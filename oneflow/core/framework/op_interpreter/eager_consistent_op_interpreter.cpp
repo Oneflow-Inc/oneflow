@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
-#include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
@@ -27,11 +26,10 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
-#include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
-#include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/tensor_consistent_id.h"
@@ -52,7 +50,7 @@ Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs,
 }
 
 std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_expr,
-                                                    const StatefulLocalOpKernel& kernel) {
+                                                    const StatefulOpKernel& kernel) {
   CHECK(!kernel.output_tuple_indexes4mut2_obns().empty());
   std::string plentysuffix = kernel.output_tuple_indexes4mut2_obns().size() == 1 ? "s" : "";
   std::stringstream ss;
@@ -118,11 +116,17 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   if (inputs.empty()) {
     // check consistency placement and nd_sbp, do not check in non-src op because it is assumed that
     // InferSbp in op is a deterministic algorithm
-    JUST(MetaInfoConsistencyCheck(parallel_desc, ctx.nd_sbp, 1));
+    JUST(MetaInfoConsistencyCheck(parallel_desc, ctx.nd_sbp, 1, /* force_check */ false));
     const auto& infer_args =
         JUST(SrcOpConsistentTensorMetaInferArgs::New(ctx.attrs, parallel_desc, JUST(ctx.nd_sbp)));
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   } else {
+    for (int i = 0; i < outputs->size(); ++i) {
+      if ((*outputs)[i]) {
+        const auto& nd_sbp = JUST((*outputs)[i]->nd_sbp());
+        JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(nd_sbp));
+      }
+    }
     const auto& infer_args = JUST(ConsistentTensorMetaInferArgs::New(ctx.attrs, inputs));
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   }
@@ -133,7 +137,9 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     if (!outputs->at(i)) {
       const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(
           output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
-      outputs->at(i).reset(new ConsistentTensor(tensor_impl));
+      (*outputs)[i].reset(new ConsistentTensor(tensor_impl));
+    } else {
+      JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(NullOpt));
     }
   }
   // Do nothing if output_tensors has 0-size shape. Since the input of some ops is 0-size but the
@@ -141,7 +147,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   if (unlikely(JUST(CachedIsAllZeroSizeTensorMeta(output_tensor_metas)))) {
     return Maybe<void>::Ok();
   }
-  // Run instruction LocalCallOpKernel
+  // Run instruction Call
   const auto& kernel = JUST(user_op_expr.MutKernel4Stream(result->stream()));
   CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
       << Error::UnimplementedError()
@@ -173,8 +179,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     output_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
   }
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      result, ctx, result->stream());
+    return builder->Call(kernel, input_eager_blob_objects, output_eager_blob_objects, result, ctx,
+                         result->stream());
   }));
   return Maybe<void>::Ok();
 }

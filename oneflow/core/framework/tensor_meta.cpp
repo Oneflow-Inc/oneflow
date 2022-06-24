@@ -14,36 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/tensor_meta.h"
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/framework/device.h"
 
 namespace oneflow {
 namespace one {
 
 MirroredTensorMeta::MirroredTensorMeta()
-    : TensorMeta(std::make_shared<const Shape>(), DataType::kInvalidDataType),
+    : TensorMeta(std::make_shared<const Shape>(), std::make_shared<const Stride>(),
+                 DataType::kInvalidDataType),
       device_(Symbol<Device>()),
-      stride_(std::make_shared<const Stride>()),
-      is_contiguous_(true),
       storage_offset_(0) {}
 
 MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                        Symbol<Device> device)
-    : TensorMeta(shape, dtype),
+    : TensorMeta(shape, std::make_shared<const Stride>(*shape), dtype),
       device_(device),
-      stride_(std::make_shared<const Stride>(*shape)),
-      is_contiguous_(true),
       storage_offset_(0) {}
 
-MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                                       Symbol<Device> device,
-                                       const std::shared_ptr<const Stride>& stride,
-                                       int64_t storage_offset)
-    : TensorMeta(shape, dtype),
-      device_(device),
-      stride_(stride),
-      is_contiguous_(IsContiguous(*shape, *stride)),
-      storage_offset_(storage_offset) {}
+MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape,
+                                       const std::shared_ptr<const Stride>& stride, DataType dtype,
+                                       Symbol<Device> device, int64_t storage_offset)
+    : TensorMeta(shape, stride, dtype), device_(device), storage_offset_(storage_offset) {}
 
 bool MirroredTensorMeta::operator==(const MirroredTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
@@ -80,7 +72,7 @@ bool IsContiguous(const Shape& shape, const Stride& stride) {
     // https://stackoverflow.com/questions/31681324/identify-contiguous-segments-of-a-non-contiguous-numpy-array
     if (shape.At(i) == 0) { return true; }
     if (contig_if_nonempty && shape.At(i) != 1) {
-      if (stride.At(i) != expected_stride) { contig_if_nonempty = false; }
+      if (stride.at(i) != expected_stride) { contig_if_nonempty = false; }
       expected_stride *= shape.At(i);
     }
   }

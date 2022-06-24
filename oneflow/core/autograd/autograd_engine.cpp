@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <memory>
 #include <stack>
 #include <queue>
 #include "oneflow/core/autograd/autograd_engine.h"
@@ -33,6 +34,38 @@ namespace oneflow {
 namespace one {
 
 namespace {
+
+void GatherFunctionNodes(FunctionNode* node, std::stack<std::shared_ptr<FunctionNode>>& stack) {
+  for (auto& prev_node : node->next_functions()) {
+    if (prev_node) {
+      if (prev_node.use_count() == 1) { stack.push(prev_node); }
+    }
+  }
+}
+
+/* NOTE:
+ * Stack overflows when releasing a very deep computation graph without
+ * a custom deleter.
+ *
+ * For example, here is a very deep computation graph:
+ * Tensor -> FunctionNode -> Tensor -> FunctionNode -> ... -> Tensor -> FunctionNode
+ * When releasing the first Tensor, it will trigger the recursive deletion and stack overflow.
+ *
+ * So we must set a custom deleter and release them iteratively.
+ */
+void FunctionNodeDeleter(FunctionNode* node) {
+  std::stack<std::shared_ptr<FunctionNode>> stack;
+  node->ReleaseData();
+  GatherFunctionNodes(node, stack);
+  delete node;
+
+  while (!stack.empty()) {
+    auto now_node = std::move(stack.top());
+    stack.pop();
+    now_node->ReleaseData();
+    GatherFunctionNodes(now_node.get(), stack);
+  }
+}
 
 bool IsReadyToRun(const std::vector<std::shared_ptr<AutogradMeta>>& out_meta_datas) {
   return std::any_of(out_meta_datas.begin(), out_meta_datas.end(),
@@ -106,35 +139,6 @@ Maybe<TensorTuple> AutogradEngine::RunBackwardAndReturnInputsTensorGradIf(
                                               create_graph);
 }
 
-StackFunctionNode::StackFunctionNode(
-    const std::string& op_type_name,
-    const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>&
-        backward_fn,
-    const TensorTuple& inputs, const TensorTuple& outputs)
-    : FunctionNode(op_type_name) {
-  input_meta_data_.resize(inputs.size());
-  next_functions_->reserve(inputs.size());
-  for (int i = 0; i < inputs.size(); ++i) {
-    if (inputs.at(i)->requires_grad()) {
-      input_meta_data_.at(i) = inputs.at(i)->mut_autograd_meta();
-      next_functions_->emplace_back(inputs.at(i)->mut_grad_fn_node());
-    }
-  }
-
-  output_meta_data_.resize(outputs.size());
-  output_tensor_infos_.reserve(outputs.size());
-  for (int i = 0; i < outputs.size(); ++i) {
-    const auto& autograd_meta =
-        NewAutogradMeta(outputs.at(i)->requires_grad(), outputs.at(i)->is_leaf());
-    outputs.at(i)->set_autograd_meta(autograd_meta);
-    output_meta_data_.at(i) = outputs.at(i)->mut_autograd_meta();
-    output_tensor_infos_.emplace_back(TensorInfo(*outputs.at(i)));
-  }
-
-  backward_fn_ = backward_fn;
-  is_in_stack_ = false;
-}
-
 Maybe<void> FunctionNode::AccGrad4RetainGradTensor() {
   for (const std::shared_ptr<AutogradMeta>& out : output_meta_data_) {
     if (out->retain_grad()) { JUST(CopyOrAccGrad(out.get(), /*autograd_mode=*/false)); }
@@ -155,8 +159,9 @@ Maybe<void> FunctionNode::AccGrad4LeafTensor(bool create_graph) {
         auto& tensor_info = output_tensor_infos_[i];
         const auto& placement = JUST(tensor_info.placement());
         const auto& nd_sbp = JUST(tensor_info.sbp());
-        JUST(out->set_acc_grad(JUST(functional::ToConsistent(
-            acc_grad, placement, *JUST(GetSbpList(nd_sbp)), GetNoneSbpList()))));
+        JUST(out->set_acc_grad(
+            JUST(functional::ToConsistent(acc_grad, placement, *JUST(GetSbpList(nd_sbp)),
+                                          GetNoneSbpList(), /* check_meta */ false))));
       }
     }
   }
@@ -169,14 +174,9 @@ void FunctionNode::ReleaseOutTensorArgs() {
   }
 }
 
-void StackFunctionNode::ReleaseData() {
-  if (!input_meta_data_.empty()) { backward_fn_.reset(); }
-  is_in_stack_ = false;
-}
-
 Maybe<bool> FunctionNode::Apply(bool create_graph) {
-  CHECK_NOTNULL_OR_RETURN(backward_fn_.get())
-      << "This FunctionNode with name `" << GetOpTypeName() << "` has been released.\n"
+  CHECK_NOTNULL_OR_RETURN(backward_fn_)
+      << "This FunctionNode with name `" << name() << "` has been released.\n"
       << "Maybe you try to backward through the node a second time. Specify retain_graph=True when "
          "calling .backward() or autograd.grad() the first time.";
   if (!IsReadyToRun(output_meta_data_)) { return false; }
@@ -187,136 +187,46 @@ Maybe<bool> FunctionNode::Apply(bool create_graph) {
       output_grads.at(i) = JUST(output_tensor_infos_.at(i).zeros());
     } else {
       const auto& hooks = JUST(oneflow::VectorAt(output_meta_data_, i))->hooks();
-      *JUST(oneflow::VectorAt(&output_grads, i)) =
+      JUST(oneflow::VectorAt(output_grads, i)) =
           JUST(JUST(oneflow::VectorAt(output_meta_data_, i))->current_grad()->GetAccTensor(hooks));
     }
   }
-  JUST((*backward_fn_)(output_grads, &input_grads, create_graph));
+  JUST(backward_fn_->body(output_grads, &input_grads, create_graph));
   for (int i = 0; i < input_meta_data_.size(); ++i) {
-    if (input_grads.at(i)) {
+    if (JUST(VectorAt(input_grads, i))) {
       CHECK_NOTNULL_OR_RETURN(input_meta_data_.at(i))
-          << op_type_name_
+          << name_
           << " calculate grad for tensor which requires_grad is False. Please submit an issue in "
              "`https://github.com/Oneflow-Inc/oneflow/issues` and we will fix it as soon as "
-             "possiable";
+             "possible";
       JUST(input_meta_data_.at(i)->current_grad()->PushPartialTensor(input_grads.at(i)));
     }
   }
   return true;
 }
 
-void StackAutogradEngine::ClearEngine() { node_list_.clear(); }
-
-void StackAutogradEngine::ClearReleasedFunctionNodes() {
-  node_list_.erase(std::remove_if(node_list_.begin(), node_list_.end(),
-                                  [](const std::weak_ptr<FunctionNode>& node) {
-                                    return node.lock() == nullptr;
-                                  }),
-                   node_list_.end());
-}
-
-Maybe<void> StackAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const TensorTuple& outputs,
-                                                                    const TensorTuple& out_grads,
-                                                                    bool retain_graph,
-                                                                    bool create_graph) {
-  ClearReleasedFunctionNodes();
-  for (int i = 0; i < outputs.size(); ++i) {
-    JUST(JUST(outputs.at(i)->current_grad())->PushPartialTensor(out_grads.at(i)));
-  }
-  // Runs each FunctionNode
-  for (const auto& weak_func_node : node_list_) {
-    const auto& func_node = weak_func_node.lock();
-    CHECK_NOTNULL_OR_RETURN(func_node);
-    if (JUST(func_node->Apply(create_graph))) {
-      JUST(func_node->AccGrad4LeafTensor(create_graph));
-      JUST(func_node->AccGrad4RetainGradTensor());
-      func_node->ReleaseOutTensorArgs();
-      if (!retain_graph) { func_node->ReleaseData(); }
-    }
-  }
-  if (!retain_graph) { ClearEngine(); }
-  return Maybe<void>::Ok();
-}
-
-Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
-    const TensorTuple& outputs, const TensorTuple& inputs, const TensorTuple& out_grads,
-    bool retain_graph, bool create_graph) {
-  ClearReleasedFunctionNodes();
-  std::shared_ptr<TensorTuple> input_current_grad = std::make_shared<TensorTuple>(inputs.size());
-  std::vector<bool> ori_retain_grad(inputs.size());
-  for (int i = 0; i < inputs.size(); ++i) {
-    ori_retain_grad.at(i) = inputs.at(i)->retain_grad();
-    JUST(inputs.at(i)->set_retain_grad(true));
-  }
-  for (int i = 0; i < outputs.size(); ++i) {
-    JUST(JUST(outputs.at(i)->current_grad())->PushPartialTensor(out_grads.at(i)));
-  }
-  // Runs each FunctionNode
-  for (const auto& weak_func_node : node_list_) {
-    const auto& func_node = weak_func_node.lock();
-    CHECK_NOTNULL_OR_RETURN(func_node);
-    if (JUST(func_node->Apply(create_graph))) {
-      JUST(func_node->AccGrad4RetainGradTensor());
-      func_node->ReleaseOutTensorArgs();
-      if (!retain_graph) { func_node->ReleaseData(); }
-    }
-  }
-  // Gets input grads and resume retain_grad
-  for (int i = 0; i < inputs.size(); ++i) {
-    input_current_grad->at(i) = JUST(inputs.at(i)->acc_grad());
-    if (!ori_retain_grad.at(i)) {
-      JUST(inputs.at(i)->set_acc_grad(nullptr));
-      JUST(inputs.at(i)->set_retain_grad(false));
-    }
-  }
-  if (!retain_graph) { ClearEngine(); }
-  return input_current_grad;
-}
-
-Maybe<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
-    const std::string& op_type_name,
-    const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>&
-        backward_fn,
-    const TensorTuple& inputs, TensorTuple* outputs) {
-  // Firstly push function_node of tensor in stack which is leaf and requires_grad
-  for (const std::shared_ptr<Tensor>& in_tensor : inputs) {
-    if (in_tensor->is_leaf() && in_tensor->requires_grad()) {
-      if (!in_tensor->grad_fn_node()) { JUST(AddAccumulateFunctionNode(in_tensor)); }
-      StackFunctionNode* stack_function_node =
-          dynamic_cast<StackFunctionNode*>(in_tensor->mut_grad_fn_node().get());
-      if (!stack_function_node->is_in_stack()) {
-        stack_function_node->set_is_in_stack(true);
-        node_list_.push_front(in_tensor->mut_grad_fn_node());
-      }
-    }
-  }
-
-  std::shared_ptr<StackFunctionNode> func_node =
-      std::make_shared<StackFunctionNode>(op_type_name, backward_fn, inputs, *outputs);
-  for (const std::shared_ptr<Tensor>& out_tensor : *outputs) {
-    out_tensor->set_grad_fn_node(func_node);
-  }
-  func_node->set_is_in_stack(true);
-  node_list_.push_front(func_node);
-  return std::static_pointer_cast<FunctionNode>(func_node);
-}
-
 void GraphFunctionNode::ReleaseData() {
-  if (!input_meta_data_.empty()) { backward_fn_.reset(); }
+  if (backward_fn_ && backward_fn_->status()) { backward_fn_.reset(); }
 }
 
-GraphFunctionNode::GraphFunctionNode(
-    const std::string& op_type_name,
-    const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>&
-        backward_fn,
-    const TensorTuple& inputs, const TensorTuple& outputs)
-    : FunctionNode(op_type_name) {
+/*static*/ std::shared_ptr<GraphFunctionNode> GraphFunctionNode::New(
+    const std::string& name, const std::shared_ptr<BackwardFunction>& backward_fn,
+    const TensorTuple& inputs, const TensorTuple& outputs) {
+  auto node = std::shared_ptr<GraphFunctionNode>(
+      new GraphFunctionNode(name, backward_fn, inputs, outputs), FunctionNodeDeleter);
+  return node;
+}
+
+GraphFunctionNode::GraphFunctionNode(const std::string& name,
+                                     const std::shared_ptr<BackwardFunction>& backward_fn,
+                                     const TensorTuple& inputs, const TensorTuple& outputs)
+    : FunctionNode(name, backward_fn) {
   input_meta_data_.resize(inputs.size());
-  next_functions_->reserve(inputs.size());
+  next_functions_.reserve(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
     if (inputs.at(i)->requires_grad()) {
       input_meta_data_.at(i) = inputs.at(i)->mut_autograd_meta();
-      next_functions_->emplace_back(inputs.at(i)->mut_grad_fn_node());
+      next_functions_.emplace_back(inputs.at(i)->mut_grad_fn_node());
     }
   }
 
@@ -353,7 +263,7 @@ Maybe<void> GraphTask::ComputeDependencies() {
     FunctionNode* node = stack.top();
     stack.pop();
     if (/*bool has_seen=*/!seen.insert(node).second) { continue; }
-    for (const auto& next_grad_fn : *(node->GetNextFunctions())) {
+    for (const auto& next_grad_fn : node->next_functions()) {
       FunctionNode* next_node = next_grad_fn.get();
       dependencies_[next_node] += 1;
       if (seen.find(next_node) == seen.end()) { stack.push(next_node); }
@@ -366,14 +276,14 @@ Maybe<void> GraphTask::ComputeDependencies() {
 // according to input tensors
 Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs) {
   struct NodeFrame {
-    NodeFrame(FunctionNode* node) : node_(node), next_function_idx_(0) {}
+    explicit NodeFrame(FunctionNode* node) : node_(node), next_function_idx_(0) {}
     FunctionNode* node_;
     size_t next_function_idx_;
 
     FunctionNode* GetNextFunction() {
-      if (next_function_idx_ < node_->GetNextFunctions()->size()) {
+      if (next_function_idx_ < node_->next_functions().size()) {
         next_function_idx_ += 1;
-        return node_->GetNextFunctions()->at(next_function_idx_ - 1).get();
+        return node_->next_functions().at(next_function_idx_ - 1).get();
       } else {
         return nullptr;
       }
@@ -403,11 +313,11 @@ Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs
         continue;  // recurse
       }
     } else {
-      bool need_execute = std::any_of(frame.node_->GetNextFunctions()->begin(),
-                                      frame.node_->GetNextFunctions()->end(),
-                                      [&](const std::shared_ptr<FunctionNode>& fn) {
-                                        return need_execute_.find(fn.get()) != need_execute_.end();
-                                      });
+      bool need_execute =
+          std::any_of(frame.node_->next_functions().begin(), frame.node_->next_functions().end(),
+                      [&](const std::shared_ptr<FunctionNode>& fn) {
+                        return need_execute_.find(fn.get()) != need_execute_.end();
+                      });
       if (need_execute) { need_execute_.insert(frame.node_); }
       seen.insert(frame.node_);
       stack.pop();
@@ -435,7 +345,7 @@ Maybe<void> GraphTask::Apply(bool save_grad_for_leaf) {
     node->ReleaseOutTensorArgs();
     if (!retain_graph_) { node->ReleaseData(); }
 
-    for (const auto& next_grad_fn : *(node->GetNextFunctions())) {
+    for (const auto& next_grad_fn : node->next_functions()) {
       FunctionNode* next_node = next_grad_fn.get();
       dependencies_[next_node] -= 1;
       if (dependencies_[next_node] == 0) { queue.push(next_node); }
@@ -485,10 +395,8 @@ Maybe<TensorTuple> GraphAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
   return input_current_grad;
 }
 
-Maybe<FunctionNode> GraphAutogradEngine::AddBackwardFuncPtr(
-    const std::string& op_type_name,
-    const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>&
-        backward_fn,
+Maybe<FunctionNode> GraphAutogradEngine::AddNode(
+    const std::string& name, const std::shared_ptr<BackwardFunction>& backward_fn,
     const TensorTuple& inputs, TensorTuple* outputs) {
   // Firstly push function_node of tensor in stack which is leaf and requires_grad
   for (const std::shared_ptr<Tensor>& in_tensor : inputs) {
@@ -498,7 +406,7 @@ Maybe<FunctionNode> GraphAutogradEngine::AddBackwardFuncPtr(
   }
 
   std::shared_ptr<FunctionNode> func_node =
-      std::make_shared<GraphFunctionNode>(op_type_name, backward_fn, inputs, *outputs);
+      GraphFunctionNode::New(name, backward_fn, inputs, *outputs);
   for (const std::shared_ptr<Tensor>& out_tensor : *outputs) {
     out_tensor->set_grad_fn_node(func_node);
   }
@@ -506,18 +414,17 @@ Maybe<FunctionNode> GraphAutogradEngine::AddBackwardFuncPtr(
 }
 
 AutogradEngine* GetThreadLocalAutogradEngine() {
-  // thread_local static StackAutogradEngine autograd_engine;
   thread_local static GraphAutogradEngine autograd_engine;
   return &autograd_engine;
 }
 
 Maybe<void> AddAccumulateFunctionNode(const std::shared_ptr<Tensor>& tensor) {
-  auto backward_fn =
-      std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
-          [=](const TensorTuple& out_grads, TensorTuple* in_grads,
-              bool create_graph) -> Maybe<void> { return Maybe<void>::Ok(); });
-  tensor->set_grad_fn_node(std::make_shared<GraphFunctionNode>(
-      "accumulate_grad", backward_fn, TensorTuple(), TensorTuple({tensor})));
+  auto backward_fn = std::make_shared<BackwardFunction>();
+  backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                          bool create_graph) -> Maybe<void> { return Maybe<void>::Ok(); };
+  backward_fn->status = []() { return false; };
+  tensor->set_grad_fn_node(GraphFunctionNode::New(
+      "accumulate_grad", backward_fn, /*inputs=*/TensorTuple{}, /*outputs*/ TensorTuple{tensor}));
   return Maybe<void>::Ok();
 }
 

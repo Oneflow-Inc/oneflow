@@ -257,7 +257,6 @@ class OneFlow_MaxPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
   let summary = "OneFlow Max Pooling Grad operation";
   let input = (ins
     AnyType:$x,
-    AnyType:$y,
     AnyType:$indice,
     AnyType:$dy
   );
@@ -284,7 +283,6 @@ class OneFlow_AvgPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
   let summary = "OneFlow Average Pooling Grad operation";
   let input = (ins
     AnyType:$x,
-    AnyType:$y,
     AnyType:$dy
   );
   let output = (outs

@@ -106,7 +106,7 @@ OF_DEVICE_FUNC void DoDimScatter(const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
     IDX_T coordinate[kDimGatherMaxDimCount] = {0};
     idx_nd_helper.OffsetToNdIndex(idx_offset, coordinate, ndim);  // idx_offset -> ijk
     IDX_T idx_elem = index[idx_offset];
-    if (idx_elem >= upper_bound) {
+    if (upper_bound != 0 && idx_elem >= upper_bound) {
 #if __CUDA_ARCH__
       __trap();
 #else

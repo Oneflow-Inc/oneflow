@@ -17,11 +17,13 @@ import os
 import random
 import sys
 import traceback
+from google.protobuf import text_format
 from typing import List, Optional, Sequence, Tuple, Union
 
 import oneflow as flow
 import oneflow._oneflow_internal._C as _C
 from oneflow.framework.tensor import Tensor
+from oneflow.framework.scope_util import current_scope
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
 from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _triple
@@ -439,12 +441,18 @@ class OFRecordImageGpuDecoderRandomCropResize(Module):
         self.warmup_size = warmup_size
         self.max_num_pixels = max_num_pixels
         gpu_decoder_conf = (
-            flow._oneflow_internal.oneflow.core.operator.op_conf.ImageDecoderRandomCropResizeOpConf()
+            flow.core.operator.op_conf_pb2.ImageDecoderRandomCropResizeOpConf()
         )
-        gpu_decoder_conf.set_in("error_input_need_to_be_replaced")
-        gpu_decoder_conf.set_out("out")
+        # parse failed when excu clang format if use `gpu_decoder_conf.in = "error_input_need_to_be_replaced"`
+        setattr(gpu_decoder_conf, "in", "error_input_need_to_be_replaced")
+        gpu_decoder_conf.out = "out"
+        gpu_decoder_conf.target_width = (
+            -1
+        )  # Set the default value, otherwise the parsing fails
+        gpu_decoder_conf.target_height = -1
+        gpu_decoder_conf_str = text_format.MessageToString(gpu_decoder_conf)
         self._op = flow._oneflow_internal.one.ImageDecoderRandomCropResizeOpExpr(
-            id_util.UniqueStr("ImageGpuDecoder"), gpu_decoder_conf, ["in"], ["out"]
+            id_util.UniqueStr("ImageGpuDecoder"), gpu_decoder_conf_str, ["in"], ["out"]
         )
 
     def forward(self, input):
@@ -836,7 +844,7 @@ class COCOReader(Module):
             # local apply
             outputs = _C.dispatch_coco_reader(
                 self._op,
-                session_id=flow.current_scope().session_id,
+                session_id=current_scope().session_id,
                 annotation_file=self.annotation_file,
                 image_dir=self.image_dir,
                 batch_size=self.batch_size,
@@ -851,7 +859,7 @@ class COCOReader(Module):
             # consistent apply
             outputs = _C.dispatch_coco_reader(
                 self._op,
-                session_id=flow.current_scope().session_id,
+                session_id=current_scope().session_id,
                 annotation_file=self.annotation_file,
                 image_dir=self.image_dir,
                 batch_size=self.batch_size,

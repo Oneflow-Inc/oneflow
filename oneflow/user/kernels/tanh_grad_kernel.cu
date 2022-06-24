@@ -74,7 +74,7 @@ class TanhGradGPUKernel final : public OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const int32_t elem_cnt = x->shape().elem_cnt();
+    const int32_t elem_cnt = x->shape_view().elem_cnt();
     const T* x_ptr = reinterpret_cast<const T*>(x->dptr());
     const T* dy_ptr = reinterpret_cast<const T*>(dy->dptr());
     T* dx_ptr = reinterpret_cast<T*>(dx->mut_dptr());

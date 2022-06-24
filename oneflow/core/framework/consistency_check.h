@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/tensor_meta.h"
 
 namespace oneflow {
 
@@ -36,20 +37,20 @@ Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const Optional<Symbol<NdSbp>>& nd_sbp,
                                      const Optional<Symbol<NdSbp>>& grad_nd_sbp,
-                                     const size_t debug_level);
+                                     const size_t debug_level, bool force_check);
 
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const Optional<Symbol<NdSbp>>& nd_sbp,
-                                     const size_t debug_level);
+                                     const size_t debug_level, bool force_check);
 
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                                      const std::vector<Symbol<SbpParallel>>& grad_sbp_tuple,
-                                     const size_t debug_level);
+                                     const size_t debug_level, bool force_check);
 
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                                     const size_t debug_level);
+                                     const size_t debug_level, bool force_check);
 
 }  // namespace oneflow
 

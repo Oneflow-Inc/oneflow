@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/common/shape_view.h"
+#include "oneflow/core/common/stride.h"
 
 namespace oneflow {
 
@@ -38,57 +39,69 @@ class DeviceCtx;
 
 namespace eager {
 
-struct CallContext {
+class TmpTensor final : public user_op::Tensor {
+ public:
+  explicit TmpTensor(const std::shared_ptr<MemoryCase>& mem_case)
+      : mem_case_(mem_case), tmp_buffer_size_(0), tmp_buffer_ptr_(nullptr) {}
+  ~TmpTensor() {}
+
+  ShapeView shape_view() const override { return ShapeView(&tmp_buffer_size_, 1); }
+  MutShapeView mut_shape_view() override { return MutShapeView(&tmp_buffer_size_, 1); }
+  const Stride& stride() const override {
+    UNIMPLEMENTED() << "TmpTensor::stride() is not implemented.";
+    static Stride empty{};
+    return empty;
+  }
+  DataType data_type() const override { return DataType::kChar; }
+  const MemoryCase& mem_case() const override { return *mem_case_; }
+  const void* raw_dptr() const override { return tmp_buffer_ptr_.get(); }
+  void* mut_raw_dptr() override { return tmp_buffer_ptr_.get(); }
+
+  int64_t tmp_buffer_size() const { return tmp_buffer_size_; }
+  void set_tmp_buffer_size(int64_t val) { tmp_buffer_size_ = val; }
+  std::unique_ptr<char, std::function<void(char*)>>& mut_tmp_buffer_ptr() {
+    return tmp_buffer_ptr_;
+  }
+
+ private:
+  std::shared_ptr<MemoryCase> mem_case_;
+  int64_t tmp_buffer_size_;
+  std::unique_ptr<char, std::function<void(char*)>> tmp_buffer_ptr_;
+};
+
+class CallContext {
+ public:
   CallContext(
       ComposedAttrMap&& composed_attrs, const one::EagerBlobObjectListPtr& inputs,
       const one::EagerBlobObjectListPtr& outputs,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
-      const one::OpExprInterpContext& op_interp_ctx,
-      const std::shared_ptr<one::StatefulLocalOpKernel> opkernel)
-      : composed_attrs(composed_attrs),
-        inputs(inputs),
-        outputs(outputs),
-        consistent_tensor_infer_result(consistent_tensor_infer_result),
-        op_interp_ctx(op_interp_ctx),
-        opkernel(opkernel),
-        tmp_buffer_ptr(nullptr),
-        tmp_buffer_size(0),
-        shape_view(&tmp_buffer_size, 1),
-        mut_shape_view(&tmp_buffer_size, 1),
-        device_ctx(nullptr) {}
+      const one::OpExprInterpContext& op_interp_ctx, const std::shared_ptr<MemoryCase>& mem_case)
+      : composed_attrs_(composed_attrs),
+        inputs_(inputs),
+        outputs_(outputs),
+        consistent_tensor_infer_result_(consistent_tensor_infer_result),
+        op_interp_ctx_(op_interp_ctx),
+        tmp_tensor_(mem_case) {}
 
-  ComposedAttrMap composed_attrs;
-  one::EagerBlobObjectListPtr inputs;
-  one::EagerBlobObjectListPtr outputs;
-  std::shared_ptr<const one::ConsistentTensorInferResult> consistent_tensor_infer_result;
-  const one::OpExprInterpContext op_interp_ctx;
-  const std::shared_ptr<one::StatefulLocalOpKernel> opkernel;
-  char* tmp_buffer_ptr;
-  int64_t tmp_buffer_size;
-  ShapeView shape_view;
-  MutShapeView mut_shape_view;
-  DeviceCtx* device_ctx;
-};
+  ~CallContext() = default;
 
-class ThreadLocalCallContextScope final {
- public:
-  ThreadLocalCallContextScope(CallContext* call_ctx) {
-    CHECK_ISNULL(*MutCurrent());
-    *MutCurrent() = call_ctx;
+  const ComposedAttrMap& composed_attrs() const { return composed_attrs_; }
+  const one::EagerBlobObjectListPtr& inputs() const { return inputs_; }
+  const one::EagerBlobObjectListPtr& outputs() const { return outputs_; }
+  const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result()
+      const {
+    return consistent_tensor_infer_result_;
   }
-  ~ThreadLocalCallContextScope() {
-    CHECK_NOTNULL(*MutCurrent());
-    *MutCurrent() = nullptr;
-  }
-
-  static CallContext* Current() { return CHECK_NOTNULL(*MutCurrent()); }
-  static bool CurrentIsValid() { return *MutCurrent() != nullptr; }
+  const one::OpExprInterpContext& op_interp_ctx() const { return op_interp_ctx_; }
+  TmpTensor* mut_tmp_tensor() { return &tmp_tensor_; }
 
  private:
-  static CallContext** MutCurrent() {
-    static thread_local CallContext* call_ctx = nullptr;
-    return &call_ctx;
-  }
+  const ComposedAttrMap composed_attrs_;
+  const one::EagerBlobObjectListPtr inputs_;
+  const one::EagerBlobObjectListPtr outputs_;
+  const std::shared_ptr<const one::ConsistentTensorInferResult> consistent_tensor_infer_result_;
+  const one::OpExprInterpContext op_interp_ctx_;
+  TmpTensor tmp_tensor_;
 };
 
 }  // namespace eager

@@ -38,9 +38,7 @@ limitations under the License.
 #include "oneflow/core/hardware/node_device_descriptor_manager.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
-#include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
-#include "oneflow/core/operator/op_conf.cfg.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
@@ -110,36 +108,36 @@ void SetCpuDeviceManagerNumThreads() {
   cpu_device_manager->SetDeviceNumThreads(num_threads);
 }
 
-void ClearAllSymbolAndIdCache() {
+void ClearAllSymbol() {
   Global<symbol::Storage<Scope>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::ScopeProto>>::Get()->ClearAll();
-
   Global<symbol::Storage<JobDesc>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::JobConfigProto>>::Get()->ClearAll();
-
   Global<symbol::Storage<ParallelDesc>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::ParallelConf>>::Get()->ClearAll();
-
   Global<symbol::Storage<OperatorConfSymbol>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::OperatorConf>>::Get()->ClearAll();
 }
 
-#if defined(__linux__) && defined(WITH_RDMA)
+#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
-bool CommNetIBEnabled() {
-  bool user_enabled = ParseBooleanFromEnv("ONEFLOW_COMM_NET_IB_ENABLE", false);
-  if (user_enabled) {
-    return ibv::IsAvailable();
-  } else {
-    return false;
-  }
-}
+bool CommNetIBEnabled() { return ibv::IsAvailable(); }
 
-#endif
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX
 
 }  // namespace
 
+EnvGlobalObjectsScope::EnvGlobalObjectsScope(const std::string& env_proto_str) {
+  EnvProto env_proto;
+  CHECK(TxtString2PbMessage(env_proto_str, &env_proto))
+      << "failed to parse env_proto" << env_proto_str;
+  CHECK_JUST(Init(env_proto));
+}
+
+EnvGlobalObjectsScope::EnvGlobalObjectsScope(const EnvProto& env_proto) {
+  CHECK_JUST(Init(env_proto));
+}
+
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
+  CHECK(Global<EnvGlobalObjectsScope>::Get() == nullptr);
+  Global<EnvGlobalObjectsScope>::SetAllocated(this);
+
   InitLogging(env_proto.cpp_logging_conf());
   Global<EnvDesc>::New(env_proto);
   Global<ProcessCtx>::New();
@@ -197,16 +195,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
     Global<EpollCommNet>::New();
     Global<Transport>::New();
     if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
-#ifdef WITH_RDMA
-      if (CommNetIBEnabled()) {
-        Global<IBVerbsCommNet>::New();
-        Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get());
-      } else {
-        Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
-      }
-#else
       Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
-#endif  // WITH_RDMA
     }
 #endif  // __linux__
   }
@@ -229,11 +218,9 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
-  auto session_ctx = Global<MultiClientSessionContext>::Get();
-  if (session_ctx != nullptr) {
-    VLOG(1) << "Multi client session has not closed , env close it at env scope destruction.";
-    CHECK_JUST(session_ctx->TryClose());
-  }
+  VLOG(2) << "Try to close env global objects scope." << std::endl;
+  OF_ENV_BARRIER();
+  if (is_normal_exit_.has_value() && !CHECK_JUST(is_normal_exit_)) { return; }
   TensorBufferPool::Delete();
   Global<KernelObserver>::Delete();
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
@@ -266,8 +253,48 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<RpcManager>::Delete();
   Global<ProcessCtx>::Delete();
   Global<EnvDesc>::Delete();
-  ClearAllSymbolAndIdCache();
+  ClearAllSymbol();
+  if (Global<EnvGlobalObjectsScope>::Get() != nullptr) {
+    Global<EnvGlobalObjectsScope>::SetAllocated(nullptr);
+  }
+  VLOG(2) << "Finish closing env global objects scope." << std::endl;
   google::ShutdownGoogleLogging();
+}
+
+Maybe<void> InitRDMA() {
+  if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+#ifdef __linux__
+    if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
+#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
+      if (CommNetIBEnabled()) {
+        if (Global<IBVerbsCommNet>::Get() == nullptr) {
+          Global<IBVerbsCommNet>::New();
+          Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get());
+        } else {
+          LOG(WARNING) << "Skip init RDMA because RDMA is already initialized!";
+        }
+      } else {
+        LOG(WARNING) << "Skip init RDMA because RDMA is unavailable!";
+      }
+#else
+      LOG(WARNING) << "Skip init RDMA because RDMA is not compiled!";
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX
+    } else {
+      LOG(WARNING) << "Skip init RDMA because only one process in this group!";
+    }
+#endif  // __linux__
+  } else {
+    LOG(WARNING) << "Skip init RDMA in dry run mode!";
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<bool> RDMAIsInitialized() {
+#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
+  return Global<IBVerbsCommNet>::Get() != nullptr;
+#else
+  return false;
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX
 }
 
 }  // namespace oneflow
