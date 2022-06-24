@@ -44,30 +44,30 @@ void EpD2HStreamType::InitInstructionStatus(const Stream& stream,
   static_assert(sizeof(EpOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
   auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream.device_ctx().get());  // NOLINT
   auto* ep_event_provider = ep_device_ctx->ep_event_provider();
-  auto* data_ptr = status_buffer->mut_buffer()->mut_data();
+  auto* data_ptr = status_buffer->mut_buffer();
   const auto& ep_event = CHECK_NOTNULL(ep_event_provider)->GetReusedEpEvent();
   EpOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, ep_event);
 }
 
 void EpD2HStreamType::DeleteInstructionStatus(const Stream& stream,
                                               InstructionStatusBuffer* status_buffer) const {
-  auto* ptr = EpOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  auto* ptr = EpOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer());
   ptr->~EpOptionalEventRecordStatusQuerier();
 }
 
 bool EpD2HStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
-  return EpOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())->done();
+  return EpOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer())->done();
 }
 
 void EpD2HStreamType::Compute(Instruction* instruction) const {
-  OF_PROFILER_RANGE_PUSH("S:" + instruction->instr_msg().DebugName());
+  OF_PROFILER_RANGE_PUSH("S:" + instruction->DebugName());
   auto* stream = instruction->mut_stream();
   auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());  // NOLINT
   auto* ep_device = ep_device_ctx->GetOrCreateEpDevice();
   ep_device->SetAsActiveDevice();
-  instruction->instr_msg().instruction_type().Compute(instruction);
-  char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
+  instruction->instruction_type().Compute(instruction);
+  char* data_ptr = instruction->mut_status_buffer()->mut_buffer();
   EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(ep_device_ctx);
   OF_PROFILER_RANGE_POP();
 }
