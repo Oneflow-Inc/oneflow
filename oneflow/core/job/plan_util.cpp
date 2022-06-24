@@ -842,7 +842,7 @@ class ChainNegoTreeBuilder : public NegoTreeBuilder {
       task_ids_str += std::to_string(task_ids[i]);
       task_ids_str += " -> ";
     }
-    LOG(ERROR) << "Chain Nego Tree: " << task_ids_str;
+    LOG(ERROR) << "Chain Nego Tree: (root) " << task_ids_str;
     
   }
 };

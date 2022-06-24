@@ -472,7 +472,7 @@ int OfCollectiveActor::HandlerNormal(const ActorMsg& msg) {
     }
   } else if (msg.msg_type() == ActorMsgType::kCollectiveMsg) {
     if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR) << "GET Actor " << actor_id_ << " status: " << print_status_[collective_status_] << " get " << print_nego_cmd_[msg.collective_nego_cmd()] << " from " << msg.src_actor_id();
-    if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR) << "NEGOROOT Actor " << actor_id_  << " invoke ReactToNegoCmd after recv kCollectiveMsg from " << msg.src_actor_id();
+    if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR) << "Actor " << actor_id_  << " invoke ReactToNegoCmd after recv kCollectiveMsg from " << msg.src_actor_id();
 
     ReactToNegoCmd(msg);
   } else {
