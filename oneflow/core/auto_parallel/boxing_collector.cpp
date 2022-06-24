@@ -544,8 +544,9 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
         }
         middle_sbps.emplace_back(broadcast_nd);
       }
-      return Maybe<void>::Ok();
     }
+    // No middle nodes for another 1d-sbp combinations
+    return Maybe<void>::Ok();
   }
 
 #ifdef WITH_CUDA
@@ -559,6 +560,9 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
       JUST(AskSbpCombination4GeneralBasicCommunication(
           sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
           consumer_parallel_desc, middle_sbps, diag_node_pos));
+      if (GlobalProcessCtx::Rank() == 0) {
+        std::cout << "Middle size for gbc: " << middle_sbps.size() << std::endl;
+      }
     }
     // Otherwise, one-step transfer
     return Maybe<void>::Ok();
