@@ -29,24 +29,23 @@ class FuseInstructionType : public vm::InstructionType {
   FuseInstructionType() = default;
   ~FuseInstructionType() override = default;
 
-  std::string DebugName(const InstructionMsg&) const override { return "Fuse"; }
+  std::string DebugName(const Instruction&) const override { return "Fuse"; }
 
   void InitInstructionStatus(Instruction* instruction) const override {
-    const auto& phy_instr_operand = instruction->instr_msg().phy_instr_operand();
+    const auto& phy_instr_operand = instruction->phy_instr_operand();
     auto* ptr = dynamic_cast<vm::FusePhyInstrOperand*>(phy_instr_operand.get());
-    auto* instr_msg_list = CHECK_NOTNULL(ptr)->mut_instr_msg_list();
-    auto* last_instr_msg = CHECK_NOTNULL(instr_msg_list->Last());
-    // init instruction status by last instruction_msg.
-    last_instr_msg->instruction_type().InitInstructionStatusIf(instruction);
+    auto* instruction_list = CHECK_NOTNULL(ptr)->mut_instruction_list();
+    auto* last_instruction = CHECK_NOTNULL(instruction_list->Last());
+    last_instruction->instruction_type().InitInstructionStatusIf(instruction);
   }
 
   void Compute(vm::Instruction* instruction) const override {
-    const auto& phy_instr_operand = instruction->instr_msg().phy_instr_operand();
+    const auto& phy_instr_operand = instruction->phy_instr_operand();
     auto* ptr = dynamic_cast<vm::FusePhyInstrOperand*>(phy_instr_operand.get());
-    auto* instr_msg_list = CHECK_NOTNULL(ptr)->mut_instr_msg_list();
-    INTRUSIVE_UNSAFE_FOR_EACH_PTR(instr_msg, instr_msg_list) {
-      OF_PROFILER_RANGE_GUARD("F:" + instr_msg->DebugName());
-      instr_msg->instruction_type().ComputeInFuseMode(instr_msg);
+    auto* instruction_list = CHECK_NOTNULL(ptr)->mut_instruction_list();
+    INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, instruction_list) {
+      OF_PROFILER_RANGE_GUARD("F:" + instruction->DebugName());
+      instruction->instruction_type().Compute(instruction);
     }
   }
 };
