@@ -42,9 +42,9 @@ namespace oneflow {
 namespace vm {
 
 struct OpCallInstructionUtil final {
-  static inline Maybe<void> Compute(const vm::InstructionMsg& instr_msg) {
-    auto* operand = OpCallInstructionUtil::GetCallPhyInstrOperand(instr_msg);
-    DeviceCtx* device_ctx = instr_msg.stream().device_ctx().get();
+  static inline Maybe<void> Compute(const vm::Instruction& instruction) {
+    auto* operand = GetCallPhyInstrOperand(instruction);
+    DeviceCtx* device_ctx = instruction.stream().device_ctx().get();
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     if (unlikely(operand->need_temp_storage())) {
       OF_PROFILER_RANGE_GUARD("TryAllocateTempStorage");
@@ -61,8 +61,8 @@ struct OpCallInstructionUtil final {
     return Maybe<void>::Ok();
   }
 
-  static inline OpCallPhyInstrOperand* GetCallPhyInstrOperand(const vm::InstructionMsg& instr_msg) {
-    auto* operand = CHECK_NOTNULL(instr_msg.phy_instr_operand().get());
+  static inline OpCallPhyInstrOperand* GetCallPhyInstrOperand(const vm::Instruction& instruction) {
+    auto* operand = CHECK_NOTNULL(instruction.phy_instr_operand().get());
     return CHECK_NOTNULL(dynamic_cast<OpCallPhyInstrOperand*>(operand));
   }
 
@@ -130,15 +130,11 @@ struct OpCallInstructionUtil final {
 };
 
 void OpCallInstructionType::Compute(vm::Instruction* instruction) const {
-  CHECK_JUST(OpCallInstructionUtil::Compute(instruction->instr_msg()));
+  CHECK_JUST(OpCallInstructionUtil::Compute(*instruction));
 }
 
-void OpCallInstructionType::ComputeInFuseMode(vm::InstructionMsg* instr_msg) const {
-  CHECK_JUST(OpCallInstructionUtil::Compute(*instr_msg));
-}
-
-std::string OpCallInstructionType::DebugName(const vm::InstructionMsg& instr_msg) const {
-  auto* operand = CHECK_NOTNULL(instr_msg.phy_instr_operand().get());
+std::string OpCallInstructionType::DebugName(const vm::Instruction& instruction) const {
+  auto* operand = CHECK_NOTNULL(instruction.phy_instr_operand().get());
   return CHECK_NOTNULL(dynamic_cast<OpCallPhyInstrOperand*>(operand))->opkernel().op_type_name()
          + ":OpCall";
 }

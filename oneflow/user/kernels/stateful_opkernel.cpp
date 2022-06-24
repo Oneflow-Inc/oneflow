@@ -875,6 +875,7 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, DeviceCtx* device_c
   auto* compute_ctx = &compute_context;
   OF_PROFILER_RANGE_GUARD("Compute");
   if (Global<profiler::ProfileMgr>::Get()) {
+#if defined(WITH_CUDA)
     const auto CalMemorySize = [compute_ctx](const one::ArgVec& args) -> int64_t {
       const auto Func = [compute_ctx](int64_t mem_size, const auto& pair) {
         const auto tensor = compute_ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
@@ -882,6 +883,7 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, DeviceCtx* device_c
       };
       return std::accumulate(args.begin(), args.end(), static_cast<int64_t>(0), Func);
     };
+#endif
     auto er_guard = CHECK_JUST(profiler::EventRecorder::CreateKernelEventRecorder(
         op_type_name(),
 #if defined(WITH_CUDA)

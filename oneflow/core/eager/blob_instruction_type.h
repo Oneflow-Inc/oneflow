@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_BLOB_INSTRUCTION_TYPE_H_
 #define ONEFLOW_CORE_EAGER_BLOB_INSTRUCTION_TYPE_H_
 
-#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/singleton_ptr.h"
@@ -34,14 +33,10 @@ class AccessBlobByCallbackInstructionType final : public vm::InstructionType {
   AccessBlobByCallbackInstructionType() = default;
   ~AccessBlobByCallbackInstructionType() override = default;
 
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
+  std::string DebugName(const vm::Instruction& instruction) const override {
     return "AccessBlobByCallback";
   }
   void Compute(vm::Instruction* instruction) const override;
-  void ComputeInFuseMode(vm::InstructionMsg* instruction_msg) const override;
-
- private:
-  void ComputeInstrMsg(const vm::InstructionMsg& instruction_msg) const;
 };
 
 class EpRecordEventInstructionType final : public vm::InstructionType {
@@ -58,12 +53,10 @@ class EpRecordEventInstructionType final : public vm::InstructionType {
     auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());
     auto* ep_event_provider = ep_device_ctx->ep_event_provider();
     const auto& ep_event = CHECK_NOTNULL(ep_event_provider)->GetReusedEpEvent();
-    auto* data_ptr = status_buffer->mut_buffer()->mut_data();
+    auto* data_ptr = status_buffer->mut_buffer();
     EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_ep_event(ep_event);
   }
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
-    return "RecordEvent";
-  }
+  std::string DebugName(const vm::Instruction&) const override { return "RecordEvent"; }
   void Compute(vm::Instruction* instruction) const override {}
 };
 }  // namespace vm
