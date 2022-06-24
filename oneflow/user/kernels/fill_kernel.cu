@@ -38,7 +38,7 @@ class FillTensorGpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const user_op::Tensor* value = ctx->Tensor4ArgNameAndIndex("value", 0);
-    const int32_t elem_cnt = in->shape().elem_cnt();
+    const int32_t elem_cnt = in->shape_view().elem_cnt();
     RUN_CUDA_KERNEL((FillTensorGpuForward<T>), ctx->stream(), elem_cnt, elem_cnt, value->dptr<T>(),
                     out->mut_dptr<T>());
   }

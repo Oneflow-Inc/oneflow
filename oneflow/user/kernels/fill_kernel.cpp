@@ -40,7 +40,7 @@ class FillKernel final : public user_op::OpKernel {
     const bool is_floating_value = ctx->Attr<bool>("is_floating_value");
     const Scalar value = is_floating_value ? Scalar(ctx->Attr<double>("floating_value"))
                                            : Scalar(ctx->Attr<int64_t>("integral_value"));
-    const int32_t elem_cnt = in->shape().elem_cnt();
+    const int32_t elem_cnt = in->shape_view().elem_cnt();
     CHECK_GE(elem_cnt, 0);
     if (elem_cnt == 0) { return; }
     std::unique_ptr<ep::primitive::Fill> fill = NewFillPrimitive(ctx);
@@ -68,7 +68,7 @@ class FillTensorCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const user_op::Tensor* value = ctx->Tensor4ArgNameAndIndex("value", 0);
     const T value_ = value->dptr<T>()[0];
-    const int32_t elem_cnt = in->shape().elem_cnt();
+    const int32_t elem_cnt = in->shape_view().elem_cnt();
     T* out_ptr = out->mut_dptr<T>();
     FOR_RANGE(int32_t, i, 0, elem_cnt) { out_ptr[i] = value_; }
   }
