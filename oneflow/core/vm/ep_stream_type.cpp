@@ -15,6 +15,8 @@ limitations under the License.
 */
 
 #include "oneflow/core/vm/ep_stream_type.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
@@ -33,8 +35,15 @@ void EpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream*
   DeviceType device_type = stream->device()->enum_type();
   size_t device_index = stream->device()->device_id();
   auto ep_device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
+  ep::AllocationOptions options{};
+  if(stream->stream_role() == StreamRole::kPinMemory){
+    CHECK_EQ(device_type, DeviceType::kCPU)
+        << "cannot pin tensor with device: " << stream->device()->type()
+        << ", only dense CPU tensors can be pinned.";
+    options.SetPinnedDevice(device_type, device_index);
+  }
   auto ep_backend_allocator =
-      std::make_unique<EpBackendAllocator>(ep_device, ep::AllocationOptions{});
+      std::make_unique<EpBackendAllocator>(ep_device, options);
   device_ctx->reset(new EpDeviceCtx(stream->device(), std::move(ep_backend_allocator)));
 }
 

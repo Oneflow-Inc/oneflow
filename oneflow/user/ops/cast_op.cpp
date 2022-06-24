@@ -15,8 +15,25 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/stream.h"
 
 namespace oneflow {
+
+namespace {
+
+Maybe<Symbol<Stream>> MakeCastStream(const Symbol<Device>& in_device,
+                                 const bool pin_memory) {
+  if(pin_memory){
+    CHECK_OR_RETURN(in_device->type()=="cpu") << "cast op only support pin_memory in cpu device but got " << in_device->type();
+  }
+  if (pin_memory && in_device->type() == "cpu") {
+    return Stream::New(in_device, StreamRole::kPinMemory);
+  }
+  return Stream::New(in_device, StreamRole::kCompute);
+}
+
+}  // namespace
 
 /* static */ Maybe<void> CastOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_tensor_desc = ctx->InputTensorDesc("in", 0);
@@ -46,6 +63,16 @@ namespace oneflow {
   DataType* dtype = output_tensor_desc->mut_data_type();
   *dtype = ctx->Attr<DataType>("dtype");
   return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<Symbol<Stream>> CastOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  const Symbol<Device>& in_device = ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
+  Symbol<Device> out_device =
+      JUST(Device::New(in_device->type(), in_device->device_id()));
+  *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = out_device;
+  const bool pin_memory = ctx->Attr<bool>("pin_memory");
+  return MakeCastStream(in_device, pin_memory);
 }
 
 REGISTER_USER_OP_GRAD("cast").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,

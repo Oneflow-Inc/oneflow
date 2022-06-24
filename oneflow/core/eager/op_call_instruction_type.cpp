@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -36,6 +37,7 @@ limitations under the License.
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/profiler/collection.h"
 #include "oneflow/core/common/cpp_attribute.h"
+#include "oneflow/core/device/cpu_device_context.h"
 
 namespace oneflow {
 namespace vm {
@@ -86,7 +88,6 @@ struct OpCallInstructionUtil final {
     size_t temp_size = InferTmpSizeFn(op_infer_ctx);
     temp_eager_blob_object->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
     temp_eager_blob_object->mut_stride() = Stride(temp_eager_blob_object->mut_shape());
-    temp_eager_blob_object->set_pin_memory(false);
     temp_eager_blob_object->set_is_dynamic(true);
     op_infer_ctx->Update(nullptr, nullptr, nullptr);
   }

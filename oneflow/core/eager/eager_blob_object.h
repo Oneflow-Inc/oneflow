@@ -139,10 +139,6 @@ class EagerBlobObject final {
     tensor_storage_->set_last_used_stream(last_used_stream);
   }
 
-  void set_pin_memory(const bool pin_memory) { pin_memory_ = pin_memory; }
-
-  bool pin_memory() const { return pin_memory_; }
-
   std::shared_ptr<const Shape> shape_ptr() const { return shape_; }
   const Shape& shape() const { return *shape_; }
   Shape& mut_shape() { return *shape_; }

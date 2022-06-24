@@ -1216,7 +1216,7 @@ class InplaceToContiguousFunctor {
     const auto& blob_object = JUST(input->eager_blob_object());
     // update eager_blob_object
     JUST(JUST(input->mut_eager_mirrored_tensor_impl())
-             ->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()), false));
+             ->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object())));
     // assign contiguous tensor data
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*assign_op_, {input, contiguous_tensor}));
     return input;
@@ -1380,18 +1380,12 @@ class CopyFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("device_type", device_type));
     JUST(attrs.SetAttr<int64_t>("device_id", device_id));
+    JUST(attrs.SetAttr<bool>("pin_memory", pin_memory));
 
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
 #endif
-    if (!x->is_local() || device_type == "cuda") {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-    } else {
-      return OpInterpUtil::Dispatch<Tensor>(
-          *op_, {x},
-          OpExprInterpContext(attrs, JUST(Device::New(device_type, device_id)),
-                              /*pin_memory=*/pin_memory));
-    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -3019,13 +3013,7 @@ class PinMemoryFunctor {
     CHECK_OR_RETURN(input->is_local() && !(LazyMode::is_enabled()))
         << Error::RuntimeError() << "Tensor.pin_memory() only support local tensor for now!";
     // if tensor already pinned, then just return
-    
-    if(JUST(JUST(input->eager_blob_object())->producer_stream())->stream_role() == StreamRole::kPinMemory){
-      printf("\n producer_stream())->stream_role() is pinned!");
-      return input;
-    }
-    printf("\n producer_stream())->stream_role() is not pinned!");
-    // if (JUST(JUST(input->AsMirroredTensor())->is_pinned())) { return input; }
+    if(JUST(JUST(input->AsMirroredTensor())->is_pinned())){ return input; }
     auto shape = input->shape();
     auto device = JUST(input->device());
     const bool requires_grad = input->requires_grad();
