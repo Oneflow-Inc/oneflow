@@ -20,7 +20,7 @@ import weakref
 
 import oneflow._C
 import oneflow._oneflow_internal
-import oneflow.framework.graph_build_util as graph_build_util
+from oneflow.framework import graph_build_util
 from oneflow.env import get_rank
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.nn.module import Module

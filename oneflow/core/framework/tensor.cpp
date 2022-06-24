@@ -87,7 +87,7 @@ Maybe<Tensor> MirroredTensor::clone() const {
   const auto& device_type = JUST(this->device())->type();
   int64_t device_id = JUST(this->device())->device_id();
   std::shared_ptr<Tensor> input = std::const_pointer_cast<Tensor>(shared_from_this());
-  const bool pin_memory = JUST(JUST(input->AsMirroredTensor())->eager_blob_object())->pin_memory();
+  const bool pin_memory = JUST(JUST(input->AsMirroredTensor())->is_pinned());
   return JUST(functional::Copy(input, device_type, device_id, /*pin_memory=*/pin_memory));
 }
 

@@ -241,13 +241,13 @@ class GpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
     const float momentum = ctx->Attr<float>("momentum");
     const std::string quantization_formula = ctx->Attr<std::string>("quantization_formula");
 
-    int64_t elements = in->shape().elem_cnt();
+    int64_t elements = in->shape_view().elem_cnt();
     T* max_ptr = tmp_buffer->mut_dptr<T>();
     T* min_ptr = max_ptr + 1;
 
-    int64_t* host_current_train_step_ptr = new int64_t[current_train_step->shape().elem_cnt()];
+    int64_t* host_current_train_step_ptr = new int64_t[current_train_step->shape_view().elem_cnt()];
     OF_CUDA_CHECK(cudaMemcpy(host_current_train_step_ptr, current_train_step->dptr<int64_t>(),
-                             current_train_step->shape().elem_cnt() * sizeof(int64_t),
+                             current_train_step->shape_view().elem_cnt() * sizeof(int64_t),
                              cudaMemcpyDefault));
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
     if (*host_current_train_step_ptr <= stop_update_after_iters && is_training) {

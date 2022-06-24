@@ -46,7 +46,7 @@ class ScalarLogicalKernel final : public user_op::OpKernel {
     const T* in_ptr = in->dptr<T>();
     bool* out_ptr = out->mut_dptr<bool>();
 
-    int64_t elem_cnt = out->shape().elem_cnt();
+    int64_t elem_cnt = out->shape_view().elem_cnt();
     if (elem_cnt != 0) {
       ScalarLogicalFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand,
                                                      in_ptr, out_ptr);

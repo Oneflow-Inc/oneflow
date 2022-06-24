@@ -130,18 +130,21 @@ class NcclLogical2DSameDim0AllReduce final : public user_op::OpKernel {
     CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(in->shape(), out->shape());
+    CHECK_EQ(in->shape_view(), out->shape_view());
     CHECK_EQ(in->data_type(), out->data_type());
     VLOG(3) << "[NcclLogical2D][SameDim0AllReduce] " << nccl_comm->stream_name() << " "
             << ctx->op_name() << std::endl;
     ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
     if (in->data_type() == DataType::kBool) { reduce_type = ncclRedOp_t::ncclMax; }
-    OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
+    OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
                                 GetNcclDataType(in->data_type()), reduce_type, nccl_comm->comm(),
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  // bool IsKernelLaunchSynchronized() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override {
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+  }
 };
 
 class NcclLogical2DSameDim0AllGather final : public user_op::OpKernel {
@@ -163,15 +166,18 @@ class NcclLogical2DSameDim0AllGather final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type());
     const int64_t num_ranks = nccl_comm->num_ranks();
-    CHECK_EQ(in->shape().elem_cnt() * num_ranks, out->shape().elem_cnt());
+    CHECK_EQ(in->shape_view().elem_cnt() * num_ranks, out->shape_view().elem_cnt());
     VLOG(3) << "[NcclLogical2D][SameDim0AllGather] " << nccl_comm->stream_name() << " "
             << ctx->op_name() << std::endl;
-    OF_NCCL_CHECK(ncclAllGather(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
+    OF_NCCL_CHECK(ncclAllGather(in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
                                 GetNcclDataType(in->data_type()), nccl_comm->comm(),
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  // bool IsKernelLaunchSynchronized() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override {
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+  }
 };
 
 template<typename T>
@@ -201,24 +207,24 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t dtype_size = GetSizeOfDataType(in->data_type());
-    int64_t data_size = GetCudaAlignedSize(out->shape().elem_cnt() * dtype_size);
+    int64_t data_size = GetCudaAlignedSize(out->shape_view().elem_cnt() * dtype_size);
     void* unpack_from_ptr = tmp_buffer->mut_dptr();
-    CHECK_EQ(tmp_buffer->shape().elem_cnt(), data_size);
+    CHECK_EQ(tmp_buffer->shape_view().elem_cnt(), data_size);
 
     CHECK_EQ(in->data_type(), out->data_type());
     const int64_t num_ranks = kernel_state->num_ranks();
     const int64_t in_split_axis = kernel_state->src_split_axis();
 
     DimVector logical_shape_dim_vec;
-    in->shape().ToDimVector(&logical_shape_dim_vec);
+    in->shape_view().ToDimVector(&logical_shape_dim_vec);
     logical_shape_dim_vec[in_split_axis] = logical_shape_dim_vec.at(in_split_axis) * num_ranks;
 
     VLOG(3) << "[NcclLogical2D][SameDim0AllGatherNoncontinuous] " << kernel_state->stream_name()
             << " " << ctx->op_name() << std::endl;
 
     // NOTE(chengcheng): Do AllGather
-    CHECK_EQ(in->shape().elem_cnt() * num_ranks, out->shape().elem_cnt());
-    OF_NCCL_CHECK(ncclAllGather(in->dptr(), unpack_from_ptr, in->shape().elem_cnt(),
+    CHECK_EQ(in->shape_view().elem_cnt() * num_ranks, out->shape_view().elem_cnt());
+    OF_NCCL_CHECK(ncclAllGather(in->dptr(), unpack_from_ptr, in->shape_view().elem_cnt(),
                                 GetNcclDataType(in->data_type()), kernel_state->comm(),
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
 
@@ -239,7 +245,10 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
                       unpack_from_dim_vec.data(), unpack_from_ptr, perm.data(), out->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  // bool IsKernelLaunchSynchronized() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override {
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+  }
 };
 
 size_t Infer2DSameDim0AllGatherNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx) {
@@ -280,22 +289,22 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     int64_t tmp_size = 0;
     const int64_t dtype_size = GetSizeOfDataType(in->data_type());
-    int64_t data_size = GetCudaAlignedSize(in->shape().elem_cnt() * dtype_size);
+    int64_t data_size = GetCudaAlignedSize(in->shape_view().elem_cnt() * dtype_size);
     // NOTE(chengcheng): in (transpose)-> pack_to_ptr (all2all)-> unpack_from_ptr (transpose)-> out
     const char* pack_to_ptr = in->dptr<char>();
     char* unpack_from_ptr = out->mut_dptr<char>();
-    if (tmp_buffer) { tmp_size = tmp_buffer->shape().elem_cnt(); }
+    if (tmp_buffer) { tmp_size = tmp_buffer->shape_view().elem_cnt(); }
     CHECK(tmp_size == 0 || tmp_size == data_size || tmp_size == data_size * 2);
 
     CHECK_EQ(in->data_type(), out->data_type());
     const int64_t num_ranks = kernel_state->num_ranks();
-    CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt());
-    const int64_t elem_cnt = in->shape().elem_cnt();
+    CHECK_EQ(in->shape_view().elem_cnt(), out->shape_view().elem_cnt());
+    const int64_t elem_cnt = in->shape_view().elem_cnt();
     const int64_t in_split_axis = kernel_state->src_split_axis();
     const int64_t out_split_axis = kernel_state->dst_split_axis();
 
     DimVector logical_shape_dim_vec;
-    in->shape().ToDimVector(&logical_shape_dim_vec);
+    in->shape_view().ToDimVector(&logical_shape_dim_vec);
     logical_shape_dim_vec[in_split_axis] = logical_shape_dim_vec.at(in_split_axis) * num_ranks;
 
     VLOG(3) << "[NcclLogical2D][SameDim0All2All] " << kernel_state->stream_name() << " "
@@ -304,7 +313,7 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
     if (out_split_axis != 0) {
       // NOTE(chengcheng): Do pack. Need transpose in -> pack_to
       // pack use temp buffer offset: [0, data_size]
-      pack_to_ptr = tmp_buffer->dptr<char>();
+      pack_to_ptr = CHECK_NOTNULL(tmp_buffer)->dptr<char>();
       DimVector transpose_in_dim_vec = logical_shape_dim_vec;
       CHECK_EQ(transpose_in_dim_vec.at(in_split_axis) % num_ranks, 0);
       transpose_in_dim_vec[in_split_axis] = transpose_in_dim_vec.at(in_split_axis) / num_ranks;
@@ -327,7 +336,7 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
     if (in_split_axis != 0) {
       // NOTE(chengcheng): Do unpack. Need transpose unpack_from -> out
       // unpack use temp buffer offset: [tmp_size - data_size, tmp_size]
-      unpack_from_ptr = tmp_buffer->mut_dptr<char>() + (tmp_size - data_size);
+      unpack_from_ptr = CHECK_NOTNULL(tmp_buffer)->mut_dptr<char>() + (tmp_size - data_size);
     }
 
     {
@@ -369,7 +378,10 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  // bool IsKernelLaunchSynchronized() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override {
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+  }
 };
 
 size_t Infer2DSameDim0All2AllKernelTmpBufferSize(user_op::InferContext* ctx) {
@@ -452,18 +464,21 @@ class NcclLogical2DSameDim1AllReduce final : public user_op::OpKernel {
     CHECK(nccl_comm != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(in->shape(), out->shape());
+    CHECK_EQ(in->shape_view(), out->shape_view());
     CHECK_EQ(in->data_type(), out->data_type());
     VLOG(3) << "[NcclLogical2D][SameDim1AllReduce] " << nccl_comm->stream_name() << " "
             << ctx->op_name() << std::endl;
     ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
     if (in->data_type() == DataType::kBool) { reduce_type = ncclRedOp_t::ncclMax; }
-    OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
+    OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
                                 GetNcclDataType(in->data_type()), reduce_type, nccl_comm->comm(),
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  // bool IsKernelLaunchSynchronized() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override {
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+  }
 };
 
 }  // namespace

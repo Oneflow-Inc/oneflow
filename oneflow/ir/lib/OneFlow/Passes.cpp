@@ -37,7 +37,7 @@ limitations under the License.
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/Passes.h"
+#include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/Transforms/Passes.h"
@@ -62,7 +62,7 @@ limitations under the License.
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
-#include "mlir/Dialect/GPU/Passes.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
 #endif  // WITH_MLIR_CUDA_CODEGEN
 
@@ -769,9 +769,10 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   AddLowerToLinalgMemRefPasses(pm);
   pm.addNestedPass<func::FuncOp>(
       createConvertLinalgToParallelLoopsPass());  // convert-linalg-to-parallel-loops
-  pm.addPass(createMapSCFToGPUPass());            // gpu-greedy-parallel-loop-mapping
-  pm.addPass(createParallelLoopToGpuPass());      // convert-parallel-loops-to-gpu
-  pm.addPass(createGpuKernelOutliningPass());     // gpu-kernel-outlining
+  pm.addNestedPass<func::FuncOp>(createGpuMapParallelLoopsPass());  // gpu-map-parallel-loops
+  pm.addPass(createParallelLoopToGpuPass());                        // convert-parallel-loops-to-gpu
+  pm.addPass(createGpuLauchSinkIndexComputationsPass());
+  pm.addPass(createGpuKernelOutliningPass());                      // gpu-kernel-outlining
   pm.addNestedPass<func::FuncOp>(createBufferHostRegisterPass());  // buffer-host-register
   pm.addPass(createCanonicalizerPass());                           // canonicalize
   // -pass-pipeline='gpu.module([PASS1][PASS2]...)'
@@ -781,6 +782,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addNestedPass<gpu::GPUModuleOp>(createSerializeToCubinPass());      // out-of-tree-gpu-to-cubin
   pm.addNestedPass<func::FuncOp>(createGpuCopyArgPass());                // buffer-host-register
   pm.addPass(createGpuToLLVMConversionPass());
+  pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
   if (enable_ir_printing) pm.enableIRPrinting();
   return pm.run(module);
 }

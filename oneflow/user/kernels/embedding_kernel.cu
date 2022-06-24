@@ -36,13 +36,13 @@ class GpuEmbeddingRenormKernel final : public user_op::OpKernel {
     const double max_norm = ctx->Attr<double>("max_norm");
     const double norm_type = ctx->Attr<double>("norm_type");
 
-    const ShapeView& in_shape = in->shape();
+    const ShapeView& in_shape = in->shape_view();
     const int64_t emb_size = in_shape.At(0);
     const int64_t emb_dim = in_shape.At(1);
     const T* in_buf = in->dptr<T>();
     const IndexType* indices_buf = indices->dptr<IndexType>();
     T* out_buf = out->mut_dptr<T>();
-    const int64_t num_indices = indices->shape().elem_cnt();
+    const int64_t num_indices = indices->shape_view().elem_cnt();
     int32_t* tmp_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr<int32_t>();
     std::unique_ptr<ep::primitive::Memset> memset_primitive =
         ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
@@ -71,9 +71,9 @@ class GpuEmbeddingKernel final : public user_op::OpKernel {
     const int64_t padding_idx = ctx->Attr<int64_t>("padding_idx");
     const bool scale_grad_by_freq = ctx->Attr<bool>("scale_grad_by_freq");
 
-    const int64_t num_indices = indices->shape().elem_cnt();
-    const int64_t emb_size = weight->shape().At(0);
-    const int64_t emb_dim = weight->shape().At(1);
+    const int64_t num_indices = indices->shape_view().elem_cnt();
+    const int64_t emb_size = weight->shape_view().At(0);
+    const int64_t emb_dim = weight->shape_view().At(1);
     const T* weight_buf = weight->dptr<T>();
     const IndexType* indices_buf = indices->dptr<IndexType>();
     T* out_buf = out->mut_dptr<T>();
@@ -101,9 +101,9 @@ class GpuEmbeddingGradKernel final : public user_op::OpKernel {
     const int64_t padding_idx = ctx->Attr<int64_t>("padding_idx");
     const bool scale_grad_by_freq = ctx->Attr<bool>("scale_grad_by_freq");
 
-    const int64_t num_indices = indices->shape().elem_cnt();
-    const int64_t emb_size = weight->shape().At(0);
-    const int64_t emb_dim = weight->shape().At(1);
+    const int64_t num_indices = indices->shape_view().elem_cnt();
+    const int64_t emb_size = weight->shape_view().At(0);
+    const int64_t emb_dim = weight->shape_view().At(1);
 
     const T* dy_buf = dy->dptr<T>();
     const IndexType* indices_buf = indices->dptr<IndexType>();
@@ -112,7 +112,7 @@ class GpuEmbeddingGradKernel final : public user_op::OpKernel {
     std::unique_ptr<ep::primitive::Memset> memset_primitive =
         ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
     CHECK(memset_primitive);
-    memset_primitive->Launch(ctx->stream(), dx_buf, 0, dx->shape().elem_cnt() * sizeof(T));
+    memset_primitive->Launch(ctx->stream(), dx_buf, 0, dx->shape_view().elem_cnt() * sizeof(T));
     memset_primitive->Launch(ctx->stream(), tmp_buf, 0,
                              GetCudaAlignedSize(sizeof(int32_t) * emb_size));
     EmbeddingGradFunctor<DeviceType::kCUDA, T, IndexType>()(
