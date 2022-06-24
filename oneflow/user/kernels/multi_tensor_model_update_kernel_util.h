@@ -21,12 +21,12 @@ limitations under the License.
 
 namespace oneflow {
 
-// Kernel arg size has 4K limit.
-constexpr int max_tensors[5] = {160, 80, 40, 20, 15};
+// Kernel arg size has 4K limit, but currently we set process 32 tensors in each kernel.
+constexpr int max_tensors[5] = {32, 32, 32, 32, 32};
 
 template<int N>
 struct TensorTupleParams {
-  void* model_addresses[N][max_tensors[N - 1]];
+  void* ptr[N][max_tensors[N - 1]];
   int64_t sizes[max_tensors[N - 1]];
   int32_t block_offset[max_tensors[N - 1]];
 };

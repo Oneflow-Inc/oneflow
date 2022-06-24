@@ -84,10 +84,10 @@ Maybe<void> FuseModelUpdateCastOpsPass::Apply(const OpGraph& op_graph,
         const user_op::UserOpConfWrapper model_update_user_conf(
             find_model_update_update_node->op().op_conf());
 
-        // Here we find cast and model_update node, Replace cast as optim_fuse_cast, and add
+        // Here we find cast and model_update node, Replace cast as mutable_cast_once, and add
         // model_half to model_update node.
         user_op::UserOpConfWrapperBuilder fused_cast_op_builder(cast_user_conf.op_name());
-        fused_cast_op_builder.OpTypeName("optim_fuse_cast")
+        fused_cast_op_builder.OpTypeName("mutable_cast_once")
             .Input("in", cast_user_conf.input("in", 0))
             .Attr<DataType>("dtype", cast_user_conf.attr<DataType>("dtype"))
             .Output("out");

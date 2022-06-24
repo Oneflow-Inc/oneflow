@@ -3421,7 +3421,6 @@ class MultiTensorAdamUpdateFunctor {
 
  private:
   std::vector<std::shared_ptr<OpExpr>> op_;
-
 };
 
 class MvFunctor {

@@ -26,7 +26,7 @@ bool IsSourceNode(const Operator& op) {
       && op_conf.user_conf().output().size() == 1) {
     return true;
   }
-  if (op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == "optim_fuse_cast") {
+  if (op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == "mutable_cast_once") {
     return true;
   }
   if (op_conf.has_variable_conf()) { return true; }

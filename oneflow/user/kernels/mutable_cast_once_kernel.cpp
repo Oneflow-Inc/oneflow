@@ -32,40 +32,43 @@ std::unique_ptr<ep::primitive::Cast> NewCastPrimitive(Context* ctx) {
                                                                  out_data_type);
 }
 
-class OptimFuseCastOpKernelState final : public OpKernelState {
+class MutableCastOnceOpKernelState final : public OpKernelState {
  public:
-  OptimFuseCastOpKernelState() : cast_flag(true) {}
-  void set_flag_false() { cast_flag = false; }
-  bool get_cast_flag() { return cast_flag; }
+  MutableCastOnceOpKernelState() : cast_once_flag(false) {}
+
+  void Once() {
+    if (!cast_once_flag) { cast_once_flag = true; }
+  }
+
+  bool IsDone() { return cast_once_flag; }
 
  private:
-  bool cast_flag = true;
+  bool cast_once_flag = false;
 };
 
-class OptimFuseCast final : public OpKernel {
+class MutableCastOnce final : public OpKernel {
  public:
-  OptimFuseCast() = default;
-  ~OptimFuseCast() = default;
+  MutableCastOnce() = default;
+  ~MutableCastOnce() = default;
 
   std::shared_ptr<OpKernelState> CreateOpKernelState(KernelInitContext* ctx) const override {
-    return std::make_shared<OptimFuseCastOpKernelState>();
+    return std::make_shared<MutableCastOnceOpKernelState>();
   }
 
  private:
   void Compute(KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* cast_state = CHECK_NOTNULL(dynamic_cast<OptimFuseCastOpKernelState*>(state));
-    bool cast_flag = cast_state->get_cast_flag();
-    if (!cast_flag) { return; }
+    auto* cast_state = CHECK_NOTNULL(dynamic_cast<MutableCastOnceOpKernelState*>(state));
+    if (!cast_state->IsDone()) { return; }
     const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t elem_cnt = input_tensor->shape().elem_cnt();
-    CHECK_EQ(output_tensor->shape().elem_cnt(), elem_cnt);
+    const int64_t elem_cnt = input_tensor->shape_view().elem_cnt();
+    CHECK_EQ(output_tensor->shape_view().elem_cnt(), elem_cnt);
     auto cast_primitive = NewCastPrimitive(ctx);
     CHECK(cast_primitive);
     cast_primitive->Launch(ctx->stream(), input_tensor->dptr(), output_tensor->mut_dptr(),
                            elem_cnt);
-    cast_state->set_flag_false();
+    cast_state->Once();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -76,8 +79,8 @@ auto CastPrimitiveExists() {
   });
 }
 
-REGISTER_USER_KERNEL("optim_fuse_cast")
-    .SetCreateFn<OptimFuseCast>()
+REGISTER_USER_KERNEL("mutable_cast_once")
+    .SetCreateFn<MutableCastOnce>()
     .SetIsMatchedHob(CastPrimitiveExists() == true);
 
 }  // namespace

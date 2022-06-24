@@ -47,13 +47,13 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), ctx->Tensor4ArgNameAndIndex("model", 0)->data_type());
-      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      CHECK_EQ(scale_by_tensor->shape_view().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
     const int64_t* skip_if_ptr = nullptr;
     if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
-      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      CHECK_EQ(skip_if->shape_view().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
 
@@ -61,13 +61,13 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
     int32_t count = 0;
     int32_t total_elem_cnt = 0;
     for (int tensor_idx = 0; tensor_idx < n_tensor; tensor_idx++) {
-      tensor_tuple_params.model_addresses[0][count] =
+      tensor_tuple_params.ptr[0][count] =
           (ctx->Tensor4ArgNameAndIndex("model", tensor_idx))->mut_dptr();
-      tensor_tuple_params.model_addresses[1][count] =
+      tensor_tuple_params.ptr[1][count] =
           (ctx->Tensor4ArgNameAndIndex("model_diff", tensor_idx))->mut_dptr();
 
       const int64_t tensor_elem_cnt =
-          ctx->Tensor4ArgNameAndIndex("model", tensor_idx)->shape().elem_cnt();
+          ctx->Tensor4ArgNameAndIndex("model", tensor_idx)->shape_view().elem_cnt();
       tensor_tuple_params.sizes[count] = tensor_elem_cnt;
 
       count += 1;
@@ -131,7 +131,8 @@ class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
     const float* bias_correction1_ptr = nullptr;
     if (ctx->has_input("bias_correction1", 0)) {
       const user_op::Tensor* bias_correction1 = ctx->Tensor4ArgNameAndIndex("bias_correction1", 0);
-      CHECK_EQ(bias_correction1->shape().elem_cnt(), 1);  // Just for Lazy Optional Input Check.
+      CHECK_EQ(bias_correction1->shape_view().elem_cnt(),
+               1);  // Just for Lazy Optional Input Check.
       bias_correction1_ptr = bias_correction1->dptr<float>();
     }
 
@@ -139,7 +140,8 @@ class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
     const float* bias_correction2_ptr = nullptr;
     if (ctx->has_input("bias_correction2", 0)) {
       const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction2", 0);
-      CHECK_EQ(bias_correction2->shape().elem_cnt(), 1);  // Just for Lazy Optional Input Check.
+      CHECK_EQ(bias_correction2->shape_view().elem_cnt(),
+               1);  // Just for Lazy Optional Input Check.
       bias_correction2_ptr = bias_correction2->dptr<float>();
     }
 
@@ -147,13 +149,13 @@ class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), ctx->Tensor4ArgNameAndIndex("model", 0)->data_type());
-      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      CHECK_EQ(scale_by_tensor->shape_view().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
     const int64_t* skip_if_ptr = nullptr;
     if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
-      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      CHECK_EQ(skip_if->shape_view().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
 
@@ -161,16 +163,16 @@ class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
     int32_t count = 0;
     int32_t total_elem_cnt = 0;
     for (int tensor_idx = 0; tensor_idx < n_tensor; tensor_idx++) {
-      tensor_tuple_params.model_addresses[0][count] =
+      tensor_tuple_params.ptr[0][count] =
           (ctx->Tensor4ArgNameAndIndex("model", tensor_idx))->mut_dptr();
-      tensor_tuple_params.model_addresses[1][count] =
+      tensor_tuple_params.ptr[1][count] =
           (ctx->Tensor4ArgNameAndIndex("model_diff", tensor_idx))->mut_dptr();
-      tensor_tuple_params.model_addresses[2][count] =
+      tensor_tuple_params.ptr[2][count] =
           (ctx->Tensor4ArgNameAndIndex("m", tensor_idx))->mut_dptr();
-      tensor_tuple_params.model_addresses[3][count] =
+      tensor_tuple_params.ptr[3][count] =
           (ctx->Tensor4ArgNameAndIndex("v", tensor_idx))->mut_dptr();
       const int64_t tensor_elem_cnt =
-          ctx->Tensor4ArgNameAndIndex("model", tensor_idx)->shape().elem_cnt();
+          ctx->Tensor4ArgNameAndIndex("model", tensor_idx)->shape_view().elem_cnt();
       tensor_tuple_params.sizes[count] = tensor_elem_cnt;
 
       count += 1;
@@ -226,13 +228,13 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), ctx->Tensor4ArgNameAndIndex("model", 0)->data_type());
-      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      CHECK_EQ(scale_by_tensor->shape_view().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
     const int64_t* skip_if_ptr = nullptr;
     if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
-      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      CHECK_EQ(skip_if->shape_view().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
 
@@ -240,15 +242,15 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
     int32_t count = 0;
     int32_t total_elem_cnt = 0;
     for (int tensor_idx = 0; tensor_idx < n_tensor; tensor_idx++) {
-      tensor_tuple_params.model_addresses[0][count] =
+      tensor_tuple_params.ptr[0][count] =
           (ctx->Tensor4ArgNameAndIndex("model", tensor_idx))->mut_dptr();
-      tensor_tuple_params.model_addresses[1][count] =
+      tensor_tuple_params.ptr[1][count] =
           (ctx->Tensor4ArgNameAndIndex("model_diff", tensor_idx))->mut_dptr();
-      tensor_tuple_params.model_addresses[2][count] =
+      tensor_tuple_params.ptr[2][count] =
           (ctx->Tensor4ArgNameAndIndex("model_half", tensor_idx))->mut_dptr();
 
       const int64_t tensor_elem_cnt =
-          ctx->Tensor4ArgNameAndIndex("model", tensor_idx)->shape().elem_cnt();
+          ctx->Tensor4ArgNameAndIndex("model", tensor_idx)->shape_view().elem_cnt();
       tensor_tuple_params.sizes[count] = tensor_elem_cnt;
 
       count += 1;
@@ -312,7 +314,8 @@ class MultiTensorAdamUpdateWithCastKernel final : public user_op::OpKernel,
     const float* bias_correction1_ptr = nullptr;
     if (ctx->has_input("bias_correction1", 0)) {
       const user_op::Tensor* bias_correction1 = ctx->Tensor4ArgNameAndIndex("bias_correction1", 0);
-      CHECK_EQ(bias_correction1->shape().elem_cnt(), 1);  // Just for Lazy Optional Input Check.
+      CHECK_EQ(bias_correction1->shape_view().elem_cnt(),
+               1);  // Just for Lazy Optional Input Check.
       bias_correction1_ptr = bias_correction1->dptr<float>();
     }
 
@@ -320,7 +323,8 @@ class MultiTensorAdamUpdateWithCastKernel final : public user_op::OpKernel,
     const float* bias_correction2_ptr = nullptr;
     if (ctx->has_input("bias_correction2", 0)) {
       const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction2", 0);
-      CHECK_EQ(bias_correction2->shape().elem_cnt(), 1);  // Just for Lazy Optional Input Check.
+      CHECK_EQ(bias_correction2->shape_view().elem_cnt(),
+               1);  // Just for Lazy Optional Input Check.
       bias_correction2_ptr = bias_correction2->dptr<float>();
     }
 
@@ -328,13 +332,13 @@ class MultiTensorAdamUpdateWithCastKernel final : public user_op::OpKernel,
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), ctx->Tensor4ArgNameAndIndex("model", 0)->data_type());
-      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      CHECK_EQ(scale_by_tensor->shape_view().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
     const int64_t* skip_if_ptr = nullptr;
     if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
-      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      CHECK_EQ(skip_if->shape_view().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
 
@@ -342,18 +346,18 @@ class MultiTensorAdamUpdateWithCastKernel final : public user_op::OpKernel,
     int32_t count = 0;
     int32_t total_elem_cnt = 0;
     for (int tensor_idx = 0; tensor_idx < n_tensor; tensor_idx++) {
-      tensor_tuple_params.model_addresses[0][count] =
+      tensor_tuple_params.ptr[0][count] =
           (ctx->Tensor4ArgNameAndIndex("model", tensor_idx))->mut_dptr();
-      tensor_tuple_params.model_addresses[1][count] =
+      tensor_tuple_params.ptr[1][count] =
           (ctx->Tensor4ArgNameAndIndex("model_diff", tensor_idx))->mut_dptr();
-      tensor_tuple_params.model_addresses[2][count] =
+      tensor_tuple_params.ptr[2][count] =
           (ctx->Tensor4ArgNameAndIndex("m", tensor_idx))->mut_dptr();
-      tensor_tuple_params.model_addresses[3][count] =
+      tensor_tuple_params.ptr[3][count] =
           (ctx->Tensor4ArgNameAndIndex("v", tensor_idx))->mut_dptr();
-      tensor_tuple_params.model_addresses[4][count] =
+      tensor_tuple_params.ptr[4][count] =
           (ctx->Tensor4ArgNameAndIndex("model_half", tensor_idx))->mut_dptr();
       const int64_t tensor_elem_cnt =
-          ctx->Tensor4ArgNameAndIndex("model", tensor_idx)->shape().elem_cnt();
+          ctx->Tensor4ArgNameAndIndex("model", tensor_idx)->shape_view().elem_cnt();
       tensor_tuple_params.sizes[count] = tensor_elem_cnt;
 
       count += 1;

@@ -46,10 +46,10 @@ __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float
   int64_t v_block_id = blockIdx.x;
   for (int64_t tensor_idx = 0; tensor_idx < num_tensor; tensor_idx++) {
     const int64_t tensor_elem_cnt = tensor_tuple_params.sizes[tensor_idx];
-    T* model_ptr = (T*)tensor_tuple_params.model_addresses[0][tensor_idx];
-    G* model_diff_ptr = (G*)tensor_tuple_params.model_addresses[1][tensor_idx];
+    T* model_ptr = (T*)tensor_tuple_params.ptr[0][tensor_idx];
+    G* model_diff_ptr = (G*)tensor_tuple_params.ptr[1][tensor_idx];
     half* model_half_ptr = nullptr;
-    if (N == 3) { model_half_ptr = (half*)tensor_tuple_params.model_addresses[2][tensor_idx]; }
+    if (N == 3) { model_half_ptr = (half*)tensor_tuple_params.ptr[2][tensor_idx]; }
 
     for (int64_t i = v_block_id * blockDim.x * kUnrollSize + threadIdx.x; i < tensor_elem_cnt;
          i += blockDim.x * gridDim.x * kUnrollSize) {
@@ -154,12 +154,12 @@ __global__ void MultiTensorAdamUpdateGpu(
   int64_t v_block_id = blockIdx.x;
   for (int64_t tensor_idx = 0; tensor_idx < num_tensor; tensor_idx++) {
     const int64_t tensor_elem_cnt = tensor_tuple_params.sizes[tensor_idx];
-    T* model_ptr = (T*)tensor_tuple_params.model_addresses[0][tensor_idx];
-    G* model_diff_ptr = (G*)tensor_tuple_params.model_addresses[1][tensor_idx];
-    T* m_ptr = (T*)tensor_tuple_params.model_addresses[2][tensor_idx];
-    T* v_ptr = (T*)tensor_tuple_params.model_addresses[3][tensor_idx];
+    T* model_ptr = (T*)tensor_tuple_params.ptr[0][tensor_idx];
+    G* model_diff_ptr = (G*)tensor_tuple_params.ptr[1][tensor_idx];
+    T* m_ptr = (T*)tensor_tuple_params.ptr[2][tensor_idx];
+    T* v_ptr = (T*)tensor_tuple_params.ptr[3][tensor_idx];
     half* model_half_ptr = nullptr;
-    if (N == 5) { model_half_ptr = (half*)tensor_tuple_params.model_addresses[4][tensor_idx]; }
+    if (N == 5) { model_half_ptr = (half*)tensor_tuple_params.ptr[4][tensor_idx]; }
 
     for (int64_t i = v_block_id * blockDim.x * kUnrollSize + threadIdx.x; i < tensor_elem_cnt;
          i += blockDim.x * gridDim.x * kUnrollSize) {
