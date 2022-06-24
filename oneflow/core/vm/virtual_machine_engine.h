@@ -98,8 +98,7 @@ class VirtualMachineEngine final : public intrusive::Base {
 
   void ReleaseFinishedInstructions(const ScheduleCtx& schedule_ctx);
   void HandleLocalPending();
-  void GetRewritedPendingInstructionsByWindowSize(size_t window_size,
-                                                  InstructionList* /*out*/ pending_instructions);
+  void FetchAndTryFusePendingInstructions(InstructionList* /*out*/ pending_instructions);
   void MakeAndAppendFusedInstruction(InstructionList&& fused_instruction_list,
                                      InstructionList* /*out*/ pending_instructions);
   void TryRunBarrierInstruction(const ScheduleCtx& schedule_ctx);
@@ -107,7 +106,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   bool OnSchedulerThread(const StreamType& stream_type);
 
   void ReleaseInstruction(Instruction* instruction);
-  void InitInstructions(InstructionList* pending_instructions);
 
   void TryConnectInstruction(Instruction* src_instruction, Instruction* dst_instruction);
   void ConnectInstructionsByWrite(DependenceAccess* dst_access);

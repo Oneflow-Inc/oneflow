@@ -60,14 +60,18 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
 void VirtualMachineEngine::HandleLocalPending() {
   OF_PROFILER_RANGE_GUARD("HandleLocalPending");
   InstructionList pending_instructions;
-  constexpr static int kPendingHandleWindow = 10;
-  GetRewritedPendingInstructionsByWindowSize(kPendingHandleWindow, &pending_instructions);
-  InitInstructions(&pending_instructions);
+  FetchAndTryFusePendingInstructions(&pending_instructions);
   INTRUSIVE_FOR_EACH_PTR(instruction, &pending_instructions) {
-    ConsumeMirroredObjects(instruction);
-    if (likely(Dispatchable(instruction))) {
-      mut_ready_instruction_list()->PushBack(instruction);
-      pending_instructions.Erase(instruction);
+    const auto& instruction_type = instruction->instruction_type();
+    instruction->InitStatus();
+    LivelyInstructionListPushBack(instruction);
+    if (unlikely(instruction_type.IsBarrier())) {
+      mut_barrier_instruction_list()->PushBack(instruction);
+    } else {
+      ConsumeMirroredObjects(instruction);
+      if (likely(Dispatchable(instruction))) {
+        mut_ready_instruction_list()->PushBack(instruction);
+      }
     }
   }
 }
@@ -107,8 +111,10 @@ void VirtualMachineEngine::MakeAndAppendFusedInstruction(
   pending_instructions->EmplaceBack(std::move(instruction));
 }
 
-void VirtualMachineEngine::GetRewritedPendingInstructionsByWindowSize(
-    size_t window_size, InstructionList* /*out*/ pending_instructions) {
+constexpr static int kPendingHandleWindow = 10;
+void VirtualMachineEngine::FetchAndTryFusePendingInstructions(
+    InstructionList* /*out*/ pending_instructions) {
+  size_t window_size = kPendingHandleWindow;
   InstructionList fused_instruction_list;
   INTRUSIVE_FOR_EACH_PTR(instruction, mut_local_pending_instruction_list()) {
     if (window_size-- <= 0) { break; }
@@ -178,18 +184,6 @@ void VirtualMachineEngine::ReleaseFinishedInstructions(const ScheduleCtx& schedu
       instruction_ptr->DeleteStatusAndClearEdges();
     }
     if (stream->running_instruction_list().empty()) { mut_active_stream_list()->Erase(stream); }
-  }
-}
-
-void VirtualMachineEngine::InitInstructions(InstructionList* pending_instructions) {
-  INTRUSIVE_FOR_EACH_PTR(instruction, pending_instructions) {
-    const auto& instruction_type = instruction->instruction_type();
-    instruction->InitStatus();
-    LivelyInstructionListPushBack(instruction);
-    if (unlikely(instruction_type.IsBarrier())) {
-      pending_instructions->Erase(instruction);
-      mut_barrier_instruction_list()->PushBack(instruction);
-    }
   }
 }
 

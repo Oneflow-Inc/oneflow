@@ -143,6 +143,21 @@ class Instruction final : public intrusive::Base {
 
   // used for instructions building, pending to scheduler, constructing DAG, pending to callback
   // thread and so on.
+  // lifetime of barrier instructions:
+  //
+  //   |<-----main_instruction_hook_----->|
+  //                                    |<-----------lively_instruction_hook_---------------->|
+  //                                          |<---------barrier_instruction_hook_--------->|
+  //
+  //
+  // lifetime of non-barrier instructions:
+  //
+  //   |<-----main_instruction_hook_----->|
+  //                                    |<-----------lively_instruction_hook_---------------->|
+  //                                          |<-------dispatched_instruction_hook_-------->|
+  //                                               |<--worker_pending_instruction_hook_-->|
+  //
+  //
   intrusive::ListHook main_instruction_hook_;
   // dispatched to Stream
   intrusive::ListHook dispatched_instruction_hook_;
@@ -150,7 +165,7 @@ class Instruction final : public intrusive::Base {
   intrusive::ListHook lively_instruction_hook_;
   // pending to ThreadCtx
   intrusive::ListHook worker_pending_instruction_hook_;
-  // for barr
+  // for barrier instruction
   intrusive::ListHook barrier_instruction_hook_;
 
  private:
