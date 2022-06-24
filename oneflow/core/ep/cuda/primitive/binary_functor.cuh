@@ -48,7 +48,9 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, half, half> {
 
 template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kGeluBackwardWithDyX, Src, Dst> {
-  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {
+    coef = sqrt(static_cast<Src>(2.0) / acos(static_cast<Src>(-1.0)))
+  }
 
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
     return static_cast<Src>(0.5)
@@ -56,7 +58,7 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kGeluBackwardWithDyX, Src, Dst
               + x * coef * exp(static_cast<Src>(-0.5) * x * x))
            * dy;
   }
-  Src coef = std::sqrt(static_cast<Src>(2.0) / std::acos(static_cast<Src>(-1.0)));
+  Src coef;
 };
 
 template<typename Src, typename Dst>
