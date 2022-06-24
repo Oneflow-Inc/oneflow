@@ -22,7 +22,8 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<Stream>> MakeCastStream(const Symbol<Device>& in_device, const Symbol<Device>& out_device, const bool pin_memory) {
+Maybe<Symbol<Stream>> MakeCastStream(const Symbol<Device>& in_device,
+                                     const Symbol<Device>& out_device, const bool pin_memory) {
   if (pin_memory) {
     CHECK_OR_RETURN(in_device->type() == "cpu")
         << "cast op only support pin_memory in cpu device but got " << in_device->type();
