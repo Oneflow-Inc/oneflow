@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/ep/common/primitive/elementwise_unary.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/ep/cpu/primitive/unary_functor.h"
-#include "oneflow/core/ep/cpu/primitive/type_seq.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
 

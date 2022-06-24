@@ -57,7 +57,7 @@ template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsInf, bool, float> {
   UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC bool operator()(float src) const { return std::isinf(src); }
+  OF_DEVICE_FUNC bool operator()(float src) const { return isinf(src); }
 };
 
 template<>
