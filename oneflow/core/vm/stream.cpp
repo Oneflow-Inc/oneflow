@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/stream.h"
-#include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cpp_attribute.h"

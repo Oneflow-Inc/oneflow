@@ -24,18 +24,13 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<Stream>> MakeStream(const Symbol<Device>& out_device, const bool pin_memory) {
+Maybe<Symbol<Stream>> MakeEmptyStream(const Symbol<Device>& out_device, const bool pin_memory) {
   if (pin_memory) {
     CHECK_OR_RETURN(out_device->type() == "cpu")
         << "empty op only support pin_memory in cpu device but got " << out_device->type();
+    return Stream::New(out_device, StreamRole::kPinMemory);
   }
-  if (pin_memory && out_device->type() == "cpu") {
-    const auto device = JUST(Device::New(out_device->type(), out_device->device_id()));
-    return Stream::New(device, StreamRole::kPinMemory);
-  } else {
-    const auto device = JUST(Device::New(out_device->type(), out_device->device_id()));
-    return Stream::New(device, StreamRole::kCompute);
-  }
+  return Stream::New(out_device, StreamRole::kCompute);
 }
 
 }  // namespace
@@ -79,7 +74,7 @@ Maybe<Symbol<Stream>> MakeStream(const Symbol<Device>& out_device, const bool pi
       JUST(Device::New(ctx->Attr<std::string>("device_type"), ctx->Attr<int64_t>("device_id")));
   *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = out_device;
   const bool pin_memory = ctx->Attr<bool>("pin_memory");
-  return MakeStream(out_device, pin_memory);
+  return MakeEmptyStream(out_device, pin_memory);
 }
 
 }  // namespace oneflow

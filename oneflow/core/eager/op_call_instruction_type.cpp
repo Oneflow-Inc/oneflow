@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/device_type.pb.h"
-#include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -37,7 +36,6 @@ limitations under the License.
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/profiler/collection.h"
 #include "oneflow/core/common/cpp_attribute.h"
-#include "oneflow/core/device/cpu_device_context.h"
 
 namespace oneflow {
 namespace vm {
