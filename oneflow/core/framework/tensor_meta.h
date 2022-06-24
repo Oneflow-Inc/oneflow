@@ -56,18 +56,17 @@ class TensorMeta : public user_op::TensorDesc {
   bool is_dynamic() const override { return is_dynamic_; }
   bool is_contiguous() const { return IsContiguous(shape(), *stride_); }
 
+  void set_shape(const std::shared_ptr<const Shape>& val) { shape_ = val; }
   Shape* mut_shape() override { return const_cast<Shape*>(shape_.get()); }
+  void set_stride(const std::shared_ptr<const Stride>& val) { stride_ = val; }
   Stride* mut_stride() override { return const_cast<Stride*>(stride_.get()); }
+  DataType* mut_dtype() { return &data_type_; }
+  void set_dtype(DataType data_type) { data_type_ = data_type; }
   DataType* mut_data_type() override { return &data_type_; }
   bool* mut_is_dynamic() override { return &is_dynamic_; }
   void set_is_dynamic(bool val) override { is_dynamic_ = val; }
 
-  void set_shape(const std::shared_ptr<const Shape>& val) { shape_ = val; }
-  void set_stride(const std::shared_ptr<const Stride>& val) { stride_ = val; }
-  DataType* mut_dtype() { return &data_type_; }
-  void set_dtype(DataType data_type) { data_type_ = data_type; }
-
- protected:
+ private:
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const Stride> stride_;
   DataType data_type_;
@@ -107,24 +106,6 @@ class ConsistentTensorMeta : public TensorMeta {
   ConsistentTensorMeta(const ConsistentTensorMeta&) = default;
   ConsistentTensorMeta(ConsistentTensorMeta&&) = default;
   virtual ~ConsistentTensorMeta() = default;
-
-  Shape* mut_shape() override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  Stride* mut_stride() override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  DataType* mut_data_type() override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  bool* mut_is_dynamic() override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  void set_is_dynamic(bool val) override { UNIMPLEMENTED(); }
 
   bool operator==(const ConsistentTensorMeta& other) const;
 
