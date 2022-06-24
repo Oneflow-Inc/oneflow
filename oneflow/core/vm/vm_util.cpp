@@ -30,9 +30,9 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
+Maybe<void> Run(vm::InstructionList* instruction_list) {
   auto* virtual_machine = JUST(GlobalMaybe<VirtualMachine>());
-  JUST(virtual_machine->Receive(instr_msg_list));
+  JUST(virtual_machine->Receive(instruction_list));
   return Maybe<void>::Ok();
 }
 
