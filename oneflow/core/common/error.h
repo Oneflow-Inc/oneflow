@@ -33,7 +33,7 @@ class Error final {
   ErrorProto* operator->() { return error_proto_.get(); }
   operator std::string() const;
   void Assign(const Error& other) { error_proto_ = other.error_proto_; }
-  void Merge(const Error& other) { error_proto_->MergeFrom(*other.error_proto_); }
+  void Merge(const Error& other);
 
   // r-value reference is used to supporting expressions like `Error().AddStackFrame("foo.cpp",
   // ,"line", "Bar") << "invalid value"` because operator<<() need r-value reference
@@ -105,6 +105,7 @@ Error& operator<<(Error& error, const T& x) {
   } else {
     auto* stack_frame_top = error->mutable_stack_frame(error->stack_frame_size() - 1);
     stack_frame_top->set_error_msg(stack_frame_top->error_msg() + ss.str());
+    std::cout << " add msg " << ss.str();
   }
   return error;
 }
