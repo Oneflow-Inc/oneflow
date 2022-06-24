@@ -58,6 +58,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("InitRDMA", &InitRDMA);
   m.def("RDMAIsInitialized", &RDMAIsInitialized);
   m.def("CudaGetDeviceCount", &CudaGetDeviceCount);
+  m.def("EmptyCache", &EmptyCache);
 #ifdef WITH_CUDA
   m.def("GetCudaDeviceIndex", &GetCudaDeviceIndex);
   m.def("SetCudaDeviceIndex", &SetCudaDeviceIndex);

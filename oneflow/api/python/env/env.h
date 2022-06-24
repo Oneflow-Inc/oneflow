@@ -19,6 +19,7 @@ limitations under the License.
 #include <string>
 #include <google/protobuf/text_format.h>
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/global.h"
 #include "oneflow/core/job/cluster.h"
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
@@ -28,6 +29,8 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/rpc/include/base.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/vm/virtual_machine.h"
 
 namespace oneflow {
 
@@ -68,6 +71,14 @@ inline Maybe<void> SetFLAGS_v(int32_t v_level) {
   return Maybe<void>::Ok();
 }
 inline Maybe<int32_t> GetFLAGS_v() { return FLAGS_v; }
+
+inline Maybe<void> EmptyCache() {
+  JUST(vm::CurrentRankSync());
+  auto* vm = JUST(GlobalMaybe<VirtualMachine>());
+  JUST(vm->ShrinkAllMem());
+  return Maybe<void>::Ok();
+}
+
 inline Maybe<void> SetGraphLRVerbose(bool verbose) {
   SetGraphVerboseStepLr(verbose);
   return Maybe<void>::Ok();

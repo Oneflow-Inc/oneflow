@@ -113,3 +113,19 @@ def synchronize(device: Union[flow.device, str, int, None] = None) -> None:
     if device_idx >= 0:
         flow._oneflow_internal.eager.Sync()
         flow._oneflow_internal.CudaSynchronize(device_idx)
+
+
+def empty_cache() -> None:
+    r"""
+    
+    Releases all unoccupied cached memory currently held by the caching
+    allocator so that those can be used in other GPU application and visible in
+    `nvidia-smi`.
+    
+    Note:
+        :func:`~flow.cuda.empty_cache` doesn't increase the amount of GPU
+        memory available for OneFlow. However, it may help reduce fragmentation
+        of GPU memory in certain cases. 
+
+    """
+    return flow._oneflow_internal.EmptyCache()
