@@ -284,6 +284,11 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
 
 /* static */ Maybe<void> SgdEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
+  const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+  const int64_t line_size = ctx->Attr<int64_t>("line_size");
+  CHECK_NE_OR_RETURN(embedding_size, 0) << "should set attr embedding_size";
+  CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
+  CHECK_EQ_OR_RETURN(line_size, embedding_size) << "get " << line_size << " " << embedding_size;
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
   *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
@@ -307,6 +312,11 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
 /* static */ Maybe<void> MomentumEmbeddingUpdateOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
+  const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+  const int64_t line_size = ctx->Attr<int64_t>("line_size");
+  CHECK_NE_OR_RETURN(embedding_size, 0) << "should set attr embedding_size";
+  CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
+  CHECK_EQ_OR_RETURN(line_size, embedding_size * 2) << "get " << line_size << " " << embedding_size;
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
   *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
@@ -330,6 +340,11 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
 
 /* static */ Maybe<void> AdamEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
+  const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+  const int64_t line_size = ctx->Attr<int64_t>("line_size");
+  CHECK_NE_OR_RETURN(embedding_size, 0) << "should set attr embedding_size";
+  CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
+  CHECK_EQ_OR_RETURN(line_size, embedding_size * 3) << "get " << line_size << " " << embedding_size;
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
   *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
@@ -353,6 +368,11 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
 /* static */ Maybe<void> AdagradEmbeddingUpdateOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
+  const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+  const int64_t line_size = ctx->Attr<int64_t>("line_size");
+  CHECK_NE_OR_RETURN(embedding_size, 0) << "should set attr embedding_size";
+  CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
+  CHECK_EQ_OR_RETURN(line_size, embedding_size * 2) << "get " << line_size << " " << embedding_size;
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
   *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
@@ -376,6 +396,11 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
 
 /* static */ Maybe<void> FtrlEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
+  const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+  const int64_t line_size = ctx->Attr<int64_t>("line_size");
+  CHECK_NE_OR_RETURN(embedding_size, 0) << "should set attr embedding_size";
+  CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
+  CHECK_EQ_OR_RETURN(line_size, embedding_size * 3) << "get " << line_size << " " << embedding_size;
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
   *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
