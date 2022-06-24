@@ -1108,24 +1108,6 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
   std::shared_ptr<OpExpr> op_reduce_mean_;
 };
 
-class BinaryCrossEntropyWithLogitsReduceMeanLossFunctor {
- public:
-  BinaryCrossEntropyWithLogitsReduceMeanLossFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits_reduce_mean")
-                         .Input("input")
-                         .Input("target")
-                         .Output("out")
-                         .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& target) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, target});
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
 class NLLLossFunctor {
  public:
   NLLLossFunctor() {
