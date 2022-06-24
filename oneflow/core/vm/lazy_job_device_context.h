@@ -45,10 +45,7 @@ class LazyJobDeviceCtx final : public DeviceCtx {
   }
 #endif
 
-  vm::Allocator* mut_allocator() override {
-    UNIMPLEMENTED();
-    return (vm::Allocator*)nullptr;
-  }
+  vm::Allocator* mut_allocator() override { return (vm::Allocator*)nullptr; }
 
   DeviceType device_type() const override {
     UNIMPLEMENTED();
