@@ -88,72 +88,41 @@ __global__ void ComputeDiffGpuHalf(const int64_t num_instances, const int64_t nu
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
-template<typename T, typename K>
+template<typename T, typename K, typename IndexType>
 __global__ void ComputeDiffWithSoftmaxGpu(const int64_t elem_cnt, const int64_t num_classes,
                                           const int64_t depth, const int64_t lower_bound,
                                           const T* prob, const K* labels, const T* dy, T* dx) {
-  if (elem_cnt >= 2147483647) {
-    // NOTE(chengcheng): int division ('/') of i will reduce performance of int64_t.
-    CUDA_1D_KERNEL_LOOP_T(int64_t, i, elem_cnt) {
-      const int64_t row_id = i / num_classes;
-      const int64_t col_id = i - row_id * num_classes;
-      assert(labels[row_id] >= 0);
-      assert(labels[row_id] < depth);
-      K label = labels[row_id] - lower_bound;
-      if (label == col_id) {
-        dx[i] = dy[row_id] * (prob[i] - 1);
-      } else {
-        dx[i] = dy[row_id] * prob[i];
-      }
-    }
-  } else {
-    CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-      const int32_t row_id = i / num_classes;
-      const int32_t col_id = i - row_id * num_classes;
-      assert(labels[row_id] >= 0);
-      assert(labels[row_id] < depth);
-      K label = labels[row_id] - lower_bound;
-      if (label == col_id) {
-        dx[i] = dy[row_id] * (prob[i] - 1);
-      } else {
-        dx[i] = dy[row_id] * prob[i];
-      }
+  CUDA_1D_KERNEL_LOOP_T(IndexType, i, elem_cnt) {
+    const IndexType row_id = i / num_classes;
+    const IndexType col_id = i - row_id * num_classes;
+    assert(labels[row_id] >= 0);
+    assert(labels[row_id] < depth);
+    K label = labels[row_id] - lower_bound;
+    if (label == col_id) {
+      dx[i] = dy[row_id] * (prob[i] - 1);
+    } else {
+      dx[i] = dy[row_id] * prob[i];
     }
   }
 }
 
-template<typename K>
+template<typename K, typename IndexType>
 __global__ void ComputeDiffWithSoftmaxGpuHalf(const int64_t elem_cnt, const int64_t num_classes,
                                               const int64_t depth, const int64_t lower_bound,
                                               const half* prob, const K* labels, const half* dy,
                                               half* dx) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  if (elem_cnt >= 2147483647) {
-    CUDA_1D_KERNEL_LOOP_T(int64_t, i, elem_cnt) {
-      // NOTE(chengcheng): int division ('/') of i will reduce performance of int64_t.
-      const int64_t row_id = i / num_classes;
-      const int64_t col_id = i - row_id * num_classes;
-      assert(labels[row_id] >= 0);
-      assert(labels[row_id] < depth);
-      K label = labels[row_id] - lower_bound;
-      if (label == col_id) {
-        dx[i] = __hmul(dy[row_id], __hsub(prob[i], __float2half(1.0)));
-      } else {
-        dx[i] = __hmul(dy[row_id], prob[i]);
-      }
-    }
-  } else {
-    CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-      const int32_t row_id = i / num_classes;
-      const int32_t col_id = i - row_id * num_classes;
-      assert(labels[row_id] >= 0);
-      assert(labels[row_id] < depth);
-      K label = labels[row_id] - lower_bound;
-      if (label == col_id) {
-        dx[i] = __hmul(dy[row_id], __hsub(prob[i], __float2half(1.0)));
-      } else {
-        dx[i] = __hmul(dy[row_id], prob[i]);
-      }
+  CUDA_1D_KERNEL_LOOP_T(IndexType, i, elem_cnt) {
+    // NOTE(chengcheng): int division ('/') of i will reduce performance of int64_t.
+    const IndexType row_id = i / num_classes;
+    const IndexType col_id = i - row_id * num_classes;
+    assert(labels[row_id] >= 0);
+    assert(labels[row_id] < depth);
+    K label = labels[row_id] - lower_bound;
+    if (label == col_id) {
+      dx[i] = __hmul(dy[row_id], __hsub(prob[i], __float2half(1.0)));
+    } else {
+      dx[i] = __hmul(dy[row_id], prob[i]);
     }
   }
 #else
@@ -162,7 +131,7 @@ __global__ void ComputeDiffWithSoftmaxGpuHalf(const int64_t elem_cnt, const int6
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 
-template<typename K>
+template<typename K, typename IndexType>
 __global__ void ComputeDiffWithSoftmaxGpuHalf2(const int64_t elem_cnt, const int64_t num_classes,
                                                const int64_t depth, const int64_t lower_bound,
                                                const half* prob, const K* labels, const half* dy,
@@ -172,37 +141,18 @@ __global__ void ComputeDiffWithSoftmaxGpuHalf2(const int64_t elem_cnt, const int
   const int64_t h2_elem_cnt = elem_cnt / 2;
   const auto* prob_h2 = reinterpret_cast<const half2*>(prob);
   auto* dx_h2 = reinterpret_cast<half2*>(dx);
-  if (elem_cnt >= 2147483647) {
-    // NOTE(chengcheng): int division ('/') of i will reduce performance of int64_t.
-    CUDA_1D_KERNEL_LOOP_T(int64_t, i, h2_elem_cnt) {
-      const int64_t row_id = i / h2_num_classes;
-      const int64_t h2_col_id = i - row_id * h2_num_classes;
-      assert(labels[row_id] >= 0);
-      assert(labels[row_id] < depth);
-      K label = labels[row_id] - lower_bound;
-      const half2 prob_h2_i = prob_h2[i];
-      const half dy_row = dy[row_id];
-      half2 dx_h2_i;
-      dx_h2_i.x = __hmul(dy_row, __hsub(prob_h2_i.x, static_cast<half>(label == 2 * h2_col_id)));
-      dx_h2_i.y =
-          __hmul(dy_row, __hsub(prob_h2_i.y, static_cast<half>(label == 2 * h2_col_id + 1)));
-      dx_h2[i] = dx_h2_i;
-    }
-  } else {
-    CUDA_1D_KERNEL_LOOP(i, h2_elem_cnt) {
-      const int32_t row_id = i / h2_num_classes;
-      const int32_t h2_col_id = i - row_id * h2_num_classes;
-      assert(labels[row_id] >= 0);
-      assert(labels[row_id] < depth);
-      K label = labels[row_id] - lower_bound;
-      const half2 prob_h2_i = prob_h2[i];
-      const half dy_row = dy[row_id];
-      half2 dx_h2_i;
-      dx_h2_i.x = __hmul(dy_row, __hsub(prob_h2_i.x, static_cast<half>(label == 2 * h2_col_id)));
-      dx_h2_i.y =
-          __hmul(dy_row, __hsub(prob_h2_i.y, static_cast<half>(label == 2 * h2_col_id + 1)));
-      dx_h2[i] = dx_h2_i;
-    }
+  CUDA_1D_KERNEL_LOOP_T(IndexType, i, h2_elem_cnt) {
+    const IndexType row_id = i / h2_num_classes;
+    const IndexType h2_col_id = i - row_id * h2_num_classes;
+    assert(labels[row_id] >= 0);
+    assert(labels[row_id] < depth);
+    K label = labels[row_id] - lower_bound;
+    const half2 prob_h2_i = prob_h2[i];
+    const half dy_row = dy[row_id];
+    half2 dx_h2_i;
+    dx_h2_i.x = __hmul(dy_row, __hsub(prob_h2_i.x, static_cast<half>(label == 2 * h2_col_id)));
+    dx_h2_i.y = __hmul(dy_row, __hsub(prob_h2_i.y, static_cast<half>(label == 2 * h2_col_id + 1)));
+    dx_h2[i] = dx_h2_i;
   }
 #else
   printf("use half need nvcc arch >= 530");
@@ -234,9 +184,17 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kCUDA, T, K> {
                                      const int64_t num_classes, const int64_t depth,
                                      const int64_t lower_bound, const T* prob, const K* labels,
                                      const T* dy, T* dx) {
-    ComputeDiffWithSoftmaxGpu<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                stream->As<ep::CudaStream>()->cuda_stream()>>>(
-        elem_cnt, num_classes, depth, lower_bound, prob, labels, dy, dx);
+    if (elem_cnt < GetMaxVal<int32_t>() / 2) {
+      ComputeDiffWithSoftmaxGpu<T, K, int32_t>
+          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+             stream->As<ep::CudaStream>()->cuda_stream()>>>(elem_cnt, num_classes, depth,
+                                                            lower_bound, prob, labels, dy, dx);
+    } else {
+      ComputeDiffWithSoftmaxGpu<T, K, int64_t>
+          <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+             stream->As<ep::CudaStream>()->cuda_stream()>>>(elem_cnt, num_classes, depth,
+                                                            lower_bound, prob, labels, dy, dx);
+    }
   }
 };
 
@@ -266,16 +224,33 @@ struct SparseCrossEntropyKernelUtil<DeviceType::kCUDA, float16, K> {
                                      const int64_t lower_bound, const float16* prob,
                                      const K* labels, const float16* dy, float16* dx) {
     if (num_classes % 2 == 0) {
-      ComputeDiffWithSoftmaxGpuHalf2<K>
-          <<<BlocksNum4ThreadsNum(elem_cnt / 2), kCudaThreadsNumPerBlock, 0,
-             stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              elem_cnt, num_classes, depth, lower_bound, reinterpret_cast<const half*>(prob),
-              labels, reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
+      if (elem_cnt < GetMaxVal<int32_t>() / 2) {
+        ComputeDiffWithSoftmaxGpuHalf2<K, int32_t>
+            <<<BlocksNum4ThreadsNum(elem_cnt / 2), kCudaThreadsNumPerBlock, 0,
+               stream->As<ep::CudaStream>()->cuda_stream()>>>(
+                elem_cnt, num_classes, depth, lower_bound, reinterpret_cast<const half*>(prob),
+                labels, reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
+      } else {
+        ComputeDiffWithSoftmaxGpuHalf2<K, int64_t>
+            <<<BlocksNum4ThreadsNum(elem_cnt / 2), kCudaThreadsNumPerBlock, 0,
+               stream->As<ep::CudaStream>()->cuda_stream()>>>(
+                elem_cnt, num_classes, depth, lower_bound, reinterpret_cast<const half*>(prob),
+                labels, reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
+      }
     } else {
-      ComputeDiffWithSoftmaxGpuHalf<K><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                         stream->As<ep::CudaStream>()->cuda_stream()>>>(
-          elem_cnt, num_classes, depth, lower_bound, reinterpret_cast<const half*>(prob), labels,
-          reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
+      if (elem_cnt < GetMaxVal<int32_t>() / 2) {
+        ComputeDiffWithSoftmaxGpuHalf<K, int32_t>
+            <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+               stream->As<ep::CudaStream>()->cuda_stream()>>>(
+                elem_cnt, num_classes, depth, lower_bound, reinterpret_cast<const half*>(prob),
+                labels, reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
+      } else {
+        ComputeDiffWithSoftmaxGpuHalf<K, int64_t>
+            <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+               stream->As<ep::CudaStream>()->cuda_stream()>>>(
+                elem_cnt, num_classes, depth, lower_bound, reinterpret_cast<const half*>(prob),
+                labels, reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
+      }
     }
   }
 };
