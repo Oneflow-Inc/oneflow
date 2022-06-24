@@ -331,11 +331,11 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   struct comp {
     bool operator()(const TopoStruct* a, const TopoStruct* b) const {
       // NOTE: Leave these code for debugging in the future
-      // static std::vector<int64_t> decide_parameters({ParseIntegerFromEnv("Parameter0", 0),
-      //                                                ParseIntegerFromEnv("Parameter1", 1),
-      //                                                ParseIntegerFromEnv("Parameter2", 2)});
+      static std::vector<int64_t> decide_parameters({ParseIntegerFromEnv("Parameter0", 0),
+                                                     ParseIntegerFromEnv("Parameter1", 0),
+                                                     ParseIntegerFromEnv("Parameter2", 0)});
       // The best parameter set is {5, 3}
-      static std::vector<int64_t> decide_parameters({5, 3});
+      // static std::vector<int64_t> decide_parameters({5, 3});
       for (int32_t decide_parameter : decide_parameters) {
         int32_t decide_parameter_a = a->GetDecidingParameter(decide_parameter);
         int32_t decide_parameter_b = b->GetDecidingParameter(decide_parameter);
