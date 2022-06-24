@@ -57,7 +57,7 @@ class VirtualMachineEngine final : public intrusive::Base {
 
   // Getters
   std::size_t flying_instruction_cnt() const {
-    return pending_msg_list().thread_unsafe_size() + local_pending_msg_list().size()
+    return pending_instruction_list().thread_unsafe_size() + local_pending_instruction_list().size()
            + (total_inserted_instruction_cnt() - total_erased_instruction_cnt());
   }
   size_t total_inserted_instruction_cnt() const { return total_inserted_instruction_cnt_; }
@@ -69,15 +69,15 @@ class VirtualMachineEngine final : public intrusive::Base {
   const BarrierInstructionList& barrier_instruction_list() const {
     return barrier_instruction_list_;
   }
-  const InstructionMutexedList& pending_msg_list() const { return pending_msg_list_; }
-  const InstructionList& local_pending_msg_list() const { return local_pending_msg_list_; }
+  const InstructionMutexedList& pending_instruction_list() const { return pending_instruction_list_; }
+  const InstructionList& local_pending_instruction_list() const { return local_pending_instruction_list_; }
   // Setters
   ActiveStreamList* mut_active_stream_list() { return &active_stream_list_; }
   ThreadCtxList* mut_thread_ctx_list() { return &thread_ctx_list_; }
   LivelyInstructionList* mut_lively_instruction_list() { return &lively_instruction_list_; }
   BarrierInstructionList* mut_barrier_instruction_list() { return &barrier_instruction_list_; }
-  InstructionMutexedList* mut_pending_msg_list() { return &pending_msg_list_; }
-  InstructionList* mut_local_pending_msg_list() { return &local_pending_msg_list_; }
+  InstructionMutexedList* mut_pending_instruction_list() { return &pending_instruction_list_; }
+  InstructionList* mut_local_pending_instruction_list() { return &local_pending_instruction_list_; }
   // Returns true if old scheduler_pending_instruction_list is empty
   Maybe<bool> Receive(InstructionList* instr_list);
   void Schedule(const ScheduleCtx& schedule_ctx);
@@ -128,9 +128,9 @@ class VirtualMachineEngine final : public intrusive::Base {
       : intrusive_ref_(),
         active_stream_list_(),
         thread_ctx_list_(),
-        pending_msg_mutex_(),
-        pending_msg_list_(&pending_msg_mutex_),
-        local_pending_msg_list_(),
+        pending_instruction_mutex_(),
+        pending_instruction_list_(&pending_instruction_mutex_),
+        local_pending_instruction_list_(),
         ready_instruction_list_(),
         lively_instruction_list_(),
         total_inserted_instruction_cnt_(0),
@@ -144,10 +144,10 @@ class VirtualMachineEngine final : public intrusive::Base {
   // Do not change the order of the following fields
   ActiveStreamList active_stream_list_;
   ThreadCtxList thread_ctx_list_;
-  std::mutex pending_msg_mutex_;
-  InstructionMutexedList pending_msg_list_;
-  // local_pending_msg_list_ should be consider as the cache of pending_msg_list_.
-  InstructionList local_pending_msg_list_;
+  std::mutex pending_instruction_mutex_;
+  InstructionMutexedList pending_instruction_list_;
+  // local_pending_instruction_list_ should be consider as the cache of pending_instruction_list_.
+  InstructionList local_pending_instruction_list_;
   ReadyInstructionList ready_instruction_list_;
   LivelyInstructionList lively_instruction_list_;
   size_t total_inserted_instruction_cnt_;

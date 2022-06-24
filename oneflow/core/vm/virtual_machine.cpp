@@ -271,8 +271,8 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
         // Use SchedulerThreadUnsafeEmpty to avoid acquiring mutex lock.
         // It's safe to use SchedulerThreadUnsafeEmpty here. pending_notifier_.notified_cnt_ will be
         // greater than zero when inconsistency between
-        // engine_->pending_msg_list.list_head_.list_head_.container_ and
-        // engine_->pending_msg_list.list_head_.list_head_.size_ occured. hence the pending
+        // engine_->pending_instruction_list.list_head_.list_head_.container_ and
+        // engine_->pending_instruction_list.list_head_.list_head_.size_ occured. hence the pending
         // instructions
         // will get handled in the next iteration.
         //  VirtualMachine::Receive may be less effiencient if the thread safe version

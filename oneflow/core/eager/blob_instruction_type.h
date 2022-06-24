@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_BLOB_INSTRUCTION_TYPE_H_
 #define ONEFLOW_CORE_EAGER_BLOB_INSTRUCTION_TYPE_H_
 
-#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/singleton_ptr.h"

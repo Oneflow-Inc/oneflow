@@ -36,7 +36,6 @@ class FuseInstructionType : public vm::InstructionType {
     auto* ptr = dynamic_cast<vm::FusePhyInstrOperand*>(phy_instr_operand.get());
     auto* instruction_list = CHECK_NOTNULL(ptr)->mut_instruction_list();
     auto* last_instruction = CHECK_NOTNULL(instruction_list->Last());
-    // init instruction status by last instruction_msg.
     last_instruction->instruction_type().InitInstructionStatusIf(instruction);
   }
 

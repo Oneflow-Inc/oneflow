@@ -110,20 +110,20 @@ void VirtualMachineEngine::MakeAndAppendFusedInstruction(
 void VirtualMachineEngine::GetRewritedPendingInstructionsByWindowSize(
     size_t window_size, InstructionList* /*out*/ pending_instructions) {
   InstructionList fused_instruction_list;
-  INTRUSIVE_FOR_EACH_PTR(instruction, mut_local_pending_msg_list()) {
+  INTRUSIVE_FOR_EACH_PTR(instruction, mut_local_pending_instruction_list()) {
     if (window_size-- <= 0) { break; }
     auto* fuse_begin = fused_instruction_list.Begin();
     if (likely(FusableBetween(kEnableInstructionFuseAtAnyPosition, instruction, fuse_begin))) {
       // fuse
-      mut_local_pending_msg_list()->MoveToDstBack(instruction, &fused_instruction_list);
+      mut_local_pending_instruction_list()->MoveToDstBack(instruction, &fused_instruction_list);
     } else if (likely(FusableBetween(kEnableInstructionFuseAsTailOnly, instruction, fuse_begin))) {
       // fuse
-      mut_local_pending_msg_list()->MoveToDstBack(instruction, &fused_instruction_list);
+      mut_local_pending_instruction_list()->MoveToDstBack(instruction, &fused_instruction_list);
       MakeAndAppendFusedInstruction(std::move(fused_instruction_list), pending_instructions);
     } else {
       // no fuse
       MakeAndAppendFusedInstruction(std::move(fused_instruction_list), pending_instructions);
-      mut_local_pending_msg_list()->MoveToDstBack(instruction, pending_instructions);
+      mut_local_pending_instruction_list()->MoveToDstBack(instruction, pending_instructions);
     }
   }
   MakeAndAppendFusedInstruction(std::move(fused_instruction_list), pending_instructions);
@@ -315,7 +315,7 @@ Maybe<bool> VirtualMachineEngine::Receive(InstructionList* compute_instruction_l
     OF_PROFILER_RANGE_GUARD(compute_instruction->DebugName());
   }
 #endif
-  bool old_list_empty = mut_pending_msg_list()->MoveFrom(compute_instruction_list);
+  bool old_list_empty = mut_pending_instruction_list()->MoveFrom(compute_instruction_list);
   return old_list_empty;
 }
 
@@ -406,18 +406,18 @@ void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
   if (unlikely(mut_barrier_instruction_list()->size())) { TryRunBarrierInstruction(schedule_ctx); }
   // Handle pending instructions, and try schedule them to ready list.
   // Use thread_unsafe_size to avoid acquiring mutex lock.
-  // The inconsistency between pending_msg_list.list_head_.list_head_.container_ and
-  // pending_msg_list.list_head_.list_head_.size_ is not a fatal error because
+  // The inconsistency between pending_instruction_list.list_head_.list_head_.container_ and
+  // pending_instruction_list.list_head_.list_head_.size_ is not a fatal error because
   // VirtualMachineEngine::Schedule is always in a buzy loop. All instructions will get handled
   // eventually.
   //  VirtualMachineEngine::Receive may be less effiencient if the thread safe version
-  //  `pending_msg_list().size()` used here, because VirtualMachineEngine::Schedule is more likely
+  //  `pending_instruction_list().size()` used here, because VirtualMachineEngine::Schedule is more likely
   //  to get the mutex lock.
-  if (unlikely(local_pending_msg_list().size())) {
+  if (unlikely(local_pending_instruction_list().size())) {
     HandleLocalPending();
-  } else if (unlikely(pending_msg_list().thread_unsafe_size())) {
+  } else if (unlikely(pending_instruction_list().thread_unsafe_size())) {
     // MoveTo is under a lock.
-    mut_pending_msg_list()->MoveTo(mut_local_pending_msg_list());
+    mut_pending_instruction_list()->MoveTo(mut_local_pending_instruction_list());
     HandleLocalPending();
   }
   // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
@@ -434,14 +434,14 @@ void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
 }
 
 bool VirtualMachineEngine::SchedulerThreadUnsafeEmpty() const {
-  return pending_msg_list().thread_unsafe_size() == 0 && local_pending_msg_list().empty()
+  return pending_instruction_list().thread_unsafe_size() == 0 && local_pending_instruction_list().empty()
          && lively_instruction_list_.empty() && active_stream_list().empty()
          && probe_list_.thread_unsafe_size() == 0 && local_probe_list_.empty();
 }
 
 bool VirtualMachineEngine::SchedulerEmpty() const {
-  // hook and size will be check in pending_msg_list().empty().
-  return pending_msg_list().empty() && probe_list_.empty() && SchedulerThreadUnsafeEmpty();
+  // hook and size will be check in pending_instruction_list().empty().
+  return pending_instruction_list().empty() && probe_list_.empty() && SchedulerThreadUnsafeEmpty();
 }
 
 }  // namespace vm

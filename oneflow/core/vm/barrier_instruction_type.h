@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_BARRIER_INSTRUCTION_TYPE_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/rpc/include/base.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
