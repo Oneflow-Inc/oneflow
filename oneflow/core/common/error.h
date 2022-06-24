@@ -105,7 +105,6 @@ Error& operator<<(Error& error, const T& x) {
   } else {
     auto* stack_frame_top = error->mutable_stack_frame(error->stack_frame_size() - 1);
     stack_frame_top->set_error_msg(stack_frame_top->error_msg() + ss.str());
-    std::cout << " add msg " << ss.str();
   }
   return error;
 }
