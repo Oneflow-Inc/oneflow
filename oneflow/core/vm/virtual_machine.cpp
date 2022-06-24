@@ -21,6 +21,8 @@ limitations under the License.
 #include "oneflow/core/vm/barrier_instruction_type.h"
 #include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/vm/allocator.h"
+#include "oneflow/core/vm/shrinkable_cache.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/singleton_ptr.h"
@@ -135,6 +137,62 @@ Maybe<void> VirtualMachine::CloseVMThreads() {
   return Maybe<void>::Ok();
 }
 
+namespace {
+
+class SingleThreadScheduleCtx : public vm::ScheduleCtx {
+ public:
+  SingleThreadScheduleCtx() = default;
+  ~SingleThreadScheduleCtx() = default;
+
+  void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {
+    while (thread_ctx->TryReceiveAndRun() > 0) {}
+  }
+};
+
+void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& schedule_ctx) {
+  do { vm->Schedule(schedule_ctx); } while (!(vm->SchedulerEmpty()));
+}
+
+}  // namespace
+
+Maybe<void> VirtualMachine::BlockingRunProbeFunc(
+    const std::function<bool(vm::VirtualMachineEngine*)>& prob_func) {
+  JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
+    auto bc = std::make_shared<BlockingCounter>(1);
+    engine_->InsertProbe([bc, prob_func](vm::VirtualMachineEngine* engine) {
+      if (!prob_func(engine)) { return false; }
+      bc->Decrease();
+      return true;
+    });
+    if (disable_vm_threads_) {
+      ScheduleUntilVMEmpty(engine_.Mutable(), SingleThreadScheduleCtx());
+    } else {
+      pending_notifier_.Notify();
+    }
+    JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+    return Maybe<void>::Ok();
+  }));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> VirtualMachine::ShrinkAllMem() {
+  auto try_shrink_men = [](vm::VirtualMachineEngine* engine) -> bool {
+    if (engine->mut_active_stream_list()->size()) { return false; }
+    INTRUSIVE_FOR_EACH_PTR(thread_ctx, engine->mut_thread_ctx_list()) {
+      INTRUSIVE_FOR_EACH_PTR(stream, thread_ctx->mut_stream_list()) {
+        const auto& device_ctx = stream->device_ctx();
+        if (device_ctx.get() && device_ctx->mut_allocator()) {
+          auto* allocator = device_ctx->mut_allocator();
+          auto* cache = dynamic_cast<vm::ShrinkableCache*>(allocator);
+          if (cache != nullptr) { cache->Shrink(); }
+        }
+      }
+    }
+    return true;
+  };
+  return BlockingRunProbeFunc(try_shrink_men);
+}
+
 VirtualMachine::~VirtualMachine() {
   if (!disable_vm_threads_) { CHECK_JUST(CloseVMThreads()); }
   CHECK(engine_->SchedulerEmpty());
@@ -202,24 +260,6 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
   }
   return Maybe<void>::Ok();
 }
-
-namespace {
-
-class SingleThreadScheduleCtx : public vm::ScheduleCtx {
- public:
-  SingleThreadScheduleCtx() = default;
-  ~SingleThreadScheduleCtx() = default;
-
-  void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {
-    while (thread_ctx->TryReceiveAndRun() > 0) {}
-  }
-};
-
-void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* engine, const vm::ScheduleCtx& schedule_ctx) {
-  do { engine->Schedule(schedule_ctx); } while (!(engine->SchedulerEmpty()));
-}
-
-}  // namespace
 
 Maybe<void> VirtualMachine::NotifyOrRunScheduler() {
   if (unlikely(pthread_fork::IsForkedSubProcess() || disable_vm_threads_)) {
