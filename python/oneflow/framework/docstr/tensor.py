@@ -1009,7 +1009,7 @@ add_docstr(
     """
     Tensor.fill_(value) → Tensor
 
-    Fills self tensor with the specified value.
+    Fills `self` tensor with the specified value.
     """,
 )
 
