@@ -97,13 +97,13 @@ Maybe<Symbol<Stream>> GetBarrierStream() {
   return Stream::New(device, StreamRole::kBarrier);
 }
 
-void MakeBarrierInstructions(vm::InstructionMsgList* list,
+void MakeBarrierInstructions(vm::InstructionList* list,
                              const std::function<void()>& BarrierCallback) {
   auto* vm = Global<VirtualMachine>::Get();
   {
     const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>([]() {});
     auto stream = CHECK_JUST(GetBarrierStream());
-    auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+    auto instruction = intrusive::make_shared<vm::Instruction>(
         CHECK_JUST(vm->GetVmStream(stream)), SingletonPtr<vm::GlobalSyncInstructionType>(),
         phy_instr_operand);
     list->EmplaceBack(std::move(instruction));
@@ -111,7 +111,7 @@ void MakeBarrierInstructions(vm::InstructionMsgList* list,
   {
     const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>(BarrierCallback);
     auto stream = CHECK_JUST(GetBarrierStream());
-    auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+    auto instruction = intrusive::make_shared<vm::Instruction>(
         CHECK_JUST(vm->GetVmStream(stream)), SingletonPtr<vm::BarrierInstructionType>(),
         phy_instr_operand);
     list->EmplaceBack(std::move(instruction));
@@ -122,7 +122,7 @@ void MakeBarrierInstructions(vm::InstructionMsgList* list,
 
 void VirtualMachine::ControlSync() {
   auto bc = std::make_shared<BlockingCounter>(1);
-  vm::InstructionMsgList list;
+  vm::InstructionList list;
   MakeBarrierInstructions(&list, [bc] { bc->Decrease(); });
   CHECK_JUST(Receive(&list));
   CHECK_JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
@@ -225,18 +225,16 @@ std::string VirtualMachine::GetBlockingDebugString() {
   return engine_->GetLivelyInstructionListDebugString(limit);
 }
 
-Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
+Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
-    INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_list) {
-      const auto& device = instr_msg->stream().device();
+    INTRUSIVE_FOR_EACH_PTR(instruction, instruction_list) {
+      const auto& device = instruction->stream().device();
       CHECK_OR_RETURN(device->enum_type() == DeviceType::kCPU)
           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
-      // NOTE: operate `engine_` in forked subprocesses causes mysterious problems.
-      // `ComputeInFuseMode` will be replaced by `Compute` soon.
-      instr_msg->instruction_type().ComputeInFuseMode(instr_msg);
+      instruction->instruction_type().Compute(instruction);
     }
   } else if (unlikely(disable_vm_threads_)) {
-    JUST(RunInCurrentThread(instr_list));
+    JUST(RunInCurrentThread(instruction_list));
   } else {
     const int64_t kHighWaterMark = GetInstructionHighWaterMark();
     if (engine_->flying_instruction_cnt() > kHighWaterMark) {
@@ -253,8 +251,8 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
         return Maybe<void>::Ok();
       }));
     }
-    if (JUST(engine_->Receive(instr_list))) {
-      // old pending_instruction_list is empty.
+    if (JUST(engine_->Receive(instruction_list))) {
+      // old scheduler_pending_instruction_list is empty.
       pending_notifier_.Notify();
     }
   }
@@ -270,7 +268,7 @@ Maybe<void> VirtualMachine::NotifyOrRunScheduler() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionMsgList* instr_list) {
+Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionList* instr_list) {
   CHECK_OR_RETURN(engine_->SchedulerEmpty())
       << "vm scheduler not empty. May be a fatal error occured";
   JUST(engine_->Receive(instr_list));
@@ -313,8 +311,8 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
         // Use SchedulerThreadUnsafeEmpty to avoid acquiring mutex lock.
         // It's safe to use SchedulerThreadUnsafeEmpty here. pending_notifier_.notified_cnt_ will be
         // greater than zero when inconsistency between
-        // engine_->pending_msg_list.list_head_.list_head_.container_ and
-        // engine_->pending_msg_list.list_head_.list_head_.size_ occured. hence the pending
+        // engine_->pending_instruction_list.list_head_.list_head_.container_ and
+        // engine_->pending_instruction_list.list_head_.list_head_.size_ occured. hence the pending
         // instructions
         // will get handled in the next iteration.
         //  VirtualMachine::Receive may be less effiencient if the thread safe version
