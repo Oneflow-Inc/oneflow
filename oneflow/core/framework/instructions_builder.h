@@ -46,13 +46,13 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
  public:
   InstructionsBuilder(const InstructionsBuilder&) = delete;
   InstructionsBuilder(InstructionsBuilder&&) = delete;
-  explicit InstructionsBuilder(vm::InstructionMsgList* instruction_list)
+  explicit InstructionsBuilder(vm::InstructionList* instruction_list)
       : instruction_list_(instruction_list) {}
   ~InstructionsBuilder() { instruction_list_->Clear(); }
 
-  const vm::InstructionMsgList& instruction_list() const { return *instruction_list_; }
+  const vm::InstructionList& instruction_list() const { return *instruction_list_; }
 
-  vm::InstructionMsgList* mut_instruction_list() { return instruction_list_; }
+  vm::InstructionList* mut_instruction_list() { return instruction_list_; }
 
   // Build VM execution instructions with NNGraph's inputs/outputs/parameters for NNGraph execution.
   Maybe<void> LaunchLazyJob(const one::EagerBlobObjectListPtr& inputs,
@@ -143,7 +143,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> MakeCriticalSectionEnd(vm::Stream* vm_stream,
                                      const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);
 
-  vm::InstructionMsgList* instruction_list_;
+  vm::InstructionList* instruction_list_;
 };
 
 // Make VM instructions with instruction builder and run instructions with physical/local view.
