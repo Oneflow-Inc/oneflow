@@ -766,11 +766,7 @@ class Graph(object):
             return outputs
         except:
             self.__print(
-                2,
-                0,
-                "[ERROR]"
-                + self._shallow_repr()
-                + " building graph got error."
+                2, 0, "[ERROR]" + self._shallow_repr() + " building graph got error."
             )
             raise
 
@@ -817,11 +813,7 @@ class Graph(object):
             )
         except:
             self.__print(
-                2,
-                0,
-                "[ERROR]"
-                + self._shallow_repr()
-                + " building plan got error."
+                2, 0, "[ERROR]" + self._shallow_repr() + " building plan got error."
             )
             raise
 
