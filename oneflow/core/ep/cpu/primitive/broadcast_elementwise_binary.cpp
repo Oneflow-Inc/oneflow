@@ -203,6 +203,8 @@ void LaunchGeneral(CpuStream* cpu_stream, size_t simplified_num_dims,
           for (int i = 0; i < kMaxNumDims; i++) {
             if (i < simplified_num_dims) {
               src_index[i] = (simplified_src_dims[i] != 1) ? dst_index[i] : 0;
+            } else {
+              src_index[i] = 0;
             }
           }
           const IndexType src_offset =
