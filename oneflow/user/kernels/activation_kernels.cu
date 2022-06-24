@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/activation_kernels.h"
-#include "oneflow/user/kernels/elementwise_xpu_kernel.cuh"
+#include "oneflow/user/kernels/elementwise_primitive_kernel.cuh"
 
 namespace oneflow {
 
