@@ -26,7 +26,7 @@ struct NeedSoftSync : public StreamRoleVisitor<NeedSoftSync> {
   static bool VisitCompute(DeviceType device_type) { return device_type != kCPU; }
   static bool VisitHost2Device(DeviceType) { return false; }
   static bool VisitDevice2Host(DeviceType) { return false; }
-  static bool VisitSyncedLaunchedCommNet(DeviceType device_type) { return device_type != kCPU; }
+  static bool VisitSyncedLaunchedCommNet(DeviceType device_type) { return false; }
   static bool VisitAsyncedLaunchedCommNet(DeviceType) { return false; }
   static bool VisitBarrier(DeviceType) { return false; }
   static bool VisitCriticalSection(DeviceType) { return false; }
