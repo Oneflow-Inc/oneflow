@@ -13,25 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_COMPILER_H_
-#define ONEFLOW_CORE_JOB_COMPILER_H_
-
-#include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/graph/task_graph.h"
-#include "oneflow/core/job/plan.pb.h"
-#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/vm/ep_backend_host_allocator.h"
+#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/ep/include/device.h"
 
 namespace oneflow {
 
-class Compiler final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(Compiler);
-  Compiler() = default;
-  ~Compiler() = default;
+namespace vm {
 
-  void Compile(Job*, Plan*) const;
-};
+void EpBackendHostAllocator::Allocate(char** mem_ptr, std::size_t size) {
+  CHECK_JUST(ep_device_->AllocPinned(allocation_options_, reinterpret_cast<void**>(mem_ptr), size));
+}
+
+void EpBackendHostAllocator::Deallocate(char* mem_ptr, std::size_t size) {
+  ep_device_->FreePinned(allocation_options_, mem_ptr);
+}
+
+}  // namespace vm
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_JOB_COMPILER_H_

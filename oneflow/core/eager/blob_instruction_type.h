@@ -20,9 +20,11 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/singleton_ptr.h"
-#include "oneflow/core/vm/cuda_optional_event_record_status_querier.h"
+#include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/device/cuda_event.h"
+#include "oneflow/core/vm/ep_event.h"
+#include "oneflow/core/vm/ep_device_context.h"
 
 namespace oneflow {
 namespace vm {
@@ -42,23 +44,10 @@ class AccessBlobByCallbackInstructionType final : public vm::InstructionType {
   void ComputeInstrMsg(const vm::InstructionMsg& instruction_msg) const;
 };
 
-class CpuRecordEventInstructionType final : public vm::InstructionType {
+class EpRecordEventInstructionType final : public vm::InstructionType {
  public:
-  CpuRecordEventInstructionType() = default;
-  ~CpuRecordEventInstructionType() override = default;
-
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
-    return "RecordEvent";
-  }
-  void Compute(vm::Instruction* instruction) const override {}
-};
-
-#ifdef WITH_CUDA
-
-class CudaRecordEventInstructionType final : public vm::InstructionType {
- public:
-  CudaRecordEventInstructionType() = default;
-  ~CudaRecordEventInstructionType() override = default;
+  EpRecordEventInstructionType() = default;
+  ~EpRecordEventInstructionType() override = default;
 
   InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAsTailOnly; }
 
@@ -66,36 +55,34 @@ class CudaRecordEventInstructionType final : public vm::InstructionType {
     auto* status_buffer = instruction->mut_status_buffer();
     auto* stream = instruction->mut_stream();
     instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
-    auto* event_provider = dynamic_cast<QueryCudaEventProvider*>(stream->device_ctx().get());
-    const auto& cuda_event = CHECK_NOTNULL(event_provider)->GetCudaEvent();
+    auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());
+    auto* ep_event_provider = ep_device_ctx->ep_event_provider();
+    const auto& ep_event = CHECK_NOTNULL(ep_event_provider)->GetReusedEpEvent();
     auto* data_ptr = status_buffer->mut_buffer()->mut_data();
-    CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_cuda_event(cuda_event);
+    EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_ep_event(ep_event);
   }
   std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
     return "RecordEvent";
   }
   void Compute(vm::Instruction* instruction) const override {}
 };
-
-#endif
-
 }  // namespace vm
 
 struct GetRecordEventInstructionType : public StreamRoleVisitor<GetRecordEventInstructionType> {
   static Maybe<const vm::InstructionType*> VisitCompute(DeviceType device_type) {
-    return GetInstructionType(device_type);
+    return SingletonPtr<vm::EpRecordEventInstructionType>();
   }
   static Maybe<const vm::InstructionType*> VisitHost2Device(DeviceType device_type) {
-    return GetInstructionType(device_type);
+    return SingletonPtr<vm::EpRecordEventInstructionType>();
   }
   static Maybe<const vm::InstructionType*> VisitDevice2Host(DeviceType device_type) {
-    return GetInstructionType(device_type);
+    return SingletonPtr<vm::EpRecordEventInstructionType>();
   }
   static Maybe<const vm::InstructionType*> VisitSyncedLaunchedCommNet(DeviceType device_type) {
-    return GetInstructionType(device_type);
+    return SingletonPtr<vm::EpRecordEventInstructionType>();
   }
   static Maybe<const vm::InstructionType*> VisitAsyncedLaunchedCommNet(DeviceType device_type) {
-    return GetInstructionType(device_type);
+    return SingletonPtr<vm::EpRecordEventInstructionType>();
   }
   static Maybe<const vm::InstructionType*> VisitBarrier(DeviceType device_type) {
     UNIMPLEMENTED_THEN_RETURN();
@@ -105,21 +92,6 @@ struct GetRecordEventInstructionType : public StreamRoleVisitor<GetRecordEventIn
   }
   static Maybe<const vm::InstructionType*> VisitLazyJobLauncher(DeviceType device_type) {
     UNIMPLEMENTED_THEN_RETURN();
-  }
-
- private:
-  static Maybe<const vm::InstructionType*> GetInstructionType(DeviceType device_type) {
-    if (device_type == DeviceType::kCPU) {
-      return SingletonPtr<vm::CpuRecordEventInstructionType>();
-    } else if (device_type == DeviceType::kCUDA) {
-#ifdef WITH_CUDA
-      return SingletonPtr<vm::CudaRecordEventInstructionType>();
-#else
-      UNIMPLEMENTED_THEN_RETURN();
-#endif
-    } else {
-      UNIMPLEMENTED_THEN_RETURN();
-    }
   }
 };
 
