@@ -53,6 +53,9 @@ struct GetStreamType final : public StreamRoleVisitor<GetStreamType> {
   static Maybe<const vm::StreamType*> VisitLazyJobLauncher(DeviceType device_type) {
     return SingletonPtr<vm::LazyJobStreamType>();
   }
+  static Maybe<const vm::StreamType*> VisitPinMemory(DeviceType device_type) {
+    return SingletonPtr<vm::EpStreamType>();
+  }
 };
 
 }  // namespace oneflow

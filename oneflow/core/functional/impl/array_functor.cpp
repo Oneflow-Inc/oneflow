@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -190,15 +191,13 @@ class EmptyFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device, const bool pin_memory) const {
     MutableAttrMap attrs;
+    Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu", 0)));
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    if (device.has_value()) {
-      Symbol<Device> device_symbol = JUST(device);
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {},
-                                            OpExprInterpContext(attrs, device_symbol, pin_memory));
-    } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
-    }
+    JUST(attrs.SetAttr<bool>("pin_memory", pin_memory));
+    JUST(attrs.SetAttr<std::string>("device_type", device_symbol->type()));
+    JUST(attrs.SetAttr<int64_t>("device_id", device_symbol->device_id()));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
   }
 
  private:
@@ -3020,7 +3019,13 @@ class PinMemoryFunctor {
     CHECK_OR_RETURN(input->is_local() && !(LazyMode::is_enabled()))
         << Error::RuntimeError() << "Tensor.pin_memory() only support local tensor for now!";
     // if tensor already pinned, then just return
-    if (JUST(JUST(input->AsMirroredTensor())->is_pinned())) { return input; }
+    
+    if(JUST(JUST(input->eager_blob_object())->producer_stream())->stream_role() == StreamRole::kPinMemory){
+      printf("\n producer_stream())->stream_role() is pinned!");
+      return input;
+    }
+    printf("\n producer_stream())->stream_role() is not pinned!");
+    // if (JUST(JUST(input->AsMirroredTensor())->is_pinned())) { return input; }
     auto shape = input->shape();
     auto device = JUST(input->device());
     const bool requires_grad = input->requires_grad();
