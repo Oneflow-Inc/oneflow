@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifdef WITH_CUDA
-
 #include "oneflow/core/vm/bin_allocator.h"
 #include <iostream>
 #include <cmath>
@@ -317,5 +315,3 @@ void BinAllocator::Deallocate(char* mem_ptr, std::size_t size) {
 
 }  // namespace vm
 }  // namespace oneflow
-
-#endif
