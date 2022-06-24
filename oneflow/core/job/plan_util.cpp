@@ -778,13 +778,6 @@ class StarNegoTreeBuilder : public NegoTreeBuilder {
     }
     int64_t root = task_ids[0];
 
-    std::string task_ids_str = "";
-    for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
-      task_ids_str += std::to_string(task_ids[i]);
-      task_ids_str += ", ";
-    }
-    // LOG(ERROR) << "Nego Tree Has ids: " << task_ids_str << " root is " << root;
-
     for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
       int64_t task_id = info.rank2node.at(i)->task_proto()->task_id();
       auto& nego_tree_info = (*(request_desc->mutable_negotiation_tree_topo()))[task_id];
@@ -798,12 +791,60 @@ class StarNegoTreeBuilder : public NegoTreeBuilder {
           std::move(std::vector<int64_t>(0)));
       }
     }
+
+    std::string task_ids_str = "";
+    for (int64_t i = 1; i < info.op_desc.num_ranks(); ++i) {
+      task_ids_str += std::to_string(task_ids[i]);
+      task_ids_str += ", ";
+    }
+    LOG(ERROR) << "Star Nego Tree root: " << root << " leaves: " << task_ids_str;
   }
 };
 
 class BinomialNegoTreeBuilder : public NegoTreeBuilder {
  public:
   void CalcNegoTree(boxing::of_collective::RequestDesc* request_desc, const OfCollectiveBoxingRequestInfo& info) override {}
+};
+
+class ChainNegoTreeBuilder : public NegoTreeBuilder {
+ public:
+  void CalcNegoTree(boxing::of_collective::RequestDesc* request_desc, const OfCollectiveBoxingRequestInfo& info) override {
+    auto task_ids = std::vector<int64_t>(info.op_desc.num_ranks());
+    for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
+      task_ids[i] = info.rank2node.at(i)->task_proto()->task_id();
+
+      // LOG(ERROR) << "i is " << i << ", info.rank2node.at(i)->task_proto()->task_id() is " << info.rank2node.at(i)->task_proto()->task_id() << ", task_ids[i] is " << task_ids[i];
+    }
+    for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
+      int64_t task_id = info.rank2node.at(i)->task_proto()->task_id();
+      auto& nego_tree_info = (*(request_desc->mutable_negotiation_tree_topo()))[task_id];
+
+      if (i == 0) {
+        // root
+        nego_tree_info.set_upstream_id(-1);
+        *(nego_tree_info.mutable_downstream_id()) = StdVec2PbRf(
+          std::move(std::vector<int64_t>({task_ids[i + 1]})));
+      } else if (i == info.op_desc.num_ranks() - 1) {
+        // leave
+        nego_tree_info.set_upstream_id(task_ids[i - 1]);
+        *(nego_tree_info.mutable_downstream_id()) = StdVec2PbRf(
+          std::move(std::vector<int64_t>(0)));
+      } else {
+        // middle
+        nego_tree_info.set_upstream_id(task_ids[i - 1]);
+        *(nego_tree_info.mutable_downstream_id()) = StdVec2PbRf(
+          std::move(std::vector<int64_t>({task_ids[i + 1]})));
+      }
+    }
+    
+    std::string task_ids_str = "";
+    for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
+      task_ids_str += std::to_string(task_ids[i]);
+      task_ids_str += " -> ";
+    }
+    LOG(ERROR) << "Chain Nego Tree: " << task_ids_str;
+    
+  }
 };
 
 }  // namespace
@@ -1015,7 +1056,14 @@ void PlanUtil::GenOfCollectiveBoxingPlan(Job* job, Plan* plan) {
         }
         request_desc->set_order(info.order);
         request_desc->set_dependency_depth(info.dependency_depth);
-        NegoTreeBuilder* nego_tree_builder = new StarNegoTreeBuilder();
+        NegoTreeBuilder* nego_tree_builder;
+        if (ParseBooleanFromEnv("ONEFLOW_OFCCL_CHAIN", false)) {
+          nego_tree_builder = new ChainNegoTreeBuilder();
+          LOG(ERROR) << "Use ChainNegoTreeBuilder";
+        } else {
+          nego_tree_builder = new StarNegoTreeBuilder();
+          LOG(ERROR) << "Use StarNegoTreeBuilder";
+        }
         nego_tree_builder->CalcNegoTree(request_desc, info);
         delete nego_tree_builder;
       } else {
