@@ -13,25 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_COMPILER_H_
-#define ONEFLOW_CORE_JOB_COMPILER_H_
-
-#include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/graph/task_graph.h"
-#include "oneflow/core/job/plan.pb.h"
-#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/vm/ep_event.h"
 
 namespace oneflow {
 
-class Compiler final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(Compiler);
-  Compiler() = default;
-  ~Compiler() = default;
+EpEvent::EpEvent(ep::Device* device) : device_(device), event_(nullptr) {
+  device_->SetAsActiveDevice();
+  event_ = device_->CreateEvent();  // NOLINT
+}
 
-  void Compile(Job*, Plan*) const;
-};
+EpEvent::~EpEvent() {
+  device_->SetAsActiveDevice();
+  device_->DestroyEvent(event_);
+}
+
+bool EpEvent::Query() const {
+  device_->SetAsActiveDevice();
+  return CHECK_JUST(event_->QueryDone());
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_JOB_COMPILER_H_
