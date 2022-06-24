@@ -42,8 +42,8 @@ namespace vm {
 
 struct OpCallInstructionUtil final {
   static inline Maybe<void> Compute(const vm::Instruction& instruction) {
-    auto* operand = GetCallPhyInstrOperand(instr_msg);
-    DeviceCtx* device_ctx = instr_msg.stream().device_ctx().get();
+    auto* operand = GetCallPhyInstrOperand(instruction);
+    DeviceCtx* device_ctx = instruction.stream().device_ctx().get();
     OF_PROFILER_RANGE_PUSH("AllocateOutputBlobsMemory");
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     OF_PROFILER_RANGE_POP();
