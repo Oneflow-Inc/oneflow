@@ -74,7 +74,7 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("input", 0), 0)
       .Split(user_op::OpArg("target", 0), 0)
-      .Split(user_op::OpArg("out", 0), 0)
+      .Broadcast(user_op::OpArg("out", 0))
       .Build();
   return Maybe<void>::Ok();
 }
