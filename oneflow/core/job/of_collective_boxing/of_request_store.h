@@ -126,7 +126,6 @@ class OfRequestStore {
   }
 
   OfRequestId GetOfRequestIdByName(const std::string& name) const {
-    // LOG(ERROR) << (name2request_id_.find(name) == name2request_id_.end());
     return name2request_id_.at(name);
   }
 

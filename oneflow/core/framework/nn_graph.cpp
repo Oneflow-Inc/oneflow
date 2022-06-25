@@ -263,7 +263,7 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
 }
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
-  // LOG(ERROR) << "OFCCL " << "enter CompileAndInitRuntime.";
+  VLOG(1) << "OFCCL " << "enter CompileAndInitRuntime.";
   CHECK_OR_RETURN(!runtime_inited_);
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   JUST(RegisterNewVariableOpInJobPass());
@@ -283,9 +283,9 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     double start = GetCurTime();
     // TODO(chengcheng): new memory reused by chunk
-    LOG(ERROR) << "OFCCL " << "enter Compiler().Compile.";
+    VLOG(1) << "OFCCL " << "enter Compiler().Compile.";
     Compiler().Compile(&job_, &plan_);
-    LOG(ERROR) << "OFCCL " << "DONE Compiler().Compile.";
+    VLOG(1) << "OFCCL " << "DONE Compiler().Compile.";
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
 
     VLOG(1) << "Graph name: " << name_ << " compile time: " << (GetCurTime() - start) / 1000000000.0
@@ -306,7 +306,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       PlanUtil::GenLightPlan(&plan_, name_);
     }
-    LOG(ERROR) << "OFCCL " << "Generated Plan.";
+    VLOG(1) << "OFCCL " << "Generated Plan.";
   }
   if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name = "plan:" + job_name();
@@ -327,7 +327,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   NewRuntimeBuffers();
 
   JUST(GetVariableRealBlobAfterSyncPlan());
-  LOG(ERROR) << "OFCCL " << "ready to init runtime.";
+  VLOG(1) << "OFCCL " << "ready to init runtime.";
 
   // NOTE(strint): Do memory shrink to free cached memory in eager VM before graph runtime init.
   JUST(vm::CurrentRankSync());
@@ -336,7 +336,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
   runtime_inited_ = true;
-  LOG(ERROR) << "OFCCL " << "runtime_inited_: " << runtime_inited_;
+  VLOG(1) << "OFCCL " << "runtime_inited_: " << runtime_inited_;
   return Maybe<void>::Ok();
 }
 

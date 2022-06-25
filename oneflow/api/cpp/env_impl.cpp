@@ -103,6 +103,7 @@ void CompleteEnvProto(of::EnvProto& env_proto) {
   if (HasEnvVar("GLOG_log_dir")) { cpp_logging_conf->set_log_dir(GetEnvVar("GLOG_log_dir", "")); }
   if (HasEnvVar("GLOG_logtostderr")) {
     cpp_logging_conf->set_logtostderr(GetEnvVar("GLOG_logtostderr", -1));
+    ---LOG(ERROR) << "GLOG_logtostderr is " << GetEnvVar("GLOG_logtostderr", -1);
   }
   if (HasEnvVar("GLOG_logbuflevel")) {
     cpp_logging_conf->set_logbuflevel(GetEnvVar("GLOG_logbuflevel", -1));

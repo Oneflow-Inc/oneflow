@@ -773,8 +773,6 @@ class StarNegoTreeBuilder : public NegoTreeBuilder {
     auto task_ids = std::vector<int64_t>(info.op_desc.num_ranks());
     for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
       task_ids[i] = info.rank2node.at(i)->task_proto()->task_id();
-
-      // LOG(ERROR) << "i is " << i << ", info.rank2node.at(i)->task_proto()->task_id() is " << info.rank2node.at(i)->task_proto()->task_id() << ", task_ids[i] is " << task_ids[i];
     }
     int64_t root = task_ids[0];
 
@@ -797,7 +795,7 @@ class StarNegoTreeBuilder : public NegoTreeBuilder {
       task_ids_str += std::to_string(task_ids[i]);
       task_ids_str += ", ";
     }
-    LOG(ERROR) << "Star Nego Tree root: " << root << " leaves: " << task_ids_str;
+    VLOG(1) << "Star Nego Tree root: " << root << " leaves: " << task_ids_str;
   }
 };
 
@@ -813,7 +811,7 @@ class ChainNegoTreeBuilder : public NegoTreeBuilder {
     for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
       task_ids[i] = info.rank2node.at(i)->task_proto()->task_id();
 
-      // LOG(ERROR) << "i is " << i << ", info.rank2node.at(i)->task_proto()->task_id() is " << info.rank2node.at(i)->task_proto()->task_id() << ", task_ids[i] is " << task_ids[i];
+      // VLOG(1) << "i is " << i << ", info.rank2node.at(i)->task_proto()->task_id() is " << info.rank2node.at(i)->task_proto()->task_id() << ", task_ids[i] is " << task_ids[i];
     }
     for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
       int64_t task_id = info.rank2node.at(i)->task_proto()->task_id();
@@ -842,7 +840,7 @@ class ChainNegoTreeBuilder : public NegoTreeBuilder {
       task_ids_str += std::to_string(task_ids[i]);
       task_ids_str += " -> ";
     }
-    LOG(ERROR) << "Chain Nego Tree: (root) " << task_ids_str;
+    VLOG(1) << "Chain Nego Tree: (root) " << task_ids_str;
     
   }
 };
@@ -1026,7 +1024,7 @@ void PlanUtil::GenOfCollectiveBoxingPlan(Job* job, Plan* plan) {
       OfGetDeviceDesc(task_proto, &device_desc);
       auto it = name2request_info.find(name);
       if (it == name2request_info.end()) {
-        // LOG(ERROR) << "task id is " << task_proto->task_id();
+        // VLOG(1) << "task id is " << task_proto->task_id();
         OfCollectiveBoxingRequestInfo request_info{
             .op_desc = rank_desc.op_desc(),
             .rank2node = {std::make_pair(rank_desc.rank(), node)},
@@ -1034,9 +1032,9 @@ void PlanUtil::GenOfCollectiveBoxingPlan(Job* job, Plan* plan) {
             .dependency_depth = dependency_depth,
         };
         name2request_info.emplace(std::make_pair(name, std::move(request_info)));
-        // LOG(ERROR) << "rank_desc.rank() is " << rank_desc.rank();
-        // LOG(ERROR) << "task id in the name2request_info is " << name2request_info[name].rank2node[rank_desc.rank()]->task_proto()->task_id();
-        // LOG(ERROR) << "task id in the name2request_info from PlanTaskNode is " << name2request_info[name].rank2node[rank_desc.rank()]->task_id();
+        // VLOG(1) << "rank_desc.rank() is " << rank_desc.rank();
+        // VLOG(1) << "task id in the name2request_info is " << name2request_info[name].rank2node[rank_desc.rank()]->task_proto()->task_id();
+        // VLOG(1) << "task id in the name2request_info from PlanTaskNode is " << name2request_info[name].rank2node[rank_desc.rank()]->task_id();
         order += 1;
       } else {
         CHECK(it->second.op_desc == rank_desc.op_desc());
@@ -1059,10 +1057,10 @@ void PlanUtil::GenOfCollectiveBoxingPlan(Job* job, Plan* plan) {
         NegoTreeBuilder* nego_tree_builder;
         if (ParseBooleanFromEnv("ONEFLOW_OFCCL_CHAIN", false)) {
           nego_tree_builder = new ChainNegoTreeBuilder();
-          LOG(ERROR) << "Use ChainNegoTreeBuilder";
+          VLOG(1) << "Use ChainNegoTreeBuilder";
         } else {
           nego_tree_builder = new StarNegoTreeBuilder();
-          LOG(ERROR) << "Use StarNegoTreeBuilder";
+          VLOG(1) << "Use StarNegoTreeBuilder";
         }
         nego_tree_builder->CalcNegoTree(request_desc, info);
         delete nego_tree_builder;

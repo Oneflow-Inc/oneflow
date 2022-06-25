@@ -36,7 +36,6 @@ Thread* ThreadMgr::GetThrd(int64_t thrd_id) {
 }
 
 void ThreadMgr::AddThreads(const HashSet<int64_t>& thread_ids) {
-  // LOG(ERROR) << "Enter ThreadMgr::AddThreads";
   const int64_t this_rank = GlobalProcessCtx::Rank();
   for (int64_t thrd_id : thread_ids) {
     const auto& it = threads_.find(thrd_id);
@@ -48,7 +47,6 @@ void ThreadMgr::AddThreads(const HashSet<int64_t>& thread_ids) {
     }
     StreamId stream_id = DecodeStreamIdFromInt64(thrd_id);
     if (stream_id.rank() != this_rank) { continue; }
-    // LOG(ERROR) << "prepare create new Thread ";
     Thread* thread = new Thread(stream_id);
     CHECK_NOTNULL(thread);
     threads_[thrd_id].reset(thread);
