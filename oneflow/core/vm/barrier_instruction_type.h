@@ -17,13 +17,12 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_BARRIER_INSTRUCTION_TYPE_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/rpc/include/base.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
-#include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
@@ -42,10 +41,9 @@ class BarrierInstructionType : public InstructionType {
  protected:
   void Run(const Instruction& instruction) const {
     const auto& phy_instr_operand = instruction.phy_instr_operand();
-    CHECK(static_cast<bool>(phy_instr_operand));
-    const auto* ptr = dynamic_cast<const NoArgCbPhyInstrOperand*>(phy_instr_operand.get());
-    CHECK_NOTNULL(ptr);
-    ptr->callback()();
+    const auto* operand =
+        CHECK_NOTNULL(dynamic_cast<const BarrierPhyInstrOperand*>(phy_instr_operand.get()));
+    operand->callback();
   }
 };
 

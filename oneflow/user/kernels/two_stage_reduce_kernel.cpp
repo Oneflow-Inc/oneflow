@@ -39,28 +39,28 @@ class ReduceDeviceStageKernel final : public OpKernel {
     T* reduce_tmp_buf = tmp_buffer->mut_dptr<T>();
     int32_t* mask_tmp_buf = tmp_buffer->mut_dptr<int32_t>();
     const size_t tmp_bytes =
-        GetCudaAlignedSize(in->shape().elem_cnt() * std::max(sizeof(T), sizeof(int32_t)));
+        GetCudaAlignedSize(in->shape_view().elem_cnt() * std::max(sizeof(T), sizeof(int32_t)));
     int32_t* reduce_sum_tmp_buf =
         reinterpret_cast<int32_t*>(tmp_buffer->mut_dptr<char>() + tmp_bytes);
 
     NdarrayReduce<device_type, T, BinaryFunc>::Reduce(
-        ctx->stream(), XpuVarNdarray<T>(out->shape(), out->mut_dptr<T>()),
-        XpuVarNdarray<const T>(in->shape(), in->dptr<T>()),
-        XpuVarNdarray<T>(in->shape(), reduce_tmp_buf));
+        ctx->stream(), XpuVarNdarray<T>(out->shape_view(), out->mut_dptr<T>()),
+        XpuVarNdarray<const T>(in->shape_view(), in->dptr<T>()),
+        XpuVarNdarray<T>(in->shape_view(), reduce_tmp_buf));
     NdarrayUtil<device_type, T>::BroadcastEQ(
-        ctx->stream(), XpuVarNdarray<bool>(mask->shape(), mask->mut_dptr<bool>()),
-        XpuVarNdarray<const T>(in->shape(), in->dptr<T>()),
-        XpuVarNdarray<const T>(out->shape(), out->dptr<T>()));
+        ctx->stream(), XpuVarNdarray<bool>(mask->shape_view(), mask->mut_dptr<bool>()),
+        XpuVarNdarray<const T>(in->shape_view(), in->dptr<T>()),
+        XpuVarNdarray<const T>(out->shape_view(), out->dptr<T>()));
 
     auto cast = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
         ctx->device_type(), DataType::kInt8, DataType::kInt32);
     CHECK(cast);
 
-    cast->Launch(ctx->stream(), mask->dptr<bool>(), mask_tmp_buf, mask->shape().elem_cnt());
+    cast->Launch(ctx->stream(), mask->dptr<bool>(), mask_tmp_buf, mask->shape_view().elem_cnt());
     NdarrayUtil<device_type, int32_t>::ReduceSum(
-        ctx->stream(), XpuVarNdarray<int32_t>(count->shape(), count->mut_dptr<int32_t>()),
-        XpuVarNdarray<const int32_t>(mask->shape(), mask_tmp_buf),
-        XpuVarNdarray<int32_t>(mask->shape(), reduce_sum_tmp_buf));
+        ctx->stream(), XpuVarNdarray<int32_t>(count->shape_view(), count->mut_dptr<int32_t>()),
+        XpuVarNdarray<const int32_t>(mask->shape_view(), mask_tmp_buf),
+        XpuVarNdarray<int32_t>(mask->shape_view(), reduce_sum_tmp_buf));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -104,20 +104,20 @@ class ReduceDeviceStageGradKernel final : public OpKernel {
     user_op::Tensor* in_diff = ctx->Tensor4ArgNameAndIndex("in_diff", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     T* tmp_buf_ptr = tmp_buffer->mut_dptr<T>();
-    const size_t tmp_bytes = GetCudaAlignedSize(out_diff->shape().elem_cnt() * sizeof(T));
+    const size_t tmp_bytes = GetCudaAlignedSize(out_diff->shape_view().elem_cnt() * sizeof(T));
     T* broadcasted_tmp_buf_ptr = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + tmp_bytes);
 
     TwoStageReduceKernelUtil<device_type, T, int32_t>::Divide(
-        ctx->stream(), out_diff->shape().elem_cnt(), out_diff->dptr<T>(), count->dptr<int32_t>(),
-        tmp_buf_ptr);
+        ctx->stream(), out_diff->shape_view().elem_cnt(), out_diff->dptr<T>(),
+        count->dptr<int32_t>(), tmp_buf_ptr);
 
     NdarrayUtil<device_type, T>::BroadcastTo(
-        ctx->stream(), XpuVarNdarray<T>(in_diff->shape(), broadcasted_tmp_buf_ptr),
-        XpuVarNdarray<const T>(out_diff->shape(), tmp_buf_ptr));
+        ctx->stream(), XpuVarNdarray<T>(in_diff->shape_view(), broadcasted_tmp_buf_ptr),
+        XpuVarNdarray<const T>(out_diff->shape_view(), tmp_buf_ptr));
 
     TwoStageReduceKernelUtil<device_type, T, bool>::Mask(
-        ctx->stream(), in_diff->shape().elem_cnt(), broadcasted_tmp_buf_ptr, mask->dptr<bool>(),
-        in_diff->mut_dptr<T>());
+        ctx->stream(), in_diff->shape_view().elem_cnt(), broadcasted_tmp_buf_ptr,
+        mask->dptr<bool>(), in_diff->mut_dptr<T>());
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -161,15 +161,15 @@ class ReduceGlobalStageKernel final : public OpKernel {
     user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
-    const Shape& reduced_shape = CreateReducedShape(in->shape(), {axis.begin(), axis.end()});
+    const Shape& reduced_shape = CreateReducedShape(in->shape_view(), {axis.begin(), axis.end()});
     NdarrayReduce<device_type, T, BinaryFunc>::Reduce(
         ctx->stream(), XpuVarNdarray<T>(reduced_shape, out->mut_dptr<T>()),
-        XpuVarNdarray<const T>(in->shape(), in->dptr<T>()),
-        XpuVarNdarray<T>(in->shape(), tmp_buffer->mut_dptr<T>()));
+        XpuVarNdarray<const T>(in->shape_view(), in->dptr<T>()),
+        XpuVarNdarray<T>(in->shape_view(), tmp_buffer->mut_dptr<T>()));
 
     NdarrayUtil<device_type, T>::BroadcastEQ(
-        ctx->stream(), XpuVarNdarray<bool>(in->shape(), mask->mut_dptr<bool>()),
-        XpuVarNdarray<const T>(in->shape(), in->dptr<T>()),
+        ctx->stream(), XpuVarNdarray<bool>(in->shape_view(), mask->mut_dptr<bool>()),
+        XpuVarNdarray<const T>(in->shape_view(), in->dptr<T>()),
         XpuVarNdarray<const T>(reduced_shape, out->dptr<T>()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -207,46 +207,47 @@ class ReduceGlobalStageGradKernel final : public OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     int32_t* device_count_with_mask = tmp_buffer->mut_dptr<int32_t>();
     const size_t device_count_with_mask_bytes =
-        GetCudaAlignedSize(device_count->shape().elem_cnt() * sizeof(int32_t));
+        GetCudaAlignedSize(device_count->shape_view().elem_cnt() * sizeof(int32_t));
     int32_t* global_count =
         reinterpret_cast<int32_t*>(tmp_buffer->mut_dptr<char>() + device_count_with_mask_bytes);
     const size_t global_count_bytes =
-        GetCudaAlignedSize(out_diff->shape().elem_cnt() * sizeof(int32_t));
+        GetCudaAlignedSize(out_diff->shape_view().elem_cnt() * sizeof(int32_t));
     int32_t* reduce_sum_tmp_buf = reinterpret_cast<int32_t*>(
         tmp_buffer->mut_dptr<char>() + device_count_with_mask_bytes + global_count_bytes);
     const size_t reduce_sum_tmp_bytes =
-        GetCudaAlignedSize(device_count->shape().elem_cnt() * sizeof(int32_t));
+        GetCudaAlignedSize(device_count->shape_view().elem_cnt() * sizeof(int32_t));
     T* divided_buf_ptr =
         reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + device_count_with_mask_bytes
                              + global_count_bytes + reduce_sum_tmp_bytes);
-    const size_t divided_buf_bytes = GetCudaAlignedSize(out_diff->shape().elem_cnt() * sizeof(T));
+    const size_t divided_buf_bytes =
+        GetCudaAlignedSize(out_diff->shape_view().elem_cnt() * sizeof(T));
     T* broadcasted_divided_buf_ptr =
         reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + device_count_with_mask_bytes
                              + global_count_bytes + reduce_sum_tmp_bytes + divided_buf_bytes);
 
     TwoStageReduceKernelUtil<device_type, int32_t, bool>::Mask(
-        ctx->stream(), device_count->shape().elem_cnt(), device_count->dptr<int32_t>(),
+        ctx->stream(), device_count->shape_view().elem_cnt(), device_count->dptr<int32_t>(),
         mask->dptr<bool>(), device_count_with_mask);
 
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
     const Shape& reduced_shape =
-        CreateReducedShape(device_count->shape(), {axis.begin(), axis.end()});
+        CreateReducedShape(device_count->shape_view(), {axis.begin(), axis.end()});
 
     NdarrayUtil<device_type, int32_t>::ReduceSum(
         ctx->stream(), XpuVarNdarray<int32_t>(reduced_shape, global_count),
-        XpuVarNdarray<const int32_t>(device_count->shape(), device_count_with_mask),
-        XpuVarNdarray<int32_t>(device_count->shape(), reduce_sum_tmp_buf));
+        XpuVarNdarray<const int32_t>(device_count->shape_view(), device_count_with_mask),
+        XpuVarNdarray<int32_t>(device_count->shape_view(), reduce_sum_tmp_buf));
 
     TwoStageReduceKernelUtil<device_type, T, int32_t>::Divide(
-        ctx->stream(), out_diff->shape().elem_cnt(), out_diff->dptr<T>(), global_count,
+        ctx->stream(), out_diff->shape_view().elem_cnt(), out_diff->dptr<T>(), global_count,
         divided_buf_ptr);
 
     NdarrayUtil<device_type, T>::BroadcastTo(
-        ctx->stream(), XpuVarNdarray<T>(in_diff->shape(), broadcasted_divided_buf_ptr),
-        XpuVarNdarray<const T>(out_diff->shape(), divided_buf_ptr));
+        ctx->stream(), XpuVarNdarray<T>(in_diff->shape_view(), broadcasted_divided_buf_ptr),
+        XpuVarNdarray<const T>(out_diff->shape_view(), divided_buf_ptr));
 
     TwoStageReduceKernelUtil<device_type, T, int32_t>::Scale(
-        ctx->stream(), in_diff->shape().elem_cnt(), broadcasted_divided_buf_ptr,
+        ctx->stream(), in_diff->shape_view().elem_cnt(), broadcasted_divided_buf_ptr,
         device_count_with_mask, in_diff->mut_dptr<T>());
   }
 

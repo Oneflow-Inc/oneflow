@@ -27,7 +27,7 @@ template<typename T>
 __global__ void UpsampleNearest1DForward(const int64_t elem_cnt, const T* in_dptr,
                                          NdIndexOffsetHelper<int64_t, 3> in_helper,
                                          NdIndexOffsetHelper<int64_t, 3> out_helper,
-                                         const int64_t in_height, const float scale_factor,
+                                         const int64_t in_height, const double scale_factor,
                                          T* out_dptr) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h;
@@ -41,7 +41,7 @@ template<typename T>
 __global__ void UpsampleNearest1DBackward(const int64_t elem_cnt, const T* dy_dptr,
                                           NdIndexOffsetHelper<int64_t, 3> dy_helper,
                                           NdIndexOffsetHelper<int64_t, 3> dx_helper,
-                                          const int64_t in_height, const float scale_factor,
+                                          const int64_t in_height, const double scale_factor,
                                           T* dx_dptr) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h;
@@ -56,7 +56,7 @@ __global__ void UpsampleNearest2DForward(const int64_t elem_cnt, const T* in_dpt
                                          NdIndexOffsetHelper<int64_t, 4> in_helper,
                                          NdIndexOffsetHelper<int64_t, 4> out_helper,
                                          const int64_t in_height, const int64_t in_width,
-                                         const float scale_h, const float scale_w, T* out_dptr) {
+                                         const double scale_h, const double scale_w, T* out_dptr) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h, w;
     out_helper.OffsetToNdIndex(index, n, c, h, w);
@@ -71,7 +71,7 @@ __global__ void UpsampleNearest2DBackward(const int64_t elem_cnt, const T* dy_dp
                                           NdIndexOffsetHelper<int64_t, 4> dy_helper,
                                           NdIndexOffsetHelper<int64_t, 4> dx_helper,
                                           const int64_t dx_height, const int64_t dx_width,
-                                          const float scale_h, const float scale_w, T* dx_dptr) {
+                                          const double scale_h, const double scale_w, T* dx_dptr) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h, w;
     dy_helper.OffsetToNdIndex(index, n, c, h, w);
@@ -128,21 +128,25 @@ class UpsampleNearest1DGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const float height_scale = ctx->Attr<float>("scale_factor");
-    const int64_t elem_cnt = y_tensor->shape().elem_cnt();
-    const int64_t in_height = x_tensor->shape().At(2);
-    const int64_t out_height = y_tensor->shape().At(2);
+    const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    double height_scale = ctx->Attr<double>("scale_factor");
+    const int64_t elem_cnt = y_tensor->shape_view().elem_cnt();
+    const int64_t in_height = x_tensor->shape_view().At(2);
+    const int64_t out_height = y_tensor->shape_view().At(2);
+    if (!output_size.empty()) {
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+    }
     if (in_height == out_height) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
-          x_tensor->shape().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
+          x_tensor->shape_view().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
     } else {
-      NdIndexOffsetHelper<int64_t, 3> in_helper(x_tensor->shape().At(0), x_tensor->shape().At(1),
-                                                x_tensor->shape().At(2));
-      NdIndexOffsetHelper<int64_t, 3> out_helper(y_tensor->shape().At(0), y_tensor->shape().At(1),
-                                                 y_tensor->shape().At(2));
+      NdIndexOffsetHelper<int64_t, 3> in_helper(
+          x_tensor->shape_view().At(0), x_tensor->shape_view().At(1), x_tensor->shape_view().At(2));
+      NdIndexOffsetHelper<int64_t, 3> out_helper(
+          y_tensor->shape_view().At(0), y_tensor->shape_view().At(1), y_tensor->shape_view().At(2));
       RUN_CUDA_KERNEL((UpsampleNearest1DForward<T>), ctx->stream(), elem_cnt, elem_cnt,
-                      x_tensor->dptr<T>(), in_helper, out_helper, x_tensor->shape().At(2),
+                      x_tensor->dptr<T>(), in_helper, out_helper, x_tensor->shape_view().At(2),
                       1.f / height_scale, y_tensor->mut_dptr<T>());
     }
   }
@@ -161,23 +165,29 @@ class UpsampleNearestGrad1DGPUKernel final : public user_op::OpKernel {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
     Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
-                              dx_tensor->shape().elem_cnt() * sizeof(T));
+                              dx_tensor->shape_view().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    const float height_scale = ctx->Attr<float>("scale_factor");
-    const int64_t elem_cnt = dy_tensor->shape().elem_cnt();
-    const int64_t in_height = dx_tensor->shape().At(2);
-    const int64_t out_height = dy_tensor->shape().At(2);
+    const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    double height_scale = ctx->Attr<double>("scale_factor");
+    const int64_t elem_cnt = dy_tensor->shape_view().elem_cnt();
+    const int64_t in_height = dx_tensor->shape_view().At(2);
+    const int64_t out_height = dy_tensor->shape_view().At(2);
+    if (!output_size.empty()) {
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+    }
     if (in_height == out_height) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
-          dy_tensor->shape().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
+          dy_tensor->shape_view().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
     } else {
-      NdIndexOffsetHelper<int64_t, 3> dy_helper(dy_tensor->shape().At(0), dy_tensor->shape().At(1),
-                                                dy_tensor->shape().At(2));
-      NdIndexOffsetHelper<int64_t, 3> dx_helper(dx_tensor->shape().At(0), dx_tensor->shape().At(1),
-                                                dx_tensor->shape().At(2));
+      NdIndexOffsetHelper<int64_t, 3> dy_helper(dy_tensor->shape_view().At(0),
+                                                dy_tensor->shape_view().At(1),
+                                                dy_tensor->shape_view().At(2));
+      NdIndexOffsetHelper<int64_t, 3> dx_helper(dx_tensor->shape_view().At(0),
+                                                dx_tensor->shape_view().At(1),
+                                                dx_tensor->shape_view().At(2));
       RUN_CUDA_KERNEL((UpsampleNearest1DBackward<T>), ctx->stream(), elem_cnt, elem_cnt,
-                      dy_tensor->dptr<T>(), dy_helper, dx_helper, dx_tensor->shape().At(2),
+                      dy_tensor->dptr<T>(), dy_helper, dx_helper, dx_tensor->shape_view().At(2),
                       1.f / height_scale, dx_tensor->mut_dptr<T>());
     }
   }
@@ -208,26 +218,33 @@ class UpsampleNearest2DGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const float height_scale = ctx->Attr<float>("height_scale");
-    const float width_scale = ctx->Attr<float>("width_scale");
-    const int64_t elem_cnt = y_tensor->shape().elem_cnt();
+    const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    double height_scale = ctx->Attr<double>("height_scale");
+    double width_scale = ctx->Attr<double>("width_scale");
+    const int64_t elem_cnt = y_tensor->shape_view().elem_cnt();
+    const int64_t in_height = x_tensor->shape_view().At(2);
+    const int64_t in_width = x_tensor->shape_view().At(3);
+    const int64_t out_height = y_tensor->shape_view().At(2);
+    const int64_t out_width = y_tensor->shape_view().At(3);
+    if (!output_size.empty()) {
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+      width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
+    }
 
-    const int64_t in_height = x_tensor->shape().At(2);
-    const int64_t in_width = x_tensor->shape().At(3);
-    const int64_t out_height = y_tensor->shape().At(2);
-    const int64_t out_width = y_tensor->shape().At(3);
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
-          x_tensor->shape().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
+          x_tensor->shape_view().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
     } else {
-      NdIndexOffsetHelper<int64_t, 4> in_helper(x_tensor->shape().At(0), x_tensor->shape().At(1),
-                                                x_tensor->shape().At(2), x_tensor->shape().At(3));
-      NdIndexOffsetHelper<int64_t, 4> out_helper(y_tensor->shape().At(0), y_tensor->shape().At(1),
-                                                 y_tensor->shape().At(2), y_tensor->shape().At(3));
+      NdIndexOffsetHelper<int64_t, 4> in_helper(
+          x_tensor->shape_view().At(0), x_tensor->shape_view().At(1), x_tensor->shape_view().At(2),
+          x_tensor->shape_view().At(3));
+      NdIndexOffsetHelper<int64_t, 4> out_helper(
+          y_tensor->shape_view().At(0), y_tensor->shape_view().At(1), y_tensor->shape_view().At(2),
+          y_tensor->shape_view().At(3));
       RUN_CUDA_KERNEL((UpsampleNearest2DForward<T>), ctx->stream(), elem_cnt, elem_cnt,
-                      x_tensor->dptr<T>(), in_helper, out_helper, x_tensor->shape().At(2),
-                      x_tensor->shape().At(3), 1.f / height_scale, 1.f / width_scale,
+                      x_tensor->dptr<T>(), in_helper, out_helper, x_tensor->shape_view().At(2),
+                      x_tensor->shape_view().At(3), 1.f / height_scale, 1.f / width_scale,
                       y_tensor->mut_dptr<T>());
     }
   }
@@ -246,27 +263,34 @@ class UpsampleNearest2DGradGPUKernel final : public user_op::OpKernel {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
     Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
-                              dx_tensor->shape().elem_cnt() * sizeof(T));
+                              dx_tensor->shape_view().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    const float height_scale = ctx->Attr<float>("height_scale");
-    const float width_scale = ctx->Attr<float>("width_scale");
-    const int64_t elem_cnt = dy_tensor->shape().elem_cnt();
-    const int64_t in_height = dx_tensor->shape().At(2);
-    const int64_t in_width = dx_tensor->shape().At(3);
-    const int64_t out_height = dy_tensor->shape().At(2);
-    const int64_t out_width = dy_tensor->shape().At(3);
+    const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    double height_scale = ctx->Attr<double>("height_scale");
+    double width_scale = ctx->Attr<double>("width_scale");
+    const int64_t elem_cnt = dy_tensor->shape_view().elem_cnt();
+    const int64_t in_height = dx_tensor->shape_view().At(2);
+    const int64_t in_width = dx_tensor->shape_view().At(3);
+    const int64_t out_height = dy_tensor->shape_view().At(2);
+    const int64_t out_width = dy_tensor->shape_view().At(3);
+    if (!output_size.empty()) {
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+      width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
+    }
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
-          dy_tensor->shape().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
+          dy_tensor->shape_view().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
     } else {
-      NdIndexOffsetHelper<int64_t, 4> dy_helper(dy_tensor->shape().At(0), dy_tensor->shape().At(1),
-                                                dy_tensor->shape().At(2), dy_tensor->shape().At(3));
-      NdIndexOffsetHelper<int64_t, 4> dx_helper(dx_tensor->shape().At(0), dx_tensor->shape().At(1),
-                                                dx_tensor->shape().At(2), dx_tensor->shape().At(3));
+      NdIndexOffsetHelper<int64_t, 4> dy_helper(
+          dy_tensor->shape_view().At(0), dy_tensor->shape_view().At(1),
+          dy_tensor->shape_view().At(2), dy_tensor->shape_view().At(3));
+      NdIndexOffsetHelper<int64_t, 4> dx_helper(
+          dx_tensor->shape_view().At(0), dx_tensor->shape_view().At(1),
+          dx_tensor->shape_view().At(2), dx_tensor->shape_view().At(3));
       RUN_CUDA_KERNEL((UpsampleNearest2DBackward<T>), ctx->stream(), elem_cnt, elem_cnt,
-                      dy_tensor->dptr<T>(), dy_helper, dx_helper, dx_tensor->shape().At(2),
-                      dx_tensor->shape().At(3), 1.f / height_scale, 1.f / width_scale,
+                      dy_tensor->dptr<T>(), dy_helper, dx_helper, dx_tensor->shape_view().At(2),
+                      dx_tensor->shape_view().At(3), 1.f / height_scale, 1.f / width_scale,
                       dx_tensor->mut_dptr<T>());
     }
   }
@@ -297,19 +321,31 @@ class UpsampleNearest3DGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const float height_scale = ctx->Attr<float>("height_scale");
-    const float width_scale = ctx->Attr<float>("width_scale");
-    const float depth_scale = ctx->Attr<float>("depth_scale");
-    const int64_t elem_cnt = y_tensor->shape().elem_cnt();
-    NdIndexOffsetHelper<int64_t, 5> in_helper(x_tensor->shape().At(0), x_tensor->shape().At(1),
-                                              x_tensor->shape().At(2), x_tensor->shape().At(3),
-                                              x_tensor->shape().At(4));
-    NdIndexOffsetHelper<int64_t, 5> out_helper(y_tensor->shape().At(0), y_tensor->shape().At(1),
-                                               y_tensor->shape().At(2), y_tensor->shape().At(3),
-                                               y_tensor->shape().At(4));
+    const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    double depth_scale = ctx->Attr<double>("depth_scale");
+    double height_scale = ctx->Attr<double>("height_scale");
+    double width_scale = ctx->Attr<double>("width_scale");
+    const int64_t in_depth = x_tensor->shape_view().At(2);
+    const int64_t in_height = x_tensor->shape_view().At(3);
+    const int64_t in_width = x_tensor->shape_view().At(4);
+    const int64_t out_depth = y_tensor->shape_view().At(2);
+    const int64_t out_height = y_tensor->shape_view().At(3);
+    const int64_t out_width = y_tensor->shape_view().At(4);
+    const int64_t elem_cnt = y_tensor->shape_view().elem_cnt();
+    if (!output_size.empty()) {
+      depth_scale = static_cast<double>(out_depth) / static_cast<double>(in_depth);
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+      width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
+    }
+    NdIndexOffsetHelper<int64_t, 5> in_helper(
+        x_tensor->shape_view().At(0), x_tensor->shape_view().At(1), x_tensor->shape_view().At(2),
+        x_tensor->shape_view().At(3), x_tensor->shape_view().At(4));
+    NdIndexOffsetHelper<int64_t, 5> out_helper(
+        y_tensor->shape_view().At(0), y_tensor->shape_view().At(1), y_tensor->shape_view().At(2),
+        y_tensor->shape_view().At(3), y_tensor->shape_view().At(4));
     RUN_CUDA_KERNEL((UpsampleNearest3DForward<T>), ctx->stream(), elem_cnt, elem_cnt,
-                    x_tensor->dptr<T>(), in_helper, out_helper, x_tensor->shape().At(2),
-                    x_tensor->shape().At(3), x_tensor->shape().At(4), 1.f / depth_scale,
+                    x_tensor->dptr<T>(), in_helper, out_helper, x_tensor->shape_view().At(2),
+                    x_tensor->shape_view().At(3), x_tensor->shape_view().At(4), 1.f / depth_scale,
                     1.f / height_scale, 1.f / width_scale, y_tensor->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -327,21 +363,33 @@ class UpsampleNearestGrad3DGPUKernel final : public user_op::OpKernel {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
     Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
-                              dx_tensor->shape().elem_cnt() * sizeof(T));
+                              dx_tensor->shape_view().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    const float height_scale = ctx->Attr<float>("height_scale");
-    const float width_scale = ctx->Attr<float>("width_scale");
-    const float depth_scale = ctx->Attr<float>("depth_scale");
-    const int64_t elem_cnt = dy_tensor->shape().elem_cnt();
-    NdIndexOffsetHelper<int64_t, 5> dy_helper(dy_tensor->shape().At(0), dy_tensor->shape().At(1),
-                                              dy_tensor->shape().At(2), dy_tensor->shape().At(3),
-                                              dy_tensor->shape().At(4));
-    NdIndexOffsetHelper<int64_t, 5> dx_helper(dx_tensor->shape().At(0), dx_tensor->shape().At(1),
-                                              dx_tensor->shape().At(2), dx_tensor->shape().At(3),
-                                              dx_tensor->shape().At(4));
+    const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    double depth_scale = ctx->Attr<double>("depth_scale");
+    double height_scale = ctx->Attr<double>("height_scale");
+    double width_scale = ctx->Attr<double>("width_scale");
+    const int64_t in_depth = dx_tensor->shape_view().At(2);
+    const int64_t in_height = dx_tensor->shape_view().At(3);
+    const int64_t in_width = dx_tensor->shape_view().At(4);
+    const int64_t out_depth = dy_tensor->shape_view().At(2);
+    const int64_t out_height = dy_tensor->shape_view().At(3);
+    const int64_t out_width = dy_tensor->shape_view().At(4);
+    const int64_t elem_cnt = dy_tensor->shape_view().elem_cnt();
+    if (!output_size.empty()) {
+      depth_scale = static_cast<double>(out_depth) / static_cast<double>(in_depth);
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+      width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
+    }
+    NdIndexOffsetHelper<int64_t, 5> dy_helper(
+        dy_tensor->shape_view().At(0), dy_tensor->shape_view().At(1), dy_tensor->shape_view().At(2),
+        dy_tensor->shape_view().At(3), dy_tensor->shape_view().At(4));
+    NdIndexOffsetHelper<int64_t, 5> dx_helper(
+        dx_tensor->shape_view().At(0), dx_tensor->shape_view().At(1), dx_tensor->shape_view().At(2),
+        dx_tensor->shape_view().At(3), dx_tensor->shape_view().At(4));
     RUN_CUDA_KERNEL((UpsampleNearest3DBackward<T>), ctx->stream(), elem_cnt, elem_cnt,
-                    dy_tensor->dptr<T>(), dy_helper, dx_helper, dx_tensor->shape().At(2),
-                    dx_tensor->shape().At(3), dx_tensor->shape().At(4), 1.f / depth_scale,
+                    dy_tensor->dptr<T>(), dy_helper, dx_helper, dx_tensor->shape_view().At(2),
+                    dx_tensor->shape_view().At(3), dx_tensor->shape_view().At(4), 1.f / depth_scale,
                     1.f / height_scale, 1.f / width_scale, dx_tensor->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

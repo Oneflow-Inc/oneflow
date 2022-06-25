@@ -41,28 +41,6 @@ Maybe<void> CumsumOp::InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CumsumGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("dx", 0) = ctx->InputShape("dy", 0);
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> CumsumGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
-Maybe<void> CumsumGradOp::GetSbp(user_op::SbpContext* ctx) {
-  const auto& dy_tensor_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
-  for (auto i = 0; i < dy_tensor_desc.shape().NumAxes(); i++) {
-    ctx->NewBuilder().Split(user_op::OpArg("dy", 0), i).Split(user_op::OpArg("dx", 0), i).Build();
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> CumsumGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-  return Maybe<void>::Ok();
-}
-
 REGISTER_USER_OP_GRAD("cumsum").SetGenBackwardOpConfFn(
     [](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {

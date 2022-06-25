@@ -18,12 +18,15 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
-#include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/eager/local_dep_object.h"
+#include "oneflow/core/device/device_context.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/tensor_methods.h"
+#include "oneflow/core/framework/user_op_tensor.h"
+#include "oneflow/core/framework/tensor_desc.h"
+#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 
@@ -81,35 +84,50 @@ class TensorStorage {
   std::vector<std::function<void()>> storage_delete_hooks_;
 };
 
-class EagerBlobObject final : public BlobObject {
+class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc {
  public:
   EagerBlobObject(const EagerBlobObject&) = delete;
   EagerBlobObject(EagerBlobObject&&) = delete;
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
-                  DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage)
-      : EagerBlobObject(mem_case, shape, data_type, tensor_storage,
+                  const std::shared_ptr<Stride>& stride, DataType data_type,
+                  const std::shared_ptr<TensorStorage>& tensor_storage)
+      : EagerBlobObject(mem_case, shape, stride, data_type, tensor_storage,
                         intrusive::shared_ptr<LocalDepObject>()) {}
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
-                  DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
+                  const std::shared_ptr<Stride>& stride, DataType data_type,
+                  const std::shared_ptr<TensorStorage>& tensor_storage,
                   const intrusive::shared_ptr<LocalDepObject>& dep_object);
 
-  ~EagerBlobObject() override {
-    tensor_storage_.reset();
-    header_buffer_.reset();
-    blob_.reset();
+  ~EagerBlobObject() { tensor_storage_.reset(); }
+
+  // user_op::TensorDesc overrides
+  const Shape& shape() const override { return *shape_; }
+  Shape* mut_shape() override { return shape_.get(); }
+  const Stride& stride() const override { return *stride_; }
+  Stride* mut_stride() override { return stride_.get(); }
+  DataType data_type() const override { return data_type_; }
+  DataType* mut_data_type() override { return &data_type_; }
+  bool is_dynamic() const override { return is_dynamic_; }
+  bool* mut_is_dynamic() override { return &is_dynamic_; }
+  void set_is_dynamic(bool is_dynamic) override { is_dynamic_ = is_dynamic; }
+
+  // user_op::Tensor overrides
+  ShapeView shape_view() const override { return *shape_; }
+  MutShapeView mut_shape_view() override { return *shape_; }
+  const MemoryCase& mem_case() const override { return *mem_case_; }
+  const void* raw_dptr() const override {
+    return tensor_storage_->blob_dptr() + storage_offset_ * GetSizeOfDataType(data_type_);
   }
+  void* mut_raw_dptr() override { return const_cast<void*>(raw_dptr()); }
 
-  BlobDesc* mut_blob_desc() override { return &blob_desc_; }
+  void set_storage_offset(const int64_t offset);
 
-  const Blob& blob() const override { return *blob_; }
-  Blob* mut_blob() override { return blob_.get(); }
+  [[deprecated("\"Blob\" will be removed in eager. Please avoid to use this method whenever "
+               "possible. Almost all methods of `Blob` are also in `EagerBlobObject`.")]] Blob*
+  blob();
 
-  Maybe<void> TryInitBlob() override;
-  Maybe<void> InitBlob();
-  Maybe<void> InitBlobWithOffset(const int64_t offset);
-
-  Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
-  Maybe<void> DeallocateBlobDataPtr() override {
+  Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx);
+  Maybe<void> DeallocateBlobDataPtr() {
     tensor_storage_->Release();
     tensor_storage_.reset(new TensorStorage);
     return Maybe<void>::Ok();
@@ -143,12 +161,40 @@ class EagerBlobObject final : public BlobObject {
     tensor_storage_->set_last_used_stream(last_used_stream);
   }
 
+  void set_pin_memory(const bool pin_memory) { pin_memory_ = pin_memory; }
+
+  bool pin_memory() const { return pin_memory_; }
+
+  std::shared_ptr<const Shape> shape_ptr() const { return shape_; }
+  std::shared_ptr<const Stride> stride_ptr() const { return stride_; }
+
+  size_t ByteSizeOfBlobBody() const { return shape_->elem_cnt() * GetSizeOfDataType(data_type_); }
+  size_t AlignedByteSizeOfBlobBody() const {
+    return RoundUp(ByteSizeOfBlobBody(), kBlobBodyAlignSize);
+  }
+  size_t ByteSizeOfBlobHeader() const { return shape().NumAxes() * sizeof(int64_t); }
+  size_t AlignedByteSizeOfBlobHeader() const {
+    return RoundUp(ByteSizeOfBlobHeader(), kBlobHeaderAlignSize);
+  }
+
+  const char* header_ptr() const { return reinterpret_cast<const char*>(shape_->dim_vec().data()); }
+  char* mut_header_ptr() { return reinterpret_cast<char*>(shape_->dim_vec().data()); }
+
  private:
-  std::unique_ptr<Blob> blob_;
-  std::unique_ptr<char[]> header_buffer_;
+  bool is_dynamic_;
+  std::shared_ptr<MemoryCase> mem_case_;
+  DataType data_type_;
+  std::shared_ptr<Shape> shape_;
+  std::shared_ptr<Stride> stride_;
+  int64_t storage_offset_;
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::atomic<bool> is_shape_synced_;
+  bool pin_memory_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
+
+  // NOTE: Will be removed soon. Avoid to use it whenever possible.
+  BlobDesc blob_desc_;
+  std::unique_ptr<Blob> blob_;
 };
 
 }  // namespace vm

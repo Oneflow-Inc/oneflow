@@ -130,13 +130,11 @@ def _LoadSingleVariable(
         if rank == global_src_rank:
             assert isinstance(path, str)
             file_backed_blob = FileBackendVariableBlob(path)
-            loaded = flow.tensor(
-                file_backed_blob.numpy(), dtype=file_backed_blob.dtype
-            ).to("cuda")
+            loaded = flow.tensor(file_backed_blob.numpy(), dtype=file_backed_blob.dtype)
         else:
-            loaded = flow.tensor([]).to("cuda")
+            loaded = flow.tensor([])
         loaded = loaded.to_global(
-            flow.placement("cuda", [global_src_rank]), flow.sbp.broadcast
+            flow.placement("cpu", [global_src_rank]), flow.sbp.broadcast
         )
         return loaded
 
@@ -269,7 +267,7 @@ def legacy_load(
 
 
 @contextmanager
-def tensor_pickling_context(path: Path, global_src_dst_rank: int):
+def tensor_pickling_context(path: Path, global_src_dst_rank: Optional[int]):
     global save_load_path
     global global_src_dsk_rank
     global_src_dsk_rank = global_src_dst_rank
@@ -297,10 +295,10 @@ def load(path: str, global_src_rank: Optional[int] = None,) -> Any:
         The loaded object
     """
     path: Path = Path(path)
-    assert path.is_dir(), "Directory {} doesn't exist!".format(path)
-    pickle_path = path / PICKLE_FILENAME
     rank = flow.env.get_rank()
     if global_src_rank is None or global_src_rank == rank:
+        assert path.is_dir(), "Directory {} doesn't exist!".format(path)
+        pickle_path = path / PICKLE_FILENAME
         is_legacy = not pickle_path.exists()
         if global_src_rank is not None:
             _broadcast_py_object(is_legacy, global_src_rank)
@@ -358,11 +356,24 @@ def save(
     obj = {"protocol_version": PROTOCOL_VERSION, "data": obj}
     with tensor_pickling_context(path, global_dst_rank):
         pickled_bytes = pickle.dumps(obj)
-    rank = flow.env.get_rank()
-    if global_dst_rank is None or global_dst_rank == rank:
+
+    def write_to_path(path):
         path.mkdir(exist_ok=True)
         pickle_path = path / PICKLE_FILENAME
         pickle_path.write_bytes(pickled_bytes)
+
+    if global_dst_rank is not None:
+        assert isinstance(
+            global_dst_rank, int
+        ), f"global_dst_rank expected type int, but got {type(global_dst_rank)}."
+        assert (
+            global_dst_rank >= 0 and global_dst_rank < flow.env.get_world_size()
+        ), f"out of range (expected to be in range of [0, {flow.env.get_world_size()}), but got {global_dst_rank})."
+        if flow.env.get_rank() == global_dst_rank:
+            write_to_path(path)
+    else:
+        # global_dst_rank is None
+        write_to_path(path)
 
 
 save_load_path = None

@@ -36,7 +36,6 @@ class FuseInstructionType : public vm::InstructionType {
     auto* ptr = dynamic_cast<vm::FusePhyInstrOperand*>(phy_instr_operand.get());
     auto* instruction_list = CHECK_NOTNULL(ptr)->mut_instruction_list();
     auto* last_instruction = CHECK_NOTNULL(instruction_list->Last());
-    // init instruction status by last instruction_msg.
     last_instruction->instruction_type().InitInstructionStatusIf(instruction);
   }
 
@@ -45,9 +44,8 @@ class FuseInstructionType : public vm::InstructionType {
     auto* ptr = dynamic_cast<vm::FusePhyInstrOperand*>(phy_instr_operand.get());
     auto* instruction_list = CHECK_NOTNULL(ptr)->mut_instruction_list();
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, instruction_list) {
-      OF_PROFILER_RANGE_PUSH("F:" + instruction->DebugName());
+      OF_PROFILER_RANGE_GUARD("F:" + instruction->DebugName());
       instruction->instruction_type().Compute(instruction);
-      OF_PROFILER_RANGE_POP();
     }
   }
 };

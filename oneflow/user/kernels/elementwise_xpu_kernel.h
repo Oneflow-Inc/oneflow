@@ -15,9 +15,12 @@ limitations under the License.
 */
 #ifndef _ONEFLOW_USER_KERNELS_ELEMENTWISE_XPU_KERNEL_H_
 #define _ONEFLOW_USER_KERNELS_ELEMENTWISE_XPU_KERNEL_H_
+#include "oneflow/core/common/scalar.h"
+#include "oneflow/core/ep/include/primitive/unary_op.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/include/primitive/elementwise_unary.h"
 
 namespace oneflow {
 template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA>
@@ -69,8 +72,8 @@ class UnaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::C
     const user_op::Tensor* input_a_tensor = ctx->Tensor4ArgNameAndIndex(input_a_name, 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex(output_name, 0);
 
-    const ShapeView input_a_shape = input_a_tensor->shape();
-    const ShapeView out_shape = out_tensor->shape();
+    const ShapeView input_a_shape = input_a_tensor->shape_view();
+    const ShapeView out_shape = out_tensor->shape_view();
     CHECK_EQ(input_a_shape, out_shape);
 
     const InputA* input_a_ptr = input_a_tensor->dptr<InputA>();
@@ -84,6 +87,46 @@ class UnaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::C
 
   std::string output_name;
   std::string input_a_name;
+};
+
+class UnaryPrimitiveKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(UnaryPrimitiveKernel);
+  UnaryPrimitiveKernel() = default;
+  ~UnaryPrimitiveKernel() = default;
+
+  using PrimitiveFactoryFuncType = std::function<std::unique_ptr<ep::primitive::ElementwiseUnary>(
+      user_op::KernelComputeContext*)>;
+
+  UnaryPrimitiveKernel(const std::string& output_name, const std::string& input_name,
+                       PrimitiveFactoryFuncType fn)
+      : output_name_(output_name),
+        input_name_(input_name),
+        primitive_factory_func_(std::move(fn)) {}
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    auto primitive = primitive_factory_func_(ctx);
+    CHECK(primitive);
+
+    const user_op::Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex(input_name_, 0);
+    user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex(output_name_, 0);
+
+    const ShapeView& input_shape = input_tensor->shape_view();
+    const ShapeView& output_shape = output_tensor->shape_view();
+    CHECK_EQ(input_shape, output_shape) << "Input shape should be equal to Output shape.";
+    const int64_t elem_cnt = input_shape.elem_cnt();
+
+    if (elem_cnt != 0) {
+      primitive->Launch(ctx->stream(), input_tensor->dptr(), output_tensor->mut_dptr(), elem_cnt);
+    }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+  std::string output_name_;
+  std::string input_name_;
+  PrimitiveFactoryFuncType primitive_factory_func_;
 };
 
 template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA,
@@ -112,9 +155,9 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::
     const user_op::Tensor* input_b_tensor = ctx->Tensor4ArgNameAndIndex(input_b_name, 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex(output_name, 0);
 
-    const ShapeView input_a_shape = input_a_tensor->shape();
-    const ShapeView input_b_shape = input_b_tensor->shape();
-    const ShapeView out_shape = out_tensor->shape();
+    const ShapeView input_a_shape = input_a_tensor->shape_view();
+    const ShapeView input_b_shape = input_b_tensor->shape_view();
+    const ShapeView out_shape = out_tensor->shape_view();
     CHECK_EQ(input_a_shape, out_shape);
     CHECK_EQ(input_b_shape, out_shape);
 

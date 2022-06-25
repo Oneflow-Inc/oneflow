@@ -17,7 +17,7 @@ limitations under the License.
 This file is ported from mlir/lib/Dialect/GPU/Transforms/SerializeToCubin.cpp
 */
 
-#include "mlir/Dialect/GPU/Passes.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
 #ifdef WITH_MLIR_CUDA_CODEGEN
 
 #include "mlir/Pass/Pass.h"
@@ -52,6 +52,7 @@ static void emitCudaError(const llvm::Twine& expr, const char* buffer, CUresult 
 namespace {
 class SerializeToCubinPass : public PassWrapper<SerializeToCubinPass, gpu::SerializeToBlobPass> {
  public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SerializeToCubinPass)
   SerializeToCubinPass();
 
   StringRef getArgument() const override { return "out-of-tree-gpu-to-cubin"; }

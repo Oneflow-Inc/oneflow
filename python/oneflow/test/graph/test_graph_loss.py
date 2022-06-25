@@ -40,7 +40,7 @@ def compare_loss(device_type, dim, reduction, cls, data_generator):
 
     f_g = CurrentGraph()
     z_lazy = f_g(x, y)
-    assert np.array_equal(z_eager.numpy(), z_lazy.numpy())
+    assert np.allclose(z_eager.numpy(), z_lazy.numpy(), rtol=1.0e-5, atol=1.0e-5)
 
 
 def generate_necessity_default(dim: int, device: str):

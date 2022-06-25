@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/stream_role.h"
 
 namespace oneflow {
@@ -27,8 +28,9 @@ class Device;
 
 namespace vm {
 
-struct ThreadCtx;
-struct StreamType;
+class ThreadCtx;
+class StreamType;
+class MirroredObject;
 
 class Stream final : public intrusive::Base {
  public:
@@ -53,11 +55,21 @@ class Stream final : public intrusive::Base {
   DispatchedInstructionList* mut_running_instruction_list() { return &running_instruction_list_; }
 
   // methods
-  void __Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamRole stream_role);
+  void __Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamRole stream_role,
+                const intrusive::shared_ptr<MirroredObject>& schedule_local_dep_object,
+                const Optional<intrusive::shared_ptr<MirroredObject>>& transport_local_dep_object);
   int64_t device_id() const;
   Symbol<Device> device() const { return device_; }
   StreamRole stream_role() const { return stream_role_; }
   const StreamType& stream_type() const;
+
+  const intrusive::shared_ptr<MirroredObject>& schedule_local_dep_object() const {
+    return schedule_local_dep_object_;
+  }
+
+  const Optional<intrusive::shared_ptr<MirroredObject>>& transport_local_dep_object() const {
+    return transport_local_dep_object_;
+  }
 
  private:
   void MoveToFreeList(intrusive::shared_ptr<Instruction>&& instruction);
@@ -85,6 +97,9 @@ class Stream final : public intrusive::Base {
   std::unique_ptr<DeviceCtx> device_ctx_;
   // lists
   DispatchedInstructionList running_instruction_list_;
+
+  intrusive::shared_ptr<MirroredObject> schedule_local_dep_object_;
+  Optional<intrusive::shared_ptr<MirroredObject>> transport_local_dep_object_;
 
  public:
   // list hooks
