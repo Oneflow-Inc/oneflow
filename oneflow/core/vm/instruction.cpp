@@ -27,27 +27,23 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-std::string InstructionMsg::DebugName() const {
+std::string Instruction::DebugName() const {
   std::string instr_name = instruction_type().DebugName(*this);
   return instr_name + ":" + GetStreamRoleName::Visit(stream().stream_role());
 }
 
-void InstructionMsg::__Init__(Stream* stream, const InstructionType* instruction_type,
-                              const std::shared_ptr<PhyInstrOperand>& phy_instr_operand) {
+void Instruction::__Init__(Stream* stream, const InstructionType* instruction_type,
+                           const std::shared_ptr<PhyInstrOperand>& phy_instr_operand) {
   stream_ = stream;
   instruction_type_ = instruction_type;
   phy_instr_operand_ = phy_instr_operand;
 }
 
-void Instruction::Init(InstructionMsg* instr_msg) {
-  instr_msg_ = instr_msg;
-  instr_msg->instruction_type().InitInstructionStatusIf(this);
-}
+void Instruction::InitStatus() { instruction_type().InitInstructionStatusIf(this); }
 
-void Instruction::Delete() {
-  OF_PROFILER_RANGE_GUARD("Instruction::Delete");
-  instr_msg().instruction_type().DeleteInstructionStatusIf(this);
-  clear_instr_msg();
+void Instruction::DeleteStatusAndClearEdges() {
+  OF_PROFILER_RANGE_GUARD("Instruction::DeleteStatusAndClearEdges");
+  instruction_type().DeleteInstructionStatusIf(this);
   mut_in_edges()->Clear();
   mut_out_edges()->Clear();
 }

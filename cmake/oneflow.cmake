@@ -252,19 +252,22 @@ if("${LLVM_MONO_REPO_URL}" STREQUAL
       "https://github.com/llvm/llvm-project/archive/35e60f5de180aea55ed478298f4b40f04dcc57d1.zip"
    OR "${LLVM_MONO_REPO_URL}" STREQUAL
       "https://github.com/llvm/llvm-project/archive/6a9bbd9f20dcd700e28738788bb63a160c6c088c.zip"
+   OR "${LLVM_MONO_REPO_URL}" STREQUAL
+      "https://github.com/llvm/llvm-project/archive/32805e60c9de1f82887cd2af30d247dcabd2e1d3.zip"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "f2f17229cf21049663b8ef4f2b6b8062"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "6b7c6506d5922de9632c8ff012b2f945"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "e0ea669a9f0872d35bffda5ec6c5ac6f"
    OR "${LLVM_MONO_REPO_MD5}" STREQUAL "241a333828bba1efa35aff4c4fc2ce87"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "075fbfdf06cb3f02373ea44971af7b03")
+   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "075fbfdf06cb3f02373ea44971af7b03"
+   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "e412dc61159b5e929b0c94e44b11feb2")
   unset(LLVM_MONO_REPO_URL CACHE)
   unset(LLVM_MONO_REPO_MD5 CACHE)
 endif()
 set(LLVM_MONO_REPO_URL
-    "https://github.com/llvm/llvm-project/archive/32805e60c9de1f82887cd2af30d247dcabd2e1d3.zip"
+    "https://github.com/llvm/llvm-project/archive/6d6268dcbf0f48e43f6f9fe46b3a28c29ba63c7d.zip"
     CACHE STRING "")
 use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
-set(LLVM_MONO_REPO_MD5 "e412dc61159b5e929b0c94e44b11feb2" CACHE STRING "")
+set(LLVM_MONO_REPO_MD5 "334997b4879aba15d9323a732356cf2a" CACHE STRING "")
 set(ONEFLOW_BUILD_ROOT_DIR "${PROJECT_BINARY_DIR}")
 add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
 if(WITH_MLIR)
