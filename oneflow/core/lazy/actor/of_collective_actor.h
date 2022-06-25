@@ -152,6 +152,7 @@ class OfCollectiveActor final: public ActorBase {
   HashMap<ActorMsgType, std::string> print_actor_msg_type_;
   boxing::of_collective::RuntimeNegoTreeInfo nego_tree_info_;
   int64_t received_downstream_ready_cnt_;
+  HashSet<int64_t> ready_downstream_id_;
   CollectiveStatus collective_status_;
   // In case get kCollectiveReady when local not ready.
   HashMap<int64_t, ActorMsg> cached_nego_ready_msg_;
