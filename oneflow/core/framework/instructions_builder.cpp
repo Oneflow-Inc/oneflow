@@ -537,12 +537,6 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
                                                       const std::function<void(uint64_t)>& callback,
                                                       const std::string& modifier) {
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
-  const auto& producer_stream = JUST(eager_blob_object->producer_stream());
-  const auto& last_used_stream = JUST(eager_blob_object->last_used_stream());
-  if (producer_stream != last_used_stream) {
-    SoftSyncStream({JUST(eager_blob_object->compute_local_dep_object())}, modifier,
-                   last_used_stream);
-  }
   const auto& phy_instr_operand =
       std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(eager_blob_object, callback, modifier);
   Symbol<Device> device = JUST(GetDevice(tensor));

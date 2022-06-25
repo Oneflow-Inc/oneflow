@@ -42,8 +42,6 @@ class Stream final {
   StreamRole stream_role() const { return stream_role_; }
   size_t unique_stream_id() const { return unique_stream_id_; }
 
-  vm::Stream* mut_vm_stream() const { return vm_stream_; }
-
  private:
   Stream(Symbol<Device> device, StreamRole stream_role);
 

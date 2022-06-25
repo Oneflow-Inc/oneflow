@@ -50,8 +50,6 @@ class VirtualMachine final {
   Maybe<void> ShrinkAllMem();
   Maybe<vm::Stream*> GetVmStream(Symbol<Stream> stream);
 
-  Maybe<void> CloseVMThreads();
-
  private:
   friend class InstructionsBuilder;
 

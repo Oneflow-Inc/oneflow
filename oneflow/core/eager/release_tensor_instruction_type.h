@@ -18,15 +18,9 @@ limitations under the License.
 
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
-<<<<<<< HEAD
-#include "oneflow/core/eager/release_tensor_arg_phy_instr_operand.h"
-#include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/vm/cuda_optional_event_record_status_querier.h"
-=======
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/eager/release_tensor_arg_phy_instr_operand.h"
 #include "oneflow/core/eager/eager_blob_object.h"
->>>>>>> refactor_eager_tmp_buffer
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/singleton_ptr.h"
 

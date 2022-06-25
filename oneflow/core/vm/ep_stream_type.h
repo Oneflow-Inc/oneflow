@@ -38,7 +38,7 @@ class EpStreamType final : public StreamType {
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Compute(Instruction* instruction) const override;
-  bool OnSchedulerThread() const override { return false; }
+  bool OnSchedulerThread() const override { return true; }
   bool SupportingTransportInstructions() const override { return true; }
 };
 

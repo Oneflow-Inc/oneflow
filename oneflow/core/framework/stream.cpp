@@ -45,11 +45,7 @@ Maybe<void> Stream::Init(size_t unique_stream_id) {
   return Make(device, stream_role);
 }
 
-/*static*/ Maybe<Symbol<Stream>> Stream::RawNew(Symbol<Device> device, StreamRole stream_role) {
-  Stream stream(device, stream_role);
-  JUST(stream.Init());
-  return SymbolOf(stream);
-}
+namespace {
 
 Maybe<Symbol<Stream>> RawGetDefaultStreamByDevice(Symbol<Device> device) {
   return Stream::New(device, StreamRole::kCompute);

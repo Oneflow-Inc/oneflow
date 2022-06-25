@@ -149,15 +149,6 @@ void VirtualMachineEngine::LivelyInstructionListPushBack(Instruction* instructio
   mut_lively_instruction_list()->PushBack(instruction);
 }
 
-intrusive::shared_ptr<Instruction> VirtualMachineEngine::LivelyInstructionListErase(
-    Instruction* instruction) {
-  ++total_erased_lively_instruction_cnt_;
-  auto ret = mut_lively_instruction_list()->Erase(instruction);
-  static constexpr int kProbeInterval = 20;
-  if (unlikely(total_erased_lively_instruction_cnt_ % kProbeInterval) == 0) { HandleProbe(); }
-  return ret;
-}
-
 void VirtualMachineEngine::InsertProbe(
     const std::function<bool(VirtualMachineEngine*)>& ProbeFunction) {
   probe_list_.EmplaceBack(intrusive::make_shared<VmProbe>(ProbeFunction));
