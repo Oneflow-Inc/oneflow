@@ -157,6 +157,7 @@ void OfCollectiveActor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   Global<CollectiveMgr>::Get()->DestroyOfRequestEntryToken(token);
   nego_tree_info_ = request_entry->nego_tree_topo()[actor_id_];
   is_nego_root_ = (nego_tree_info_.upstream_id == -1);
+  is_nego_leaf_ = (nego_tree_info_.downstream_id.size() == 0);
   // LOG(ERROR) << "Actor " << actor_id_ << " nego_tree_upstream: " << nego_tree_info_.upstream_id;
   // if (nego_tree_info_.downstream_id.size() > 0) {
   //   for (int i = 0; i < nego_tree_info_.downstream_id.size(); ++i)
@@ -177,6 +178,10 @@ void OfCollectiveActor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   print_actor_msg_type_.emplace(ActorMsgType::kEordMsg, "kEordMsg");
   print_actor_msg_type_.emplace(ActorMsgType::kRegstMsg, "kRegstMsg");
 
+  if (!is_nego_leaf_) {
+    cached_nego_ready_msg_ = HashMap<int64_t, ActorMsg>();
+    ready_downstream_id_ = HashSet<int64_t>();
+  }
   cached_nego_ready_msg_ = HashMap<int64_t, ActorMsg>();
   ready_downstream_id_ = HashSet<int64_t>();
   ResetCollectiveStatus();
@@ -423,28 +428,13 @@ int OfCollectiveActor::HandlerNormal(const ActorMsg& msg) {
         // every actor gets here.
         collective_status_ = CollectiveStatus::kLocalReady;
         if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR) << "Actor " << actor_id_ << " UpdateCollectiveStatus to " << print_status_[collective_status_];
-        
-        if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR) << "Actor " << actor_id_  << " ready to process cached_nego_ready_msg_, then show_cached_nego_ready_msg:";
-        if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) show_cached_nego_ready_msg(cached_nego_ready_msg_, actor_id_, print_actor_msg_type_, print_nego_cmd_);
-        
-        int64_t cached_nego_ready_msg_id = 0;
-        FOR_EACH(src_actor_id7msg, cached_nego_ready_msg_) {
-          if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR) << "Actor " << actor_id_ << " invoke ReactToNegoCmd for cached_nego_ready_msg_ " << cached_nego_ready_msg_id << " out of " << cached_nego_ready_msg_.size() << " msg.src: " << src_actor_id7msg->second.src_actor_id() << " msg.dst: " << src_actor_id7msg->second.dst_actor_id() << " msg.type: " << print_actor_msg_type_[src_actor_id7msg->second.msg_type()];
-          ++cached_nego_ready_msg_id;
 
-          ReactToNegoCmd(src_actor_id7msg->second);
-        }
-
-        cached_nego_ready_msg_.clear();
-
-        if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR) << "Actor " << actor_id_  << " clear cached_nego_ready_msg_, then show_cached_nego_ready_msg:";
-        if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) show_cached_nego_ready_msg(cached_nego_ready_msg_, actor_id_, print_actor_msg_type_, print_nego_cmd_);
-
-        // leaves enter here.
-        if (IsDownstreamReady()) {
+        // leaf updates to kDownstreamReady directly.
+        if (is_nego_leaf_) {
           collective_status_ = CollectiveStatus::kDownstreamReady;
-          if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR) << "Actor " << actor_id_ << " UpdateCollectiveStatus to " << print_status_[collective_status_];
-          if (HasUpstream()) {
+          if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR) << "Actor " << actor_id_ << " Leaf directly UpdateCollectiveStatus to " << print_status_[collective_status_];
+
+          if (!is_nego_root_) {
             // send ready msg to upstream.
             auto ready_msg = 
               ActorMsg::BuildCollectiveMsg(actor_id_, nego_tree_info_.upstream_id,
@@ -452,6 +442,23 @@ int OfCollectiveActor::HandlerNormal(const ActorMsg& msg) {
             if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR) << "SEND Actor " << actor_id_  << " leave send kCollectiveReady to " << nego_tree_info_.upstream_id;
             SyncSendMsg(std::move(ready_msg));
           }
+        } else {
+          // non-leaf need to check whether there is cached ds_ready msg
+          if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR) << "Actor " << actor_id_  << " ready to process cached_nego_ready_msg_, then show_cached_nego_ready_msg:";
+          if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) show_cached_nego_ready_msg(cached_nego_ready_msg_, actor_id_, print_actor_msg_type_, print_nego_cmd_);
+          
+          int64_t cached_nego_ready_msg_id = 0;
+          FOR_EACH(src_actor_id7msg, cached_nego_ready_msg_) {
+            if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR) << "Actor " << actor_id_ << " invoke ReactToNegoCmd for cached_nego_ready_msg_ " << cached_nego_ready_msg_id << " out of " << cached_nego_ready_msg_.size() << " msg.src: " << src_actor_id7msg->second.src_actor_id() << " msg.dst: " << src_actor_id7msg->second.dst_actor_id() << " msg.type: " << print_actor_msg_type_[src_actor_id7msg->second.msg_type()];
+            ++cached_nego_ready_msg_id;
+
+            ReactToNegoCmd(src_actor_id7msg->second);
+          }
+
+          cached_nego_ready_msg_.clear();
+
+          if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR) << "Actor " << actor_id_  << " clear cached_nego_ready_msg_, then show_cached_nego_ready_msg:";
+          if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) show_cached_nego_ready_msg(cached_nego_ready_msg_, actor_id_, print_actor_msg_type_, print_nego_cmd_);
         }
       }
     }
@@ -540,7 +547,7 @@ void OfCollectiveActor::ReactToNegoCmd(const ActorMsg& msg) {
         if (IsDownstreamReady()) {
           collective_status_ = CollectiveStatus::kDownstreamReady;
           if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR) << "Actor " << actor_id_ << " UpdateCollectiveStatus to " << print_status_[collective_status_];
-          if (HasUpstream()) {
+          if (!is_nego_root_) {
             // send ready msg to upstream.
             auto ready_msg = 
               ActorMsg::BuildCollectiveMsg(actor_id_, nego_tree_info_.upstream_id,
@@ -570,7 +577,7 @@ void OfCollectiveActor::ReactToNegoCmd(const ActorMsg& msg) {
     UNIMPLEMENTED();
   }
   if (CanAct()) {
-    if (HasDownstream()) {
+    if (!is_nego_leaf_) {
       FOR_EACH(downstream_id, nego_tree_info_.downstream_id) {
         auto start_msg =
           ActorMsg::BuildCollectiveMsg(actor_id_, *downstream_id,

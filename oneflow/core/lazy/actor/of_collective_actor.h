@@ -156,8 +156,8 @@ class OfCollectiveActor final: public ActorBase {
   CollectiveStatus collective_status_;
   // In case get kCollectiveReady when local not ready.
   HashMap<int64_t, ActorMsg> cached_nego_ready_msg_;
-  // initially for debug
   bool is_nego_root_;
+  bool is_nego_leaf_;
 
   ActorContext* actor_ctx_;  
   int64_t actor_id_;
