@@ -113,7 +113,6 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
 template<typename T>
 class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> final {
  public:
-  Maybe() : error_or_scalar_(nullptr) {}
   Maybe(const Error& error) : error_or_scalar_(error.error_proto()) { CheckError(); }
   Maybe(const std::shared_ptr<ErrorProto>& error) : error_or_scalar_(error) { CheckError(); }
   Maybe(const Maybe&) = default;
@@ -153,6 +152,7 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
   }
 
  private:
+  Maybe() : error_or_scalar_(nullptr) {}
   void CheckError() const {
     CHECK_NE(this->error()->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET);
   }
