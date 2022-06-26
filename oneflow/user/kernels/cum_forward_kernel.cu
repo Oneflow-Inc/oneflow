@@ -101,7 +101,7 @@ class GpuCumKernel : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     // judge whether tensor has 0 size dimension first
     const auto* in = ctx->Tensor4ArgNameAndIndex("x", 0);
-    auto elem_cnt = in->shape().elem_cnt();
+    auto elem_cnt = in->shape_view().elem_cnt();
     if (!elem_cnt) { return; }
 
     auto* out = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -110,9 +110,9 @@ class GpuCumKernel : public user_op::OpKernel {
     auto* out_ptr = out->mut_dptr<T>();
 
     // data partition: up_space|space|down_space
-    auto up_space = elem_cnt / in->shape().Count(dim);
-    auto space = in->shape().At(dim);
-    auto down_space = in->shape().Count(dim + 1);
+    auto up_space = elem_cnt / in->shape_view().Count(dim);
+    auto space = in->shape_view().At(dim);
+    auto down_space = in->shape_view().Count(dim + 1);
     auto thread_num = up_space * down_space;
 
     if (up_space == 1) {

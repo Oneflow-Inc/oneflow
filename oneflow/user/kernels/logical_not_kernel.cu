@@ -41,7 +41,7 @@ class GpuLogicalNotKernel final : public user_op::OpKernel, public user_op::Cuda
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const int64_t elem_cnt = x->shape().elem_cnt();
+    const int64_t elem_cnt = x->shape_view().elem_cnt();
     OF_CUDA_CHECK(
         (cuda::elementwise::Unary(LogicalNotFunctor<T>(), elem_cnt, y->mut_dptr<K>(), x->dptr<T>(),
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
