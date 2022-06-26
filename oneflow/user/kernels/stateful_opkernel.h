@@ -34,7 +34,7 @@ struct OpCallInstructionUtil;
 }
 
 namespace eager {
-struct CallContext;
+class CallContext;
 }
 
 namespace one {
@@ -97,8 +97,6 @@ class StatefulOpKernel final {
                                     const user_op::OpKernel* op_kernel,
                                     user_op::OpKernelState** state, user_op::OpKernelCache** cache);
 
-  vm::EagerBlobObject* mut_temp_blob_object();
-
   user_op::OpKernelState* mut_opkernel_state(const user_op::OpKernel* opkernel) {
     return op_kernel_state_map_.at(opkernel).get();
   }
@@ -129,7 +127,6 @@ class StatefulOpKernel final {
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelState>> op_kernel_state_map_;
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelCache>> op_kernel_cache_map_;
   HashMap<const user_op::OpKernel*, const user_op::InferTmpSizeFn*> infer_tmp_size_fn_map_;
-  std::unique_ptr<vm::EagerBlobObject> tmp_blob_object_;
   std::vector<int64_t> input_tuple_indexes4const_ibns_;
   std::vector<int64_t> input_tuple_indexes4mut_ibns_;
   std::vector<int64_t> output_tuple_indexes4mut_obns_;

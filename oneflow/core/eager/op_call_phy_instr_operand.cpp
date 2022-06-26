@@ -29,13 +29,8 @@ OpCallPhyInstrOperand::OpCallPhyInstrOperand(
     const one::OpExprInterpContext& op_interp_ctx,
     const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
     : vm_stream_(vm_stream),
-      call_ctx_{
-          .composed_attrs = ComposedAttrMap(op_interp_ctx.attrs, opkernel->base_attrs()),
-          .inputs = inputs,
-          .outputs = outputs,
-          .consistent_tensor_infer_result = consistent_tensor_infer_result,
-          .op_interp_ctx = op_interp_ctx,
-      },
+      call_ctx_(ComposedAttrMap(op_interp_ctx.attrs, opkernel->base_attrs()), inputs, outputs,
+                consistent_tensor_infer_result, op_interp_ctx, opkernel->mem_case()),
       opkernel_(opkernel),
       user_opkernel_(nullptr),
       need_temp_storage_(false),

@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/eager/op_call_instruction_type.h"
 #include "oneflow/core/eager/op_call_phy_instr_operand.h"
@@ -44,25 +45,19 @@ struct OpCallInstructionUtil final {
   static inline Maybe<void> Compute(const vm::Instruction& instruction) {
     auto* operand = GetCallPhyInstrOperand(instruction);
     DeviceCtx* device_ctx = instruction.stream().device_ctx().get();
-    OF_PROFILER_RANGE_PUSH("AllocateOutputBlobsMemory");
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
-    OF_PROFILER_RANGE_POP();
     if (unlikely(operand->need_temp_storage())) {
-      OF_PROFILER_RANGE_GUARD("TryAllocateTempStorageBlobMemory");
-      InferTempStorageBlobDesc(operand);
-      JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
+      OF_PROFILER_RANGE_GUARD("TryAllocateTempStorage");
+      InferTempStorageSize(operand);
+      JUST(TryAllocateTempStorage(operand, device_ctx));
     }
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
     if (operand->user_opkernel()->has_state_or_cache()) {
-      OF_PROFILER_RANGE_GUARD("TryInitOpKernelStateAndCache");
       TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
     }
     OpKernelCompute(operand, device_ctx, state, cache);
-    if (unlikely(operand->need_temp_storage())) {
-      OF_PROFILER_RANGE_GUARD("DeallocateTempStorageBlobMemory");
-      JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
-    }
+    if (unlikely(operand->need_temp_storage())) { DeallocateTempStorage(operand, device_ctx); }
     return Maybe<void>::Ok();
   }
 
@@ -72,21 +67,18 @@ struct OpCallInstructionUtil final {
   }
 
  private:
-  static inline void InferTempStorageBlobDesc(OpCallPhyInstrOperand* operand) {
-    auto* temp_eager_blob_object = operand->mut_opkernel()->mut_temp_blob_object();
-    CHECK(temp_eager_blob_object->data_type() == DataType::kChar);
+  static inline void InferTempStorageSize(OpCallPhyInstrOperand* operand) {
+    auto* tmp_tensor = operand->call_ctx_.mut_tmp_tensor();
     size_t temp_size =
         operand->opkernel().InferTmpSize(&operand->call_ctx_, operand->user_opkernel());
-    *temp_eager_blob_object->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
-    *temp_eager_blob_object->mut_stride() = Stride(*temp_eager_blob_object->mut_shape());
-    temp_eager_blob_object->set_pin_memory(false);
-    temp_eager_blob_object->set_is_dynamic(true);
+    tmp_tensor->set_tmp_buffer_size(temp_size);
   }
 
   static inline void TryInitOpKernelStateAndCache(OpCallPhyInstrOperand* operand,
                                                   DeviceCtx* device_ctx,
                                                   user_op::OpKernelState** state,
                                                   user_op::OpKernelCache** cache) {
+    OF_PROFILER_RANGE_GUARD("TryInitOpKernelStateAndCache");
     if (likely(operand->op_interp_ctx().state)) {
       *state = operand->op_interp_ctx().state.get();
       // set state to nullptr so that state initialization in TryInitOpKernelStateAndCache will be
@@ -99,15 +91,28 @@ struct OpCallInstructionUtil final {
 
   static inline Maybe<void> AllocateOutputBlobsMemory(OpCallPhyInstrOperand* operand,
                                                       DeviceCtx* device_ctx) {
+    OF_PROFILER_RANGE_GUARD("AllocateOutputBlobsMemory");
     for (const auto& blob_object : *operand->outputs()) {
       JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
     }
     return Maybe<void>::Ok();
   }
 
-  static inline Maybe<void> TryAllocateTempStorageBlobMemory(OpCallPhyInstrOperand* operand,
-                                                             DeviceCtx* device_ctx) {
-    return operand->mut_opkernel()->mut_temp_blob_object()->TryAllocateBlobBodyMemory(device_ctx);
+  static inline Maybe<void> TryAllocateTempStorage(OpCallPhyInstrOperand* operand,
+                                                   DeviceCtx* device_ctx) {
+    auto* tmp_tensor = operand->call_ctx_.mut_tmp_tensor();
+    size_t byte_size = tmp_tensor->tmp_buffer_size();
+    if (byte_size > 0) {
+      char* mem_ptr = nullptr;
+      device_ctx->mut_allocator()->Allocate(&mem_ptr, byte_size);
+      const auto Free = [device_ctx, mem_ptr, byte_size](char* ptr) {
+        CHECK(mem_ptr == ptr);
+        device_ctx->mut_allocator()->Deallocate(mem_ptr, byte_size);
+      };
+      using CharUniquePtr = std::unique_ptr<char, std::function<void(char*)>>;
+      tmp_tensor->mut_tmp_buffer_ptr() = CharUniquePtr(mem_ptr, Free);
+    }
+    return Maybe<void>::Ok();
   }
 
   static inline void OpKernelCompute(OpCallPhyInstrOperand* operand, DeviceCtx* device_ctx,
@@ -118,9 +123,9 @@ struct OpCallInstructionUtil final {
     operand->mut_opkernel()->Compute(call_ctx, device_ctx, user_kernel, state, cache);
   }
 
-  static inline Maybe<void> DeallocateTempStorageBlobMemory(OpCallPhyInstrOperand* operand,
-                                                            DeviceCtx* device_ctx) {
-    return operand->mut_opkernel()->mut_temp_blob_object()->DeallocateBlobDataPtr();
+  static inline void DeallocateTempStorage(OpCallPhyInstrOperand* operand, DeviceCtx* device_ctx) {
+    OF_PROFILER_RANGE_GUARD("DeallocateTempStorage");
+    operand->call_ctx_.mut_tmp_tensor()->mut_tmp_buffer_ptr().reset();
   }
 };
 

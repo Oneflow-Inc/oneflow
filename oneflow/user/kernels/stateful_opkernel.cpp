@@ -40,14 +40,7 @@ class ZeroCopyBaseContextHelper {
  public:
   ZeroCopyBaseContextHelper(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                             const std::shared_ptr<const ArgTuple>& output_arg_tuple)
-      : ZeroCopyBaseContextHelper(input_arg_tuple, output_arg_tuple, nullptr) {}
-
-  ZeroCopyBaseContextHelper(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-                            const std::shared_ptr<const ArgTuple>& output_arg_tuple,
-                            vm::EagerBlobObject* tmp_buffer)
-      : input_arg_tuple_(input_arg_tuple),
-        output_arg_tuple_(output_arg_tuple),
-        tmp_buffer_(tmp_buffer) {}
+      : input_arg_tuple_(input_arg_tuple), output_arg_tuple_(output_arg_tuple) {}
 
 #define RETURN_IF_FOUND(inputs, outputs, post_action)                                             \
   int32_t i = TryGetTensorTupleIndex(input_arg_tuple_->arg_name2bn_index2tensor_tuple_index(),    \
@@ -60,21 +53,21 @@ class ZeroCopyBaseContextHelper {
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
                                                   const std::string& arg_name,
                                                   const int32_t index) const {
-    RETURN_IF_FOUND(*call_ctx->inputs, *call_ctx->outputs, .get());
+    RETURN_IF_FOUND(*call_ctx->inputs(), *call_ctx->outputs(), .get());
     return nullptr;
   }
 
   user_op::Tensor* Tensor4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                           const int32_t index) const {
-    RETURN_IF_FOUND(*call_ctx->inputs, *call_ctx->outputs, .get());
-    if (arg_name == "tmp_buffer" && index == 0) { return CHECK_NOTNULL(tmp_buffer_); }
+    RETURN_IF_FOUND(*call_ctx->inputs(), *call_ctx->outputs(), .get());
+    if (arg_name == "tmp_buffer" && index == 0) { return call_ctx->mut_tmp_tensor(); }
     return nullptr;
   }
 
   const ConsistentTensorMeta* ConsistentTensorMeta4ArgNameAndIndex(eager::CallContext* call_ctx,
                                                                    const std::string& arg_name,
                                                                    const int32_t index) const {
-    const auto& consistent_tensor_infer_result = call_ctx->consistent_tensor_infer_result;
+    const auto& consistent_tensor_infer_result = call_ctx->consistent_tensor_infer_result();
     RETURN_IF_FOUND(consistent_tensor_infer_result->input_tensor_metas(),
                     consistent_tensor_infer_result->output_tensor_metas(),
                     .shared_from_symbol().get());
@@ -82,7 +75,7 @@ class ZeroCopyBaseContextHelper {
   }
 
   Optional<Symbol<ParallelDesc>> parallel_desc(eager::CallContext* call_ctx) const {
-    const auto& consistent_tensor_infer_result = call_ctx->consistent_tensor_infer_result;
+    const auto& consistent_tensor_infer_result = call_ctx->consistent_tensor_infer_result();
     if (!consistent_tensor_infer_result) { return Optional<Symbol<ParallelDesc>>(); }
     if (!consistent_tensor_infer_result->input_tensor_metas().empty()) {
       return consistent_tensor_infer_result->input_tensor_metas().at(0)->parallel_desc();
@@ -126,7 +119,6 @@ class ZeroCopyBaseContextHelper {
 
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
   std::shared_ptr<const ArgTuple> output_arg_tuple_;
-  vm::EagerBlobObject* tmp_buffer_;
 };
 
 class UserKernelBaseContextHelper final : public ZeroCopyBaseContextHelper {
@@ -134,13 +126,7 @@ class UserKernelBaseContextHelper final : public ZeroCopyBaseContextHelper {
   UserKernelBaseContextHelper(const std::string& device_tag,
                               const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                               const std::shared_ptr<const ArgTuple>& output_arg_tuple)
-      : UserKernelBaseContextHelper(device_tag, input_arg_tuple, output_arg_tuple, nullptr) {}
-
-  UserKernelBaseContextHelper(const std::string& device_tag,
-                              const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-                              const std::shared_ptr<const ArgTuple>& output_arg_tuple,
-                              vm::EagerBlobObject* tmp_buffer)
-      : ZeroCopyBaseContextHelper(input_arg_tuple, output_arg_tuple, tmp_buffer),
+      : ZeroCopyBaseContextHelper(input_arg_tuple, output_arg_tuple),
         device_tag_(device_tag),
         device_type_(CHECK_JUST(DeviceType4DeviceTag(device_tag_))) {}
 
@@ -294,7 +280,7 @@ class UserOpInferContextHelper final {
   const user_op::UserOpConfWrapper& user_op_conf() const { return *user_op_conf_; }
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(eager::CallContext* call_ctx,
                                                            const std::string& attr_name) const {
-    return call_ctx->composed_attrs.Attr4Name(attr_name);
+    return call_ctx->composed_attrs().Attr4Name(attr_name);
   }
 
  private:
@@ -423,10 +409,9 @@ class UserKernelComputeContextHelper final {
   UserKernelComputeContextHelper(const std::string& device_tag,
                                  const user_op::UserOpConfWrapper* user_op_conf,
                                  const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-                                 const std::shared_ptr<const ArgTuple>& output_arg_tuple,
-                                 vm::EagerBlobObject* tmp_buffer)
+                                 const std::shared_ptr<const ArgTuple>& output_arg_tuple)
       : user_op_conf_(user_op_conf),
-        base_ctx_helper_(device_tag, input_arg_tuple, output_arg_tuple, tmp_buffer) {}
+        base_ctx_helper_(device_tag, input_arg_tuple, output_arg_tuple) {}
 
   ~UserKernelComputeContextHelper() = default;
 
@@ -456,7 +441,7 @@ class UserKernelComputeContextHelper final {
   const user_op::UserOpConfWrapper& user_op_conf() const { return *user_op_conf_; }
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(eager::CallContext* call_ctx,
                                                            const std::string& attr_name) const {
-    return call_ctx->composed_attrs.Attr4Name(attr_name);
+    return call_ctx->composed_attrs().Attr4Name(attr_name);
   }
 
  private:
@@ -532,7 +517,7 @@ class UserKernelRegContextHelper final {
 
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(eager::CallContext* call_ctx,
                                                            const std::string& attr_name) const {
-    return call_ctx->composed_attrs.Attr4Name(attr_name);
+    return call_ctx->composed_attrs().Attr4Name(attr_name);
   }
 
  private:
@@ -622,7 +607,7 @@ class UserKernelInitAndCacheContextHelper final {
 
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(eager::CallContext* call_ctx,
                                                            const std::string& attr_name) const {
-    return call_ctx->composed_attrs.Attr4Name(attr_name);
+    return call_ctx->composed_attrs().Attr4Name(attr_name);
   }
 
   const user_op::UserOpConfWrapper& user_op_conf() const { return *user_op_conf_; }
@@ -765,10 +750,6 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   opkernel->output_arg_tuple_ = output_arg_tuple;
   opkernel->need_check_mem_case_ = true;
 
-  opkernel->tmp_blob_object_.reset(new vm::EagerBlobObject(
-      opkernel->mem_case(), std::make_shared<Shape>(), std::make_shared<Stride>(), DataType::kChar,
-      std::make_shared<vm::TensorStorage>()));
-
   const std::string& device_tag = op_conf->device_tag();
   const user_op::UserOpConfWrapper* user_op_conf = opkernel->user_op_conf_.get();
   opkernel->op_infer_ctx_helper_.reset(
@@ -777,9 +758,8 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   opkernel->init_and_cache_ctx_helper_.reset(new UserKernelInitAndCacheContextHelper(
       opkernel->op_conf_->device_tag(), opkernel->user_op_conf_.get(), opkernel->input_arg_tuple_,
       opkernel->output_arg_tuple_));
-  opkernel->compute_ctx_helper_.reset(
-      new UserKernelComputeContextHelper(device_tag, user_op_conf, input_arg_tuple,
-                                         output_arg_tuple, opkernel->mut_temp_blob_object()));
+  opkernel->compute_ctx_helper_.reset(new UserKernelComputeContextHelper(
+      device_tag, user_op_conf, input_arg_tuple, output_arg_tuple));
   opkernel->reg_ctx_helper_.reset(
       new UserKernelRegContextHelper(device_tag, user_op_conf, input_arg_tuple, output_arg_tuple));
   const auto* op_reg_val =
@@ -815,8 +795,8 @@ Maybe<void> StatefulOpKernel::ChooseOpKernel(eager::CallContext* call_ctx,
                                              bool* need_temp_storage) {
   OF_PROFILER_RANGE_GUARD("ChooseOpKernel");
   DataType primary_dtype = kInvalidDataType;
-  const auto& inputs = call_ctx->inputs;
-  const auto& outputs = call_ctx->outputs;
+  const auto& inputs = call_ctx->inputs();
+  const auto& outputs = call_ctx->outputs();
   if (likely(!inputs->empty())) {
     primary_dtype = (*inputs)[0]->data_type();
   } else if (likely(!outputs->empty())) {
@@ -880,8 +860,6 @@ const user_op::InferTmpSizeFn& StatefulOpKernel::GetInferTmpSizeFn(
     const user_op::OpKernel* op_kernel) const {
   return *infer_tmp_size_fn_map_.at(op_kernel);
 }
-
-vm::EagerBlobObject* StatefulOpKernel::mut_temp_blob_object() { return tmp_blob_object_.get(); }
 
 user_op::TensorDescInferFn StatefulOpKernel::TensorDescInferFn() const {
   return tensor_desc_infer_fn_;
