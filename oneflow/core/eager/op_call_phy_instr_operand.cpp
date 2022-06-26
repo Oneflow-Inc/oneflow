@@ -33,6 +33,7 @@ OpCallPhyInstrOperand::OpCallPhyInstrOperand(
                 consistent_tensor_infer_result, op_interp_ctx, opkernel->mem_case()),
       opkernel_(opkernel),
       user_opkernel_(nullptr),
+      infer_tmp_size_fn_(nullptr),
       need_temp_storage_(false),
       dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode),
       input_dependences_(),

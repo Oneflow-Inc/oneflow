@@ -49,8 +49,6 @@ class TmpTensor final : public user_op::Tensor {
   MutShapeView mut_shape_view() override { return MutShapeView(&tmp_buffer_size_, 1); }
   const Stride& stride() const override {
     UNIMPLEMENTED() << "TmpTensor::stride() is not implemented.";
-    static Stride empty{};
-    return empty;
   }
   DataType data_type() const override { return DataType::kChar; }
   const MemoryCase& mem_case() const override { return *mem_case_; }
@@ -80,7 +78,7 @@ class CallContext {
       const one::EagerBlobObjectListPtr& outputs,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
       const one::OpExprInterpContext& op_interp_ctx, const std::shared_ptr<MemoryCase>& mem_case)
-      : composed_attrs_(composed_attrs),
+      : composed_attrs_(std::move(composed_attrs)),
         inputs_(inputs),
         outputs_(outputs),
         consistent_tensor_infer_result_(consistent_tensor_infer_result),
