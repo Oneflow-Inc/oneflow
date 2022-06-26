@@ -3058,6 +3058,58 @@ class PinMemoryFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FillFunctor {
+ public:
+  FillFunctor() { op_ = CHECK_JUST(one::OpBuilder("fill_").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const Scalar& value) const {
+    JUST(CheckInplaceValid(in));
+    MutableAttrMap attrs;
+    if (IsFloatingDataType(in->dtype()->data_type())) {
+      JUST(attrs.SetAttr<double>("floating_value", value.As<double>()));
+      JUST(attrs.SetAttr<bool>("is_floating_value", true));
+    } else if (IsIntegralDataType(in->dtype()->data_type())) {
+      JUST(attrs.SetAttr<int64_t>("integral_value", value.As<int64_t>()));
+      JUST(attrs.SetAttr<bool>("is_floating_value", false));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
+    }
+    auto outputs = std::make_shared<TensorTuple>(1);
+    (*outputs)[0] = in;
+    JUST(OpInterpUtil::Dispatch(*op_, {in}, outputs.get(), attrs));
+    return (*outputs)[0];
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FillTensorFunctor {
+ public:
+  FillTensorFunctor() {
+    op_ =
+        CHECK_JUST(one::OpBuilder("fill_tensor_").Input("in").Input("value").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
+                           const std::shared_ptr<one::Tensor>& value) const {
+    JUST(CheckInplaceValid(in));
+    const int64_t ndim = value->ndim();
+    CHECK_EQ_OR_RETURN(ndim, 0)
+        << Error::RuntimeError()
+        << "fill_ only supports 0-dimension value tensor but got tensor with " << ndim
+        << " dimensions.";
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({in, value}).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    auto outputs = std::make_shared<TensorTuple>(1);
+    (*outputs)[0] = in;
+    JUST(OpInterpUtil::Dispatch(*op_, {input_tuple[0], input_tuple[1]}, outputs.get()));
+    return (*outputs)[0];
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -3070,6 +3122,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ZerosLikeFunctor>("ZerosLike");
   m.add_functor<impl::OnesLikeFunctor>("OnesLike");
   m.add_functor<impl::FlattenFunctor>("Flatten");
+  m.add_functor<impl::FillFunctor>("Fill");
+  m.add_functor<impl::FillTensorFunctor>("FillTensor");
   m.add_functor<impl::WhereFunctor>("Where");
   m.add_functor<impl::WhereScalarXFunctor>("WhereScalarX");
   m.add_functor<impl::WhereScalarYFunctor>("WhereScalarY");
