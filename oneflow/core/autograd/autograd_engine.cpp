@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/framework/eager_blob_object_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/global_param_grad_sync_mode.h"
 #include "oneflow/core/common/container_util.h"
@@ -75,25 +74,12 @@ bool IsReadyToRun(const std::vector<std::shared_ptr<AutogradMeta>>& out_meta_dat
                      });
 }
 
-Maybe<bool> OnSameStream(const Tensor& lhs, const Tensor& rhs) {
-  const auto lhs_maybe_eager_blob_object = TRY(lhs.eager_blob_object());
-  const auto rhs_maybe_eager_blob_object = TRY(rhs.eager_blob_object());
-  if (lhs_maybe_eager_blob_object.IsOk() && rhs_maybe_eager_blob_object.IsOk()) {
-    return ProducedAndLastUsedOnSameStream(JUST(lhs_maybe_eager_blob_object),
-                                           JUST(rhs_maybe_eager_blob_object));
-  }
-  return false;
-}
-
 Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
   autograd::AutoGradMode mode(autograd_mode);
   auto current_grad = JUST(autograd_meta->current_grad()->GetAccTensor({}));
   if (!current_grad) { return Maybe<void>::Ok(); }
   if (autograd_meta->acc_grad()) {
-    DevVmDepObjectConsumeModeGuard guard(
-        JUST(OnSameStream(*autograd_meta->acc_grad(), *current_grad))
-            ? DevVmDepObjectConsumeMode::MUTABLE
-            : DevVmDepObjectConsumeMode::NONE);
+    DevVmDepObjectConsumeModeGuard guard(DevVmDepObjectConsumeMode::NONE);
     // Should not inplace accumulate grad. For example,
     // >>> z = x + y
     // >>> p = x / z
