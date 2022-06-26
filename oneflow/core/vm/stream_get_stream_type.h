@@ -18,13 +18,11 @@ limitations under the License.
 
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/singleton_ptr.h"
-#include "oneflow/core/vm/event_recorded_cuda_stream_type.h"
+#include "oneflow/core/vm/event_recorded_ep_stream_type.h"
 #include "oneflow/core/vm/control_stream_type.h"
-#include "oneflow/core/vm/cpu_stream_type.h"
 #include "oneflow/core/vm/critical_section_stream_type.h"
-#include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
-#include "oneflow/core/vm/cuda_copy_h2d_stream_type.h"
-#include "oneflow/core/vm/cuda_stream_type.h"
+#include "oneflow/core/vm/ep_d2h_stream_type.h"
+#include "oneflow/core/vm/ep_stream_type.h"
 #include "oneflow/core/vm/lazy_job_stream_type.h"
 #include "oneflow/core/vm/stream_get_stream_type.h"
 
@@ -32,65 +30,19 @@ namespace oneflow {
 
 struct GetStreamType final : public StreamRoleVisitor<GetStreamType> {
   static Maybe<const vm::StreamType*> VisitCompute(DeviceType device_type) {
-    if (device_type == DeviceType::kCPU) {
-      return SingletonPtr<vm::CpuStreamType>();
-    } else if (device_type == DeviceType::kCUDA) {
-#ifdef WITH_CUDA
-      return SingletonPtr<vm::CudaStreamType>();
-#else
-      UNIMPLEMENTED_THEN_RETURN();
-#endif
-    } else {
-      UNIMPLEMENTED_THEN_RETURN();
-    }
+    return SingletonPtr<vm::EpStreamType>();
   }
   static Maybe<const vm::StreamType*> VisitHost2Device(DeviceType device_type) {
-    if (device_type == DeviceType::kCUDA) {
-#ifdef WITH_CUDA
-      return SingletonPtr<vm::CudaCopyH2DStreamType>();
-#else
-      UNIMPLEMENTED_THEN_RETURN();
-#endif
-    } else {
-      UNIMPLEMENTED_THEN_RETURN();
-    }
+    return SingletonPtr<vm::EventRecordedEpStreamType>();
   }
   static Maybe<const vm::StreamType*> VisitDevice2Host(DeviceType device_type) {
-    if (device_type == DeviceType::kCUDA) {
-#ifdef WITH_CUDA
-      return SingletonPtr<vm::CudaCopyD2HStreamType>();
-#else
-      UNIMPLEMENTED_THEN_RETURN();
-#endif
-    } else {
-      UNIMPLEMENTED_THEN_RETURN();
-    }
+    return SingletonPtr<vm::EpD2HStreamType>();
   }
   static Maybe<const vm::StreamType*> VisitSyncedLaunchedCommNet(DeviceType device_type) {
-    if (device_type == DeviceType::kCPU) {
-      return SingletonPtr<vm::CpuStreamType>();
-    } else if (device_type == DeviceType::kCUDA) {
-#ifdef WITH_CUDA
-      return SingletonPtr<vm::EventRecordedCudaStreamType>();
-#else
-      UNIMPLEMENTED_THEN_RETURN();
-#endif
-    } else {
-      UNIMPLEMENTED_THEN_RETURN();
-    }
+    return SingletonPtr<vm::EventRecordedEpStreamType>();
   }
   static Maybe<const vm::StreamType*> VisitAsyncedLaunchedCommNet(DeviceType device_type) {
-    if (device_type == DeviceType::kCPU) {
-      return SingletonPtr<vm::CpuStreamType>();
-    } else if (device_type == DeviceType::kCUDA) {
-#ifdef WITH_CUDA
-      return SingletonPtr<vm::EventRecordedCudaStreamType>();
-#else
-      UNIMPLEMENTED_THEN_RETURN();
-#endif
-    } else {
-      UNIMPLEMENTED_THEN_RETURN();
-    }
+    return SingletonPtr<vm::EventRecordedEpStreamType>();
   }
   static Maybe<const vm::StreamType*> VisitBarrier(DeviceType device_type) {
     return SingletonPtr<vm::ControlStreamType>();

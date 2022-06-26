@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/of_unused.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/job/job_instance.h"
@@ -70,9 +71,7 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
   LaunchLazyJobInstructionType() = default;
   ~LaunchLazyJobInstructionType() = default;
 
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
-    return "LaunchLazyJob";
-  }
+  std::string DebugName(const vm::Instruction&) const override { return "LaunchLazyJob"; }
   void Compute(vm::Instruction* instruction) const override {
     const auto& cur_nn_graph = GetCurNNGraph(instruction);
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);
@@ -92,6 +91,7 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Push(job_instance);
       OF_PROFILER_RANGE_POP();  // BufferMgr
     }
+    OF_UNUSED(run_id);  // disable compiler warning.
     OF_PROFILER_RANGE_PUSH("EnqueueNNGraph");
     device_ctx->EnqueueNNGraph(cur_nn_graph);
     OF_PROFILER_RANGE_POP();  // EnqueueNNGraph
@@ -106,14 +106,14 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
   }
 
   std::shared_ptr<NNGraphIf> GetCurNNGraph(Instruction* instruction) const {
-    const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
+    const auto* ptr = instruction->phy_instr_operand().get();
     const auto* phy_instr_operand = dynamic_cast<const LaunchLazyJobPhyInstrOperand*>(ptr);
     CHECK_NOTNULL(phy_instr_operand);
     return phy_instr_operand->nn_graph();
   }
 
   std::shared_ptr<LazyJobInstance> MakeJobInstance(Instruction* instruction) const {
-    const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
+    const auto* ptr = instruction->phy_instr_operand().get();
     const auto* phy_instr_operand = dynamic_cast<const LaunchLazyJobPhyInstrOperand*>(ptr);
     CHECK_NOTNULL(phy_instr_operand);
     const auto& nn_graph = phy_instr_operand->nn_graph();
@@ -121,7 +121,7 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
       auto* device_ctx = GetLazyJobDeviceCtx(instruction);
       device_ctx->DequeueNNGraph();
       auto* status_buffer = instruction->mut_status_buffer();
-      NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
+      NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer())->set_done();
     };
     return std::make_shared<LazyJobInstance>(nn_graph->job_name(), FinishCb);
   }
