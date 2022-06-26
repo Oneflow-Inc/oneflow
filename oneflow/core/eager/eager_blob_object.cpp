@@ -35,12 +35,14 @@ EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
       stride_(stride),
       storage_offset_(0),
       tensor_storage_(tensor_storage),
+      mem_ptr_(nullptr),
       is_shape_synced_(true),
       compute_local_dep_object_(dep_object),
       blob_desc_(shape, stride, data_type) {
   CHECK(static_cast<bool>(shape));
   CHECK(static_cast<bool>(stride));
   CHECK(static_cast<bool>(tensor_storage));
+  if (tensor_storage_) { mem_ptr_ = tensor_storage_->blob_dptr(); }  // NOLINT
 }
 
 Blob* EagerBlobObject::blob() {
@@ -83,15 +85,14 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     return Maybe<void>::Ok();
   }
   {
-    char* dptr = nullptr;
-    JUST(allocator->Allocate(&dptr, required_body_bytes));
+    JUST(allocator->Allocate(&mem_ptr_, required_body_bytes));
     // reset tensor_storage_;
     const auto& Free = [allocator, required_body_bytes](char* dptr) {
       if (IsShuttingDown()) { return; }
       allocator->Deallocate(dptr, required_body_bytes);
     };
-    tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
-                                   required_body_bytes);
+    tensor_storage_->set_blob_dptr(
+        std::unique_ptr<char, std::function<void(char*)>>(mem_ptr_, Free), required_body_bytes);
 
     InitNonPODTypeEagerBlobObjectIfNeed(tensor_storage_->non_pod_allocator(), this);
   }

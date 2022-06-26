@@ -25,7 +25,6 @@ limitations under the License.
 #include "oneflow/core/vm/ep_stream_type.h"
 #include "oneflow/core/vm/lazy_job_stream_type.h"
 #include "oneflow/core/vm/stream_get_stream_type.h"
-#include "oneflow/core/common/env_var/ep_based_cuda.h"
 
 namespace oneflow {
 
