@@ -34,6 +34,7 @@
 
 ### System Requirements
 
+- Linux. As for now, there is no pre-built release for macOS, Windows.
 - Python 3.6, 3.7, 3.8, 3.9, 3.10
 - (**Highly recommended**) Upgrade pip
 
@@ -206,11 +207,7 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 
 ### Advanced features
 
-<details>
-<summary>XRT</summary>
-
-- You can check this [doc](oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
-</details>
+- [OneFlow-XRT](https://github.com/Oneflow-Inc/oneflow-xrt): An extension for OneFlow to target third-party compiler, such as XLA, TensorRT and OpenVINO etc.
 
 ## Getting Started
 

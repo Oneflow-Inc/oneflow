@@ -36,13 +36,13 @@ class PolynomialLR(LRScheduler):
 
     .. math::
         \begin{aligned}
-           & decay\_batch = min(decay\_batch, current\_batch) \\
+           & current\_batch = min(decay\_batch, current\_batch) \\
            & learning\_rate = (base\_lr-end\_lr)*(1-\frac{current\_batch}{decay\_batch})^{power}+end\_lr
         \end{aligned}
 
     Args:
         optimizer (Optimizer): Wrapper optimizer.
-        steps (int): The decayed steps.
+        decay_batch (int): The decayed steps.
         end_learning_rate (float, optional): The final learning rate. Defaults to 0.0001.
         power (float, optional): The power of polynomial. Defaults to 1.0.
         cycle (bool, optional): If cycle is True, the scheduler will decay the learning rate every decay steps. Defaults to False.
@@ -55,7 +55,7 @@ class PolynomialLR(LRScheduler):
        
         ... 
         polynomial_scheduler = flow.optim.lr_scheduler.PolynomialLR(
-            optimizer, steps=5, end_learning_rate=0.00001, power=2
+            optimizer, decay_batch=5, end_learning_rate=0.00001, power=2
             )
 
         for epoch in range(num_epoch):
@@ -66,15 +66,17 @@ class PolynomialLR(LRScheduler):
     def __init__(
         self,
         optimizer,
-        steps: int,
+        decay_batch: int,
         end_learning_rate: float = 0.0001,
         power: float = 1.0,
         cycle: bool = False,
         last_step: int = -1,
         verbose: bool = False,
     ):
-        assert steps > 0, f"steps must greater than zero, but got {steps}"
-        self.max_decay_steps = steps
+        assert (
+            decay_batch > 0
+        ), f"decay_batch must greater than zero, but got {decay_batch}"
+        self.max_decay_steps = decay_batch
         self.end_learning_rate = end_learning_rate
         self.power = power
         self.cycle = cycle
@@ -94,8 +96,9 @@ class PolynomialLR(LRScheduler):
         return (base_lr - self.end_learning_rate) * factor + self.end_learning_rate
 
     def _generate_conf_for_graph(self, lr_conf):
-        polynomial_conf = lr_conf.mutable_polynomial_conf()
-        polynomial_conf.set_decay_batches(self.max_decay_steps)
-        polynomial_conf.set_end_learning_rate(self.end_learning_rate)
-        polynomial_conf.set_power(self.power)
-        polynomial_conf.set_cycle(self.cycle)
+        lr_conf.polynomial_conf.SetInParent()
+        polynomial_conf = lr_conf.polynomial_conf
+        polynomial_conf.decay_batches = self.max_decay_steps
+        polynomial_conf.end_learning_rate = self.end_learning_rate
+        polynomial_conf.power = self.power
+        polynomial_conf.cycle = self.cycle

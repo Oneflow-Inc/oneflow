@@ -24,7 +24,7 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-struct Instruction;
+class Instruction;
 
 enum InstructionFuseType {
   kInvalidInstructionFuseType = 0,
@@ -38,11 +38,11 @@ class InstructionType {
   virtual ~InstructionType() = default;
 
   Maybe<void> InferIf(Instruction* instruction) const {
-    OF_PROFILER_RANGE_PUSH_POP_GUARD(std::string("Infer:") + DebugName(*instruction));
+    OF_PROFILER_RANGE_GUARD(std::string("Infer:") + DebugName(*instruction));
     return Infer(instruction);
   }
   void ComputeIf(Instruction* instruction) const {
-    OF_PROFILER_RANGE_PUSH_POP_GUARD(std::string("Compute:") + DebugName(*instruction));
+    OF_PROFILER_RANGE_GUARD(std::string("Compute:") + DebugName(*instruction));
     Compute(instruction);
   }
 

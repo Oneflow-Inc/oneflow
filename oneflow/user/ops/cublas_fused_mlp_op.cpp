@@ -64,8 +64,7 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
     cublas_aux_ld = n;
     // Set Middle result shape.
     long cublas_aligned_aux_ld = AlignReluAuxLd(cublas_aux_ld);
-    int64_t aux_size =
-        cublas_aligned_aux_ld / GetSizeOfDataType(DataType::kInt8);  // Cause we use int8_t as dtype
+    int64_t aux_size = cublas_aligned_aux_ld / 32;  // Cause we use int32_t as dtype
     *ctx->OutputShape("cublas_aux", idx) = Shape({m, aux_size});
     *ctx->OutputShape("hidden", idx) = Shape({m, n});
     // Set for next layer.
@@ -94,7 +93,7 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
 
   for (int32_t i = 0; i < ctx->output_size("cublas_aux"); i++) {
     user_op::TensorDesc* aux_desc = ctx->OutputTensorDesc("cublas_aux", i);
-    *aux_desc->mut_data_type() = DataType::kInt8;
+    *aux_desc->mut_data_type() = DataType::kInt32;
   }
 
   return Maybe<void>::Ok();
@@ -173,7 +172,6 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                                      weight_num - 1);
       }
       std::string cublas_dy = last_bias_grad;
-      ;
       for (int32_t hidden_layer_idx = weight_num - 1; hidden_layer_idx > 0; hidden_layer_idx--) {
         user_op::UserOpConfWrapperBuilder cublas_bias_add_relu_matmul_grad_builder(
             op.op_name() + "_cublas_bias_add_relu_matmul_grad_" + std::to_string(hidden_layer_idx));
@@ -182,6 +180,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                 .Input("dy", cublas_dy)
                 .Input("weight", op.input("weights", hidden_layer_idx))
                 .Input("aux", op.output("cublas_aux", hidden_layer_idx - 1))
+                .Attr<double>("alpha", 1.0)
                 .Output("d_grad")
                 .Output("d_bias")
                 .Build();

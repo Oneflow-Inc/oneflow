@@ -31,7 +31,8 @@ void ThreadSafeAllocator::Deallocate(char* mem_ptr, std::size_t size) {
 
 void ThreadSafeAllocator::Shrink() {
   std::unique_lock<std::mutex> lock(mutex4backend_allocator_);
-  backend_allocator_->Shrink();
+  auto* cache = dynamic_cast<ShrinkableCache*>(backend_allocator_.get());
+  if (cache != nullptr) { cache->Shrink(); }
 }
 
 void ThreadSafeAllocator::DeviceReset() {
@@ -51,7 +52,8 @@ void SingleThreadOnlyAllocator::Deallocate(char* mem_ptr, std::size_t size) {
 
 void SingleThreadOnlyAllocator::Shrink() {
   CheckUniqueThreadAccess();
-  backend_allocator_->Shrink();
+  auto* cache = dynamic_cast<ShrinkableCache*>(backend_allocator_.get());
+  if (cache != nullptr) { cache->Shrink(); }
 }
 
 void SingleThreadOnlyAllocator::DeviceReset() {

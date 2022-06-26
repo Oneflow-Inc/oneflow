@@ -30,8 +30,6 @@ class CudaBackendAllocator final : public Allocator {
 
   Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
-  bool IsCached() const override { return false; }
-  void Shrink() override {}
   void DeviceReset() override;
 
  private:

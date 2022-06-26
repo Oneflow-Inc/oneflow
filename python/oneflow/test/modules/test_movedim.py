@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+from random import shuffle
+
 from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
@@ -32,6 +34,22 @@ class TestMovedim(flow.unittest.TestCase):
             dim4=random(3, 6),
         ).to(device)
         z = torch.movedim(x, (0, 1), (2, 3))
+        return z
+
+    @autotest(n=10)
+    def test_flow_movedim_with_stride(test_case):
+        device = random_device()
+        x = random_tensor(
+            ndim=4,
+            dim1=random(3, 6),
+            dim2=random(3, 6),
+            dim3=random(3, 6),
+            dim4=random(3, 6),
+        ).to(device)
+        perm = [0, 1, 2, 3]
+        shuffle(perm)
+        y = x.permute(perm)
+        z = torch.movedim(y, (0, 1), (2, 3))
         return z
 
     @autotest(check_graph=True)

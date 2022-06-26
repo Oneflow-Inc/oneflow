@@ -64,6 +64,9 @@ REGISTER_USER_OP("{{op.name}}")
 {%- if op.no_grad -%}
     .NoGrad()
 {%- endif -%}
+{%- if op.support_non_contiguous -%}
+    .SupportNonContiguous()
+{%- endif -%}
 {%- if op.same_output_regst_num != -1 -%}
     .SetOutputBufferNum({{op.same_output_regst_num}})
 {%- endif -%}

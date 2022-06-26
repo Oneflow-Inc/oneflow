@@ -129,6 +129,7 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
     emitAttrs(def, &op);
     emitInt(def, "same_output_regst_num", &op);
     emitTrait(def, "no_grad", "NoGrad", &op);
+    emitTrait(def, "support_non_contiguous", "SupportNonContiguous", &op);
     emitTrait(def, "cpu_only", "CpuOnly", &op);
     emitBit(def, "has_nd_sbp_infer_fn", &op);
     emitBit(def, "has_get_sbp_fn", &op);

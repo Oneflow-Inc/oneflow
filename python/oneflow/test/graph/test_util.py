@@ -68,7 +68,6 @@ type_name_to_flow_type = {
     "int8": flow.int8,
     "int32": flow.int32,
     "int64": flow.int64,
-    "char": flow.char,
     "uint8": flow.uint8,
 }
 type_name_to_np_type = {
@@ -78,7 +77,6 @@ type_name_to_np_type = {
     "int8": np.int8,
     "int32": np.int32,
     "int64": np.int64,
-    "char": np.byte,
     "uint8": np.uint8,
 }
 

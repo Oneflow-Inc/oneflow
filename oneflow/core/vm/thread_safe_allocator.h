@@ -20,12 +20,13 @@ limitations under the License.
 #include <mutex>
 #include <thread>
 #include "oneflow/core/vm/allocator.h"
+#include "oneflow/core/vm/shrinkable_cache.h"
 
 namespace oneflow {
 
 namespace vm {
 
-class ThreadSafeAllocator final : public Allocator {
+class ThreadSafeAllocator final : public Allocator, public ShrinkableCache {
  public:
   explicit ThreadSafeAllocator(std::unique_ptr<Allocator>&& backend_allocator)
       : Allocator(), backend_allocator_(std::move(backend_allocator)) {}
@@ -33,7 +34,6 @@ class ThreadSafeAllocator final : public Allocator {
 
   Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
-  bool IsCached() const override { return backend_allocator_->IsCached(); }
   void Shrink() override;
   void DeviceReset() override;
 
@@ -42,7 +42,7 @@ class ThreadSafeAllocator final : public Allocator {
   std::mutex mutex4backend_allocator_;
 };
 
-class SingleThreadOnlyAllocator final : public Allocator {
+class SingleThreadOnlyAllocator final : public Allocator, public ShrinkableCache {
  public:
   explicit SingleThreadOnlyAllocator(std::unique_ptr<Allocator>&& backend_allocator)
       : Allocator(),
@@ -52,7 +52,6 @@ class SingleThreadOnlyAllocator final : public Allocator {
 
   Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
-  bool IsCached() const override { return backend_allocator_->IsCached(); }
   void Shrink() override;
   void DeviceReset() override;
 

@@ -25,12 +25,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace vm {
-class MirroredObject;
-class Stream;
-}  // namespace vm
-using LocalDepObject = vm::MirroredObject;
-
 class Stream final {
  public:
   Stream(const Stream&) = default;
@@ -46,27 +40,18 @@ class Stream final {
 
   Symbol<Device> device() const { return device_; }
   StreamRole stream_role() const { return stream_role_; }
-
-  LocalDepObject* mut_schedule_local_dep_object() const { return schedule_local_dep_object_; }
-  const Optional<LocalDepObject*>& mut_transport_local_dep_object() const {
-    return transport_local_dep_object_;
-  }
-
-  vm::Stream* mut_vm_stream() const { return vm_stream_; }
+  size_t unique_stream_id() const { return unique_stream_id_; }
 
  private:
   Stream(Symbol<Device> device, StreamRole stream_role);
 
   static Maybe<Symbol<Stream>> RawNew(Symbol<Device> device, StreamRole stream_role);
 
-  Maybe<void> Init();
+  Maybe<void> Init(size_t unique_stream_id);
 
   Symbol<Device> device_;
   StreamRole stream_role_;
-
-  LocalDepObject* schedule_local_dep_object_;
-  Optional<LocalDepObject*> transport_local_dep_object_;
-  vm::Stream* vm_stream_;
+  size_t unique_stream_id_;
 };
 
 extern Maybe<Symbol<Stream>> (*GetDefaultStreamByDevice)(Symbol<Device>);

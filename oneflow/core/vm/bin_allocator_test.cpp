@@ -16,12 +16,44 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include "gtest/gtest.h"
 #include "oneflow/core/vm/bin_allocator.h"
-#include "oneflow/core/vm/cuda_backend_allocator.h"
 #include "oneflow/core/vm/thread_safe_allocator.h"
 #include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 namespace vm {
+
+class CudaBackendAllocator final : public Allocator {
+ public:
+  explicit CudaBackendAllocator(int64_t device_id) : device_id_(device_id) {}
+  ~CudaBackendAllocator() override = default;
+
+  Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
+  void Deallocate(char* mem_ptr, std::size_t size) override;
+  void DeviceReset() override;
+
+ private:
+  int64_t device_id_;
+};
+
+Maybe<void> CudaBackendAllocator::Allocate(char** mem_ptr, std::size_t size) {
+  cudaSetDevice(device_id_);
+  if (cudaMalloc(mem_ptr, size) != cudaSuccess) { *mem_ptr = nullptr; }
+  return Maybe<void>::Ok();
+}
+
+void CudaBackendAllocator::Deallocate(char* mem_ptr, std::size_t size) {
+  cudaSetDevice(device_id_);
+  OF_CUDA_CHECK(cudaFree(mem_ptr));
+}
+
+void CudaBackendAllocator::DeviceReset() {
+  cudaSetDevice(device_id_);
+  // NOTE(chengcheng): In some corner case on ubuntu, cuda memory not released even if OOM.
+  //   So there need release all cuda memory allocated by this process before core dump.
+  LOG(WARNING) << "OOM error is detected, process will exit. And it will start to reset CUDA "
+               << "device for releasing device memory.";
+  OF_CUDA_CHECK(cudaDeviceReset());
+}
 
 TEST(CudaBinAllocator, cuda_allocator) {
   int gpu_num = -1;
@@ -47,7 +79,7 @@ TEST(CudaBinAllocator, cuda_allocator) {
   std::vector<char*> ptrs;
   for (int i = 0; i < 512; ++i) {
     char* ptr = nullptr;
-    a->Allocate(&ptr, 1);
+    CHECK_JUST(a->Allocate(&ptr, 1));
     ASSERT_TRUE(ptr != nullptr);
     ptrs.emplace_back(ptr);
   }
@@ -63,7 +95,7 @@ TEST(CudaBinAllocator, cuda_allocator) {
   ptrs.clear();
   for (int i = 0; i < 2048; ++i) {
     char* ptr = nullptr;
-    a->Allocate(&ptr, 10000);
+    CHECK_JUST(a->Allocate(&ptr, 10000));
     ASSERT_TRUE(ptr != nullptr);
     ptrs.emplace_back(ptr);
   }
@@ -77,10 +109,10 @@ TEST(CudaBinAllocator, cuda_allocator) {
   }
 
   char* data_ptr_1 = nullptr;
-  a->Allocate(&data_ptr_1, 2048 * sizeof(float));
+  CHECK_JUST(a->Allocate(&data_ptr_1, 2048 * sizeof(float)));
 
   char* data_ptr_2 = nullptr;
-  a->Allocate(&data_ptr_2, 4096 * sizeof(double));
+  CHECK_JUST(a->Allocate(&data_ptr_2, 4096 * sizeof(double)));
 
   ASSERT_TRUE(data_ptr_1 != data_ptr_2);
   if (data_ptr_1 < data_ptr_2) {

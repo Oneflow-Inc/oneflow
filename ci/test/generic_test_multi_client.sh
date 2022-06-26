@@ -28,7 +28,7 @@ unset https_proxy
 
 export ONEFLOW_TEST_DEVICE_NUM=1
 
-COMMON_PYTEST_ARGS="-p no:randomly -p no:cacheprovider --max-worker-restart=0 -x --durations=50 --capture=sys"
+COMMON_PYTEST_ARGS="-p no:warnings -p no:randomly -p no:cacheprovider --max-worker-restart=0 -x --durations=50 --capture=sys --ignore=log"
 time python3 -m pytest ${COMMON_PYTEST_ARGS} --dist loadfile ${parallel_spec} ${ONEFLOW_TEST_DIR}
 if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_backend_grpc())')" == *"True"* ]]; then
     export ONEFLOW_TEST_DEVICE_NUM=2

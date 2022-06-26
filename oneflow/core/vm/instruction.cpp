@@ -29,7 +29,7 @@ namespace vm {
 
 std::string Instruction::DebugName() const {
   std::string instr_name = instruction_type().DebugName(*this);
-  return instr_name + ":" + StreamRoleSwitch<GetStreamRoleName>(stream().stream_role());
+  return instr_name + ":" + GetStreamRoleName::Visit(stream().stream_role());
 }
 
 void Instruction::__Init__(Stream* stream, const InstructionType* instruction_type,
@@ -42,7 +42,7 @@ void Instruction::__Init__(Stream* stream, const InstructionType* instruction_ty
 void Instruction::InitStatus() { instruction_type().InitInstructionStatusIf(this); }
 
 void Instruction::DeleteStatusAndClearEdges() {
-  OF_PROFILER_RANGE_PUSH_POP_GUARD("Instruction::DeleteStatusAndClearEdges");
+  OF_PROFILER_RANGE_GUARD("Instruction::DeleteStatusAndClearEdges");
   instruction_type().DeleteInstructionStatusIf(this);
   mut_in_edges()->Clear();
   mut_out_edges()->Clear();

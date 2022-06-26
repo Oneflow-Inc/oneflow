@@ -51,8 +51,6 @@ class RangeGuard final {
 #define OF_PROFILER_ONLY_CODE(...) __VA_ARGS__
 #define OF_PROFILER_RANGE_PUSH(name) ::oneflow::profiler::RangePush(name)
 #define OF_PROFILER_RANGE_POP() ::oneflow::profiler::RangePop()
-#define OF_PROFILER_RANGE_PUSH_POP_GUARD(name) \
-  ::oneflow::profiler::RangePushPopGuard OF_PP_CAT(_of_profiler_range_guard_, __COUNTER__)(name)
 #define OF_PROFILER_RANGE_GUARD(name) \
   ::oneflow::profiler::RangeGuard OF_PP_CAT(_of_profiler_range_guard_, __COUNTER__)(name)
 #define OF_PROFILER_LOG_HOST_MEMORY_USAGE(name) ::oneflow::profiler::LogHostMemoryUsage(name)
@@ -60,18 +58,19 @@ class RangeGuard final {
 #define OF_PROFILER_ONLY_CODE(...)
 #define OF_PROFILER_RANGE_PUSH(name)
 #define OF_PROFILER_RANGE_POP()
-#define OF_PROFILER_RANGE_PUSH_POP_GUARD(name)
 #define OF_PROFILER_RANGE_GUARD(name)
 #define OF_PROFILER_NAME_THIS_HOST_THREAD(name)
 #define OF_PROFILER_LOG_HOST_MEMORY_USAGE(name)
 #endif
 
-class RangePushPopGuard final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(RangePushPopGuard);
-  explicit RangePushPopGuard(const std::string& name) { OF_PROFILER_RANGE_PUSH(name); }
-  ~RangePushPopGuard() { OF_PROFILER_RANGE_POP(); }
-};
+void EnableProfiler(bool use_cpu, bool use_cuda, bool record_shapes, bool record_bandwidth);
+
+// DisableProfilerAndReturnResult will return a json of profile results.
+Maybe<std::string> DisableProfilerAndReturnResult();
+
+Maybe<std::string> StartRecord(const std::string& name);
+
+Maybe<void> EndRecord(const std::string& event_recorder_key);
 
 }  // namespace profiler
 

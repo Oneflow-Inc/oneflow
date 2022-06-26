@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/of_unused.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/job/job_instance.h"
@@ -78,23 +79,20 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
 
     static thread_local int64_t run_id = 0;
     {
-      OF_PROFILER_RANGE_PUSH_POP_GUARD("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
+      OF_PROFILER_RANGE_GUARD("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
       device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(cur_nn_graph);
     }
     {
-      OF_PROFILER_RANGE_PUSH_POP_GUARD("i=" + std::to_string(run_id++) + "-MakeJobInstance");
+      OF_PROFILER_RANGE_GUARD("Send all buffers to BufferMgr");
       const auto& job_instance = MakeJobInstance(instruction);
-      OF_PROFILER_RANGE_PUSH_POP_GUARD("Send all buffers to BufferMgr");
       const auto& job_name = job_instance->job_name();
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Push(job_instance);
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Push(job_instance);
     }
-    {
-      OF_PROFILER_RANGE_PUSH_POP_GUARD("EnqueueNNGraph");
-      device_ctx->EnqueueNNGraph(cur_nn_graph);
-    }
-    (void)run_id;  // disable compiler warning.
+    OF_UNUSED(run_id);  // disable compiler warning.
+    OF_PROFILER_RANGE_GUARD("EnqueueNNGraph");
+    device_ctx->EnqueueNNGraph(cur_nn_graph);
   }
 
  private:

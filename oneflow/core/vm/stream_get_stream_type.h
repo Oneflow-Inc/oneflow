@@ -18,14 +18,10 @@ limitations under the License.
 
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/singleton_ptr.h"
-#include "oneflow/core/vm/async_cuda_stream_type.h"
-#include "oneflow/core/vm/async_ep_stream_type.h"
+#include "oneflow/core/vm/event_recorded_ep_stream_type.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/critical_section_stream_type.h"
 #include "oneflow/core/vm/ep_d2h_stream_type.h"
-#include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
-#include "oneflow/core/vm/cuda_copy_h2d_stream_type.h"
-#include "oneflow/core/vm/cuda_stream_type.h"
 #include "oneflow/core/vm/ep_stream_type.h"
 #include "oneflow/core/vm/lazy_job_stream_type.h"
 #include "oneflow/core/vm/stream_get_stream_type.h"
@@ -33,101 +29,29 @@ limitations under the License.
 
 namespace oneflow {
 
-struct GetStreamType {
-  static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kInvalid>,
-                                           DeviceType device_type) {  // NOLINT
-    UNIMPLEMENTED_THEN_RETURN();
+struct GetStreamType final : public StreamRoleVisitor<GetStreamType> {
+  static Maybe<const vm::StreamType*> VisitCompute(DeviceType device_type) {
+    return SingletonPtr<vm::EpStreamType>();
   }
-  static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kCompute>,
-                                           DeviceType device_type) {
-    if (device_type == DeviceType::kCUDA) {
-      if (ThreadLocalEnvBool<ONEFLOW_EP_BASED_CUDA>()) {
-        return SingletonPtr<vm::EpStreamType>();
-      } else {
-#ifdef WITH_CUDA
-        return SingletonPtr<vm::CudaStreamType>();
-#else
-        UNIMPLEMENTED_THEN_RETURN();
-#endif
-      }
-    } else {
-      return SingletonPtr<vm::EpStreamType>();
-    }
+  static Maybe<const vm::StreamType*> VisitHost2Device(DeviceType device_type) {
+    return SingletonPtr<vm::EventRecordedEpStreamType>();
   }
-  static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kHost2Device>,
-                                           DeviceType device_type) {
-    if (device_type == DeviceType::kCUDA) {
-      if (ThreadLocalEnvBool<ONEFLOW_EP_BASED_CUDA>()) {
-        return SingletonPtr<vm::EpStreamType>();
-      } else {
-#ifdef WITH_CUDA
-        return SingletonPtr<vm::CudaCopyH2DStreamType>();
-#else
-        UNIMPLEMENTED_THEN_RETURN();
-#endif
-      }
-    } else {
-      return SingletonPtr<vm::EpStreamType>();
-    }
+  static Maybe<const vm::StreamType*> VisitDevice2Host(DeviceType device_type) {
+    return SingletonPtr<vm::EpD2HStreamType>();
   }
-  static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kDevice2Host>,
-                                           DeviceType device_type) {
-    if (device_type == DeviceType::kCUDA) {
-      if (ThreadLocalEnvBool<ONEFLOW_EP_BASED_CUDA>()) {
-        return SingletonPtr<vm::EpD2HStreamType>();
-      } else {
-#ifdef WITH_CUDA
-        return SingletonPtr<vm::CudaCopyD2HStreamType>();
-#else
-        UNIMPLEMENTED_THEN_RETURN();
-#endif
-      }
-    } else {
-      return SingletonPtr<vm::EpD2HStreamType>();
-    }
+  static Maybe<const vm::StreamType*> VisitSyncedLaunchedCommNet(DeviceType device_type) {
+    return SingletonPtr<vm::EventRecordedEpStreamType>();
   }
-  static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>,
-                                           DeviceType device_type) {
-    if (device_type == DeviceType::kCUDA) {
-      if (ThreadLocalEnvBool<ONEFLOW_EP_BASED_CUDA>()) {
-        return SingletonPtr<vm::EpStreamType>();
-      } else {
-#ifdef WITH_CUDA
-        return SingletonPtr<vm::CudaStreamType>();
-#else
-        UNIMPLEMENTED_THEN_RETURN();
-#endif
-      }
-    } else {
-      return SingletonPtr<vm::EpStreamType>();
-    }
+  static Maybe<const vm::StreamType*> VisitAsyncedLaunchedCommNet(DeviceType device_type) {
+    return SingletonPtr<vm::EventRecordedEpStreamType>();
   }
-  static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>,
-                                           DeviceType device_type) {
-    if (device_type == DeviceType::kCUDA) {
-      if (ThreadLocalEnvBool<ONEFLOW_EP_BASED_CUDA>()) {
-        return SingletonPtr<vm::AsyncEpStreamType>();
-      } else {
-#ifdef WITH_CUDA
-        return SingletonPtr<vm::AsyncCudaStreamType>();
-#else
-        UNIMPLEMENTED_THEN_RETURN();
-#endif
-      }
-    } else {
-      return SingletonPtr<vm::AsyncEpStreamType>();
-    }
-  }
-  static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kBarrier>,
-                                           DeviceType device_type) {
+  static Maybe<const vm::StreamType*> VisitBarrier(DeviceType device_type) {
     return SingletonPtr<vm::ControlStreamType>();
   }
-  static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kCriticalSection>,
-                                           DeviceType device_type) {
+  static Maybe<const vm::StreamType*> VisitCriticalSection(DeviceType device_type) {
     return SingletonPtr<vm::CriticalSectionStreamType>();
   }
-  static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kLazyJobLauncher>,
-                                           DeviceType device_type) {
+  static Maybe<const vm::StreamType*> VisitLazyJobLauncher(DeviceType device_type) {
     return SingletonPtr<vm::LazyJobStreamType>();
   }
 };

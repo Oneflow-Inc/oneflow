@@ -3,6 +3,7 @@ package oneflow;
 
 import "oneflow/core/job/mirrored_parallel.proto";
 import "oneflow/core/framework/user_op_attr.proto";
+import "oneflow/core/job/module_conf.proto";
 
 message ScopeProto {
   required int64 job_desc_symbol_id = 20;
@@ -15,4 +16,5 @@ message ScopeProto {
   required int64 session_id = 80;
   map<string, AttrValue> attr_name2attr_value = 90;
   optional string calculation_pass_name = 100 [default = "forward_pass"];
+  optional string module_name = 110;
 }
