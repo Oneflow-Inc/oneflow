@@ -93,7 +93,7 @@ void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_b
   CHECK(interfaces_valid().at(i));
   OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   auto& eager_blob_object = eager_blob_objects_->at(i);
-  of_blob->blob().shape_view().ToShape(&eager_blob_object->mut_shape());
+  of_blob->blob().shape_view().ToShape(eager_blob_object->mut_shape());
   const auto& end_event_record = op_name2end_event_record_->at(op_name);
   if (eager_blob_object->dptr() == nullptr) {
     end_event_record->Init(std::make_shared<NaiveEventRecord>());

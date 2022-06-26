@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/barrier_instruction_type.h"
 #include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/vm_util.h"
