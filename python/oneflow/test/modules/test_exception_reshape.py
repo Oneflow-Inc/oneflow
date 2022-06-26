@@ -30,7 +30,7 @@ class TestModule(flow.unittest.TestCase):
         x = flow.tensor((2, 2))
         with test_case.assertRaises(RuntimeError) as ctx:
             y = x.reshape((-1, -1))
-        test_case.assertEqual("only one dimension can be inferred", str(ctx.exception))
+        test_case.assertEqual("Check failed: (need_infer_axis) == (-1) (0 vs -1) only one dimension can be inferred", str(ctx.exception))
 
 
 if __name__ == "__main__":
