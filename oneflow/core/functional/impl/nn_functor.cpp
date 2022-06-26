@@ -3051,8 +3051,10 @@ class OneEmbeddingEmbeddingGradientShuffleFunctor {
     JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_grad->shape()->At(num_axes - 1)));
     JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
     return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {embedding_grad, num_unique_matrix, cur_rank_inverse_indices,
-               inverse_unique_partition_indices});
+        *op_,
+        {embedding_grad, num_unique_matrix, cur_rank_inverse_indices,
+         inverse_unique_partition_indices},
+        attrs);
   }
 
  private:
