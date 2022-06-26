@@ -20,9 +20,7 @@ from typing import List, Union
 
 import oneflow._oneflow_internal
 import oneflow.core.job.resource_pb2 as resource_util
-import oneflow.framework.hob as hob
 import oneflow.framework.session_context as session_ctx
-import oneflow.support.enable_if as enable_if
 
 
 def _set_resource_attr(attrs_chain: Union[List[str], str], attr_value):
@@ -57,24 +55,23 @@ def _set_resource_attr(attrs_chain: Union[List[str], str], attr_value):
         """
         last_obj = obj
         for att in _attrs_chain:
-            assert hasattr(last_obj, att), "do not have this attribute!"
+            assert hasattr(last_obj, att), (
+                repr(last_obj) + " does not have attribute " + att + " !"
+            )
             last_obj = getattr(last_obj, att)
         return last_obj
 
+    resource_config = session.config_proto.resource
+    setattr(
+        __get_obj(
+            resource_config, attrs_chain[0:-1]
+        ),  # the owning object of the attribute to be updated
+        attrs_chain[-1],  # the attribute needs to be updated
+        attr_value,
+    )
+
     if session.status_ == session.Status.INITED:
-        resource_config = resource_util.Resource()
-        setattr(
-            __get_obj(resource_config, attrs_chain[0:-1]), # the owning object of the attribute to be updated
-            attrs_chain[-1], # the attribute needs to be updated
-            attr_value
-        )
         session.update_resource_eagerly(resource_config)
-    else:
-        setattr(
-            __get_obj(session.config_proto.resource, attrs_chain[0:-1]), # the owning object of the attribute to be updated
-            attrs_chain[-1], # the attribute needs to be updated
-            attr_value,
-        )
 
 def api_load_library(val: str) -> None:
     """Load necessary library for job now
@@ -84,8 +81,9 @@ def api_load_library(val: str) -> None:
     assert type(val) is str
     oneflow._oneflow_internal.LoadLibrary(val)
 
+
 def api_machine_num(val: int) -> None:
-    """Set available number of machine/node for  running job .
+    """Set available number of machine/node for running job.
 
     Args:
         val (int): available number of machines
@@ -402,8 +400,3 @@ def api_nccl_enable_mixed_fusion(val: bool) -> None:
     """
     assert type(val) is bool
     _set_resource_attr(["collective_boxing_conf", "nccl_enable_mixed_fusion"], val)
-
-
-@enable_if.condition(hob.in_normal_mode & hob.session_initialized)
-def do_nothing(*args, **kwargs):
-    print("This action donot working because session is initialized.", file=sys.stderr)
