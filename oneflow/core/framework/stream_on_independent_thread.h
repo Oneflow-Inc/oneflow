@@ -30,7 +30,7 @@ struct StreamOnIndependentThread : public StreamRoleVisitor<StreamOnIndependentT
   static bool VisitBarrier() { return false; }
   static bool VisitCriticalSection() { return true; }
   static bool VisitLazyJobLauncher() { return true; }
-  static bool VisitPinMemory() { return false; }
+  static bool VisitPinnedCompute() { return false; }
 };
 
 }  // namespace oneflow

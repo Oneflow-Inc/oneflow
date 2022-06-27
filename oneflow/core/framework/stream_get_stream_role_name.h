@@ -33,7 +33,7 @@ struct GetStreamRoleName : public StreamRoleVisitor<GetStreamRoleName> {
   static const char* VisitBarrier() { return "barrier"; }
   static const char* VisitCriticalSection() { return "critical_section"; }
   static const char* VisitLazyJobLauncher() { return "lazy_job_launcher"; }
-  static const char* VisitPinMemory() { return "pin_memory"; }
+  static const char* VisitPinnedCompute() { return "pin_memory"; }
 };
 
 }  // namespace oneflow

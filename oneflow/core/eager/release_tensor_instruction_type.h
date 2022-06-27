@@ -83,7 +83,7 @@ struct GetReleaseInstructionType : public StreamRoleVisitor<GetReleaseInstructio
   static Maybe<const vm::InstructionType*> VisitLazyJobLauncher(DeviceType device_type) {
     UNIMPLEMENTED_THEN_RETURN();
   }
-  static Maybe<const vm::InstructionType*> VisitPinMemory(DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> VisitPinnedCompute(DeviceType device_type) {
     return SingletonPtr<vm::ReleaseTensorInstructionType>();
   }
 };
