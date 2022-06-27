@@ -33,7 +33,7 @@ namespace vm {
 
 void PinnedEpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                        Stream* stream) const {
-  // TODO:(zhaoluyang) support pin_memory_device
+  // TODO:(zhaoluyang) empty/cast/copy op support pin_memory_device
   DeviceType device_type = stream->device()->enum_type();
   size_t device_index = stream->device()->device_id();
   auto ep_device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
