@@ -122,36 +122,6 @@ auto ConvWeightGradNoTransATransBMatmulPrimitiveExists() {
       });
 }
 
-template<typename Context>
-std::unique_ptr<ep::primitive::Matmul> NewConvBiasGradNoTransANoTransBMatmulPrimitive(
-    Context* ctx) {
-  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->data_type();
-  return NewMatmulPrimitive(ctx->device_type(), data_type, /*transpose_a=*/false,
-                            /*transpose_b=*/false);
-}
-
-auto ConvBiasGradNoTransANoTransBMatmulPrimitiveExists() {
-  return hob::make_custom(
-      "ConvBiasGradNoTransANoTransBMatmulPrimitiveExists",
-      [](const user_op::KernelRegContext& ctx) {
-        return NewConvBiasGradNoTransANoTransBMatmulPrimitive(&ctx).operator bool();
-      });
-}
-
-template<typename Context>
-std::unique_ptr<ep::primitive::Matmul> NewConvBiasGradTransANoTransBMatmulPrimitive(Context* ctx) {
-  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->data_type();
-  return NewMatmulPrimitive(ctx->device_type(), data_type, /*transpose_a=*/true,
-                            /*transpose_b=*/false);
-}
-
-auto ConvBiasGradTransANoTransBMatmulPrimitiveExists() {
-  return hob::make_custom(
-      "ConvBiasGradTransANoTransBMatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
-        return NewConvBiasGradTransANoTransBMatmulPrimitive(&ctx).operator bool();
-      });
-}
-
 template<typename T>
 using Im2ColFunc = void (*)(const T* in_dptr, const ShapeView& in_shape,
                             const ShapeView& weight_shape, const ShapeView& out_shape,
