@@ -31,7 +31,7 @@ class TestAddN(flow.unittest.TestCase):
      
             flow.add(a,b,c)
            
-            test_case.assertTrue(
+        test_case.assertTrue(
             "inconsistent tensor size, expected all tensor to have the same number of elements, but got"
             in str(context.exception)
             )
@@ -47,7 +47,7 @@ class TestAddN(flow.unittest.TestCase):
      
             flow.add(a,b,c)
            
-            test_case.assertTrue(
+        test_case.assertTrue(
             "expected all tenser to have same type,but found"
             in str(context.exception)
             )
