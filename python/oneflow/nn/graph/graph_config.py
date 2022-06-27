@@ -283,6 +283,7 @@ class GraphConfig(object):
 
         If using nccl compute stream, turning it on might not speed up the training.
         If not using nccl compute stream, turning it on might slow down data parallelism by 0.6% and slow down model parallelism by 6%.
+        Considering memory, enabling the straighten algorithm is forbidden with one machine/device only, and not recommended under pipeline parallelism. 
         """
         self.proto.enable_straighten_algorithm_in_task_graph = mode
 
