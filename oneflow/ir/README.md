@@ -37,6 +37,10 @@ There is parallel signature for OneFlow Ops in MLIR. It is implemented as MLIR d
     ```mlir
     %102 = "oneflow.add_n2"(%101, %97) {oneflow.parallel = #oneflow.parallel.signature<[S(0), S(0)], S(0)>, ...
     ```
+- 2D SBP `matmul`
+    ```
+    %120 = "oneflow.matmul"(%119, %output_105) {oneflow.parallel = #oneflow.parallel.signature<[{S(0), P}, S(0)], S(0)>, ...
+    ```
 
 ## Development
 
