@@ -26,6 +26,7 @@ namespace user_op {
 namespace {
 
 constexpr int32_t kBlockSize = 1024;
+constexpr int32_t kReduceLocalSumBlockSize = 256;
 
 template<typename T>
 struct DefaultComputeType {
@@ -84,7 +85,7 @@ __global__ void FusedBinaryCrossEntropyWithLogitsReduceMeanKernel(const In* inpu
 
 template<typename Out, typename ComputeType>
 __global__ void ReduceLocalSumKernel(ComputeType* block_local_sum_buf, Out* out, int64_t elem_cnt) {
-  using BlockReduce = cub::BlockReduce<ComputeType, kBlockSize>;
+  using BlockReduce = cub::BlockReduce<ComputeType, kReduceLocalSumBlockSize>;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   ComputeType reduce_sum = 0.0;
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) { reduce_sum += block_local_sum_buf[i]; }
@@ -115,7 +116,7 @@ struct BinaryCrossEntropyWithLogitsReduceMeanGradFunctor {
       const T elem_cnt_reciprocal, const T dy)
       : elem_cnt_reciprocal(elem_cnt_reciprocal), dy(dy) {}
   __device__ T operator()(const T input_val, const T target_val) const {
-    return (CalSigmoid<ComputeType>(input_val), target_val) * dy * elem_cnt_reciprocal;
+    return (CalSigmoid(input_val) - target_val) * dy * elem_cnt_reciprocal;
   }
   const T dy;
   const T elem_cnt_reciprocal;
@@ -171,7 +172,7 @@ class BinaryCrossEntropyWithLogitsMeanKernel final : public user_op::OpKernel {
               input_blob->dptr<T>(), target_blob->dptr<T>(), tmp_buffer->mut_dptr<ComputeType>(),
               input_blob->shape_view().elem_cnt());
       ReduceLocalSumKernel<T, ComputeType>
-          <<<1, 256, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+          <<<1, kReduceLocalSumBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
               tmp_buffer->mut_dptr<ComputeType>(), out_blob->mut_dptr<T>(), block_num);
     }
   }
