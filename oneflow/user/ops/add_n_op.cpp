@@ -66,7 +66,7 @@ namespace oneflow {
 
 /*static*/ Maybe<void> AddNOp::CheckAttr(const user_op::UserOpDefWrapper&,
                                          const user_op::UserOpConfWrapper& op_conf) {
-  CHECK_OR_RETURN(op_conf.input_size("in") >= 2);//NOLINT(maybe-need-error-msg),not trigger and consider deleting
+  CHECK_OR_RETURN(op_conf.input_size("in") >= 2);//NOLINT(maybe-need-error-msg)
   
   return Maybe<void>::Ok();
 }
