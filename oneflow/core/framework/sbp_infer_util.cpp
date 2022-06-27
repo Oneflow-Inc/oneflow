@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/auto_parallel/boxing_collector.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
+#include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/nd_sbp_util.h"
@@ -518,16 +519,12 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
                logical_blob_desc, reduced_in_parallel_desc, reduced_out_parallel_desc));
   }
 
-  double logical_blob_size =
-      logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
-
 #ifdef WITH_CUDA
   // Use a general basic communication if no P in the consumer
   if ((!NdSbpHasPartialParallel(consumer_sbp_parallel))) {
     return Ratio4GeneralBasicCommunication(producer_sbp_parallel, consumer_sbp_parallel,
-                                           producer_parallel_desc, consumer_parallel_desc)
-               * logical_blob_desc.shape().elem_cnt()
-               * GetSizeOfDataType(logical_blob_desc.data_type())
+                                           logical_blob_desc, producer_parallel_desc,
+                                           consumer_parallel_desc)
            + GetTransferCost();
   }
 #endif  // WITH_CUDA
@@ -537,6 +534,8 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
 
   bool on_same_devices =
       reduced_in_parallel_desc.EqualsIgnoringHierarchy(reduced_out_parallel_desc);
+  double logical_blob_size =
+      logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
 
   if (in_dim == 2 && out_dim == 2) {
     // Not supporting different hierarchy
@@ -682,9 +681,8 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
   // Use a general basic communication if no P in the consumer
   if ((!NdSbpHasPartialParallel(consumer_sbp_parallel))) {
     return Ratio4GeneralBasicCommunication(producer_sbp_parallel, consumer_sbp_parallel,
-                                           producer_parallel_desc, consumer_parallel_desc)
-               * logical_blob_desc.shape().elem_cnt()
-               * GetSizeOfDataType(logical_blob_desc.data_type())
+                                           logical_blob_desc, producer_parallel_desc,
+                                           consumer_parallel_desc)
            + GetTransferCost();
   }
 #endif  // WITH_CUDA
@@ -774,6 +772,7 @@ double ComputeSbpInferPriority(const NdSbp& producer_sbp_parallel,
 // or producer_parallel_desc != consumer_parallel_desc
 double Ratio4GeneralBasicCommunication(const NdSbp& producer_sbp_parallel,
                                        const NdSbp& consumer_sbp_parallel,
+                                       const BlobDesc& logical_blob_desc,
                                        const ParallelDesc& producer_parallel_desc,
                                        const ParallelDesc& consumer_parallel_desc) {
   // The upper bound of the amount of the transferred data
@@ -838,63 +837,27 @@ double Ratio4GeneralBasicCommunication(const NdSbp& producer_sbp_parallel,
   } else {
     // No P in the producer or no B in the consumer, one-step transfer
     if (on_same_devices) {
-      // We only deal with 1D and 2D sbp at this moment
-      // For higher dimension, we should use simulation.
-      std::shared_ptr<Shape> parallel_hierarchy;
-      if (producer_sbp_parallel.sbp_parallel_size() < consumer_sbp_parallel.sbp_parallel_size()) {
-        parallel_hierarchy = consumer_parallel_desc.hierarchy();
-      } else {
-        parallel_hierarchy = producer_parallel_desc.hierarchy();
-      }
-      int32_t max_sbp_size = std::max(producer_sbp_parallel.sbp_parallel_size(),
-                                      consumer_sbp_parallel.sbp_parallel_size());
-
-      for (int32_t sbp_id = 0; sbp_id < max_sbp_size; sbp_id++) {
-        const auto& producer_sbp4sbp_id = producer_sbp_parallel.sbp_parallel(
-            std::min(sbp_id, producer_sbp_parallel.sbp_parallel_size()));
-        const auto& consumer_sbp4sbp_id = consumer_sbp_parallel.sbp_parallel(
-            std::min(sbp_id, consumer_sbp_parallel.sbp_parallel_size()));
-        // ? -> Si
-        if (consumer_sbp4sbp_id.has_split_parallel()) {
-          // Sj -> Si
-          if (producer_sbp4sbp_id.has_split_parallel()
-              && producer_sbp4sbp_id != consumer_sbp4sbp_id) {
-            intersection_ratio /= parallel_hierarchy->At(sbp_id);
-          }
-        } else {
-          // B/P -> B
-          if (!producer_sbp4sbp_id.has_split_parallel()) {
-            intersection_ratio *= parallel_hierarchy->At(sbp_id);
-          }
-        }
-        // For B/P/Si -> Si and Si -> B
-        // intersection ratio remains the same
-      }
-      // With the approximation above,
-      // (S1, S0) -> (S0, S0) would have an approximate intersection ratio 1/n
-      // (B, S0) -> (S0, S0) would have an approximate intersection ratio 1
-      // However, their actual intersection ratios are (n+p-1)/(n^2*m) and (n+p-1)/(nm),
-      // respectively We add a patch for this approximation, making them 1/nm and 1/m respectively
-      if (producer_sbp_parallel.sbp_parallel(0) != consumer_sbp_parallel.sbp_parallel(0)
-          && max_sbp_size >= 2
-          && (NdSbpAllSameSplitParallel(producer_sbp_parallel)
-              || NdSbpAllSameSplitParallel(consumer_sbp_parallel))
-          && (producer_sbp_parallel.sbp_parallel(
-                  std::min(1, producer_sbp_parallel.sbp_parallel_size()))
-              == consumer_sbp_parallel.sbp_parallel(
-                  std::min(1, consumer_sbp_parallel.sbp_parallel_size())))) {
-        intersection_ratio /= parallel_hierarchy->At(1);
-      }
+      // We use simulation for nD sbp with n=1,2,3,...
+      TensorSliceView in_second_slice =
+          GetTensorSliceView4ParallelId(*producer_parallel_desc.hierarchy(), producer_sbp_parallel,
+                                        logical_blob_desc.shape(), /*parallel_id=*/1);
+      TensorSliceView out_second_slice =
+          GetTensorSliceView4ParallelId(*consumer_parallel_desc.hierarchy(), consumer_sbp_parallel,
+                                        logical_blob_desc.shape(), /*parallel_id=*/1);
+      const TensorSliceView& intersection = in_second_slice.Intersect(out_second_slice);
       // The intersection ratio is design for two steps.
       // However, we only have one step here, we would increase the ratio by 1.0
       // to eliminate the unused step
-      intersection_ratio += 1.0;
+      intersection_ratio += std::min(
+          1.0, (double)(intersection.shape().elem_cnt() * producer_parallel_desc.parallel_num())
+                   / logical_blob_desc.shape().elem_cnt());
     }
     // Otherwise, on different devices
     // intersection_ratio = 1.0;
   }
   // Subtract the intersection part
-  return producer_partial_ratio + consumer_broadcast_ratio - intersection_ratio;
+  return (producer_partial_ratio + consumer_broadcast_ratio - intersection_ratio)
+         * logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
 }
 
 }  // namespace oneflow

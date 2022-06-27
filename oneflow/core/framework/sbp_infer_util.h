@@ -100,6 +100,7 @@ double ComputeSbpInferPriority(const NdSbp& producer_sbp_parallel,
 // Cost = ratio * data amount
 double Ratio4GeneralBasicCommunication(const NdSbp& producer_sbp_parallel,
                                        const NdSbp& consumer_sbp_parallel,
+                                       const BlobDesc& logical_blob_desc,
                                        const ParallelDesc& producer_parallel_desc,
                                        const ParallelDesc& consumer_parallel_desc);
 
