@@ -40,8 +40,9 @@ Boolean                                 ``oneflow.bool``                        
 To find out if a :class:`oneflow.dtype` is a floating point data type, the property :attr:`is_floating_point`
 can be used, which returns ``True`` if the data type is a floating point data type.
 
-To find out if a :class:`oneflow.dtype` is a complex data type, the property :attr:`is_complex`
-can be used, which returns ``True`` if the data type is a complex data type.
+
+
+
 
 .. _type-promotion-doc:
 
