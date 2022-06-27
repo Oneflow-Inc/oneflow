@@ -159,7 +159,7 @@ void BinAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
 }
 
 Maybe<bool> BinAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
-  CHECK_OR_RETURN(IsAlignedSize(aligned_size, alignment_));
+  CHECK_OR_RETURN(IsAlignedSize(aligned_size, alignment_)) << "not aligned";
 
   size_t allocate_bytes = aligned_size;
   if (allocate_bytes < 1048576) {
@@ -193,7 +193,7 @@ Maybe<bool> BinAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   InsertPiece2Bin(piece);
   MarkPiece(piece);
 
-  CHECK_OR_RETURN(mem_ptr2block_.emplace(mem_ptr, Block(piece)).second);
+  CHECK_OR_RETURN(mem_ptr2block_.emplace(mem_ptr, Block(piece)).second) << "existed mem_ptr";
 
   return true;
 }
@@ -274,8 +274,8 @@ Maybe<void> BinAllocator::Allocate(char** mem_ptr, std::size_t size) {
                << ".\n The total_memory_bytes allocated by this BinAllocator is : "
                << total_memory_bytes_;
   }
-  CHECK_NOTNULL_OR_RETURN(piece->ptr);
-  CHECK_OR_RETURN(ptr2piece_.find(piece->ptr) != ptr2piece_.end());
+  CHECK_NOTNULL_OR_RETURN(piece->ptr) << "invalid piece null ptr";
+  CHECK_OR_RETURN(ptr2piece_.find(piece->ptr) != ptr2piece_.end()) << "piece is not found";
   *mem_ptr = piece->ptr;
   return Maybe<void>::Ok();
 }

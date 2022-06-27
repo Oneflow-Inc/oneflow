@@ -27,7 +27,7 @@ Maybe<void> CudaBackendAllocator::Allocate(char** mem_ptr, std::size_t size) {
   cudaSetDevice(device_id_);
   if (cudaMalloc(mem_ptr, size) != cudaSuccess) {
     *mem_ptr = nullptr;
-    return Error::OutOfMemoryError();
+    return Error::OutOfMemoryError() << "cuda allocator out of memory";
   }
   return Maybe<void>::Ok();
 }
