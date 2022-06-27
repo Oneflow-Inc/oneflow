@@ -81,7 +81,7 @@ class KeyValueStoreOptions final {
     CHECK(json_object.contains("value_type_size"));
     CHECK(json_object["value_type_size"].is_number());
     std::string value_type_name = json_object["value_type"];
-    if (value_type_name == "oneflow.float") {
+    if (value_type_name == "oneflow.float" || value_type_name == "oneflow.float32") {
       value_type_ = DataType::kFloat;
     } else {
       UNIMPLEMENTED();
