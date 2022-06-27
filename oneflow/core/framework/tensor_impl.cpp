@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/framework/stream_is_pinned.h"
 
 namespace oneflow {
 namespace one {
@@ -122,7 +123,7 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
 
 Maybe<bool> EagerMirroredTensorImpl::is_pinned() const {
   if (!eager_blob_object_) { return false; }
-  return JUST(eager_blob_object_->producer_stream())->stream_role() == StreamRole::kPinnedCompute;
+  return IsStreamPinned::Visit(JUST(eager_blob_object_->producer_stream())->stream_role());
 }
 
 Maybe<void> EagerMirroredTensorImpl::set_eager_blob_object(
