@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
-#include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -31,17 +30,17 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
+Maybe<void> Run(vm::InstructionList* instruction_list) {
   auto* virtual_machine = JUST(GlobalMaybe<VirtualMachine>());
-  JUST(virtual_machine->Receive(instr_msg_list));
+  JUST(virtual_machine->Receive(instruction_list));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> ClusterSync() {
   auto bc = std::make_shared<BlockingCounter>(1);
   JUST(PhysicalRun([bc](InstructionsBuilder* builder) -> Maybe<void> {
-    JUST(builder->ComputeGlobalFrontSeqBarrier());
-    JUST(builder->ComputeRankFrontSeqCallback([bc]() { bc->Decrease(); }));
+    JUST(builder->GlobalSync());
+    JUST(builder->Barrier([bc]() { bc->Decrease(); }));
     return Maybe<void>::Ok();
   }));
   JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
@@ -51,7 +50,7 @@ Maybe<void> ClusterSync() {
 Maybe<void> CurrentRankSync() {
   auto bc = std::make_shared<BlockingCounter>(1);
   JUST(PhysicalRun([bc](InstructionsBuilder* builder) -> Maybe<void> {
-    JUST(builder->ComputeRankFrontSeqCallback([bc]() { bc->Decrease(); }));
+    JUST(builder->Barrier([bc]() { bc->Decrease(); }));
     return Maybe<void>::Ok();
   }));
   JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));

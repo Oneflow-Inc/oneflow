@@ -968,6 +968,11 @@
     Double alpha=1.0) => MatMul"
   bind_python: True
 
+- name: "mv"
+  signature:
+    "Tensor (Tensor input, Tensor vec) => Mv"
+  bind_python: True
+
 - name: "fused_mlp"
   signature:
     "Tensor (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation) => FusedMLP"
@@ -2232,6 +2237,13 @@
 
 - name: "pin_memory"
   signature: "Tensor (Tensor input) => PinMemory"
+  bind_python: True
+
+- name: "fill_"
+  signature: [
+    "Tensor (Tensor in, Scalar value) => Fill",
+    "Tensor (Tensor in, Tensor value) => FillTensor"
+    ]
   bind_python: True
 
 - name: "rnn_tanh_cell"

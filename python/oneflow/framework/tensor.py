@@ -17,7 +17,6 @@ import oneflow as flow
 import oneflow.framework.tensor_str as tensor_str
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
-import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 
 import numpy as np
 from typing import Union
@@ -601,6 +600,10 @@ def _matmul(self, other):
     return flow.matmul(self, other)
 
 
+def _mv(self, vec):
+    return flow._C.mv(self, vec)
+
+
 def _round(self):
     return flow.round(self)
 
@@ -776,8 +779,7 @@ def _normal(self, mean=0, std=1):
 
 
 def _fill(self, value):
-    initializer_conf = flow.constant_initializer(value=value, dtype=self.dtype)
-    return _init_by_initializer_conf(self, initializer_conf)
+    return flow._C.fill_(self, value)
 
 
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
@@ -1019,9 +1021,14 @@ def _numpy(self):
         tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
         return [t.numpy() for t in tensors]
     if self.is_global:
-        self = self.to_global(
-            placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast
-        ).to_local()
+        self_cpu_placement = flow.placement("cpu", self.placement.ranks)
+        self = (
+            self.to_global(placement=self_cpu_placement)
+            .to_global(
+                placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast
+            )
+            .to_local()
+        )
     assert self.is_local
     if self.device != flow.device("cpu"):
         self = self.cpu()
@@ -1152,6 +1159,7 @@ def RegisterMethods():
     Tensor.new_tensor = _new_tensor
     Tensor.cumsum = _cumsum
     Tensor.cumprod = _cumprod
+    Tensor.mv = _mv
 
 
 def register_tensor_op(op_name):

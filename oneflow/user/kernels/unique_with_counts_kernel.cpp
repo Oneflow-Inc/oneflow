@@ -35,9 +35,9 @@ class UniqueWithCountsKernel final : public user_op::OpKernel {
     user_op::Tensor* num_unique = ctx->Tensor4ArgNameAndIndex("num_unique", 0);
     user_op::Tensor* tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     void* tmp_ptr = tmp ? tmp->mut_dptr() : nullptr;
-    int64_t tmp_size = tmp ? tmp->shape().elem_cnt() * GetSizeOfDataType(tmp->data_type()) : 0;
+    int64_t tmp_size = tmp ? tmp->shape_view().elem_cnt() * GetSizeOfDataType(tmp->data_type()) : 0;
     UniqueKernelUtil<device_type, T, K>::UniqueWithCounts(
-        ctx->stream(), x->shape().elem_cnt(), x->dptr<T>(), num_unique->mut_dptr<K>(),
+        ctx->stream(), x->shape_view().elem_cnt(), x->dptr<T>(), num_unique->mut_dptr<K>(),
         y->mut_dptr<T>(), idx->mut_dptr<K>(), count->mut_dptr<K>(), tmp_ptr, tmp_size);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
