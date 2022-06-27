@@ -971,6 +971,7 @@
 - name: "mm"
   signature:
     "Tensor (Tensor input, Tensor mat2) => MatMulNoBroadCast"
+  bind_python: True
 
 - name: "mv"
   signature:
