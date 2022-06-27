@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/vm/ep_device_context.h"
 #include "oneflow/core/vm/bin_allocator.h"
-#include "oneflow/core/vm/ep_backend_allocator.h"
+#include "oneflow/core/vm/ep_backend_host_allocator.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
