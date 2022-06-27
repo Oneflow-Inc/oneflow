@@ -40,9 +40,9 @@ void PinnedEpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
   CHECK_EQ(device_type, DeviceType::kCPU)
       << "cannot pin tensor with device: " << stream->device()->type()
       << ", only dense CPU tensors can be pinned.";
-  options.SetPinnedDevice(device_type, device_index);
-  auto ep_backend_allocator = std::make_unique<EpBackendAllocator>(ep_device, options);
-  device_ctx->reset(new EpDeviceCtx(stream->device(), std::move(ep_backend_allocator)));
+  options.SetPinnedDevice(DeviceType::kCUDA, device_index);
+  auto ep_backend_host_allocator = std::make_unique<EpBackendHostAllocator>(ep_device, options);
+  device_ctx->reset(new EpDeviceCtx(stream->device(), std::move(ep_backend_host_allocator)));
 }
 
 void PinnedEpStreamType::InitInstructionStatus(const Stream& stream,
