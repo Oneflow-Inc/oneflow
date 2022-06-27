@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/vm/critical_section_stream_type.h"
 #include "oneflow/core/vm/ep_d2h_stream_type.h"
 #include "oneflow/core/vm/ep_stream_type.h"
+#include "oneflow/core/vm/pinned_ep_stream_type.h"
 #include "oneflow/core/vm/lazy_job_stream_type.h"
 #include "oneflow/core/vm/stream_get_stream_type.h"
 
@@ -52,6 +53,9 @@ struct GetStreamType final : public StreamRoleVisitor<GetStreamType> {
   }
   static Maybe<const vm::StreamType*> VisitLazyJobLauncher(DeviceType device_type) {
     return SingletonPtr<vm::LazyJobStreamType>();
+  }
+  static Maybe<const vm::StreamType*> VisitPinnedCompute(DeviceType device_type) {
+    return SingletonPtr<vm::PinnedEpStreamType>();
   }
 };
 

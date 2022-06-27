@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/vm/ep_stream_type.h"
+#include "oneflow/core/vm/pinned_ep_stream_type.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/vm/instruction_type.h"
@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/vm/ep_device_context.h"
 #include "oneflow/core/vm/bin_allocator.h"
-#include "oneflow/core/vm/ep_backend_allocator.h"
+#include "oneflow/core/vm/ep_backend_host_allocator.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
@@ -31,34 +31,39 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void EpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const {
+void PinnedEpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
+                                       Stream* stream) const {
+  // TODO:(zhaoluyang) empty/cast/copy op support pin_memory_device
   DeviceType device_type = stream->device()->enum_type();
   size_t device_index = stream->device()->device_id();
   auto ep_device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
-  auto ep_backend_allocator =
-      std::make_unique<EpBackendAllocator>(ep_device, ep::AllocationOptions{});
+  ep::AllocationOptions options{};
+  CHECK_EQ(stream->stream_role(), StreamRole::kPinnedCompute)
+      << "stream role must be 'StreamRole::kPinnedCompute'";
+  options.SetPinnedDevice(device_type, device_index);
+  auto ep_backend_allocator = std::make_unique<EpBackendHostAllocator>(ep_device, options);
   device_ctx->reset(new EpDeviceCtx(stream->device(), std::move(ep_backend_allocator)));
 }
 
-void EpStreamType::InitInstructionStatus(const Stream& stream,
-                                         InstructionStatusBuffer* status_buffer) const {
+void PinnedEpStreamType::InitInstructionStatus(const Stream& stream,
+                                               InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(EpOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
   auto* data_ptr = status_buffer->mut_buffer();
   EpOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, nullptr);
 }
 
-void EpStreamType::DeleteInstructionStatus(const Stream& stream,
-                                           InstructionStatusBuffer* status_buffer) const {
+void PinnedEpStreamType::DeleteInstructionStatus(const Stream& stream,
+                                                 InstructionStatusBuffer* status_buffer) const {
   auto* ptr = EpOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer());
   ptr->~EpOptionalEventRecordStatusQuerier();
 }
 
-bool EpStreamType::QueryInstructionStatusDone(const Stream& stream,
-                                              const InstructionStatusBuffer& status_buffer) const {
+bool PinnedEpStreamType::QueryInstructionStatusDone(
+    const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   return EpOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer())->done();
 }
 
-void EpStreamType::Run(Instruction* instruction) const {
+void PinnedEpStreamType::Run(Instruction* instruction) const {
   OF_PROFILER_RANGE_GUARD("S:" + instruction->DebugName());
   auto* stream = instruction->mut_stream();
   auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());  // NOLINT

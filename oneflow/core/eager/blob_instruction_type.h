@@ -88,6 +88,9 @@ struct GetRecordEventInstructionType : public StreamRoleVisitor<GetRecordEventIn
   static Maybe<const vm::InstructionType*> VisitLazyJobLauncher(DeviceType device_type) {
     UNIMPLEMENTED_THEN_RETURN();
   }
+  static Maybe<const vm::InstructionType*> VisitPinnedCompute(DeviceType device_type) {
+    return VisitCompute(device_type);
+  }
 };
 
 }  // namespace oneflow
