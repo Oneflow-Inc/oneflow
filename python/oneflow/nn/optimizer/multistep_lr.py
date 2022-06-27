@@ -21,8 +21,8 @@ from .lr_scheduler import LRScheduler
 
 class MultiStepLR(LRScheduler):
     """
-    Decays the learning rate of each parameter group by gamma once the number of step 
-    reaches one of the milestones. Notice that such decay can happen simultaneously with 
+    Decays the learning rate of each parameter group by gamma once the number of step
+    reaches one of the milestones. Notice that such decay can happen simultaneously with
     other changes to the learning rate from outside this scheduler.When last_step=-1, sets initial lr as lr.
 
     Args:
@@ -63,18 +63,12 @@ class MultiStepLR(LRScheduler):
         self.gamma = gamma
         super().__init__(optimizer, last_step, verbose)
 
-    @oneflow.lr_def
     def get_lr(self, base_lr, step):
         sect = bisect.bisect_right(self.milestones, step)
         factor = self.gamma ** sect
         return base_lr * factor
 
-    def lr_def():
-        self.__lr_ast__ = [AST]
-
     def _generate_conf_for_graph(self, lr_conf):
-        transformed_lr_ast = transform(self.__lr_ast, bindings: [self....])
-        _oneflow_internal.ir.compile_and_register_lr_jit(transformed_lr_ast, sels.__class__)
         lr_conf.multi_step_conf.SetInParent()
         multi_step_conf = lr_conf.multi_step_conf
         for milestone in self.milestones:

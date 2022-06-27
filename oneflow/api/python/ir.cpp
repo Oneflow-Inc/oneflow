@@ -20,28 +20,28 @@ limitations under the License.
 #include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowRoundTrip.h"
 #include <glog/logging.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "mlir/"
+#include <functional>
 
+#include <Python-ast.h>
 class LR_JIT {
-  private:
-    std::unordered_map<std::function_id, std::function> function_id2lr_func_;
-}
+ public:
+  static void lower_ast_to_llvm(const _mod& ast, const std::string& function_id){};
+
+ private:
+  std::unordered_map<std::string, std::function<double(double, int64_t)>> function_id2lr_func_;
+};
 
 namespace oneflow {
-
 ONEFLOW_API_PYBIND11_MODULE("ir", m) {
   m.def("load_jit_shared_lib",
         [](const std::string& lib_path) { MutSharedLibPaths()->insert(lib_path); });
-  m.def("compile_and_register_lr_jit",
-        [](const python_ast& ast, std::string function_id) { 
-          ir = lower_ast_to_llvm(ast, function_id);
-          jit = JitEngine::create(ir);
-          std::function lr_func = (double base_lr, int64_t step)[] {
-            jit.invoke(base_lr, step);
-          }
-          Global<LR_JIT>::get()->register(function_id, lr_func);
-          Global<LR_JIT>::get()->invoke(function_id, 0.01, 19); // test it
-         });
+  m.def("compile_and_register_lr_jit", [](const _mod& ast, const std::string& function_id) {
+    LR_JIT::lower_ast_to_llvm(ast, function_id);
+    // auto jit = JitEngine::create(ir);
+    // auto lr_func = (double base_lr, int64_t step)[] { jit.invoke(base_lr, step); }
+    // Global<LR_JIT>::get()->register(function_id, lr_func);
+    // Global<LR_JIT>::get()->invoke(function_id, 0.01, 19);  // test it
+  });
 }
 
 }  // namespace oneflow
