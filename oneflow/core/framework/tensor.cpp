@@ -105,12 +105,13 @@ Maybe<Tensor> MirroredTensor::clone() const {
 Maybe<void> MirroredTensor::set_data(const std::shared_ptr<Tensor>& other) {
   CHECK_OR_RETURN(this->is_leaf()) << "Can only set leaf tensor's data.";
   const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(JUST(other->detach()));
-  CHECK_NOTNULL_OR_RETURN(mirrored_tensor);
+  CHECK_NOTNULL_OR_RETURN(mirrored_tensor)
+      << "Can not set a global tensor to the data of a local tensor";
   bool old_requires_grad = requires_grad();
   impl_ = mirrored_tensor->impl_;
   set_requires_grad(old_requires_grad);
   grad_fn_node_ = nullptr;
-  if (other->is_lazy()) { this->BorrowTensorName(other.get()); }
+  if (other->is_lazy()) { JUST(this->BorrowTensorName(other.get())); }
   return Maybe<void>::Ok();
 }
 
