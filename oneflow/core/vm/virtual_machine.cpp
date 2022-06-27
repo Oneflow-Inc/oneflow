@@ -230,7 +230,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
       const auto& device = instruction->stream().device();
       CHECK_OR_RETURN(device->enum_type() == DeviceType::kCPU)
           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
-      JUST(instruction->instruction_type().InferIf(instruction));
+      JUST(instruction->instruction_type().PrepareIf(instruction));
       instruction->instruction_type().ComputeIf(instruction);
     }
   } else if (unlikely(disable_vm_threads_)) {

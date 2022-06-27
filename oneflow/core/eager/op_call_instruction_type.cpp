@@ -42,7 +42,7 @@ namespace oneflow {
 namespace vm {
 
 struct OpCallInstructionUtil final {
-  static inline Maybe<void> Infer(const vm::Instruction& instruction) {
+  static inline Maybe<void> Prepare(const vm::Instruction& instruction) {
     auto* operand = GetCallPhyInstrOperand(instruction);
     DeviceCtx* device_ctx = instruction.stream().device_ctx().get();
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
@@ -133,8 +133,8 @@ struct OpCallInstructionUtil final {
   }
 };
 
-Maybe<void> OpCallInstructionType::Infer(vm::Instruction* instruction) const {
-  return OpCallInstructionUtil::Infer(*instruction);
+Maybe<void> OpCallInstructionType::Prepare(vm::Instruction* instruction) const {
+  return OpCallInstructionUtil::Prepare(*instruction);
 }
 
 void OpCallInstructionType::Compute(vm::Instruction* instruction) const {

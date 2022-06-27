@@ -28,7 +28,7 @@ class OpCallInstructionType final : public vm::InstructionType {
   OpCallInstructionType() = default;
   ~OpCallInstructionType() = default;
 
-  Maybe<void> Infer(vm::Instruction* instruction) const override;
+  Maybe<void> Prepare(vm::Instruction* instruction) const override;
   void Compute(vm::Instruction* instruction) const override;
 
   InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPosition; }

@@ -46,7 +46,7 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
   std::string DebugName(const vm::Instruction& instruction) const override {
     return "ReleaseTensor";
   }
-  Maybe<void> Infer(vm::Instruction* instruction) const override {
+  Maybe<void> Prepare(vm::Instruction* instruction) const override {
     Release(*instruction);
     return Maybe<void>::Ok();
   }

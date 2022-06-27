@@ -37,9 +37,9 @@ class InstructionType {
  public:
   virtual ~InstructionType() = default;
 
-  Maybe<void> InferIf(Instruction* instruction) const {
-    OF_PROFILER_RANGE_GUARD(std::string("Infer:") + DebugName(*instruction));
-    return Infer(instruction);
+  Maybe<void> PrepareIf(Instruction* instruction) const {
+    OF_PROFILER_RANGE_GUARD(std::string("Prepare:") + DebugName(*instruction));
+    return Prepare(instruction);
   }
   void ComputeIf(Instruction* instruction) const {
     OF_PROFILER_RANGE_GUARD(std::string("Compute:") + DebugName(*instruction));
@@ -63,7 +63,7 @@ class InstructionType {
  private:
   // Allocating tensors, deallocating tensors, preparing opkernel states and preparing opkernel
   // caches.
-  virtual Maybe<void> Infer(Instruction* instruction) const = 0;
+  virtual Maybe<void> Prepare(Instruction* instruction) const = 0;
 
   virtual void Compute(Instruction* instruction) const = 0;
 

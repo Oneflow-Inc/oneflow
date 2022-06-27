@@ -72,7 +72,7 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
   ~LaunchLazyJobInstructionType() = default;
 
   std::string DebugName(const vm::Instruction&) const override { return "LaunchLazyJob"; }
-  Maybe<void> Infer(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }
+  Maybe<void> Prepare(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }
   void Compute(vm::Instruction* instruction) const override {
     const auto& cur_nn_graph = GetCurNNGraph(instruction);
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);
