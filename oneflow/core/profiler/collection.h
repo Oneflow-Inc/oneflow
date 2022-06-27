@@ -27,7 +27,7 @@ limitations under the License.
 #include "oneflow/core/profiler/event.h"
 #include "oneflow/core/profiler/util.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 

@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_API_COMMON_VARIABLE_TENSOR_MGR_H_
 #define ONEFLOW_API_COMMON_VARIABLE_TENSOR_MGR_H_
 
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
 
