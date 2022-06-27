@@ -41,10 +41,13 @@ class VirtualMachine final {
 
   std::string GetBlockingDebugString();
 
-  Maybe<void> Receive(vm::InstructionMsgList* instr_list);
+  Maybe<void> Receive(vm::InstructionList* instr_list);
 
   Maybe<void> CloseVMThreads();
 
+  // Never called in vm work threads.
+  // VM sync must be called to ensure all working instructions are finished.
+  Maybe<void> ShrinkAllMem();
   Maybe<vm::Stream*> GetVmStream(Symbol<Stream> stream);
 
  private:
@@ -67,7 +70,9 @@ class VirtualMachine final {
   Maybe<vm::Stream*> CreateStream(vm::ThreadCtx* thread_ctx, Symbol<Device> device,
                                   StreamRole stream_role);
 
-  Maybe<void> RunInCurrentThread(vm::InstructionMsgList* instr_list);
+  Maybe<void> RunInCurrentThread(vm::InstructionList* instr_list);
+
+  Maybe<void> BlockingRunProbeFunc(const std::function<bool(vm::VirtualMachineEngine*)>& prob_func);
 
   Maybe<void> NotifyOrRunScheduler();
 
