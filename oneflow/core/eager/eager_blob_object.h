@@ -116,7 +116,8 @@ class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc
   MutShapeView mut_shape_view() override { return *shape_; }
   const MemoryCase& mem_case() const override { return *mem_case_; }
   const void* raw_dptr() const override {
-    return mem_ptr_ + storage_offset_ * GetSizeOfDataType(data_type_);
+    return mem_ptr_for_allocation_compuation_pipelining_
+           + storage_offset_ * GetSizeOfDataType(data_type_);
   }
   void* mut_raw_dptr() override { return const_cast<void*>(raw_dptr()); }
 
@@ -176,6 +177,15 @@ class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc
   const char* header_ptr() const { return reinterpret_cast<const char*>(shape_->dim_vec().data()); }
   char* mut_header_ptr() { return reinterpret_cast<char*>(shape_->dim_vec().data()); }
 
+  void init_mem_ptr_for_allocation_compuation_pipelining() {
+    auto* ptr = tensor_storage_->blob_dptr();
+    if (mem_ptr_for_allocation_compuation_pipelining_ == nullptr) {
+      mem_ptr_for_allocation_compuation_pipelining_ = ptr;
+    } else {
+      CHECK_EQ(mem_ptr_for_allocation_compuation_pipelining_, ptr);
+    }
+  }
+
  private:
   bool is_dynamic_;
   std::shared_ptr<MemoryCase> mem_case_;
@@ -184,9 +194,9 @@ class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc
   std::shared_ptr<Stride> stride_;
   int64_t storage_offset_;
   std::shared_ptr<TensorStorage> tensor_storage_;
-  // For allocation-computation pipeline, the value of mem_ptr_ are kept even after
-  // tensor_storage_.reset().
-  char* mem_ptr_;
+  // For allocation-computation pipeline, the value of mem_ptr_for_allocation_compuation_pipelining_
+  // are kept even after tensor_storage_.reset().
+  char* mem_ptr_for_allocation_compuation_pipelining_;
   std::atomic<bool> is_shape_synced_;
   bool pin_memory_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
