@@ -58,7 +58,6 @@ class TestModule(flow.unittest.TestCase):
         z = torch.mm(x, y)
         return z
 
-
     def test_flow_mv_with_random_data(test_case):
         device = random_device()
         k = random(1, 6)
@@ -70,7 +69,6 @@ class TestModule(flow.unittest.TestCase):
     @profile(torch.mv)
     def profile_mv(test_case):
         torch.mv(torch.ones(32, 64), torch.ones(64))
-
 
 
 if __name__ == "__main__":
