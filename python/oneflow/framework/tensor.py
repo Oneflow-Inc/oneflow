@@ -17,7 +17,6 @@ import oneflow as flow
 import oneflow.framework.tensor_str as tensor_str
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
-import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 
 import numpy as np
 from typing import Union
@@ -780,8 +779,7 @@ def _normal(self, mean=0, std=1):
 
 
 def _fill(self, value):
-    initializer_conf = flow.constant_initializer(value=value, dtype=self.dtype)
-    return _init_by_initializer_conf(self, initializer_conf)
+    return flow._C.fill_(self, value)
 
 
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
