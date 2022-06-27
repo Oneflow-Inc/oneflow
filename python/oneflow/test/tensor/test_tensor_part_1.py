@@ -16,10 +16,8 @@ limitations under the License.
 
 import copy
 import os
-import unittest
-from collections import OrderedDict
-
 import numpy as np
+import unittest
 import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
@@ -32,6 +30,14 @@ class TestTensor(flow.unittest.TestCase):
     def test_numpy_and_default_dtype(test_case):
         shape = (2, 3, 4, 5)
         tensor = flow.Tensor(*shape)
+        flow.nn.init.ones_(tensor)
+        test_case.assertTrue(tensor.dtype == flow.float32)
+        test_case.assertTrue(
+            np.allclose(tensor.numpy(), np.ones(shape, dtype=np.float32))
+        )
+
+        shape = flow.Size((2, 3, 4, 5))
+        tensor = flow.Tensor(shape)
         flow.nn.init.ones_(tensor)
         test_case.assertTrue(tensor.dtype == flow.float32)
         test_case.assertTrue(
@@ -273,13 +279,13 @@ class TestTensor(flow.unittest.TestCase):
             bool(flow.tensor([]))
 
     @flow.unittest.skip_unless_1n1d()
-    def test_tensor_autograd_related_methods(test_case):
+    def test_tensor_autograd_fill_cpu(test_case):
         shape = (2, 3, 4, 5)
         x = flow.Tensor(*shape)
         y = flow.Tensor(*shape)
-        y.requires_grad = True
         x.fill_(1.0)
-        y.fill_(2.0)
+        y.fill_(flow.tensor(1.0))
+        y.requires_grad = True
         z = x + y
         test_case.assertFalse(x.requires_grad)
         test_case.assertTrue(x.is_leaf)
@@ -309,6 +315,47 @@ class TestTensor(flow.unittest.TestCase):
             np.allclose(z.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
         )
         test_case.assertIsNone(x.grad)
+        test_case.assertIsNotNone(y.grad)
+        w.backward(gradient=grad, retain_graph=True)
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_tensor_autograd_fill_cuda(test_case):
+        shape = (2, 3, 4, 5)
+        x = flow.Tensor(*shape).to("cuda:0")
+        y = flow.Tensor(*shape).to("cuda:0")
+        x.fill_(1.0)
+        y.fill_(flow.tensor(1.0).to("cuda:0"))
+        y.requires_grad = True
+        z = x + y
+        test_case.assertFalse(x.requires_grad)
+        test_case.assertTrue(x.is_leaf)
+        test_case.assertTrue(y.requires_grad)
+        test_case.assertTrue(y.is_leaf)
+        test_case.assertTrue(z.requires_grad)
+        test_case.assertFalse(z.is_leaf)
+        with flow.no_grad():
+            m = x + y
+        test_case.assertTrue(m.is_leaf)
+        test_case.assertFalse(m.requires_grad)
+        m.requires_grad = True
+        v = flow.Tensor(*shape).to("cuda:0")
+        v.requires_grad = True
+        z.retain_grad()
+        w = v + z
+        grad = flow.Tensor(*shape)
+        grad.fill_(1.0)
+        w.backward(gradient=grad, retain_graph=True)
+        test_case.assertTrue(
+            np.allclose(v.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
+        )
+        test_case.assertTrue(
+            np.allclose(y.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
+        )
+        test_case.assertTrue(
+            np.allclose(z.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
+        )
+        test_case.assertIsNone(x.grad)
+        test_case.assertIsNotNone(y.grad)
         w.backward(gradient=grad, retain_graph=True)
 
     @flow.unittest.skip_unless_1n1d()
@@ -1108,6 +1155,13 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.tensor(np_arr, dtype=flow.int8)
         test_case.assertTrue(np.array_equal(x.numpy(), [1.0, 2.0, 3.0]))
         test_case.assertEquals(x.dtype, flow.int8)
+
+    @profile(torch.Tensor.fill_)
+    def profile_fill_(test_case):
+        torch.Tensor.fill_(torch.ones(1, 8, 16, 16), 2)
+        torch.Tensor.fill_(torch.ones(1000, 1000), 2)
+        torch.Tensor.fill_(torch.ones(1, 8, 16, 16), torch.tensor(2))
+        torch.Tensor.fill_(torch.ones(1000, 1000), torch.tensor(2))
 
 
 if __name__ == "__main__":

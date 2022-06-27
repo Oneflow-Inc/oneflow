@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/boxing_identity_task_node.h"
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
@@ -451,7 +452,7 @@ TaskGraph::TaskGraph(bool disable_straighten_algorithm) {
     }
   });
 
-  if (disable_straighten_algorithm) {
+  if (disable_straighten_algorithm || GlobalProcessCtx::WorldSize() <= 1) {
     SetOrderInGraphForEachNode();
   } else {
     StraightenNodes(this, &ordered_task_nodes_);
