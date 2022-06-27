@@ -183,37 +183,36 @@ void LaunchGeneral(CpuStream* cpu_stream, size_t simplified_num_dims,
                    const int64_t* simplified_src1_dims, const Src* src1,
                    const int64_t* simplified_dst_dims, Dst* dst, int64_t dst_elem_cnt, Scalar attr0,
                    Scalar attr1) {
-  const int64_t src0_elem_cnt = GetElementCount(simplified_num_dims, simplified_src0_dims);
-  bool if_broadcast_src0 = (src0_elem_cnt != dst_elem_cnt);
-  const int64_t* simplified_src_dims =
-      if_broadcast_src0 ? simplified_src0_dims : simplified_src1_dims;
   auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
   cpu_stream->ParallelFor(
       0, dst_elem_cnt,
-      [functor, src0, src1, dst, simplified_num_dims, simplified_src_dims, if_broadcast_src0,
+      [functor, src0, src1, dst, simplified_num_dims, simplified_src0_dims, simplified_src1_dims,
        simplified_dst_dims](int64_t begin, int64_t end) {
-        auto src_index_helper =
-            NdIndexOffsetHelper<IndexType, kMaxNumDims>(simplified_src_dims, simplified_num_dims);
+        auto src0_index_helper =
+            NdIndexOffsetHelper<IndexType, kMaxNumDims>(simplified_src0_dims, simplified_num_dims);
+        auto src1_index_helper =
+            NdIndexOffsetHelper<IndexType, kMaxNumDims>(simplified_src1_dims, simplified_num_dims);
         auto dst_index_helper = OffsetToIndexCalculator<IndexType, kMaxNumDims>(
             simplified_dst_dims, simplified_num_dims);
-        IndexType src_index[kMaxNumDims];
+        IndexType src0_index[kMaxNumDims];
+        IndexType src1_index[kMaxNumDims];
         IndexType dst_index[kMaxNumDims];
         for (IndexType offset = begin; offset < end; offset++) {
           dst_index_helper.OffsetToNdIndex(offset, dst_index, simplified_num_dims);
           for (int i = 0; i < kMaxNumDims; i++) {
             if (i < simplified_num_dims) {
-              src_index[i] = (simplified_src_dims[i] != 1) ? dst_index[i] : 0;
+              src0_index[i] = (simplified_src0_dims[i] != 1) ? dst_index[i] : 0;
+              src1_index[i] = (simplified_src1_dims[i] != 1) ? dst_index[i] : 0;
             } else {
-              src_index[i] = 0;
+              src0_index[i] = 0;
+              src1_index[i] = 0;
             }
           }
-          const IndexType src_offset =
-              src_index_helper.NdIndexToOffset(src_index, simplified_num_dims);
-          if (if_broadcast_src0) {
-            dst[offset] = functor(src0[src_offset], src1[offset]);
-          } else {
-            dst[offset] = functor(src0[offset], src1[src_offset]);
-          }
+          const IndexType src0_offset =
+              src0_index_helper.NdIndexToOffset(src0_index, simplified_num_dims);
+          const IndexType src1_offset =
+              src1_index_helper.NdIndexToOffset(src1_index, simplified_num_dims);
+          dst[offset] = functor(src0[src0_offset], src1[src1_offset]);
         }
       });
 }
