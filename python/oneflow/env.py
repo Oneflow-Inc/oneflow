@@ -57,3 +57,31 @@ def get_world_size():
 
     """
     return oneflow._oneflow_internal.GetWorldSize()
+
+
+def init_rdma():
+    """
+    Init RDMA in the current envirment. If the current envirment support 
+    RDMA, turning on RDMA by calling oneflow.env.init_rdma() can speed up 
+    data transfer.
+
+    Note:
+        - Make sure to avoid using fork() after oneflow.env.init_rdma() is invoked. 
+          Otherwise, data corruption or segmentation fault  may result!
+
+        - Requires all devices to execute oneflow.env.init_rdma() simultaneously. 
+          Otherwise, deadlock may result!
+
+
+    """
+    oneflow._oneflow_internal.InitRDMA()
+
+
+def rdma_is_initialized():
+    """Returns whether RDMA is initialized in the current envirment or not.
+
+    Returns:
+        Whether RDMA is initialized or not.
+
+    """
+    return oneflow._oneflow_internal.RDMAIsInitialized()

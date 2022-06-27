@@ -74,6 +74,8 @@ class ParallelDesc final {
   int64_t device_num_of_each_machine() const { return device_num_of_each_machine_; }
   const ParallelConf& parallel_conf() const { return parallel_conf_; }
 
+  const ParallelConf& data() const { return parallel_conf_; }
+
   Maybe<void> GetParallelContext(ParallelContext* parallel_ctx, int64_t machine_id,
                                  int64_t device_id) const;
   std::shared_ptr<Shape> hierarchy() const { return hierarchy_; }

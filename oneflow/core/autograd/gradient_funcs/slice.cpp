@@ -23,7 +23,6 @@ namespace oneflow {
 namespace one {
 
 struct SliceCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
   Shape like_shape;
   std::vector<int64_t> start;
   std::vector<int64_t> stop;
@@ -34,31 +33,29 @@ class Slice : public OpExprGradFunction<SliceCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr) << "Slice op_expr is null";
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(SliceCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
-    ctx->requires_grad = inputs.at(0)->requires_grad();
-    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+    CHECK_EQ_OR_RETURN(inputs.size(), 1) << "Slice input size must be 1";
+    CHECK_EQ_OR_RETURN(outputs.size(), 1) << "Slice output size must be 1";
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->start = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("start"));
     ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
     ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
-    ctx->like_shape = *(inputs.at(0)->shape());
+    ctx->like_shape = *(inputs[0]->shape());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const SliceCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(1);
-    in_grads->at(0) = JUST(
-        functional::SliceGrad(out_grads.at(0), ctx->like_shape, ctx->start, ctx->stop, ctx->step));
+    (*in_grads)[0] = JUST(
+        functional::SliceGrad(out_grads[0], ctx->like_shape, ctx->start, ctx->stop, ctx->step));
     return Maybe<void>::Ok();
   }
 
@@ -67,18 +64,20 @@ class Slice : public OpExprGradFunction<SliceCaptureState> {
 };
 
 struct SliceUpdateCaptureState : public AutoGradCaptureState {
-  bool requires_grad_x;
-  bool requires_grad_update;
+  bool requires_grad_ref = false;
+  bool requires_grad_value = false;
   std::vector<int64_t> start;
   std::vector<int64_t> stop;
   std::vector<int64_t> step;
+  Shape value_shape;  // used to calculate ref gradient
+  Symbol<NdSbp> value_sbp;
 };
 
 class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr) << "SliceUpdate op_expr is null";
 
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
@@ -86,18 +85,21 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
 
   Maybe<void> Capture(SliceUpdateCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
-    ctx->requires_grad_x = inputs.at(0)->requires_grad();
-    ctx->requires_grad_update = inputs.at(1)->requires_grad();
-    if (!ctx->requires_grad_x && !ctx->requires_grad_update) { return Maybe<void>::Ok(); }
+    CHECK_EQ_OR_RETURN(inputs.size(), 2) << "SliceUpdate input size must be 2";
+    CHECK_EQ_OR_RETURN(outputs.size(), 1) << "SliceUpdate output size must be 1";
+    ctx->requires_grad_ref = inputs[0]->requires_grad();
+    ctx->requires_grad_value = inputs[1]->requires_grad();
+    if (!ctx->requires_grad_ref && !ctx->requires_grad_value) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->start = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("start"));
     ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
     ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
 
-    if (ctx->requires_grad_x) { ctx->SaveTensorForBackward(inputs.at(1)); }
+    if (ctx->requires_grad_ref) {
+      ctx->value_shape = *(inputs[1]->shape());
+      if (inputs[1]->is_consistent()) { ctx->value_sbp = JUST(inputs[1]->nd_sbp()); }
+    }
     return Maybe<void>::Ok();
   }
 
@@ -105,13 +107,21 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
                     TensorTuple* in_grads) const override {
     in_grads->resize(2);
 
-    if (ctx->requires_grad_x) {
-      const auto& update = ctx->SavedTensors().at(0);
-      const auto& temp = JUST(functional::ZerosLike(update));
-      (*in_grads)[0] = JUST(functional::SliceUpdate(out_grads[0], temp, ctx->start, ctx->stop,
+    if (ctx->requires_grad_ref) {
+      std::shared_ptr<Tensor> zeros;
+      if (out_grads[0]->is_local()) {
+        zeros = JUST(functional::Constant(ctx->value_shape, 0, out_grads[0]->dtype(),
+                                          JUST(out_grads[0]->device())));
+      } else {
+        const auto& parallel_desc = JUST(out_grads[0]->parallel_desc());
+        zeros =
+            JUST(functional::ConsistentConstant(ctx->value_shape, 0, out_grads[0]->dtype(),
+                                                parallel_desc, *JUST(GetSbpList(ctx->value_sbp))));
+      }
+      (*in_grads)[0] = JUST(functional::SliceUpdate(out_grads[0], zeros, ctx->start, ctx->stop,
                                                     ctx->step, /*inplace=*/false));
     }
-    if (ctx->requires_grad_update) {
+    if (ctx->requires_grad_value) {
       (*in_grads)[1] = JUST(functional::Slice(out_grads[0], ctx->start, ctx->stop, ctx->step,
                                               /*enable_view_slice=*/false));
     }
@@ -122,8 +132,8 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
   AttrMap base_attrs_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("slice", Slice);
 REGISTER_OP_EXPR_GRAD_FUNCTION("slice_update", SliceUpdate);
+REGISTER_OP_EXPR_GRAD_FUNCTION("slice", Slice);
 
 }  // namespace one
 }  // namespace oneflow

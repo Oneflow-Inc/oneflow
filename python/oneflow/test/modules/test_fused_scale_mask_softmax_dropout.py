@@ -27,14 +27,22 @@ import oneflow.unittest
 
 
 def _test_fused_scale_mask_softmax_dropout(
-    test_case, batch_size, num_heads, seq_length, fill_value, scale_value, p
+    test_case,
+    batch_size,
+    num_heads,
+    seq_length,
+    fill_value,
+    scale_value,
+    broadcast_dim,
+    p,
 ):
     x = np.random.randn(batch_size, num_heads, seq_length, seq_length)
-    mask = np.random.randint(
-        0, 2, size=(batch_size, num_heads, seq_length, seq_length), dtype=np.bool
-    )
+    mask_size = [batch_size, num_heads, seq_length, seq_length]
+    if broadcast_dim:
+        mask_size[broadcast_dim] = 1
+    mask = np.random.randint(0, 2, size=mask_size, dtype=np.bool)
 
-    fused_x_tensor = flow.tensor(x).to("cuda")
+    fused_x_tensor = flow.tensor(x, dtype=flow.float32).to("cuda")
     fused_mask_tensor = flow.tensor(mask, dtype=flow.bool).to("cuda")
     fused_x_tensor.requires_grad = True
 
@@ -47,7 +55,7 @@ def _test_fused_scale_mask_softmax_dropout(
         p=p,
     )[0]
 
-    origin_x_tensor = flow.tensor(x).to("cuda")
+    origin_x_tensor = flow.tensor(x, dtype=flow.float32).to("cuda")
     origin_mask_tensor = flow.tensor(mask, dtype=flow.float32).to("cuda")
     origin_x_tensor.requires_grad = True
     origin_out = flow.mul(
@@ -83,6 +91,7 @@ class TestFusedScaleMaskSoftmaxDropout(flow.unittest.TestCase):
         args_dict["seq_length"] = [8, 16, 32, 64]
         args_dict["fill_value"] = [-10000.0]
         args_dict["scale_value"] = [1.0, 2.0, 4.0]
+        args_dict["broadcast_dim"] = [None, 0, 1, 2]
         args_dict["p"] = [0.0, 1.0]
 
         for arg in GenArgList(args_dict):

@@ -126,26 +126,27 @@ class MatmulKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     const auto trans_a = GetBlasTransposeType(ctx, "transpose_a");
     const auto trans_b = GetBlasTransposeType(ctx, "transpose_b");
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
-    CHECK_EQ(a->shape().NumAxes(), 2);
+    CHECK_EQ(a->shape_view().NumAxes(), 2);
     const DataType data_type = a->data_type();
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
-    CHECK_EQ(b->shape().NumAxes(), 2);
+    CHECK_EQ(b->shape_view().NumAxes(), 2);
     CHECK_EQ(b->data_type(), data_type);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(out->shape().NumAxes(), 2);
+    CHECK_EQ(out->shape_view().NumAxes(), 2);
     CHECK_EQ(out->data_type(), data_type);
     size_t m = 0, n = 0, k = 0;
-    InferMatmulMNK(a->shape(), b->shape(), out->shape(), trans_a, trans_b, &m, &n, &k);
+    InferMatmulMNK(a->shape_view(), b->shape_view(), out->shape_view(), trans_a, trans_b, &m, &n,
+                   &k);
     const double alpha = ctx->Attr<double>("alpha");
     double beta = 0.0;
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), data_type);
-      CHECK_EQ(add_to_output->shape(), out->shape());
+      CHECK_EQ(add_to_output->shape_view(), out->shape_view());
       auto memcpy = NewMemcpyPrimitive(ctx);
       CHECK(memcpy);
       memcpy->Launch(ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
-                     add_to_output->shape().elem_cnt() * GetSizeOfDataType(data_type));
+                     add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(data_type));
       beta = 1.0;
     }
     auto matmul = NewMatmulPrimitive(ctx);
@@ -178,24 +179,25 @@ class BatchMatmulKernel final : public user_op::OpKernel, public user_op::CudaGr
     const auto trans_b = GetBlasTransposeType(ctx, "transpose_b");
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const DataType data_type = a->data_type();
-    const int64_t num_axes = a->shape().NumAxes();
+    const int64_t num_axes = a->shape_view().NumAxes();
     CHECK_GT(num_axes, 2);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
     CHECK_EQ(b->data_type(), data_type);
-    CHECK_EQ(b->shape().NumAxes(), num_axes);
+    CHECK_EQ(b->shape_view().NumAxes(), num_axes);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(out->data_type(), data_type);
-    CHECK_EQ(out->shape().NumAxes(), num_axes);
+    CHECK_EQ(out->shape_view().NumAxes(), num_axes);
     size_t m = 0;
     size_t n = 0;
     size_t k = 0;
-    InferMatmulMNK(a->shape(), b->shape(), out->shape(), trans_a, trans_b, &m, &n, &k);
+    InferMatmulMNK(a->shape_view(), b->shape_view(), out->shape_view(), trans_a, trans_b, &m, &n,
+                   &k);
     size_t batch_size = 1;
     for (size_t i = 0; i < num_axes - 2; ++i) {
-      const int64_t dim_size = a->shape().At(i);
+      const int64_t dim_size = a->shape_view().At(i);
       CHECK_GT(dim_size, 0);
-      CHECK_EQ(b->shape().At(i), dim_size);
-      CHECK_EQ(out->shape().At(i), dim_size);
+      CHECK_EQ(b->shape_view().At(i), dim_size);
+      CHECK_EQ(out->shape_view().At(i), dim_size);
       batch_size *= dim_size;
     }
     const double alpha = ctx->Attr<double>("alpha");
@@ -203,11 +205,11 @@ class BatchMatmulKernel final : public user_op::OpKernel, public user_op::CudaGr
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), data_type);
-      CHECK_EQ(add_to_output->shape(), out->shape());
+      CHECK_EQ(add_to_output->shape_view(), out->shape_view());
       auto memcpy = NewMemcpyPrimitive(ctx);
       CHECK(memcpy);
       memcpy->Launch(ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
-                     add_to_output->shape().elem_cnt() * GetSizeOfDataType(data_type));
+                     add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(data_type));
       beta = 1.0;
     }
     auto batch_matmul = NewBatchMatmulPrimitive(ctx);
@@ -250,26 +252,26 @@ class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::Cu
     double beta = 0.0;
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
-      CHECK_EQ(add_to_output->shape(), out->shape());
+      CHECK_EQ(add_to_output->shape_view(), out->shape_view());
       auto memcpy = NewMemcpyPrimitive(ctx);
       CHECK(memcpy);
       memcpy->Launch(
           ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
-          add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+          add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       beta = 1.0;
     }
 
-    CHECK_EQ(b->shape().NumAxes(), 2);
-    CHECK_GT(a->shape().NumAxes(), b->shape().NumAxes());
-    int64_t m = a->shape().Count(0, a->shape().NumAxes() - 1);
-    int64_t k = a->shape().At(a->shape().NumAxes() - 1);
+    CHECK_EQ(b->shape_view().NumAxes(), 2);
+    CHECK_GT(a->shape_view().NumAxes(), b->shape_view().NumAxes());
+    int64_t m = a->shape_view().Count(0, a->shape_view().NumAxes() - 1);
+    int64_t k = a->shape_view().At(a->shape_view().NumAxes() - 1);
     int64_t n = -1;
     if (!transpose_b) {
-      n = b->shape().At(1);
-      CHECK_EQ(k, b->shape().At(0));
+      n = b->shape_view().At(1);
+      CHECK_EQ(k, b->shape_view().At(0));
     } else {
-      n = b->shape().At(0);
-      CHECK_EQ(k, b->shape().At(1));
+      n = b->shape_view().At(0);
+      CHECK_EQ(k, b->shape_view().At(1));
     }
     auto matmul = NewMatmulPrimitive(ctx);
     CHECK(matmul);
@@ -312,20 +314,20 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel,
     double beta = 0.0;
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
-      CHECK_EQ(add_to_output->shape(), out->shape());
+      CHECK_EQ(add_to_output->shape_view(), out->shape_view());
       auto memcpy = NewMemcpyPrimitive(ctx);
       CHECK(memcpy);
       memcpy->Launch(
           ctx->stream(), out->mut_dptr(), add_to_output->dptr(),
-          add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+          add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       beta = 1.0;
     }
 
-    CHECK_EQ(a->shape().NumAxes(), b->shape().NumAxes());
-    int64_t k = a->shape().Count(0, a->shape().NumAxes() - 1);
-    CHECK_EQ(b->shape().Count(0, b->shape().NumAxes() - 1), k);
-    int64_t m = a->shape().At(a->shape().NumAxes() - 1);
-    int64_t n = b->shape().At(b->shape().NumAxes() - 1);
+    CHECK_EQ(a->shape_view().NumAxes(), b->shape_view().NumAxes());
+    int64_t k = a->shape_view().Count(0, a->shape_view().NumAxes() - 1);
+    CHECK_EQ(b->shape_view().Count(0, b->shape_view().NumAxes() - 1), k);
+    int64_t m = a->shape_view().At(a->shape_view().NumAxes() - 1);
+    int64_t n = b->shape_view().At(b->shape_view().NumAxes() - 1);
 
     auto matmul = NewMatmulPrimitiveForBroadcastMatmulGradB(ctx);
     CHECK(matmul);

@@ -267,7 +267,7 @@ def legacy_load(
 
 
 @contextmanager
-def tensor_pickling_context(path: Path, global_src_dst_rank: int):
+def tensor_pickling_context(path: Path, global_src_dst_rank: Optional[int]):
     global save_load_path
     global global_src_dsk_rank
     global_src_dsk_rank = global_src_dst_rank
@@ -295,10 +295,10 @@ def load(path: str, global_src_rank: Optional[int] = None,) -> Any:
         The loaded object
     """
     path: Path = Path(path)
-    assert path.is_dir(), "Directory {} doesn't exist!".format(path)
-    pickle_path = path / PICKLE_FILENAME
     rank = flow.env.get_rank()
     if global_src_rank is None or global_src_rank == rank:
+        assert path.is_dir(), "Directory {} doesn't exist!".format(path)
+        pickle_path = path / PICKLE_FILENAME
         is_legacy = not pickle_path.exists()
         if global_src_rank is not None:
             _broadcast_py_object(is_legacy, global_src_rank)

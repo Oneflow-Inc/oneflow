@@ -37,7 +37,7 @@ limitations under the License.
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/Passes.h"
+#include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/Transforms/Passes.h"
@@ -62,7 +62,7 @@ limitations under the License.
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
-#include "mlir/Dialect/GPU/Passes.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
 #endif  // WITH_MLIR_CUDA_CODEGEN
 
@@ -349,9 +349,9 @@ IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value)
 
 NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name) {
   NamedAttrList attrs;
-  attrs.set("op_name", StringAttr::get(ctx, op_name));
-  attrs.set("device_tag", StringAttr::get(ctx, "cpu"));
-  attrs.set("device_name",
+  attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), StringAttr::get(ctx, op_name));
+  attrs.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(), StringAttr::get(ctx, "cpu"));
+  attrs.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
             ArrayAttr::get(ctx, llvm::to_vector<8>(llvm::map_range(ArrayRef<StringRef>({"@0:0"}),
                                                                    [&](StringRef v) -> Attribute {
                                                                      return StringAttr::get(ctx, v);
@@ -417,21 +417,21 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
           conv_op->getLoc(), conv_op->getResultTypes(), SmallVector<Value, 4>({div_op.z()}),
           reshape_op_attrs);
 
-      auto mul_op = rewriter.create<oneflow::MultiplyOp>(
+      auto mul_op = rewriter.create<oneflow::BroadcastMulOp>(
           conv_op->getLoc(), conv_op->getResultTypes(),
           SmallVector<Value, 4>({conv_op.weight(), reshape_op.out()}),
           GetUserOpCommonAttrs(ctx, "multiply"));
-      operands.push_back(mul_op.out());
+      operands.push_back(mul_op.z());
 
       // deal with bias
       if (!conv_op.bias()) {
-        auto mul_op_bias = rewriter.create<oneflow::MultiplyOp>(
+        auto mul_op_bias = rewriter.create<oneflow::BroadcastMulOp>(
             conv_op->getLoc(), conv_op->getResultTypes(),
             SmallVector<Value, 4>({bn_op.moving_mean(), div_op.z()}),
             GetUserOpCommonAttrs(ctx, "multiply_bias"));
         auto sub_op_bias = rewriter.create<oneflow::BroadcastSubOp>(
             conv_op->getLoc(), conv_op->getResultTypes(),
-            SmallVector<Value, 4>({bn_op.beta(), mul_op_bias.out()}),
+            SmallVector<Value, 4>({bn_op.beta(), mul_op_bias.z()}),
             GetUserOpCommonAttrs(ctx, "sub_bias"));
         operands.push_back(sub_op_bias.z());
       } else {
@@ -569,7 +569,8 @@ llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, 
                                                              PatternRewriter& rewriter) {
   std::string transpose_name = OpTrait::IsOpConfCompatible<void>::getOpName(op).str()
                                + "_transpose_input_" + std::to_string(num_transposed_operand);
-  transpose_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
+  transpose_attributes.set(llvm::StringRef(OpTrait::IsOpConfCompatible<void>::getOpNameAttr()),
+                           rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> input_operands;
   input_operands.push_back(val);
   auto res = rewriter
@@ -583,7 +584,8 @@ TransposeOp getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList tra
                                  int num_transposed_result, PatternRewriter& rewriter) {
   std::string transpose_name = OpTrait::IsOpConfCompatible<void>::getOpName(op).str()
                                + "_transpose_output_" + std::to_string(num_transposed_result);
-  transpose_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
+  transpose_attributes.set(llvm::StringRef(OpTrait::IsOpConfCompatible<void>::getOpNameAttr()),
+                           rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> operands;
   operands.push_back(val);
   TransposeOp transpose_op = rewriter.create<oneflow::TransposeOp>(op.getLoc(), val.getType(),
@@ -767,9 +769,10 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   AddLowerToLinalgMemRefPasses(pm);
   pm.addNestedPass<func::FuncOp>(
       createConvertLinalgToParallelLoopsPass());  // convert-linalg-to-parallel-loops
-  pm.addPass(createMapSCFToGPUPass());            // gpu-greedy-parallel-loop-mapping
-  pm.addPass(createParallelLoopToGpuPass());      // convert-parallel-loops-to-gpu
-  pm.addPass(createGpuKernelOutliningPass());     // gpu-kernel-outlining
+  pm.addNestedPass<func::FuncOp>(createGpuMapParallelLoopsPass());  // gpu-map-parallel-loops
+  pm.addPass(createParallelLoopToGpuPass());                        // convert-parallel-loops-to-gpu
+  pm.addPass(createGpuLauchSinkIndexComputationsPass());
+  pm.addPass(createGpuKernelOutliningPass());                      // gpu-kernel-outlining
   pm.addNestedPass<func::FuncOp>(createBufferHostRegisterPass());  // buffer-host-register
   pm.addPass(createCanonicalizerPass());                           // canonicalize
   // -pass-pipeline='gpu.module([PASS1][PASS2]...)'
@@ -779,6 +782,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addNestedPass<gpu::GPUModuleOp>(createSerializeToCubinPass());      // out-of-tree-gpu-to-cubin
   pm.addNestedPass<func::FuncOp>(createGpuCopyArgPass());                // buffer-host-register
   pm.addPass(createGpuToLLVMConversionPass());
+  pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
   if (enable_ir_printing) pm.enableIRPrinting();
   return pm.run(module);
 }

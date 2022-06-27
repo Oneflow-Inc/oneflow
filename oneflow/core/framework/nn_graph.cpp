@@ -34,7 +34,9 @@ limitations under the License.
 #include "oneflow/core/job/critical_section_instance.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/plan_util.h"
+#include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
@@ -273,10 +275,14 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   if (Global<JobDesc>::Get() != nullptr) { Global<JobDesc>::Delete(); }
 
   auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id_);
+
+  // NOTE(chengcheng): do job compeleter for each rank.
+  JUST(JobCompleter().Complete(&job_));
+
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     double start = GetCurTime();
     // TODO(chengcheng): new memory reused by chunk
-    Compiler().Compile(&job_, &plan_, /* need_job_complete */ true);
+    Compiler().Compile(&job_, &plan_);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
 
     VLOG(1) << "Graph name: " << name_ << " compile time: " << (GetCurTime() - start) / 1000000000.0
@@ -291,6 +297,9 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
     PlanUtil::PlanMemoryLog(&plan_, name_);
+    if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+      PlanUtil::GenLightPlan(&plan_, name_);
+    }
   }
   if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name = "plan:" + job_name();
@@ -311,6 +320,12 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   NewRuntimeBuffers();
 
   JUST(GetVariableRealBlobAfterSyncPlan());
+
+  // NOTE(strint): Do memory shrink to free cached memory in eager VM before graph runtime init.
+  JUST(vm::CurrentRankSync());
+  auto* vm = JUST(GlobalMaybe<VirtualMachine>());
+  JUST(vm->ShrinkAllMem());
+
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
   runtime_inited_ = true;
   return Maybe<void>::Ok();

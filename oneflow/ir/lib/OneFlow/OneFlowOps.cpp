@@ -155,6 +155,7 @@ struct ConcreteUserOps : public OpRewritePattern<UserOp> {
       NamedAttrList attributes(op->getAttrDictionary());
       attributes.erase(op.input_sizesAttrName());
       attributes.erase(op.output_sizesAttrName());
+      attributes.erase(op.output_lbnsAttrName());
       attributes.erase(OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr());
       attributes.erase(OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr());
       llvm::SmallVector<int32_t> input_sizes, output_sizes;

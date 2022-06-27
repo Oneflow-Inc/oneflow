@@ -51,6 +51,7 @@ class UserKernel final : public Kernel {
   void ForwardUserKernel(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                          user_op::OpKernelState* opkernel_state) const;
   bool IsCudaGraphSupported() const;
+  bool IsReadyForCudaGraphCapture(KernelContext* ctx) const;
 
  private:
   void VirtualKernelInit(KernelContext* ctx) override;
