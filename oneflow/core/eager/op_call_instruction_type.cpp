@@ -45,7 +45,6 @@ struct OpCallInstructionUtil final {
   static inline Maybe<void> Prepare(const vm::Instruction& instruction) {
     auto* operand = GetCallPhyInstrOperand(instruction);
     DeviceCtx* device_ctx = instruction.stream().device_ctx().get();
-    InitInputBlobsMemPtrForAllocationCompuationPipelining(operand, device_ctx);
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     if (unlikely(operand->need_temp_storage())) {
       InferTempStorageSize(operand);
@@ -94,13 +93,6 @@ struct OpCallInstructionUtil final {
     }
     operand->mut_opkernel()->TryInitOpKernelStateAndCache(&operand->call_ctx_, device_ctx,
                                                           operand->user_opkernel(), state, cache);
-  }
-
-  static inline void InitInputBlobsMemPtrForAllocationCompuationPipelining(
-      OpCallPhyInstrOperand* operand, DeviceCtx* device_ctx) {
-    for (const auto& blob_object : *operand->inputs()) {
-      blob_object->init_mem_ptr_for_allocation_compuation_pipelining();
-    }
   }
 
   static inline Maybe<void> AllocateOutputBlobsMemory(OpCallPhyInstrOperand* operand,

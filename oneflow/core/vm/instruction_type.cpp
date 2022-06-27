@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -28,6 +29,20 @@ void InstructionType::InitInstructionStatus(Instruction* instruction) const {
 void InstructionType::DeleteInstructionStatus(Instruction* instruction) const {
   instruction->stream_type().DeleteInstructionStatus(instruction->stream(),
                                                      instruction->mut_status_buffer());
+}
+
+namespace {
+
+void InitMemPtrForAllocationCompuationPipelining(EagerBlobObject* eager_blob_object) {
+  eager_blob_object->init_mem_ptr_for_allocation_compuation_pipelining();
+}
+
+}  // namespace
+
+void InstructionType::InitInputBlobsMemPtrForAllocationCompuationPipelining(
+    Instruction* instruction) const {
+  const auto& operand = *instruction->phy_instr_operand();
+  operand.ForEachInputEagerBlobObjects(&InitMemPtrForAllocationCompuationPipelining);
 }
 
 }  // namespace vm
