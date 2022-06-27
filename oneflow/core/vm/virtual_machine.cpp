@@ -17,10 +17,11 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/barrier_instruction_type.h"
 #include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/vm/allocator.h"
+#include "oneflow/core/vm/shrinkable_cache.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/singleton_ptr.h"
@@ -95,13 +96,13 @@ Maybe<Symbol<Stream>> GetBarrierStream() {
   return Stream::New(device, StreamRole::kBarrier);
 }
 
-void MakeBarrierInstructions(vm::InstructionMsgList* list,
+void MakeBarrierInstructions(vm::InstructionList* list,
                              const std::function<void()>& BarrierCallback) {
   auto* vm = Global<VirtualMachine>::Get();
   {
     const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>([]() {});
     auto stream = CHECK_JUST(GetBarrierStream());
-    auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+    auto instruction = intrusive::make_shared<vm::Instruction>(
         CHECK_JUST(vm->GetVmStream(stream)), SingletonPtr<vm::GlobalSyncInstructionType>(),
         phy_instr_operand);
     list->EmplaceBack(std::move(instruction));
@@ -109,7 +110,7 @@ void MakeBarrierInstructions(vm::InstructionMsgList* list,
   {
     const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>(BarrierCallback);
     auto stream = CHECK_JUST(GetBarrierStream());
-    auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+    auto instruction = intrusive::make_shared<vm::Instruction>(
         CHECK_JUST(vm->GetVmStream(stream)), SingletonPtr<vm::BarrierInstructionType>(),
         phy_instr_operand);
     list->EmplaceBack(std::move(instruction));
@@ -120,7 +121,7 @@ void MakeBarrierInstructions(vm::InstructionMsgList* list,
 
 void VirtualMachine::ControlSync() {
   auto bc = std::make_shared<BlockingCounter>(1);
-  vm::InstructionMsgList list;
+  vm::InstructionList list;
   MakeBarrierInstructions(&list, [bc] { bc->Decrease(); });
   CHECK_JUST(Receive(&list));
   CHECK_JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
@@ -133,6 +134,62 @@ Maybe<void> VirtualMachine::CloseVMThreads() {
   schedule_thread_.join();
   disable_vm_threads_ = true;
   return Maybe<void>::Ok();
+}
+
+namespace {
+
+class SingleThreadScheduleCtx : public vm::ScheduleCtx {
+ public:
+  SingleThreadScheduleCtx() = default;
+  ~SingleThreadScheduleCtx() = default;
+
+  void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {
+    while (thread_ctx->TryReceiveAndRun() > 0) {}
+  }
+};
+
+void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& schedule_ctx) {
+  do { vm->Schedule(schedule_ctx); } while (!(vm->SchedulerEmpty()));
+}
+
+}  // namespace
+
+Maybe<void> VirtualMachine::BlockingRunProbeFunc(
+    const std::function<bool(vm::VirtualMachineEngine*)>& prob_func) {
+  JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
+    auto bc = std::make_shared<BlockingCounter>(1);
+    engine_->InsertProbe([bc, prob_func](vm::VirtualMachineEngine* engine) {
+      if (!prob_func(engine)) { return false; }
+      bc->Decrease();
+      return true;
+    });
+    if (disable_vm_threads_) {
+      ScheduleUntilVMEmpty(engine_.Mutable(), SingleThreadScheduleCtx());
+    } else {
+      pending_notifier_.Notify();
+    }
+    JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+    return Maybe<void>::Ok();
+  }));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> VirtualMachine::ShrinkAllMem() {
+  auto try_shrink_men = [](vm::VirtualMachineEngine* engine) -> bool {
+    if (engine->mut_active_stream_list()->size()) { return false; }
+    INTRUSIVE_FOR_EACH_PTR(thread_ctx, engine->mut_thread_ctx_list()) {
+      INTRUSIVE_FOR_EACH_PTR(stream, thread_ctx->mut_stream_list()) {
+        const auto& device_ctx = stream->device_ctx();
+        if (device_ctx.get() && device_ctx->mut_allocator()) {
+          auto* allocator = device_ctx->mut_allocator();
+          auto* cache = dynamic_cast<vm::ShrinkableCache*>(allocator);
+          if (cache != nullptr) { cache->Shrink(); }
+        }
+      }
+    }
+    return true;
+  };
+  return BlockingRunProbeFunc(try_shrink_men);
 }
 
 VirtualMachine::~VirtualMachine() {
@@ -167,18 +224,16 @@ std::string VirtualMachine::GetBlockingDebugString() {
   return engine_->GetLivelyInstructionListDebugString(limit);
 }
 
-Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
+Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
-    INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_list) {
-      const auto& device = instr_msg->stream().device();
+    INTRUSIVE_FOR_EACH_PTR(instruction, instruction_list) {
+      const auto& device = instruction->stream().device();
       CHECK_OR_RETURN(device->enum_type() == DeviceType::kCPU)
           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
-      // NOTE: operate `engine_` in forked subprocesses causes mysterious problems.
-      // `ComputeInFuseMode` will be replaced by `Compute` soon.
-      instr_msg->instruction_type().ComputeInFuseMode(instr_msg);
+      instruction->instruction_type().Compute(instruction);
     }
   } else if (unlikely(disable_vm_threads_)) {
-    JUST(RunInCurrentThread(instr_list));
+    JUST(RunInCurrentThread(instruction_list));
   } else {
     const int64_t kHighWaterMark = GetInstructionHighWaterMark();
     if (engine_->flying_instruction_cnt() > kHighWaterMark) {
@@ -195,31 +250,13 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
         return Maybe<void>::Ok();
       }));
     }
-    if (JUST(engine_->Receive(instr_list))) {
-      // old pending_instruction_list is empty.
+    if (JUST(engine_->Receive(instruction_list))) {
+      // old scheduler_pending_instruction_list is empty.
       pending_notifier_.Notify();
     }
   }
   return Maybe<void>::Ok();
 }
-
-namespace {
-
-class SingleThreadScheduleCtx : public vm::ScheduleCtx {
- public:
-  SingleThreadScheduleCtx() = default;
-  ~SingleThreadScheduleCtx() = default;
-
-  void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {
-    while (thread_ctx->TryReceiveAndRun() > 0) {}
-  }
-};
-
-void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* engine, const vm::ScheduleCtx& schedule_ctx) {
-  do { engine->Schedule(schedule_ctx); } while (!(engine->SchedulerEmpty()));
-}
-
-}  // namespace
 
 Maybe<void> VirtualMachine::NotifyOrRunScheduler() {
   if (unlikely(pthread_fork::IsForkedSubProcess() || disable_vm_threads_)) {
@@ -230,7 +267,7 @@ Maybe<void> VirtualMachine::NotifyOrRunScheduler() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionMsgList* instr_list) {
+Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionList* instr_list) {
   CHECK_OR_RETURN(engine_->SchedulerEmpty())
       << "vm scheduler not empty. May be a fatal error occured";
   JUST(engine_->Receive(instr_list));
@@ -273,8 +310,8 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
         // Use SchedulerThreadUnsafeEmpty to avoid acquiring mutex lock.
         // It's safe to use SchedulerThreadUnsafeEmpty here. pending_notifier_.notified_cnt_ will be
         // greater than zero when inconsistency between
-        // engine_->pending_msg_list.list_head_.list_head_.container_ and
-        // engine_->pending_msg_list.list_head_.list_head_.size_ occured. hence the pending
+        // engine_->pending_instruction_list.list_head_.list_head_.container_ and
+        // engine_->pending_instruction_list.list_head_.list_head_.size_ occured. hence the pending
         // instructions
         // will get handled in the next iteration.
         //  VirtualMachine::Receive may be less effiencient if the thread safe version
