@@ -69,14 +69,14 @@ Runtime::Runtime(
     Global<ThreadMgr>::Get()->AddThreads(thread_ids_);
     Global<RuntimeJobDescs>::Get()->AddPlan(plan);
     if (ParseBooleanFromEnv("ONEFLOW_ENABLE_OFCCL", false)){
-      // LOG(ERROR) << "ready to Global<boxing::of_collective::CollectiveMgr>::Get()->AddPlan(plan)";
+      LOG(ERROR) << "ready to Global<boxing::of_collective::CollectiveMgr>::Get()->AddPlan(plan)";
       collective_boxing_collective_manager_plan_token_ =
           Global<boxing::of_collective::CollectiveMgr>::Get()->AddPlan(plan);
-      // LOG(ERROR) << "Global<boxing::of_collective::CollectiveMgr>::Get()->AddPlan(plan) Done";
+      LOG(ERROR) << "Global<boxing::of_collective::CollectiveMgr>::Get()->AddPlan(plan) Done";
     }
     collective_boxing_scheduler_plan_token_ =
         Global<boxing::collective::Scheduler>::Get()->AddPlan(plan);
-    // LOG(ERROR) << "Global<boxing::collective::Scheduler>::Get()->AddPlan(plan) Done";
+    LOG(ERROR) << "Global<boxing::collective::Scheduler>::Get()->AddPlan(plan) Done";
 #ifdef WITH_CUDA
     Global<EagerNcclCommMgr>::Get()->CreateCommFromPlan(plan);
 #endif  // WITH_CUDA
@@ -104,17 +104,12 @@ Runtime::Runtime(
   }
   RuntimeCtx* runtime_ctx = Global<RuntimeCtx>::Get();
   runtime_ctx->NewCounter("constructing_actor_cnt", this_machine_task_num);
-  // LOG(ERROR) << "ready HandoutTasks(source_tasks)";
   HandoutTasks(source_tasks);
-  // LOG(ERROR) << "HandoutTasks(source_tasks) Done";
   HandoutTasks(other_tasks);
-  // LOG(ERROR) << "HandoutTasks(other_tasks) Done";
   runtime_ctx->WaitUntilCntEqualZero("constructing_actor_cnt");
   VLOG(3) << "Actors on this machine constructed";
-  // LOG(ERROR) << "Actors on this machine constructed";
   OF_SESSION_BARRIER();
   VLOG(3) << "Actors on every machine constructed";
-  // LOG(ERROR) << "Actors on every machine constructed";
   for (auto pair : job_id2actor_size_) {
     runtime_ctx->NewCounter(GetRunningActorCountKeyByJobId(pair.first), pair.second);
   }
