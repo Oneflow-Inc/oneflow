@@ -31,6 +31,9 @@ class TestEnv(flow.unittest.TestCase):
     def test_cuda_is_available(test_case):
         test_case.assertEqual(flow.cuda.is_available(), True)
 
+    def test_cuda_empty_cache(test_case):
+        flow.cuda.empty_cache()
+
     def test_cuda_synchronize(test_case):
         flow.cuda.synchronize()
         flow.cuda.synchronize("cuda")
