@@ -87,7 +87,7 @@ struct GetRecordEventInstructionType : public StreamRoleVisitor<GetRecordEventIn
     UNIMPLEMENTED_THEN_RETURN();
   }
   static Maybe<const vm::InstructionType*> VisitPinnedCompute(DeviceType device_type) {
-    return SingletonPtr<vm::EpRecordEventInstructionType>();
+    return VisitCompute(device_type);
   }
 };
 
