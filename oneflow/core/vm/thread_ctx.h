@@ -25,8 +25,8 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-using PendingInstructionMutexedList =
-    intrusive::MutexedList<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)>;
+using WorkerPendingInstructionMutexedList =
+    intrusive::MutexedList<INTRUSIVE_FIELD(Instruction, worker_pending_instruction_hook_)>;
 
 class ThreadCtx final : public intrusive::Base {
  public:
@@ -38,8 +38,8 @@ class ThreadCtx final : public intrusive::Base {
 
   // Setters
   StreamList* mut_stream_list() { return &stream_list_; }
-  PendingInstructionMutexedList* mut_pending_instruction_list() {
-    return &pending_instruction_list_;
+  WorkerPendingInstructionMutexedList* mut_worker_pending_instruction_list() {
+    return &worker_pending_instruction_list_;
   }
 
   // methods
@@ -54,15 +54,15 @@ class ThreadCtx final : public intrusive::Base {
   ThreadCtx()
       : intrusive_ref_(),
         stream_list_(),
-        pending_instruction_mutex_(),
-        pending_instruction_list_(&pending_instruction_mutex_),
+        worker_pending_instruction_mutex_(),
+        worker_pending_instruction_list_(&worker_pending_instruction_mutex_),
         notifier_(),
         thread_ctx_hook_() {}
   intrusive::Ref intrusive_ref_;
   // lists
   StreamList stream_list_;
-  std::mutex pending_instruction_mutex_;
-  PendingInstructionMutexedList pending_instruction_list_;
+  std::mutex worker_pending_instruction_mutex_;
+  WorkerPendingInstructionMutexedList worker_pending_instruction_list_;
   Notifier notifier_;
 
  public:
