@@ -42,6 +42,9 @@ There is parallel signature for OneFlow Ops in MLIR. It is implemented as MLIR d
     %120 = "oneflow.matmul"(%119, %output_105) {oneflow.parallel = #oneflow.psig<[{S(0), P}, S(0)], S(0)>, ...
     ```
 
+### Principle
+- In IR, The signature should be orthogonal to device placement information althogh in some passes they might be related to each other.
+
 ## Development
 
 - To run all the regression tests. The `-j3` option for [`LIT`](https://llvm.org/docs/CommandGuide/lit.html) is to prevent OOM on GPU.
