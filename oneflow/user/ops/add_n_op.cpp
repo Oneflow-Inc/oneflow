@@ -66,7 +66,9 @@ namespace oneflow {
 
 /*static*/ Maybe<void> AddNOp::CheckAttr(const user_op::UserOpDefWrapper&,
                                          const user_op::UserOpConfWrapper& op_conf) {
-  CHECK_OR_RETURN(op_conf.input_size("in") >= 2);//NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(op_conf.input_size("in") >= 2)<<" The number of input tensors should greater than or equal to 2"
+
+
   
   return Maybe<void>::Ok();
 }
