@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-struct IsStreamPinned : public StreamRoleVisitor<IsStreamPinned> {
+struct IsStreamAllocatorPinned : public StreamRoleVisitor<IsStreamAllocatorPinned> {
   static bool VisitCompute() { return false; }
   static bool VisitHost2Device() { return false; }
   static bool VisitDevice2Host() { return false; }
