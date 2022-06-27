@@ -31,7 +31,7 @@ struct NeedSoftSync : public StreamRoleVisitor<NeedSoftSync> {
   static bool VisitBarrier(DeviceType) { return false; }
   static bool VisitCriticalSection(DeviceType) { return false; }
   static bool VisitLazyJobLauncher(DeviceType) { return false; }
-  static bool VisitPinnedCompute(DeviceType) { return VisitCompute(); }
+  static bool VisitPinnedCompute(DeviceType device_type) { return VisitCompute(device_type); }
 };
 
 }  // namespace oneflow
