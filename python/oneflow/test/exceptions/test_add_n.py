@@ -25,14 +25,14 @@ class TestAddN(flow.unittest.TestCase):
         with test_case.assertRaises(RuntimeError) as context:
             
         
-            a = flow.tensor([1, 2])
+            a = flow.tensor([1,2])
             b = flow.tensor([3,4])
             c = flow.tensor([[2, 2],[2,2]])
      
-            flow.add(a, b,c)
+            flow.add(a,b,c)
            
             test_case.assertTrue(
-            "inconsistent tensor size, expected tensor to have the same number of elements, but got"
+            "inconsistent tensor size, expected all tensor to have the same number of elements, but got"
             in str(context.exception)
             )
         
@@ -48,7 +48,7 @@ class TestAddN(flow.unittest.TestCase):
             flow.add(a,b,c)
            
             test_case.assertTrue(
-            "expected both tenser to have same type,but found"
+            "expected all tenser to have same type,but found"
             in str(context.exception)
             )
      
