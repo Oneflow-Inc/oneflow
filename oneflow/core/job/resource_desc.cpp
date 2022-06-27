@@ -28,7 +28,7 @@ namespace oneflow {
 ResourceDesc::ResourceDesc(const Resource& resource, int64_t num_process_per_node)
     : resource_(resource) {
   CHECK_GT(resource_.machine_num(), 0);
-  CHECK_LE(resource_.machine_num(), Global<EnvDesc>::Get()->TotalMachineNum());
+  CHECK_LE(resource_.machine_num(), Singleton<EnvDesc>::Get()->TotalMachineNum());
   for (int i = 0; i < GlobalProcessCtx::WorldSize(); ++i) {
     CHECK(process_ranks_.emplace(i).second);
   }
@@ -37,15 +37,15 @@ ResourceDesc::ResourceDesc(const Resource& resource, int64_t num_process_per_nod
 Machine ResourceDesc::machine(int32_t idx) const {
   CHECK_GE(idx, 0);
   CHECK(process_ranks().find(idx) != process_ranks().end());
-  if (Global<EnvDesc>::Get()->has_ctrl_bootstrap_conf()) {
-    CHECK_NOTNULL(Global<ProcessCtx>::Get());
-    CHECK_GE(Global<ProcessCtx>::Get()->ctrl_addr().size(), process_ranks().size());
+  if (Singleton<EnvDesc>::Get()->has_ctrl_bootstrap_conf()) {
+    CHECK_NOTNULL(Singleton<ProcessCtx>::Get());
+    CHECK_GE(Singleton<ProcessCtx>::Get()->ctrl_addr().size(), process_ranks().size());
     Machine machine;
-    const Address& addr = Global<ProcessCtx>::Get()->ctrl_addr(idx);
+    const Address& addr = Singleton<ProcessCtx>::Get()->ctrl_addr(idx);
     machine.set_addr(addr.host());
     return machine;
   } else {
-    return Global<EnvDesc>::Get()->machine(idx);
+    return Singleton<EnvDesc>::Get()->machine(idx);
   }
 }
 

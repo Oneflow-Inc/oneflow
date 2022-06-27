@@ -22,10 +22,10 @@ namespace oneflow {
 namespace vm {
 
 VirtualMachineScope::VirtualMachineScope(const Resource& resource) {
-  Global<VirtualMachine>::New();
+  Singleton<VirtualMachine>::New();
 }
 
-VirtualMachineScope::~VirtualMachineScope() { Global<VirtualMachine>::Delete(); }
+VirtualMachineScope::~VirtualMachineScope() { Singleton<VirtualMachine>::Delete(); }
 
 }  // namespace vm
 }  // namespace oneflow

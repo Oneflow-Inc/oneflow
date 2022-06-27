@@ -35,12 +35,12 @@ class CpuArgMaxKernel final : public user_op::OpKernel {
     const int64_t instance_size = in->shape_view().At(in->shape_view().NumAxes() - 1);
     const int64_t instance_num = in->shape_view().elem_cnt() / instance_size;
     const int64_t num_thread =
-        std::min(instance_num, (int64_t)Global<ThreadPool>::Get()->thread_num());
+        std::min(instance_num, (int64_t)Singleton<ThreadPool>::Get()->thread_num());
     const BalancedSplitter bs(instance_num, num_thread);
     BlockingCounter bc(num_thread);
     FOR_RANGE(int64_t, thread_id, 0, num_thread) {
       const Range range = bs.At(thread_id);
-      Global<ThreadPool>::Get()->AddWork([=, &bc]() {
+      Singleton<ThreadPool>::Get()->AddWork([=, &bc]() {
         FOR_RANGE(int64_t, i, range.begin(), range.end()) {
           const T* in_ptr_i = in_ptr + i * instance_size;
           out_ptr[i] =

@@ -30,16 +30,16 @@ class CpuDeviceCtx final : public DeviceCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDeviceCtx);
   CpuDeviceCtx() {
-    device_ = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCPU, 0);
+    device_ = Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCPU, 0);
     stream_ = device_->CreateStream();
   }
   ~CpuDeviceCtx() { device_->DestroyStream(stream_); }
 
   std::unique_ptr<DeviceCtx> Copy() const { return std::unique_ptr<DeviceCtx>(new CpuDeviceCtx()); }
 
-  vm::Allocator* mut_allocator() override { return Global<vm::CpuAllocator>::Get(); }
+  vm::Allocator* mut_allocator() override { return Singleton<vm::CpuAllocator>::Get(); }
 
-  vm::Allocator* mut_pin_memory_allocator() { return Global<vm::CudaHostAllocator>::Get(); }
+  vm::Allocator* mut_pin_memory_allocator() { return Singleton<vm::CudaHostAllocator>::Get(); }
 
   DeviceType device_type() const override { return DeviceType::kCPU; }
 

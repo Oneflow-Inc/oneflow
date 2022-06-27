@@ -135,7 +135,7 @@ class Blob final {
 };
 
 #define INIT_GLOBAL_BLOB_MUTABLE_CHECKER(is_header_mutable, is_body_mutable)             \
-  COMMAND(Global<BlobAccessCheckerIf<is_header_mutable, is_body_mutable>>::SetAllocated( \
+  COMMAND(Singleton<BlobAccessCheckerIf<is_header_mutable, is_body_mutable>>::SetAllocated( \
       new BlobAccessCheckerIf<is_header_mutable, is_body_mutable>()))
 
 INIT_GLOBAL_BLOB_MUTABLE_CHECKER(false, false);

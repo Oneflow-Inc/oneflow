@@ -39,7 +39,7 @@ class OneEmbeddingHandler final {
 
   void LoadSnapshot(const std::string& snapshot_name) {
 #ifdef WITH_CUDA
-    Global<embedding::EmbeddingManager>::Get()->LoadSnapshot(embedding_name_, local_rank_id_,
+    Singleton<embedding::EmbeddingManager>::Get()->LoadSnapshot(embedding_name_, local_rank_id_,
                                                              rank_id_, snapshot_name);
 #else
     UNIMPLEMENTED() << "Only Support with CUDA";
@@ -48,7 +48,7 @@ class OneEmbeddingHandler final {
 
   void SaveSnapshot(const std::string& snapshot_name) {
 #ifdef WITH_CUDA
-    Global<embedding::EmbeddingManager>::Get()->SaveSnapshot(embedding_name_, local_rank_id_,
+    Singleton<embedding::EmbeddingManager>::Get()->SaveSnapshot(embedding_name_, local_rank_id_,
                                                              rank_id_, snapshot_name);
 #else
     UNIMPLEMENTED() << "Only Support with CUDA";
@@ -58,7 +58,7 @@ class OneEmbeddingHandler final {
  private:
   void CreateKeyValueStore(const embedding::KeyValueStoreOptions& key_value_store_options) {
 #ifdef WITH_CUDA
-    Global<embedding::EmbeddingManager>::Get()->CreateKeyValueStore(
+    Singleton<embedding::EmbeddingManager>::Get()->CreateKeyValueStore(
         key_value_store_options, local_rank_id_, rank_id_, world_size_);
 #else
     UNIMPLEMENTED() << "Only Support with CUDA";

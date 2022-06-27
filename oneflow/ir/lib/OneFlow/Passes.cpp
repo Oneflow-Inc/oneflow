@@ -487,7 +487,7 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
     if (op.op_name().str().find("FreeEagerTensor") != std::string::npos) { return failure(); }
     attrs.set(StringAttr::get(getContext(), "value"),
               support::TensorToDenseElementsAttr(
-                  ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()->Get(op.op_name().str()),
+                  ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Get(op.op_name().str()),
                   rewriter.getContext()));
     attrs.set(op.op_nameAttrName(), op.op_nameAttr());
     attrs.set(op.device_tagAttrName(), op.device_tagAttr());
@@ -532,7 +532,7 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
                                                        ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
     const std::string tensor_name = op.op_nameAttr().str();
-    ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()->Set(
+    ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Set(
         tensor_name,  // tensor_name can't be replaced by op.op_nameAttr().str() directly when
                       // compiling with gcc and I has no idea why.
                       // But it works when compiling with clang.

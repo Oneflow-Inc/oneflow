@@ -48,7 +48,7 @@ class VariableTensorMgr final {
   void Clear();
 
  private:
-  friend class Global<VariableTensorMgr>;
+  friend class Singleton<VariableTensorMgr>;
   VariableTensorMgr() = default;
 
   std::map<std::string, std::shared_ptr<one::Tensor>> variables_;

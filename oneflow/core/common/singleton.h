@@ -26,7 +26,7 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T, typename Kind = void>
-class Global final {
+class Singleton final {
  public:
   static T* Get() { return *GetPPtr(); }
   static void SetAllocated(T* val) { *GetPPtr() = val; }
@@ -93,4 +93,4 @@ Maybe<T*> GlobalMaybe() {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_GLOBAL_H_
+#endif  // ONEFLOW_CORE_COMMON_SINGLETON_H_

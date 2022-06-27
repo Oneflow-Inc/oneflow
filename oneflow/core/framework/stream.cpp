@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/static_global.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/stream_mgr.h"
 

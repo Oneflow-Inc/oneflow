@@ -270,7 +270,7 @@ class LocalTensorSharedNumpyDataFunctor {
 
     // Build TensorBuffer
     const auto& Free = [array](char* dptr) {
-      CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+      CHECK_JUST(Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
         Py_DECREF(array);
         return Maybe<void>::Ok();
       }));

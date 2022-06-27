@@ -66,7 +66,7 @@ class EpDeviceCtx : public DeviceCtx {
 
   ep::Device* GetOrCreateEpDevice() const {
     if (unlikely(ep_device_ == nullptr)) {
-      ep_device_ = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(device_->enum_type(),
+      ep_device_ = Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_->enum_type(),
                                                                        device_->device_id());
       CHECK(ep_device_);
     }

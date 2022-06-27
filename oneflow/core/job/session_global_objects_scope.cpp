@@ -44,32 +44,32 @@ SessionGlobalObjectsScope::SessionGlobalObjectsScope() {}
 
 Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   session_id_ = config_proto.session_id();
-  Global<ResourceDesc, ForSession>::Delete();
+  Singleton<ResourceDesc, ForSession>::Delete();
   DumpVersionInfo();
-  Global<ResourceDesc, ForSession>::New(config_proto.resource(),
+  Singleton<ResourceDesc, ForSession>::New(config_proto.resource(),
                                         GlobalProcessCtx::NumOfProcessPerNode());
-  Global<IDMgr>::New();
-  Global<TaskStreamIndexManager>::New();
+  Singleton<IDMgr>::New();
+  Singleton<TaskStreamIndexManager>::New();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    Global<JobName2JobId>::New();
-    Global<CriticalSectionDesc>::New();
-    Global<InterUserJobInfo>::New();
-    Global<LazyJobBuildAndInferCtxMgr>::New();
-    Global<JobSetCompileCtx>::New();
-    Global<RuntimeBufferManagersScope>::New();
+    Singleton<JobName2JobId>::New();
+    Singleton<CriticalSectionDesc>::New();
+    Singleton<InterUserJobInfo>::New();
+    Singleton<LazyJobBuildAndInferCtxMgr>::New();
+    Singleton<JobSetCompileCtx>::New();
+    Singleton<RuntimeBufferManagersScope>::New();
   }
   for (const std::string& lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
   {
     // NOTE(chengcheng): Init Global Runtime objects.
-    Global<RuntimeCtx>::New();
-    Global<MemoryAllocator>::New();
-    Global<ChunkMgr>::New();
-    Global<RegstMgr>::New();
-    Global<ActorMsgBus>::New();
-    Global<ThreadMgr>::New();
-    Global<RuntimeJobDescs>::New();
-    Global<summary::EventsWriter>::New();
-    Global<boxing::collective::Scheduler>::New();
+    Singleton<RuntimeCtx>::New();
+    Singleton<MemoryAllocator>::New();
+    Singleton<ChunkMgr>::New();
+    Singleton<RegstMgr>::New();
+    Singleton<ActorMsgBus>::New();
+    Singleton<ThreadMgr>::New();
+    Singleton<RuntimeJobDescs>::New();
+    Singleton<summary::EventsWriter>::New();
+    Singleton<boxing::collective::Scheduler>::New();
   }
 
   return Maybe<void>::Ok();
@@ -77,9 +77,9 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
 
 Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto) {
   session_id_ = config_proto.session_id();
-  Global<ResourceDesc, ForSession>::Delete();
+  Singleton<ResourceDesc, ForSession>::Delete();
   DumpVersionInfo();
-  Global<ResourceDesc, ForSession>::New(config_proto.resource());
+  Singleton<ResourceDesc, ForSession>::New(config_proto.resource());
   for (const std::string& lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
   return Maybe<void>::Ok();
 }
@@ -87,29 +87,29 @@ Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto
 SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   {
     // NOTE(chengcheng): Delete Global Runtime objects.
-    Global<boxing::collective::Scheduler>::Delete();
-    Global<summary::EventsWriter>::Delete();
-    Global<RuntimeJobDescs>::Delete();
-    Global<ThreadMgr>::Delete();
-    Global<ActorMsgBus>::Delete();
-    Global<RegstMgr>::Delete();
-    Global<ChunkMgr>::Delete();
-    Global<MemoryAllocator>::Delete();
-    Global<RuntimeCtx>::Delete();
+    Singleton<boxing::collective::Scheduler>::Delete();
+    Singleton<summary::EventsWriter>::Delete();
+    Singleton<RuntimeJobDescs>::Delete();
+    Singleton<ThreadMgr>::Delete();
+    Singleton<ActorMsgBus>::Delete();
+    Singleton<RegstMgr>::Delete();
+    Singleton<ChunkMgr>::Delete();
+    Singleton<MemoryAllocator>::Delete();
+    Singleton<RuntimeCtx>::Delete();
   }
 
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    Global<RuntimeBufferManagersScope>::Delete();
-    Global<JobSetCompileCtx>::Delete();
-    Global<LazyJobBuildAndInferCtxMgr>::Delete();
-    Global<InterUserJobInfo>::Delete();
-    Global<CriticalSectionDesc>::Delete();
-    Global<JobName2JobId>::Delete();
+    Singleton<RuntimeBufferManagersScope>::Delete();
+    Singleton<JobSetCompileCtx>::Delete();
+    Singleton<LazyJobBuildAndInferCtxMgr>::Delete();
+    Singleton<InterUserJobInfo>::Delete();
+    Singleton<CriticalSectionDesc>::Delete();
+    Singleton<JobName2JobId>::Delete();
   }
-  Global<TaskStreamIndexManager>::Delete();
-  Global<IDMgr>::Delete();
-  Global<ResourceDesc, ForSession>::Delete();
-  Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
+  Singleton<TaskStreamIndexManager>::Delete();
+  Singleton<IDMgr>::Delete();
+  Singleton<ResourceDesc, ForSession>::Delete();
+  Singleton<ResourceDesc, ForSession>::New(Singleton<ResourceDesc, ForEnv>::Get()->resource(),
                                         GlobalProcessCtx::NumOfProcessPerNode());
 }
 

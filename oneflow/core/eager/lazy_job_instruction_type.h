@@ -86,7 +86,7 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
       OF_PROFILER_RANGE_POP();  // MakeJobInstance
       OF_PROFILER_RANGE_PUSH("Send all buffers to BufferMgr");
       const auto& job_name = job_instance->job_name();
-      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
+      auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Push(job_instance);
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Push(job_instance);
       OF_PROFILER_RANGE_POP();  // BufferMgr

@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/api/python/env/env.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/shut_down_util.h"
