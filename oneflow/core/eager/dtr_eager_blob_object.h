@@ -112,6 +112,9 @@ class DTREagerBlobObject final : public EagerBlobObject {
   // TODO: variable cost functions in terms of different heuristics
   Maybe<double> cost() const;
   Maybe<double> cost(const std::string& heuristic) const;
+  // override the size, for megengine style cost
+  Maybe<double> cost(size_t override_size) const;
+  Maybe<double> cost(const std::string& heuristic, size_t override_size) const;
   Maybe<double> reverse_cost() const;
 
   std::shared_ptr<DisjNode> node;

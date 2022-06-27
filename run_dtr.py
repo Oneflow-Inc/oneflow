@@ -82,6 +82,8 @@ parser.add_argument(
     "--no-allocator", action=NegativeArgAction, env_var_name="OF_DTR_ALLO"
 )
 parser.add_argument("--nlr", action=PositiveArgAction, env_var_name="OF_DTR_NLR")
+parser.add_argument("--me-style", action=PositiveArgAction, env_var_name="ONEFLOW_DTR_MEGENGINE_STYLE")
+parser.add_argument("--with-size", action=PositiveArgAction, env_var_name="ONEFLOW_DTR_HEURISTIC_WITH_SIZE")
 parser.add_argument(
     "--high-conv", action=PositiveArgAction, env_var_name="OF_DTR_HIGH_CONV"
 )
@@ -92,6 +94,7 @@ parser.add_argument("--debug-level", type=int, default=0)
 parser.add_argument("--no-dataloader", action="store_true")
 
 args = parser.parse_args()
+assert not (args.me_style and args.with_size)
 
 if args.debug_level > 0:
     print(os.environ)
@@ -107,12 +110,14 @@ ALL_ITERS = args.iters
 
 if args.allocator:
     heuristic = "eq_compute_time_and_last_access"
+    if args.me_style:
+        heuristic = "eq"
 else:
     heuristic = "eq"
 
 if args.dtr:
     print(
-        f"model_name: {args.model_name}, dtr_enabled: {args.dtr}, dtr_allo: {args.allocator}, threshold: {args.threshold}, batch size: {args.bs}, eager eviction: {args.ee}, left and right: {args.lr}, debug_level: {args.debug_level}, heuristic: {heuristic}, o_one: {args.o_one}"
+        f"model_name: {args.model_name}, dtr_enabled: {args.dtr}, dtr_allo: {args.allocator}, threshold: {args.threshold}, batch size: {args.bs}, eager eviction: {args.ee}, left and right: {args.lr}, debug_level: {args.debug_level}, heuristic: {heuristic}, o_one: {args.o_one}, me_style: {args.me_style}, with_size: {args.with_size}"
     )
 else:
     print(f"model_name: {args.model_name}, dtr_enabled: {args.dtr}")

@@ -116,7 +116,8 @@ class DtrCudaAllocator final : public Allocator {
   void MergeNeighbourFreePiece(Piece* lhs, Piece* rhs);
   void RemovePieceFromBin(Piece* piece);
 
-  Piece* EvictAndFindPiece(size_t size);
+  Piece* EvictAndFindPieceOnce(size_t size);
+  Piece* EvictAndFindPieceMegEngineStyle(size_t size);
 
   int64_t device_id_;
   void* memory_ = nullptr;

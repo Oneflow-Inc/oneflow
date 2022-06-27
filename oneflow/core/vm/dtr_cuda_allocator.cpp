@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <iterator>
 #ifdef WITH_CUDA
 
 #include "oneflow/core/common/env_var/dtr.h"
@@ -135,9 +136,9 @@ void DtrCudaAllocator::ErasePieceFromPtrMap(Piece* piece) {
   ptr2piece_.erase(it);
 }
 
-double get_cost(const vm::DTREagerBlobObject* ebo, int& coeff) {
+double get_cost(const vm::DTREagerBlobObject* ebo, int& coeff, size_t size) {
   if (ebo == nullptr) { return 0.; }
-  double cost = CHECK_JUST(ebo->cost());
+  double cost = CHECK_JUST(ebo->cost(size));
 
   if (!EnvBool<OF_DTR_O_ONE>()) {
     CHECK(!isinf(cost));
@@ -150,6 +151,10 @@ double get_cost(const vm::DTREagerBlobObject* ebo, int& coeff) {
   CHECK(!isinf(cost));
   CHECK(!isnan(cost));
   return cost;
+}
+
+double get_cost(const vm::DTREagerBlobObject* ebo, int& coeff) {
+  return get_cost(ebo, coeff, 0);
 }
 
 void DtrCudaAllocator::DisplayAllPieces() {
@@ -344,7 +349,57 @@ void DtrCudaAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
   DeallocatePiece(rhs);
 }
 
-DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t required_size) {
+DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceMegEngineStyle(size_t required_size) {
+  if (EnvBool<ONEFLOW_DTR_OPERATION_LOG>()) {
+    LOG(INFO) << "****"
+              << "START-EvictAndFindPiece" << std::endl;
+  }
+  if (dtr::debug_level() >= 2) { LOG(INFO) << "required size: " << required_size; }
+  auto GetSizeIncludingNeighborhood = [](auto it, auto begin, auto end) -> size_t{
+    size_t size = it->second->size;
+    if (it != begin) {
+      for (auto t = std::prev(it); t->second->tensor == nullptr; t--) {
+        size += t->second->size;
+        if (t == begin) {
+          break;
+        }
+      }
+    }
+    if (it != end) {
+      for (auto t = std::next(it); t != end && t->second->tensor == nullptr; t++) {
+        size += t->second->size;
+      }
+    }
+    return size;
+  };
+
+  while (true) {
+    double min_cost = std::numeric_limits<double>::max();
+    vm::DTREagerBlobObject* min_tensor = nullptr;
+    for (auto it = ptr2piece_.begin(); it != ptr2piece_.end() && !InSmallMemoryArea(it->second->ptr); it++) {
+      int coeff = -1;
+      auto* tensor = it->second->tensor;
+      if (tensor != nullptr && !tensor->is_pinned() && tensor->is_evictable()) {
+        auto cur_op_cost = get_cost(tensor, coeff, GetSizeIncludingNeighborhood(it, ptr2piece_.begin(), ptr2piece_.end()));
+        if (cur_op_cost < min_cost) {
+          min_cost = cur_op_cost;
+          min_tensor = tensor;
+        }
+      }
+    }
+    if (min_tensor) {
+      CHECK_JUST(min_tensor->evict(false));
+      Piece* piece = FindPiece(required_size, true);
+      if (piece != nullptr) {
+        return piece;
+      }
+    } else {
+      LOG(FATAL) << "eviction fail";
+    }
+  }
+}
+
+DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required_size) {
   if (EnvBool<ONEFLOW_DTR_OPERATION_LOG>()) {
     LOG(INFO) << "****"
               << "START-EvictAndFindPiece" << std::endl;
@@ -353,14 +408,13 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t required_siz
   auto start = ptr2piece_.begin();
   auto end = ptr2piece_.begin();
   size_t total_size = 0;
-  double cost = 0;
+  double cost_except_size = 0;
   double min_cost = std::numeric_limits<double>::max();
   auto min_start = start;
   auto min_end = start;
   while (end != ptr2piece_.end() && !InSmallMemoryArea(end->second->ptr)) {
     if (total_size < required_size) {
       auto* end_tensor = end->second->tensor;
-      // const auto* end_tensor = end->second->tensor;
       if (end_tensor != nullptr && (end_tensor->is_pinned() || !end_tensor->is_evictable())) {
         if (dtr::debug_level() >= 2) {
           LOG(INFO) << "skip tensor: " << end_tensor
@@ -372,7 +426,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t required_siz
         end++;
         start = end;
         total_size = 0;
-        cost = 0;
+        cost_except_size = 0;
         continue;
       }
       total_size += end->second->size;
@@ -385,12 +439,12 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t required_siz
       }
       int coeff = -1;
       auto cur_op_cost = get_cost(end_tensor, coeff);
-      cost += cur_op_cost;
+      cost_except_size += cur_op_cost;
       if (dtr::debug_level() >= 2) {
         LOG(INFO) << "move end, include op: "
                   << (end_tensor != nullptr ? end_tensor->compute_op_type_name() : "no tensor")
                   << ", size: " << end->second->size << ", total_size: " << total_size
-                  << ", total cost: " << cost << ", cur op cost: " << cur_op_cost;
+                  << ", total cost: " << cost_except_size << ", cur op cost: " << cur_op_cost;
       }
       end++;
     } else {
@@ -403,14 +457,18 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t required_siz
         coeff = Global<dtr::TensorPool>::Get()->update_after_pesudo_compute(start_tensor);
       }
       auto cur_op_cost = get_cost(start_tensor, coeff);
-      cost -= cur_op_cost;
+      cost_except_size -= cur_op_cost;
       if (dtr::debug_level() >= 2) {
         LOG(INFO) << "move start, exclude op: "
                   << (start_tensor != nullptr ? start_tensor->compute_op_type_name() : "no tensor")
                   << ", size: " << start->second->size << ", total_size: " << total_size
-                  << ", total cost: " << cost << ", cur op cost: " << cur_op_cost;
+                  << ", total cost: " << cost_except_size << ", cur op cost: " << cur_op_cost;
       }
       start++;
+    }
+    double cost = cost_except_size;
+    if (EnvBool<ONEFLOW_DTR_HEURISTIC_WITH_SIZE>()) {
+      cost /= total_size;
     }
     if (total_size >= required_size && cost < min_cost) {
       min_cost = cost;
@@ -477,7 +535,11 @@ void DtrCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
       }
       first_time = false;
     }
-    piece = EvictAndFindPiece(aligned_size);
+    if (EnvBool<ONEFLOW_DTR_MEGENGINE_STYLE>()) {
+      piece = EvictAndFindPieceMegEngineStyle(aligned_size);
+    } else {
+      piece = EvictAndFindPieceOnce(aligned_size);
+    }
     if (EnvBool<ONEFLOW_DTR_RECORD_MEM_FRAG_RATE>()) {
       size_t free_mem = 0;
       for (const auto& pair : ptr2piece_) {
