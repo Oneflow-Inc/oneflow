@@ -505,6 +505,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
     } else {
       matmul = NewChannelsLastMatmulPrimitive(ctx);
     }
+    CHECK(matmul);
 
     for (int64_t i = 0; i < in->shape_view().At(0); ++i) {
       const T* input_ptr = GetImgDptr<T>(in, i);
@@ -632,6 +633,7 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
     } else {
       matmul = NewConvDataGradTransANoTransBMatmulPrimitive(ctx);
     }
+    CHECK(matmul);
 
     FOR_RANGE(int64_t, i, 0, dy->shape_view().At(0)) {
       const T* filter_ptr = filter->dptr<T>();
@@ -739,6 +741,7 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
     } else {
       matmul = NewConvWeightGradNoTransATransBMatmulPrimitive(ctx);
     }
+    CHECK(matmul);
 
     FOR_RANGE(int64_t, i, 0, dy->shape_view().At(0)) {
       const T* x_ptr = GetImgDptr<T>(x, i);

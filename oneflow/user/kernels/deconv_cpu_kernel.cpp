@@ -381,6 +381,7 @@ class DeconvCpuKernel final : public user_op::OpKernel {
     } else {
       matmul = NewDeconvTransANoTransBMatmulPrimitive(ctx);
     }
+    CHECK(matmul);
 
     FOR_RANGE(int64_t, i, 0, in->shape_view().At(0)) {
       // channels first:  col_buf' = weight(T) * in[i]'

@@ -515,6 +515,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
     } else {
       matmul = NewChannelsLastMatmulPrimitive(ctx);
     }
+    CHECK(matmul);
 
     for (int64_t i = 0; i < in->shape_view().At(0); ++i) {
       conv_cache->im2col_func_(GetImgDptr<T>(in, i), ShapeView(conv_cache->in_5d_shape_),
@@ -625,6 +626,7 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
     } else {
       matmul = NewConvDataGradTransANoTransBMatmulPrimitive(ctx);
     }
+    CHECK(matmul);
 
     int32_t idx_offset = conv_cache->idx_offset_;
     FOR_RANGE(int64_t, i, 0, dy->shape_view().At(0)) {
@@ -713,6 +715,7 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
     } else {
       matmul = NewConvWeightGradNoTransATransBMatmulPrimitive(ctx);
     }
+    CHECK(matmul);
 
     int32_t idx_offset = conv_cache->idx_offset_;
     FOR_RANGE(int64_t, i, 0, dy->shape_view().At(0)) {
@@ -794,6 +797,7 @@ class ConvBiasGradCpuKernel final : public user_op::OpKernel {
     } else {
       matmul = NewConvBiasGradNoTransANoTransBMatmulPrimitive(ctx);
     }
+    CHECK(matmul);
 
     int ndims = dy->shape_view().NumAxes() - 2;
     FOR_RANGE(int64_t, i, 0, dy->shape_view().At(0)) {
