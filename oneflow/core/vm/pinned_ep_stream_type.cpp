@@ -33,6 +33,7 @@ namespace vm {
 
 void PinnedEpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                        Stream* stream) const {
+  // TODO:(zhaoluyang) support pin_memory_device
   DeviceType device_type = stream->device()->enum_type();
   size_t device_index = stream->device()->device_id();
   auto ep_device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
@@ -41,7 +42,7 @@ void PinnedEpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
       << "cannot pin tensor with device: " << stream->device()->type()
       << ", only dense CPU tensors can be pinned.";
   options.SetPinnedDevice(device_type, device_index);
-  auto ep_backend_allocator = std::make_unique<EpBackendAllocator>(ep_device, options);
+  auto ep_backend_allocator = std::make_unique<EpBackendHostAllocator>(ep_device, options);
   device_ctx->reset(new EpDeviceCtx(stream->device(), std::move(ep_backend_allocator)));
 }
 
