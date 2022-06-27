@@ -36,6 +36,14 @@ class TestTensor(flow.unittest.TestCase):
             np.allclose(tensor.numpy(), np.ones(shape, dtype=np.float32))
         )
 
+        shape = flow.Size((2, 3, 4, 5))
+        tensor = flow.Tensor(shape)
+        flow.nn.init.ones_(tensor)
+        test_case.assertTrue(tensor.dtype == flow.float32)
+        test_case.assertTrue(
+            np.allclose(tensor.numpy(), np.ones(shape, dtype=np.float32))
+        )
+
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_deepcopy(test_case):
         shape = (2, 3)

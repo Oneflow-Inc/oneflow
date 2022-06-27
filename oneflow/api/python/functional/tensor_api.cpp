@@ -17,6 +17,7 @@ limitations under the License.
 #include <memory>
 
 #include "oneflow/api/python/utils/tensor_utils.h"
+#include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/tensor_api.yaml.h"
 #include "oneflow/core/common/optional.h"
@@ -135,6 +136,7 @@ class TensorWithDataCtorFunctor {
       Shape shape(DimVector{size});
       return TensorWithShapeCtor(shape, device);
     }
+    if (TensorSize_Check(data)) { return TensorWithShapeCtor(TensorSize_AsShape(data), device); }
 
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
@@ -163,6 +165,9 @@ class ConsistentTensorWithDataCtorFunctor {
       int64_t size = PyLong_AsLongLong(data);
       Shape shape(DimVector{size});
       return ConsistentTensorWithShapeCtor(shape, placement, sbp_tuple);
+    }
+    if (TensorSize_Check(data)) {
+      return ConsistentTensorWithShapeCtor(TensorSize_AsShape(data), placement, sbp_tuple);
     }
 
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
