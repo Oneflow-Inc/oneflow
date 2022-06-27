@@ -23,9 +23,9 @@ import oneflow.unittest
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
-class TestDetachGraph(oneflow.unittest.TestCase):
-    def test_clone_graph(test_case):
-        class DetachGraph(flow.nn.Graph):
+class TestTensorDetachGraph(oneflow.unittest.TestCase):
+    def test_tensor_detach_graph(test_case):
+        class TensorDetachGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
 
@@ -35,7 +35,7 @@ class TestDetachGraph(oneflow.unittest.TestCase):
                 return x, y
 
         x = flow.randn(3, 4)
-        res = DetachGraph()(x)
+        res = TensorDetachGraph()(x)
         test_case.assertTrue(len(res) == 2)
         test_case.assertTrue(np.allclose(res[0], res[1], 1e-05, 1e-05))
 

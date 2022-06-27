@@ -23,9 +23,9 @@ import oneflow.unittest
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
-class TestCloneGraph(oneflow.unittest.TestCase):
-    def test_clone_graph(test_case):
-        class CloneGraph(flow.nn.Graph):
+class TestTensorCloneGraph(oneflow.unittest.TestCase):
+    def test_tensor_clone_graph(test_case):
+        class TensorCloneGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
 
@@ -35,7 +35,7 @@ class TestCloneGraph(oneflow.unittest.TestCase):
                 return x, y
 
         x = flow.randn(3, 4)
-        res = CloneGraph()(x)
+        res = TensorCloneGraph()(x)
         test_case.assertTrue(len(res) == 2)
         test_case.assertTrue(np.allclose(res[0], res[1] * 2, 1e-05, 1e-05))
 
