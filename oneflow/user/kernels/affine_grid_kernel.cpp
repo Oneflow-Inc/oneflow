@@ -16,8 +16,8 @@ limitations under the License.
 
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/ep/include/primitive/matmul.h"
 #include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/ep/include/primitive/matmul.h"
 #include "affine_grid_kernel.h"
 
 namespace oneflow {
