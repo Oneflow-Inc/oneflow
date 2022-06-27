@@ -26,3 +26,10 @@ Optimizations on OneFlow MLIR dialect. A CLI to optimize .mlir file. [read more]
 
 - ### OneFlow dialect
 In the `include` and `lib` directories, there are definitions of MLIR OneFlow dialect and its operators.
+
+## Development
+
+- To run all the regression tests. The `-j3` option for [`LIT`](https://llvm.org/docs/CommandGuide/lit.html) is to prevent OOM on GPU.
+    ```bash
+    LIT_OPTS="-j3" cmake --build build -t c1 -j24
+    ```
