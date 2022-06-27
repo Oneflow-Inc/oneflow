@@ -30,7 +30,7 @@ Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
     const auto device = JUST(Device::New(out_device->type(), out_device->device_id()));
     return Stream::New(device, StreamRole::kHost2Device);
   } else if (in_device->type() == "cpu" && out_device->type() == "cpu" && pin_memory) {
-    return Stream::New(out_device, StreamRole::kPinMemory);
+    return Stream::New(out_device, StreamRole::kPinnedCompute);
   } else {
     CHECK_EQ_OR_RETURN(in_device->type(), out_device->type());
     return Stream::New(out_device, StreamRole::kCompute);

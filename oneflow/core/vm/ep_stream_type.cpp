@@ -36,7 +36,7 @@ void EpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream*
   size_t device_index = stream->device()->device_id();
   auto ep_device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
   ep::AllocationOptions options{};
-  if (stream->stream_role() == StreamRole::kPinMemory) {
+  if (stream->stream_role() == StreamRole::kPinnedCompute) {
     CHECK_EQ(device_type, DeviceType::kCPU)
         << "cannot pin tensor with device: " << stream->device()->type()
         << ", only dense CPU tensors can be pinned.";

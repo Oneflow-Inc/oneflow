@@ -28,7 +28,7 @@ Maybe<Symbol<Stream>> MakeEmptyStream(const Symbol<Device>& out_device, const bo
   if (pin_memory) {
     CHECK_OR_RETURN(out_device->type() == "cpu")
         << "empty op only support pin_memory in cpu device but got " << out_device->type();
-    return Stream::New(out_device, StreamRole::kPinMemory);
+    return Stream::New(out_device, StreamRole::kPinnedCompute);
   }
   return Stream::New(out_device, StreamRole::kCompute);
 }

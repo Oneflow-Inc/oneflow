@@ -33,7 +33,7 @@ enum class StreamRole {
   kBarrier,
   kCriticalSection,
   kLazyJobLauncher,
-  kPinMemory
+  kPinnedCompute
 };
 
 template<typename DerivedT>
@@ -54,7 +54,7 @@ struct StreamRoleVisitor {
         return DerivedT::VisitCriticalSection(std::forward<Args>(args)...);
       case StreamRole::kLazyJobLauncher:
         return DerivedT::VisitLazyJobLauncher(std::forward<Args>(args)...);
-      case StreamRole::kPinMemory: return DerivedT::VisitPinMemory(std::forward<Args>(args)...);
+      case StreamRole::kPinnedCompute: return DerivedT::VisitPinMemory(std::forward<Args>(args)...);
     }
     LOG(FATAL) << "invalid stream role";
   }

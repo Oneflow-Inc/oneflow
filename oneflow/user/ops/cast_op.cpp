@@ -27,7 +27,7 @@ Maybe<Symbol<Stream>> MakeCastStream(const Symbol<Device>& in_device,
   if (pin_memory) {
     CHECK_OR_RETURN(in_device->type() == "cpu")
         << "cast op only support pin_memory in cpu device but got " << in_device->type();
-    return Stream::New(out_device, StreamRole::kPinMemory);
+    return Stream::New(out_device, StreamRole::kPinnedCompute);
   }
   return Stream::New(out_device, StreamRole::kCompute);
 }

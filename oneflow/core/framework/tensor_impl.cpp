@@ -122,7 +122,7 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
 
 Maybe<bool> EagerMirroredTensorImpl::is_pinned() const {
   if (!eager_blob_object_) { return false; }
-  return JUST(eager_blob_object_->producer_stream())->stream_role() == StreamRole::kPinMemory;
+  return JUST(eager_blob_object_->producer_stream())->stream_role() == StreamRole::kPinnedCompute;
 }
 
 Maybe<void> EagerMirroredTensorImpl::set_eager_blob_object(
