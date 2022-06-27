@@ -64,7 +64,7 @@ Runtime::Runtime(
     const HashMap<std::string, vm::EagerBlobObject*>& variable_op_name2eager_blob_object) {
   DumpThreadIdsFromPlan(plan);
   {
-    // NOTE(chengcheng): All runtime Global objects AddPlan
+    // NOTE(chengcheng): All runtime global(singleton) objects AddPlan
     Singleton<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob_object);
     Singleton<ThreadMgr>::Get()->AddThreads(thread_ids_);
     Singleton<RuntimeJobDescs>::Get()->AddPlan(plan);

@@ -60,7 +60,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   }
   for (const std::string& lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
   {
-    // NOTE(chengcheng): Init Global Runtime objects.
+    // NOTE(chengcheng): Init Global(singleton) Runtime objects.
     Singleton<RuntimeCtx>::New();
     Singleton<MemoryAllocator>::New();
     Singleton<ChunkMgr>::New();
@@ -86,7 +86,7 @@ Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto
 
 SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   {
-    // NOTE(chengcheng): Delete Global Runtime objects.
+    // NOTE(chengcheng): Delete Global(singleton) Runtime objects.
     Singleton<boxing::collective::Scheduler>::Delete();
     Singleton<summary::EventsWriter>::Delete();
     Singleton<RuntimeJobDescs>::Delete();
