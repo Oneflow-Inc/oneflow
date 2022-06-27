@@ -200,10 +200,13 @@ Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middl
   // NOTE: The performance of this function are all the same with different hierarchy
   int32_t world_size = GlobalProcessCtx::WorldSize();
   Shape hierarchy44({4 * world_size, 4 * world_size});
+  int32_t virtual_range_size = hierarchy44.elem_cnt();
   std::shared_ptr<Shape> virtual_hierarchy = std::make_shared<Shape>(hierarchy44);
   auto parallel_desc = JUST(ParallelDesc::New(
       "cpu", {"0:0-" + std::to_string(hierarchy44.elem_cnt() - 1)}, virtual_hierarchy));
-  BlobDesc blob_desc({16, 16, 16, 16}, DataType::kInt8, /*is_dynamic=*/false);
+  BlobDesc blob_desc({virtual_range_size, virtual_range_size, virtual_range_size,
+                      virtual_range_size, virtual_range_size, virtual_range_size},
+                     DataType::kInt8, /*is_dynamic=*/false);
   JUST(GenerateCombination4SamePlacement(max_middle_node_num, blob_desc, *parallel_desc));
   return Maybe<void>::Ok();
 }
@@ -319,7 +322,10 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(
     BoxingCollector* boxing_collector_producer, BoxingCollector* boxing_collector_consumer) {
   // Virtual parallel and blob description
   int32_t world_size = GlobalProcessCtx::WorldSize();
-  BlobDesc blob_desc({16, 16, 16, 16}, DataType::kInt8, /*is_dynamic=*/false);
+  int32_t virtual_range_size = 4 * world_size * (4 * world_size + 1);
+  BlobDesc blob_desc({virtual_range_size, virtual_range_size, virtual_range_size,
+                      virtual_range_size, virtual_range_size, virtual_range_size},
+                     DataType::kInt8, /*is_dynamic=*/false);
   // Virtual placements before transfer
   Shape in_hierarchy44({4 * world_size + 1, 4 * world_size});
   std::shared_ptr<Shape> in_hierarchy = std::make_shared<Shape>(in_hierarchy44);
