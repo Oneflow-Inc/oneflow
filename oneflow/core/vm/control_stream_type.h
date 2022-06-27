@@ -37,7 +37,7 @@ class ControlStreamType final : public StreamType {
                                InstructionStatusBuffer* status_buffer) const override;
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
-  void Compute(Instruction* instruction) const override;
+  void Run(Instruction* instruction) const override;
 
   bool OnSchedulerThread(StreamRole) const override { return true; }
   bool SupportingTransportInstructions() const override { return false; }

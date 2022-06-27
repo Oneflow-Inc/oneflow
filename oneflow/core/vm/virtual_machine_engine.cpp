@@ -318,7 +318,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
   if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
   // Prepare
   {
-    const auto& ret = TRY(instruction->instruction_type().PrepareIf(instruction));
+    const auto& ret = TRY(instruction->Prepare());
     if (unlikely(!ret.IsOk())) {
       if (ret.error()->has_out_of_memory_error()) {
         // Waits previous instructions done before shrinking memory..
@@ -330,8 +330,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
           if (shrinkable_cache != nullptr) { shrinkable_cache->Shrink(); }
         }
         // Infers the instruction again.
-        CHECK_JUST_MSG(instruction->instruction_type().PrepareIf(instruction),
-                       std::stringstream() << DebugDeviceReset(stream));
+        CHECK_JUST_MSG(instruction->Prepare(), std::stringstream() << DebugDeviceReset(stream));
       } else {
         CHECK_JUST(ret);
       }

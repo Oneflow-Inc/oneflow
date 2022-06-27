@@ -54,9 +54,7 @@ class FuseInstructionType : public vm::InstructionType {
     auto* ptr = dynamic_cast<vm::FusePhyInstrOperand*>(phy_instr_operand.get());
     auto* instruction_list = CHECK_NOTNULL(ptr)->mut_instruction_list();
     OF_PROFILER_RANGE_GUARD("F:" + instruction->DebugName());
-    INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, instruction_list) {
-      instruction->instruction_type().ComputeIf(instruction);
-    }
+    INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, instruction_list) { instruction->Compute(); }
   }
 };
 

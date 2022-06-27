@@ -46,9 +46,7 @@ bool CriticalSectionStreamType::QueryInstructionStatusDone(
   return CriticalSectionStatusQuerier::Cast(status_buffer.buffer())->QueryDone();
 }
 
-void CriticalSectionStreamType::Compute(Instruction* instruction) const {
-  instruction->instruction_type().ComputeIf(instruction);
-}
+void CriticalSectionStreamType::Run(Instruction* instruction) const { instruction->Compute(); }
 
 }  // namespace vm
 }  // namespace oneflow
