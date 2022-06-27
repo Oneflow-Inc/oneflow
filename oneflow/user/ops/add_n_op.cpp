@@ -21,7 +21,7 @@ namespace oneflow {
 /* static */ Maybe<void> AddNOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const auto& in_0 = ctx->InputTensorDesc("in", 0);
   auto* out = ctx->OutputTensorDesc("out", 0);
-  CHECK_NOTNULL_OR_RETURN(out)<<"out is nullptr";//NOLINT(maybe-need-error-msg)
+  CHECK_NOTNULL_OR_RETURN(out);//NOLINT(maybe-need-error-msg)
   for (const auto& pair : ctx->inputs()) {
     const auto& cur_in = ctx->InputTensorDesc(pair.first, pair.second);
     if (in_0.shape().NumAxes() > 0 && cur_in.shape().NumAxes() > 0) {
