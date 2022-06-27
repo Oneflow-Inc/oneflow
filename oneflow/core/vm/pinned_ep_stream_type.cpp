@@ -31,34 +31,35 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void PinnedEpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const {
+void PinnedEpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
+                                       Stream* stream) const {
   DeviceType device_type = stream->device()->enum_type();
   size_t device_index = stream->device()->device_id();
   auto ep_device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
   ep::AllocationOptions options{};
   CHECK_EQ(device_type, DeviceType::kCPU)
-        << "cannot pin tensor with device: " << stream->device()->type()
-        << ", only dense CPU tensors can be pinned.";
+      << "cannot pin tensor with device: " << stream->device()->type()
+      << ", only dense CPU tensors can be pinned.";
   options.SetPinnedDevice(device_type, device_index);
   auto ep_backend_allocator = std::make_unique<EpBackendAllocator>(ep_device, options);
   device_ctx->reset(new EpDeviceCtx(stream->device(), std::move(ep_backend_allocator)));
 }
 
 void PinnedEpStreamType::InitInstructionStatus(const Stream& stream,
-                                         InstructionStatusBuffer* status_buffer) const {
+                                               InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(EpOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
   auto* data_ptr = status_buffer->mut_buffer();
   EpOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, nullptr);
 }
 
 void PinnedEpStreamType::DeleteInstructionStatus(const Stream& stream,
-                                           InstructionStatusBuffer* status_buffer) const {
+                                                 InstructionStatusBuffer* status_buffer) const {
   auto* ptr = EpOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer());
   ptr->~EpOptionalEventRecordStatusQuerier();
 }
 
-bool PinnedEpStreamType::QueryInstructionStatusDone(const Stream& stream,
-                                              const InstructionStatusBuffer& status_buffer) const {
+bool PinnedEpStreamType::QueryInstructionStatusDone(
+    const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   return EpOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer())->done();
 }
 
