@@ -27,6 +27,17 @@ Optimizations on OneFlow MLIR dialect. A CLI to optimize .mlir file. [read more]
 - ### OneFlow dialect
 In the `include` and `lib` directories, there are definitions of MLIR OneFlow dialect and its operators.
 
+## Parallel Signature
+There is parallel signature for OneFlow Ops in MLIR. It is implemented as MLIR dialect attribute. Some examples:
+- 1D SBP
+    ```mlir
+    %100 = "oneflow.relu"(%99) {oneflow.parallel = #oneflow.parallel.signature<S(0), S(0)>, ...
+    ```
+- multiple inputs and outputs 1D SBP
+    ```mlir
+    %102 = "oneflow.add_n2"(%101, %97) {oneflow.parallel = #oneflow.parallel.signature<[S(0), S(0)], S(0)>, ...
+    ```
+
 ## Development
 
 - To run all the regression tests. The `-j3` option for [`LIT`](https://llvm.org/docs/CommandGuide/lit.html) is to prevent OOM on GPU.
