@@ -25,7 +25,7 @@ def lr_def(func):
         print(ast.dump(_ast))
         transformer.visit(_ast)
         print(ast.dump(_ast))
-        # oneflow._oneflow_internal.ir.compile_and_register_lr_jit(_ast, _id)
+        oneflow._oneflow_internal.ir.compile_and_register_lr_jit(_ast, _id)
 
     return wrapper
 
