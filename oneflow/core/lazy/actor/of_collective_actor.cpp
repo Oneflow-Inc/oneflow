@@ -571,7 +571,7 @@ void OfCollectiveActor::ReactToNegoCmd(const ActorMsg& msg) {
     case CollectiveNegoCmd::kCollectiveDone:
       CHECK(collective_status_ == CollectiveStatus::kCanAct) << "Actor " << actor_id_ << " In status " << print_status_[collective_status_] << " should not get " << "kCollectiveStart";
 
-      LOG_IF(ERROR, ParseBooleanFromEnv("ONEFLOW_OFCCL_SHOW_NEGO_LOG", false)) << "Actor " << actor_id_ << " receive kCollectiveDone and will return regsts and ResetCollectiveStatus";
+      LOG_IF(ERROR, ParseBooleanFromEnv("ONEFLOW_OFCCL_SHOW_RUN_LOG", false)) << "Actor " << actor_id_ << " receive kCollectiveDone and will return regsts and ResetCollectiveStatus";
       
       AsyncSendNaiveProducedRegstMsgToConsumer();
       // no inplace ctrl regst
@@ -663,7 +663,7 @@ void OfCollectiveActor::Act() {
     );
   });
 
-  LOG_IF(ERROR, ParseBooleanFromEnv("ONEFLOW_OFCCL_SHOW_NEGO_LOG", false)) << "Actor " << actor_id_ << " will send itself kCollectiveDone after kernel finish";
+  LOG_IF(ERROR, ParseBooleanFromEnv("ONEFLOW_OFCCL_SHOW_RUN_LOG", false)) << "Actor " << actor_id_ << " will send itself kCollectiveDone after kernel finish";
 
 
   LOG_IF(ERROR, ParseBooleanFromEnv("ONEFLOW_OFCCL_SHOW_NEGO_LOG", false)) << "Actor " << actor_id_ << " OfCollectiveActor::Act() Done";
