@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/cuda/elementwise.cuh"
+#include "oneflow/core/cuda/atomic.cuh"
 #include <cub/cub.cuh>
 
 namespace oneflow {
@@ -27,45 +28,68 @@ namespace {
 constexpr int32_t kBlockSize = 1024;
 
 template<typename T>
-__global__ void FusedBinaryCrossEntropyWithLogitsReduceMeanKernel(const T* input, const T* target,
-                                                                  T* out, const int32_t elem_cnt) {
-  T zero = static_cast<T>(0.0);
-  T one = static_cast<T>(1.0);
-  using BlockReduce = cub::BlockReduce<T, kBlockSize>;
+struct DefaultComputeType {
+  using type = T;
+};
+
+template<>
+struct DefaultComputeType<half> {
+  using type = float;
+};
+
+template<class Func>
+inline cudaError_t GetNumBlocks(Func func, int64_t block_size, size_t dynamic_smem_size,
+                                int64_t max_blocks, int64_t waves, int* num_blocks) {
+  int dev;
+  {
+    cudaError_t err = cudaGetDevice(&dev);
+    if (err != cudaSuccess) { return err; }
+  }
+  int sm_count;
+  {
+    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
+    if (err != cudaSuccess) { return err; }
+  }
+  int max_active_blocks;
+  {
+    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks, func,
+                                                                    block_size, dynamic_smem_size);
+  }
+  *num_blocks =
+      std::max<int>(1, std::min<int64_t>(max_blocks, sm_count * max_active_blocks * waves));
+  return cudaSuccess;
+}
+
+template<typename In, typename Out, typename ComputeType>
+__global__ void FusedBinaryCrossEntropyWithLogitsReduceMeanKernel(const In* input, const In* target,
+                                                                  Out* out,
+                                                                  const int32_t elem_cnt) {
+  ComputeType zero = static_cast<ComputeType>(0.0);
+  ComputeType one = static_cast<ComputeType>(1.0);
+  using BlockReduce = cub::BlockReduce<ComputeType, kBlockSize>;
   __shared__ typename BlockReduce::TempStorage temp_storage;
-  T reduce_sum = 0.0;
+  ComputeType reduce_sum = 0.0;
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const T input_val = input[i];
-    const T target_val = target[i];
-    const T max_val = -input_val < zero ? zero : -input_val;
-    const T result =
+    const ComputeType input_val = static_cast<ComputeType>(input[i]);
+    const ComputeType target_val = static_cast<ComputeType>(target[i]);
+    const ComputeType max_val = -input_val < zero ? zero : -input_val;
+    const ComputeType result =
         (one - target_val) * input_val + max_val + (log(exp(-max_val) + exp(-input_val - max_val)));
     reduce_sum += result;
   }
-  const T block_reduce_sum = BlockReduce(temp_storage).Sum(reduce_sum);
-  if (threadIdx.x == 0) { out[0] = block_reduce_sum / elem_cnt; }
+
+  const ComputeType block_reduce_sum = BlockReduce(temp_storage).Sum(reduce_sum);
+  if (threadIdx.x == 0) { out[blockIdx.x] = static_cast<Out>(block_reduce_sum / elem_cnt); }
 }
 
-template<>
-__global__ void FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<half>(const half* input,
-                                                                        const half* target,
-                                                                        half* out,
-                                                                        const int32_t elem_cnt) {
-  float zero = static_cast<float>(0.0);
-  float one = static_cast<float>(1.0);
-  using BlockReduce = cub::BlockReduce<float, kBlockSize>;
+template<typename Out, typename ComputeType>
+__global__ void ReduceLocalSumKernel(ComputeType* block_local_sum_buf, Out* out, int64_t elem_cnt) {
+  using BlockReduce = cub::BlockReduce<ComputeType, kBlockSize>;
   __shared__ typename BlockReduce::TempStorage temp_storage;
-  float reduce_sum = 0.0;
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const float input_val = __half2float(input[i]);
-    const float target_val = __half2float(target[i]);
-    const float max_val = -input_val < zero ? zero : -input_val;
-    const float result =
-        (one - target_val) * input_val + max_val + (log(exp(-max_val) + exp(-input_val - max_val)));
-    const float block_reduce_sum = BlockReduce(temp_storage).Sum(result);
-    if (threadIdx.x == 0) { reduce_sum += block_reduce_sum; }
-  }
-  if (threadIdx.x == 0) { out[0] = __float2half(reduce_sum / elem_cnt); }
+  ComputeType reduce_sum = 0.0;
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) { reduce_sum += block_local_sum_buf[i]; }
+  const ComputeType block_reduce_sum = BlockReduce(temp_storage).Sum(reduce_sum);
+  if (threadIdx.x == 0) { out[0] = static_cast<Out>(block_reduce_sum); }
 }
 
 template<typename T>
@@ -85,25 +109,26 @@ __device__ __forceinline__ half CalSigmoid(const half x) {
   return __float2half(CalSigmoid(__half2float(x)));
 }
 
-template<typename T>
+template<typename T, typename ComputeType>
 struct BinaryCrossEntropyWithLogitsReduceMeanGradFunctor {
   OF_DEVICE_FUNC explicit BinaryCrossEntropyWithLogitsReduceMeanGradFunctor(
       const T elem_cnt_reciprocal, const T dy)
       : elem_cnt_reciprocal(elem_cnt_reciprocal), dy(dy) {}
   __device__ T operator()(const T input_val, const T target_val) const {
-    return (CalSigmoid(input_val) - target_val) * dy * elem_cnt_reciprocal;
+    return (CalSigmoid<ComputeType>(input_val), target_val) * dy * elem_cnt_reciprocal;
   }
   const T dy;
   const T elem_cnt_reciprocal;
 };
 
-template<typename T>
+template<typename T, typename ComputeType>
 struct BinaryCrossEntropyWithLogitsReduceMeanGradDyptrFunctor {
   OF_DEVICE_FUNC explicit BinaryCrossEntropyWithLogitsReduceMeanGradDyptrFunctor(
       const int32_t elem_cnt, const T* dy_ptr)
       : elem_cnt_reciprocal(1.0f / elem_cnt), dy_ptr(dy_ptr) {}
-  __device__ BinaryCrossEntropyWithLogitsReduceMeanGradFunctor<T> operator()() const {
-    return BinaryCrossEntropyWithLogitsReduceMeanGradFunctor<T>(elem_cnt_reciprocal, *dy_ptr);
+  __device__ BinaryCrossEntropyWithLogitsReduceMeanGradFunctor<T, ComputeType> operator()() const {
+    return BinaryCrossEntropyWithLogitsReduceMeanGradFunctor<T, ComputeType>(elem_cnt_reciprocal,
+                                                                             *dy_ptr);
   }
   const T* dy_ptr;
   const T elem_cnt_reciprocal;
@@ -127,11 +152,28 @@ class BinaryCrossEntropyWithLogitsMeanKernel final : public user_op::OpKernel {
     const T* input = input_blob->dptr<T>();
     const T* target = target_blob->dptr<T>();
     T* out = out_blob->mut_dptr<T>();
+    using ComputeType = typename DefaultComputeType<T>::type;
 
-    FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<<<
-        1, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-        input_blob->dptr<T>(), target_blob->dptr<T>(), out_blob->mut_dptr<T>(),
-        input_blob->shape_view().elem_cnt());
+    if (elem_cnt < kBlockSize) {
+      FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<T, T, ComputeType>
+          <<<1, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+              input_blob->dptr<T>(), target_blob->dptr<T>(), out_blob->mut_dptr<T>(),
+              input_blob->shape_view().elem_cnt());
+    } else {
+      auto* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+      const int64_t block_num = (elem_cnt + kBlockSize - 1) / kBlockSize;
+      int launch_block = block_num;
+      OF_CUDA_CHECK(GetNumBlocks(
+          FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<T, ComputeType, ComputeType>,
+          kBlockSize, 0, block_num, 32, &launch_block));
+      FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<T, ComputeType, ComputeType>
+          <<<launch_block, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+              input_blob->dptr<T>(), target_blob->dptr<T>(), tmp_buffer->mut_dptr<ComputeType>(),
+              input_blob->shape_view().elem_cnt());
+      ReduceLocalSumKernel<T, ComputeType>
+          <<<1, 256, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+              tmp_buffer->mut_dptr<ComputeType>(), out_blob->mut_dptr<T>(), block_num);
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -155,23 +197,35 @@ class BinaryCrossEntropyWithLogitsReduceMeanGradKernel final : public user_op::O
     const T* input = input_blob->dptr<T>();
     const T* target = target_blob->dptr<T>();
     T* dx = dx_blob->mut_dptr<T>();
+    using ComputeType = typename DefaultComputeType<T>::type;
 
     OF_CUDA_CHECK((cuda::elementwise::BinaryWithFactory(
-        BinaryCrossEntropyWithLogitsReduceMeanGradDyptrFunctor<T>(elem_cnt, dy), elem_cnt, dx,
-        input, target, ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
+        BinaryCrossEntropyWithLogitsReduceMeanGradDyptrFunctor<T, ComputeType>(elem_cnt, dy),
+        elem_cnt, dx, input, target, ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 }  // namespace
 
-#define REGISTER_BINARY_CROSS_ENTROPY_REDUCE_MEAN_KERNEL(dtype)                            \
-  REGISTER_USER_KERNEL("binary_cross_entropy_with_logits_reduce_mean")                     \
-      .SetCreateFn<BinaryCrossEntropyWithLogitsMeanKernel<dtype>>()                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                     \
-                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)  \
-                       && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value) \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+#define REGISTER_BINARY_CROSS_ENTROPY_REDUCE_MEAN_KERNEL(dtype)                                 \
+  REGISTER_USER_KERNEL("binary_cross_entropy_with_logits_reduce_mean")                          \
+      .SetCreateFn<BinaryCrossEntropyWithLogitsMeanKernel<dtype>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)       \
+                       && (user_op::HobDataType("target", 0) == GetDataType<dtype>::value)      \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
+        const int64_t elem_cnt = ctx->InputShape("input", 0).elem_cnt();                        \
+        const int64_t block_num = (elem_cnt + kBlockSize - 1) / kBlockSize;                     \
+        int launch_block = block_num;                                                           \
+        using ComputeType = typename DefaultComputeType<dtype>::type;                           \
+        OF_CUDA_CHECK(GetNumBlocks(                                                             \
+            FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<dtype, ComputeType, ComputeType>, \
+            kBlockSize, 0, block_num, 32, &launch_block));                                      \
+        const int64_t tmp_buffer_size = GetCudaAlignedSize(launch_block * sizeof(dtype));       \
+        return tmp_buffer_size;                                                                 \
+      });
 
 #define REGISTER_BINARY_CROSS_ENTROPY_REDUCE_MEAN_GRAD_KERNEL(dtype)                       \
   REGISTER_USER_KERNEL("binary_cross_entropy_with_logits_reduce_mean_grad")                \
