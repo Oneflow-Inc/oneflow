@@ -125,7 +125,7 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
-class StatefulLocalOpKernel;
+class StatefulOpKernel;
 class ConsistentTensorInferCache;
 
 class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
@@ -139,7 +139,7 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
 
   const AttrMap& base_attrs() const { return base_attrs_; }
 
-  Maybe<StatefulLocalOpKernel> MutKernel4Stream(Symbol<Stream> stream) const;
+  Maybe<StatefulOpKernel> MutKernel4Stream(Symbol<Stream> stream) const;
 
   bool has_device_and_stream_infer_fn() const {
     return static_cast<bool>(device_and_stream_infer_fn_);
@@ -172,7 +172,7 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   user_op::TensorDescInferFn tensor_desc_infer_fn_;
   user_op::DataTypeInferFn dtype_infer_fn_;
   user_op::DeviceAndStreamInferFn device_and_stream_infer_fn_;
-  mutable HashMap<Symbol<Stream>, std::shared_ptr<StatefulLocalOpKernel>> stream2kernel_;
+  mutable HashMap<Symbol<Stream>, std::shared_ptr<StatefulOpKernel>> stream2kernel_;
   std::shared_ptr<ConsistentTensorInferCache> consistent_tensor_infer_cache_;
 };
 

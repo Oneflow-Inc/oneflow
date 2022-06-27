@@ -59,5 +59,19 @@ class TestModule(flow.unittest.TestCase):
         return z
 
 
+    def test_flow_mv_with_random_data(test_case):
+        device = random_device()
+        k = random(1, 6)
+        x = random_tensor(ndim=2, dim1=k).to(device)
+        y = random_tensor(ndim=1, dim0=k).to(device)
+        z = torch.mv(x, y)
+        return z
+
+    @profile(torch.mv)
+    def profile_mv(test_case):
+        torch.mv(torch.ones(32, 64), torch.ones(64))
+
+
+
 if __name__ == "__main__":
     unittest.main()

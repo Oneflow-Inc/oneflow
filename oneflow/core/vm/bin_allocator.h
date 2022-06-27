@@ -18,18 +18,20 @@ limitations under the License.
 
 #include <cstdint>
 #include "oneflow/core/vm/allocator.h"
+#include "oneflow/core/vm/shrinkable_cache.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 namespace vm {
 
-class BinAllocator final : public Allocator {
+class BinAllocator final : public Allocator, public ShrinkableCache {
  public:
   explicit BinAllocator(size_t alignment, std::unique_ptr<Allocator>&& backend);
   ~BinAllocator() override;
 
   void Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
+  void Shrink() override { DeallocateFreeBlockForGarbageCollection(); }
 
  private:
   static constexpr int32_t kInvalidBinNum = -1;

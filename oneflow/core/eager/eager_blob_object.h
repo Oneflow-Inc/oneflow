@@ -24,6 +24,8 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/tensor_methods.h"
+#include "oneflow/core/framework/user_op_tensor.h"
+#include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/register/blob.h"
 
 namespace oneflow {
@@ -52,15 +54,15 @@ class TensorStorage {
     blob_bytes_ = bytes;
   }
 
-  const Optional<Symbol<Stream>>& producer_stream() const { return producer_stream_; }
-  Maybe<void> init_producer_stream(Symbol<Stream> producer_stream) {
+  const Optional<Symbol<::oneflow::Stream>>& producer_stream() const { return producer_stream_; }
+  Maybe<void> init_producer_stream(Symbol<::oneflow::Stream> producer_stream) {
     CHECK_OR_RETURN(!producer_stream_.has_value());
     producer_stream_ = producer_stream;
     return Maybe<void>::Ok();
   }
 
-  const Optional<Symbol<Stream>>& last_used_stream() const { return last_used_stream_; }
-  void set_last_used_stream(Symbol<Stream> last_used_stream) {
+  const Optional<Symbol<::oneflow::Stream>>& last_used_stream() const { return last_used_stream_; }
+  void set_last_used_stream(Symbol<::oneflow::Stream> last_used_stream) {
     last_used_stream_ = last_used_stream;
   }
 
@@ -77,12 +79,12 @@ class TensorStorage {
   size_t blob_bytes_;
   std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
   std::unique_ptr<MemoryAllocator> non_pod_allocator_;
-  Optional<Symbol<Stream>> producer_stream_;
-  Optional<Symbol<Stream>> last_used_stream_;
+  Optional<Symbol<::oneflow::Stream>> producer_stream_;
+  Optional<Symbol<::oneflow::Stream>> last_used_stream_;
   std::vector<std::function<void()>> storage_delete_hooks_;
 };
 
-class EagerBlobObject final {
+class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc {
  public:
   EagerBlobObject(const EagerBlobObject&) = delete;
   EagerBlobObject(EagerBlobObject&&) = delete;
@@ -97,6 +99,26 @@ class EagerBlobObject final {
                   const intrusive::shared_ptr<LocalDepObject>& dep_object);
 
   ~EagerBlobObject() { tensor_storage_.reset(); }
+
+  // user_op::TensorDesc overrides
+  const Shape& shape() const override { return *shape_; }
+  Shape* mut_shape() override { return shape_.get(); }
+  const Stride& stride() const override { return *stride_; }
+  Stride* mut_stride() override { return stride_.get(); }
+  DataType data_type() const override { return data_type_; }
+  DataType* mut_data_type() override { return &data_type_; }
+  bool is_dynamic() const override { return is_dynamic_; }
+  bool* mut_is_dynamic() override { return &is_dynamic_; }
+  void set_is_dynamic(bool is_dynamic) override { is_dynamic_ = is_dynamic; }
+
+  // user_op::Tensor overrides
+  ShapeView shape_view() const override { return *shape_; }
+  MutShapeView mut_shape_view() override { return *shape_; }
+  const MemoryCase& mem_case() const override { return *mem_case_; }
+  const void* raw_dptr() const override {
+    return tensor_storage_->blob_dptr() + storage_offset_ * GetSizeOfDataType(data_type_);
+  }
+  void* mut_raw_dptr() override { return const_cast<void*>(raw_dptr()); }
 
   void set_storage_offset(const int64_t offset);
 
@@ -125,17 +147,17 @@ class EagerBlobObject final {
 
   void set_is_shape_synced(bool val) { is_shape_synced_ = val; }
 
-  const Optional<Symbol<Stream>>& producer_stream() const {
+  const Optional<Symbol<::oneflow::Stream>>& producer_stream() const {
     return tensor_storage_->producer_stream();
   }
-  Maybe<void> init_producer_stream(Symbol<Stream> producer_stream) {
+  Maybe<void> init_producer_stream(Symbol<::oneflow::Stream> producer_stream) {
     return tensor_storage_->init_producer_stream(producer_stream);
   }
 
-  const Optional<Symbol<Stream>>& last_used_stream() const {
+  const Optional<Symbol<::oneflow::Stream>>& last_used_stream() const {
     return tensor_storage_->last_used_stream();
   }
-  void set_last_used_stream(Symbol<Stream> last_used_stream) {
+  void set_last_used_stream(Symbol<::oneflow::Stream> last_used_stream) {
     tensor_storage_->set_last_used_stream(last_used_stream);
   }
 
@@ -144,11 +166,7 @@ class EagerBlobObject final {
   bool pin_memory() const { return pin_memory_; }
 
   std::shared_ptr<const Shape> shape_ptr() const { return shape_; }
-  const Shape& shape() const { return *shape_; }
-  Shape& mut_shape() { return *shape_; }
   std::shared_ptr<const Stride> stride_ptr() const { return stride_; }
-  const Stride& stride() const { return *stride_; }
-  Stride& mut_stride() { return *stride_; }
 
   size_t ByteSizeOfBlobBody() const { return shape_->elem_cnt() * GetSizeOfDataType(data_type_); }
   size_t AlignedByteSizeOfBlobBody() const {
@@ -159,27 +177,8 @@ class EagerBlobObject final {
     return RoundUp(ByteSizeOfBlobHeader(), kBlobHeaderAlignSize);
   }
 
-  template<typename T = void>
-  const T* dptr() const {
-    return reinterpret_cast<T*>(tensor_storage_->blob_dptr()
-                                + storage_offset_ * GetSizeOfDataType(data_type_));
-  }
-
-  template<typename T = void>
-  T* mut_dptr() {
-    return const_cast<T*>(dptr<T>());
-  }
-
   const char* header_ptr() const { return reinterpret_cast<const char*>(shape_->dim_vec().data()); }
   char* mut_header_ptr() { return reinterpret_cast<char*>(shape_->dim_vec().data()); }
-
-  DataType data_type() const { return data_type_; }
-  DataType* mut_data_type() { return &data_type_; }
-  const MemoryCase& mem_case() const { return *mem_case_; }
-
-  bool is_dynamic() const { return is_dynamic_; }
-  void set_is_dynamic(bool is_dynamic) { is_dynamic_ = is_dynamic; }
-  bool* mut_is_dynamic() { return &is_dynamic_; }
 
  private:
   bool is_dynamic_;

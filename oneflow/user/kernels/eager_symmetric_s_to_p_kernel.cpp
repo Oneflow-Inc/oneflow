@@ -108,7 +108,7 @@ class EagerSymmetricSToPKernel final : public user_op::OpKernel {
     CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const auto& out_shape_view = out->shape();
+    const auto& out_shape_view = out->shape_view();
 
     const void* in_ptr = in->dptr();
     void* out_ptr = out->mut_dptr();

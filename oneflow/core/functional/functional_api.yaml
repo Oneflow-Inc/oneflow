@@ -971,6 +971,10 @@
 - name: "mm"
   signature:
     "Tensor (Tensor input, Tensor mat2) => MatMulNoBroadCast"
+
+- name: "mv"
+  signature:
+    "Tensor (Tensor input, Tensor vec) => Mv"
   bind_python: True
 
 - name: "fused_mlp"
@@ -2237,6 +2241,13 @@
 
 - name: "pin_memory"
   signature: "Tensor (Tensor input) => PinMemory"
+  bind_python: True
+
+- name: "fill_"
+  signature: [
+    "Tensor (Tensor in, Scalar value) => Fill",
+    "Tensor (Tensor in, Tensor value) => FillTensor"
+    ]
   bind_python: True
 
 - name: "rnn_tanh_cell"

@@ -427,14 +427,14 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
     user_op::Tensor* arg_tensor = Tensor4ArgNameAndIndex(arg_name, arg_index);
     CHECK(arg_tensor != nullptr) << "Tensor of arg (" << arg_name << "," << arg_index
                                  << ") is not found";
-    return arg_tensor->shape();
+    return arg_tensor->shape_view();
   }
   MutShapeView MutShapeView4ArgNameAndIndex(const std::string& arg_name,
                                             int32_t arg_index) override {
     user_op::Tensor* arg_tensor = Tensor4ArgNameAndIndex(arg_name, arg_index);
     CHECK(arg_tensor != nullptr) << "Tensor of arg (" << arg_name << "," << arg_index
                                  << ") is not found";
-    return arg_tensor->mut_shape();
+    return arg_tensor->mut_shape_view();
   }
 
   user_op::InferContext* MutOpInferContext() override { return &op_infer_ctx_; }
@@ -649,8 +649,13 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
         cuda_stream->LaunchGraph(cuda_graph_exec_.get());
         return;
       }
-      current_scope_capturing = true;
-      cuda_stream->BeginGraphCapture();
+      const auto* cuda_graph_support =
+          CHECK_NOTNULL(dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get()));
+      if (cuda_graph_support->IsReadyForCapture(ctx_.get(), opkernel_state,
+                                                opkernel_cache_.get())) {
+        current_scope_capturing = true;
+        cuda_stream->BeginGraphCapture();
+      }
     }
   }
 #endif  // WITH_CUDA_GRAPHS
@@ -672,6 +677,13 @@ bool UserKernel::IsCudaGraphSupported() const {
 #else
   return false;
 #endif  // WITH_CUDA_GRAPHS
+}
+
+bool UserKernel::IsReadyForCudaGraphCapture(KernelContext* ctx) const {
+  const auto* cuda_graph_support = dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get());
+  if (cuda_graph_support == nullptr) { return false; }
+  return cuda_graph_support->IsReadyForCapture(ctx_.get(), opkernel_state_.get(),
+                                               opkernel_cache_.get());
 }
 
 void UserKernel::VirtualKernelInit(KernelContext* ctx) {

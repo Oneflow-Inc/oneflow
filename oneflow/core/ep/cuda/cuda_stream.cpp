@@ -29,7 +29,7 @@ namespace ep {
 
 namespace {
 
-constexpr size_t kDefaultWorkspaceSize = 4 * 1024 * 1024;  // 4M
+constexpr size_t kDefaultWorkspaceSizeMb = 4;  // 4M
 
 void SetAffinityByDevice(int dev_id) {
   auto node_device_desc_mgr = Global<hardware::NodeDeviceDescriptorManager>::Get();
@@ -40,10 +40,6 @@ void SetAffinityByDevice(int dev_id) {
   if (!cuda_device) { return; }
   node_device_desc->Topology()->SetCPUAffinityByPCIBusID(cuda_device->PCIBusID());
   node_device_desc->Topology()->SetMemoryAffinityByPCIBusID(cuda_device->PCIBusID());
-}
-
-bool IsCuda9OnTuringDevice(const cudaDeviceProp& prop) {
-  return CUDA_VERSION >= 9000 && CUDA_VERSION < 9020 && prop.major == 7 && prop.minor == 5;
 }
 
 }  // namespace
@@ -101,21 +97,15 @@ CudaStream::CudaStream(CudaDevice* device)
     OF_CUBLAS_CHECK(cublasSetMathMode(cublas_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
   }
 #endif  // CUBLAS_VERSION >= 11000
-  workspace_size_ = kDefaultWorkspaceSize;
+  workspace_size_ =
+      ParseIntegerFromEnv("ONEFLOW_EP_CUDA_CUBLAS_WORKSPACE_SIZE_MB", kDefaultWorkspaceSizeMb)
+      * 1024 * 1024;
   OF_CUDA_CHECK(cudaMalloc(&workspace_, workspace_size_));
 #if CUBLAS_VERSION >= 11200
   OF_CUBLAS_CHECK(cublasSetWorkspace(cublas_handle_, workspace_, workspace_size_));
 #endif  // CUBLAS_VERSION >= 11200
   // cudnn_handle
-  if (IsCuda9OnTuringDevice(device_properties())) {
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
-    OF_CUDA_CHECK(cudaGetLastError());
-  }
   OF_CUDNN_CHECK(cudnnCreate(&cudnn_handle_));
-  if (IsCuda9OnTuringDevice(device_properties())) {
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
-    cudaGetLastError();
-  }
   OF_CUDNN_CHECK(cudnnSetStream(cudnn_handle_, cuda_stream_));
 }
 

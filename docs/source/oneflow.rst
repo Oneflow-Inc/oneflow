@@ -93,6 +93,7 @@ oneflow
             masked_select, 
             matmul, 
             mm, 
+            mv, 
             narrow, 
             max, 
             mean,
