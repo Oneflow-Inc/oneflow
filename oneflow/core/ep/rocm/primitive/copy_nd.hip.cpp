@@ -17,7 +17,7 @@ limitations under the License.
 
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
 #include "oneflow/core/ep/common/primitive/copy_nd.h"
-#include "oneflow/core/ep/hip/cuda_stream.h"
+#include "oneflow/core/ep/rocm/cuda_stream.h"
 #include <hip/hip_runtime.h>
 
 namespace oneflow {

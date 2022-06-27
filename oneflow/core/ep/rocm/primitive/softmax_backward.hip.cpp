@@ -16,9 +16,9 @@ limitations under the License.
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/ep/include/primitive/softmax_backward.h"
 #include "oneflow/core/ep/include/primitive/log_softmax_backward.h"
-#include "oneflow/core/ep/hip/primitive/type_seq.h"
+#include "oneflow/core/ep/rocm/primitive/type_seq.h"
 #include "oneflow/core/hip/softmax.hip.h"
-#include "oneflow/core/ep/hip/cuda_stream.h"
+#include "oneflow/core/ep/rocm/cuda_stream.h"
 
 namespace oneflow {
 

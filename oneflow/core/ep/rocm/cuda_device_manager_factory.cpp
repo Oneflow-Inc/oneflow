@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/ep/include/device_manager_factory.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
-#include "oneflow/core/ep/hip/cuda_device_manager.h"
+#include "oneflow/core/ep/rocm/cuda_device_manager.h"
 
 #ifdef WITH_ROCM
 

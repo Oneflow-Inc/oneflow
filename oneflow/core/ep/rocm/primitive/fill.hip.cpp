@@ -15,8 +15,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/ep/include/primitive/fill.h"
-#include "oneflow/core/ep/hip/primitive/type_seq.h"
-#include "oneflow/core/ep/hip/cuda_stream.h"
+#include "oneflow/core/ep/rocm/primitive/type_seq.h"
+#include "oneflow/core/ep/rocm/cuda_stream.h"
 
 namespace oneflow {
 

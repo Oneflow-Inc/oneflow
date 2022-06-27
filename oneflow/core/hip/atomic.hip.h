@@ -21,9 +21,7 @@ limitations under the License.
 #include <hip/hip_runtime.h>
 #include <hip/hip_fp16.h>
 #include <cstdint>
-// #if CUDA_VERSION >= 11000
-// #include <cuda_bf16.h>
-// #endif  // CUDA_VERSION >= 11000
+
 namespace oneflow {
 
 namespace cuda {
@@ -51,17 +49,6 @@ __device__ __forceinline__
     typename std::enable_if<sizeof(T) == sizeof(unsigned long long int), T>::type
     CASImpl(T* address, T compare, T val) {
   return CastCASImpl<T, unsigned long long int>(address, compare, val);
-}
-
-template<typename T>
-__device__ __forceinline__ typename std::enable_if<sizeof(T) == sizeof(unsigned short int), T>::type
-CASImpl(T* address, T compare, T val) {
-// #if __CUDA_ARCH__ >= 700
-//   return CastCASImpl<T, unsigned short int>(address, compare, val);
-// #else
-  asm volatile("trap;");
-  return 0;
-// #endif  // __CUDA_ARCH__ >= 700
 }
 
 __device__ __forceinline__ int CASImpl(int* address, int compare, int val) {

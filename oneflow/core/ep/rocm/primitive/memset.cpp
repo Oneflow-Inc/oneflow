@@ -16,7 +16,7 @@ limitations under the License.
 #ifdef WITH_ROCM
 
 #include "oneflow/core/ep/include/primitive/memset.h"
-#include "oneflow/core/ep/hip/cuda_stream.h"
+#include "oneflow/core/ep/rocm/cuda_stream.h"
 #include <hip/hip_runtime.h>
 
 namespace oneflow {

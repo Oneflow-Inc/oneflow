@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/ep/hip/primitive/broadcast_elementwise_binary.hip.h"
+#include "oneflow/core/ep/rocm/primitive/broadcast_elementwise_binary.hip.h"
 
 namespace oneflow {
 

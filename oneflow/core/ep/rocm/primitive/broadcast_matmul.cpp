@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/ep/common/primitive/broadcast_matmul.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/ep/hip/cuda_stream.h"
+#include "oneflow/core/ep/rocm/cuda_stream.h"
 #include <hip/hip_runtime.h>
 #include <hip/hip_fp16.h>
 namespace oneflow {

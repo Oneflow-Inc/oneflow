@@ -13,38 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EP_HIP_HIP_EVENT_H_
-#define ONEFLOW_CORE_EP_HIP_HIP_EVENT_H_
 
-#include "oneflow/core/ep/include/event.h"
-
-#ifdef WITH_ROCM
-
-#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/ep/rocm/primitive/broadcast_elementwise_binary.hip.h"
 
 namespace oneflow {
 
 namespace ep {
+namespace primitive {
+namespace broadcast_elementwise_binary {
 
-class CudaEvent : public Event {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CudaEvent);
-  explicit CudaEvent(unsigned int flags);
-  ~CudaEvent() override;
+#define INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY(binary_op, data_type_pair) \
+  template std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary<      \
+      binary_op, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(data_type_pair)>();
 
-  Maybe<bool> QueryDone() override;
-  Maybe<void> Sync() override;
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
+                                 BINARY_MATH_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ);
 
-  hipEvent_t cuda_event();
-
- private:
-  hipEvent_t cuda_event_;
-};
-
+}  // namespace broadcast_elementwise_binary
+}  // namespace primitive
 }  // namespace ep
 
 }  // namespace oneflow
-
-#endif  // WITH_ROCM
-
-#endif  // ONEFLOW_CORE_EP_CUDA_CUDA_EVENT_H_

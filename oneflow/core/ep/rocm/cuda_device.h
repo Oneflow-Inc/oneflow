@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EP_HIP_HIP_DEVICE_H_
-#define ONEFLOW_CORE_EP_HIP_HIP_DEVICE_H_
+#ifndef ONEFLOW_CORE_EP_ROCM_CUDA_DEVICE_H_
+#define ONEFLOW_CORE_EP_ROCM_CUDA_DEVICE_H_
 
 #include "oneflow/core/ep/include/device.h"
 #include "oneflow/core/common/data_type.h"
@@ -75,4 +75,4 @@ class CudaDevice : public Device {
 
 #endif  // WITH_ROCM
 
-#endif  // ONEFLOW_CORE_EP_CUDA_CUDA_DEVICE_H_
+#endif  // ONEFLOW_CORE_EP_ROCM_CUDA_DEVICE_H_

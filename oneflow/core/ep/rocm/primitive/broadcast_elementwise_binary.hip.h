@@ -16,10 +16,10 @@ limitations under the License.
 */
 #include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 #include "oneflow/core/ep/common/primitive/broadcast_elementwise_binary.h"
-#include "oneflow/core/ep/hip/primitive/type_seq.h"
-#include "oneflow/core/ep/hip/cuda_stream.h"
+#include "oneflow/core/ep/rocm/primitive/type_seq.h"
+#include "oneflow/core/ep/rocm/cuda_stream.h"
 #include "oneflow/core/hip/elementwise.hip.h"
-#include "oneflow/core/ep/hip/primitive/binary_functor.hip.h"
+#include "oneflow/core/ep/rocm/primitive/binary_functor.hip.h"
 
 namespace oneflow {
 
