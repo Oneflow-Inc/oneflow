@@ -60,7 +60,7 @@ class ConsistentToConsistentGradFunction : public OpExprGradFunction<ConsistentT
     const auto& out_grad = out_grads.at(0);
     CHECK_OR_RETURN(out_grad->is_consistent())
         << Error::RuntimeError()
-        << "Expected global tensor for consistent_to_consistent for but got local tensor!";
+        << "Expected global tensor for consistent_to_consistent but got local tensor!";
     in_grads->resize(1);
     const auto& grad_nd_sbp = grad_nd_sbp_.value_or(JUST(out_grad->nd_sbp()));
     const auto& grad_sbp_list = JUST(GetSbpList(grad_nd_sbp));
