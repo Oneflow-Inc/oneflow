@@ -157,7 +157,6 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
       std::string cublas_dy = last_bias_grad;
 
       if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_ASYNC_GRAD", false)) {
-        printf("Here use fully fusedmlp grad \n");
         // Use Fully Fused MLP Backward.
         user_op::UserOpConfWrapperBuilder fused_mlp_grad_builder(op.op_name() + "_fused_mlp_grad");
         fused_mlp_grad_builder.Op("cublas_fused_mlp_grad")
