@@ -269,9 +269,9 @@ class GpuFusedGruCellKernel final : public user_op::OpKernel {
 
     T* hy_ptr = hy->mut_dptr<T>();
     T* workspace_ptr = workspace->mut_dptr<T>();
-    const int64_t hx_numel = hx->shape().elem_cnt();
-    const int64_t workspace_numel = workspace->shape().elem_cnt();
-    const int64_t hidden_size = hx->shape().At(hx->shape().NumAxes() - 1);
+    const int64_t hx_numel = hx->shape_view().elem_cnt();
+    const int64_t workspace_numel = workspace->shape_view().elem_cnt();
+    const int64_t hidden_size = hx->shape_view().At(hx->shape_view().NumAxes() - 1);
     FusedGruCellFunctor<T>()(ctx->stream(), hx_numel, workspace_numel, hidden_size, input_gates_ptr,
                              hidden_gates_ptr, hx_ptr, input_bias_ptr, hidden_bias_ptr, hy_ptr,
                              workspace_ptr);
@@ -316,9 +316,9 @@ class GpuFusedGruCellGradFloatKernel final : public user_op::OpKernel {
       grad_hx_ptr = grad_hx->mut_dptr<float>();
     }
 
-    const int64_t hx_numel = grad_hy->shape().elem_cnt();
-    const int64_t workspace_numel = workspace->shape().elem_cnt();
-    const int64_t hidden_size = grad_hy->shape().At(grad_hy->shape().NumAxes() - 1);
+    const int64_t hx_numel = grad_hy->shape_view().elem_cnt();
+    const int64_t workspace_numel = workspace->shape_view().elem_cnt();
+    const int64_t hidden_size = grad_hy->shape_view().At(grad_hy->shape_view().NumAxes() - 1);
     FusedGruCellGradFunctor<float>()(ctx->stream(), hx_numel, workspace_numel, hidden_size,
                                      grad_hy_ptr, workspace_ptr, grad_input_gates_ptr,
                                      grad_hidden_gates_ptr, grad_hx_ptr);
@@ -329,19 +329,21 @@ class GpuFusedGruCellGradFloatKernel final : public user_op::OpKernel {
       std::vector<int32_t> axis;
       axis.push_back(0);
       const Shape& reduced_shape =
-          CreateReducedShape(grad_input_gates->shape(), {axis.begin(), axis.end()});
+          CreateReducedShape(grad_input_gates->shape_view(), {axis.begin(), axis.end()});
       user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
       NdarrayReduce<DeviceType::kCUDA, float, BinaryFuncSum>::Reduce(
           ctx->stream(), XpuVarNdarray<float>(reduced_shape, grad_input_bias_ptr),
-          XpuVarNdarray<const float>(grad_input_gates->shape(), grad_input_gates->dptr<float>()),
-          XpuVarNdarray<float>(tmp_buffer->shape(), tmp_buffer->mut_dptr<float>()));
+          XpuVarNdarray<const float>(grad_input_gates->shape_view(),
+                                     grad_input_gates->dptr<float>()),
+          XpuVarNdarray<float>(tmp_buffer->shape_view(), tmp_buffer->mut_dptr<float>()));
 
       float* grad_hidden_bias_ptr =
           ctx->Tensor4ArgNameAndIndex("grad_hidden_bias", 0)->mut_dptr<float>();
       NdarrayReduce<DeviceType::kCUDA, float, BinaryFuncSum>::Reduce(
           ctx->stream(), XpuVarNdarray<float>(reduced_shape, grad_hidden_bias_ptr),
-          XpuVarNdarray<const float>(grad_hidden_gates->shape(), grad_hidden_gates->dptr<float>()),
-          XpuVarNdarray<float>(tmp_buffer->shape(), tmp_buffer->mut_dptr<float>()));
+          XpuVarNdarray<const float>(grad_hidden_gates->shape_view(),
+                                     grad_hidden_gates->dptr<float>()),
+          XpuVarNdarray<float>(tmp_buffer->shape_view(), tmp_buffer->mut_dptr<float>()));
     }
   }
 
@@ -389,9 +391,9 @@ class GpuFusedGruCellGradHalfKernel final : public user_op::OpKernel {
       grad_hx_ptr = grad_hx->mut_dptr<float16>();
     }
 
-    const int64_t hx_numel = grad_hy->shape().elem_cnt();
-    const int64_t workspace_numel = workspace->shape().elem_cnt();
-    const int64_t hidden_size = grad_hy->shape().At(grad_hy->shape().NumAxes() - 1);
+    const int64_t hx_numel = grad_hy->shape_view().elem_cnt();
+    const int64_t workspace_numel = workspace->shape_view().elem_cnt();
+    const int64_t hidden_size = grad_hy->shape_view().At(grad_hy->shape_view().NumAxes() - 1);
     FusedGruCellGradFunctor<float16>()(ctx->stream(), hx_numel, workspace_numel, hidden_size,
                                        grad_hy_ptr, workspace_ptr, grad_input_gates_ptr,
                                        grad_hidden_gates_ptr, grad_hx_ptr);
@@ -400,7 +402,7 @@ class GpuFusedGruCellGradHalfKernel final : public user_op::OpKernel {
       std::vector<int32_t> axis;
       axis.push_back(0);
       user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-      const ShapeView& in_shape = grad_input_gates->shape();
+      const ShapeView& in_shape = grad_input_gates->shape_view();
       const Shape& reduced_shape = CreateReducedShape(in_shape, {axis.begin(), axis.end()});
       float* in_tmp_buffer = tmp_buffer->mut_dptr<float>();
       const size_t in_tmp_buffer_bytes = GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
@@ -413,7 +415,7 @@ class GpuFusedGruCellGradHalfKernel final : public user_op::OpKernel {
       const size_t reduce_tmp_buffer_bytes =
           GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
       CHECK_LE(in_tmp_buffer_bytes + out_tmp_buffer_bytes + reduce_tmp_buffer_bytes,
-               tmp_buffer->shape().elem_cnt());
+               tmp_buffer->shape_view().elem_cnt());
       auto h2f = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
           ctx->device_type(), DataType::kFloat16, DataType::kFloat);
       CHECK(h2f);
@@ -430,7 +432,7 @@ class GpuFusedGruCellGradHalfKernel final : public user_op::OpKernel {
 
       user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("grad_input_bias", 0);
       f2h->Launch(ctx->stream(), out_tmp_buffer, output_tensor->mut_dptr<float16>(),
-                  output_tensor->shape().elem_cnt());
+                  output_tensor->shape_view().elem_cnt());
 
       h2f->Launch(ctx->stream(), grad_hidden_gates->dptr<float16>(), in_tmp_buffer,
                   in_shape.elem_cnt());
@@ -441,7 +443,7 @@ class GpuFusedGruCellGradHalfKernel final : public user_op::OpKernel {
 
       output_tensor = ctx->Tensor4ArgNameAndIndex("grad_hidden_bias", 0);
       f2h->Launch(ctx->stream(), out_tmp_buffer, output_tensor->mut_dptr<float16>(),
-                  output_tensor->shape().elem_cnt());
+                  output_tensor->shape_view().elem_cnt());
     }
   }
 
