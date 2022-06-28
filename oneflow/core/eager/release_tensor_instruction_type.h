@@ -47,16 +47,27 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
     return "ReleaseTensor";
   }
   Maybe<void> Prepare(vm::Instruction* instruction) const override {
-    Release(*instruction);
+    if (IsPODDataType(GetDataType(instruction))) { Release(*instruction); }
     return Maybe<void>::Ok();
   }
-  void Compute(vm::Instruction* instruction) const override {}
+  void Compute(vm::Instruction* instruction) const override {
+    if (!IsPODDataType(GetDataType(instruction))) { Release(*instruction); }
+  }
   void InitInstructionStatus(Instruction* instruction) const override {
     auto* status_buffer = instruction->mut_status_buffer();
     auto* stream = instruction->mut_stream();
     instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
     auto* data_ptr = status_buffer->mut_buffer();
     EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_ep_event(nullptr);
+  }
+
+ private:
+  DataType GetDataType(vm::Instruction* instruction) const {
+    const auto& phy_instr_operand = instruction->phy_instr_operand();
+    CHECK(static_cast<bool>(phy_instr_operand));
+    const auto* ptr =
+        dynamic_cast<const vm::ReleaseTensorArgPhyInstrOperand*>(phy_instr_operand.get());
+    return ptr->eager_blob_object()->data_type();
   }
 };
 
