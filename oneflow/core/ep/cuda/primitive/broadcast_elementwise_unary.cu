@@ -29,24 +29,6 @@ namespace broadcast_elementwise_unary {
 
 namespace {
 
-template<typename T, int N>
-struct GetPackType {
-  using type = typename std::aligned_storage<N * sizeof(T), N * sizeof(T)>::type;
-};
-
-template<typename T, int N>
-using PackType = typename GetPackType<T, N>::type;
-
-template<typename T, int N>
-union Pack {
-  static_assert(sizeof(PackType<T, N>) == sizeof(T) * N, "");
-  OF_DEVICE_FUNC Pack() {
-    // do nothing
-  }
-  PackType<T, N> storage;
-  T elem[N];
-};
-
 constexpr size_t kMaxPackSize = 4;
 
 template<size_t max_pack_size, typename Src, typename Dst>
@@ -99,9 +81,10 @@ template<UnaryOp op, typename Src, typename Dst, size_t max_dims, size_t pack_si
          typename IndexType>
 __global__ void BroadcastElementwiseUnaryGpu(
     BroadcastElementwiseUnaryParams<Src, Dst, max_dims, IndexType> params) {
-  const PackType<Src, pack_size>* src =
-      reinterpret_cast<const PackType<Src, pack_size>*>(params.src);
-  PackType<Dst, pack_size>* dst = reinterpret_cast<PackType<Dst, pack_size>*>(params.dst);
+  using LoadPack = cuda::elementwise::Packed<Src, pack_size>;
+  using StorePack = cuda::elementwise::Packed<Dst, pack_size>;
+  const LoadPack* src = reinterpret_cast<const LoadPack*>(params.src);
+  StorePack* dst = reinterpret_cast<StorePack*>(params.dst);
 
   IndexType src_index[max_dims];
   IndexType dst_index[max_dims];
@@ -116,16 +99,15 @@ __global__ void BroadcastElementwiseUnaryGpu(
     }
     const IndexType src_offset =
         params.src_index_to_offset_helper.NdIndexToOffset(src_index, num_dims);
-    Pack<Src, pack_size> src_pack;
-    src_pack.storage = src[src_offset];
-    Pack<Dst, pack_size> dst_pack;
+    LoadPack src_pack = src[src_offset];
+    StorePack dst_pack;
 #pragma unroll
     for (int j = 0; j < pack_size; ++j) { dst_pack.elem[j] = functor(src_pack.elem[j]); }
     IndexType dst_offset = offset;
     if (!params.dst_is_continous) {
       dst_offset = params.dst_index_to_offset_helper.NdIndexToOffset(dst_index, num_dims);
     }
-    dst[dst_offset] = dst_pack.storage;
+    dst[dst_offset] = dst_pack;
   }
 }
 
@@ -242,6 +224,42 @@ void LaunchWithSimplified(CudaStream* stream, size_t simplified_num_dims,
                                 simplified_dst_strides, dst, attr0, attr1);
 }
 
+template<typename T, size_t pack>
+__global__ void LaunchFillKernel(T* dst, T value, size_t count) {
+  using StorePack = cuda::elementwise::Packed<T, pack>;
+  const size_t pack_count = count / pack;
+  StorePack pack_value;
+  #pragma unroll
+  for (size_t i = 0; i < pack; ++i) { pack_value.elem[i] = value; }
+  StorePack* pack_dst = reinterpret_cast<StorePack*>(dst);
+  CUDA_1D_KERNEL_LOOP_T(size_t, i, pack_count) { pack_dst[i] = pack_value; }
+  Dst* tail_dst = dst + pack_count * pack;
+  const size_t tail_count = count - pack_count * pack;
+  CUDA_1D_KERNEL_LOOP_T(size_t, i, tail_count) { tail_dst[i] = value; }
+}
+
+template<typename T, size_t pack>
+void LaunchPackFill(CudaStream* stream, T* dst, T value, size_t count) {
+  LaunchFillKernel<Src, Dst, pack><<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0, stream->cuda_stream()>>>(
+    dst, value, count);
+}
+
+template<typename T>
+void LaunchFill(CudaStream* stream, T* dst, T value, size_t count) {
+  auto uintptr = reinterpret_cast<std::uintptr_t>(dst);
+  if (uintptr % 16 == 0) {
+    LaunchPackFill<T, 16 / sizeof(Src)>(stream, dst, value, count);
+  } else if (uintptr % 8 == 0) {
+    LaunchPackFill<T, 8 / sizeof(Src)>(stream, dst, value, count);
+  } else if (uintptr % 4 == 0) {
+    LaunchPackFill<T, 4 / sizeof(Src)>(stream, dst, value, count);
+  } else if (uintptr % 2 == 0) {
+    LaunchPackFill<T, 2 / sizeof(Src)>(stream, dst, value, count);
+  } else {
+    LaunchPackFill<T, 1 / sizeof(Src)>(stream, dst, value, count);
+  }
+}
+
 template<UnaryOp unary_op, typename Src, typename Dst>
 class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
  public:
@@ -265,12 +283,10 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
     CheckInplace(simplified_num_dims, simplified_src_dims, src, nullptr, nullptr,
                  simplified_dst_dims, dst);
     if (simplified_num_dims == 1 && simplified_src_dims[0] == 1) {
-      // TODO(yaozihang)
-      // const int64_t elem_cnt = simplified_src_dims[0];
-      // auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Src, Dst>(attr0, attr1);
-      // OF_CUDA_CHECK((cuda::elementwise::Unary<decltype(functor), Dst, Src>(
-      //     functor, elem_cnt, reinterpret_cast<Dst*>(dst), reinterpret_cast<const Src*>(src),
-      //     cuda_stream->cuda_stream())));
+      const int64_t elem_cnt = simplified_dst_dims[0];
+      auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Src, Dst>(attr0, attr1);
+      Dst scalar_res = functor(*src);
+      LaunchFill(cuda_stream, reinterpret_cast<Dst*>(dst), scalar_res, elem_cnt);
     } else if (simplified_num_dims == 1 && simplified_src_strides[0] == 1
                && simplified_dst_strides[0] == 1) {  // 输入输出完全连续且无广播
       const int64_t elem_cnt = simplified_src_dims[0];
@@ -314,7 +330,9 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
     static const std::map<std::tuple<UnaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<BroadcastElementwiseUnary>(Scalar, Scalar)>>
         new_broadcast_elementwise_unary_handle{
-            // TODO(yaozihang): add registry for ops which use BroadcastElementwiseUnary primitive
+            // For All Type OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
+              UNARY_BROADCAST_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ)
         };
 
 #undef MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY

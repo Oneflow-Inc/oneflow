@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_PRIMITIVE_COMMON_BROADCAST_ELEMENTWISE_UNARY
 #define ONEFLOW_CORE_PRIMITIVE_COMMON_BROADCAST_ELEMENTWISE_UNARY
 
-#include "oneflow/core/ep/include/primitive/primitive.h"
+#include "oneflow/core/ep/include/primitive/broadcast_elementwise_unary.h"
 #include "oneflow/core/ep/include/primitive/fast_integer_math.h"
 #include "oneflow/core/ep/common/primitive/util.h"
 
@@ -157,6 +157,8 @@ class OffsetToIndexWithStrideCalculator {
   }
   FastIntegerMath<T> math_helper_[N];
 };
+
+#define UNARY_BROADCAST_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kIdentity)
 
 }  // namespace broadcast_elementwise_unary
 }  // namespace primitive

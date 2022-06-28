@@ -29,6 +29,15 @@ template<DeviceType device, UnaryOp unary_op, typename Dst, typename Src>
 struct UnaryFunctor;
 
 template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kIdentity, Dst, Src> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return static_cast<Dst>(src);
+  }
+};
+
+template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kElu, Dst, Src> {
   UnaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<double>()) {}
 
