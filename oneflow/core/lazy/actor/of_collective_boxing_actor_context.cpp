@@ -29,11 +29,7 @@ StreamContext* OfCollectiveBoxingActorContext::stream_ctx() const { return strea
 const TaskProto& OfCollectiveBoxingActorContext::task_proto() const { return task_proto_; }
 
 void OfCollectiveBoxingActorContext::AddCallback(std::function<void()> callback) {
-  // TODO: (Panlichen) realy need lock??
-  std::lock_guard<std::mutex> lock(mutex_);
-  // TODO: (Panlichen) seems we have no reason to delay executing callback;
-  // besides, seems now we only add callback to send msg, so only run on CPU.
-  callback();
+  CHECK_JUST(stream_ctx_->AddCallback(std::move(callback)));
 }
 
 REGISTER_ACTOR_CONTEXT(TaskType::kOfCollectiveBoxingGeneric, OfCollectiveBoxingActorContext);

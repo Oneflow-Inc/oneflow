@@ -36,7 +36,6 @@ class OfCollectiveBoxingActorContext : public ActorContext {
  private:
   StreamContext* stream_ctx_{};
   TaskProto task_proto_{};
-  std::mutex mutex_;
 };
 
 }  // namespace oneflow

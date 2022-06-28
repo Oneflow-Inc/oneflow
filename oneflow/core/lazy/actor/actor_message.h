@@ -27,7 +27,7 @@ enum class ActorCmd {
   kConstructActor
 };
 
-enum class CollectiveNegoCmd { kCollectiveReady = 0, kCollectiveStart };
+enum class CollectiveNegoCmd { kCollectiveReady = 0, kCollectiveStart, kCollectiveDone };
 
 enum class ActorMsgType { kRegstMsg = 0, kEordMsg, kCmdMsg, kCollectiveMsg };
 
