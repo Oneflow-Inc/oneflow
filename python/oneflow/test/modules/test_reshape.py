@@ -95,21 +95,21 @@ class TestModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_reshape_flow_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device)
         y = torch.reshape(x, shape=(-1,))
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_reshape_flow_with_0dim_data(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
         y = torch.reshape(x, shape=(-1,))
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_reshape_with_0_size_data(test_case):
         device = random_device()
         x = random_tensor(4, 2, 0, 3).to(device)
@@ -118,7 +118,7 @@ class TestModule(flow.unittest.TestCase):
         )
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_reshape_flow_bool_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device=device, dtype=torch.bool)
