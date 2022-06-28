@@ -83,7 +83,7 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
 
         # Test the resource config update eagerly
         # Note: this tests all the apis in oneflow.framework.config_util automatically
-        def test_resource_config_update_eagerly_automatically():
+        def test_resource_config_update_apis_eagerly_automatically():
             attrs_and_values_to_check = []
             num_api_tested = 0
 
@@ -111,8 +111,8 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
 
             print("number of APIs tested: " + str(num_api_tested))
 
-        test_resource_config_update_eagerly_automatically()
-        test_resource_config_update_eagerly_automatically()
+        test_resource_config_update_apis_eagerly_automatically()
+        test_resource_config_update_apis_eagerly_automatically()
 
         print("optimization conf after session init: \n", g._optimization_conf_proto)
 
