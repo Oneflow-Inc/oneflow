@@ -176,7 +176,6 @@ intrusive::shared_ptr<Instruction> VirtualMachineEngine::LivelyInstructionListEr
 
 // Collect ready instructions onto ready_instruction_list_
 void VirtualMachineEngine::ReleaseFinishedInstructions(const ScheduleCtx& schedule_ctx) {
-  OF_PROFILER_RANGE_GUARD("ReleaseFinishedInstructions");
   INTRUSIVE_FOR_EACH_PTR(stream, mut_active_stream_list()) {
     while (true) {
       auto* instruction_ptr = stream->mut_running_instruction_list()->Begin();
