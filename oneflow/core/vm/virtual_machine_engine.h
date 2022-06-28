@@ -110,9 +110,9 @@ class VirtualMachineEngine final : public intrusive::Base {
   void TryConnectInstruction(Instruction* src_instruction, Instruction* dst_instruction);
   void ConnectInstructionsByWrite(DependenceAccess* dst_access);
   void ConnectInstructionsByRead(DependenceAccess* dst_access);
-  DependenceAccess* AccessLocalObject(OperandAccessType access_type, Dependence* local_object,
-                                      Instruction* instrution);
-  void ConsumeLocalObjects(Instruction* instruction);
+  DependenceAccess* AccessDependence(OperandAccessType access_type, Dependence* local_object,
+                                     Instruction* instrution);
+  void ConsumeDependences(Instruction* instruction);
   void DispatchInstruction(Instruction* instruction, const ScheduleCtx& schedule_ctx);
 
   bool EdgeDispatchable(const Instruction* src, const Instruction* dst) const;

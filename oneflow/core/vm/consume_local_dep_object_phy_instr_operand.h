@@ -33,9 +33,9 @@ class ConsumeLocalDepObjectPhyInstrOperand : public PhyInstrOperand {
         modifier_(modifier),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstLocalObject(SetInserter(&input_dependences_));
-    ForEachMutLocalObject(SetInserter(&output_dependences_));
-    ForEachMut2LocalObject(SetInserter(&output_dependences_));
+    ForEachConstDependence(SetInserter(&input_dependences_));
+    ForEachMutDependence(SetInserter(&output_dependences_));
+    ForEachMut2Dependence(SetInserter(&output_dependences_));
     stream_sequential_dependence_ = nullptr;
   }
 
@@ -44,11 +44,11 @@ class ConsumeLocalDepObjectPhyInstrOperand : public PhyInstrOperand {
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  void ForEachConstLocalObject(const std::function<void(Dependence* compute)>&) const;
+  void ForEachConstDependence(const std::function<void(Dependence* compute)>&) const;
 
-  void ForEachMutLocalObject(const std::function<void(Dependence* compute)>&) const;
+  void ForEachMutDependence(const std::function<void(Dependence* compute)>&) const;
 
-  void ForEachMut2LocalObject(const std::function<void(Dependence* compute)>&) const;
+  void ForEachMut2Dependence(const std::function<void(Dependence* compute)>&) const;
 
  private:
   std::vector<intrusive::shared_ptr<LocalDepObject>> compute_local_dep_objects_;

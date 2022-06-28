@@ -23,17 +23,17 @@ namespace oneflow {
 
 namespace vm {
 
-void AccessBlobArgCbPhyInstrOperand::ForEachConstLocalObject(
+void AccessBlobArgCbPhyInstrOperand::ForEachConstDependence(
     const std::function<void(Dependence* compute)>& DoEach) const {
   if (modifier_ == "const") { DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object())); }
 }
 
-void AccessBlobArgCbPhyInstrOperand::ForEachMutLocalObject(
+void AccessBlobArgCbPhyInstrOperand::ForEachMutDependence(
     const std::function<void(Dependence* compute)>& DoEach) const {
   if (modifier_ == "mut") { DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object())); }
 }
 
-void AccessBlobArgCbPhyInstrOperand::ForEachMut2LocalObject(
+void AccessBlobArgCbPhyInstrOperand::ForEachMut2Dependence(
     const std::function<void(Dependence* compute)>& DoEach) const {
   if (modifier_ == "mut2") { DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object())); }
 }

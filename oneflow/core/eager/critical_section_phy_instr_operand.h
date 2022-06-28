@@ -58,9 +58,9 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
   const std::shared_ptr<NNGraphIf>& nn_graph() const { return nn_graph_; }
   const one::EagerBlobObjectListPtr& eager_blob_objects() const { return eager_blob_objects_; }
 
-  void ForEachLocalObject(const std::function<void(vm::Dependence* compute)>&) const;
+  void ForEachDependence(const std::function<void(vm::Dependence* compute)>&) const;
 
-  void ForEachMutLocalObject(const std::function<void(vm::Dependence* compute)>&) const;
+  void ForEachMutDependence(const std::function<void(vm::Dependence* compute)>&) const;
 
   virtual const std::vector<std::string>& interfaces_op_names() const = 0;
   virtual const std::vector<bool>& interfaces_valid() const = 0;
@@ -96,9 +96,9 @@ class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeg
                                             vm_stream),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstLocalObject(SetInserter(&input_dependences_));
-    ForEachMutLocalObject(SetInserter(&output_dependences_));
-    ForEachMut2LocalObject(SetInserter(&output_dependences_));
+    ForEachConstDependence(SetInserter(&input_dependences_));
+    ForEachMutDependence(SetInserter(&output_dependences_));
+    ForEachMut2Dependence(SetInserter(&output_dependences_));
     CHECK_EQ(nn_graph->inputs_op_names().size(), eager_blob_objects->size());
     CHECK_EQ(nn_graph->inputs_op_names().size(), nn_graph->inputs_valid().size());
     for (int i = 0; i < nn_graph->inputs_op_names().size(); ++i) {
@@ -112,8 +112,8 @@ class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeg
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
   // for inputs
-  void ForEachConstLocalObject(const std::function<void(vm::Dependence* compute)>& DoEach) const {
-    ForEachLocalObject(DoEach);
+  void ForEachConstDependence(const std::function<void(vm::Dependence* compute)>& DoEach) const {
+    ForEachDependence(DoEach);
   }
 
   // for outputs
@@ -134,7 +134,7 @@ class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeg
     return GetInputCriticalSectionWaitBufferName(job_name);
   }
   void AccessBlobByOpName(uint64_t of_blob_ptr, const std::string& op_name) override;
-  void ForEachMut2LocalObject(const std::function<void(vm::Dependence* compute)>&) const {}
+  void ForEachMut2Dependence(const std::function<void(vm::Dependence* compute)>&) const {}
 
  private:
   DependenceVector input_dependences_;
@@ -153,9 +153,9 @@ class OutputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBe
                                             vm_stream),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstLocalObject(SetInserter(&input_dependences_));
-    ForEachMutLocalObject(SetInserter(&output_dependences_));
-    ForEachMut2LocalObject(SetInserter(&output_dependences_));
+    ForEachConstDependence(SetInserter(&input_dependences_));
+    ForEachMutDependence(SetInserter(&output_dependences_));
+    ForEachMut2Dependence(SetInserter(&output_dependences_));
     CHECK_EQ(nn_graph->outputs_op_names().size(), eager_blob_objects->size());
     CHECK_EQ(nn_graph->outputs_op_names().size(), nn_graph->outputs_valid().size());
     for (int i = 0; i < nn_graph->outputs_op_names().size(); ++i) {
@@ -169,11 +169,11 @@ class OutputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBe
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
   // for inputs
-  void ForEachConstLocalObject(const std::function<void(vm::Dependence* compute)>&) const {}
+  void ForEachConstDependence(const std::function<void(vm::Dependence* compute)>&) const {}
 
   // for outputs
-  void ForEachMut2LocalObject(const std::function<void(vm::Dependence* compute)>& DoEach) const {
-    ForEachLocalObject(DoEach);
+  void ForEachMut2Dependence(const std::function<void(vm::Dependence* compute)>& DoEach) const {
+    ForEachDependence(DoEach);
   }
 
   const std::vector<std::string>& interfaces_op_names() const override {
@@ -209,9 +209,9 @@ class CriticalSectionEndPhyInstrOperand : public PhyInstrOperand {
 
   const std::shared_ptr<SharedEventRecord>& event_record() const { return event_record_; }
 
-  void ForEachLocalObject(const std::function<void(vm::Dependence* compute)>&) const;
+  void ForEachDependence(const std::function<void(vm::Dependence* compute)>&) const;
 
-  void ForEachMutLocalObject(const std::function<void(vm::Dependence* compute)>&) const;
+  void ForEachMutDependence(const std::function<void(vm::Dependence* compute)>&) const;
 
  private:
   std::shared_ptr<EagerBlobObject> eager_blob_object_;
@@ -227,20 +227,20 @@ class InputCriticalSecondEndPhyInstrOperand final : public CriticalSectionEndPhy
       : CriticalSectionEndPhyInstrOperand(eager_blob_object, event_record, vm_stream),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstLocalObject(SetInserter(&input_dependences_));
-    ForEachMutLocalObject(SetInserter(&output_dependences_));
-    ForEachMut2LocalObject(SetInserter(&output_dependences_));
+    ForEachConstDependence(SetInserter(&input_dependences_));
+    ForEachMutDependence(SetInserter(&output_dependences_));
+    ForEachMut2Dependence(SetInserter(&output_dependences_));
   }
   ~InputCriticalSecondEndPhyInstrOperand() override = default;
 
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  void ForEachConstLocalObject(const std::function<void(vm::Dependence* compute)>& DoEach) const {
-    ForEachLocalObject(DoEach);
+  void ForEachConstDependence(const std::function<void(vm::Dependence* compute)>& DoEach) const {
+    ForEachDependence(DoEach);
   }
 
-  void ForEachMut2LocalObject(const std::function<void(vm::Dependence* compute)>&) const {}
+  void ForEachMut2Dependence(const std::function<void(vm::Dependence* compute)>&) const {}
 
  private:
   DependenceVector input_dependences_;
@@ -255,9 +255,9 @@ class OutputCriticalSecondEndPhyInstrOperand final : public CriticalSectionEndPh
       : CriticalSectionEndPhyInstrOperand(eager_blob_object, event_record, vm_stream),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstLocalObject(SetInserter(&input_dependences_));
-    ForEachMutLocalObject(SetInserter(&output_dependences_));
-    ForEachMut2LocalObject(SetInserter(&output_dependences_));
+    ForEachConstDependence(SetInserter(&input_dependences_));
+    ForEachMutDependence(SetInserter(&output_dependences_));
+    ForEachMut2Dependence(SetInserter(&output_dependences_));
   }
   ~OutputCriticalSecondEndPhyInstrOperand() override = default;
 
@@ -265,11 +265,11 @@ class OutputCriticalSecondEndPhyInstrOperand final : public CriticalSectionEndPh
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
   // for inputs
-  void ForEachConstLocalObject(const std::function<void(vm::Dependence* compute)>&) const {}
+  void ForEachConstDependence(const std::function<void(vm::Dependence* compute)>&) const {}
 
   // for outputs
-  void ForEachMut2LocalObject(const std::function<void(vm::Dependence* compute)>& DoEach) const {
-    ForEachLocalObject(DoEach);
+  void ForEachMut2Dependence(const std::function<void(vm::Dependence* compute)>& DoEach) const {
+    ForEachDependence(DoEach);
   }
 
  private:

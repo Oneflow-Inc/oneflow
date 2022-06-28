@@ -27,19 +27,19 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void CriticalSectionBeginPhyInstrOperand::ForEachLocalObject(
+void CriticalSectionBeginPhyInstrOperand::ForEachDependence(
     const std::function<void(vm::Dependence* compute)>& DoEach) const {
   for (const auto& eager_blob_object : *eager_blob_objects_) {
     DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
   }
 }
 
-void CriticalSectionEndPhyInstrOperand::ForEachLocalObject(
+void CriticalSectionEndPhyInstrOperand::ForEachDependence(
     const std::function<void(vm::Dependence* compute)>& DoEach) const {
   DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object()));
 }
 
-void CriticalSectionBeginPhyInstrOperand::ForEachMutLocalObject(
+void CriticalSectionBeginPhyInstrOperand::ForEachMutDependence(
     const std::function<void(vm::Dependence* compute)>& DoEach) const {
   DoEach(vm_stream_->schedule_local_dep_object().get());
 }
@@ -108,7 +108,7 @@ void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_b
   }
 }
 
-void CriticalSectionEndPhyInstrOperand::ForEachMutLocalObject(
+void CriticalSectionEndPhyInstrOperand::ForEachMutDependence(
     const std::function<void(vm::Dependence* compute)>& DoEach) const {
   DoEach(vm_stream_->schedule_local_dep_object().get());
 }

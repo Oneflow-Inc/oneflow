@@ -68,7 +68,7 @@ void VirtualMachineEngine::HandleLocalPending() {
     if (unlikely(instruction_type.IsBarrier())) {
       mut_barrier_instruction_list()->PushBack(instruction);
     } else {
-      ConsumeLocalObjects(instruction);
+      ConsumeDependences(instruction);
       if (likely(Dispatchable(instruction))) {
         mut_ready_instruction_list()->PushBack(instruction);
       }
@@ -187,9 +187,9 @@ void VirtualMachineEngine::ReleaseFinishedInstructions(const ScheduleCtx& schedu
   }
 }
 
-DependenceAccess* VirtualMachineEngine::AccessLocalObject(OperandAccessType access_type,
-                                                          Dependence* local_object,
-                                                          Instruction* instruction) {
+DependenceAccess* VirtualMachineEngine::AccessDependence(OperandAccessType access_type,
+                                                         Dependence* local_object,
+                                                         Instruction* instruction) {
   auto access = access_pool_.make_shared(instruction, local_object, access_type);
   auto* ptr = access.Mutable();
   instruction->mut_access_list()->PushBack(ptr);
@@ -233,19 +233,19 @@ void VirtualMachineEngine::ConnectInstructionsByRead(DependenceAccess* dst_acces
   }
 }
 
-void VirtualMachineEngine::ConsumeLocalObjects(Instruction* instruction) {
+void VirtualMachineEngine::ConsumeDependences(Instruction* instruction) {
   const auto& phy_instr_operand = CHECK_NOTNULL(instruction->phy_instr_operand());
   auto* stream_sequential_dep = phy_instr_operand->stream_sequential_dependence();
   if (likely(stream_sequential_dep != nullptr)) {
     ConnectInstructionsByWrite(
-        AccessLocalObject(kMutableOperandAccess, stream_sequential_dep, instruction));
+        AccessDependence(kMutableOperandAccess, stream_sequential_dep, instruction));
   }
   // Connect instructions by write before connecting by read.
   for (auto* local_object : phy_instr_operand->output_dependences()) {
-    ConnectInstructionsByWrite(AccessLocalObject(kMutableOperandAccess, local_object, instruction));
+    ConnectInstructionsByWrite(AccessDependence(kMutableOperandAccess, local_object, instruction));
   }
   for (auto* local_object : phy_instr_operand->input_dependences()) {
-    ConnectInstructionsByRead(AccessLocalObject(kConstOperandAccess, local_object, instruction));
+    ConnectInstructionsByRead(AccessDependence(kConstOperandAccess, local_object, instruction));
   }
 }
 

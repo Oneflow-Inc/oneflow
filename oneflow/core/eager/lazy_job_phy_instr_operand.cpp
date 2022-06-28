@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void LaunchLazyJobPhyInstrOperand::ForEachMutLocalObject(
+void LaunchLazyJobPhyInstrOperand::ForEachMutDependence(
     const std::function<void(vm::Dependence* compute)>& DoEach) const {
   for (const auto& eager_blob_object : *param_blob_objects_) {
     DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));

@@ -38,9 +38,9 @@ OpCallPhyInstrOperand::OpCallPhyInstrOperand(
       dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode),
       input_dependences_(),
       output_dependences_() {
-  ForEachConstLocalObject(SetInserter(&input_dependences_));
-  ForEachMutLocalObject(SetInserter(&output_dependences_));
-  ForEachMut2LocalObject(SetInserter(&output_dependences_));
+  ForEachConstDependence(SetInserter(&input_dependences_));
+  ForEachMutDependence(SetInserter(&output_dependences_));
+  ForEachMut2Dependence(SetInserter(&output_dependences_));
   InitStreamSequentialDependence();
 }
 
@@ -48,7 +48,7 @@ Maybe<void> OpCallPhyInstrOperand::Init() {
   return mut_opkernel()->ChooseOpKernel(&call_ctx_, &user_opkernel_, &need_temp_storage_);
 }
 
-void OpCallPhyInstrOperand::ForEachConstLocalObject(
+void OpCallPhyInstrOperand::ForEachConstDependence(
     const std::function<void(vm::Dependence* compute)>& DoEach) const {
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4const_ibns()) {
@@ -73,7 +73,7 @@ void OpCallPhyInstrOperand::InitStreamSequentialDependence() {
   }
 }
 
-void OpCallPhyInstrOperand::ForEachMutLocalObject(
+void OpCallPhyInstrOperand::ForEachMutDependence(
     const std::function<void(vm::Dependence* compute)>& DoEach) const {
   const auto& opt_transport_dep_object = vm_stream_->transport_local_dep_object();
   if (opt_transport_dep_object.has_value()) { DoEach(CHECK_JUST(opt_transport_dep_object)->get()); }
@@ -90,7 +90,7 @@ void OpCallPhyInstrOperand::ForEachMutLocalObject(
   }
 }
 
-void OpCallPhyInstrOperand::ForEachMut2LocalObject(
+void OpCallPhyInstrOperand::ForEachMut2Dependence(
     const std::function<void(vm::Dependence* compute)>& DoEach) const {
   const auto& output_list = outputs();
   for (int64_t index : opkernel().output_tuple_indexes4mut2_obns()) {
