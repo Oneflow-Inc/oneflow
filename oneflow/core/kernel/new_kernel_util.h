@@ -29,9 +29,6 @@ class Stream;
 
 }
 
-template<DeviceType deivce_type>
-struct NewKernelUtil : public BlasIf<deivce_type> {};
-
 template<DeviceType device_type>
 void Memcpy(ep::Stream* stream, void* dst, const void* src, size_t sz) {
   CHECK_EQ(device_type, stream->device_type()) << "Device type mismatch";
