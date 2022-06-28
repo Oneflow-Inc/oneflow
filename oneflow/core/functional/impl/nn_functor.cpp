@@ -3364,10 +3364,10 @@ class MultiTensorSgdUpdateFunctor {
   MultiTensorSgdUpdateFunctor() {
     // This functor is just for unittest
     op_.resize(kMaxInputCount /*the maximum number of inputs*/);
-    for (int n = 1; n < op_.size(); ++n) {
+    for (int n = 0; n < op_.size(); ++n) {
       op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_sgd_update")
-                              .Input("model", n)
-                              .Input("model_diff", n)
+                              .Input("model", n + 1)
+                              .Input("model_diff", n + 1)
                               .Input("learning_rate")
                               .Build());
     }
@@ -3380,12 +3380,14 @@ class MultiTensorSgdUpdateFunctor {
     JUST(attrs.SetAttr<double>("scale", scale));
     JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
     const int64_t weight_size = model.size();
-
-    TensorTuple input(2 * weight_size + 1);
-    std::copy(model.begin(), model.end(), input.begin());
-    std::copy(model_diff.begin(), model_diff.end(), input.begin() + weight_size);
-    input[2 * weight_size] = learning_rate;
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[weight_size], input, attrs));
+    for (int i = 0; i < weight_size; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < weight_size ? kMaxInputCount : weight_size - i;
+      TensorTuple input(2 * size + 1);
+      std::copy(model.begin() + i, model.begin() + i + size, input.begin());
+      std::copy(model_diff.begin() + i, model_diff.begin() + size, input.begin() + size);
+      input[2 * size] = learning_rate;
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[size - 1], input, attrs));
+    }
     return Maybe<void>::Ok();
   }
 
@@ -3398,12 +3400,12 @@ class MultiTensorAdamUpdateFunctor {
   MultiTensorAdamUpdateFunctor() {
     // This functor is just for unittest
     op_.resize(kMaxInputCount /*the maximum number of inputs*/);
-    for (int n = 1; n < op_.size(); ++n) {
+    for (int n = 0; n < op_.size(); ++n) {
       op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_adam_update")
-                              .Input("model", n)
-                              .Input("model_diff", n)
-                              .Input("m", n)
-                              .Input("v", n)
+                              .Input("model", n + 1)
+                              .Input("model_diff", n + 1)
+                              .Input("m", n + 1)
+                              .Input("v", n + 1)
                               .Input("learning_rate")
                               .Build());
     }
@@ -3426,15 +3428,16 @@ class MultiTensorAdamUpdateFunctor {
 
     const int64_t weight_size = model.size();
 
-    TensorTuple input(4 * weight_size + 1);
-    std::copy(model.begin(), model.end(), input.begin());
-    std::copy(model_diff.begin(), model_diff.end(), input.begin() + weight_size);
-    std::copy(m.begin(), m.end(), input.begin() + 2 * weight_size);
-    std::copy(v.begin(), v.end(), input.begin() + 3 * weight_size);
-
-    input[4 * weight_size] = learning_rate;
-
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[weight_size], input, attrs));
+    for (int i = 0; i < weight_size; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < weight_size ? kMaxInputCount : weight_size - i;
+      TensorTuple input(4 * size + 1);
+      std::copy(model.begin() + i, model.begin() + i + size, input.begin());
+      std::copy(model_diff.begin() + i, model_diff.begin() + i + size, input.begin() + size);
+      std::copy(m.begin() + i, m.begin() + i + size, input.begin() + 2 * size);
+      std::copy(v.begin() + i, v.begin() + i + size, input.begin() + 3 * size);
+      input[4 * size] = learning_rate;
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[size - 1], input, attrs));
+    }
     return Maybe<void>::Ok();
   }
 
