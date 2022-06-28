@@ -1057,7 +1057,7 @@
 
 - name: "binary_cross_entropy_with_logits_reduce_mean_loss_grad"
   signature: "Tensor(Tensor dy, Tensor input, Tensor target) => BinaryCrossEntropyWithLogitsReduceMeanLossGrad"
-  bind_python: True
+  bind_python: False
 
 - name: "sparse_cross_entropy"
   signature: "Tensor (Tensor prediction, Tensor label, Int64 depth) => SparseCrossEntropy"
