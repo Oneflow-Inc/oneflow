@@ -79,7 +79,7 @@ class EventRecorder {
   }
 
   Maybe<void> RegisterEventToProfileMgr(const std::shared_ptr<IEvent>& event) {
-    auto* pmgr = JUST(GlobalMaybe<ProfileMgr>());
+    auto* pmgr = JUST(SingletonMaybe<ProfileMgr>());
     pmgr->events_.push(event_);
     return Maybe<void>::Ok();
   }

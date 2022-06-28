@@ -86,7 +86,7 @@ class Singleton final {
 };
 
 template<typename T, typename... Kind>
-Maybe<T*> GlobalMaybe() {
+Maybe<T*> SingletonMaybe() {
   CHECK_NOTNULL_OR_RETURN((Singleton<T, Kind...>::Get())) << " typeid: " << typeid(T).name();
   return Singleton<T, Kind...>::Get();
 }

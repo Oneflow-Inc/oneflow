@@ -64,7 +64,7 @@ Maybe<void> EagerRunOps(const Job& job, HashSet<std::string>* op_names,
                                                            const ParallelConf& parallel_conf)
                             const) {
   const auto& op_graph = JUST(OpGraph::New(job));
-  const auto* foreign_callback = JUST(GlobalMaybe<std::shared_ptr<ForeignCallback>>());
+  const auto* foreign_callback = JUST(SingletonMaybe<std::shared_ptr<ForeignCallback>>());
   JUST(op_graph->ForEachOpNode([&](const OpNode& op_node) -> Maybe<void> {
     if (!op_names->insert(op_node.op().op_name()).second) { return Maybe<void>::Ok(); }
     const auto& op_attribute = op_node.op().GetOpAttributeWithoutOpNameAndLbn();
@@ -188,7 +188,8 @@ void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(const OperatorConf& 
   job_->mutable_net()->add_op()->CopyFrom(operator_conf);
 
   // set up the module config
-  const auto& scope = Singleton<symbol::Storage<Scope>>::Get()->Get(operator_conf.scope_symbol_id());
+  const auto& scope =
+      Singleton<symbol::Storage<Scope>>::Get()->Get(operator_conf.scope_symbol_id());
   if (scope.scope_proto().has_module_name()) {
     const auto& module_name = scope.scope_proto().module_name();
     auto* module_name2module_conf = job_->mutable_module_name2module_conf();
@@ -965,7 +966,7 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
   (*mut_mirrored_lbi2sub_lbis())[mirrored_lbi].emplace_back(mirrored_lbi);
   const auto& parallel_conf = parallel_desc.parallel_conf();
   const auto& op_attribute = JUST(AddAndInferConsistentOp(op_conf));
-  (*JUST(GlobalMaybe<std::shared_ptr<ForeignCallback>>()))
+  (*JUST(SingletonMaybe<std::shared_ptr<ForeignCallback>>()))
       ->EagerMirroredCast(*op_attribute, parallel_conf);
   return mirrored_lbi;
 }
@@ -1025,7 +1026,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     TeePersistentLogStream::Create(StrCat("forward_graph", job_id()))->Write(job());
     Singleton<OpGraph>::New(job());
     Singleton<OpGraph>::Get()->ToDotWithFilePath("forward_dlnet_" + std::to_string(job_id())
-                                              + "_op_graph.dot");
+                                                 + "_op_graph.dot");
     Singleton<OpGraph>::Delete();
   }
 

@@ -33,7 +33,7 @@ Maybe<void> Stream::Init(size_t unique_stream_id) {
 
 /*static*/ Maybe<Symbol<Stream>> Stream::RawNew(Symbol<Device> device, StreamRole stream_role) {
   std::shared_ptr<Stream> stream(new Stream(device, stream_role));
-  return JUST(GlobalMaybe<StreamMgr>())
+  return JUST(SingletonMaybe<StreamMgr>())
       ->AddStreamSymbol(*stream, [&](size_t unique_stream_id) -> Maybe<Symbol<Stream>> {
         JUST(stream->Init(unique_stream_id));
         return SymbolOf(*stream);

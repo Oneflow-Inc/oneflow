@@ -101,21 +101,21 @@ void EnableProfiler(bool use_cpu, bool use_cuda, bool record_shapes, bool record
 Maybe<std::string> DisableProfilerAndReturnResult() {
   JUST(vm::ClusterSync());
 
-  auto* pmgr = JUST(GlobalMaybe<ProfileMgr>());
+  auto* pmgr = JUST(SingletonMaybe<ProfileMgr>());
   std::string results = pmgr->DumpResultsJson();
   Singleton<ProfileMgr>::Delete();
   return results;
 }
 
 Maybe<std::string> StartRecord(const std::string& name) {
-  auto* pmgr = JUST(GlobalMaybe<ProfileMgr>());
+  auto* pmgr = JUST(SingletonMaybe<ProfileMgr>());
   JUST(vm::ClusterSync());
   return pmgr->RegisterEventRecorder(profiler::EventRecorder::CreateCustomEventRecorder(name),
                                      name);
 }
 
 Maybe<void> EndRecord(const std::string& event_recorder_key) {
-  auto* pmgr = JUST(GlobalMaybe<ProfileMgr>());
+  auto* pmgr = JUST(SingletonMaybe<ProfileMgr>());
   JUST(vm::ClusterSync());
   pmgr->UnregisterEventRecorder(event_recorder_key);
   return Maybe<void>::Ok();

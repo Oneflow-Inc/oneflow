@@ -312,7 +312,9 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     OF_SESSION_BARRIER();
     // NOTE(zwx): After barrier plan is synchronized between all ranks,
     //     then it can be cleared for saving mem.
-    if (GlobalProcessCtx::IsThisProcessMaster()) { Singleton<CtrlClient>::Get()->ClearKV(plan_name); }
+    if (GlobalProcessCtx::IsThisProcessMaster()) {
+      Singleton<CtrlClient>::Get()->ClearKV(plan_name);
+    }
   }
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
@@ -323,7 +325,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   // NOTE(strint): Do memory shrink to free cached memory in eager VM before graph runtime init.
   JUST(vm::CurrentRankSync());
-  auto* vm = JUST(GlobalMaybe<VirtualMachine>());
+  auto* vm = JUST(SingletonMaybe<VirtualMachine>());
   JUST(vm->ShrinkAllMem());
 
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));

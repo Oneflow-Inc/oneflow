@@ -25,7 +25,7 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T, typename Kind>
-class Global;
+class Singleton;
 namespace one {
 
 class Tensor;

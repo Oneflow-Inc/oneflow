@@ -361,7 +361,7 @@ Maybe<vm::Stream*> VirtualMachine::GetVmStream(Symbol<Stream> stream) {
   if (stream->unique_stream_id() >= unique_stream_id2vm_stream_.size()) {
     std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
     if (stream->unique_stream_id() >= unique_stream_id2vm_stream_.size()) {
-      auto* stream_mgr = JUST(GlobalMaybe<StreamMgr>());
+      auto* stream_mgr = JUST(SingletonMaybe<StreamMgr>());
       for (int i = unique_stream_id2vm_stream_.size(); i <= stream->unique_stream_id(); ++i) {
         Symbol<Stream> cur_stream = JUST(stream_mgr->GetStreamSymbol(i));
         CHECK_EQ_OR_RETURN(cur_stream->unique_stream_id(), i)

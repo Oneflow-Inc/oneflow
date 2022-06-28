@@ -105,7 +105,7 @@ Maybe<void> EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
 bool EagerExecutionEnabled() { return *Singleton<bool, EagerExecution>::Get(); }
 
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
-  return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
+  return JUST(SingletonMaybe<LazyJobBuildAndInferCtxMgr>());
 }
 
 Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name) {

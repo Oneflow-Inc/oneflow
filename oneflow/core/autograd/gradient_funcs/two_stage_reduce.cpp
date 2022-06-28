@@ -135,8 +135,8 @@ class ReduceGlobal : public OpExprGradFunction<ReduceGlobalCaptureState> {
   AttrMap base_attrs_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_min_global_stage", ReduceSingleton<ReduceMode::kMin>);
-REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_max_global_stage", ReduceSingleton<ReduceMode::kMax>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_min_global_stage", ReduceGlobal<ReduceMode::kMin>);
+REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_max_global_stage", ReduceGlobal<ReduceMode::kMax>);
 
 }  // namespace one
 }  // namespace oneflow
