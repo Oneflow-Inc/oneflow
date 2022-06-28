@@ -20,8 +20,8 @@ namespace oneflow {
 namespace vm {
 
 size_t ThreadCtx::TryReceiveAndRun() {
-  intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)> tmp_list;
-  mut_pending_instruction_list()->MoveTo(&tmp_list);
+  intrusive::List<INTRUSIVE_FIELD(Instruction, worker_pending_instruction_hook_)> tmp_list;
+  mut_worker_pending_instruction_list()->MoveTo(&tmp_list);
   size_t size = tmp_list.size();
   INTRUSIVE_FOR_EACH(instruction, &tmp_list) {
     tmp_list.Erase(instruction.Mutable());

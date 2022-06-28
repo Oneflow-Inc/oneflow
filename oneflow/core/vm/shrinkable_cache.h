@@ -13,25 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <vector>
-#include "oneflow/core/device/cuda_event.h"
+#ifndef ONEFLOW_CORE_VM_SHRINKABLE_CACHE_H_
+#define ONEFLOW_CORE_VM_SHRINKABLE_CACHE_H_
 
 namespace oneflow {
+namespace vm {
 
-#ifdef WITH_CUDA
+class ShrinkableCache {
+ public:
+  ShrinkableCache() = default;
+  virtual ~ShrinkableCache() = default;
 
-CudaEvent::CudaEvent(int device_id, unsigned int flags) : device_id_(device_id) {
-  CudaCurrentDeviceGuard guard(device_id_);
-  OF_CUDA_CHECK(cudaEventCreateWithFlags(&event_, flags));
-}
+  virtual void Shrink() = 0;
+};
 
-CudaEvent::~CudaEvent() {
-  CudaCurrentDeviceGuard guard(device_id_);
-  OF_CUDA_CHECK(cudaEventDestroy(event_));
-}
-
-bool CudaEvent::Query() const { return cudaEventQuery(event_) != cudaErrorNotReady; }
-
-#endif
-
+}  // namespace vm
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_VM_SHRINKABLE_CACHE_H_

@@ -125,13 +125,17 @@ class NcclLogicalAllReduceKernel final : public user_op::OpKernel {
     CHECK_EQ(in->data_type(), out->data_type());
     VLOG(3) << "[NcclLogical][AllReduce] " << nccl_comm->stream_name() << " " << ctx->op_name()
             << std::endl;
+    ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
+    if (in->data_type() == DataType::kBool) { reduce_type = ncclRedOp_t::ncclMax; }
     OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
-                                GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
-                                nccl_comm->comm(),
+                                GetNcclDataType(in->data_type()), reduce_type, nccl_comm->comm(),
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  bool IsKernelLaunchSynchronized() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override {
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+  }
 };
 
 class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
@@ -156,13 +160,17 @@ class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
     CHECK_EQ(in->shape_view().elem_cnt(), out->shape_view().elem_cnt() * num_ranks);
     VLOG(3) << "[NcclLogical][ReduceScatter] " << nccl_comm->stream_name() << " " << ctx->op_name()
             << std::endl;
-    OF_NCCL_CHECK(ncclReduceScatter(in->dptr(), out->mut_dptr(), out->shape_view().elem_cnt(),
-                                    GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
-                                    nccl_comm->comm(),
-                                    ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+    ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
+    if (in->data_type() == DataType::kBool) { reduce_type = ncclRedOp_t::ncclMax; }
+    OF_NCCL_CHECK(ncclReduceScatter(
+        in->dptr(), out->mut_dptr(), out->shape_view().elem_cnt(), GetNcclDataType(in->data_type()),
+        reduce_type, nccl_comm->comm(), ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  bool IsKernelLaunchSynchronized() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override {
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+  }
 };
 
 class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
@@ -192,7 +200,10 @@ class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  bool IsKernelLaunchSynchronized() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override {
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+  }
 };
 
 template<typename T>
@@ -258,7 +269,10 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
                       unpack_from_dim_vec.data(), unpack_from_ptr, perm.data(), out->mut_dptr());
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  bool IsKernelLaunchSynchronized() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override {
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+  }
 };
 
 size_t InferAllGatherNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx) {
@@ -327,7 +341,10 @@ class NcclLogicalReduceScatterNoncontinuous final : public user_op::OpKernel {
                                     ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  bool IsKernelLaunchSynchronized() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override {
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+  }
 };
 
 size_t InferReduceScatterNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx) {
@@ -458,7 +475,10 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  bool IsKernelLaunchSynchronized() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override {
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+  }
 };
 
 size_t InferS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
@@ -501,6 +521,7 @@ REGISTER_USER_KERNEL("_nccl_logical_all_gather")
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferAllGatherNoncontinuousKernelTmpBufferSize);
 
+REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(bool)
 REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(int8_t)
 REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(int32_t)
 REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(int64_t)
@@ -532,6 +553,7 @@ REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(float16)
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferS2SKernelTmpBufferSize);
 
+REGISTER_S2S_KERNEL(bool)
 REGISTER_S2S_KERNEL(int8_t)
 REGISTER_S2S_KERNEL(int32_t)
 REGISTER_S2S_KERNEL(int64_t)
