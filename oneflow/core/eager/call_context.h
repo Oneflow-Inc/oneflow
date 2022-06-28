@@ -83,9 +83,7 @@ class CallContext {
         outputs_(outputs),
         consistent_tensor_infer_result_(consistent_tensor_infer_result),
         op_interp_ctx_(op_interp_ctx),
-        tmp_tensor_(mem_case),
-        state_(nullptr),
-        cache_(nullptr) {}
+        tmp_tensor_(mem_case) {}
 
   ~CallContext() = default;
 
@@ -99,9 +97,6 @@ class CallContext {
   const one::OpExprInterpContext& op_interp_ctx() const { return op_interp_ctx_; }
   TmpTensor* mut_tmp_tensor() { return &tmp_tensor_; }
 
-  user_op::OpKernelState*& mut_state() { return state_; }
-  user_op::OpKernelCache*& mut_cache() { return cache_; }
-
  private:
   const ComposedAttrMap composed_attrs_;
   const one::EagerBlobObjectListPtr inputs_;
@@ -109,8 +104,6 @@ class CallContext {
   const std::shared_ptr<const one::ConsistentTensorInferResult> consistent_tensor_infer_result_;
   const one::OpExprInterpContext op_interp_ctx_;
   TmpTensor tmp_tensor_;
-  user_op::OpKernelState* state_;
-  user_op::OpKernelCache* cache_;
 };
 
 }  // namespace eager

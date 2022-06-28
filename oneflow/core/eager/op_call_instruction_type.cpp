@@ -59,12 +59,13 @@ struct OpCallInstructionUtil final {
   static inline void Compute(const vm::Instruction& instruction) {
     auto* operand = GetCallPhyInstrOperand(instruction);
     DeviceCtx* device_ctx = instruction.stream().device_ctx().get();
+    user_op::OpKernelState* state = nullptr;
+    user_op::OpKernelCache* cache = nullptr;
     if (operand->user_opkernel()->has_state_or_cache()) {
       auto* call_ctx = operand->mut_call_ctx();
-      TryInitOpKernelStateAndCache(operand, device_ctx, &call_ctx->mut_state(),
-                                   &call_ctx->mut_cache());
+      TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
     }
-    OpKernelCompute(operand, device_ctx);
+    OpKernelCompute(operand, device_ctx, state, cache);
   }
 
   static inline OpCallPhyInstrOperand* GetCallPhyInstrOperand(const vm::Instruction& instruction) {
@@ -118,11 +119,10 @@ struct OpCallInstructionUtil final {
     return Maybe<void>::Ok();
   }
 
-  static inline void OpKernelCompute(OpCallPhyInstrOperand* operand, DeviceCtx* device_ctx) {
+  static inline void OpKernelCompute(OpCallPhyInstrOperand* operand, DeviceCtx* device_ctx,
+                                     user_op::OpKernelState* state, user_op::OpKernelCache* cache) {
     auto* call_ctx = &operand->call_ctx_;
     auto* user_kernel = operand->user_opkernel();
-    auto* state = operand->mut_call_ctx()->mut_state();
-    auto* cache = operand->mut_call_ctx()->mut_cache();
     operand->mut_opkernel()->Compute(call_ctx, device_ctx, user_kernel, state, cache);
   }
 
