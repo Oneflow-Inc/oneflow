@@ -149,7 +149,8 @@ def rand_op(
 
 
 def randn_op(
-    *size,
+    *shape,
+    size=(),
     out=None,
     generator=None,
     dtype: Optional[flow.dtype] = None,
@@ -196,6 +197,8 @@ def randn_op(
         True
 
     """
+    if size == ():
+        size = shape
     size = _handle_size_arg(size)
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
