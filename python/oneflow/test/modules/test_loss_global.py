@@ -91,7 +91,7 @@ def generate_necessity_for_cross_entropy_or_nll_loss(
     return f(x_np, True), f(y_np, False), f(x_np, True), f(y_np, False)
 
 
-class TestBCELossOrWithLogitsGlobal(flow.unittest.TestCase):
+class TestBCELossOrWithLogitsConsistent(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_bce_loss(testcase):
         arg_dict = OrderedDict()
@@ -104,7 +104,7 @@ class TestBCELossOrWithLogitsGlobal(flow.unittest.TestCase):
             compare_loss(*arg)
 
 
-class TestCrossEntropyOrNllLossGlobal(flow.unittest.TestCase):
+class TestCrossEntropyOrNllLossConsistent(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_cross_entropy_loss_or_nll_loss(testcase):
         arg_dict = OrderedDict()
@@ -117,7 +117,7 @@ class TestCrossEntropyOrNllLossGlobal(flow.unittest.TestCase):
             compare_loss(*arg)
 
 
-class TestKLDivLossGlobal(flow.unittest.TestCase):
+class TestKLDivLossConsistent(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_kl_div_loss(testcase):
         arg_dict = OrderedDict()
@@ -130,7 +130,7 @@ class TestKLDivLossGlobal(flow.unittest.TestCase):
             compare_loss(*arg)
 
 
-class TestSmoothL1LossGlobal(flow.unittest.TestCase):
+class TestSmoothL1LossConsistent(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_smooth_l1_loss(testcase):
         arg_dict = OrderedDict()
