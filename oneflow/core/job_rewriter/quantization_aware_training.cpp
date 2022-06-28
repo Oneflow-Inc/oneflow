@@ -382,7 +382,7 @@ class QuantAwareTraining final : public JobPass {
 
 Maybe<bool> IsNodeQuantizationEnabled(const OpNode& node) {
   int64_t scope_symbol_id = node.op().op_conf().scope_symbol_id();
-  CHECK_OR_RETURN(Singleton<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id));
+  CHECK_OR_RETURN(Singleton<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id));  // NOLINT
   const Scope& scope = Singleton<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
   return scope.Bool("quantization_aware_training");
 }

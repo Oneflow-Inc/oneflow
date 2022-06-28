@@ -22,7 +22,7 @@ limitations under the License.
 namespace oneflow {
 
 RegstDesc::RegstDesc() {
-  regst_desc_id_ = Singleton<IDMgr>::Get()->NewRegstDescId();
+  regst_desc_id_ = Singleton<IDMgr>::Get()->NewRegstDescId();  // NOLINT
   producer_ = nullptr;
   min_register_num_ = 1;
   max_register_num_ = kMaxRegisterNum;
