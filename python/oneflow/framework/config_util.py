@@ -16,14 +16,15 @@ limitations under the License.
 import os
 import sys
 import traceback
-from typing import List, Union
+from typing import Callable, List, Union
 
 import oneflow._oneflow_internal
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.framework.session_context as session_ctx
+import oneflow.framework.attr_util as attr_util
 
 
-def _set_resource_attr(attrs_chain: Union[List[str], str], attr_value):
+def _set_resource_attr(attrs_chain: Union[List[str], str], attr_value, type_):
     r"""
     set the attribute of config_proto.resource to attr_value.
     the attribute is specified as a string or a list of string.
@@ -39,41 +40,33 @@ def _set_resource_attr(attrs_chain: Union[List[str], str], attr_value):
     we can call `_set_resource_attr(["collective_boxing_conf", "nccl_num_streams"], 1)`
 `
     """
+    assert isinstance(attr_value, type_), (
+        "Attribute "
+        + repr(attrs_chain)
+        + " type unmatched! Expected: "
+        + str(type_)
+        + " but get: "
+        + str(type(attr_value))
+    )
 
     if isinstance(attrs_chain, str):
         attrs_chain = [attrs_chain]
 
     session = session_ctx.GetDefaultSession()
 
-    def __get_obj(obj, _attrs_chain):
-        r"""
-        Get the object given the attribute chain.
-
-        For example, if we want to get `resource.collective_boxing_conf.nccl_num_streams`
-
-        we can call `__get_obj(resource, ["collective_boxing_conf", "nccl_num_streams"])
-        """
-        last_obj = obj
-        for att in _attrs_chain:
-            assert hasattr(last_obj, att), (
-                repr(last_obj) + " does not have attribute " + att + " !"
-            )
-            last_obj = getattr(last_obj, att)
-        return last_obj
-
-    # get the current resource config 
+    # get the current resource config
     resource_config = session.config_proto.resource
 
     # update the current resource config
     setattr(
-        __get_obj(
+        attr_util.get_nested_attribute(
             resource_config, attrs_chain[0:-1]
         ),  # the owning object of the attribute to be updated
         attrs_chain[-1],  # the attribute needs to be updated
         attr_value,
     )
 
-    # update the resource config eagerly if the session is already initialized  
+    # update the resource config eagerly if the session is already initialized
     if session.status_ == session.Status.INITED:
         session.update_resource_eagerly(resource_config)
 
@@ -93,8 +86,8 @@ def api_machine_num(val: int) -> None:
     Args:
         val (int): available number of machines
     """
-    assert type(val) is int
-    _set_resource_attr("machine_num", val)
+    attrs, type_ = api_attrs_and_type[api_machine_num]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_gpu_device_num(val: int) -> None:
@@ -104,15 +97,17 @@ def api_gpu_device_num(val: int) -> None:
         val (int): number of GPUs. It is identical on every machine. In other words,
         you can't specify different number of GPUs you would like to use on each machine.
     """
-    assert type(val) is int
+
+    attrs, type_ = api_attrs_and_type[api_gpu_device_num]
+
     if oneflow._oneflow_internal.flags.with_cuda():
-        _set_resource_attr("gpu_device_num", val)
+        _set_resource_attr(attrs, val, type_)
     else:
         print(
             "INFO: for CPU-only OneFlow, oneflow.config.gpu_device_num is equivalent to oneflow.config.cpu_device_num"
         )
         print(traceback.format_stack()[-2])
-        _set_resource_attr("cpu_device_num", val)
+        _set_resource_attr(attrs, val, type_)
 
 
 def api_cpu_device_num(val: int) -> None:
@@ -121,8 +116,9 @@ def api_cpu_device_num(val: int) -> None:
     Args:
         val (int): number of CPUs. It is identical on every machine.
     """
-    assert type(val) is int
-    _set_resource_attr("cpu_device_num", val)
+
+    attrs, type_ = api_attrs_and_type[api_cpu_device_num]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_comm_net_worker_num(val: int) -> None:
@@ -132,8 +128,8 @@ def api_comm_net_worker_num(val: int) -> None:
     Args:
         val (int): number of workers
     """
-    assert type(val) is int
-    _set_resource_attr("comm_net_worker_num", val)
+    attrs, type_ = api_attrs_and_type[api_comm_net_worker_num]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_max_mdsave_worker_num(val: int) -> None:
@@ -142,8 +138,9 @@ def api_max_mdsave_worker_num(val: int) -> None:
     Args:
         val (int):  max number of workers
     """
-    assert type(val) is int
-    _set_resource_attr("max_mdsave_worker_num", val)
+
+    attrs, type_ = api_attrs_and_type[api_max_mdsave_worker_num]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_numa_aware_cuda_malloc_host(val: bool = True) -> None:
@@ -163,8 +160,9 @@ def api_compute_thread_pool_size(val: int) -> None:
     Args:
         val (int): size of  thread pool
     """
-    assert type(val) is int
-    _set_resource_attr("compute_thread_pool_size", val)
+
+    attrs, type_ = api_attrs_and_type[api_compute_thread_pool_size]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_reserved_host_mem_mbyte(val: int) -> None:
@@ -173,8 +171,9 @@ def api_reserved_host_mem_mbyte(val: int) -> None:
     Args:
         val (int):  memory size, e.g. 1024(mb)
     """
-    assert type(val) is int
-    _set_resource_attr("reserved_host_mem_mbyte", val)
+
+    attrs, type_ = api_attrs_and_type[api_reserved_host_mem_mbyte]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_reserved_device_mem_mbyte(val: int) -> None:
@@ -183,8 +182,9 @@ def api_reserved_device_mem_mbyte(val: int) -> None:
     Args:
         val (int):  memory size, e.g. 1024(mb)
     """
-    assert type(val) is int
-    _set_resource_attr("reserved_device_mem_mbyte", val)
+
+    attrs, type_ = api_attrs_and_type[api_reserved_device_mem_mbyte]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_enable_cudnn_fused_normalization_add_relu(val: bool) -> None:
@@ -193,8 +193,9 @@ def api_enable_cudnn_fused_normalization_add_relu(val: bool) -> None:
     Args:
         val (bool): whether enable or not
     """
-    assert type(val) is bool
-    _set_resource_attr(["cudnn_conf", "enable_cudnn_fused_normalization_add_relu"], val)
+
+    attrs, type_ = api_attrs_and_type[api_enable_cudnn_fused_normalization_add_relu]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_enable_debug_mode(val: bool) -> None:
@@ -203,8 +204,9 @@ def api_enable_debug_mode(val: bool) -> None:
     Args:
         val (bool):  True or False
     """
-    assert type(val) is bool
-    _set_resource_attr("enable_debug_mode", val)
+
+    attrs, type_ = api_attrs_and_type[api_enable_debug_mode]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_legacy_model_io_enabled():
@@ -218,8 +220,9 @@ def api_enable_legacy_model_io(val: bool = True):
     Args:
         val ([type]): True or False
     """
-    assert type(val) is bool
-    _set_resource_attr("enable_legacy_model_io", val)
+
+    attrs, type_ = api_attrs_and_type[api_enable_legacy_model_io]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_enable_model_io_v2(val: bool):
@@ -228,8 +231,9 @@ def api_enable_model_io_v2(val: bool):
     Args:
         val ([type]): True or False
     """
-    assert type(val) is bool
-    _set_resource_attr("enable_legacy_model_io", val)
+
+    attrs, type_ = api_attrs_and_type[api_enable_model_io_v2]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_enable_fusion(val: bool = True) -> None:
@@ -238,8 +242,9 @@ def api_enable_fusion(val: bool = True) -> None:
     Args:
         val (bool, optional): True or False. Defaults to True.
     """
-    assert type(val) is bool
-    _set_resource_attr(["collective_boxing_conf", "enable_fusion"], val)
+
+    attrs, type_ = api_attrs_and_type[api_enable_fusion]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_num_callback_threads(val: int) -> None:
@@ -249,8 +254,9 @@ def api_num_callback_threads(val: int) -> None:
     Args:
         val (int): number of  callback threads
     """
-    assert type(val) is int
-    _set_resource_attr(["collective_boxing_conf", "num_callback_threads"], val)
+
+    attrs, type_ = api_attrs_and_type[api_num_callback_threads]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_enable_tensor_float_32_compute(val: bool = True) -> None:
@@ -259,8 +265,8 @@ def api_enable_tensor_float_32_compute(val: bool = True) -> None:
     Args:
         val (bool, optional): True or False. Defaults to True.
     """
-    assert type(val) is bool
-    _set_resource_attr("enable_tensor_float_32_compute", val)
+    attrs, type_ = api_attrs_and_type[api_enable_tensor_float_32_compute]
+    _set_resource_attr(attrs, val, type_)
     if not val:
         os.environ["ONEFLOW_EP_CUDA_ENABLE_TF32_EXECUTION"] = "0"
 
@@ -271,8 +277,9 @@ def api_enable_mem_chain_merge(val: bool = True) -> None:
     Args:
         val (bool, optional): True or False. Defaults to True.
     """
-    assert type(val) is bool
-    _set_resource_attr("enable_mem_chain_merge", val)
+
+    attrs, type_ = api_attrs_and_type[api_enable_mem_chain_merge]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_use_compute_stream(val: bool = False) -> None:
@@ -281,8 +288,9 @@ def api_nccl_use_compute_stream(val: bool = False) -> None:
     Args:
         val (bool, optional): True or False. Defaults to False.
     """
-    assert type(val) is bool
-    _set_resource_attr("nccl_use_compute_stream", val)
+
+    attrs, type_ = api_attrs_and_type[api_nccl_use_compute_stream]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_disable_group_boxing_by_dst_parallel(val: bool = False) -> None:
@@ -291,8 +299,9 @@ def api_disable_group_boxing_by_dst_parallel(val: bool = False) -> None:
     Args:
         val (bool, optional): True or False. Defaults to False.
     """
-    assert type(val) is bool
-    _set_resource_attr("disable_group_boxing_by_dst_parallel", val)
+
+    attrs, type_ = api_attrs_and_type[api_disable_group_boxing_by_dst_parallel]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_num_streams(val: int) -> None:
@@ -301,8 +310,9 @@ def api_nccl_num_streams(val: int) -> None:
     Args:
         val (int): number of streams
     """
-    assert type(val) is int
-    _set_resource_attr(["collective_boxing_conf", "nccl_num_streams"], val)
+
+    attrs, type_ = api_attrs_and_type[api_nccl_num_streams]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_fusion_threshold_mb(val: int) -> None:
@@ -311,8 +321,9 @@ def api_nccl_fusion_threshold_mb(val: int) -> None:
     Args:
         val (int): int number, e.g. 10(mb)
     """
-    assert type(val) is int
-    _set_resource_attr(["collective_boxing_conf", "nccl_fusion_threshold_mb"], val)
+
+    attrs, type_ = api_attrs_and_type[api_nccl_fusion_threshold_mb]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_fusion_all_reduce_use_buffer(val: bool) -> None:
@@ -321,10 +332,9 @@ def api_nccl_fusion_all_reduce_use_buffer(val: bool) -> None:
     Args:
         val (bool): True or False
     """
-    assert type(val) is bool
-    _set_resource_attr(
-        ["collective_boxing_conf", "nccl_fusion_all_reduce_use_buffer"], val
-    )
+
+    attrs, type_ = api_attrs_and_type[api_nccl_fusion_all_reduce_use_buffer]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_fusion_all_reduce(val: bool) -> None:
@@ -333,8 +343,9 @@ def api_nccl_fusion_all_reduce(val: bool) -> None:
     Args:
         val (bool):  True or False
     """
-    assert type(val) is bool
-    _set_resource_attr(["collective_boxing_conf", "nccl_fusion_all_reduce"], val)
+
+    attrs, type_ = api_attrs_and_type[api_nccl_fusion_all_reduce]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_fusion_reduce_scatter(val: bool) -> None:
@@ -343,8 +354,9 @@ def api_nccl_fusion_reduce_scatter(val: bool) -> None:
     Args:
         val (bool): True or False
     """
-    assert type(val) is bool
-    _set_resource_attr(["collective_boxing_conf", "nccl_fusion_reduce_scatter"], val)
+
+    attrs, type_ = api_attrs_and_type[api_nccl_fusion_reduce_scatter]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_fusion_all_gather(val: bool) -> None:
@@ -353,8 +365,9 @@ def api_nccl_fusion_all_gather(val: bool) -> None:
     Args:
         val (bool): True or False
     """
-    assert type(val) is bool
-    _set_resource_attr(["collective_boxing_conf", "nccl_fusion_all_gather"], val)
+
+    attrs, type_ = api_attrs_and_type[api_nccl_fusion_all_gather]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_fusion_reduce(val: bool) -> None:
@@ -363,8 +376,9 @@ def api_nccl_fusion_reduce(val: bool) -> None:
     Args:
         val (bool): True or False
     """
-    assert type(val) is bool
-    _set_resource_attr(["collective_boxing_conf", "nccl_fusion_reduce"], val)
+
+    attrs, type_ = api_attrs_and_type[api_nccl_fusion_reduce]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_fusion_broadcast(val: bool) -> None:
@@ -373,8 +387,9 @@ def api_nccl_fusion_broadcast(val: bool) -> None:
     Args:
         val (bool): True or False
     """
-    assert type(val) is bool
-    _set_resource_attr(["collective_boxing_conf", "nccl_fusion_broadcast"], val)
+
+    attrs, type_ = api_attrs_and_type[api_nccl_fusion_broadcast]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_fusion_max_ops(val: int) -> None:
@@ -383,8 +398,9 @@ def api_nccl_fusion_max_ops(val: int) -> None:
     Args:
         val (int): Maximum number of ops
     """
-    assert type(val) is int
-    _set_resource_attr(["collective_boxing_conf", "nccl_fusion_max_ops"], val)
+
+    attrs, type_ = api_attrs_and_type[api_nccl_fusion_max_ops]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_enable_all_to_all(val: bool) -> None:
@@ -393,8 +409,9 @@ def api_nccl_enable_all_to_all(val: bool) -> None:
     Args:
         val (bool): True or False
     """
-    assert type(val) is bool
-    _set_resource_attr(["collective_boxing_conf", "nccl_enable_all_to_all"], val)
+
+    attrs, type_ = api_attrs_and_type[api_nccl_enable_all_to_all]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_enable_mixed_fusion(val: bool) -> None:
@@ -403,5 +420,74 @@ def api_nccl_enable_mixed_fusion(val: bool) -> None:
     Args:
         val (bool): True or False
     """
-    assert type(val) is bool
-    _set_resource_attr(["collective_boxing_conf", "nccl_enable_mixed_fusion"], val)
+
+    attrs, type_ = api_attrs_and_type[api_nccl_enable_mixed_fusion]
+    _set_resource_attr(attrs, val, type_)
+
+
+api_attrs_and_type = {
+    api_machine_num: ("machine_num", int),
+    api_cpu_device_num: ("cpu_device_num", int),
+    api_comm_net_worker_num: ("comm_net_worker_num", int),
+    api_max_mdsave_worker_num: ("max_mdsave_worker_num", int),
+    api_compute_thread_pool_size: ("compute_thread_pool_size", int),
+    api_reserved_host_mem_mbyte: ("reserved_host_mem_mbyte", int),
+    api_reserved_device_mem_mbyte: ("reserved_device_mem_mbyte", int),
+    api_enable_cudnn_fused_normalization_add_relu: (
+        ["cudnn_conf", "enable_cudnn_fused_normalization_add_relu"],
+        bool,
+    ),
+    api_enable_debug_mode: ("enable_debug_mode", bool),
+    api_enable_legacy_model_io: ("enable_legacy_model_io", bool),
+    api_enable_model_io_v2: ("enable_legacy_model_io_v2", bool),
+    api_enable_fusion: (["collective_boxing_conf", "enable_fusion"], bool),
+    api_num_callback_threads: (["collective_boxing_conf", "num_callback_threads"], int),
+    api_enable_tensor_float_32_compute: ("enable_tensor_float_32_compute", bool),
+    api_enable_mem_chain_merge: ("enable_mem_chain_merge", bool),
+    api_nccl_use_compute_stream: ("nccl_use_compute_stream", bool),
+    api_disable_group_boxing_by_dst_parallel: (
+        "disable_group_boxing_by_dst_parallel",
+        bool,
+    ),
+    api_nccl_num_streams: (["collective_boxing_conf", "nccl_num_streams"], int),
+    api_nccl_fusion_threshold_mb: (
+        ["collective_boxing_conf", "nccl_fusion_threshold_mb"],
+        int,
+    ),
+    api_nccl_fusion_all_reduce_use_buffer: (
+        ["collective_boxing_conf", "nccl_fusion_all_reduce_use_buffer"],
+        bool,
+    ),
+    api_nccl_fusion_all_reduce: (
+        ["collective_boxing_conf", "nccl_fusion_all_reduce"],
+        bool,
+    ),
+    api_nccl_fusion_reduce_scatter: (
+        ["collective_boxing_conf", "nccl_fusion_reduce_scatter"],
+        bool,
+    ),
+    api_nccl_fusion_all_gather: (
+        ["collective_boxing_conf", "nccl_fusion_all_gather"],
+        bool,
+    ),
+    api_nccl_fusion_reduce: (["collective_boxing_conf", "nccl_fusion_reduce"], bool),
+    api_nccl_fusion_broadcast: (
+        ["collective_boxing_conf", "nccl_fusion_broadcast"],
+        bool,
+    ),
+    api_nccl_fusion_max_ops: (["collective_boxing_conf", "nccl_fusion_max_ops"], int),
+    api_nccl_enable_all_to_all: (
+        ["collective_boxing_conf", "nccl_enable_all_to_all"],
+        bool,
+    ),
+    api_nccl_enable_mixed_fusion: (
+        ["collective_boxing_conf", "nccl_enable_mixed_fusion"],
+        bool,
+    ),
+}
+
+api_attrs_and_type[api_gpu_device_num] = (
+    ("gpu_device_num", int)
+    if oneflow._oneflow_internal.flags.with_cuda()
+    else ("cpu_device_num", int)
+)

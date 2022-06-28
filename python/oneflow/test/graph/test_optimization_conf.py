@@ -18,10 +18,12 @@ import unittest
 
 import numpy as np
 
-import oneflow
 import oneflow as flow
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.unittest
+import oneflow.framework.config_util as config_util
+import oneflow.framework.attr_util as attr_util
+import random
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -79,64 +81,38 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
         g._generate_config_proto()
         print("graph conf: \n", g._config_proto)
 
-        # nccl
-        flow.boxing.nccl.enable_use_compute_stream(False)
-        flow.boxing.nccl.disable_group_boxing_by_dst_parallel(False)
-        flow.boxing.nccl.allow_fuse_all_reduce(False)
-        flow.boxing.nccl.allow_fuse_broadcast(False)
-        flow.utils.cpu_device_num(222)
-        flow.utils.machine_num(999)
-        flow.utils.comm_net_worker_num(111)
-        flow.utils.max_mdsave_worker_num(88)
-        flow.utils.compute_thread_pool_size(33)
-        flow.utils.reserved_host_mem_mbyte(22)
-        flow.utils.reserved_device_mem_mbyte(555)
-        flow.utils.enable_debug_mode(True)
-        flow.backends.cudnn.enable_fused_normalization_add_relu(False)
-        flow.boxing.enable_fusion(False)
+        # Test the resource config update eagerly
+        # Note: this tests all the apis in oneflow.framework.config_util automatically
+        def test_resource_config_update_eagerly_automatically():
+            attrs_and_values_to_check = []
+            num_api_tested = 0
 
-        test_case.assertTrue(not g._optimization_conf_proto.nccl_use_compute_stream)
+            for api in config_util.api_attrs_and_type.keys():
+                attrs, type_ = config_util.api_attrs_and_type[api]
+                if type_ is int:
+                    attr_value = random.randint(0, 9999)
+                    attrs_and_values_to_check.append((attrs, attr_value))
+                elif type_ is bool:
+                    attr_value = random.choice([True, False])
+                    attrs_and_values_to_check.append((attrs, attr_value))
+                else:
+                    assert False, "unsupported type!"
 
-        test_case.assertTrue(
-            not g._optimization_conf_proto.disable_group_boxing_by_dst_parallel
-        )
+                api(attr_value)
+                num_api_tested += 1
 
-        test_case.assertTrue(
-            not g._optimization_conf_proto.collective_boxing_conf.nccl_fusion_all_reduce
-        )
+            # check all the attributes are set correctly
+            for (attrs, expected_attr_value) in attrs_and_values_to_check:
+                current_attr_value = attr_util.get_nested_attribute(g._optimization_conf_proto, attrs)
+                test_case.assertTrue(
+                    current_attr_value == expected_attr_value,
+                    str(attrs) + " : " + str(current_attr_value) + " vs " + str(current_attr_value)
+                )
 
-        test_case.assertTrue(
-            not g._optimization_conf_proto.collective_boxing_conf.nccl_fusion_broadcast
-        )
+            print("number of APIs tested: " + str(num_api_tested))
 
-        # utils
-        test_case.assertTrue(g._optimization_conf_proto.machine_num == 999)
-
-        test_case.assertTrue(g._optimization_conf_proto.cpu_device_num == 222)
-
-        test_case.assertTrue(g._optimization_conf_proto.comm_net_worker_num == 111)
-
-        test_case.assertTrue(g._optimization_conf_proto.max_mdsave_worker_num == 88)
-
-        test_case.assertTrue(g._optimization_conf_proto.compute_thread_pool_size == 33)
-
-        test_case.assertTrue(g._optimization_conf_proto.reserved_host_mem_mbyte == 22)
-
-        test_case.assertTrue(
-            g._optimization_conf_proto.reserved_device_mem_mbyte == 555
-        )
-
-        test_case.assertTrue(g._optimization_conf_proto.enable_debug_mode)
-
-        # cudnn
-        test_case.assertTrue(
-            not g._optimization_conf_proto.cudnn_conf.enable_cudnn_fused_normalization_add_relu
-        )
-
-        # boxing
-        test_case.assertTrue(
-            not g._optimization_conf_proto.collective_boxing_conf.enable_fusion
-        )
+        test_resource_config_update_eagerly_automatically()
+        test_resource_config_update_eagerly_automatically()
 
         print("optimization conf after session init: \n", g._optimization_conf_proto)
 
