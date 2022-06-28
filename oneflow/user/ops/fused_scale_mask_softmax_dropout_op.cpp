@@ -22,7 +22,11 @@ namespace oneflow {
     -> Maybe<void> {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
-  CHECK_OR_RETURN(x_desc.shape() == mask_desc.shape());
+  const auto x_shape = x_desc.shape();
+  const auto mask_shape = mask_desc.shape();
+  CHECK_EQ_OR_RETURN(x_desc.shape().At(x_shape.NumAxes() - 1),
+                     mask_desc.shape().At(mask_shape.NumAxes() - 1))
+      << " last dim of x and mask is not equal.";
   *ctx->OutputShape("y", 0) = x_desc.shape();
   *ctx->OutputIsDynamic("y", 0) = x_desc.is_dynamic();
   *ctx->OutputShape("softmax_y", 0) = x_desc.shape();
@@ -37,7 +41,7 @@ namespace oneflow {
     -> Maybe<void> {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
-  CHECK_OR_RETURN(mask_desc.data_type() == DataType::kBool);
+  CHECK_EQ_OR_RETURN(mask_desc.data_type(), DataType::kBool) << " mask dtype only support bool.";
   *ctx->OutputDType("y", 0) = x_desc.data_type();
   *ctx->OutputDType("softmax_y", 0) = x_desc.data_type();
   return Maybe<void>::Ok();
@@ -47,23 +51,37 @@ namespace oneflow {
     -> Maybe<void> {
   user_op::InputArgModifier* mask_modifier = GetInputArgModifierFn("mask", 0);
   user_op::InputArgModifier* dropout_mask_modifier = GetInputArgModifierFn("dropout_mask", 0);
-  CHECK_OR_RETURN(mask_modifier != nullptr);
-  CHECK_OR_RETURN(dropout_mask_modifier != nullptr);
+  CHECK_OR_RETURN(mask_modifier != nullptr) << " cannot find mask input.";
+  CHECK_OR_RETURN(dropout_mask_modifier != nullptr) << " cannot find dropout mask input.";
   mask_modifier->set_requires_grad(false);
   dropout_mask_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedScaleMaskSoftmaxDropoutOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  CHECK_GE_OR_RETURN(x_tensor.shape().NumAxes(), 2);
+  CHECK_GE_OR_RETURN(x_tensor.shape().NumAxes(), 2) << " x num axes at least 2.";
+  const user_op::TensorDesc& mask_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("mask", 0);
+  CHECK_EQ_OR_RETURN(x_tensor.shape().NumAxes(), mask_tensor.shape().NumAxes())
+      << " x num axes must equal with mask.";
   FOR_RANGE(int64_t, axis, 0, x_tensor.shape().NumAxes() - 2) {
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("x", 0), axis)
-        .Split(user_op::OpArg("mask", 0), axis)
-        .Split(user_op::OpArg("dropout_mask", 0), axis)
-        .Split(user_op::OpArg("y", 0), axis)
-        .Split(user_op::OpArg("softmax_y", 0), axis)
-        .Build();
+    // NOTE(chengcheng): mask support broadcast, when dim value = 1, sbp = broadcast
+    if (mask_tensor.shape().At(axis) == 1) {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("x", 0), axis)
+          .Broadcast(user_op::OpArg("mask", 0))
+          .Split(user_op::OpArg("dropout_mask", 0), axis)
+          .Split(user_op::OpArg("y", 0), axis)
+          .Split(user_op::OpArg("softmax_y", 0), axis)
+          .Build();
+    } else {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("x", 0), axis)
+          .Split(user_op::OpArg("mask", 0), axis)
+          .Split(user_op::OpArg("dropout_mask", 0), axis)
+          .Split(user_op::OpArg("y", 0), axis)
+          .Split(user_op::OpArg("softmax_y", 0), axis)
+          .Build();
+    }
   }
   return Maybe<void>::Ok();
 }
@@ -73,8 +91,10 @@ namespace oneflow {
   const user_op::TensorDesc& softmax_y_desc = ctx->InputTensorDesc("softmax_y", 0);
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
-  CHECK_EQ_OR_RETURN(dy_desc.shape(), softmax_y_desc.shape());
-  CHECK_OR_RETURN(dy_desc.shape() == mask_desc.shape());
+  CHECK_EQ_OR_RETURN(dy_desc.shape(), softmax_y_desc.shape()) << " dy and y shape must equal.";
+  CHECK_EQ_OR_RETURN(dy_desc.shape().At(dy_desc.shape().NumAxes() - 1),
+                     mask_desc.shape().At(mask_desc.shape().NumAxes() - 1))
+      << " last dim of y and mask is not equal.";
   user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
   *dx_desc->mut_shape() = dy_desc.shape();
   *dx_desc->mut_is_dynamic() = dy_desc.is_dynamic();
@@ -89,8 +109,9 @@ namespace oneflow {
   const user_op::TensorDesc& softmax_y_desc = ctx->InputTensorDesc("softmax_y", 0);
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
-  CHECK_OR_RETURN(dy_desc.data_type() == softmax_y_desc.data_type());
-  CHECK_OR_RETURN(mask_desc.data_type() == DataType::kBool);
+  CHECK_EQ_OR_RETURN(dy_desc.data_type(), softmax_y_desc.data_type())
+      << " dy and softmax_y dtype must equal";
+  CHECK_EQ_OR_RETURN(mask_desc.data_type(), DataType::kBool) << " mask dtype only support bool.";
   user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
   *dx_desc->mut_data_type() = dy_desc.data_type();
   return Maybe<void>::Ok();
@@ -98,15 +119,28 @@ namespace oneflow {
 /*static*/ auto FusedScaleMaskSoftmaxDropoutGradOp::GetSbp(user_op::SbpContext* ctx)
     -> Maybe<void> {
   const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
-  CHECK_GE_OR_RETURN(dy_tensor.shape().NumAxes(), 2);
+  CHECK_GE_OR_RETURN(dy_tensor.shape().NumAxes(), 2) << " dy num axes at least 2.";
+  const user_op::TensorDesc& mask_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("mask", 0);
+  CHECK_EQ_OR_RETURN(dy_tensor.shape().NumAxes(), mask_tensor.shape().NumAxes())
+      << " dy num axes must equal with mask.";
   FOR_RANGE(int64_t, axis, 0, dy_tensor.shape().NumAxes() - 2) {
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("softmax_y", 0), axis)
-        .Split(user_op::OpArg("dy", 0), axis)
-        .Split(user_op::OpArg("mask", 0), axis)
-        .Split(user_op::OpArg("dropout_mask", 0), axis)
-        .Split(user_op::OpArg("dx", 0), axis)
-        .Build();
+    if (mask_tensor.shape().At(axis) == 1) {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("softmax_y", 0), axis)
+          .Split(user_op::OpArg("dy", 0), axis)
+          .Broadcast(user_op::OpArg("mask", 0))
+          .Split(user_op::OpArg("dropout_mask", 0), axis)
+          .Split(user_op::OpArg("dx", 0), axis)
+          .Build();
+    } else {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("softmax_y", 0), axis)
+          .Split(user_op::OpArg("dy", 0), axis)
+          .Split(user_op::OpArg("mask", 0), axis)
+          .Split(user_op::OpArg("dropout_mask", 0), axis)
+          .Split(user_op::OpArg("dx", 0), axis)
+          .Build();
+    }
   }
   return Maybe<void>::Ok();
 }

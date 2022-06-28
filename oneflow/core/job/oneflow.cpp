@@ -38,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/job_rewriter/job_completer.h"
 
 namespace std {
 
@@ -185,7 +186,8 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) 
   const JobDesc& job_desc = GlobalJobDesc();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     double start = GetCurTime();
-    Compiler().Compile(job, plan, need_job_complete);
+    if (need_job_complete) { JUST(JobCompleter().Complete(job)); }
+    Compiler().Compile(job, plan);
     PlanUtil::GenMemBlockAndChunk4Plan(plan);
 
     LOG(INFO) << "\njob_id: " << job_desc.job_id() << " , job_name: " << job_desc.job_name()

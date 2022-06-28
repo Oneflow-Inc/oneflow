@@ -78,7 +78,7 @@ class FusedCastScaleGpuKernel final : public user_op::OpKernel, public user_op::
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const int64_t n = x->shape().elem_cnt();
+    const int64_t n = x->shape_view().elem_cnt();
     const double scale = ctx->Attr<double>("scale");
     const int64_t launch_n = ((std::is_same<T, half>::value && std::is_same<U, float>::value)
                               || (std::is_same<T, float>::value && std::is_same<U, half>::value))

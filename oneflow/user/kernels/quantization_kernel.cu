@@ -114,9 +114,9 @@ class GpuQuantizationKernel final : public user_op::OpKernel {
     const int32_t quantization_bit = ctx->Attr<int32_t>("quantization_bit");
     const std::string quantization_formula = ctx->Attr<std::string>("quantization_formula");
 
-    const int64_t elements = in->shape().elem_cnt();
-    const int64_t panel_size = in->shape().Count(1);
-    const int64_t scale_size = scale->shape().elem_cnt();
+    const int64_t elements = in->shape_view().elem_cnt();
+    const int64_t panel_size = in->shape_view().Count(1);
+    const int64_t scale_size = scale->shape_view().elem_cnt();
 
     // round to even
     auto origin_round_mode = std::fegetround();
