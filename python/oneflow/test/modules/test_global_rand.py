@@ -51,7 +51,7 @@ def _test_graph_rand(test_case, shape, placement, sbp):
 
 class TestRandGlobal(flow.unittest.TestCase):
     @globaltest
-    def test_rand_consistent(test_case):
+    def test_rand_global(test_case):
         shapes = [(8,), (8, 8,), (8, 8, 8)]
         for shape in shapes:
             for placement in all_placement():

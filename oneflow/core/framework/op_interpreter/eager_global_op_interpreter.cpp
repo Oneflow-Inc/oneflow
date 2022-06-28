@@ -32,7 +32,7 @@ limitations under the License.
 #include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
-#include "oneflow/core/framework/tensor_consistent_id.h"
+#include "oneflow/core/framework/tensor_global_id.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/boxing/eager_boxing_logger.h"

@@ -93,8 +93,8 @@ class JobBuildAndInferCtx {
     return &mirrored_lbi2sub_lbis_;
   }
   Maybe<const ParallelDesc*> ParallelDesc4Lbi(const LogicalBlobId& lbi) const;
-  HashMap<LogicalBlobId, LogicalBlobId>* mut_consistent_lbi2mirrored_lbi() {
-    return &consistent_lbi2mirrored_lbi_;
+  HashMap<LogicalBlobId, LogicalBlobId>* mut_global_lbi2mirrored_lbi() {
+    return &global_lbi2mirrored_lbi_;
   }
   Maybe<const SbpParallel*> SbpParallel4Lbi(const LogicalBlobId& lbi) const;
   bool IsVariableLbi(const LogicalBlobId& lbi) const;
@@ -148,7 +148,7 @@ class JobBuildAndInferCtx {
   HashMap<std::string, std::shared_ptr<Operator>> op_name2op_;
   HashMap<ParallelDesc, PlacementGroup*> parallel_desc2placement_group_;
   HashMap<ParallelDesc, BlobPlacementGroup*> parallel_desc2blob_placement_group_;
-  HashMap<LogicalBlobId, LogicalBlobId> consistent_lbi2mirrored_lbi_;
+  HashMap<LogicalBlobId, LogicalBlobId> global_lbi2mirrored_lbi_;
   HashMap<LogicalBlobId, std::vector<LogicalBlobId>> mirrored_lbi2sub_lbis_;
   HashMap<LogicalBlobId, ParallelDesc> mirrored_lbi2parallel_desc_;
   HashMap<LogicalBlobId, SbpParallel> mirrored_lbi2sbp_parallel_;

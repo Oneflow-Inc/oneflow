@@ -86,7 +86,7 @@ def _test_graph_randn(test_case, shape, placement, sbp):
 
 class TestRandnGlobal(flow.unittest.TestCase):
     @globaltest
-    def test_randn_consistent(test_case):
+    def test_randn_global(test_case):
         shapes = [(8,), (8, 8,), (8, 8, 8)]
         for shape in shapes:
             for placement in all_placement():

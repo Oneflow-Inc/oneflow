@@ -21,7 +21,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-def _consistent_math_op_grad_grad_impl(test_case, op_name, placement, sbp):
+def _global_math_op_grad_grad_impl(test_case, op_name, placement, sbp):
     x = (
         random_tensor(2, dim0=8, dim1=8)
         .to_global(placement=placement, sbp=sbp)
@@ -50,13 +50,13 @@ class TestGlobalMathOpHigherDerivative(flow.unittest.TestCase):
     def test_global_sin_grad_grad(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                _consistent_math_op_grad_grad_impl(test_case, "sin", placement, sbp)
+                _global_math_op_grad_grad_impl(test_case, "sin", placement, sbp)
 
     @globaltest
     def test_global_cos_grad_grad(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                _consistent_math_op_grad_grad_impl(test_case, "cos", placement, sbp)
+                _global_math_op_grad_grad_impl(test_case, "cos", placement, sbp)
 
 
 if __name__ == "__main__":

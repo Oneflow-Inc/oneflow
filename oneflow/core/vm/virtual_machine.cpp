@@ -28,7 +28,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
-#include "oneflow/core/thread/thread_consistent_id.h"
+#include "oneflow/core/thread/thread_global_id.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/stream_on_independent_thread.h"

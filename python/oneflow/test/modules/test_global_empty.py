@@ -73,7 +73,7 @@ def _test_graph_empty(test_case, func, shape, placement, sbp):
 
 class TestEmptyGlobal(flow.unittest.TestCase):
     @globaltest
-    def test_empty_consistent(test_case):
+    def test_empty_global(test_case):
         shapes = [(8,), (8, 8,), (8, 8, 8)]
         functions = [
             "empty",

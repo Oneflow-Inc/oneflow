@@ -63,17 +63,17 @@ const std::string& BuiltinOpExprImpl<UserOpConf>::op_type_name() const {
 }
 
 const std::string& GlobalToGlobalOpExpr::op_type_name() const {
-  static const std::string kOpTypeName = "consistent_to_consistent";
+  static const std::string kOpTypeName = "global_to_global";
   return kOpTypeName;
 }
 
 const std::string& CastToGlobalOpExpr::op_type_name() const {
-  static const std::string kOpTypeName = "cast_to_consistent";
+  static const std::string kOpTypeName = "cast_to_global";
   return kOpTypeName;
 }
 
 const std::string& CastFromGlobalOpExpr::op_type_name() const {
-  static const std::string kOpTypeName = "cast_from_consistent";
+  static const std::string kOpTypeName = "cast_from_global";
   return kOpTypeName;
 }
 
@@ -651,7 +651,7 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastFromMirroredOpConf>::GetOrCreateO
 
 Maybe<OpExprGradClosure> GlobalToGlobalOpExpr::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("consistent_to_consistent"));
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("global_to_global"));
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
     JUST(op_grad_func_->Init(*this));
   }
@@ -660,7 +660,7 @@ Maybe<OpExprGradClosure> GlobalToGlobalOpExpr::GetOrCreateOpGradClosure() const 
 
 Maybe<OpExprGradClosure> CastToGlobalOpExpr::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_to_consistent"));
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_to_global"));
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
     JUST(op_grad_func_->Init(*this));
   }
@@ -669,7 +669,7 @@ Maybe<OpExprGradClosure> CastToGlobalOpExpr::GetOrCreateOpGradClosure() const {
 
 Maybe<OpExprGradClosure> CastFromGlobalOpExpr::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_from_consistent"));
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_from_global"));
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
     JUST(op_grad_func_->Init(*this));
   }

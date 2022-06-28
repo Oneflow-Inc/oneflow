@@ -3352,7 +3352,7 @@ class TestEagerGlobalCastNDimReduceBoxing(flow.unittest.TestCase):
             _test_eager_global_n_dim_reduce(test_case, *arg)
 
 
-def _test_eager_consistent_with_0_size_data(
+def _test_eager_global_with_0_size_data(
     test_case,
     shape,
     in_device_type,
@@ -3374,7 +3374,7 @@ def _test_eager_consistent_with_0_size_data(
 
 @flow.unittest.skip_unless_1n4d()
 class TestEagerNaiveBoxingSToS(flow.unittest.TestCase):
-    def test_eager_consistent_with_0_size_data(test_case):
+    def test_eager_global_with_0_size_data(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(8, 0, 4), (5, 0, 7)]
         arg_dict["in_device_type"] = ["cpu", "cuda"]
@@ -3394,7 +3394,7 @@ class TestEagerNaiveBoxingSToS(flow.unittest.TestCase):
             (flow.sbp.partial_sum,),
         ]
         for arg in GenArgList(arg_dict):
-            _test_eager_consistent_with_0_size_data(test_case, *arg)
+            _test_eager_global_with_0_size_data(test_case, *arg)
 
 
 def _test_eager_boxing_one_to_n_with_diff_dim(

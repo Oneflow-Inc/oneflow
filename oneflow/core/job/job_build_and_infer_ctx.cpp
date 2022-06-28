@@ -880,14 +880,14 @@ ParallelConf EagerJobBuildAndInferCtx::GetMirroredOpParallelConf(const ParallelD
 Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompatibleGlobalBlob(
     int64_t scope_symbol_id, const LogicalBlobId& lbi) {
   const std::string& lbn = GenLogicalBlobName(lbi);
-  const auto& sbn_it = mut_consistent_lbi2mirrored_lbi()->find(lbi);
-  if (sbn_it != mut_consistent_lbi2mirrored_lbi()->end()) { return sbn_it->second; }
+  const auto& sbn_it = mut_global_lbi2mirrored_lbi()->find(lbi);
+  if (sbn_it != mut_global_lbi2mirrored_lbi()->end()) { return sbn_it->second; }
   const SbpParallel& sbp = *JUST(SbpParallel4Lbi(lbi));
   const ParallelDesc& parallel_desc = *JUST(ParallelDesc4Lbi(lbi));
   LogicalBlobId mirrored_lbi;
   mirrored_lbi.set_op_name(kAutoMirroredBlobNamePrefix + NewUniqueId());
   mirrored_lbi.set_blob_name("out");
-  (*mut_consistent_lbi2mirrored_lbi())[lbi] = mirrored_lbi;
+  (*mut_global_lbi2mirrored_lbi())[lbi] = mirrored_lbi;
   auto* lbi_vec = &(*mut_mirrored_lbi2sub_lbis())[mirrored_lbi];
   lbi_vec->reserve(parallel_desc.parallel_num());
   auto PushBackSubLbi = [&](const std::string& op_name, const std::string& blob_name) {
@@ -938,8 +938,8 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompati
 Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompatibleGlobalBlob(
     int64_t scope_symbol_id, const LogicalBlobId& lbi) {
   const std::string& lbn = GenLogicalBlobName(lbi);
-  const auto& sbn_it = mut_consistent_lbi2mirrored_lbi()->find(lbi);
-  if (sbn_it != mut_consistent_lbi2mirrored_lbi()->end()) { return sbn_it->second; }
+  const auto& sbn_it = mut_global_lbi2mirrored_lbi()->find(lbi);
+  if (sbn_it != mut_global_lbi2mirrored_lbi()->end()) { return sbn_it->second; }
   const SbpParallel& sbp = *JUST(SbpParallel4Lbi(lbi));
   CHECK_OR_RETURN(!sbp.has_partial_sum_parallel())
       << "`P' consistant blob is not compatible to mirrored blob";
@@ -961,7 +961,7 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
   LogicalBlobId mirrored_lbi;
   mirrored_lbi.set_op_name(op_conf.name());
   mirrored_lbi.set_blob_name("out");
-  (*mut_consistent_lbi2mirrored_lbi())[lbi] = mirrored_lbi;
+  (*mut_global_lbi2mirrored_lbi())[lbi] = mirrored_lbi;
   (*mut_mirrored_lbi2sub_lbis())[mirrored_lbi].emplace_back(mirrored_lbi);
   const auto& parallel_conf = parallel_desc.parallel_conf();
   const auto& op_attribute = JUST(AddAndInferGlobalOp(op_conf));
@@ -1309,7 +1309,7 @@ Maybe<void> JobBuildAndInferCtx::Rebuild() {
   op_name2op_.clear();
   parallel_desc2placement_group_.clear();
   parallel_desc2blob_placement_group_.clear();
-  consistent_lbi2mirrored_lbi_.clear();
+  global_lbi2mirrored_lbi_.clear();
   mirrored_lbi2sub_lbis_.clear();
   mirrored_lbi2parallel_desc_.clear();
   mirrored_lbi2sbp_parallel_.clear();

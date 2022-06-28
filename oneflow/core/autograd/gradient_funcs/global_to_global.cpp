@@ -66,7 +66,7 @@ class GlobalToGlobalGradFunction : public OpExprGradFunction<GlobalToGlobalState
   Optional<Symbol<NdSbp>> grad_nd_sbp_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("consistent_to_consistent", GlobalToGlobalGradFunction);
+REGISTER_OP_EXPR_GRAD_FUNCTION("global_to_global", GlobalToGlobalGradFunction);
 
 }  // namespace one
 }  // namespace oneflow

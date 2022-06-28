@@ -70,7 +70,7 @@ class TransportToken final {
 
   // Getters
   TransportTokenType type() const { return static_cast<TransportTokenType>(type_); }
-  int thread_consistent_id() const { return thread_consistent_id_; }
+  int thread_global_id() const { return thread_global_id_; }
   int32_t seq_id() const { return seq_id_; }
 
   // Setters
@@ -85,17 +85,17 @@ class TransportToken final {
   }
 
  private:
-  TransportToken(TransportTokenType type, uint8_t thread_consistent_id)
+  TransportToken(TransportTokenType type, uint8_t thread_global_id)
       : src_rank_(0),
         dst_rank_(0),
         type_(static_cast<uint8_t>(type)),
-        thread_consistent_id_(thread_consistent_id),
+        thread_global_id_(thread_global_id),
         seq_id_(0) {}
 
   uint16_t src_rank_;
   uint16_t dst_rank_;
   uint8_t type_ : kTransportTokenTypeBit;  // TransportTokenType
-  uint8_t thread_consistent_id_ : kTransportTokenThreadGlobalIdBit;
+  uint8_t thread_global_id_ : kTransportTokenThreadGlobalIdBit;
   uint32_t seq_id_ : (32 - kTransportTokenTypeBit - kTransportTokenThreadGlobalIdBit);
 };
 static_assert(sizeof(TransportToken) == sizeof(uint64_t), "");

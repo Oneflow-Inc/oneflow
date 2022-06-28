@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/transport_token.h"
-#include "oneflow/core/framework/tensor_consistent_id.h"
+#include "oneflow/core/framework/tensor_global_id.h"
 
 namespace oneflow {
 

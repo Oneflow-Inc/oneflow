@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/thread/thread_consistent_id.h"
+#include "oneflow/core/thread/thread_global_id.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/common/container_util.h"
@@ -70,8 +70,8 @@ class GlobalIdStorage final {
 };
 
 std::unique_ptr<int64_t>* MutThreadLocalUniqueGlobalId() {
-  static thread_local std::unique_ptr<int64_t> consistent_id;
-  return &consistent_id;
+  static thread_local std::unique_ptr<int64_t> global_id;
+  return &global_id;
 }
 
 }  // namespace

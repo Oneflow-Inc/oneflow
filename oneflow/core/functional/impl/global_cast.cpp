@@ -400,9 +400,9 @@ Maybe<Tensor> GlobalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDe
   const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op, {global_tensor}, OpExprInterpContext(AttrMap{}, parallel_desc, nd_sbp)));
   if (!LazyMode::is_enabled() && tensor != x && !IsGlobalTensorMetaCheckDisabled()) {
-    const auto& input_consistent_id = JUST(x->transport_token());
+    const auto& input_global_id = JUST(x->transport_token());
     const auto& output_consistend_id = JUST(tensor->transport_token());
-    CHECK_NE_OR_RETURN(input_consistent_id, output_consistend_id);  // NOLINT(maybe-need-error-msg)
+    CHECK_NE_OR_RETURN(input_global_id, output_consistend_id);  // NOLINT(maybe-need-error-msg)
   }
   return tensor;
 }
@@ -454,7 +454,7 @@ Maybe<Tensor> LocalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDes
 class LocalToGlobalFunctor {
  public:
   LocalToGlobalFunctor() {
-    op_ = CHECK_JUST(one::CastToGlobalOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
+    op_ = CHECK_JUST(one::CastToGlobalOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_global"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -500,8 +500,8 @@ class LocalToGlobalFunctor {
 class ToGlobalFunctor {
  public:
   ToGlobalFunctor() {
-    local_to_consistent_op_ =
-        CHECK_JUST(one::CastToGlobalOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
+    local_to_global_op_ =
+        CHECK_JUST(one::CastToGlobalOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_global"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -518,19 +518,19 @@ class ToGlobalFunctor {
       tensor = JUST(GlobalToGlobal(x, parallel_desc, sbp_parallels, grad_sbp_parallels));
     } else {
       tensor =
-          JUST(LocalToGlobal(x, parallel_desc, sbp_parallels, local_to_consistent_op_, check_meta));
+          JUST(LocalToGlobal(x, parallel_desc, sbp_parallels, local_to_global_op_, check_meta));
     }
     return tensor;
   }
 
  private:
-  std::shared_ptr<OpExpr> local_to_consistent_op_;
+  std::shared_ptr<OpExpr> local_to_global_op_;
 };
 
 class GlobalToLocalFunctor {
  public:
   GlobalToLocalFunctor() {
-    op_ = CHECK_JUST(one::CastFromGlobalOpExpr::New(*CHECK_JUST(UniqueStr("consistent_to_local"))));
+    op_ = CHECK_JUST(one::CastFromGlobalOpExpr::New(*CHECK_JUST(UniqueStr("global_to_local"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {

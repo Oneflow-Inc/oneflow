@@ -27,7 +27,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("push_mirrored_strategy_enabled", &Session::PushMirroredStrategyEnabled)
       .def("pop_mirrored_strategy_enabled", &Session::PopMirroredStrategyEnabled)
       .def("is_mirrored_strategy_enabled", &Session::IsMirroredStrategyEnabled)
-      .def("is_consistent_strategy_enabled", &Session::IsGlobalStrategyEnabled)
+      .def("is_global_strategy_enabled", &Session::IsGlobalStrategyEnabled)
       .def("is_mirrored_strategy_enabled_stack_size",
            [](const Session* sess) { return sess->is_mirrored_strategy_enabled_stack()->size(); });
 

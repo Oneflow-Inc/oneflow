@@ -31,7 +31,7 @@ namespace {
 
 Maybe<one::OpExpr> MakeToGlobalOpExpr() {
   std::shared_ptr<one::OpExpr> op_expr =
-      JUST(one::CastToGlobalOpExpr::New(*JUST(UniqueStr("cast_to_consistent"))));
+      JUST(one::CastToGlobalOpExpr::New(*JUST(UniqueStr("cast_to_global"))));
   return op_expr;
 }
 

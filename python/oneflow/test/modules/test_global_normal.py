@@ -44,7 +44,7 @@ def _test_global_normal(
 
 class TestNormalGlobal(flow.unittest.TestCase):
     @globaltest
-    def test_normal_consistent(test_case):
+    def test_normal_global(test_case):
         arg_dict = OrderedDict()
         arg_dict["mean"] = [-1, 0, 1]
         arg_dict["std"] = [1, 2, 8]

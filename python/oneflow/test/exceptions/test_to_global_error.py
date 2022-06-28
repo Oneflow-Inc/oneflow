@@ -29,7 +29,7 @@ from oneflow.test_utils.automated_test_util import *
 @flow.unittest.skip_unless_1n2d()
 class TestToGlobalError(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_tensor_to_consistent(self):
+    def test_tensor_to_global(self):
         with self.assertRaises(Exception) as context:
             data = flow.rand(2, dtype=flow.float32)
             placement = flow.env.all_device_placement("cuda")
@@ -42,7 +42,7 @@ class TestToGlobalError(flow.unittest.TestCase):
         )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_tensor_is_consistent(self):
+    def test_tensor_is_global(self):
         with self.assertRaises(Exception) as context:
             data = flow.rand(2, dtype=flow.float32)
             print(data.is_global())
@@ -53,7 +53,7 @@ class TestToGlobalError(flow.unittest.TestCase):
         )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_module_to_consistent(self):
+    def test_module_to_global(self):
         with self.assertRaises(Exception) as context:
             m = flow.nn.Conv2d(1, 1, 1)
             placement = flow.env.all_device_placement("cuda")

@@ -34,7 +34,7 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
-#include "oneflow/core/framework/tensor_consistent_id.h"
+#include "oneflow/core/framework/tensor_global_id.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/functional/functional.h"

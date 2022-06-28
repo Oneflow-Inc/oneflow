@@ -53,7 +53,7 @@ def _test_graph_randint(test_case, shape, placement, sbp, dtype):
 
 class TestRandintGlobal(flow.unittest.TestCase):
     @globaltest
-    def test_randint_consistent(test_case):
+    def test_randint_global(test_case):
         shapes = [(8,), (8, 8,), (8, 8, 8)]
         dtypes = [
             flow.uint8,

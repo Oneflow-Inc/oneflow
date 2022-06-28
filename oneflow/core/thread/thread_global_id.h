@@ -27,9 +27,8 @@ const static int kThreadGlobalIdScheduler = 2;
 
 size_t GetThreadGlobalIdCount();
 
-Maybe<void> InitThisThreadUniqueGlobalId(int64_t thread_consistent_id,
-                                         const std::string& debug_string);
-Maybe<void> InitThisThreadGlobalId(int64_t thread_consistent_id, const std::string& debug_string);
+Maybe<void> InitThisThreadUniqueGlobalId(int64_t thread_global_id, const std::string& debug_string);
+Maybe<void> InitThisThreadGlobalId(int64_t thread_global_id, const std::string& debug_string);
 Maybe<int64_t> GetThisThreadGlobalId();
 Maybe<void> ResetThisThreadUniqueGlobalId();
 

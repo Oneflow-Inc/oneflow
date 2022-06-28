@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/transport_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/transport/transport.h"
-#include "oneflow/core/thread/thread_consistent_id.h"
+#include "oneflow/core/thread/thread_global_id.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/spin_counter.h"

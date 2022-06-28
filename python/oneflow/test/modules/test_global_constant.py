@@ -96,7 +96,7 @@ def _test_graph_constant(test_case, func, shape, placement, sbp):
 
 class TestConstantGlobal(flow.unittest.TestCase):
     @globaltest
-    def test_constant_consistent(test_case):
+    def test_constant_global(test_case):
         shapes = [(8,), (8, 8,), (8, 8, 8)]
         functions = [
             "ones",

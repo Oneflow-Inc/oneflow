@@ -66,14 +66,14 @@ std::string ErrorString4Inputs(const TensorTuple& inputs, const OpExpr& op_expr)
 Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExprInterpContext& ctx,
                                           const OpExpr& op_expr) {
   static const auto& g_lazy_interpreter = BuildLazyInterpreter();
-  static const auto& g_eager_consistent_interpreter = BuildEagerInterpreter(/*is_mirrored=*/false);
+  static const auto& g_eager_global_interpreter = BuildEagerInterpreter(/*is_mirrored=*/false);
   static const auto& g_eager_mirrored_interpreter = BuildEagerInterpreter(/*is_mirrored=*/true);
   if (!LazyMode::is_enabled()) {
     if (inputs.empty()) {
       if (ctx.parallel_desc.has_value()) {
         JUST(ctx.nd_sbp);
         CHECK_OR_RETURN(!ctx.device.has_value());
-        return g_eager_consistent_interpreter;
+        return g_eager_global_interpreter;
       } else {
         CHECK_OR_RETURN(!ctx.nd_sbp.has_value());
         return g_eager_mirrored_interpreter;
@@ -95,7 +95,7 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExp
             CHECK_OR_RETURN(tensor->is_global()) << ErrorString4Inputs(inputs, op_expr);
           }
         }
-        return g_eager_consistent_interpreter;
+        return g_eager_global_interpreter;
       } else {
         if (inputs.size() == 1) {
           // do nothing

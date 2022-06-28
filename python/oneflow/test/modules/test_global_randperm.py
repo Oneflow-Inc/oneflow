@@ -54,7 +54,7 @@ def _test_graph_randperm(test_case, N, placement, sbp, dtype):
 @unittest.skip("This fails in multi-gpu")
 class TestRandpermGlobal(flow.unittest.TestCase):
     @globaltest
-    def test_randperm_consistent(test_case):
+    def test_randperm_global(test_case):
         RandNs = [i for i in range(10, 50, 10)]
         # TODO support uint8,int8,int64,float32,float64,data type test
         Dtypes = [

@@ -60,7 +60,7 @@ def _test_graph_coin_flip(
 
 class TestCoinFlipGlobal(flow.unittest.TestCase):
     @globaltest
-    def test_coin_flip_consistent(test_case):
+    def test_coin_flip_global(test_case):
         arg_dict = OrderedDict()
         arg_dict["batch_size"] = [8, 64]
         arg_dict["random_seed"] = [None, 1, -1]

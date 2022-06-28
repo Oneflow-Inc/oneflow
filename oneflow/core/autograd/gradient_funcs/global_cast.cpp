@@ -69,7 +69,7 @@ class CastToGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
   std::shared_ptr<OpExpr> grad_op_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("cast_to_consistent", CastToGlobal);
+REGISTER_OP_EXPR_GRAD_FUNCTION("cast_to_global", CastToGlobal);
 
 class CastFromGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
  public:
@@ -107,7 +107,7 @@ class CastFromGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
   std::shared_ptr<OpExpr> grad_op_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("cast_from_consistent", CastFromGlobal);
+REGISTER_OP_EXPR_GRAD_FUNCTION("cast_from_global", CastFromGlobal);
 
 }  // namespace one
 }  // namespace oneflow
