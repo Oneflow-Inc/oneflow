@@ -26,7 +26,8 @@ namespace user_op {
 namespace {
 
 constexpr int32_t kBlockSize = 1024;
-constexpr int32_t kReduceLocalSumBlockSize = 256;
+constexpr int32_t kReduceLocalSumBlockSize = 1024;
+constexpr int32_t kSingleBlockProcessNumThreshold = 4 * kBlockSize;
 
 template<typename T>
 struct DefaultComputeType {
@@ -94,20 +95,20 @@ __global__ void ReduceLocalSumKernel(ComputeType* block_local_sum_buf, Out* out,
 }
 
 template<typename T>
-__device__ __forceinline__ T CalSigmoid(const T x) {
+__device__ __forceinline__ T Sigmoid(const T x) {
   const T half_of_one = static_cast<T>(0.5);
   return half_of_one * tanh(half_of_one * x) + half_of_one;
 }
 
 template<>
-__device__ __forceinline__ float CalSigmoid(const float x) {
+__device__ __forceinline__ float Sigmoid(const float x) {
   const float half_of_one = static_cast<float>(0.5);
   return half_of_one * tanhf(half_of_one * x) + half_of_one;
 }
 
 template<>
-__device__ __forceinline__ half CalSigmoid(const half x) {
-  return __float2half(CalSigmoid(__half2float(x)));
+__device__ __forceinline__ half Sigmoid(const half x) {
+  return __float2half(Sigmoid(__half2float(x)));
 }
 
 template<typename T, typename ComputeType>
@@ -116,7 +117,7 @@ struct BinaryCrossEntropyWithLogitsReduceMeanGradFunctor {
       const T elem_cnt_reciprocal, const T dy)
       : elem_cnt_reciprocal(elem_cnt_reciprocal), dy(dy) {}
   __device__ T operator()(const T input_val, const T target_val) const {
-    return (CalSigmoid(input_val) - target_val) * dy * elem_cnt_reciprocal;
+    return (Sigmoid(input_val) - target_val) * dy * elem_cnt_reciprocal;
   }
   const T dy;
   const T elem_cnt_reciprocal;
@@ -155,18 +156,20 @@ class BinaryCrossEntropyWithLogitsMeanKernel final : public user_op::OpKernel {
     T* out = out_blob->mut_dptr<T>();
     using ComputeType = typename DefaultComputeType<T>::type;
 
-    if (elem_cnt < kBlockSize) {
+    if (elem_cnt < kSingleBlockProcessNumThreshold) {
       FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<T, T, ComputeType>
           <<<1, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
               input_blob->dptr<T>(), target_blob->dptr<T>(), out_blob->mut_dptr<T>(),
               input_blob->shape_view().elem_cnt());
     } else {
       auto* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+      const int64_t tmp_buffer_elem_cnt = tmp_buffer->shape_view().elem_cnt() / sizeof(T);
       const int64_t block_num = (elem_cnt + kBlockSize - 1) / kBlockSize;
       int launch_block = block_num;
       OF_CUDA_CHECK(GetNumBlocks(
           FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<T, ComputeType, ComputeType>,
           kBlockSize, 0, block_num, 32, &launch_block));
+      launch_block = std::min<int32_t>(tmp_buffer_elem_cnt, launch_block);
       FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<T, ComputeType, ComputeType>
           <<<launch_block, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
               input_blob->dptr<T>(), target_blob->dptr<T>(), tmp_buffer->mut_dptr<ComputeType>(),
