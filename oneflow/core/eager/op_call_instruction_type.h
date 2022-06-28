@@ -29,11 +29,10 @@ class OpCallInstructionType final : public vm::InstructionType {
   ~OpCallInstructionType() = default;
 
   void Compute(vm::Instruction* instruction) const override;
-  void ComputeInFuseMode(vm::InstructionMsg* instr_msg) const override;
 
   InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPosition; }
 
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override;
+  std::string DebugName(const vm::Instruction& instruction) const override;
 
  protected:
  private:
