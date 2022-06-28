@@ -39,7 +39,7 @@ class InstructionType {
 
   Maybe<void> PrepareIf(Instruction* instruction) const {
     OF_PROFILER_RANGE_GUARD(std::string("Prepare:") + DebugName(*instruction));
-    InitInputBlobsMemPtrForAllocationCompuationPipelining(instruction);
+    InitOrCheckInputBlobsMemPtrForAllocationCompuationPipelining(instruction);
     return Prepare(instruction);
   }
 
@@ -72,7 +72,7 @@ class InstructionType {
 
   virtual void InitInstructionStatus(Instruction* instruction) const;
   virtual void DeleteInstructionStatus(Instruction* instruction) const;
-  void InitInputBlobsMemPtrForAllocationCompuationPipelining(Instruction* instruction) const;
+  void InitOrCheckInputBlobsMemPtrForAllocationCompuationPipelining(Instruction* instruction) const;
 };
 
 }  // namespace vm

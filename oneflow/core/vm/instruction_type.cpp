@@ -33,16 +33,16 @@ void InstructionType::DeleteInstructionStatus(Instruction* instruction) const {
 
 namespace {
 
-void InitMemPtrForAllocationCompuationPipelining(EagerBlobObject* eager_blob_object) {
-  eager_blob_object->init_mem_ptr_for_allocation_compuation_pipelining();
+void InitOrCheckMemPtrForAllocationCompuationPipelining(EagerBlobObject* eager_blob_object) {
+  eager_blob_object->InitOrCheckMemPtrForAllocationComputationPipelining();
 }
 
 }  // namespace
 
-void InstructionType::InitInputBlobsMemPtrForAllocationCompuationPipelining(
+void InstructionType::InitOrCheckInputBlobsMemPtrForAllocationCompuationPipelining(
     Instruction* instruction) const {
   const auto& operand = *instruction->phy_instr_operand();
-  operand.ForEachInputEagerBlobObjects(&InitMemPtrForAllocationCompuationPipelining);
+  operand.ForEachInputEagerBlobObjects(&InitOrCheckMemPtrForAllocationCompuationPipelining);
 }
 
 }  // namespace vm

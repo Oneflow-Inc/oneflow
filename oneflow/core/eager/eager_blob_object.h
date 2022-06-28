@@ -177,7 +177,7 @@ class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc
   const char* header_ptr() const { return reinterpret_cast<const char*>(shape_->dim_vec().data()); }
   char* mut_header_ptr() { return reinterpret_cast<char*>(shape_->dim_vec().data()); }
 
-  void init_mem_ptr_for_allocation_compuation_pipelining() {
+  void InitOrCheckMemPtrForAllocationComputationPipelining() {
     auto* ptr = tensor_storage_->blob_dptr();
     if (mem_ptr_for_allocation_compuation_pipelining_ == nullptr) {
       mem_ptr_for_allocation_compuation_pipelining_ = ptr;

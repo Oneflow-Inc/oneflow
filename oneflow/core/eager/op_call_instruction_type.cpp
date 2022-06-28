@@ -100,7 +100,7 @@ struct OpCallInstructionUtil final {
     OF_PROFILER_RANGE_GUARD("AllocateOutputBlobsMemory");
     for (const auto& blob_object : *operand->outputs()) {
       JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
-      blob_object->init_mem_ptr_for_allocation_compuation_pipelining();
+      blob_object->InitOrCheckMemPtrForAllocationComputationPipelining();
     }
     return Maybe<void>::Ok();
   }
