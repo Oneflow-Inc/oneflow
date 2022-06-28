@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/cuda/elementwise.cuh"
-#include "oneflow/core/cuda/atomic.cuh"
 #include <cub/cub.cuh>
 
 namespace oneflow {
