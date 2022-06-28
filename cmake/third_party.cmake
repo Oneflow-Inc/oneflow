@@ -93,6 +93,7 @@ if(BUILD_CUDA)
       list(APPEND VENDOR_CUDA_LIBRARIES CUDA::nppig_static)
       # Must put nppc_static after nppig_static in CUDA 10.2
       list(APPEND VENDOR_CUDA_LIBRARIES CUDA::nppc_static)
+      list(APPEND VENDOR_CUDA_LIBRARIES CUDA::culibos)
     endif()
   endif()
   message(STATUS "VENDOR_CUDA_LIBRARIES: ${VENDOR_CUDA_LIBRARIES}")
