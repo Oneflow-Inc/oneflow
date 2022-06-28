@@ -13,28 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_CUDA_COPY_H2D_STREAM_TYPE_H_
-#define ONEFLOW_CORE_VM_CUDA_COPY_H2D_STREAM_TYPE_H_
+#ifndef ONEFLOW_CORE_VM_EP_D2H_STREAM_TYPE_H_
+#define ONEFLOW_CORE_VM_EP_D2H_STREAM_TYPE_H_
 
-#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.h"
-#include "oneflow/core/vm/stream.h"
-#include "oneflow/core/vm/thread_ctx.h"
-#include "oneflow/core/vm/cuda_optional_event_record_status_querier.h"
-#include "oneflow/core/vm/cuda_stream_handle_device_context.h"
-#include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
 namespace vm {
 
-class CudaCopyH2DStreamType final : public StreamType {
+class EpD2HStreamType final : public StreamType {
  public:
-  CudaCopyH2DStreamType() = default;
-  ~CudaCopyH2DStreamType() = default;
+  EpD2HStreamType() = default;
+  ~EpD2HStreamType() override = default;
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 
@@ -46,10 +39,10 @@ class CudaCopyH2DStreamType final : public StreamType {
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Compute(Instruction* instruction) const override;
   bool OnSchedulerThread() const override { return true; }
-  bool SupportingTransportInstructions() const override { return false; }
+  bool SupportingTransportInstructions() const override { return true; }
 };
 
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_CUDA_COPY_H2D_STREAM_TYPE_H_
+#endif  // ONEFLOW_CORE_VM_EP_D2H_STREAM_TYPE_H_

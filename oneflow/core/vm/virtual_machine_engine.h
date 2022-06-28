@@ -47,17 +47,17 @@ class VirtualMachineEngine final : public intrusive::Base {
   // types
   using ActiveStreamList = intrusive::List<INTRUSIVE_FIELD(Stream, active_stream_hook_)>;
   using ThreadCtxList = intrusive::List<INTRUSIVE_FIELD(ThreadCtx, thread_ctx_hook_)>;
-  using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, instruction_hook_)>;
+  using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, main_instruction_hook_)>;
   using LivelyInstructionList =
       intrusive::List<INTRUSIVE_FIELD(Instruction, lively_instruction_hook_)>;
   using BarrierInstructionList =
       intrusive::List<INTRUSIVE_FIELD(Instruction, barrier_instruction_hook_)>;
-  using InstructionMsgMutexedList =
-      intrusive::MutexedList<INTRUSIVE_FIELD(InstructionMsg, InstructionMsg::instr_msg_hook_)>;
+  using InstructionMutexedList =
+      intrusive::MutexedList<INTRUSIVE_FIELD(Instruction, Instruction::main_instruction_hook_)>;
 
   // Getters
   std::size_t flying_instruction_cnt() const {
-    return pending_msg_list().thread_unsafe_size() + local_pending_msg_list().size()
+    return pending_instruction_list().thread_unsafe_size() + local_pending_instruction_list().size()
            + (total_inserted_instruction_cnt() - total_erased_instruction_cnt());
   }
   size_t total_inserted_instruction_cnt() const { return total_inserted_instruction_cnt_; }
@@ -69,23 +69,26 @@ class VirtualMachineEngine final : public intrusive::Base {
   const BarrierInstructionList& barrier_instruction_list() const {
     return barrier_instruction_list_;
   }
-  const InstructionMsgMutexedList& pending_msg_list() const { return pending_msg_list_; }
-  const InstructionMsgList& local_pending_msg_list() const { return local_pending_msg_list_; }
+  const InstructionMutexedList& pending_instruction_list() const {
+    return pending_instruction_list_;
+  }
+  const InstructionList& local_pending_instruction_list() const {
+    return local_pending_instruction_list_;
+  }
   // Setters
   ActiveStreamList* mut_active_stream_list() { return &active_stream_list_; }
   ThreadCtxList* mut_thread_ctx_list() { return &thread_ctx_list_; }
   LivelyInstructionList* mut_lively_instruction_list() { return &lively_instruction_list_; }
   BarrierInstructionList* mut_barrier_instruction_list() { return &barrier_instruction_list_; }
-  InstructionMsgMutexedList* mut_pending_msg_list() { return &pending_msg_list_; }
-  InstructionMsgList* mut_local_pending_msg_list() { return &local_pending_msg_list_; }
-
-  // Returns true if old pending_instruction_list is empty
-  Maybe<bool> Receive(InstructionMsgList* compute_instr_msg_list);
+  InstructionMutexedList* mut_pending_instruction_list() { return &pending_instruction_list_; }
+  InstructionList* mut_local_pending_instruction_list() { return &local_pending_instruction_list_; }
+  // Returns true if old scheduler_pending_instruction_list is empty
+  Maybe<bool> Receive(InstructionList* instr_list);
   void Schedule(const ScheduleCtx& schedule_ctx);
-  void Callback();
   bool SchedulerThreadUnsafeEmpty() const;
   bool SchedulerEmpty() const;
   std::string GetLivelyInstructionListDebugString(int64_t debug_cnt);
+  void MoveToGarbageListAndNotifyGC(const ScheduleCtx& schedule_ctx);
 
  private:
   using ReadyInstructionList =
@@ -95,16 +98,14 @@ class VirtualMachineEngine final : public intrusive::Base {
 
   void ReleaseFinishedInstructions(const ScheduleCtx& schedule_ctx);
   void HandleLocalPending();
-  void GetRewritedPendingInstructionsByWindowSize(size_t window_size,
-                                                  InstructionMsgList* /*out*/ pending_instr_msgs);
-  void MakeAndAppendFusedInstruction(InstructionMsgList&& fused_instr_msg_list,
-                                     InstructionMsgList* /*out*/ pending_instr_msgs);
+  void FetchAndTryFusePendingInstructions(InstructionList* /*out*/ pending_instructions);
+  void MakeAndAppendFusedInstruction(InstructionList&& fused_instruction_list,
+                                     InstructionList* /*out*/ pending_instructions);
   void TryRunBarrierInstruction(const ScheduleCtx& schedule_ctx);
   void DispatchAndPrescheduleInstructions(const ScheduleCtx& schedule_ctx);
   bool OnSchedulerThread(const StreamType& stream_type);
 
   void ReleaseInstruction(Instruction* instruction);
-  void MakeInstructions(InstructionMsg*, /*out*/ InstructionList* ret_instruction_list);
 
   void TryConnectInstruction(Instruction* src_instruction, Instruction* dst_instruction);
   void ConnectInstructionsByWrite(DependenceAccess* dst_access);
@@ -119,8 +120,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   void TryDispatchReadyInstructions();
 
   void LivelyInstructionListPushBack(Instruction* instruction);
-  intrusive::shared_ptr<Instruction> LivelyInstructionListErase(Instruction* instruction,
-                                                                const ScheduleCtx& schedule_ctx);
+  intrusive::shared_ptr<Instruction> LivelyInstructionListErase(Instruction* instruction);
   void HandleLocalProbe();
 
   friend class intrusive::Ref;
@@ -130,9 +130,9 @@ class VirtualMachineEngine final : public intrusive::Base {
       : intrusive_ref_(),
         active_stream_list_(),
         thread_ctx_list_(),
-        pending_msg_mutex_(),
-        pending_msg_list_(&pending_msg_mutex_),
-        local_pending_msg_list_(),
+        pending_instruction_mutex_(),
+        pending_instruction_list_(&pending_instruction_mutex_),
+        local_pending_instruction_list_(),
         ready_instruction_list_(),
         lively_instruction_list_(),
         total_inserted_instruction_cnt_(0),
@@ -146,10 +146,10 @@ class VirtualMachineEngine final : public intrusive::Base {
   // Do not change the order of the following fields
   ActiveStreamList active_stream_list_;
   ThreadCtxList thread_ctx_list_;
-  std::mutex pending_msg_mutex_;
-  InstructionMsgMutexedList pending_msg_list_;
-  // local_pending_msg_list_ should be consider as the cache of pending_msg_list_.
-  InstructionMsgList local_pending_msg_list_;
+  std::mutex pending_instruction_mutex_;
+  InstructionMutexedList pending_instruction_list_;
+  // local_pending_instruction_list_ should be consider as the cache of pending_instruction_list_.
+  InstructionList local_pending_instruction_list_;
   ReadyInstructionList ready_instruction_list_;
   LivelyInstructionList lively_instruction_list_;
   size_t total_inserted_instruction_cnt_;

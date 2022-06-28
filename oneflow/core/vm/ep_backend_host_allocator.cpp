@@ -13,25 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <vector>
-#include "oneflow/core/device/cuda_event.h"
+#include "oneflow/core/vm/ep_backend_host_allocator.h"
+#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/ep/include/device.h"
 
 namespace oneflow {
 
-#ifdef WITH_CUDA
+namespace vm {
 
-CudaEvent::CudaEvent(int device_id, unsigned int flags) : device_id_(device_id) {
-  CudaCurrentDeviceGuard guard(device_id_);
-  OF_CUDA_CHECK(cudaEventCreateWithFlags(&event_, flags));
+void EpBackendHostAllocator::Allocate(char** mem_ptr, std::size_t size) {
+  CHECK_JUST(ep_device_->AllocPinned(allocation_options_, reinterpret_cast<void**>(mem_ptr), size));
 }
 
-CudaEvent::~CudaEvent() {
-  CudaCurrentDeviceGuard guard(device_id_);
-  OF_CUDA_CHECK(cudaEventDestroy(event_));
+void EpBackendHostAllocator::Deallocate(char* mem_ptr, std::size_t size) {
+  ep_device_->FreePinned(allocation_options_, mem_ptr);
 }
 
-bool CudaEvent::Query() const { return cudaEventQuery(event_) != cudaErrorNotReady; }
-
-#endif
+}  // namespace vm
 
 }  // namespace oneflow
