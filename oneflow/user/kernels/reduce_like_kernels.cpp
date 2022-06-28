@@ -168,8 +168,7 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
       GetReduceSumLayout(axis, in_shape, &is_axis_contiguous, &outer_size, &inner_size,
                          &reduce_size);
       if (is_axis_contiguous && (outer_size == 1 || inner_size == 1)) {
-        CBLAS_TRANSPOSE trans_a = (inner_size == 1) ? CblasNoTrans : CblasTrans;
-        CBLAS_TRANSPOSE trans_b = CblasNoTrans;
+        bool trans_a = (inner_size == 1);
         const int32_t m = (inner_size == 1) ? outer_size : inner_size;
         const int32_t n = 1;
         const int32_t k = reduce_size;
@@ -182,7 +181,6 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
         std::unique_ptr<ep::primitive::Matmul> matmul;
         if (trans_a) {
           matmul = NewReduceMatmulTransAPrimitive(ctx);
-
         } else {
           matmul = NewReduceMatmulNoTransAPrimitive(ctx);
         }
