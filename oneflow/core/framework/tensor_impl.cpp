@@ -102,7 +102,7 @@ Maybe<LocalDepObject*> EagerLocalTensorImpl::compute_local_dep_object() const {
 }
 
 Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
-    const intrusive::shared_ptr<LocalDepObject>& dep_object, const bool pin_memory) {
+    const intrusive::shared_ptr<LocalDepObject>& dep_object) {
   CHECK_OR_RETURN(static_cast<bool>(device()));
   const auto& mem_case = device()->mem_case();
   const auto& mut_shape = std::const_pointer_cast<Shape>(tensor_meta()->shape_ptr());
