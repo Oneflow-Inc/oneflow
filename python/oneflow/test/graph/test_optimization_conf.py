@@ -111,8 +111,9 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
 
             print("number of APIs tested: " + str(num_api_tested))
 
-        test_resource_config_update_apis_eagerly_automatically()
-        test_resource_config_update_apis_eagerly_automatically()
+        for i in range(5):
+            test_resource_config_update_apis_eagerly_automatically()
+    
 
         print("optimization conf after session init: \n", g._optimization_conf_proto)
 
