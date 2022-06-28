@@ -161,10 +161,10 @@ Maybe<void> InferSGDUpdateWithCastTensorDesc(user_op::InferContext* ctx) {
   const int64_t weight_size = ctx->input_size("model");
   for (int i = 0; i < weight_size; i++) {
     const user_op::TensorDesc& model = ctx->InputTensorDesc("model", i);
-    const user_op::TensorDesc& model_half = ctx->InputTensorDesc("model_half", i);
+    const user_op::TensorDesc& model_copy = ctx->InputTensorDesc("model_copy", i);
     const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", i);
     CHECK_EQ_OR_RETURN(model_diff.shape(), model.shape());
-    CHECK_EQ_OR_RETURN(model_half.shape(), model.shape());
+    CHECK_EQ_OR_RETURN(model_copy.shape(), model.shape());
   }
   JUST(CheckLearningRateShape(ctx));
   if (ctx->has_input("scale_by_tensor", 0)) {
@@ -178,7 +178,7 @@ Maybe<void> SgdWithCastInputArgModifyFn(const user_op::GetInputArgModifier& GetI
                                         const user_op::UserOpConfWrapper& conf) {
   for (int64_t i = 0; i < conf.input_size("model"); i++) {
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", i));
-    JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model_half", i));
+    JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model_copy", i));
   }
   return Maybe<void>::Ok();
 }
@@ -188,12 +188,12 @@ Maybe<void> InferAdamUpdateWithCastTensorDesc(user_op::InferContext* ctx) {
   for (int i = 0; i < weight_size; i++) {
     const user_op::TensorDesc& model = ctx->InputTensorDesc("model", i);
     const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", i);
-    const user_op::TensorDesc& model_half = ctx->InputTensorDesc("model_half", i);
+    const user_op::TensorDesc& model_copy = ctx->InputTensorDesc("model_copy", i);
     const user_op::TensorDesc& m = ctx->InputTensorDesc("m", i);
     const user_op::TensorDesc& v = ctx->InputTensorDesc("v", i);
 
     CHECK_EQ_OR_RETURN(model_diff.shape(), model.shape());
-    CHECK_EQ_OR_RETURN(model_half.shape(), model.shape());
+    CHECK_EQ_OR_RETURN(model_copy.shape(), model.shape());
     CHECK_EQ_OR_RETURN(m.shape(), model.shape());
     CHECK_EQ_OR_RETURN(v.shape(), model.shape());
   }
@@ -209,7 +209,7 @@ Maybe<void> AdamWithCastInputArgModifyFn(const user_op::GetInputArgModifier& Get
                                          const user_op::UserOpConfWrapper& conf) {
   for (int64_t i = 0; i < conf.input_size("model"); i++) {
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", i));
-    JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model_half", i));
+    JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model_copy", i));
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "m", i));
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "v", i));
   }

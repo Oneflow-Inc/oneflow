@@ -5780,7 +5780,7 @@ def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [NoGrad, AttrSizedOpera
   let input = (ins
     OneFlow_Tensor:$model,
     OneFlow_Tensor:$model_diff,
-    Optional<OneFlow_Tensor>:$model_half, 
+    Optional<OneFlow_Tensor>:$model_copy, 
     Optional<OneFlow_Tensor>:$learning_rate,
     Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<OneFlow_Tensor>:$skip_if,
@@ -6005,7 +6005,7 @@ def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [NoGrad, AttrSizedOperand
   let input = (ins
     OneFlow_Tensor:$model,
     OneFlow_Tensor:$model_diff,
-    Optional<OneFlow_Tensor>:$model_half,
+    Optional<OneFlow_Tensor>:$model_copy,
     Optional<OneFlow_Tensor>:$learning_rate,
     Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<OneFlow_Tensor>:$skip_if
@@ -6122,7 +6122,7 @@ def OneFlow_MultiTensorSgdUpdateWithCastOp : OneFlow_BaseOp<"multi_tensor_sgd_up
   let input = (ins
     Variadic<OneFlow_Tensor>:$model,
     Variadic<OneFlow_Tensor>:$model_diff,
-    Variadic<OneFlow_Tensor>:$model_half,
+    Variadic<OneFlow_Tensor>:$model_copy,
     Optional<OneFlow_Tensor>:$learning_rate,
     Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<OneFlow_Tensor>:$skip_if
@@ -6148,7 +6148,7 @@ def OneFlow_MultiTensorAdamUpdateWithCastOp : OneFlow_BaseOp<"multi_tensor_adam_
   let input = (ins
     Variadic<OneFlow_Tensor>:$model,
     Variadic<OneFlow_Tensor>:$model_diff,
-    Variadic<OneFlow_Tensor>:$model_half,
+    Variadic<OneFlow_Tensor>:$model_copy,
     Optional<OneFlow_Tensor>:$learning_rate,
     Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<OneFlow_Tensor>:$skip_if, 

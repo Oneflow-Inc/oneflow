@@ -28,7 +28,7 @@ struct SGDOptimizerKey {
   float l2;
   float weight_decay;
   ParallelConf parallel_conf;
-  bool has_model_half;
+  bool has_model_copy;
   /*
   In fuse_model_update_cast pass, not all the cast fp16 model_diff kernel can be fused,
   it may cause some model diff type is float16, some is float32.
@@ -42,7 +42,7 @@ bool operator==(const SGDOptimizerKey& lhs, const SGDOptimizerKey& rhs) {
          && (lhs.scale_by_tensor_lbn == rhs.scale_by_tensor_lbn)
          && (lhs.skip_if_lbn == rhs.skip_if_lbn) && (lhs.scale == rhs.scale) && (lhs.l1 == rhs.l1)
          && (lhs.l2 == rhs.l2) && (lhs.weight_decay == rhs.weight_decay)
-         && (lhs.parallel_conf == rhs.parallel_conf) && (lhs.has_model_half == rhs.has_model_half)
+         && (lhs.parallel_conf == rhs.parallel_conf) && (lhs.has_model_copy == rhs.has_model_copy)
          && (lhs.model_diff_dtype == rhs.model_diff_dtype);
 }
 
@@ -60,7 +60,7 @@ struct AdamOptimizerKey {
   bool amsgrad;
   bool do_bias_correction;
   ParallelConf parallel_conf;
-  bool has_model_half;
+  bool has_model_copy;
   DataType model_diff_dtype;
 };
 
@@ -71,7 +71,7 @@ bool operator==(const AdamOptimizerKey& lhs, const AdamOptimizerKey& rhs) {
          && (lhs.l2 == rhs.l2) && (lhs.beta1 == rhs.beta1) && (lhs.beta2 == rhs.beta2)
          && (lhs.epsilon == rhs.epsilon) && (lhs.weight_decay == rhs.weight_decay)
          && (lhs.amsgrad == rhs.amsgrad) && (lhs.do_bias_correction == rhs.do_bias_correction)
-         && (lhs.parallel_conf == rhs.parallel_conf) && (lhs.has_model_half == rhs.has_model_half)
+         && (lhs.parallel_conf == rhs.parallel_conf) && (lhs.has_model_copy == rhs.has_model_copy)
          && (lhs.model_diff_dtype == rhs.model_diff_dtype);
 }
 
@@ -92,7 +92,7 @@ struct hash<oneflow::SGDOptimizerKey> {
     return string_hash(key.learning_rate) ^ string_hash(key.scale_by_tensor_lbn)
            ^ string_hash(key.skip_if_lbn) ^ double_hash(key.scale) ^ float_hash(key.l1)
            ^ float_hash(key.l2) ^ float_hash(key.weight_decay)
-           ^ parallel_conf_hash(key.parallel_conf) ^ bool_hash(key.has_model_half)
+           ^ parallel_conf_hash(key.parallel_conf) ^ bool_hash(key.has_model_copy)
            ^ dtype_hash(key.model_diff_dtype);
   }
 };
@@ -112,7 +112,7 @@ struct hash<oneflow::AdamOptimizerKey> {
            ^ float_hash(key.l2) ^ float_hash(key.beta1) ^ float_hash(key.beta2)
            ^ float_hash(key.epsilon) ^ float_hash(key.weight_decay) ^ bool_hash(key.amsgrad)
            ^ bool_hash(key.do_bias_correction) ^ parallel_conf_hash(key.parallel_conf)
-           ^ bool_hash(key.has_model_half) ^ dtype_hash(key.model_diff_dtype);
+           ^ bool_hash(key.has_model_copy) ^ dtype_hash(key.model_diff_dtype);
   }
 };
 
@@ -209,7 +209,7 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
   op_graph.ForEachNode([&](OpNode* op_node) {
     const auto& op_conf = op_node->op().op_conf();
     if (!op_conf.has_variable_conf()) { return; }
-    LogicalBlobId model_half_lbi;
+    LogicalBlobId model_copy_lbi;
 
     for (OpEdge* find_model_update_edge : op_node->out_edges()) {
       OpNode* find_model_update_update_node = find_model_update_edge->dst_node();
@@ -243,14 +243,14 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
 
       std::string scale_by_tensor_lbn = "";
       std::string skip_if_lbn = "";
-      bool has_model_half = false;
+      bool has_model_copy = false;
       if (model_update_user_conf.has_input("scale_by_tensor", 0)) {
         scale_by_tensor_lbn = model_update_user_conf.input("scale_by_tensor", 0);
       }
       if (model_update_user_conf.has_input("skip_if", 0)) {
         skip_if_lbn = model_update_user_conf.input("skip_if", 0);
       }
-      if (model_update_user_conf.has_input("model_half", 0)) { has_model_half = true; }
+      if (model_update_user_conf.has_input("model_copy", 0)) { has_model_copy = true; }
 
       const BlobDesc& model_diff_blob_desc = op_graph.GetLogicalBlobDesc(
           GenLogicalBlobId(model_update_user_conf.input("model_diff", 0)));
@@ -265,21 +265,21 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
                             model_update_user_conf.attr<float>("l2"),
                             model_update_user_conf.attr<float>("weight_decay"),
                             parallel_conf,
-                            has_model_half,
+                            has_model_copy,
                             model_diff_dtype};
         const auto& iter = multi_tensor_sgd_update_hashmap.find(key);
 
         if (iter != multi_tensor_sgd_update_hashmap.end()) {
           iter->second.Input("model", model_update_user_conf.input("model", 0))
               .Input("model_diff", model_update_user_conf.input("model_diff", 0));
-          if (has_model_half) {
-            iter->second.Input("model_half", model_update_user_conf.input("model_half", 0));
+          if (has_model_copy) {
+            iter->second.Input("model_copy", model_update_user_conf.input("model_copy", 0));
           }
         } else {
           user_op::UserOpConfWrapperBuilder multi_tensor_sgd_update_op_builder(
               "multi_tensor_model_update" + NewUniqueId());
           std::string op_type_name = "multi_tensor_sgd_update";
-          if (has_model_half) { op_type_name = "multi_tensor_sgd_update_with_cast"; }
+          if (has_model_copy) { op_type_name = "multi_tensor_sgd_update_with_cast"; }
 
           multi_tensor_sgd_update_op_builder.OpTypeName(op_type_name)
               .Input("model", model_update_user_conf.input("model", 0))
@@ -289,9 +289,9 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
               .Attr<float>("l1", model_update_user_conf.attr<float>("l1"))
               .Attr<float>("l2", model_update_user_conf.attr<float>("l2"))
               .Attr<float>("weight_decay", model_update_user_conf.attr<float>("weight_decay"));
-          if (has_model_half) {
-            multi_tensor_sgd_update_op_builder.Input("model_half",
-                                                     model_update_user_conf.input("model_half", 0));
+          if (has_model_copy) {
+            multi_tensor_sgd_update_op_builder.Input("model_copy",
+                                                     model_update_user_conf.input("model_copy", 0));
           }
 
           AddScaleAndSkipLbn(multi_tensor_sgd_update_op_builder, model_update_user_conf);
@@ -316,7 +316,7 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
                              model_update_user_conf.attr<bool>("amsgrad"),
                              model_update_user_conf.attr<bool>("do_bias_correction"),
                              parallel_conf,
-                             has_model_half,
+                             has_model_copy,
                              model_diff_dtype};
         if (key.amsgrad) {
           UNIMPLEMENTED() << "Multi Tensor Adam update do not support amsgrad = True. ";
@@ -328,8 +328,8 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
               .Input("model_diff", model_update_user_conf.input("model_diff", 0))
               .Input("m", model_update_user_conf.input("m", 0))
               .Input("v", model_update_user_conf.input("v", 0));
-          if (has_model_half) {
-            iter->second.Input("model_half", model_update_user_conf.input("model_half", 0));
+          if (has_model_copy) {
+            iter->second.Input("model_copy", model_update_user_conf.input("model_copy", 0));
           }
           if (model_update_user_conf.attr<bool>("do_bias_correction")) {
             iter->second
@@ -340,7 +340,7 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
           user_op::UserOpConfWrapperBuilder multi_tensor_adam_update_op_builder(
               "multi_tensor_model_update" + NewUniqueId());
           std::string op_type_name = "multi_tensor_adam_update";
-          if (has_model_half) { op_type_name = "multi_tensor_adam_update_with_cast"; }
+          if (has_model_copy) { op_type_name = "multi_tensor_adam_update_with_cast"; }
           multi_tensor_adam_update_op_builder.OpTypeName(op_type_name)
               .Input("model", model_update_user_conf.input("model", 0))
               .Input("model_diff", model_update_user_conf.input("model_diff", 0))
@@ -363,9 +363,9 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
                 .Input("bias_correction1", model_update_user_conf.input("bias_correction1", 0))
                 .Input("bias_correction2", model_update_user_conf.input("bias_correction2", 0));
           }
-          if (has_model_half) {
+          if (has_model_copy) {
             multi_tensor_adam_update_op_builder.Input(
-                "model_half", model_update_user_conf.input("model_half", 0));
+                "model_copy", model_update_user_conf.input("model_copy", 0));
           }
           AddScaleAndSkipLbn(multi_tensor_adam_update_op_builder, model_update_user_conf);
 

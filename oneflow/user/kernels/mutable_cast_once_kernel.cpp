@@ -36,7 +36,7 @@ class MutableCastOnceOpKernelState final : public OpKernelState {
  public:
   MutableCastOnceOpKernelState() : cast_once_flag(false) {}
 
-  void Once() {
+  void SetDone() {
     if (!cast_once_flag) { cast_once_flag = true; }
   }
 
@@ -68,7 +68,7 @@ class MutableCastOnce final : public OpKernel {
     CHECK(cast_primitive);
     cast_primitive->Launch(ctx->stream(), input_tensor->dptr(), output_tensor->mut_dptr(),
                            elem_cnt);
-    cast_state->Once();
+    cast_state->SetDone();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

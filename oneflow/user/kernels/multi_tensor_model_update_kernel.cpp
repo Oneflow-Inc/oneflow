@@ -72,7 +72,7 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
 
       count += 1;
       total_elem_cnt += tensor_elem_cnt;
-      if (count == max_tensors[1] || tensor_idx == n_tensor - 1) {
+      if (count == kMaxTuples || tensor_idx == n_tensor - 1) {
         MultiTensorSGDUpdateKernelUtil<device_type, T, G>::Update(
             ctx->stream(), total_elem_cnt, count, static_cast<T>(scale), l1, l2, weight_decay,
             learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, tensor_tuple_params);
@@ -177,7 +177,7 @@ class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
 
       count += 1;
       total_elem_cnt += tensor_elem_cnt;
-      if (count == max_tensors[3] || tensor_idx == n_tensor - 1) {
+      if (count == kMaxTuples || tensor_idx == n_tensor - 1) {
         MultiTensorAdamUpdateKernelUtil<device_type, T, G>::Update(
             ctx->stream(), total_elem_cnt, count, static_cast<T>(scale), l1, l2, beta1, beta2,
             epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val,
@@ -247,7 +247,7 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
       tensor_tuple_params.ptr[1][count] =
           (ctx->Tensor4ArgNameAndIndex("model_diff", tensor_idx))->mut_dptr();
       tensor_tuple_params.ptr[2][count] =
-          (ctx->Tensor4ArgNameAndIndex("model_half", tensor_idx))->mut_dptr();
+          (ctx->Tensor4ArgNameAndIndex("model_copy", tensor_idx))->mut_dptr();
 
       const int64_t tensor_elem_cnt =
           ctx->Tensor4ArgNameAndIndex("model", tensor_idx)->shape_view().elem_cnt();
@@ -255,7 +255,7 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
 
       count += 1;
       total_elem_cnt += tensor_elem_cnt;
-      if (count == max_tensors[1] || tensor_idx == n_tensor - 1) {
+      if (count == kMaxTuples || tensor_idx == n_tensor - 1) {
         MultiTensorSGDUpdateWithCastKernelUtil<device_type, T, G>::Update(
             ctx->stream(), total_elem_cnt, count, static_cast<T>(scale), l1, l2, weight_decay,
             learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, tensor_tuple_params);
@@ -273,7 +273,7 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                    \
                        && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)      \
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value) \
-                       && (user_op::HobDataType("model_half", 0) == GetDataType<float16>::value));
+                       && (user_op::HobDataType("model_copy", 0) == GetDataType<float16>::value));
 
 REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float16);
@@ -355,14 +355,14 @@ class MultiTensorAdamUpdateWithCastKernel final : public user_op::OpKernel,
       tensor_tuple_params.ptr[3][count] =
           (ctx->Tensor4ArgNameAndIndex("v", tensor_idx))->mut_dptr();
       tensor_tuple_params.ptr[4][count] =
-          (ctx->Tensor4ArgNameAndIndex("model_half", tensor_idx))->mut_dptr();
+          (ctx->Tensor4ArgNameAndIndex("model_copy", tensor_idx))->mut_dptr();
       const int64_t tensor_elem_cnt =
           ctx->Tensor4ArgNameAndIndex("model", tensor_idx)->shape_view().elem_cnt();
       tensor_tuple_params.sizes[count] = tensor_elem_cnt;
 
       count += 1;
       total_elem_cnt += tensor_elem_cnt;
-      if (count == max_tensors[3] || tensor_idx == n_tensor - 1) {
+      if (count == kMaxTuples || tensor_idx == n_tensor - 1) {
         MultiTensorAdamUpdateWithCastKernelUtil<device_type, T, G>::Update(
             ctx->stream(), total_elem_cnt, count, static_cast<T>(scale), l1, l2, beta1, beta2,
             epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val,
@@ -382,7 +382,7 @@ class MultiTensorAdamUpdateWithCastKernel final : public user_op::OpKernel,
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                    \
                        && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)      \
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value) \
-                       && (user_op::HobDataType("model_half", 0) == GetDataType<float16>::value));
+                       && (user_op::HobDataType("model_copy", 0) == GetDataType<float16>::value));
 
 REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float16);

@@ -93,8 +93,8 @@ Maybe<void> InferSGDUpdateTensorDesc(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(model_diff.shape(), shape);
   }
   JUST(CheckLearningRateShape(ctx));
-  if (ctx->has_input("model_half", 0)) {
-    CHECK_EQ_OR_RETURN(ctx->InputTensorDesc("model_half", 0).shape(), shape);
+  if (ctx->has_input("model_copy", 0)) {
+    CHECK_EQ_OR_RETURN(ctx->InputTensorDesc("model_copy", 0).shape(), shape);
   }
   if (ctx->has_input("scale_by_tensor", 0)) {
     const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
@@ -185,8 +185,8 @@ Maybe<void> InferAdamUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& v = ctx->InputTensorDesc("v", 0);
   JUST(CheckShapeLike(&v, &model));
   JUST(CheckLearningRateShape(ctx));
-  if (ctx->has_input("model_half", 0)) {
-    CHECK_EQ_OR_RETURN(ctx->InputTensorDesc("model_half", 0).shape(), shape);
+  if (ctx->has_input("model_copy", 0)) {
+    CHECK_EQ_OR_RETURN(ctx->InputTensorDesc("model_copy", 0).shape(), shape);
   }
   if (ctx->has_input("scale_by_tensor", 0)) {
     const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
@@ -322,8 +322,8 @@ Maybe<void> AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArg
   if (conf.has_input("max_v", 0)) {
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "max_v", 0));
   }
-  if (conf.has_input("model_half", 0)) {
-    JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model_half", 0));
+  if (conf.has_input("model_copy", 0)) {
+    JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model_copy", 0));
   }
   return Maybe<void>::Ok();
 }
@@ -346,8 +346,8 @@ Maybe<void> LambInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArg
 Maybe<void> SgdInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                 const user_op::UserOpConfWrapper& conf) {
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0));
-  if (conf.has_input("model_half", 0)) {
-    JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model_half", 0));
+  if (conf.has_input("model_copy", 0)) {
+    JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model_copy", 0));
   }
   return Maybe<void>::Ok();
 }
@@ -484,8 +484,8 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
                        .Broadcast(ctx->inputs())
                        .Split(user_op::OpArg("model", 0), axis)
                        .Split(user_op::OpArg("model_diff", 0), axis);
-    if (ctx->user_op_conf().has_input("model_half", 0)) {
-      builder.Split(user_op::OpArg("model_half", 0), axis);
+    if (ctx->user_op_conf().has_input("model_copy", 0)) {
+      builder.Split(user_op::OpArg("model_copy", 0), axis);
     }
     builder.Build();
   }
@@ -631,8 +631,8 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
     split_args.emplace_back("v", 0);
     if (ctx->user_op_conf().has_input("max_v", 0)) { split_args.emplace_back("max_v", 0); }
     auto builder = ctx->NewBuilder().Broadcast(ctx->inputs()).Split(split_args, axis);
-    if (ctx->user_op_conf().has_input("model_half", 0)) {
-      builder.Split(user_op::OpArg("model_half", 0), axis);
+    if (ctx->user_op_conf().has_input("model_copy", 0)) {
+      builder.Split(user_op::OpArg("model_copy", 0), axis);
     }
     builder.Build();
   }

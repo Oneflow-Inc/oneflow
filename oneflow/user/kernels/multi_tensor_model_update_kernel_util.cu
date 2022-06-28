@@ -48,8 +48,8 @@ __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float
     const int64_t tensor_elem_cnt = tensor_tuple_params.sizes[tensor_idx];
     T* model_ptr = (T*)tensor_tuple_params.ptr[0][tensor_idx];
     G* model_diff_ptr = (G*)tensor_tuple_params.ptr[1][tensor_idx];
-    half* model_half_ptr = nullptr;
-    if (N == 3) { model_half_ptr = (half*)tensor_tuple_params.ptr[2][tensor_idx]; }
+    half* model_copy_ptr = nullptr;
+    if (N == 3) { model_copy_ptr = (half*)tensor_tuple_params.ptr[2][tensor_idx]; }
 
     for (int64_t i = v_block_id * blockDim.x * kUnrollSize + threadIdx.x; i < tensor_elem_cnt;
          i += blockDim.x * gridDim.x * kUnrollSize) {
@@ -81,7 +81,7 @@ __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float
         int64_t actual_idx = i + ilp * blockDim.x;
         if (actual_idx < tensor_elem_cnt) {
           *(model_ptr + actual_idx) = model_val[ilp];
-          if (N == 3) { *(model_half_ptr + actual_idx) = static_cast<half>(model_val[ilp]); }
+          if (N == 3) { *(model_copy_ptr + actual_idx) = static_cast<half>(model_val[ilp]); }
         }
       }
     }
@@ -158,8 +158,8 @@ __global__ void MultiTensorAdamUpdateGpu(
     G* model_diff_ptr = (G*)tensor_tuple_params.ptr[1][tensor_idx];
     T* m_ptr = (T*)tensor_tuple_params.ptr[2][tensor_idx];
     T* v_ptr = (T*)tensor_tuple_params.ptr[3][tensor_idx];
-    half* model_half_ptr = nullptr;
-    if (N == 5) { model_half_ptr = (half*)tensor_tuple_params.ptr[4][tensor_idx]; }
+    half* model_copy_ptr = nullptr;
+    if (N == 5) { model_copy_ptr = (half*)tensor_tuple_params.ptr[4][tensor_idx]; }
 
     for (int64_t i = v_block_id * blockDim.x * kUnrollSize + threadIdx.x; i < tensor_elem_cnt;
          i += blockDim.x * gridDim.x * kUnrollSize) {
@@ -203,7 +203,7 @@ __global__ void MultiTensorAdamUpdateGpu(
           *(model_ptr + actual_idx) = model_val[ilp];
           *(m_ptr + actual_idx) = m_val[ilp];
           *(v_ptr + actual_idx) = v_val[ilp];
-          if (N == 5) { *(model_half_ptr + actual_idx) = static_cast<half>(model_val[ilp]); }
+          if (N == 5) { *(model_copy_ptr + actual_idx) = static_cast<half>(model_val[ilp]); }
         }
       }
     }
