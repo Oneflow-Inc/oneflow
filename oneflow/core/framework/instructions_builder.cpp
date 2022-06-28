@@ -73,7 +73,7 @@ static constexpr auto* GetLazyJobLauncherStream =
 template<typename PhyInstrOperandT>
 Maybe<void> InstructionsBuilder::MakeCriticalSectionBegin(
     vm::Stream* vm_stream, const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand) {
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+  auto instruction = intrusive::make_shared<vm::Instruction>(
       vm_stream, SingletonPtr<vm::CriticalSectionBeginInstructionType>(), phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
@@ -82,7 +82,7 @@ Maybe<void> InstructionsBuilder::MakeCriticalSectionBegin(
 template<typename PhyInstrOperandT>
 Maybe<void> InstructionsBuilder::MakeCriticalSectionEnd(
     vm::Stream* vm_stream, const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand) {
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+  auto instruction = intrusive::make_shared<vm::Instruction>(
       vm_stream, SingletonPtr<vm::CriticalSectionEndInstructionType>(), phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
@@ -174,7 +174,7 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr
           std::make_shared<vm::LaunchLazyJobPhyInstrOperand>(nn_graph, parameters);
       auto stream = JUST(GetLazyJobLauncherStream());
       auto* vm_stream = JUST(Global<VirtualMachine>::Get()->GetVmStream(stream));
-      auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+      auto instruction = intrusive::make_shared<vm::Instruction>(
           vm_stream, SingletonPtr<vm::LaunchLazyJobInstructionType>(), phy_instr_operand);
       instruction_list_->EmplaceBack(std::move(instruction));
     }
@@ -376,7 +376,7 @@ Maybe<void> InstructionsBuilder::Call(
   auto phy_instr_operand = JUST(vm::OpCallPhyInstrOperand::New(
       vm_stream, opkernel, input_eager_blob_objects, output_eager_blob_objects,
       consistent_tensor_infer_result, ctx, *one::CurrentDevVmDepObjectConsumeMode()));
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+  auto instruction = intrusive::make_shared<vm::Instruction>(
       vm_stream, SingletonPtr<vm::OpCallInstructionType>(), phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   for (const auto& output : *output_eager_blob_objects) {
@@ -418,7 +418,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
       std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(eager_blob_object, vm_stream);
   StreamRole stream_role = producer_stream->stream_role();
   DeviceType device_type = producer_stream->device()->enum_type();
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+  auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Global<VirtualMachine>::Get()->GetVmStream(producer_stream)),
       JUST(GetReleaseInstructionType::Visit(stream_role, device_type)), phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
@@ -461,7 +461,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
   const auto& phy_instr_operand = std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(
       std::move(compute_local_dep_objects), modifier);
   StreamRole stream_role = last_used_stream->stream_role();
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+  auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Global<VirtualMachine>::Get()->GetVmStream(last_used_stream)),
       JUST(GetRecordEventInstructionType::Visit(stream_role, device_type)), phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
@@ -551,7 +551,7 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
   // ```
   // `ndarray` may not be ones because instruction AccessBlobByCallback is prescheduled before
   // oneflow.ones actually finished.
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+  auto instruction = intrusive::make_shared<vm::Instruction>(
       // Never replace `stream` with producer_stream or last_used_stream.
       JUST(Global<VirtualMachine>::Get()->GetVmStream(stream)),
       SingletonPtr<vm::AccessBlobByCallbackInstructionType>(), phy_instr_operand);
@@ -579,7 +579,7 @@ Maybe<Symbol<Stream>> GetBarrierStream() {
 Maybe<void> InstructionsBuilder::GlobalSync() {
   const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>([]() {});
   auto stream = JUST(GetBarrierStream());
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+  auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Global<VirtualMachine>::Get()->GetVmStream(stream)),
       SingletonPtr<vm::GlobalSyncInstructionType>(), phy_instr_operand);
   instruction_list_->PushBack(instruction.Mutable());
@@ -589,7 +589,7 @@ Maybe<void> InstructionsBuilder::GlobalSync() {
 Maybe<void> InstructionsBuilder::Barrier(const std::function<void()>& Callback) {
   const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>(Callback);
   auto stream = JUST(GetBarrierStream());
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+  auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Global<VirtualMachine>::Get()->GetVmStream(stream)),
       SingletonPtr<vm::BarrierInstructionType>(), phy_instr_operand);
   instruction_list_->PushBack(instruction.Mutable());
@@ -597,7 +597,7 @@ Maybe<void> InstructionsBuilder::Barrier(const std::function<void()>& Callback) 
 }
 
 Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
-  vm::InstructionMsgList instruction_list;
+  vm::InstructionList instruction_list;
   InstructionsBuilder instructions_builder(&instruction_list);
   JUST(Build(&instructions_builder));
   JUST(vm::Run(instructions_builder.mut_instruction_list()));

@@ -29,15 +29,6 @@ struct UnaryElemwiseXpuLauncher<DeviceType::kCUDA, FunctorT, OutputT, InputA> fi
   }
 };
 
-template<typename FunctorT, typename OutputT, typename InputA, typename InputB>
-struct BinaryElemwiseXpuLauncher<DeviceType::kCUDA, FunctorT, OutputT, InputA, InputB> final {
-  void operator()(ep::Stream* stream, int64_t elem_cnt, OutputT* out, const InputA* input_a,
-                  const InputB* input_b, FunctorT functor) {
-    OF_CUDA_CHECK(cuda::elementwise::Binary(functor, elem_cnt, out, input_a, input_b,
-                                            stream->As<ep::CudaStream>()->cuda_stream()));
-  }
-};
-
 }  // namespace oneflow
 
 #endif  // _ONEFLOW_USER_KERNELS_ELEMENTWISE_XPU_KERNEL_CUH_
