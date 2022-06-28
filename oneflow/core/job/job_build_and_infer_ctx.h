@@ -40,6 +40,8 @@ class JobBuildAndInferCtx {
   Maybe<OpAttribute> AddAndInferMirroredOp(const OperatorConf& op_conf);
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
   Maybe<void> SetTrainConf(const TrainConf& train_conf);
+  Maybe<void> MarkVariableGradientBlobNames(
+      const HashMap<std::string, std::string>& variable_gradient_lbns);
 
   bool HasJobConf() const;
   Maybe<Shape> GetStaticShape(const std::string& lbn) const;

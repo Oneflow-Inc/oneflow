@@ -27,17 +27,6 @@ namespace oneflow {
 
 namespace {
 
-void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
-    const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi, JobBuilder* job_builder) {
-  auto& mut_pairs =
-      (*job_builder->mutable_helper()->mutable_tag2lbi_relations())[kProducedLbi2ConsumedDiffLbi];
-  for (const auto& pair : lbi2diff_lbi) {
-    auto* mut_pair = mut_pairs.add_pair();
-    *mut_pair->mutable_first() = pair.first;
-    *mut_pair->mutable_second() = pair.second;
-  }
-}
-
 class GenerateBackwardAndOptimizerOpConfs final : public JobPass {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GenerateBackwardAndOptimizerOpConfs);
@@ -48,19 +37,6 @@ class GenerateBackwardAndOptimizerOpConfs final : public JobPass {
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override;
 };
-
-void FilterModelLbi2ModelDiffLbiByOpConf(
-    const OpGraph& op_graph, const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
-    HashMap<LogicalBlobId, LogicalBlobId>* model_lbi2model_diff_lbi) {
-  for (const auto& pair : lbi2diff_lbi) {
-    const LogicalBlobId& lbi = pair.first;
-    const LogicalBlobId& diff_lbi = pair.second;
-    const OpNode* producer = op_graph.OpNode4OpName(lbi.op_name());
-    if (producer->op().op_conf().has_variable_conf()) {
-      (*model_lbi2model_diff_lbi)[lbi] = diff_lbi;
-    }
-  }
-}
 
 void FilterCurModelLbi2ModelDiffLbiByName(
     const ::google::protobuf::RepeatedPtrField<std::string>& variables,
@@ -117,20 +93,20 @@ Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* jo
 
 Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx) const {
   if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+  HashMap<LogicalBlobId, LogicalBlobId> model_lbi2model_diff_lbi;
+  for (const auto& optimizer_conf : job->job_conf().train_conf().optimizer_conf()) {
+    CHECK_OR_RETURN(optimizer_conf.variable_op_names_size()
+                    == optimizer_conf.variable_gradient_lbns_size())
+        << "variable_op_names and variable_gradient_lbns size mismatch";
+    for (int i = 0; i < optimizer_conf.variable_op_names_size(); ++i) {
+      auto model_lbi = GenLogicalBlobId(optimizer_conf.variable_op_names(i) + "/out");
+      auto model_diff_lbi = GenLogicalBlobId(optimizer_conf.variable_gradient_lbns(i));
+      model_lbi2model_diff_lbi.emplace(model_lbi, model_diff_lbi);
+    }
+  }
   const OpGraph op_graph(*job);
   auto job_builder = std::make_shared<JobBuilder>(job);
   const JobBuilder* old_job_builder = job_builder.get();
-  LogicalBlobId total_loss_instance_num;
-  HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
-  OpBlobArgPairs identical_sbp_oba_pairs;
-  job_builder = JUST(WithCalculationPassScope(kBackwardPass, job, [&]() -> Maybe<void> {
-    CHECK(old_job_builder == job_builder.get());  // Check this lambda never been async called
-    JUST(AutoGrad(ctx, op_graph, job_builder.get(), &lbi2diff_lbi, &identical_sbp_oba_pairs));
-    return Maybe<void>::Ok();
-  }));
-  HashMap<LogicalBlobId, LogicalBlobId> model_lbi2model_diff_lbi;
-  FilterModelLbi2ModelDiffLbiByOpConf(op_graph, lbi2diff_lbi, &model_lbi2model_diff_lbi);
-  old_job_builder = job_builder.get();
   job_builder = JUST(WithCalculationPassScope(kOptimizerPass, job, [&]() -> Maybe<void> {
     CHECK(old_job_builder == job_builder.get());  // Check this lambda never been async called
     AddDiffStaticShapeCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
@@ -161,7 +137,6 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
     }
     return Maybe<void>::Ok();
   }));
-  UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder.get());
   return Maybe<void>::Ok();
 }
 

@@ -86,6 +86,7 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
   m.def("RunLazyNNGraph", &RunLazyNNGraph);
   m.def("SoftSyncNNGraphBuffers", &SoftSyncNNGraphBuffers);
   m.def("AddTensorAsGraphLoss", &AddTensorAsGraphLoss);
+  m.def("MarkVariableGradients", &MarkVariableGradients);
   m.def("ConvertJobToTosaIR", [](const std::string& serialized_job) -> Maybe<std::string> {
     Job job;
     CHECK_OR_RETURN(TxtString2PbMessage(serialized_job, &job))

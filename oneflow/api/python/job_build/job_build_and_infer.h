@@ -180,6 +180,19 @@ inline Maybe<void> AddTensorAsGraphLoss(const std::shared_ptr<one::Tensor>& t) {
   return JUST(GetCurInferCtx())->AddLossLogicalBlobName(loss_lbn);
 }
 
+inline Maybe<void> MarkVariableGradients(
+    const std::map<std::string, std::shared_ptr<one::Tensor>>& variable_gradients) {
+  CHECK_OR_RETURN(LazyMode::is_enabled());
+  HashMap<std::string, std::string> variable_gradient_lbns;
+  for (const auto& it : variable_gradients) {
+    CHECK_OR_RETURN(it.second->is_lazy())
+        << "gradient expected to be a lazy tensor for variable " << it.first;
+    const std::string& lbn = one::TensorNameScope::Global()->Lookup(it.second);
+    variable_gradient_lbns.emplace(it.first, lbn);
+  }
+  return JUST(GetCurInferCtx())->MarkVariableGradientBlobNames(variable_gradient_lbns);
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_JOB_BUILD_JOB_BUILD_AND_INFER_H_

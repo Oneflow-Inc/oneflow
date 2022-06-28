@@ -659,6 +659,26 @@ Maybe<void> JobBuildAndInferCtx::AddLossConsistentBlobName(const std::string& lb
   return Maybe<void>::Ok();
 }
 
+Maybe<void> JobBuildAndInferCtx::MarkVariableGradientBlobNames(
+    const HashMap<std::string, std::string>& variable_gradient_lbns) {
+  if (variable_gradient_lbns.empty()) { return Maybe<void>::Ok(); }
+  CHECK_OR_RETURN(job_->job_conf().has_train_conf())
+      << Error::UnknownJobBuildAndInferError()
+      << "job has no TrainConf when add variable gradient logical blob name";
+  auto* train_conf = job_->mutable_job_conf()->mutable_train_conf();
+  for (int i = 0; i < train_conf->optimizer_conf_size(); ++i) {
+    auto* optimizer_conf = train_conf->mutable_optimizer_conf(i);
+    for (const auto& variable_op_name : optimizer_conf->variable_op_names()) {
+      const auto& it = variable_gradient_lbns.find(variable_op_name);
+      CHECK_OR_RETURN(it != variable_gradient_lbns.end())
+          << Error::UnknownJobBuildAndInferError() << "gradient is missing for trainable variable "
+          << variable_op_name;
+      optimizer_conf->add_variable_gradient_lbns(it->second);
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<Shape> JobBuildAndInferCtx::GetStaticShape(const std::string& lbn) const {
   JUST(CheckLbnValidAndExist(lbn));
   return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->shape();

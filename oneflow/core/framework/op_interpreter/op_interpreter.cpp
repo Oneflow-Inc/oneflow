@@ -111,7 +111,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   }
   // Lazy mode will construct backward compute graph in passes, so disable autograd if lazy mode.
   std::shared_ptr<OpExprGradClosure> grad_closure(nullptr);
-  if (requires_grad && !LazyMode::is_enabled()) {
+  if (requires_grad) {
     grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
     auto backward_fn = std::make_shared<BackwardFunction>();
     backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
@@ -156,7 +156,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     }
   }
 
-  if (requires_grad && !LazyMode::is_enabled()) {
+  if (requires_grad) {
     // Capture inputs and outputs after `AddBackwardFuncPtr` because of that grad function
     // node has been attached to them.
     JUST(grad_closure->Capture(*inputs_ptr, *outputs, ctx));
