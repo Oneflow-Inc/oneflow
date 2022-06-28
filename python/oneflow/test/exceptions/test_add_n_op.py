@@ -34,9 +34,9 @@ class TestAddN(flow.unittest.TestCase):
     
     def test_add_n_dtype_error_msg(test_case):
         with test_case.assertRaises(RuntimeError) as context:            
-            a = flow.tensor([1,2],dtype=oneflow.int64)
-            b = flow.tensor([3,4],dtype=oneflow.int64)
-            c = flow.tensor([2,2],dtype=oneflow.float64)
+            a = flow.tensor([1,2],dtype=flow.int64)
+            b = flow.tensor([3,4],dtype=flow.int64)
+            c = flow.tensor([2,2],dtype=flow.float64)
             flow.add(a,b,c)
            
         test_case.assertTrue(
