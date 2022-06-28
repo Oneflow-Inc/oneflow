@@ -68,7 +68,7 @@ def _test_randn_tuple_shape(test_case, shape, placement, sbp):
 
 
 def _test_graph_randn(test_case, shape, placement, sbp):
-    class ConsistentRandnGraph(flow.nn.Graph):
+    class GlobalRandnGraph(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
 
@@ -76,7 +76,7 @@ def _test_graph_randn(test_case, shape, placement, sbp):
             x = flow.randn(*shape, placement=placement, sbp=sbp)
             return x
 
-    model = ConsistentRandnGraph()
+    model = GlobalRandnGraph()
     x = model()
 
     test_case.assertEqual(x.shape, flow.Size(shape))
@@ -84,7 +84,7 @@ def _test_graph_randn(test_case, shape, placement, sbp):
     test_case.assertEqual(x.placement, placement)
 
 
-class TestRandnConsistent(flow.unittest.TestCase):
+class TestRandnGlobal(flow.unittest.TestCase):
     @globaltest
     def test_randn_consistent(test_case):
         shapes = [(8,), (8, 8,), (8, 8, 8)]

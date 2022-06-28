@@ -509,7 +509,7 @@ static PyObject* PyTensorObject_is_eager(PyObject* self, void* unused) {
 }
 
 static PyObject* PyTensorObject_is_global(PyObject* self, void* unused) {
-  return functional::CastToPyObject(PyTensor_Unpack(self)->is_consistent());
+  return functional::CastToPyObject(PyTensor_Unpack(self)->is_global());
 }
 
 static PyObject* PyTensorObject_is_local(PyObject* self, void* unused) {

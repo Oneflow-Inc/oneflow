@@ -1035,9 +1035,9 @@ class Module(object):
 
         return self._apply(convert)
 
-    def to_consistent(self, *args, **kwargs):
+    def to_global(self, *args, **kwargs):
         raise RuntimeError(
-            ".to_consistent has been removed, please use .to_global instead"
+            ".to_global has been removed, please use .to_global instead"
         )
 
     def to_global(self, placement=None, sbp=None):

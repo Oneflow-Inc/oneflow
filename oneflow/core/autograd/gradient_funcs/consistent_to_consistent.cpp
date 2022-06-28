@@ -25,21 +25,21 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct ConsistentToConsistentState : public AutoGradCaptureState {
+struct GlobalToGlobalState : public AutoGradCaptureState {
   Symbol<ParallelDesc> parallel_desc;
   Symbol<NdSbp> nd_sbp;
 };
 
-class ConsistentToConsistentGradFunction : public OpExprGradFunction<ConsistentToConsistentState> {
+class GlobalToGlobalGradFunction : public OpExprGradFunction<GlobalToGlobalState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
-    const auto* fw_op_expr = dynamic_cast<const ConsistentToConsistentOpExpr*>(&op);
+    const auto* fw_op_expr = dynamic_cast<const GlobalToGlobalOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
     grad_nd_sbp_ = fw_op_expr->grad_nd_sbp();
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(ConsistentToConsistentState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(GlobalToGlobalState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs,
                       const OpExprInterpContext& interp_ctx) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
@@ -48,17 +48,17 @@ class ConsistentToConsistentGradFunction : public OpExprGradFunction<ConsistentT
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const ConsistentToConsistentState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const GlobalToGlobalState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     const auto& out_grad = out_grads.at(0);
-    CHECK_OR_RETURN(out_grad->is_consistent());
+    CHECK_OR_RETURN(out_grad->is_global());
     in_grads->resize(1);
     const auto& grad_nd_sbp = grad_nd_sbp_.value_or(JUST(out_grad->nd_sbp()));
     const auto& grad_sbp_list = JUST(GetSbpList(grad_nd_sbp));
     const auto& grad_grad_sbp_list = JUST(GetSbpList(ctx->nd_sbp));
-    (*in_grads)[0] = JUST(one::functional::ToConsistent(
-        out_grad, ctx->parallel_desc, *grad_sbp_list, *grad_grad_sbp_list, /* check_meta */ false));
+    (*in_grads)[0] = JUST(one::functional::ToGlobal(out_grad, ctx->parallel_desc, *grad_sbp_list,
+                                                    *grad_grad_sbp_list, /* check_meta */ false));
     return Maybe<void>::Ok();
   }
 
@@ -66,7 +66,7 @@ class ConsistentToConsistentGradFunction : public OpExprGradFunction<ConsistentT
   Optional<Symbol<NdSbp>> grad_nd_sbp_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("consistent_to_consistent", ConsistentToConsistentGradFunction);
+REGISTER_OP_EXPR_GRAD_FUNCTION("consistent_to_consistent", GlobalToGlobalGradFunction);
 
 }  // namespace one
 }  // namespace oneflow

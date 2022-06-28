@@ -37,7 +37,7 @@ class Session {
   Maybe<void> PushMirroredStrategyEnabled(bool is_mirrored);
   Maybe<void> PopMirroredStrategyEnabled();
   Maybe<bool> IsMirroredStrategyEnabled() const;
-  Maybe<bool> IsConsistentStrategyEnabled() const;
+  Maybe<bool> IsGlobalStrategyEnabled() const;
 
  private:
   int64_t id_;

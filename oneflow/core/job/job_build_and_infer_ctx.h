@@ -36,7 +36,7 @@ class JobBuildAndInferCtx {
 
   Maybe<void> SetJobConf(const JobConfigProto& job_conf);
   Maybe<void> AddLbiAndDiffWatcherUuidPair(const LbiAndDiffWatcherUuidPair& lbi_uuid_pair);
-  Maybe<OpAttribute> AddAndInferConsistentOp(const OperatorConf& op_conf);
+  Maybe<OpAttribute> AddAndInferGlobalOp(const OperatorConf& op_conf);
   Maybe<OpAttribute> AddAndInferMirroredOp(const OperatorConf& op_conf);
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
   Maybe<void> SetTrainConf(const TrainConf& train_conf);
@@ -78,11 +78,11 @@ class JobBuildAndInferCtx {
   virtual Maybe<void> CheckAllInputsWithSameParallelNum(const Operator& op,
                                                         int32_t parallel_num) const = 0;
   virtual std::string GetMirroredOpName(const std::string& op_name, int64_t parallel_id) const = 0;
-  virtual int64_t SizeOfSubConsistentOpList(int64_t parallel_num) const = 0;
+  virtual int64_t SizeOfSubGlobalOpList(int64_t parallel_num) const = 0;
   virtual ParallelConf GetMirroredOpParallelConf(const ParallelDesc&,
                                                  int64_t parallel_id) const = 0;
   virtual bool GetIsMirroredParallelView() const = 0;
-  virtual Maybe<LogicalBlobId> FindOrCreateMirroredLbiFromCompatibleConsistentBlob(
+  virtual Maybe<LogicalBlobId> FindOrCreateMirroredLbiFromCompatibleGlobalBlob(
       int64_t scope_symbol_id, const LogicalBlobId& lbn) = 0;
 
   Job* mut_job() const { return job_; }
@@ -130,7 +130,7 @@ class JobBuildAndInferCtx {
   Maybe<LogicalBlobId> GetMirroredLbi(const std::string& lbn_with_hint) const;
   bool HasAnyMirroredBlobInput(const Operator& op) const;
   Maybe<void> CheckAllInputsConvertableToMirroredBlob(const Operator& op) const;
-  Maybe<void> AddLossConsistentBlobName(const std::string& lbn);
+  Maybe<void> AddLossGlobalBlobName(const std::string& lbn);
   Maybe<void> AddLossMirroredBlobName(const std::string& lbn);
   Maybe<const LogicalBlobId*> GetSubLbi(int64_t scope_symbol_id, const LogicalBlobId& lbi,
                                         int32_t index);
@@ -169,10 +169,10 @@ class LazyJobBuildAndInferCtx : public JobBuildAndInferCtx {
   Maybe<void> CheckAllInputsWithSameParallelNum(const Operator& op,
                                                 int32_t parallel_num) const override;
   std::string GetMirroredOpName(const std::string& op_name, int64_t parallel_id) const override;
-  int64_t SizeOfSubConsistentOpList(int64_t parallel_num) const override { return parallel_num; }
+  int64_t SizeOfSubGlobalOpList(int64_t parallel_num) const override { return parallel_num; }
   ParallelConf GetMirroredOpParallelConf(const ParallelDesc&, int64_t parallel_id) const override;
   bool GetIsMirroredParallelView() const override { return false; }
-  Maybe<LogicalBlobId> FindOrCreateMirroredLbiFromCompatibleConsistentBlob(
+  Maybe<LogicalBlobId> FindOrCreateMirroredLbiFromCompatibleGlobalBlob(
       int64_t scope_symbol_id, const LogicalBlobId& lbn) override;
 };
 
@@ -187,10 +187,10 @@ class EagerJobBuildAndInferCtx : public JobBuildAndInferCtx {
   Maybe<void> CheckAllInputsWithSameParallelNum(const Operator& op,
                                                 int32_t parallel_num) const override;
   std::string GetMirroredOpName(const std::string& op_name, int64_t parallel_id) const override;
-  int64_t SizeOfSubConsistentOpList(int64_t parallel_num) const override { return 1; }
+  int64_t SizeOfSubGlobalOpList(int64_t parallel_num) const override { return 1; }
   ParallelConf GetMirroredOpParallelConf(const ParallelDesc&, int64_t parallel_id) const override;
   bool GetIsMirroredParallelView() const override { return true; }
-  Maybe<LogicalBlobId> FindOrCreateMirroredLbiFromCompatibleConsistentBlob(
+  Maybe<LogicalBlobId> FindOrCreateMirroredLbiFromCompatibleGlobalBlob(
       int64_t scope_symbol_id, const LogicalBlobId& lbn) override;
 
   HashSet<std::string> executed_op_names_;

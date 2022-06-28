@@ -45,7 +45,7 @@ def _test_global_sub_with_0_size_data(test_case, placement, sbp):
     return out1, out2
 
 
-class TestConsistentSubModule(flow.unittest.TestCase):
+class TestGlobalSubModule(flow.unittest.TestCase):
     @globaltest
     def test_global_sub(test_case):
         for placement in all_placement():

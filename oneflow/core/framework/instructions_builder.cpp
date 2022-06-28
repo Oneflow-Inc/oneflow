@@ -37,7 +37,7 @@ limitations under the License.
 #include "oneflow/core/vm/barrier_instruction_type.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
-#include "oneflow/core/framework/consistent_tensor_infer_cache.h"
+#include "oneflow/core/framework/global_tensor_infer_cache.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/eager/critical_section_instruction_type.h"
 #include "oneflow/core/eager/lazy_job_instruction_type.h"
@@ -368,14 +368,14 @@ Maybe<void> InstructionsBuilder::Call(
     const std::shared_ptr<one::StatefulOpKernel>& opkernel,
     const one::EagerBlobObjectListPtr& input_eager_blob_objects,
     const one::EagerBlobObjectListPtr& output_eager_blob_objects,
-    const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
+    const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
     const one::OpExprInterpContext& ctx, Symbol<Stream> stream) {
   JUST(SoftSyncStream(output_eager_blob_objects, stream));
   JUST(SoftSyncStream(input_eager_blob_objects, stream));
   auto* vm_stream = JUST(Global<VirtualMachine>::Get()->GetVmStream(stream));
   auto phy_instr_operand = JUST(vm::OpCallPhyInstrOperand::New(
       vm_stream, opkernel, input_eager_blob_objects, output_eager_blob_objects,
-      consistent_tensor_infer_result, ctx, *one::CurrentDevVmDepObjectConsumeMode()));
+      global_tensor_infer_result, ctx, *one::CurrentDevVmDepObjectConsumeMode()));
   auto instruction = intrusive::make_shared<vm::Instruction>(
       vm_stream, SingletonPtr<vm::OpCallInstructionType>(), phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));

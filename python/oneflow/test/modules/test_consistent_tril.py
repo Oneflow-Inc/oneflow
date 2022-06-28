@@ -51,7 +51,7 @@ def _test_global_tril_with_diag(test_case, placement, sbp):
     return y
 
 
-class TestConsistentTril(flow.unittest.TestCase):
+class TestGlobalTril(flow.unittest.TestCase):
     @globaltest
     def test_global_tril_without_diag(test_case):
         for placement in all_placement():

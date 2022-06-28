@@ -24,24 +24,24 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct CastConsistentCaptureState : public AutoGradCaptureState {
+struct CastGlobalCaptureState : public AutoGradCaptureState {
   Symbol<ParallelDesc> parallel_desc;
   Symbol<NdSbp> nd_sbp;
   std::shared_ptr<const Shape> shape;
   Symbol<DType> dtype;
 };
 
-class CastToConsistent : public OpExprGradFunction<CastConsistentCaptureState> {
+class CastToGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
-    const auto* fw_op_expr = dynamic_cast<const CastToConsistentOpExpr*>(&op);
+    const auto* fw_op_expr = dynamic_cast<const CastToGlobalOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
     const std::string& op_name = fw_op_expr->op_name();
-    grad_op_ = JUST(one::CastFromConsistentOpExpr::New(GradientOpName(op_name)));
+    grad_op_ = JUST(one::CastFromGlobalOpExpr::New(GradientOpName(op_name)));
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(CastConsistentCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(CastGlobalCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs,
                       const OpExprInterpContext& interp_ctx) const override {
     ctx->parallel_desc = JUST(interp_ctx.parallel_desc);
@@ -49,17 +49,17 @@ class CastToConsistent : public OpExprGradFunction<CastConsistentCaptureState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const CastConsistentCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const CastGlobalCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     std::shared_ptr<Tensor> out_grad = out_grads.at(0);
-    CHECK_OR_RETURN(out_grad->is_consistent());
+    CHECK_OR_RETURN(out_grad->is_global());
     {
       Symbol<NdSbp> nd_sbp_constraint = ctx->nd_sbp;
       Symbol<ParallelDesc> parallel_desc_constraint = ctx->parallel_desc;
-      out_grad = JUST(functional::ToConsistent(out_grad, parallel_desc_constraint,
-                                               *JUST(GetSbpList(nd_sbp_constraint)),
-                                               GetNoneSbpList(), /* check_meta */ false));
+      out_grad = JUST(functional::ToGlobal(out_grad, parallel_desc_constraint,
+                                           *JUST(GetSbpList(nd_sbp_constraint)), GetNoneSbpList(),
+                                           /* check_meta */ false));
     }
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grad}));
     return Maybe<void>::Ok();
@@ -69,22 +69,22 @@ class CastToConsistent : public OpExprGradFunction<CastConsistentCaptureState> {
   std::shared_ptr<OpExpr> grad_op_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("cast_to_consistent", CastToConsistent);
+REGISTER_OP_EXPR_GRAD_FUNCTION("cast_to_consistent", CastToGlobal);
 
-class CastFromConsistent : public OpExprGradFunction<CastConsistentCaptureState> {
+class CastFromGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
-    const auto* fw_op_expr = dynamic_cast<const CastFromConsistentOpExpr*>(&op);
+    const auto* fw_op_expr = dynamic_cast<const CastFromGlobalOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
     const std::string& op_name = fw_op_expr->op_name();
-    grad_op_ = JUST(one::CastToConsistentOpExpr::New(GradientOpName(op_name)));
+    grad_op_ = JUST(one::CastToGlobalOpExpr::New(GradientOpName(op_name)));
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(CastConsistentCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(CastGlobalCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     const auto& input = inputs.at(0);
-    CHECK_OR_RETURN(input->is_consistent());
+    CHECK_OR_RETURN(input->is_global());
     ctx->parallel_desc = JUST(input->parallel_desc());
     ctx->nd_sbp = JUST(input->nd_sbp());
     ctx->shape = input->shape();
@@ -92,7 +92,7 @@ class CastFromConsistent : public OpExprGradFunction<CastConsistentCaptureState>
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const CastConsistentCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const CastGlobalCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& dual_nd_sbp = JUST(GetDualNdSbp(ctx->nd_sbp));
     MutableAttrMap attrs;
@@ -107,7 +107,7 @@ class CastFromConsistent : public OpExprGradFunction<CastConsistentCaptureState>
   std::shared_ptr<OpExpr> grad_op_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("cast_from_consistent", CastFromConsistent);
+REGISTER_OP_EXPR_GRAD_FUNCTION("cast_from_consistent", CastFromGlobal);
 
 }  // namespace one
 }  // namespace oneflow

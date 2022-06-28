@@ -126,7 +126,7 @@ def _compare_lazy_global_with_torch(
         )
 
 
-class TestConsistentSparseSoftmaxCrossEntropyWithLogits(flow.unittest.TestCase):
+class TestGlobalSparseSoftmaxCrossEntropyWithLogits(flow.unittest.TestCase):
     @globaltest
     def test_eager_global_sparse_softmax_cross_entropy(test_case):
         arg_dict = OrderedDict()

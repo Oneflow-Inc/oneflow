@@ -1045,11 +1045,11 @@ def zero_(self):
 
 
 def _is_consistent(self):
-    raise RuntimeError(".is_consistent has been removed, please use .is_global instead")
+    raise RuntimeError(".is_global has been removed, please use .is_global instead")
 
 
 def _to_consistent(self, *args, **kwargs):
-    raise RuntimeError(".to_consistent has been removed, please use .to_global instead")
+    raise RuntimeError(".to_global has been removed, please use .to_global instead")
 
 
 def _isnan(self):
@@ -1159,8 +1159,8 @@ def RegisterMethods():
     Tensor.nms = _nms
     Tensor.nonzero = _nonzero
     Tensor.prod = _prod
-    Tensor.is_consistent = _is_consistent
-    Tensor.to_consistent = _to_consistent
+    Tensor.is_global = _is_consistent
+    Tensor.to_global = _to_consistent
     Tensor.new_tensor = _new_tensor
     Tensor.cumsum = _cumsum
     Tensor.cumprod = _cumprod

@@ -30,7 +30,7 @@ def do_test_expm1_impl(test_case, ndim, placement, sbp):
     return z
 
 
-class TestExpm1Consistent(flow.unittest.TestCase):
+class TestExpm1Global(flow.unittest.TestCase):
     @globaltest
     def test_expm1(test_case):
         # random ndim in range [1,4]

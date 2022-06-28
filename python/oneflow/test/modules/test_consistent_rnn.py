@@ -198,7 +198,7 @@ def _test_gru_impl(
     )
 
 
-class TestRNNConsistent(oneflow.unittest.TestCase):
+class TestRNNGlobal(oneflow.unittest.TestCase):
     @globaltest
     def test_rnn(test_case):
         arg_dict = OrderedDict()

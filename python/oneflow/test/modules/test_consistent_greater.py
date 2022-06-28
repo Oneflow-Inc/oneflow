@@ -39,7 +39,7 @@ def _test_greater_impl(test_case, ndim, placement, sbp):
 
 
 @unittest.skip("TODO: houjiang, yushun. this test might fail")
-class TestGreaterConsistent(flow.unittest.TestCase):
+class TestGreaterGlobal(flow.unittest.TestCase):
     @globaltest
     def test_greater(test_case):
         # random ndim in range [1,4]

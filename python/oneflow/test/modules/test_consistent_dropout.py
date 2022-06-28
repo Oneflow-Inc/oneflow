@@ -39,7 +39,7 @@ def _test_dropout_eval_p01(test_case, placement, sbp, ndim, p):
     return m(x)
 
 
-class TestDropoutConsistent(flow.unittest.TestCase):
+class TestDropoutGlobal(flow.unittest.TestCase):
     @globaltest
     def test_dropout_p01(test_case):
         # random ndim in range [1,3]

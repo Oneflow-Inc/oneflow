@@ -133,7 +133,7 @@ def _test_roi_align_in_fixed_data_impl(test_case, placement, sbp):
     )
 
 
-class TestConsistentRoiAlign(flow.unittest.TestCase):
+class TestGlobalRoiAlign(flow.unittest.TestCase):
     # TODO(wyg): It is a bug in pytorch-1.9.0, torchvision-0.10.0 and python3.7.10.
     #            Open this test after updating the versions of pytorch in CI.
 

@@ -33,7 +33,7 @@ def _test_consistent_rand(test_case, shape, placement, sbp):
 
 
 def _test_graph_rand(test_case, shape, placement, sbp):
-    class ConsistentRandGraph(flow.nn.Graph):
+    class GlobalRandGraph(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
 
@@ -41,7 +41,7 @@ def _test_graph_rand(test_case, shape, placement, sbp):
             x = flow.rand(*shape, placement=placement, sbp=sbp)
             return x
 
-    model = ConsistentRandGraph()
+    model = GlobalRandGraph()
     x = model()
 
     test_case.assertEqual(x.shape, flow.Size(shape))
@@ -49,7 +49,7 @@ def _test_graph_rand(test_case, shape, placement, sbp):
     test_case.assertEqual(x.placement, placement)
 
 
-class TestRandConsistent(flow.unittest.TestCase):
+class TestRandGlobal(flow.unittest.TestCase):
     @globaltest
     def test_rand_consistent(test_case):
         shapes = [(8,), (8, 8,), (8, 8, 8)]

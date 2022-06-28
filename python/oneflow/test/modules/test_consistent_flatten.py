@@ -33,7 +33,7 @@ def do_test_flatten_impl(test_case, ndim, placement, sbp):
     return z
 
 
-class TestFlattenConsistent(flow.unittest.TestCase):
+class TestFlattenGlobal(flow.unittest.TestCase):
     @globaltest
     def test_flatten(test_case):
         # random ndim in range [1,4]

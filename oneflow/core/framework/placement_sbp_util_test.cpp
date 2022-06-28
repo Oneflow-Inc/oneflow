@@ -151,10 +151,10 @@ Symbol<NdSbp> GetNdSbp(Args... sbps) {
   return SymbolOf(nd_sbp);
 }
 
-Symbol<one::ConsistentTensorMeta> MakeConsistentTensorMeta(Symbol<ParallelDesc> parallel_desc,
-                                                           Symbol<NdSbp> nd_sbp) {
+Symbol<one::GlobalTensorMeta> MakeGlobalTensorMeta(Symbol<ParallelDesc> parallel_desc,
+                                                   Symbol<NdSbp> nd_sbp) {
   const auto& shape = std::make_shared<const Shape>(DimVector{256, 256});
-  one::ConsistentTensorMeta tensor_meta(shape, DataType::kInt32, nd_sbp, parallel_desc);
+  one::GlobalTensorMeta tensor_meta(shape, DataType::kInt32, nd_sbp, parallel_desc);
   return SymbolOf(tensor_meta);
 }
 
@@ -171,7 +171,7 @@ TEST(DecomposeIntoNaiveTransformations, decompose_axis0) {
   const auto& parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
   const auto& src_nd_sbp = GetNdSbp("P", "B");
   const auto& dst_nd_sbp = GetNdSbp("S0", "B");
-  const auto& tensor_meta = MakeConsistentTensorMeta(parallel_desc, src_nd_sbp);
+  const auto& tensor_meta = MakeGlobalTensorMeta(parallel_desc, src_nd_sbp);
   const auto& transformations =
       CHECK_JUST(private_details::DecomposeIntoNaiveTransformations(tensor_meta, dst_nd_sbp));
   ASSERT_EQ(transformations->size(), 1);
@@ -180,7 +180,7 @@ TEST(DecomposeIntoNaiveTransformations, decompose_axis0) {
   expected_parallel_conf.add_device_name(std::string("0:0"));
   expected_parallel_conf.add_device_name(std::string("1:0"));
   const auto& expected_parallel_desc = SymbolOf(ParallelDesc(expected_parallel_conf));
-  const auto& ctensor_meta = transformations->at(0).consistent_tensor_meta;
+  const auto& ctensor_meta = transformations->at(0).global_tensor_meta;
   ASSERT_TRUE(ctensor_meta->parallel_desc() == expected_parallel_desc);
   ASSERT_EQ(ctensor_meta->nd_sbp()->sbp_parallel_size(), 1);
   ASSERT_EQ(transformations->at(0).dst_nd_sbp->sbp_parallel_size(), 1);
@@ -200,7 +200,7 @@ TEST(DecomposeIntoNaiveTransformations, decompose_axis1) {
   const auto& parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
   const auto& src_nd_sbp = GetNdSbp("S0", "P");
   const auto& dst_nd_sbp = GetNdSbp("S0", "S1");
-  const auto& tensor_meta = MakeConsistentTensorMeta(parallel_desc, src_nd_sbp);
+  const auto& tensor_meta = MakeGlobalTensorMeta(parallel_desc, src_nd_sbp);
   const auto& transformations =
       CHECK_JUST(private_details::DecomposeIntoNaiveTransformations(tensor_meta, dst_nd_sbp));
   ASSERT_EQ(transformations->size(), 1);
@@ -208,7 +208,7 @@ TEST(DecomposeIntoNaiveTransformations, decompose_axis1) {
   expected_parallel_conf.set_device_tag("cpu");
   expected_parallel_conf.add_device_name("0:0-3");
   const auto& expected_parallel_desc = SymbolOf(ParallelDesc(expected_parallel_conf));
-  const auto& ctensor_meta = transformations->at(0).consistent_tensor_meta;
+  const auto& ctensor_meta = transformations->at(0).global_tensor_meta;
   ASSERT_TRUE(ctensor_meta->parallel_desc() == expected_parallel_desc);
   ASSERT_EQ(ctensor_meta->nd_sbp()->sbp_parallel_size(), 1);
   ASSERT_EQ(transformations->at(0).dst_nd_sbp->sbp_parallel_size(), 1);
@@ -228,7 +228,7 @@ TEST(DecomposeIntoNaiveTransformations, decompose_two_axes) {
   const auto& parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
   const auto& src_nd_sbp = GetNdSbp("S0", "P");
   const auto& dst_nd_sbp = GetNdSbp("B", "S0");
-  const auto& tensor_meta = MakeConsistentTensorMeta(parallel_desc, src_nd_sbp);
+  const auto& tensor_meta = MakeGlobalTensorMeta(parallel_desc, src_nd_sbp);
   const auto& transformations =
       CHECK_JUST(private_details::DecomposeIntoNaiveTransformations(tensor_meta, dst_nd_sbp));
   ASSERT_EQ(transformations->size(), 2);
@@ -238,7 +238,7 @@ TEST(DecomposeIntoNaiveTransformations, decompose_two_axes) {
     expected_parallel_conf.add_device_name(std::string("0:0"));
     expected_parallel_conf.add_device_name(std::string("1:0"));
     const auto& expected_parallel_desc = SymbolOf(ParallelDesc(expected_parallel_conf));
-    const auto& ctensor_meta = transformations->at(0).consistent_tensor_meta;
+    const auto& ctensor_meta = transformations->at(0).global_tensor_meta;
     ASSERT_TRUE(ctensor_meta->parallel_desc() == expected_parallel_desc);
     ASSERT_EQ(ctensor_meta->nd_sbp()->sbp_parallel_size(), 1);
     ASSERT_EQ(transformations->at(0).dst_nd_sbp->sbp_parallel_size(), 1);
@@ -251,7 +251,7 @@ TEST(DecomposeIntoNaiveTransformations, decompose_two_axes) {
     expected_parallel_conf.set_device_tag("cpu");
     expected_parallel_conf.add_device_name("0:0-1");
     const auto& expected_parallel_desc = SymbolOf(ParallelDesc(expected_parallel_conf));
-    const auto& ctensor_meta = transformations->at(1).consistent_tensor_meta;
+    const auto& ctensor_meta = transformations->at(1).global_tensor_meta;
     ASSERT_TRUE(ctensor_meta->parallel_desc() == expected_parallel_desc);
     ASSERT_EQ(ctensor_meta->nd_sbp()->sbp_parallel_size(), 1);
     ASSERT_EQ(transformations->at(1).dst_nd_sbp->sbp_parallel_size(), 1);

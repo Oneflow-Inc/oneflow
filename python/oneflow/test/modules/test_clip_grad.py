@@ -169,7 +169,7 @@ class TestClipGrad(flow.unittest.TestCase):
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestClipGradConsistent(flow.unittest.TestCase):
+class TestClipGradGlobal(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_clip_grad_consistent(test_case):
         arg_dict = OrderedDict()

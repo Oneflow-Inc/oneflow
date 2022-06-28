@@ -24,7 +24,7 @@ limitations under the License.
 namespace oneflow {
 
 const static int kTransportTokenTypeBit = 5;
-const static int kTransportTokenThreadConsistentIdBit = 3;
+const static int kTransportTokenThreadGlobalIdBit = 3;
 
 enum TransportTokenType {
   // Begin
@@ -33,7 +33,7 @@ enum TransportTokenType {
   kTransportTokenTypeMeta,  // e.g. for consistent id generating
   kTransportTokenTypeSyncSymbolParallelDesc,
   kTransportTokenTypeSyncSymbolNdSbp,
-  kTransportTokenTypeSyncSymbolConsistentTensorMeta,
+  kTransportTokenTypeSyncSymbolGlobalTensorMeta,
   kTransportTokenTypeCheckRankGroupConsistency,
   kTransportTokenTypeCheckTensorConsistency,
   kTransportTokenTypeSyncLocalShapeDtype,
@@ -59,11 +59,11 @@ class TransportToken final {
 
   static Maybe<TransportToken> NewTransportToken(TransportTokenType type);
 
-  static constexpr size_t MaxNumberOfThreadConsistentUId() {
-    return (1 << kTransportTokenThreadConsistentIdBit);
+  static constexpr size_t MaxNumberOfThreadGlobalUId() {
+    return (1 << kTransportTokenThreadGlobalIdBit);
   }
 
-  Maybe<void> CheckThreadConsistentId() const;
+  Maybe<void> CheckThreadGlobalId() const;
   bool operator==(const TransportToken& other) const {
     return static_cast<uint64_t>(*this) == static_cast<uint64_t>(other);
   }
@@ -95,8 +95,8 @@ class TransportToken final {
   uint16_t src_rank_;
   uint16_t dst_rank_;
   uint8_t type_ : kTransportTokenTypeBit;  // TransportTokenType
-  uint8_t thread_consistent_id_ : kTransportTokenThreadConsistentIdBit;
-  uint32_t seq_id_ : (32 - kTransportTokenTypeBit - kTransportTokenThreadConsistentIdBit);
+  uint8_t thread_consistent_id_ : kTransportTokenThreadGlobalIdBit;
+  uint32_t seq_id_ : (32 - kTransportTokenTypeBit - kTransportTokenThreadGlobalIdBit);
 };
 static_assert(sizeof(TransportToken) == sizeof(uint64_t), "");
 

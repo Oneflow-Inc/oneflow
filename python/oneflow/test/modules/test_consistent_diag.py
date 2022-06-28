@@ -30,7 +30,7 @@ def do_test_diag_impl(test_case, ndim, placement, sbp):
     return torch.diag(y)
 
 
-class TestDiagConsistent(flow.unittest.TestCase):
+class TestDiagGlobal(flow.unittest.TestCase):
     @globaltest
     def test_diag(test_case):
         # random ndim in range [1,2]

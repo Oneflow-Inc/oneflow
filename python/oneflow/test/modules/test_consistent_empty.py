@@ -53,7 +53,7 @@ def _test_graph_empty(test_case, func, shape, placement, sbp):
     else:
         raise NotImplementedError
 
-    class ConsistentEmptyGraph(flow.nn.Graph):
+    class GlobalEmptyGraph(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
 
@@ -63,7 +63,7 @@ def _test_graph_empty(test_case, func, shape, placement, sbp):
                 x = func2(x, size=shape)
             return x
 
-    model = ConsistentEmptyGraph()
+    model = GlobalEmptyGraph()
     x = model()
 
     test_case.assertEqual(x.shape, flow.Size(shape))
@@ -71,7 +71,7 @@ def _test_graph_empty(test_case, func, shape, placement, sbp):
     test_case.assertEqual(x.placement, placement)
 
 
-class TestEmptyConsistent(flow.unittest.TestCase):
+class TestEmptyGlobal(flow.unittest.TestCase):
     @globaltest
     def test_empty_consistent(test_case):
         shapes = [(8,), (8, 8,), (8, 8, 8)]

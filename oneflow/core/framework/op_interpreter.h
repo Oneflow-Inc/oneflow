@@ -55,8 +55,8 @@ struct OpExprInterpContext {
 
   AttrMap attrs;
   Optional<Symbol<Device>> device;               // for local op
-  Optional<Symbol<ParallelDesc>> parallel_desc;  // for consistent op
-  Optional<Symbol<NdSbp>> nd_sbp;                // for consistent op
+  Optional<Symbol<ParallelDesc>> parallel_desc;  // for global op
+  Optional<Symbol<NdSbp>> nd_sbp;                // for global op
   Optional<bool> pin_memory;                     // for pin_memory related op
   Optional<bool> inplace;                        // for inplace operation op
   std::shared_ptr<user_op::OpKernelState> state;
@@ -86,9 +86,9 @@ class OpExprInterpreter {
   _macro(VariableOp);                \
   _macro(CastToMirroredOp);          \
   _macro(CastFromMirroredOp);        \
-  _macro(ConsistentToConsistentOp);  \
-  _macro(CastToConsistentOp);        \
-  _macro(CastFromConsistentOp);      \
+  _macro(GlobalToGlobalOp);          \
+  _macro(CastToGlobalOp);            \
+  _macro(CastFromGlobalOp);          \
   _macro(DistributeSplitOp);         \
   _macro(DistributeCloneOp);         \
   _macro(DistributeConcatOp);        \
@@ -123,7 +123,7 @@ class LazyInterpreter : public OpExprInterpreter {
   DECLARE_NORMAL_APPLY_FUNC(FeedVariableOp);
   DECLARE_NORMAL_APPLY_FUNC(FetchOutputOp);
   DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
-  DECLARE_NORMAL_APPLY_FUNC(ConsistentToConsistentOp);
+  DECLARE_NORMAL_APPLY_FUNC(GlobalToGlobalOp);
   DECLARE_NORMAL_APPLY_FUNC(ImageDecoderRandomCropResizeOp);
 };
 
@@ -145,10 +145,10 @@ class EagerInterpreter : public OpExprInterpreter {
   DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
 };
 
-class EagerConsistentInterpreter : public EagerInterpreter {
+class EagerGlobalInterpreter : public EagerInterpreter {
  public:
-  EagerConsistentInterpreter() : EagerInterpreter() {}
-  virtual ~EagerConsistentInterpreter() = default;
+  EagerGlobalInterpreter() : EagerInterpreter() {}
+  virtual ~EagerGlobalInterpreter() = default;
 
  private:
   FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);

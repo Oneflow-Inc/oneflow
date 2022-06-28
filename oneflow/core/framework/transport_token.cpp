@@ -23,14 +23,14 @@ limitations under the License.
 namespace oneflow {
 
 /*static*/ Maybe<TransportToken> TransportToken::NewTransportToken(TransportTokenType type) {
-  int32_t thread_consistent_id = JUST(GetThisThreadConsistentId());
+  int32_t thread_consistent_id = JUST(GetThisThreadGlobalId());
   CHECK_GE_OR_RETURN(thread_consistent_id, 0);
-  CHECK_LT_OR_RETURN(thread_consistent_id, MaxNumberOfThreadConsistentUId());
+  CHECK_LT_OR_RETURN(thread_consistent_id, MaxNumberOfThreadGlobalUId());
   return TransportToken(type, thread_consistent_id);
 }
 
-Maybe<void> TransportToken::CheckThreadConsistentId() const {
-  int32_t thread_consistent_id = JUST(GetThisThreadConsistentId());
+Maybe<void> TransportToken::CheckThreadGlobalId() const {
+  int32_t thread_consistent_id = JUST(GetThisThreadGlobalId());
   CHECK_EQ_OR_RETURN(thread_consistent_id, this->thread_consistent_id());
   return Maybe<void>::Ok();
 }

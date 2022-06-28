@@ -33,7 +33,7 @@ def do_test_greater_equal_impl(test_case, ndim, placement, sbp):
     return z
 
 
-class TestGreaterEqualConsistent(flow.unittest.TestCase):
+class TestGreaterEqualGlobal(flow.unittest.TestCase):
     @globaltest
     def test_greater_equal(test_case):
         # random ndim in range [1,4]

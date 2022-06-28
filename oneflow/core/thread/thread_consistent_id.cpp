@@ -22,13 +22,13 @@ namespace oneflow {
 
 namespace {
 
-class ConsistentIdStorage final {
+class GlobalIdStorage final {
  public:
-  ConsistentIdStorage() = default;
-  ~ConsistentIdStorage() = default;
+  GlobalIdStorage() = default;
+  ~GlobalIdStorage() = default;
 
-  static ConsistentIdStorage* Singleton() {
-    static auto* storage = new ConsistentIdStorage();
+  static GlobalIdStorage* Singleton() {
+    static auto* storage = new GlobalIdStorage();
     return storage;
   }
 
@@ -69,39 +69,37 @@ class ConsistentIdStorage final {
   HashMap<int64_t, std::string> id2debug_string_;
 };
 
-std::unique_ptr<int64_t>* MutThreadLocalUniqueConsistentId() {
+std::unique_ptr<int64_t>* MutThreadLocalUniqueGlobalId() {
   static thread_local std::unique_ptr<int64_t> consistent_id;
   return &consistent_id;
 }
 
 }  // namespace
 
-size_t GetThreadConsistentIdCount() { return ConsistentIdStorage::Singleton()->Size(); }
+size_t GetThreadGlobalIdCount() { return GlobalIdStorage::Singleton()->Size(); }
 
-Maybe<void> InitThisThreadUniqueConsistentId(int64_t id, const std::string& debug_string) {
-  JUST(ConsistentIdStorage::Singleton()->Emplace(id, debug_string));
-  auto* ptr = MutThreadLocalUniqueConsistentId();
+Maybe<void> InitThisThreadUniqueGlobalId(int64_t id, const std::string& debug_string) {
+  JUST(GlobalIdStorage::Singleton()->Emplace(id, debug_string));
+  auto* ptr = MutThreadLocalUniqueGlobalId();
   CHECK_ISNULL_OR_RETURN(ptr->get());
   ptr->reset(new int64_t(id));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InitThisThreadConsistentId(int64_t id, const std::string& debug_string) {
-  JUST(ConsistentIdStorage::Singleton()->TryEmplace(id, debug_string));
-  auto* ptr = MutThreadLocalUniqueConsistentId();
+Maybe<void> InitThisThreadGlobalId(int64_t id, const std::string& debug_string) {
+  JUST(GlobalIdStorage::Singleton()->TryEmplace(id, debug_string));
+  auto* ptr = MutThreadLocalUniqueGlobalId();
   CHECK_ISNULL_OR_RETURN(ptr->get());
   ptr->reset(new int64_t(id));
   return Maybe<void>::Ok();
 }
 
-Maybe<int64_t> GetThisThreadConsistentId() {
-  auto* ptr = MutThreadLocalUniqueConsistentId();
+Maybe<int64_t> GetThisThreadGlobalId() {
+  auto* ptr = MutThreadLocalUniqueGlobalId();
   CHECK_NOTNULL_OR_RETURN(ptr->get());
   return **ptr;
 }
 
-Maybe<void> ResetThisThreadUniqueConsistentId() {
-  return ConsistentIdStorage::Singleton()->Reset();
-}
+Maybe<void> ResetThisThreadUniqueGlobalId() { return GlobalIdStorage::Singleton()->Reset(); }
 
 }  // namespace oneflow

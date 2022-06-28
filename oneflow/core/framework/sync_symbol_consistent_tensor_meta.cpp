@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/sync_symbol_consistent_tensor_meta.h"
+#include "oneflow/core/framework/sync_symbol_global_tensor_meta.h"
 #include "oneflow/core/framework/sync_symbol_parallel_desc.h"
 #include "oneflow/core/framework/sync_symbol_nd_sbp.h"
 #include "oneflow/core/framework/rank_group_rpc_util.h"
@@ -23,36 +23,36 @@ limitations under the License.
 
 namespace oneflow {
 
-struct FlatConsistentTensorMeta final {
-  static Maybe<FlatConsistentTensorMeta> New(
-      uint64_t symbol_id, Symbol<one::ConsistentTensorMeta> consistent_tensor_meta) {
-    const auto& meta = std::make_shared<FlatConsistentTensorMeta>();
-    JUST(meta->Init(symbol_id, consistent_tensor_meta));
+struct FlatGlobalTensorMeta final {
+  static Maybe<FlatGlobalTensorMeta> New(uint64_t symbol_id,
+                                         Symbol<one::GlobalTensorMeta> global_tensor_meta) {
+    const auto& meta = std::make_shared<FlatGlobalTensorMeta>();
+    JUST(meta->Init(symbol_id, global_tensor_meta));
     return meta;
   }
 
-  Maybe<void> Init(uint64_t symbol_id, Symbol<one::ConsistentTensorMeta> consistent_tensor_meta) {
+  Maybe<void> Init(uint64_t symbol_id, Symbol<one::GlobalTensorMeta> global_tensor_meta) {
     this->symbol_id = symbol_id;
-    JUST(this->shape.Init(consistent_tensor_meta->shape()));
-    this->dtype = static_cast<int32_t>(consistent_tensor_meta->dtype());
-    this->is_dynamic = consistent_tensor_meta->is_dynamic();
-    this->nd_sbp = JUST(
-        SyncedSymbolMap<NdSbp>::FindOrSync(consistent_tensor_meta->nd_sbp(), &SyncSymbolNdSbp));
+    JUST(this->shape.Init(global_tensor_meta->shape()));
+    this->dtype = static_cast<int32_t>(global_tensor_meta->dtype());
+    this->is_dynamic = global_tensor_meta->is_dynamic();
+    this->nd_sbp =
+        JUST(SyncedSymbolMap<NdSbp>::FindOrSync(global_tensor_meta->nd_sbp(), &SyncSymbolNdSbp));
     this->parallel_desc = JUST(SyncedSymbolMap<ParallelDesc>::FindOrSync(
-        consistent_tensor_meta->parallel_desc(), &SyncSymbolParallelDesc));
+        global_tensor_meta->parallel_desc(), &SyncSymbolParallelDesc));
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Check(uint64_t symbol_id, Symbol<one::ConsistentTensorMeta> consistent_tensor_meta) {
+  Maybe<void> Check(uint64_t symbol_id, Symbol<one::GlobalTensorMeta> global_tensor_meta) {
     CHECK_EQ_OR_RETURN(this->symbol_id, symbol_id);
-    JUST(this->shape.Check(consistent_tensor_meta->shape()));
-    CHECK_EQ_OR_RETURN(static_cast<DataType>(this->dtype), consistent_tensor_meta->dtype());
-    CHECK_EQ_OR_RETURN(this->is_dynamic, consistent_tensor_meta->is_dynamic());
+    JUST(this->shape.Check(global_tensor_meta->shape()));
+    CHECK_EQ_OR_RETURN(static_cast<DataType>(this->dtype), global_tensor_meta->dtype());
+    CHECK_EQ_OR_RETURN(this->is_dynamic, global_tensor_meta->is_dynamic());
     const auto& nd_sbp = JUST(SyncedSymbolMap<NdSbp>::Symbol4SyncedSymbolId(this->nd_sbp));
-    CHECK_OR_RETURN(nd_sbp == consistent_tensor_meta->nd_sbp());
+    CHECK_OR_RETURN(nd_sbp == global_tensor_meta->nd_sbp());
     const auto& parallel_desc =
         JUST(SyncedSymbolMap<ParallelDesc>::Symbol4SyncedSymbolId(this->parallel_desc));
-    CHECK_OR_RETURN(parallel_desc == consistent_tensor_meta->parallel_desc());
+    CHECK_OR_RETURN(parallel_desc == global_tensor_meta->parallel_desc());
     return Maybe<void>::Ok();
   }
 
@@ -64,24 +64,23 @@ struct FlatConsistentTensorMeta final {
   uint64_t parallel_desc;
 };
 
-Maybe<void> SyncSymbolConsistentTensorMeta(
-    uint64_t symbol_id, Symbol<one::ConsistentTensorMeta> consistent_tensor_meta) {
+Maybe<void> SyncSymbolGlobalTensorMeta(uint64_t symbol_id,
+                                       Symbol<one::GlobalTensorMeta> global_tensor_meta) {
   const auto& transport_token =
-      JUST(TransportToken::NewTransportToken(kTransportTokenTypeSyncSymbolConsistentTensorMeta));
-  const auto& recv_buffer = std::make_shared<FlatConsistentTensorMeta>();
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeSyncSymbolGlobalTensorMeta));
+  const auto& recv_buffer = std::make_shared<FlatGlobalTensorMeta>();
   NaiveAsyncTransportCtx ctx(
       transport_token,
       [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
-        const auto& send_buffer =
-            JUST(FlatConsistentTensorMeta::New(symbol_id, consistent_tensor_meta));
+        const auto& send_buffer = JUST(FlatGlobalTensorMeta::New(symbol_id, global_tensor_meta));
         *buffer = send_buffer.get();
-        *size = sizeof(FlatConsistentTensorMeta);
+        *size = sizeof(FlatGlobalTensorMeta);
         *Cb = [send_buffer] {};
         return Maybe<void>::Ok();
       },
       [recv_buffer](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
         *buffer = recv_buffer.get();
-        *size = sizeof(FlatConsistentTensorMeta);
+        *size = sizeof(FlatGlobalTensorMeta);
         *Cb = [recv_buffer] {};
         return Maybe<void>::Ok();
       });
@@ -89,7 +88,7 @@ Maybe<void> SyncSymbolConsistentTensorMeta(
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
   JUST(ctx.WaitDone());
-  JUST(recv_buffer->Check(symbol_id, consistent_tensor_meta));
+  JUST(recv_buffer->Check(symbol_id, global_tensor_meta));
   return Maybe<void>::Ok();
 }
 

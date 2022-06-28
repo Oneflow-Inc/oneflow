@@ -26,7 +26,7 @@ from oneflow.test_utils.test_util import GenArgList
 
 
 @flow.unittest.skip_unless_1n4d()
-class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
+class TestGlobalCastModule_1n4d(flow.unittest.TestCase):
     def test_to_global_flatten_hierarchy(test_case):
         x = flow.ones((4, 4), dtype=flow.int32)
         sbp = (flow.sbp.partial_sum,)
@@ -178,7 +178,7 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n2d()
-class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
+class TestGlobalCastModule_1n2d(flow.unittest.TestCase):
     def test_to_global_broadcast_shape_dtype(test_case):
         if os.getenv("RANK") == "0":
             x = flow.ones((4, 4), dtype=flow.int32)
@@ -430,7 +430,7 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestConsistentCastModule_1n1d(flow.unittest.TestCase):
+class TestGlobalCastModule_1n1d(flow.unittest.TestCase):
     def test_to_global(test_case):
         x = flow.ones((4, 4))
         placement = flow.placement("cpu", ranks=[0])
@@ -586,7 +586,7 @@ def _test_cpu_p2s_with_random_parameter(test_case, device_list):
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestConsistentCast(flow.unittest.TestCase):
+class TestGlobalCast(flow.unittest.TestCase):
     def test_cpu_local_tensor_to_gpu_placement(test_case):
         if flow.env.get_rank() == 0:
             np_arr = np.array([4, 6, 7, 8], dtype=np.float32)
@@ -640,7 +640,7 @@ class TestConsistentCast(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestConsistentCast_S2S(flow.unittest.TestCase):
+class TestGlobalCast_S2S(flow.unittest.TestCase):
     def test_global_to_global_s0_to_s1(test_case):
         if flow.env.get_rank() == 0:
             np_arr = np.array(
@@ -805,7 +805,7 @@ class TestConsistentCast_S2S(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestConsistentCast_XToB(flow.unittest.TestCase):
+class TestGlobalCast_XToB(flow.unittest.TestCase):
     def test_global_to_global_btb_gpu_to_gpu(test_case):
         if flow.env.get_rank() == 0:
             np_arr = np.array(
@@ -942,7 +942,7 @@ class TestConsistentCast_XToB(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestConsistentCast_1ToN(flow.unittest.TestCase):
+class TestGlobalCast_1ToN(flow.unittest.TestCase):
     def test_global_to_global_1tob(test_case):
         if flow.env.get_rank() == 0:
             np_arr = np.array(
@@ -1063,7 +1063,7 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestConsistentCast_NTo1(flow.unittest.TestCase):
+class TestGlobalCast_NTo1(flow.unittest.TestCase):
     def test_global_to_global_bt1(test_case):
         if flow.env.get_rank() == 0:
             np_arr = np.array(
@@ -1168,7 +1168,7 @@ class TestConsistentCast_NTo1(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestConsistentCast_1To1(flow.unittest.TestCase):
+class TestGlobalCast_1To1(flow.unittest.TestCase):
     def test_global_to_global_1to1_gpu_to_gpu(test_case):
         if flow.env.get_rank() == 0:
             np_arr = np.array(

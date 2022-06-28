@@ -46,7 +46,7 @@ namespace oneflow {
 namespace {
 
 Maybe<bool> GetTensorValidInCurRank(const std::shared_ptr<one::Tensor>& tensor) {
-  if (tensor->is_consistent()) {
+  if (tensor->is_global()) {
     const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(JUST(tensor->parallel_desc())));
     if (parallel_id->has_value()) {
       return true;
@@ -60,7 +60,7 @@ Maybe<bool> GetTensorValidInCurRank(const std::shared_ptr<one::Tensor>& tensor) 
 
 Maybe<std::string> GetTensorMetaString(const std::shared_ptr<one::Tensor>& tensor) {
   std::string ret = "shape=" + tensor->shape()->ToString() + ", dtype=" + tensor->dtype()->name();
-  if (tensor->is_consistent()) {
+  if (tensor->is_global()) {
     ret += ", placement=" + *JUST(PlacementToString(JUST(tensor->parallel_desc())));
     ret += ", nd_sbp=" + NdSbpToString(JUST(tensor->nd_sbp()));
   } else {
@@ -346,7 +346,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       CHECK(tensor != NULL)
           << "the tensor of " << var_name
           << " is not existed in job, so it's not created in nn.Graph and cannot be NULL.";
-      if (tensor->is_consistent()) {
+      if (tensor->is_global()) {
         const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
         var_blob = JUST(local_var->eager_blob_object()).get();
       } else {
@@ -380,8 +380,8 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
         }
         // NOTE(chengcheng): New EagerTensor need set LazyMode false.
         auto lazy_mode_disabled_guard = LazyMode::Guard(/*is_enabled*/ false);
-        tensor = JUST(one::functional::ConsistentConstant(
-            blob_desc.shape(), value, Symbol<DType>(dtype), placement, *sbp_tuple));
+        tensor = JUST(one::functional::GlobalConstant(blob_desc.shape(), value,
+                                                      Symbol<DType>(dtype), placement, *sbp_tuple));
         JUST(vm::CurrentRankSync());
         VLOG(2) << "Lazy nn.Graph name " << name_ << " op: " << op_attribute.op_conf().name()
                 << " created in JobPass, nn.Graph has created a eager tensor for this variable.\n";
@@ -389,10 +389,10 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
         // Load a additional variable tensor
         auto lazy_mode_disabled_guard = LazyMode::Guard(/*is_enabled*/ false);
         std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-        // To consistent from a local or consistent tensor.
-        bool check_meta = load_tensor_iter->second->is_consistent() ? false : true;
-        tensor = JUST(one::functional::ToConsistent(load_tensor_iter->second, placement, *sbp_tuple,
-                                                    grad_sbp_tuple, check_meta));
+        // To consistent from a local or global tensor.
+        bool check_meta = load_tensor_iter->second->is_global() ? false : true;
+        tensor = JUST(one::functional::ToGlobal(load_tensor_iter->second, placement, *sbp_tuple,
+                                                grad_sbp_tuple, check_meta));
         JUST(vm::CurrentRankSync());
         VLOG(2) << "Lazy nn.Graph name " << name_ << " op: " << op_attribute.op_conf().name()
                 << " created in JobPass, nn.Graph has loaded the tensor from state dict for this "
@@ -406,7 +406,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
 
       const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
       var_blob = JUST(local_var->eager_blob_object()).get();
-    } else if (tensor->is_consistent()) {
+    } else if (tensor->is_global()) {
       // Deal with tensors which need to change sbp.
       NdSbpSignature var_nd_sbp_signature = NdSbpSignature(plan_.job_id2op_attribute_ref_table()
                                                                .at(job_id_)
@@ -425,9 +425,9 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
         }
         {
           auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
-          const auto& new_tensor = JUST(
-              one::functional::ToConsistent(tensor, JUST(tensor->parallel_desc()),
-                                            optimized_sbp_parallels, {}, /* check_meta */ false));
+          const auto& new_tensor =
+              JUST(one::functional::ToGlobal(tensor, JUST(tensor->parallel_desc()),
+                                             optimized_sbp_parallels, {}, /* check_meta */ false));
           JUST(vm::CurrentRankSync());
           // Use tensor.set_data inferface and make new TensorImpl instead of the old one.
           JUST(tensor->set_data(new_tensor));
@@ -502,7 +502,7 @@ Maybe<void> MakeEagerBlobObjectList(std::vector<std::shared_ptr<vm::EagerBlobObj
   blob_list->reserve(tensor_list.size());
   for (const auto& tensor : tensor_list) {
     CHECK_OR_RETURN(tensor->is_eager());
-    if (tensor->is_consistent()) {
+    if (tensor->is_global()) {
       blob_list->emplace_back(JUST(JUST(tensor->cur_rank_phy_tensor())->eager_blob_object()));
     } else {
       blob_list->emplace_back(JUST(tensor->eager_blob_object()));

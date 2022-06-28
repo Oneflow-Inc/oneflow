@@ -36,7 +36,7 @@ std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(const bool& is_mirror
   if (is_mirrored) {
     internal = std::make_shared<EagerMirroredInterpreter>();
   } else {
-    internal = std::make_shared<EagerConsistentInterpreter>();
+    internal = std::make_shared<EagerGlobalInterpreter>();
   }
   return std::make_shared<AutogradInterpreter>(internal);
 }
@@ -56,7 +56,7 @@ std::string ErrorString4Inputs(const TensorTuple& inputs, const OpExpr& op_expr)
     if (tensor->is_local()) {
       error_str << "local";
     } else {
-      error_str << "consistent";
+      error_str << "global";
     }
     if (++idx != inputs.size()) { error_str << ", "; }
   }
@@ -79,20 +79,20 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExp
         return g_eager_mirrored_interpreter;
       }
     } else {
-      if (inputs.at(0)->is_consistent()) {
+      if (inputs.at(0)->is_global()) {
         if (inputs.size() == 1) {
           // do nothing
         } else if (inputs.size() == 2) {
-          CHECK_OR_RETURN(inputs.at(1)->is_consistent())
+          CHECK_OR_RETURN(inputs.at(1)->is_global())
               << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
         } else if (inputs.size() == 3) {
-          CHECK_OR_RETURN(inputs.at(1)->is_consistent())
+          CHECK_OR_RETURN(inputs.at(1)->is_global())
               << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-          CHECK_OR_RETURN(inputs.at(2)->is_consistent())
+          CHECK_OR_RETURN(inputs.at(2)->is_global())
               << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
         } else {
           for (const auto& tensor : inputs) {
-            CHECK_OR_RETURN(tensor->is_consistent()) << ErrorString4Inputs(inputs, op_expr);
+            CHECK_OR_RETURN(tensor->is_global()) << ErrorString4Inputs(inputs, op_expr);
           }
         }
         return g_eager_consistent_interpreter;
@@ -150,7 +150,7 @@ template<>
     if (is_mirrored_strategy_enabled) {
       return infer_ctx->AddAndInferMirroredOp(op_conf);
     } else {
-      return infer_ctx->AddAndInferConsistentOp(op_conf);
+      return infer_ctx->AddAndInferGlobalOp(op_conf);
     }
   }());
   return op_attribute;

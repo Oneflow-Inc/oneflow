@@ -40,7 +40,7 @@ def _test_consistent_coin_flip(
 def _test_graph_coin_flip(
     test_case, batch_size, random_seed, probability, placement, sbp
 ):
-    class ConsistentCoinFlipGraph(flow.nn.Graph):
+    class GlobalCoinFlipGraph(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
             self.m = flow.nn.CoinFlip(
@@ -50,7 +50,7 @@ def _test_graph_coin_flip(
         def build(self):
             return self.m()
 
-    model = ConsistentCoinFlipGraph()
+    model = GlobalCoinFlipGraph()
     x = model()
 
     test_case.assertEqual(x.shape[0], batch_size)
@@ -58,7 +58,7 @@ def _test_graph_coin_flip(
     test_case.assertEqual(x.placement, placement)
 
 
-class TestCoinFlipConsistent(flow.unittest.TestCase):
+class TestCoinFlipGlobal(flow.unittest.TestCase):
     @globaltest
     def test_coin_flip_consistent(test_case):
         arg_dict = OrderedDict()

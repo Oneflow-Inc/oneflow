@@ -544,7 +544,7 @@ class FusedMLPFunctor {
 
 #if CUDA_VERSION >= 11060
     DeviceType device_type{};
-    if (x->is_consistent()) {
+    if (x->is_global()) {
       device_type = JUST(x->parallel_desc())->device_type();
     } else {
       device_type = JUST(x->device())->enum_type();
@@ -646,7 +646,7 @@ class FusedMatmulBiasAddReluDropoutFunctor {
 
 #if CUDA_VERSION >= 11060
     DeviceType device_type{};
-    if (x->is_consistent()) {
+    if (x->is_global()) {
       device_type = JUST(x->parallel_desc())->device_type();
     } else {
       device_type = JUST(x->device())->enum_type();
@@ -1383,7 +1383,7 @@ class SparseSoftmaxCrossEntropyFunctor {
 
   Maybe<bool> RunWithMsVersion(const std::shared_ptr<one::Tensor>& logits,
                                const std::shared_ptr<one::Tensor>& label) const {
-    if (!(logits->is_consistent() && label->is_consistent())) { return false; }
+    if (!(logits->is_global() && label->is_global())) { return false; }
 
     if (JUST(logits->parallel_desc())->parallel_num() == 1) { return false; }
 
@@ -1461,10 +1461,10 @@ class SparseSoftmaxCrossEntropyFunctor {
 
       s0s1_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(0));
       s0s1_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(1));
-      max_global_stage_input0 = JUST(functional::ToConsistent(
+      max_global_stage_input0 = JUST(functional::ToGlobal(
           max_device_stage->at(0), JUST(max_device_stage->at(0)->parallel_desc()),
           new_sbp_parallels, s0s1_sbp_parallels, /* check_meta */ false));
-      max_global_stage_input1 = JUST(functional::ToConsistent(
+      max_global_stage_input1 = JUST(functional::ToGlobal(
           max_device_stage->at(2), JUST(max_device_stage->at(0)->parallel_desc()),
           new_sbp_parallels, s0s1_sbp_parallels, /* check_meta */ false));
     }
@@ -1476,9 +1476,9 @@ class SparseSoftmaxCrossEntropyFunctor {
         *op_reduce_max_global_stage_, {max_global_stage_input0, max_global_stage_input1}, attrs));
     auto& broadcast_sub_input = max_global_stage->at(0);
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
-      broadcast_sub_input = JUST(functional::ToConsistent(
-          broadcast_sub_input, JUST(max_device_stage->at(0)->parallel_desc()), new_sbp_parallels,
-          new_sbp_parallels, /* check_meta */ false));
+      broadcast_sub_input = JUST(
+          functional::ToGlobal(broadcast_sub_input, JUST(max_device_stage->at(0)->parallel_desc()),
+                               new_sbp_parallels, new_sbp_parallels, /* check_meta */ false));
     }
     // op_broadcast_sub_
     attrs.clear();
@@ -1495,7 +1495,7 @@ class SparseSoftmaxCrossEntropyFunctor {
     std::shared_ptr<Tensor> broadcast_div_input1 = output_reduce_sum->at(0);
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
       std::vector<Symbol<SbpParallel>> empty_grad_sbp_parallels;
-      broadcast_div_input1 = JUST(functional::ToConsistent(
+      broadcast_div_input1 = JUST(functional::ToGlobal(
           output_reduce_sum->at(0), JUST(output_reduce_sum->at(0)->parallel_desc()),
           new_sbp_parallels, new_sbp_parallels, /* check_meta */ false));
     }
@@ -1804,9 +1804,9 @@ class NormalFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ConsistentNormalFunctor {
+class GlobalNormalFunctor {
  public:
-  ConsistentNormalFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
+  GlobalNormalFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
   Maybe<Tensor> operator()(const float& mean, const float& std, const Shape& shape,
                            const Optional<one::Tensor>& out, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple,
@@ -3469,7 +3469,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingLookupFunctor>("OneEmbeddingLookup");
   m.add_functor<impl::OneEmbeddingUniqueKeyValuePairFunctor>("OneEmbeddingUniqueKeyValuePair");
   m.add_functor<impl::NormalFunctor>("Normal");
-  m.add_functor<impl::ConsistentNormalFunctor>("ConsistentNormal");
+  m.add_functor<impl::GlobalNormalFunctor>("GlobalNormal");
   m.add_functor<impl::OneEmbeddingSgdUpdateFunctor>("OneEmbeddingSgdUpdate");
   m.add_functor<impl::OneEmbeddingAdamUpdateFunctor>("OneEmbeddingAdamUpdate");
   m.add_functor<impl::OneEmbeddingAdagradUpdateFunctor>("OneEmbeddingAdagradUpdate");

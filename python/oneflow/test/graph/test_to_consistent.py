@@ -144,7 +144,7 @@ class MyModule3(flow.nn.Module):
         return self.activation(z)
 
 
-class ConsistentToModule(flow.nn.Module):
+class GlobalToModule(flow.nn.Module):
     def __init__(self, device="cuda"):
         super().__init__()
         self.device = device
@@ -333,7 +333,7 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
             (4, 3), placement=flow.placement("cpu", ranks=[0, 1]), sbp=flow.sbp.split(0)
         )
 
-        global_to = ConsistentToModule("cuda")
+        global_to = GlobalToModule("cuda")
         g_global_to = MyGraph(global_to)
 
         e = global_to(c_x)
@@ -480,7 +480,7 @@ class ToGlobal2DGraphTestCase(oneflow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestLazy1dTo2dConsistent(flow.unittest.TestCase):
+class TestLazy1dTo2dGlobal(flow.unittest.TestCase):
     def test_lazy_1d_to_2d_sbp(test_case):
         P_1d = flow.placement(
             device_type="cuda", device_ids={0: range(4)}, hierarchy=(4,)

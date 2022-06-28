@@ -1019,9 +1019,9 @@ class Arange2Functor {
   }
 };
 
-class ConsistentArangeFunctor {
+class GlobalArangeFunctor {
  public:
-  ConsistentArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
+  GlobalArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
@@ -1071,13 +1071,13 @@ class ConsistentArangeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ConsistentArange2Functor {
+class GlobalArange2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& limit, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    return ConsistentArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
+    return GlobalArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
   }
 };
 
@@ -2949,7 +2949,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<Transpose2dimFunctor>("Swapaxes");
   m.add_functor<Transpose2dimFunctor>("Swapdims");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
-  m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
+  m.add_functor<GlobalArangeFunctor, GlobalArange2Functor>("GlobalArange");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampInplaceFunctor>("ClampInplace");

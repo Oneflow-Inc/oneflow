@@ -33,7 +33,7 @@ def do_test_fmod_impl(test_case, ndim, placement, sbp):
     return z
 
 
-class TestFmodConsistent(flow.unittest.TestCase):
+class TestFmodGlobal(flow.unittest.TestCase):
     @globaltest
     def test_fmod(test_case):
         # random ndim in range [1,5]

@@ -25,7 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/framework/consistent_tensor_infer_cache.h"
+#include "oneflow/core/framework/global_tensor_infer_cache.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
@@ -49,13 +49,13 @@ Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs,
   return JUST(ctx.parallel_desc);
 }
 
-std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_expr,
-                                                    const StatefulOpKernel& kernel) {
+std::string GetDynamicOpGlobalFailedDebugString(const UserOpExpr& user_op_expr,
+                                                const StatefulOpKernel& kernel) {
   CHECK(!kernel.output_tuple_indexes4mut2_obns().empty());
   std::string plentysuffix = kernel.output_tuple_indexes4mut2_obns().size() == 1 ? "s" : "";
   std::stringstream ss;
   ss << "operator `" << user_op_expr.op_type_name() << "`"
-     << " does not support consistent mode because the shape" << plentysuffix << " of output tensor"
+     << " does not support global mode because the shape" << plentysuffix << " of output tensor"
      << plentysuffix << " ";
   int i = 0;
   for (const auto& out_index : kernel.output_tuple_indexes4mut2_obns()) {
@@ -66,7 +66,7 @@ std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_ex
   return ss.str();
 }
 
-Maybe<bool> IsAllZeroSizeTensorMeta(const std::vector<Symbol<ConsistentTensorMeta>>& tensor_metas) {
+Maybe<bool> IsAllZeroSizeTensorMeta(const std::vector<Symbol<GlobalTensorMeta>>& tensor_metas) {
   if (tensor_metas.empty()) { return false; }
   for (const auto& tensor_meta : tensor_metas) {
     if (tensor_meta->shape().elem_cnt() != 0) { return false; }
@@ -83,11 +83,11 @@ Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<NdSb
   const auto& logical_shape = input->shape();
   // If the input is a tensor of size 0, construct the output directly.
   if (unlikely(logical_shape->elem_cnt() == 0)) {
-    ConsistentTensorMeta tensor_meta(logical_shape, input->dtype()->data_type(), out_nd_sbp,
-                                     out_parallel_desc);
+    GlobalTensorMeta tensor_meta(logical_shape, input->dtype()->data_type(), out_nd_sbp,
+                                 out_parallel_desc);
     const auto& tensor_impl =
-        JUST(EagerConsistentTensorImpl::New(SymbolOf(tensor_meta), input->requires_grad(), false));
-    std::shared_ptr<Tensor> output = std::make_shared<ConsistentTensor>(tensor_impl);
+        JUST(EagerGlobalTensorImpl::New(SymbolOf(tensor_meta), input->requires_grad(), false));
+    std::shared_ptr<Tensor> output = std::make_shared<GlobalTensor>(tensor_impl);
     return output;
   }
   const auto* mgr = Global<EagerBoxingInterpreterManager>::Get();
@@ -105,21 +105,21 @@ Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<NdSb
 }
 
 auto* GetBoxingOutput =
-    DECORATE(DECORATE(&CalcBoxingOutput, CheckConsistentTensorMeta), DisableRecusiveBoxingCall);
+    DECORATE(DECORATE(&CalcBoxingOutput, CheckGlobalTensorMeta), DisableRecusiveBoxingCall);
 
 Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                       TensorTuple* outputs, const OpExprInterpContext& ctx) {
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
   const auto& parallel_desc = JUST(GetParallelDesc(inputs, ctx));
-  std::shared_ptr<const ConsistentTensorInferResult> result;
+  std::shared_ptr<const GlobalTensorInferResult> result;
   NonRecursiveMetaInfoConsistencyCheckScope scope;
   if (inputs.empty()) {
     // check consistency placement and nd_sbp, do not check in non-src op because it is assumed that
     // InferSbp in op is a deterministic algorithm
     JUST(MetaInfoConsistencyCheck(parallel_desc, ctx.nd_sbp, 1, /* force_check */ false));
     const auto& infer_args =
-        JUST(SrcOpConsistentTensorMetaInferArgs::New(ctx.attrs, parallel_desc, JUST(ctx.nd_sbp)));
-    result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
+        JUST(SrcOpGlobalTensorMetaInferArgs::New(ctx.attrs, parallel_desc, JUST(ctx.nd_sbp)));
+    result = JUST(user_op_expr.mut_global_tensor_infer_cache()->GetOrInfer(*infer_args));
   } else {
     for (int i = 0; i < outputs->size(); ++i) {
       if ((*outputs)[i]) {
@@ -127,17 +127,17 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
         JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(nd_sbp));
       }
     }
-    const auto& infer_args = JUST(ConsistentTensorMetaInferArgs::New(ctx.attrs, inputs));
-    result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
+    const auto& infer_args = JUST(GlobalTensorMetaInferArgs::New(ctx.attrs, inputs));
+    result = JUST(user_op_expr.mut_global_tensor_infer_cache()->GetOrInfer(*infer_args));
   }
   const auto& output_tensor_metas = result->output_tensor_metas();
   Optional<int64_t> parallel_id;
   const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   for (int i = 0; i < outputs->size(); ++i) {
     if (!outputs->at(i)) {
-      const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(
+      const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
           output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
-      (*outputs)[i].reset(new ConsistentTensor(tensor_impl));
+      (*outputs)[i].reset(new GlobalTensor(tensor_impl));
     } else {
       JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(NullOpt));
     }
@@ -150,8 +150,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   // Run instruction Call
   const auto& kernel = JUST(user_op_expr.MutKernel4Stream(result->stream()));
   CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
-      << Error::UnimplementedError()
-      << GetDynamicOpConsistentFailedDebugString(user_op_expr, *kernel);
+      << Error::UnimplementedError() << GetDynamicOpGlobalFailedDebugString(user_op_expr, *kernel);
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(inputs.size());
   // expand lifetime of boxing outputs to the end of this function
@@ -185,34 +184,33 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   return Maybe<void>::Ok();
 }
 
-auto* InterpretThenInitConsistentId = DECORATE(&Interpret, NonRecursiveInitConsistentId);
+auto* InterpretThenInitGlobalId = DECORATE(&Interpret, NonRecursiveInitGlobalId);
 
 }  // namespace
 
-Maybe<void> EagerConsistentInterpreter::ApplyImpl(const UserOpExpr& op_expr,
-                                                  const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const OpExprInterpContext& ctx) const {
-  return InterpretThenInitConsistentId(op_expr, inputs, outputs, ctx);
+Maybe<void> EagerGlobalInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
+                                              TensorTuple* outputs,
+                                              const OpExprInterpContext& ctx) const {
+  return InterpretThenInitGlobalId(op_expr, inputs, outputs, ctx);
 }
 
-Maybe<void> EagerConsistentInterpreter::ApplyImpl(const VariableOpExpr& op_expr,
-                                                  const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const OpExprInterpContext& ctx) const {
+Maybe<void> EagerGlobalInterpreter::ApplyImpl(const VariableOpExpr& op_expr,
+                                              const TensorTuple& inputs, TensorTuple* outputs,
+                                              const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
 namespace {
 
 static constexpr auto* RecursiveGetBoxingOutput =
-    DECORATE(&CalcBoxingOutput, CheckConsistentTensorMeta);
+    DECORATE(&CalcBoxingOutput, CheckGlobalTensorMeta);
 
-Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_expr,
-                                      const TensorTuple& inputs, TensorTuple* outputs,
-                                      const OpExprInterpContext& ctx) {
+Maybe<void> RawGlobalToGlobal(const GlobalToGlobalOpExpr& op_expr, const TensorTuple& inputs,
+                              TensorTuple* outputs, const OpExprInterpContext& ctx) {
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
   const auto& input = inputs.at(0);
-  CHECK_OR_RETURN(input->is_consistent());
+  CHECK_OR_RETURN(input->is_global());
   CHECK_OR_RETURN(ctx.parallel_desc.has_value());
   CHECK_OR_RETURN(ctx.nd_sbp.has_value());
   const auto& in_parallel_desc = JUST(input->parallel_desc());
@@ -232,37 +230,36 @@ Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_exp
     CHECK_OR_RETURN(parallel_desc == out_parallel_desc);
     outputs->at(0) = tensor;
   } else {
-    ConsistentTensorMeta tensor_meta(tensor->shape(), tensor->dtype()->data_type(), out_nd_sbp,
-                                     out_parallel_desc);
+    GlobalTensorMeta tensor_meta(tensor->shape(), tensor->dtype()->data_type(), out_nd_sbp,
+                                 out_parallel_desc);
     const auto& tensor_impl =
-        JUST(EagerConsistentTensorImpl::New(SymbolOf(tensor_meta), tensor->requires_grad(), false));
-    outputs->at(0).reset(new ConsistentTensor(tensor_impl));
+        JUST(EagerGlobalTensorImpl::New(SymbolOf(tensor_meta), tensor->requires_grad(), false));
+    outputs->at(0).reset(new GlobalTensor(tensor_impl));
   }
   CHECK_OR_RETURN(outputs->at(0));
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* ConsistentToConsistent =
-    DECORATE(&RawConsistentToConsistent, NonRecursiveInitConsistentId);
+static constexpr auto* GlobalToGlobal = DECORATE(&RawGlobalToGlobal, NonRecursiveInitGlobalId);
 
 }  // namespace
 
-Maybe<void> EagerConsistentInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_expr,
-                                                  const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const OpExprInterpContext& ctx) const {
-  JUST(ConsistentToConsistent(op_expr, inputs, outputs, ctx));
+Maybe<void> EagerGlobalInterpreter::ApplyImpl(const GlobalToGlobalOpExpr& op_expr,
+                                              const TensorTuple& inputs, TensorTuple* outputs,
+                                              const OpExprInterpContext& ctx) const {
+  JUST(GlobalToGlobal(op_expr, inputs, outputs, ctx));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToConsistentOpExpr& op_expr,
-                                                  const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const OpExprInterpContext& ctx) const {
+Maybe<void> EagerGlobalInterpreter::ApplyImpl(const CastToGlobalOpExpr& op_expr,
+                                              const TensorTuple& inputs, TensorTuple* outputs,
+                                              const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
-Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromConsistentOpExpr& op_expr,
-                                                  const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const OpExprInterpContext& ctx) const {
+Maybe<void> EagerGlobalInterpreter::ApplyImpl(const CastFromGlobalOpExpr& op_expr,
+                                              const TensorTuple& inputs, TensorTuple* outputs,
+                                              const OpExprInterpContext& ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   const auto& input_tensor = inputs.at(0);
   const auto& mirrored_tensor = JUST(JUST(input_tensor->cur_rank_phy_tensor())->detach());
@@ -273,45 +270,45 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromConsistentOpExpr
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToMirroredOpExpr& op_expr,
-                                                  const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const OpExprInterpContext& ctx) const {
+Maybe<void> EagerGlobalInterpreter::ApplyImpl(const CastToMirroredOpExpr& op_expr,
+                                              const TensorTuple& inputs, TensorTuple* outputs,
+                                              const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
-Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromMirroredOpExpr& op_expr,
-                                                  const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const OpExprInterpContext& ctx) const {
+Maybe<void> EagerGlobalInterpreter::ApplyImpl(const CastFromMirroredOpExpr& op_expr,
+                                              const TensorTuple& inputs, TensorTuple* outputs,
+                                              const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
-Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeSplitOpExpr& op_expr,
-                                                  const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const OpExprInterpContext& ctx) const {
+Maybe<void> EagerGlobalInterpreter::ApplyImpl(const DistributeSplitOpExpr& op_expr,
+                                              const TensorTuple& inputs, TensorTuple* outputs,
+                                              const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
-Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeCloneOpExpr& op_expr,
-                                                  const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const OpExprInterpContext& ctx) const {
+Maybe<void> EagerGlobalInterpreter::ApplyImpl(const DistributeCloneOpExpr& op_expr,
+                                              const TensorTuple& inputs, TensorTuple* outputs,
+                                              const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
-Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeConcatOpExpr& op_expr,
-                                                  const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const OpExprInterpContext& ctx) const {
+Maybe<void> EagerGlobalInterpreter::ApplyImpl(const DistributeConcatOpExpr& op_expr,
+                                              const TensorTuple& inputs, TensorTuple* outputs,
+                                              const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
-Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeAddOpExpr& op_expr,
-                                                  const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const OpExprInterpContext& ctx) const {
+Maybe<void> EagerGlobalInterpreter::ApplyImpl(const DistributeAddOpExpr& op_expr,
+                                              const TensorTuple& inputs, TensorTuple* outputs,
+                                              const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
-Maybe<void> EagerConsistentInterpreter::ApplyImpl(const SelectTopNOpExpr& op_expr,
-                                                  const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const OpExprInterpContext& ctx) const {
+Maybe<void> EagerGlobalInterpreter::ApplyImpl(const SelectTopNOpExpr& op_expr,
+                                              const TensorTuple& inputs, TensorTuple* outputs,
+                                              const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 

@@ -31,7 +31,7 @@ def _test_einsum_get_diagonal(test_case, placement, sbp):
     return z
 
 
-class TestEinsumConsistent(flow.unittest.TestCase):
+class TestEinsumGlobal(flow.unittest.TestCase):
     @globaltest
     def test_einsum_get_diagonal(test_case):
         for placement in all_placement():

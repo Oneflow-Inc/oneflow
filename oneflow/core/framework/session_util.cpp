@@ -68,7 +68,7 @@ Maybe<bool> Session::IsMirroredStrategyEnabled() const {
   return is_mirrored_strategy_enabled_stack_->size() > 0
          && is_mirrored_strategy_enabled_stack_->back();
 }
-Maybe<bool> Session::IsConsistentStrategyEnabled() const {
+Maybe<bool> Session::IsGlobalStrategyEnabled() const {
   return is_mirrored_strategy_enabled_stack_->size() > 0
          && !is_mirrored_strategy_enabled_stack_->back();
 }

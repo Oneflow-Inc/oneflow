@@ -53,7 +53,7 @@ def _test_global_cuda(test_case, placement, sbp):
     return y
 
 
-class TestConsistentCuda(flow.unittest.TestCase):
+class TestGlobalCuda(flow.unittest.TestCase):
     @globaltest
     def test_global_cuda(test_case):
         for placement in all_placement():
@@ -117,7 +117,7 @@ def _test_global_tolist(test_case, placement, sbp):
     return y
 
 
-class TestConsistentTensorOps(flow.unittest.TestCase):
+class TestGlobalTensorOps(flow.unittest.TestCase):
     @globaltest
     def test_global_cpu(test_case):
         for placement in all_placement():

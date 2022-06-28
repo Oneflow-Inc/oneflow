@@ -97,7 +97,7 @@ def _test_global_transpose_with_0_size_data(test_case, placement, sbp):
     return y
 
 
-class TestConsistentTranspose(flow.unittest.TestCase):
+class TestGlobalTranspose(flow.unittest.TestCase):
     @globaltest
     def test_global_transpose(test_case):
         arg_dict = OrderedDict()

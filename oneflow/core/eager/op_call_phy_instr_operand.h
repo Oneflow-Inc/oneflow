@@ -78,9 +78,8 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
   const user_op::OpKernel* user_opkernel() const { return user_opkernel_; }
   const user_op::InferTmpSizeFn& infer_tmp_size_fn() const { return *infer_tmp_size_fn_; }
 
-  const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result()
-      const {
-    return call_ctx_.consistent_tensor_infer_result();
+  const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result() const {
+    return call_ctx_.global_tensor_infer_result();
   }
 
   eager::CallContext* mut_call_ctx() { return &call_ctx_; }
@@ -90,7 +89,7 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
   OpCallPhyInstrOperand(
       vm::Stream* vm_stream, const std::shared_ptr<one::StatefulOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
-      const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
+      const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
       const one::OpExprInterpContext& op_interp_ctx,
       const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode);
 

@@ -48,7 +48,7 @@ def _test_global_std_tensor_with_random_data(test_case, placement, sbp):
     return z
 
 
-class TestConsistentStd(flow.unittest.TestCase):
+class TestGlobalStd(flow.unittest.TestCase):
     @globaltest
     def test_global_std_flow_with_random_data(test_case):
         for placement in all_placement():

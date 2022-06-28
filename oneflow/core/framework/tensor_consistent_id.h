@@ -20,27 +20,27 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<TransportToken> NewTensorConsistentId();
+Maybe<TransportToken> NewTensorGlobalId();
 
 namespace one {
 
 class TensorTuple;
 
-int64_t* MutThreadLocalConsistentIdDepth();
-Maybe<void> InitConsistentId(TensorTuple* outputs);
+int64_t* MutThreadLocalGlobalIdDepth();
+Maybe<void> InitGlobalId(TensorTuple* outputs);
 
 template<typename... Args>
-struct NonRecursiveInitConsistentId;
+struct NonRecursiveInitGlobalId;
 
 template<typename Arg0, typename Arg1, typename... Args>
-struct NonRecursiveInitConsistentId<Maybe<void>, Arg0, Arg1, TensorTuple*, Args...> {
+struct NonRecursiveInitGlobalId<Maybe<void>, Arg0, Arg1, TensorTuple*, Args...> {
   template<Maybe<void> (*func)(Arg0, Arg1, TensorTuple*, Args...)>
   static Maybe<void> Call(Arg0 arg0, Arg1 arg1, TensorTuple* outputs, Args... args) {
-    auto* recursive_depth = MutThreadLocalConsistentIdDepth();
+    auto* recursive_depth = MutThreadLocalGlobalIdDepth();
     ++*recursive_depth;
     Maybe<void> ret = func(arg0, arg1, outputs, args...);
     --*recursive_depth;
-    if (*recursive_depth == 0 && ret.IsOk()) { JUST(InitConsistentId(outputs)); }
+    if (*recursive_depth == 0 && ret.IsOk()) { JUST(InitGlobalId(outputs)); }
     return ret;
   }
 };

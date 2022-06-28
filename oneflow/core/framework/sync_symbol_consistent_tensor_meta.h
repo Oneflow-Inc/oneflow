@@ -24,10 +24,10 @@ limitations under the License.
 namespace oneflow {
 
 namespace one {
-class ConsistentTensorMeta;
+class GlobalTensorMeta;
 }
 
-Maybe<void> SyncSymbolConsistentTensorMeta(uint64_t symbol_id, Symbol<one::ConsistentTensorMeta>);
+Maybe<void> SyncSymbolGlobalTensorMeta(uint64_t symbol_id, Symbol<one::GlobalTensorMeta>);
 
 }  // namespace oneflow
 

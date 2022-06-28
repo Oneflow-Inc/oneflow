@@ -33,7 +33,7 @@ def do_test_div_impl(test_case, ndim, placement, sbp):
     return z
 
 
-class TestDivConsistent(flow.unittest.TestCase):
+class TestDivGlobal(flow.unittest.TestCase):
     @globaltest
     def test_div(test_case):
         # random ndim in range [1,4]

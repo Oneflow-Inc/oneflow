@@ -38,7 +38,7 @@ def _test_global_triplet_marginloss_with_random_data(test_case, placement, sbp):
     return y
 
 
-class TestConsistentTripletMarginLoss(flow.unittest.TestCase):
+class TestGlobalTripletMarginLoss(flow.unittest.TestCase):
     @globaltest
     def test_global_triplet_marginloss_with_random_data(test_case):
         for placement in all_placement():

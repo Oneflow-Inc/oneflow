@@ -46,7 +46,7 @@ def _test_squeeze_with_0_size_data(test_case, placement, sbp):
     return y
 
 
-class TestConsistentSqueeze(flow.unittest.TestCase):
+class TestGlobalSqueeze(flow.unittest.TestCase):
     @globaltest
     def test_squeeze_1d_input(test_case):
         for placement in all_placement():

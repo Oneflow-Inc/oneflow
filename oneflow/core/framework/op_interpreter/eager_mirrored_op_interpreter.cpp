@@ -257,20 +257,20 @@ Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
   return Broadcast(tensor, root, broadcast_parallel_desc, false);
 }
 
-Maybe<Shape> CalcPhysicalShape(Symbol<ConsistentTensorMeta> consistent_tensor_meta) {
+Maybe<Shape> CalcPhysicalShape(Symbol<GlobalTensorMeta> global_tensor_meta) {
   const auto& opt_parallel_id =
-      JUST(GetParallelId4CurrentProcessCtx(consistent_tensor_meta->parallel_desc()));
+      JUST(GetParallelId4CurrentProcessCtx(global_tensor_meta->parallel_desc()));
   int64_t parallel_id = JUST(*opt_parallel_id);
-  return GetPhysicalShape(consistent_tensor_meta->shape(), *consistent_tensor_meta->nd_sbp(),
-                          *consistent_tensor_meta->parallel_desc(), parallel_id);
+  return GetPhysicalShape(global_tensor_meta->shape(), *global_tensor_meta->nd_sbp(),
+                          *global_tensor_meta->parallel_desc(), parallel_id);
 }
 
 static constexpr auto* GetPhysicalShape = DECORATE(&CalcPhysicalShape, ThreadLocal);
 
 Maybe<Tensor> TryReshapeTensor(const std::shared_ptr<Tensor>& tensor,
-                               Symbol<ConsistentTensorMeta> consistent_tensor_meta) {
+                               Symbol<GlobalTensorMeta> global_tensor_meta) {
   CHECK_OR_RETURN(tensor->is_local());
-  const auto& physical_shape = JUST(GetPhysicalShape(consistent_tensor_meta));
+  const auto& physical_shape = JUST(GetPhysicalShape(global_tensor_meta));
   if (*physical_shape == *tensor->shape()) { return tensor; }
   CHECK_EQ_OR_RETURN(physical_shape->elem_cnt(), tensor->shape()->elem_cnt());
   // TODO(lixinqi) inplace reshape.
@@ -279,7 +279,7 @@ Maybe<Tensor> TryReshapeTensor(const std::shared_ptr<Tensor>& tensor,
 
 }  // namespace
 
-Maybe<void> EagerMirroredInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_expr,
+Maybe<void> EagerMirroredInterpreter::ApplyImpl(const GlobalToGlobalOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
@@ -287,12 +287,12 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const ConsistentToConsistentOpEx
 
 namespace {
 
-Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const TensorTuple& inputs,
-                                 TensorTuple* outputs, const OpExprInterpContext& ctx) {
+Maybe<void> RawLocalToGlobal(const CastToGlobalOpExpr& op_expr, const TensorTuple& inputs,
+                             TensorTuple* outputs, const OpExprInterpContext& ctx) {
   std::shared_ptr<MirroredTensor> input_mirrored_tensor;
   {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_OR_RETURN(!inputs.at(0)->is_consistent());
+    CHECK_OR_RETURN(!inputs.at(0)->is_global());
     const auto& input_tensor = JUST(inputs.at(0)->detach());
     input_mirrored_tensor = JUST(input_tensor->AsMirroredTensor());
     CHECK_OR_RETURN(input_mirrored_tensor) << Error::InvalidValueError("Tensor Cast Error");
@@ -300,7 +300,7 @@ Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const Te
     JUST(input_mirrored_tensor->set_requires_grad(requires_grad));
     input_mirrored_tensor->set_is_leaf(!requires_grad);
   }
-  std::shared_ptr<ConsistentTensor> consistent_tensor;
+  std::shared_ptr<GlobalTensor> global_tensor;
   {
     CHECK_OR_RETURN(ctx.parallel_desc.has_value());
     CHECK_OR_RETURN(ctx.nd_sbp.has_value());
@@ -308,57 +308,55 @@ Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const Te
     const auto& parallel_desc = JUST(ctx.parallel_desc);
     const auto& logical_shape = JUST(ctx.attrs.GetAttr<Shape>("shape"));
     DataType dtype = JUST(ctx.attrs.GetAttr<DataType>("dtype"));
-    ConsistentTensorMeta tensor_meta(std::make_shared<const Shape>(logical_shape), dtype, nd_sbp,
-                                     parallel_desc);
+    GlobalTensorMeta tensor_meta(std::make_shared<const Shape>(logical_shape), dtype, nd_sbp,
+                                 parallel_desc);
     Optional<int64_t> parallel_id{};
     const auto& device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
-    const auto& consistent_tensor_impl = JUST(EagerConsistentTensorImpl::New(
+    const auto& global_tensor_impl = JUST(EagerGlobalTensorImpl::New(
         SymbolOf(tensor_meta), device, parallel_id, input_mirrored_tensor->requires_grad(),
         !input_mirrored_tensor->requires_grad()));
-    consistent_tensor = std::make_shared<ConsistentTensor>(consistent_tensor_impl);
+    global_tensor = std::make_shared<GlobalTensor>(global_tensor_impl);
     if (parallel_id.has_value()) {
       const auto& pyhsical_shape = JUST(GetPhysicalShape(tensor_meta));
       const auto& input_mirrored_tensor_shape = input_mirrored_tensor->shape();
       CHECK_EQ_OR_RETURN(*pyhsical_shape, *input_mirrored_tensor_shape);
       CHECK_OR_RETURN(dtype == input_mirrored_tensor->dtype()->data_type());
-      consistent_tensor_impl->reset_cur_rank_phy_tensor(input_mirrored_tensor);
+      global_tensor_impl->reset_cur_rank_phy_tensor(input_mirrored_tensor);
     }
   }
-  outputs->at(0) = consistent_tensor;
+  outputs->at(0) = global_tensor;
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* LocalToConsistent =
-    DECORATE(&RawLocalToConsistent, NonRecursiveInitConsistentId);
+static constexpr auto* LocalToGlobal = DECORATE(&RawLocalToGlobal, NonRecursiveInitGlobalId);
 
 }  // namespace
 
-Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op_expr,
+Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToGlobalOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) const {
-  JUST(LocalToConsistent(op_expr, inputs, outputs, ctx));
-  const auto& consistent_tensor = JUST(outputs->at(0)->AsConsistentTensor());
-  JUST(WithConsistencyChecked(consistent_tensor, [&]() -> Maybe<void> {
-    if (IsConsistentTensorMetaCheckDisabled()) { return Maybe<void>::Ok(); }
+  JUST(LocalToGlobal(op_expr, inputs, outputs, ctx));
+  const auto& global_tensor = JUST(outputs->at(0)->AsGlobalTensor());
+  JUST(WithConsistencyChecked(global_tensor, [&]() -> Maybe<void> {
+    if (IsGlobalTensorMetaCheckDisabled()) { return Maybe<void>::Ok(); }
     const auto& parallel_desc = JUST(ctx.parallel_desc);
     const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
     if (!parallel_id->has_value()) { return Maybe<void>::Ok(); }
     const auto& nd_sbp = JUST(ctx.nd_sbp);
-    const auto& tensor_meta = JUST(consistent_tensor->consistent_tensor_meta());
-    const auto& local_tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
+    const auto& tensor_meta = JUST(global_tensor->global_tensor_meta());
+    const auto& local_tensor = JUST(global_tensor->cur_rank_phy_tensor());
     const auto& reshaped_tensor = JUST(TryReshapeTensor(local_tensor, tensor_meta));
     const auto& synced_tensor =
         JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp));
-    auto* consistent_tensor_impl =
-        reinterpret_cast<EagerConsistentTensorImpl*>(consistent_tensor->mut_impl());
-    CHECK_NOTNULL_OR_RETURN(consistent_tensor_impl);
-    consistent_tensor_impl->reset_cur_rank_phy_tensor(JUST(synced_tensor->AsMirroredTensor()));
+    auto* global_tensor_impl = reinterpret_cast<EagerGlobalTensorImpl*>(global_tensor->mut_impl());
+    CHECK_NOTNULL_OR_RETURN(global_tensor_impl);
+    global_tensor_impl->reset_cur_rank_phy_tensor(JUST(synced_tensor->AsMirroredTensor()));
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastFromConsistentOpExpr& op_expr,
+Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastFromGlobalOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();

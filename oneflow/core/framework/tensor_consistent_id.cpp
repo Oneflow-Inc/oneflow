@@ -31,23 +31,23 @@ static constexpr auto* GetMetaTransportToken = DECORATE(&RawGetMetaTransportToke
 
 }  // namespace
 
-Maybe<TransportToken> NewTensorConsistentId() { return ++**JUST(GetMetaTransportToken()); }
+Maybe<TransportToken> NewTensorGlobalId() { return ++**JUST(GetMetaTransportToken()); }
 
 namespace one {
 
-int64_t* MutThreadLocalConsistentIdDepth() {
+int64_t* MutThreadLocalGlobalIdDepth() {
   static thread_local int64_t recursive_depth = 0;
   return &recursive_depth;
 }
 
-Maybe<void> InitConsistentId(TensorTuple* outputs) {
+Maybe<void> InitGlobalId(TensorTuple* outputs) {
   for (const auto& output : *outputs) {
     CHECK_OR_RETURN(output);
-    const auto& consistent_tensor = JUST(output->AsConsistentTensor());
-    CHECK_OR_RETURN(consistent_tensor)
+    const auto& global_tensor = JUST(output->AsGlobalTensor());
+    CHECK_OR_RETURN(global_tensor)
         << Error::UnimplementedError() << "consistent tensors suppported only.";
-    const auto& transport_token = JUST(NewTensorConsistentId());
-    JUST(consistent_tensor->mut_impl()->set_transport_token(transport_token));
+    const auto& transport_token = JUST(NewTensorGlobalId());
+    JUST(global_tensor->mut_impl()->set_transport_token(transport_token));
   }
   return Maybe<void>::Ok();
 }

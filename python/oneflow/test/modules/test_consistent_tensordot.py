@@ -35,7 +35,7 @@ def _test_global_tensordot_against_pytorch(test_case, ndim, placement, sbp):
     return z
 
 
-class TestTensorDotConsistent(flow.unittest.TestCase):
+class TestTensorDotGlobal(flow.unittest.TestCase):
     @globaltest
     def test_tensordot(test_case):
         for placement in all_placement():

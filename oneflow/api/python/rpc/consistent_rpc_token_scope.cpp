@@ -29,10 +29,10 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> InitConsistentTransportTokenScope(const std::string& thread_tag,
-                                              int64_t thread_consistent_id,
-                                              Symbol<RankGroup> rank_group) {
-  JUST(InitThisThreadUniqueConsistentId(thread_consistent_id, thread_tag));
+Maybe<void> InitGlobalTransportTokenScope(const std::string& thread_tag,
+                                          int64_t thread_consistent_id,
+                                          Symbol<RankGroup> rank_group) {
+  JUST(InitThisThreadUniqueGlobalId(thread_consistent_id, thread_tag));
   static thread_local const auto& init_rank_group_scope =
       JUST(RankGroupScope::MakeInitialRankGroupScope(rank_group));
   // no unused warning for `init_rank_group_scope`.
@@ -40,21 +40,21 @@ Maybe<void> InitConsistentTransportTokenScope(const std::string& thread_tag,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InitConsistentTransportTokenScope(const std::string& thread_tag,
-                                              int64_t thread_consistent_id) {
+Maybe<void> InitGlobalTransportTokenScope(const std::string& thread_tag,
+                                          int64_t thread_consistent_id) {
   const auto& rank_group = JUST(RankGroup::DefaultRankGroup());
-  JUST(InitConsistentTransportTokenScope(thread_tag, thread_consistent_id, rank_group));
+  JUST(InitGlobalTransportTokenScope(thread_tag, thread_consistent_id, rank_group));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ApiInitDefaultConsistentTransportTokenScope() {
-  return InitConsistentTransportTokenScope("main", kThreadConsistentIdMain);
+Maybe<void> ApiInitDefaultGlobalTransportTokenScope() {
+  return InitGlobalTransportTokenScope("main", kThreadGlobalIdMain);
 }
 
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("InitDefaultConsistentTransportTokenScope", &ApiInitDefaultConsistentTransportTokenScope);
+  m.def("InitDefaultGlobalTransportTokenScope", &ApiInitDefaultGlobalTransportTokenScope);
 }
 
 }  // namespace oneflow

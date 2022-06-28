@@ -29,7 +29,7 @@ void initialize() {
 void release() {
   if (of::Global<OneFlowEnv>::Get() != nullptr) { of::Global<OneFlowEnv>::Delete(); }
   of::SetShuttingDown();
-  of::ResetThisThreadUniqueConsistentId().GetOrThrow();
+  of::ResetThisThreadUniqueGlobalId().GetOrThrow();
 }
 
 }  // namespace oneflow_api

@@ -98,7 +98,7 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
 
     if (ctx->requires_grad_ref) {
       ctx->value_shape = *(inputs[1]->shape());
-      if (inputs[1]->is_consistent()) { ctx->value_sbp = JUST(inputs[1]->nd_sbp()); }
+      if (inputs[1]->is_global()) { ctx->value_sbp = JUST(inputs[1]->nd_sbp()); }
     }
     return Maybe<void>::Ok();
   }
@@ -114,8 +114,7 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
                                           JUST(out_grads[0]->device())));
       } else {
         const auto& parallel_desc = JUST(out_grads[0]->parallel_desc());
-        zeros =
-            JUST(functional::ConsistentConstant(ctx->value_shape, 0, out_grads[0]->dtype(),
+        zeros = JUST(functional::GlobalConstant(ctx->value_shape, 0, out_grads[0]->dtype(),
                                                 parallel_desc, *JUST(GetSbpList(ctx->value_sbp))));
       }
       (*in_grads)[0] = JUST(functional::SliceUpdate(out_grads[0], zeros, ctx->start, ctx->stop,

@@ -36,7 +36,7 @@ def _test_einsum_attention(test_case, placement, sbp):
 
 
 @unittest.skipIf(True, "skip this test temporarily")
-class TestEinsumConsistent(flow.unittest.TestCase):
+class TestEinsumGlobal(flow.unittest.TestCase):
     @globaltest
     def test_einsum_attention(test_case):
         for placement in all_placement():

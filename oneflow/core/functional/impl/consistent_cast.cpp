@@ -364,25 +364,24 @@ Maybe<void> CheckNdSbpValid(Symbol<NdSbp> nd_sbp, const Shape& logical_shape) {
 
 namespace {
 
-Maybe<one::OpExpr> RawGetConsistentToConsistentOpExpr(
+Maybe<one::OpExpr> RawGetGlobalToGlobalOpExpr(
     const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels) {
   Optional<Symbol<NdSbp>> grad_nd_sbp;
   if (!grad_sbp_parallels.empty()) { grad_nd_sbp = JUST(GetNdSbp(grad_sbp_parallels)); }
-  std::shared_ptr<one::OpExpr> op_expr = JUST(one::ConsistentToConsistentOpExpr::New(grad_nd_sbp));
+  std::shared_ptr<one::OpExpr> op_expr = JUST(one::GlobalToGlobalOpExpr::New(grad_nd_sbp));
   return op_expr;
 }
 
 }  // namespace
 
-static constexpr auto* GetConsistentToConsistentOpExpr =
-    DECORATE(&RawGetConsistentToConsistentOpExpr, ThreadLocalCopiable);
+static constexpr auto* GetGlobalToGlobalOpExpr =
+    DECORATE(&RawGetGlobalToGlobalOpExpr, ThreadLocalCopiable);
 
-Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
-                                     Symbol<ParallelDesc> parallel_desc,
-                                     const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                                     const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels) {
-  const auto& consistent_tensor = JUST(x->AsConsistentTensor());
-  CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
+Maybe<Tensor> GlobalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
+                             const std::vector<Symbol<SbpParallel>>& sbp_parallels,
+                             const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels) {
+  const auto& global_tensor = JUST(x->AsGlobalTensor());
+  CHECK_NOTNULL_OR_RETURN(global_tensor) << "consistent tensors supported only";
   const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
   JUST(CheckNdSbpValid(nd_sbp, *x->shape()));
   std::shared_ptr<one::OpExpr> op;
@@ -390,17 +389,17 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
                && JUST(x->parallel_desc())->hierarchy()->NumAxes()
                       != parallel_desc->hierarchy()->NumAxes()
                && grad_sbp_parallels.size() == 0)) {
-    op = JUST(GetConsistentToConsistentOpExpr(*JUST(GetSbpList(JUST(x->nd_sbp())))));
+    op = JUST(GetGlobalToGlobalOpExpr(*JUST(GetSbpList(JUST(x->nd_sbp())))));
   } else {
-    op = JUST(GetConsistentToConsistentOpExpr(grad_sbp_parallels));
+    op = JUST(GetGlobalToGlobalOpExpr(grad_sbp_parallels));
   }
   if (!LazyMode::is_enabled() && JUST(x->nd_sbp()) == nd_sbp
       && JUST(x->parallel_desc()) == parallel_desc && grad_sbp_parallels.size() == 0) {
     return x;
   }
   const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-      *op, {consistent_tensor}, OpExprInterpContext(AttrMap{}, parallel_desc, nd_sbp)));
-  if (!LazyMode::is_enabled() && tensor != x && !IsConsistentTensorMetaCheckDisabled()) {
+      *op, {global_tensor}, OpExprInterpContext(AttrMap{}, parallel_desc, nd_sbp)));
+  if (!LazyMode::is_enabled() && tensor != x && !IsGlobalTensorMetaCheckDisabled()) {
     const auto& input_consistent_id = JUST(x->transport_token());
     const auto& output_consistend_id = JUST(tensor->transport_token());
     CHECK_NE_OR_RETURN(input_consistent_id, output_consistend_id);  // NOLINT(maybe-need-error-msg)
@@ -408,10 +407,9 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
   return tensor;
 }
 
-Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
-                                Symbol<ParallelDesc> parallel_desc,
-                                const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                                const std::shared_ptr<OpExpr>& op, bool check_meta_hint) {
+Maybe<Tensor> LocalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
+                            const std::vector<Symbol<SbpParallel>>& sbp_parallels,
+                            const std::shared_ptr<OpExpr>& op, bool check_meta_hint) {
   CHECK_OR_RETURN(!x->is_lazy())
       << Error::RuntimeError()
       << "local_tensor.to_global() is not supported within nn.Graph for now";
@@ -453,11 +451,10 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
 
 }  //  namespace
 
-class LocalToConsistentFunctor {
+class LocalToGlobalFunctor {
  public:
-  LocalToConsistentFunctor() {
-    op_ =
-        CHECK_JUST(one::CastToConsistentOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
+  LocalToGlobalFunctor() {
+    op_ = CHECK_JUST(one::CastToGlobalOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -490,7 +487,7 @@ class LocalToConsistentFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    DisableCheckConsistentTensorMetaScope scope{};
+    DisableCheckGlobalTensorMetaScope scope{};
     const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
         *op_, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
     return tensor;
@@ -500,11 +497,11 @@ class LocalToConsistentFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ToConsistentFunctor {
+class ToGlobalFunctor {
  public:
-  ToConsistentFunctor() {
+  ToGlobalFunctor() {
     local_to_consistent_op_ =
-        CHECK_JUST(one::CastToConsistentOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
+        CHECK_JUST(one::CastToGlobalOpExpr::New(*CHECK_JUST(UniqueStr("cast_to_consistent"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -517,11 +514,11 @@ class ToConsistentFunctor {
     JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, grad_sbp_parallels, 1,
                                   /* force_check */ check_meta));
     std::shared_ptr<Tensor> tensor;
-    if (x->is_consistent()) {
-      tensor = JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, grad_sbp_parallels));
+    if (x->is_global()) {
+      tensor = JUST(GlobalToGlobal(x, parallel_desc, sbp_parallels, grad_sbp_parallels));
     } else {
-      tensor = JUST(
-          LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_, check_meta));
+      tensor =
+          JUST(LocalToGlobal(x, parallel_desc, sbp_parallels, local_to_consistent_op_, check_meta));
     }
     return tensor;
   }
@@ -530,18 +527,17 @@ class ToConsistentFunctor {
   std::shared_ptr<OpExpr> local_to_consistent_op_;
 };
 
-class ConsistentToLocalFunctor {
+class GlobalToLocalFunctor {
  public:
-  ConsistentToLocalFunctor() {
-    op_ = CHECK_JUST(
-        one::CastFromConsistentOpExpr::New(*CHECK_JUST(UniqueStr("consistent_to_local"))));
+  GlobalToLocalFunctor() {
+    op_ = CHECK_JUST(one::CastFromGlobalOpExpr::New(*CHECK_JUST(UniqueStr("consistent_to_local"))));
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     CHECK_OR_RETURN(!x->is_lazy())
         << Error::RuntimeError()
-        << "consistent_tensor.to_local() is not supported within nn.Graph for now";
-    CHECK_OR_RETURN(x->is_consistent())
+        << "global_tensor.to_local() is not supported within nn.Graph for now";
+    CHECK_OR_RETURN(x->is_global())
         << Error::RuntimeError() << "Expected global tensor for to_local but got local tensor!";
     return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}));
   }
@@ -553,9 +549,9 @@ class ConsistentToLocalFunctor {
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<impl::LocalToConsistentFunctor>("LocalToConsistent");
-  m.add_functor<impl::ToConsistentFunctor>("ToConsistent");
-  m.add_functor<impl::ConsistentToLocalFunctor>("ConsistentToLocal");
+  m.add_functor<impl::LocalToGlobalFunctor>("LocalToGlobal");
+  m.add_functor<impl::ToGlobalFunctor>("ToGlobal");
+  m.add_functor<impl::GlobalToLocalFunctor>("GlobalToLocal");
 };
 
 }  // namespace functional

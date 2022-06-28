@@ -33,7 +33,7 @@ def do_test_eq_impl(test_case, ndim, placement, sbp):
     return z
 
 
-class TestEqConsistent(flow.unittest.TestCase):
+class TestEqGlobal(flow.unittest.TestCase):
     @globaltest
     def test_eq(test_case):
         # random ndim in range [1,4]

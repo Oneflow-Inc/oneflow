@@ -30,7 +30,7 @@ def do_test_erf_impl(test_case, ndim, placement, sbp):
     return z
 
 
-class TestErfConsistent(flow.unittest.TestCase):
+class TestErfGlobal(flow.unittest.TestCase):
     @globaltest
     def test_erf(test_case):
         # random ndim in range [1,4]

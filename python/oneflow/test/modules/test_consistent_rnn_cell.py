@@ -195,7 +195,7 @@ def _test_gru_cell(test_case, placement, sbp):
     return hx
 
 
-class TestRNNCellConsistent(flow.unittest.TestCase):
+class TestRNNCellGlobal(flow.unittest.TestCase):
     @globaltest
     def test_lstm_cell(test_case):
         for placement in all_placement():

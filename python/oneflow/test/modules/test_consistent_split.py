@@ -62,7 +62,7 @@ def _test_flow_split_sizes_neg_dim_with_random_data(test_case, placement, sbp):
     return torch.cat(res, dim=1)
 
 
-class TestConsistentSplitModule(flow.unittest.TestCase):
+class TestGlobalSplitModule(flow.unittest.TestCase):
     @globaltest
     def test_flow_split_with_random_data(test_case):
         for placement in all_placement():

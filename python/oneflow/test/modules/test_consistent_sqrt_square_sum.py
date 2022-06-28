@@ -43,7 +43,7 @@ def _test_scalar_random_data(test_case, placement, sbp):
     return y
 
 
-class TestConsistentLinalgVectorNorm2D(flow.unittest.TestCase):
+class TestGlobalLinalgVectorNorm2D(flow.unittest.TestCase):
     @globaltest
     def test_sqrt_sum_with_cpu_random_data(test_case):
         for placement in all_placement():

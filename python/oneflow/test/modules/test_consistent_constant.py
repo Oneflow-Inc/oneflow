@@ -70,7 +70,7 @@ def _test_graph_constant(test_case, func, shape, placement, sbp):
     else:
         raise NotImplementedError
 
-    class ConsistentConstantGraph(flow.nn.Graph):
+    class GlobalConstantGraph(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
 
@@ -80,7 +80,7 @@ def _test_graph_constant(test_case, func, shape, placement, sbp):
                 x = func2(x)
             return x
 
-    model = ConsistentConstantGraph()
+    model = GlobalConstantGraph()
     x = model()
 
     test_case.assertEqual(x.shape, flow.Size(shape))
@@ -94,7 +94,7 @@ def _test_graph_constant(test_case, func, shape, placement, sbp):
     test_case.assertTrue(np.array_equal(x.numpy(), np_res))
 
 
-class TestConstantConsistent(flow.unittest.TestCase):
+class TestConstantGlobal(flow.unittest.TestCase):
     @globaltest
     def test_constant_consistent(test_case):
         shapes = [(8,), (8, 8,), (8, 8, 8)]

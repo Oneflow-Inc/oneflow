@@ -30,7 +30,7 @@ def do_test_floor_impl(test_case, ndim, placement, sbp):
     return z
 
 
-class TestFloorConsistent(flow.unittest.TestCase):
+class TestFloorGlobal(flow.unittest.TestCase):
     @globaltest
     def test_floor(test_case):
         # random ndim in range [1,4]

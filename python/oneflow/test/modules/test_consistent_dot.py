@@ -29,7 +29,7 @@ def do_test_dot_impl(test_case, placement, sbp):
     return z
 
 
-class TestDotConsistent(flow.unittest.TestCase):
+class TestDotGlobal(flow.unittest.TestCase):
     @globaltest
     def test_dot(test_case):
         for placement in all_placement():

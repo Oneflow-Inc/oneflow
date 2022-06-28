@@ -1836,7 +1836,7 @@
   bind_python: False
 
 - name: "to_global"
-  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp, Bool check_meta) => ToConsistent"
+  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp, Bool check_meta) => ToGlobal"
   bind_python: True
 
 - name: "to_local"

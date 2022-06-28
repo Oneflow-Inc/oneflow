@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
-#include "oneflow/core/framework/consistent_tensor_infer_cache.h"
+#include "oneflow/core/framework/global_tensor_infer_cache.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/profiler/collection.h"
@@ -29,12 +29,12 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-class ConsistentTensorInferResult;
+class GlobalTensorInferResult;
 
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
 using EagerBlobObjectListRawPtr = const std::vector<std::shared_ptr<vm::EagerBlobObject>>*;
-using ConsistentTensorInferResultRawPtr = const ConsistentTensorInferResult*;
+using GlobalTensorInferResultRawPtr = const GlobalTensorInferResult*;
 
 class ZeroCopyBaseContextHelper {
  public:
@@ -64,23 +64,22 @@ class ZeroCopyBaseContextHelper {
     return nullptr;
   }
 
-  const ConsistentTensorMeta* ConsistentTensorMeta4ArgNameAndIndex(eager::CallContext* call_ctx,
-                                                                   const std::string& arg_name,
-                                                                   const int32_t index) const {
-    const auto& consistent_tensor_infer_result = call_ctx->consistent_tensor_infer_result();
-    RETURN_IF_FOUND(consistent_tensor_infer_result->input_tensor_metas(),
-                    consistent_tensor_infer_result->output_tensor_metas(),
-                    .shared_from_symbol().get());
+  const GlobalTensorMeta* GlobalTensorMeta4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                           const std::string& arg_name,
+                                                           const int32_t index) const {
+    const auto& global_tensor_infer_result = call_ctx->global_tensor_infer_result();
+    RETURN_IF_FOUND(global_tensor_infer_result->input_tensor_metas(),
+                    global_tensor_infer_result->output_tensor_metas(), .shared_from_symbol().get());
     return nullptr;
   }
 
   Optional<Symbol<ParallelDesc>> parallel_desc(eager::CallContext* call_ctx) const {
-    const auto& consistent_tensor_infer_result = call_ctx->consistent_tensor_infer_result();
-    if (!consistent_tensor_infer_result) { return Optional<Symbol<ParallelDesc>>(); }
-    if (!consistent_tensor_infer_result->input_tensor_metas().empty()) {
-      return consistent_tensor_infer_result->input_tensor_metas().at(0)->parallel_desc();
-    } else if (!consistent_tensor_infer_result->output_tensor_metas().empty()) {
-      return consistent_tensor_infer_result->output_tensor_metas().at(0)->parallel_desc();
+    const auto& global_tensor_infer_result = call_ctx->global_tensor_infer_result();
+    if (!global_tensor_infer_result) { return Optional<Symbol<ParallelDesc>>(); }
+    if (!global_tensor_infer_result->input_tensor_metas().empty()) {
+      return global_tensor_infer_result->input_tensor_metas().at(0)->parallel_desc();
+    } else if (!global_tensor_infer_result->output_tensor_metas().empty()) {
+      return global_tensor_infer_result->output_tensor_metas().at(0)->parallel_desc();
     } else {
       UNIMPLEMENTED();
       return Optional<Symbol<ParallelDesc>>();
@@ -245,7 +244,7 @@ class UserOpInferContextHelper final {
   }
   const NdSbp& NdSbp4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                      int32_t index) const {
-    return *CHECK_NOTNULL(zero_copy_base_ctx_helper_.ConsistentTensorMeta4ArgNameAndIndex(
+    return *CHECK_NOTNULL(zero_copy_base_ctx_helper_.GlobalTensorMeta4ArgNameAndIndex(
                               call_ctx, arg_name, index))
                 ->nd_sbp();
   }
@@ -583,7 +582,7 @@ class UserKernelInitAndCacheContextHelper final {
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
                                                                const std::string& arg_name,
                                                                int32_t index) const {
-    return base_ctx_helper_.ConsistentTensorMeta4ArgNameAndIndex(call_ctx, arg_name, index);
+    return base_ctx_helper_.GlobalTensorMeta4ArgNameAndIndex(call_ctx, arg_name, index);
   }
   const SbpParallel& SbpParallel4ArgNameAndIndex(eager::CallContext* call_ctx,
                                                  const std::string& arg_name, int32_t index) const {
@@ -595,7 +594,7 @@ class UserKernelInitAndCacheContextHelper final {
   const NdSbp& NdSbp4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                      int32_t index) const {
     return *CHECK_NOTNULL(
-                base_ctx_helper_.ConsistentTensorMeta4ArgNameAndIndex(call_ctx, arg_name, index))
+                base_ctx_helper_.GlobalTensorMeta4ArgNameAndIndex(call_ctx, arg_name, index))
                 ->nd_sbp();
   }
 

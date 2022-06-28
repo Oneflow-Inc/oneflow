@@ -62,7 +62,7 @@ Maybe<void> ForEachThreadCtx(vm::VirtualMachineEngine* engine,
 
 void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
   *Initializer = [&]() {
-    CHECK_JUST(InitThisThreadUniqueConsistentId(kThreadConsistentIdScheduler, "scheduler"));
+    CHECK_JUST(InitThisThreadUniqueGlobalId(kThreadGlobalIdScheduler, "scheduler"));
     OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Scheduler");
   };
 }
@@ -412,8 +412,8 @@ Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device,
       CHECK_GT(device_type_value, 0);
       std::string device_tag = *CHECK_JUST(DeviceTag4DeviceType(device->enum_type()));
       if (!StreamOnIndependentThread::Visit(stream_role)) {
-        CHECK_JUST(InitThisThreadConsistentId(device_type_value + kThreadConsistentIdScheduler,
-                                              device_tag));
+        CHECK_JUST(
+            InitThisThreadGlobalId(device_type_value + kThreadGlobalIdScheduler, device_tag));
       }
       OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Worker_" + device_tag);
     };

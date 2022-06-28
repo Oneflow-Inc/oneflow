@@ -45,7 +45,7 @@ def _test_unsqueeze_with_0_size_data(test_case, placement, sbp):
     return y
 
 
-class TestConsistentUnsqueeze(flow.unittest.TestCase):
+class TestGlobalUnsqueeze(flow.unittest.TestCase):
     @globaltest
     def test_flow_unsqueeze_with_random_data(test_case):
         for placement in all_placement():

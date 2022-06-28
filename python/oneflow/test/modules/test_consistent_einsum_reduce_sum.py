@@ -30,7 +30,7 @@ def _test_einsum_reduce_sum(test_case, placement, sbp):
     return z
 
 
-class TestEinsumConsistent(flow.unittest.TestCase):
+class TestEinsumGlobal(flow.unittest.TestCase):
     @globaltest
     def test_einsum_reduce_sum(test_case):
         for placement in all_placement():

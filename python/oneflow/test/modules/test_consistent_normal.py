@@ -42,7 +42,7 @@ def _test_consistent_normal(
     test_case.assertEqual(x.requires_grad, requires_grad)
 
 
-class TestNormalConsistent(flow.unittest.TestCase):
+class TestNormalGlobal(flow.unittest.TestCase):
     @globaltest
     def test_normal_consistent(test_case):
         arg_dict = OrderedDict()

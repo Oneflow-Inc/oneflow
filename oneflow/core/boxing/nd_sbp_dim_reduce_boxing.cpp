@@ -106,7 +106,7 @@ Maybe<one::Tensor> ParallelDimReduce(const std::shared_ptr<one::Tensor>& tensor,
 
   const std::shared_ptr<one::Tensor>& local_tensor = JUST(tensor->cur_rank_phy_tensor());
 
-  std::shared_ptr<one::Tensor> reduced_in_tensor = JUST(one::functional::LocalToConsistent(
+  std::shared_ptr<one::Tensor> reduced_in_tensor = JUST(one::functional::LocalToGlobal(
       local_tensor, reduced_in->placement(), *JUST(GetSbpList(reduced_in->nd_sbp())),
       *tensor->shape(), tensor->dtype()));
 
@@ -124,9 +124,9 @@ Maybe<one::Tensor> ParallelDimReduce(const std::shared_ptr<one::Tensor>& tensor,
   const std::shared_ptr<one::Tensor>& reduced_out_local_tensor =
       JUST(reduced_out_tensor->cur_rank_phy_tensor());
 
-  return JUST(one::functional::LocalToConsistent(reduced_out_local_tensor, out->placement(),
-                                                 *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
-                                                 tensor->dtype()));
+  return JUST(one::functional::LocalToGlobal(reduced_out_local_tensor, out->placement(),
+                                             *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
+                                             tensor->dtype()));
 }
 
 COMMAND(RegisterBoxingFunction("nd-sbp-dim-reduce", CheckParallelDimReduce, &ParallelDimReduce));

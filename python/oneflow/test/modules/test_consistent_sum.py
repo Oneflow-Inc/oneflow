@@ -39,7 +39,7 @@ def _test_global_sum_with_0_size_tensor(test_case, placement, sbp):
     return y
 
 
-class TestConsistentSumModule(flow.unittest.TestCase):
+class TestGlobalSumModule(flow.unittest.TestCase):
     @globaltest
     def test_global_sum_against_pytorch(test_case):
         for placement in all_placement():

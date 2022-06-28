@@ -32,7 +32,7 @@ def _test_consistent_randperm(test_case, N, placement, sbp, dtype):
 
 
 def _test_graph_randperm(test_case, N, placement, sbp, dtype):
-    class ConsistentRandpermGraph(flow.nn.Graph):
+    class GlobalRandpermGraph(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
 
@@ -40,7 +40,7 @@ def _test_graph_randperm(test_case, N, placement, sbp, dtype):
             x = flow.randperm(N, placement=placement, sbp=sbp, dtype=dtype)
             return x
 
-    model = ConsistentRandpermGraph()
+    model = GlobalRandpermGraph()
     x = model()
     y1 = x.to_global(placement=placement, sbp=sbp)
     y1_np_sort = np.sort(y1.numpy())
@@ -52,7 +52,7 @@ def _test_graph_randperm(test_case, N, placement, sbp, dtype):
 
 
 @unittest.skip("This fails in multi-gpu")
-class TestRandpermConsistent(flow.unittest.TestCase):
+class TestRandpermGlobal(flow.unittest.TestCase):
     @globaltest
     def test_randperm_consistent(test_case):
         RandNs = [i for i in range(10, 50, 10)]

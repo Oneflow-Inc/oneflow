@@ -34,7 +34,7 @@ def do_test_eye_impl(test_case, placement, sbp):
     return x
 
 
-class TestEyeConsistent(flow.unittest.TestCase):
+class TestEyeGlobal(flow.unittest.TestCase):
     @globaltest
     def test_eye(test_case):
         shape = random_tensor().shape

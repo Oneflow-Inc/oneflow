@@ -63,7 +63,7 @@ def _test_deconv2d_impl(test_case, placement, input_sbp):
     return y
 
 
-class TestDeconv2dConsistent(flow.unittest.TestCase):
+class TestDeconv2dGlobal(flow.unittest.TestCase):
     @globaltest
     def test_deconv2d(test_case):
         for placement in all_placement():

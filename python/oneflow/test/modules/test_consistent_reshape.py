@@ -54,7 +54,7 @@ def _test_reshape_like_impl(test_case, pair, placement, in_sbp, like_sbp):
         test_case.assertTrue(np.array_equal(np_out, local_z.numpy()))
 
 
-class TestReshapeConsistent(flow.unittest.TestCase):
+class TestReshapeGlobal(flow.unittest.TestCase):
     @globaltest
     def test_reshape(test_case):
         shape_pairs = [
