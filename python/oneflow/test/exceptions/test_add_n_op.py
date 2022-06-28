@@ -23,7 +23,7 @@ class TestAddN(flow.unittest.TestCase):
         with test_case.assertRaises(RuntimeError) as context:
             a = flow.tensor([1,2])
             b = flow.tensor([3,4])
-            c = flow.tensor([[2, 2],[2,2]])     
+            c = flow.tensor([[2,2],[2,2]])     
             flow.add(a,b,c)
            
         test_case.assertTrue(
