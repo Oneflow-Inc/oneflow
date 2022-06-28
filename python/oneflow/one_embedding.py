@@ -87,6 +87,7 @@ def _init(
     ).itemsize
     assert value_type_size > 0
     key_value_store_options["value_type_size"] = value_type_size
+    key_value_store_options["value_type"] = str(dtype)
     scale_factor = store_options["size_factor"]
     key_value_store_options["storage_dim"] = scale_factor * embedding_dim
     # kv store
