@@ -291,7 +291,7 @@ class LocalTensorSharedNumpyDataFunctor {
                                                               /*ls_leaf=*/true);
 
     // Init blob
-    JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject(), /*pin_memory=*/false));
+    JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject()));
     const auto& stream = JUST(GetDefaultStreamByDevice(device));
     const auto& eager_blob_object = JUST(tensor_impl->eager_blob_object());
     JUST(eager_blob_object->init_producer_stream(stream));

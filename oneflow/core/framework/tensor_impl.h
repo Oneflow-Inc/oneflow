@@ -248,8 +248,6 @@ class EagerLocalTensorImpl final : public LocalTensorImpl {
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
 
   Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object);
-  Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object,
-                                  const bool pin_memory);
   Maybe<EagerLocalTensorImpl*> mut_eager_local_tensor_impl() override { return this; }
 
   Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) override;

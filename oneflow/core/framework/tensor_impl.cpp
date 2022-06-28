@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <type_traits>
 #include "oneflow/core/common/blocking_then_busy.h"
+#include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/framework/tensor_meta.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -31,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/framework/stream_allocator_is_pinned.h"
 
 namespace oneflow {
 namespace one {
@@ -110,12 +112,10 @@ Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
     auto tensor_storage = tensor_storage_->storage();
     eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, mut_stride,
                                                                dtype(), tensor_storage, dep_object);
-    eager_blob_object_->set_pin_memory(pin_memory);
   } else {
     const auto& eager_blob_object =
         std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, mut_stride, dtype(),
                                               std::make_shared<vm::TensorStorage>(), dep_object);
-    eager_blob_object->set_pin_memory(pin_memory);
     JUST(set_eager_blob_object(eager_blob_object));
   }
   return Maybe<void>::Ok();
@@ -123,7 +123,7 @@ Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
 
 Maybe<bool> EagerLocalTensorImpl::is_pinned() const {
   if (!eager_blob_object_) { return false; }
-  return eager_blob_object_->pin_memory();
+  return IsStreamAllocatorPinned::Visit(JUST(eager_blob_object_->producer_stream())->stream_role());
 }
 
 Maybe<void> EagerLocalTensorImpl::set_eager_blob_object(
@@ -225,7 +225,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
     auto cur_rank_phy_tensor_impl =
         std::make_shared<EagerLocalTensorImpl>(cur_rank_phy_tensor_meta, requires_grad, is_leaf);
     const auto& dep_object = NewLocalDepObject();
-    JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(dep_object, /*pin_memory=*/false));
+    JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(dep_object));
     cur_rank_phy_tensor = std::make_shared<LocalTensor>(cur_rank_phy_tensor_impl);
   } else {
     const auto& dtype_symbol = JUST(DType::Get(dtype));
