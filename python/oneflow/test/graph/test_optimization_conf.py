@@ -103,17 +103,22 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
 
             # check all the attributes are set correctly
             for (attrs, expected_attr_value) in attrs_and_values_to_check:
-                current_attr_value = attr_util.get_nested_attribute(g._optimization_conf_proto, attrs)
+                current_attr_value = attr_util.get_nested_attribute(
+                    g._optimization_conf_proto, attrs
+                )
                 test_case.assertTrue(
                     current_attr_value == expected_attr_value,
-                    str(attrs) + " : " + str(current_attr_value) + " vs " + str(current_attr_value)
+                    str(attrs)
+                    + " : "
+                    + str(current_attr_value)
+                    + " vs "
+                    + str(current_attr_value),
                 )
 
             print("number of APIs tested: " + str(num_api_tested))
 
         for i in range(5):
             test_resource_config_update_apis_eagerly_automatically()
-    
 
         print("optimization conf after session init: \n", g._optimization_conf_proto)
 

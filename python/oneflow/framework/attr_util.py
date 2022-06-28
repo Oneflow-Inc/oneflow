@@ -28,7 +28,10 @@ def get_nested_attribute(owning_object, attrs_chain):
         if isinstance(attrs_chain, str):
             attrs_chain = [attrs_chain]
         else:
-            assert False, "attrs_chain should be either a string or a list, but get " + str(type(attrs_chain))
+            assert False, (
+                "attrs_chain should be either a string or a list, but get "
+                + str(type(attrs_chain))
+            )
 
     last_attr = owning_object
     for att in attrs_chain:
