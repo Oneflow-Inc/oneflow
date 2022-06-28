@@ -421,7 +421,7 @@ void ForEachOpGraphNecessaryCtrlEdge(
 
 }  // namespace
 
-TaskGraph::TaskGraph(bool disable_straighten_algorithm) {
+TaskGraph::TaskGraph(bool enable_straighten_algorithm) {
   OpGraph* op_graph = Singleton<OpGraph>::Get();
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
@@ -452,10 +452,10 @@ TaskGraph::TaskGraph(bool disable_straighten_algorithm) {
     }
   });
 
-  if (disable_straighten_algorithm || GlobalProcessCtx::WorldSize() <= 1) {
-    SetOrderInGraphForEachNode();
-  } else {
+  if (enable_straighten_algorithm && GlobalProcessCtx::WorldSize() > 1) {
     StraightenNodes(this, &ordered_task_nodes_);
+  } else {
+    SetOrderInGraphForEachNode();
   }
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
