@@ -115,7 +115,8 @@ Runtime::~Runtime() {
   }
   OF_SESSION_BARRIER();
   Singleton<ThreadMgr>::Get()->DeleteThreads(independent_thread_ids_);
-  Singleton<boxing::collective::Scheduler>::Get()->DeletePlan(collective_boxing_scheduler_plan_token_);
+  Singleton<boxing::collective::Scheduler>::Get()->DeletePlan(
+      collective_boxing_scheduler_plan_token_);
 }
 
 void Runtime::DumpThreadIdsFromPlan(const Plan& plan) {

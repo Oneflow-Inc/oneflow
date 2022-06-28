@@ -23,7 +23,8 @@ limitations under the License.
 
 namespace oneflow {
 
-COMMAND(Singleton<symbol::Storage<ParallelDesc>>::SetAllocated(new symbol::Storage<ParallelDesc>()));
+COMMAND(
+    Singleton<symbol::Storage<ParallelDesc>>::SetAllocated(new symbol::Storage<ParallelDesc>()));
 COMMAND(Singleton<symbol::Storage<Scope>>::SetAllocated(new symbol::Storage<Scope>()));
 COMMAND(Singleton<symbol::Storage<JobDesc>>::SetAllocated(new symbol::Storage<JobDesc>()));
 COMMAND(Singleton<symbol::Storage<OperatorConfSymbol>>::SetAllocated(

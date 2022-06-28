@@ -72,7 +72,9 @@ std::string GenPortKey(int64_t machine_id) { return "EpollPort/" + std::to_strin
 void PushPort(int64_t machine_id, uint16_t port) {
   Singleton<CtrlClient>::Get()->PushKV(GenPortKey(machine_id), std::to_string(port));
 }
-void ClearPort(int64_t machine_id) { Singleton<CtrlClient>::Get()->ClearKV(GenPortKey(machine_id)); }
+void ClearPort(int64_t machine_id) {
+  Singleton<CtrlClient>::Get()->ClearKV(GenPortKey(machine_id));
+}
 uint16_t PullPort(int64_t machine_id) {
   uint16_t port = 0;
   Singleton<CtrlClient>::Get()->PullKV(

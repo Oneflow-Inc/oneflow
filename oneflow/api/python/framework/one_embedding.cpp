@@ -40,7 +40,7 @@ class OneEmbeddingHandler final {
   void LoadSnapshot(const std::string& snapshot_name) {
 #ifdef WITH_CUDA
     Singleton<embedding::EmbeddingManager>::Get()->LoadSnapshot(embedding_name_, local_rank_id_,
-                                                             rank_id_, snapshot_name);
+                                                                rank_id_, snapshot_name);
 #else
     UNIMPLEMENTED() << "Only Support with CUDA";
 #endif
@@ -49,7 +49,7 @@ class OneEmbeddingHandler final {
   void SaveSnapshot(const std::string& snapshot_name) {
 #ifdef WITH_CUDA
     Singleton<embedding::EmbeddingManager>::Get()->SaveSnapshot(embedding_name_, local_rank_id_,
-                                                             rank_id_, snapshot_name);
+                                                                rank_id_, snapshot_name);
 #else
     UNIMPLEMENTED() << "Only Support with CUDA";
 #endif

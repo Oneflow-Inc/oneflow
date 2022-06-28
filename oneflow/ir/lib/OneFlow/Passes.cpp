@@ -485,10 +485,11 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
     if (!op) return failure();
     NamedAttrList attrs;
     if (op.op_name().str().find("FreeEagerTensor") != std::string::npos) { return failure(); }
-    attrs.set(StringAttr::get(getContext(), "value"),
-              support::TensorToDenseElementsAttr(
-                  ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Get(op.op_name().str()),
-                  rewriter.getContext()));
+    attrs.set(
+        StringAttr::get(getContext(), "value"),
+        support::TensorToDenseElementsAttr(
+            ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Get(op.op_name().str()),
+            rewriter.getContext()));
     attrs.set(op.op_nameAttrName(), op.op_nameAttr());
     attrs.set(op.device_tagAttrName(), op.device_tagAttr());
     attrs.set(op.device_nameAttrName(), op.device_nameAttr());

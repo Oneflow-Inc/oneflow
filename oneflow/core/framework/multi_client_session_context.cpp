@@ -182,7 +182,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     Singleton<ResourceDesc, ForSession>::Delete();
     // NOTE(chengcheng): New after delete because in EnvGlobalObjectScope once created ResourceDesc.
     Singleton<ResourceDesc, ForSession>::New(Singleton<ResourceDesc, ForEnv>::Get()->resource(),
-                                          GlobalProcessCtx::NumOfProcessPerNode());
+                                             GlobalProcessCtx::NumOfProcessPerNode());
     VLOG(1) << "Finish delete multi client session context." << std::endl;
     env_ctx_.reset();
     is_inited_ = false;

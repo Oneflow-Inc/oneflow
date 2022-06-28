@@ -56,7 +56,9 @@ class CopyCommNetActor final : public Actor {
   int64_t in_regst_desc_id_;
 };
 
-CopyCommNetActor::~CopyCommNetActor() { Singleton<CommNet>::Get()->DeleteActorReadId(actor_read_id_); }
+CopyCommNetActor::~CopyCommNetActor() {
+  Singleton<CommNet>::Get()->DeleteActorReadId(actor_read_id_);
+}
 
 void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
   is_in_eord_ = false;
@@ -98,7 +100,8 @@ void CopyCommNetActor::Act() {
   } else {
     void* writeable_token = writeable_regst->comm_net_token();
     // Async
-    Singleton<CommNet>::Get()->Read(actor_read_id_, src_machine_id, readable_token, writeable_token);
+    Singleton<CommNet>::Get()->Read(actor_read_id_, src_machine_id, readable_token,
+                                    writeable_token);
   }
 }
 

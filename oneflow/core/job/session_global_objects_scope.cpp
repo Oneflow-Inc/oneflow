@@ -47,7 +47,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   Singleton<ResourceDesc, ForSession>::Delete();
   DumpVersionInfo();
   Singleton<ResourceDesc, ForSession>::New(config_proto.resource(),
-                                        GlobalProcessCtx::NumOfProcessPerNode());
+                                           GlobalProcessCtx::NumOfProcessPerNode());
   Singleton<IDMgr>::New();
   Singleton<TaskStreamIndexManager>::New();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
@@ -110,7 +110,7 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   Singleton<IDMgr>::Delete();
   Singleton<ResourceDesc, ForSession>::Delete();
   Singleton<ResourceDesc, ForSession>::New(Singleton<ResourceDesc, ForEnv>::Get()->resource(),
-                                        GlobalProcessCtx::NumOfProcessPerNode());
+                                           GlobalProcessCtx::NumOfProcessPerNode());
 }
 
 }  // namespace oneflow

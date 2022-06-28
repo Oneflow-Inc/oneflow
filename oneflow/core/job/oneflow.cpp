@@ -128,8 +128,8 @@ void PushPlan(const std::string& plan_name, Plan&& plan) {
       sub_plan.mutable_task()->Add(std::move(pair.second.front()));
       pair.second.pop_front();
     }
-    Singleton<CtrlClient>::Get()->PushKV(sub_plan_key(plan_name, pair.first.first, pair.first.second),
-                                      sub_plan);
+    Singleton<CtrlClient>::Get()->PushKV(
+        sub_plan_key(plan_name, pair.first.first, pair.first.second), sub_plan);
   }
 
   for (const auto& mem_block : plan.block_chunk_list().mem_block()) {
@@ -143,10 +143,10 @@ void PushPlan(const std::string& plan_name, Plan&& plan) {
   }
 
   Singleton<CtrlClient>::Get()->PushKV(ctrl_regst_desc_info_key(plan_name),
-                                    plan.ctrl_regst_desc_info());
+                                       plan.ctrl_regst_desc_info());
   Singleton<CtrlClient>::Get()->PushKV(job_id2job_conf(plan_name), plan.job_confs());
   Singleton<CtrlClient>::Get()->PushKV(GetCollectiveBoxingPlanKey(plan_name),
-                                    plan.collective_boxing_plan());
+                                       plan.collective_boxing_plan());
 }
 
 void PullPlan(const std::string& plan_name, Plan* plan) {
@@ -171,7 +171,7 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   Singleton<CtrlClient>::Get()->PullKV(job_id2job_conf(plan_name), &job_confs);
   *(plan->mutable_job_confs()) = job_confs;
   Singleton<CtrlClient>::Get()->PullKV(GetCollectiveBoxingPlanKey(plan_name),
-                                    plan->mutable_collective_boxing_plan());
+                                       plan->mutable_collective_boxing_plan());
   MemBlockAndChunkList block7chunk;
   Singleton<CtrlClient>::Get()->PullKV(block7chunk_key(plan_name, machine_id), &block7chunk);
   plan->mutable_block_chunk_list()->CopyFrom(block7chunk);

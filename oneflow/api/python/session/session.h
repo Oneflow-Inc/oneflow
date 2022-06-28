@@ -35,7 +35,9 @@ limitations under the License.
 
 namespace oneflow {
 
-inline Maybe<bool> IsSessionInited() { return Singleton<SessionGlobalObjectsScope>::Get() != nullptr; }
+inline Maybe<bool> IsSessionInited() {
+  return Singleton<SessionGlobalObjectsScope>::Get() != nullptr;
+}
 
 inline void FixCpuDeviceNum(ConfigProto* config_proto) {
   if (config_proto->resource().cpu_device_num() > 0) { return; }

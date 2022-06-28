@@ -74,7 +74,7 @@ void* Regst::comm_net_token() {
     CHECK(main_mem_ptr() != nullptr);
     CHECK(separated_header_mem_ptr() == nullptr);
     token = Singleton<CommNet>::Get()->RegisterMemory(main_mem_ptr(),
-                                                   this->regst_desc()->MainByteSize4OneRegst());
+                                                      this->regst_desc()->MainByteSize4OneRegst());
     comm_net_token_ = token;
     return token;
   }

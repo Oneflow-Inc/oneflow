@@ -458,7 +458,9 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
     thread_->EnqueueActorMsg(sync_post_act_msgs_.cbegin(), sync_post_act_msgs_.cend());
     if (!async_post_act_msgs_.empty()) {
       actor_ctx_->AddCallback([this]() {
-        for (const auto& msg : async_post_act_msgs_) { Singleton<ActorMsgBus>::Get()->SendMsg(msg); }
+        for (const auto& msg : async_post_act_msgs_) {
+          Singleton<ActorMsgBus>::Get()->SendMsg(msg);
+        }
       });
     }
   }

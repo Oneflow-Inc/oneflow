@@ -201,7 +201,8 @@ void RpcClient::LoadServer(const LoadServerRequest& request, CtrlService::Stub* 
 CtrlService::Stub* RpcClient::GetThisStub() { return stubs_[GlobalProcessCtx::Rank()].get(); }
 
 CtrlService::Stub* RpcClient::GetResponsibleStub(const std::string& key) {
-  int64_t machine_id = (std::hash<std::string>{}(key)) % Singleton<EnvDesc>::Get()->TotalMachineNum();
+  int64_t machine_id =
+      (std::hash<std::string>{}(key)) % Singleton<EnvDesc>::Get()->TotalMachineNum();
   return stubs_[machine_id].get();
 }
 

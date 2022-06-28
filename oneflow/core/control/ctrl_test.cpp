@@ -63,8 +63,9 @@ TEST(CtrlServer, new_delete) {
   Singleton<EnvDesc>::New(env_proto);
   Singleton<CtrlServer>::New();
   Singleton<ProcessCtx>::New();
-  CHECK_JUST(HostListCtrlBootstrap(*Singleton<EnvDesc>::Get())
-                 .InitProcessCtx(Singleton<CtrlServer>::Get()->port(), Singleton<ProcessCtx>::Get()));
+  CHECK_JUST(
+      HostListCtrlBootstrap(*Singleton<EnvDesc>::Get())
+          .InitProcessCtx(Singleton<CtrlServer>::Get()->port(), Singleton<ProcessCtx>::Get()));
   auto* client = new GrpcCtrlClient(*Singleton<ProcessCtx>::Get());
   Singleton<CtrlClient>::SetAllocated(client);
   Singleton<ResourceDesc, ForEnv>::New(GetResource(), GlobalProcessCtx::NumOfProcessPerNode());

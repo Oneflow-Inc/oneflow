@@ -52,8 +52,8 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()
       || Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
     TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
-    Singleton<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_" + std::to_string(job_desc.job_id())
-                                              + "_op_graph.dot");
+    Singleton<OpGraph>::Get()->ToDotWithFilePath(
+        "optimized_dlnet_" + std::to_string(job_desc.job_id()) + "_op_graph.dot");
   }
 
   // Step2: build task_gph.

@@ -181,10 +181,11 @@ void ConcatSplitDataContent(ep::Stream* stream,
   if (part_num >= 2) {
     BlockingCounter bc(part_num);
     FOR_RANGE(int32_t, part_id, 0, part_num) {
-      Singleton<ThreadPool>::Get()->AddWork([stream, &in_desc, &out_desc, part_id, &part_num, &bc]() {
-        ConcatSplitPartDataContent(stream, in_desc, out_desc, part_id, part_num);
-        bc.Decrease();
-      });
+      Singleton<ThreadPool>::Get()->AddWork(
+          [stream, &in_desc, &out_desc, part_id, &part_num, &bc]() {
+            ConcatSplitPartDataContent(stream, in_desc, out_desc, part_id, part_num);
+            bc.Decrease();
+          });
     }
     bc.WaitForeverUntilCntEqualZero();
   } else {

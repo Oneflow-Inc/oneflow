@@ -108,7 +108,7 @@ class CtrlClient {
 
 #define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
 #define OF_ENV_BARRIER() oneflow::Singleton<oneflow::CtrlClient>::Get()->Barrier(FILE_LINE_STR)
-#define OF_SESSION_BARRIER()                            \
+#define OF_SESSION_BARRIER()                               \
   oneflow::Singleton<oneflow::CtrlClient>::Get()->Barrier( \
       FILE_LINE_STR, Singleton<ResourceDesc, ForSession>::Get()->process_ranks().size())
 

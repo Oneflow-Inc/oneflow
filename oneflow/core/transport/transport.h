@@ -33,7 +33,8 @@ namespace oneflow {
 // Machin A need call:
 //   Singleton<Transport>::Get()->Send(token, B, data_ptr_A, data_size_A, callback_after_send);
 // Machin B need call:
-//   Singleton<Transport>::Get()->Receive(token, A, data_ptr_B, data_size_B, callback_after_receive);
+//   Singleton<Transport>::Get()->Receive(token, A, data_ptr_B, data_size_B,
+//   callback_after_receive);
 //
 // data_size_A <= data_size_B
 //

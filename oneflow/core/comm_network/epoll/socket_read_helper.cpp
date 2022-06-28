@@ -95,7 +95,7 @@ void SocketReadHelper::SetStatusWhenRequestWriteMsgHeadDone() {
   msg_to_send.request_read_msg.dst_token = cur_msg_.request_write_msg.dst_token;
   msg_to_send.request_read_msg.read_id = cur_msg_.request_write_msg.read_id;
   Singleton<EpollCommNet>::Get()->SendSocketMsg(cur_msg_.request_write_msg.dst_machine_id,
-                                             msg_to_send);
+                                                msg_to_send);
   SwitchToMsgHeadReadHandle();
 }
 

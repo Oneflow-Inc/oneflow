@@ -22,7 +22,8 @@ limitations under the License.
 namespace oneflow {
 
 inline StreamId GenerateComputeTaskStreamId(const DeviceId& device_id) {
-  auto stream_index = Singleton<TaskStreamIndexManager>::Get()->GetComputeTaskStreamIndex(device_id);
+  auto stream_index =
+      Singleton<TaskStreamIndexManager>::Get()->GetComputeTaskStreamIndex(device_id);
   return StreamId{device_id, stream_index};
 }
 

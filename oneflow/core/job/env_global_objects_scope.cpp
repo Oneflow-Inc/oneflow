@@ -172,9 +172,9 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   CHECK_JUST(Singleton<RpcManager>::Get()->Bootstrap());
   CHECK_JUST(Singleton<RpcManager>::Get()->CreateClient());
   Singleton<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto),
-                                    GlobalProcessCtx::NumOfProcessPerNode());
+                                       GlobalProcessCtx::NumOfProcessPerNode());
   Singleton<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto),
-                                        GlobalProcessCtx::NumOfProcessPerNode());
+                                           GlobalProcessCtx::NumOfProcessPerNode());
   Singleton<hardware::NodeDeviceDescriptorManager>::SetAllocated(
       new hardware::NodeDeviceDescriptorManager());
   if (Singleton<ResourceDesc, ForEnv>::Get()->enable_debug_mode()) {

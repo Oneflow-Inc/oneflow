@@ -44,7 +44,7 @@ NodeDeviceDescriptorManager::NodeDeviceDescriptorManager() {
     std::string serialized_local_node;
     local->Serialize(&serialized_local_node);
     Singleton<CtrlClient>::Get()->PushKV(MakeNodeDeviceDescriptorRpcKey(impl_->rank),
-                                      serialized_local_node);
+                                         serialized_local_node);
     for (int64_t i = 0; i < impl_->nodes.size(); ++i) {
       if (i == impl_->rank) { continue; }
       Singleton<CtrlClient>::Get()->PullKV(
