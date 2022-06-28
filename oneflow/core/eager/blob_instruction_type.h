@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/vm/stream.h"
-#include "oneflow/core/device/cuda_event.h"
 #include "oneflow/core/vm/ep_event.h"
 #include "oneflow/core/vm/ep_device_context.h"
 
