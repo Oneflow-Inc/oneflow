@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-
-from numpy import dtype
 import oneflow as flow
 import oneflow.unittest
 
@@ -23,12 +21,10 @@ import oneflow.unittest
 class TestAddN(flow.unittest.TestCase):
     def test_add_n_shape_error_msg(test_case):
         with test_case.assertRaises(RuntimeError) as context:
-            
-        
+                   
             a = flow.tensor([1,2])
             b = flow.tensor([3,4])
-            c = flow.tensor([[2, 2],[2,2]])
-     
+            c = flow.tensor([[2, 2],[2,2]])     
             flow.add(a,b,c)
            
         test_case.assertTrue(
@@ -38,13 +34,10 @@ class TestAddN(flow.unittest.TestCase):
         
     
     def test_add_n_dtype_error_msg(test_case):
-        with test_case.assertRaises(RuntimeError) as context:
-            
-        
+        with test_case.assertRaises(RuntimeError) as context:            
             a = flow.tensor([1,2],dtype=oneflow.int64)
             b = flow.tensor([3,4],dtype=oneflow.int64)
             c = flow.tensor([2,2],dtype=oneflow.float64)
-     
             flow.add(a,b,c)
            
         test_case.assertTrue(
@@ -55,10 +48,7 @@ class TestAddN(flow.unittest.TestCase):
             
     
     
-        
-        
-  
-
+       
 
 if __name__ == "__main__":
     unittest.main()
