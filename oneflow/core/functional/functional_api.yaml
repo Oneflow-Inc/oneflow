@@ -968,6 +968,11 @@
     Double alpha=1.0) => MatMul"
   bind_python: True
 
+- name: "mm"
+  signature:
+    "Tensor (Tensor input, Tensor mat2) => MatMulNoBroadCast"
+  bind_python: True
+
 - name: "mv"
   signature:
     "Tensor (Tensor input, Tensor vec) => Mv"
