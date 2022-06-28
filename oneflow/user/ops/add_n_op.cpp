@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
-
+  
 /* static */ Maybe<void> AddNOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const auto& in_0 = ctx->InputTensorDesc("in", 0);
   auto* out = ctx->OutputTensorDesc("out", 0);
