@@ -53,17 +53,17 @@ struct OpCallInstructionUtil final {
       // kernel executed.
       DeallocateTempStorage(operand, device_ctx);
     }
-    if (operand->user_opkernel()->has_state_or_cache()) {
-      auto* call_ctx = operand->mut_call_ctx();
-      TryInitOpKernelStateAndCache(operand, device_ctx, &call_ctx->mut_state(),
-                                   &call_ctx->mut_cache());
-    }
     return Maybe<void>::Ok();
   }
 
   static inline void Compute(const vm::Instruction& instruction) {
     auto* operand = GetCallPhyInstrOperand(instruction);
     DeviceCtx* device_ctx = instruction.stream().device_ctx().get();
+    if (operand->user_opkernel()->has_state_or_cache()) {
+      auto* call_ctx = operand->mut_call_ctx();
+      TryInitOpKernelStateAndCache(operand, device_ctx, &call_ctx->mut_state(),
+                                   &call_ctx->mut_cache());
+    }
     OpKernelCompute(operand, device_ctx);
   }
 
