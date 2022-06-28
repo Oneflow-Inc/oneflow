@@ -37,8 +37,7 @@ class TestAddN(flow.unittest.TestCase):
         with test_case.assertRaises(RuntimeError) as context:
             flow.add(a, b, c)
         test_case.assertTrue(
-            "expected all tenser to have same type, but found"
-            in str(context.exception)
+            "expected all tenser to have same type, but found" in str(context.exception)
         )
 
 
