@@ -22,7 +22,8 @@ def MulCastPattern : Pat<
         $cast_device_name,
         $cast_scope_symbol_id,
         $cast_hierarchy,
-        $cast_dtype
+        $cast_dtype,
+        $cast_pin_memory
     ),
     $scalar,
     $mul_op_name,
@@ -434,7 +435,8 @@ def DeleteSameDtypeCastOpPattern : Pat<
      $cast_device_name,
      $cast_scope_symbol_id,
      $cast_hierarchy,
-     $dtype
+     $dtype,
+     $pin_memory
   ),
   (
     replaceWithValue $x
