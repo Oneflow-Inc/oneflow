@@ -53,14 +53,14 @@ def convert_url_to_oss_key1(url):
 
 
 def convert_url_to_oss_https_url(url):
-    if should_be_local(url):
+    if should_be_mirrored(url):
         key = convert_url_to_oss_key(url)
         return "https://oneflow-static.oss-cn-beijing.aliyuncs.com/" + key
     else:
         return url
 
 
-def should_be_local(url: str):
+def should_be_mirrored(url: str):
     parsed = urlparse(url)
     return (
         not parsed.port
@@ -109,7 +109,7 @@ def upload_one_to_aliyun(url: str):
 def upload_to_aliyun(dir_path):
     urls = scan_urls(dir_path)
     for url in urls:
-        if should_be_local(url):
+        if should_be_mirrored(url):
             print("mirroring: ", url)
             upload_one_to_aliyun(url)
         else:
