@@ -19,7 +19,9 @@ namespace oneflow {
 namespace user_op {
 
 class KernelInitContext;
+class KernelComputeContext;
 class OpKernelState;
+class OpKernelCache;
 
 class CudaGraphSupport {
  public:
@@ -27,6 +29,11 @@ class CudaGraphSupport {
   virtual ~CudaGraphSupport() = default;
 
   virtual bool IsCudaGraphSupported(KernelInitContext* ctx, OpKernelState* state) const {
+    return true;
+  }
+
+  virtual bool IsReadyForCapture(KernelComputeContext* ctx, OpKernelState* state,
+                                 const OpKernelCache* cache) const {
     return true;
   }
 };

@@ -109,7 +109,7 @@ Maybe<void> MirroredTensor::set_data(const std::shared_ptr<Tensor>& other) {
       << "Can not set a global tensor to the data of a local tensor";
   bool old_requires_grad = requires_grad();
   impl_ = mirrored_tensor->impl_;
-  set_requires_grad(old_requires_grad);
+  JUST(set_requires_grad(old_requires_grad));
   grad_fn_node_ = nullptr;
   if (other->is_lazy()) { JUST(this->BorrowTensorName(other.get())); }
   return Maybe<void>::Ok();
