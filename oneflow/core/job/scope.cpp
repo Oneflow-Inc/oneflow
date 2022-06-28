@@ -94,7 +94,7 @@ Maybe<ScopeProto> Scope::MakeChildScopeProto() const {
 Maybe<int64_t> NewScopeSymbolId(
     int64_t old_scope_symbol_id,
     const std::function<void(std::shared_ptr<ScopeProto> new_scope)>& InitNewScopeProto) {
-  CHECK_OR_RETURN(Singleton<symbol::Storage<Scope>>::Get()->Has(old_scope_symbol_id));
+  CHECK_OR_RETURN(Singleton<symbol::Storage<Scope>>::Get()->Has(old_scope_symbol_id));  // NOLINT
   const Scope& old_scope = Singleton<symbol::Storage<Scope>>::Get()->Get(old_scope_symbol_id);
   std::shared_ptr<ScopeProto> new_scope = JUST(old_scope.MakeChildScopeProto());
   InitNewScopeProto(new_scope);

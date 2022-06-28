@@ -226,7 +226,8 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   if (!Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
     if (Singleton<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
-      if (Singleton<EpollCommNet>::Get() != static_cast<EpollCommNet*>(Singleton<CommNet>::Get())) {
+      if (Singleton<EpollCommNet>::Get()
+          != dynamic_cast<EpollCommNet*>(Singleton<CommNet>::Get())) {
         Singleton<CommNet>::Delete();
       }
     }
