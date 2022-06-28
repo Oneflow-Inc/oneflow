@@ -20,6 +20,8 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <cuda.h>
+#include "oneflow/core/device/nccl_util.h"
+#include "oneflow/core/job/eager_nccl_comm_manager.h"
 // CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
 #if CUDA_VERSION >= 11060
 
@@ -40,9 +42,15 @@ long AlignReluAuxLd(long aux_ld) {
          * kAuxReluLdAlignRequirement;
 }
 
+struct Comm {
+  Comm(ncclComm_t comm) : comm(comm) {}
+  ncclComm_t comm;
+};
+
 class CublasFusedMLPKernelCache final : public user_op::OpKernelCache {
  public:
-  CublasFusedMLPKernelCache() {
+  CublasFusedMLPKernelCache()
+      : stream_name_(EagerNcclCommMgr::kDefaultStreamName), if_support_comm_(true) {
     // Just for init.
     OF_CUBLAS_CHECK(cublasLtMatmulDescCreate(&operation_desc, CUBLAS_COMPUTE_32F, CUDA_R_32F));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_a_desc, CUDA_R_32F, 1, 1, 1));
@@ -62,6 +70,48 @@ class CublasFusedMLPKernelCache final : public user_op::OpKernelCache {
   cublasLtMatrixLayout_t cublas_b_desc;
   cublasLtMatrixLayout_t cublas_c_desc;
   cublasLtMatmulPreference_t cublas_preference;
+
+  bool IfCommCreate() const {
+    if (!comm_) { return false; }
+    return true;
+  }
+  ncclComm_t comm() const { return Get().comm; }
+
+  void Init(user_op::KernelCacheContext* ctx) {
+    if (ctx->parallel_ctx().parallel_num() > 1) {
+      const int64_t d_weights_size = ctx->output_size("d_weights");
+      for (int i = 0; i < d_weights_size; i++) {
+        if (!ctx->SbpParallel4ArgNameAndIndex("d_weights", i).has_broadcast_parallel()
+            || !ctx->SbpParallel4ArgNameAndIndex("d_biases", i).has_broadcast_parallel()
+            || !ctx->SbpParallel4ArgNameAndIndex("dy", 0).has_split_parallel()) {
+          if_support_comm_ = false;
+          break;
+        }
+      }
+    } else {
+      if_support_comm_ = false;
+    }
+    if (if_support_comm_
+        && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE", false)) {
+      std::set<std::pair<int64_t, int64_t>> device_set;
+      for (int64_t parallel_id = 0; parallel_id < ctx->parallel_desc().parallel_num();
+           ++parallel_id) {
+        int64_t machine_id = CHECK_JUST(ctx->parallel_desc().MachineId4ParallelId(parallel_id));
+        int64_t device_id = CHECK_JUST(ctx->parallel_desc().DeviceId4ParallelId(parallel_id));
+        device_set.emplace(std::make_pair(machine_id, device_id));
+      }
+      EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+      ncclComm_t comm;
+      comm = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
+      comm_.reset(new Comm(comm));
+    }
+  }
+
+ private:
+  const Comm& Get() const { return *comm_; }
+  std::string stream_name_;
+  std::unique_ptr<Comm> comm_;
+  bool if_support_comm_;
 };
 
 std::shared_ptr<CublasFusedMLPKernelCache> CreateCublasFusedMLPKernelCache() {
