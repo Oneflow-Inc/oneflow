@@ -62,7 +62,6 @@ struct OpCallInstructionUtil final {
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
     if (operand->user_opkernel()->has_state_or_cache()) {
-      auto* call_ctx = operand->mut_call_ctx();
       TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
     }
     OpKernelCompute(operand, device_ctx, state, cache);
