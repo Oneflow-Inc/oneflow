@@ -108,6 +108,7 @@ class Block(object):
 
 
 class ModuleBlock(Block):
+    _unique_identity_dict = dict()
     def __init__(
         self,
         prefix: str = "",
@@ -288,13 +289,26 @@ class ModuleBlock(Block):
 
             def insert_identity(t):
                 assert isinstance(t, Tensor)
-                return oneflow._C.identity(t)
+                return ModuleBlock._get_or_create_identity(t)
 
             args, kwargs = self.__map_io(
                 "input", insert_identity, "insert_identity", *args, **kwargs
             )
 
         return args, kwargs
+    
+    @staticmethod
+    def _get_or_create_identity(input_tensor: Tensor = None):
+        if input_tensor.is_local:
+            key = id(input_tensor)
+        else:
+            key = id(input_tensor) + "-" + str(input_tensor.placement)
+        print("==>key: ", key)
+        
+        if key not in ModuleBlock._unique_identity_dict:
+            ModuleBlock._unique_identity_dict[key] = oneflow._C.identity(input_tensor)
+
+        return ModuleBlock._unique_identity_dict[key]
 
     def add_module(self, name: str, module: Optional[Module]) -> None:
         self.__setattr__(
