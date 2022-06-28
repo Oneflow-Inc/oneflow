@@ -47,6 +47,9 @@ class TestEinsumConsistent(flow.unittest.TestCase):
     @globaltest
     def test_einsum_tensor_contraction(test_case):
         for placement in all_placement():
+            if np.array(placement.ranks).shape == (2, 2):
+                continue
+
             for sbp in all_sbp(placement, max_dim=4):
                 _test_einsum_tensor_contraction(test_case, placement, sbp)
 
