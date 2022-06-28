@@ -459,19 +459,30 @@ class TestTensor(flow.unittest.TestCase):
         dim0 = random(low=2, high=10).to(int)
         dim1 = random(low=3, high=20).to(int)
         dim2 = random(low=2, high=11).to(int)
-        a = random_tensor(ndim=2, dim0=dim0, dim1=dim1)
-        b = random_tensor(ndim=2, dim0=dim1, dim1=dim2)
+        a = random_tensor(ndim=2, dim0=dim0, dim1=dim1).to(device)
+        b = random_tensor(ndim=2, dim0=dim1, dim1=dim2).to(device)
         return a @ b
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5)
-    def test_mm_with_random_data(test_case):
+    def test_mv_with_random_data(test_case):
         device = random_device()
         dim0 = random(low=2, high=10).to(int)
         dim1 = random(low=3, high=20).to(int)
         a = random_tensor(ndim=2, dim0=dim0, dim1=dim1).to(device)
         b = random_tensor(ndim=1, dim0=dim1).to(device)
         return a.mv(b)
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=True)
+    def test_mm_with_random_data(test_case):
+        device = random_device()
+        dim0 = random(low=2, high=10).to(int)
+        dim1 = random(low=3, high=20).to(int)
+        dim2 = random(low=2, high=11).to(int)
+        a = random_tensor(ndim=2, dim0=dim0, dim1=dim1).to(device)
+        b = random_tensor(ndim=2, dim0=dim1, dim1=dim2).to(device)
+        return a.mm(b)
 
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_to_list(test_case):
