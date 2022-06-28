@@ -46,7 +46,6 @@ class BiasAddUserKernel final : public user_op::OpKernel, public user_op::CudaGr
     const int64_t outer_size = a_tensor->shape_view().Count(0, bias_add_axis);
     const int64_t bias_size = a_tensor->shape_view().At(bias_add_axis);
     const int64_t inner_size = a_tensor->shape_view().Count(bias_add_axis + 1);
-    const auto n = a_tensor->shape_view().elem_cnt();
     auto primitive = NewPrimitive(ctx);
     const int64_t src0_dims[3] = {outer_size, bias_size, inner_size};
     const int64_t src1_dims[3] = {1, bias_size, 1};
