@@ -31,11 +31,17 @@ class TestTensor(flow.unittest.TestCase):
     def test_creating_global_tensor(test_case):
         placement = flow.placement("cuda", [0])
         sbp = flow.sbp.broadcast
-        shape = (2, 3)
 
         # Shape -> GlobalTensor
+        shape = (2, 3)
         x = flow.Tensor(*shape, placement=placement, sbp=sbp)
         test_case.assertTrue(x.is_global)
+        test_case.assertTrue(x.size() == shape)
+
+        shape = flow.Size((2, 3))
+        x = flow.Tensor(shape, placement=placement, sbp=sbp)
+        test_case.assertTrue(x.is_global)
+        test_case.assertTrue(x.size() == shape)
 
         # LocalTensor -> GlobalTensor
         x = flow.Tensor(*shape, device="cpu")

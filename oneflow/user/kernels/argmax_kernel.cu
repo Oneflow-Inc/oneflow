@@ -130,11 +130,11 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    const int32_t elem_cnt = in->shape().elem_cnt();
-    const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
+    const int32_t elem_cnt = in->shape_view().elem_cnt();
+    const int32_t instance_size = in->shape_view().At(in->shape_view().NumAxes() - 1);
     const int32_t instance_num = elem_cnt / instance_size;
-    TmpBufferManager<T> buffer_manager(tmp_buffer->shape().elem_cnt(), tmp_buffer->mut_dptr<void>(),
-                                       instance_num);
+    TmpBufferManager<T> buffer_manager(tmp_buffer->shape_view().elem_cnt(),
+                                       tmp_buffer->mut_dptr<void>(), instance_num);
 
     ArgMax(in->dptr<T>(), instance_num, instance_size, buffer_manager.TempStoragePtr(),
            buffer_manager.TempStorageBytes(), buffer_manager.KeyValueOutPtr(),

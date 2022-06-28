@@ -147,6 +147,10 @@ class NcclLogicalSendRecv final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override {
+    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+  }
 };
 
 void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
@@ -222,24 +226,24 @@ void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::O
       if (out_tensor_slice_copier_vec.at(i)) {
         if (is_first_slice) {
           is_first_slice = false;
-          if (recv_elem_cnts.at(i) != out->shape().elem_cnt()) {
+          if (recv_elem_cnts.at(i) != out->shape_view().elem_cnt()) {
             // if not same shape, memset out
             memset_primitive->Launch(ctx->stream(), out->mut_dptr(), 0,
-                                     out->shape().elem_cnt() * GetSizeOfDataType(data_type));
+                                     out->shape_view().elem_cnt() * GetSizeOfDataType(data_type));
           }
           out_tensor_slice_copier_vec.at(i)->Copy(ctx->stream(), out->mut_dptr(),
                                                   recv_out_ptr.at(i));
         } else {
-          if (recv_elem_cnts.at(i) == out->shape().elem_cnt()) {
+          if (recv_elem_cnts.at(i) == out->shape_view().elem_cnt()) {
             add_primitive->Launch(ctx->stream(), out->dptr(), recv_out_ptr.at(i), out->mut_dptr(),
-                                  out->shape().elem_cnt());
+                                  out->shape_view().elem_cnt());
           } else {
             void* out_buf = reinterpret_cast<void*>(buf_ptr + offset);
             memset_primitive->Launch(ctx->stream(), out_buf, 0,
-                                     out->shape().elem_cnt() * GetSizeOfDataType(data_type));
+                                     out->shape_view().elem_cnt() * GetSizeOfDataType(data_type));
             out_tensor_slice_copier_vec.at(i)->Copy(ctx->stream(), out_buf, recv_out_ptr.at(i));
             add_primitive->Launch(ctx->stream(), out->dptr(), out_buf, out->mut_dptr(),
-                                  out->shape().elem_cnt());
+                                  out->shape_view().elem_cnt());
           }
         }
       }

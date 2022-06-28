@@ -103,7 +103,7 @@ void DecodeWorker(const std::string& image_feature_name, const std::string& labe
     CHECK(receive_status == kBufferStatusSuccess);
     OFRecord record;
     CHECK(record.ParseFromArray(serialized_record.data<char>(),
-                                serialized_record.shape().elem_cnt()));
+                                serialized_record.shape_view().elem_cnt()));
     ImageClassificationDataInstance instance;
     DecodeImageFromOFRecord(record, image_feature_name, color_space, &instance.image);
     DecodeLabelFromFromOFRecord(record, label_feature_name, &instance.label);
