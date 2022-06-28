@@ -109,12 +109,15 @@ Maybe<void> NcclSendRecvBoxingOp::InferOutBlobDescs(
   const NcclSendRecvBoxingOpConf& conf = this->op_conf().nccl_send_recv_boxing_conf();
   const Shape& logical_shape = Shape(conf.logical_shape());
   if (conf.has_input()) {
-    const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+    // const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
     const NdSbp& src_nd_sbp = conf.src_nd_sbp();
     const ParallelDesc& src_parallel_desc = ParallelDesc(conf.src_parallel_conf());
-    std::shared_ptr<Shape> in_shape =
-        JUST(GetPhysicalShape(logical_shape, src_nd_sbp, src_parallel_desc, 0));
-    CHECK_EQ_OR_RETURN(*in_shape, in_blob_desc->shape());
+    // std::shared_ptr<Shape> in_shape =
+    JUST(GetPhysicalShape(logical_shape, src_nd_sbp, src_parallel_desc, 0));
+    // We do not check the shape of "in" here since we might have inconsistency
+    // For example, a blob with shape [4] is transferring from [3]: S0 to [2, 2]: (B, S0)
+    // *in_shape = [2] and in_blob_desc->shape() = [1]
+    // CHECK_EQ_OR_RETURN(*in_shape, in_blob_desc->shape());
   }
   if (conf.has_output()) {
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
