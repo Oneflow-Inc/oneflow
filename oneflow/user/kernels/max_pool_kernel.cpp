@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <unistd.h>
 #include "oneflow/user/kernels/max_pool_kernel_util.h"
 #include "oneflow/user/kernels/onednn_pool_kernel_util.h"
 
@@ -219,17 +220,17 @@ class MaxPool1dKernel final : public user_op::OpKernel {
 
 #ifdef WITH_ONEDNN
     if (IsOneDnnApplicable<device_type, T>(params_3d)) {
-      dm::dims src_dims = {1, 1, x->shape_view().At(0) * x->shape_view().At(1), x->shape_view().At(2)};
-      dm::dims dst_dims = {1, 1, y->shape_view().At(0) * y->shape_view().At(1), y->shape_view().At(2)};
-      dm::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
-      dm::dims strides_dims = {1, params_3d.stride_3d()[2]};
-      dm::dims padding_dims_l = {0, params_3d.padding()[2]};
-      dm::dims padding_dims_r = {0, params_3d.padding()[2]};
-      dm::dims dilation = {0, params_3d.dilation_3d()[2] - 1};
+      dm::dims src_dims = {x->shape_view().At(0), x->shape_view().At(1), x->shape_view().At(2)};
+      dm::dims dst_dims = {y->shape_view().At(0), y->shape_view().At(1), y->shape_view().At(2)};
+      dm::dims kernel_dims = {params_3d.pool_size_3d()[2]};
+      dm::dims strides_dims = {params_3d.stride_3d()[2]};
+      dm::dims padding_dims_l = {params_3d.padding()[2]};
+      dm::dims padding_dims_r = {params_3d.padding()[2]};
+      dm::dims dilation = {params_3d.dilation_3d()[2] - 1};
 
       OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
           ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dm::format_tag::nchw, src, dest, indice_ptr,
+          padding_dims_r, dilation, dm::format_tag::ncw, src, dest, indice_ptr,
           dnnl::algorithm::pooling_max);
     } else {
 #endif
@@ -279,18 +280,46 @@ class MaxPool1dGradKernel final : public user_op::OpKernel {
     T* dest = dx->mut_dptr<T>();
 #ifdef WITH_ONEDNN
     if (IsOneDnnApplicable<device_type, T>(params_3d)) {
-      dm::dims diff_dst_dims = {1, 1, dy->shape_view().At(0) * dy->shape_view().At(1), dy->shape_view().At(2)};
-      dm::dims diff_src_dims = {1, 1, dx->shape_view().At(0) * dx->shape_view().At(1), dx->shape_view().At(2)};
-      dm::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
-      dm::dims strides_dims = {1, params_3d.stride_3d()[2]};
-      dm::dims padding_dims_l = {0, params_3d.padding()[2]};
-      dm::dims padding_dims_r = {0, params_3d.padding()[2]};
-      dm::dims dilation = {0, params_3d.dilation_3d()[2] - 1};
+      dm::dims diff_dst_dims = {2,1,1,1};
+      dm::dims diff_src_dims = {2,1,1,1};
+      dm::dims kernel_dims = {1,1};
+      dm::dims strides_dims = {1,1};
+      dm::dims padding_dims_l = {0,0};
+      dm::dims padding_dims_r = {0,0};
+      dm::dims dilation = {0,0};
+
+      float* src2 = new float[200];
+      std::fill_n(src2, 2, 1);
+      float* dst2 = new float[200];
+      setenv("LOCAL_RANK", "0", true);
+      setenv("RANK", "0", true);
 
       OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
           ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dm::format_tag::nchw, src, dest, indice_ptr,
+          padding_dims_r, dilation, dm::format_tag::nchw, src2, dst2, indice_ptr,
           dnnl::algorithm::pooling_max);
+      // LOG(INFO) << "src ptr:" << src;
+      // LOG(INFO) << "dest ptr:" << dest;
+      LOG(INFO) << "indice ptr:" << indice_ptr;
+      LOG(INFO) << "src size: " << dy->shape_view();
+      LOG(INFO) << "dest size: " << dx->shape_view();
+      LOG(INFO) << "diff_src_dims = " << diff_src_dims;
+      LOG(INFO) << "diff_dst_dims = " << diff_dst_dims;
+      LOG(INFO) << "kernel_dims = " << kernel_dims;
+      LOG(INFO) << "strides_dims = " << strides_dims;
+      LOG(INFO) << "padding_dims_l = " << padding_dims_l;
+      LOG(INFO) << "padding_dims_r = " << padding_dims_r;
+      LOG(INFO) << "dilation = " << dilation;
+      LOG(INFO) << "src[0] = " << src2[0];
+      LOG(INFO) << "src[1] = " << src2[1];
+      LOG(INFO) << "src[2] = " << src2[2];
+      LOG(INFO) << "src[3] = " << src2[3];
+      LOG(INFO) << "dest[0] = " << dst2[0];
+      LOG(INFO) << "dest[1] = " << dst2[1];
+      LOG(INFO) << "dest[2] = " << dst2[2];
+      LOG(INFO) << "dest[3] = " << dst2[3];
+      setenv("LOCAL_RANK", "1", true);
+      setenv("RANK", "1", true);
     } else {
 #endif
       DimVector dy_vector(2);

@@ -1057,7 +1057,16 @@ def check_tensor_equality(
         if not np.allclose(
             torch_grad, flow_grad, rtol=rtol, atol=atol, equal_nan=True,
         ):
-            print_note_fake_program(detail=True)
+            def print_rank_0(x):
+                if flow.env.get_rank() == 0:
+                    print(x)
+            print_rank_0("Grad wrong")
+            print_rank_0("pytorch grad:")
+            print_rank_0(torch_grad)
+            print_rank_0("oneflow grad")
+            print_rank_0(flow_grad)
+            if flow.env.get_rank() == 0:
+                print_note_fake_program(detail=True)
             return False
     torch_numpy = torch_tensor.detach().cpu().numpy()
     oneflow_numpy = flow_tensor.numpy()
@@ -1069,6 +1078,7 @@ def check_tensor_equality(
         equality_res = equality_res and (torch_numpy.dtype == oneflow_numpy.dtype)
 
     if equality_res == False:
+        print("Tensor itself(forward) wrong")
         print_note_fake_program(detail=True)
         print("---------Tensor Shape--------")
         print(torch_tensor.shape)
