@@ -130,15 +130,15 @@ void CheckInplaceRegstDescId(const TaskProto& task_proto) {
 }
 
 void show_cached_nego_ready_msg(const HashMap<int64_t, oneflow::ActorMsg>& cached_nego_ready_msg, int64_t actor_id, HashMap<ActorMsgType, std::string>& print_actor_msg_type, HashMap<CollectiveNegoCmd, std::string>& print_nego_cmd) {
-  LOG(ERROR) << "========= show begin ======== " << actor_id;
+  VLOG(2) << "========= show begin ======== " << actor_id;
   if (cached_nego_ready_msg.empty()) {
-    LOG(ERROR) << "Actor " << actor_id << " cached_nego_ready_msg is empty";
+    VLOG(2) << "Actor " << actor_id << " cached_nego_ready_msg is empty";
   } else {
     FOR_EACH(src_actor_id7msg, cached_nego_ready_msg) {
-      LOG(ERROR) << "Actor " << actor_id << " in the cached_nego_ready_msg, src: " << src_actor_id7msg->first << " dst: " << src_actor_id7msg->second.dst_actor_id() << " msg.type:  " << print_actor_msg_type[src_actor_id7msg->second.msg_type()] << " collective_nego_cmd: " << print_nego_cmd[src_actor_id7msg->second.collective_nego_cmd()];
+      VLOG(2) << "Actor " << actor_id << " in the cached_nego_ready_msg, src: " << src_actor_id7msg->first << " dst: " << src_actor_id7msg->second.dst_actor_id() << " msg.type:  " << print_actor_msg_type[src_actor_id7msg->second.msg_type()] << " collective_nego_cmd: " << print_nego_cmd[src_actor_id7msg->second.collective_nego_cmd()];
     }
   }
-  LOG(ERROR) << "========= show end ======== " << actor_id;
+  VLOG(2) << "========= show end ======== " << actor_id;
 }
 
 }  // namespace
@@ -441,8 +441,8 @@ int OfCollectiveActor::HandlerNormal(const ActorMsg& msg) {
           }
         } else {
           // non-leaf need to check whether there is cached ds_ready msg
-          VLOG(2) << "Actor " << actor_id_  << " ready to process cached_nego_ready_msg_, then show_cached_nego_ready_msg:";
-          if (ParseBooleanFromEnv("ONEFLOW_OFCCL_SHOW_NEGO_LOG", false)) show_cached_nego_ready_msg(cached_nego_ready_msg_, actor_id_, print_actor_msg_type_, print_nego_cmd_);
+          VLOG(2) << "Actor " << actor_id_  << " ready to process cached_nego_ready_msg_, then show_cached_nego_ready_msg: cached_nego_ready_msg_.size() is " << cached_nego_ready_msg_.size();
+          // show_cached_nego_ready_msg(cached_nego_ready_msg_, actor_id_, print_actor_msg_type_, print_nego_cmd_);
           
           int64_t cached_nego_ready_msg_id = 0;
           FOR_EACH(src_actor_id7msg, cached_nego_ready_msg_) {
@@ -454,8 +454,8 @@ int OfCollectiveActor::HandlerNormal(const ActorMsg& msg) {
 
           cached_nego_ready_msg_.clear();
 
-          VLOG(2) << "Actor " << actor_id_  << " clear cached_nego_ready_msg_, then show_cached_nego_ready_msg:";
-          if (ParseBooleanFromEnv("ONEFLOW_OFCCL_SHOW_NEGO_LOG", false)) show_cached_nego_ready_msg(cached_nego_ready_msg_, actor_id_, print_actor_msg_type_, print_nego_cmd_);
+          VLOG(2) << "Actor " << actor_id_  << " clear cached_nego_ready_msg_, then show_cached_nego_ready_msg: cached_nego_ready_msg_.size() is " << cached_nego_ready_msg_.size();
+          // show_cached_nego_ready_msg(cached_nego_ready_msg_, actor_id_, print_actor_msg_type_, print_nego_cmd_);
         }
       }
     }
@@ -518,8 +518,8 @@ void OfCollectiveActor::ReactToNegoCmd(const ActorMsg& msg) {
         case CollectiveStatus::kInvalid:
           cached_nego_ready_msg_.emplace(src_actor_id, msg);
 
-          VLOG(2) << "Actor " << actor_id_  << " get kCollectiveReady when kInvalid from " << src_actor_id << ", then show_cached_nego_ready_msg:";
-          if (ParseBooleanFromEnv("ONEFLOW_OFCCL_SHOW_NEGO_LOG", false)) show_cached_nego_ready_msg(cached_nego_ready_msg_, actor_id_, print_actor_msg_type_, print_nego_cmd_);
+          VLOG(2) << "Actor " << actor_id_  << " get kCollectiveReady when kInvalid from " << src_actor_id << ", then show_cached_nego_ready_msg: cached_nego_ready_msg_.size() is " << cached_nego_ready_msg_.size();
+          // show_cached_nego_ready_msg(cached_nego_ready_msg_, actor_id_, print_actor_msg_type_, print_nego_cmd_);
         break;
 
         case CollectiveStatus::kLocalReady:
