@@ -49,7 +49,7 @@ Maybe<void> FuseModelUpdateCastOpsPass::Apply(const OpGraph& op_graph,
   op_graph.ForEachNode([&](OpNode* op_node) {
     const auto& op_conf = op_node->op().op_conf();
     if (!op_conf.has_variable_conf()) { return; }
-    LogicalBlobId model_half_lbi;
+    LogicalBlobId model_copy_lbi;
 
     for (OpEdge* find_cast_edge : op_node->out_edges()) {
       OpNode* find_cast_node = find_cast_edge->dst_node();
@@ -85,7 +85,7 @@ Maybe<void> FuseModelUpdateCastOpsPass::Apply(const OpGraph& op_graph,
             find_model_update_update_node->op().op_conf());
 
         // Here we find cast and model_update node, Replace cast as mutable_cast_once, and add
-        // model_half to model_update node.
+        // model_copy to model_update node.
         user_op::UserOpConfWrapperBuilder fused_cast_op_builder(cast_user_conf.op_name());
         fused_cast_op_builder.OpTypeName("mutable_cast_once")
             .Input("in", cast_user_conf.input("in", 0))
@@ -100,7 +100,7 @@ Maybe<void> FuseModelUpdateCastOpsPass::Apply(const OpGraph& op_graph,
         job_builder->MutOpsOnlyOnce({new_cast_op_conf});
 
         const user_op::UserOpConfWrapper new_cast_user_conf(new_cast_op_conf);
-        model_half_lbi = GenLogicalBlobId(new_cast_user_conf.output("out", 0));
+        model_copy_lbi = GenLogicalBlobId(new_cast_user_conf.output("out", 0));
         user_op::UserOpConfWrapperBuilder fused_model_update_op_builder(
             model_update_user_conf.op_name());
         if (IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "sgd_update")) {
@@ -142,7 +142,7 @@ Maybe<void> FuseModelUpdateCastOpsPass::Apply(const OpGraph& op_graph,
         } else {
           UNIMPLEMENTED() << "Need support more optimizers. ";
         }
-        fused_model_update_op_builder.Input("model_half", GenLogicalBlobName(model_half_lbi));
+        fused_model_update_op_builder.Input("model_copy", GenLogicalBlobName(model_copy_lbi));
         CHECK(model_update_user_conf.op_conf().has_scope_symbol_id());
         fused_model_update_op_builder.ScopeSymbolId(
             model_update_user_conf.op_conf().scope_symbol_id());
