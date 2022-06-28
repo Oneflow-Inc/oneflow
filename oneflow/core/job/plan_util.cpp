@@ -782,11 +782,11 @@ class StarNegoTreeBuilder : public NegoTreeBuilder {
       if (task_id == root) {
         nego_tree_info.set_upstream_id(-1);
         *(nego_tree_info.mutable_downstream_id()) = StdVec2PbRf(
-          std::move(std::vector<int64_t>(task_ids.begin() + 1, task_ids.end())));
+          std::vector<int64_t>(task_ids.begin() + 1, task_ids.end()));
       } else {
         nego_tree_info.set_upstream_id(root);
         *(nego_tree_info.mutable_downstream_id()) = StdVec2PbRf(
-          std::move(std::vector<int64_t>(0)));
+          std::vector<int64_t>(0));
       }
     }
 
@@ -821,17 +821,17 @@ class ChainNegoTreeBuilder : public NegoTreeBuilder {
         // root
         nego_tree_info.set_upstream_id(-1);
         *(nego_tree_info.mutable_downstream_id()) = StdVec2PbRf(
-          std::move(std::vector<int64_t>({task_ids[i + 1]})));
+          std::vector<int64_t>({task_ids[i + 1]}));
       } else if (i == info.op_desc.num_ranks() - 1) {
         // leave
         nego_tree_info.set_upstream_id(task_ids[i - 1]);
         *(nego_tree_info.mutable_downstream_id()) = StdVec2PbRf(
-          std::move(std::vector<int64_t>(0)));
+          std::vector<int64_t>(0));
       } else {
         // middle
         nego_tree_info.set_upstream_id(task_ids[i - 1]);
         *(nego_tree_info.mutable_downstream_id()) = StdVec2PbRf(
-          std::move(std::vector<int64_t>({task_ids[i + 1]})));
+          std::vector<int64_t>({task_ids[i + 1]}));
       }
     }
     
