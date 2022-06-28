@@ -21,7 +21,6 @@ namespace oneflow {
 /* static */ Maybe<void> AddNOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const auto& in_0 = ctx->InputTensorDesc("in", 0);
   auto* out = ctx->OutputTensorDesc("out", 0);
-
   CHECK_NOTNULL_OR_RETURN(out);  // NOLINT(maybe-need-error-msg)
   for (const auto& pair : ctx->inputs()) {
     const auto& cur_in = ctx->InputTensorDesc(pair.first, pair.second);
@@ -57,7 +56,7 @@ namespace oneflow {
   for (const auto& pair : ctx->inputs()) {
     const auto& cur_in = ctx->InputTensorDesc(pair.first, pair.second);
     CHECK_EQ_OR_RETURN(in_0.data_type(), cur_in.data_type())
-        << ctx->op_name() << Error::RuntimeError()
+        << Error::RuntimeError() << ctx->op_name()
         << "expected all tenser to have same type, but found " << DataType_Name(in_0.data_type())
         << " and " << DataType_Name(cur_in.data_type());
   }
@@ -68,6 +67,7 @@ namespace oneflow {
 /*static*/ Maybe<void> AddNOp::CheckAttr(const user_op::UserOpDefWrapper&,
                                          const user_op::UserOpConfWrapper& op_conf) {
   CHECK_OR_RETURN(op_conf.input_size("in") >= 2)
+      << Error::RuntimeError()
       << "The number of input tensors should be greater than or equal to 2";
   return Maybe<void>::Ok();
 }
