@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -1137,7 +1138,10 @@ class FusedMLPGradFunctor {
     std::copy(weights.begin(), weights.end(), input.begin() + 2);
     std::copy(cublas_aux.begin(), cublas_aux.end(), input.begin() + 2 + weight_size);
     std::copy(hidden.begin(), hidden.end(), input.begin() + 2 + 2 * weight_size);
+#if CUDA_VERSION >= 11060
     return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_[weight_size], input);
+#endif
+    UNIMPLEMENTED_THEN_RETURN() << "Only Support in CUDA_VERSION >= 11060";
   }
 
  private:

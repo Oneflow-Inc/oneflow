@@ -30,25 +30,7 @@ class LazyJobDeviceCtx final : public DeviceCtx {
   LazyJobDeviceCtx() = default;
   ~LazyJobDeviceCtx() override = default;
 
-#ifdef WITH_CUDA
-  cudaStream_t cuda_stream() const override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  cublasHandle_t cublas_handle() const override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  cudnnHandle_t cudnn_handle() const override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-#endif
-
-  vm::Allocator* mut_allocator() override {
-    UNIMPLEMENTED();
-    return (vm::Allocator*)nullptr;
-  }
+  vm::Allocator* mut_allocator() override { return (vm::Allocator*)nullptr; }
 
   DeviceType device_type() const override {
     UNIMPLEMENTED();
