@@ -38,9 +38,9 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
   INTRUSIVE_FOR_EACH(access, access_list) {
     CHECK_GT(access->ref_cnt(), 1);
     access_list->Erase(access.Mutable());
-    auto* mirrored_object = access->mut_mirrored_object();
+    auto* local_object = access->mut_local_object();
     if (unlikely(!access->rw_mutexed_object_access_hook().empty())) {
-      mirrored_object->mut_access_list()->Erase(access.Mutable());
+      local_object->mut_access_list()->Erase(access.Mutable());
     }
   }
   auto* out_edges = instruction->mut_out_edges();
@@ -68,7 +68,7 @@ void VirtualMachineEngine::HandleLocalPending() {
     if (unlikely(instruction_type.IsBarrier())) {
       mut_barrier_instruction_list()->PushBack(instruction);
     } else {
-      ConsumeMirroredObjects(instruction);
+      ConsumeLocalObjects(instruction);
       if (likely(Dispatchable(instruction))) {
         mut_ready_instruction_list()->PushBack(instruction);
       }
@@ -187,13 +187,13 @@ void VirtualMachineEngine::ReleaseFinishedInstructions(const ScheduleCtx& schedu
   }
 }
 
-DependenceAccess* VirtualMachineEngine::AccessMirroredObject(OperandAccessType access_type,
-                                                             MirroredObject* mirrored_object,
-                                                             Instruction* instruction) {
-  auto access = access_pool_.make_shared(instruction, mirrored_object, access_type);
+DependenceAccess* VirtualMachineEngine::AccessLocalObject(OperandAccessType access_type,
+                                                          LocalObject* local_object,
+                                                          Instruction* instruction) {
+  auto access = access_pool_.make_shared(instruction, local_object, access_type);
   auto* ptr = access.Mutable();
   instruction->mut_access_list()->PushBack(ptr);
-  mirrored_object->mut_access_list()->EmplaceBack(std::move(access));
+  local_object->mut_access_list()->EmplaceBack(std::move(access));
   return ptr;
 }
 
@@ -208,9 +208,9 @@ void VirtualMachineEngine::TryConnectInstruction(Instruction* src_instruction,
 
 void VirtualMachineEngine::ConnectInstructionsByWrite(DependenceAccess* dst_access) {
   CHECK(dst_access->is_mut_operand());
-  auto* mirrored_object = dst_access->mut_mirrored_object();
+  auto* local_object = dst_access->mut_local_object();
   auto* dst_instruction = dst_access->mut_instruction();
-  auto* access_list = mirrored_object->mut_access_list();
+  auto* access_list = local_object->mut_access_list();
   if (likely(access_list->Begin() == dst_access)) { return; }
   INTRUSIVE_FOR_EACH_PTR(src_access, access_list) {
     if (unlikely(src_access == dst_access)) { break; }
@@ -221,9 +221,9 @@ void VirtualMachineEngine::ConnectInstructionsByWrite(DependenceAccess* dst_acce
 
 void VirtualMachineEngine::ConnectInstructionsByRead(DependenceAccess* dst_access) {
   CHECK(dst_access->is_const_operand());
-  auto* mirrored_object = dst_access->mut_mirrored_object();
+  auto* local_object = dst_access->mut_local_object();
   auto* dst_instruction = dst_access->mut_instruction();
-  auto* first = mirrored_object->mut_access_list()->Begin();
+  auto* first = local_object->mut_access_list()->Begin();
   if (first->is_mut_operand()) {
     TryConnectInstruction(first->mut_instruction(), dst_instruction);
   } else if (first->is_const_operand()) {
@@ -233,21 +233,19 @@ void VirtualMachineEngine::ConnectInstructionsByRead(DependenceAccess* dst_acces
   }
 }
 
-void VirtualMachineEngine::ConsumeMirroredObjects(Instruction* instruction) {
+void VirtualMachineEngine::ConsumeLocalObjects(Instruction* instruction) {
   const auto& phy_instr_operand = CHECK_NOTNULL(instruction->phy_instr_operand());
   auto* stream_sequential_dep = phy_instr_operand->stream_sequential_dependence();
   if (likely(stream_sequential_dep != nullptr)) {
     ConnectInstructionsByWrite(
-        AccessMirroredObject(kMutableOperandAccess, stream_sequential_dep, instruction));
+        AccessLocalObject(kMutableOperandAccess, stream_sequential_dep, instruction));
   }
   // Connect instructions by write before connecting by read.
-  for (auto* mirrored_object : phy_instr_operand->output_dependences()) {
-    ConnectInstructionsByWrite(
-        AccessMirroredObject(kMutableOperandAccess, mirrored_object, instruction));
+  for (auto* local_object : phy_instr_operand->output_dependences()) {
+    ConnectInstructionsByWrite(AccessLocalObject(kMutableOperandAccess, local_object, instruction));
   }
-  for (auto* mirrored_object : phy_instr_operand->input_dependences()) {
-    ConnectInstructionsByRead(
-        AccessMirroredObject(kConstOperandAccess, mirrored_object, instruction));
+  for (auto* local_object : phy_instr_operand->input_dependences()) {
+    ConnectInstructionsByRead(AccessLocalObject(kConstOperandAccess, local_object, instruction));
   }
 }
 

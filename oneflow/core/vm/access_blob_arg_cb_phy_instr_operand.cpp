@@ -23,18 +23,18 @@ namespace oneflow {
 
 namespace vm {
 
-void AccessBlobArgCbPhyInstrOperand::ForEachConstMirroredObject(
-    const std::function<void(MirroredObject* compute)>& DoEach) const {
+void AccessBlobArgCbPhyInstrOperand::ForEachConstLocalObject(
+    const std::function<void(LocalObject* compute)>& DoEach) const {
   if (modifier_ == "const") { DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object())); }
 }
 
-void AccessBlobArgCbPhyInstrOperand::ForEachMutMirroredObject(
-    const std::function<void(MirroredObject* compute)>& DoEach) const {
+void AccessBlobArgCbPhyInstrOperand::ForEachMutLocalObject(
+    const std::function<void(LocalObject* compute)>& DoEach) const {
   if (modifier_ == "mut") { DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object())); }
 }
 
-void AccessBlobArgCbPhyInstrOperand::ForEachMut2MirroredObject(
-    const std::function<void(MirroredObject* compute)>& DoEach) const {
+void AccessBlobArgCbPhyInstrOperand::ForEachMut2LocalObject(
+    const std::function<void(LocalObject* compute)>& DoEach) const {
   if (modifier_ == "mut2") { DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object())); }
 }
 

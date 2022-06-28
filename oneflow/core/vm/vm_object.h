@@ -25,7 +25,7 @@ namespace oneflow {
 namespace vm {
 
 class Instruction;
-class MirroredObject;
+class LocalObject;
 
 enum OperandAccessType {
   kConstOperandAccess = 0,
@@ -41,9 +41,9 @@ class DependenceAccess final
   // Getters
   OperandAccessType access_type() const { return access_type_; }
   bool has_instruction() const { return instruction_ != nullptr; }
-  bool has_mirrored_object() const { return mirrored_object_ != nullptr; }
+  bool has_local_object() const { return local_object_ != nullptr; }
   const Instruction& instruction() const { return *instruction_; }
-  const MirroredObject& mirrored_object() const { return *mirrored_object_; }
+  const LocalObject& local_object() const { return *local_object_; }
   const intrusive::ListHook& rw_mutexed_object_access_hook() const {
     return rw_mutexed_object_access_hook_;
   }
@@ -51,15 +51,14 @@ class DependenceAccess final
   // Setters
   void set_access_type(OperandAccessType val) { access_type_ = val; }
   void set_instruction(Instruction* val) { instruction_ = val; }
-  void set_mirrored_object(MirroredObject* val) { mirrored_object_ = val; }
+  void set_local_object(LocalObject* val) { local_object_ = val; }
   void clear_instruction() { instruction_ = nullptr; }
-  void clear_mirrored_object() { mirrored_object_ = nullptr; }
+  void clear_local_object() { local_object_ = nullptr; }
   Instruction* mut_instruction() { return instruction_; }
-  MirroredObject* mut_mirrored_object() { return mirrored_object_; }
+  LocalObject* mut_local_object() { return local_object_; }
 
   // methods
-  void __Init__(Instruction* instruction, MirroredObject* mirrored_object,
-                OperandAccessType access_type);
+  void __Init__(Instruction* instruction, LocalObject* local_object, OperandAccessType access_type);
 
   bool is_const_operand() const { return kConstOperandAccess == access_type(); }
   bool is_mut_operand() const { return kMutableOperandAccess == access_type(); }
@@ -74,14 +73,14 @@ class DependenceAccess final
       : intrusive_ref_(),
         access_type_(),
         instruction_(),
-        mirrored_object_(),
+        local_object_(),
         instruction_access_hook_(),
         rw_mutexed_object_access_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
   OperandAccessType access_type_;
   Instruction* instruction_;
-  MirroredObject* mirrored_object_;
+  LocalObject* local_object_;
 
  public:
   // list hooks
@@ -89,7 +88,7 @@ class DependenceAccess final
   intrusive::ListHook rw_mutexed_object_access_hook_;
 };  // NOLINT
 
-class MirroredObject final : public intrusive::Base {
+class LocalObject final : public intrusive::Base {
  public:
   // types
   using DependenceAccessList =
@@ -107,7 +106,7 @@ class MirroredObject final : public intrusive::Base {
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  MirroredObject() : intrusive_ref_(), access_list_() {}
+  LocalObject() : intrusive_ref_(), access_list_() {}
 
   intrusive::Ref intrusive_ref_;
   // list hooks

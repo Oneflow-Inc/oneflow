@@ -5,9 +5,9 @@ message MirroredParallel {
 }
 
 message OptMirroredParallel {
-  optional MirroredParallel mirrored_parallel = 1;
+  optional MirroredParallel local_parallel = 1;
 }
 
 message MirroredSignature {
-  map<string, OptMirroredParallel> bn_in_op2opt_mirrored_parallel = 1;
+  map<string, OptMirroredParallel> bn_in_op2opt_local_parallel = 1;
 }

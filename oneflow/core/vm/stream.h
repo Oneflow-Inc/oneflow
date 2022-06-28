@@ -30,7 +30,7 @@ namespace vm {
 
 class ThreadCtx;
 class StreamType;
-class MirroredObject;
+class LocalObject;
 
 class Stream final : public intrusive::Base {
  public:
@@ -56,18 +56,18 @@ class Stream final : public intrusive::Base {
 
   // methods
   void __Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamRole stream_role,
-                const intrusive::shared_ptr<MirroredObject>& schedule_local_dep_object,
-                const Optional<intrusive::shared_ptr<MirroredObject>>& transport_local_dep_object);
+                const intrusive::shared_ptr<LocalObject>& schedule_local_dep_object,
+                const Optional<intrusive::shared_ptr<LocalObject>>& transport_local_dep_object);
   int64_t device_id() const;
   Symbol<Device> device() const { return device_; }
   StreamRole stream_role() const { return stream_role_; }
   const StreamType& stream_type() const;
 
-  const intrusive::shared_ptr<MirroredObject>& schedule_local_dep_object() const {
+  const intrusive::shared_ptr<LocalObject>& schedule_local_dep_object() const {
     return schedule_local_dep_object_;
   }
 
-  const Optional<intrusive::shared_ptr<MirroredObject>>& transport_local_dep_object() const {
+  const Optional<intrusive::shared_ptr<LocalObject>>& transport_local_dep_object() const {
     return transport_local_dep_object_;
   }
 
@@ -98,8 +98,8 @@ class Stream final : public intrusive::Base {
   // lists
   DispatchedInstructionList running_instruction_list_;
 
-  intrusive::shared_ptr<MirroredObject> schedule_local_dep_object_;
-  Optional<intrusive::shared_ptr<MirroredObject>> transport_local_dep_object_;
+  intrusive::shared_ptr<LocalObject> schedule_local_dep_object_;
+  Optional<intrusive::shared_ptr<LocalObject>> transport_local_dep_object_;
 
  public:
   // list hooks

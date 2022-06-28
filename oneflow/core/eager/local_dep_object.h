@@ -25,7 +25,7 @@ limitations under the License.
 namespace oneflow {
 
 // LocalDepObject helps VirtualMachineEngine building instruction edges
-using LocalDepObject = vm::MirroredObject;
+using LocalDepObject = vm::LocalObject;
 
 intrusive::shared_ptr<LocalDepObject> NewLocalDepObject();
 
