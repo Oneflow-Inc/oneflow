@@ -24,7 +24,7 @@ from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgDict
 
 
-def _test_consistent_randint(test_case, shape, placement, sbp, dtype):
+def _test_global_randint(test_case, shape, placement, sbp, dtype):
     x = flow.randint(1, 10, shape, placement=placement, sbp=sbp, dtype=dtype)
 
     test_case.assertEqual(x.shape, flow.Size(shape))
@@ -69,7 +69,7 @@ class TestRandintGlobal(flow.unittest.TestCase):
                     placement, max_dim=len(shape), except_partial_sum=True
                 ):
                     for dtype in dtypes:
-                        _test_consistent_randint(
+                        _test_global_randint(
                             test_case, shape, placement, sbp, dtype
                         )
 

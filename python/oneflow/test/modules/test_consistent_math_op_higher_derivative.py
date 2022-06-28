@@ -47,13 +47,13 @@ def _consistent_math_op_grad_grad_impl(test_case, op_name, placement, sbp):
 
 class TestGlobalMathOpHigherDerivative(flow.unittest.TestCase):
     @globaltest
-    def test_consistent_sin_grad_grad(test_case):
+    def test_global_sin_grad_grad(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _consistent_math_op_grad_grad_impl(test_case, "sin", placement, sbp)
 
     @globaltest
-    def test_consistent_cos_grad_grad(test_case):
+    def test_global_cos_grad_grad(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _consistent_math_op_grad_grad_impl(test_case, "cos", placement, sbp)

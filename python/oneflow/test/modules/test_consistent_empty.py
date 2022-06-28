@@ -24,7 +24,7 @@ from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgDict
 
 
-def _test_consistent_empty(test_case, func, shape, placement, sbp):
+def _test_global_empty(test_case, func, shape, placement, sbp):
     func2 = None
     if func == "empty":
         func = flow.empty
@@ -85,7 +85,7 @@ class TestEmptyGlobal(flow.unittest.TestCase):
                     for sbp in all_sbp(
                         placement, max_dim=len(shape), except_partial_sum=True
                     ):
-                        _test_consistent_empty(test_case, func, shape, placement, sbp)
+                        _test_global_empty(test_case, func, shape, placement, sbp)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n2d()

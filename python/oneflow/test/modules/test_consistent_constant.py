@@ -25,7 +25,7 @@ from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgDict
 
 
-def _test_consistent_constant(test_case, func, shape, placement, sbp):
+def _test_global_constant(test_case, func, shape, placement, sbp):
     func2 = None
     if func == "ones":
         func = flow.ones
@@ -109,7 +109,7 @@ class TestConstantGlobal(flow.unittest.TestCase):
                     for sbp in all_sbp(
                         placement, max_dim=len(shape), except_partial_sum=True
                     ):
-                        _test_consistent_constant(
+                        _test_global_constant(
                             test_case, func, shape, placement, sbp
                         )
 

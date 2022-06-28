@@ -24,7 +24,7 @@ from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgDict
 
 
-def _test_consistent_coin_flip(
+def _test_global_coin_flip(
     test_case, batch_size, random_seed, probability, placement, sbp
 ):
     m = flow.nn.CoinFlip(
@@ -72,7 +72,7 @@ class TestCoinFlipGlobal(flow.unittest.TestCase):
                     continue
 
                 for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
-                    _test_consistent_coin_flip(
+                    _test_global_coin_flip(
                         test_case, **args, placement=placement, sbp=sbp
                     )
 

@@ -23,7 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgDict
 
 
-def _test_consistent_randperm(test_case, N, placement, sbp, dtype):
+def _test_global_randperm(test_case, N, placement, sbp, dtype):
     x = flow.randperm(N, placement=placement, sbp=sbp, dtype=dtype)
     # TODO:Synchronously get a global random seed, and then each rank sets its own seed in manual_seeds
     test_case.assertEqual(x.dtype, dtype)
@@ -64,7 +64,7 @@ class TestRandpermGlobal(flow.unittest.TestCase):
             for placement in all_placement():
                 for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
                     for dtype in Dtypes:
-                        _test_consistent_randperm(test_case, N, placement, sbp, dtype)
+                        _test_global_randperm(test_case, N, placement, sbp, dtype)
 
     @flow.unittest.skip_unless_1n2d()
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

@@ -25,7 +25,7 @@ from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgDict
 
 
-def _test_consistent_randn(test_case, shape, placement, sbp):
+def _test_global_randn(test_case, shape, placement, sbp):
     x1 = flow.randn(*shape, placement=placement, sbp=sbp)
     x2 = flow.randn(*shape, placement=placement, sbp=sbp)
     test_case.assertTrue(not np.allclose(x1.numpy(), x2.numpy(), atol=1e-4, rtol=1e-4))
@@ -93,7 +93,7 @@ class TestRandnGlobal(flow.unittest.TestCase):
                 for sbp in all_sbp(
                     placement, max_dim=len(shape), except_partial_sum=True
                 ):
-                    _test_consistent_randn(test_case, shape, placement, sbp)
+                    _test_global_randn(test_case, shape, placement, sbp)
                     _test_different_dtype(test_case, shape, placement, sbp)
                     _test_backward(test_case, shape, placement, sbp)
                     _test_with_generator(test_case, shape, placement, sbp)

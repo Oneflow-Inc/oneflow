@@ -138,7 +138,7 @@ class TestGlobalRoiAlign(flow.unittest.TestCase):
     #            Open this test after updating the versions of pytorch in CI.
 
     #  @globaltest
-    #  def test_consistent_roi_align(test_case):
+    #  def test_global_roi_align(test_case):
     #      for placement in all_placement():
     #          # TODO: roi_align only support gpu
     #          if placement.type == "cpu":
@@ -146,7 +146,7 @@ class TestGlobalRoiAlign(flow.unittest.TestCase):
     #          for rois_sbp in all_sbp(placement, max_dim=0, except_partial_sum=True):
     #              _test_roi_align(test_case, placement, rois_sbp)
 
-    def test_consistent_roi_align_in_fixed_data(test_case):
+    def test_global_roi_align_in_fixed_data(test_case):
         for placement in all_placement():
             # TODO: roi_align only support gpu
             if placement.type == "cpu":

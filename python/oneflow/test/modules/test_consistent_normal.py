@@ -21,7 +21,7 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 
 
-def _test_consistent_normal(
+def _test_global_normal(
     test_case, placement, sbp, mean, std, shape, dtype, requires_grad
 ):
     dtype = type_name_to_flow_type[dtype]
@@ -56,7 +56,7 @@ class TestNormalGlobal(flow.unittest.TestCase):
                 for sbp in all_sbp(
                     placement, max_dim=len(arg[2]), except_partial_sum=True
                 ):
-                    _test_consistent_normal(test_case, placement, sbp, *arg)
+                    _test_global_normal(test_case, placement, sbp, *arg)
 
 
 if __name__ == "__main__":
