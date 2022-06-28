@@ -35,23 +35,29 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
 
   InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPosition; }
 
-  void Release(const vm::Instruction& instruction) const {
+  void Release(const vm::Instruction& instruction, bool exec_in_prepare) const {
     const auto& phy_instr_operand = instruction.phy_instr_operand();
     CHECK(static_cast<bool>(phy_instr_operand));
     const auto* ptr =
         dynamic_cast<const vm::ReleaseTensorArgPhyInstrOperand*>(phy_instr_operand.get());
     CHECK_NOTNULL(ptr);
+    DataType data_type = ptr->eager_blob_object()->data_type();
+    if (exec_in_prepare && !IsPODDataType(data_type)) {
+      return;
+    } else if (!exec_in_prepare && IsPODDataType(data_type)) {
+      return;
+    }
     CHECK_JUST(ptr->eager_blob_object()->DeallocateBlobDataPtr());
   }
   std::string DebugName(const vm::Instruction& instruction) const override {
     return "ReleaseTensor";
   }
   Maybe<void> Prepare(vm::Instruction* instruction) const override {
-    if (IsPODDataType(GetDataType(instruction))) { Release(*instruction); }
+    Release(*instruction, /*exec_in_prepare=*/true);
     return Maybe<void>::Ok();
   }
   void Compute(vm::Instruction* instruction) const override {
-    if (!IsPODDataType(GetDataType(instruction))) { Release(*instruction); }
+    Release(*instruction, /*exec_in_prepare=*/false);
   }
   void InitInstructionStatus(Instruction* instruction) const override {
     auto* status_buffer = instruction->mut_status_buffer();
@@ -59,15 +65,6 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
     instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
     auto* data_ptr = status_buffer->mut_buffer();
     EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_ep_event(nullptr);
-  }
-
- private:
-  DataType GetDataType(vm::Instruction* instruction) const {
-    const auto& phy_instr_operand = instruction->phy_instr_operand();
-    CHECK(static_cast<bool>(phy_instr_operand));
-    const auto* ptr =
-        dynamic_cast<const vm::ReleaseTensorArgPhyInstrOperand*>(phy_instr_operand.get());
-    return ptr->eager_blob_object()->data_type();
   }
 };
 
