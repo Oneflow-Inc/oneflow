@@ -780,7 +780,7 @@ class ConvBiasGradCpuKernel final : public user_op::OpKernel {
 
     const auto& data_format = ctx->Attr<std::string>("data_format");
     int32_t idx_offset;
-    bool is_out_diff_need_trans;
+    bool is_out_diff_need_trans = false;
     int32_t filter;
     if (data_format == "channels_first") {
       idx_offset = 2;
