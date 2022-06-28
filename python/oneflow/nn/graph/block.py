@@ -289,6 +289,7 @@ class ModuleBlock(Block):
 
             def insert_identity(t):
                 assert isinstance(t, Tensor)
+                #return oneflow._C.identity(t)
                 return ModuleBlock._get_or_create_identity(t)
 
             args, kwargs = self.__map_io(
@@ -299,14 +300,14 @@ class ModuleBlock(Block):
     
     @staticmethod
     def _get_or_create_identity(input_tensor: Tensor = None):
-        if input_tensor.is_local:
-            key = id(input_tensor)
-        else:
-            key = id(input_tensor) + "-" + str(input_tensor.placement)
+        key = input_tensor
         print("==>key: ", key)
         
         if key not in ModuleBlock._unique_identity_dict:
+            print("creat new ident for key: ", key)
             ModuleBlock._unique_identity_dict[key] = oneflow._C.identity(input_tensor)
+        else:
+            print("reuse ident for key: ", key)
 
         return ModuleBlock._unique_identity_dict[key]
 
