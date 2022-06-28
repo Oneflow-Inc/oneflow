@@ -79,60 +79,67 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
         g._generate_config_proto()
         print("graph conf: \n", g._config_proto)
 
-        # nccl 
+        # nccl
         flow.boxing.nccl.enable_use_compute_stream(False)
+        flow.boxing.nccl.disable_group_boxing_by_dst_parallel(False)
+        flow.boxing.nccl.allow_fuse_all_reduce(False)
+        flow.boxing.nccl.allow_fuse_broadcast(False)
+        flow.utils.cpu_device_num(222)
+        flow.utils.machine_num(999)
+        flow.utils.comm_net_worker_num(111)
+        flow.utils.max_mdsave_worker_num(88)
+        flow.utils.compute_thread_pool_size(33)
+        flow.utils.reserved_host_mem_mbyte(22)
+        flow.utils.reserved_device_mem_mbyte(555)
+        flow.utils.enable_debug_mode(True)
+        flow.backends.cudnn.enable_fused_normalization_add_relu(False)
+        flow.boxing.enable_fusion(False)
+
         test_case.assertTrue(not g._optimization_conf_proto.nccl_use_compute_stream)
 
-        flow.boxing.nccl.disable_group_boxing_by_dst_parallel(False)
         test_case.assertTrue(
             not g._optimization_conf_proto.disable_group_boxing_by_dst_parallel
         )
 
-        flow.boxing.nccl.allow_fuse_all_reduce(False)
         test_case.assertTrue(
             not g._optimization_conf_proto.collective_boxing_conf.nccl_fusion_all_reduce
         )
 
-        flow.boxing.nccl.allow_fuse_broadcast(False)
         test_case.assertTrue(
             not g._optimization_conf_proto.collective_boxing_conf.nccl_fusion_broadcast
         )
 
-
         # utils
-        flow.utils.machine_num(999)
         test_case.assertTrue(g._optimization_conf_proto.machine_num == 999)
 
-        flow.utils.cpu_device_num(222)
         test_case.assertTrue(g._optimization_conf_proto.cpu_device_num == 222)
 
-        flow.utils.comm_net_worker_num(111)
         test_case.assertTrue(g._optimization_conf_proto.comm_net_worker_num == 111)
-        
-        flow.utils.max_mdsave_worker_num(88)
+
         test_case.assertTrue(g._optimization_conf_proto.max_mdsave_worker_num == 88)
 
-        flow.utils.compute_thread_pool_size(33)
         test_case.assertTrue(g._optimization_conf_proto.compute_thread_pool_size == 33)
 
-        flow.utils.reserved_host_mem_mbyte(22)
         test_case.assertTrue(g._optimization_conf_proto.reserved_host_mem_mbyte == 22)
 
-        flow.utils.reserved_device_mem_mbyte(555)
-        test_case.assertTrue(g._optimization_conf_proto.reserved_device_mem_mbyte == 555)
+        test_case.assertTrue(
+            g._optimization_conf_proto.reserved_device_mem_mbyte == 555
+        )
 
-        flow.utils.enable_debug_mode(True)
-        test_case.assertTrue(g._optimization_conf_proto.enable_debug_mode) 
+        test_case.assertTrue(g._optimization_conf_proto.enable_debug_mode)
 
-        # cudnn 
-        flow.backends.cudnn.enable_fused_normalization_add_relu(False)
-        test_case.assertTrue(not g._optimization_conf_proto.cudnn_conf.enable_cudnn_fused_normalization_add_relu)
-        
+        # cudnn
+        test_case.assertTrue(
+            not g._optimization_conf_proto.cudnn_conf.enable_cudnn_fused_normalization_add_relu
+        )
 
         # boxing
-        flow.boxing.enable_fusion(False)
-        test_case.assertTrue(not g._optimization_conf_proto.collective_boxing_conf.enable_fusion)
+        test_case.assertTrue(
+            not g._optimization_conf_proto.collective_boxing_conf.enable_fusion
+        )
 
         print("optimization conf after session init: \n", g._optimization_conf_proto)
+
+
 if __name__ == "__main__":
     unittest.main()

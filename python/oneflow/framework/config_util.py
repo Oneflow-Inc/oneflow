@@ -61,7 +61,10 @@ def _set_resource_attr(attrs_chain: Union[List[str], str], attr_value):
             last_obj = getattr(last_obj, att)
         return last_obj
 
+    # get the current resource config 
     resource_config = session.config_proto.resource
+
+    # update the current resource config
     setattr(
         __get_obj(
             resource_config, attrs_chain[0:-1]
@@ -70,8 +73,10 @@ def _set_resource_attr(attrs_chain: Union[List[str], str], attr_value):
         attr_value,
     )
 
+    # update the resource config eagerly if the session is already initialized  
     if session.status_ == session.Status.INITED:
         session.update_resource_eagerly(resource_config)
+
 
 def api_load_library(val: str) -> None:
     """Load necessary library for job now
