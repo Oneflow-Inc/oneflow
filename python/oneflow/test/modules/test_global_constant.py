@@ -109,9 +109,7 @@ class TestConstantGlobal(flow.unittest.TestCase):
                     for sbp in all_sbp(
                         placement, max_dim=len(shape), except_partial_sum=True
                     ):
-                        _test_global_constant(
-                            test_case, func, shape, placement, sbp
-                        )
+                        _test_global_constant(test_case, func, shape, placement, sbp)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n2d()

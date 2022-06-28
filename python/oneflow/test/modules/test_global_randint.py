@@ -69,9 +69,7 @@ class TestRandintGlobal(flow.unittest.TestCase):
                     placement, max_dim=len(shape), except_partial_sum=True
                 ):
                     for dtype in dtypes:
-                        _test_global_randint(
-                            test_case, shape, placement, sbp, dtype
-                        )
+                        _test_global_randint(test_case, shape, placement, sbp, dtype)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n2d()
