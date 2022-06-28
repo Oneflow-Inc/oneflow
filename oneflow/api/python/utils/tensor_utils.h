@@ -70,8 +70,8 @@ inline static Maybe<PyObject*> EagerMirroredTensorToNumpy(PyObject* py_tensor) {
   const size_t ndim = tensor->ndim();
   const auto shape = numpy::OFShapeToNumpyShape(tensor->shape()->dim_vec());
   // NumPy strides use bytes. OneFlow strides use element counts.
-  const auto stride = numpy::OFStrideToNumpyStride(JUST(tensor->stride())->StrideVec(),
-                                                   tensor->dtype()->data_type());
+  const auto stride =
+      numpy::OFStrideToNumpyStride(*JUST(tensor->stride()), tensor->dtype()->data_type());
 
   T* data_ptr = nullptr;
   const auto& Callback = [&](uint64_t ofblob_ptr) {

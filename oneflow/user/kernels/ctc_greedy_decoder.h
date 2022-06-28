@@ -48,10 +48,10 @@ class CTCGreedyDecoderKernel final : public user_op::OpKernel {
     const T* log_probs_ptr = log_probs->dptr<T>();
     const int64_t* input_lengths_ptr = input_lengths->dptr<int64_t>();
     const bool merge_repeated = ctx->Attr<bool>("merge_repeated");
-    const int64_t max_input_length = log_probs->shape().At(0);
-    const int64_t batch_size = log_probs->shape().At(1);
-    const int64_t num_labels = log_probs->shape().At(2);
-    CHECK_EQ(batch_size, input_lengths->shape().At(0));
+    const int64_t max_input_length = log_probs->shape_view().At(0);
+    const int64_t batch_size = log_probs->shape_view().At(1);
+    const int64_t num_labels = log_probs->shape_view().At(2);
+    CHECK_EQ(batch_size, input_lengths->shape_view().At(0));
     int64_t* decoded_ptr = decoded->mut_dptr<int64_t>();
     T* neg_sum_logits_ptr = neg_sum_logits->mut_dptr<T>();
 

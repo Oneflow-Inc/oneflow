@@ -20,7 +20,7 @@ import weakref
 
 import oneflow._C
 import oneflow._oneflow_internal
-import oneflow.framework.graph_build_util as graph_build_util
+from oneflow.framework import graph_build_util
 from oneflow.env import get_rank
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.nn.module import Module
@@ -30,10 +30,9 @@ from oneflow.nn.parameter import Parameter
 from oneflow.nn.graph.block_config import BlockConfig
 from oneflow.nn.graph.util import (
     add_indent,
+    ArgsTree,
     operators_repr,
     seq_to_func_return,
-    IONodeType,
-    IONode,
 )
 
 
@@ -76,6 +75,7 @@ class Block(object):
         self._origin = None
         self._scope = None
         self._prev_scope = None
+        assert belonged_graph is None or isinstance(belonged_graph, weakref.ProxyTypes)
         self._belonged_graph = belonged_graph
         self.config = BlockConfig()
 
@@ -196,17 +196,20 @@ class ModuleBlock(Block):
         assert self._type == BlockType.MODULE
         self.__print(0, 1, self._shallow_repr())
 
-        in_node = IONode(
-            None, 0, (args, kwargs), "_" + self.name_prefix + self.name + "_input"
+        args_tree = ArgsTree(
+            (args, kwargs), True, "_" + self.name_prefix + self.name + "_input", None
         )
-        for (name, node) in list(in_node.named_nodes()):
-            if node._is_leaf:
-                arg = node._value
+
+        for (name, arg) in args_tree.iter_named_nodes():
+            if arg.is_leaf():
+                arg_value = arg.value()
                 meta_repr_str = (
-                    arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
+                    arg_value._meta_repr()
+                    if isinstance(arg_value, Tensor)
+                    else str(type(arg_value))
                 )
                 in_str = "(INPUT:" + name + ":" + meta_repr_str + ")"
-                if not isinstance(arg, Tensor):
+                if not isinstance(arg_value, Tensor):
                     in_str = "[WARNING]" + in_str
                 self._args_repr.append(in_str)
                 self.__print(0, 1, in_str)
@@ -236,17 +239,20 @@ class ModuleBlock(Block):
         else:
             outputs = result
 
-        out_node = IONode(
-            None, 0, (outputs, {}), "_" + self.name_prefix + self.name + "_output"
+        args_tree = ArgsTree(
+            (outputs, {}), True, "_" + self.name_prefix + self.name + "_output", None
         )
-        for (name, node) in list(out_node.named_nodes()):
-            if node._is_leaf:
-                arg = node._value
+
+        for (name, arg) in args_tree.iter_named_nodes():
+            if arg.is_leaf():
+                arg_value = arg.value()
                 meta_repr_str = (
-                    arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
+                    arg_value._meta_repr()
+                    if isinstance(arg_value, Tensor)
+                    else str(type(arg_value))
                 )
                 out_str = "(OUTPUT:" + name + ":" + meta_repr_str + ")"
-                if not isinstance(arg, Tensor):
+                if not isinstance(arg_value, Tensor):
                     out_str = "[WARNING]" + out_str
                 self._outs_repr.append(out_str)
                 self.__print(0, 1, out_str)
@@ -258,10 +264,6 @@ class ModuleBlock(Block):
         args, kwargs = self.__pre_forward_map(*args, **kwargs)
         with self.scope_context():
             result = self._origin.__class__.forward(self, *args, **kwargs)
-            # Always pack outputs to remain type of outputs
-            outputs = (result,)
-        result = self.__post_forward_map(*outputs)
-        result = seq_to_func_return(result, True)
         self._is_executing_forward = False
         return result
 
@@ -270,6 +272,16 @@ class ModuleBlock(Block):
         # Identity op outside activation checkpointing scope will be the endpoint of an activation checkpointing segment.
         # Identity op as the first op of a pipeline stage will make backward op depends on the identity op within the stage,
         # otherwise the backward op may depends the op in former stage which will make graph creates unnessary buffers.
+        if self.config._stage_placement is not None:
+
+            def insert_to_global(t):
+                assert isinstance(t, Tensor)
+                return t.to_global(placement=self.config._stage_placement)
+
+            args, kwargs = self.__map_io(
+                "input", insert_to_global, "insert_to_global", *args, **kwargs
+            )
+
         if self.config.activation_checkpointing or (
             self.config.stage_id is not None and self.config.stage_id >= 0
         ):
@@ -283,21 +295,6 @@ class ModuleBlock(Block):
             )
 
         return args, kwargs
-
-    def __post_forward_map(self, *args):
-        # Insert identity op when doing activation checkpointing or pipeline execution.
-        if self.config.activation_checkpointing or (
-            self.config.stage_id is not None and self.config.stage_id >= 0
-        ):
-
-            def insert_identity(t):
-                assert isinstance(t, Tensor)
-                return oneflow._C.identity(t)
-
-            args, _ = self.__map_io(
-                "output", insert_identity, "insert_identity", *args,
-            )
-        return args
 
     def add_module(self, name: str, module: Optional[Module]) -> None:
         self.__setattr__(
@@ -335,13 +332,16 @@ class ModuleBlock(Block):
             assert isinstance(item, Tensor)
             return func(item)
 
-        io_node = IONode(
-            None, 0, (args, kwargs), "_" + self.name_prefix + self.name + "_" + io_type
+        args_tree = ArgsTree(
+            (args, kwargs),
+            True,
+            "_" + self.name_prefix + self.name + "_" + io_type,
+            None,
         )
 
         def leaf_node_fn(leaf_node):
-            arg = leaf_node._value
-            name = leaf_node._prefix + "_" + leaf_node._name
+            arg = leaf_node.value()
+            name = leaf_node.prefix() + "_" + leaf_node.name()
             is_tensor, repr_str = self.__io_tensor_check_and_gen(arg, io_type, name)
             if is_tensor:
                 self.__print(
@@ -358,7 +358,7 @@ class ModuleBlock(Block):
                 )
                 return arg
 
-        out = io_node.map_leaf(leaf_node_fn)
+        out = args_tree.map_leaf(leaf_node_fn)
         mapped_args = out[0]
         mapped_kwargs = out[1]
         return mapped_args, mapped_kwargs
@@ -555,11 +555,13 @@ class ModuleBlock(Block):
         )
 
         if self._belonged_graph.is_compiled:
-            module_conf = self._belonged_graph._graph_proto.module_name2module_conf[
-                self.name_prefix + self.name
-            ]
-
-            return operators_repr(module_conf.ops)
+            if self._belonged_graph._compiled_graph_proto is not None:
+                module_conf = self._belonged_graph._compiled_graph_proto.module_name2module_conf[
+                    self.name_prefix + self.name
+                ]
+                return operators_repr(
+                    module_conf.ops, self._belonged_graph._compiled_graph_proto
+                )
 
         return []
 

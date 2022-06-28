@@ -20,7 +20,9 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple
 import torch
 import oneflow as flow
 import oneflow.support.env_var_util
-import oneflow.test_utils.automated_test_util.torch_flow_dual_object as dual_object_module
+from oneflow.test_utils.automated_test_util import (
+    torch_flow_dual_object as dual_object_module,
+)
 
 __all__ = ["profile", "set_profiler_hook", "profile_dual_object"]
 
@@ -148,7 +150,10 @@ def run_flow(
         print(
             f'OneFlow ({f"CPU, num_threads={num_threads}" if device == "cpu" else "GPU"}):'
         )
-    with flow.profiler.profile(activities=activities) as prof:
+    with flow.profiler.profile(
+        activities=activities,
+        record_bandwidth_for_cuda=flow.profiler.ProfilerActivity.CUDA in activities,
+    ) as prof:
         with flow.profiler.record_function(END_TO_END):
             for _ in range(RUN_NUM):
                 op(*args, **kwargs)

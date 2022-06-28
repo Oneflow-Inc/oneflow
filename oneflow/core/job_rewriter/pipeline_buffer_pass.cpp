@@ -293,7 +293,7 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
       const int64_t dst_stage_id = GetStageIdHint(dst_node);
       if (src_node->parallel_desc().device_type() == DeviceType::kCPU
           && dst_node->parallel_desc().device_type() == DeviceType::kCUDA) {
-        if (src_stage_id == 0 && (dst_stage_id == max_stage_id || dst_stage_id == 0)) {
+        if (src_stage_id == 0 && dst_stage_id == max_stage_id) {
           TryInsertOrUseBufferOpToDstNode(edge, total_stage_num * 2, &buffer_op_name2op_conf,
                                           &buffer_op_name2parallel_conf, &mut_op_name2conf);
           return;

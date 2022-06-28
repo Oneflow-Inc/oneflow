@@ -16,52 +16,86 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_
 #define ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_
 
+#include <mutex>
 #include "oneflow/core/common/notifier.h"
-#include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/thread/thread_pool.h"
+#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/steady_vector.h"
 
 namespace oneflow {
 
 class InstructionsBuilder;
+class Device;
 
 class VirtualMachine final {
  public:
   VirtualMachine(const VirtualMachine&) = delete;
   VirtualMachine(VirtualMachine&&) = delete;
-  VirtualMachine(const Resource& resource, int64_t this_machine_id);
+  VirtualMachine();
   ~VirtualMachine();
 
   static std::function<Maybe<bool>()> GetPredicatorNoMoreInstructionsFinished();
 
-  bool NoMoreErasedInstructions(size_t* last_total_erased_instruction_cnt) const;
+  intrusive::shared_ptr<vm::MirroredObject> FindOrCreateTransportLocalDepObject();
+
   std::string GetBlockingDebugString();
 
-  Maybe<void> Receive(vm::InstructionMsgList* instr_list);
-
-  const vm::VirtualMachineEngine& vm() const { return *vm_; }
+  Maybe<void> Receive(vm::InstructionList* instr_list);
 
   Maybe<void> CloseVMThreads();
+
+  // Never called in vm work threads.
+  // VM sync must be called to ensure all working instructions are finished.
+  Maybe<void> ShrinkAllMem();
+  Maybe<vm::Stream*> GetVmStream(Symbol<Stream> stream);
 
  private:
   friend class InstructionsBuilder;
 
   void ScheduleLoop(const std::function<void()>& Initializer);
-  void CallbackLoop(const std::function<void()>& Initializer);
 
-  vm::VirtualMachineEngine* mut_vm() { return vm_.Mutable(); }
+  intrusive::shared_ptr<vm::MirroredObject> FindOrCreateScheduleLocalDepObject(
+      Symbol<Device> device, StreamRole stream_role);
+  bool NoMoreErasedInstructions(size_t* last_total_erased_instruction_cnt) const;
+
+  const vm::VirtualMachineEngine& engine() const { return *engine_; }
+  vm::VirtualMachineEngine* mut_engine() { return engine_.Mutable(); }
+
   void ControlSync();
+  Maybe<vm::ThreadCtx*> FindOrCreateThreadCtx(Symbol<Device> device, StreamRole stream_role);
+  Maybe<vm::ThreadCtx*> CreateThreadCtx(Symbol<Device> device, StreamRole stream_role);
+  Maybe<vm::Stream*> CreateStream(Symbol<Device> device, StreamRole stream_role);
 
-  Maybe<void> RunInCurrentThread(vm::InstructionMsgList* instr_list);
+  Maybe<vm::Stream*> CreateStream(vm::ThreadCtx* thread_ctx, Symbol<Device> device,
+                                  StreamRole stream_role);
 
-  bool vm_threads_closed_;
-  intrusive::shared_ptr<vm::VirtualMachineEngine> vm_;
+  Maybe<void> RunInCurrentThread(vm::InstructionList* instr_list);
+
+  Maybe<void> BlockingRunProbeFunc(const std::function<bool(vm::VirtualMachineEngine*)>& prob_func);
+
+  Maybe<void> NotifyOrRunScheduler();
+
+  bool disable_vm_threads_;
+  bool scheduler_stopped_;
+  intrusive::shared_ptr<vm::VirtualMachineEngine> engine_;
+
   // for asynchronized execution
+  std::mutex worker_threads_mutex_;
   std::list<std::unique_ptr<std::thread>> worker_threads_;
+
+  // for creating vm::Stream and vm::ThreadCtx
+  std::recursive_mutex creating_stream_and_thread_ctx_mutex_;
+  HashMap<DeviceType, vm::ThreadCtx*> devcie_type2non_independent_thread_ctx_;
+  HashMap<std::pair<DeviceType, StreamRole>, vm::ThreadCtx*>
+      devcie_type_stream_role_2independent_thread_ctx_;
+  HashMap<std::pair<Symbol<Device>, StreamRole>, intrusive::shared_ptr<vm::MirroredObject>>
+      device_stream_role2local_dep_object_;
+  intrusive::shared_ptr<vm::MirroredObject> transport_local_dep_object_;
+  SteadyVector<vm::Stream*> unique_stream_id2vm_stream_;
+
   std::thread schedule_thread_;
   Notifier pending_notifier_;
-  std::thread callback_thread_;
-  Notifier callback_notifier_;
 };
 
 }  // namespace oneflow

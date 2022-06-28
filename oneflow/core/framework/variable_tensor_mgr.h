@@ -45,6 +45,7 @@ class VariableTensorMgr final {
                    const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors);
   std::tuple<std::vector<std::string>, std::vector<std::shared_ptr<one::Tensor>>> Dump();
   std::vector<std::string> DumpNames();
+  void Clear();
 
  private:
   friend class Global<VariableTensorMgr>;

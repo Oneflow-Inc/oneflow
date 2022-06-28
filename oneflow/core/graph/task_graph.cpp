@@ -23,12 +23,14 @@ limitations under the License.
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/boxing_identity_task_node.h"
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/ep/include/primitive/memcpy.h"
+#include "oneflow/core/graph/straighten_nodes.h"
 
 namespace oneflow {
 
@@ -419,7 +421,7 @@ void ForEachOpGraphNecessaryCtrlEdge(
 
 }  // namespace
 
-TaskGraph::TaskGraph() {
+TaskGraph::TaskGraph(bool disable_straighten_algorithm) {
   OpGraph* op_graph = Global<OpGraph>::Get();
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
@@ -450,7 +452,11 @@ TaskGraph::TaskGraph() {
     }
   });
 
-  SetOrderInGraphForEachNode();
+  if (disable_straighten_algorithm || GlobalProcessCtx::WorldSize() <= 1) {
+    SetOrderInGraphForEachNode();
+  } else {
+    StraightenNodes(this, &ordered_task_nodes_);
+  }
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
 
