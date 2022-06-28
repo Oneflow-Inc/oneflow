@@ -269,7 +269,7 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromConsistentOpExpr
   bool requires_grad = autograd::GradMode::is_enabled() && input_tensor->requires_grad();
   JUST(local_tensor->set_requires_grad(requires_grad));
   local_tensor->set_is_leaf(!requires_grad);
-  outputs->at(0) = local_tensor;
+  (*outputs)[0] = local_tensor;
   return Maybe<void>::Ok();
 }
 

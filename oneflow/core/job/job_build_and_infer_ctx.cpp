@@ -713,7 +713,7 @@ Maybe<void> JobBuildAndInferCtx::AddLossLocalBlobName(const std::string& lbn) {
   CHECK_OR_RETURN(job_->job_conf().has_train_conf())
       << Error::UnknownJobBuildAndInferError()
       << "job has no TrainConf when adding loss logical blob name";
-  for (const auto& lbi : local_lbi2sub_lbis_.at(*local_lbi)) {
+  for (const auto& lbi : local_lbi2sub_lbis_[*local_lbi]) {
     job_->mutable_job_conf()->mutable_train_conf()->add_loss_lbn(GenLogicalBlobName(lbi));
   }
   return Maybe<void>::Ok();
@@ -727,13 +727,13 @@ Maybe<LogicalBlobId> JobBuildAndInferCtx::GetLocalLbi(const std::string& lbn_wit
 
 Maybe<int> JobBuildAndInferCtx::LocalBlobGetNumSubLbi(const std::string& lbn_with_hint) const {
   const auto& local_lbi = JUST(GetLocalLbi(lbn_with_hint));
-  return local_lbi2sub_lbis_.at(*local_lbi).size();
+  return local_lbi2sub_lbis_.at(*local_lbi).size();  // NOLINT
 }
 
 Maybe<const LogicalBlobId*> JobBuildAndInferCtx::LocalBlobGetSubLbi(
     const std::string& lbn_with_hint, int index) const {
   const auto& local_lbi = JUST(GetLocalLbi(lbn_with_hint));
-  const auto& vec = local_lbi2sub_lbis_.at(*local_lbi);
+  const auto& vec = local_lbi2sub_lbis_.at(*local_lbi);  // NOLINT
   CHECK_GE_OR_RETURN(index, 0);
   CHECK_LT_OR_RETURN(index, vec.size());
   return &vec.at(index);
@@ -776,7 +776,7 @@ Maybe<OptInt64> JobBuildAndInferCtx::LocalBlobGetSplitAxisFromProducerView(
 Maybe<const ParallelDesc*> JobBuildAndInferCtx::LocalBlobGetParallelDescFromProducerView(
     const std::string& lbn_with_hint) const {
   const auto& lbi = JUST(GetLocalLbi(lbn_with_hint));
-  return &(local_lbi2parallel_desc_.at(*lbi));
+  return &(local_lbi2parallel_desc_.at(*lbi));  // NOLINT
 }
 
 Maybe<void> JobBuildAndInferCtx::CheckJob() const {
@@ -1312,7 +1312,7 @@ Maybe<void> JobBuildAndInferCtx::Rebuild() {
   CHECK_OR_RETURN(job_->has_job_parallel_view_conf());
   for (const auto& op_conf : job_->net().op()) {
     const auto& op_name = op_conf.name();
-    CHECK_OR_RETURN(op_name2is_local.find(op_name) == op_name2is_local.end());
+    CHECK_OR_RETURN(op_name2is_local.find(op_name) == op_name2is_local.end());  // NOLINT
     op_name2is_local[op_name] = false;
     const auto& op_name2is_local_parallel_view =
         job_->job_parallel_view_conf().op_name2is_local_parallel_view();

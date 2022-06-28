@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <utility>
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
@@ -887,7 +888,8 @@ Maybe<void> Operator::InferNdSbpSignature(
 Maybe<void> Operator::InferLocalSignatureIf(
     std::function<Maybe<const LocalSigInferHint*>(const std::string&)> LocalSigInferHint4Ibn,
     bool is_local_parallel_view_conf, const ParallelDesc& parallel_desc) {
-  return InferLocalSignature(LocalSigInferHint4Ibn, is_local_parallel_view_conf, parallel_desc);
+  return InferLocalSignature(std::move(LocalSigInferHint4Ibn), is_local_parallel_view_conf,
+                             parallel_desc);
 }
 
 std::string DebugString4LocalHint(
@@ -903,7 +905,8 @@ std::string DebugString4LocalHint(
 }
 
 Maybe<void> Operator::InferLocalSignature(
-    std::function<Maybe<const LocalSigInferHint*>(const std::string&)> LocalSigInferHint4Ibn,
+    std::function<Maybe<const LocalSigInferHint*>(const std::string&)>
+        LocalSigInferHint4Ibn,  // NOLINT
     bool is_local_parallel_view_conf, const ParallelDesc& parallel_desc) {
   HashSet<bool> is_local_parallel_view_values;
   for (const auto& ibn : input_bns()) {
@@ -1479,10 +1482,10 @@ Maybe<void> CheckOpInputSignature(const Operator& op, const OpNodeSignature& ups
     {
       CHECK_OR_RETURN(upstream_signature.has_sbp_signature());
       const auto& map = upstream_signature.sbp_signature().bn_in_op2sbp_parallel();
-      CHECK_OR_RETURN(map.find(ibn) != map.end());
+      CHECK_OR_RETURN(map.find(ibn) != map.end());  // NOLINT
     }
     {
-      CHECK_OR_RETURN(upstream_signature.has_local_signature());
+      CHECK_OR_RETURN(upstream_signature.has_local_signature());  // NOLINT
       const auto& map = upstream_signature.local_signature().bn_in_op2opt_local_parallel();
       CHECK_OR_RETURN(map.find(ibn) != map.end());
     }

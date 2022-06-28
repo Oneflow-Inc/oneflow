@@ -137,7 +137,8 @@ Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor) {
 }
 
 #define MAKE_SWITCH_ENTRY(func_name, dtype) func_name<dtype>
-DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, CopyLocalTensorFromUntypedArray, MAKE_SWITCH_ENTRY,
+DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, CopyLocalTensorFromUntypedArray,  // NOLINT
+                          MAKE_SWITCH_ENTRY,                             // NOLINT
                           MAKE_DATA_TYPE_CTRV_SEQ(POD_AND_HALF_DATA_TYPE_SEQ));
 
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,

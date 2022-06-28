@@ -55,7 +55,7 @@ Maybe<EagerLocalTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& te
   return tensor->mut_eager_local_tensor_impl();
 }
 
-class MutLocalTensorMeta : public TensorMeta {
+class MutLocalTensorMeta : public TensorMeta {  // NOLINT
  public:
   MutLocalTensorMeta()
       : TensorMeta(std::make_shared<const Shape>(), std::make_shared<const Stride>(),
@@ -106,7 +106,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   for (int i = 0; i < outputs->size(); i++) {
     if (!outputs->at(i)) {
       const auto& tensor_impl = std::make_shared<EagerLocalTensorImpl>();
-      outputs->at(i) = std::make_shared<LocalTensor>(tensor_impl);
+      (*outputs)[i] = std::make_shared<LocalTensor>(tensor_impl);
       output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
     } else {
       bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
@@ -294,7 +294,7 @@ Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const Te
     CHECK_OR_RETURN(!inputs.at(0)->is_consistent());
     const auto& input_tensor = JUST(inputs.at(0)->detach());
     input_local_tensor = JUST(input_tensor->AsLocalTensor());
-    CHECK_OR_RETURN(input_local_tensor) << Error::InvalidValueError("Tensor Cast Error");
+    CHECK_OR_RETURN(input_local_tensor) << Error::InvalidValueError("Tensor Cast Error");  // NOLINT
     bool requires_grad = autograd::GradMode::is_enabled() && inputs.at(0)->requires_grad();
     JUST(input_local_tensor->set_requires_grad(requires_grad));
     input_local_tensor->set_is_leaf(!requires_grad);
@@ -318,8 +318,8 @@ Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const Te
     if (parallel_id.has_value()) {
       const auto& pyhsical_shape = JUST(GetPhysicalShape(tensor_meta));
       const auto& input_local_tensor_shape = input_local_tensor->shape();
-      CHECK_EQ_OR_RETURN(*pyhsical_shape, *input_local_tensor_shape);
-      CHECK_OR_RETURN(dtype == input_local_tensor->dtype()->data_type());
+      CHECK_EQ_OR_RETURN(*pyhsical_shape, *input_local_tensor_shape);      // NOLINT
+      CHECK_OR_RETURN(dtype == input_local_tensor->dtype()->data_type());  // NOLINT
       consistent_tensor_impl->reset_cur_rank_phy_tensor(input_local_tensor);
     }
   }

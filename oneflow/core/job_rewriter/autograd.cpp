@@ -250,7 +250,7 @@ Maybe<void> TryLocalCastTotalLossInstanceNum(
   bool is_local = JUST(IsLocal4Lbi(begin.first, begin.second));
   for (const auto& pair : loss_lbi2loss_node) {
     bool is_other_local = JUST(IsLocal4Lbi(pair.first, pair.second));
-    CHECK_EQ_OR_RETURN(is_local, is_other_local);
+    CHECK_EQ_OR_RETURN(is_local, is_other_local);  // NOLINT
   }
   if (is_local) {
     OperatorConf op_conf;
