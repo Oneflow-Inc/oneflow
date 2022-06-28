@@ -56,7 +56,7 @@ namespace oneflow {
     const auto& cur_in = ctx->InputTensorDesc(pair.first, pair.second);
     CHECK_EQ_OR_RETURN(in_0.data_type(), cur_in.data_type())
         << Error::RuntimeError() << ctx->op_name()
-        << "expected all tenser to have same type, but found " << DataType_Name(in_0.data_type())
+        << " expected all tenser to have same type, but found " << DataType_Name(in_0.data_type())
         << " and " << DataType_Name(cur_in.data_type());
   }
   *out->mut_data_type() = in_0.data_type();
