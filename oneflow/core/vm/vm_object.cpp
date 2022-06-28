@@ -25,7 +25,7 @@ void DependenceAccess::__Init__() {
   clear_local_object();
 }
 
-void DependenceAccess::__Init__(Instruction* instruction, LocalObject* local_object,
+void DependenceAccess::__Init__(Instruction* instruction, Dependence* local_object,
                                 OperandAccessType access_type) {
   __Init__();
   set_instruction(instruction);

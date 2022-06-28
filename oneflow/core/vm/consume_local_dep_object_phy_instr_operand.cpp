@@ -21,21 +21,21 @@ namespace oneflow {
 namespace vm {
 
 void ConsumeLocalDepObjectPhyInstrOperand::ForEachConstLocalObject(
-    const std::function<void(LocalObject* compute)>& DoEach) const {
+    const std::function<void(Dependence* compute)>& DoEach) const {
   if (modifier_ == "const") {
     for (const auto& dep : compute_local_dep_objects_) { DoEach(dep.get()); }
   }
 }
 
 void ConsumeLocalDepObjectPhyInstrOperand::ForEachMutLocalObject(
-    const std::function<void(LocalObject* compute)>& DoEach) const {
+    const std::function<void(Dependence* compute)>& DoEach) const {
   if (modifier_ == "mut") {
     for (const auto& dep : compute_local_dep_objects_) { DoEach(dep.get()); }
   }
 }
 
 void ConsumeLocalDepObjectPhyInstrOperand::ForEachMut2LocalObject(
-    const std::function<void(LocalObject* compute)>& DoEach) const {
+    const std::function<void(Dependence* compute)>& DoEach) const {
   if (modifier_ == "mut2") {
     for (const auto& dep : compute_local_dep_objects_) { DoEach(dep.get()); }
   }

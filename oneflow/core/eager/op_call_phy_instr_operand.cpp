@@ -49,7 +49,7 @@ Maybe<void> OpCallPhyInstrOperand::Init() {
 }
 
 void OpCallPhyInstrOperand::ForEachConstLocalObject(
-    const std::function<void(vm::LocalObject* compute)>& DoEach) const {
+    const std::function<void(vm::Dependence* compute)>& DoEach) const {
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4const_ibns()) {
     const auto& input = input_list->at(index);
@@ -74,7 +74,7 @@ void OpCallPhyInstrOperand::InitStreamSequentialDependence() {
 }
 
 void OpCallPhyInstrOperand::ForEachMutLocalObject(
-    const std::function<void(vm::LocalObject* compute)>& DoEach) const {
+    const std::function<void(vm::Dependence* compute)>& DoEach) const {
   const auto& opt_transport_dep_object = vm_stream_->transport_local_dep_object();
   if (opt_transport_dep_object.has_value()) { DoEach(CHECK_JUST(opt_transport_dep_object)->get()); }
 
@@ -91,7 +91,7 @@ void OpCallPhyInstrOperand::ForEachMutLocalObject(
 }
 
 void OpCallPhyInstrOperand::ForEachMut2LocalObject(
-    const std::function<void(vm::LocalObject* compute)>& DoEach) const {
+    const std::function<void(vm::Dependence* compute)>& DoEach) const {
   const auto& output_list = outputs();
   for (int64_t index : opkernel().output_tuple_indexes4mut2_obns()) {
     const auto& output = output_list->at(index);

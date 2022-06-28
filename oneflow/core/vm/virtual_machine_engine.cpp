@@ -188,7 +188,7 @@ void VirtualMachineEngine::ReleaseFinishedInstructions(const ScheduleCtx& schedu
 }
 
 DependenceAccess* VirtualMachineEngine::AccessLocalObject(OperandAccessType access_type,
-                                                          LocalObject* local_object,
+                                                          Dependence* local_object,
                                                           Instruction* instruction) {
   auto access = access_pool_.make_shared(instruction, local_object, access_type);
   auto* ptr = access.Mutable();

@@ -25,9 +25,9 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class LocalObject;
+class Dependence;
 
-using DependenceVector = std::vector<LocalObject*>;
+using DependenceVector = std::vector<Dependence*>;
 
 // physical instruction operand
 class PhyInstrOperand {
@@ -36,14 +36,12 @@ class PhyInstrOperand {
 
   virtual const DependenceVector& input_dependences() const = 0;
   virtual const DependenceVector& output_dependences() const = 0;
-  virtual LocalObject* stream_sequential_dependence() const {
-    return stream_sequential_dependence_;
-  }
+  virtual Dependence* stream_sequential_dependence() const { return stream_sequential_dependence_; }
 
-  static std::function<void(LocalObject*)> SetInserter(DependenceVector* dependences) {
+  static std::function<void(Dependence*)> SetInserter(DependenceVector* dependences) {
     auto existed =
-        std::make_shared<std::set<LocalObject*>>(dependences->begin(), dependences->end());
-    return [dependences, existed](LocalObject* object) {
+        std::make_shared<std::set<Dependence*>>(dependences->begin(), dependences->end());
+    return [dependences, existed](Dependence* object) {
       if (existed->insert(object).second) { dependences->push_back(object); }
     };
   }
@@ -51,7 +49,7 @@ class PhyInstrOperand {
  protected:
   PhyInstrOperand() : stream_sequential_dependence_(nullptr) {}
 
-  LocalObject* stream_sequential_dependence_;
+  Dependence* stream_sequential_dependence_;
 };
 
 }  // namespace vm

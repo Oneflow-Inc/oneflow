@@ -58,11 +58,11 @@ class AccessBlobArgCbPhyInstrOperand : public PhyInstrOperand {
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  void ForEachConstLocalObject(const std::function<void(LocalObject* compute)>&) const;
+  void ForEachConstLocalObject(const std::function<void(Dependence* compute)>&) const;
 
-  void ForEachMutLocalObject(const std::function<void(LocalObject* compute)>&) const;
+  void ForEachMutLocalObject(const std::function<void(Dependence* compute)>&) const;
 
-  void ForEachMut2LocalObject(const std::function<void(LocalObject* compute)>&) const;
+  void ForEachMut2LocalObject(const std::function<void(Dependence* compute)>&) const;
 
  private:
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;

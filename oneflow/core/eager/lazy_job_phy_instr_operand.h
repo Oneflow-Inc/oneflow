@@ -57,11 +57,11 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  void ForEachConstLocalObject(const std::function<void(vm::LocalObject* compute)>&) const {}
+  void ForEachConstLocalObject(const std::function<void(vm::Dependence* compute)>&) const {}
 
-  void ForEachMutLocalObject(const std::function<void(vm::LocalObject* compute)>&) const;
+  void ForEachMutLocalObject(const std::function<void(vm::Dependence* compute)>&) const;
 
-  void ForEachMut2LocalObject(const std::function<void(vm::LocalObject* compute)>&) const {}
+  void ForEachMut2LocalObject(const std::function<void(vm::Dependence* compute)>&) const {}
 
  private:
   std::shared_ptr<NNGraphIf> nn_graph_;

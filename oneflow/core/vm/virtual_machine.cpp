@@ -334,19 +334,19 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
   scheduler_stopped_ = true;
 }
 
-intrusive::shared_ptr<vm::LocalObject> VirtualMachine::FindOrCreateScheduleLocalDepObject(
+intrusive::shared_ptr<vm::Dependence> VirtualMachine::FindOrCreateScheduleLocalDepObject(
     Symbol<Device> device, StreamRole stream_role) {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
   auto key = std::make_pair(device, stream_role);
-  intrusive::shared_ptr<vm::LocalObject>* ptr = &device_stream_role2local_dep_object_[key];
-  if (!*ptr) { *ptr = intrusive::make_shared<vm::LocalObject>(); }
+  intrusive::shared_ptr<vm::Dependence>* ptr = &device_stream_role2local_dep_object_[key];
+  if (!*ptr) { *ptr = intrusive::make_shared<vm::Dependence>(); }
   return *ptr;
 }
 
-intrusive::shared_ptr<vm::LocalObject> VirtualMachine::FindOrCreateTransportLocalDepObject() {
+intrusive::shared_ptr<vm::Dependence> VirtualMachine::FindOrCreateTransportLocalDepObject() {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
   if (!transport_local_dep_object_) {
-    transport_local_dep_object_ = intrusive::make_shared<vm::LocalObject>();
+    transport_local_dep_object_ = intrusive::make_shared<vm::Dependence>();
   }
   return transport_local_dep_object_;
 }
@@ -432,9 +432,9 @@ Maybe<vm::Stream*> VirtualMachine::CreateStream(vm::ThreadCtx* thread_ctx, Symbo
   // stream_ptr may be used after timout.
   auto stream_ptr = std::make_shared<vm::Stream*>(nullptr);
   auto bc = std::make_shared<BlockingCounter>(1);
-  intrusive::shared_ptr<vm::LocalObject> schedule_local_dep_object =
+  intrusive::shared_ptr<vm::Dependence> schedule_local_dep_object =
       FindOrCreateScheduleLocalDepObject(device, stream_role);
-  Optional<intrusive::shared_ptr<vm::LocalObject>> transport_local_dep_object;
+  Optional<intrusive::shared_ptr<vm::Dependence>> transport_local_dep_object;
   if (IsCommNetStream::Visit(stream_role)) {
     transport_local_dep_object = FindOrCreateTransportLocalDepObject();
   }

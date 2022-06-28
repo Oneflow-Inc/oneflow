@@ -24,7 +24,7 @@ namespace oneflow {
 namespace vm {
 
 void LaunchLazyJobPhyInstrOperand::ForEachMutLocalObject(
-    const std::function<void(vm::LocalObject* compute)>& DoEach) const {
+    const std::function<void(vm::Dependence* compute)>& DoEach) const {
   for (const auto& eager_blob_object : *param_blob_objects_) {
     DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
   }
