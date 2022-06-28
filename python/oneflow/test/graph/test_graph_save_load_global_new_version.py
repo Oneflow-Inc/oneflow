@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import unittest
 import numpy as np
 import tempfile
@@ -152,8 +153,8 @@ def _test_linear_graph_save_load_global(test_case, device):
         train_with_graph(1, state_dict_dir, iter2_state_dict)
 
 
-# @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-# @flow.unittest.skip_unless_1n2d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n2d()
 class TestLinearGraphSaveLoadGlobal(oneflow.unittest.TestCase):
     def test_linear_graph_save_load_gpu(test_case):
         _test_linear_graph_save_load_global(test_case, "cuda")
