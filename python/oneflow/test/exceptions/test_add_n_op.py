@@ -20,31 +20,27 @@ import oneflow.unittest
 
 class TestAddN(flow.unittest.TestCase):
     def test_add_n_shape_error_msg(test_case):
+        a = flow.tensor([1, 2])
+        b = flow.tensor([3, 4])
+        c = flow.tensor([[2, 2], [2, 2]])
         with test_case.assertRaises(RuntimeError) as context:
-            a = flow.tensor([1,2])
-            b = flow.tensor([3,4])
-            c = flow.tensor([[2,2],[2,2]])     
-            flow.add(a,b,c)
-           
+            flow.add(a, b, c)
         test_case.assertTrue(
             "inconsistent tensor size, expected all tensor to have the same number of elements, but got"
             in str(context.exception)
-            )
-        
-    
+        )
+
     def test_add_n_dtype_error_msg(test_case):
-        with test_case.assertRaises(RuntimeError) as context:            
-            a = flow.tensor([1,2],dtype=flow.int64)
-            b = flow.tensor([3,4],dtype=flow.int64)
-            c = flow.tensor([2,2],dtype=flow.float64)
-            flow.add(a,b,c)
-           
+        a = flow.tensor([1, 2], dtype=flow.int64)
+        b = flow.tensor([3, 4], dtype=flow.int64)
+        c = flow.tensor([2, 2], dtype=flow.float64)
+        with test_case.assertRaises(RuntimeError) as context:
+            flow.add(a, b, c)
         test_case.assertTrue(
-            "expected all tenser to have same type,but found"
+            "expected all tenser to have same type, but found"
             in str(context.exception)
-            )
-     
-            
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
-    
