@@ -21,6 +21,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 import oneflow.framework.graph_build_util as graph_build_util
+import oneflow.framework.scope_util as scope_util
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -114,7 +115,7 @@ class TestGraphBlock(flow.unittest.TestCase):
 
             def forward(self, x):
                 if graph_build_util.lazy_mode.is_enabled():
-                    scope = oneflow.current_scope()
+                    scope = scope_util.current_scope()
                     scope_proto = graph_build_util.scope_to_proto(scope)
                     ck_bool = scope_proto.attr_name2attr_value["checkpointing"].at_bool
                     test_case.assertEqual(ck_bool, True)
@@ -160,7 +161,7 @@ class TestGraphBlock(flow.unittest.TestCase):
 
             def forward(self, x):
                 if graph_build_util.lazy_mode.is_enabled():
-                    scope = oneflow.current_scope()
+                    scope = scope_util.current_scope()
                     scope_proto = graph_build_util.scope_to_proto(scope)
                     ck_bool = scope_proto.attr_name2attr_value["checkpointing"].at_bool
                     test_case.assertEqual(ck_bool, True)
@@ -213,7 +214,7 @@ class TestGraphBlock(flow.unittest.TestCase):
 
             def forward(self, x):
                 if graph_build_util.lazy_mode.is_enabled():
-                    scope = oneflow.current_scope()
+                    scope = scope_util.current_scope()
                     scope_proto = graph_build_util.scope_to_proto(scope)
                     ck_bool = scope_proto.attr_name2attr_value["checkpointing"].at_bool
                     test_case.assertEqual(ck_bool, True)

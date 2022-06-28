@@ -41,7 +41,12 @@ release = u""
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon", "recommonmark"]
+extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "recommonmark",
+    "sphinx_copybutton",
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -187,9 +192,7 @@ epub_exclude_files = ["search.html"]
 
 autodoc_default_options = {
     "undoc-members": True,
-    "exclude-members": "__weakref__",
-    "exclude-members": "__init__",
-    "exclude-members": "forward",
+    "exclude-members": "forward, extra_repr, reset_parameters",
 }
 
 

@@ -47,7 +47,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> DropoutOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-  *ctx->OutputDType("mask", 0) = DataType::kInt8;
+  *ctx->OutputDType("mask", 0) = DataType::kBool;
   return Maybe<void>::Ok();
 }
 
@@ -84,7 +84,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> DropoutGradOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kInt8);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kBool);
   return Maybe<void>::Ok();
 }
 
@@ -117,7 +117,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> RandomMaskLikeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kInt8;
+  *ctx->OutputDType("out", 0) = DataType::kBool;
   return Maybe<void>::Ok();
 }
 

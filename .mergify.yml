@@ -1,0 +1,20 @@
+pull_request_rules:
+  - name: automatic update for PR with label “automerge“
+    conditions:
+      - "#approved-reviews-by>=2"
+      - -conflict # skip conflicts
+      - -draft # skip draft PRs
+      - label="automerge"
+    actions:
+      update:
+  - name: automatic merge
+    conditions:
+      - "#approved-reviews-by>=2"
+      - -conflict # skip conflicts
+      - -draft # skip draft PRs
+      - label="automerge"
+      - "#commits-behind==0"
+      - -closed
+    actions:
+      merge:
+        method: squash

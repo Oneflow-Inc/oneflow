@@ -16,7 +16,6 @@ limitations under the License.
 #include <mutex>
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/global.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/hardware/node_device_descriptor_manager.h"
 #include "oneflow/core/hardware/cuda_device_descriptor.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -52,8 +51,8 @@ const char* CublasGetErrorString(cublasStatus_t error) {
 #if CUDA_VERSION >= 6050
     case CUBLAS_STATUS_LICENSE_ERROR: return "CUBLAS_STATUS_LICENSE_ERROR";
 #endif
+    default: return "Unknown cublas status";
   }
-  return "Unknown cublas status";
 }
 
 const char* CurandGetErrorString(curandStatus_t error) {
@@ -71,8 +70,8 @@ const char* CurandGetErrorString(curandStatus_t error) {
     case CURAND_STATUS_INITIALIZATION_FAILED: return "CURAND_STATUS_INITIALIZATION_FAILED";
     case CURAND_STATUS_ARCH_MISMATCH: return "CURAND_STATUS_ARCH_MISMATCH";
     case CURAND_STATUS_INTERNAL_ERROR: return "CURAND_STATUS_INTERNAL_ERROR";
+    default: return "Unknown curand status";
   }
-  return "Unknown curand status";
 }
 
 #if CUDA_VERSION >= 10020
@@ -90,8 +89,8 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error) {
     case NVJPEG_STATUS_INTERNAL_ERROR: return "NVJPEG_STATUS_INTERNAL_ERROR";
     case NVJPEG_STATUS_IMPLEMENTATION_NOT_SUPPORTED:
       return "NVJPEG_STATUS_IMPLEMENTATION_NOT_SUPPORTED";
+    default: return "Unknown nvjpeg status";
   }
-  return "Unknown nvjpeg status";
 }
 
 #endif
@@ -158,18 +157,17 @@ CublasMathModeGuard::~CublasMathModeGuard() {
 
 void CublasMathModeGuard::SetMathMode(cublasMath_t new_mode) {
   new_mode_ = new_mode;
-  if (new_mode_ != saved_mode_) { OF_CUBLAS_CHECK(cublasSetMathMode(handle_, saved_mode_)); }
+  if (new_mode_ != saved_mode_) { OF_CUBLAS_CHECK(cublasSetMathMode(handle_, new_mode_)); }
 }
 
-int GetCudaDeviceIndex() {
-  int cuda_device_index = 0;
-  if (CHECK_JUST(IsMultiClient())) {
-    cuda_device_index = GlobalProcessCtx::LocalRank();
-  } else {
-    OF_CUDA_CHECK(cudaGetDevice(&cuda_device_index));
-  }
-  return cuda_device_index;
+void CudaSynchronize(int device_id) {
+  CudaCurrentDeviceGuard dev_guard(device_id);
+  OF_CUDA_CHECK(cudaDeviceSynchronize());
 }
+
+void SetCudaDeviceIndex(int device_id) { OF_CUDA_CHECK(cudaSetDevice(device_id)); }
+
+int GetCudaDeviceIndex() { return GlobalProcessCtx::LocalRank(); }
 
 int GetCudaDeviceCount() {
   /* static */ int cuda_device_count = 0;

@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/pcheck.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/optional.h"
-#include "oneflow/core/common/env_var.h"
+#include "oneflow/core/common/env_var/env_var.h"
 #ifdef __linux__
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -37,19 +37,20 @@ namespace {
 #ifdef __linux__
 
 // return errno
-int ShmOpen(const std::string& shm_name, int* fd) {
+int ShmOpen(const std::string& shm_name, int* fd, bool create) {
   SharedMemoryManager::get().AddShmName(shm_name);
-  *fd = shm_open(("/" + shm_name).c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+  *fd = shm_open(("/" + shm_name).c_str(), (create ? O_CREAT : 0) | O_RDWR | O_EXCL,
+                 S_IRUSR | S_IWUSR);
   return *fd == -1 ? errno : 0;
 }
 
 // return errno
-int ShmOpen(std::string* shm_name, int* fd) {
+int ShmOpen(std::string* shm_name, int* fd, bool create) {
   int err = EEXIST;
   while (true) {
     static constexpr int kNameLength = 8;
     *shm_name = std::string("ofshm_") + GenAlphaNumericString(kNameLength);
-    err = ShmOpen(*shm_name, fd);
+    err = ShmOpen(*shm_name, fd, create);
     if (err != EEXIST) { return err; }
   }
   return err;
@@ -62,10 +63,10 @@ int ShmMap(int fd, const size_t shm_size, void** ptr) {
 
 #endif
 
-Maybe<void*> ShmSetUp(std::string* shm_name, size_t shm_size) {
+Maybe<void*> ShmSetUp(std::string* shm_name, size_t shm_size, bool create) {
 #ifdef __linux__
   int fd = 0;
-  PCHECK_OR_RETURN(ShmOpen(shm_name, &fd));
+  PCHECK_OR_RETURN(ShmOpen(shm_name, &fd, create));
   PCHECK_OR_RETURN(posix_fallocate(fd, 0, shm_size)) << ReturnEmptyStr([&] { close(fd); });
   void* ptr = nullptr;
   PCHECK_OR_RETURN(ShmMap(fd, shm_size, &ptr)) << ReturnEmptyStr([&] { close(fd); });
@@ -77,10 +78,10 @@ Maybe<void*> ShmSetUp(std::string* shm_name, size_t shm_size) {
 #endif
 }
 
-Maybe<void*> ShmSetUp(const std::string& shm_name, size_t* shm_size) {
+Maybe<void*> ShmSetUp(const std::string& shm_name, size_t* shm_size, bool create) {
 #ifdef __linux__
   int fd = 0;
-  PCHECK_OR_RETURN(ShmOpen(shm_name, &fd));
+  PCHECK_OR_RETURN(ShmOpen(shm_name, &fd, create));
   struct stat st;  // NOLINT
   PCHECK_OR_RETURN(fstat(fd, &st)) << ReturnEmptyStr([&] { close(fd); });
   *shm_size = st.st_size;
@@ -169,15 +170,15 @@ SharedMemoryManager::~SharedMemoryManager() { UnlinkAllShms(); }
 
 SharedMemory::~SharedMemory() { CHECK_JUST(Close()); }
 
-Maybe<SharedMemory> SharedMemory::Open(size_t shm_size) {
+Maybe<SharedMemory> SharedMemory::Open(size_t shm_size, bool create) {
   std::string shm_name;
-  char* ptr = static_cast<char*>(JUST(ShmSetUp(&shm_name, shm_size)));
+  char* ptr = static_cast<char*>(JUST(ShmSetUp(&shm_name, shm_size, create)));
   return std::shared_ptr<SharedMemory>(new SharedMemory(ptr, shm_name, shm_size));
 }
 
-Maybe<SharedMemory> SharedMemory::Open(const std::string& shm_name) {
+Maybe<SharedMemory> SharedMemory::Open(const std::string& shm_name, bool create) {
   size_t shm_size = 0;
-  char* ptr = static_cast<char*>(JUST(ShmSetUp(shm_name, &shm_size)));
+  char* ptr = static_cast<char*>(JUST(ShmSetUp(shm_name, &shm_size, create)));
   return std::shared_ptr<SharedMemory>(new SharedMemory(ptr, shm_name, shm_size));
 }
 

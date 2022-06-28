@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #ifdef WITH_CUDA
 #include <nccl.h>
@@ -58,8 +59,7 @@ int32_t ResourceDesc::ComputeThreadPoolSize() const {
 }
 
 bool ResourceDesc::enable_debug_mode() const {
-  return std::getenv("ONEFLOW_DEBUG_MODE") != nullptr || std::getenv("ONEFLOW_DEBUG") != nullptr
-         || resource_.enable_debug_mode();
+  return IsInDebugMode() || resource_.enable_debug_mode();
 }
 
 bool ResourceDesc::enable_dry_run() const { return std::getenv("ONEFLOW_DRY_RUN") != nullptr; }

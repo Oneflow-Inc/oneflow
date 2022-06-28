@@ -35,7 +35,7 @@ class MyGraph(flow.nn.Graph):
         super().__init__()
         self.m = module
         sgd = flow.optim.SGD(module.parameters(), lr=1e-3)
-        self.add_optimizer(flow.optim.utils.SparseOptimizer(sgd))
+        self.add_optimizer(sgd, is_sparse=True)
 
     def build(self, input):
         result = self.m(input)

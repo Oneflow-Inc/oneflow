@@ -20,7 +20,9 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/nd_sbp_util.h"
+#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/register/blob_desc.h"
@@ -76,11 +78,17 @@ BoxingCollector::BoxingCollector(int32_t max_axis) { CHECK_JUST(Init(max_axis));
 
 // Construct a boxing collector with given maximum number of axis
 Maybe<void> BoxingCollector::Init(int32_t max_axis) {
+  // Not allowed two-step boxing and disable checking for debugging
+  if (ParseBooleanFromEnv("ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK", false)) {
+    return Maybe<void>::Ok();
+  }
   // Set up at least two split for op graph.
   // For a negative example: Resnet50 only have B, P, S(0)
   CollectUniverse(max_axis);
   GenerateNdSbpList(2);
   GenerateMap1d2nd();
+  // Get copy cost in lazy mode
+  LazyMode::Guard enable_lazy_mode(true);
   JUST(GenerateCombination4SamePlacement(3));
   JUST(GenerateCombination4DiffHierarchy(this, this));
   JUST(GenerateCombination4DiffPlacement(this, this));
@@ -95,6 +103,8 @@ Maybe<void> BoxingCollector::Init(const BlobDesc& logical_blob_desc,
   // Filter out unsuitable middle nodes before computing minimum cost.
   JUST(FilterNdSbpList4LogicalShape(logical_blob_desc, *parallel_desc.hierarchy()));
   GenerateMap1d2nd();
+  // Get copy cost in lazy mode
+  LazyMode::Guard enable_lazy_mode(true);
   JUST(GenerateCombination4SamePlacement(5, logical_blob_desc, parallel_desc));
   return Maybe<void>::Ok();
 }
@@ -200,11 +210,9 @@ Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middl
     minimum_copy_cost_[i].resize(n);
     middle_nodes_[i].resize(n);
     for (int32_t j = 0; j < n; j++) {
-      // Get copy cost in lazy mode
-      LazyMode::Guard enable_lazy_mode(true);
       minimum_copy_cost_[i][j] = JUST(ComputeLazyCopyCostBetweenNdSbp(
           nd_sbp_lists_[i], nd_sbp_lists_[j], blob_desc, parallel_desc, parallel_desc,
-          /*is_same_sbp=*/false));
+          /*requires_same_sbp=*/false));
     }
   }
 
@@ -336,7 +344,7 @@ Maybe<void> BoxingCollector::ComputeCostFor1DSbpDiffPlacement(
       int32_t diag_consumer = id_1d_2_nd_[id_1d_consumer];
       if (diag_consumer < 0) { continue; }
       cost_4_diff_placement[id_1d_producer][id_1d_consumer] = JUST(ComputeLazyCopyCostBetweenNdSbp(
-          nd_sbp_lists_[id_1d_producer], nd_sbp_lists_[diag_consumer], blob_desc, in_parallel_desc,
+          nd_sbp_lists_[diag_producer], nd_sbp_lists_[diag_consumer], blob_desc, in_parallel_desc,
           out_parallel_desc, false));
     }
   }
@@ -484,12 +492,37 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
                                                bool is_customized, std::vector<NdSbp>& middle_sbps,
                                                int32_t* diag_node_pos, bool compute_cost) {
   middle_sbps.clear();
+  // Not allowed two-step boxing and disable checking for debugging
+  if (ParseBooleanFromEnv("ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK", false)) {
+    return Maybe<void>::Ok();
+  }
+  // If compute_cost==false + 2D sbp + same placment + nccl logical + not (p->b),
+  // Use nccl logical send recv instead of middle node.
+  // Note that in op sbp inference, cost of middle nodes is still used for the moment.
+#ifdef WITH_CUDA
+  if (compute_cost == false && producer_parallel_desc.hierarchy()->NumAxes() == 2
+      && producer_parallel_desc == consumer_parallel_desc
+      && !(NdSbpHasPartialParallel(sbp_consumer)) &&
+      // TODO(): When same dim 0 finished dealing with (*, P) -> (*, S) in nccl logical pass, open
+      // this condition. When dealing with (P, P) -> (B, S0), middle node will change it to (P, P)
+      // -> (P, S0) -> (B, S0), neither same dim 0 or send recv in nccl logical pass can deal with
+      // (P, P) -> (P, S0) at the moment.
+      // !(NdSbpHasPartialParallel(sbp_producer) && NdSbpHasBroadcastParallel(sbp_consumer)) &&
+      Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+    VLOG(3) << "Middle node insertion is skipped when src sbp is " << NdSbpToString(sbp_producer)
+            << " dst sbp is " << NdSbpToString(sbp_consumer)
+            << ", because nccl logical send/recv can handle this.";
+    return Maybe<void>::Ok();
+  }
+#endif  // WITH_CUDA
+
   // Dealing with 1D sbp to 1D sbp
   // Specifically, S -> P.
   if (Is1dSbp(sbp_producer) && Is1dSbp(sbp_consumer)) {
     if (sbp_consumer.sbp_parallel(0).has_partial_sum_parallel()) {
       // Support [4]: P <--> [2, 2]: (P, P)
-      if (producer_parallel_desc.EqualsIgnoringHierarchy(consumer_parallel_desc)
+      // Support {0, 1, 2, 3}: P <--> {2, 0, 6, 7}: (P, P)
+      if (producer_parallel_desc.parallel_num() == consumer_parallel_desc.parallel_num()
           && sbp_producer.sbp_parallel(0).has_partial_sum_parallel()) {
         return Maybe<void>::Ok();
       }
@@ -635,7 +668,12 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffPlacement(
   bool same_placement = producer_parallel_desc.EqualsIgnoringHierarchy(consumer_parallel_desc);
   // Dealing with 2D sbp
   if (i >= 0 && j >= 0) {
+    // Pure copy between machines and devices
+    if (i == j && (*producer_parallel_desc.hierarchy() == *consumer_parallel_desc.hierarchy())) {
+      return Maybe<void>::Ok();
+    }
     if (same_placement) {
+      // Different hierarchies
       CHECK_OR_RETURN(diag_node_diff_hierarchy_.size() > 0)
           << "Have not initialzie the combination table for different hierarchies yet! "
              "Please run JUST(GenerateCombination4DiffHierarchy(this, this)); "
@@ -647,6 +685,7 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffPlacement(
         return Maybe<void>::Ok();
       }
     } else {
+      // Different placements
       CHECK_OR_RETURN(diag_node_diff_placement_.size() > 0)
           << "Have not initialzie the combination table for different hierarchies yet! "
              "Please run JUST(GenerateCombination4DiffPlacement(this, this)); "
@@ -916,20 +955,21 @@ Maybe<void> BoxingCollector::Generate1Combination4DiffPlacement(
       }
 
       // Transfer from diag_consumer to id_consumer
+      int32_t curr_path_length = path_length;
       if (boxing_collector_consumer->middle_nodes_[diag_consumer][id_consumer].size() > 0) {
-        path_length +=
+        curr_path_length +=
             boxing_collector_consumer->middle_nodes_[diag_consumer][id_consumer][0].size() + 1;
       } else if (diag_consumer != id_consumer) {
-        path_length++;
+        curr_path_length++;
       }
       // Pick the path with minimum copy cost
-      if (path_length <= min_path_length) {
+      if (curr_path_length <= min_path_length) {
         double curr_cost =
             boxing_collector_producer->minimum_copy_cost_[id_producer][diag_producer]
             + cost_4_diff_placement[id_1d_producer][id_1d_consumer]
             + boxing_collector_consumer->minimum_copy_cost_[diag_consumer][id_consumer];
 
-        min_path_length = path_length;
+        min_path_length = curr_path_length;
         // Find a candidate with small cost
         if (curr_cost < min_cost * 1.0000001) {
           // Find a smaller cost, clear the previous path.

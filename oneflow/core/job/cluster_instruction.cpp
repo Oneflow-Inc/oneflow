@@ -115,7 +115,7 @@ void ClusterInstruction::MasterSendHalt() {
 }
 
 void ClusterInstruction::MasterSendAbort() {
-  LOG(ERROR) << "sending abort instruction";
+  LOG(INFO) << "Sending abort instruction.";
   ClusterInstructionProto cluster_instruction;
   cluster_instruction.mutable_cluster_ctrl_abort();
   PushClusterInstruction(cluster_instruction);

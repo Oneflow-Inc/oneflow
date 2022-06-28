@@ -21,18 +21,21 @@ namespace oneflow {
 Maybe<int64_t> GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx) {
   int64_t seed = ctx->Attr<int64_t>("seed");
   if (!ctx->Attr<bool>("has_seed")) { seed = NewRandomSeed(); }
+  return GetOpKernelRandomSeedInCurrentRank(ctx, seed);
+}
 
+Maybe<int64_t> GetOpKernelRandomSeedInCurrentRank(const user_op::KernelInitContext* ctx,
+                                                  int64_t init_seed) {
+  int64_t seed = init_seed;
   int64_t parallel_num = ctx->parallel_ctx().parallel_num();
   const auto& outputs = ctx->outputs();
   CHECK_EQ(outputs.size(), 1);
-
   if (parallel_num > 1) {
     const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
     int64_t parallel_id = ctx->parallel_ctx().parallel_id();
     const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex(JUST(VectorAt(outputs, 0)).first,
                                                      JUST(VectorAt(outputs, 0)).second);
     std::vector<int64_t> coordinate(hierarchy.NumAxes());
-
     int64_t seed_idx = 0;
     int64_t stride = 1;
     for (int i = nd_sbp.sbp_parallel_size() - 1; i >= 0; --i) {
@@ -50,8 +53,7 @@ Maybe<int64_t> GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx) {
         return Error::RuntimeError() << "random source op only support broadcast or split";
       }
     }
-
-    std::seed_seq seq{seed};
+    std::seed_seq seq{init_seed};
     std::vector<int64_t> seeds(stride);
     seq.generate(seeds.begin(), seeds.end());
     seed = JUST(VectorAt(seeds, seed_idx));

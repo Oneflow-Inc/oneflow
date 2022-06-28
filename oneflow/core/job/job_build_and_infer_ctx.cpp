@@ -60,22 +60,16 @@ Maybe<void> GetOpNames(const Job& job, HashSet<std::string>* op_names) {
 }
 
 Maybe<void> EagerRunOps(const Job& job, HashSet<std::string>* op_names,
-                        void (ForeignCallback::*interpret)(
-                            const std::shared_ptr<cfg::OpAttribute>& op_attribute,
-                            const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const) {
+                        void (ForeignCallback::*interpret)(const OpAttribute& op_attribute,
+                                                           const ParallelConf& parallel_conf)
+                            const) {
   const auto& op_graph = JUST(OpGraph::New(job));
   const auto* foreign_callback = JUST(GlobalMaybe<std::shared_ptr<ForeignCallback>>());
   JUST(op_graph->ForEachOpNode([&](const OpNode& op_node) -> Maybe<void> {
     if (!op_names->insert(op_node.op().op_name()).second) { return Maybe<void>::Ok(); }
     const auto& op_attribute = op_node.op().GetOpAttributeWithoutOpNameAndLbn();
     const auto& parallel_conf = op_node.parallel_desc().parallel_conf();
-    {
-      const std::shared_ptr<cfg::OpAttribute>& cfg_op_attribute =
-          std::make_shared<cfg::OpAttribute>(*op_attribute);
-      const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
-          std::make_shared<cfg::ParallelConf>(parallel_conf);
-      (foreign_callback->get()->*interpret)(cfg_op_attribute, cfg_parallel_conf);
-    }
+    (foreign_callback->get()->*interpret)(*op_attribute, parallel_conf);
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
@@ -192,6 +186,18 @@ void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(const OperatorConf& 
     (*op_name2is_mirrored_parallel_view)[operator_conf.name()] = true;
   }
   job_->mutable_net()->add_op()->CopyFrom(operator_conf);
+
+  // set up the module config
+  const auto& scope = Global<symbol::Storage<Scope>>::Get()->Get(operator_conf.scope_symbol_id());
+  if (scope.scope_proto().has_module_name()) {
+    const auto& module_name = scope.scope_proto().module_name();
+    auto* module_name2module_conf = job_->mutable_module_name2module_conf();
+    if (!(*module_name2module_conf)[module_name].has_name()) {
+      (*module_name2module_conf)[module_name].set_name(scope.scope_proto().module_name());
+    }
+
+    *((*module_name2module_conf)[module_name].add_ops()) = operator_conf.name();
+  }
 }
 
 Maybe<void> JobBuildAndInferCtx::InferMirroredSignature(Operator* op,
@@ -959,14 +965,8 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
   (*mut_mirrored_lbi2sub_lbis())[mirrored_lbi].emplace_back(mirrored_lbi);
   const auto& parallel_conf = parallel_desc.parallel_conf();
   const auto& op_attribute = JUST(AddAndInferConsistentOp(op_conf));
-  {
-    const std::shared_ptr<cfg::OpAttribute>& cfg_op_attribute =
-        std::make_shared<cfg::OpAttribute>(*op_attribute);
-    const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
-        std::make_shared<cfg::ParallelConf>(parallel_conf);
-    (*JUST(GlobalMaybe<std::shared_ptr<ForeignCallback>>()))
-        ->EagerMirroredCast(cfg_op_attribute, cfg_parallel_conf);
-  }
+  (*JUST(GlobalMaybe<std::shared_ptr<ForeignCallback>>()))
+      ->EagerMirroredCast(*op_attribute, parallel_conf);
   return mirrored_lbi;
 }
 
@@ -996,16 +996,27 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
       return false;
     }
   };
+  int32_t pass_cnt = 0;
+  const int64_t prev_v = FLAGS_v;
   auto DoPass = [&](const std::string& pass_name, int32_t cnt = 0) -> Maybe<void> {
+    VLOG(1) << job_name << " start compiling with pass"
+            << " pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name
+            << (cnt > 0 ? std::to_string(cnt) : "");
     if (unlikely(NeedLogJob(pass_name))) {
       std::string cnt_str = cnt > 0 ? std::to_string(cnt) : "";
-      LogJob(pass_name + cnt_str + "-before");
+      LogJob("pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name + cnt_str + "-before");
+      FLAGS_v = 3;
     }
     JUST(JobPass4Name(pass_name)(mut_job(), &job_pass_ctx));
     if (unlikely(NeedLogJob(pass_name))) {
+      FLAGS_v = prev_v;
       std::string cnt_str = cnt > 0 ? std::to_string(cnt) : "";
-      LogJob(pass_name + cnt_str + "-after");
+      LogJob("pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name + cnt_str + "-after");
     }
+    VLOG(1) << job_name << " finish compiling with pass"
+            << " pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name
+            << (cnt > 0 ? std::to_string(cnt) : "");
+    ++pass_cnt;
     return Maybe<void>::Ok();
   };
 
@@ -1020,10 +1031,8 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
 
   if (GlobalJobDesc().Bool("__is_user_function__")) {
     JUST(DoPass("ModelUpdateConfCompatiblePass"));
-    JUST(DoPass("SetDefaultVariableConf"));
     JUST(DoPass("AddInputOutputOpsPass"));
     JUST(DoPass("NormalizationExponentialAverageAutoTickPass"));
-    JUST(DoPass("GradientAccumulationRewritePass"));
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
     JUST(DoPass("PruneAmpWhiteIdentityOpPass"));
@@ -1037,6 +1046,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("IRRoundTripBeforeAD"));
 #endif  // WITH_MLIR
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
+    JUST(DoPass("ReplaceEmbeddingOps"));
     JUST(DoPass("AddSspVariableProxy"));
     JUST(DoPass("CheckpointingPass"));
     JUST(DoPass("CudnnFusedNormalizationAddReluPass"));
@@ -1140,7 +1150,8 @@ Maybe<void> JobBuildAndInferCtx::InferBlobBackwardSignature(
   };
   const auto& maybe_ok =
       TRY(GenerateBackwardOpConfIf(op, &bw_op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp));
-  CHECK(maybe_ok.IsOk() || maybe_ok.error()->has_gradient_function_not_found_error());
+  CHECK(maybe_ok.IsOk() || maybe_ok.error()->has_gradient_function_not_found_error())
+      << GetFormatedSerializedError(::oneflow::private_details::JustGetError(maybe_ok));
   // find backward used logical blob ids
   auto backward_used_lbis = std::make_shared<HashSet<LogicalBlobId>>();
   for (const auto& bw_op_conf : bw_op_confs) {
@@ -1178,10 +1189,11 @@ void FormateUserConf(nlohmann::json& json_conf) {
     json_conf.erase(json_conf.find("user_conf"));
     return;
   }
-  std::string nomarl_array[] = {"at_int32",  "at_int64",  "at_bool",  "at_float",
-                                "at_double", "at_string", "at_shape", "at_data_type"};
+  std::string nomarl_array[] = {"at_int32",  "at_int64", "at_bool",   "at_float",    "at_double",
+                                "at_string", "at_shape", "at_stride", "at_data_type"};
   std::string list_array[] = {"at_list_int32",     "at_list_int64", "at_list_float",
-                              "at_list_data_type", "at_list_shape", "at_list_string"};
+                              "at_list_data_type", "at_list_shape", "at_list_stride",
+                              "at_list_string"};
   nlohmann::json attr_json = user_conf["attr"];
   for (int32_t i = 0; i < attr_json.size(); i++) {
     std::string key = attr_json[i]["key"];
@@ -1191,7 +1203,7 @@ void FormateUserConf(nlohmann::json& json_conf) {
       std::string value_key = nomarl_array[j];
       if (value_json.contains(value_key)) {
         is_found_normal = true;
-        if ("at_shape" == value_key) {
+        if ("at_shape" == value_key || "at_stride" == value_key) {
           json_conf[key] = value_json[value_key]["dim"];
         } else {
           json_conf[key] = value_json[value_key];

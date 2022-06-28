@@ -28,12 +28,16 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestBatchNormModule(flow.unittest.TestCase):
-    @autotest(auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=True)
+    @autotest(
+        auto_backward=True, rtol=1e-3, atol=1e-3, check_grad_use_random_data=False
+    )
     def test_batchnorm1d_module_with_random_data(test_case):
         device = random_device()
         channel = random(1, 4).to(int)
         m = torch.nn.BatchNorm1d(
-            num_features=channel, track_running_stats=random().to(bool)
+            num_features=channel,
+            track_running_stats=random().to(bool),
+            affine=random().to(bool),
         ).to(device)
         m.train(random())
         x = random_tensor(
@@ -42,12 +46,16 @@ class TestBatchNormModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=True)
+    @autotest(
+        auto_backward=True, rtol=1e-3, atol=1e-3, check_grad_use_random_data=False
+    )
     def test_batchnorm2d_module_with_random_data(test_case):
         device = random_device()
         channel = random(1, 4).to(int)
         m = torch.nn.BatchNorm2d(
-            num_features=channel, track_running_stats=random().to(bool)
+            num_features=channel,
+            track_running_stats=random().to(bool),
+            affine=random().to(bool),
         ).to(device)
         m.train(random())
         x = random_tensor(
@@ -56,12 +64,16 @@ class TestBatchNormModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=True)
+    @autotest(
+        auto_backward=True, rtol=1e-3, atol=1e-3, check_grad_use_random_data=False
+    )
     def test_batchnorm3d_module_with_random_data(test_case):
         device = random_device()
         channel = random(1, 4).to(int)
         m = torch.nn.BatchNorm3d(
-            num_features=channel, track_running_stats=random().to(bool)
+            num_features=channel,
+            track_running_stats=random().to(bool),
+            affine=random().to(bool),
         ).to(device)
         m.train(random())
         x = random_tensor(ndim=5, dim1=channel, requires_grad=True).to(device)

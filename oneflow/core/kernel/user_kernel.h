@@ -51,6 +51,7 @@ class UserKernel final : public Kernel {
   void ForwardUserKernel(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                          user_op::OpKernelState* opkernel_state) const;
   bool IsCudaGraphSupported() const;
+  bool IsReadyForCudaGraphCapture(KernelContext* ctx) const;
 
  private:
   void VirtualKernelInit(KernelContext* ctx) override;
@@ -59,6 +60,7 @@ class UserKernel final : public Kernel {
   void ForwardShape(KernelContext* ctx) const override;
 
   bool IsStateless() const override;
+  bool IsKernelLaunchSynchronized() const override { return kernel_->IsKernelLaunchSynchronized(); }
 
   mutable std::shared_ptr<user_op::OpKernelCache> opkernel_cache_;
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;

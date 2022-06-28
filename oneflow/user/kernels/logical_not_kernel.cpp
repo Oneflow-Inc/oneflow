@@ -22,7 +22,7 @@ namespace oneflow {
 
 template<template<typename T> class UNARY_OP, typename T>
 struct LogicalNotFunctor<DeviceType::kCPU, UNARY_OP, T> final {
-  void operator()(ep::Stream* stream, const int64_t elem_cnt, const T* in, int8_t* out) {
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, const T* in, bool* out) {
     DoLogicalNot<UNARY_OP, T>(elem_cnt, in, out);
   }
 };
@@ -39,19 +39,19 @@ class CpuLogicalNotKernel final : public user_op::OpKernel {
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const T* x = tensor_x->dptr<T>();
     K* y = tensor_y->mut_dptr<K>();
-    int64_t n = tensor_x->shape().elem_cnt();
+    int64_t n = tensor_x->shape_view().elem_cnt();
     if (n != 0) { LogicalNotFunctor<device_type, UNARY_OP, T>()(ctx->stream(), n, x, y); }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_LOGICAL_NOT_KERNEL(dtype, DataType)                                        \
-  REGISTER_USER_KERNEL("logical_not")                                                           \
-      .SetCreateFn<CpuLogicalNotKernel<DeviceType::kCPU, UnaryFuncLogicalNot, dtype, int8_t>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+#define REGISTER_CPU_LOGICAL_NOT_KERNEL(dtype, DataType)                                      \
+  REGISTER_USER_KERNEL("logical_not")                                                         \
+      .SetCreateFn<CpuLogicalNotKernel<DeviceType::kCPU, UnaryFuncLogicalNot, dtype, bool>>() \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                         \
                        && (user_op::HobDataType("x", 0) == DataType));
 
-OF_PP_FOR_EACH_TUPLE(REGISTER_CPU_LOGICAL_NOT_KERNEL, ARITHMETIC_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(REGISTER_CPU_LOGICAL_NOT_KERNEL, ARITHMETIC_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

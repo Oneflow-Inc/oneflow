@@ -24,7 +24,7 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-void MaskAndScale(ep::Stream* stream, const int64_t n, float scale, const T* x, const int8_t* mask,
+void MaskAndScale(ep::Stream* stream, const int64_t n, float scale, const T* x, const bool* mask,
                   T* y) {
   for (int64_t i = 0; i < n; ++i) { y[i] = x[i] * static_cast<T>(mask[i]) * scale; }
 }
@@ -32,7 +32,7 @@ void MaskAndScale(ep::Stream* stream, const int64_t n, float scale, const T* x, 
 template<typename T>
 void FusedDropoutKernel(ep::Stream* stream, const int64_t elem_cnt,
                         const std::shared_ptr<one::CPUGeneratorImpl>& cpu_gen, const float rate,
-                        float scale, const T* x, int8_t* mask, T* y) {
+                        float scale, const T* x, bool* mask, T* y) {
   /*
   `uniform_real_distribution` interval is [a, b).
   And `curand_uniform4` interval is (0, 1.0], so we use > in CUDA and use >= in CPU.
@@ -74,19 +74,19 @@ class DropoutKernelCPU final : public user_op::OpKernel {
     std::shared_ptr<one::CPUGeneratorImpl> cpu_generator =
         CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
 
-    FusedDropoutKernel<T>(ctx->stream(), in->shape().elem_cnt(), cpu_generator, rate, scale,
-                          in->dptr<T>(), mask->mut_dptr<int8_t>(), out->mut_dptr<T>());
+    FusedDropoutKernel<T>(ctx->stream(), in->shape_view().elem_cnt(), cpu_generator, rate, scale,
+                          in->dptr<T>(), mask->mut_dptr<bool>(), out->mut_dptr<T>());
 
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), out->data_type());
-      CHECK_EQ(add_to_output->shape(), out->shape());
+      CHECK_EQ(add_to_output->shape_view(), out->shape_view());
       std::unique_ptr<ep::primitive::Add> primitive =
           ep::primitive::NewPrimitive<ep::primitive::AddFactory>(DeviceType::kCPU,
                                                                  add_to_output->data_type());
       CHECK(primitive);
       primitive->Launch(ctx->stream(), out->dptr<T>(), add_to_output->dptr<T>(), out->mut_dptr<T>(),
-                        add_to_output->shape().elem_cnt());
+                        add_to_output->shape_view().elem_cnt());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -97,7 +97,7 @@ class DropoutKernelCPU final : public user_op::OpKernel {
       .SetCreateFn<DropoutKernelCPU<dtype>>()                                                   \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)         \
-                       && (user_op::HobDataType("mask", 0) == GetDataType<int8_t>::value))      \
+                       && (user_op::HobDataType("mask", 0) == GetDataType<bool>::value))        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
@@ -119,8 +119,8 @@ class DropoutGradKernelCPU final : public user_op::OpKernel {
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const float scale = ctx->Attr<float>("scale");
-    MaskAndScale<T>(ctx->stream(), dy->shape().elem_cnt(), scale, dy->dptr<T>(),
-                    mask->dptr<int8_t>(), dx->mut_dptr<T>());
+    MaskAndScale<T>(ctx->stream(), dy->shape_view().elem_cnt(), scale, dy->dptr<T>(),
+                    mask->dptr<bool>(), dx->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

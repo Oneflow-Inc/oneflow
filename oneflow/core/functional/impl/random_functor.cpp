@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/global.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/attr_map.h"

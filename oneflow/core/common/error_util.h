@@ -17,15 +17,13 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_ERROR_UTIL_H
 
 #include <string>
-#include "oneflow/core/common/error.cfg.h"
 #include "oneflow/core/common/error.pb.h"
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
-namespace cfg {
-class ErrorProto;
-}
-Maybe<std::string> FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>& error);
+
+Maybe<std::string> FormatErrorStr(const std::shared_ptr<ErrorProto>& error);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_ERROR_UTIL_H

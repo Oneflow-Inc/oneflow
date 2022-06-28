@@ -130,11 +130,7 @@ async def launch_remote_container(
     assert img_tag
     multi_client_args = [node_rank, master_addr]
     multi_client_arg_has_value = [x is not None for x in multi_client_args]
-    if any(multi_client_arg_has_value):
-        assert all(multi_client_arg_has_value)
-        is_multi_client = True
-    else:
-        is_multi_client = False
+    assert all(multi_client_arg_has_value)
     pythonpath_args = None
     if oneflow_wheel_path:
         pythonpath_args = ""
@@ -157,13 +153,10 @@ async def launch_remote_container(
         f"ssh {remote_host} docker exec {container_name} python3 -m oneflow --doctor"
     )
     if cmd:
-        if is_multi_client:
-            multi_client_docker_args = (
-                # Use _MASTER_ADDR to avoid name conflict with OneFlow's built-in MASTER_ADDR
-                f"--env NODE_RANK={node_rank} --env _MASTER_ADDR={master_addr}"
-            )
-        else:
-            multi_client_docker_args = ""
+        multi_client_docker_args = (
+            # Use _MASTER_ADDR to avoid name conflict with OneFlow's built-in MASTER_ADDR
+            f"--env NODE_RANK={node_rank} --env _MASTER_ADDR={master_addr}"
+        )
         await spawn_shell(
             f"ssh {remote_host} docker exec {multi_client_docker_args} {container_name} {cmd}"
         )
@@ -185,35 +178,6 @@ def handle_call(conn=None, cmd=None, response=None):
     msg = conn.recv().decode()
     conn.send(response.encode())
     return msg
-
-
-def wait_for_env_proto_and_launch_workers(
-    agent_port=None, agent_authkey=None, remote_hosts=None
-):
-    listener = Listener(("localhost", agent_port), authkey=agent_authkey)
-    while True:
-        conn = listener.accept()
-        remote_docker_proc = {}
-        for remote_host in remote_hosts:
-            assert handle_cast(conn=conn, cmd="host"), remote_host
-            env_proto_txt = handle_cast(conn=conn, cmd="env_proto")
-            print("[docker agent]", f"[{remote_host}]", env_proto_txt)
-            f = tempfile.NamedTemporaryFile(mode="wb+", delete=True)
-            f.write(env_proto_txt.encode())
-            f.flush()
-            subprocess.check_call(
-                f"rsync -azPq --omit-dir-times --no-perms --no-group {f.name} {remote_host}:{workspace_dir}/env.prototxt",
-                shell=True,
-            )
-            run_docker_cmd = f"ssh {remote_host} docker exec {container_name}"
-            run_docker_cmd += f" python3 -m oneflow.compatible.single_client --start_worker --env_proto={workspace_dir}/env.prototxt"
-            print("[docker agent]", run_docker_cmd)
-            remote_docker_proc[remote_host] = subprocess.Popen(
-                run_docker_cmd, shell=True
-            )
-            handle_call(conn=conn, cmd="start_worker", response="ok")
-        for k, v in remote_docker_proc.items():
-            assert v.wait() == 0
 
 
 class DockerAgent:
@@ -300,24 +264,6 @@ bash {bash_script}
         run_docker_cmd = get_docker_cmd(f, bash_cmd)
         self.bash_tmp_file = f
         self.bash_proc = subprocess.Popen(run_docker_cmd, shell=True)
-
-    def block(self):
-        from multiprocessing import Process
-
-        p = None
-        kwargs = {
-            "agent_port": self.agent_port,
-            "agent_authkey": self.agent_authkey,
-            "remote_hosts": self.remote_hosts,
-        }
-        p = Process(target=wait_for_env_proto_and_launch_workers, kwargs=kwargs,)
-        p.start()
-        print("[docker agent]", "blocking")
-        while self.bash_proc.poll() is None and p.is_alive() == True:
-            pass
-        p.terminate()
-        assert self.bash_proc.returncode == 0
-        print("[docker agent]", "bash execution done")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
@@ -450,7 +396,7 @@ if __name__ == "__main__":
     parser.add_argument("--copy_files", action="append", default=[])
     args = parser.parse_args()
 
-    assert args.mode in ["multi_client", "single_client"]
+    assert args.mode in ["multi_client"]
     assert bool(args.oneflow_wheel_path) != bool(args.oneflow_python_path)
     assert bool(args.bash_script) != bool(args.cmd)
     if args.skip_libs:
@@ -700,23 +646,3 @@ if __name__ == "__main__":
                 ],
             )
         )
-
-    if args.mode == "single_client":
-        with DockerAgent(
-            port=agent_port,
-            authkey=agent_authkey.encode(),
-            this_host=this_host,
-            remote_hosts=remote_hosts,
-            container_name=container_name,
-            workspace_dir=workspace_dir,
-            oneflow_wheel_path=oneflow_wheel_path,
-            oneflow_python_path=args.oneflow_python_path,
-            img_tag=img_tag,
-            oneflow_test_tmp_dir=args.oneflow_test_tmp_dir,
-            extra_docker_args=" ".join(main_node_extra_docker_args),
-        ) as agent:
-            if args.bash_script:
-                agent.run_bash_script_async(bash_script=args.bash_script,)
-            elif args.cmd:
-                agent.run_bash_script_async(cmd=args.cmd,)
-            agent.block()

@@ -46,7 +46,7 @@ namespace oneflow {
   const user_op::TensorDesc& predictions = ctx->InputTensorDesc("predictions", 0);
   CHECK_EQ_OR_RETURN(predictions.data_type(), DataType::kFloat);
   user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
-  *out->mut_data_type() = kInt8;
+  *out->mut_data_type() = kBool;
   return Maybe<void>::Ok();
 }
 

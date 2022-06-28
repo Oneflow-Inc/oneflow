@@ -26,7 +26,10 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "fused_self_attention_query_mul_key_and_value",
                                "prelu",
                                "tf_prelu",
-                               "fused_dot_feature_interaction"};
+                               "cublas_fused_mlp",
+                               "fused_matmul_bias_add_relu_dropout",
+                               "fused_dot_feature_interaction",
+                               "embedding_lookup_placeholder"};
   return white_list;
 }
 
@@ -42,12 +45,12 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "tf_avg_pool_2d",
                               "tf_avg_pool_3d",
                               "bias_add",
-                              "multiply",
-                              "sigmoid",
+                              "sigmoid_v2",
                               "tanh",
                               "sqrt",
                               "scalar_mul",
                               "scalar_add",
+                              "scalar_div",
                               "broadcast_add",
                               "broadcast_sub",
                               "broadcast_mul",
@@ -87,6 +90,7 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "identity",
                                "flatten",
                                "squeeze",
+                               "embedding",
                                "expand_dims",
                                "cast_to_static_shape",
                                "parallel_cast",
@@ -96,7 +100,8 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "unpack",
                                "pack",
                                "nvtx_start",
-                               "nvtx_end"};
+                               "nvtx_end",
+                               "narrow"};
 
   return clear_list;
 }

@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/job/job_ir.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 
 namespace oneflow {
 
@@ -134,7 +135,8 @@ class RoundTripOneFlowJobWrapper : public mlir::oneflow::RoundTripOneFlowJobWrap
 
   void TopoForEachOpConf(
       std::function<void(const ::oneflow::OperatorConf*)> Handler) const override {
-    op_graph_.TopoForEachNode([&](OpNode* op_node) { Handler(&op_node->op().op_conf()); });
+    op_graph_.TopoForEachNodeWithCtrlEdge(
+        [&](OpNode* op_node) { Handler(&op_node->op().op_conf()); });
   }
 
   std::string LogDir() {
@@ -175,11 +177,14 @@ Maybe<void> IRRoundTrip<ir_pass_type>::Apply(Job* job, JobPassCtx* ctx) const {
 template class IRRoundTrip<kBeforeAD>;
 template class IRRoundTrip<kAfterAD>;
 
+Maybe<std::string> ConvertJobToTosaIR(Job* job) {
+  RoundTripOneFlowJobWrapper<kBeforeAD> job_wrapper(job);
+  return ::mlir::oneflow::ConvertJobToTosaIR(job_wrapper);
+}
+
 Maybe<void> SaveJobToIR(Job* job, const std::string& path) {
   // TODO: check path is valid dir
-  if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr) {
-    TeePersistentLogStream::Create("saved_job")->Write(*job);
-  }
+  if (IsInDebugMode()) { TeePersistentLogStream::Create("saved_job")->Write(*job); }
   RoundTripOneFlowJobWrapper<kBeforeAD> job_wrapper(job);
   ::mlir::oneflow::SaveJobToIR(job_wrapper, path);
   return Maybe<void>::Ok();

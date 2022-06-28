@@ -166,7 +166,7 @@ class GpuRollKernel final : public user_op::OpKernel {
 
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
-    const int64_t elem_count = out->shape().elem_cnt();
+    const int64_t elem_count = out->shape_view().elem_cnt();
 
     if (dims[0] == -1) {
       // NOTE(Liang Depeng): Borrow the implementation of pytorch and simplify to 1d array case.
@@ -179,7 +179,7 @@ class GpuRollKernel final : public user_op::OpKernel {
       SHAPE new_shape{};
       SHIFTS new_shifts{};
       int32_t num_axes = 0;
-      computeParams(in->shape(), shifts, dims, new_shifts.val, new_shape.val, &num_axes);
+      computeParams(in->shape_view(), shifts, dims, new_shifts.val, new_shape.val, &num_axes);
 
       STRIDE stride{};
       initStride(stride, new_shape, num_axes);
@@ -285,6 +285,7 @@ class GpuRollKernel final : public user_op::OpKernel {
 REGISTER_ROLL_KERNEL(float);
 REGISTER_ROLL_KERNEL(double);
 REGISTER_ROLL_KERNEL(float16);
+REGISTER_ROLL_KERNEL(bool);
 REGISTER_ROLL_KERNEL(uint8_t);
 REGISTER_ROLL_KERNEL(int8_t);
 REGISTER_ROLL_KERNEL(int32_t);

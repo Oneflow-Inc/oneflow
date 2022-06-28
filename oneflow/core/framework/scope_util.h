@@ -21,6 +21,11 @@ limitations under the License.
 
 namespace oneflow {
 
+Maybe<Scope> MakeScope(const JobConfigProto& config_proto, const Device& device);
+
+Maybe<Scope> MakeInitialScope(const JobConfigProto& job_conf, Symbol<ParallelDesc> placement,
+                              bool is_mirrored);
+
 Maybe<Scope> GetCurrentScope();
 
 Maybe<void> InitThreadLocalScopeStack(const std::shared_ptr<Scope>& scope);

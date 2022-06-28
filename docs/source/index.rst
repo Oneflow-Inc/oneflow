@@ -12,9 +12,10 @@ OneFlow API Reference
     :caption: OneFlow Python API
 
     oneflow
+    tensor
+    tensor_attributes
     nn
     functional
-    tensor
     autograd
     cuda
     distributed
@@ -27,8 +28,7 @@ OneFlow API Reference
     utils
     env
     comm
-    placement
-    sbp
+    one_embedding
 
 
 

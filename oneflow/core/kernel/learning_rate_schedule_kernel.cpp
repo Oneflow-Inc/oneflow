@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/graph_scope_vars.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
@@ -32,9 +33,11 @@ class LearningRateScheduleKernel final : public Kernel {
       log_stream_ = TeePersistentLogStream::Create("train_step2lr.csv");
       (*log_stream_) << "train_step, lr\n";
     }
+    if (IsOpenGraphVerboseStepLr()) { print_step_lr_ = true; }
   }
-  void ForwardDataContent(KernelContext* ctx) const override;
 
+  void ForwardDataContent(KernelContext* ctx) const override;
+  bool print_step_lr_ = false;
   std::unique_ptr<TeePersistentLogStream> log_stream_;
 };
 
@@ -286,6 +289,11 @@ void LearningRateScheduleKernel::ForwardDataContent(KernelContext* ctx) const {
   float learning_rate = conf.learning_rate();
   if (conf.has_learning_rate_decay()) {
     learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
+  }
+  // NOTE(lixiang): Set verbose=True will print step and lr.
+  if (unlikely(print_step_lr_)) {
+    std::cout << "Last step " << train_step << " adjusting learning rate to " << learning_rate
+              << std::endl;
   }
   *ctx->BnInOp2Blob("out")->mut_dptr<float>() = learning_rate;
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {

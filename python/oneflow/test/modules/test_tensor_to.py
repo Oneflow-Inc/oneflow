@@ -21,6 +21,8 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
+from oneflow.test_utils.automated_test_util import *
+
 
 @flow.unittest.skip_unless_1n2d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -165,6 +167,18 @@ class TestTo(flow.unittest.TestCase):
         output = input.to(tensor)
         test_case.assertEqual(output.dtype, flow.int)
         test_case.assertEqual(output.device, flow.device("cuda"))
+
+    @autotest(n=5, check_graph=True)
+    def test_int_to_args(test_case):
+        device_num = random(0, 2).to(int).value()
+        x = random_tensor(ndim=4).to(device_num)
+        return x
+
+    @autotest(n=5, check_graph=True)
+    def test_int_to_kwargs(test_case):
+        device_num = random(0, 2).to(int).value()
+        x = random_tensor(ndim=4).to(device=device_num)
+        return x
 
 
 if __name__ == "__main__":

@@ -33,12 +33,13 @@ template<>
 class RandomMaskGenerator<DeviceType::kCPU> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
-  RandomMaskGenerator(const std::shared_ptr<one::Generator>& generator) {
-    generator_ = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
+  RandomMaskGenerator(const std::shared_ptr<one::Generator>& generator,
+                      const int device_index = -1) {
+    generator_ = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>(device_index));
   }
   ~RandomMaskGenerator() = default;
 
-  void Generate(ep::Stream* stream, int64_t n, float rate, int8_t* mask);
+  void Generate(ep::Stream* stream, int64_t n, float rate, bool* mask);
 
  private:
   std::shared_ptr<one::CPUGeneratorImpl> generator_;
@@ -49,12 +50,13 @@ template<>
 class RandomMaskGenerator<DeviceType::kCUDA> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
-  RandomMaskGenerator(const std::shared_ptr<one::Generator>& generator) {
-    generator_ = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
+  RandomMaskGenerator(const std::shared_ptr<one::Generator>& generator,
+                      const int device_index = -1) {
+    generator_ = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
   }
   ~RandomMaskGenerator() = default;
 
-  void Generate(ep::Stream* stream, int64_t n, float rate, int8_t* mask);
+  void Generate(ep::Stream* stream, int64_t n, float rate, bool* mask);
 
  private:
   std::shared_ptr<one::CUDAGeneratorImpl> generator_;

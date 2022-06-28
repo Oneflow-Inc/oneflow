@@ -215,7 +215,12 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       stream_kernel_observer_ = kernel_observer_provider->GetKernelObserver();
     }
   }
-  ~LightActor() override = default;
+  ~LightActor() override {
+    for (IndexType i = 0; i < index2state_.Size(); ++i) {
+      auto& state = index2state_.Get(i);
+      if (state.regst_type == RegstType::kProduced) { delete state.regst; }
+    }
+  }
 
   void Init(const JobDesc* job_desc, ActorContext* actor_ctx) override {
     const TaskProto& task_proto = actor_ctx->task_proto();
@@ -460,18 +465,24 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
 
   inline void LaunchKernel() {
 #ifdef WITH_CUDA_GRAPHS
+    bool is_capturing = false;
     if (cuda_graph_exec_[0]) {
       auto* cuda_stream = stream_ctx_->stream()->As<ep::CudaStream>();
       if (cuda_graph_exec_[0]->IsInstantiated()) {
         cuda_stream->LaunchGraph(cuda_graph_exec_[0].get());
         return;
       }
-      cuda_stream->BeginGraphCapture();
+      auto* user_kernel =
+          CHECK_NOTNULL(dynamic_cast<const UserKernel*>(kernel_info_[0]->kernel.get()));
+      if (user_kernel->IsReadyForCudaGraphCapture(this)) {
+        is_capturing = true;
+        cuda_stream->BeginGraphCapture();
+      }
     }
 #endif
     kernel_info_[0]->kernel->Launch(this);
 #ifdef WITH_CUDA_GRAPHS
-    if (cuda_graph_exec_[0]) {
+    if (cuda_graph_exec_[0] && is_capturing) {
       auto* cuda_stream = stream_ctx_->stream()->As<ep::CudaStream>();
       cuda_stream->EndGraphCapture(cuda_graph_exec_[0].get());
       cuda_stream->LaunchGraph(cuda_graph_exec_[0].get());

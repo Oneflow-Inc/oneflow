@@ -13,15 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import logging
 import os
 import time
+import inspect
 from collections import OrderedDict
 from functools import partial
-from typing import Dict, Optional, Union, List
+from typing import Dict, Optional, Union, List, Callable
+import weakref
 from google.protobuf import text_format
 
 import oneflow
 import oneflow._oneflow_internal
+import oneflow.core.job.job_pb2 as job_pb
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx
@@ -35,15 +39,14 @@ from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import (
     add_indent,
+    ArgsTree,
+    operators_repr,
     seq_to_func_return,
     sys_exc_error_msg,
-    IONodeType,
-    IONode,
 )
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LRScheduler
 from oneflow.nn.optimizer.optimizer import Optimizer
-from oneflow.nn.optimizer.sparse_optimizer import SparseOptimizer
 
 
 class Graph(object):
@@ -112,6 +115,7 @@ class Graph(object):
         self.config = GraphConfig()
         self._blocks = OrderedDict()
         self._opts = []
+        self._verbose = False
         self._grad_scaler = None
         self._variables_conf = OrderedDict()
         self._additional_variable_tobe_loaded = OrderedDict()
@@ -122,19 +126,23 @@ class Graph(object):
         self._forward_job_proto = None
         # forward, backward and optimized graph job proto
         self._full_job_proto = None
+        # completed graph job proto
+        self._compiled_job_proto = None
+        self._job_id = None
         self._args_repr = []
         self._outs_repr = []
         self._debug = False
         self._debug_min_s_level = 2
         self._debug_max_v_level = 0
+        self._debug_max_py_stack_depth = 2
         self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
 
-        self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
-        session = session_ctx.GetDefaultSession()
-        assert type(session) is MultiClientSession
-        session.TryInit()
-        session.AddCGraph(self._c_nn_graph)
+        self._session = session_ctx.GetDefaultSession()
+        assert type(self._session) is MultiClientSession
+        self._session.TryInit()
+        self._c_nn_graph = None
+        self.env_enable_mlir_inference_opt = None
 
     def build(self, *args, **kwargs):
         r"""The ``build()`` method must be overridden to define neural network
@@ -178,7 +186,9 @@ class Graph(object):
             * ``None``
 
         """
-        raise NotImplementedError()
+        raise NotImplementedError(
+            "nn.Graph.build() method must be overridden when subclassing the nn.Graph."
+        )
 
     def __call__(self, *args, **kwargs):
         r"""Call nn.Graph subclass instance to run your customized graph.
@@ -202,16 +212,17 @@ class Graph(object):
 
             Donot override this function.
         """
+
         if not self._is_compiled:
-            with graph_build_util.GLogScopeContext(
-                self._debug_min_s_level, self._debug_max_v_level
-            ):
-                self._compile(*args, **kwargs)
+            self._compile(*args, **kwargs)
+            self.__print(
+                0, 2, lambda: f"{self.name} with operators:\n" + self.__repr__()
+            )
 
         return self.__run(*args, **kwargs)
 
     def add_optimizer(
-        self, optim: Optimizer, *, lr_sch: LRScheduler = None,
+        self, optim: Optimizer, *, lr_sch: LRScheduler = None, is_sparse: bool = False,
     ):
         r"""Add an optimizer, an learning rate scheduler to the graph.
 
@@ -230,6 +241,12 @@ class Graph(object):
         Also note that only scalar tensor are allowed to call ``backward()``
         in ``nn.Graph.build()`` for the moment. So you may call methods such as ``Tensor.mean()``
         to make the loss tensor a scalar tensor.
+
+        Note:
+            If you want to output the learning rate information for each step,
+            set the ``verbose`` parameter of the ``lr_scheduler`` to ``True``, and you will see the result at rank 0.
+
+            This feature is the same as eager mode.
 
         For example:
 
@@ -267,27 +284,34 @@ class Graph(object):
         Args:
             optim (oneflow.optim.Optimizer): The optimizer.
             lr_sch : The learning rate scheduler, see oneflow.optim.lr_scheduler.
+            is_sparse: When set to be True, treat optim as a sparse optimizer. Default is False.
         """
         opt_dict = dict()
         assert optim is not None, "optimizer cannot be None"
         assert isinstance(
-            optim, (Optimizer, SparseOptimizer)
+            optim, Optimizer
         ), "optimizer must be an instance of Optimizer"
+
         opt_dict["optim"] = optim
+        opt_dict["is_sparse"] = bool(is_sparse)
         if lr_sch is not None:
             assert isinstance(lr_sch, LRScheduler)
             assert (
                 lr_sch.optimizer is optim
             ), "lr_scheduler's optimizer must be the same optimizer in add_optimizer."
             opt_dict["lr_sch"] = lr_sch
+            self._verbose = opt_dict["lr_sch"].verbose
+            rank = get_rank()
+            if rank != 0:
+                self._verbose = False
+        oneflow._oneflow_internal.SetGraphLRVerbose(self._verbose)
         self._opts.append(opt_dict)
         # Set the training config if there is an optimizer add in graph.
         if len(self._opts) == 1:
             self.config._train(True)
 
     def set_grad_scaler(self, grad_scaler: GradScaler = None):
-        r"""Set the GradScaler for gradient and loss scaling.
-        """
+        r"""Set the GradScaler for gradient and loss scaling."""
         assert isinstance(grad_scaler, (GradScaler, StaticGradScaler))
         self._grad_scaler = grad_scaler
 
@@ -309,7 +333,7 @@ class Graph(object):
 
         """
         # Sync to make sure states has been updated.
-        oneflow._oneflow_internal.eager.multi_client.Sync()
+        oneflow._oneflow_internal.eager.Sync()
         if destination is None:
             destination = OrderedDict()
             destination._metadata = OrderedDict()
@@ -337,7 +361,7 @@ class Graph(object):
                     additional_tensor = additional_tensor.to_local()
                 destination[additional_var_names[i]] = additional_tensor
         else:
-            # Get form loaded dict.
+            # Get from loaded dict.
             for name, item in self._additional_variable_tobe_loaded.items():
                 destination[name] = item
         return destination
@@ -365,8 +389,6 @@ class Graph(object):
             not self._is_compiled
         ), "nn.Graph's state dict can only be loaded before the first call of a graph."
         # Additional variables are states in Optimizer or LRScheduler of nn.Graph.
-        additional_var_names = list()
-        additional_var_tensors = list()
         for name, item in state_dict.items():
             if name in self._blocks:
                 # 1 load parameter/buffer to Modules
@@ -374,34 +396,30 @@ class Graph(object):
             else:
                 # 2 store other state to CNNGraph, CNNGraph load them after job pass
                 assert isinstance(item, Tensor)
-                additional_var_names.append(name)
-                additional_var_tensors.append(item)
                 self._additional_variable_tobe_loaded[name] = item
-
-        if len(additional_var_names) > 0:
-            self._c_nn_graph.register_additional_variable_names_and_tensors(
-                additional_var_names, convert_to_tensor_tuple(additional_var_tensors)
-            )
-        # Sync to make sure states has been loaded.
-        oneflow._oneflow_internal.eager.multi_client.Sync()
 
     @property
     def name(self):
-        r"""Name auto-generated for this graph.
-        """
+        r"""Name auto-generated for this graph."""
         return self._name
 
     @property
-    def training(self):
-        r"""In traninig mode if the graph has an optimizer.
+    def is_compiled(self):
+        r"""Whether this graph is compiled or not
         """
+        return self._is_compiled
+
+    @property
+    def training(self):
+        r"""In traninig mode if the graph has an optimizer."""
         return self.config.training
 
     def debug(
         self,
         v_level: int = 0,
+        *,
         ranks: Optional[Union[int, List[int]]] = None,
-        mode: bool = True,
+        max_py_stack_depth: int = 2,
     ) -> None:
         r"""Open or close debug mode of the graph.
 
@@ -411,12 +429,15 @@ class Graph(object):
         Each nn.Module inside a nn.Graph also has a debug() method to enable debug mode.
 
         Use ``v_level`` to choose verbose debug info level, default level is 0, max level is 3.
+        ``v_level`` -1 will disable the debug mode of the graph (i.e. no info will be printed).
         ``v_level`` 0 will print warning and graph building stages. ``v_level`` 1 will additionally
         print graph build info of each nn.Module. ``v_level`` 2 will additionally print graph build
         info of each operation. ``v_level`` 3 will additionally print more detailed info of each
         operation.
 
         Use ``ranks`` to choose which rank to print the debug information.
+
+        Use ``max_py_stack_depth`` to specify the max Python stack depth for the debug information.
 
         For example:
 
@@ -427,15 +448,16 @@ class Graph(object):
             out_tensors = g(input_tensors)  # Will print log for debug at the first call
 
         Args:
-            v_level (int): choose verbose debug info level, default v_level is 0, max v_level is 3.
+            v_level (int): choose verbose debug info level, default v_level is 0, max v_level is 3. v_level can be set to -1 to close the debug mode.
             ranks (int or list(int)): choose ranks to print the debug information. Default rank ``0``.
                 You can choose any valid rank. Ranks equals ``-1`` means debug on all ranks.
-            mode (bool): whether to set debug mode (``True``) or not (``False``). Default: ``True``.
+            max_py_stack_depth(int): the maximum depth for the Python stack debug information. Default: ``2``
         """
         assert isinstance(v_level, int)
-        assert v_level >= 0, "The min verbose debug info level is 0."
+        assert v_level >= -1, "The min verbose debug info level is -1."
         assert v_level <= 3, "The max verbose debug info level is 3."
-        assert isinstance(mode, bool)
+        assert max_py_stack_depth >= 0, "The min max stack depth is 0."
+        assert isinstance(max_py_stack_depth, int)
 
         if ranks is None:
             rank_list = [0]
@@ -448,13 +470,15 @@ class Graph(object):
 
         my_rank = get_rank()
         if -1 in rank_list or my_rank in rank_list:
-            self._debug = mode
+            self._debug = v_level >= 0
             if self._debug:
                 self._debug_min_s_level = 0
-                self._debug_max_v_level = v_level
+                self._debug_max_v_level = max(0, v_level)
             for name, block in self._blocks.items():
                 assert block.type == BlockType.MODULE
-                block.debug(v_level, ranks, mode)
+                block.debug(v_level, ranks=ranks, max_py_stack_depth=max_py_stack_depth)
+
+        self._debug_max_py_stack_depth = max_py_stack_depth
 
     def __repr__(self):
         r"""For printing the graph structure.
@@ -488,6 +512,9 @@ class Graph(object):
                 mod_str = add_indent(mod_str, 2)
                 child_lines.append(mod_str)
 
+        for op_str in self._ops_repr():
+            child_lines.append(add_indent(op_str, 2))
+
         if len(self._outs_repr) > 0:
             for out_str in self._outs_repr:
                 output_str = add_indent(out_str, 2)
@@ -503,15 +530,26 @@ class Graph(object):
         shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
         return shallow_repr
 
-    def __print(self, s_level=2, v_level=0, msg: str = ""):
-        r"""Do print according to info level.
+    def _ops_repr(self):
+        r"""Generate operators' string representation of this graph
         """
+        if self._is_compiled and self._compiled_graph_proto is not None:
+            module_conf = self._compiled_graph_proto.module_name2module_conf[self.name]
+            return operators_repr(module_conf.ops, self._compiled_graph_proto)
+
+        return []
+
+    def __print(self, s_level=2, v_level=0, msg=None):
+        r"""Do print according to info level."""
         assert isinstance(s_level, int)
         assert isinstance(v_level, int)
-        assert isinstance(msg, str)
+        assert isinstance(msg, str) or isinstance(msg, Callable)
         if s_level >= self._debug_min_s_level:
             if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
-                print(msg, flush=True)
+                if isinstance(msg, str):
+                    print(msg, flush=True)
+                elif isinstance(msg, Callable):
+                    print(msg(), flush=True)
 
     @property
     def _config_proto(self):
@@ -519,9 +557,7 @@ class Graph(object):
 
     @property
     def _optimization_conf_proto(self):
-        session = session_ctx.GetDefaultSession()
-        assert type(session) is MultiClientSession
-        return session.resource
+        return self._session.resource
 
     @property
     def _graph_proto(self):
@@ -536,7 +572,7 @@ class Graph(object):
 
     @property
     def _full_graph_proto(self):
-        if not self._is_compiled:
+        if self._full_job_proto is None:
             self.__print(
                 2,
                 0,
@@ -544,6 +580,25 @@ class Graph(object):
                 " You can call the graph to trigger it's compilation.",
             )
         return self._full_job_proto
+
+    @_full_graph_proto.setter
+    def _full_graph_proto(self, full_job_proto):
+        assert (
+            not self._is_compiled
+        ), "nn.Graph's full graph proto can only be set before the first compilation."
+        self._full_job_proto = full_job_proto
+        self._c_nn_graph.job = full_job_proto.SerializeToString()
+
+    @property
+    def _compiled_graph_proto(self):
+        if not self._is_compiled:
+            self.__print(
+                2,
+                0,
+                f"[ERROR]{self._shallow_repr()} has not been compiled, so it's compiled graph proto is None."
+                " You can call the graph to trigger it's compilation.",
+            )
+        return self._compiled_job_proto
 
     def _generate_name(self):
         child_name = self.__class__.__name__
@@ -560,6 +615,12 @@ class Graph(object):
             bu_gen = b.buffers(recurse=True)
             for bu in bu_gen:
                 yield bu
+
+    def __ensure_state_tensors_contiguous(self):
+        for state_block in self._state():
+            state_tensor = state_block.origin
+            if not state_tensor.is_contiguous():
+                state_tensor.contiguous_()
 
     def _filter_states(self):
         state_tensor_set = set()
@@ -585,13 +646,11 @@ class Graph(object):
         return state_op_names
 
     def _generate_config_proto(self):
-        self.config.proto.set_job_name(self._name)
+        self.config.proto.job_name = self._name
         self._outputs_buffer_size = self.config._outputs_buffer_size
 
         if self._grad_scaler is not None:
-            self._grad_scaler._generate_conf_for_graph(
-                self.config.proto.mutable_train_conf()
-            )
+            self._grad_scaler._generate_conf_for_graph(self.config.proto.train_conf)
 
         for opt in self._opts:
             opt_dict = OptDict(opt)
@@ -625,7 +684,61 @@ class Graph(object):
                 )
                 state2lazy_builder[state_tensor] = state_block.lazy_origin_builder()
 
+    @staticmethod
+    def to_graph(func):
+        """Make a function to do static graph run with nn.Graph.
+
+        After decorating a function with ``to_graph``, the function is turned into a naive `nn.Graph`.
+
+        Note:
+            This is just a quick way to run a simple function with nn.Graph.
+            If you want to do training or model save/load, customize a nn.Graph class instead, donot use ``to_graph``.
+
+        For example:
+
+        .. code-block:: python
+
+            >>> import oneflow as flow
+            >>> @flow.nn.Graph.to_graph
+            ... def test_func(x):
+            ...     return x * 2
+            >>> input = flow.tensor((1, 2), dtype=flow.float32)
+            >>> out = test_func(input)
+            >>> out
+            tensor([2., 4.], dtype=oneflow.float32)
+
+        ..
+            Feature Stage of Feature [to_graph].
+            - Maintainer List [@strint]
+            - Current Stage [Pre-alpha, note that this is an experimental feature and maybe removed without notice.]
+
+        """
+        assert inspect.isfunction(
+            func
+        ), f"nn.Graph.to_graph only support function currently, so {func} must be a function."
+        graph_cls_name = func.__name__ + "_graph"
+
+        def init(self):
+            super(graph_cls_name, self).__init__()
+
+        def build(self, *args, **kwargs):
+            return func(*args, **kwargs)
+
+        graph_cls_name = type(
+            graph_cls_name, (Graph,), {"__init__": init, "build": build,},
+        )
+
+        a_graph = graph_cls_name()
+
+        return a_graph
+
     def _compile(self, *args, **kwargs):
+        self.__ensure_input_tensors_contiguous(*args, **kwargs)
+        _, eager_outputs = self.build_graph(*args, **kwargs)
+        self.finish_complie_and_init_runtime()
+        return eager_outputs
+
+    def build_graph(self, *args, **kwargs):
         # Build graph
         try:
             self.__print(0, 0, self._shallow_repr() + " start building graph.")
@@ -633,7 +746,13 @@ class Graph(object):
                 "nn.Graph " + self._name + " has already been compiled."
             )
             build_graph_start = time.perf_counter()
-            eager_outputs = self.__build_graph(*args, **kwargs)
+            with graph_build_util.DebugScopeContext(
+                self._debug_min_s_level,
+                self._debug_max_v_level,
+                self._debug,
+                self._debug_max_py_stack_depth,
+            ):
+                outputs = self.__build_graph(*args, **kwargs)
             build_graph_end = time.perf_counter()
             self.__print(
                 0,
@@ -644,6 +763,7 @@ class Graph(object):
                 + "s."
                 + "\n",
             )
+            return outputs
         except:
             self.__print(
                 2,
@@ -655,13 +775,37 @@ class Graph(object):
             )
             raise
 
+    def finish_complie_and_init_runtime(self):
+        additional_var_names = list()
+        additional_var_tensors = list()
+        for name, tensor in self._additional_variable_tobe_loaded.items():
+            additional_var_names.append(name)
+            additional_var_tensors.append(tensor)
+        if len(additional_var_names) > 0:
+            self._c_nn_graph.register_additional_variable_names_and_tensors(
+                additional_var_names, convert_to_tensor_tuple(additional_var_tensors)
+            )
+        # Sync to make sure states has been loaded.
+        oneflow._oneflow_internal.eager.Sync()
+
         # Complie graph to execution plan and init Runtime
         try:
             self.__print(
                 0, 0, self._shallow_repr() + " start building plan.",
             )
             compile_and_init_start = time.perf_counter()
-            self._c_nn_graph.complie_and_init_runtime()
+            with graph_build_util.DebugScopeContext(
+                self._debug_min_s_level,
+                self._debug_max_v_level,
+                self._debug,
+                self._debug_max_py_stack_depth,
+            ):
+                self._c_nn_graph.complie_and_init_runtime()
+            # Get compiled job
+            compiled_job_str = self._c_nn_graph.get_current_job_str()
+            self._compiled_job_proto = job_pb.Job()
+            self._compiled_job_proto.ParseFromString(compiled_job_str)
+
             compile_and_init_end = time.perf_counter()
             self.__print(
                 0,
@@ -669,11 +813,6 @@ class Graph(object):
                 self._shallow_repr()
                 + " building plan Done! Cost time: "
                 + str(round(compile_and_init_end - compile_and_init_start, 2))
-                + "s."
-                + "\n"
-                + self._shallow_repr()
-                + "'s total time to build graph and plan : "
-                + str(round(compile_and_init_end - build_graph_start, 2))
                 + "s."
                 + "\n",
             )
@@ -691,11 +830,9 @@ class Graph(object):
         self._is_compiled = True
         # After compile, _additional_variable_tobe_loaded is useless.
         self._additional_variable_tobe_loaded.clear()
-        return eager_outputs
 
     def __build_graph(self, *args, **kwargs):
-        session = session_ctx.GetDefaultSession()
-        assert type(session) is MultiClientSession
+        self.__ensure_state_tensors_contiguous()
 
         # Filter to get unique states in graph
         state_op_names = self._filter_states()
@@ -717,7 +854,7 @@ class Graph(object):
             + " end building graph builders of parameters and buffers.",
         )
 
-        with graph_build_util.graph_build_context(self.config.proto, session):
+        with graph_build_util.graph_build_context(self.config.proto, self._session):
             # Deal with inputs
             self.__print(0, 1, self._shallow_repr() + " start building graph inputs.")
             arg_op_names, lazy_args, lazy_kwargs, self._args_repr, _ = self.__build_io(
@@ -753,10 +890,48 @@ class Graph(object):
                 1,
                 self._shallow_repr() + " start building graph with compile passes.",
             )
+            self.env_enable_mlir_inference_opt = os.getenv(
+                "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
+            )
+            enable_mlir_inference_opt = (
+                False
+                if self.env_enable_mlir_inference_opt is None
+                else bool(self.env_enable_mlir_inference_opt)
+            )
+            modules_has_training = False
+            for item in self._blocks.values():
+                if item._origin.training:
+                    modules_has_training = True
+                    break
+            if (
+                modules_has_training or self.training or self._is_global_view
+            ) and enable_mlir_inference_opt:
+                if self.training:
+                    logging.warning(
+                        "environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored in training mode."
+                    )
+
+                if modules_has_training and not self.training:
+                    logging.warning(
+                        "environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored when not all modules in graph are in eval mode. "
+                    )
+
+                if self._is_global_view:
+                    logging.warning(
+                        "environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored in global mode. "
+                    )
+                enable_mlir_inference_opt = False
+                del os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"]
+            oneflow._oneflow_internal.FillVariableTensorMgr(
+                state_op_names, self._state_tensor_tuple
+            )
             # Complete the graph job proto
             oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
             # Save full graph job proto after job Complete for find real output blob shape and build it.
             self._full_job_proto = c_api_util.GetCurrentJob()
+            self._job_id = (
+                oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobId()
+            )
             self.__print(
                 0, 1, self._shallow_repr() + " end building graph with compile passes."
             )
@@ -775,7 +950,12 @@ class Graph(object):
                 self._shallow_repr()
                 + " end re-building graph outputs for optimizatioin.",
             )
-
+            self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
+                self._name,
+                self._full_job_proto.SerializeToString(),
+                self._job_id,
+                self._session._session_ctx,
+            )
             # Register input/output/variable/buffer to _c_nn_graph
             self._c_nn_graph.register_input_op_names_and_tensors(
                 arg_op_names,
@@ -784,12 +964,21 @@ class Graph(object):
             self._c_nn_graph.register_output_op_names_and_tensors(
                 output_op_names, self._outputs_tensor_tuple
             )
+            (
+                state_op_names,
+                state_tensors,
+            ) = oneflow._oneflow_internal.DumpVariableTensorMgr()
+            self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
+
             self._c_nn_graph.register_variable_op_names_and_tensors(
                 state_op_names, self._state_tensor_tuple
             )
 
         # Always pack outputs to remain type of outputs
-        return seq_to_func_return(self._eager_outputs_buffer[0], True)
+        return (
+            self._full_job_proto,
+            seq_to_func_return(self._eager_outputs_buffer[0], True),
+        )
 
     def __rebuild_outputs(self, out2name=None):
         # NOTE(chengcheng):
@@ -877,6 +1066,7 @@ class Graph(object):
                 )
 
     def __run(self, *args, **kwargs):
+        self.__ensure_input_tensors_contiguous(*args, **kwargs)
         try:
             flattened_eager_args = self.__flatten_io("input", *args, **kwargs)
             outputs_tensor_tuple = self._outputs_tensor_tuple_buffer[
@@ -884,7 +1074,7 @@ class Graph(object):
             ]
             eager_outputs = self._eager_outputs_buffer[self._cur_index_of_ouputs_buffer]
 
-            # oneflow._oneflow_internal.eager.multi_client.Sync() NOTE(chengcheng): Need Sync?
+            # oneflow._oneflow_internal.eager.Sync() NOTE(chengcheng): Need Sync?
             oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
                 convert_to_tensor_tuple(flattened_eager_args),
                 outputs_tensor_tuple,
@@ -938,30 +1128,30 @@ class Graph(object):
             self.__print(0, 1, repr_str)
             return build_arg
 
-        io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + io_type)
+        args_tree = ArgsTree(
+            (args, kwargs), True, "_" + self.name + "_" + io_type, None
+        )
 
-        def leaf_node_fn(node):
-            name = node._prefix + "_" + node._name
-            if node._type == IONodeType.TENSOR:
+        def leaf_arg_fn(arg):
+            name = arg.prefix() + "_" + arg.name()
+            if isinstance(arg.value(), Tensor):
                 arg_repr = self.__io_item_check_and_gen_repr(
-                    node._value, Tensor, io_type, name
+                    arg.value(), Tensor, io_type, name
                 )
-                build_arg = build_tensor_or_none(node._value, name, arg_repr)
+                build_arg = build_tensor_or_none(arg.value(), name, arg_repr)
                 return build_arg
-            elif node._type == IONodeType.NONE:
+            elif arg.value() is None:
                 arg_repr = self.__io_item_check_and_gen_repr(
-                    node._value, None, io_type, name
+                    arg.value(), None, io_type, name
                 )
-                build_arg = build_tensor_or_none(node._value, name, arg_repr)
-
-                return build_arg
-            elif node._type == IONodeType.OPAQUE:
+                build_arg = build_tensor_or_none(arg.value(), name, arg_repr)
+            else:  # Opaque
                 # Error
                 arg_repr = self.__io_item_check_and_gen_repr(
-                    node._value, None, io_type, name
+                    arg.value(), None, io_type, name
                 )
 
-        out = io_node.map_leaf(leaf_node_fn)
+        out = args_tree.map_leaf(leaf_arg_fn)
         build_args = out[0]
         build_kwargs = out[1]
 
@@ -1016,28 +1206,31 @@ class Graph(object):
                 mapped_arg = None
             return mapped_arg
 
-        io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + io_type)
+        args_tree = ArgsTree(
+            (args, kwargs), True, "_" + self.name + "_" + io_type, None
+        )
 
-        def leaf_node_fn(leaf_node):
-            arg = leaf_node._value
-            if isinstance(arg, Tensor) or arg is None:
-                return mapping_tensor_or_none(arg)
+        def leaf_arg_fn(arg):
+            arg_value = arg.value()
+            if isinstance(arg_value, Tensor) or arg_value is None:
+                return mapping_tensor_or_none(arg_value)
             else:
                 self.__io_item_check(
-                    arg, None, io_type, leaf_node._prefix + "_" + leaf_node._name,
+                    arg_value, None, io_type, arg.prefix() + "_" + arg.name(),
                 )
 
-        out = io_node.map_leaf(leaf_node_fn)
+        out = args_tree.map_leaf(leaf_arg_fn)
         mapped_args = out[0]
         mapped_kwargs = out[1]
         return mapped_args, mapped_kwargs
 
     def __flatten_io(self, io_type, *args, **kwargs):
         flattened_args = []
-        io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + io_type)
-        for (name, node) in list(io_node.named_nodes()):
-            if node._type == IONodeType.TENSOR:
-                flattened_args.append(node._value)
+        args_tree = ArgsTree((args, kwargs), False)
+
+        for arg in args_tree.iter_nodes():
+            if isinstance(arg, Tensor):
+                flattened_args.append(arg)
             else:
                 continue
         return flattened_args
@@ -1132,7 +1325,9 @@ class Graph(object):
         elif name == "":
             raise KeyError('module name can\'t be empty string ""')
 
-        self._blocks[name] = get_block_cls(module)("", name, module)
+        self._blocks[name] = get_block_cls(module)(
+            "", name, module, weakref.proxy(self)
+        )
 
     def __setattr__(self, name: str, value=None):
         if isinstance(value, Module):
@@ -1163,6 +1358,35 @@ class Graph(object):
         raise AttributeError(
             "'{}' object has no attribute '{}'".format(type(self).__name__, name)
         )
+
+    def __del__(self):
+        # Ensure vm has finished running this graph.
+        if self._session._env.is_shutting_down():
+            # After python shutting down, it's not safe to call oneflow._oneflow_internal.eager.
+            # But shutting down will do sync in SwitchToShuttingDownPhase.
+            # So it's safe to skip sync here.
+            return
+        oneflow._oneflow_internal.eager.Sync()
+        current_env_enable_mlir_inference_opt = os.getenv(
+            "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
+        )
+        if (self.env_enable_mlir_inference_opt is not None) and (
+            current_env_enable_mlir_inference_opt is None
+        ):
+            os.environ[
+                "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
+            ] = self.env_enable_mlir_inference_opt
+        oneflow._oneflow_internal.ClearVariableTensorMgr()
+
+    def __ensure_input_tensors_contiguous(self, *args, **kwargs):
+        args_tree = ArgsTree((args, kwargs), False)
+
+        def func(value):
+            if isinstance(value, Tensor) and not value.is_contiguous():
+                value.contiguous_()
+            return value
+
+        args_tree.map_leaf(func)
 
 
 if __name__ == "__main__":

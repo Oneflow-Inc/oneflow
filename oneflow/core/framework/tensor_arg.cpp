@@ -42,8 +42,14 @@ Maybe<void> TensorArg::PushPartialTensor(const std::shared_ptr<Tensor>& partial_
   return Maybe<void>::Ok();
 }
 
-Maybe<Tensor> TensorArg::GetAccTensor() {
+Maybe<Tensor> TensorArg::GetAccTensor(const std::vector<AutogradMeta::Hook>& hooks) {
   CHECK_OR_RETURN(Empty() == false) << "Can not GetAccTensor because it is empty";
+  if (!hooks.empty()) {
+    for (const auto& hook : hooks) {
+      auto new_grad = hook(acc_tensor_);
+      if (new_grad) { acc_tensor_ = new_grad; }
+    }
+  }
   return acc_tensor_;
 }
 

@@ -29,7 +29,7 @@ namespace ep {
 
 namespace {
 
-constexpr size_t kDefaultWorkspaceSize = 4 * 1024 * 1024;  // 4M
+constexpr size_t kDefaultWorkspaceSizeMb = 4;  // 4M
 
 void SetAffinityByDevice(int dev_id) {
   auto node_device_desc_mgr = Global<hardware::NodeDeviceDescriptorManager>::Get();
@@ -40,10 +40,6 @@ void SetAffinityByDevice(int dev_id) {
   if (!cuda_device) { return; }
   node_device_desc->Topology()->SetCPUAffinityByPCIBusID(cuda_device->PCIBusID());
   node_device_desc->Topology()->SetMemoryAffinityByPCIBusID(cuda_device->PCIBusID());
-}
-
-bool IsCuda9OnTuringDevice(const cudaDeviceProp& prop) {
-  return CUDA_VERSION >= 9000 && CUDA_VERSION < 9020 && prop.major == 7 && prop.minor == 5;
 }
 
 }  // namespace
@@ -92,26 +88,24 @@ CudaStream::CudaStream(CudaDevice* device)
   // cublas_handle
   OF_CUBLAS_CHECK(cublasCreate(&cublas_handle_));
   OF_CUBLAS_CHECK(cublasSetStream(cublas_handle_, cuda_stream_));
+#if CUDA_VERSION >= 10010
+  // cublas_lt_handle
+  OF_CUBLAS_CHECK(cublasLtCreate(&cublas_lt_handle_));
+#endif
 #if CUBLAS_VERSION >= 11000
   if (ParseBooleanFromEnv("ONEFLOW_EP_CUDA_ENABLE_TF32_EXECUTION", true)) {
     OF_CUBLAS_CHECK(cublasSetMathMode(cublas_handle_, CUBLAS_TF32_TENSOR_OP_MATH));
   }
 #endif  // CUBLAS_VERSION >= 11000
-#if CUBLAS_VERSION >= 11200
-  workspace_size_ = kDefaultWorkspaceSize;
+  workspace_size_ =
+      ParseIntegerFromEnv("ONEFLOW_EP_CUDA_CUBLAS_WORKSPACE_SIZE_MB", kDefaultWorkspaceSizeMb)
+      * 1024 * 1024;
   OF_CUDA_CHECK(cudaMalloc(&workspace_, workspace_size_));
+#if CUBLAS_VERSION >= 11200
   OF_CUBLAS_CHECK(cublasSetWorkspace(cublas_handle_, workspace_, workspace_size_));
 #endif  // CUBLAS_VERSION >= 11200
   // cudnn_handle
-  if (IsCuda9OnTuringDevice(device_properties())) {
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
-    OF_CUDA_CHECK(cudaGetLastError());
-  }
   OF_CUDNN_CHECK(cudnnCreate(&cudnn_handle_));
-  if (IsCuda9OnTuringDevice(device_properties())) {
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
-    cudaGetLastError();
-  }
   OF_CUDNN_CHECK(cudnnSetStream(cudnn_handle_, cuda_stream_));
 }
 
@@ -120,10 +114,11 @@ CudaStream::~CudaStream() {
   OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_));
   OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle_));
   OF_CUBLAS_CHECK(cublasDestroy(cublas_handle_));
+#if CUDA_VERSION >= 10010
+  OF_CUBLAS_CHECK(cublasLtDestroy(cublas_lt_handle_));
+#endif
   OF_CUDA_CHECK(cudaStreamDestroy(cuda_stream_));
-#if CUBLAS_VERSION >= 11200
   OF_CUDA_CHECK(cudaFree(workspace_));
-#endif  // CUBLAS_VERSION >= 11200
 }
 
 Maybe<void> CudaStream::OnExecutionContextSetup() {
@@ -136,7 +131,7 @@ Maybe<void> CudaStream::OnExecutionContextTeardown() { return Maybe<void>::Ok();
 
 DeviceType CudaStream::device_type() const { return DeviceType::kCUDA; }
 
-Device* CudaStream::device() const { return device_; }
+CudaDevice* CudaStream::device() const { return device_; }
 
 Maybe<void> CudaStream::Sync() {
   cudaError_t err = cudaStreamSynchronize(cuda_stream_);
@@ -155,6 +150,14 @@ void CudaStream::RecordEvent(Event* event) {
 cudaStream_t CudaStream::cuda_stream() const { return cuda_stream_; }
 
 cublasHandle_t CudaStream::cublas_handle() const { return cublas_handle_; }
+
+#if CUDA_VERSION >= 10010
+cublasLtHandle_t CudaStream::cublas_lt_handle() const { return cublas_lt_handle_; }
+#endif
+
+void* CudaStream::cublas_workspace() const { return workspace_; }
+
+size_t CudaStream::cublas_workspace_size() const { return workspace_size_; }
 
 cudnnHandle_t CudaStream::cudnn_handle() const { return cudnn_handle_; }
 

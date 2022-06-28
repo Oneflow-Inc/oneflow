@@ -28,7 +28,7 @@ class CpuTrilKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
-    const auto shape = x->shape();
+    const auto shape = x->shape_view();
     const auto diagonal = ctx->Attr<int64_t>("diagonal");
     const int64_t num_rows = shape.At(shape.NumAxes() - 2);
     const int64_t num_cols = shape.At(shape.NumAxes() - 1);
@@ -56,6 +56,7 @@ class CpuTrilKernel final : public user_op::OpKernel {
 
 REGISTER_CPU_TRIL_KERNEL(float)
 REGISTER_CPU_TRIL_KERNEL(double)
+REGISTER_CPU_TRIL_KERNEL(bool)
 REGISTER_CPU_TRIL_KERNEL(uint8_t)
 REGISTER_CPU_TRIL_KERNEL(int8_t)
 REGISTER_CPU_TRIL_KERNEL(int32_t)

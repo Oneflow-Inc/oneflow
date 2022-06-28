@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/foreign_lock_helper.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/env_var.h"
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
 

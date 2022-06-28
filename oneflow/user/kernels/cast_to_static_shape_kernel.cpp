@@ -31,10 +31,10 @@ class CastToStaticShapeKernel final : public user_op::OpKernel {
     const user_op::Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input", 0);
     const Shape& input_static_shape = ctx->TensorDesc4ArgNameAndIndex("input", 0)->shape();
     user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output", 0);
-    CHECK(input_tensor->shape() == ShapeView(input_static_shape));
-    CHECK_EQ(output_tensor->shape(), input_tensor->shape());
+    CHECK(input_tensor->shape_view() == ShapeView(input_static_shape));
+    CHECK_EQ(output_tensor->shape_view(), input_tensor->shape_view());
     size_t output_tensor_size =
-        output_tensor->shape().elem_cnt() * GetSizeOfDataType(output_tensor->data_type());
+        output_tensor->shape_view().elem_cnt() * GetSizeOfDataType(output_tensor->data_type());
     Memcpy<device_type>(ctx->stream(), output_tensor->mut_dptr(), input_tensor->dptr(),
                         output_tensor_size);
   }

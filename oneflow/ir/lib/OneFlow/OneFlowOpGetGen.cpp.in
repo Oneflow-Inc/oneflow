@@ -3,7 +3,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/StringSet.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -12,6 +11,7 @@
 #include "OneFlow/OneFlowEnums.h.inc"
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/OneFlowInterfaces.h.inc"
+#include "OneFlow/OneFlowTypes.h"
 
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlow.@OP_GROUP_NAME_LOWER@_ops.h.inc"

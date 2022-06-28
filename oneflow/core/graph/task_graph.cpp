@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/register/blob_desc.h"
@@ -24,12 +23,14 @@ limitations under the License.
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/boxing_identity_task_node.h"
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/ep/include/primitive/memcpy.h"
+#include "oneflow/core/graph/straighten_nodes.h"
 
 namespace oneflow {
 
@@ -293,7 +294,7 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
       StreamId::stream_index_t stream_index = 0;
       if (op_node->op().op_conf().has_stream_name_hint()) {
         const std::string& stream_name_hint = op_node->op().op_conf().stream_name_hint();
-        LOG(INFO) << "set op: " << op_node->op().op_name() << " to stream: " << stream_name_hint;
+        VLOG(3) << "set op: " << op_node->op().op_name() << " to stream: " << stream_name_hint;
         stream_index = Global<TaskStreamIndexManager>::Get()->GetNamedTaskStreamIndex(
             device_id, stream_name_hint);
       } else {
@@ -420,7 +421,7 @@ void ForEachOpGraphNecessaryCtrlEdge(
 
 }  // namespace
 
-TaskGraph::TaskGraph() {
+TaskGraph::TaskGraph(bool disable_straighten_algorithm) {
   OpGraph* op_graph = Global<OpGraph>::Get();
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
@@ -451,7 +452,11 @@ TaskGraph::TaskGraph() {
     }
   });
 
-  SetOrderInGraphForEachNode();
+  if (disable_straighten_algorithm || GlobalProcessCtx::WorldSize() <= 1) {
+    SetOrderInGraphForEachNode();
+  } else {
+    StraightenNodes(this, &ordered_task_nodes_);
+  }
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
 

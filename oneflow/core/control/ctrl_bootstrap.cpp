@@ -74,7 +74,7 @@ Maybe<void> CtrlBootstrap::InitProcessCtx(int64_t port, ProcessCtx* ret_process_
 
   mut_bootstrap_client()->Barrier(__FILE__ ":" OF_PP_STRINGIZE(__LINE__));
 
-  LOG(INFO) << "\n" << ret_process_ctx->DebugString();
+  VLOG(2) << "\n" << ret_process_ctx->DebugString();
   return Maybe<void>::Ok();
 }
 

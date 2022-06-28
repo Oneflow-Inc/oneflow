@@ -28,19 +28,8 @@ include(flatbuffers)
 include(lz4)
 include(string_view)
 
-if(WITH_XLA)
-  include(tensorflow)
-endif()
-
-if(WITH_OPENVINO)
-  include(openvino)
-endif()
-
-if(WITH_TENSORRT)
-  include(tensorrt)
-endif()
-
 include(hwloc)
+include(liburing)
 if(WITH_ONEDNN)
   include(oneDNN)
 endif()
@@ -51,7 +40,7 @@ set_mirror_url_with_hash(INJA_URL https://github.com/pantor/inja/archive/refs/ta
 option(CUDA_STATIC "" ON)
 
 if(BUILD_CUDA)
-  if((NOT CUDA_STATIC) OR WITH_XLA OR BUILD_SHARED_LIBS)
+  if((NOT CUDA_STATIC) OR BUILD_SHARED_LIBS)
     set(OF_CUDA_LINK_DYNAMIC_LIBRARY ON)
   else()
     set(OF_CUDA_LINK_DYNAMIC_LIBRARY OFF)
@@ -152,9 +141,7 @@ if(WITH_ONEDNN)
   set(oneflow_third_party_libs ${oneflow_third_party_libs} ${ONEDNN_STATIC_LIBRARIES})
 endif()
 
-if(NOT WITH_XLA)
-  list(APPEND oneflow_third_party_libs ${RE2_LIBRARIES})
-endif()
+list(APPEND oneflow_third_party_libs ${RE2_LIBRARIES})
 
 if(WITH_ZLIB)
   list(APPEND oneflow_third_party_libs zlib_imported)
@@ -168,12 +155,11 @@ endif()
 
 set(oneflow_third_party_dependencies
     protobuf
-    opencv_copy_headers_to_destination
-    libpng_copy_headers_to_destination
-    opencv_copy_libs_to_destination
     eigen
     half_copy_headers_to_destination
     re2
+    opencv
+    install_libpng_headers
     flatbuffers
     lz4_copy_libs_to_destination
     lz4_copy_headers_to_destination)
@@ -199,6 +185,7 @@ list(
   ${ZLIB_INCLUDE_DIR}
   ${PROTOBUF_INCLUDE_DIR}
   ${GRPC_INCLUDE_DIR}
+  ${GLOG_INCLUDE_DIR}
   ${LIBJPEG_INCLUDE_DIR}
   ${OPENCV_INCLUDE_DIR}
   ${LIBPNG_INCLUDE_DIR}
@@ -213,9 +200,7 @@ if(WITH_ONEDNN)
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${ONEDNN_INCLUDE_DIR})
 endif()
 
-if(NOT WITH_XLA)
-  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${RE2_INCLUDE_DIR})
-endif()
+list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${RE2_INCLUDE_DIR})
 
 if(BUILD_CUDA)
   if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
@@ -265,21 +250,14 @@ if(BUILD_HWLOC)
   add_definitions(-DWITH_HWLOC)
 endif()
 
+if(WITH_LIBURING)
+  list(APPEND oneflow_third_party_dependencies liburing)
+  list(APPEND oneflow_third_party_libs ${LIBURING_STATIC_LIBRARIES})
+  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${LIBURING_INCLUDE_DIR})
+  add_definitions(-DWITH_LIBURING)
+endif()
+
 include_directories(SYSTEM ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})
-
-if(WITH_XLA)
-  list(APPEND oneflow_third_party_dependencies tensorflow_copy_libs_to_destination)
-  list(APPEND oneflow_third_party_dependencies tensorflow_symlink_headers)
-  list(APPEND oneflow_third_party_libs ${TENSORFLOW_XLA_LIBRARIES})
-endif()
-
-if(WITH_TENSORRT)
-  list(APPEND oneflow_third_party_libs ${TENSORRT_LIBRARIES})
-endif()
-
-if(WITH_OPENVINO)
-  list(APPEND oneflow_third_party_libs ${OPENVINO_LIBRARIES})
-endif()
 
 foreach(oneflow_third_party_lib IN LISTS oneflow_third_party_libs)
   if(NOT "${oneflow_third_party_lib}" MATCHES "^-l.+"
