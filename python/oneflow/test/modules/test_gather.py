@@ -154,13 +154,16 @@ class TestGather(flow.unittest.TestCase):
     def test_flow_gather_with_random_data(test_case):
         device = random_device()
         input = random_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
-        dim = random(0, 4).to(int)
+        dim = random(0, 4).to(int).value()
+        high = input.oneflow.shape[dim]
         index = random_tensor(
             ndim=4,
             dim1=random(1, 3).to(int),
             dim2=random(1, 4).to(int),
             dim3=random(1, 5).to(int),
             dtype=int,
+            low=0,
+            high=high,
         ).to(device)
         return torch.gather(input, dim, index)
 
@@ -170,13 +173,16 @@ class TestGather(flow.unittest.TestCase):
         input = random_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(
             device=device, dtype=torch.bool
         )
-        dim = random(0, 4).to(int)
+        dim = random(0, 4).to(int).value()
+        high = input.oneflow.shape[dim]
         index = random_tensor(
             ndim=4,
             dim1=random(1, 3).to(int),
             dim2=random(1, 4).to(int),
             dim3=random(1, 5).to(int),
             dtype=int,
+            low=0,
+            high=high,
         ).to(device)
         return torch.gather(input, dim, index)
 
