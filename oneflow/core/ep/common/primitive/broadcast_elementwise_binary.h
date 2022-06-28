@@ -70,6 +70,25 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalOr)  \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalXor)
 
+#define BINARY_ACTIVATION_BACKWARD_OP_SEQ                     \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEluBackwardWithDyX)         \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kCeluBackwardWithDyX)        \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kGeluBackwardWithDyX)        \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kHardswishBackwardWithDyX)   \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kHardsigmoidBackwardWithDyX) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kHardshrinkBackwardWithDyY)  \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kHardtanhBackwardWithDyY)    \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLeakyReluBackwardWithDyX)   \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMishBackwardWithDyX)        \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kReluBackwardWithDyY)        \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSeluBackwardWithDyX)        \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSiluBackwardWithDyX)        \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSoftsignBackwardWithDyX)    \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSoftplusBackwardWithDyX)    \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSoftshrinkBackwardWithDyY)  \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kTanhBackwardWithDyX)        \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kThresholdBackwardWithDyX)
+
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive
 }  // namespace ep
