@@ -229,7 +229,7 @@ __global__ void LaunchFillKernel(T* dst, T value, size_t count) {
   using StorePack = cuda::elementwise::Packed<T, pack>;
   const size_t pack_count = count / pack;
   StorePack pack_value;
-  #pragma unroll
+#pragma unroll
   for (size_t i = 0; i < pack; ++i) { pack_value.elem[i] = value; }
   StorePack* pack_dst = reinterpret_cast<StorePack*>(dst);
   CUDA_1D_KERNEL_LOOP_T(size_t, i, pack_count) { pack_dst[i] = pack_value; }
@@ -240,8 +240,9 @@ __global__ void LaunchFillKernel(T* dst, T value, size_t count) {
 
 template<typename T, size_t pack>
 void LaunchPackFill(CudaStream* stream, T* dst, T value, size_t count) {
-  LaunchFillKernel<Src, Dst, pack><<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0, stream->cuda_stream()>>>(
-    dst, value, count);
+  LaunchFillKernel<Src, Dst, pack>
+      <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0, stream->cuda_stream()>>>(
+          dst, value, count);
 }
 
 template<typename T>
@@ -332,8 +333,7 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
         new_broadcast_elementwise_unary_handle{
             // For All Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
-              UNARY_BROADCAST_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ)
-        };
+                                             UNARY_BROADCAST_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ)};
 
 #undef MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 
