@@ -52,13 +52,28 @@ class IndexToOffsetWithStrideCalculator {
  public:
   IndexToOffsetWithStrideCalculator() {}
 
-  OF_DEVICE_FUNC explicit IndexToOffsetWithStrideCalculator(const T* dims, const T* strides) {
-    InitStrides(dims, strides, N);
+  OF_DEVICE_FUNC explicit IndexToOffsetWithStrideCalculator(const T* strides) {
+    InitStrides(strides, N);
   }
 
-  OF_DEVICE_FUNC explicit IndexToOffsetWithStrideCalculator(const T* dims, const T* strides,
-                                                            int n) {
-    InitStrides(dims, strides, n);
+  template<typename U>
+  OF_DEVICE_FUNC explicit IndexToOffsetWithStrideCalculator(const U* strides) {
+    T strides_arr[N];
+    for (int i = 0; i < N; ++i) { strides_arr[i] = strides[i]; }
+    InitStrides(strides_arr, N);
+  }
+
+  OF_DEVICE_FUNC explicit IndexToOffsetWithStrideCalculator(const T* strides, int n) {
+    InitStrides(strides, n);
+  }
+
+  template<typename U>
+  OF_DEVICE_FUNC explicit IndexToOffsetWithStrideCalculator(const U* strides, int n) {
+    T strides_arr[N];
+    for (int i = 0; i < N; ++i) {
+      if (i < n) { strides_arr[i] = strides[i]; }
+    }
+    InitStrides(strides_arr, n);
   }
 
   ~IndexToOffsetWithStrideCalculator() = default;
@@ -88,7 +103,7 @@ class IndexToOffsetWithStrideCalculator {
   OF_DEVICE_FUNC constexpr int Size() const { return N; }
 
  private:
-  OF_DEVICE_FUNC void InitStrides(const T* dims, const T* strides, const int n) {
+  OF_DEVICE_FUNC void InitStrides(const T* strides, const int n) {
     for (int i = n; i < N; ++i) { stride_[i] = 1; }
     for (int i = n - 1; i >= 0; --i) { stride_[i] = strides[i]; }
   }
@@ -105,8 +120,24 @@ class OffsetToIndexWithStrideCalculator {
     InitFastIntegerMath(dims, N);
   }
 
+  template<typename U>
+  OF_DEVICE_FUNC explicit OffsetToIndexWithStrideCalculator(const U* dims) {
+    T dims_arr[N];
+    for (int i = 0; i < N; ++i) { dims_arr[i] = dims[i]; }
+    InitFastIntegerMath(dims_arr, N);
+  }
+
   OF_DEVICE_FUNC explicit OffsetToIndexWithStrideCalculator(const T* dims, int n) {
     InitFastIntegerMath(dims, n);
+  }
+
+  template<typename U>
+  OF_DEVICE_FUNC explicit OffsetToIndexWithStrideCalculator(const U* dims, int n) {
+    T dims_arr[N];
+    for (int i = 0; i < N; ++i) {
+      if (i < n) { dims_arr[i] = dims[i]; }
+    }
+    InitFastIntegerMath(dims_arr, n);
   }
 
   ~OffsetToIndexWithStrideCalculator() = default;

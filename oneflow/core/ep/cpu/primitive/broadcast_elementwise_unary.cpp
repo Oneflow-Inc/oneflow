@@ -91,14 +91,14 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
            simplified_src_strides, simplified_dst_strides,
            continuous_output](int64_t begin, int64_t end) {
             auto src_index_to_offset_helper =
-                IndexToOffsetWithStrideCalculator<int64_t, kMaxNumDims>(
-                    simplified_src_dims, simplified_src_strides, simplified_num_dims);
+                IndexToOffsetWithStrideCalculator<int64_t, kMaxNumDims>(simplified_src_strides,
+                                                                        simplified_num_dims);
             auto dst_offset_to_index_helper =
                 OffsetToIndexWithStrideCalculator<int64_t, kMaxNumDims>(simplified_dst_dims,
                                                                         simplified_num_dims);
             auto dst_index_to_offset_helper =
-                IndexToOffsetWithStrideCalculator<int64_t, kMaxNumDims>(
-                    simplified_dst_dims, simplified_dst_strides, simplified_num_dims);
+                IndexToOffsetWithStrideCalculator<int64_t, kMaxNumDims>(simplified_dst_strides,
+                                                                        simplified_num_dims);
             int64_t src_index[kMaxNumDims];
             int64_t dst_index[kMaxNumDims];
             for (int64_t offset = begin; offset < end; offset++) {

@@ -89,7 +89,7 @@ __global__ void BroadcastElementwiseUnaryGpu(
   IndexType src_index[max_dims];
   IndexType dst_index[max_dims];
   size_t num_dims = params.num_dims;
-  auto functor = UnaryFunctor<DeviceType::kCPU, op, Src, Dst>(params.attr0, params.attr1);
+  auto functor = UnaryFunctor<DeviceType::kCUDA, op, Src, Dst>(params.attr0, params.attr1);
 
   CUDA_1D_KERNEL_LOOP_T(IndexType, offset, params.count) {
     params.dst_offset_to_index_helper.OffsetToNdIndex(offset, dst_index, num_dims);
@@ -128,11 +128,11 @@ void LaunchKernel(CudaStream* stream, size_t num_dims, const int64_t* src_dims,
   BroadcastElementwiseUnaryParams<Src, Dst, max_dims, IndexType> params;
   for (size_t i = 0; i < num_dims; ++i) { params.src_index_mask[i] = (src_dims[i] == 1) ? 0 : 1; }
   params.src_index_to_offset_helper =
-      IndexToOffsetWithStrideCalculator<int64_t, kMaxNumDims>(src_dims, src_strides, num_dims);
+      IndexToOffsetWithStrideCalculator<IndexType, max_dims>(src_strides, num_dims);
   params.dst_offset_to_index_helper =
-      OffsetToIndexWithStrideCalculator<int64_t, kMaxNumDims>(dst_dims, num_dims);
+      OffsetToIndexWithStrideCalculator<IndexType, max_dims>(dst_dims, num_dims);
   params.dst_index_to_offset_helper =
-      IndexToOffsetWithStrideCalculator<int64_t, kMaxNumDims>(dst_dims, dst_strides, num_dims);
+      IndexToOffsetWithStrideCalculator<IndexType, max_dims>(dst_strides, num_dims);
   params.num_dims = num_dims;
   params.src = src;
   params.dst = dst;
@@ -152,11 +152,13 @@ void DispatchIndexType(CudaStream* stream, size_t num_dims, const int64_t* src_d
                        const int64_t* dst_strides, Dst* dst, Scalar attr0, Scalar attr1) {
   size_t count = GetElementCount(num_dims, dst_dims);
   if (count < GetMaxVal<int32_t>()) {
-    LaunchKernel<op, Src, Dst, max_dims, pack_size, int32_t>(
-        stream, num_dims, src_dims, src_strides, dst_dims, dst_strides, dst, attr0, attr1, count);
+    LaunchKernel<op, Src, Dst, max_dims, pack_size, int32_t>(stream, num_dims, src_dims,
+                                                             src_strides, src, dst_dims,
+                                                             dst_strides, dst, attr0, attr1, count);
   } else {
-    LaunchKernel<op, Src, Dst, max_dims, pack_size, int64_t>(
-        stream, num_dims, src_dims, src_strides, dst_dims, dst_strides, dst, attr0, attr1, count);
+    LaunchKernel<op, Src, Dst, max_dims, pack_size, int64_t>(stream, num_dims, src_dims,
+                                                             src_strides, src, dst_dims,
+                                                             dst_strides, dst, attr0, attr1, count);
   }
 }
 
@@ -165,9 +167,9 @@ void DispatchPackSize(CudaStream* stream, size_t pack_size, size_t num_dims,
                       const int64_t* src_dims, const int64_t* src_strides, const Src* src,
                       const int64_t* dst_dims, const int64_t* dst_strides, Dst* dst, Scalar attr0,
                       Scalar attr1) {
-  void (*func)(Stream* /*stream*/, size_t /*num_dims*/, const int64_t* /*src0_dims*/,
-               const void* /*src0*/, const int64_t* /*src1_dims*/, const void* /*src1*/,
-               const int64_t* /*dst_dims*/, void* /*dst*/, Scalar /*attr0*/, Scalar /*attr1*/) =
+  void (*func)(CudaStream* /*stream*/, size_t /*num_dims*/, const int64_t* /*src_dims*/,
+               const int64_t* /*src_strides*/, const Src* /*src*/, const int64_t* /*dst_dims*/,
+               const int64_t* /*dst_strides*/, Dst* /*dst*/, Scalar /*attr0*/, Scalar /*attr1*/) =
       nullptr;
   if (pack_size == 1) {
     func = DispatchIndexType<op, Src, Dst, max_dims, 1>;
@@ -200,7 +202,7 @@ void DispatchNumDims(CudaStream* stream, size_t pack_size, size_t num_dims, cons
   } else {
     UNIMPLEMENTED();
   }
-  func(stream, pack_size, num_dims, src_dims, src_strides, dst_dims, dst_strides, dst, attr0,
+  func(stream, pack_size, num_dims, src_dims, src_strides, src, dst_dims, dst_strides, dst, attr0,
        attr1);
 }
 
@@ -233,31 +235,38 @@ __global__ void LaunchFillKernel(T* dst, T value, size_t count) {
   for (size_t i = 0; i < pack; ++i) { pack_value.elem[i] = value; }
   StorePack* pack_dst = reinterpret_cast<StorePack*>(dst);
   CUDA_1D_KERNEL_LOOP_T(size_t, i, pack_count) { pack_dst[i] = pack_value; }
-  Dst* tail_dst = dst + pack_count * pack;
+  T* tail_dst = dst + pack_count * pack;
   const size_t tail_count = count - pack_count * pack;
   CUDA_1D_KERNEL_LOOP_T(size_t, i, tail_count) { tail_dst[i] = value; }
 }
 
 template<typename T, size_t pack>
-void LaunchPackFill(CudaStream* stream, T* dst, T value, size_t count) {
-  LaunchFillKernel<Src, Dst, pack>
+typename std::enable_if<(pack != 0), void>::type LaunchPackFill(CudaStream* stream, T* dst, T value,
+                                                                size_t count) {
+  LaunchFillKernel<T, pack>
       <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0, stream->cuda_stream()>>>(
           dst, value, count);
+}
+
+template<typename T, size_t pack>
+typename std::enable_if<(pack == 0), void>::type LaunchPackFill(CudaStream* stream, T* dst, T value,
+                                                                size_t count) {
+  LOG(FATAL) << "wrong alignment";
 }
 
 template<typename T>
 void LaunchFill(CudaStream* stream, T* dst, T value, size_t count) {
   auto uintptr = reinterpret_cast<std::uintptr_t>(dst);
   if (uintptr % 16 == 0) {
-    LaunchPackFill<T, 16 / sizeof(Src)>(stream, dst, value, count);
+    LaunchPackFill<T, 16 / sizeof(T)>(stream, dst, value, count);
   } else if (uintptr % 8 == 0) {
-    LaunchPackFill<T, 8 / sizeof(Src)>(stream, dst, value, count);
+    LaunchPackFill<T, 8 / sizeof(T)>(stream, dst, value, count);
   } else if (uintptr % 4 == 0) {
-    LaunchPackFill<T, 4 / sizeof(Src)>(stream, dst, value, count);
+    LaunchPackFill<T, 4 / sizeof(T)>(stream, dst, value, count);
   } else if (uintptr % 2 == 0) {
-    LaunchPackFill<T, 2 / sizeof(Src)>(stream, dst, value, count);
+    LaunchPackFill<T, 2 / sizeof(T)>(stream, dst, value, count);
   } else {
-    LaunchPackFill<T, 1 / sizeof(Src)>(stream, dst, value, count);
+    LaunchPackFill<T, 1 / sizeof(T)>(stream, dst, value, count);
   }
 }
 
@@ -285,20 +294,21 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
                  simplified_dst_dims, dst);
     if (simplified_num_dims == 1 && simplified_src_dims[0] == 1) {
       const int64_t elem_cnt = simplified_dst_dims[0];
-      auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Src, Dst>(attr0, attr1);
-      Dst scalar_res = functor(*src);
+      auto functor = UnaryFunctor<DeviceType::kCUDA, unary_op, Src, Dst>(attr0, attr1);
+      Dst scalar_res = functor(*reinterpret_cast<const Src*>(src));
       LaunchFill(cuda_stream, reinterpret_cast<Dst*>(dst), scalar_res, elem_cnt);
     } else if (simplified_num_dims == 1 && simplified_src_strides[0] == 1
                && simplified_dst_strides[0] == 1) {  // 输入输出完全连续且无广播
       const int64_t elem_cnt = simplified_src_dims[0];
-      auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Src, Dst>(attr0, attr1);
+      auto functor = UnaryFunctor<DeviceType::kCUDA, unary_op, Src, Dst>(attr0, attr1);
       OF_CUDA_CHECK((cuda::elementwise::Unary<decltype(functor), Dst, Src>(
           functor, elem_cnt, reinterpret_cast<Dst*>(dst), reinterpret_cast<const Src*>(src),
           cuda_stream->cuda_stream())));
     } else {
       LaunchWithSimplified<unary_op, Src, Dst>(
-          cuda_stream, simplified_num_dims, simplified_src_dims, simplified_src_strides, src,
-          simplified_dst_dims, simplified_dst_strides, dst, attr0, attr1);
+          cuda_stream, simplified_num_dims, simplified_src_dims, simplified_src_strides,
+          reinterpret_cast<const Src*>(src), simplified_dst_dims, simplified_dst_strides,
+          reinterpret_cast<Dst*>(dst), attr0, attr1);
     }
   }
 
