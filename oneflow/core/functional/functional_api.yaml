@@ -1951,9 +1951,9 @@
       Device device=None, Generator generator=None, Bool requires_grad=False)=> RandInt",
       "Tensor (Int64 high, Shape size, *, DataType dtype=None,
       Device device=None, Generator generator=None, Bool requires_grad=False)=> RandInt",
-      "Tensor (Int64 low, Int64 high, Shape size, *, Placement placement, SbpList sbp_tuple,
+      "Tensor (Int64 low, Int64 high, Shape size, *, Placement placement, SbpList sbp,
       DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> ConsistentRandInt",
-      "Tensor (Int64 high, Shape size, *, Placement placement, SbpList sbp_tuple,
+      "Tensor (Int64 high, Shape size, *, Placement placement, SbpList sbp,
       DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> ConsistentRandInt",
     ]
   bind_python: True
