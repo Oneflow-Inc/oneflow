@@ -42,7 +42,7 @@ class ThreadMgr final {
   Thread* GetThrd(int64_t thrd_id);
 
  private:
-  friend class Global<ThreadMgr>;
+  friend class Singleton<ThreadMgr>;
 
   HashMap<int64_t, std::unique_ptr<Thread>> threads_;
   std::mutex mutex4del_threads_;
@@ -53,16 +53,16 @@ void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);
 template<typename DoEachT>
 void MultiThreadLoop(size_t num, const DoEachT& DoEach) {
   if (num == 0) { return; }
-  if (unlikely(pthread_fork::IsForkedSubProcess()) || Global<ThreadPool>::Get() == nullptr) {
+  if (unlikely(pthread_fork::IsForkedSubProcess()) || Singleton<ThreadPool>::Get() == nullptr) {
     SingleThreadLoop(num, DoEach);
     return;
   }
-  size_t thread_num = Global<ThreadPool>::Get()->thread_num();
+  size_t thread_num = Singleton<ThreadPool>::Get()->thread_num();
   thread_num = std::min(num, thread_num);
   BalancedSplitter bs(num, thread_num);
   BlockingCounter bc(thread_num);
   FOR_RANGE(size_t, range_id, 0, thread_num) {
-    Global<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, DoEach] {
+    Singleton<ThreadPool>::Get()->AddWork([&bc, &bs, range_id, DoEach] {
       size_t start = bs.At(range_id).begin();
       size_t end = bs.At(range_id).end();
       FOR_RANGE(size_t, i, start, end) { DoEach(i); }

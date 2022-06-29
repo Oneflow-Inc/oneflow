@@ -649,8 +649,13 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
         cuda_stream->LaunchGraph(cuda_graph_exec_.get());
         return;
       }
-      current_scope_capturing = true;
-      cuda_stream->BeginGraphCapture();
+      const auto* cuda_graph_support =
+          CHECK_NOTNULL(dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get()));
+      if (cuda_graph_support->IsReadyForCapture(ctx_.get(), opkernel_state,
+                                                opkernel_cache_.get())) {
+        current_scope_capturing = true;
+        cuda_stream->BeginGraphCapture();
+      }
     }
   }
 #endif  // WITH_CUDA_GRAPHS
@@ -672,6 +677,13 @@ bool UserKernel::IsCudaGraphSupported() const {
 #else
   return false;
 #endif  // WITH_CUDA_GRAPHS
+}
+
+bool UserKernel::IsReadyForCudaGraphCapture(KernelContext* ctx) const {
+  const auto* cuda_graph_support = dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get());
+  if (cuda_graph_support == nullptr) { return false; }
+  return cuda_graph_support->IsReadyForCapture(ctx_.get(), opkernel_state_.get(),
+                                               opkernel_cache_.get());
 }
 
 void UserKernel::VirtualKernelInit(KernelContext* ctx) {

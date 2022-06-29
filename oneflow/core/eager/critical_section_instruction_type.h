@@ -24,7 +24,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/common/buffer_manager.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/register/ofblob.h"
@@ -45,18 +45,18 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
   CriticalSectionBeginInstructionType() = default;
   ~CriticalSectionBeginInstructionType() = default;
 
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
+  std::string DebugName(const vm::Instruction& instruction) const override {
     return "CriticalSectionBegin";
   }
   void Compute(vm::Instruction* instruction) const override {
     OF_PROFILER_RANGE_GUARD("CriticalSectionBegin");
     {
-      auto ptr = instruction->instr_msg().phy_instr_operand();
+      auto ptr = instruction->phy_instr_operand();
       auto phy_instr_operand = std::dynamic_pointer_cast<CriticalSectionBeginPhyInstrOperand>(ptr);
       CHECK_NOTNULL(phy_instr_operand);
       const auto& critical_section_instance = MakeCriticalSectionInstance(phy_instr_operand);
       const auto& job_name = critical_section_instance->job_name();
-      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
+      auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
       for (int i = 0; i < phy_instr_operand->interfaces_op_names().size(); ++i) {
         if (phy_instr_operand->interfaces_valid().at(i)) {
           const std::string& interface_op_name = phy_instr_operand->interfaces_op_names().at(i);
@@ -73,7 +73,7 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
       buffer_mgr->Get(wait_buffer_name)->Push(critical_section_instance);
     }
     {
-      auto* status_buffer_data = instruction->mut_status_buffer()->mut_buffer()->mut_data();
+      auto* status_buffer_data = instruction->mut_status_buffer()->mut_buffer();
       auto* status_querier = CriticalSectionStatusQuerier::MutCast(status_buffer_data);
       status_querier->SetLaunched(std::make_shared<NaiveEventRecord>());
     }
@@ -118,14 +118,14 @@ class CriticalSectionEndInstructionType final : public InstructionType {
   CriticalSectionEndInstructionType() = default;
   ~CriticalSectionEndInstructionType() = default;
 
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
+  std::string DebugName(const vm::Instruction& instruction) const override {
     return "CriticalSectionEnd";
   }
   void Compute(vm::Instruction* instruction) const override {
-    const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
+    const auto* ptr = instruction->phy_instr_operand().get();
     const auto* phy_instr_operand = dynamic_cast<const CriticalSectionEndPhyInstrOperand*>(ptr);
     CHECK_NOTNULL(phy_instr_operand);
-    auto* status_buffer_data = instruction->mut_status_buffer()->mut_buffer()->mut_data();
+    auto* status_buffer_data = instruction->mut_status_buffer()->mut_buffer();
     auto* status_querier = CriticalSectionStatusQuerier::MutCast(status_buffer_data);
     status_querier->SetLaunched(phy_instr_operand->event_record());
   }

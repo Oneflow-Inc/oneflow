@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_BARRIER_INSTRUCTION_TYPE_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/rpc/include/base.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
@@ -36,15 +35,15 @@ class BarrierInstructionType : public InstructionType {
 
   bool IsBarrier() const override { return true; }
 
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "Barrier"; }
-  void Compute(Instruction* instruction) const override { Run(instruction->instr_msg()); }
-  void ComputeInFuseMode(InstructionMsg* instr_msg) const override { Run(*instr_msg); }
+  std::string DebugName(const vm::Instruction& instruction) const override { return "Barrier"; }
+  void Compute(Instruction* instruction) const override { Run(*instruction); }
 
  protected:
-  void Run(const InstructionMsg& instr_msg) const {
+  void Run(const Instruction& instruction) const {
+    const auto& phy_instr_operand = instruction.phy_instr_operand();
     const auto* operand =
-        dynamic_cast<const BarrierPhyInstrOperand*>(instr_msg.phy_instr_operand().get());
-    CHECK_NOTNULL(operand)->callback();
+        CHECK_NOTNULL(dynamic_cast<const BarrierPhyInstrOperand*>(phy_instr_operand.get()));
+    operand->callback();
   }
 };
 
@@ -55,9 +54,8 @@ class GlobalSyncInstructionType : public InstructionType {
 
   bool IsBarrier() const override { return true; }
 
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "GlobalSync"; }
+  std::string DebugName(const Instruction& instruction) const override { return "GlobalSync"; }
   void Compute(Instruction* instruction) const override { OF_ENV_BARRIER(); }
-  void ComputeInFuseMode(InstructionMsg* instr_msg) const override { OF_ENV_BARRIER(); }
 };
 
 }  // namespace vm

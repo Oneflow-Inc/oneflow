@@ -202,7 +202,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
     // but should return real status while stride/view mechanism is ready in lazy-mirrored mode
     return true;
   }
-  Maybe<bool> is_pinned() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<bool> is_pinned() const override { return false; }
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
@@ -250,8 +250,6 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
 
   Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object);
-  Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object,
-                                  const bool pin_memory);
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override { return this; }
 
   Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) override;
