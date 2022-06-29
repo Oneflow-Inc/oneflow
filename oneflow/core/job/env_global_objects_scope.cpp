@@ -189,7 +189,6 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<embedding::EmbeddingManager>::New();
 #endif
   Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
-  Global<EagerJobBuildAndInferCtxMgr>::New();
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
     Global<EpollCommNet>::New();
@@ -234,7 +233,6 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
     Global<EpollCommNet>::Delete();
 #endif  // __linux__
   }
-  Global<EagerJobBuildAndInferCtxMgr>::Delete();
   Global<vm::VirtualMachineScope>::Delete();
 #ifdef WITH_CUDA
   Global<embedding::EmbeddingManager>::Delete();

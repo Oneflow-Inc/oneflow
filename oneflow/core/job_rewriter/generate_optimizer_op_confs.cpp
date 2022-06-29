@@ -27,11 +27,11 @@ namespace oneflow {
 
 namespace {
 
-class GenerateBackwardAndOptimizerOpConfs final : public JobPass {
+class GenerateOptimizerOpConfs final : public JobPass {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(GenerateBackwardAndOptimizerOpConfs);
-  GenerateBackwardAndOptimizerOpConfs() = default;
-  ~GenerateBackwardAndOptimizerOpConfs() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(GenerateOptimizerOpConfs);
+  GenerateOptimizerOpConfs() = default;
+  ~GenerateOptimizerOpConfs() override = default;
 
   bool IsEnabled(const JobPassCtx& ctx) const { return ctx.job_desc().IsTrain(); }
 
@@ -91,7 +91,7 @@ Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* jo
   return new_job_builder;
 }
 
-Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx) const {
+Maybe<void> GenerateOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx) const {
   if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
   HashMap<LogicalBlobId, LogicalBlobId> model_lbi2model_diff_lbi;
   for (const auto& optimizer_conf : job->job_conf().train_conf().optimizer_conf()) {
@@ -140,7 +140,7 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
   return Maybe<void>::Ok();
 }
 
-REGISTER_JOB_PASS("GenerateBackwardAndOptimizerOpConfs", GenerateBackwardAndOptimizerOpConfs);
+REGISTER_JOB_PASS("GenerateOptimizerOpConfs", GenerateOptimizerOpConfs);
 
 }  // namespace
 

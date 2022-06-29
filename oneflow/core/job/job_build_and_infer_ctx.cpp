@@ -59,22 +59,6 @@ Maybe<void> GetOpNames(const Job& job, HashSet<std::string>* op_names) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerRunOps(const Job& job, HashSet<std::string>* op_names,
-                        void (ForeignCallback::*interpret)(const OpAttribute& op_attribute,
-                                                           const ParallelConf& parallel_conf)
-                            const) {
-  const auto& op_graph = JUST(OpGraph::New(job));
-  const auto* foreign_callback = JUST(GlobalMaybe<std::shared_ptr<ForeignCallback>>());
-  JUST(op_graph->ForEachOpNode([&](const OpNode& op_node) -> Maybe<void> {
-    if (!op_names->insert(op_node.op().op_name()).second) { return Maybe<void>::Ok(); }
-    const auto& op_attribute = op_node.op().GetOpAttributeWithoutOpNameAndLbn();
-    const auto& parallel_conf = op_node.parallel_desc().parallel_conf();
-    (foreign_callback->get()->*interpret)(*op_attribute, parallel_conf);
-    return Maybe<void>::Ok();
-  }));
-  return Maybe<void>::Ok();
-}
-
 void UpdateOpName2AncestorsNeedNoGrad(
     const Operator& op, const std::function<const Operator*(const std::string&)>& Op4OpName,
     const bool is_train, HashMap<std::string, bool>* op_name2ancestors_need_no_grad) {
@@ -464,18 +448,6 @@ Maybe<void> LazyJobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(const Ope
     CHECK_EQ_OR_RETURN(ibn_parallel_num, parallel_num)
         << "the parallel_num of input lbn: " << GenLogicalBlobName(lbi)
         << " is not equals to op' parallel_num";
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> EagerJobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(
-    const Operator& op, int32_t parallel_num) const {
-  for (const auto& ibn : op.input_bns()) {
-    const auto& lbi = op.BnInOp2Lbi(ibn);
-    int32_t ibn_parallel_num = JUST(ParallelDesc4Lbi(lbi))->parallel_num();
-    CHECK_EQ_OR_RETURN(ibn_parallel_num, parallel_num)
-        << "the parallel_num of input lbn: " << GenLogicalBlobName(lbi)
-        << "is not equals to op' parallel_num";
   }
   return Maybe<void>::Ok();
 }
@@ -882,19 +854,9 @@ std::string LazyJobBuildAndInferCtx::GetMirroredOpName(const std::string& op_nam
   return op_name + "_" + std::to_string(parallel_id);
 }
 
-std::string EagerJobBuildAndInferCtx::GetMirroredOpName(const std::string& op_name,
-                                                        int64_t parallel_id) const {
-  return op_name;
-}
-
 ParallelConf LazyJobBuildAndInferCtx::GetMirroredOpParallelConf(const ParallelDesc& parallel_desc,
                                                                 int64_t parallel_id) const {
   return parallel_desc.GetParallelIdOnlyParallelConf(parallel_id);
-}
-
-ParallelConf EagerJobBuildAndInferCtx::GetMirroredOpParallelConf(const ParallelDesc& parallel_desc,
-                                                                 int64_t parallel_id) const {
-  return parallel_desc.parallel_conf();
 }
 
 Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompatibleConsistentBlob(
@@ -952,41 +914,6 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompati
     const auto* job_desc = JUST(scope.job_desc());
     JUST(AddAndInferOp(op_conf, parallel_desc.parallel_conf(), job_desc, false));
   }
-  return mirrored_lbi;
-}
-
-Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompatibleConsistentBlob(
-    int64_t scope_symbol_id, const LogicalBlobId& lbi) {
-  const std::string& lbn = GenLogicalBlobName(lbi);
-  const auto& sbn_it = mut_consistent_lbi2mirrored_lbi()->find(lbi);
-  if (sbn_it != mut_consistent_lbi2mirrored_lbi()->end()) { return sbn_it->second; }
-  const SbpParallel& sbp = *JUST(SbpParallel4Lbi(lbi));
-  CHECK_OR_RETURN(!sbp.has_partial_sum_parallel())
-      << "`P' consistant blob is not compatible to mirrored blob";
-  const ParallelDesc& parallel_desc = *JUST(ParallelDesc4Lbi(lbi));
-  OperatorConf op_conf;
-  {
-    // inherit scope_symbol_id from producer
-    const auto& producer_op_conf = JUST(Op4OpName(lbi.op_name()))->op_conf();
-    CHECK_OR_RETURN(producer_op_conf.has_scope_symbol_id());
-    op_conf.set_scope_symbol_id(producer_op_conf.scope_symbol_id());
-  }
-  op_conf.set_scope_symbol_id(scope_symbol_id);
-  op_conf.set_device_tag(*JUST(DeviceTag4DeviceType(parallel_desc.device_type())));
-  op_conf.set_name(kAutoMirroredBlobNamePrefix + "-CastToMirrored-" + NewUniqueId());
-  auto* cast_to_mirrored_conf = op_conf.mutable_cast_to_mirrored_conf();
-  cast_to_mirrored_conf->set_in(lbn);
-  cast_to_mirrored_conf->set_out("out");
-  *cast_to_mirrored_conf->mutable_sbp_parallel() = sbp;
-  LogicalBlobId mirrored_lbi;
-  mirrored_lbi.set_op_name(op_conf.name());
-  mirrored_lbi.set_blob_name("out");
-  (*mut_consistent_lbi2mirrored_lbi())[lbi] = mirrored_lbi;
-  (*mut_mirrored_lbi2sub_lbis())[mirrored_lbi].emplace_back(mirrored_lbi);
-  const auto& parallel_conf = parallel_desc.parallel_conf();
-  const auto& op_attribute = JUST(AddAndInferConsistentOp(op_conf));
-  (*JUST(GlobalMaybe<std::shared_ptr<ForeignCallback>>()))
-      ->EagerMirroredCast(*op_attribute, parallel_conf);
   return mirrored_lbi;
 }
 
@@ -1050,8 +977,6 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   }
 
   if (GlobalJobDesc().Bool("__is_user_function__")) {
-    JUST(DoPass("ModelUpdateConfCompatiblePass"));
-    JUST(DoPass("AddInputOutputOpsPass"));
     JUST(DoPass("NormalizationExponentialAverageAutoTickPass"));
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
@@ -1065,7 +990,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
 #ifdef WITH_MLIR
     JUST(DoPass("IRRoundTripBeforeAD"));
 #endif  // WITH_MLIR
-    JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
+    JUST(DoPass("GenerateOptimizerOpConfs"));
     JUST(DoPass("ReplaceEmbeddingOps"));
     JUST(DoPass("AddSspVariableProxy"));
     JUST(DoPass("CheckpointingPass"));
@@ -1091,23 +1016,6 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   }
   JUST(DoPass("DumpBlobParallelConfPass"));
   JUST(CheckJob());
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> EagerJobBuildAndInferCtx::Complete() {
-  CHECK_NOTNULL(Global<JobDesc>::Get());
-  Global<JobDesc>::Delete();
-  JUST(GetOpNames(job(), &executed_op_names_));
-  auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
-  JobPassCtx job_pass_ctx(GlobalJobDesc());
-  auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
-    return JobPass4Name(pass_name)(mut_job(), &job_pass_ctx);
-  };
-  JUST(DoPass("AutoTrainStep"));
-  JUST(DoPass("AutoLearningRate"));
-  JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
-  JUST(DoPass("AddLbiDiffWatcherOpConfs"));
-  JUST(EagerRunOps(job(), &executed_op_names_, &ForeignCallback::EagerInterpretCompletedOp));
   return Maybe<void>::Ok();
 }
 

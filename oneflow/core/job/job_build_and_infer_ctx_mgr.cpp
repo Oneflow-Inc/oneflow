@@ -43,11 +43,6 @@ JobBuildAndInferCtx* LazyJobBuildAndInferCtxMgr::NewJobBuildAndInferCtx(Job* job
   return new LazyJobBuildAndInferCtx(job, job_id);
 }
 
-JobBuildAndInferCtx* EagerJobBuildAndInferCtxMgr::NewJobBuildAndInferCtx(Job* job,
-                                                                         int64_t job_id) const {
-  return new EagerJobBuildAndInferCtx(job, job_id);
-}
-
 Maybe<JobBuildAndInferCtx*> JobBuildAndInferCtxMgr::FindJobBuildAndInferCtx(
     const std::string& job_name) {
   CHECK_OR_RETURN(job_name2infer_ctx_.find(job_name) != job_name2infer_ctx_.end())
@@ -87,18 +82,6 @@ Maybe<void> LazyJobBuildAndInferCtxMgr::VirtualCloseJob() {
   CHECK_EQ_OR_RETURN(job_desc->job_name(), *JUST(GetCurrentJobName()));
   CHECK_EQ_OR_RETURN(job_desc->job_id(), mut_job_set()->job_size() - 1);
   Global<JobDesc>::Delete();
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
-  const JobDesc* job_desc = Global<JobDesc>::Get();
-  if (job_desc != nullptr) {
-    CHECK_EQ_OR_RETURN(job_desc->job_name(), *JUST(GetCurrentJobName()));
-    CHECK_EQ_OR_RETURN(job_desc->job_id(), mut_job_set()->job_size() - 1);
-    Global<JobDesc>::Delete();
-  }
-  mut_job_set()->clear_job();
-  clear_job_name2infer_ctx();
   return Maybe<void>::Ok();
 }
 
