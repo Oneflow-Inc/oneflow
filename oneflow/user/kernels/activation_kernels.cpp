@@ -15,36 +15,9 @@ limitations under the License.
 */
 #include "oneflow/core/ep/include/primitive/binary_op.h"
 #include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
-#include "oneflow/user/kernels/elementwise_xpu_kernel.h"
+#include "oneflow/user/kernels/elementwise_primitive_kernel.h"
 
 namespace oneflow {
-
-namespace {
-auto UnaryPrimitiveExists(ep::primitive::UnaryOp op, const std::string& output_name,
-                          const std::string& input_name) {
-  return hob::make_custom(
-      "ElementwiseUnaryPrimitiveExists", [=](const user_op::KernelRegContext& ctx) {
-        const user_op::TensorDesc* src = ctx.TensorDesc4ArgNameAndIndex(input_name, 0);
-        const user_op::TensorDesc* dst = ctx.TensorDesc4ArgNameAndIndex(output_name, 0);
-        auto primitive = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
-            ctx.device_type(), op, src->data_type(), dst->data_type());
-        return primitive.operator bool();
-      });
-}
-
-auto BinaryPrimitiveExists(ep::primitive::BinaryOp op, const std::string& output_name,
-                           const std::string& input_a_name) {
-  return hob::make_custom(
-      "BroadcastElementwiseBinaryPrimitiveExists", [=](const user_op::KernelRegContext& ctx) {
-        const user_op::TensorDesc* src0 = ctx.TensorDesc4ArgNameAndIndex(input_a_name, 0);
-        const user_op::TensorDesc* dst = ctx.TensorDesc4ArgNameAndIndex(output_name, 0);
-        auto primitive =
-            ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
-                ctx.device_type(), op, src0->data_type(), dst->data_type(), 1 /*max_num_dims*/);
-        return primitive.operator bool();
-      });
-}
-}  // namespace
 
 REGISTER_USER_KERNEL("elu")
     .SetCreateFn([]() {
