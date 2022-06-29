@@ -41,14 +41,14 @@ std::unique_ptr<ep::primitive::Matmul> NewMatmulPrimitive(DeviceType device_type
 
 template<typename Context>
 std::unique_ptr<ep::primitive::Matmul> NewReduceMatmulTransAPrimitive(Context* ctx) {
-  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("input_tensor", 0)->data_type();
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("y", 0)->data_type();
   return NewMatmulPrimitive(ctx->device_type(), data_type, /*transpose_a=*/true,
                             /*transpose_b=*/false);
 }
 
 template<typename Context>
 std::unique_ptr<ep::primitive::Matmul> NewReduceMatmulNoTransAPrimitive(Context* ctx) {
-  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("input_tensor", 0)->data_type();
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("y", 0)->data_type();
   return NewMatmulPrimitive(ctx->device_type(), data_type, /*transpose_a=*/false,
                             /*transpose_b=*/false);
 }
