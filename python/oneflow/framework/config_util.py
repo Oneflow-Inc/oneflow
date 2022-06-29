@@ -90,7 +90,6 @@ def api_machine_num(val: int) -> None:
     _set_resource_attr(attrs, val, type_)
 
 
-
 def api_gpu_device_num(val: int) -> None:
     """Set number of GPUs on each machine to run oneflow on.
 
@@ -423,6 +422,7 @@ api_attrs_and_type = {
     api_machine_num: ("machine_num", int),
     api_comm_net_worker_num: ("comm_net_worker_num", int),
     api_max_mdsave_worker_num: ("max_mdsave_worker_num", int),
+    api_cpu_device_num: ("cpu_device_num", int),
     api_compute_thread_pool_size: ("compute_thread_pool_size", int),
     api_reserved_host_mem_mbyte: ("reserved_host_mem_mbyte", int),
     api_reserved_device_mem_mbyte: ("reserved_device_mem_mbyte", int),
@@ -479,8 +479,3 @@ api_attrs_and_type = {
     ),
 }
 
-api_attrs_and_type[api_gpu_device_num] = (
-    ("gpu_device_num", int)
-    if oneflow._oneflow_internal.flags.with_cuda()
-    else ("cpu_device_num", int)
-)
