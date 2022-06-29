@@ -181,7 +181,7 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
         JUST(tensor->AsMirroredTensor()),
         [handle](uint64_t ofblob_ptr) {
           auto* of_blob = reinterpret_cast<OfBlob*>(ofblob_ptr);
-          CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+          CHECK_JUST(Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
             ParseArrayToBlob(handle.get(), of_blob->mut_blob());
             return Maybe<void>::Ok();
           }));
