@@ -59,7 +59,7 @@ CudaStreamContext::CudaStreamContext(int device_index)
     : stream_(nullptr), device_index_(device_index) {
   CudaCurrentDeviceGuard guard(device_index_);
   device_ = std::dynamic_pointer_cast<ep::CudaDevice>(
-      Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index));
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index));
   CHECK(device_);
   stream_ = dynamic_cast<ep::CudaStream*>(device_->CreateStream());
   CHECK(stream_ != nullptr);

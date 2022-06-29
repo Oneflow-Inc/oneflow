@@ -41,7 +41,7 @@ class EagerNcclCommMgr final {
   void SetAsyncLaunchNcclLogicalKernel(bool val) { async_launch_nccl_logical_kernel_ = val; }
 
  private:
-  friend class Global<EagerNcclCommMgr>;
+  friend class Singleton<EagerNcclCommMgr>;
   // NOTE(chengcheng): default async launch nccl logical kernel is true for better performence.
   EagerNcclCommMgr() : async_launch_nccl_logical_kernel_(true) {}
 

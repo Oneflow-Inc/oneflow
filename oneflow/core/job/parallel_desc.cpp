@@ -32,7 +32,7 @@ namespace oneflow {
 namespace {
 
 int64_t GetDeviceCount(DeviceType device_type) {
-  return Global<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(device_type);
+  return Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(device_type);
 }
 
 using MachineId2DeviceIdList =
@@ -379,7 +379,7 @@ ParallelConf GenParallelConfOfCpuZeroOnMaster() {
 ParallelConf GenParallelConfOfCpuZeroOnAllMachines() {
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
-  for (int64_t i : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
+  for (int64_t i : Singleton<ResourceDesc, ForSession>::Get()->process_ranks()) {
     parallel_conf.add_device_name(std::string("@") + std::to_string(i) + ":0");
   }
   return parallel_conf;

@@ -223,7 +223,7 @@ void GenMemChainTasksAndRegsts(
   int64_t mem_chain_id = 0;
 
   bool enable_mem_chain_merge =
-      Global<ResourceDesc, ForSession>::Get()->resource().enable_mem_chain_merge();
+      Singleton<ResourceDesc, ForSession>::Get()->resource().enable_mem_chain_merge();
 
   for (auto& device_chain_pair : device2chain2mem_chain) {
     if (device_chain_pair.second.empty()) { continue; }
@@ -826,7 +826,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
       }
     }
     CHECK(best_result != nullptr);
-    int64_t mem_block_id = Global<IDMgr>::Get()->NewMemBlockId();
+    int64_t mem_block_id = Singleton<IDMgr>::Get()->NewMemBlockId();
     CHECK_EQ(mem_chain2mem_reused_regsts.at(pair.first).size(),
              (best_result->regst_desc2offset.size()
               + mem_chain2consumer2inplaced_regst.at(pair.first).size()));

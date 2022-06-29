@@ -24,7 +24,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/common/buffer_manager.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/register/ofblob.h"
@@ -56,7 +56,7 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
       CHECK_NOTNULL(phy_instr_operand);
       const auto& critical_section_instance = MakeCriticalSectionInstance(phy_instr_operand);
       const auto& job_name = critical_section_instance->job_name();
-      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
+      auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
       for (int i = 0; i < phy_instr_operand->interfaces_op_names().size(); ++i) {
         if (phy_instr_operand->interfaces_valid().at(i)) {
           const std::string& interface_op_name = phy_instr_operand->interfaces_op_names().at(i);
