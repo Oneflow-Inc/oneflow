@@ -197,7 +197,7 @@ void DispatchNumDims(CudaStream* stream, size_t pack_size, size_t num_dims, cons
     func = DispatchPackSize<op, Src, Dst, 3>;
   } else if (num_dims == 4) {
     func = DispatchPackSize<op, Src, Dst, 4>;
-  } else if (num_dims <= 8) {
+  } else if (num_dims <= kMaxNumDims) {
     func = DispatchPackSize<op, Src, Dst, 8>;
   } else {
     UNIMPLEMENTED();
@@ -227,10 +227,9 @@ void LaunchWithSimplified(CudaStream* stream, size_t simplified_num_dims,
 }
 
 template<UnaryOp op, typename Src, typename Dst, size_t pack>
-__global__ void LaunchFillKernel(Dst* dst, const Src* src, size_t count, Scalar attr0,
-                                 Scalar attr1) {
+__global__ void LaunchFillKernel(Dst* dst, const Src* src, size_t pack_count, size_t count,
+                                 Scalar attr0, Scalar attr1) {
   using StorePack = cuda::elementwise::Packed<Dst, pack>;
-  const size_t pack_count = count / pack;
   StorePack pack_value;
   auto functor = UnaryFunctor<DeviceType::kCUDA, op, Src, Dst>(attr0, attr1);
   Dst value = functor(*src);
@@ -247,9 +246,10 @@ template<UnaryOp op, typename Src, typename Dst, size_t pack>
 typename std::enable_if<(pack != 0), void>::type LaunchPackFill(CudaStream* stream, Dst* dst,
                                                                 const Src* src, size_t count,
                                                                 Scalar attr0, Scalar attr1) {
+  size_t pack_count = count / pack;
   LaunchFillKernel<op, Src, Dst, pack>
-      <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0, stream->cuda_stream()>>>(
-          dst, src, count, attr0, attr1);
+      <<<BlocksNum4ThreadsNum(pack_count), kCudaThreadsNumPerBlock, 0, stream->cuda_stream()>>>(
+          dst, src, pack_count, count, attr0, attr1);
 }
 
 template<UnaryOp op, typename Src, typename Dst, size_t pack>
@@ -284,9 +284,11 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
   ~BroadcastElementwiseUnaryImpl() override = default;
 
   void Launch(Stream* stream, size_t num_src_dims, const int64_t* src_dims,
-              const int64_t* src_strides, const void* src, size_t num_dst_dims,
-              const int64_t* dst_dims, const int64_t* dst_strides, void* dst) override {
+              const int64_t* src_strides, const void* src_ptr, size_t num_dst_dims,
+              const int64_t* dst_dims, const int64_t* dst_strides, void* dst_ptr) override {
     auto* cuda_stream = stream->As<CudaStream>();
+    Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
+    const Src* src = reinterpret_cast<const Src*>(src_ptr);
     size_t simplified_num_dims = 0;
     int64_t simplified_src_dims[kMaxNumDims];
     int64_t simplified_dst_dims[kMaxNumDims];
@@ -300,20 +302,17 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
                  simplified_dst_dims, dst);
     if (simplified_num_dims == 1 && simplified_src_dims[0] == 1) {
       const int64_t elem_cnt = simplified_dst_dims[0];
-      LaunchFill<unary_op, Src, Dst>(cuda_stream, reinterpret_cast<Dst*>(dst),
-                                     reinterpret_cast<const Src*>(src), elem_cnt, attr0, attr1);
+      LaunchFill<unary_op, Src, Dst>(cuda_stream, dst, src, elem_cnt, attr0, attr1);
     } else if (simplified_num_dims == 1 && simplified_src_strides[0] == 1
                && simplified_dst_strides[0] == 1) {
       const int64_t elem_cnt = simplified_src_dims[0];
       auto functor = UnaryFunctor<DeviceType::kCUDA, unary_op, Src, Dst>(attr0, attr1);
       OF_CUDA_CHECK((cuda::elementwise::Unary<decltype(functor), Dst, Src>(
-          functor, elem_cnt, reinterpret_cast<Dst*>(dst), reinterpret_cast<const Src*>(src),
-          cuda_stream->cuda_stream())));
+          functor, elem_cnt, dst, src, cuda_stream->cuda_stream())));
     } else {
       LaunchWithSimplified<unary_op, Src, Dst>(
-          cuda_stream, simplified_num_dims, simplified_src_dims, simplified_src_strides,
-          reinterpret_cast<const Src*>(src), simplified_dst_dims, simplified_dst_strides,
-          reinterpret_cast<Dst*>(dst), attr0, attr1);
+          cuda_stream, simplified_num_dims, simplified_src_dims, simplified_src_strides, src,
+          simplified_dst_dims, simplified_dst_strides, dst, attr0, attr1);
     }
   }
 

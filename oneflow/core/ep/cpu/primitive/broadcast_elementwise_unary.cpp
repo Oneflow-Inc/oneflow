@@ -38,9 +38,11 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
   ~BroadcastElementwiseUnaryImpl() override = default;
 
   void Launch(Stream* stream, size_t num_src_dims, const int64_t* src_dims,
-              const int64_t* src_strides, const Src* src, size_t num_dst_dims,
-              const int64_t* dst_dims, const int64_t* dst_strides, Dst* dst) override {
+              const int64_t* src_strides, const void* src_ptr, size_t num_dst_dims,
+              const int64_t* dst_dims, const int64_t* dst_strides, void* dst_ptr) override {
     auto* cpu_stream = stream->As<CpuStream>();
+    Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
+    const Src* src = reinterpret_cast<const Src*>(src_ptr);
     size_t simplified_num_dims = 0;
     int64_t simplified_src_dims[kMaxNumDims];
     int64_t simplified_dst_dims[kMaxNumDims];
@@ -54,12 +56,15 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
                  simplified_dst_dims, dst);
     if (simplified_num_dims == 1 && simplified_src_dims[0] == 1) {
       auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Src, Dst>(attr0, attr1);
-      Dst scalar_res = functor(*src);
+      Dst scalar_value = functor(*src);
       const int64_t elem_cnt = simplified_dst_dims[0];
       const int64_t dst_stride = simplified_dst_strides[0];
-      cpu_stream->ParallelFor(0, elem_cnt, [dst, dst_stride](int64_t begin, int64_t end) {
-        for (int64_t i = begin; i < end; i++) { dst[i * dst_stride] = scalar_res; }
-      });
+      cpu_stream->ParallelFor(0, elem_cnt,
+                              [dst, dst_stride, scalar_value](int64_t begin, int64_t end) {
+                                for (int64_t i = begin; i < end; i++) {
+                                  dst[i * dst_stride] = scalar_value;
+                                }
+                              });
     } else if (simplified_num_dims == 1) {
       const int64_t elem_cnt = simplified_src_dims[0];
       const int64_t src_stride = simplified_src_strides[0];
@@ -112,11 +117,11 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
               }
               const int64_t src_offset =
                   src_index_to_offset_helper.NdIndexToOffset(src_index, simplified_num_dims);
-              if (!continuous_output) {  // 输出完全连续
+              if (!continuous_output) {
                 const int64_t dst_offset =
                     dst_index_to_offset_helper.NdIndexToOffset(dst_index, simplified_num_dims);
                 dst[dst_offset] = functor(src[src_offset]);
-              } else {  // Naive 实现
+              } else {
                 dst[offset] = functor(src[src_offset]);
               }
             }
@@ -153,8 +158,9 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
     static const std::map<std::tuple<UnaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<BroadcastElementwiseUnary>(Scalar, Scalar)>>
         new_broadcast_elementwise_unary_handle{
-            // TODO(yaozihang): add registry for ops which use BroadcastElementwiseUnary primitive
-        };
+            // For All Type OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
+                                             UNARY_BROADCAST_OP_SEQ, CPU_PRIMITIVE_ALL_TYPE_SEQ)};
 
 #undef MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 
