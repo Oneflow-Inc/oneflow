@@ -116,6 +116,8 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<MirroredTensor> AsMirroredTensor() = 0;
   virtual Maybe<ConsistentTensor> AsConsistentTensor() = 0;
 
+  Maybe<void> BorrowTensorName(const Tensor* other) const;
+
   // The same tensor instance should share the python object to ensure that
   // their id are consistent in Python. That is if x and y are hold the same tensor,
   // then `id(x)` should equal to `id(y)`
@@ -294,7 +296,9 @@ class TensorIf : public Tensor {
 template<typename DerivedT>
 class ProxyTensor : public TensorIf<DerivedT> {
  public:
-  ProxyTensor(const std::shared_ptr<Tensor>& tensor) : tensor_(tensor) {}
+  ProxyTensor(const std::shared_ptr<Tensor>& tensor) : tensor_(tensor) {
+    if (tensor->is_lazy()) { CHECK_JUST(this->BorrowTensorName(tensor.get())); }
+  }
   virtual ~ProxyTensor() = default;
 
   virtual std::shared_ptr<const Shape> shape() const override { return tensor_->shape(); }
@@ -391,11 +395,10 @@ class ProxyTensor : public TensorIf<DerivedT> {
 
   virtual user_op::TensorDesc* mut_tensor_meta() override { return tensor_->mut_tensor_meta(); }
   virtual Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
-    CHECK_OR_RETURN(is_local() == other->is_local() && is_eager() == other->is_eager())
-        << "You can't assign copy between tensors with different type";
     bool old_requires_grad = tensor_->requires_grad();
     this->tensor_ = JUST(other->detach());
     JUST(this->tensor_->set_requires_grad(old_requires_grad));
+    if (other->is_lazy()) { JUST(this->BorrowTensorName(other.get())); }
     return Maybe<void>::Ok();
   }
 
@@ -528,16 +531,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
     return impl_->mut_eager_mirrored_tensor_impl();
   }
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
-  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
-    CHECK_OR_RETURN(this->is_leaf()) << "Can only set leaf tensor's data.";
-    const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(JUST(other->detach()));
-    CHECK_NOTNULL_OR_RETURN(mirrored_tensor);
-    bool old_requires_grad = requires_grad();
-    impl_ = mirrored_tensor->impl_;
-    set_requires_grad(old_requires_grad);
-    grad_fn_node_ = nullptr;
-    return Maybe<void>::Ok();
-  }
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
 
   Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) override {
     return impl_->RegisterStorageDeleteHook(hook);
