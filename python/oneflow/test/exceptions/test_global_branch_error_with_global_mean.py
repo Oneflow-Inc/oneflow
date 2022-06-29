@@ -29,10 +29,9 @@ from oneflow.test_utils.automated_test_util import *
 @flow.unittest.skip_unless_1n2d()
 class TestGlobalMeanBranchError(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def _test_global_branch_error_global_data_mean(test_case):
+    def test_global_branch_error_global_data_mean(test_case):
         try:
             os.environ["ONEFLOW_TIMEOUT_SECONDS"] = "2"
-            os.environ["ONEFLOW_DEBUG_MODE"] = "1"
             data = flow.rand(2, dtype=flow.float32)
             placement = flow.env.all_device_placement("cuda")
             sbp = flow.sbp.split(0)
@@ -48,7 +47,6 @@ class TestGlobalMeanBranchError(flow.unittest.TestCase):
             assert err_msg in str(e)
         finally:
             os.environ["ONEFLOW_TIMEOUT_SECONDS"] = "300"
-            os.environ["ONEFLOW_DEBUG_MODE"] = "0"
 
 
 if __name__ == "__main__":
