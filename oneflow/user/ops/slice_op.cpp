@@ -150,9 +150,9 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
   DimVector dim_vec(ndim);  // logical shape in slice attributes
   FOR_RANGE(size_t, i, 0, dim_vec.size()) {
-    const int64_t step = step_vec.at(i);
-    const int64_t start = start_vec.at(i);
-    const int64_t stop = stop_vec.at(i);
+    const int64_t step = step_vec[i];
+    const int64_t start = start_vec[i];
+    const int64_t stop = stop_vec[i];
     CHECK_GT_OR_RETURN(step, 0) << "Slice step must be greater than 0";
     CHECK_GE_OR_RETURN(start, 0) << "Slice start must be greater or equal to 0";
     CHECK_GE_OR_RETURN(stop, 0) << "Slice stop must be greater or equal to 0";
