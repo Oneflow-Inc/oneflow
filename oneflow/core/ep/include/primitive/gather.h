@@ -42,4 +42,4 @@ class GatherFactory : public Factory<Gather> {
 }  // namespace primitive
 }  // namespace ep
 }  // namespace oneflow
-#endif
+#endif  // ONEFLOW_CORE_EP_INCLUDE_PRIMITIVE_GATHER_H_
