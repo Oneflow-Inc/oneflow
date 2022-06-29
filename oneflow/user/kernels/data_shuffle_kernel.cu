@@ -1200,11 +1200,12 @@ class EmbeddingShuffleKernelDynamicMemoryAlloc final : public user_op::OpKernel 
     for (int64_t i = 0; i < parallel_num; ++i) {
       unique_partitioned_num_ids += host_num_unique_matrix[parallel_id * parallel_num + i];
     }
-    embedding::ValuesPtr* ptrs = Singleton<embedding::EmbeddingManager>::Get()->GetValuesPtr(
-        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
-    void* cur_rank_embeddings_ptr = (ptrs->HasLookupEmbeddings())
-                                        ? ptrs->GetLookupEmbeddingsPtr(current_iter_)
-                                        : ptrs->GetLookupValuesPtr(current_iter_);
+    embedding::DynamicMallocPtrsManager* ptrs_mgr =
+        Singleton<embedding::EmbeddingManager>::Get()->GetDynamicMallocPtrsManager(
+            ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    void* cur_rank_embeddings_ptr = (ptrs_mgr->HasLookupEmbeddings())
+                                        ? ptrs_mgr->GetLookupEmbeddingsPtr(current_iter_)
+                                        : ptrs_mgr->GetLookupValuesPtr(current_iter_);
     if (!enable_quantized_comm) {
       // 1. reverse cur_rank unique, from (num_unique, embedding_size) to (cur_rank_num_ids,
       // embedding_size)
@@ -1822,8 +1823,9 @@ class EmbeddingGradientShuffleDynamicMemoryAllocKernel final : public user_op::O
     for (int64_t i = 0; i < parallel_num; ++i) {
       unique_partitioned_num_ids += host_num_unique_matrix[parallel_id * parallel_num + i];
     }
-    embedding::ValuesPtr* ptrs = Singleton<embedding::EmbeddingManager>::Get()->GetValuesPtr(
-        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    embedding::DynamicMallocPtrsManager* ptrs_mgr =
+        Singleton<embedding::EmbeddingManager>::Get()->GetDynamicMallocPtrsManager(
+            ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
     if (!enable_quantized_comm) {
       // 1. sum to unique grad, from (num_ids, embedding_size) to (unique_partitioned_num_ids,
       // padded_embedding_size)

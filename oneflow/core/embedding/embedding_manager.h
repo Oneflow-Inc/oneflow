@@ -66,14 +66,14 @@ class NumUniques {
   std::mutex mutex_;
 };
 
-class ValuesPtr {
+class DynamicMallocPtrsManager {
  public:
-  ValuesPtr() {
+  DynamicMallocPtrsManager() {
     has_lookup_values_ = false;
     has_lookup_embeddings_ = false;
     has_updated_values_ = false;
   }
-  ~ValuesPtr() {
+  ~DynamicMallocPtrsManager() {
     if (has_lookup_values_) { OF_CUDA_CHECK(cudaFree(lookup_values_)); }
     if (has_lookup_embeddings_) { OF_CUDA_CHECK(cudaFree(lookup_embeddings_)); }
   }
@@ -119,7 +119,8 @@ class EmbeddingManager final {
                     const std::string& snapshot_name);
   void LoadSnapshot(const std::string& embedding_name, int64_t local_rank_id, int64_t rank_id,
                     const std::string& snapshot_name);
-  ValuesPtr* GetValuesPtr(const std::string& embedding_name, int64_t rank_id);
+  DynamicMallocPtrsManager* GetDynamicMallocPtrsManager(const std::string& embedding_name,
+                                                        int64_t rank_id);
 
   NumUniques* GetNumUniques(const std::string& embedding_name, int64_t rank_id);
 
@@ -131,7 +132,8 @@ class EmbeddingManager final {
  private:
   HashMap<std::pair<std::string, int64_t>, std::unique_ptr<KeyValueStore>> key_value_store_map_;
   std::mutex mutex_;
-  HashMap<std::pair<std::string, int64_t>, std::unique_ptr<ValuesPtr>> values_ptrs_map_;
+  HashMap<std::pair<std::string, int64_t>, std::unique_ptr<DynamicMallocPtrsManager>>
+      dynamic_malloc_ptrs_manager_map_;
   HashMap<std::pair<std::string, int64_t>, std::unique_ptr<NumUniques>> num_uniques_map_;
 };
 

@@ -26,11 +26,12 @@ namespace embedding {
 
 constexpr size_t kDefaultMaxQueryLength = 65536;
 
-ValuesPtr* EmbeddingManager::GetValuesPtr(const std::string& embedding_name, int64_t rank_id) {
+DynamicMallocPtrsManager* EmbeddingManager::GetDynamicMallocPtrsManager(
+    const std::string& embedding_name, int64_t rank_id) {
   std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, rank_id);
   std::unique_lock<std::mutex> lock(mutex_);
-  auto it = values_ptrs_map_.find(map_key);
-  CHECK(it != values_ptrs_map_.end())
+  auto it = dynamic_malloc_ptrs_manager_map_.find(map_key);
+  CHECK(it != dynamic_malloc_ptrs_manager_map_.end())
       << "Can not find embedding: " << embedding_name << "-" << rank_id;
   return it->second.get();
 }
@@ -92,7 +93,9 @@ void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value
       << name;
   if (UseDynamicMemoryAllocation()) {
 #if CUDA_VERSION >= 11020
-    CHECK(values_ptrs_map_.emplace(map_key, std::make_unique<ValuesPtr>()).second)
+    CHECK(dynamic_malloc_ptrs_manager_map_
+              .emplace(map_key, std::make_unique<DynamicMallocPtrsManager>())
+              .second)
         << "Can't create an embedding values with same name of an existing embedding, the name: "
         << name;
 
@@ -158,21 +161,22 @@ const std::vector<uint32_t>& NumUniques::GetNumUniqueMatrix(int64_t iter) {
   return state.num_unique_matrix;
 }
 
-void* ValuesPtr::GetLookupValuesPtr(int64_t iter) {
+void* DynamicMallocPtrsManager::GetLookupValuesPtr(int64_t iter) {
   std::unique_lock<std::mutex> lock(mutex_);
   CHECK(has_lookup_values_);
   CHECK_EQ(lookup_values_iter_, iter)
       << "saved iter: " << lookup_values_iter_ << " current iter: " << iter;
   return lookup_values_;
 }
-void* ValuesPtr::GetLookupEmbeddingsPtr(int64_t iter) {
+void* DynamicMallocPtrsManager::GetLookupEmbeddingsPtr(int64_t iter) {
   std::unique_lock<std::mutex> lock(mutex_);
   CHECK(has_lookup_embeddings_);
   CHECK_EQ(lookup_embeddings_iter_, iter)
       << "saved iter: " << lookup_embeddings_iter_ << " current iter: " << iter;
   return lookup_embeddings_;
 }
-void* ValuesPtr::MallocLookupValuesPtr(int64_t iter, size_t data_size, cudaStream_t cuda_stream) {
+void* DynamicMallocPtrsManager::MallocLookupValuesPtr(int64_t iter, size_t data_size,
+                                                      cudaStream_t cuda_stream) {
 #if CUDA_VERSION >= 11020
   std::unique_lock<std::mutex> lock(mutex_);
   if (has_lookup_values_ && lookup_values_size_ >= data_size) {
@@ -190,10 +194,10 @@ void* ValuesPtr::MallocLookupValuesPtr(int64_t iter, size_t data_size, cudaStrea
   return nullptr;
 #endif
 }
-bool ValuesPtr::HasLookupEmbeddings() { return has_lookup_embeddings_; }
+bool DynamicMallocPtrsManager::HasLookupEmbeddings() { return has_lookup_embeddings_; }
 
-void* ValuesPtr::MallocLookupEmbeddingsPtr(int64_t iter, size_t data_size,
-                                           cudaStream_t cuda_stream) {
+void* DynamicMallocPtrsManager::MallocLookupEmbeddingsPtr(int64_t iter, size_t data_size,
+                                                          cudaStream_t cuda_stream) {
 #if CUDA_VERSION >= 11020
   std::unique_lock<std::mutex> lock(mutex_);
   if (has_lookup_embeddings_ && lookup_embeddings_size_ >= data_size) {
@@ -212,7 +216,8 @@ void* ValuesPtr::MallocLookupEmbeddingsPtr(int64_t iter, size_t data_size,
 #endif
 }
 
-void* ValuesPtr::MallocUpdatedValuesPtr(int64_t iter, size_t data_size, cudaStream_t cuda_stream) {
+void* DynamicMallocPtrsManager::MallocUpdatedValuesPtr(int64_t iter, size_t data_size,
+                                                       cudaStream_t cuda_stream) {
 #if CUDA_VERSION >= 11020
   std::unique_lock<std::mutex> lock(mutex_);
   CHECK(!has_updated_values_);
@@ -225,14 +230,14 @@ void* ValuesPtr::MallocUpdatedValuesPtr(int64_t iter, size_t data_size, cudaStre
   return nullptr;
 #endif
 }
-void* ValuesPtr::GetUpdatedValuesPtr(int64_t iter) {
+void* DynamicMallocPtrsManager::GetUpdatedValuesPtr(int64_t iter) {
   std::unique_lock<std::mutex> lock(mutex_);
   CHECK(has_updated_values_);
   CHECK_EQ(updated_values_iter_, iter)
       << "saved iter: " << updated_values_iter_ << " current iter: " << iter;
   return updated_values_;
 }
-void ValuesPtr::FreeUpdatedValuesPtr(int64_t iter, cudaStream_t cuda_stream) {
+void DynamicMallocPtrsManager::FreeUpdatedValuesPtr(int64_t iter, cudaStream_t cuda_stream) {
 #if CUDA_VERSION >= 11020
   std::unique_lock<std::mutex> lock(mutex_);
   CHECK(has_updated_values_);

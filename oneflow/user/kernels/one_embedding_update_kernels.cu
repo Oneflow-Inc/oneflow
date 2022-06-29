@@ -209,18 +209,19 @@ void GetUniqueValueAndUpdatedPtr(user_op::KernelComputeContext* ctx, const int64
                                  const T** unique_embeddings_ptr,
                                  T** updated_unique_embeddings_ptr) {
   if (embedding::UseDynamicMemoryAllocation()) {
-    embedding::ValuesPtr* ptrs = Singleton<embedding::EmbeddingManager>::Get()->GetValuesPtr(
-        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    embedding::DynamicMallocPtrsManager* ptrs_mgr =
+        Singleton<embedding::EmbeddingManager>::Get()->GetDynamicMallocPtrsManager(
+            ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
     uint32_t num_unique;
     embedding::NumUniques* num_uniques =
         Singleton<embedding::EmbeddingManager>::Get()->GetNumUniques(
             ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
     num_unique = num_uniques->GetNumUnique(current_iter);
-    void* updated_values_ptr = ptrs->MallocUpdatedValuesPtr(
+    void* updated_values_ptr = ptrs_mgr->MallocUpdatedValuesPtr(
         current_iter, GetCudaAlignedSize(num_unique * line_size * sizeof(T)),
         ctx->stream()->As<ep::CudaStream>()->cuda_stream());
-    *unique_embeddings_ptr = reinterpret_cast<T*>(ptrs->GetLookupValuesPtr(current_iter));
+    *unique_embeddings_ptr = reinterpret_cast<T*>(ptrs_mgr->GetLookupValuesPtr(current_iter));
     *updated_unique_embeddings_ptr = reinterpret_cast<T*>(updated_values_ptr);
   } else {
     const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
