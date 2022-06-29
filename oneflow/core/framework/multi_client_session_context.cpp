@@ -63,14 +63,14 @@ int32_t GetCpuDeviceNum() { return std::thread::hardware_concurrency(); }
 MultiClientSessionContext::MultiClientSessionContext(
     const std::shared_ptr<EnvGlobalObjectsScope>& env_ctx)
     : env_ctx_(env_ctx) {
-  CHECK(Global<MultiClientSessionContext>::Get() == nullptr);
-  Global<MultiClientSessionContext>::SetAllocated(this);
+  CHECK(Singleton<MultiClientSessionContext>::Get() == nullptr);
+  Singleton<MultiClientSessionContext>::SetAllocated(this);
 }
 
 MultiClientSessionContext::~MultiClientSessionContext() {
   CHECK_JUST(TryClose());
-  if (Global<MultiClientSessionContext>::Get() != nullptr) {
-    Global<MultiClientSessionContext>::SetAllocated(nullptr);
+  if (Singleton<MultiClientSessionContext>::Get() != nullptr) {
+    Singleton<MultiClientSessionContext>::SetAllocated(nullptr);
   }
 }
 
@@ -98,15 +98,15 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
     }
 
     // NOTE(chengcheng): detele first because in EnvGlobalObjectScope has created ResourceDesc.
-    if (Global<ResourceDesc, ForSession>::Get() != nullptr) {
+    if (Singleton<ResourceDesc, ForSession>::Get() != nullptr) {
       // TODO(chengcheng): reorganize dependency of all Global objects.
-      Global<ResourceDesc, ForSession>::Delete();
+      Singleton<ResourceDesc, ForSession>::Delete();
     }
-    Global<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::NumOfProcessPerNode());
-    Global<IDMgr>::New();
-    Global<TaskStreamIndexManager>::New();
+    Singleton<ResourceDesc, ForSession>::New(resource, GlobalProcessCtx::NumOfProcessPerNode());
+    Singleton<IDMgr>::New();
+    Singleton<TaskStreamIndexManager>::New();
     // TODO(chengcheng): refactor JobBuildAndInferCtxMgr
-    Global<LazyJobBuildAndInferCtxMgr>::New();
+    Singleton<LazyJobBuildAndInferCtxMgr>::New();
 
     for (const std::string& lib_path : config_proto.load_lib_path()) {
       // TODO(chengcheng): remove load_lib_path in config proto. using LoadLibraryNow
@@ -115,18 +115,18 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
 
     {
       // NOTE(chengcheng): init runtime global objects
-      Global<BufferMgr<std::shared_ptr<JobInstance>>>::New();
-      Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::New();
-      Global<RuntimeCtx>::New();
-      Global<MemoryAllocator>::New();
-      Global<ChunkMgr>::New();
-      Global<RegstMgr>::New();
-      Global<ActorMsgBus>::New();
-      Global<ThreadMgr>::New();
-      Global<RuntimeJobDescs>::New();
-      Global<summary::EventsWriter>::New();
-      Global<boxing::collective::Scheduler>::New();
-      Global<VariableTensorMgr>::New();
+      Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::New();
+      Singleton<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::New();
+      Singleton<RuntimeCtx>::New();
+      Singleton<MemoryAllocator>::New();
+      Singleton<ChunkMgr>::New();
+      Singleton<RegstMgr>::New();
+      Singleton<ActorMsgBus>::New();
+      Singleton<ThreadMgr>::New();
+      Singleton<RuntimeJobDescs>::New();
+      Singleton<summary::EventsWriter>::New();
+      Singleton<boxing::collective::Scheduler>::New();
+      Singleton<VariableTensorMgr>::New();
     }
 
     is_inited_ = true;
@@ -143,8 +143,9 @@ Maybe<void> MultiClientSessionContext::TryInit(const std::string& config_proto_s
 
 Maybe<void> MultiClientSessionContext::UpdateResource(const Resource& reso_proto) {
   CHECK_OR_RETURN(is_inited_) << " session must be inited when updating resource.";
-  CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForSession>::Get()));
-  Global<ResourceDesc, ForSession>::Get()->Update(reso_proto);
+  CHECK_NOTNULL_OR_RETURN((Singleton<ResourceDesc, ForSession>::Get()))
+      << "ResourceDesc get failed!";
+  Singleton<ResourceDesc, ForSession>::Get()->Update(reso_proto);
   return Maybe<void>::Ok();
 }
 
@@ -160,29 +161,29 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     VLOG(1) << "Try to delete multi client session context." << std::endl;
     {
       // NOTE(chengcheng): delete runtime global objects
-      Global<boxing::collective::Scheduler>::Delete();
-      Global<summary::EventsWriter>::Delete();
-      Global<RuntimeJobDescs>::Delete();
-      Global<ThreadMgr>::Delete();
-      Global<ActorMsgBus>::Delete();
-      Global<RegstMgr>::Delete();
-      Global<ChunkMgr>::Delete();
-      Global<MemoryAllocator>::Delete();
-      Global<RuntimeCtx>::Delete();
-      Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Delete();
-      Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
-      Global<VariableTensorMgr>::Delete();
+      Singleton<boxing::collective::Scheduler>::Delete();
+      Singleton<summary::EventsWriter>::Delete();
+      Singleton<RuntimeJobDescs>::Delete();
+      Singleton<ThreadMgr>::Delete();
+      Singleton<ActorMsgBus>::Delete();
+      Singleton<RegstMgr>::Delete();
+      Singleton<ChunkMgr>::Delete();
+      Singleton<MemoryAllocator>::Delete();
+      Singleton<RuntimeCtx>::Delete();
+      Singleton<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Delete();
+      Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
+      Singleton<VariableTensorMgr>::Delete();
     }
 
-    Global<LazyJobBuildAndInferCtxMgr>::Delete();
-    Global<TaskStreamIndexManager>::Delete();
-    Global<IDMgr>::Delete();
+    Singleton<LazyJobBuildAndInferCtxMgr>::Delete();
+    Singleton<TaskStreamIndexManager>::Delete();
+    Singleton<IDMgr>::Delete();
 
     // TODO(chengcheng): remove template ForEnv and ForSession
-    Global<ResourceDesc, ForSession>::Delete();
+    Singleton<ResourceDesc, ForSession>::Delete();
     // NOTE(chengcheng): New after delete because in EnvGlobalObjectScope once created ResourceDesc.
-    Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
-                                          GlobalProcessCtx::NumOfProcessPerNode());
+    Singleton<ResourceDesc, ForSession>::New(Singleton<ResourceDesc, ForEnv>::Get()->resource(),
+                                             GlobalProcessCtx::NumOfProcessPerNode());
     VLOG(1) << "Finish delete multi client session context." << std::endl;
     env_ctx_.reset();
     is_inited_ = false;

@@ -134,8 +134,8 @@ class Blob final {
   std::unique_ptr<MutShapeView> mut_shape_view_;
 };
 
-#define INIT_GLOBAL_BLOB_MUTABLE_CHECKER(is_header_mutable, is_body_mutable)             \
-  COMMAND(Global<BlobAccessCheckerIf<is_header_mutable, is_body_mutable>>::SetAllocated( \
+#define INIT_GLOBAL_BLOB_MUTABLE_CHECKER(is_header_mutable, is_body_mutable)                \
+  COMMAND(Singleton<BlobAccessCheckerIf<is_header_mutable, is_body_mutable>>::SetAllocated( \
       new BlobAccessCheckerIf<is_header_mutable, is_body_mutable>()))
 
 INIT_GLOBAL_BLOB_MUTABLE_CHECKER(false, false);
