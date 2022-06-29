@@ -49,10 +49,17 @@ class PyASTNode {
     return res;
   }
 
-  PyASTNode operator[](const std::string& name) { return PyASTNode(_node.attr(name.c_str())); }
-
-  void Walk(){};
+  PyASTNode Visit(const std::string& name) { return PyASTNode(_node.attr(name.c_str())); }
 };
+
+std::string PyASTNodeWrapper::GetName() { return _node->GetName(); }
+
+std::vector<std::string> PyASTNodeWrapper::GetFields() { return _node->GetFields(); }
+
+PyASTNodeWrapper PyASTNodeWrapper::Visit(const std::string& name) {
+  auto _py_ast_node = std::make_shared<PyASTNode>(_node->Visit(name));
+  return PyASTNodeWrapper(_py_ast_node);
+}
 
 namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("ir", m) {

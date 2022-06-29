@@ -14,6 +14,17 @@
 
 class PyASTNode;
 
+class PyASTNodeWrapper {
+  std::shared_ptr<PyASTNode> _node;
+
+ public:
+  explicit PyASTNodeWrapper(std::shared_ptr<PyASTNode> node) : _node(std::move(node)){};
+  std::string GetName();
+  std::vector<std::string> GetFields();
+  PyASTNodeWrapper Visit(const std::string& name);
+  void Walk(){};
+};
+
 class JIT_Engine;
 
 class LR_JIT final {
