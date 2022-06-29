@@ -60,25 +60,26 @@ TEST(CtrlServer, new_delete) {
   int port = CtrlUtil().FindAvailablePort();
   if (port == -1) { return; }
   EnvProto env_proto = GetEnvProto(port);
-  Global<EnvDesc>::New(env_proto);
-  Global<CtrlServer>::New();
-  Global<ProcessCtx>::New();
-  CHECK_JUST(HostListCtrlBootstrap(*Global<EnvDesc>::Get())
-                 .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
-  auto* client = new GrpcCtrlClient(*Global<ProcessCtx>::Get());
-  Global<CtrlClient>::SetAllocated(client);
-  Global<ResourceDesc, ForEnv>::New(GetResource(), GlobalProcessCtx::NumOfProcessPerNode());
-  Global<ResourceDesc, ForSession>::New(GetResource(), GlobalProcessCtx::NumOfProcessPerNode());
+  Singleton<EnvDesc>::New(env_proto);
+  Singleton<CtrlServer>::New();
+  Singleton<ProcessCtx>::New();
+  CHECK_JUST(
+      HostListCtrlBootstrap(*Singleton<EnvDesc>::Get())
+          .InitProcessCtx(Singleton<CtrlServer>::Get()->port(), Singleton<ProcessCtx>::Get()));
+  auto* client = new GrpcCtrlClient(*Singleton<ProcessCtx>::Get());
+  Singleton<CtrlClient>::SetAllocated(client);
+  Singleton<ResourceDesc, ForEnv>::New(GetResource(), GlobalProcessCtx::NumOfProcessPerNode());
+  Singleton<ResourceDesc, ForSession>::New(GetResource(), GlobalProcessCtx::NumOfProcessPerNode());
 
   // do test
   // OF_ENV_BARRIER();
 
-  Global<ResourceDesc, ForSession>::Delete();
-  Global<ResourceDesc, ForEnv>::Delete();
-  Global<CtrlClient>::Delete();
-  Global<ProcessCtx>::Delete();
-  Global<CtrlServer>::Delete();
-  Global<EnvDesc>::Delete();
+  Singleton<ResourceDesc, ForSession>::Delete();
+  Singleton<ResourceDesc, ForEnv>::Delete();
+  Singleton<CtrlClient>::Delete();
+  Singleton<ProcessCtx>::Delete();
+  Singleton<CtrlServer>::Delete();
+  Singleton<EnvDesc>::Delete();
 }
 #endif  // RPC_BACKEND_GRPC
 

@@ -37,7 +37,7 @@ namespace one {
 namespace {
 
 Maybe<void> CPUSynchronize() {
-  if (Global<VirtualMachine>::Get() != nullptr) { return vm::CurrentRankSync(); }
+  if (Singleton<VirtualMachine>::Get() != nullptr) { return vm::CurrentRankSync(); }
   return Maybe<void>::Ok();
 }
 
