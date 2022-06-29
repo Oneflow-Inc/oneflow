@@ -59,6 +59,8 @@ add_docstr(
 add_docstr(
     oneflow._C.randn,
     """
+    randn(*size, *, dtype=None, generator=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
+
     Returns a tensor filled with random numbers from a normal distribution with mean 0 and variance 1 (also called the standard normal distribution).
 
     The shape of the tensor is defined by the variable argument ``size``.
@@ -66,9 +68,7 @@ add_docstr(
     Args:
         size (int... or oneflow.Size): Defining the shape of the output tensor.
           Can be a variable number of arguments or a collection like a list or tuple or oneflow.Size.
-        out (optional): The output tensor.
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
-        layout (optional): The desired layout of returned Tensor.
         generator (flow.Generator, optional): a pseudorandom number generator for sampling
         device (flow.device, optional): The desired device of returned local tensor. If None, uses the
           current device.
@@ -100,6 +100,8 @@ add_docstr(
 add_docstr(
     oneflow._C.rand,
     """
+    rand(*size, *, dtype=None, generator=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
+
     Returns a tensor filled with random numbers from a uniform distribution on the interval [0, 1)
 
     The shape of the tensor is defined by the variable argument ``size``.
@@ -107,9 +109,7 @@ add_docstr(
     Args:
         size (int... or oneflow.Size): Defining the shape of the output tensor.
           Can be a variable number of arguments or a collection like a list or tuple or oneflow.Size.
-        out (optional): The output tensor.
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
-        layout (optional): The desired layout of returned Tensor.
         generator (flow.Generator, optional): a pseudorandom number generator for sampling
         device (flow.device, optional): The desired device of returned local tensor. If None, uses the
           current device.
@@ -142,6 +142,8 @@ add_docstr(
 add_docstr(
     oneflow._C.normal,
     r"""
+    normal(mean, std, size, *, out=None, placement=None, sbp=None, generator=None, dtype=None, device=None, requires_grad=False) -> Tensor
+
     Returns a tensor of random numbers drawn from separate normal distributions whose mean and standard deviation are given.
 
     Args:
@@ -177,16 +179,20 @@ add_docstr(
 add_docstr(
     oneflow._C.randint,
     """
+    randint(low=0, high, size, *, dtype=None, generator=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
+
     Returns a tensor filled with random integers generated uniformly between low (inclusive) and high (exclusive).
 
     The shape of the tensor is defined by the variable argument ``size``.
 
     Args:
-        size (int... or oneflow.Size): Defining the shape of the output tensor.
+        low (int, optional):  Lowest integer to be drawn from the distribution. Default: 0.
+        high (int):  One above the highest integer to be drawn from the distribution.
+        size (tuple or oneflow.Size):  Defining the shape of the output tensor.
           Can be a variable number of arguments or a collection like a list or tuple or oneflow.Size.
-        out (optional): The output tensor.
+
+    Keyword args:
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.int64``.
-        layout (optional): The desired layout of returned Tensor.
         generator (flow.Generator, optional) – a pseudorandom number generator for sampling
         device (flow.device, optional): The desired device of returned local tensor. If None, uses the
           current device.
@@ -221,6 +227,8 @@ add_docstr(
 add_docstr(
     oneflow._C.randperm,
     r"""
+    randperm(n, *, generator=None, dtype=torch.int64, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
+
     Returns a random permutation of integers from ``0`` to ``n - 1``.
 
     Args:
@@ -228,17 +236,14 @@ add_docstr(
 
     Keyword args:
         generator(:class:`oneflow.Generator`, optional):  a pseudorandom number generator for sampling
-        out (Tensor, optional): output Tensor,not supported yet.
         dtype (:class:`oneflow.dtype`, optional): the desired data type of returned tensor.
             Default: ``oneflow.int64``.
-        layout: layout is not supported yet.
         device: the desired device of returned tensor. Default: cpu.
         placement:(:class:`flow.placement`, optional): The desired device of returned global tensor. If None,
             will construct local tensor.
         sbp: (:class:`flow.sbp`, optional): The desired sbp of returned global tensor. It must be equal with the
             numbers of placement.
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: False.
-        pin_memory(bool, optional):pin_memory is not supported yet.
 
     Example:
 

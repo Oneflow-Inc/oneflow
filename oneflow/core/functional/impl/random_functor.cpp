@@ -247,17 +247,6 @@ class RandIntFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class RandInt2Functor {
- public:
-  Maybe<Tensor> operator()(const int64_t high, const Shape& shape,
-                           const Optional<Symbol<DType>>& dtype,
-                           const Optional<Symbol<Device>>& device,
-                           const Optional<one::Generator>& generator,
-                           const bool& requires_grad) const {
-    return RandInt(/*low*/ 0, high, shape, dtype, device, generator, requires_grad);
-  }
-};
-
 class ConsistentRandIntFunctor {
  public:
   ConsistentRandIntFunctor() {
@@ -297,20 +286,6 @@ class ConsistentRandIntFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
-};
-
-class ConsistentRandInt2Functor {
- public:
-  Maybe<Tensor> operator()(const int64_t high, const Shape& shape,
-                           const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<SbpParallel>>& sbp,
-                           const Optional<Symbol<DType>>& dtype,
-                           const Optional<one::Generator>& generator,
-                           const bool& requires_grad) const {
-    JUST(CheckDeviceIdsIsValid(placement));
-    return ConsistentRandInt(/*low*/ 0, high, shape, placement, sbp, dtype, generator,
-                             requires_grad);
-  }
 };
 
 class RandPermFunctor {
@@ -381,8 +356,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ConsistentRandFunctor>("ConsistentRand");
   m.add_functor<RandNFunctor>("RandN");
   m.add_functor<ConsistentRandNFunctor>("ConsistentRandN");
-  m.add_functor<RandIntFunctor, RandInt2Functor>("RandInt");
-  m.add_functor<ConsistentRandIntFunctor, ConsistentRandInt2Functor>("ConsistentRandInt");
+  m.add_functor<RandIntFunctor>("RandInt");
+  m.add_functor<ConsistentRandIntFunctor>("ConsistentRandInt");
 };
 
 }  // namespace functional
