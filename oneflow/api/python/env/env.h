@@ -19,7 +19,7 @@ limitations under the License.
 #include <string>
 #include <google/protobuf/text_format.h>
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/job/cluster.h"
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
@@ -74,7 +74,7 @@ inline Maybe<int32_t> GetFLAGS_v() { return FLAGS_v; }
 
 inline Maybe<void> EmptyCache() {
   JUST(vm::CurrentRankSync());
-  auto* vm = JUST(GlobalMaybe<VirtualMachine>());
+  auto* vm = JUST(SingletonMaybe<VirtualMachine>());
   JUST(vm->ShrinkAllMem());
   return Maybe<void>::Ok();
 }
