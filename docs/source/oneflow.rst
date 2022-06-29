@@ -6,6 +6,7 @@ It has a CUDA counterpart, that enables you to run your tensor computations on a
 
 .. currentmodule:: oneflow
 
+
 Tensor
 -------------------------------------------
 
@@ -321,5 +322,6 @@ BLAS and LAPACK Operations
     bmm 
     dot 
     matmul
+
 
 

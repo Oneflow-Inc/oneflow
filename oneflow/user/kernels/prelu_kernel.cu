@@ -409,10 +409,10 @@ class GpuPReluKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* alpha = ctx->Tensor4ArgNameAndIndex("alpha", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const int32_t elem_cnt = x->shape().elem_cnt();
-    const int32_t batch = x->shape().At(0);
-    const int32_t channels = (x->shape().NumAxes() == 1) ? 1 : x->shape().At(1);
-    const int32_t alpha_size = alpha->shape().elem_cnt();
+    const int32_t elem_cnt = x->shape_view().elem_cnt();
+    const int32_t batch = x->shape_view().At(0);
+    const int32_t channels = (x->shape_view().NumAxes() == 1) ? 1 : x->shape_view().At(1);
+    const int32_t alpha_size = alpha->shape_view().elem_cnt();
     const int32_t inner_size = elem_cnt / batch / channels;
 
     if (alpha_size == 1) {
@@ -454,16 +454,16 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
     user_op::Tensor* alpha_diff = ctx->Tensor4ArgNameAndIndex("alpha_diff", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const bool alpha_requires_grad = ctx->Attr<bool>("alpha_requires_grad");
-    const int32_t elem_cnt = x->shape().elem_cnt();
+    const int32_t elem_cnt = x->shape_view().elem_cnt();
     T* broadcasted_alpha_diff = tmp_buffer->mut_dptr<T>();
     T* reduce_sum_tmp_buf = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()
                                                  + GetCudaAlignedSize(elem_cnt * sizeof(T)));
 
-    const Shape& left_extended_shape = CreatePreluLeftExtendedShape(ShapeView(x->shape()));
+    const Shape& left_extended_shape = CreatePreluLeftExtendedShape(ShapeView(x->shape_view()));
 
-    const int32_t batch = x->shape().At(0);
-    const int32_t channels = (x->shape().NumAxes() == 1) ? 1 : x->shape().At(1);
-    const int32_t alpha_size = alpha->shape().elem_cnt();
+    const int32_t batch = x->shape_view().At(0);
+    const int32_t channels = (x->shape_view().NumAxes() == 1) ? 1 : x->shape_view().At(1);
+    const int32_t alpha_size = alpha->shape_view().elem_cnt();
     const int32_t inner_size = elem_cnt / batch / channels;
     if (alpha_size == 1) {
       DispatchPreluBackwardSingleAlphaIndex<T>(ctx->stream(), elem_cnt, x->dptr<T>(),
@@ -477,8 +477,8 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
     if (alpha_requires_grad) {
       NdarrayUtil<DeviceType::kCUDA, T>::ReduceSum(
           ctx->stream(), XpuVarNdarray<T>(left_extended_shape, alpha_diff->mut_dptr<T>()),
-          XpuVarNdarray<const T>(x->shape(), broadcasted_alpha_diff),
-          XpuVarNdarray<T>(x->shape(), reduce_sum_tmp_buf));
+          XpuVarNdarray<const T>(x->shape_view(), broadcasted_alpha_diff),
+          XpuVarNdarray<T>(x->shape_view(), reduce_sum_tmp_buf));
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

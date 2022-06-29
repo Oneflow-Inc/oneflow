@@ -252,6 +252,8 @@ Tensor class reference
             masked_fill, 
             masked_select, 
             matmul, 
+            mm, 
+            mv, 
             max, 
             maximum, 
             median, 
@@ -347,3 +349,5 @@ Tensor class reference
             zero_, 
             nms,
             pin_memory,
+            is_pinned,
+

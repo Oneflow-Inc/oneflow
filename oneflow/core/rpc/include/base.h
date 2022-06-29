@@ -107,19 +107,19 @@ class CtrlClient {
 };
 
 #define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
-#define OF_ENV_BARRIER() oneflow::Global<oneflow::CtrlClient>::Get()->Barrier(FILE_LINE_STR)
-#define OF_SESSION_BARRIER()                            \
-  oneflow::Global<oneflow::CtrlClient>::Get()->Barrier( \
-      FILE_LINE_STR, Global<ResourceDesc, ForSession>::Get()->process_ranks().size())
+#define OF_ENV_BARRIER() oneflow::Singleton<oneflow::CtrlClient>::Get()->Barrier(FILE_LINE_STR)
+#define OF_SESSION_BARRIER()                               \
+  oneflow::Singleton<oneflow::CtrlClient>::Get()->Barrier( \
+      FILE_LINE_STR, Singleton<ResourceDesc, ForSession>::Get()->process_ranks().size())
 
 static void OfCallOnce(const std::string& name, std::function<void()> f) {
-  TryLockResult lock_ret = Global<CtrlClient>::Get()->TryLock(name);
+  TryLockResult lock_ret = Singleton<CtrlClient>::Get()->TryLock(name);
   if (lock_ret == TryLockResult::kLocked) {
     f();
-    Global<CtrlClient>::Get()->NotifyDone(name);
+    Singleton<CtrlClient>::Get()->NotifyDone(name);
   } else if (lock_ret == TryLockResult::kDone) {
   } else if (lock_ret == TryLockResult::kDoing) {
-    Global<CtrlClient>::Get()->WaitUntilDone(name);
+    Singleton<CtrlClient>::Get()->WaitUntilDone(name);
   } else {
     UNIMPLEMENTED();
   }

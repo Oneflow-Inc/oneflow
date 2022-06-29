@@ -36,10 +36,12 @@ inline NdIndexSliceArgs<T, I> ConstructNdIndexSliceArgs(const user_op::Tensor& d
                                                         const user_op::Tensor& indices) {
   NdIndexSliceArgs<T, I> args;
   std::memset(&args, 0, sizeof(NdIndexSliceArgs<T, I>));
-  args.num_slices = indices.shape().Count(0, indices.shape().NumAxes() - 1);
-  args.index_ndims = indices.shape().At(indices.shape().NumAxes() - 1);
-  args.slice_size = slices.shape().Count(indices.shape().NumAxes() - 1);
-  FOR_RANGE(int64_t, i, 0, dense.shape().NumAxes()) { args.dense_shape[i] = dense.shape().At(i); }
+  args.num_slices = indices.shape_view().Count(0, indices.shape_view().NumAxes() - 1);
+  args.index_ndims = indices.shape_view().At(indices.shape_view().NumAxes() - 1);
+  args.slice_size = slices.shape_view().Count(indices.shape_view().NumAxes() - 1);
+  FOR_RANGE(int64_t, i, 0, dense.shape_view().NumAxes()) {
+    args.dense_shape[i] = dense.shape_view().At(i);
+  }
   return args;
 }
 

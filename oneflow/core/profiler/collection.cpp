@@ -80,7 +80,7 @@ Maybe<EventRecorder> EventRecorder::CreateKernelEventRecorder(
     cudaStream_t cuda_stream, const std::function<int64_t()>& memory_size_getter,
 #endif
     const ShapeGetterFuncType& shape_getter) {
-  auto pmgr = Global<ProfileMgr>::Get();
+  auto pmgr = Singleton<ProfileMgr>::Get();
   if (pmgr) {
 #if defined(WITH_CUDA)
     if ((pmgr->use_cpu_ && (!cuda_stream)) || (pmgr->use_cuda_ && cuda_stream)) {

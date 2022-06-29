@@ -20,13 +20,13 @@ limitations under the License.
 namespace oneflow {
 
 RuntimeBufferManagersScope::RuntimeBufferManagersScope() {
-  Global<BufferMgr<int64_t>>::New();
-  Global<BufferMgr<std::shared_ptr<JobInstance>>>::New();
+  Singleton<BufferMgr<int64_t>>::New();
+  Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::New();
 }
 
 RuntimeBufferManagersScope::~RuntimeBufferManagersScope() {
-  Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
-  Global<BufferMgr<int64_t>>::Delete();
+  Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
+  Singleton<BufferMgr<int64_t>>::Delete();
 }
 
 }  // namespace oneflow

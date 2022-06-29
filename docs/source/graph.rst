@@ -79,6 +79,7 @@ The following script, using the CIFAR10 dataset, trains the mobilenet_v2 model:
 Static Graph Mode
 ------------------------------------------------------------
 
+
 Constructing it
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. currentmodule:: oneflow.nn.Graph
