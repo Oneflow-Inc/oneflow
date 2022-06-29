@@ -202,10 +202,10 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
     num_uniques_ =
         Singleton<embedding::EmbeddingManager>::Get()->GetNumUniques(embedding_name_, parallel_id_);
     if (embedding::UseDynamicMemoryAllocation()) {
-      values_ptr_ = Singleton<embedding::EmbeddingManager>::Get()->GetValuesPtr(embedding_name_,
-                                                                                parallel_id_);
+      ptrs_mgr_ = Singleton<embedding::EmbeddingManager>::Get()->GetDynamicMallocPtrsManager(
+          embedding_name_, parallel_id_);
     } else {
-      values_ptr_ = nullptr;
+      ptrs_mgr_ = nullptr;
     }
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
@@ -284,10 +284,10 @@ class EmbeddingPutKernelState final : public user_op::OpKernelState {
     num_uniques_ =
         Singleton<embedding::EmbeddingManager>::Get()->GetNumUniques(embedding_name, parallel_id);
     if (embedding::UseDynamicMemoryAllocation()) {
-      values_ptr_ =
-          Singleton<embedding::EmbeddingManager>::Get()->GetValuesPtr(embedding_name, parallel_id);
+      ptrs_mgr_ = Singleton<embedding::EmbeddingManager>::Get()->GetDynamicMallocPtrsManager(
+          embedding_name, parallel_id);
     } else {
-      values_ptr_ = nullptr;
+      ptrs_mgr_ = nullptr;
     }
   }
   ~EmbeddingPutKernelState() override = default;
