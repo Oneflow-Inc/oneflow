@@ -60,11 +60,11 @@ bool IsConnectToTickOp(const TaskNode* node) {
 std::string GetOpConfCalculationPassName(const OperatorConf& op_conf) {
   CHECK(op_conf.has_scope_symbol_id());
   int64_t scope_symbol_id = op_conf.scope_symbol_id();
-  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
+  CHECK(Singleton<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
       << " Error! op : \n " << op_conf.DebugString()
       << " has error scope_symbol_id = " << scope_symbol_id
-      << " which cannot find in Global<symbol::Storage<Scope>>::Get()\n";
-  const Scope& scope = Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
+      << " which cannot find in Singleton<symbol::Storage<Scope>>::Get()\n";
+  const Scope& scope = Singleton<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
   return scope.scope_proto().calculation_pass_name();
 }
 
@@ -103,7 +103,7 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
     }
   }
   // NOTE(chengcheng): ONLY nccl_use_compute_stream = false will exclude optimizer pass ops
-  if (!Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
+  if (!Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
       && IsOptimizerPassOp(op)) {
     return true;
   }
@@ -250,7 +250,7 @@ bool IsInplaceAllowed(
 }
 
 std::unique_ptr<BoxingLogger> CreateBoxingLogger() {
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     return std::unique_ptr<BoxingLogger>(
         new CsvBoxingLogger(StrCat("boxing/log/", GlobalJobDesc().job_id()) + ".csv"));
   } else {
@@ -295,10 +295,10 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
       if (op_node->op().op_conf().has_stream_name_hint()) {
         const std::string& stream_name_hint = op_node->op().op_conf().stream_name_hint();
         VLOG(3) << "set op: " << op_node->op().op_name() << " to stream: " << stream_name_hint;
-        stream_index = Global<TaskStreamIndexManager>::Get()->GetNamedTaskStreamIndex(
+        stream_index = Singleton<TaskStreamIndexManager>::Get()->GetNamedTaskStreamIndex(
             device_id, stream_name_hint);
       } else {
-        stream_index = Global<TaskStreamIndexManager>::Get()->GetTaskStreamIndex(
+        stream_index = Singleton<TaskStreamIndexManager>::Get()->GetTaskStreamIndex(
             comp_task_node->GetTaskType(), device_id);
       }
       comp_task_node->set_thrd_id(EncodeStreamIdToInt64(StreamId{device_id, stream_index}));
@@ -421,8 +421,8 @@ void ForEachOpGraphNecessaryCtrlEdge(
 
 }  // namespace
 
-TaskGraph::TaskGraph(bool disable_straighten_algorithm) {
-  OpGraph* op_graph = Global<OpGraph>::Get();
+TaskGraph::TaskGraph(bool enable_straighten_algorithm) {
+  OpGraph* op_graph = Singleton<OpGraph>::Get();
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
   hierarchical_sub_tsk_gph_builder_.reset(new DispatchHierarchicalSubTskGphBuilder());
@@ -452,12 +452,12 @@ TaskGraph::TaskGraph(bool disable_straighten_algorithm) {
     }
   });
 
-  if (disable_straighten_algorithm || GlobalProcessCtx::WorldSize() <= 1) {
-    SetOrderInGraphForEachNode();
-  } else {
+  if (enable_straighten_algorithm && GlobalProcessCtx::WorldSize() > 1) {
     StraightenNodes(this, &ordered_task_nodes_);
+  } else {
+    SetOrderInGraphForEachNode();
   }
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
 
 TaskGraph::~TaskGraph() = default;
@@ -663,7 +663,7 @@ void TaskGraph::GetSafeInplaceOpBlobArgList(
   InplaceLbiGraph origin_graph(obas_info, Op4OpName);
   InplaceLbiGraph safe_graph(*safe_obas_info, Op4OpName);
   origin_graph.ComputeSafeInplaceObns(safe_obas_info, IsLbiAllConsumersReachable);
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     origin_graph.ToDotWithFilePath(
         JoinPath("dot", "InplaceLbiGraph", GlobalJobDesc().job_name() + "_origin.dot"));
     safe_graph.ToDotWithFilePath(

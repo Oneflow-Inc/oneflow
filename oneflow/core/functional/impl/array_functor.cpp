@@ -18,10 +18,11 @@ limitations under the License.
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -190,15 +191,13 @@ class EmptyFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device, const bool pin_memory) const {
     MutableAttrMap attrs;
+    Symbol<Device> device_symbol = device.value_or(JUST(Device::New("cpu", 0)));
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    if (device.has_value()) {
-      Symbol<Device> device_symbol = JUST(device);
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {},
-                                            OpExprInterpContext(attrs, device_symbol, pin_memory));
-    } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
-    }
+    JUST(attrs.SetAttr<bool>("pin_memory", pin_memory));
+    JUST(attrs.SetAttr<std::string>("device_type", device_symbol->type()));
+    JUST(attrs.SetAttr<int64_t>("device_id", device_symbol->device_id()));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
   }
 
  private:
@@ -1217,7 +1216,7 @@ class InplaceToContiguousFunctor {
     const auto& blob_object = JUST(input->eager_blob_object());
     // update eager_blob_object
     JUST(JUST(input->mut_eager_mirrored_tensor_impl())
-             ->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()), false));
+             ->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object())));
     // assign contiguous tensor data
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*assign_op_, {input, contiguous_tensor}));
     return input;
@@ -1381,18 +1380,12 @@ class CopyFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("device_type", device_type));
     JUST(attrs.SetAttr<int64_t>("device_id", device_id));
+    JUST(attrs.SetAttr<bool>("pin_memory", pin_memory));
 
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
 #endif
-    if (!x->is_local() || device_type == "cuda") {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-    } else {
-      return OpInterpUtil::Dispatch<Tensor>(
-          *op_, {x},
-          OpExprInterpContext(attrs, JUST(Device::New(device_type, device_id)),
-                              /*pin_memory=*/pin_memory));
-    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
