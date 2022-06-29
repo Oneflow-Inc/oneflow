@@ -30,10 +30,15 @@ Pooling functions
     :toctree: generated
     :nosignatures:
 
+    avg_pool1d
+    avg_pool2d
+    avg_pool3d
+    max_pool1d
+    max_pool2d
+    max_pool3d
     adaptive_avg_pool1d
     adaptive_avg_pool2d
     adaptive_avg_pool3d
-    MaxPool1d
 
 Non-linear activation functions
 -------------------------------
@@ -45,6 +50,8 @@ Non-linear activation functions
     threshold
     relu
     hardtanh
+    hardswish
+    relu6
     elu
     selu
     celu
@@ -95,6 +102,15 @@ Sparse functions
     embedding
     one_hot
 
+Distance functions
+----------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    cosine_similarity
+
 
 Loss functions
 --------------
@@ -105,6 +121,7 @@ Loss functions
 
     sparse_softmax_cross_entropy
     cross_entropy
+    smooth_l1_loss
     triplet_margin_loss
 
 Vision functions
