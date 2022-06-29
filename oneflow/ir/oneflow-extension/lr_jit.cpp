@@ -43,11 +43,11 @@ class JIT_Engine final {
 
  public:
   explicit JIT_Engine(unique_ptr<ExecutionEngine> _engine) : _engine(move(_engine)){};
-  explicit JIT_Engine(const PyAst&);
+  explicit JIT_Engine(const PyASTNode& ast);
   double Invoke(double base_lr, int64_t step);
 };
 
-JIT_Engine::JIT_Engine(const PyAst& ast) {
+JIT_Engine::JIT_Engine(const PyASTNode& ast) {
   std::string moduleStr = R"mlir(
   func.func @get_lr(%arg0 : f32, %arg1 : i32) -> f32 attributes { llvm.emit_c_interface } {
     return %arg0 : f32
@@ -76,7 +76,7 @@ double JIT_Engine::Invoke(double base_lr, int64_t step) {
   return res;
 }
 
-void LR_JIT::Register(const string& function_id, const PyAst& ast) {
+void LR_JIT::Register(const string& function_id, const PyASTNode& ast) {
   auto jit = make_shared<JIT_Engine>(ast);
   function_id2engine_[function_id] = jit;
 }

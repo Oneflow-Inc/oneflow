@@ -14,6 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <pybind11/pybind11.h>
+#include <pybind11/pytypes.h>
+#include <algorithm>
+#include <string>
 #include <iostream>
 #include "oneflow/core/common/singleton.h"
 #ifdef WITH_MLIR
@@ -24,6 +28,31 @@ limitations under the License.
 #include <glog/logging.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include <functional>
+#include <utility>
+
+class PyASTNode {
+  pybind11::object _node;
+
+ public:
+  explicit PyASTNode(pybind11::object node) : _node(std::move(node)){};
+  std::string GetName() {
+    auto cls = _node.attr("__class__");
+    auto name = cls.attr("__name__");
+    return name.cast<pybind11::str>();
+  }
+
+  std::vector<std::string> GetFields() {
+    auto fields = _node.attr("_fields");
+    std::vector<std::string> res;
+    std::for_each(fields.begin(), fields.end(),
+                  [&res](pybind11::handle field) { res.push_back(field.cast<pybind11::str>()); });
+    return res;
+  }
+
+  PyASTNode operator[](const std::string& name) { return PyASTNode(_node.attr(name.c_str())); }
+
+  void Walk(){};
+};
 
 namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("ir", m) {
@@ -31,10 +60,8 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
         [](const std::string& lib_path) { MutSharedLibPaths()->insert(lib_path); });
   m.def("compile_and_register_lr_jit",
         [](const pybind11::object& ast, const std::string& function_id) {
-          PyAst _ast;
-
           Singleton<LR_JIT>::New();
-          Singleton<LR_JIT>::Get()->Register(function_id, _ast);
+          Singleton<LR_JIT>::Get()->Register(function_id, PyASTNode(ast));
           auto engine = Singleton<LR_JIT>::Get()->LookUp(function_id);
           auto lr = Singleton<LR_JIT>::Get()->Invoke(engine, 1, 2);
           std::cout << lr << std::endl;
