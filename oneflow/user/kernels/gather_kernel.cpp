@@ -28,7 +28,9 @@ namespace {
 template<typename Context>
 std::unique_ptr<ep::primitive::Gather> NewGatherPrimitive(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
-  return ep::primitive::NewPrimitive<ep::primitive::GatherFactory>(ctx->device_type(), data_type);
+  const DataType indice_type = ctx->TensorDesc4ArgNameAndIndex("indices", 0)->data_type();
+  return ep::primitive::NewPrimitive<ep::primitive::GatherFactory>(
+      ctx->device_type(), std::make_tuple(data_type, indice_type));
 }
 
 Shape GetFlatShape(ShapeView shape, int64_t axis) {

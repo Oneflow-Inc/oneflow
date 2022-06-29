@@ -110,7 +110,7 @@ class GatherImpl : public Gather {
               const size_t num_indices, const size_t src_dim0, const size_t src_dim1,
               const size_t src_dim2, const size_t offset) override {
     DispatchMovementSize(stream, src_dim0, src_dim1, src_dim2 * sizeof(T), num_indices, offset,
-                         indice, src, dst);
+                         static_cast<const K*>(indice), src, dst);
   }
 };
 template<typename T, typename K>
@@ -122,15 +122,17 @@ class GatherFactoryImpl : public GatherFactory {
   OF_DISALLOW_COPY_AND_MOVE(GatherFactoryImpl);
   GatherFactoryImpl() = default;
   ~GatherFactoryImpl() = default;
-  std::unique_ptr<Gather> New(DataType data_type) override {
-#define MAKE_NEW_GATHER_ENTRY(in_type, indice_type) \
-  {OF_PP_PAIR_SECOND(in_type), NewGather<OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indice_type)>},
+  std::unique_ptr<Gather> New(std::tuple<DataType, DataType> type_tuple) override {
+#define MAKE_NEW_GATHER_ENTRY(in_type_pair, indice_type_pair)                             \
+  {std::make_tuple(OF_PP_PAIR_SECOND(in_type_pair), OF_PP_PAIR_SECOND(indice_type_pair)), \
+   NewGather<OF_PP_PAIR_FIRST(in_type_pair), OF_PP_PAIR_FIRST(indice_type_pair)>},
 
-    static const std::map<DataType, std::function<std::unique_ptr<Gather>()>> new_gather_handle{
-        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_GATHER_ENTRY, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)};
+    static const std::map<std::tuple<DataType, DataType>, std::function<std::unique_ptr<Gather>()>>
+        new_gather_handle{OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+            MAKE_NEW_GATHER_ENTRY, GATHER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)};
 
 #undef MAKE_NEW_GATHER_ENTRY
-    return NewPrimitiveFromHandlers(new_gather_handle, data_type);
+    return NewPrimitiveFromHandlers(new_gather_handle, type_tuple);
   }
 };
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, GatherFactory, GatherFactoryImpl);
