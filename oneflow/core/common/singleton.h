@@ -26,7 +26,7 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T, typename Kind = void>
-class Global final {
+class Singleton final {
  public:
   static T* Get() { return *GetPPtr(); }
   static void SetAllocated(T* val) { *GetPPtr() = val; }
@@ -79,18 +79,18 @@ class Global final {
   }
   static void CheckKind() {
     if (!std::is_same<Kind, void>::value) {
-      CHECK(Global<T>::Get() == nullptr)
-          << typeid(Global<T>).name() << " are disable for avoiding misuse";
+      CHECK(Singleton<T>::Get() == nullptr)
+          << typeid(Singleton<T>).name() << " are disable for avoiding misuse";
     }
   }
 };
 
 template<typename T, typename... Kind>
-Maybe<T*> GlobalMaybe() {
-  CHECK_NOTNULL_OR_RETURN((Global<T, Kind...>::Get())) << " typeid: " << typeid(T).name();
-  return Global<T, Kind...>::Get();
+Maybe<T*> SingletonMaybe() {
+  CHECK_NOTNULL_OR_RETURN((Singleton<T, Kind...>::Get())) << " typeid: " << typeid(T).name();
+  return Singleton<T, Kind...>::Get();
 }
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_GLOBAL_H_
+#endif  // ONEFLOW_CORE_COMMON_SINGLETON_H_
