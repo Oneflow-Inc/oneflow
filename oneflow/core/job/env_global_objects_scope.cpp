@@ -75,16 +75,6 @@ void InitLogging(const CppLoggingConf& logging_conf) {
 
 int32_t GetDefaultCpuDeviceNum() { return std::thread::hardware_concurrency(); }
 
-int32_t GetDefaultGpuDeviceNum() {
-#ifndef WITH_CUDA
-  return 0;
-#else
-  int device_count = 0;
-  cudaGetDeviceCount(&device_count);
-  return device_count;
-#endif
-}
-
 Resource GetDefaultResource(const EnvProto& env_proto) {
   Resource resource;
   if (env_proto.has_ctrl_bootstrap_conf()) {
@@ -93,7 +83,6 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
     resource.set_machine_num(env_proto.machine_size());
   }
   resource.set_cpu_device_num(GetDefaultCpuDeviceNum());
-  resource.set_gpu_device_num(GetDefaultGpuDeviceNum());
   return resource;
 }
 
