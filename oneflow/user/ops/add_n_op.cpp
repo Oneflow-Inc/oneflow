@@ -17,15 +17,17 @@ limitations under the License.
 #include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
-
 /* static */ Maybe<void> AddNOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const auto& in_0 = ctx->InputTensorDesc("in", 0);
   auto* out = ctx->OutputTensorDesc("out", 0);
-  CHECK_NOTNULL_OR_RETURN(out);
+  CHECK_NOTNULL_OR_RETURN(out);  // NOLINT(maybe-need-error-msg)
   for (const auto& pair : ctx->inputs()) {
     const auto& cur_in = ctx->InputTensorDesc(pair.first, pair.second);
     if (in_0.shape().NumAxes() > 0 && cur_in.shape().NumAxes() > 0) {
-      CHECK_EQ_OR_RETURN(in_0.shape(), cur_in.shape());
+      CHECK_EQ_OR_RETURN(in_0.shape(), cur_in.shape())
+          << Error::RuntimeError()
+          << "inconsistent tensor size, expected all tensor to have the same number of elements, "
+          << "but got " << in_0.shape().elem_cnt() << " and " << cur_in.shape().elem_cnt();
     }
   }
   *out->mut_shape() = in_0.shape();
@@ -49,10 +51,13 @@ namespace oneflow {
 /* static */ Maybe<void> AddNOp::InferDataType(user_op::InferContext* ctx) {
   const auto& in_0 = ctx->InputTensorDesc("in", 0);
   auto* out = ctx->OutputTensorDesc("out", 0);
-  CHECK_NOTNULL_OR_RETURN(out);
+  CHECK_NOTNULL_OR_RETURN(out);  // NOLINT(maybe-need-error-msg)
   for (const auto& pair : ctx->inputs()) {
     const auto& cur_in = ctx->InputTensorDesc(pair.first, pair.second);
-    CHECK_EQ_OR_RETURN(in_0.data_type(), cur_in.data_type()) << ctx->op_name();
+    CHECK_EQ_OR_RETURN(in_0.data_type(), cur_in.data_type())
+        << Error::RuntimeError() << ctx->op_name()
+        << " expected all tenser to have same type, but found " << DataType_Name(in_0.data_type())
+        << " and " << DataType_Name(cur_in.data_type());
   }
   *out->mut_data_type() = in_0.data_type();
   return Maybe<void>::Ok();
@@ -60,7 +65,9 @@ namespace oneflow {
 
 /*static*/ Maybe<void> AddNOp::CheckAttr(const user_op::UserOpDefWrapper&,
                                          const user_op::UserOpConfWrapper& op_conf) {
-  CHECK_OR_RETURN(op_conf.input_size("in") >= 2);
+  CHECK_OR_RETURN(op_conf.input_size("in") >= 2)
+      << Error::RuntimeError()
+      << "The number of input tensors should be greater than or equal to 2";
   return Maybe<void>::Ok();
 }
 
