@@ -40,7 +40,6 @@ EnvProto GetEnvProto() {
 Resource GetResource() {
   Resource ret;
   ret.set_machine_num(10);
-  ret.set_gpu_device_num(8);
   ret.set_cpu_device_num(5);
   ret.set_comm_net_worker_num(4);
   return ret;
