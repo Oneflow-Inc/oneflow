@@ -478,4 +478,3 @@ api_attrs_and_type = {
         bool,
     ),
 }
-
