@@ -26,7 +26,7 @@ namespace oneflow {
 namespace embedding {
 
 inline bool UseDynamicMemoryAllocation() {
-  bool use_dynamic_memory_allocation =
+  static bool use_dynamic_memory_allocation =
       ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_USE_DYNAMIC_MEMORY_ALLOCATION", true);
 #if CUDA_VERSION >= 11020
   return use_dynamic_memory_allocation;
@@ -43,29 +43,26 @@ inline bool UseDynamicMemoryAllocation() {
 
 constexpr int64_t kRingBufferSize = 8;
 
+struct NumUniqueState {
+  uint32_t num_unique;
+  std::vector<uint32_t> num_unique_matrix;
+  int64_t iter;
+};
+
 class NumUniques {
  public:
-  NumUniques() {
-    num_unique_.resize(kRingBufferSize);
-    num_unique_iter_.resize(kRingBufferSize);
-    num_unique_matrix_.resize(kRingBufferSize);
-    num_unique_matrix_iter_.resize(kRingBufferSize);
-  }
+  NumUniques() { num_unique_states_.resize(kRingBufferSize); }
   ~NumUniques() = default;
 
   uint32_t GetNumUnique(int64_t iter);
 
-  void SetNumUnique(uint32_t num_unique, int64_t iter);
-
-  void SetNumUniqueMatrix(const std::vector<uint32_t>& num_unique_matrix, int64_t iter);
+  void SetNumUniqueState(uint32_t num_unique, const std::vector<uint32_t>& num_unique_matrix,
+                         int64_t iter);
 
   const std::vector<uint32_t>& GetNumUniqueMatrix(int64_t iter);
 
  private:
-  std::vector<uint32_t> num_unique_;
-  std::vector<int64_t> num_unique_iter_;
-  std::vector<std::vector<uint32_t>> num_unique_matrix_;
-  std::vector<int64_t> num_unique_matrix_iter_;
+  std::vector<NumUniqueState> num_unique_states_;
   std::mutex mutex_;
 };
 

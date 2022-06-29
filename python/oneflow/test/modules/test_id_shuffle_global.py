@@ -222,7 +222,6 @@ def _test_embedding_shuffle(test_case, dtype, enable_quantize):
 
 
 def _test_embedding_gradient_shuffle(test_case, enable_quantize, fp16, embedding_size):
-    print(enable_quantize, fp16, embedding_size)
     np_tolerance = 0
     batch_size = int(1024 / parallel_num)
     placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))

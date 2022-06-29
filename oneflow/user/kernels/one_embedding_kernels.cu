@@ -200,10 +200,10 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
     key_value_store_->ReserveQueryLength(max_query_length);
 
     num_uniques_ =
-        Global<embedding::EmbeddingManager>::Get()->GetNumUniques(embedding_name_, parallel_id_);
+        Singleton<embedding::EmbeddingManager>::Get()->GetNumUniques(embedding_name_, parallel_id_);
     if (embedding::UseDynamicMemoryAllocation()) {
-      values_ptr_ =
-          Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(embedding_name_, parallel_id_);
+      values_ptr_ = Singleton<embedding::EmbeddingManager>::Get()->GetValuesPtr(embedding_name_,
+                                                                                parallel_id_);
     } else {
       values_ptr_ = nullptr;
     }
@@ -276,16 +276,16 @@ class EmbeddingPutKernelState final : public user_op::OpKernelState {
   explicit EmbeddingPutKernelState(user_op::KernelInitContext* ctx) {
     const std::string& embedding_name = ctx->Attr<std::string>("embedding_name");
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-    key_value_store_ =
-        Singleton<embedding::EmbeddingManager>::Get()->GetKeyValueStore(embedding_name, parallel_id);
+    key_value_store_ = Singleton<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
+        embedding_name, parallel_id);
     uint32_t max_query_length =
         ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
     key_value_store_->ReserveQueryLength(max_query_length);
     num_uniques_ =
-        Global<embedding::EmbeddingManager>::Get()->GetNumUniques(embedding_name, parallel_id);
+        Singleton<embedding::EmbeddingManager>::Get()->GetNumUniques(embedding_name, parallel_id);
     if (embedding::UseDynamicMemoryAllocation()) {
       values_ptr_ =
-          Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(embedding_name, parallel_id);
+          Singleton<embedding::EmbeddingManager>::Get()->GetValuesPtr(embedding_name, parallel_id);
     } else {
       values_ptr_ = nullptr;
     }

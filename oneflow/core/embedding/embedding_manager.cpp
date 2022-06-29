@@ -136,31 +136,26 @@ void EmbeddingManager::LoadSnapshot(const std::string& embedding_name, int64_t l
 uint32_t NumUniques::GetNumUnique(int64_t iter) {
   std::unique_lock<std::mutex> lock(mutex_);
   int64_t index = iter % kRingBufferSize;
-  CHECK_EQ(num_unique_iter_.at(index), iter)
-      << "saved iter: " << num_unique_iter_.at(index) << " current iter: " << iter;
-  return num_unique_.at(index);
+  const NumUniqueState& state = num_unique_states_.at(index);
+  CHECK_EQ(state.iter, iter) << "saved iter: " << state.iter << " current iter: " << iter;
+  return state.num_unique;
 }
 
-void NumUniques::SetNumUnique(uint32_t num_unique, int64_t iter) {
+void NumUniques::SetNumUniqueState(uint32_t num_unique,
+                                   const std::vector<uint32_t>& num_unique_matrix, int64_t iter) {
   std::unique_lock<std::mutex> lock(mutex_);
   int64_t index = iter % kRingBufferSize;
-  num_unique_.at(index) = num_unique;
-  num_unique_iter_.at(index) = iter;
-}
-
-void NumUniques::SetNumUniqueMatrix(const std::vector<uint32_t>& num_unique_matrix, int64_t iter) {
-  std::unique_lock<std::mutex> lock(mutex_);
-  int64_t index = iter % kRingBufferSize;
-  num_unique_matrix_.at(index) = num_unique_matrix;
-  num_unique_matrix_iter_.at(index) = iter;
+  num_unique_states_.at(index).num_unique = num_unique;
+  num_unique_states_.at(index).num_unique_matrix = num_unique_matrix;
+  num_unique_states_.at(index).iter = iter;
 }
 
 const std::vector<uint32_t>& NumUniques::GetNumUniqueMatrix(int64_t iter) {
   std::unique_lock<std::mutex> lock(mutex_);
   int64_t index = iter % kRingBufferSize;
-  CHECK_EQ(num_unique_matrix_iter_.at(index), iter)
-      << "saved iter: " << num_unique_matrix_iter_.at(index) << " current iter: " << iter;
-  return num_unique_matrix_.at(index);
+  const NumUniqueState& state = num_unique_states_.at(index);
+  CHECK_EQ(state.iter, iter) << "saved iter: " << state.iter << " current iter: " << iter;
+  return state.num_unique_matrix;
 }
 
 void* ValuesPtr::GetLookupValuesPtr(int64_t iter) {
