@@ -1,49 +1,92 @@
+#include <glog/logging.h>
+#include <memory>
+#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
+#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/Parser/Parser.h"
+#include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowPyIr.h"
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/ExecutionEngine/MemRefUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/OwningOpRef.h"
+#include "mlir/Dialect/Linalg/Passes.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
 
-static std::function<double(double, int64_t)> AstToJIT(const ast& ast,
-                                                       const std::string& function_id) {
-  std::string moduleStr = R"mlir(
-  func.func @foo(%arg0 : i32) -> i32 attributes { llvm.emit_c_interface } {
-    %res = arith.addi %arg0, %arg0 : i32
-    return %res : i32
+#include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowAstJIT.h"
+
+using namespace std;
+using namespace mlir;
+
+static struct LLVMInitializer {
+  LLVMInitializer() {
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
   }
-  )mlir";
-  mlir::DialectRegistry registry;
-  mlir::registerAllDialects(registry);
-  mlir::registerLLVMDialectTranslation(registry);
-  mlir::MLIRContext context(registry);
-  mlir::OwningOpRef<mlir::ModuleOp> module =
-      mlir::parseSourceString<mlir::ModuleOp>(moduleStr, &context);
-  auto jit_or_error = mlir::ExecutionEngine::create(*module);
-  CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
-                        << llvm::toString(jit_or_error.takeError());
-  auto jit = std::move(jit_or_error->get());
-  auto lr_func = [jit](double base_lr, int64_t step) {
-    double res = 0;
-    auto&& r_res = mlir::ExecutionEngine::Result<double>(res);
-    auto err = jit->invoke("get_lr", base_lr, step, r_res);
-    CHECK(!!err) << "failed to run JIT exe engine";
-    return res;
-  };
-  return lr_func;
+} initializer;
+
+static LogicalResult lowerToLLVMDialect(ModuleOp module) {
+  PassManager pm(module.getContext());
+  pm.addPass(createMemRefToLLVMPass());
+  pm.addNestedPass<func::FuncOp>(arith::createConvertArithmeticToLLVMPass());
+  pm.addPass(createConvertFuncToLLVMPass());
+  pm.addPass(createReconcileUnrealizedCastsPass());
+  return pm.run(module);
 }
 
-void LR_JIT::Register(const std::string& function_id,
-                      std::function<double(double, int64_t)> lr_func) {
-  function_id2lr_func_[function_id] = std::move(lr_func);
+class JIT_Engine final {
+  unique_ptr<ExecutionEngine> _engine;
+
+ public:
+  explicit JIT_Engine(unique_ptr<ExecutionEngine> _engine) : _engine(move(_engine)){};
+  explicit JIT_Engine(const PyAst&);
+  double Invoke(double base_lr, int64_t step);
 };
 
-bool LR_JIT::Invoke(const std::string& function_id, double& lr, double base_lr, int64_t step) {
-  if (function_id2lr_func_.count(function_id)) {
-    lr = function_id2lr_func_[function_id](base_lr, step);
-    return true;
+JIT_Engine::JIT_Engine(const PyAst& ast) {
+  std::string moduleStr = R"mlir(
+  func.func @get_lr(%arg0 : f32, %arg1 : i32) -> f32 attributes { llvm.emit_c_interface } {
+    return %arg0 : f32
   }
-  return false;
+  )mlir";
+  DialectRegistry registry;
+  registerAllDialects(registry);
+  registerLLVMDialectTranslation(registry);
+  MLIRContext context(registry);
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(moduleStr, &context);
+  CHECK(!!module) << "failed to parse module";
+  CHECK(succeeded(lowerToLLVMDialect(*module))) << "failed to lower to llvm dialect";
+  auto jit_or_err = ExecutionEngine::create(*module);
+  CHECK(jit_or_err) << "failed to create JIT exe engine, "
+                    << llvm::toString(jit_or_err.takeError());
+
+  _engine = cantFail(move(jit_or_err));
+}
+
+double JIT_Engine::Invoke(double base_lr, int64_t step) {
+  float res = 0;
+  auto&& out = ExecutionEngine::result(res);
+  auto base_lr_jit = static_cast<float>(base_lr);
+  auto step_jit = static_cast<int>(step);
+  auto err = _engine->invoke("get_lr", base_lr_jit, step_jit, out);
+  return res;
+}
+
+void LR_JIT::Register(const string& function_id, const PyAst& ast) {
+  auto jit = make_shared<JIT_Engine>(ast);
+  function_id2engine_[function_id] = jit;
+}
+
+std::shared_ptr<JIT_Engine> LR_JIT::LookUp(const std::string& function_id) {
+  if (function_id2engine_.count(function_id)) { return function_id2engine_[function_id]; }
+  return nullptr;
+};
+
+double LR_JIT::Invoke(shared_ptr<JIT_Engine> engine, double base_lr, int64_t step) {
+  if (engine == nullptr) llvm::errs() << "engine is null";
+  return engine->Invoke(base_lr, step);
 };

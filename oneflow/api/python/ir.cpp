@@ -14,11 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <iostream>
 #ifdef WITH_MLIR
 
 #include "oneflow/ir/include/OneFlow/Extension.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowRoundTrip.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowPyIr.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowAstJIT.h"
 #include <glog/logging.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include <functional>
@@ -27,9 +28,16 @@ namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("ir", m) {
   m.def("load_jit_shared_lib",
         [](const std::string& lib_path) { MutSharedLibPaths()->insert(lib_path); });
-  m.def("compile_and_register_lr_jit", [](const pybind11::object& ast, const std::string& function_id) {
-    // LR_JIT::LowerAstToLLVM(ast, function_id);
-  });
+  m.def("compile_and_register_lr_jit",
+        [](const pybind11::object& ast, const std::string& function_id) {
+          PyAst _ast;
+
+          Global<LR_JIT>::New();
+          Global<LR_JIT>::Get()->Register(function_id, _ast);
+          auto engine = Global<LR_JIT>::Get()->LookUp(function_id);
+          auto lr = Global<LR_JIT>::Get()->Invoke(engine, 1, 2);
+          std::cout << lr << std::endl;
+        });
 }
 
 }  // namespace oneflow
