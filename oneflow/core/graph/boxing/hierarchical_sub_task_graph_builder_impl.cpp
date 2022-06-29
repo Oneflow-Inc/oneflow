@@ -36,7 +36,7 @@ std::shared_ptr<ChainSubTskGphBuilder> Make1DSubTskGphBuilder() {
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new OneToOneSubTskGphBuilder());
   builders.emplace_back(new B21SubTskGphBuilder());
-  if (!Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+  if (!Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
     builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
   }
   builders.emplace_back(new SliceBoxingSubTskGphBuilder());

@@ -29,7 +29,7 @@ LocalCtrlClient::LocalCtrlClient(const ProcessCtx& process_ctx) {
 }
 
 void LocalCtrlClient::Barrier(const std::string& barrier_name) {
-  Barrier(barrier_name, Global<EnvDesc>::Get()->TotalMachineNum());
+  Barrier(barrier_name, Singleton<EnvDesc>::Get()->TotalMachineNum());
 }
 
 void LocalCtrlClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
@@ -174,7 +174,7 @@ class DryRunCtrlClient : public CtrlClient {
   ~DryRunCtrlClient() override = default;
 
   void Barrier(const std::string& barrier_name) override {
-    Barrier(barrier_name, Global<EnvDesc>::Get()->TotalMachineNum());
+    Barrier(barrier_name, Singleton<EnvDesc>::Get()->TotalMachineNum());
   }
   void Barrier(const std::string& barrier_name, int32_t barrier_num) override {
     VLOG(3) << "skipping barrier in dry run, barrier name: " << barrier_name
@@ -229,30 +229,30 @@ void SetLocalProcessCtx(oneflow::ProcessCtx* ctx) {
 }
 
 Maybe<void> LocalRpcManager::Bootstrap() {
-  SetLocalProcessCtx(Global<ProcessCtx>::Get());
+  SetLocalProcessCtx(Singleton<ProcessCtx>::Get());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> LocalRpcManager::CreateClient() {
-  auto* client = new LocalCtrlClient(*Global<ProcessCtx>::Get());
-  Global<CtrlClient>::SetAllocated(client);
+  auto* client = new LocalCtrlClient(*Singleton<ProcessCtx>::Get());
+  Singleton<CtrlClient>::SetAllocated(client);
   return Maybe<void>::Ok();
 }
 
-LocalRpcManager::~LocalRpcManager() { Global<CtrlClient>::Delete(); }
+LocalRpcManager::~LocalRpcManager() { Singleton<CtrlClient>::Delete(); }
 
 Maybe<void> DryRunRpcManager::Bootstrap() {
-  SetLocalProcessCtx(Global<ProcessCtx>::Get());
+  SetLocalProcessCtx(Singleton<ProcessCtx>::Get());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> DryRunRpcManager::CreateClient() {
-  auto* client = new DryRunCtrlClient(*Global<ProcessCtx>::Get());
-  Global<CtrlClient>::SetAllocated(client);
+  auto* client = new DryRunCtrlClient(*Singleton<ProcessCtx>::Get());
+  Singleton<CtrlClient>::SetAllocated(client);
   return Maybe<void>::Ok();
 }
 
-DryRunRpcManager::~DryRunRpcManager() { Global<CtrlClient>::Delete(); }
+DryRunRpcManager::~DryRunRpcManager() { Singleton<CtrlClient>::Delete(); }
 
 }  // namespace oneflow
 

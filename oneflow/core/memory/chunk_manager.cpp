@@ -51,7 +51,8 @@ char* ChunkMgr::FindOrCreateChunk(const ChunkProto& chunk) {
   CHECK_EQ(GlobalProcessCtx::Rank(), chunk.machine_id());
   auto it = chunk_id2chunk_.find(chunk.chunk_id());
   if (it == chunk_id2chunk_.end()) {
-    char* chunk_ptr = Global<MemoryAllocator>::Get()->Allocate(chunk.mem_case(), chunk.mem_size());
+    char* chunk_ptr =
+        Singleton<MemoryAllocator>::Get()->Allocate(chunk.mem_case(), chunk.mem_size());
     it = chunk_id2chunk_.emplace(chunk.chunk_id(), ChunkWithPtr(chunk_ptr, chunk)).first;
   } else {
     const ChunkProto& store_proto = it->second.chunk_proto;
