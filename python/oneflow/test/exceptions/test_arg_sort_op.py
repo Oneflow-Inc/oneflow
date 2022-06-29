@@ -23,10 +23,9 @@ class TestArgSort(flow.unittest.TestCase):
     def test_direction_parameter_err(test_case):
         with test_case.assertRaises(RuntimeError) as context:
             x = flow.tensor([5, 10, 7, 8, 9, 1])
-            flow._C.arg_sort(x, direction='NONE')
+            flow._C.arg_sort(x, direction="NONE")
         test_case.assertTrue(
-            "expected the input direction parameter value is"
-            in str(context.exception)
+            "expected the input direction parameter value is" in str(context.exception)
         )
 
 
