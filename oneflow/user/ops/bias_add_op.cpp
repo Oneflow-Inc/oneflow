@@ -19,13 +19,9 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> BiasAddOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const auto& a_tensor_desc = ctx->InputTensorDesc("a", 0);
   const auto& b_tensor_desc = ctx->InputTensorDesc("b", 0);
-  const auto bias_add_axis = ctx->Attr<int32_t>("axis");
-  CHECK_EQ_OR_RETURN(b_tensor_desc.shape().NumAxes(), 1);
-  CHECK_GE_OR_RETURN(bias_add_axis, 0);
-  CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc.shape().NumAxes());
-  CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0));
+  CHECK_EQ_OR_RETURN(b_tensor_desc.shape().NumAxes(), 1)
+      << Error::RuntimeError() << "Bias tensor has to be a one-dimensional vector";
   *ctx->OutputShape("out", 0) = ctx->InputShape("a", 0);
   *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("a", 0);
   return Maybe<void>::Ok();
