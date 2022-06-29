@@ -823,7 +823,6 @@ class TestTensor(flow.unittest.TestCase):
         z = x.dot(y)
         return z
 
-
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5)
     def test_arccos_tensor_with_random_data(test_case):

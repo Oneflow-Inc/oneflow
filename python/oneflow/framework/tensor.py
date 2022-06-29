@@ -28,6 +28,7 @@ TensorTuple = flow._oneflow_internal.TensorTuple
 def _ndim(self):
     return len(self.shape)
 
+
 def _backward(self, gradient=None, retain_graph=False, create_graph=False):
     if not lazy_mode.is_enabled():
         flow.autograd.backward(self, gradient, retain_graph, create_graph)
@@ -137,6 +138,7 @@ def _sub(self, other):
 def _sub_inplace(self, other):
     return flow._C.sub(self, other, inplace=True)
 
+
 def _expand(self, *size):
     return flow.expand(self, *size)
 
@@ -147,6 +149,7 @@ def _expand_as(input, other):
 
 def _argwhere(self):
     return flow.argwhere(self)
+
 
 def _index(self):
     assert self.numel() == 1 and self.dtype in (
