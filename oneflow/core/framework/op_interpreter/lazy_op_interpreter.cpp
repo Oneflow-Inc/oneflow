@@ -456,7 +456,7 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
   // NOTE(chengcheng): MUST store this tensor to MultiClientSessionContext for graph runtime bind.
   const std::string graph_name = *JUST(JUST(GlobalJobBuildAndInferCtxMgr())->GetCurrentJobName());
   const std::string lbn = GenLogicalBlobName(new_op_name, "out");
-  Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
+  Singleton<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
       graph_name, input_tensor, new_op_name);
   // NOTE(chengcheng): MUST record this eager_tensor name as new variable output lbn.
   // NOTE(chengcheng): in GradAcc FreeEagerTensor need insert repeat op, but there is no need to

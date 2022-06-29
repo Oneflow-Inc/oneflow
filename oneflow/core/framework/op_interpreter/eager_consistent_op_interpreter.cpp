@@ -90,13 +90,13 @@ Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<NdSb
     std::shared_ptr<Tensor> output = std::make_shared<ConsistentTensor>(tensor_impl);
     return output;
   }
-  const auto* mgr = Global<EagerBoxingInterpreterManager>::Get();
+  const auto* mgr = Singleton<EagerBoxingInterpreterManager>::Get();
   // Eager boxing
   const auto& in_nd_sbp = JUST(input->nd_sbp());
   const auto& in_parallel_desc = JUST(input->parallel_desc());
   const auto& boxing_interpreter = JUST(mgr->GetEagerBoxingInterpreter(
       in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *logical_shape));
-  Global<const EagerBoxingLogger>::Get()->Log(
+  Singleton<const EagerBoxingLogger>::Get()->Log(
       *JUST(boxing_interpreter->boxing_interpreter_status()), /* prefix */ "");
   if (!current_rank_local_is_valid) { return input; }
   const auto& output = JUST(boxing_interpreter->Interpret(input, in_nd_sbp, out_nd_sbp,

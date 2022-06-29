@@ -64,7 +64,7 @@ Maybe<void> EagerRunOps(const Job& job, HashSet<std::string>* op_names,
                                                            const ParallelConf& parallel_conf)
                             const) {
   const auto& op_graph = JUST(OpGraph::New(job));
-  const auto* foreign_callback = JUST(GlobalMaybe<std::shared_ptr<ForeignCallback>>());
+  const auto* foreign_callback = JUST(SingletonMaybe<std::shared_ptr<ForeignCallback>>());
   JUST(op_graph->ForEachOpNode([&](const OpNode& op_node) -> Maybe<void> {
     if (!op_names->insert(op_node.op().op_name()).second) { return Maybe<void>::Ok(); }
     const auto& op_attribute = op_node.op().GetOpAttributeWithoutOpNameAndLbn();
@@ -108,8 +108,8 @@ Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
       << Error::JobNameNotEqualError() << "job name you set: " << job_conf.job_name()
       << " not equal to origin job name: " << job_->job_conf().job_name();
   job_->mutable_job_conf()->CopyFrom(job_conf);
-  CHECK_ISNULL_OR_RETURN(Global<JobDesc>::Get());
-  Global<JobDesc>::New(job_conf, job_id_);
+  CHECK_ISNULL_OR_RETURN(Singleton<JobDesc>::Get());
+  Singleton<JobDesc>::New(job_conf, job_id_);
   return Maybe<void>::Ok();
 }
 
@@ -186,7 +186,8 @@ void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(const OperatorConf& 
   job_->mutable_net()->add_op()->CopyFrom(operator_conf);
 
   // set up the module config
-  const auto& scope = Global<symbol::Storage<Scope>>::Get()->Get(operator_conf.scope_symbol_id());
+  const auto& scope =
+      Singleton<symbol::Storage<Scope>>::Get()->Get(operator_conf.scope_symbol_id());
   if (scope.scope_proto().has_module_name()) {
     const auto& module_name = scope.scope_proto().module_name();
     auto* module_name2module_conf = job_->mutable_module_name2module_conf();
@@ -496,7 +497,7 @@ Maybe<void> JobBuildAndInferCtx::AddLbiAndDiffWatcherUuidPair(
 
 Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferLocalOp(const OperatorConf& op_conf) {
   CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
-  const auto& scope = Global<symbol::Storage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
+  const auto& scope = Singleton<symbol::Storage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
   const auto* job_desc = JUST(scope.job_desc());
   const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
   auto op = JUST(ConstructOp(op_conf, parallel_desc.device_type()));
@@ -550,7 +551,7 @@ Maybe<const LogicalBlobId*> JobBuildAndInferCtx::GetSubLbi(int64_t scope_symbol_
 
 Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferConsistentOp(const OperatorConf& op_conf) {
   CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
-  const auto& scope = Global<symbol::Storage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
+  const auto& scope = Singleton<symbol::Storage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
   const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
   const auto* job_desc = JUST(scope.job_desc());
   return AddAndInferOp(op_conf, parallel_desc.parallel_conf(), job_desc, false);
@@ -921,7 +922,7 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatible
   {
     const auto& producer_op_conf = JUST(Op4OpName(lbi.op_name()))->op_conf();
     CHECK_OR_RETURN(producer_op_conf.has_scope_symbol_id());
-    const auto& scope = Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
+    const auto& scope = Singleton<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
     const auto* job_desc = JUST(scope.job_desc());
     JUST(AddAndInferOp(op_conf, parallel_desc.parallel_conf(), job_desc, false));
   }
@@ -958,16 +959,16 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatibl
   (*mut_local_lbi2sub_lbis())[local_lbi].emplace_back(local_lbi);
   const auto& parallel_conf = parallel_desc.parallel_conf();
   const auto& op_attribute = JUST(AddAndInferConsistentOp(op_conf));
-  (*JUST(GlobalMaybe<std::shared_ptr<ForeignCallback>>()))
-      ->EagerLocalCast(*op_attribute, parallel_conf);
-  return local_lbi;
+  (*JUST(SingletonMaybe<std::shared_ptr<ForeignCallback>>()))
+      ->EagerMirroredCast(*op_attribute, parallel_conf);
+  return mirrored_lbi;
 }
 
 Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   CHECK_GT_OR_RETURN(job().net().op_size(), 0)
       << " Sorry, nn.Graph need at least 1 op in net, but get 0 now.";
-  CHECK_NOTNULL(Global<JobDesc>::Get());
-  Global<JobDesc>::Delete();
+  CHECK_NOTNULL(Singleton<JobDesc>::Get());
+  Singleton<JobDesc>::Delete();
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   JobPassCtx job_pass_ctx(GlobalJobDesc());
   const auto& job_name = job().job_conf().job_name();
@@ -975,9 +976,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     std::string full_log_name =
         job_name + "-job_id_" + std::to_string(job_id()) + "-" + name_suffix;
     TeePersistentLogStream::Create(full_log_name)->Write(job());
-    Global<OpGraph>::New(job());
-    Global<OpGraph>::Get()->ToDotWithFilePath(full_log_name + ".dot");
-    Global<OpGraph>::Delete();
+    Singleton<OpGraph>::New(job());
+    Singleton<OpGraph>::Get()->ToDotWithFilePath(full_log_name + ".dot");
+    Singleton<OpGraph>::Delete();
   };
   std::string debug_pass_name = GetStringFromEnv("ONEFLOW_DEBUG_PASS", "");
   auto NeedLogJob = [&](const std::string& pass_name) -> bool {
@@ -1013,13 +1014,13 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     return Maybe<void>::Ok();
   };
 
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()
-      || Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()
+      || Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
     TeePersistentLogStream::Create(StrCat("forward_graph", job_id()))->Write(job());
-    Global<OpGraph>::New(job());
-    Global<OpGraph>::Get()->ToDotWithFilePath("forward_dlnet_" + std::to_string(job_id())
-                                              + "_op_graph.dot");
-    Global<OpGraph>::Delete();
+    Singleton<OpGraph>::New(job());
+    Singleton<OpGraph>::Get()->ToDotWithFilePath("forward_dlnet_" + std::to_string(job_id())
+                                                 + "_op_graph.dot");
+    Singleton<OpGraph>::Delete();
   }
 
   if (GlobalJobDesc().Bool("__is_user_function__")) {
@@ -1068,8 +1069,8 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
 }
 
 Maybe<void> EagerJobBuildAndInferCtx::Complete() {
-  CHECK_NOTNULL(Global<JobDesc>::Get());
-  Global<JobDesc>::Delete();
+  CHECK_NOTNULL(Singleton<JobDesc>::Get());
+  Singleton<JobDesc>::Delete();
   JUST(GetOpNames(job(), &executed_op_names_));
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   JobPassCtx job_pass_ctx(GlobalJobDesc());
@@ -1322,7 +1323,7 @@ Maybe<void> JobBuildAndInferCtx::Rebuild() {
   }
   // build op graph
   OpGraph op_graph;
-  if (Global<JobDesc>::Get()) {
+  if (Singleton<JobDesc>::Get()) {
     JUST(op_graph.Init(*job_));
   } else {
     auto scope = std::make_unique<GlobalJobDescScope>(job_->job_conf(), job_id());

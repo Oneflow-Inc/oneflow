@@ -25,7 +25,7 @@ limitations under the License.
 #include "oneflow/core/platform/include/pthread_fork.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/common/cpp_attribute.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
 
