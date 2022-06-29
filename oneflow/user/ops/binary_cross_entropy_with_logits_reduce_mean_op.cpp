@@ -24,7 +24,8 @@ namespace {
 Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   const auto& input_desc = ctx->InputTensorDesc("input", 0);
   const auto& target_desc = ctx->InputTensorDesc("target", 0);
-  CHECK_EQ_OR_RETURN(input_desc.shape(), target_desc.shape());
+  CHECK_EQ_OR_RETURN(input_desc.shape(), target_desc.shape())
+      << "Input shape should be equal to Target shape. ";
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
   *out_desc->mut_is_dynamic() = false;
   *out_desc->mut_shape() = Shape({});
@@ -34,7 +35,8 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
 Maybe<void> InferFwDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
-  CHECK_EQ_OR_RETURN(input_desc.data_type(), target_desc.data_type());
+  CHECK_EQ_OR_RETURN(input_desc.data_type(), target_desc.data_type())
+      << "Input datatype should be equal to Target datatype. ";
   *ctx->OutputDType("out", 0) = ctx->InputDType("input", 0);
 
   return Maybe<void>::Ok();
@@ -43,7 +45,8 @@ Maybe<void> InferFwDataType(user_op::InferContext* ctx) {
 Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   const auto& input_desc = ctx->InputTensorDesc("input", 0);
   const auto& target_desc = ctx->InputTensorDesc("target", 0);
-  CHECK_EQ_OR_RETURN(input_desc.shape(), target_desc.shape());
+  CHECK_EQ_OR_RETURN(input_desc.shape(), target_desc.shape())
+      << "Input shape should be equal to Target shape. ";
   user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
   *dx_desc->mut_is_dynamic() = false;
   *dx_desc->mut_shape() = input_desc.shape();
@@ -53,7 +56,8 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
 Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
-  CHECK_EQ_OR_RETURN(input_desc.data_type(), target_desc.data_type());
+  CHECK_EQ_OR_RETURN(input_desc.data_type(), target_desc.data_type())
+      << "Input datatype should be equal to Target datatype. ";
   *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
   return Maybe<void>::Ok();
 }
@@ -82,7 +86,7 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
 /* static */ Maybe<void> BinaryCrossEntropyWithLogitsReduceMeanOp::ModifyInputArg(
     const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
-  CHECK_OR_RETURN(target_modifier != nullptr);
+  CHECK_OR_RETURN(target_modifier != nullptr) << "target_modifier should not be nullptr. ";
   target_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();
 }
