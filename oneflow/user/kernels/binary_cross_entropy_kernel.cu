@@ -107,7 +107,6 @@ template<typename T>
 class BinaryCrossEntropyKernel final : public user_op::OpKernel {
  public:
   BinaryCrossEntropyKernel() = default;
-  // ~BinaryCrossEntropyKernel() override = default;
   ~BinaryCrossEntropyKernel() = default;
 
  private:
