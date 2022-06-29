@@ -243,7 +243,7 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const NdSbp& producer_sbp_paralle
   }
 
   // TODO: get copy cost from each EagerBoxingInterpreter
-  if (!TRY(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
+  if (!TRY(Singleton<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
                producer_sbp_parallel, consumer_sbp_parallel, producer_parallel_desc,
                consumer_parallel_desc, logical_blob_desc.shape()))
            .IsOk()) {
