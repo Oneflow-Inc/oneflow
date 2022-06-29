@@ -960,8 +960,8 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatibl
   const auto& parallel_conf = parallel_desc.parallel_conf();
   const auto& op_attribute = JUST(AddAndInferConsistentOp(op_conf));
   (*JUST(SingletonMaybe<std::shared_ptr<ForeignCallback>>()))
-      ->EagerMirroredCast(*op_attribute, parallel_conf);
-  return mirrored_lbi;
+      ->EagerLocalCast(*op_attribute, parallel_conf);
+  return local_lbi;
 }
 
 Maybe<void> LazyJobBuildAndInferCtx::Complete() {
