@@ -36,7 +36,8 @@ void PinnedEpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
   // TODO:(zhaoluyang) empty/cast/copy op support pin_memory_device
   DeviceType device_type = stream->device()->enum_type();
   size_t device_index = stream->device()->device_id();
-  auto ep_device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
+  auto ep_device =
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
   ep::AllocationOptions options{};
   CHECK_EQ(stream->stream_role(), StreamRole::kPinnedCompute)
       << "stream role must be 'StreamRole::kPinnedCompute'";

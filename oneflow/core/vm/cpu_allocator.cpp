@@ -27,7 +27,7 @@ Maybe<void> CpuAllocator::Allocate(char** mem_ptr, std::size_t size) {
 
 void CpuAllocator::Deallocate(char* mem_ptr, std::size_t size) { std::free(mem_ptr); }
 
-COMMAND(Global<CpuAllocator>::SetAllocated(new CpuAllocator()));
+COMMAND(Singleton<CpuAllocator>::SetAllocated(new CpuAllocator()));
 
 }  // namespace vm
 }  // namespace oneflow

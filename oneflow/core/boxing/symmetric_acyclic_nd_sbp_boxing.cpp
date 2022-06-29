@@ -59,9 +59,9 @@ Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input, Symb
                                  Symbol<NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
                                  Symbol<ParallelDesc> out_parallel_desc) {
   const auto& boxing_interpreter =
-      JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
+      JUST(Singleton<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
           in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *input->shape()));
-  Global<const EagerBoxingLogger>::Get()->Log(
+  Singleton<const EagerBoxingLogger>::Get()->Log(
       *JUST(boxing_interpreter->boxing_interpreter_status()),
       /* prefix */ "\t\tInternal boxing of symmetric-acyclic-nd-sbp-to-nd-sbp, ");
   return JUST(boxing_interpreter->Interpret(input, in_nd_sbp, out_nd_sbp, in_parallel_desc,
