@@ -18,7 +18,6 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from oneflow.framework import dtype
 from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
