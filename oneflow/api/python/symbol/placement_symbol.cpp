@@ -38,7 +38,7 @@ namespace oneflow {
 namespace {
 
 int64_t GetDeviceCount(const std::string& device_name) {
-  return Global<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(device_name);
+  return Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(device_name);
 }
 
 struct PlacementSymbolExportUtil {
@@ -157,7 +157,7 @@ struct PlacementSymbolExportUtil {
 
   static Maybe<Symbol<ParallelDesc>> AllDevicePlacement(const std::string& type) {
     static thread_local HashMap<std::string, Symbol<ParallelDesc>> device_tag2placement;
-    CHECK_NOTNULL((Global<ResourceDesc, ForEnv>::Get()));
+    CHECK_NOTNULL((Singleton<ResourceDesc, ForEnv>::Get()));
     JUST(CheckDeviceTag(type));
     auto it = device_tag2placement.find(type);
     if (it == device_tag2placement.end()) {
