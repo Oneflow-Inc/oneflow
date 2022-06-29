@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/vm_object.h"
-#include "oneflow/core/vm/vm_resource_desc.h"
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/intrusive/mutexed_list.h"
 #include "oneflow/core/intrusive/object_pool.h"
