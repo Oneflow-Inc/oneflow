@@ -171,7 +171,7 @@ class TestAddModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_0_size_add(test_case):
         device = random_device()
         x = random_tensor(2, 0, 3).to(device)
@@ -179,7 +179,7 @@ class TestAddModule(flow.unittest.TestCase):
         out = x + y
         return out
 
-    @autotest(n=3, auto_backward=False, check_graph=True)
+    @autotest(n=3, auto_backward=False)
     def test_0dim_inplace_add(test_case):
         device = random_device()
         x = random_tensor(2, 2, 3, requires_grad=False).to(device)
@@ -187,7 +187,7 @@ class TestAddModule(flow.unittest.TestCase):
         x += y.mean()
         return x
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_0dim_two_inplace_add(test_case):
         device = random_device()
         x = random_tensor(2, 2, 3).to(device).mean()
@@ -195,7 +195,7 @@ class TestAddModule(flow.unittest.TestCase):
         x += y.mean()
         return x
 
-    @autotest(n=3, check_graph=True)
+    @autotest(n=3)
     def test_add_with_alpha(test_case):
         device = random_device()
         x1 = random_tensor(2, 2, 3).to(device).mean()
@@ -209,7 +209,7 @@ class TestAddModule(flow.unittest.TestCase):
         z3 = torch.add(s, x3, alpha=alpha)
         return z1, z2, z3
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(auto_backward=False)
     def test_bool_add(test_case):
         device = random_device()
         x = random_tensor(2, 1, 3).to(device, torch.bool)
@@ -217,7 +217,7 @@ class TestAddModule(flow.unittest.TestCase):
         out = x + y
         return out
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(auto_backward=False)
     def test_0shape_bool_add(test_case):
         device = random_device()
         x = random_tensor(2, 0, 3).to(device, torch.bool)
@@ -225,7 +225,7 @@ class TestAddModule(flow.unittest.TestCase):
         out = x + y
         return out
 
-    @autotest(n=3, auto_backward=False, check_graph=True)
+    @autotest(n=3, auto_backward=False)
     def test_0dim_bool_inplace_add(test_case):
         device = random_device()
         x = random_tensor(2, 2, 3, requires_grad=False).to(device, torch.bool)
@@ -233,7 +233,7 @@ class TestAddModule(flow.unittest.TestCase):
         x += y.mean().to(torch.bool)
         return x
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(auto_backward=False)
     def test_0dim_two_inplace_add(test_case):
         device = random_device()
         x = random_tensor(2, 2, 3).to(device).mean().to(torch.bool)
@@ -241,7 +241,7 @@ class TestAddModule(flow.unittest.TestCase):
         return x
         x += y.mean().to(torch.bool)
 
-    @autotest(n=3, check_graph=True)
+    @autotest(n=3)
     def test_add_with_alpha_0dim(test_case):
         device = random_device()
         x1 = random_tensor(ndim=0).to(device).mean()

@@ -62,22 +62,22 @@ class FlipCpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const int32_t elem_cnt = y_tensor->shape().elem_cnt();
+    const int32_t elem_cnt = y_tensor->shape_view().elem_cnt();
     if (elem_cnt == 0) { return; }
-    const int32_t total_dims = y_tensor->shape().NumAxes();
+    const int32_t total_dims = y_tensor->shape_view().NumAxes();
 
     std::vector<int32_t> dims = ctx->Attr<std::vector<int32_t>>("dims");
     VIS vis;
     for (auto x : dims) { vis.val[x] = true; }
 
     SIZE_V sizes_v;
-    for (int32_t i = 0; i < total_dims; i++) { sizes_v.val[i] = y_tensor->shape().At(i); }
+    for (int32_t i = 0; i < total_dims; i++) { sizes_v.val[i] = y_tensor->shape_view().At(i); }
 
     // TODO(bbuf) delete strides caluculate, after tensor strides supported
     SIZE_V strides_v;
     strides_v.val[total_dims - 1] = 1;
     for (int32_t i = total_dims - 2; i >= 0; i--) {
-      strides_v.val[i] = strides_v.val[i + 1] * y_tensor->shape().At(i + 1);
+      strides_v.val[i] = strides_v.val[i + 1] * y_tensor->shape_view().At(i + 1);
     }
 
     FlipCpuForward(elem_cnt, total_dims, sizes_v, vis, strides_v, x_tensor->dptr<T>(),

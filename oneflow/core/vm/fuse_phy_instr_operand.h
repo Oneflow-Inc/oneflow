@@ -27,33 +27,31 @@ namespace vm {
 
 class FusePhyInstrOperand : public PhyInstrOperand {
  public:
-  explicit FusePhyInstrOperand(InstructionMsgList&& instr_msg_list)
-      : instr_msg_list_(), input_dependences_(), output_dependences_() {
-    instr_msg_list.MoveTo(&instr_msg_list_);
+  explicit FusePhyInstrOperand(InstructionList&& instruction_list)
+      : instruction_list_(), input_dependences_(), output_dependences_() {
+    instruction_list.MoveTo(&instruction_list_);
     auto ReadOnlyDepsInserter = SetInserter(&input_dependences_);
     auto WritableDepsInserter = SetInserter(&output_dependences_);
-    auto* last_instr_msg = instr_msg_list_.Last();
-    INTRUSIVE_UNSAFE_FOR_EACH_PTR(instr_msg, &instr_msg_list_) {
-      if (instr_msg == last_instr_msg) {
-        CHECK(instr_msg->instr_type_id().instruction_type().fuse_type()
-                  == kEnableInstructionFuseAsTailOnly
-              || instr_msg->instr_type_id().instruction_type().fuse_type()
+    auto* last_instruction = instruction_list_.Last();
+    INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, &instruction_list_) {
+      if (instruction == last_instruction) {
+        CHECK(instruction->instruction_type().fuse_type() == kEnableInstructionFuseAsTailOnly
+              || instruction->instruction_type().fuse_type()
                      == kEnableInstructionFuseAtAnyPosition);
       } else {
-        CHECK(instr_msg->instr_type_id().instruction_type().fuse_type()
-              == kEnableInstructionFuseAtAnyPosition);
+        CHECK(instruction->instruction_type().fuse_type() == kEnableInstructionFuseAtAnyPosition);
       }
       if (unlikely(stream_sequential_dependence_ == nullptr)) {
         stream_sequential_dependence_ =
-            instr_msg->phy_instr_operand()->stream_sequential_dependence();
+            instruction->phy_instr_operand()->stream_sequential_dependence();
       } else {
         CHECK_EQ(stream_sequential_dependence_,
-                 instr_msg->phy_instr_operand()->stream_sequential_dependence());
+                 instruction->phy_instr_operand()->stream_sequential_dependence());
       }
-      for (auto* dep : instr_msg->phy_instr_operand()->input_dependences()) {
+      for (auto* dep : instruction->phy_instr_operand()->input_dependences()) {
         ReadOnlyDepsInserter(dep);
       }
-      for (auto* dep : instr_msg->phy_instr_operand()->output_dependences()) {
+      for (auto* dep : instruction->phy_instr_operand()->output_dependences()) {
         WritableDepsInserter(dep);
       }
     }
@@ -63,10 +61,10 @@ class FusePhyInstrOperand : public PhyInstrOperand {
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  InstructionMsgList* mut_instr_msg_list() { return &instr_msg_list_; }
+  InstructionList* mut_instruction_list() { return &instruction_list_; }
 
  private:
-  InstructionMsgList instr_msg_list_;
+  InstructionList instruction_list_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
 };
