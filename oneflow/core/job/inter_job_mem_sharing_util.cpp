@@ -81,9 +81,9 @@ std::vector<HashSet<int64_t>> InitJobId2MutualExclusionJobIds(
       }
     }
   }
-  const InterJobReuseMemStrategy* strategy = Global<const InterJobReuseMemStrategy>::Get();
+  const InterJobReuseMemStrategy* strategy = Singleton<const InterJobReuseMemStrategy>::Get();
   if (strategy->has_custom_parallelism()) {
-    auto* job_name2job_id = Global<JobName2JobId>::Get();
+    auto* job_name2job_id = Singleton<JobName2JobId>::Get();
     for (const auto& group : strategy->custom_parallelism().nonparallel_group()) {
       for (const std::string& first_name : group.job_name()) {
         for (const std::string& second_name : group.job_name()) {
@@ -106,7 +106,7 @@ std::vector<HashSet<int64_t>> GetMutualExclusionJobGroups(
   int64_t job_size = jobs.size();
   std::vector<HashSet<int64_t>> job_groups;
   job_groups.reserve(job_size);
-  if (Global<const InterJobReuseMemStrategy>::Get()->has_reuse_mem_priority()) {
+  if (Singleton<const InterJobReuseMemStrategy>::Get()->has_reuse_mem_priority()) {
     job_groups.emplace_back(HashSet<int64_t>());
     FOR_RANGE(int64_t, i, 0, job_size) { job_groups.front().emplace(i); }
     return job_groups;

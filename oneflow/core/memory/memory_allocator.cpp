@@ -27,8 +27,8 @@ namespace oneflow {
 namespace {
 
 std::shared_ptr<ep::Device> GetAllocationDevice(const MemoryCase& mem_case) {
-  auto device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(mem_case.device_type(),
-                                                                    mem_case.device_id());
+  auto device = Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(mem_case.device_type(),
+                                                                       mem_case.device_id());
   CHECK(device);
   return device;
 }
