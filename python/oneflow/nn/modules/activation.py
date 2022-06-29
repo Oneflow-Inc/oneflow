@@ -17,10 +17,7 @@ import warnings
 from typing import Optional
 
 import oneflow as flow
-import oneflow._oneflow_internal
-from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _check_inplace_valid
 
 
 class PReLU(Module):
@@ -116,8 +113,6 @@ class ReLU(Module):
         self.inplace = inplace
 
     def forward(self, x):
-        if self.inplace:
-            _check_inplace_valid(x)
         return flow._C.relu(x, self.inplace)
 
     def extra_repr(self):
@@ -321,8 +316,6 @@ class CELU(Module):
         self.inplace = inplace
 
     def forward(self, x):
-        if self.inplace:
-            _check_inplace_valid(x)
         return flow._C.celu(x, alpha=self.alpha, inplace=self.inplace)
 
     def extra_repr(self):
@@ -860,9 +853,7 @@ class LeakyReLU(Module):
         self.inplace = inplace
 
     def forward(self, x):
-        if self.inplace:
-            warnings.warn("LeakyReLU module do not support inplace now")
-        return flow._C.leaky_relu(x, alpha=self.negative_slope)
+        return flow._C.leaky_relu(x, alpha=self.negative_slope, inplace=self.inplace)
 
     def extra_repr(self):
         param_str = f"negative_slope={self.negative_slope}"
@@ -1004,7 +995,7 @@ class SELU(Module):
 class Softshrink(Module):
     r"""
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.Softshrink.html?highlight=softshrink#torch.nn.Softshrink.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Softshrink.html.
 
     The Softshrink activation.
 
@@ -1140,7 +1131,7 @@ class Threshold(Module):
     r"""The Threshold Activation. Return ``x`` if ``x`` is greater than ``threshold``, else return ``value``.
 
     The interface is consistent with PyTorch.
-    The documentation is referenced from https://pytorch.org/docs/stable/generated/torch.nn.Threshold.html.
+    The documentation is referenced from https://pytorch.org/docs/1.10/generated/torch.nn.Threshold.html.
 
     The formula is:
 

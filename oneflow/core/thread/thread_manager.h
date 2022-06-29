@@ -53,7 +53,7 @@ void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);
 template<typename DoEachT>
 void MultiThreadLoop(size_t num, const DoEachT& DoEach) {
   if (num == 0) { return; }
-  if (unlikely(pthread_fork::IsForkedSubProcess())) {
+  if (unlikely(pthread_fork::IsForkedSubProcess()) || Global<ThreadPool>::Get() == nullptr) {
     SingleThreadLoop(num, DoEach);
     return;
   }

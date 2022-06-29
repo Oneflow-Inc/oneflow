@@ -44,7 +44,7 @@ void ScaleModelDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuil
                                HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
                         HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
-void ClipGradient(const OpGraph& op_graph, JobBuilder* job_builder,
+void ClipGradient(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                   HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi, const ClipConf& clip_conf);
 Maybe<void> GenerateBackwardOpConfIf(
     const Operator& op, std::vector<OperatorConf>* op_confs,

@@ -108,7 +108,7 @@ void AvgBackwardCompute(user_op::KernelComputeContext* ctx, const int32_t& dim) 
   const T* out_ptr = grad_output->dptr<T>();
   T* in_ptr = grad_input->mut_dptr<T>();
 
-  std::fill(in_ptr, in_ptr + grad_input->shape().elem_cnt(), static_cast<T>(0));
+  std::fill(in_ptr, in_ptr + grad_input->shape_view().elem_cnt(), static_cast<T>(0));
 
   const int64_t input_width = in.Count(4);
   const int64_t output_width = out.Count(4);

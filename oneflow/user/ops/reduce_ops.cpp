@@ -24,6 +24,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   const Shape& input_shape = ctx->InputShape("input_tensor", 0);
   const auto& reduce_axes = ctx->Attr<std::vector<int32_t>>("axis");
   Shape* output_shape = ctx->OutputShape("output_tensor", 0);
+  Stride* output_stride = ctx->OutputStride("output_tensor", 0);
   // For 0-dim Tensor
   if (reduce_axes.empty()) {
     *output_shape = input_shape;
@@ -37,6 +38,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
       *output_shape = reduce_shape.RemoveOnes(reduce_axes_vec);
     }
   }
+  *output_stride = Stride(*output_shape);
   return Maybe<void>::Ok();
 }
 
@@ -192,13 +194,13 @@ Maybe<void> GenerateBackwardOpConf4ReduceMaxMin(const user_op::UserOpWrapper& op
 
     user_op::UserOpConfWrapperBuilder multiply_mask_builder(op.op_name() + "_grad_multiply_mask");
     user_op::UserOpConfWrapper multiply_mask_op =
-        multiply_mask_builder.Op("multiply")
+        multiply_mask_builder.Op("broadcast_mul")
             .Input("x", broadcast_divided_dy_op.output("y", 0))
             .Input("y", cast_mask_op.output("out", 0))
-            .Output("out")
+            .Output("z")
             .Build();
     AddOp(multiply_mask_op);
-    op.BindGradTensorWithOpInput(multiply_mask_op.output("out", 0), "input_tensor", 0);
+    op.BindGradTensorWithOpInput(multiply_mask_op.output("z", 0), "input_tensor", 0);
   }
   return Maybe<void>::Ok();
 }

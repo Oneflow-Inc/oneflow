@@ -60,7 +60,8 @@ Maybe<Tensor> CPUGeneratorImpl::GetState() const {
   JUST(CPUSynchronize());
   CPUGeneratorState state;
   const auto& device = JUST(Device::New("cpu"));
-  const auto& tensor_state = JUST(functional::Empty(Shape{sizeof(state)}, DType::UInt8(), device));
+  const auto& tensor_state =
+      JUST(functional::Empty(Shape{sizeof(state)}, DType::UInt8(), device, /*pin_memory=*/false));
 
   std::stringstream ss;
   ss << engine_;
@@ -181,7 +182,8 @@ Maybe<Tensor> CUDAGeneratorImpl::GetState() const {
   int64_t state_size = max_block_num_ * max_thread_num_ * sizeof(curandState);
   int64_t total_size = state_size + sizeof(int64_t);
   const auto& device = JUST(Device::New("cpu"));
-  const auto& tensor_state = JUST(functional::Empty(Shape{total_size}, DType::UInt8(), device));
+  const auto& tensor_state =
+      JUST(functional::Empty(Shape{total_size}, DType::UInt8(), device, /*pin_memory=*/false));
 
   const auto& callback = [&](uint64_t of_blob_ptr) {
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
@@ -293,7 +295,8 @@ Maybe<Tensor> AutoGeneratorImpl::GetState() const {
     }
   }
   const auto& device = JUST(Device::New("cpu"));
-  const auto& tensor_state = JUST(functional::Empty(Shape{total_size}, DType::UInt8(), device));
+  const auto& tensor_state =
+      JUST(functional::Empty(Shape{total_size}, DType::UInt8(), device, /*pin_memory=*/false));
   const auto& callback = [&buffer, &total_size](uint64_t of_blob_ptr) {
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
     memcpy(of_blob->mut_blob()->mut_dptr<uint8_t>(), buffer.data(), total_size);
@@ -337,7 +340,8 @@ Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
   std::vector<std::shared_ptr<Tensor>> tensor_states(state.num);
   for (int i = 0; i < state.num; ++i) {
     int64_t state_size = state_sizes.at(i);
-    tensor_states[i] = JUST(functional::Empty(Shape{state_size}, DType::UInt8(), device));
+    tensor_states[i] =
+        JUST(functional::Empty(Shape{state_size}, DType::UInt8(), device, /*pin_memory=*/false));
     const auto& callback = [&data, &state_size](uint64_t of_blob_ptr) {
       auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
       memcpy(of_blob->mut_blob()->mut_dptr<uint8_t>(), data, state_size);

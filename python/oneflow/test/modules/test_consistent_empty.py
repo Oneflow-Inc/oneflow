@@ -24,21 +24,43 @@ from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgDict
 
 
-def _test_consistent_empty(test_case, shape, placement, sbp):
-    x = flow.empty(*shape, placement=placement, sbp=sbp)
+def _test_consistent_empty(test_case, func, shape, placement, sbp):
+    func2 = None
+    if func == "empty":
+        func = flow.empty
+    elif func == "new_empty":
+        func = flow.empty
+        func2 = flow.new_empty
+    else:
+        raise NotImplementedError
+
+    x = func(*shape, placement=placement, sbp=sbp)
+    if func2:
+        x = func2(x, size=shape)
 
     test_case.assertEqual(x.shape, flow.Size(shape))
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
 
 
-def _test_graph_empty(test_case, shape, placement, sbp):
+def _test_graph_empty(test_case, func, shape, placement, sbp):
+    func2 = None
+    if func == "empty":
+        func = flow.empty
+    elif func == "new_empty":
+        func = flow.empty
+        func2 = flow.new_empty
+    else:
+        raise NotImplementedError
+
     class ConsistentEmptyGraph(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
 
         def build(self):
-            x = flow.empty(*shape, placement=placement, sbp=sbp)
+            x = func(*shape, placement=placement, sbp=sbp)
+            if func2:
+                x = func2(x, size=shape)
             return x
 
     model = ConsistentEmptyGraph()
@@ -53,17 +75,23 @@ class TestEmptyConsistent(flow.unittest.TestCase):
     @globaltest
     def test_empty_consistent(test_case):
         shapes = [(8,), (8, 8,), (8, 8, 8)]
-        for shape in shapes:
-            for placement in all_placement():
-                for sbp in all_sbp(
-                    placement, max_dim=len(shape), except_partial_sum=True
-                ):
-                    _test_consistent_empty(test_case, shape, placement, sbp)
+        functions = [
+            "empty",
+            "new_empty",
+        ]
+        for func in functions:
+            for shape in shapes:
+                for placement in all_placement():
+                    for sbp in all_sbp(
+                        placement, max_dim=len(shape), except_partial_sum=True
+                    ):
+                        _test_consistent_empty(test_case, func, shape, placement, sbp)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n2d()
     def test_empty_graph(test_case):
         arg_dict = OrderedDict()
+        arg_dict["func"] = ["empty", "new_empty"]
         arg_dict["shape"] = [(8,), (8, 8,), (8, 8, 8)]
         arg_dict["placement"] = [
             # 1d
@@ -74,10 +102,11 @@ class TestEmptyConsistent(flow.unittest.TestCase):
             flow.placement("cuda", ranks=[[0, 1],]),
         ]
         for args in GenArgDict(arg_dict):
+            func = args["func"]
             shape = args["shape"]
             placement = args["placement"]
             for sbp in all_sbp(placement, max_dim=len(shape), except_partial_sum=True):
-                _test_graph_empty(test_case, shape, placement, sbp)
+                _test_graph_empty(test_case, func, shape, placement, sbp)
 
 
 if __name__ == "__main__":

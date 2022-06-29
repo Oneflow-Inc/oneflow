@@ -107,12 +107,18 @@ class AutogradEngine {
 class GraphFunctionNode final : public FunctionNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GraphFunctionNode);
-  GraphFunctionNode(const std::string& name, const std::shared_ptr<BackwardFunction>& backward_fn,
-                    const TensorTuple& inputs, const TensorTuple& outputs);
+  static std::shared_ptr<GraphFunctionNode> New(
+      const std::string& name, const std::shared_ptr<BackwardFunction>& backward_fn,
+      const TensorTuple& inputs, const TensorTuple& outputs);
+
   GraphFunctionNode() = delete;
   ~GraphFunctionNode() override = default;
 
   void ReleaseData() override;
+
+ private:
+  GraphFunctionNode(const std::string& name, const std::shared_ptr<BackwardFunction>& backward_fn,
+                    const TensorTuple& inputs, const TensorTuple& outputs);
 };
 
 class GraphTask final {

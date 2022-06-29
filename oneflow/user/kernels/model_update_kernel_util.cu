@@ -737,4 +737,63 @@ template struct LarsUpdateKernelUtil<DeviceType::kCUDA, float, float>;
 template struct LarsUpdateKernelUtil<DeviceType::kCUDA, double, double>;
 template struct LarsUpdateKernelUtil<DeviceType::kCUDA, float, float16>;
 
+template<typename T, typename G>
+__global__ void FtrlUpdateGpu(int64_t n, T scale, float l1, float l2, float lr_power, float lambda1,
+                              float lambda2, float beta, float weight_decay,
+                              float learning_rate_val, const float* learning_rate,
+                              const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
+                              T* model, T* accumulate, T* z) {
+  if (skip_if != nullptr && *skip_if != 0) { return; }
+  if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
+  if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    FtrlUpdateFunctor<T, G>()(model_diff + i, model + i, accumulate + i, z + i, scale, l1, l2,
+                              lr_power, lambda1, lambda2, beta, weight_decay, learning_rate_val);
+  }
+}
+
+template<typename T, typename G>
+struct FtrlUpdateKernelUtil<DeviceType::kCUDA, T, G> {
+  static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float lr_power,
+                     float lambda1, float lambda2, float beta, float weight_decay,
+                     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
+                     const int64_t* skip_if, const G* model_diff, T* model, T* accumulate, T* z);
+};
+
+template<typename T, typename G>
+void FtrlUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
+    ep::Stream* stream, int64_t n, T scale, float l1, float l2, float lr_power, float lambda1,
+    float lambda2, float beta, float weight_decay, float learning_rate_val,
+    const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
+    T* model, T* accumulate, T* z) {
+  FtrlUpdateGpu<T, G><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                        stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      n, scale, l1, l2, lr_power, lambda1, lambda2, beta, weight_decay, learning_rate_val,
+      learning_rate, scale_by_ptr, skip_if, model_diff, model, accumulate, z);
+}
+
+template<typename T>
+struct FtrlUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
+  static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float lr_power,
+                     float lambda1, float lambda2, float beta, float weight_decay,
+                     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
+                     const int64_t* skip_if, const float16* model_diff, T* model, T* accumulate,
+                     T* z);
+};
+
+template<typename T>
+void FtrlUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
+    ep::Stream* stream, int64_t n, T scale, float l1, float l2, float lr_power, float lambda1,
+    float lambda2, float beta, float weight_decay, float learning_rate_val,
+    const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
+    const float16* model_diff, T* model, T* accumulate, T* z) {
+  FtrlUpdateKernelUtil<DeviceType::kCUDA, T, half>::Update(
+      stream, n, scale, l1, l2, lr_power, lambda1, lambda2, beta, weight_decay, learning_rate_val,
+      learning_rate, scale_by_ptr, skip_if, reinterpret_cast<const half*>(model_diff), model,
+      accumulate, z);
+}
+
+template struct FtrlUpdateKernelUtil<DeviceType::kCUDA, float, float>;
+template struct FtrlUpdateKernelUtil<DeviceType::kCUDA, double, double>;
+template struct FtrlUpdateKernelUtil<DeviceType::kCUDA, float, float16>;
 }  // namespace oneflow

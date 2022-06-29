@@ -24,7 +24,7 @@ from oneflow.nn.modules.utils import _quadruple
 class ReplicationPad2d(Module):
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.ReplicationPad2d.html?highlight=replicationpad2d#torch.nn.ReplicationPad2d
+    https://pytorch.org/docs/1.10/generated/torch.nn.ReplicationPad2d.html.
 
     Pads the input tensor using the replication of the input boundary.
 
@@ -87,7 +87,7 @@ class ReplicationPad2d(Module):
 class ReflectionPad2d(Module):
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.ReflectionPad2d.html
+    https://pytorch.org/docs/1.10/generated/torch.nn.ReflectionPad2d.html.
 
 
     This operator pads the input tensor using the reflection of the input boundary.
@@ -151,7 +151,7 @@ class ReflectionPad2d(Module):
 class ConstantPad1d(Module):
     """Pads the input tensor boundaries with a constant value.
     The interface is consistent with PyTorch, and referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.ConstantPad1d.html?highlight=constantpad1d#torch.nn.ConstantPad1d
+    https://pytorch.org/docs/1.10/generated/torch.nn.ConstantPad1d.html.
 
     For `N`-dimensional padding, use :func:`torch.nn.functional.pad()`.
 
@@ -205,7 +205,7 @@ class ConstantPad1d(Module):
 class ConstantPad2d(Module):
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.ConstantPad2d.html?highlight=constantpad2d#torch.nn.ConstantPad2d
+    https://pytorch.org/docs/1.10/generated/torch.nn.ConstantPad2d.html.
 
     This operator pads the input with constant value that user specifies.
     User can set the amount of padding by setting the parameter `paddings`.
@@ -270,7 +270,7 @@ class ConstantPad2d(Module):
 class ConstantPad3d(Module):
     """Pads the input tensor boundaries with a constant value.
     The interface is consistent with PyTorch, and referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.ConstantPad3d.html?highlight=constantpad3d#torch.nn.ConstantPad3d
+    https://pytorch.org/docs/1.10/generated/torch.nn.ConstantPad3d.html.
 
     For `N`-dimensional padding, use :func:`flow.nn.functional.pad()`.
 
@@ -341,7 +341,7 @@ class ConstantPad3d(Module):
 class ZeroPad2d(Module):
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.ZeroPad2d.html
+    https://pytorch.org/docs/1.10/generated/torch.nn.ZeroPad2d.html.
 
     Pads the input tensor boundaries with zero. User can set the amount of padding by setting the parameter `paddings`.
 

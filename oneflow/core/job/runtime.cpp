@@ -17,11 +17,13 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/job/runtime_job_descs.h"
+#include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/device/cuda_util.h"
@@ -57,15 +59,20 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 
 }  // namespace
 
-Runtime::Runtime(const Plan& plan, const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
+Runtime::Runtime(
+    const Plan& plan,
+    const HashMap<std::string, vm::EagerBlobObject*>& variable_op_name2eager_blob_object) {
   DumpThreadIdsFromPlan(plan);
   {
     // NOTE(chengcheng): All runtime Global objects AddPlan
-    Global<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob);
+    Global<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob_object);
     Global<ThreadMgr>::Get()->AddThreads(thread_ids_);
     Global<RuntimeJobDescs>::Get()->AddPlan(plan);
     collective_boxing_scheduler_plan_token_ =
         Global<boxing::collective::Scheduler>::Get()->AddPlan(plan);
+#ifdef WITH_CUDA
+    Global<EagerNcclCommMgr>::Get()->CreateCommFromPlan(plan);
+#endif  // WITH_CUDA
   }
   std::vector<const TaskProto*> source_tasks;
   source_tasks.reserve(plan.task().size());

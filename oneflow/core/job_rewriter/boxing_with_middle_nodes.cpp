@@ -15,9 +15,11 @@ limitations under the License.
 */
 #include "oneflow/core/job_rewriter/boxing_with_middle_nodes.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/auto_parallel/boxing_collector.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 
@@ -59,7 +61,13 @@ Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_build
         // move to the next ibn if no middle nodes needed
         if (middle_sbps.size() <= 0) { continue; }
         LogicalBlobId middle_node_lbi = lbi;
+        VLOG(3) << " Lbi " << lbi.op_name() << "/" << lbi.blob_name() << " src sbp "
+                << NdSbpToString(producer_nd_sbp);
+        VLOG(3) << " Lbi " << lbi.op_name() << "/" << lbi.blob_name() << " dst sbp "
+                << NdSbpToString(consumer_nd_sbp);
         for (int32_t middle_node_id = 0; middle_node_id < middle_sbps.size(); middle_node_id++) {
+          VLOG(3) << " Lbi " << lbi.op_name() << "/" << lbi.blob_name() << " add middle node "
+                  << NdSbpToString(JUST(VectorAt(middle_sbps, middle_node_id)));
           // Create the middle operators
           OperatorConf identity_op_conf{};
           identity_op_conf.set_name("System-Boxing-Middle-Identity-" + NewUniqueId());

@@ -23,7 +23,7 @@ add_docstr(
 
     The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.tile.html
+    https://pytorch.org/docs/1.10/generated/torch.tile.html.
 
     Constructs a tensor by repeating the elements of ``input``.  The ``dims`` argument specifies the number
     of repetitions in each dimension.

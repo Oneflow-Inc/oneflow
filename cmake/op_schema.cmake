@@ -81,6 +81,5 @@ set_source_files_properties(${GENERATED_OP_SCHEMA_H} ${GENERATED_OP_SCHEMA_CPP} 
                                                                                            TRUE)
 
 oneflow_add_library(of_op_schema OBJECT ${GENERATED_OP_SCHEMA_H} ${GENERATED_OP_SCHEMA_CPP})
-target_link_libraries(of_op_schema glog::glog)
-add_dependencies(of_op_schema of_cfgobj)
+target_link_libraries(of_op_schema LLVMSupportWithHeader glog::glog)
 add_dependencies(of_op_schema prepare_oneflow_third_party)

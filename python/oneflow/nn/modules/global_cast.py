@@ -18,75 +18,73 @@ from oneflow.framework.tensor import register_tensor_op, Tensor
 from oneflow.nn.module import Module
 
 
-class ToGlobal(Module):
-    def __init__(self, placement, sbp):
-        super().__init__()
-        self.placement = placement
-        if isinstance(sbp, flow.sbp.sbp):
-            sbp = [sbp]
-        for elem in sbp:
-            assert isinstance(
-                elem, flow.sbp.sbp
-            ), "element %s is not an sbp instance" % (sbp)
-        self.sbp = sbp
+def _check_sbp(sbp):
+    if sbp is None:
+        pass
+    elif isinstance(sbp, (tuple, list)):
+        if not all(isinstance(sbp_item, flow.sbp.sbp) for sbp_item in sbp):
+            raise TypeError(
+                "sbp parameter must be type of oneflow.sbp.sbp or list/tuple of oneflow.sbp.sbp"
+            )
+    elif isinstance(sbp, flow.sbp.sbp):
+        sbp = (sbp,)
+    else:
+        raise TypeError(f"Invalid parameter sbp with type {type(sbp)}")
 
-    def forward(self, x, sbp, placement):
-        return flow._C.to_global(x, placement=placement, sbp=sbp)
+    return sbp
 
 
-def to_global_op(input, placement=None, sbp=None, grad_sbp=None):
+def local_to_global_op(input, placement=None, sbp=None, *, check_meta=True):
     assert isinstance(input, Tensor)
+    assert input.is_local, "input must be a local tensor"
+    if placement is None or sbp is None:
+        raise ValueError(
+            "Converting a local tensor to global tensor must have placement and sbp parameters."
+        )
 
-    def _check_sbp(sbp):
-        if sbp is None:
-            pass
-        elif isinstance(sbp, (tuple, list)):
-            if not all(isinstance(sbp_item, flow.sbp.sbp) for sbp_item in sbp):
-                raise TypeError(
-                    "sbp parameter must be type of oneflow.sbp.sbp or list/tuple of oneflow.sbp.sbp"
-                )
-        elif isinstance(sbp, flow.sbp.sbp):
-            sbp = (sbp,)
-        else:
-            raise TypeError(f"Invalid parameter sbp with type {type(sbp)}")
-
-        return sbp
+    assert isinstance(
+        placement, flow.placement
+    ), f"Invalid parameter placement with type {type(placement)}"
 
     sbp = _check_sbp(sbp)
+    grad_sbp = tuple()
+    return flow._C.to_global(input, placement, sbp, grad_sbp, check_meta)
 
-    if input.is_global:
-        # convert global tensor to another global tensor with different placement or sbp
-        if placement is None:
-            placement = input.placement
 
-        if sbp is None:
-            sbp = input.sbp
+def global_to_global_op(
+    input, placement=None, sbp=None, *, grad_sbp=None, check_meta=False
+):
+    assert isinstance(input, Tensor)
+    assert input.is_global, "input must be a global tensor"
 
-        grad_sbp = _check_sbp(grad_sbp)
+    sbp = _check_sbp(sbp)
+    if placement is None:
+        placement = input.placement
 
-    else:
-        # local tensor to global tensor
-        if placement is None or sbp is None:
-            raise ValueError(
-                "Converting a local tensor to global tensor must have placement and sbp parameters."
-            )
+    if sbp is None:
+        sbp = input.sbp
 
-        if not isinstance(placement, flow.placement):
-            raise ValueError(f"Invalid parameter placement with type {type(placement)}")
+    assert isinstance(
+        placement, flow.placement
+    ), f"Invalid parameter placement with type {type(placement)}"
 
+    grad_sbp = _check_sbp(grad_sbp)
     if grad_sbp is None:
         grad_sbp = tuple()
-    return flow._C.to_global(input, placement, sbp, grad_sbp)
+    return flow._C.to_global(input, placement, sbp, grad_sbp, check_meta)
 
 
-class ToLocal(Module):
-    def __init__(self):
-        super().__init__()
+def to_global_op(input, placement=None, sbp=None, **kwargs):
+    assert isinstance(input, Tensor)
 
-    def forward(self, x):
-        return flow._C.to_local(x)
+    if input.is_global:
+        return global_to_global_op(input=input, placement=placement, sbp=sbp, **kwargs)
+    else:
+        if "grad_sbp" in kwargs:
+            del kwargs["grad_sbp"]
+        return local_to_global_op(input=input, placement=placement, sbp=sbp, **kwargs)
 
 
 def to_local_op(input):
-    assert input.is_global, "input must be a global tensor!"
+    assert input.is_global, "Expected global tensor for to_local but got local tensor!"
     return flow._C.to_local(input)

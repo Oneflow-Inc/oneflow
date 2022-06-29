@@ -87,13 +87,15 @@ Kernel* CreateKernel(const KernelConf& kernel_conf);
 
 #define REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, device, dtype, ...)                        \
   NEW_REGISTER_KERNEL(op_type, __VA_ARGS__).SetIsMatchedPred([](const KernelConf& conf) -> bool { \
-    return (ToString(device) == conf.op_attribute().op_conf().device_tag())                       \
+    return (*CHECK_JUST(DeviceTag4DeviceType(device))                                             \
+            == conf.op_attribute().op_conf().device_tag())                                        \
            && (GetDataType<dtype>::value == conf.data_type());                                    \
   });
 
 #define REGISTER_KERNEL_WITH_DEVICE(op_type, device, ...)                                         \
   NEW_REGISTER_KERNEL(op_type, __VA_ARGS__).SetIsMatchedPred([](const KernelConf& conf) -> bool { \
-    return (ToString(device) == conf.op_attribute().op_conf().device_tag());                      \
+    return (*CHECK_JUST(DeviceTag4DeviceType(device))                                             \
+            == conf.op_attribute().op_conf().device_tag());                                       \
   });
 
 #define REGISTER_KERNEL_HELPER_CPU_FLOATING(op_type, kernel)               \

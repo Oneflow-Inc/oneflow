@@ -40,14 +40,26 @@ py::object AddFunctionDoc(py::object f, const std::string& doc_string) {
       THROW(RuntimeError) << "function "
                           << PyBytes_AsString(
                                  PyUnicode_AsEncodedString(f->func_name, "utf-8", "~E~"))
-                          << " already has a docstring.";
+                          << " already has a docstring";
     }
     f->func_doc = PyUnicode_FromString(doc_str);
+  } else if (strcmp(Py_TYPE(obj)->tp_name, "method_descriptor") == 0) {
+    PyMethodDescrObject* f = (PyMethodDescrObject*)obj;
+    if (f->d_method->ml_doc) {
+      THROW(RuntimeError) << "function " << f->d_method->ml_name << "already has a docstring";
+    }
+    f->d_method->ml_doc = doc_str;
+  } else if (strcmp(Py_TYPE(obj)->tp_name, "getset_descriptor") == 0) {
+    PyMethodDescrObject* f = (PyMethodDescrObject*)obj;
+    if (f->d_method->ml_doc) {
+      THROW(RuntimeError) << "function " << f->d_method->ml_name << "already has a docstring";
+    }
+    f->d_method->ml_doc = doc_str;
   } else if (py::isinstance<py::detail::generic_type>(f)) {
     if (py::hasattr(f, "__doc__")) {
       auto doc = py::getattr(f, "__doc__");
       if (!doc.is(py::none())) {
-        THROW(RuntimeError) << Py_TYPE(obj)->tp_name << " already has a docstring.";
+        THROW(RuntimeError) << Py_TYPE(obj)->tp_name << " already has a docstring";
       }
     }
     py::setattr(f, "__doc__", py::reinterpret_steal<py::object>(PyUnicode_FromString(doc_str)));
@@ -57,7 +69,7 @@ py::object AddFunctionDoc(py::object f, const std::string& doc_string) {
     auto* f = (PyCFunctionObject*)(PyInstanceMethod_Function(obj));
     f->m_ml->ml_doc = doc_str;
   } else {
-    THROW(RuntimeError) << "function is " << Py_TYPE(obj)->tp_name << ", not a valid function.";
+    THROW(RuntimeError) << "function is " << Py_TYPE(obj)->tp_name << ", not a valid function";
   }
   f.inc_ref();
   return f;

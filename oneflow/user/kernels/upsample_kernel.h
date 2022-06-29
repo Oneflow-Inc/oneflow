@@ -16,45 +16,43 @@ limitations under the License.
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include <math.h>
 
-template<typename T>
-OF_DEVICE_FUNC T GetLinearInputIndex(const int64_t out_dim_idx, const T scale, bool align_corners) {
+OF_DEVICE_FUNC double GetLinearInputIndex(const int64_t out_dim_idx, const double scale,
+                                          bool align_corners) {
   if (align_corners) {
-    return static_cast<T>(scale * out_dim_idx);
+    return static_cast<double>(scale * out_dim_idx);
   } else {
-    T src_idx = scale * (out_dim_idx + 0.5) - 0.5;
-    return static_cast<T>(src_idx < 0 ? 0 : src_idx);
+    double src_idx = scale * (out_dim_idx + 0.5) - 0.5;
+    return static_cast<double>(src_idx < 0 ? 0 : src_idx);
   }
 }
 
-OF_DEVICE_FUNC static int64_t GetNearestInputIndex(const int64_t out_dim_idx, const float scale,
+OF_DEVICE_FUNC static int64_t GetNearestInputIndex(const int64_t out_dim_idx, const double scale,
                                                    const int64_t in_dim_size) {
   int64_t index = static_cast<int64_t>(floorf(out_dim_idx * scale));
   index = index > in_dim_size - 1 ? in_dim_size - 1 : index;
   return index;
 }
 
-template<typename T>
-OF_DEVICE_FUNC T GetAreaPixelScale(const int64_t input_size, const int64_t output_size,
-                                   bool align_corners, const T scale) {
+OF_DEVICE_FUNC double GetAreaPixelScale(const int64_t input_size, const int64_t output_size,
+                                        bool align_corners, const double scale) {
   if (align_corners) {
     if (output_size > 1) {
-      return static_cast<T>(input_size - 1) / (output_size - 1);
+      return static_cast<double>(input_size - 1) / (output_size - 1);
     } else {
       return 0;
     }
   } else {
-    return (scale > 0. ? 1.0 / scale : static_cast<T>(input_size) / output_size);
+    return (scale > 0. ? 1.0 / scale : static_cast<double>(input_size) / output_size);
   }
 }
 
-template<typename T>
-OF_DEVICE_FUNC T GetAreaPixel(const T scale, const int64_t dst_index, bool align_corners,
-                              bool cubic = false) {
+OF_DEVICE_FUNC double GetAreaPixel(const double scale, const int64_t dst_index, bool align_corners,
+                                   bool cubic = false) {
   if (align_corners) {
     return scale * dst_index;
   } else {
-    T src_idx = scale * (dst_index + 0.5) - 0.5;
-    return (!cubic && src_idx < 0) ? static_cast<T>(0) : src_idx;
+    double src_idx = scale * (dst_index + 0.5) - 0.5;
+    return (!cubic && src_idx < 0) ? static_cast<double>(0) : src_idx;
   }
 }
 
@@ -71,7 +69,8 @@ struct BilinearParam {
 template<typename T>
 OF_DEVICE_FUNC void GetBilinearParam(const bool align_corners, const int64_t h, const int64_t w,
                                      const int64_t in_height, const int64_t in_width,
-                                     const T scale_h, const T scale_w, BilinearParam<T>* params) {
+                                     const double scale_h, const double scale_w,
+                                     BilinearParam<T>* params) {
   T h1r;
   if (align_corners) {
     h1r = scale_h * static_cast<T>(h);

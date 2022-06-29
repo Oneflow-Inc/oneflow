@@ -55,9 +55,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetWorldSize", &GetWorldSize);
   m.def("GetNodeSize", &GetNodeSize);
   m.def("GetLocalRank", &GetLocalRank);
+  m.def("InitRDMA", &InitRDMA);
+  m.def("RDMAIsInitialized", &RDMAIsInitialized);
   m.def("CudaGetDeviceCount", &CudaGetDeviceCount);
 #ifdef WITH_CUDA
   m.def("GetCudaDeviceIndex", &GetCudaDeviceIndex);
+  m.def("SetCudaDeviceIndex", &SetCudaDeviceIndex);
+  m.def("CudaSynchronize", &CudaSynchronize);
 #endif  // WITH_CUDA
   m.def("SetFLAGS_alsologtostderr", &SetFLAGS_alsologtostderr);
   m.def("GetFLAGS_alsologtostderr", &GetFLAGS_alsologtostderr);
@@ -65,6 +69,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetFLAGS_v", &GetFLAGS_v);
   m.def("SetGraphLRVerbose", &SetGraphLRVerbose);
   m.def("GetGraphLRVerbose", &GetGraphLRVerbose);
+  m.def("SetGraphDebugMaxPyStackDepth", &SetGraphDebugMaxPyStackDepth);
+  m.def("GetGraphDebugMaxPyStackDepth", &GetGraphDebugMaxPyStackDepth);
+  m.def("SetGraphDebugMode", &SetGraphDebugMode);
+  m.def("GetGraphDebugMode", &GetGraphDebugMode);
 }
 
 }  // namespace oneflow

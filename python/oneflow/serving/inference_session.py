@@ -24,11 +24,6 @@ import numpy as np
 
 import oneflow as flow
 import oneflow._oneflow_internal
-import oneflow._oneflow_internal.oneflow.core.common.data_type as dtype_proto_cfg
-import oneflow._oneflow_internal.oneflow.core.common.shape as shape_proto_cfg
-import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_proto_cfg
-import oneflow._oneflow_internal.oneflow.core.job.sbp_parallel as sbp_parallel_cfg
-import oneflow._oneflow_internal.oneflow.core.operator.interface_blob_conf as interface_blob_conf_proto_cfg
 import oneflow.core.job.job_conf_pb2 as job_conf_proto
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.core.operator.interface_blob_conf_pb2 as interface_blob_conf_proto
@@ -63,52 +58,6 @@ def _need_check_device_tag(op_conf):
     if op_conf.HasField("return_conf"):
         return False
     return op_conf.HasField("device_tag")
-
-
-def _signature_proto_to_cfg(signature_proto, mut_signature_cfg):
-    assert isinstance(signature_proto, job_conf_proto.JobSignatureDef)
-    assert isinstance(mut_signature_cfg, job_conf_proto_cfg.JobSignatureDef)
-    for (input_name, input_def) in signature_proto.inputs.items():
-        input_def_cfg = job_conf_proto_cfg.JobInputDef()
-        input_def_cfg.mutable_lbi().set_op_name(input_def.lbi.op_name)
-        input_def_cfg.mutable_lbi().set_blob_name(input_def.lbi.blob_name)
-        _inferface_blob_conf_proto_to_cfg(
-            input_def.blob_conf, input_def_cfg.mutable_blob_conf()
-        )
-        mut_signature_cfg.mutable_inputs()[input_name].CopyFrom(input_def_cfg)
-    for (output_name, output_def) in signature_proto.outputs.items():
-        output_def_cfg = job_conf_proto_cfg.JobOutputDef()
-        output_def_cfg.mutable_lbi().set_op_name(output_def.lbi.op_name)
-        output_def_cfg.mutable_lbi().set_blob_name(output_def.lbi.blob_name)
-        mut_signature_cfg.mutable_outputs()[output_name].CopyFrom(output_def_cfg)
-
-
-def _inferface_blob_conf_proto_to_cfg(
-    inferface_blob_conf_proto, mut_inferface_blob_conf_cfg
-):
-    assert isinstance(
-        inferface_blob_conf_proto, interface_blob_conf_proto.InterfaceBlobConf
-    )
-    assert isinstance(
-        mut_inferface_blob_conf_cfg, interface_blob_conf_proto_cfg.InterfaceBlobConf
-    )
-    shape = shape_proto_cfg.ShapeProto()
-    for dim in inferface_blob_conf_proto.shape.dim:
-        shape.add_dim(dim)
-    mut_inferface_blob_conf_cfg.mutable_shape().CopyFrom(shape)
-    dtype = dtype_proto_cfg.DataType(int(inferface_blob_conf_proto.data_type))
-    mut_inferface_blob_conf_cfg.set_data_type(dtype)
-    if inferface_blob_conf_proto.HasField("nd_sbp"):
-        assert len(inferface_blob_conf_proto.nd_sbp.sbp_parallel) == 1
-        sbp_proto = inferface_blob_conf_proto.nd_sbp.sbp_parallel[0]
-        if sbp_proto.HasField("split_parallel"):
-            split_axis = sbp_proto.split_parallel.axis
-            sbp = sbp_parallel_cfg.SbpParallel()
-            sbp.mutable_split_parallel().set_axis(split_axis)
-            mut_inferface_blob_conf_cfg.mutable_nd_sbp().mutable_sbp_parallel().Add().CopyFrom(
-                sbp
-            )
-    mut_inferface_blob_conf_cfg.set_is_dynamic(inferface_blob_conf_proto.is_dynamic)
 
 
 class ModelVersionPolicy(enum.Enum):
@@ -217,22 +166,22 @@ class InferenceSession(object):
     def set_job_signature(self, job_name, signature):
         assert isinstance(signature, job_conf_proto.JobSignatureDef)
         job_conf = self._get_job_conf(job_name)
-        _signature_proto_to_cfg(signature, job_conf.mutable_signature())
+        job_conf.signature.CopyFrom(signature)
 
     def set_job_batch_size(self, job_name, batch_size):
         self._check_status(self.SessionStatus.OPEN)
         job_conf = self._get_job_conf(job_name)
-        for (_, mut_input_def) in job_conf.mutable_signature().mutable_inputs().items():
-            mut_shape = mut_input_def.mutable_blob_conf().mutable_shape()
-            mut_shape.mutable_dim()[0] = batch_size
+        for (_, mut_input_def) in job_conf.signature.inputs.items():
+            mut_shape = mut_input_def.blob_conf.shape
+            mut_shape.dim[0] = batch_size
 
     def _get_job_conf(self, job_name):
         if job_name in self.job_name2job_conf_:
             return self.job_name2job_conf_[job_name]
         else:
-            job_conf = job_conf_proto_cfg.JobConfigProto()
-            job_conf.set_job_name(job_name)
-            job_conf.mutable_predict_conf()
+            job_conf = job_conf_proto.JobConfigProto()
+            job_conf.job_name = job_name
+            job_conf.predict_conf.SetInParent()
             self.job_name2job_conf_[job_name] = job_conf
             return job_conf
 
@@ -250,8 +199,10 @@ class InferenceSession(object):
         # tag_and_dev_ids = placement_util.GetDefaultMachineDeviceIds(
         #     self.config_proto_.resource
         # )
-        scope = scope_util.MakeInitialScope(
-            job_conf, "cpu", ["0:0"], None, self.is_mirrored_
+        assert type(job_conf) is job_conf_proto.JobConfigProto, type(job_conf)
+        serialized_job_conf_str = text_format.MessageToString(job_conf)
+        scope = oneflow._oneflow_internal.MakeInitialScope(
+            serialized_job_conf_str, flow.placement("cpu", [0]), self.is_mirrored_
         )
         with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):
             with scope_util.ScopeContext(scope):
