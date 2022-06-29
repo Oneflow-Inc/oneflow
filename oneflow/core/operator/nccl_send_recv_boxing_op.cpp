@@ -113,7 +113,7 @@ Maybe<void> NcclSendRecvBoxingOp::InferOutBlobDescs(
     const NdSbp& src_nd_sbp = conf.src_nd_sbp();
     const ParallelDesc& src_parallel_desc = ParallelDesc(conf.src_parallel_conf());
     std::shared_ptr<Shape> in_shape =
-        JUST(GetPhysicalShape(logical_shape, src_nd_sbp, src_parallel_desc, 0));
+        JUST(GetPhysicalShape(logical_shape, src_nd_sbp, src_parallel_desc, parallel_ctx->parallel_id()));
     CHECK_EQ_OR_RETURN(*in_shape, in_blob_desc->shape());
   }
   if (conf.has_output()) {
@@ -121,7 +121,7 @@ Maybe<void> NcclSendRecvBoxingOp::InferOutBlobDescs(
     const NdSbp& dst_nd_sbp = conf.dst_nd_sbp();
     const ParallelDesc& dst_parallel_desc = ParallelDesc(conf.dst_parallel_conf());
     std::shared_ptr<Shape> out_shape =
-        JUST(GetPhysicalShape(logical_shape, dst_nd_sbp, dst_parallel_desc, 0));
+        JUST(GetPhysicalShape(logical_shape, dst_nd_sbp, dst_parallel_desc, parallel_ctx->parallel_id()));
     out_blob_desc->mut_shape() = *out_shape;
     out_blob_desc->set_data_type(conf.data_type());
   }
