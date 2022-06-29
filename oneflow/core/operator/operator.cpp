@@ -1308,7 +1308,7 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
   }
   if (op_parallel_desc_ && bn2parallel_desc_) {
     if (op_conf().scope_symbol_id() != 0) {
-      const auto& scope_storage = *Global<symbol::Storage<Scope>>::Get();
+      const auto& scope_storage = *Singleton<symbol::Storage<Scope>>::Get();
       const auto& scope = JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
       int64_t parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(op_conf()));
       auto* parallel_signature = op_attribute->mutable_parallel_signature();

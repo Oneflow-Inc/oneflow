@@ -35,7 +35,7 @@ class ForeignInputKernel final : public Kernel {
 void ForeignInputKernel::ForwardDataContent(KernelContext* ctx) const {
   const auto& buffer_name = op_conf().foreign_input_conf().ofblob_buffer_name();
   std::shared_ptr<JobInstance> foreign_job_instance;
-  BufferStatus buffer_status = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get()
+  BufferStatus buffer_status = Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::Get()
                                    ->Get(buffer_name)
                                    ->TryReceive(&foreign_job_instance);
   CHECK_NE(buffer_status, kBufferStatusEmpty);
