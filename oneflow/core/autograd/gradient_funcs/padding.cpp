@@ -29,15 +29,15 @@ class Pad2d : public OpExprGradFunction<Pad2dCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(Pad2dCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = JUST(VectorAt(inputs, 0))->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -54,7 +54,7 @@ class ReflectionPad2d : public Pad2d {
  public:
   Maybe<void> Apply(const Pad2dCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(1);
     if (ctx->requires_grad) {
       (*in_grads)[0] =
@@ -68,7 +68,7 @@ class ReplicationPad2d : public Pad2d {
  public:
   Maybe<void> Apply(const Pad2dCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(1);
     if (ctx->requires_grad) {
       (*in_grads)[0] =
@@ -87,15 +87,15 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(ConstantPadNdCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     const std::shared_ptr<Tensor>& input_0 = JUST(VectorAt(inputs, 0));
     ctx->requires_grad = input_0->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -107,7 +107,7 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
   }
   Maybe<void> Apply(const ConstantPadNdCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(1);
     if (ctx->requires_grad) {
       (*in_grads)[0] =
