@@ -90,6 +90,7 @@ def api_machine_num(val: int) -> None:
     _set_resource_attr(attrs, val, type_)
 
 
+
 def api_gpu_device_num(val: int) -> None:
     """Set number of GPUs on each machine to run oneflow on.
 
@@ -98,16 +99,9 @@ def api_gpu_device_num(val: int) -> None:
         you can't specify different number of GPUs you would like to use on each machine.
     """
 
-    attrs, type_ = api_attrs_and_type[api_gpu_device_num]
-
-    if oneflow._oneflow_internal.flags.with_cuda():
-        _set_resource_attr(attrs, val, type_)
-    else:
-        print(
-            "INFO: for CPU-only OneFlow, oneflow.config.gpu_device_num is equivalent to oneflow.config.cpu_device_num"
-        )
-        print(traceback.format_stack()[-2])
-        _set_resource_attr(attrs, val, type_)
+    print(
+        "'gpu_device_num' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 def api_cpu_device_num(val: int) -> None:
@@ -427,7 +421,6 @@ def api_nccl_enable_mixed_fusion(val: bool) -> None:
 
 api_attrs_and_type = {
     api_machine_num: ("machine_num", int),
-    api_cpu_device_num: ("cpu_device_num", int),
     api_comm_net_worker_num: ("comm_net_worker_num", int),
     api_max_mdsave_worker_num: ("max_mdsave_worker_num", int),
     api_compute_thread_pool_size: ("compute_thread_pool_size", int),
