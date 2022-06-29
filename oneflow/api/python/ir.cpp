@@ -68,7 +68,8 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
   m.def("compile_and_register_lr_jit",
         [](const pybind11::object& ast, const std::string& function_id) {
           Singleton<LR_JIT>::New();
-          Singleton<LR_JIT>::Get()->Register(function_id, PyASTNode(ast));
+          auto _py_ast_node = std::make_shared<PyASTNode>(ast);
+          Singleton<LR_JIT>::Get()->Register(function_id, PyASTNodeWrapper(_py_ast_node));
           auto engine = Singleton<LR_JIT>::Get()->LookUp(function_id);
           auto lr = Singleton<LR_JIT>::Get()->Invoke(engine, 1, 2);
           std::cout << lr << std::endl;
