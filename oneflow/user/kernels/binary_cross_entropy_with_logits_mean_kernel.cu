@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/framework.h"
+#include "oneflow/user/kernels/binary_cross_entropy_with_logits_mean_kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include <cub/cub.cuh>
@@ -65,13 +65,14 @@ inline cudaError_t GetNumBlocks(Func func, int64_t block_size, size_t dynamic_sm
 template<typename In, typename Out, typename ComputeType>
 __global__ void FusedBinaryCrossEntropyWithLogitsReduceMeanKernel(const In* input, const In* target,
                                                                   Out* out,
-                                                                  const int32_t elem_cnt) {
+                                                                  const int32_t local_elem_cnt,
+                                                                  const int32_t reduce_elem_cnt) {
   ComputeType zero = static_cast<ComputeType>(0.0);
   ComputeType one = static_cast<ComputeType>(1.0);
   using BlockReduce = cub::BlockReduce<ComputeType, kBlockSize>;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   ComputeType reduce_sum = 0.0;
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+  CUDA_1D_KERNEL_LOOP(i, local_elem_cnt) {
     const ComputeType input_val = static_cast<ComputeType>(input[i]);
     const ComputeType target_val = static_cast<ComputeType>(target[i]);
     const ComputeType max_val = -input_val < zero ? zero : -input_val;
@@ -81,7 +82,7 @@ __global__ void FusedBinaryCrossEntropyWithLogitsReduceMeanKernel(const In* inpu
   }
 
   const ComputeType block_reduce_sum = BlockReduce(temp_storage).Sum(reduce_sum);
-  if (threadIdx.x == 0) { out[blockIdx.x] = static_cast<Out>(block_reduce_sum / elem_cnt); }
+  if (threadIdx.x == 0) { out[blockIdx.x] = static_cast<Out>(block_reduce_sum / reduce_elem_cnt); }
 }
 
 template<typename Out, typename ComputeType>
@@ -130,26 +131,6 @@ struct BinaryCrossEntropyWithLogitsReduceMeanGradDyptrFunctor {
   const T elem_cnt_reciprocal;
 };
 
-class BCEWithLogitsReduceMeanKernelCache final : public user_op::OpKernelCache {
- public:
-  BCEWithLogitsReduceMeanKernelCache(int64_t logical_elem_cnt)
-      : logical_elem_cnt_(logical_elem_cnt) {}
-  ~BCEWithLogitsReduceMeanKernelCache() override = default;
-
-  int64_t logical_elem_cnt() const { return logical_elem_cnt_; }
-
- private:
-  const int64_t logical_elem_cnt_;
-};
-
-std::shared_ptr<user_op::OpKernelCache> CreateBCEWithLogitsReduceMeanKernelCache(
-    user_op::KernelCacheContext* ctx) {
-  if (ctx->parallel_ctx().parallel_num() == 1) { return nullptr; }
-  const int64_t logical_elem_cnt =
-      ctx->LogicalTensorDesc4ArgNameAndIndex("input", 0)->shape().elem_cnt();
-  return std::make_shared<BCEWithLogitsReduceMeanKernelCache>(logical_elem_cnt);
-}
-
 template<typename T>
 class BinaryCrossEntropyWithLogitsMeanKernel final : public user_op::OpKernel,
                                                      public CudaGraphSupport {
@@ -157,6 +138,11 @@ class BinaryCrossEntropyWithLogitsMeanKernel final : public user_op::OpKernel,
   BinaryCrossEntropyWithLogitsMeanKernel() = default;
   ~BinaryCrossEntropyWithLogitsMeanKernel() override = default;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateBCEWithLogitsReduceMeanKernelCache(ctx);
+  }
 
  private:
   using user_op::OpKernel::Compute;
@@ -166,13 +152,14 @@ class BinaryCrossEntropyWithLogitsMeanKernel final : public user_op::OpKernel,
     const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
     auto* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    int64_t elem_cnt = input_blob->shape_view().elem_cnt();
+    int64_t local_elem_cnt = input_blob->shape_view().elem_cnt();
+    int64_t reduce_elem_cnt = local_elem_cnt;
 
-    if (cache) {
-      // Because `out`'s SBP maybe P or B, we need to use logical_elem_cnt as reduce_mean factor.
+    if (cache != nullptr) {
+      // Because `out`'s SBP maybe P or B, we need to use reduce_elem_cnt as reduce_mean factor.
       const auto* bce_cache = dynamic_cast<const BCEWithLogitsReduceMeanKernelCache*>(cache);
       CHECK_NOTNULL(bce_cache);
-      elem_cnt = bce_cache->logical_elem_cnt();
+      reduce_elem_cnt = bce_cache->reduce_elem_cnt();
     }
 
     const T* input = input_blob->dptr<T>();
@@ -180,15 +167,15 @@ class BinaryCrossEntropyWithLogitsMeanKernel final : public user_op::OpKernel,
     T* out = out_blob->mut_dptr<T>();
     using ComputeType = typename DefaultComputeType<T>::type;
 
-    if (elem_cnt <= kSingleBlockProcessNumThreshold) {
+    if (local_elem_cnt <= kSingleBlockProcessNumThreshold) {
       FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<T, T, ComputeType>
           <<<1, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
               input_blob->dptr<T>(), target_blob->dptr<T>(), out_blob->mut_dptr<T>(),
-              input_blob->shape_view().elem_cnt());
+              local_elem_cnt, reduce_elem_cnt);
     } else {
       auto* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
       const int64_t tmp_buffer_elem_cnt = tmp_buffer->shape_view().elem_cnt() / sizeof(T);
-      const int64_t block_num = (elem_cnt + kBlockSize - 1) / kBlockSize;
+      const int64_t block_num = (local_elem_cnt + kBlockSize - 1) / kBlockSize;
       int launch_block = block_num;
       OF_CUDA_CHECK(GetNumBlocks(
           FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<T, ComputeType, ComputeType>,
@@ -197,7 +184,7 @@ class BinaryCrossEntropyWithLogitsMeanKernel final : public user_op::OpKernel,
       FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<T, ComputeType, ComputeType>
           <<<launch_block, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
               input_blob->dptr<T>(), target_blob->dptr<T>(), tmp_buffer->mut_dptr<ComputeType>(),
-              input_blob->shape_view().elem_cnt());
+              local_elem_cnt, reduce_elem_cnt);
       ReduceLocalSumKernel<T, ComputeType>
           <<<1, kReduceLocalSumBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
               tmp_buffer->mut_dptr<ComputeType>(), out_blob->mut_dptr<T>(), block_num);
@@ -210,16 +197,31 @@ class BinaryCrossEntropyWithLogitsReduceMeanGradKernel final : public user_op::O
  public:
   BinaryCrossEntropyWithLogitsReduceMeanGradKernel() = default;
   ~BinaryCrossEntropyWithLogitsReduceMeanGradKernel() = default;
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateBCEWithLogitsReduceMeanKernelCache(ctx);
+  }
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache* cache) const override {
     const auto* input_blob = ctx->Tensor4ArgNameAndIndex("input", 0);
     const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
     const auto* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     auto* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    const int64_t elem_cnt = input_blob->shape_view().elem_cnt();
+    int64_t local_elem_cnt = input_blob->shape_view().elem_cnt();
+    int64_t reduce_elem_cnt = local_elem_cnt;
+    if (cache != nullptr) {
+      // Because `out`'s SBP maybe P or B, we need to use reduce_elem_cnt as reduce_mean factor.
+      const auto* bce_cache = dynamic_cast<const BCEWithLogitsReduceMeanKernelCache*>(cache);
+      CHECK_NOTNULL(bce_cache);
+      reduce_elem_cnt = bce_cache->reduce_elem_cnt();
+    }
+
     const T* dy = dy_blob->dptr<T>();
     const T* input = input_blob->dptr<T>();
     const T* target = target_blob->dptr<T>();
@@ -227,10 +229,9 @@ class BinaryCrossEntropyWithLogitsReduceMeanGradKernel final : public user_op::O
     using ComputeType = typename DefaultComputeType<T>::type;
 
     OF_CUDA_CHECK((cuda::elementwise::BinaryWithFactory(
-        BinaryCrossEntropyWithLogitsReduceMeanGradDyptrFunctor<T, ComputeType>(elem_cnt, dy),
-        elem_cnt, dx, input, target, ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
+        BinaryCrossEntropyWithLogitsReduceMeanGradDyptrFunctor<T, ComputeType>(reduce_elem_cnt, dy),
+        local_elem_cnt, dx, input, target, ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
   }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 }  // namespace

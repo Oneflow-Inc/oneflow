@@ -13,9 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/framework.h"
+#include "oneflow/user/kernels/binary_cross_entropy_with_logits_mean_kernel_util.h"
 #include "oneflow/user/kernels/loss_kernel_util.h"
-
 namespace oneflow {
 namespace user_op {
 namespace {
@@ -36,7 +35,8 @@ inline T CalSigmoid(const T x) {
 
 template<typename T>
 void ComputeBinaryCrossEntropyWithLogitsReduceMeanOut(int64_t elem_cnt, const T* input,
-                                                      const T* target, T* out) {
+                                                      const T* target, T* out,
+                                                      int64_t reduce_elem_cnt) {
   T result = 0.0;
   FOR_RANGE(int64_t, i, 0, elem_cnt) {
     T input_val = input[i];
@@ -47,13 +47,14 @@ void ComputeBinaryCrossEntropyWithLogitsReduceMeanOut(int64_t elem_cnt, const T*
                 + (std::log(std::exp(-max_val) + std::exp(-input_val - max_val)));
     }
   }
-  out[0] = result / elem_cnt;
+  out[0] = result / reduce_elem_cnt;
 }
 
 template<typename T>
 void ComputeBinaryCrossEntropyWithLogitsReduceMeanGradOut(int64_t elem_cnt, const T* input,
-                                                          const T* target, const T* dy, T* dx) {
-  T dy_val = dy[0] / elem_cnt;
+                                                          const T* target, const T* dy, T* dx,
+                                                          int64_t reduce_elem_cnt) {
+  T dy_val = dy[0] / reduce_elem_cnt;
   FOR_RANGE(int64_t, i, 0, elem_cnt) {
     T input_val = input[i];
     T target_val = target[i];
@@ -67,23 +68,37 @@ class BinaryCrossEntropyWithLogitsReduceMeanKernel final : public user_op::OpKer
  public:
   BinaryCrossEntropyWithLogitsReduceMeanKernel() = default;
   ~BinaryCrossEntropyWithLogitsReduceMeanKernel() = default;
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateBCEWithLogitsReduceMeanKernelCache(ctx);
+  }
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache* cache) const override {
     const auto* input_blob = ctx->Tensor4ArgNameAndIndex("input", 0);
     const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
     auto* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    const int64_t elem_cnt = input_blob->shape_view().elem_cnt();
+    int64_t local_elem_cnt = input_blob->shape_view().elem_cnt();
+    int64_t reduce_elem_cnt = local_elem_cnt;
+    if (cache != nullptr) {
+      // Because `out`'s SBP maybe P or B, we need to use reduce_elem_cnt as reduce_mean factor.
+      const auto* bce_cache = dynamic_cast<const BCEWithLogitsReduceMeanKernelCache*>(cache);
+      CHECK_NOTNULL(bce_cache);
+      reduce_elem_cnt = bce_cache->reduce_elem_cnt();
+    }
 
     const T* input = input_blob->dptr<T>();
     const T* target = target_blob->dptr<T>();
     T* out = out_blob->mut_dptr<T>();
 
-    ComputeBinaryCrossEntropyWithLogitsReduceMeanOut(elem_cnt, input, target, out);
+    ComputeBinaryCrossEntropyWithLogitsReduceMeanOut(local_elem_cnt, input, target, out,
+                                                     reduce_elem_cnt);
   }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<typename T>
@@ -91,24 +106,38 @@ class BinaryCrossEntropyWithLogitsReduceMeanGradKernel final : public user_op::O
  public:
   BinaryCrossEntropyWithLogitsReduceMeanGradKernel() = default;
   ~BinaryCrossEntropyWithLogitsReduceMeanGradKernel() = default;
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateBCEWithLogitsReduceMeanKernelCache(ctx);
+  }
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache* cache) const override {
     const auto* input_blob = ctx->Tensor4ArgNameAndIndex("input", 0);
     const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
     const auto* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     auto* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    const int64_t elem_cnt = input_blob->shape_view().elem_cnt();
+    int64_t local_elem_cnt = input_blob->shape_view().elem_cnt();
+    int64_t reduce_elem_cnt = local_elem_cnt;
+    if (cache != nullptr) {
+      // Because `out`'s SBP maybe P or B, we need to use reduce_elem_cnt as reduce_mean factor.
+      const auto* bce_cache = dynamic_cast<const BCEWithLogitsReduceMeanKernelCache*>(cache);
+      CHECK_NOTNULL(bce_cache);
+      reduce_elem_cnt = bce_cache->reduce_elem_cnt();
+    }
 
     const T* dy = dy_blob->dptr<T>();
     const T* input = input_blob->dptr<T>();
     const T* target = target_blob->dptr<T>();
     T* dx = dx_blob->mut_dptr<T>();
-    ComputeBinaryCrossEntropyWithLogitsReduceMeanGradOut(elem_cnt, input, target, dy, dx);
+    ComputeBinaryCrossEntropyWithLogitsReduceMeanGradOut(local_elem_cnt, input, target, dy, dx,
+                                                         reduce_elem_cnt);
   }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 }  // namespace
