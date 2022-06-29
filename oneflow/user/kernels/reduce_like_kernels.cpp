@@ -168,7 +168,7 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
       GetReduceSumLayout(axis, in_shape, &is_axis_contiguous, &outer_size, &inner_size,
                          &reduce_size);
       if (is_axis_contiguous && (outer_size == 1 || inner_size == 1)) {
-        bool trans_a = (inner_size == 1);
+        bool trans_a = (inner_size != 1);
         const int32_t m = (inner_size == 1) ? outer_size : inner_size;
         const int32_t n = 1;
         const int32_t k = reduce_size;

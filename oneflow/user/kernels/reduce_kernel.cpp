@@ -216,7 +216,7 @@ class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::Cuda
     int64_t outer_size = 0, inner_size = 0, reduce_size = 0;
     GetReduceSumLayout(axis, in_shape, &is_axis_contiguous, &outer_size, &inner_size, &reduce_size);
     if (is_axis_contiguous && (outer_size == 1 || inner_size == 1)) {
-      bool trans_a = (inner_size == 1);
+      bool trans_a = (inner_size != 1);
       const int32_t m = (inner_size == 1) ? outer_size : inner_size;
       const int32_t n = 1;
       const int32_t k = reduce_size;
@@ -237,12 +237,11 @@ class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::Cuda
       std::unique_ptr<ep::primitive::Matmul> matmul;
       if (trans_a) {
         matmul = NewReduceMatmulTransAPrimitive(ctx);
-
       } else {
         matmul = NewReduceMatmulNoTransAPrimitive(ctx);
       }
-      matmul->Launch(ctx->stream(), m, n, k, 1.0, input_tensor->dptr<float16>(), ones, 0.0,
-                     output_tensor->mut_dptr<float16>());
+      matmul->Launch(ctx->stream(), m, n, k, 1.0, input_tensor->dptr(), ones, 0.0,
+                     output_tensor->mut_dptr());
     } else {
       const Shape& reduced_shape = CreateReducedShape(in_shape, {axis.begin(), axis.end()});
       float* in_tmp_buffer = tmp_buffer->mut_dptr<float>();
