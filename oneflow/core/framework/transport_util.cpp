@@ -106,7 +106,7 @@ Maybe<void> Send(const TransportToken& token, int64_t rank, void* buffer, std::s
   int64_t src_rank = GlobalProcessCtx::Rank();
   int64_t dst_rank = rank;
   TransportToken send_token = JUST(GetAutoIncrementalTransportToken(src_rank, dst_rank, token));
-  auto* transport = JUST(GlobalMaybe<Transport>());
+  auto* transport = JUST(SingletonMaybe<Transport>());
   transport->Send(static_cast<uint64_t>(send_token), rank, buffer, size, Callback);
   return Maybe<void>::Ok();
 #else
@@ -121,7 +121,7 @@ Maybe<void> Recv(const TransportToken& token, int64_t rank, void* buffer, std::s
   int64_t src_rank = rank;
   int64_t dst_rank = GlobalProcessCtx::Rank();
   TransportToken recv_token = JUST(GetAutoIncrementalTransportToken(src_rank, dst_rank, token));
-  auto* transport = JUST(GlobalMaybe<Transport>());
+  auto* transport = JUST(SingletonMaybe<Transport>());
   transport->Receive(static_cast<uint64_t>(recv_token), rank, buffer, size, Callback);
   return Maybe<void>::Ok();
 #else

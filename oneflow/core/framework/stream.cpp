@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/static_global.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/stream_mgr.h"
 
@@ -33,7 +33,7 @@ Maybe<void> Stream::Init(size_t unique_stream_id) {
 
 /*static*/ Maybe<Symbol<Stream>> Stream::RawNew(Symbol<Device> device, StreamRole stream_role) {
   std::shared_ptr<Stream> stream(new Stream(device, stream_role));
-  return JUST(GlobalMaybe<StreamMgr>())
+  return JUST(SingletonMaybe<StreamMgr>())
       ->AddStreamSymbol(*stream, [&](size_t unique_stream_id) -> Maybe<Symbol<Stream>> {
         JUST(stream->Init(unique_stream_id));
         return SymbolOf(*stream);
