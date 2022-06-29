@@ -9,6 +9,7 @@
 #include <string>
 
 #include "oneflow/core/common/just.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/util.h"
 
 class PyAst final {};
@@ -24,7 +25,7 @@ class LR_JIT final {
   double Invoke(std::shared_ptr<JIT_Engine> engine, double base_lr, int64_t step);
 
  private:
-  friend class oneflow::Global<LR_JIT>;
+  friend class oneflow::Singleton<LR_JIT>;
   LR_JIT() = default;
   std::unordered_map<std::string, std::shared_ptr<JIT_Engine>> function_id2engine_;
 };

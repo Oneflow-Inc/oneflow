@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include <iostream>
+#include "oneflow/core/common/singleton.h"
 #ifdef WITH_MLIR
 
 #include "oneflow/ir/include/OneFlow/Extension.h"
@@ -32,10 +33,10 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
         [](const pybind11::object& ast, const std::string& function_id) {
           PyAst _ast;
 
-          Global<LR_JIT>::New();
-          Global<LR_JIT>::Get()->Register(function_id, _ast);
-          auto engine = Global<LR_JIT>::Get()->LookUp(function_id);
-          auto lr = Global<LR_JIT>::Get()->Invoke(engine, 1, 2);
+          Singleton<LR_JIT>::New();
+          Singleton<LR_JIT>::Get()->Register(function_id, _ast);
+          auto engine = Singleton<LR_JIT>::Get()->LookUp(function_id);
+          auto lr = Singleton<LR_JIT>::Get()->Invoke(engine, 1, 2);
           std::cout << lr << std::endl;
         });
 }
