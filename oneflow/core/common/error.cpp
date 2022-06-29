@@ -54,9 +54,7 @@ void Error::Merge(const Error& other) {
   if (!error_summary.empty()) {
     error_proto_->set_error_summary(error_summary + " " + error_proto_->error_summary());
   }
-  if (!msg.empty()) {
-    error_proto_->set_msg(msg + " " + error_proto_->msg());
-  }
+  if (!msg.empty()) { error_proto_->set_msg(msg + " " + error_proto_->msg()); }
 }
 
 Error::operator std::string() const { return error_proto_->DebugString(); }
