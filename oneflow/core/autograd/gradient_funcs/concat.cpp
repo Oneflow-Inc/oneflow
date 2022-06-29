@@ -42,9 +42,7 @@ class Concat : public OpExprGradFunction<ConcatCaptureState> {
 
 Maybe<void> Concat::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr)
-      << Error::RuntimeError()
-      << "A user op expr is required to do the autograd, it should not be null";
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -63,9 +61,7 @@ Maybe<void> Concat::Capture(ConcatCaptureState* ctx, const TensorTuple& inputs,
 
 Maybe<void> Concat::Apply(const ConcatCaptureState* ctx, const TensorTuple& out_grads,
                           TensorTuple* in_grads) const {
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1)
-      << Error::RuntimeError() << "The number of output grads is expected to be 1, but got "
-      << out_grads.size();
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   in_grads->resize(ctx->input_num);
   TensorTuple like(ctx->input_num);
   for (int i = 0; i < ctx->input_num; ++i) { like[i] = ctx->SavedTensors().at(i); }
