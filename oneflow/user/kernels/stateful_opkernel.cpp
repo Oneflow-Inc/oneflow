@@ -874,7 +874,7 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, DeviceCtx* device_c
   UserKernelComputeContext compute_context(compute_ctx_helper_.get(), call_ctx, device_ctx);
   auto* compute_ctx = &compute_context;
   OF_PROFILER_RANGE_GUARD("Compute");
-  if (Global<profiler::ProfileMgr>::Get()) {
+  if (Singleton<profiler::ProfileMgr>::Get()) {
 #if defined(WITH_CUDA)
     const auto CalMemorySize = [compute_ctx](const one::ArgVec& args) -> int64_t {
       const auto Func = [compute_ctx](int64_t mem_size, const auto& pair) {

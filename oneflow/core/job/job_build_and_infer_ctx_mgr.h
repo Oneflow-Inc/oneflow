@@ -60,7 +60,7 @@ class LazyJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
   ~LazyJobBuildAndInferCtxMgr() override = default;
 
  private:
-  friend class Global<LazyJobBuildAndInferCtxMgr>;
+  friend class Singleton<LazyJobBuildAndInferCtxMgr>;
 
   Maybe<void> VirtualCloseJob() override;
   JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const override;
