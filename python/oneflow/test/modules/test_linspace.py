@@ -28,7 +28,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestLinspace(flow.unittest.TestCase):
-    @autotest(n=30, auto_backward=False, rtol=1e-5, atol=1e-5, check_graph=True)
+    @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5, check_graph=True)
     def test_linspace_int_with_random_data(test_case):
         start = random().to(int)
         end = start + random().to(int)
@@ -38,7 +38,7 @@ class TestLinspace(flow.unittest.TestCase):
         x.to(device)
         return x
 
-    @autotest(n=30, auto_backward=False, rtol=1e-5, atol=1e-5, check_graph=True)
+    @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5, check_graph=True)
     def test_linspace_float_with_random_data(test_case):
         start = random()
         end = start + random()

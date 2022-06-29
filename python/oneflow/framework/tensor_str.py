@@ -285,10 +285,6 @@ def _tensor_str(self, indent):
     if self.dtype is flow.float16:
         self = self.float()
 
-    # TODO: not support nd sbp tensor for now
-    if self.is_global and len(self.placement.ranks.shape) > 1:
-        return "[...]"
-
     with flow.no_grad():
         formatter = _Formatter(get_summarized_data(self) if summarize else self)
         return _tensor_str_with_formatter(self, indent, summarize, formatter)
