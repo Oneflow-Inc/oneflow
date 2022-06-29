@@ -55,7 +55,7 @@ class CastToConsistent : public OpExprGradFunction<CastConsistentCaptureState> {
     std::shared_ptr<Tensor> out_grad = out_grads.at(0);
     CHECK_OR_RETURN(out_grad->is_consistent())
         << Error::RuntimeError()
-        << "Expected global tensor for cast_to_consistent for but got local tensor";
+        << "Expected global tensor for cast_to_consistent but got local tensor";
     {
       Symbol<NdSbp> nd_sbp_constraint = ctx->nd_sbp;
       Symbol<ParallelDesc> parallel_desc_constraint = ctx->parallel_desc;
