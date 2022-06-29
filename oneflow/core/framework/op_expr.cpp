@@ -24,7 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/user/kernels/stateful_opkernel.h"
 
 namespace oneflow {
 namespace one {
@@ -122,7 +122,7 @@ Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
   return Maybe<void>::Ok();
 }
 
-Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Stream(Symbol<Stream> stream) const {
+Maybe<StatefulOpKernel> UserOpExpr::MutKernel4Stream(Symbol<Stream> stream) const {
   const auto& it = stream2kernel_.find(stream);
   if (it != stream2kernel_.end()) { return it->second; }
 
@@ -130,8 +130,8 @@ Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Stream(Symbol<Stream> stream)
   JUST(BuildOpConf(op_conf.get(), {}));
   op_conf->set_device_tag(stream->device()->type());
   auto parallel_desc = JUST(Placement4Device(stream->device())).shared_from_symbol();
-  const auto& opkernel = JUST(StatefulLocalOpKernel::New(
-      op_conf, stream, base_attrs(), parallel_desc, input_arg_tuple(), output_arg_tuple()));
+  const auto& opkernel = JUST(StatefulOpKernel::New(op_conf, stream, base_attrs(), parallel_desc,
+                                                    input_arg_tuple(), output_arg_tuple()));
   stream2kernel_.emplace(stream, opkernel);
   return opkernel;
 }

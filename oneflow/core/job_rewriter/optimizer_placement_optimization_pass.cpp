@@ -167,21 +167,6 @@ void SetNdSbp4Consumers(JobBuilder* builder, const SequencePtr& sequence, const 
   if (shard_restore_level == 1) {
     // Input lbn for parallel cast op
     std::string parallel_cast_input_lbn = GenLogicalBlobName(lbi);
-    // Add indentity to enable mem reuse of boxing op when there is no op between var op and boxing.
-    if (sequence->len() == 1) {
-      VLOG(3) << "ZeRO find a data-parallel sequence only has one variable "
-              << sequence->GetVariableNode()->op().op_name();
-      const auto var_identity_op =
-          user_op::UserOpConfWrapperBuilder("System-ZeRO-Identity-" + node->op().op_name() + "-"
-                                            + NewUniqueId())
-              .Op("identity")
-              .Input("in", GenLogicalBlobName(lbi))
-              .Output("out")
-              .ScopeSymbolId(node->op().op_conf().scope_symbol_id())
-              .Build();
-      builder->AddOps(node->parallel_desc().parallel_conf(), {var_identity_op.op_conf()});
-      parallel_cast_input_lbn = var_identity_op.output("out", 0);
-    }
     // Add parallel cast op to make soft limt on consumer to consume weight with Broadcast SBP.
     const auto parallel_cast_op =
         user_op::UserOpConfWrapperBuilder("System-ZeRO-ParallelCast-" + node->op().op_name() + "-"

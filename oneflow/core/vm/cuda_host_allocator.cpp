@@ -56,7 +56,7 @@ void CudaHostAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   granularity2free_ptrs_[granularity].emplace_back(mem_ptr);
 }
 
-COMMAND(Global<CudaHostAllocator>::SetAllocated(new CudaHostAllocator(0)));
+COMMAND(Singleton<CudaHostAllocator>::SetAllocated(new CudaHostAllocator(0)));
 
 }  // namespace vm
 }  // namespace oneflow
