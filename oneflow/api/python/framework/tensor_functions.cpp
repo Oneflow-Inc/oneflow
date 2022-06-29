@@ -283,6 +283,7 @@ DIRECT_PASS_FUNC(PyTensorObject_pow, functional::pow)
 DIRECT_PASS_FUNC(PyTensorObject_chunk, functional::chunk)
 DIRECT_PASS_FUNC(PyTensorObject_narrow, functional::narrow)
 DIRECT_PASS_FUNC(PyTensorObject_masked_fill, functional::masked_fill)
+DIRECT_PASS_FUNC(PyTensorObject_dot, functional::dot)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -730,9 +731,7 @@ static PyObject* PyTensorObject_to_global(PyObject* self, PyObject* args, PyObje
   PyObject* result = NULL;
   if (tensor->is_consistent())
     result = PyTensorObject_global_to_global(self, args, kwargs);
-  else {
-    result = PyTensorObject_local_to_global(self, args, kwargs);
-  }
+  else { result = PyTensorObject_local_to_global(self, args, kwargs); }
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
 
@@ -880,6 +879,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"chunk", (PyCFunction)PyTensorObject_chunk, METH_VARARGS | METH_KEYWORDS, NULL},
     {"narrow", (PyCFunction)PyTensorObject_narrow, METH_VARARGS | METH_KEYWORDS, NULL},
     {"masked_fill", (PyCFunction)PyTensorObject_masked_fill, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"dot", (PyCFunction)PyTensorObject_dot, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
