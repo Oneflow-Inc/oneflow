@@ -90,7 +90,6 @@ def api_machine_num(val: int) -> None:
     _set_resource_attr(attrs, val, type_)
 
 
-
 def api_gpu_device_num(val: int) -> None:
     """Set number of GPUs on each machine to run oneflow on.
 
