@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include <cub/cub.cuh>
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 
@@ -26,7 +27,7 @@ namespace {
 
 constexpr int32_t kBlockSize = 1024;
 constexpr int32_t kReduceLocalSumBlockSize = 1024;
-constexpr int32_t kSingleBlockProcessNumThreshold = 4 * kBlockSize;
+constexpr int32_t kSingleBlockProcessNumThreshold = 1024;
 
 template<typename T>
 struct DefaultComputeType {
@@ -100,12 +101,6 @@ __device__ __forceinline__ T Sigmoid(const T x) {
 }
 
 template<>
-__device__ __forceinline__ float Sigmoid(const float x) {
-  const float half_of_one = static_cast<float>(0.5);
-  return half_of_one * tanhf(half_of_one * x) + half_of_one;
-}
-
-template<>
 __device__ __forceinline__ half Sigmoid(const half x) {
   return __float2half(Sigmoid(__half2float(x)));
 }
@@ -135,27 +130,57 @@ struct BinaryCrossEntropyWithLogitsReduceMeanGradDyptrFunctor {
   const T elem_cnt_reciprocal;
 };
 
+class BCEWithLogitsReduceMeanKernelCache final : public user_op::OpKernelCache {
+ public:
+  BCEWithLogitsReduceMeanKernelCache(int64_t logical_elem_cnt)
+      : logical_elem_cnt_(logical_elem_cnt) {}
+  ~BCEWithLogitsReduceMeanKernelCache() override = default;
+
+  int64_t logical_elem_cnt() const { return logical_elem_cnt_; }
+
+ private:
+  const int64_t logical_elem_cnt_;
+};
+
+std::shared_ptr<user_op::OpKernelCache> CreateBCEWithLogitsReduceMeanKernelCache(
+    user_op::KernelCacheContext* ctx) {
+  if (ctx->parallel_ctx().parallel_num() == 1) { return nullptr; }
+  const int64_t logical_elem_cnt =
+      ctx->LogicalTensorDesc4ArgNameAndIndex("input", 0)->shape().elem_cnt();
+  return std::make_shared<BCEWithLogitsReduceMeanKernelCache>(logical_elem_cnt);
+}
+
 template<typename T>
-class BinaryCrossEntropyWithLogitsMeanKernel final : public user_op::OpKernel {
+class BinaryCrossEntropyWithLogitsMeanKernel final : public user_op::OpKernel,
+                                                     public CudaGraphSupport {
  public:
   BinaryCrossEntropyWithLogitsMeanKernel() = default;
-  ~BinaryCrossEntropyWithLogitsMeanKernel() = default;
+  ~BinaryCrossEntropyWithLogitsMeanKernel() override = default;
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache* cache) const override {
     const auto* input_blob = ctx->Tensor4ArgNameAndIndex("input", 0);
     const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
     auto* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    const int64_t elem_cnt = input_blob->shape_view().elem_cnt();
+    int64_t elem_cnt = input_blob->shape_view().elem_cnt();
+
+    if (cache) {
+      // Because `out`'s SBP maybe P or B, we need to use logical_elem_cnt as reduce_mean factor.
+      const auto* bce_cache = dynamic_cast<const BCEWithLogitsReduceMeanKernelCache*>(cache);
+      CHECK_NOTNULL(bce_cache);
+      elem_cnt = bce_cache->logical_elem_cnt();
+    }
 
     const T* input = input_blob->dptr<T>();
     const T* target = target_blob->dptr<T>();
     T* out = out_blob->mut_dptr<T>();
     using ComputeType = typename DefaultComputeType<T>::type;
 
-    if (elem_cnt < kSingleBlockProcessNumThreshold) {
+    if (elem_cnt <= kSingleBlockProcessNumThreshold) {
       FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<T, T, ComputeType>
           <<<1, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
               input_blob->dptr<T>(), target_blob->dptr<T>(), out_blob->mut_dptr<T>(),
@@ -178,7 +203,6 @@ class BinaryCrossEntropyWithLogitsMeanKernel final : public user_op::OpKernel {
               tmp_buffer->mut_dptr<ComputeType>(), out_blob->mut_dptr<T>(), block_num);
     }
   }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<typename T>
