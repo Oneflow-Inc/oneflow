@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_methods.h"
+#include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/maybe.h"
@@ -32,8 +33,17 @@ namespace oneflow {
 
 namespace one {
 
+Maybe<void> Tensor::BorrowTensorName(const Tensor* other) const {
+  CHECK_OR_RETURN(other->is_lazy())
+      << Error::RuntimeError() << "can not borrow tensor name from an eager tensor";
+  const auto& lbn = TensorNameScope::Global()->Lookup(other);
+  CHECK_OR_RETURN(!lbn.empty()) << "the input lazy tensor has no tensor name";
+  TensorNameScope::Global()->Record(this, lbn);
+  return Maybe<void>::Ok();
+}
+
 Maybe<LocalTensor> StaticZerosTensor::AsLocalTensor() {
-  CHECK_OR_RETURN(is_local());
+  CHECK_OR_RETURN(is_local());  // NOLINT
   return std::dynamic_pointer_cast<LocalTensor>(
       JUST(functional::Constant(*shape_, Scalar(0), CHECK_JUST(DType::Get(dtype_)), device_)));
 }
@@ -67,8 +77,14 @@ std::shared_ptr<Tensor> Parameter::pin_memory() const {
 
 bool LocalTensor::is_cuda() const { return CHECK_JUST(device())->type() == "cuda"; }
 
+<<<<<<< HEAD
 Maybe<Tensor> LocalTensor::detach() const {
   std::shared_ptr<Tensor> tensor = std::make_shared<LocalTensor>(JUST(impl_->detach()));
+=======
+Maybe<Tensor> MirroredTensor::detach() const {
+  std::shared_ptr<Tensor> tensor = std::make_shared<MirroredTensor>(JUST(impl_->detach()));
+  if (this->is_lazy()) { JUST(tensor->BorrowTensorName(this)); }
+>>>>>>> master
   return tensor;
 }
 
@@ -89,6 +105,19 @@ Maybe<Tensor> LocalTensor::clone() const {
   std::shared_ptr<Tensor> input = std::const_pointer_cast<Tensor>(shared_from_this());
   const bool pin_memory = JUST(JUST(input->AsLocalTensor())->is_pinned());
   return JUST(functional::Copy(input, device_type, device_id, /*pin_memory=*/pin_memory));
+}
+
+Maybe<void> MirroredTensor::set_data(const std::shared_ptr<Tensor>& other) {
+  CHECK_OR_RETURN(this->is_leaf()) << "Can only set leaf tensor's data.";
+  const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(JUST(other->detach()));
+  CHECK_NOTNULL_OR_RETURN(mirrored_tensor)
+      << "Can not set a global tensor to the data of a local tensor";
+  bool old_requires_grad = requires_grad();
+  impl_ = mirrored_tensor->impl_;
+  JUST(set_requires_grad(old_requires_grad));
+  grad_fn_node_ = nullptr;
+  if (other->is_lazy()) { JUST(this->BorrowTensorName(other.get())); }
+  return Maybe<void>::Ok();
 }
 
 std::shared_ptr<Tensor> ConsistentTensor::contiguous() const {
@@ -136,6 +165,7 @@ bool ConsistentTensor::is_cuda() const {
 
 Maybe<Tensor> ConsistentTensor::detach() const {
   std::shared_ptr<Tensor> tensor = std::make_shared<ConsistentTensor>(JUST(impl_->detach()));
+  if (this->is_lazy()) { JUST(tensor->BorrowTensorName(this)); }
   return tensor;
 }
 
@@ -153,6 +183,7 @@ Maybe<void> ConsistentTensor::set_data(const std::shared_ptr<Tensor>& other) {
   impl_ = consistent_tensor->impl_;
   JUST(set_requires_grad(old_requires_grad));
   grad_fn_node_ = nullptr;
+  if (other->is_lazy()) { JUST(this->BorrowTensorName(other.get())); }
   return Maybe<void>::Ok();
 }
 

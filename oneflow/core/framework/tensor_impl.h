@@ -200,7 +200,7 @@ class LazyLocalTensorImpl final : public LocalTensorImpl {
     // but should return real status while stride/view mechanism is ready in lazy-local mode
     return true;
   }
-  Maybe<bool> is_pinned() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<bool> is_pinned() const override { return false; }
 
   // Getters valid only for EagerLocalTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
