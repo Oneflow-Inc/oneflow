@@ -88,7 +88,7 @@ class CastFromConsistent : public OpExprGradFunction<CastConsistentCaptureState>
     const auto& input = inputs.at(0);
     CHECK_OR_RETURN(input->is_consistent())
         << Error::RuntimeError()
-        << "Expected global tensor for cast_from_consistent for but got local tensor";
+        << "Expected global tensor for cast_from_consistent but got local tensor";
     ctx->parallel_desc = JUST(input->parallel_desc());
     ctx->nd_sbp = JUST(input->nd_sbp());
     ctx->shape = input->shape();
