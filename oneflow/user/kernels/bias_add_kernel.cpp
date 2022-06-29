@@ -13,28 +13,63 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/bias_add_kernel.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/ndarray/ndarray_util.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 
 namespace oneflow {
 
-template<typename T, typename Index>
-struct BiasAddCalculation<DeviceType::kCPU, T, Index> {
-  static void Invoke(ep::Stream* stream, int64_t outer_size, int64_t bias_size, int64_t inner_size,
-                     const T* x, const T* bias, T* y) {
-    const Shape in_out_shape({outer_size, bias_size, inner_size});
-    const Shape bias_shape({1, bias_size, 1});
-    NdarrayUtil<DeviceType::kCPU, T>::BroadcastAdd(stream, XpuVarNdarray<T>(in_out_shape, y),
-                                                   XpuVarNdarray<const T>(in_out_shape, x),
-                                                   XpuVarNdarray<const T>(bias_shape, bias));
+namespace {
+
+template<typename Context>
+std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> NewPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("a", 0)->data_type();
+  return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
+      ctx->device_type(), ep::primitive::BinaryOp::kAdd, data_type, data_type, 3);
+}
+
+class BiasAddUserKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+ public:
+  BiasAddUserKernel() = default;
+  ~BiasAddUserKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const auto* a_tensor = ctx->Tensor4ArgNameAndIndex("a", 0);
+    const auto* b_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);
+    if (a_tensor->shape_view().elem_cnt() == 0 || b_tensor->shape_view().elem_cnt() == 0) {
+      return;
+    }
+    auto* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const int32_t bias_add_axis = ctx->Attr<int32_t>("axis");
+    const int64_t outer_size = a_tensor->shape_view().Count(0, bias_add_axis);
+    const int64_t bias_size = a_tensor->shape_view().At(bias_add_axis);
+    const int64_t inner_size = a_tensor->shape_view().Count(bias_add_axis + 1);
+    auto primitive = NewPrimitive(ctx);
+    const int64_t src0_dims[3] = {outer_size, bias_size, inner_size};
+    const int64_t src1_dims[3] = {1, bias_size, 1};
+    primitive->Launch(ctx->stream(), 3, src0_dims, a_tensor->dptr(), 3, src1_dims, b_tensor->dptr(),
+                      out_tensor->mut_dptr());
   }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_BIAS_ADD_USER_KERNEL(CPU, float)
-REGISTER_BIAS_ADD_USER_KERNEL(CPU, double)
-REGISTER_BIAS_ADD_USER_KERNEL(CPU, int8_t)
-REGISTER_BIAS_ADD_USER_KERNEL(CPU, int32_t)
-REGISTER_BIAS_ADD_USER_KERNEL(CPU, int64_t)
+auto PrimitiveExists() {
+  return hob::make_custom("PrimitiveExists", [](const user_op::KernelRegContext& ctx) -> bool {
+    return NewPrimitive(&ctx).operator bool();
+  });
+}
+
+REGISTER_USER_KERNEL("bias_add")
+    .SetCreateFn<BiasAddUserKernel>()
+    .SetIsMatchedHob(PrimitiveExists() == true)
+    .SetInplaceProposalFn([](const user_op::InferContext& ctx,
+                             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
+      OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "a", 0, true));
+      return Maybe<void>::Ok();
+    });
+}  // namespace
 
 }  // namespace oneflow

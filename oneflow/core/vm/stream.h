@@ -43,10 +43,6 @@ class Stream final : public intrusive::Base {
   bool has_thread_ctx() const { return thread_ctx_ != nullptr; }
   const std::unique_ptr<DeviceCtx>& device_ctx() const { return device_ctx_; }
   const intrusive::ListHook& active_stream_hook() const { return active_stream_hook_; }
-  const DispatchedInstructionList& free_instruction_list() const { return free_instruction_list_; }
-  const DispatchedInstructionList& zombie_instruction_list() const {
-    return zombie_instruction_list_;
-  }
   const DispatchedInstructionList& running_instruction_list() const {
     return running_instruction_list_;
   }
@@ -56,16 +52,12 @@ class Stream final : public intrusive::Base {
   void set_thread_ctx(ThreadCtx* val) { thread_ctx_ = val; }
   void clear_thread_ctx() { thread_ctx_ = nullptr; }
   std::unique_ptr<DeviceCtx>* mut_device_ctx() { return &device_ctx_; }
-  DispatchedInstructionList* mut_free_instruction_list() { return &free_instruction_list_; }
-  DispatchedInstructionList* mut_zombie_instruction_list() { return &zombie_instruction_list_; }
   DispatchedInstructionList* mut_running_instruction_list() { return &running_instruction_list_; }
 
   // methods
   void __Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamRole stream_role,
                 const intrusive::shared_ptr<MirroredObject>& schedule_local_dep_object,
                 const Optional<intrusive::shared_ptr<MirroredObject>>& transport_local_dep_object);
-  intrusive::shared_ptr<Instruction> NewInstruction(InstructionMsg* instr_msg);
-  void DeleteInstruction(intrusive::shared_ptr<Instruction>&&);
   int64_t device_id() const;
   Symbol<Device> device() const { return device_; }
   StreamRole stream_role() const { return stream_role_; }
@@ -93,8 +85,6 @@ class Stream final : public intrusive::Base {
         stream_role_(StreamRole::kInvalid),
         stream_type_(),
         device_ctx_(),
-        free_instruction_list_(),
-        zombie_instruction_list_(),
         running_instruction_list_(),
         active_stream_hook_(),
         thread_ctx_stream_hook_() {}
@@ -106,8 +96,6 @@ class Stream final : public intrusive::Base {
   const StreamType* stream_type_;
   std::unique_ptr<DeviceCtx> device_ctx_;
   // lists
-  DispatchedInstructionList free_instruction_list_;
-  DispatchedInstructionList zombie_instruction_list_;
   DispatchedInstructionList running_instruction_list_;
 
   intrusive::shared_ptr<MirroredObject> schedule_local_dep_object_;

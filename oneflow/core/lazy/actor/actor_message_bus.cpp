@@ -39,9 +39,9 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
       }
       ActorMsg new_msg = msg;
       new_msg.set_comm_net_sequence_number(comm_net_sequence);
-      Global<CommNet>::Get()->SendActorMsg(dst_machine_id, new_msg);
+      Singleton<CommNet>::Get()->SendActorMsg(dst_machine_id, new_msg);
     } else {
-      Global<CommNet>::Get()->SendActorMsg(dst_machine_id, msg);
+      Singleton<CommNet>::Get()->SendActorMsg(dst_machine_id, msg);
     }
   }
 }
@@ -49,7 +49,7 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
 void ActorMsgBus::SendMsgWithoutCommNet(const ActorMsg& msg) {
   CHECK_EQ(MachineId4ActorId(msg.dst_actor_id()), GlobalProcessCtx::Rank());
   int64_t thrd_id = ThrdId4ActorId(msg.dst_actor_id());
-  Global<ThreadMgr>::Get()->GetThrd(thrd_id)->EnqueueActorMsg(msg);
+  Singleton<ThreadMgr>::Get()->GetThrd(thrd_id)->EnqueueActorMsg(msg);
 }
 
 }  // namespace oneflow
