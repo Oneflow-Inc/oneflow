@@ -148,7 +148,7 @@ class SGDUpdateKernel final : public user_op::OpKernel, public user_op::CudaGrap
       CHECK_EQ(skip_if->shape_view().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
-    SGDUpdateKernelUtil<device_type, T, G, float16>::Update(
+    SGDUpdateKernelUtil<device_type, T, G, C>::Update(
         ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, weight_decay,
         learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
         model->mut_dptr<T>(), model_copy_ptr);
@@ -460,7 +460,7 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
       model_copy_ptr = model_copy->mut_dptr<C>();
     }
 
-    AdamUpdateKernelUtil<device_type, T, G, float16>::Update(
+    AdamUpdateKernelUtil<device_type, T, G, C>::Update(
         ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
         epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, bias_correction1_val,
         bias_correction2_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, bias_correction1_ptr,

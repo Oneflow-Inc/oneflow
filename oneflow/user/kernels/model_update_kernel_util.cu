@@ -23,18 +23,18 @@ namespace oneflow {
 
 namespace {
 
-template<typename T, typename G>
+template<typename T, typename G, typename C>
 __global__ void SGDUpdateGpu(int64_t n, T scale, float l1, float l2, float weight_decay,
                              float learning_rate_val, const float* learning_rate,
                              const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
-                             T* model, half* model_copy) {
+                             T* model, C* model_copy) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   CUDA_1D_KERNEL_LOOP(i, n) {
     if (model_copy != nullptr) {
-      FusedSGDUpdateFunctor<T, G, half>()(model_diff + i, model + i, model_copy + i, scale, l1, l2,
-                                          weight_decay, learning_rate_val);
+      FusedSGDUpdateFunctor<T, G, C>()(model_diff + i, model + i, model_copy + i, scale, l1, l2,
+                                       weight_decay, learning_rate_val);
     } else {
       SGDUpdateFunctor<T, G>()(model_diff + i, model + i, scale, l1, l2, weight_decay,
                                learning_rate_val);
@@ -95,24 +95,42 @@ void SGDUpdateKernelUtil<DeviceType::kCUDA, T, G, C>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const G* model_diff, T* model, C* model_copy) {
-  SGDUpdateGpu<T, G><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                       stream->As<ep::CudaStream>()->cuda_stream()>>>(
+  SGDUpdateGpu<T, G, C><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                          stream->As<ep::CudaStream>()->cuda_stream()>>>(
       n, scale, l1, l2, weight_decay, learning_rate_val, learning_rate, scale_by_ptr, skip_if,
-      model_diff, model, reinterpret_cast<half*>(model_copy));
+      model_diff, model, model_copy);
 }
 
-template<typename T, typename C>
-struct SGDUpdateKernelUtil<DeviceType::kCUDA, T, float16, C> {
+template<typename T, typename G>
+struct SGDUpdateKernelUtil<DeviceType::kCUDA, T, G, float16> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
                      float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, const float16* model_diff, T* model, C* model_copy);
+                     const int64_t* skip_if, const G* model_diff, T* model, float16* model_copy);
 };
 
-template<typename T, typename C>
-void SGDUpdateKernelUtil<DeviceType::kCUDA, T, float16, C>::Update(
+template<typename T, typename G>
+void SGDUpdateKernelUtil<DeviceType::kCUDA, T, G, float16>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
-    const int64_t* skip_if, const float16* model_diff, T* model, C* model_copy) {
+    const int64_t* skip_if, const G* model_diff, T* model, float16* model_copy) {
+  SGDUpdateKernelUtil<DeviceType::kCUDA, T, G, half>::Update(
+      stream, n, scale, l1, l2, weight_decay, learning_rate_val, learning_rate, scale_by_ptr,
+      skip_if, model_diff, model, reinterpret_cast<half*>(model_copy));
+}
+
+template<typename T>
+struct SGDUpdateKernelUtil<DeviceType::kCUDA, T, float16, float16> {
+  static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
+                     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
+                     const int64_t* skip_if, const float16* model_diff, T* model,
+                     float16* model_copy);
+};
+
+template<typename T>
+void SGDUpdateKernelUtil<DeviceType::kCUDA, T, float16, float16>::Update(
+    ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
+    float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
+    const int64_t* skip_if, const float16* model_diff, T* model, float16* model_copy) {
   SGDUpdateKernelUtil<DeviceType::kCUDA, T, half, half>::Update(
       stream, n, scale, l1, l2, weight_decay, learning_rate_val, learning_rate, scale_by_ptr,
       skip_if, reinterpret_cast<const half*>(model_diff), model,
@@ -268,7 +286,7 @@ __global__ void BiasCorrectionFactorKernelGpu(float beta, const int64_t* train_s
   *out = bias_correction_factor;
 }
 
-template<typename T, typename G>
+template<typename T, typename G, typename C>
 __global__ void AdamUpdateGpu(int64_t n, T scale, float l1, float l2, float beta1, float beta2,
                               float epsilon, float weight_decay, bool amsgrad,
                               bool do_bias_correction, float learning_rate_val,
@@ -276,7 +294,7 @@ __global__ void AdamUpdateGpu(int64_t n, T scale, float l1, float l2, float beta
                               const float* learning_rate, const T* scale_by_ptr,
                               const int64_t* skip_if, const float* bias_correction1_ptr,
                               const float* bias_correction2_ptr, const G* model_diff, T* model,
-                              half* model_copy, T* m, T* v, T* max_v) {
+                              C* model_copy, T* m, T* v, T* max_v) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
@@ -284,10 +302,10 @@ __global__ void AdamUpdateGpu(int64_t n, T scale, float l1, float l2, float beta
   if (bias_correction2_ptr != nullptr) { bias_correction2_val = *bias_correction2_ptr; }
   CUDA_1D_KERNEL_LOOP(i, n) {
     if (model_copy != nullptr) {
-      FusedAdamUpdateFunctor<T, G, half>()(model_diff + i, model + i, model_copy + i, m + i, v + i,
-                                           max_v + i, scale, l1, l2, beta1, beta2, epsilon,
-                                           weight_decay, amsgrad, bias_correction1_val,
-                                           bias_correction2_val, learning_rate_val);
+      FusedAdamUpdateFunctor<T, G, C>()(model_diff + i, model + i, model_copy + i, m + i, v + i,
+                                        max_v + i, scale, l1, l2, beta1, beta2, epsilon,
+                                        weight_decay, amsgrad, bias_correction1_val,
+                                        bias_correction2_val, learning_rate_val);
     } else {
       AdamUpdateFunctor<T, G>()(model_diff + i, model + i, m + i, v + i, max_v + i, scale, l1, l2,
                                 beta1, beta2, epsilon, weight_decay, amsgrad, bias_correction1_val,
@@ -379,33 +397,59 @@ void AdamUpdateKernelUtil<DeviceType::kCUDA, T, G, C>::Update(
     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
     const float* bias_correction1_ptr, const float* bias_correction2_ptr, const G* model_diff,
     T* model, C* model_copy, T* m, T* v, T* max_v) {
-  AdamUpdateGpu<T, G><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                        stream->As<ep::CudaStream>()->cuda_stream()>>>(
+  AdamUpdateGpu<T, G, C><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
       n, scale, l1, l2, beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
+      learning_rate_val, bias_correction1_val, bias_correction2_val, learning_rate, scale_by_ptr,
+      skip_if, bias_correction1_ptr, bias_correction2_ptr, model_diff, model, model_copy, m, v,
+      max_v);
+}
+
+template<typename T, typename G>
+struct AdamUpdateKernelUtil<DeviceType::kCUDA, T, G, float16> {
+  static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1,
+                     float beta2, float epsilon, float weight_decay, bool amsgrad,
+                     bool do_bias_correction, float learning_rate_val, float bias_correction1_val,
+                     float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
+                     const int64_t* skip_if, const float* bias_correction1_ptr,
+                     const float* bias_correction2_ptr, const G* model_diff, T* model,
+                     float16* model_copy, T* m, T* v, T* max_v);
+};
+
+template<typename T, typename G>
+void AdamUpdateKernelUtil<DeviceType::kCUDA, T, G, float16>::Update(
+    ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1, float beta2,
+    float epsilon, float weight_decay, bool amsgrad, bool do_bias_correction,
+    float learning_rate_val, float bias_correction1_val, float bias_correction2_val,
+    const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
+    const float* bias_correction1_ptr, const float* bias_correction2_ptr, const G* model_diff,
+    T* model, float16* model_copy, T* m, T* v, T* max_v) {
+  AdamUpdateKernelUtil<DeviceType::kCUDA, T, G, half>::Update(
+      stream, n, scale, l1, l2, beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
       learning_rate_val, bias_correction1_val, bias_correction2_val, learning_rate, scale_by_ptr,
       skip_if, bias_correction1_ptr, bias_correction2_ptr, model_diff, model,
       reinterpret_cast<half*>(model_copy), m, v, max_v);
 }
 
-template<typename T, typename C>
-struct AdamUpdateKernelUtil<DeviceType::kCUDA, T, float16, C> {
+template<typename T>
+struct AdamUpdateKernelUtil<DeviceType::kCUDA, T, float16, float16> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1,
                      float beta2, float epsilon, float weight_decay, bool amsgrad,
                      bool do_bias_correction, float learning_rate_val, float bias_correction1_val,
                      float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, const float* bias_correction1_ptr,
                      const float* bias_correction2_ptr, const float16* model_diff, T* model,
-                     C* model_copy, T* m, T* v, T* max_v);
+                     float16* model_copy, T* m, T* v, T* max_v);
 };
 
-template<typename T, typename C>
-void AdamUpdateKernelUtil<DeviceType::kCUDA, T, float16, C>::Update(
+template<typename T>
+void AdamUpdateKernelUtil<DeviceType::kCUDA, T, float16, float16>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1, float beta2,
     float epsilon, float weight_decay, bool amsgrad, bool do_bias_correction,
     float learning_rate_val, float bias_correction1_val, float bias_correction2_val,
     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
     const float* bias_correction1_ptr, const float* bias_correction2_ptr, const float16* model_diff,
-    T* model, C* model_copy, T* m, T* v, T* max_v) {
+    T* model, float16* model_copy, T* m, T* v, T* max_v) {
   AdamUpdateKernelUtil<DeviceType::kCUDA, T, half, half>::Update(
       stream, n, scale, l1, l2, beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
       learning_rate_val, bias_correction1_val, bias_correction2_val, learning_rate, scale_by_ptr,

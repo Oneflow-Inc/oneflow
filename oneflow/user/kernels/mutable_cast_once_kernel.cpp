@@ -34,16 +34,16 @@ std::unique_ptr<ep::primitive::Cast> NewCastPrimitive(Context* ctx) {
 
 class MutableCastOnceOpKernelState final : public OpKernelState {
  public:
-  MutableCastOnceOpKernelState() : cast_once_flag(false) {}
+  MutableCastOnceOpKernelState() : cast_once_flag_(false) {}
 
   void SetDone() {
-    if (!cast_once_flag) { cast_once_flag = true; }
+    if (!cast_once_flag_) { cast_once_flag_ = true; }
   }
 
-  bool IsDone() { return cast_once_flag; }
+  bool IsDone() { return cast_once_flag_; }
 
  private:
-  bool cast_once_flag = false;
+  bool cast_once_flag_ = false;
 };
 
 class MutableCastOnce final : public OpKernel {
@@ -59,7 +59,7 @@ class MutableCastOnce final : public OpKernel {
   void Compute(KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
     auto* cast_state = CHECK_NOTNULL(dynamic_cast<MutableCastOnceOpKernelState*>(state));
-    if (!cast_state->IsDone()) { return; }
+    if (cast_state->IsDone()) { return; }
     const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t elem_cnt = input_tensor->shape_view().elem_cnt();
