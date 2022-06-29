@@ -32,21 +32,21 @@ void AsyncRunLazyJobSet(ThreadPool* lazy_runtime_thread,
                         std::shared_ptr<BlockingCounter> wait_session_init) {
   lazy_runtime_thread->AddWork([wait_session_init] {
     ConfigProto config_proto;
-    Global<CtrlClient>::Get()->PullKV("config_proto", &config_proto);
-    CHECK_NOTNULL(Global<EnvDesc>::Get());
-    int32_t machine_num = Global<EnvDesc>::Get()->TotalMachineNum();
+    Singleton<CtrlClient>::Get()->PullKV("config_proto", &config_proto);
+    CHECK_NOTNULL(Singleton<EnvDesc>::Get());
+    int32_t machine_num = Singleton<EnvDesc>::Get()->TotalMachineNum();
     // do nothing if it's not my business
     if (GlobalProcessCtx::Rank() >= machine_num) { return; }
-    Global<SessionGlobalObjectsScope>::New();
-    CHECK_JUST(Global<SessionGlobalObjectsScope>::Get()->Init(config_proto));
+    Singleton<SessionGlobalObjectsScope>::New();
+    CHECK_JUST(Singleton<SessionGlobalObjectsScope>::Get()->Init(config_proto));
     wait_session_init->Decrease();
     JobSet job_set;
-    Global<CtrlClient>::Get()->PullKV("session_job_set", &job_set);
+    Singleton<CtrlClient>::Get()->PullKV("session_job_set", &job_set);
     {
       Oneflow oneflow;
       CHECK_JUST(oneflow.Init(job_set));
     }
-    Global<SessionGlobalObjectsScope>::Delete();
+    Singleton<SessionGlobalObjectsScope>::Delete();
   });
 }
 
