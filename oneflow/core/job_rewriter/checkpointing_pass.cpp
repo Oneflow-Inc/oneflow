@@ -50,10 +50,10 @@ const std::string kCheckpointingBadOpName = "OneFlow-System-CheckpointPassBadEnd
 
 const Scope& Scope4OpNode(const OpNode* op_node) {
   int64_t scope_symbol_id = op_node->op().op_conf().scope_symbol_id();
-  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
+  CHECK(Singleton<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
       << "rank[" << GlobalProcessCtx::Rank() << "] "
       << "scope_symbol_id: " << scope_symbol_id;
-  return Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
+  return Singleton<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
 }
 
 bool IsForwardPassScope(const Scope& scope) {

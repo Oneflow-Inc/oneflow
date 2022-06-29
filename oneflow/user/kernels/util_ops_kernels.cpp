@@ -13,39 +13,36 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/device_type.pb.h"
-#include "oneflow/core/common/data_type_seq.h"
-#include "oneflow/user/kernels/util_ops_kernels.h"
+#include "oneflow/user/kernels/elementwise_primitive_kernel.h"
 
 namespace oneflow {
 namespace user_op {
 
-template<typename T>
-struct IsNanFunctor<DeviceType::kCPU, T, std::enable_if_t<std::is_floating_point<T>::value>> {
-  OF_DEVICE_FUNC bool operator()(const T x) const { return std::isnan(x); }
-};
+REGISTER_USER_KERNEL("isinf")
+    .SetCreateFn([]() {
+      return user_op::NewOpKernel<UnaryPrimitiveKernel>(
+          "out", "in", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+            const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+            return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+                ctx->device_type(), ep::primitive::UnaryOp::kIsInf, src->data_type(),
+                dst->data_type());
+          });
+    })
+    .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kIsInf, "out", "in"));
 
-template<typename T>
-struct IsNanFunctor<DeviceType::kCPU, T, std::enable_if_t<!std::is_floating_point<T>::value>> {
-  OF_DEVICE_FUNC bool operator()(const T x) const { return false; }
-};
-
-template<typename T>
-struct IsInfFunctor<DeviceType::kCPU, T, std::enable_if_t<std::is_floating_point<T>::value>> {
-  OF_DEVICE_FUNC bool operator()(const T x) const { return std::isinf(x); }
-};
-
-template<typename T>
-struct IsInfFunctor<DeviceType::kCPU, T, std::enable_if_t<!std::is_floating_point<T>::value>> {
-  OF_DEVICE_FUNC bool operator()(const T x) const { return false; }
-};
-
-#define REGISTER_UTIL_OPS_CPU_KERNEL(device, dtype_pair)      \
-  REGISTER_ISNAN_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair)) \
-  REGISTER_ISINF_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UTIL_OPS_CPU_KERNEL, (DeviceType::kCPU),
-                                 UTIL_OPS_DATA_TYPE_SEQ);
+REGISTER_USER_KERNEL("isnan")
+    .SetCreateFn([]() {
+      return user_op::NewOpKernel<UnaryPrimitiveKernel>(
+          "out", "in", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+            const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+            return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+                ctx->device_type(), ep::primitive::UnaryOp::kIsNan, src->data_type(),
+                dst->data_type());
+          });
+    })
+    .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kIsNan, "out", "in"));
 
 }  // namespace user_op
 }  // namespace oneflow

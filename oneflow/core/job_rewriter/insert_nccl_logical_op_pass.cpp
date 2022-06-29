@@ -48,7 +48,7 @@ class InsertNcclLogicalOpPass final : public JobPass {
   }
 
   bool IsEnabled(const JobPassCtx& ctx) const {
-    return Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream();
+    return Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream();
   }
 
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
@@ -395,7 +395,7 @@ bool TryBuildNcclBy2DHierarchyOthers(OperatorConf* ret, const NdSbp& src_nd_sbp,
 
 Maybe<int64_t> BuildScopeWithReducedParallelDesc(int64_t old_scope_symbol_id,
                                                  const ParallelDesc& parallel_desc) {
-  auto* scope_storage = Global<symbol::Storage<Scope>>::Get();
+  auto* scope_storage = Singleton<symbol::Storage<Scope>>::Get();
   CHECK_OR_RETURN(scope_storage->Has(old_scope_symbol_id));
   auto old_scope = scope_storage->GetPtr(old_scope_symbol_id);
   std::shared_ptr<Scope> new_scope;
@@ -529,7 +529,7 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
           mut_op_names->insert(next_op_name);
         }
 
-        if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+        if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
           VLOG(2) << " insert nccl op: " << nccl_op.name() << " from [" << src_op_name
                   << ", order=" << src_order << ", sbp=" << NdSbpToString(src_node->NdSbp4Lbi(lbi))
                   << "] to [" << dst_op_name << ", order=" << node2subgraph_order.at(dst_node)
@@ -613,7 +613,7 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
           // NOTE(chengcheng, guoran): set nccl op as dst_node parallel_conf (hierarchy) may check
           //   failed in complier, so need use dst_node reduced_parallel_conf.
           nccl_op_parallel_confs->emplace_back(dst_reduced_parallel_desc.parallel_conf());
-          if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+          if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
             VLOG(2) << " insert nccl op: " << nccl_op.name() << " from [" << src_op_name
                     << ", order=" << src_order << "] to [" << dst_op_name << ", order=" << dst_order
                     << "] and after [" << pre_op_name << ", order=" << pre_order << "]\n";
@@ -868,7 +868,7 @@ void InsertNcclLogicalOpsInSubGraph(
     CHECK(node2subgraph_order.emplace(subgraph_order.at(i), i).second);
   }
 
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     VLOG(3) << " Try insert nccl logical ops into job: " << job_builder->job().job_conf().job_name()
             << ". Begin...\n";
   }
@@ -899,7 +899,7 @@ void InsertNcclLogicalOpsInSubGraph(
                                                  &nccl_op_confs, &nccl_op_parallel_confs,
                                                  subgraph_order, node2subgraph_order);
 
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     VLOG(3) << " Try insert nccl logical ops into job: " << job_builder->job().job_conf().job_name()
             << ". ...End\n\n";
   }
@@ -1136,7 +1136,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
                       "launch upper limit."
                    << " So the nccl logical kernel will from async to sync exec, which may affect "
                       "performance.";
-      EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+      EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
       comm_mgr->SetAsyncLaunchNcclLogicalKernel(false);
     }
 

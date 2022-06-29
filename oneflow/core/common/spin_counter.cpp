@@ -15,13 +15,13 @@ limitations under the License.
 */
 #include <chrono>
 #include "oneflow/core/common/spin_counter.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
 
 namespace oneflow {
 
 Maybe<void> SpinCounter::WaitUntilCntEqualZero() const {
-  return Global<ForeignLockHelper>::Get()->WithScopedRelease([&]() -> Maybe<void> {
+  return Singleton<ForeignLockHelper>::Get()->WithScopedRelease([&]() -> Maybe<void> {
     while (cnt_val_ > 0) {};
     return Maybe<void>::Ok();
   });
