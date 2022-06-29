@@ -60,7 +60,7 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
       cpu_stream->ParallelFor(0, elem_cnt, [dst, dst_stride](int64_t begin, int64_t end) {
         for (int64_t i = begin; i < end; i++) { dst[i * dst_stride] = scalar_res; }
       });
-    } else if (simplified_num_dims == 1) {  // 输入输出完全连续且无广播
+    } else if (simplified_num_dims == 1) {
       const int64_t elem_cnt = simplified_src_dims[0];
       const int64_t src_stride = simplified_src_strides[0];
       const int64_t dst_stride = simplified_dst_strides[0];

@@ -151,7 +151,7 @@ void DispatchIndexType(CudaStream* stream, size_t num_dims, const int64_t* src_d
                        const int64_t* src_strides, const Src* src, const int64_t* dst_dims,
                        const int64_t* dst_strides, Dst* dst, Scalar attr0, Scalar attr1) {
   size_t count = GetElementCount(num_dims, dst_dims);
-  if (count < GetMaxVal<int32_t>()) {
+  if (count < GetMaxVal<int32_t>() / 2) {
     LaunchKernel<op, Src, Dst, max_dims, pack_size, int32_t>(stream, num_dims, src_dims,
                                                              src_strides, src, dst_dims,
                                                              dst_strides, dst, attr0, attr1, count);
@@ -226,47 +226,53 @@ void LaunchWithSimplified(CudaStream* stream, size_t simplified_num_dims,
                                 simplified_dst_strides, dst, attr0, attr1);
 }
 
-template<typename T, size_t pack>
-__global__ void LaunchFillKernel(T* dst, T value, size_t count) {
-  using StorePack = cuda::elementwise::Packed<T, pack>;
+template<UnaryOp op, typename Src, typename Dst, size_t pack>
+__global__ void LaunchFillKernel(Dst* dst, const Src* src, size_t count, Scalar attr0,
+                                 Scalar attr1) {
+  using StorePack = cuda::elementwise::Packed<Dst, pack>;
   const size_t pack_count = count / pack;
   StorePack pack_value;
+  auto functor = UnaryFunctor<DeviceType::kCUDA, op, Src, Dst>(attr0, attr1);
+  Dst value = functor(*src);
 #pragma unroll
   for (size_t i = 0; i < pack; ++i) { pack_value.elem[i] = value; }
   StorePack* pack_dst = reinterpret_cast<StorePack*>(dst);
   CUDA_1D_KERNEL_LOOP_T(size_t, i, pack_count) { pack_dst[i] = pack_value; }
-  T* tail_dst = dst + pack_count * pack;
+  Dst* tail_dst = dst + pack_count * pack;
   const size_t tail_count = count - pack_count * pack;
   CUDA_1D_KERNEL_LOOP_T(size_t, i, tail_count) { tail_dst[i] = value; }
 }
 
-template<typename T, size_t pack>
-typename std::enable_if<(pack != 0), void>::type LaunchPackFill(CudaStream* stream, T* dst, T value,
-                                                                size_t count) {
-  LaunchFillKernel<T, pack>
+template<UnaryOp op, typename Src, typename Dst, size_t pack>
+typename std::enable_if<(pack != 0), void>::type LaunchPackFill(CudaStream* stream, Dst* dst,
+                                                                const Src* src, size_t count,
+                                                                Scalar attr0, Scalar attr1) {
+  LaunchFillKernel<op, Src, Dst, pack>
       <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0, stream->cuda_stream()>>>(
-          dst, value, count);
+          dst, src, count, attr0, attr1);
 }
 
-template<typename T, size_t pack>
-typename std::enable_if<(pack == 0), void>::type LaunchPackFill(CudaStream* stream, T* dst, T value,
-                                                                size_t count) {
+template<UnaryOp op, typename Src, typename Dst, size_t pack>
+typename std::enable_if<(pack == 0), void>::type LaunchPackFill(CudaStream* stream, Dst* dst,
+                                                                const Src* src, size_t count,
+                                                                Scalar attr0, Scalar attr1) {
   LOG(FATAL) << "wrong alignment";
 }
 
-template<typename T>
-void LaunchFill(CudaStream* stream, T* dst, T value, size_t count) {
+template<UnaryOp op, typename Src, typename Dst>
+void LaunchFill(CudaStream* stream, Dst* dst, const Src* src, size_t count, Scalar attr0,
+                Scalar attr1) {
   auto uintptr = reinterpret_cast<std::uintptr_t>(dst);
   if (uintptr % 16 == 0) {
-    LaunchPackFill<T, 16 / sizeof(T)>(stream, dst, value, count);
+    LaunchPackFill<op, Src, Dst, 16 / sizeof(Dst)>(stream, dst, src, count, attr0, attr1);
   } else if (uintptr % 8 == 0) {
-    LaunchPackFill<T, 8 / sizeof(T)>(stream, dst, value, count);
+    LaunchPackFill<op, Src, Dst, 8 / sizeof(Dst)>(stream, dst, src, count, attr0, attr1);
   } else if (uintptr % 4 == 0) {
-    LaunchPackFill<T, 4 / sizeof(T)>(stream, dst, value, count);
+    LaunchPackFill<op, Src, Dst, 4 / sizeof(Dst)>(stream, dst, src, count, attr0, attr1);
   } else if (uintptr % 2 == 0) {
-    LaunchPackFill<T, 2 / sizeof(T)>(stream, dst, value, count);
+    LaunchPackFill<op, Src, Dst, 2 / sizeof(Dst)>(stream, dst, src, count, attr0, attr1);
   } else {
-    LaunchPackFill<T, 1 / sizeof(T)>(stream, dst, value, count);
+    LaunchPackFill<op, Src, Dst, 1 / sizeof(Dst)>(stream, dst, src, count, attr0, attr1);
   }
 }
 
@@ -294,11 +300,10 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
                  simplified_dst_dims, dst);
     if (simplified_num_dims == 1 && simplified_src_dims[0] == 1) {
       const int64_t elem_cnt = simplified_dst_dims[0];
-      auto functor = UnaryFunctor<DeviceType::kCUDA, unary_op, Src, Dst>(attr0, attr1);
-      Dst scalar_res = functor(*reinterpret_cast<const Src*>(src));
-      LaunchFill(cuda_stream, reinterpret_cast<Dst*>(dst), scalar_res, elem_cnt);
+      LaunchFill<unary_op, Src, Dst>(cuda_stream, reinterpret_cast<Dst*>(dst),
+                                     reinterpret_cast<const Src*>(src), elem_cnt, attr0, attr1);
     } else if (simplified_num_dims == 1 && simplified_src_strides[0] == 1
-               && simplified_dst_strides[0] == 1) {  // 输入输出完全连续且无广播
+               && simplified_dst_strides[0] == 1) {
       const int64_t elem_cnt = simplified_src_dims[0];
       auto functor = UnaryFunctor<DeviceType::kCUDA, unary_op, Src, Dst>(attr0, attr1);
       OF_CUDA_CHECK((cuda::elementwise::Unary<decltype(functor), Dst, Src>(

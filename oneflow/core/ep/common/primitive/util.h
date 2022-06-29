@@ -52,7 +52,7 @@ inline void SimplifyBroadcastDims(size_t num_src_dims, const int64_t* src_dims,
   std::sort(std::begin(sorted_dst_strides), std::end(sorted_dst_strides),
             [](auto pair1, auto pair2) { return pair1.first > pair2.first; });
   const int64_t num_src_padding_dims = num_dst_dims - num_src_dims;
-  // 维度补齐 & 维度重排
+  // dimension completion & permutation
   for (int64_t i = num_dst_dims - 1; i >= 0; i--) {
     size_t idx = sorted_dst_strides[i].second;
     new_dst_dims[i] = dst_dims[idx];
@@ -61,7 +61,7 @@ inline void SimplifyBroadcastDims(size_t num_src_dims, const int64_t* src_dims,
     new_src_strides[i] = idx < num_src_padding_dims ? new_src_strides[i + 1]
                                                     : src_strides[idx - num_src_padding_dims];
   }
-  // 维度合并
+  // dimension merge
   bool prev_broadcast_src = false;
   for (int64_t i = 0; i < num_dst_dims; ++i) {
     const bool broadcast_src = (new_src_dims[i] == 1);
