@@ -24,8 +24,8 @@ namespace one {
   return &scope;
 }
 
-const std::string& TensorNameScope::Lookup(const std::shared_ptr<Tensor>& tensor) const {
-  uint64_t key = reinterpret_cast<uint64_t>(tensor.get());
+const std::string& TensorNameScope::Lookup(const Tensor* tensor) const {
+  uint64_t key = reinterpret_cast<uint64_t>(tensor);
   std::lock_guard<std::mutex> lock(mutex_);
   const auto& it = tensor_names_.find(key);
   if (it != tensor_names_.end()) {
@@ -35,11 +35,19 @@ const std::string& TensorNameScope::Lookup(const std::shared_ptr<Tensor>& tensor
   }
 }
 
-void TensorNameScope::Record(const std::shared_ptr<Tensor>& tensor, const std::string& name) {
+const std::string& TensorNameScope::Lookup(const std::shared_ptr<Tensor>& tensor) const {
+  return Lookup(tensor.get());
+}
+
+void TensorNameScope::Record(const Tensor* tensor, const std::string& name) {
   std::lock_guard<std::mutex> lock(mutex_);
-  uint64_t key = reinterpret_cast<uint64_t>(tensor.get());
+  uint64_t key = reinterpret_cast<uint64_t>(tensor);
   // We assume that the name of the tensor will be update more than once.
   tensor_names_[key] = name;
+}
+
+void TensorNameScope::Record(const std::shared_ptr<Tensor>& tensor, const std::string& name) {
+  Record(tensor.get(), name);
 }
 
 void TensorNameScope::Clear() {

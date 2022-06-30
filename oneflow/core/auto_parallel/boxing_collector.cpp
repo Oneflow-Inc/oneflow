@@ -508,7 +508,7 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
       // -> (P, S0) -> (B, S0), neither same dim 0 or send recv in nccl logical pass can deal with
       // (P, P) -> (P, S0) at the moment.
       // !(NdSbpHasPartialParallel(sbp_producer) && NdSbpHasBroadcastParallel(sbp_consumer)) &&
-      Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+      Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
     VLOG(3) << "Middle node insertion is skipped when src sbp is " << NdSbpToString(sbp_producer)
             << " dst sbp is " << NdSbpToString(sbp_consumer)
             << ", because nccl logical send/recv can handle this.";

@@ -48,7 +48,7 @@ bool HasCudaDevice() {
 
 void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_embeddings,
                        size_t embedding_vec_size) {
-  auto device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, 0);
+  auto device = Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, 0);
   ep::Stream* stream = device->CreateStream();
 
   store->SaveSnapshot("init");
@@ -173,7 +173,7 @@ void TestKeyValueStore(KeyValueStore* store, size_t num_embeddings, size_t test_
 
 TEST(PersistentTableKeyValueStore, PersistentTableKeyValueStore) {
   if (!HasCudaDevice()) { return; }
-  Global<ep::DeviceManagerRegistry>::New();
+  Singleton<ep::DeviceManagerRegistry>::New();
   PersistentTableKeyValueStoreOptions options{};
   uint32_t value_length = 128;
 
@@ -188,12 +188,12 @@ TEST(PersistentTableKeyValueStore, PersistentTableKeyValueStore) {
   TestKeyValueStore(store.get(), 1024, 1024, value_length);
   store.reset();
   PosixFile::RecursiveDelete(path);
-  Global<ep::DeviceManagerRegistry>::Delete();
+  Singleton<ep::DeviceManagerRegistry>::Delete();
 }
 
 TEST(CachedKeyValueStore, LRU) {
   if (!HasCudaDevice()) { return; }
-  Global<ep::DeviceManagerRegistry>::New();
+  Singleton<ep::DeviceManagerRegistry>::New();
   PersistentTableKeyValueStoreOptions store_options{};
   std::string path = CreateTempDirectory();
   store_options.table_options.path = path;
@@ -215,12 +215,12 @@ TEST(CachedKeyValueStore, LRU) {
   TestKeyValueStore(cached_store.get(), 1024, 1024, value_length);
   cached_store.reset();
   PosixFile::RecursiveDelete(path);
-  Global<ep::DeviceManagerRegistry>::Delete();
+  Singleton<ep::DeviceManagerRegistry>::Delete();
 }
 
 TEST(CachedKeyValueStore, Full) {
   if (!HasCudaDevice()) { return; }
-  Global<ep::DeviceManagerRegistry>::New();
+  Singleton<ep::DeviceManagerRegistry>::New();
   PersistentTableKeyValueStoreOptions store_options{};
   std::string path = CreateTempDirectory();
   store_options.table_options.path = path;
@@ -242,12 +242,12 @@ TEST(CachedKeyValueStore, Full) {
   TestKeyValueStore(cached_store.get(), 1024, 1024, value_length);
   cached_store.reset();
   PosixFile::RecursiveDelete(path);
-  Global<ep::DeviceManagerRegistry>::Delete();
+  Singleton<ep::DeviceManagerRegistry>::Delete();
 }
 
 TEST(MockKeyValueStore, Mock) {
   if (!HasCudaDevice()) { return; }
-  Global<ep::DeviceManagerRegistry>::New();
+  Singleton<ep::DeviceManagerRegistry>::New();
   MockKeyValueStoreOptions store_options{};
   std::string path = CreateTempDirectory();
   uint32_t value_length = 128;
@@ -258,7 +258,7 @@ TEST(MockKeyValueStore, Mock) {
   TestKeyValueStore(store.get(), 1024, 1024, value_length);
   store.reset();
   PosixFile::RecursiveDelete(path);
-  Global<ep::DeviceManagerRegistry>::Delete();
+  Singleton<ep::DeviceManagerRegistry>::Delete();
 }
 
 #endif  // WITH_CUDA
