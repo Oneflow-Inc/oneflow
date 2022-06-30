@@ -81,28 +81,11 @@ def machine_num(val):
     sess.config_proto.resource.machine_num = val
 
 
-def api_gpu_device_num(val: int) -> None:
-    """Set number of GPUs on each machine to run oneflow on.
-
-    Args:
-        val (int): number of GPUs. It is identical on every machine. In other words,
-        you can't specify different number of GPUs you would like to use on each machine.
-    """
-    if oneflow._oneflow_internal.flags.with_cuda():
-        return enable_if.unique([gpu_device_num, do_nothing])(val)
-    else:
-        print(
-            "INFO: for CPU-only OneFlow, oneflow.config.gpu_device_num is equivalent to oneflow.config.cpu_device_num"
-        )
-        print(traceback.format_stack()[-2])
-        return enable_if.unique([cpu_device_num, do_nothing])(val)
-
-
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
 def gpu_device_num(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.resource.gpu_device_num = val
+    print(
+        "'gpu_device_num' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 def api_cpu_device_num(val: int) -> None:

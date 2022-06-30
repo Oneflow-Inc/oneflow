@@ -15,6 +15,8 @@ limitations under the License.
 */
 
 #include "oneflow/core/vm/ep_stream_type.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
@@ -32,7 +34,8 @@ namespace vm {
 void EpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const {
   DeviceType device_type = stream->device()->enum_type();
   size_t device_index = stream->device()->device_id();
-  auto ep_device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
+  auto ep_device =
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
   auto ep_backend_allocator =
       std::make_unique<EpBackendAllocator>(ep_device, ep::AllocationOptions{});
   device_ctx->reset(new EpDeviceCtx(stream->device(), std::move(ep_backend_allocator)));

@@ -496,7 +496,8 @@ class LruCache : public Cache {
       : device_index_{},
         max_query_length_(0),
         query_indices_buffer_(nullptr),
-        query_keys_buffer_(nullptr) {
+        query_keys_buffer_(nullptr),
+        value_type_(options.value_type) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     InitLruCacheContext(options, &ctx_);
   }
@@ -511,6 +512,7 @@ class LruCache : public Cache {
 
   uint32_t KeySize() const override { return sizeof(Key); }
   uint32_t ValueSize() const override { return sizeof(Elem) * ctx_.line_size; }
+  DataType ValueType() const override { return value_type_; }
   uint64_t Capacity() const override { return ctx_.n_set * kWarpSize; }
   uint32_t MaxQueryLength() const override { return max_query_length_; }
 
@@ -587,6 +589,7 @@ class LruCache : public Cache {
   LruCacheContext<Key, Elem> ctx_;
   uint32_t* query_indices_buffer_;
   Key* query_keys_buffer_;
+  DataType value_type_;
 };
 
 template<typename Key>

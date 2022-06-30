@@ -37,7 +37,7 @@ std::shared_ptr<ep::Device> GetAllocationDevice(const MemoryCase& mem_case) {
   } else {
     UNIMPLEMENTED();
   }
-  auto device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
+  auto device = Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
   CHECK(device);
   return device;
 }
