@@ -335,6 +335,13 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
 Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
   CHECK_OR_RETURN(variable_op_name2eager_blob_object_.empty()) << kOfBugIssueUploadPrompt;
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    auto eager_blob_objects = std::make_shared<std::vector<std::shared_ptr<vm::EagerBlobObject>>>();
+    for (const auto& pair : variable_op_name2eager_blob_object_) {
+      eager_blob_objects->push_back(pair.second->shared_from_this());
+    }
+    return builder->TouchTensors(eager_blob_objects);
+  }));
   JUST(vm::CurrentRankSync());
   // Create or Rebuild variable, then get the real blob.
   for (const std::string& var_name : variable_op_names_) {

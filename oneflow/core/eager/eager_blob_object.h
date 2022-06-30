@@ -84,7 +84,9 @@ class TensorStorage {
   std::vector<std::function<void()>> storage_delete_hooks_;
 };
 
-class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc {
+class EagerBlobObject final : public user_op::Tensor,
+                              public user_op::TensorDesc,
+                              public std::enable_shared_from_this<EagerBlobObject> {
  public:
   EagerBlobObject(const EagerBlobObject&) = delete;
   EagerBlobObject(EagerBlobObject&&) = delete;
