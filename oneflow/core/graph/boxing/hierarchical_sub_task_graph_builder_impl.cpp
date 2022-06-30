@@ -132,7 +132,7 @@ class NDNcclSendRecvBoxingSubTskGphBuilder final : public HierarchicalSubTskGphB
         const int64_t machine_id = JUST(merged_parallel_desc.MachineId4ParallelId(id));
         int64_t device_index = JUST(merged_parallel_desc.DeviceId4ParallelId(id));
         int64_t thrd_id = EncodeStreamIdToInt64(GenerateNamedTaskStreamId(
-            machine_id, merged_parallel_desc.device_type(), device_index, "NCCL_SEND_RECV_BOXING"));
+            machine_id, merged_parallel_desc.device_type(), device_index, "NCCL_SEND_RECV_BOXING" + NewUniqueId()));
         bool has_input = in_parallel_desc.Containing(machine_id, device_index);
         bool has_output = out_parallel_desc.Containing(machine_id, device_index);
         node->Init(machine_id, thrd_id, lbi, logical_blob_desc.shape(),
