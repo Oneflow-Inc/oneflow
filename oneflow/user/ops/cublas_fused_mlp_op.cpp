@@ -162,7 +162,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
         fused_mlp_grad_builder.Op("cublas_fused_mlp_grad")
             .Input("dy", cublas_dy)
             .Input("x", op.input("x", 0))
-            .Output("d_grad")
+            .Output("d_x")
             .Output("d_biases", weight_num)
             .Output("d_weights", weight_num);
 
@@ -186,7 +186,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
           }
         }
         if (op.NeedGenGradTensor4OpInput("x", 0)) {
-          op.BindGradTensorWithOpInput(fused_mlp_grad_op.output("d_grad", 0), "x", 0);
+          op.BindGradTensorWithOpInput(fused_mlp_grad_op.output("d_x", 0), "x", 0);
         }
       } else {
         // step2: use reduce_sum to get last layer's bias grad.

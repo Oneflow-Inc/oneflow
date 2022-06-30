@@ -72,6 +72,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     std::shared_ptr<CublasFusedMLPKernelCache> kernel_cache = CreateCublasFusedMLPKernelCache();
+    // if (if_comm_create && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE", false))
     kernel_cache->Init(ctx);
     return kernel_cache;
   }
@@ -90,7 +91,14 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
   bool IsReadyForCapture(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                          const user_op::OpKernelCache* cache) const override {
     auto* kernel_cache = dynamic_cast<const CublasFusedMLPKernelCache*>(state);
-    return kernel_cache->IfCommCreate();
+    if(ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE", false)){
+      printf("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE! \n"); 
+      return kernel_cache->IfCommCreate();
+    } else {
+      printf("Always ready for capture! \n"); 
+      return true; 
+    }
+    // return kernel_cache->IfCommCreate();
   }
 
   using user_op::OpKernel::Compute;
@@ -100,7 +108,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t weight_num = ctx->input_size("weights");
-    user_op::Tensor* d_grad = ctx->Tensor4ArgNameAndIndex("d_grad", 0);
+    user_op::Tensor* d_x = ctx->Tensor4ArgNameAndIndex("d_x", 0);
     // just a placeholder.
     user_op::Tensor* d_bias = ctx->Tensor4ArgNameAndIndex("d_biases", weight_num - 1);
     user_op::Tensor* d_last_bias = ctx->Tensor4ArgNameAndIndex("d_biases", weight_num - 1);
@@ -111,6 +119,12 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
 
     ncclComm_t comm{};
     bool if_comm_create = matmul_grad_cache->IfCommCreate();
+    if(if_comm_create){
+      printf("Comm create! \n"); 
+    } else {
+      printf("No create \n"); 
+    }
+
     if (if_comm_create
         && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE", false)) {
       comm = matmul_grad_cache->comm();
@@ -197,8 +211,8 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
         OF_CUBLAS_CHECK(cublasLtMatmul(
             cuda_stream->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha,
             weight->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
-            matmul_grad_cache->cublas_b_desc, &sp_beta, d_grad->mut_dptr(),
-            matmul_grad_cache->cublas_c_desc, d_grad->mut_dptr(), matmul_grad_cache->cublas_c_desc,
+            matmul_grad_cache->cublas_b_desc, &sp_beta, d_x->mut_dptr(),
+            matmul_grad_cache->cublas_c_desc, d_x->mut_dptr(), matmul_grad_cache->cublas_c_desc,
             nullptr, cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
             cuda_stream->cuda_stream()));
       }

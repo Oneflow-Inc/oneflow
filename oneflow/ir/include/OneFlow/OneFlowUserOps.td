@@ -4563,7 +4563,7 @@ def OneFlow_CublasFusedMLPGradOp : OneFlow_BaseOp<"cublas_fused_mlp_grad", [NoSi
     Variadic<OneFlow_Tensor>:$hidden
   );
   let output = (outs
-    OneFlow_Tensor:$d_grad, 
+    OneFlow_Tensor:$d_x, 
     Variadic<OneFlow_Tensor>:$d_biases, 
     Variadic<OneFlow_Tensor>:$d_weights
   );

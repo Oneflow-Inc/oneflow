@@ -31,7 +31,7 @@ Maybe<void> InferTensorDesc4FusedMatmulBackward(user_op::InferContext* ctx) {
     *ctx->OutputShape("d_weights", idx) = weight_desc.shape();
     *ctx->OutputShape("d_biases", idx) = Shape({weight_desc.shape().At(0)});
   }
-  *ctx->OutputShape("d_grad", 0) = x_desc.shape();
+  *ctx->OutputShape("d_x", 0) = x_desc.shape();
   return Maybe<void>::Ok();
 }
 
@@ -47,7 +47,7 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx) {
     *ctx->OutputDType("d_weights", idx) = dy_desc.data_type();
     *ctx->OutputDType("d_biases", idx) = dy_desc.data_type();
   }
-  *ctx->OutputDType("d_grad", 0) = dy_desc.data_type();
+  *ctx->OutputDType("d_x", 0) = dy_desc.data_type();
   return Maybe<void>::Ok();
 }
 
@@ -74,7 +74,7 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx) {
     builder.Split(user_op::OpArg("hidden", i), 0);
   }
 
-  builder.Split(user_op::OpArg("d_grad", 0), 0);
+  builder.Split(user_op::OpArg("d_x", 0), 0);
   if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE", false)) {
     // FusedMLPGradKernel do allreduce for dbias and dweight, so here convert from PartialSum to
     // Broadcast.

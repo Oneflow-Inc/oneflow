@@ -1121,7 +1121,7 @@ class FusedMLPGradFunctor {
                                     .Input("weights", n)
                                     .Input("cublas_aux", n)
                                     .Input("hidden", n)
-                                    .Output("d_grad")
+                                    .Output("d_x")
                                     .Output("d_biases", n)
                                     .Output("d_weights", n)
                                     .Build());
