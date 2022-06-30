@@ -190,6 +190,7 @@ Tensor class reference
             cumprod,
             cumsum,
             data, 
+            dot,
             detach, 
             device, 
             placement,

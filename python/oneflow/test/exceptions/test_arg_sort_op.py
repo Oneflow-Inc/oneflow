@@ -15,22 +15,18 @@ limitations under the License.
 """
 
 import unittest
-
 import oneflow as flow
 import oneflow.unittest
 
 
-@flow.unittest.skip_unless_1n1d()
-class TestModule(flow.unittest.TestCase):
-    def test_exception_only_one_dim_infered(test_case):
-        # torch exception and messge:
-        #
-        #   RuntimeError: only one dimension can be inferred
-        #
-        x = flow.tensor((2, 2))
-        with test_case.assertRaises(RuntimeError) as ctx:
-            y = x.reshape((-1, -1))
-        test_case.assertEqual("only one dimension can be inferred", str(ctx.exception))
+class TestArgSort(flow.unittest.TestCase):
+    def test_direction_parameter_err(test_case):
+        with test_case.assertRaises(RuntimeError) as context:
+            x = flow.tensor([5, 10, 7, 8, 9, 1])
+            flow._C.arg_sort(x, direction="NONE")
+        test_case.assertTrue(
+            "expected the input direction parameter value is" in str(context.exception)
+        )
 
 
 if __name__ == "__main__":
