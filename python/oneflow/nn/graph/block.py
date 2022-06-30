@@ -300,15 +300,11 @@ class ModuleBlock(Block):
     
     def _get_or_create_identity(self, input_tensor: Tensor = None):
         key = input_tensor
-        print("==>key: ", key)
         
         if key not in ModuleBlock._unique_identity_dict:
             ident_name_scope = graph_build_util.make_new_name_scope(self.prev_scope, self.name_prefix + self.name)
             with graph_build_util.BlockScopeContext(self.prev_scope, ident_name_scope):
-                print("creat new ident for key: ", key)
                 ModuleBlock._unique_identity_dict[key] = oneflow._C.identity(input_tensor)
-        else:
-            print("reuse ident for key: ", key)
 
         return ModuleBlock._unique_identity_dict[key]
 
