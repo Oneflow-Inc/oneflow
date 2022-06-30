@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,18 +12,22 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#include "oneflow/core/lazy/actor/actor.h"
-#include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/core/job/runtime_job_descs.h"
+"""
 
-namespace oneflow {
+import unittest
+import oneflow as flow
+import oneflow.unittest
 
-std::unique_ptr<ActorBase> NewActor(ActorContext* actor_ctx) {
-  ActorBase* rptr = NewObj<int32_t, ActorBase>(actor_ctx->task_proto().task_type());
-  const auto& job_descs = *Singleton<RuntimeJobDescs>::Get();
-  rptr->Init(&job_descs.job_desc(actor_ctx->task_proto().job_id()), actor_ctx);
-  return std::unique_ptr<ActorBase>(rptr);
-}
 
-}  // namespace oneflow
+class TestArgSort(flow.unittest.TestCase):
+    def test_direction_parameter_err(test_case):
+        with test_case.assertRaises(RuntimeError) as context:
+            x = flow.tensor([5, 10, 7, 8, 9, 1])
+            flow._C.arg_sort(x, direction="NONE")
+        test_case.assertTrue(
+            "expected the input direction parameter value is" in str(context.exception)
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -32,7 +32,7 @@ namespace {
 constexpr size_t kDefaultWorkspaceSizeMb = 4;  // 4M
 
 void SetAffinityByDevice(int dev_id) {
-  auto node_device_desc_mgr = Global<hardware::NodeDeviceDescriptorManager>::Get();
+  auto node_device_desc_mgr = Singleton<hardware::NodeDeviceDescriptorManager>::Get();
   if (node_device_desc_mgr == nullptr) { return; }
   auto node_device_desc = node_device_desc_mgr->GetLocalNodeDeviceDescriptor();
   auto cuda_device = std::dynamic_pointer_cast<const hardware::CudaDeviceDescriptor>(

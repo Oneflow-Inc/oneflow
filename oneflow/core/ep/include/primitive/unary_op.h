@@ -23,6 +23,7 @@ namespace primitive {
 
 enum class UnaryOp {
   kIdentity,
+  // activation op
   kElu,
   kCelu,
   kRelu,
@@ -40,7 +41,13 @@ enum class UnaryOp {
   kSoftPlus,
   kTanh,
   kThreshold,
+
+  // logical op
   kLogicalNot,
+
+  // utils op
+  kIsInf,
+  kIsNan,
 };
 
 }

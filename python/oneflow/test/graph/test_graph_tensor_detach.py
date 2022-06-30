@@ -13,23 +13,31 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import unittest
 import numpy as np
+
 import oneflow as flow
 import oneflow.unittest
-from oneflow.test_utils.automated_test_util import *
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
-class TestDot(flow.unittest.TestCase):
-    @autotest(n=5)
-    def test_dot(test_case):
-        device = random_device()
-        k = random(10, 100)
-        x = random_tensor(ndim=1, dim0=k).to(device)
-        y = random_tensor(ndim=1, dim0=k).to(device)
-        z = torch.dot(x, y)
-        return z
+class TestTensorDetachGraph(oneflow.unittest.TestCase):
+    def test_tensor_detach_graph(test_case):
+        class TensorDetachGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+
+            def build(self, x):
+                x += x
+                y = x.detach()
+                return x, y
+
+        x = flow.randn(3, 4)
+        res = TensorDetachGraph()(x)
+        test_case.assertTrue(len(res) == 2)
+        test_case.assertTrue(np.allclose(res[0], res[1], 1e-05, 1e-05))
 
 
 if __name__ == "__main__":

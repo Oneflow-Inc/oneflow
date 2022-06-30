@@ -62,10 +62,10 @@ void CreateNcclComm(ncclComm_t* comm, const int dev, const std::string& key,
   int rank = std::distance(device_vec.cbegin(), it);
   if (rank == 0) {
     OF_NCCL_CHECK(ncclGetUniqueId(&nccl_unique_id));
-    Global<CtrlClient>::Get()->PushKV(key,
-                                      std::string(nccl_unique_id.internal, NCCL_UNIQUE_ID_BYTES));
+    Singleton<CtrlClient>::Get()->PushKV(
+        key, std::string(nccl_unique_id.internal, NCCL_UNIQUE_ID_BYTES));
   } else {
-    Global<CtrlClient>::Get()->PullKV(key, [&nccl_unique_id](const std::string& val) {
+    Singleton<CtrlClient>::Get()->PullKV(key, [&nccl_unique_id](const std::string& val) {
       memcpy(nccl_unique_id.internal, val.data(), NCCL_UNIQUE_ID_BYTES);
     });
   }

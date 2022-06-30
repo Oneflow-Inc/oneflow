@@ -38,6 +38,34 @@ struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kTanh, Dst, Src> {
   OF_DEVICE_FUNC Dst operator()(Src src) const { return std::tanh(src); }
 };
 
+template<>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kIsInf, bool, float> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(float src) const { return std::isinf(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kIsInf, bool, double> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(double src) const { return std::isinf(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kIsNan, bool, float> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(float src) const { return std::isnan(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kIsNan, bool, double> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(double src) const { return std::isnan(src); }
+};
+
 }  // namespace primitive
 }  // namespace ep
 }  // namespace oneflow
