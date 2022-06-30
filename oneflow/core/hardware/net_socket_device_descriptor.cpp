@@ -36,6 +36,7 @@ void GetPCIBusID(const std::string& name, std::string* pci_bus_id) {
   const char* device_real_path = realpath(device_path.data(), nullptr);
   if (device_real_path == nullptr) { return; }
   const std::string device_real_path_str = device_real_path;
+  free(device_real_path);
   const size_t pos = device_real_path_str.rfind('/');
   if (pos == std::string::npos) { return; }
   *pci_bus_id = device_real_path_str.substr(pos + 1);
