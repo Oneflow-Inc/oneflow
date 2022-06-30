@@ -39,7 +39,7 @@ namespace oneflow {
     if (in.is_dynamic() && indices.is_dynamic() == false) {
       CHECK_GE_OR_RETURN(indices.shape().dim_vec().at(i), in.shape().dim_vec().at(i))
           << Error::RuntimeError()
-          << "the size of indices tensor should be greater than or equal to the "
+          << "The size of indices tensor should be greater than or equal to the "
              "size of input tensor "
           << " at dimension " << i
           << " when the input tensor is dynamic and the indices tensor is not dynamic";
