@@ -113,9 +113,10 @@ const int32_t kCudaWarpSize = 32;
 // TODO: limit of shared memory should be different for different arch
 const int32_t kCudaMaxSharedMemoryByteSize = 48 << 10;
 
-inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
+inline int64_t BlocksNum4ThreadsNum(const int64_t n) {
   CHECK_GT(n, 0);
-  return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock, kCudaMaxBlocksNum);
+  return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock,
+                  static_cast<int64_t>(kCudaMaxBlocksNum));
 }
 
 #define RUN_CUDA_KERNEL(func, stream, elem_cnt, ...) \

@@ -611,6 +611,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.mm,
+    """
+    See :func:`oneflow.mm`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.narrow,
     """
     See :func:`oneflow.narrow`
@@ -1009,7 +1016,7 @@ add_docstr(
     """
     Tensor.fill_(value) → Tensor
 
-    Fills self tensor with the specified value.
+    Fills `self` tensor with the specified value.
     """,
 )
 
@@ -1284,6 +1291,13 @@ add_docstr(
     oneflow.Tensor.arctan,
     """
     See :func:`oneflow.arctan`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.dot,
+    """
+    See :func:`oneflow.dot`
     """,
 )
 
