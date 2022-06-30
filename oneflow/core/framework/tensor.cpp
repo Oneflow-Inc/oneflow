@@ -77,14 +77,9 @@ std::shared_ptr<Tensor> Parameter::pin_memory() const {
 
 bool LocalTensor::is_cuda() const { return CHECK_JUST(device())->type() == "cuda"; }
 
-<<<<<<< HEAD
 Maybe<Tensor> LocalTensor::detach() const {
   std::shared_ptr<Tensor> tensor = std::make_shared<LocalTensor>(JUST(impl_->detach()));
-=======
-Maybe<Tensor> MirroredTensor::detach() const {
-  std::shared_ptr<Tensor> tensor = std::make_shared<MirroredTensor>(JUST(impl_->detach()));
   if (this->is_lazy()) { JUST(tensor->BorrowTensorName(this)); }
->>>>>>> master
   return tensor;
 }
 
@@ -107,9 +102,9 @@ Maybe<Tensor> LocalTensor::clone() const {
   return JUST(functional::Copy(input, device_type, device_id, /*pin_memory=*/pin_memory));
 }
 
-Maybe<void> MirroredTensor::set_data(const std::shared_ptr<Tensor>& other) {
+Maybe<void> LocalTensor::set_data(const std::shared_ptr<Tensor>& other) {
   CHECK_OR_RETURN(this->is_leaf()) << "Can only set leaf tensor's data.";
-  const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(JUST(other->detach()));
+  const auto& mirrored_tensor = std::dynamic_pointer_cast<LocalTensor>(JUST(other->detach()));
   CHECK_NOTNULL_OR_RETURN(mirrored_tensor)
       << "Can not set a global tensor to the data of a local tensor";
   bool old_requires_grad = requires_grad();
