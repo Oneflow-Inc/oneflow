@@ -435,11 +435,11 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       DispatchTail<T, true>(
-          stream, seed, cuda_gen_state, in->shape().elem_cnt(), rate, scale,
+          stream, seed, cuda_gen_state, in->shape_view().elem_cnt(), rate, scale,
           reinterpret_cast<const T*>(in->dptr()), reinterpret_cast<bool*>(mask->mut_dptr()),
           reinterpret_cast<const T*>(addend->dptr()), reinterpret_cast<T*>(out->mut_dptr()));
     } else {
-      DispatchTail<T, false>(stream, seed, cuda_gen_state, in->shape().elem_cnt(), rate, scale,
+      DispatchTail<T, false>(stream, seed, cuda_gen_state, in->shape_view().elem_cnt(), rate, scale,
                              reinterpret_cast<const T*>(in->dptr()),
                              reinterpret_cast<bool*>(mask->mut_dptr()), nullptr,
                              reinterpret_cast<T*>(out->mut_dptr()));
@@ -474,7 +474,7 @@ class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::Cud
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const float scale = ctx->Attr<float>("scale");
-    const int64_t elem_cnt = dy->shape().elem_cnt();
+    const int64_t elem_cnt = dy->shape_view().elem_cnt();
     OF_CUDA_CHECK((cuda::elementwise::Binary(
         MaskAndScaleFunctor<T>(scale), elem_cnt, reinterpret_cast<T*>(dx->mut_dptr()),
         reinterpret_cast<const T*>(dy->dptr()), reinterpret_cast<const bool*>(mask->dptr()),

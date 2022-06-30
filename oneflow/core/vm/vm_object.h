@@ -17,12 +17,8 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_VM_OBJECT_H_
 
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/intrusive/object_pool.h"
-#include "oneflow/core/vm/id_util.h"
-#include "oneflow/core/vm/stream_desc.h"
-#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 
