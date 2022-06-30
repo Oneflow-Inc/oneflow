@@ -48,7 +48,8 @@ namespace oneflow {
           << "The indices tensor is not allowed to be dynamic when the input tensor is not dynamic";
     } else {
       CHECK_EQ_OR_RETURN(indices.shape().dim_vec().at(i), in.shape().dim_vec().at(i))
-          << Error::RuntimeError() << "The size of indices tensor must match the size of input tensor"
+          << Error::RuntimeError()
+          << "The size of indices tensor must match the size of input tensor"
           << " at dimension " << i << " when two tensors are both dynamic or neither";
     }
   }
