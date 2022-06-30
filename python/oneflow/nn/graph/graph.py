@@ -404,8 +404,7 @@ class Graph(object):
 
     @property
     def is_compiled(self):
-        r"""Whether this graph is compiled or not
-        """
+        r"""Whether this graph is compiled or not"""
         return self._is_compiled
 
     @property
@@ -530,8 +529,7 @@ class Graph(object):
         return shallow_repr
 
     def _ops_repr(self):
-        r"""Generate operators' string representation of this graph
-        """
+        r"""Generate operators' string representation of this graph"""
         if self._is_compiled and self._compiled_graph_proto is not None:
             module_conf = self._compiled_graph_proto.module_name2module_conf[self.name]
             return operators_repr(module_conf.ops, self._compiled_graph_proto)
@@ -570,6 +568,13 @@ class Graph(object):
         return self._original_job_proto
 
     @property
+    def _forward_job_proto(self):
+        logging.warning(
+            "_forward_job_proto is deprecated, please use _graph_proto instead."
+        )
+        return self._graph_proto
+
+    @property
     def optimized_graph_proto(self):
         if self._full_job_proto is None:
             self.__print(
@@ -587,6 +592,13 @@ class Graph(object):
         ), "nn.Graph's full graph proto can only be set before the first compilation."
         self._full_job_proto = full_job_proto
         self._c_nn_graph.job = full_job_proto.SerializeToString()
+
+    @property
+    def _full_graph_proto(self):
+        logging.warning(
+            "_full_graph_proto is deprecated, please use optimized_graph_proto instead."
+        )
+        return self.optimized_graph_proto
 
     @property
     def _compiled_graph_proto(self):
