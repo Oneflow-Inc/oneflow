@@ -630,7 +630,9 @@ jobs:
     env:
       ONEFLOW_SRC: .
       TEST_CONTAINER_NAME: "pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${{ matrix.entry }}-test"
+      TEST_MANYLINUX_CONTAINER_NAME: "pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${{ matrix.entry }}-test-manylinux"
       TEST_WITH_TF_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-tf-2.3.0:2f831e9354298a11447578e869d983959feb046f
+      TEST_MANYLINUX_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/manylinux2014_x86_64_cuda10.2:4fd9cc268bbe59c6245ca3941b8264fd256a8670
       SSH_TANK_HOST: 192.168.1.13
       SSH_TANK_PATH: /tank
       METRICS_DIR: metrics
@@ -683,6 +685,11 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
+      - name: Remove manylinux container
+        timeout-minutes: 45
+        if: ${{ contains(matrix.runs-on, 'self-hosted') }}
+        run: |
+          docker rm -f ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} || true
       - uses: Oneflow-Inc/get-oneflow/cache-complete@support-iree-ci
         name: Save cache if successful
         id: save-cache
@@ -784,16 +791,41 @@ jobs:
             ${{ env.EXTRA_DOCKER_ARGS }} \
             ${{ env.TEST_IMG_TAG }} \
             sleep 7200
+      - name: Start manylinux container
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        working-directory: ${{ env.ONEFLOW_SRC }}
+        run: |
+          docker run -d --rm --privileged --shm-size=8g \
+            --pids-limit ${{ env.THREAD_LIMIT }} \
+            --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
+            --runtime=nvidia \
+            -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \
+            -v ${ONEFLOW_WHEEL_PATH}:${ONEFLOW_WHEEL_PATH}:ro \
+            -v $HOME/test-container-cache/dot-local:/root/.local \
+            -v $HOME/test-container-cache/dot-cache:/root/.cache \
+            -e ONEFLOW_WHEEL_PATH=${ONEFLOW_WHEEL_PATH} \
+            -e ONEFLOW_CI=1 \
+            -v $PWD:$PWD \
+            -w $PWD \
+            -v ${ONEFLOW_TEST_CACHE_DIR}:${ONEFLOW_TEST_CACHE_DIR} \
+            -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
+            -e ONEFLOW_TIMEOUT_SECONDS=${{ env.ONEFLOW_TIMEOUT_SECONDS }} \
+            -e ONEFLOW_THRAED_LOCAL_CACHED_SIZE=${{ env.ONEFLOW_THRAED_LOCAL_CACHED_SIZE }} \
+            ${{ env.MLIR_DOCKER_ARGS }} \
+            --name ${TEST_MANYLINUX_CONTAINER_NAME} \
+            ${{ env.EXTRA_DOCKER_ARGS }} \
+            ${{ env.TEST_MANYLINUX_IMG_TAG }} \
+            sleep 7200
       - name: Exe test
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         timeout-minutes: 10
         run: |
-          docker exec ${{ env.TEST_CONTAINER_NAME }} ./liboneflow-ci-linux/bin/oneflow_testexe
+          docker exec ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} ./liboneflow-ci-linux/bin/oneflow_testexe
       - name: Exe test (C++ API)
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         timeout-minutes: 10
         run: |
-          docker exec -e ONEFLOW_SERVING_DEBUG=1 ${{ env.TEST_CONTAINER_NAME }} ./liboneflow-ci-linux/bin/oneflow_cpp_api_testexe
+          docker exec -e ONEFLOW_SERVING_DEBUG=1 ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} ./liboneflow-ci-linux/bin/oneflow_cpp_api_testexe
       - name: Test container
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
@@ -989,6 +1021,15 @@ jobs:
         if: ${{ always() && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
+      - name: Remove manylinux container
+        timeout-minutes: 45
+        if: ${{ always() && contains(matrix.runs-on, 'self-hosted') }}
+        run: |
+          docker rm -f ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} || true
+      - name: Clean workspace
+        timeout-minutes: 45
+        if: ${{ always() && contains(matrix.runs-on, 'self-hosted') }}
+        run: |
           docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
 
   static_analysis_with_clang_on_diff:
