@@ -294,9 +294,13 @@ class RandPermFunctor {
   Maybe<Tensor> operator()(const int32_t n, const Optional<one::Generator>& generator,
                            const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
+    DataType dtype_val = DataType::kInt64;
+    if (dtype) { dtype_val = dtype->data_type(); }
+
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("n", n));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
@@ -322,10 +326,14 @@ class ConsistentRandPermFunctor {
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                            const Optional<one::Generator>& generator, const Symbol<DType>& dtype,
                            const bool& requires_grad) const {
+    DataType dtype_val = DataType::kInt64;
+    if (dtype) { dtype_val = dtype->data_type(); }
+
     JUST(CheckDeviceIdsIsValid(placement));
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("n", n));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);

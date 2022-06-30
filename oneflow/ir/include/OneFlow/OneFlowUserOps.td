@@ -5048,6 +5048,7 @@ def OneFlow_RandpermOp : OneFlow_BaseOp<"randperm", [NoSideEffect, NoGrad, Decla
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "0">:$n,
     DefaultValuedAttr<SI64Attr, "0">:$seed,
+    OneFlow_DataType:$dtype,
     StrArrayAttr:$nd_sbp
   );
   let has_logical_tensor_desc_infer_fn = 1;
