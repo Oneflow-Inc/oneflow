@@ -123,43 +123,23 @@ struct stmt_ {
 };
 
 struct expr_ {
-    int lineno;
-    int col_offset;
     enum class ExprKind : uint8_t { kBoolOp=1, kBinOp=2, kLambda=3, kIfExp=4,
                                              kCompare=5, kCall=6, kNum=7,
                                              kConstant=8, kAttribute=9,
                                              kName=10 } expr_kind;
-
-    expr_(int lineno_, int col_offset_) : lineno(lineno_),
-          col_offset(col_offset_) {}
     virtual std::any visit(BaseVisitor&) = 0;
 };
 
 struct arguments_ {
     std::vector<arg_t> args;
-    arg_t vararg;
-    std::vector<arg_t> kwonlyargs;
-    std::vector<expr_t> kw_defaults;
-    arg_t kwarg;
-    std::vector<expr_t> defaults;
 
-    arguments_(const std::vector<arg_t>& args_, arg_t vararg_, const
-               std::vector<arg_t>& kwonlyargs_, const std::vector<expr_t>&
-               kw_defaults_, arg_t kwarg_, const std::vector<expr_t>&
-               defaults_) : args(args_), vararg(vararg_),
-               kwonlyargs(kwonlyargs_), kw_defaults(kw_defaults_),
-               kwarg(kwarg_), defaults(defaults_) {}
+    arguments_(const std::vector<arg_t>& args_) : args(args_) {}
 };
 
 struct arg_ {
     identifier arg;
-    expr_t annotation;
-    int lineno;
-    int col_offset;
 
-    arg_(const identifier& arg_, expr_t annotation_, int lineno_, int
-         col_offset_) : arg(arg_), annotation(annotation_), lineno(lineno_),
-         col_offset(col_offset_) {}
+    arg_(const identifier& arg_) : arg(arg_) {}
 };
 
 
@@ -249,14 +229,10 @@ struct FunctionDef_ : stmt_ {
     identifier name;
     arguments_t args;
     std::vector<stmt_t> body;
-    std::vector<expr_t> decorator_list;
-    expr_t returns;
 
     FunctionDef_(const identifier& name_, arguments_t args_, const
-                 std::vector<stmt_t>& body_, const std::vector<expr_t>&
-                 decorator_list_, expr_t returns_) : name(name_), args(args_),
-                 body(body_), decorator_list(decorator_list_),
-                 returns(returns_), stmt_() {
+                 std::vector<stmt_t>& body_) : name(name_), args(args_),
+                 body(body_), stmt_() {
         stmt_kind = stmt_::StmtKind::kFunctionDef;
     }
 
@@ -427,9 +403,8 @@ struct BoolOp_ : expr_ {
     boolop_t op;
     std::vector<expr_t> values;
 
-    BoolOp_(boolop_t op_, const std::vector<expr_t>& values_, int lineno_, int
-            col_offset_) : op(op_), values(values_), expr_(lineno_,
-            col_offset_) {
+    BoolOp_(boolop_t op_, const std::vector<expr_t>& values_) : op(op_),
+            values(values_), expr_() {
         expr_kind = expr_::ExprKind::kBoolOp;
     }
 
@@ -444,9 +419,8 @@ struct BinOp_ : expr_ {
     operator_t op;
     expr_t right;
 
-    BinOp_(expr_t left_, operator_t op_, expr_t right_, int lineno_, int
-           col_offset_) : left(left_), op(op_), right(right_), expr_(lineno_,
-           col_offset_) {
+    BinOp_(expr_t left_, operator_t op_, expr_t right_) : left(left_), op(op_),
+           right(right_), expr_() {
         expr_kind = expr_::ExprKind::kBinOp;
     }
 
@@ -460,8 +434,8 @@ struct Lambda_ : expr_ {
     arguments_t args;
     expr_t body;
 
-    Lambda_(arguments_t args_, expr_t body_, int lineno_, int col_offset_) :
-            args(args_), body(body_), expr_(lineno_, col_offset_) {
+    Lambda_(arguments_t args_, expr_t body_) : args(args_), body(body_),
+            expr_() {
         expr_kind = expr_::ExprKind::kLambda;
     }
 
@@ -476,9 +450,8 @@ struct IfExp_ : expr_ {
     expr_t body;
     expr_t orelse;
 
-    IfExp_(expr_t test_, expr_t body_, expr_t orelse_, int lineno_, int
-           col_offset_) : test(test_), body(body_), orelse(orelse_),
-           expr_(lineno_, col_offset_) {
+    IfExp_(expr_t test_, expr_t body_, expr_t orelse_) : test(test_),
+           body(body_), orelse(orelse_), expr_() {
         expr_kind = expr_::ExprKind::kIfExp;
     }
 
@@ -494,9 +467,8 @@ struct Compare_ : expr_ {
     std::vector<expr_t> comparators;
 
     Compare_(expr_t left_, const std::vector<cmpop_t>& ops_, const
-             std::vector<expr_t>& comparators_, int lineno_, int col_offset_) :
-             left(left_), ops(ops_), comparators(comparators_), expr_(lineno_,
-             col_offset_) {
+             std::vector<expr_t>& comparators_) : left(left_), ops(ops_),
+             comparators(comparators_), expr_() {
         expr_kind = expr_::ExprKind::kCompare;
     }
 
@@ -510,8 +482,8 @@ struct Call_ : expr_ {
     expr_t func;
     std::vector<expr_t> args;
 
-    Call_(expr_t func_, const std::vector<expr_t>& args_, int lineno_, int
-          col_offset_) : func(func_), args(args_), expr_(lineno_, col_offset_) {
+    Call_(expr_t func_, const std::vector<expr_t>& args_) : func(func_),
+          args(args_), expr_() {
         expr_kind = expr_::ExprKind::kCall;
     }
 
@@ -524,8 +496,7 @@ struct Call_ : expr_ {
 struct Num_ : expr_ {
     double n;
 
-    Num_(double n_, int lineno_, int col_offset_) : n(n_), expr_(lineno_,
-         col_offset_) {
+    Num_(double n_) : n(n_), expr_() {
         expr_kind = expr_::ExprKind::kNum;
     }
 
@@ -538,8 +509,7 @@ struct Num_ : expr_ {
 struct Constant_ : expr_ {
     double value;
 
-    Constant_(double value_, int lineno_, int col_offset_) : value(value_),
-              expr_(lineno_, col_offset_) {
+    Constant_(double value_) : value(value_), expr_() {
         expr_kind = expr_::ExprKind::kConstant;
     }
 
@@ -554,9 +524,8 @@ struct Attribute_ : expr_ {
     identifier attr;
     expr_context_t ctx;
 
-    Attribute_(expr_t value_, const identifier& attr_, expr_context_t ctx_, int
-               lineno_, int col_offset_) : value(value_), attr(attr_),
-               ctx(ctx_), expr_(lineno_, col_offset_) {
+    Attribute_(expr_t value_, const identifier& attr_, expr_context_t ctx_) :
+               value(value_), attr(attr_), ctx(ctx_), expr_() {
         expr_kind = expr_::ExprKind::kAttribute;
     }
 
@@ -570,8 +539,8 @@ struct Name_ : expr_ {
     identifier id;
     expr_context_t ctx;
 
-    Name_(const identifier& id_, expr_context_t ctx_, int lineno_, int
-          col_offset_) : id(id_), ctx(ctx_), expr_(lineno_, col_offset_) {
+    Name_(const identifier& id_, expr_context_t ctx_) : id(id_), ctx(ctx_),
+          expr_() {
         expr_kind = expr_::ExprKind::kName;
     }
 
@@ -584,8 +553,7 @@ struct Name_ : expr_ {
 
 mod_t Module(const std::vector<stmt_t>& body);
 stmt_t FunctionDef(const identifier& name, arguments_t args, const
-                   std::vector<stmt_t>& body, const std::vector<expr_t>&
-                   decorator_list, expr_t returns);
+                   std::vector<stmt_t>& body);
 stmt_t Return(expr_t value);
 stmt_t Assign(const std::vector<expr_t>& targets, expr_t value);
 stmt_t For(expr_t target, expr_t iter, const std::vector<stmt_t>& body, const
@@ -600,28 +568,19 @@ stmt_t Expr(expr_t value);
 stmt_t Pass();
 stmt_t Break();
 stmt_t Continue();
-expr_t BoolOp(boolop_t op, const std::vector<expr_t>& values, int lineno, int
-              col_offset);
-expr_t BinOp(expr_t left, operator_t op, expr_t right, int lineno, int
-             col_offset);
-expr_t Lambda(arguments_t args, expr_t body, int lineno, int col_offset);
-expr_t IfExp(expr_t test, expr_t body, expr_t orelse, int lineno, int
-             col_offset);
+expr_t BoolOp(boolop_t op, const std::vector<expr_t>& values);
+expr_t BinOp(expr_t left, operator_t op, expr_t right);
+expr_t Lambda(arguments_t args, expr_t body);
+expr_t IfExp(expr_t test, expr_t body, expr_t orelse);
 expr_t Compare(expr_t left, const std::vector<cmpop_t>& ops, const
-               std::vector<expr_t>& comparators, int lineno, int col_offset);
-expr_t Call(expr_t func, const std::vector<expr_t>& args, int lineno, int
-            col_offset);
-expr_t Num(double n, int lineno, int col_offset);
-expr_t Constant(double value, int lineno, int col_offset);
-expr_t Attribute(expr_t value, const identifier& attr, expr_context_t ctx, int
-                 lineno, int col_offset);
-expr_t Name(const identifier& id, expr_context_t ctx, int lineno, int
-            col_offset);
-arguments_t arguments(const std::vector<arg_t>& args, arg_t vararg, const
-                      std::vector<arg_t>& kwonlyargs, const
-                      std::vector<expr_t>& kw_defaults, arg_t kwarg, const
-                      std::vector<expr_t>& defaults);
-arg_t arg(const identifier& arg, expr_t annotation, int lineno, int col_offset);
+               std::vector<expr_t>& comparators);
+expr_t Call(expr_t func, const std::vector<expr_t>& args);
+expr_t Num(double n);
+expr_t Constant(double value);
+expr_t Attribute(expr_t value, const identifier& attr, expr_context_t ctx);
+expr_t Name(const identifier& id, expr_context_t ctx);
+arguments_t arguments(const std::vector<arg_t>& args);
+arg_t arg(const identifier& arg);
 
 std::string to_string(mod_t node);
 std::string to_string(stmt_t node);

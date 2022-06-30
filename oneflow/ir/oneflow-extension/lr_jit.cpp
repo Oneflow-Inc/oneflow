@@ -18,6 +18,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowAstJIT.h"
+#include "py_ast.h"
 
 using namespace std;
 using namespace mlir;
@@ -47,7 +48,30 @@ class JIT_Engine final {
   double Invoke(double base_lr, int64_t step);
 };
 
-JIT_Engine::JIT_Engine(PyASTNodeWrapper& ast) {
+static OwningOpRef<ModuleOp> genModuleForTest() {
+  // FunctionDef(name='get_lr', args=arguments(posonlyargs=[], args=[arg(arg='self',
+  // annotation=None, type_comment=None), arg(arg='base_lr', annotation=None, type_comment=None),
+  // arg(arg='step', annotation=None, type_comment=None)], vararg=None, kwonlyargs=[],
+  // kw_defaults=[], kwarg=None, defaults=[]), body=[Assign(targets=[Name(id='decay_batch',
+  // ctx=Store())], value=Constant(value=5, kind=None), type_comment=None),
+  // Assign(targets=[Name(id='cur_batch', ctx=Store())], value=Name(id='step', ctx=Load()),
+  // type_comment=None), If(test=Constant(value=False, kind=None),
+  // body=[If(test=Compare(left=Name(id='cur_batch', ctx=Load()), ops=[Eq()],
+  // comparators=[Constant(value=0, kind=None)]), body=[Assign(targets=[Name(id='cur_batch',
+  // ctx=Store())], value=Constant(value=1, kind=None), type_comment=None)], orelse=[]),
+  // Assign(targets=[Name(id='decay_batch', ctx=Store())], value=BinOp(left=Name(id='decay_batch',
+  // ctx=Load()), op=Mult(), right=Call(args=[BinOp(left=Name(id='cur_batch', ctx=Load()), op=Div(),
+  // right=Name(id='decay_batch', ctx=Load()))], keywords=[])), type_comment=None)],
+  // orelse=[Assign(targets=[Name(id='cur_batch', ctx=Store())], value=Call(func=Name(id='min',
+  // ctx=Load()), args=[Name(id='cur_batch', ctx=Load()), Name(id='decay_batch', ctx=Load())],
+  // keywords=[]), type_comment=None)]), Assign(targets=[Name(id='factor', ctx=Store())],
+  // value=BinOp(left=BinOp(left=Constant(value=1, kind=None), op=Sub(),
+  // right=BinOp(left=Name(id='cur_batch', ctx=Load()), op=Div(), right=Name(id='decay_batch',
+  // ctx=Load()))), op=Pow(), right=Constant(value=1.0, kind=None)), type_comment=None),
+  // Return(value=BinOp(left=BinOp(left=BinOp(left=Name(id='base_lr', ctx=Load()), op=Sub(),
+  // right=Constant(value=0.0001, kind=None)), op=Mult(), right=Name(id='factor', ctx=Load())),
+  // op=Add(), right=Constant(value=0.0001, kind=None)))], decorator_list=[], returns=None,
+  // type_comment=None)
   std::string moduleStr = R"mlir(
   func.func @get_lr(%arg0 : f32, %arg1 : i32) -> f32 attributes { llvm.emit_c_interface } {
     return %arg0 : f32
@@ -58,6 +82,25 @@ JIT_Engine::JIT_Engine(PyASTNodeWrapper& ast) {
   registerLLVMDialectTranslation(registry);
   MLIRContext context(registry);
   OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(moduleStr, &context);
+  return module;
+}
+
+static OwningOpRef<ModuleOp> genModuleForBuild() {
+  std::string moduleStr = R"mlir(
+  func.func @get_lr(%arg0 : f32, %arg1 : i32) -> f32 attributes { llvm.emit_c_interface } {
+    return %arg0 : f32
+  }
+  )mlir";
+  DialectRegistry registry;
+  registerAllDialects(registry);
+  registerLLVMDialectTranslation(registry);
+  MLIRContext context(registry);
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(moduleStr, &context);
+  return module;
+}
+
+JIT_Engine::JIT_Engine(PyASTNodeWrapper& ast) {
+  auto module = genModuleForBuild();
   CHECK(!!module) << "failed to parse module";
   CHECK(succeeded(lowerToLLVMDialect(*module))) << "failed to lower to llvm dialect";
   auto jit_or_err = ExecutionEngine::create(*module);

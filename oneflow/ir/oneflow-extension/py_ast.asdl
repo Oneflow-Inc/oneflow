@@ -1,0 +1,49 @@
+module PythonAST
+{
+    mod = Module(stmt* body)
+
+    stmt = FunctionDef(identifier name, arguments args,
+                       stmt* body, expr* decorator_list, expr? returns)
+          | Return(expr? value)
+
+          | Assign(expr* targets, expr value)
+          | For(expr target, expr iter, stmt* body, stmt* orelse)
+          | While(expr test, stmt* body, stmt* orelse)
+          | If(expr test, stmt* body, stmt* orelse)
+
+          | Raise(expr? exc, expr? cause)
+          | Assert(expr test, expr? msg)
+
+          | Expr(expr value)
+          | Pass | Break | Continue
+
+    expr = BoolOp(boolop op, expr* values)
+         | BinOp(expr left, operator op, expr right)
+         | Lambda(arguments args, expr body)
+         | IfExp(expr test, expr body, expr orelse)
+         | Compare(expr left, cmpop* ops, expr* comparators)
+         | Call(expr func, expr* args)
+         | Num(double n) -- a number as a PyObject.
+         | Constant(double value)
+
+         | Attribute(expr value, identifier attr, expr_context ctx)
+         | Name(identifier id, expr_context ctx)
+
+          -- col_offset is the byte offset in the utf8 string the parser uses
+          attributes (int lineno, int col_offset)
+
+    expr_context = Load | Store | Del | AugLoad | AugStore | Param
+
+    boolop = And | Or
+
+    operator = Add | Sub | Mult |  Div | Pow
+
+    cmpop = Eq | NotEq | Lt | LtE | Gt | GtE | Is | IsNot | In | NotIn
+
+
+    arguments = (arg* args, arg? vararg, arg* kwonlyargs, expr* kw_defaults,
+                 arg? kwarg, expr* defaults)
+
+    arg = (identifier arg, expr? annotation)
+           attributes (int lineno, int col_offset)
+}
