@@ -96,11 +96,6 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
     // TODO(chengcheng): refactor JobBuildAndInferCtxMgr
     Singleton<LazyJobBuildAndInferCtxMgr>::New();
 
-    for (const std::string& lib_path : config_proto.load_lib_path()) {
-      // TODO(chengcheng): remove load_lib_path in config proto. using LoadLibraryNow
-      JUST(LoadLibrary(lib_path));
-    }
-
     {
       // NOTE(chengcheng): init runtime global objects
       Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::New();
