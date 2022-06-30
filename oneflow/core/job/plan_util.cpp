@@ -58,7 +58,7 @@ void PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan) {
       RegstDescProto* regst_desc = &pair.second;
       if (regst_desc->mem_block_id() == -1) {
         CHECK_EQ(regst_desc->mem_block_offset(), -1);
-        regst_desc->set_mem_block_id(Global<IDMgr>::Get()->NewMemBlockId());
+        regst_desc->set_mem_block_id(Singleton<IDMgr>::Get()->NewMemBlockId());
         regst_desc->set_mem_block_offset(0);
       }
     }
@@ -101,7 +101,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
   for (auto& pair : mzuid2mem_blocks) {
     int64_t mem_zone_uid = pair.first;
     std::vector<const ChunkProto*> exist_chunks;
-    Global<ChunkMgr>::Get()->GetChunkProtosByMemZoneUniqueId(mem_zone_uid, &exist_chunks);
+    Singleton<ChunkMgr>::Get()->GetChunkProtosByMemZoneUniqueId(mem_zone_uid, &exist_chunks);
     auto chunk_it = exist_chunks.begin();
     auto& mem_blocks = pair.second;
     int64_t current_chunk_offset = 0;
@@ -149,7 +149,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
       auto remain_block_it = remain_blocks.begin();
       MemBlockProto* first_block = *remain_block_it;
       ChunkProto new_chunk;
-      new_chunk.set_chunk_id(Global<IDMgr>::Get()->NewChunkId());
+      new_chunk.set_chunk_id(Singleton<IDMgr>::Get()->NewChunkId());
       new_chunk.set_machine_id(first_block->machine_id());
       *new_chunk.mutable_mem_case() = first_block->mem_case();
       new_chunk.set_mem_size(first_block->mem_size());
@@ -174,7 +174,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
       all_chunks.emplace_back(new_chunk);
       CHECK(unique_chunk_ids.insert(new_chunk.chunk_id()).second);
 
-      Global<ChunkMgr>::Get()->AddChunkProto(new_chunk);
+      Singleton<ChunkMgr>::Get()->AddChunkProto(new_chunk);
     }
   }
 
@@ -261,7 +261,7 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     }
 
     if (regst_separated_size > 0) {
-      int64_t separated_mem_block_id = Global<IDMgr>::Get()->NewMemBlockId();
+      int64_t separated_mem_block_id = Singleton<IDMgr>::Get()->NewMemBlockId();
       regst_desc->set_separated_header_mem_block_id(separated_mem_block_id);
       MemBlockProto mem_block;
       mem_block.set_mem_block_id(separated_mem_block_id);
@@ -388,9 +388,9 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
 }
 
 void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
-  const auto& process_ranks = Global<ResourceDesc, ForSession>::Get()->process_ranks();
+  const auto& process_ranks = Singleton<ResourceDesc, ForSession>::Get()->process_ranks();
   size_t gpu_device_num =
-      Global<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(DeviceType::kCUDA);
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(DeviceType::kCUDA);
   std::map<int64_t, std::map<int64_t, std::vector<std::vector<std::string>>>>
       machine_id2job_id_device_id2node_list;
   for (size_t i : process_ranks) {

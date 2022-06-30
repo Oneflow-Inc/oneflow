@@ -251,6 +251,8 @@ def check_eager_graph_tensor(eager_res, graph_res):
             equal_nan=True,
         )
         return equality_res
+    else:
+        return True
 
 
 # NOTE(lixiang): Deepcopy the input parameters in order to correctly test the inplace version of the op.
@@ -428,8 +430,8 @@ def get_tensor_graph_res(
                 oneflow,
                 "nn.Graph",
                 "get_tensor_graph_res",
-                oneflow_args,
-                oneflow_kwargs,
+                tensor_graph_args,
+                tensor_graph_kwargs,
             )
         raise OneFlowGraphBuildOrRunError(e)
     return test_g_res
@@ -509,17 +511,6 @@ def oneflow_eager_run_with_graph_check(
             if isinstance(test_g_res, tuple):
                 for _, g_res in enumerate(test_g_res):
                     if not check_eager_graph_tensor(oneflow_res, g_res):
-                        if verbose:
-                            get_fake_program_more_detail(
-                                oneflow,
-                                "Eager + nn.Graph",
-                                "oneflow_eager_run_with_graph_check",
-                                oneflow_args,
-                                oneflow_kwargs,
-                            )
-            else:
-                if not check_eager_graph_tensor(oneflow_res, test_g_res):
-                    if verbose:
                         get_fake_program_more_detail(
                             oneflow,
                             "Eager + nn.Graph",
@@ -527,6 +518,15 @@ def oneflow_eager_run_with_graph_check(
                             oneflow_args,
                             oneflow_kwargs,
                         )
+            else:
+                if not check_eager_graph_tensor(oneflow_res, test_g_res):
+                    get_fake_program_more_detail(
+                        oneflow,
+                        "Eager + nn.Graph",
+                        "oneflow_eager_run_with_graph_check",
+                        oneflow_args,
+                        oneflow_kwargs,
+                    )
     return oneflow_res
 
 
@@ -1058,6 +1058,12 @@ def check_tensor_equality(
             torch_grad, flow_grad, rtol=rtol, atol=atol, equal_nan=True,
         ):
             print_note_fake_program(detail=True)
+            print("---------Grad Shape--------")
+            print(torch_grad.shape)
+            print(flow_grad.shape)
+            print(
+                f"Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}"
+            )
             return False
     torch_numpy = torch_tensor.detach().cpu().numpy()
     oneflow_numpy = flow_tensor.numpy()
