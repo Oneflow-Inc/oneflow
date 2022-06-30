@@ -22,6 +22,7 @@ import oneflow._oneflow_internal
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.env_util as env_util
+import oneflow.core.job.resource_pb2 as resource_pb
 
 
 class MultiClientSession(object):
@@ -122,6 +123,17 @@ class MultiClientSession(object):
         self._check_status(self.Status.INITED)
         config_proto_str = text_format.MessageToString(resource_config)
         self._session_ctx.update_resource(config_proto_str)
+
+    """
+    Get the current resource when session is initialized
+    """
+
+    def get_resource_eagerly(self):
+        self._check_status(self.Status.INITED)
+        serialized_resource = self._session_ctx.get_serialized_resource()
+        resource = resource_pb.Resource()
+        resource.ParseFromString(serialized_resource)
+        return resource
 
     def __del__(self):
         if self._env.is_shutting_down():

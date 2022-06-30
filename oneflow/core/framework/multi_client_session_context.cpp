@@ -139,6 +139,13 @@ Maybe<void> MultiClientSessionContext::UpdateResource(const std::string& reso_pr
   return UpdateResource(reso_proto);
 }
 
+Maybe<std::string> MultiClientSessionContext::GetSerializedResource() {
+  CHECK_OR_RETURN(is_inited_) << " session must be inited when getting resource.";
+  CHECK_NOTNULL_OR_RETURN((Singleton<ResourceDesc, ForSession>::Get()))
+      << "ResourceDesc get failed!";
+  return Singleton<ResourceDesc, ForSession>::Get()->resource().SerializeAsString();
+}
+
 Maybe<void> MultiClientSessionContext::TryClose() {
   if (is_inited_) {
     VLOG(1) << "Try to delete multi client session context." << std::endl;

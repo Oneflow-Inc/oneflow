@@ -55,7 +55,11 @@ def _set_resource_attr(attrs_chain: Union[List[str], str], attr_value, type_):
     session = session_ctx.GetDefaultSession()
 
     # get the current resource config
-    resource_config = session.config_proto.resource
+    resource_config = (
+        session.config_proto.resource
+        if session.status_ != session.Status.INITED
+        else session.get_resource_eagerly()
+    )
 
     # update the current resource config
     setattr(
@@ -478,4 +482,3 @@ api_attrs_and_type = {
         bool,
     ),
 }
-
