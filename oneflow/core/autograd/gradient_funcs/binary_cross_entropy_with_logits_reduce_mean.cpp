@@ -41,7 +41,7 @@ class BinaryCrossEntropyWithLogitsReduceMean
 
 Maybe<void> BinaryCrossEntropyWithLogitsReduceMean::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr) << "fw_op_expr should not be null. ";
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -62,7 +62,7 @@ Maybe<void> BinaryCrossEntropyWithLogitsReduceMean::Apply(
     const BinaryCrossEntropyWithLogitsReduceMeanCaptureState* ctx, const TensorTuple& out_grads,
     TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1) << "out_grads size should be equal to 1. ";
   const auto& dy = JUST(VectorAt(out_grads, 0));
   const auto& input = JUST(VectorAt(ctx->SavedTensors(), 0));
   const auto& target = JUST(VectorAt(ctx->SavedTensors(), 1));
