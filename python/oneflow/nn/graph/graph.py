@@ -570,7 +570,7 @@ class Graph(object):
         return self._original_job_proto
 
     @property
-    def _optimized_graph_proto(self):
+    def optimized_graph_proto(self):
         if self._full_job_proto is None:
             self.__print(
                 2,
@@ -580,8 +580,8 @@ class Graph(object):
             )
         return self._full_job_proto
 
-    @_optimized_graph_proto.setter
-    def _optimized_graph_proto(self, full_job_proto):
+    @optimized_graph_proto.setter
+    def optimized_graph_proto(self, full_job_proto):
         assert (
             not self._is_compiled
         ), "nn.Graph's full graph proto can only be set before the first compilation."

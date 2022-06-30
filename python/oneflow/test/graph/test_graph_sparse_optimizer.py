@@ -59,7 +59,7 @@ class GraphSparseOptimizerTest(oneflow.unittest.TestCase):
         graph._compile(_rand_input(PLC, SBP))
 
         sparse_optimizer_found = False
-        for op in graph._optimized_graph_proto.net.op:
+        for op in graph.optimized_graph_proto.net.op:
             # print("==>", op.name)
             if op.HasField("user_conf"):
                 # print("  -->", op.user_conf.op_type_name)
