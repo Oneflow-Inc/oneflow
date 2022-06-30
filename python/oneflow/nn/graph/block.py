@@ -108,7 +108,6 @@ class Block(object):
 
 
 class ModuleBlock(Block):
-    _unique_identity_dict = dict()
     def __init__(
         self,
         prefix: str = "",
@@ -289,7 +288,6 @@ class ModuleBlock(Block):
 
             def insert_identity(t):
                 assert isinstance(t, Tensor)
-                #return oneflow._C.identity(t)
                 return self._get_or_create_identity(t)
 
             args, kwargs = self.__map_io(
@@ -301,12 +299,12 @@ class ModuleBlock(Block):
     def _get_or_create_identity(self, input_tensor: Tensor = None):
         key = input_tensor
         
-        if key not in ModuleBlock._unique_identity_dict:
+        if key not in self._belonged_graph._unique_identity_op_dict:
             ident_name_scope = graph_build_util.make_new_name_scope(self.prev_scope, self.name_prefix + self.name)
             with graph_build_util.BlockScopeContext(self.prev_scope, ident_name_scope):
-                ModuleBlock._unique_identity_dict[key] = oneflow._C.identity(input_tensor)
+                self._belonged_graph._unique_identity_op_dict[key] = oneflow._C.identity(input_tensor)
 
-        return ModuleBlock._unique_identity_dict[key]
+        return self._belonged_graph._unique_identity_op_dict[key]
 
     def add_module(self, name: str, module: Optional[Module]) -> None:
         self.__setattr__(

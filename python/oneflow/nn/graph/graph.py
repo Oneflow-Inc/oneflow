@@ -138,6 +138,9 @@ class Graph(object):
         self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
 
+        # For graph level op rewrite
+        self._unique_identity_op_dict = dict()
+
         self._session = session_ctx.GetDefaultSession()
         assert type(self._session) is MultiClientSession
         self._session.TryInit()
