@@ -43,6 +43,14 @@ class BroadcastElementwiseUnaryFactory : public Factory<BroadcastElementwiseUnar
   ~BroadcastElementwiseUnaryFactory() override = default;
 
   virtual std::unique_ptr<BroadcastElementwiseUnary> New(UnaryOp op, DataType src_type,
+                                                         DataType dst_type,
+                                                         size_t max_num_dims) = 0;
+
+  virtual std::unique_ptr<BroadcastElementwiseUnary> New(UnaryOp op, DataType src_type,
+                                                         DataType dst_type, size_t max_num_dims,
+                                                         Scalar attr0) = 0;
+
+  virtual std::unique_ptr<BroadcastElementwiseUnary> New(UnaryOp op, DataType src_type,
                                                          DataType dst_type, size_t max_num_dims,
                                                          Scalar attr0, Scalar attr1) = 0;
 };

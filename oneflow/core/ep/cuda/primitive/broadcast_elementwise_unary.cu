@@ -228,10 +228,9 @@ void LaunchWithSimplified(CudaStream* stream, size_t simplified_num_dims,
 
 template<UnaryOp op, typename Src, typename Dst, size_t pack>
 __global__ void LaunchFillKernel(Dst* dst, const Src* src, size_t pack_count, size_t count,
-                                 Scalar attr0, Scalar attr1) {
+                                 UnaryFunctor<DeviceType::kCUDA, op, Src, Dst> functor) {
   using StorePack = cuda::elementwise::Packed<Dst, pack>;
   StorePack pack_value;
-  auto functor = UnaryFunctor<DeviceType::kCUDA, op, Src, Dst>(attr0, attr1);
   Dst value = functor(*src);
 #pragma unroll
   for (size_t i = 0; i < pack; ++i) { pack_value.elem[i] = value; }
@@ -247,9 +246,10 @@ typename std::enable_if<(pack != 0), void>::type LaunchPackFill(CudaStream* stre
                                                                 const Src* src, size_t count,
                                                                 Scalar attr0, Scalar attr1) {
   size_t pack_count = count / pack;
+  auto functor = UnaryFunctor<DeviceType::kCUDA, op, Src, Dst>(attr0, attr1);
   LaunchFillKernel<op, Src, Dst, pack>
       <<<BlocksNum4ThreadsNum(pack_count), kCudaThreadsNumPerBlock, 0, stream->cuda_stream()>>>(
-          dst, src, pack_count, count, attr0, attr1);
+          dst, src, pack_count, count, functor);
 }
 
 template<UnaryOp op, typename Src, typename Dst, size_t pack>
@@ -332,6 +332,16 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
   OF_DISALLOW_COPY_AND_MOVE(BroadcastElementwiseUnaryFactoryImpl);
   BroadcastElementwiseUnaryFactoryImpl() = default;
   ~BroadcastElementwiseUnaryFactoryImpl() override = default;
+
+  std::unique_ptr<BroadcastElementwiseUnary> New(UnaryOp op, DataType src_type, DataType dst_type,
+                                                 size_t max_num_dims) override {
+    return New(op, src_type, dst_type, max_num_dims, Scalar(), Scalar());
+  }
+
+  std::unique_ptr<BroadcastElementwiseUnary> New(UnaryOp op, DataType src_type, DataType dst_type,
+                                                 size_t max_num_dims, Scalar attr0) override {
+    return New(op, src_type, dst_type, max_num_dims, attr0, Scalar());
+  }
 
   std::unique_ptr<BroadcastElementwiseUnary> New(UnaryOp unary_op, DataType src_type,
                                                  DataType dst_type, size_t max_num_dims,

@@ -146,6 +146,16 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
   BroadcastElementwiseUnaryFactoryImpl() = default;
   ~BroadcastElementwiseUnaryFactoryImpl() override = default;
 
+  std::unique_ptr<BroadcastElementwiseUnary> New(UnaryOp op, DataType src_type, DataType dst_type,
+                                                 size_t max_num_dims) override {
+    return New(op, src_type, dst_type, max_num_dims, Scalar(), Scalar());
+  }
+
+  std::unique_ptr<BroadcastElementwiseUnary> New(UnaryOp op, DataType src_type, DataType dst_type,
+                                                 size_t max_num_dims, Scalar attr0) override {
+    return New(op, src_type, dst_type, max_num_dims, attr0, Scalar());
+  }
+
   std::unique_ptr<BroadcastElementwiseUnary> New(UnaryOp unary_op, DataType src_type,
                                                  DataType dst_type, size_t max_num_dims,
                                                  Scalar attr0, Scalar attr1) override {

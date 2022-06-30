@@ -95,15 +95,15 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsNan, bool, double> {
   OF_DEVICE_FUNC bool operator()(double src) const { return isnan(src); }
 };
 
-#define SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(op)                          \
-  template<>                                                                  \
-  struct UnaryFunctor<DeviceType::kCUDA, op, half, half> {                    \
+#define SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(op)                                         \
+  template<>                                                                                 \
+  struct UnaryFunctor<DeviceType::kCUDA, op, half, half> {                                   \
     OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {} \
-                                                                              \
-    UnaryFunctor<DeviceType::kCUDA, op, float, float> float_functor;          \
-    OF_DEVICE_FUNC half operator()(half src) const {                          \
-      return __float2half(float_functor(__half2float(src)));                  \
-    }                                                                         \
+                                                                                             \
+    UnaryFunctor<DeviceType::kCUDA, op, float, float> float_functor;                         \
+    OF_DEVICE_FUNC half operator()(half src) const {                                         \
+      return __float2half(float_functor(__half2float(src)));                                 \
+    }                                                                                        \
   };
 
 SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(UnaryOp::kElu);
