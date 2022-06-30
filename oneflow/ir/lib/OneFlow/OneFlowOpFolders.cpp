@@ -39,8 +39,8 @@ using TensorPtr = std::shared_ptr<::oneflow::one::Tensor>;
 using MaybeTensor = ::oneflow::Maybe<::oneflow::one::Tensor>;
 
 StringAttr GenNewVariableOpName(MLIRContext* ctx, const std::string& key = "") {
-  if (key == "") { return StringAttr::get(ctx, "variable_" + ::oneflow::NewUniqueId()); }
-  return StringAttr::get(ctx, "variable_" + key + "_" + ::oneflow::NewUniqueId());
+  if (key == "") { return StringAttr::get(ctx, "__internal_variable_" + ::oneflow::NewUniqueId()); }
+  return StringAttr::get(ctx, "__internal_variable_" + key + "_" + ::oneflow::NewUniqueId());
 }
 
 OpFoldResult UnaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
