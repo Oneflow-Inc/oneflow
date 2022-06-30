@@ -149,10 +149,9 @@ class InferenceSession(object):
             self.config_proto_ = config_proto
             # self.config_proto_ = session_util._GetDefaultConfigProto()
         if self.option_.device_tag == "cuda":
-            self.config_proto_.resource.gpu_device_num = self.option_.device_num
+            pass
         elif self.option_.device_tag == "cpu":
             self.config_proto_.resource.cpu_device_num = self.option_.device_num
-            self.config_proto_.resource.gpu_device_num = 0
         else:
             raise NotImplementedError(
                 "not supported device tag {}".format(self.option_.device_tag)
