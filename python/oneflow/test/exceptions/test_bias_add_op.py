@@ -26,8 +26,7 @@ class TestBiasAdd(flow.unittest.TestCase):
             y = flow.tensor([[2, 2], [1, 1]])
             out = flow._C.bias_add(y, x, axis=0)
         test_case.assertTrue(
-            "Bias tensor has to be a one-dimensional vector"
-            in str(context.exception)
+            "Bias tensor has to be a one-dimensional vector" in str(context.exception)
         )
 
 
