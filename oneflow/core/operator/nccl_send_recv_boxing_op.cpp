@@ -108,20 +108,29 @@ Maybe<void> NcclSendRecvBoxingOp::InferOutBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const NcclSendRecvBoxingOpConf& conf = this->op_conf().nccl_send_recv_boxing_conf();
   const Shape& logical_shape = Shape(conf.logical_shape());
+  const ParallelDesc& parallel_desc = ParallelDesc(conf.parallel_conf());
+  const int64_t machine_id =
+      CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_ctx->parallel_id()));
+  const int64_t device_index =
+      CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_ctx->parallel_id()));
   if (conf.has_input()) {
     const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
     const NdSbp& src_nd_sbp = conf.src_nd_sbp();
     const ParallelDesc& src_parallel_desc = ParallelDesc(conf.src_parallel_conf());
-    std::shared_ptr<Shape> in_shape = JUST(GetPhysicalShape(
-        logical_shape, src_nd_sbp, src_parallel_desc, parallel_ctx->parallel_id()));
+    int64_t src_parallel_id =
+        CHECK_JUST(src_parallel_desc.ParallelId4MachineDeviceId(machine_id, device_index));
+    std::shared_ptr<Shape> in_shape =
+        JUST(GetPhysicalShape(logical_shape, src_nd_sbp, src_parallel_desc, src_parallel_id));
     CHECK_EQ_OR_RETURN(*in_shape, in_blob_desc->shape());
   }
   if (conf.has_output()) {
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
     const NdSbp& dst_nd_sbp = conf.dst_nd_sbp();
     const ParallelDesc& dst_parallel_desc = ParallelDesc(conf.dst_parallel_conf());
-    std::shared_ptr<Shape> out_shape = JUST(GetPhysicalShape(
-        logical_shape, dst_nd_sbp, dst_parallel_desc, parallel_ctx->parallel_id()));
+    int64_t dst_parallel_id =
+        CHECK_JUST(dst_parallel_desc.ParallelId4MachineDeviceId(machine_id, device_index));
+    std::shared_ptr<Shape> out_shape =
+        JUST(GetPhysicalShape(logical_shape, dst_nd_sbp, dst_parallel_desc, dst_parallel_id));
     out_blob_desc->mut_shape() = *out_shape;
     out_blob_desc->set_data_type(conf.data_type());
   }
