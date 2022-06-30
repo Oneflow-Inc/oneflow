@@ -28,7 +28,7 @@ namespace oneflow {
       << Error::RuntimeError() << "The size of the axis must greater than or equal to 0, "
       << "but got " << bias_add_axis;
   CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc.shape().NumAxes())
-      << Error::RuntimeError() << "Dimension out of range (expected to be in range of [0"
+      << Error::IndexError() << "Dimension out of range (expected to be in range of [0"
       << ", " << a_tensor_desc.shape().NumAxes() - 1 << "],"
       << " but got " << bias_add_axis << ")";
   CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0))
