@@ -1,8 +1,11 @@
+set(CMAKE_CXX_STANDARD 17)
+
 oneflow_add_mlir_library(
   MLIROneFlowExtension
   extension.cpp
   ir_pass.cpp
   lr_jit.cpp
+  py_ast.cpp
   DEPENDS
   LINK_LIBS
   PUBLIC
