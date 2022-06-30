@@ -42,10 +42,8 @@ void ComputeBinaryCrossEntropyWithLogitsReduceMeanOut(int64_t elem_cnt, const T*
     T input_val = input[i];
     T target_val = target[i];
     T max_val = ComputeMaxVal(input_val);
-    if (out != nullptr) {
-      result += (1 - target_val) * input_val + max_val
-                + (std::log(std::exp(-max_val) + std::exp(-input_val - max_val)));
-    }
+    result += (1 - target_val) * input_val + max_val
+              + (std::log(std::exp(-max_val) + std::exp(-input_val - max_val)));
   }
   out[0] = result / reduce_elem_cnt;
 }
