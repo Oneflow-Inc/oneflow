@@ -40,8 +40,8 @@ x = torch.randn((512, 3, 512,512),device=cuda0)
 time.sleep(3)
 get_gpu_mem_info(0)
 
-# x = torch.randn((1, 3, 512,512),device=cuda0)
-# get_gpu_mem_info(0)
+x = x.cpu()
+get_gpu_mem_info(0)
 
 torch.cuda.empty_cache()
 get_gpu_mem_info(0)
