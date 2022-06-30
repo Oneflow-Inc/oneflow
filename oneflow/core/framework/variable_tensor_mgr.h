@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_OPERATOR_VARIABLE_TENSOR_MGR_H_
-#define ONEFLOW_CORE_OPERATOR_VARIABLE_TENSOR_MGR_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_VARIABLE_TENSOR_MGR_H_
+#define ONEFLOW_CORE_FRAMEWORK_VARIABLE_TENSOR_MGR_H_
 
 #include <map>
 #include <memory>
@@ -46,6 +46,8 @@ class VariableTensorMgr final {
   std::tuple<std::vector<std::string>, std::vector<std::shared_ptr<one::Tensor>>> Dump();
   std::vector<std::string> DumpNames();
   void Clear();
+  void WalkVariables(
+      const std::function<void(const std::string&, const std::shared_ptr<one::Tensor>&)>&);
 
  private:
   friend class Singleton<VariableTensorMgr>;
@@ -56,4 +58,4 @@ class VariableTensorMgr final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_VARIABLE_TENSOR_MGR_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_VARIABLE_TENSOR_MGR_H_

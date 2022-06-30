@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/framework/variable_tensor_mgr.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
@@ -792,11 +793,23 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   // transpose op due to fuse pattern like normlazation_add_relu.
   pm.addPass(oneflow::createAutoNhwcPass());
   pm.addPass(oneflow::createFuseIntoExistingOpPass());
+
   if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION", false)
       && job_wrapper.job()->job_conf().has_predict_conf()) {
-    pm.addPass(oneflow::createPreConvertInferenceOpPass());
-    pm.addPass(oneflow::createConvertInferenceOpPass());
-    pm.addPass(oneflow::createPostConvertInferenceOpPass());
+    const auto graph_is_global = []() -> bool {
+      const auto mgr = ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get();
+      bool is_global = false;
+      mgr->WalkVariables([&is_global](const std::string& name,
+                                      const std::shared_ptr<::oneflow::one::Tensor>& tensor) {
+        if (tensor->is_consistent()) { is_global = true; }
+      });
+      return is_global;
+    };
+    if (!graph_is_global()) {
+      pm.addPass(oneflow::createPreConvertInferenceOpPass());
+      pm.addPass(oneflow::createConvertInferenceOpPass());
+      pm.addPass(oneflow::createPostConvertInferenceOpPass());
+    }
   }
   pm.addPass(createCanonicalizerPass());
   llvm::raw_string_ostream os_graphviz(graphviz);

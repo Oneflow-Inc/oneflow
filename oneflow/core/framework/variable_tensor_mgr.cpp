@@ -73,4 +73,9 @@ std::vector<std::string> VariableTensorMgr::DumpNames() {
   return variable_op_names;
 }
 
+void VariableTensorMgr::WalkVariables(
+    const std::function<void(const std::string&, const std::shared_ptr<one::Tensor>&)>& f) {
+  for (const auto& x : variables_) { f(x.first, x.second); }
+}
+
 }  // namespace oneflow
