@@ -156,14 +156,9 @@ bool GlobalTensor::is_cuda() const {
   return CHECK_JUST(parallel_desc())->device_type() == DeviceType::kCUDA;
 }
 
-<<<<<<< HEAD
 Maybe<Tensor> GlobalTensor::detach() const {
   std::shared_ptr<Tensor> tensor = std::make_shared<GlobalTensor>(JUST(impl_->detach()));
-=======
-Maybe<Tensor> ConsistentTensor::detach() const {
-  std::shared_ptr<Tensor> tensor = std::make_shared<ConsistentTensor>(JUST(impl_->detach()));
   if (this->is_lazy()) { JUST(tensor->BorrowTensorName(this)); }
->>>>>>> master
   return tensor;
 }
 

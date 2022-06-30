@@ -966,7 +966,7 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
   (*mut_global_lbi2mirrored_lbi())[lbi] = mirrored_lbi;
   (*mut_mirrored_lbi2sub_lbis())[mirrored_lbi].emplace_back(mirrored_lbi);
   const auto& parallel_conf = parallel_desc.parallel_conf();
-  const auto& op_attribute = JUST(AddAndInferConsistentOp(op_conf));
+  const auto& op_attribute = JUST(AddAndInferGlobalOp(op_conf));
   (*JUST(SingletonMaybe<std::shared_ptr<ForeignCallback>>()))
       ->EagerMirroredCast(*op_attribute, parallel_conf);
   return mirrored_lbi;
