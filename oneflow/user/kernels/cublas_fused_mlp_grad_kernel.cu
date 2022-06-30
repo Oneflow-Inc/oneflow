@@ -162,9 +162,6 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t weight_num = ctx->input_size("weights");
     user_op::Tensor* d_x = ctx->Tensor4ArgNameAndIndex("d_x", 0);
-    // just a placeholder.
-    user_op::Tensor* d_bias = ctx->Tensor4ArgNameAndIndex("d_biases", weight_num - 1);
-    user_op::Tensor* d_last_bias = ctx->Tensor4ArgNameAndIndex("d_biases", weight_num - 1);
 
     auto* kernel_state = dynamic_cast<MatmulGradKernelState*>(state);
     const auto* matmul_grad_cache =
@@ -226,7 +223,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
                            &cublas_n, &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
       if (idx != 0) {
         const user_op::Tensor* aux = ctx->Tensor4ArgNameAndIndex("cublas_aux", idx - 1);
-        d_bias = ctx->Tensor4ArgNameAndIndex("d_biases", idx - 1);
+        user_op::Tensor* d_bias = ctx->Tensor4ArgNameAndIndex("d_biases", idx - 1);
         epilogue = CUBLASLT_EPILOGUE_DRELU_BGRAD;
         SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/true,
                       /*transpose_a=*/ep::primitive::BlasTransposeType::N,
@@ -269,6 +266,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
 
       // step1: Get last layer's dbias.
       if (idx == weight_num - 1) {
+        user_op::Tensor* d_last_bias = ctx->Tensor4ArgNameAndIndex("d_biases", weight_num - 1);
         DimVector ones_buf_shape(2);
         ones_buf_shape.at(0) = 1;
         ones_buf_shape.at(1) = batch_size;
@@ -351,17 +349,11 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
         // Here we wait wgrad event, and set a ncclGroup to Allreduce d_bias and d_weight.
         OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->allreduce_stream(), dweight_event));
         OF_NCCL_CHECK(ncclGroupStart());
-        if (idx == weight_num - 1) {
-          OF_NCCL_CHECK(ncclAllReduce(
-              d_last_bias->mut_dptr(), d_last_bias->mut_dptr(),
-              d_last_bias->shape_view().elem_cnt(), GetNcclDataType(d_last_bias->data_type()),
-              ncclRedOp_t::ncclSum, comm, kernel_state->allreduce_stream()));
-        } else {
-          OF_NCCL_CHECK(ncclAllReduce(d_bias->mut_dptr(), d_bias->mut_dptr(),
-                                      d_bias->shape_view().elem_cnt(),
-                                      GetNcclDataType(d_bias->data_type()), ncclRedOp_t::ncclSum,
-                                      comm, kernel_state->allreduce_stream()));
-        }
+        user_op::Tensor* allreduce_d_bias = ctx->Tensor4ArgNameAndIndex("d_biases", idx);
+        OF_NCCL_CHECK(ncclAllReduce(allreduce_d_bias->mut_dptr(), allreduce_d_bias->mut_dptr(),
+                                    allreduce_d_bias->shape_view().elem_cnt(),
+                                    GetNcclDataType(allreduce_d_bias->data_type()),
+                                    ncclRedOp_t::ncclSum, comm, kernel_state->allreduce_stream()));
         OF_NCCL_CHECK(ncclAllReduce(d_weight->mut_dptr(), d_weight->mut_dptr(),
                                     d_weight->shape_view().elem_cnt(),
                                     GetNcclDataType(d_weight->data_type()), ncclRedOp_t::ncclSum,
