@@ -116,6 +116,9 @@ class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc
   MutShapeView mut_shape_view() override { return *shape_; }
   const MemoryCase& mem_case() const override { return *mem_case_; }
   const void* raw_dptr() const override {
+    CHECK(inited_mem_ptr_for_allocation_compuation_pipelining_)
+        << "mem_ptr_for_allocation_compuation_pipelining_ not initialized. Please check if there "
+           "are any EagerBlobObjects created outside vm";
     return mem_ptr_for_allocation_compuation_pipelining_
            + storage_offset_ * GetSizeOfDataType(data_type_);
   }
@@ -179,10 +182,11 @@ class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc
 
   void InitOrCheckMemPtrForAllocationComputationPipelining() {
     auto* ptr = tensor_storage_->blob_dptr();
-    if (mem_ptr_for_allocation_compuation_pipelining_ == nullptr) {
-      mem_ptr_for_allocation_compuation_pipelining_ = ptr;
-    } else {
+    if (inited_mem_ptr_for_allocation_compuation_pipelining_) {
       CHECK_EQ(mem_ptr_for_allocation_compuation_pipelining_, ptr);
+    } else {
+      mem_ptr_for_allocation_compuation_pipelining_ = ptr;
+      inited_mem_ptr_for_allocation_compuation_pipelining_ = true;
     }
   }
 
@@ -197,6 +201,7 @@ class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc
   // For allocation-computation pipeline, the value of mem_ptr_for_allocation_compuation_pipelining_
   // are kept even after tensor_storage_.reset().
   char* mem_ptr_for_allocation_compuation_pipelining_;
+  bool inited_mem_ptr_for_allocation_compuation_pipelining_;
   std::atomic<bool> is_shape_synced_;
   bool pin_memory_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
