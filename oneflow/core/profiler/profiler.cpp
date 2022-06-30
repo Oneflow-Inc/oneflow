@@ -94,8 +94,8 @@ void ProfilerStop() {
 
 void EnableProfiler(bool use_cpu, bool use_cuda, bool record_shapes, bool record_bandwidth) {
   CHECK_JUST(vm::ClusterSync());
-  if (Global<ProfileManager>::Get() == nullptr) {
-    Global<ProfileManager>::New(use_cpu, use_cuda, record_shapes, record_bandwidth);
+  if (Singleton<ProfileMgr>::Get() == nullptr) {
+    Singleton<ProfileMgr>::New(use_cpu, use_cuda, record_shapes, record_bandwidth);
   }
 }
 
@@ -105,21 +105,21 @@ Maybe<std::string> DisableProfilerAndReturnResult() {
 #if defined(WITH_CUDA)
   OF_CUDA_CHECK(cudaDeviceSynchronize());
 #endif  // WITH_CUDA
-  auto* pmgr = JUST(GlobalMaybe<ProfileManager>());
+  auto* pmgr = JUST(SingletonMaybe<ProfileManager>());
   std::string results = pmgr->DumpResultsJson();
-  Global<ProfileManager>::Delete();
+  Singleton<ProfileManager>::Delete();
   return results;
 }
 
 Maybe<std::string> StartRecord(const std::string& name) {
-  auto* pmgr = JUST(GlobalMaybe<ProfileManager>());
+  auto* pmgr = JUST(SingletonMaybe<ProfileManager>());
   JUST(vm::ClusterSync());
   return pmgr->RegisterEventRecorder(profiler::EventRecorder::CreateCustomEventRecorder(name),
                                      name);
 }
 
 Maybe<void> EndRecord(const std::string& event_recorder_key) {
-  auto* pmgr = JUST(GlobalMaybe<ProfileManager>());
+  auto* pmgr = JUST(SingletonMaybe<ProfileManager>());
   JUST(vm::ClusterSync());
   pmgr->UnregisterEventRecorder(event_recorder_key);
   return Maybe<void>::Ok();

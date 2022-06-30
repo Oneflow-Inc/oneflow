@@ -98,7 +98,7 @@ Maybe<Symbol<Stream>> GetBarrierStream() {
 
 void MakeBarrierInstructions(vm::InstructionList* list,
                              const std::function<void()>& BarrierCallback) {
-  auto* vm = Global<VirtualMachine>::Get();
+  auto* vm = Singleton<VirtualMachine>::Get();
   {
     const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>([]() {});
     auto stream = CHECK_JUST(GetBarrierStream());
@@ -156,7 +156,7 @@ void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& s
 
 Maybe<void> VirtualMachine::BlockingRunProbeFunc(
     const std::function<bool(vm::VirtualMachineEngine*)>& prob_func) {
-  JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
+  JUST(Singleton<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
     auto bc = std::make_shared<BlockingCounter>(1);
     engine_->InsertProbe([bc, prob_func](vm::VirtualMachineEngine* engine) {
       if (!prob_func(engine)) { return false; }
@@ -200,10 +200,10 @@ VirtualMachine::~VirtualMachine() {
 
 std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreInstructionsFinished() {
   auto last_total_erased = std::make_shared<size_t>(0);
-  auto* vm = Global<VirtualMachine>::Get();
+  auto* vm = Singleton<VirtualMachine>::Get();
   if (vm != nullptr) { *last_total_erased = vm->engine_->total_erased_instruction_cnt(); }
   return [last_total_erased]() -> Maybe<bool> {
-    auto* vm = Global<VirtualMachine>::Get();
+    auto* vm = Singleton<VirtualMachine>::Get();
     CHECK_NOTNULL_OR_RETURN(vm) << "virtual machine not initialized.";
     CHECK_OR_RETURN(!vm->NoMoreErasedInstructions(last_total_erased.get()))
         << "blocking instructions\n"
@@ -237,7 +237,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
   } else {
     const int64_t kHighWaterMark = GetInstructionHighWaterMark();
     if (engine_->flying_instruction_cnt() > kHighWaterMark) {
-      JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
+      JUST(Singleton<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
         auto bc = std::make_shared<BlockingCounter>(1);
         engine_->InsertProbe([bc](vm::VirtualMachineEngine* engine) {
           const int64_t kLowWaterMark = GetInstructionLowWaterMark();
@@ -361,7 +361,7 @@ Maybe<vm::Stream*> VirtualMachine::GetVmStream(Symbol<Stream> stream) {
   if (stream->unique_stream_id() >= unique_stream_id2vm_stream_.size()) {
     std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
     if (stream->unique_stream_id() >= unique_stream_id2vm_stream_.size()) {
-      auto* stream_mgr = JUST(GlobalMaybe<StreamMgr>());
+      auto* stream_mgr = JUST(SingletonMaybe<StreamMgr>());
       for (int i = unique_stream_id2vm_stream_.size(); i <= stream->unique_stream_id(); ++i) {
         Symbol<Stream> cur_stream = JUST(stream_mgr->GetStreamSymbol(i));
         CHECK_EQ_OR_RETURN(cur_stream->unique_stream_id(), i)

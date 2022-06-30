@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include <mutex>
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/hardware/node_device_descriptor_manager.h"
 #include "oneflow/core/hardware/cuda_device_descriptor.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -105,7 +105,7 @@ namespace {
 
 std::function<cudaError_t(void**, size_t)> GetCudaMallocHostFn(int32_t dev) {
   auto default_fn = [](void** ptr, size_t size) { return cudaMallocHost(ptr, size); };
-  auto manager = Global<hardware::NodeDeviceDescriptorManager>::Get();
+  auto manager = Singleton<hardware::NodeDeviceDescriptorManager>::Get();
   if (manager == nullptr) { return default_fn; }
   auto node_desc = manager->GetLocalNodeDeviceDescriptor();
   auto cuda_device = std::dynamic_pointer_cast<const hardware::CudaDeviceDescriptor>(

@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/scalar_logical_kernels.h"
-#include "oneflow/user/kernels/elementwise_xpu_kernel.cuh"
 
 namespace oneflow {
 
