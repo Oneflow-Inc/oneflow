@@ -13,24 +13,31 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
+import os
 import unittest
+import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
-class TestModule(flow.unittest.TestCase):
-    def test_exception_only_one_dim_infered(test_case):
-        # torch exception and messge:
-        #
-        #   RuntimeError: only one dimension can be inferred
-        #
-        x = flow.tensor((2, 2))
-        with test_case.assertRaises(RuntimeError) as ctx:
-            y = x.reshape((-1, -1))
-        test_case.assertEqual("only one dimension can be inferred", str(ctx.exception))
+class TestTensorCloneGraph(oneflow.unittest.TestCase):
+    def test_tensor_clone_graph(test_case):
+        class TensorCloneGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+
+            def build(self, x):
+                y = x.clone()
+                x += x
+                return x, y
+
+        x = flow.randn(3, 4)
+        res = TensorCloneGraph()(x)
+        test_case.assertTrue(len(res) == 2)
+        test_case.assertTrue(np.allclose(res[0], res[1] * 2, 1e-05, 1e-05))
 
 
 if __name__ == "__main__":
