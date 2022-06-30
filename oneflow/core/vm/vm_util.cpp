@@ -30,6 +30,32 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
+static void GetGPUMemory() {
+  int deviceCount = 0;
+  cudaError_t error_id = cudaGetDeviceCount(&deviceCount);
+  if (deviceCount == 0) { std::cout << "NULL" << std::endl; }
+
+  size_t gpu_total_size;
+  size_t gpu_free_size;
+
+  cudaError_t cuda_status = cudaMemGetInfo(&gpu_free_size, &gpu_total_size);
+
+  if (cudaSuccess != cuda_status) {
+    std::cout << "Error: cudaMemGetInfo fails : " << cudaGetErrorString(cuda_status) << std::endl;
+    exit(1);
+  }
+
+  double total_memory = double(gpu_total_size) / (1024.0 * 1024.0);
+  double free_memory = double(gpu_free_size) / (1024.0 * 1024.0);
+  double used_memory = total_memory - free_memory;
+
+  std::cout << "\n"
+            << "Total:" << total_memory << "m \n"
+            << "Used:" << used_memory << "m \n"
+            << "Free:" << free_memory << "m \n"
+            << std::endl;
+}
+
 Maybe<void> Run(vm::InstructionList* instruction_list) {
   auto* virtual_machine = JUST(SingletonMaybe<VirtualMachine>());
   JUST(virtual_machine->Receive(instruction_list));
