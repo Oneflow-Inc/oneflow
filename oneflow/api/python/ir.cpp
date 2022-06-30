@@ -14,11 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <llvm/IR/IntrinsicsS390.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
 #include <algorithm>
 #include <string>
 #include <iostream>
+#include <tuple>
+#include <vector>
 #include "oneflow/core/common/singleton.h"
 #ifdef WITH_MLIR
 
@@ -50,6 +53,21 @@ class PyASTNode {
   }
 
   PyASTNode Visit(const std::string& name) { return PyASTNode(_node.attr(name.c_str())); }
+
+  std::vector<PyASTNode> AsList() {
+    std::vector<PyASTNode> res;
+    for (auto item : _node) {
+      auto node = PyASTNode(item.cast<pybind11::object>());
+      res.push_back(node);
+    }
+    return res;
+  }
+
+  int AsInt() { return _node.cast<pybind11::int_>(); }
+
+  std::string AsStr() { return _node.cast<pybind11::str>(); }
+
+  float AsFloat() { return _node.cast<pybind11::float_>(); }
 };
 
 std::string PyASTNodeWrapper::GetName() { return _node->GetName(); }
@@ -61,6 +79,24 @@ PyASTNodeWrapper PyASTNodeWrapper::Visit(const std::string& name) {
   return PyASTNodeWrapper(_py_ast_node);
 }
 
+int PyASTNodeWrapper::AsInt() { return _node->AsInt(); }
+
+std::string PyASTNodeWrapper::AsStr() { return _node->AsStr(); }
+
+float PyASTNodeWrapper::AsFloat() { return _node->AsFloat(); }
+
+std::vector<PyASTNodeWrapper> PyASTNodeWrapper::AsList() {
+  std::vector<PyASTNodeWrapper> res;
+  auto list = _node->AsList();
+  for (auto item : list) {
+    auto item_wrapper = PyASTNodeWrapper(std::make_shared<PyASTNode>(item));
+    res.push_back(item_wrapper);
+  }
+  return res;
+}
+
+
+
 namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("ir", m) {
   m.def("load_jit_shared_lib",
@@ -69,7 +105,8 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
         [](const pybind11::object& ast, const std::string& function_id) {
           Singleton<LR_JIT>::New();
           auto _py_ast_node = std::make_shared<PyASTNode>(ast);
-          Singleton<LR_JIT>::Get()->Register(function_id, PyASTNodeWrapper(_py_ast_node));
+          auto _py_ast_node_wrapper = PyASTNodeWrapper(_py_ast_node);
+          Singleton<LR_JIT>::Get()->Register(function_id, _py_ast_node_wrapper);
           auto engine = Singleton<LR_JIT>::Get()->LookUp(function_id);
           auto lr = Singleton<LR_JIT>::Get()->Invoke(engine, 1, 2);
           std::cout << lr << std::endl;

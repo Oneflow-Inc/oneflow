@@ -22,7 +22,10 @@ class PyASTNodeWrapper {
   std::string GetName();
   std::vector<std::string> GetFields();
   PyASTNodeWrapper Visit(const std::string& name);
-  void Walk(){};
+  int AsInt();
+  std::string AsStr();
+  float AsFloat();
+  std::vector<PyASTNodeWrapper> AsList();
 };
 
 class JIT_Engine;
@@ -31,7 +34,7 @@ class LR_JIT final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LR_JIT);
   ~LR_JIT() = default;
-  void Register(const std::string& function_id, const PyASTNodeWrapper& ast);
+  void Register(const std::string& function_id, PyASTNodeWrapper& ast);
   std::shared_ptr<JIT_Engine> LookUp(const std::string& function_id);
   double Invoke(std::shared_ptr<JIT_Engine> engine, double base_lr, int64_t step);
 
