@@ -21,7 +21,7 @@ namespace oneflow {
 namespace profiler {
 
 Maybe<void> EventRecorder::RegisterEventToProfileManager(const std::shared_ptr<IEvent>& event) {
-  auto* pmgr = JUST(GlobalMaybe<ProfileManager>());
+  auto* pmgr = JUST(SingletonMaybe<ProfileManager>());
   pmgr->events_.push(event_);
   return Maybe<void>::Ok();
 }
@@ -36,7 +36,7 @@ Maybe<EventRecorder> EventRecorder::CreateKernelEventRecorder(
     const std::function<int64_t()>& memory_size_getter,
 #endif
     const ShapeGetterFuncType& shape_getter) {
-  auto pmgr = Global<ProfileManager>::Get();
+  auto pmgr = Singleton<ProfileManager>::Get();
   if (pmgr) {
 #if defined(WITH_CUDA)
     if (pmgr->use_cpu_ || pmgr->use_cuda_) {
