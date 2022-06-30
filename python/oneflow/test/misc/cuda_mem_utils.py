@@ -24,7 +24,7 @@ def get_cuda_mem_info(gpu_id=0):
 
     if gpu_id < 0 or gpu_id >= pynvml.nvmlDeviceGetCount():
         print(r"gpu {} is not exist".format(gpu_id))
-        return
+        return 0, 0, 0
 
     handler = pynvml.nvmlDeviceGetHandleByIndex(gpu_id)
     meminfo = pynvml.nvmlDeviceGetMemoryInfo(handler)
@@ -32,4 +32,4 @@ def get_cuda_mem_info(gpu_id=0):
     used = round(meminfo.used / 1024 / 1024, 2)
     free = round(meminfo.free / 1024 / 1024, 2)
 
-    print("Total Memory: ", total, " Used Memory: ", used, " Free Memory: ", free)
+    return total, used, free
