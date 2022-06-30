@@ -559,8 +559,11 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
   if (producer_parallel_desc == consumer_parallel_desc && sbp_producer == sbp_consumer) {
     return Maybe<void>::Ok();
   }
+  static const bool enable_general_basic_communication =
+      Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
+      || ParseBooleanFromEnv("Enable_General_Basic_Communication", false);
   // Use a general basic communication if no P in the consumer
-  if ((!NdSbpHasPartialParallel(sbp_consumer))) {
+  if (enable_general_basic_communication && (!NdSbpHasPartialParallel(sbp_consumer))) {
     if (NdSbpHasPartialParallel(sbp_producer) && NdSbpHasBroadcastParallel(sbp_consumer)) {
       // (?, P, ?)->(Si, Sj)->(?, B, ?), two-step transfer
       JUST(AskSbpCombination4GeneralBasicCommunication(
