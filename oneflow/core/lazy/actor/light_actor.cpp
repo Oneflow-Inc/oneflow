@@ -238,7 +238,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
 #endif
     }
     const int64_t thrd_id = ThrdId4ActorId(task_proto.task_id());
-    thread_ = Global<ThreadMgr>::Get()->GetThrd(thrd_id);
+    thread_ = Singleton<ThreadMgr>::Get()->GetThrd(thrd_id);
     total_reading_cnt_ = 0;
     max_total_reading_cnt_ = 0;
     remaining_eord_cnt_ = 0;
@@ -257,7 +257,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       const IndexType index = regst_desc_id_index_.Add(regst_desc.regst_desc_id());
       auto& state = index2state_.Get(index);
 
-      Global<RegstMgr>::Get()->NewRegsts(regst_desc, [&state](Regst* regst) {
+      Singleton<RegstMgr>::Get()->NewRegsts(regst_desc, [&state](Regst* regst) {
         CHECK(state.regst == nullptr);
         state.regst = regst;
       });
@@ -363,8 +363,8 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       } else if (state.regst_type == RegstType::kConsumed) {
         const int64_t regst_desc_id = index2regst_desc_id.at(i);
         int64_t producer = -1;
-        if (Global<RegstMgr>::Get()->HasProducerTaskId4RegstDescId(regst_desc_id)) {
-          producer = Global<RegstMgr>::Get()->ProducerTaskId4RegstDescId(regst_desc_id);
+        if (Singleton<RegstMgr>::Get()->HasProducerTaskId4RegstDescId(regst_desc_id)) {
+          producer = Singleton<RegstMgr>::Get()->ProducerTaskId4RegstDescId(regst_desc_id);
         } else {
           producer = state.regst->producer_actor_id();
         }
@@ -374,7 +374,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
             return_inplace_consumed_fn_[0] = [this, msg]() { thread_->EnqueueActorMsg(msg); };
           } else {
             return_inplace_consumed_fn_[0] = [this, msg]() {
-              actor_ctx_->AddCallback([msg] { Global<ActorMsgBus>::Get()->SendMsg(msg); });
+              actor_ctx_->AddCallback([msg] { Singleton<ActorMsgBus>::Get()->SendMsg(msg); });
             };
           }
         } else {
@@ -458,25 +458,33 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
     thread_->EnqueueActorMsg(sync_post_act_msgs_.cbegin(), sync_post_act_msgs_.cend());
     if (!async_post_act_msgs_.empty()) {
       actor_ctx_->AddCallback([this]() {
-        for (const auto& msg : async_post_act_msgs_) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
+        for (const auto& msg : async_post_act_msgs_) {
+          Singleton<ActorMsgBus>::Get()->SendMsg(msg);
+        }
       });
     }
   }
 
   inline void LaunchKernel() {
 #ifdef WITH_CUDA_GRAPHS
+    bool is_capturing = false;
     if (cuda_graph_exec_[0]) {
       auto* cuda_stream = stream_ctx_->stream()->As<ep::CudaStream>();
       if (cuda_graph_exec_[0]->IsInstantiated()) {
         cuda_stream->LaunchGraph(cuda_graph_exec_[0].get());
         return;
       }
-      cuda_stream->BeginGraphCapture();
+      auto* user_kernel =
+          CHECK_NOTNULL(dynamic_cast<const UserKernel*>(kernel_info_[0]->kernel.get()));
+      if (user_kernel->IsReadyForCudaGraphCapture(this)) {
+        is_capturing = true;
+        cuda_stream->BeginGraphCapture();
+      }
     }
 #endif
     kernel_info_[0]->kernel->Launch(this);
 #ifdef WITH_CUDA_GRAPHS
-    if (cuda_graph_exec_[0]) {
+    if (cuda_graph_exec_[0] && is_capturing) {
       auto* cuda_stream = stream_ctx_->stream()->As<ep::CudaStream>();
       cuda_stream->EndGraphCapture(cuda_graph_exec_[0].get());
       cuda_stream->LaunchGraph(cuda_graph_exec_[0].get());
@@ -491,7 +499,7 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       const RtRegstDesc* regst_desc = state.regst->regst_desc();
       actor_ctx_->AddCallback([regst_desc]() {
         for (int64_t consumer : regst_desc->consumers_actor_id()) {
-          Global<ActorMsgBus>::Get()->SendMsg(
+          Singleton<ActorMsgBus>::Get()->SendMsg(
               ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id()));
         }
       });
@@ -530,42 +538,42 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   }
 
   void WillForward(KernelContext* kernel_ctx, const Kernel* kernel) override {
-    Global<KernelObserver>::Get()->WillForward(kernel_ctx, kernel);
+    Singleton<KernelObserver>::Get()->WillForward(kernel_ctx, kernel);
     if (stream_kernel_observer_ != nullptr) {
       stream_kernel_observer_->WillForward(kernel_ctx, kernel);
     }
   }
 
   void DidForward(KernelContext* kernel_ctx, const Kernel* kernel) override {
-    Global<KernelObserver>::Get()->DidForward(kernel_ctx, kernel);
+    Singleton<KernelObserver>::Get()->DidForward(kernel_ctx, kernel);
     if (stream_kernel_observer_ != nullptr) {
       stream_kernel_observer_->DidForward(kernel_ctx, kernel);
     }
   }
 
   void WillForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) override {
-    Global<KernelObserver>::Get()->WillForwardHeader(kernel_ctx, kernel);
+    Singleton<KernelObserver>::Get()->WillForwardHeader(kernel_ctx, kernel);
     if (stream_kernel_observer_ != nullptr) {
       stream_kernel_observer_->WillForwardHeader(kernel_ctx, kernel);
     }
   }
 
   void DidForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) override {
-    Global<KernelObserver>::Get()->DidForwardHeader(kernel_ctx, kernel);
+    Singleton<KernelObserver>::Get()->DidForwardHeader(kernel_ctx, kernel);
     if (stream_kernel_observer_ != nullptr) {
       stream_kernel_observer_->DidForwardHeader(kernel_ctx, kernel);
     }
   }
 
   void WillForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override {
-    Global<KernelObserver>::Get()->WillForwardDataContent(kernel_ctx, kernel);
+    Singleton<KernelObserver>::Get()->WillForwardDataContent(kernel_ctx, kernel);
     if (stream_kernel_observer_ != nullptr) {
       stream_kernel_observer_->WillForwardDataContent(kernel_ctx, kernel);
     }
   }
 
   void DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) override {
-    Global<KernelObserver>::Get()->DidForwardDataContent(kernel_ctx, kernel);
+    Singleton<KernelObserver>::Get()->DidForwardDataContent(kernel_ctx, kernel);
     if (stream_kernel_observer_ != nullptr) {
       stream_kernel_observer_->DidForwardDataContent(kernel_ctx, kernel);
     }
@@ -690,7 +698,7 @@ ActorBase* TryNewLightActorWithoutInit(ActorContext* actor_ctx) {
 std::unique_ptr<ActorBase> TryNewLightActor(ActorContext* actor_ctx) {
   ActorBase* actor = TryNewLightActorWithoutInit(actor_ctx);
   if (actor != nullptr) {
-    const auto& job_descs = *Global<RuntimeJobDescs>::Get();
+    const auto& job_descs = *Singleton<RuntimeJobDescs>::Get();
     actor->Init(&job_descs.job_desc(actor_ctx->task_proto().job_id()), actor_ctx);
   }
   return std::unique_ptr<ActorBase>(actor);

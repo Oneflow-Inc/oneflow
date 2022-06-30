@@ -25,28 +25,20 @@ from oneflow.test_utils.automated_test_util import *
 @autotest(n=1, check_graph=False)
 def _test_flow_global_var_all_dim_with_random_data(test_case, placement, sbp):
     x = random_tensor(
-        ndim=4,
-        dim0=random(1, 3).to(int) * 8,
-        dim1=random(1, 3).to(int) * 8,
-        dim2=random(1, 3).to(int) * 8,
-        dim3=random(1, 3).to(int) * 8,
+        ndim=2, dim0=random(1, 3).to(int) * 8, dim1=random(1, 3).to(int) * 8,
     ).to_global(placement, sbp)
     y = torch.var(x)
     return y
 
 
-@autotest(n=2, check_graph=False)
+@autotest(n=1, check_graph=False)
 def _test_flow_global_var_one_dim_with_random_data(test_case, placement, sbp):
     x = random_tensor(
-        ndim=4,
-        dim0=random(1, 3).to(int) * 8,
-        dim1=random(1, 3).to(int) * 8,
-        dim2=random(1, 3).to(int) * 8,
-        dim3=random(1, 3).to(int) * 8,
+        ndim=2, dim0=random(1, 3).to(int) * 8, dim1=random(1, 3).to(int) * 8,
     ).to_global(placement, sbp)
     y = torch.var(
         x,
-        dim=random(low=0, high=4).to(int),
+        dim=random(low=0, high=2).to(int),
         unbiased=random().to(bool),
         keepdim=random().to(bool),
     )
@@ -55,10 +47,10 @@ def _test_flow_global_var_one_dim_with_random_data(test_case, placement, sbp):
 
 @autotest(n=1, auto_backward=True, check_graph=False)
 def _test_flow_var_0_size_data_with_random_data(test_case, placement, sbp):
-    x = random_tensor(4, 8, 16, 0, 8).to_global(placement, sbp)
+    x = random_tensor(3, 8, 0, 8).to_global(placement, sbp)
     y = torch.var(
         x,
-        dim=random(low=0, high=4).to(int),
+        dim=random(low=0, high=3).to(int),
         unbiased=random().to(bool),
         keepdim=random().to(bool),
     )
@@ -69,7 +61,7 @@ class TestVar(flow.unittest.TestCase):
     @globaltest
     def test_flow_global_var_all_dim_with_random_data(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=4):
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_flow_global_var_all_dim_with_random_data(
                     test_case, placement, sbp
                 )
@@ -77,7 +69,7 @@ class TestVar(flow.unittest.TestCase):
     @globaltest
     def test_flow_global_var_one_dim_with_random_data(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=4):
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_flow_global_var_one_dim_with_random_data(
                     test_case, placement, sbp
                 )
@@ -85,7 +77,7 @@ class TestVar(flow.unittest.TestCase):
     @globaltest
     def test_flow_var_0_size_data_with_random_data(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=4, valid_split_axis=[0, 1, 3]):
+            for sbp in all_sbp(placement, max_dim=2, valid_split_axis=[0]):
                 _test_flow_var_0_size_data_with_random_data(test_case, placement, sbp)
 
 
