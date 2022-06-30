@@ -26,6 +26,26 @@ namespace embedding {
 
 constexpr size_t kDefaultMaxQueryLength = 65536;
 
+EmbeddingState* EmbeddingManager::GetEmbeddingState(const std::string& embedding_name,
+                                                    int64_t rank_id) {
+  std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, rank_id);
+  std::unique_lock<std::mutex> lock(mutex_);
+  auto it = embedding_state_map_.find(map_key);
+  // for id shuffle test, not need to create table
+  if (it == embedding_state_map_.end()) {
+    LOG(WARNING) << "create embedding state: " << embedding_name << "-" << rank_id;
+    if (UseDynamicMemoryAllocation()) {
+      it =
+          embedding_state_map_.emplace(map_key, std::make_unique<DynamicAllocationEmbeddingState>())
+              .first;
+    } else {
+      it = embedding_state_map_.emplace(map_key, std::make_unique<StaticAllocationEmbeddingState>())
+               .first;
+    }
+  }
+  return it->second.get();
+}
+
 KeyValueStore* EmbeddingManager::GetKeyValueStore(const std::string& embedding_name,
                                                   int64_t rank_id) {
   std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, rank_id);
