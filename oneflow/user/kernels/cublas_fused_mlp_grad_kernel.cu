@@ -24,13 +24,22 @@ namespace oneflow {
 
 namespace {
 
+struct Comm {
+  Comm(ncclComm_t comm) : comm(comm) {}
+  ncclComm_t comm;
+};
+
 class MatmulGradKernelState final : public user_op::OpKernelState {
  public:
-  MatmulGradKernelState(user_op::KernelInitContext* ctx) {
+  MatmulGradKernelState(user_op::KernelInitContext* ctx)
+      : if_need_comm_(false), stream_name_(EagerNcclCommMgr::kDefaultStreamName) {
     OF_CUDA_CHECK(cudaStreamCreate(&cuda_stream_));
     OF_CUDA_CHECK(cudaStreamCreate(&allreduce_stream_));
     OF_CUBLAS_CHECK(cublasLtCreate(&cublas_lt_handle_));
-    OF_CUDA_CHECK(cudaMalloc(&workspace_, 8 * 1024 * 1024));
+    workspace_size_ =
+        ParseIntegerFromEnv("ONEFLOW_EP_CUDA_CUBLAS_WORKSPACE_SIZE_MB", kDefaultWorkspaceSizeMb)
+        * 1024 * 1024;
+    OF_CUDA_CHECK(cudaMalloc(&workspace_, workspace_size_));
   }
   ~MatmulGradKernelState() {
     OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_));
@@ -43,14 +52,58 @@ class MatmulGradKernelState final : public user_op::OpKernelState {
   cudaStream_t cuda_stream() const { return cuda_stream_; }
   cudaStream_t allreduce_stream() const { return allreduce_stream_; }
   cublasLtHandle_t cublas_lt_handle() const { return cublas_lt_handle_; }
-  size_t cublas_workspace_size() const { return 8 * 1024 * 1024; }
+  size_t cublas_workspace_size() const { return workspace_size_; }
   void* cublas_workspace() const { return workspace_; }
+
+  bool IfCommCreate() const {
+    if (!comm_) { return false; }
+    return true;
+  }
+
+  bool IfNeedComm() const { return if_need_comm_; }
+
+  ncclComm_t comm() const { return comm_->comm; }
+
+  void InitNeedComm(user_op::KernelInitContext* ctx) {
+    if_need_comm_ = true;
+    if (ctx->parallel_ctx().parallel_num() > 1) {
+      const int64_t d_weights_size = ctx->output_size("d_weights");
+      for (int i = 0; i < d_weights_size; i++) {
+        if (!ctx->SbpParallel4ArgNameAndIndex("d_weights", i).has_broadcast_parallel()
+            || !ctx->SbpParallel4ArgNameAndIndex("d_biases", i).has_broadcast_parallel()
+            || !ctx->SbpParallel4ArgNameAndIndex("dy", 0).has_split_parallel()) {
+          if_need_comm_ = false;
+          break;
+        }
+      }
+    } else {
+      if_need_comm_ = false;
+    }
+  }
+
+  void InitCommMgr(user_op::KernelInitContext* ctx) {
+    std::set<std::pair<int64_t, int64_t>> device_set;
+    for (int64_t parallel_id = 0; parallel_id < ctx->parallel_desc().parallel_num();
+         ++parallel_id) {
+      int64_t machine_id = CHECK_JUST(ctx->parallel_desc().MachineId4ParallelId(parallel_id));
+      int64_t device_id = CHECK_JUST(ctx->parallel_desc().DeviceId4ParallelId(parallel_id));
+      device_set.emplace(std::make_pair(machine_id, device_id));
+    }
+    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
+    ncclComm_t comm;
+    comm = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
+    comm_.reset(new Comm(comm));
+  }
 
  private:
   cudaStream_t cuda_stream_{};
   cudaStream_t allreduce_stream_{};
   cublasLtHandle_t cublas_lt_handle_{};
   void* workspace_{};
+  size_t workspace_size_;
+  std::string stream_name_;
+  std::unique_ptr<Comm> comm_;
+  bool if_need_comm_;
 };
 
 template<typename T>
@@ -71,15 +124,18 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
 
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    std::shared_ptr<CublasFusedMLPKernelCache> kernel_cache = CreateCublasFusedMLPKernelCache();
-    // if (if_comm_create && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE", false))
-    kernel_cache->Init(ctx);
-    return kernel_cache;
+    return CreateCublasFusedMLPKernelCache();
   }
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<MatmulGradKernelState>(ctx);
+    std::shared_ptr<MatmulGradKernelState> kernel_state =
+        std::make_shared<MatmulGradKernelState>(ctx);
+    if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE", false)) {
+      kernel_state->InitNeedComm(ctx);
+      if (kernel_state->IfNeedComm()) { kernel_state->InitCommMgr(ctx); }
+    }
+    return kernel_state;
   }
 
  private:
@@ -90,15 +146,14 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
 
   bool IsReadyForCapture(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                          const user_op::OpKernelCache* cache) const override {
-    auto* kernel_cache = dynamic_cast<const CublasFusedMLPKernelCache*>(state);
-    if(ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE", false)){
-      printf("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE! \n"); 
-      return kernel_cache->IfCommCreate();
+    auto* kernel_state = dynamic_cast<MatmulGradKernelState*>(state);
+    if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE", false)) {
+      printf("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE! \n");
+      return kernel_state->IfCommCreate();
     } else {
-      printf("Always ready for capture! \n"); 
-      return true; 
+      printf("Always ready for capture! \n");
+      return true;
     }
-    // return kernel_cache->IfCommCreate();
   }
 
   using user_op::OpKernel::Compute;
@@ -118,16 +173,11 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
         CHECK_NOTNULL(dynamic_cast<const CublasFusedMLPKernelCache*>(cache));
 
     ncclComm_t comm{};
-    bool if_comm_create = matmul_grad_cache->IfCommCreate();
-    if(if_comm_create){
-      printf("Comm create! \n"); 
-    } else {
-      printf("No create \n"); 
-    }
+    bool if_need_comm = kernel_state->IfNeedComm();
 
-    if (if_comm_create
+    if (if_need_comm
         && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE", false)) {
-      comm = matmul_grad_cache->comm();
+      comm = kernel_state->comm();
     }
 
     void* dy_tmp_buf = tmp_buffer->mut_dptr();
@@ -296,8 +346,9 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
         OF_CUDA_CHECK(cudaEventRecord(dweight_event, kernel_state->cuda_stream()));
       }
 
-      if (if_comm_create
+      if (if_need_comm
           && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE", false)) {
+        // printf("Here need comm and overlap allreduce. \n");
         // Do Allreduce for d_bias and d_weight.
         // Here we wait wgrad event, and set a ncclGroup to Allreduce d_bias and d_weight.
         OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->allreduce_stream(), dweight_event));
@@ -325,7 +376,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
       }
     }
 
-    if (if_comm_create
+    if (if_need_comm
         && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE", false)) {
       OF_CUDA_CHECK(cudaStreamWaitEvent(cuda_stream->cuda_stream(), allreduce_event));
     } else {
