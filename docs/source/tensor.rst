@@ -46,6 +46,7 @@ OneFlow Tensor Class
             cpu, 
             cuda,
             data, 
+            dot,
             detach, 
             device, 
             placement,
