@@ -24,14 +24,14 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class BinAllocator final : public Allocator, public ShrinkableCache {
+class BinAllocator final : public Allocator {
  public:
   explicit BinAllocator(size_t alignment, std::unique_ptr<Allocator>&& backend);
   ~BinAllocator() override;
 
   void Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
-  void Shrink() override { DeallocateFreeBlockForGarbageCollection(); }
+  void ShrinkCache() override { DeallocateFreeBlockForGarbageCollection(); }
 
  private:
   static constexpr int32_t kInvalidBinNum = -1;

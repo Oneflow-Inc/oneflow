@@ -26,7 +26,7 @@ namespace oneflow {
 
 namespace vm {
 
-class ThreadSafeAllocator final : public Allocator, public ShrinkableCache {
+class ThreadSafeAllocator final : public Allocator {
  public:
   explicit ThreadSafeAllocator(std::unique_ptr<Allocator>&& backend_allocator)
       : Allocator(), backend_allocator_(std::move(backend_allocator)) {}
@@ -34,18 +34,14 @@ class ThreadSafeAllocator final : public Allocator, public ShrinkableCache {
 
   void Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
-
-  void Shrink() override {
-    auto* cache = dynamic_cast<ShrinkableCache*>(backend_allocator_.get());
-    if (cache != nullptr) { cache->Shrink(); }
-  }
+  void ShrinkCache() override { backend_allocator_->ShrinkCache(); }
 
  private:
   std::unique_ptr<Allocator> backend_allocator_;
   std::mutex mutex4backend_allocator_;
 };
 
-class SingleThreadOnlyAllocator final : public Allocator, public ShrinkableCache {
+class SingleThreadOnlyAllocator final : public Allocator {
  public:
   explicit SingleThreadOnlyAllocator(std::unique_ptr<Allocator>&& backend_allocator)
       : Allocator(),
@@ -56,9 +52,8 @@ class SingleThreadOnlyAllocator final : public Allocator, public ShrinkableCache
   void Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
 
-  void Shrink() override {
-    auto* cache = dynamic_cast<ShrinkableCache*>(backend_allocator_.get());
-    if (cache != nullptr) { cache->Shrink(); }
+  void ShrinkCache() override {
+    backend_allocator_->ShrinkCache();
   }
 
  private:

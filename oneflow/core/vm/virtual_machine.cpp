@@ -182,8 +182,7 @@ Maybe<void> VirtualMachine::ShrinkAllMem() {
         const auto& device_ctx = stream->device_ctx();
         if (device_ctx.get() && device_ctx->mut_allocator()) {
           auto* allocator = device_ctx->mut_allocator();
-          auto* cache = dynamic_cast<vm::ShrinkableCache*>(allocator);
-          if (cache != nullptr) { cache->Shrink(); }
+          if (allocator) { allocator->ShrinkCache(); }
         }
       }
     }
