@@ -815,6 +815,16 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5)
+    def test_dot(test_case):
+        device = random_device()
+        k = random(10, 100)
+        x = random_tensor(ndim=1, dim0=k).to(device)
+        y = random_tensor(ndim=1, dim0=k).to(device)
+        z = x.dot(y)
+        return z
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5)
     def test_arccos_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor(low=2, high=3).to(device)
