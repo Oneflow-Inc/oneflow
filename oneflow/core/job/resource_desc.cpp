@@ -111,14 +111,6 @@ void ResourceDesc::DumpCudnnConf(const JobConfigProto& job_conf) {
   }
 }
 
-void ResourceDesc::Update(const Resource& reso_conf) {
-  if (reso_conf.has_nccl_use_compute_stream()) {
-    resource_.set_nccl_use_compute_stream(reso_conf.nccl_use_compute_stream());
-  }
-  if (reso_conf.has_disable_group_boxing_by_dst_parallel()) {
-    resource_.set_disable_group_boxing_by_dst_parallel(
-        reso_conf.disable_group_boxing_by_dst_parallel());
-  }
-}
+void ResourceDesc::Update(const Resource& reso_conf) { resource_.CopyFrom(reso_conf); }
 
 }  // namespace oneflow
