@@ -15,7 +15,7 @@ limitations under the License.
 */
 #ifndef _ONEFLOW_USER_KERNELS_SCALAR_LOGICAL_KERNELS_H_
 #define _ONEFLOW_USER_KERNELS_SCALAR_LOGICAL_KERNELS_H_
-#include "oneflow/user/kernels/elementwise_xpu_kernel.h"
+#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/binary_func.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 

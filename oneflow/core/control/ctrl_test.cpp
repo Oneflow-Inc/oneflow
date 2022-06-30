@@ -47,7 +47,6 @@ EnvProto GetEnvProto(int port) {
 Resource GetResource() {
   Resource ret;
   ret.set_machine_num(1);
-  ret.set_gpu_device_num(0);
   ret.set_cpu_device_num(1);
   ret.set_comm_net_worker_num(1);
   return ret;
