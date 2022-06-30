@@ -2998,10 +2998,11 @@ class OneEmbeddingIdShuffleFunctor {
   }
 
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& ids,
-                                const Optional<one::Tensor>& table_ids,
-                                const int32_t& num_tables) const {
+                                const Optional<one::Tensor>& table_ids, const int32_t& num_tables,
+                                const std::string& embedding_name) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("num_tables", num_tables));
+    JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
     if (table_ids) {
       return OpInterpUtil::Dispatch<TensorTuple>(*op_table_ids_has_in_out_, {ids, JUST(table_ids)},
                                                  attrs);
@@ -3027,14 +3028,20 @@ class OneEmbeddingEmbeddingShuffleFunctor {
                          .Build());
   }
 
-  Maybe<Tensor> operator()(
-      const std::shared_ptr<one::Tensor>& cur_rank_embeddings,
-      const std::shared_ptr<one::Tensor>& num_unique_matrix,
-      const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
-      const std::shared_ptr<one::Tensor>& inverse_unique_partition_indices) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& cur_rank_embeddings,
+                           const std::shared_ptr<one::Tensor>& num_unique_matrix,
+                           const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
+                           const std::shared_ptr<one::Tensor>& inverse_unique_partition_indices,
+                           const std::string& embedding_name) const {
+    MutableAttrMap attrs;
+    const int64_t num_axes = cur_rank_embeddings->shape()->NumAxes();
+    JUST(attrs.SetAttr<int64_t>("embedding_size", cur_rank_embeddings->shape()->At(num_axes - 1)));
+    JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
     return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {cur_rank_embeddings, num_unique_matrix, cur_rank_inverse_indices,
-               inverse_unique_partition_indices});
+        *op_,
+        {cur_rank_embeddings, num_unique_matrix, cur_rank_inverse_indices,
+         inverse_unique_partition_indices},
+        attrs);
   }
 
  private:
@@ -3053,14 +3060,20 @@ class OneEmbeddingEmbeddingGradientShuffleFunctor {
                          .Build());
   }
 
-  Maybe<Tensor> operator()(
-      const std::shared_ptr<one::Tensor>& embedding_grad,
-      const std::shared_ptr<one::Tensor>& num_unique_matrix,
-      const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
-      const std::shared_ptr<one::Tensor>& inverse_unique_partition_indices) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& embedding_grad,
+                           const std::shared_ptr<one::Tensor>& num_unique_matrix,
+                           const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
+                           const std::shared_ptr<one::Tensor>& inverse_unique_partition_indices,
+                           const std::string& embedding_name) const {
+    MutableAttrMap attrs;
+    const int64_t num_axes = embedding_grad->shape()->NumAxes();
+    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_grad->shape()->At(num_axes - 1)));
+    JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
     return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {embedding_grad, num_unique_matrix, cur_rank_inverse_indices,
-               inverse_unique_partition_indices});
+        *op_,
+        {embedding_grad, num_unique_matrix, cur_rank_inverse_indices,
+         inverse_unique_partition_indices},
+        attrs);
   }
 
  private:
@@ -3175,10 +3188,13 @@ class OneEmbeddingSgdUpdateFunctor {
                            const std::shared_ptr<one::Tensor>& learning_rate,
                            const std::shared_ptr<one::Tensor>& down_scale_by_tensor,
                            const std::shared_ptr<one::Tensor>& skip_if, const double scale,
-                           const float weight_decay, const float momentum) const {
+                           const float weight_decay, const float momentum, const int64_t line_size,
+                           const int64_t embedding_size) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("scale", scale));
     JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
+    JUST(attrs.SetAttr<int64_t>("line_size", line_size));
+    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
     if (momentum == 0) {
       return OpInterpUtil::Dispatch<Tensor>(*sgd_op_,
                                             {num_unique_ids, unique_embeddings, embedding_grad,
@@ -3233,7 +3249,8 @@ class OneEmbeddingAdamUpdateFunctor {
                            const Optional<one::Tensor>& bias_correction1,
                            const Optional<one::Tensor>& bias_correction2, const double scale,
                            const float weight_decay, const float beta1, const float beta2,
-                           const float epsilon, const bool do_bias_correction) const {
+                           const float epsilon, const bool do_bias_correction,
+                           const int64_t line_size, const int64_t embedding_size) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("scale", scale));
     JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
@@ -3241,6 +3258,8 @@ class OneEmbeddingAdamUpdateFunctor {
     JUST(attrs.SetAttr<float>("beta2", beta2));
     JUST(attrs.SetAttr<float>("epsilon", epsilon));
     JUST(attrs.SetAttr<bool>("do_bias_correction", do_bias_correction));
+    JUST(attrs.SetAttr<int64_t>("line_size", line_size));
+    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
     if (do_bias_correction) {
       CHECK(bias_correction1);
       CHECK(bias_correction2);
@@ -3285,13 +3304,15 @@ class OneEmbeddingAdagradUpdateFunctor {
                            const std::shared_ptr<one::Tensor>& down_scale_by_tensor,
                            const std::shared_ptr<one::Tensor>& skip_if,
                            const std::shared_ptr<one::Tensor>& train_step, const double scale,
-                           const float weight_decay, const float lr_decay,
-                           const float epsilon) const {
+                           const float weight_decay, const float lr_decay, const float epsilon,
+                           const int64_t line_size, const int64_t embedding_size) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("scale", scale));
     JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
     JUST(attrs.SetAttr<float>("lr_decay", lr_decay));
     JUST(attrs.SetAttr<float>("epsilon", epsilon));
+    JUST(attrs.SetAttr<int64_t>("line_size", line_size));
+    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
     return OpInterpUtil::Dispatch<Tensor>(
         *op_,
         {num_unique_ids, unique_embeddings, embedding_grad, learning_rate, down_scale_by_tensor,
@@ -3325,7 +3346,8 @@ class OneEmbeddingFtrlUpdateFunctor {
                            const std::shared_ptr<one::Tensor>& down_scale_by_tensor,
                            const std::shared_ptr<one::Tensor>& skip_if, const double scale,
                            const float weight_decay, const float lr_power, const float lambda1,
-                           const float lambda2, const float beta) const {
+                           const float lambda2, const float beta, const int64_t line_size,
+                           const int64_t embedding_size) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("scale", scale));
     JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
@@ -3333,6 +3355,8 @@ class OneEmbeddingFtrlUpdateFunctor {
     JUST(attrs.SetAttr<float>("lambda1", lambda1));
     JUST(attrs.SetAttr<float>("lambda2", lambda2));
     JUST(attrs.SetAttr<float>("beta", beta));
+    JUST(attrs.SetAttr<int64_t>("line_size", line_size));
+    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
     return OpInterpUtil::Dispatch<Tensor>(*op_,
                                           {num_unique_ids, unique_embeddings, embedding_grad,
                                            learning_rate, down_scale_by_tensor, skip_if},

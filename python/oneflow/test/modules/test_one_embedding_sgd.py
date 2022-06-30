@@ -19,6 +19,9 @@ from collections import OrderedDict
 import tempfile
 
 import os
+
+# dynamic memory allocation can't be tested in unittest
+os.environ["ONEFLOW_ONE_EMBEDDING_USE_DYNAMIC_MEMORY_ALLOCATION"] = "0"
 import numpy as np
 from oneflow.test_utils.test_util import GenArgDict
 from optimizer_test_util import clip_grad_norm_np
@@ -69,6 +72,8 @@ def compare_with_numpy_sgd(
                 scale,
                 weight_decay,
                 momentum,
+                line_size,
+                embedding_size,
             )
 
         for i in range(train_iters):
