@@ -15,13 +15,112 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/nn_util.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/ep/include/primitive/add.h"
+#include "oneflow/core/ep/include/primitive/matmul.h"
 
 namespace oneflow {
 
 namespace {
+
+ep::primitive::BlasTransposeType GetBlasTransposeType(bool transpose) {
+  return transpose ? ep::primitive::BlasTransposeType::T : ep::primitive::BlasTransposeType::N;
+}
+
+std::unique_ptr<ep::primitive::Matmul> NewMatmulPrimitive(DeviceType device_type,
+                                                          DataType data_type, bool transpose_a,
+                                                          bool transpose_b) {
+  const auto trans_a = GetBlasTransposeType(transpose_a);
+  const auto trans_b = GetBlasTransposeType(transpose_b);
+  return ep::primitive::NewPrimitive<ep::primitive::MatmulFactory>(device_type, data_type, trans_a,
+                                                                   trans_b);
+}
+
+template<typename Context>
+std::unique_ptr<ep::primitive::Matmul> NewChannelsFirstMatmulPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
+  return NewMatmulPrimitive(ctx->device_type(), data_type, /*transpose_a=*/false,
+                            /*transpose_b=*/false);
+}
+
+auto ChannelsFirstMatmulPrimitiveExists() {
+  return hob::make_custom("ChannelsFirstMatmulPrimitiveExists",
+                          [](const user_op::KernelRegContext& ctx) {
+                            return NewChannelsFirstMatmulPrimitive(&ctx).operator bool();
+                          });
+}
+
+template<typename Context>
+std::unique_ptr<ep::primitive::Matmul> NewChannelsLastMatmulPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
+  return NewMatmulPrimitive(ctx->device_type(), data_type, /*transpose_a=*/true,
+                            /*transpose_b=*/true);
+}
+
+auto ChannelsLastMatmulPrimitiveExists() {
+  return hob::make_custom("ChannelsLastMatmulPrimitiveExists",
+                          [](const user_op::KernelRegContext& ctx) {
+                            return NewChannelsLastMatmulPrimitive(&ctx).operator bool();
+                          });
+}
+
+template<typename Context>
+std::unique_ptr<ep::primitive::Matmul> NewConvDataGradTransATransBMatmulPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->data_type();
+  return NewMatmulPrimitive(ctx->device_type(), data_type, /*transpose_a=*/true,
+                            /*transpose_b=*/true);
+}
+
+auto ConvDataGradTransATransBMatmulPrimitiveExists() {
+  return hob::make_custom("ConvDataGradTransATransBMatmulPrimitiveExists",
+                          [](const user_op::KernelRegContext& ctx) {
+                            return NewConvDataGradTransATransBMatmulPrimitive(&ctx).operator bool();
+                          });
+}
+
+template<typename Context>
+std::unique_ptr<ep::primitive::Matmul> NewConvDataGradTransANoTransBMatmulPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->data_type();
+  return NewMatmulPrimitive(ctx->device_type(), data_type, /*transpose_a=*/true,
+                            /*transpose_b=*/false);
+}
+
+auto ConvDataGradTransANoTransBMatmulPrimitiveExists() {
+  return hob::make_custom(
+      "ConvDataGradTransANoTransBMatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+        return NewConvDataGradTransANoTransBMatmulPrimitive(&ctx).operator bool();
+      });
+}
+
+template<typename Context>
+std::unique_ptr<ep::primitive::Matmul> NewConvWeightGradTransATransBMatmulPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->data_type();
+  return NewMatmulPrimitive(ctx->device_type(), data_type, /*transpose_a=*/true,
+                            /*transpose_b=*/true);
+}
+
+auto ConvWeightGradTransATransBMatmulPrimitiveExists() {
+  return hob::make_custom(
+      "ConvWeightGradTransATransBMatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+        return NewConvWeightGradTransATransBMatmulPrimitive(&ctx).operator bool();
+      });
+}
+
+template<typename Context>
+std::unique_ptr<ep::primitive::Matmul> NewConvWeightGradNoTransATransBMatmulPrimitive(
+    Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("dy", 0)->data_type();
+  return NewMatmulPrimitive(ctx->device_type(), data_type, /*transpose_a=*/false,
+                            /*transpose_b=*/true);
+}
+
+auto ConvWeightGradNoTransATransBMatmulPrimitiveExists() {
+  return hob::make_custom(
+      "ConvWeightGradNoTransATransBMatmulPrimitiveExists",
+      [](const user_op::KernelRegContext& ctx) {
+        return NewConvWeightGradNoTransATransBMatmulPrimitive(&ctx).operator bool();
+      });
+}
 
 template<typename T>
 using Im2ColFunc = void (*)(const T* in_dptr, const ShapeView& in_shape,
@@ -34,27 +133,6 @@ using Col2ImFunc = void (*)(const T* col_buf, const ShapeView& in_shape,
                             const ShapeView& weight_shape, const ShapeView& out_shape,
                             const int32_t* strides, const int32_t* dilation_rate,
                             const int32_t* padding_before, T* in_diff_ptr);
-
-template<typename T>
-using GemmFunc = void (*)(enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b, const int m,
-                          const int n, const int k, const T alpha, const T* a, const T* b,
-                          const T beta, T* c);
-
-template<typename T>
-void Gemm4ChannelFirst(enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b, const int m,
-                       const int n, const int k, const T alpha, const T* a, const T* b,
-                       const T beta, T* c) {
-  NewKernelUtil<DeviceType::kCPU>::OFGemm(nullptr, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
-}
-
-template<typename T>
-void Gemm4ChannelLast(enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b, const int m,
-                      const int n, const int k, const T alpha, const T* a, const T* b, const T beta,
-                      T* c) {
-  trans_a = (trans_a == CblasNoTrans) ? CblasTrans : CblasNoTrans;
-  trans_b = (trans_b == CblasNoTrans) ? CblasTrans : CblasNoTrans;
-  NewKernelUtil<DeviceType::kCPU>::OFGemm(nullptr, trans_b, trans_a, n, m, k, alpha, b, a, beta, c);
-}
 
 template<typename T>
 T* GetImgMutDptr(user_op::Tensor* tensor, int64_t idx) {
@@ -309,7 +387,6 @@ template<typename T>
 struct ConvOpKernelCache final : public user_op::OpKernelCache {
   Im2ColFunc<T> im2col_func_ = ConvKernelUtil<T>::NCDHWIm2Col;
   Col2ImFunc<T> col2im_func_ = ConvKernelUtil<T>::NCDHWCol2Im;
-  GemmFunc<T> forward_func_ = Gemm4ChannelLast;
 
   Shape in_5d_shape_;
   Shape out_5d_shape_;
@@ -319,7 +396,7 @@ struct ConvOpKernelCache final : public user_op::OpKernelCache {
   std::vector<int32_t> dilation_rate_3d_;
   std::vector<int32_t> padding_before_3d_;
 
-  enum CBLAS_TRANSPOSE is_out_diff_need_trans_ = CblasNoTrans;
+  bool is_out_diff_need_trans_ = false;
   int32_t idx_offset_ = 0;
   bool is_dynamic_ = false;
   int32_t groups = 1;
@@ -336,14 +413,12 @@ std::shared_ptr<ConvOpKernelCache<T>> CreateConvOpKernelCache(user_op::KernelCac
   if (data_format == "channels_first") {
     state->im2col_func_ = ConvKernelUtil<T>::NCDHWIm2Col;
     state->col2im_func_ = ConvKernelUtil<T>::NCDHWCol2Im;
-    state->forward_func_ = Gemm4ChannelFirst;
-    state->is_out_diff_need_trans_ = CblasNoTrans;
+    state->is_out_diff_need_trans_ = false;
     state->idx_offset_ = 2;
   } else {
     state->im2col_func_ = ConvKernelUtil<T>::NDHWCIm2Col;
     state->col2im_func_ = ConvKernelUtil<T>::NDHWCCol2Im;
-    state->forward_func_ = Gemm4ChannelLast;
-    state->is_out_diff_need_trans_ = CblasTrans;
+    state->is_out_diff_need_trans_ = true;
     state->idx_offset_ = 1;
   }
   state->groups = ctx->Attr<int32_t>("groups");
@@ -423,6 +498,15 @@ class ConvCpuKernel final : public user_op::OpKernel {
     const int32_t k = conv_cache->weight_5d_shape_.Count(1);
     bool is_bias_mul_inited = false;
 
+    const auto& data_format = ctx->Attr<std::string>("data_format");
+    std::unique_ptr<ep::primitive::Matmul> matmul;
+    if (data_format == "channels_first") {
+      matmul = NewChannelsFirstMatmulPrimitive(ctx);
+    } else {
+      matmul = NewChannelsLastMatmulPrimitive(ctx);
+    }
+    CHECK(matmul);
+
     for (int64_t i = 0; i < in->shape_view().At(0); ++i) {
       const T* input_ptr = GetImgDptr<T>(in, i);
       const T* weight_ptr = weight->dptr<T>();
@@ -436,12 +520,11 @@ class ConvCpuKernel final : public user_op::OpKernel {
 
         // channels first: out = weight * col_buf
         // channels last:  out = (weight * col_buf)(T)
-        conv_cache->forward_func_(CblasNoTrans, CblasNoTrans,
-                                  m,  // filter / groups
-                                  n,  // od * oh * ow
-                                  k,  // ci * kd * kh * kw / groups
-                                  static_cast<T>(1), weight_ptr, col_buf_dptr, static_cast<T>(0),
-                                  output_ptr);
+        matmul->Launch(ctx->stream(),
+                       m,  // filter / groups
+                       n,  // od * oh * ow
+                       k,  // ci * kd * kh * kw / groups
+                       static_cast<T>(1), weight_ptr, col_buf_dptr, static_cast<T>(0), output_ptr);
         input_ptr += input_step;
         weight_ptr += weight_step;
         output_ptr += output_step;
@@ -462,13 +545,12 @@ class ConvCpuKernel final : public user_op::OpKernel {
 
         // channels first:  out += bias * bias_mul
         // channels last:   out += (bias * bias_mul)(T)
-        conv_cache->forward_func_(
-            CblasNoTrans, CblasNoTrans,
-            conv_cache->weight_5d_shape_.At(0),                           // filter
-            conv_cache->out_5d_shape_.Count(idx_offset, idx_offset + 3),  // od * oh * ow
-            1,                                                            // 1
-            static_cast<T>(1), bias->dptr<T>(), bias_mul_dptr, static_cast<T>(1),
-            GetImgMutDptr<T>(out, i));
+        matmul->Launch(ctx->stream(),
+                       conv_cache->weight_5d_shape_.At(0),                           // filter
+                       conv_cache->out_5d_shape_.Count(idx_offset, idx_offset + 3),  // od * oh * ow
+                       1,                                                            // 1
+                       static_cast<T>(1), bias->dptr<T>(), bias_mul_dptr, static_cast<T>(1),
+                       GetImgMutDptr<T>(out, i));
       }
     }
   }
@@ -479,7 +561,9 @@ class ConvCpuKernel final : public user_op::OpKernel {
       .SetCreateFn<ConvCpuKernel<dtype, ndims>>()                                           \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                       \
                        && (user_op::HobAttr<int32_t>("groups") > 1)                         \
-                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))     \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)      \
+                       && ChannelsFirstMatmulPrimitiveExists()                              \
+                       && ChannelsLastMatmulPrimitiveExists())                              \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                         \
         size_t tmp_buffer_size = 0;                                                         \
         const auto& out_shape = ctx->OutputTensorDesc("out", 0)->shape();                   \
@@ -543,6 +627,14 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
     Memset<DeviceType::kCPU>(ctx->stream(), dx->mut_dptr<T>(), 0,
                              dx->shape_view().elem_cnt() * sizeof(T));
 
+    std::unique_ptr<ep::primitive::Matmul> matmul;
+    if (conv_cache->is_out_diff_need_trans_) {
+      matmul = NewConvDataGradTransATransBMatmulPrimitive(ctx);
+    } else {
+      matmul = NewConvDataGradTransANoTransBMatmulPrimitive(ctx);
+    }
+    CHECK(matmul);
+
     FOR_RANGE(int64_t, i, 0, dy->shape_view().At(0)) {
       const T* filter_ptr = filter->dptr<T>();
       const T* dy_ptr = GetImgDptr<T>(dy, i);
@@ -550,12 +642,12 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
       FOR_RANGE(int64_t, g, 0, conv_cache->groups) {
         // channels first:  col_buf' = weight(T) * out[i]'
         // channels last :  col_buf' = weight(T) * out[i]'(T)
-        NewKernelUtil<DeviceType::kCPU>::OFGemm(
-            nullptr, CblasTrans, conv_cache->is_out_diff_need_trans_,
-            m,  //  ci * kd * kh * kw / groups
-            n,  //  od * oh * ow
-            k,  //  filter / groups
-            static_cast<T>(1), filter_ptr, dy_ptr, static_cast<T>(0), col_buf->mut_dptr<T>());
+        matmul->Launch(ctx->stream(),
+                       m,  //  ci * kd * kh * kw / groups
+                       n,  //  od * oh * ow
+                       k,  //  filter / groups
+                       static_cast<T>(1), filter_ptr, dy_ptr, static_cast<T>(0),
+                       col_buf->mut_dptr<T>());
 
         // in' = col2im(col_buf')
         conv_cache->col2im_func_(
@@ -587,7 +679,9 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
       .SetCreateFn<ConvDataGradCpuKernel<dtype>>()                                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                      \
                        && (user_op::HobAttr<int32_t>("groups") > 1)                        \
-                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))    \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)     \
+                       && ConvDataGradTransATransBMatmulPrimitiveExists()                  \
+                       && ConvDataGradTransANoTransBMatmulPrimitiveExists())               \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                        \
         size_t tmp_buffer_size = 0;                                                        \
         const auto& out_diff_shape = ctx->InputTensorDesc("dy", 0).shape();                \
@@ -640,6 +734,15 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
 
     Memset<DeviceType::kCPU>(ctx->stream(), filter_diff->mut_dptr<T>(), 0,
                              filter_diff->shape_view().elem_cnt() * sizeof(T));
+
+    std::unique_ptr<ep::primitive::Matmul> matmul;
+    if (conv_cache->is_out_diff_need_trans_) {
+      matmul = NewConvWeightGradTransATransBMatmulPrimitive(ctx);
+    } else {
+      matmul = NewConvWeightGradNoTransATransBMatmulPrimitive(ctx);
+    }
+    CHECK(matmul);
+
     FOR_RANGE(int64_t, i, 0, dy->shape_view().At(0)) {
       const T* x_ptr = GetImgDptr<T>(x, i);
       const T* dy_ptr = GetImgDptr<T>(dy, i);
@@ -653,12 +756,12 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
 
         // channels first:  weight' += out[i]' * col_buf(T)
         // channels last :  weight' += out[i]'(T) * col_buf(T)
-        NewKernelUtil<DeviceType::kCPU>::OFGemm(
-            nullptr, conv_cache->is_out_diff_need_trans_, CblasTrans,
-            m,  //  filter / groups
-            n,  //  ci * kd * kh * kw
-            k,  //  od * oh * ow / groups
-            static_cast<T>(1), dy_ptr, col_buf->dptr<T>(), static_cast<T>(1), filter_diff_ptr);
+        matmul->Launch(ctx->stream(),
+                       m,  //  filter / groups
+                       n,  //  ci * kd * kh * kw
+                       k,  //  od * oh * ow / groups
+                       static_cast<T>(1), dy_ptr, col_buf->dptr<T>(), static_cast<T>(1),
+                       filter_diff_ptr);
         x_ptr += x_step;
         dy_ptr += dy_step;
         filter_diff_ptr += filter_diff_step;
@@ -672,7 +775,9 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
       .SetCreateFn<ConvFilterGradCpuKernel<dtype>>()                                            \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
                        && (user_op::HobAttr<int32_t>("groups") > 1)                             \
-                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))         \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)          \
+                       && ConvWeightGradTransATransBMatmulPrimitiveExists()                     \
+                       && ConvWeightGradNoTransATransBMatmulPrimitiveExists())                  \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                             \
         size_t tmp_buffer_size = 0;                                                             \
         const auto& out_diff_shape = ctx->InputTensorDesc("dy", 0).shape();                     \
