@@ -46,6 +46,17 @@ Error&& Error::AddStackFrame(const std::string& file, const int64_t& line,
   return std::move(*this);
 }
 
+void Error::Merge(const Error& other) {
+  std::string error_summary{error_proto_->error_summary()};
+  std::string msg{error_proto_->msg()};
+  error_proto_->MergeFrom(*other.error_proto_);
+  // MergeFrom will overwrite singular field, so restore it.
+  if (!error_summary.empty()) {
+    error_proto_->set_error_summary(error_summary + " " + error_proto_->error_summary());
+  }
+  if (!msg.empty()) { error_proto_->set_msg(msg + " " + error_proto_->msg()); }
+}
+
 Error::operator std::string() const { return error_proto_->DebugString(); }
 
 Error Error::Ok() { return std::make_shared<ErrorProto>(); }
