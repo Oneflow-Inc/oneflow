@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/allocator.h"
-#include "oneflow/core/vm/shrinkable_cache.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/singleton_ptr.h"

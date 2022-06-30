@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <cstdint>
 #include "oneflow/core/vm/allocator.h"
-#include "oneflow/core/vm/shrinkable_cache.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {

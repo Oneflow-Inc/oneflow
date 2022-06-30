@@ -20,7 +20,6 @@ limitations under the License.
 #include <mutex>
 #include <thread>
 #include "oneflow/core/vm/allocator.h"
-#include "oneflow/core/vm/shrinkable_cache.h"
 
 namespace oneflow {
 
