@@ -185,9 +185,9 @@ class FusedSelfAttentionQueryMulKeyAndValueGpuKernel final : public user_op::OpK
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* h_tensor = ctx->Tensor4ArgNameAndIndex("hidden_states", 0);
-    int64_t seq_len = h_tensor->shape().At(0);
-    int64_t batch_size = h_tensor->shape().At(1);
-    int64_t hidden_size = h_tensor->shape().At(2);
+    int64_t seq_len = h_tensor->shape_view().At(0);
+    int64_t batch_size = h_tensor->shape_view().At(1);
+    int64_t hidden_size = h_tensor->shape_view().At(2);
     int64_t head_size = ctx->Attr<int64_t>("head_size");
     int64_t num_heads = hidden_size / (3 * head_size);
     int64_t ld = batch_size * hidden_size;
@@ -212,7 +212,7 @@ class FusedSelfAttentionQueryMulKeyAndValueGpuKernel final : public user_op::OpK
                                                    tmp_v_tensor->mut_dptr<T>());
     // v from (s, b, n, h) transpose to (b, n, s, h)
     Shape value_shape({seq_len, batch_size, num_heads, head_size});
-    TransposeGpu<T>(ctx->stream(), h_tensor->data_type(), value_shape, v_tensor->shape(),
+    TransposeGpu<T>(ctx->stream(), h_tensor->data_type(), value_shape, v_tensor->shape_view(),
                     {1, 2, 0, 3}, tmp_v_tensor->dptr<T>(), v_tensor->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -234,19 +234,20 @@ class FusedSelfAttentionQueryMulKeyAndValueGradGpuKernel final : public user_op:
     user_op::Tensor* h_grad_tensor = ctx->Tensor4ArgNameAndIndex("hidden_states_grad", 0);
 
     float alpha = ctx->Attr<float>("alpha");
-    int64_t seq_len = h_grad_tensor->shape().At(0);
-    int64_t batch_size = h_grad_tensor->shape().At(1);
-    int64_t hidden_size = h_grad_tensor->shape().At(2);
-    int64_t num_heads = v_grad_tensor->shape().At(1);
-    int64_t head_size = v_grad_tensor->shape().At(3);
+    int64_t seq_len = h_grad_tensor->shape_view().At(0);
+    int64_t batch_size = h_grad_tensor->shape_view().At(1);
+    int64_t hidden_size = h_grad_tensor->shape_view().At(2);
+    int64_t num_heads = v_grad_tensor->shape_view().At(1);
+    int64_t head_size = v_grad_tensor->shape_view().At(3);
     int64_t ld = batch_size * hidden_size;
     int64_t stride = 3 * head_size;
     CHECK_EQ(hidden_size, num_heads * stride);
 
     // transpose from (b, n, s, h) to (s, b, n, h)
     Shape value_shape({seq_len, batch_size, num_heads, head_size});
-    TransposeGpu<T>(ctx->stream(), v_grad_tensor->data_type(), v_grad_tensor->shape(), value_shape,
-                    {2, 0, 1, 3}, v_grad_tensor->dptr<T>(), tmp_v_tensor->mut_dptr<T>());
+    TransposeGpu<T>(ctx->stream(), v_grad_tensor->data_type(), v_grad_tensor->shape_view(),
+                    value_shape, {2, 0, 1, 3}, v_grad_tensor->dptr<T>(),
+                    tmp_v_tensor->mut_dptr<T>());
     // slice v grad
     SliceParams params = ConstructSliceParams4Value(seq_len, batch_size, num_heads, head_size);
     SliceKernelUtil<DeviceType::kCUDA, T>::Backward(ctx->stream(), params, tmp_v_tensor->dptr<T>(),

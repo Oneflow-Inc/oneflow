@@ -152,6 +152,8 @@ from oneflow._C import rsqrt
 from oneflow._C import sqrt
 from oneflow._C import square
 from oneflow._C import matmul
+from oneflow._C import mm
+from oneflow._C import mv
 from oneflow._C import bernoulli
 from oneflow._C import round
 from oneflow._C import softplus

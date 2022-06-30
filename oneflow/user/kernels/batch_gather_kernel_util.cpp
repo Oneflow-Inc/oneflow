@@ -28,10 +28,10 @@ Shape GetFlatShape(const ShapeView& shape, const int64_t axis) {
 
 template<DeviceType device_type, typename T, typename K>
 void BatchGatherForward(ep::Stream* stream, const Blob* in, const Blob* indices, Blob* out) {
-  const int64_t axis = indices->shape().NumAxes() - 1;
-  const Shape flat_out_shape = GetFlatShape(out->shape(), axis);
+  const int64_t axis = indices->shape_view().NumAxes() - 1;
+  const Shape flat_out_shape = GetFlatShape(out->shape_view(), axis);
   BatchGatherKernelUtilImpl<device_type, T, K>::Forward(stream, in->dptr<T>(), indices->dptr<K>(),
-                                                        flat_out_shape, in->shape().At(axis),
+                                                        flat_out_shape, in->shape_view().At(axis),
                                                         out->mut_dptr<T>());
 }
 
@@ -39,11 +39,11 @@ template<DeviceType device_type, typename T, typename K>
 void BatchGatherBackward(ep::Stream* stream, const Blob* out_diff, const Blob* indices,
                          Blob* in_diff) {
   Memset<device_type>(stream, in_diff->mut_dptr<T>(), 0, in_diff->ByteSizeOfBlobBody());
-  const int64_t axis = indices->shape().NumAxes() - 1;
-  const Shape flat_out_diff_shape = GetFlatShape(out_diff->shape(), axis);
+  const int64_t axis = indices->shape_view().NumAxes() - 1;
+  const Shape flat_out_diff_shape = GetFlatShape(out_diff->shape_view(), axis);
   BatchGatherKernelUtilImpl<device_type, T, K>::Backward(
       stream, out_diff->dptr<T>(), indices->dptr<K>(), flat_out_diff_shape,
-      in_diff->shape().At(axis), in_diff->mut_dptr<T>());
+      in_diff->shape_view().At(axis), in_diff->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>
