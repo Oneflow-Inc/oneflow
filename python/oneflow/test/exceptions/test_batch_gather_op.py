@@ -70,7 +70,7 @@ class TestBatchGather(flow.unittest.TestCase):
             indice = flow.tensor([[1, 2], [1, 2], [1, 2]]).to("cpu")
             out = flow.batch_gather(x_tensor, indice)
         test_case.assertTrue(
-            "The size of bias tensor must match the size of input tensor"
+            "The size of indices tensor must match the size of input tensor"
             in str(context.exception)
         )
 
