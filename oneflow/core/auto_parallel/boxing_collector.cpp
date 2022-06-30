@@ -560,7 +560,7 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
     return Maybe<void>::Ok();
   }
   static const bool enable_general_basic_communication =
-      Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
+      Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
       || ParseBooleanFromEnv("ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION", false);
   // Use a general basic communication if no P in the consumer
   if (enable_general_basic_communication && (!NdSbpHasPartialParallel(sbp_consumer))) {
@@ -569,9 +569,6 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
       JUST(AskSbpCombination4GeneralBasicCommunication(
           sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
           consumer_parallel_desc, middle_sbps, diag_node_pos));
-      if (GlobalProcessCtx::Rank() == 0) {
-        std::cout << "Middle size for gbc: " << middle_sbps.size() << std::endl;
-      }
     }
     // Otherwise, one-step transfer
     return Maybe<void>::Ok();

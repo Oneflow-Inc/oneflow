@@ -523,7 +523,7 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
 
 #ifdef WITH_CUDA
   static const bool enable_general_basic_communication =
-      Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
+      Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
       || ParseBooleanFromEnv("ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION", false);
   // Use a general basic communication if no P in the consumer
   if ((enable_general_basic_communication && !NdSbpHasPartialParallel(consumer_sbp_parallel))) {
@@ -684,7 +684,7 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
   }
 #ifdef WITH_CUDA
   static const bool enable_general_basic_communication =
-      Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
+      Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
       || ParseBooleanFromEnv("ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION", false);
   // Use a general basic communication if no P in the consumer
   if ((enable_general_basic_communication && !NdSbpHasPartialParallel(consumer_sbp_parallel))) {
