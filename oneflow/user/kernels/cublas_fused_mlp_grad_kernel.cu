@@ -148,10 +148,8 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
                          const user_op::OpKernelCache* cache) const override {
     auto* kernel_state = dynamic_cast<MatmulGradKernelState*>(state);
     if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE", false)) {
-      printf("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE! \n");
       return kernel_state->IfCommCreate();
     } else {
-      printf("Always ready for capture! \n");
       return true;
     }
   }
