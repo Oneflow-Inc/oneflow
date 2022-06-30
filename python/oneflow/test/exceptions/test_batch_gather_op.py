@@ -44,8 +44,8 @@ class TestBatchGather(flow.unittest.TestCase):
     def test_legal_dimension_error_msg(test_case):
         with test_case.assertRaises(RuntimeError) as context:
             x = np.random.randn(1)
-            x_tensor = flow.tensor(x).to("cpu")
-            indice = flow.tensor([[1, 1], [1, 1], [1, 1]]).to("cpu")
+            x_tensor = flow.tensor(x)
+            indice = flow.tensor([[1, 1], [1, 1], [1, 1]])
             flow.batch_gather(x_tensor, indice)
         test_case.assertTrue(
             "The dimension of the input tensor should be greater than or equal to the dimension of the indices tensor"
@@ -55,8 +55,8 @@ class TestBatchGather(flow.unittest.TestCase):
     def test_indice_type_error_msg(test_case):
         with test_case.assertRaises(TypeError) as context:
             x = np.random.randn(2)
-            x_tensor = flow.tensor(x).to("cpu")
-            indice = flow.tensor([1, 1], dtype=flow.float64).to("cpu")
+            x_tensor = flow.tensor(x)
+            indice = flow.tensor([1, 1], dtype=flow.float64)
             flow.batch_gather(x_tensor, indice)
         test_case.assertTrue(
             "The dtype of the indices tensor must be int32 or int64"
@@ -66,8 +66,8 @@ class TestBatchGather(flow.unittest.TestCase):
     def test_tensor_shape_size_error_msg(test_case):
         with test_case.assertRaises(RuntimeError) as context:
             x = np.random.randn(4, 5)
-            x_tensor = flow.tensor(x).to("cpu")
-            indice = flow.tensor([[1, 2], [1, 2], [1, 2]]).to("cpu")
+            x_tensor = flow.tensor(x)
+            indice = flow.tensor([[1, 2], [1, 2], [1, 2]])
             out = flow.batch_gather(x_tensor, indice)
         test_case.assertTrue(
             "The size of indices tensor must match the size of input tensor"
