@@ -58,7 +58,7 @@ def _set_resource_attr(attrs_chain: Union[List[str], str], attr_value, type_):
     resource_config = (
         session.config_proto.resource
         if session.status_ != session.Status.INITED
-        else session.get_resource_eagerly()
+        else session.resource
     )
 
     # update the current resource config

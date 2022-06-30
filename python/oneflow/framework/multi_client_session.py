@@ -124,17 +124,6 @@ class MultiClientSession(object):
         config_proto_str = text_format.MessageToString(resource_config)
         self._session_ctx.update_resource(config_proto_str)
 
-    """
-    Get the current resource when session is initialized
-    """
-
-    def get_resource_eagerly(self):
-        self._check_status(self.Status.INITED)
-        serialized_resource = self._session_ctx.get_serialized_resource()
-        resource = resource_pb.Resource()
-        resource.ParseFromString(serialized_resource)
-        return resource
-
     def __del__(self):
         if self._env.is_shutting_down():
             # After python shutting down, it's not safe to call oneflow

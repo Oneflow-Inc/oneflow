@@ -46,10 +46,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("update_resource",
            [](MultiClientSessionContext& session, const std::string& reso_proto_str) {
              return session.UpdateResource(reso_proto_str).GetOrThrow();
-           })
-      .def("get_serialized_resource", [](MultiClientSessionContext& session) -> Maybe<py::bytes> {
-        return py::bytes(*JUST(session.GetSerializedResource()));
-      });
+           });
 
   m.def("NewSessionId", &NewSessionId);
   py::class_<LogicalConfigProtoContext>(m, "LogicalConfigProtoContext")

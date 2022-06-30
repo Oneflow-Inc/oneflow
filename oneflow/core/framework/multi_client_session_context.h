@@ -35,7 +35,6 @@ class MultiClientSessionContext {
   Maybe<void> TryInit(const std::string& config_proto_str);
   Maybe<void> UpdateResource(const Resource& reso_proto);
   Maybe<void> UpdateResource(const std::string& reso_proto_str);
-  Maybe<std::string> GetSerializedResource();
 
   Maybe<void> TryClose();
 
