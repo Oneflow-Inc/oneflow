@@ -94,8 +94,8 @@ void ProfilerStop() {
 
 void EnableProfiler(bool use_cpu, bool use_cuda, bool record_shapes, bool record_bandwidth) {
   CHECK_JUST(vm::ClusterSync());
-  if (Singleton<ProfileMgr>::Get() == nullptr) {
-    Singleton<ProfileMgr>::New(use_cpu, use_cuda, record_shapes, record_bandwidth);
+  if (Singleton<ProfileManager>::Get() == nullptr) {
+    Singleton<ProfileManager>::New(use_cpu, use_cuda, record_shapes, record_bandwidth);
   }
 }
 
