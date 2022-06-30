@@ -55,26 +55,6 @@ OF_PP_FOR_EACH_TUPLE(CBLAS_TEMPLATE, BLAS_NAME_SEQ);
 
 #undef CBLAS_TEMPLATE
 
-#ifdef WITH_CUDA
-
-#define CUBLAS_TEMPLATE(name)                                                                   \
-  template<typename T, typename... Args>                                                        \
-  typename std::enable_if<std::is_same<T, float>::value>::type cublas_##name(Args&&... args) {  \
-    OF_CUBLAS_CHECK(cublasS##name(std::forward<Args>(args)...));                                \
-  }                                                                                             \
-  template<typename T, typename... Args>                                                        \
-  typename std::enable_if<std::is_same<T, double>::value>::type cublas_##name(Args&&... args) { \
-    OF_CUBLAS_CHECK(cublasD##name(std::forward<Args>(args)...));                                \
-  }                                                                                             \
-  template<typename T, typename... Args>                                                        \
-  typename std::enable_if<std::is_same<T, half>::value>::type cublas_##name(Args&&... args) {   \
-    OF_CUBLAS_CHECK(cublasH##name(std::forward<Args>(args)...));                                \
-  }
-
-OF_PP_FOR_EACH_TUPLE(CUBLAS_TEMPLATE, BLAS_NAME_SEQ);
-
-#endif  // WITH_CUDA
-
 #undef BLAS_NAME_SEQ
 
 }  // namespace oneflow
