@@ -18,19 +18,6 @@ limitations under the License.
 
 namespace oneflow {
 
-#define REGISTER_SQUEEZE_KERNEL(D)                                                              \
-  REGISTER_USER_KERNEL("squeeze")                                                               \
-      .SetCreateFn<CopyDataContentKernel<DeviceType::D>>()                                      \
-      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::D)                               \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, false));                      \
-        return Maybe<void>::Ok();                                                               \
-      });
-
-REGISTER_SQUEEZE_KERNEL(kCPU)
-#ifdef WITH_CUDA
-REGISTER_SQUEEZE_KERNEL(kCUDA)
-#endif
+REGISTER_COPY_DATA_CONTENT_KERNEL("squeeze");
 
 }  // namespace oneflow

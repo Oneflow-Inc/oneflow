@@ -14,12 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/include/primitive/memcpy.h"
 
 namespace oneflow {
 
-template<DeviceType device_type>
 class CopyDataContentKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   CopyDataContentKernel() = default;
@@ -31,10 +30,24 @@ class CopyDataContentKernel final : public user_op::OpKernel, public user_op::Cu
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape_view().elem_cnt(), out->shape_view().elem_cnt());
     CHECK_EQ(in->data_type(), out->data_type());
-    Memcpy<device_type>(ctx->stream(), out->mut_dptr<void>(), in->dptr<void>(),
-                        in->shape_view().elem_cnt() * GetSizeOfDataType(in->data_type()));
+    std::unique_ptr<ep::primitive::Memcpy> primitive =
+        ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(ctx->stream()->device_type(),
+                                                                  ep::primitive::MemcpyKind::kDtoD);
+    CHECK(primitive) << "Can not create Memcpy primitive for device type "
+                     << ctx->stream()->device_type();
+    primitive->Launch(ctx->stream(), out->mut_dptr(), in->dptr(),
+                      in->shape_view().elem_cnt() * GetSizeOfDataType(in->data_type()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
+
+#define REGISTER_COPY_DATA_CONTENT_KERNEL(op_type_name)                                         \
+  REGISTER_USER_KERNEL(op_type_name)                                                            \
+      .SetCreateFn<CopyDataContentKernel>()                                                     \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, false));                      \
+        return Maybe<void>::Ok();                                                               \
+      });
 
 }  // namespace oneflow

@@ -18,19 +18,6 @@ limitations under the License.
 
 namespace oneflow {
 
-#define REGISTER_AMP_WHITE_IDENTITY_KERNEL(device)                                              \
-  REGISTER_USER_KERNEL("amp_white_identity")                                                    \
-      .SetCreateFn<CopyDataContentKernel<device>>()                                             \
-      .SetIsMatchedHob(user_op::HobDeviceType() == device)                                      \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, false));                      \
-        return Maybe<void>::Ok();                                                               \
-      });
-
-REGISTER_AMP_WHITE_IDENTITY_KERNEL(DeviceType::kCPU)
-#ifdef WITH_CUDA
-REGISTER_AMP_WHITE_IDENTITY_KERNEL(DeviceType::kCUDA)
-#endif
+REGISTER_COPY_DATA_CONTENT_KERNEL("amp_white_identity");
 
 }  // namespace oneflow
