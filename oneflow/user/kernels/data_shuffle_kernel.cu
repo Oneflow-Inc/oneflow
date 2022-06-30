@@ -980,125 +980,130 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     const T* cur_rank_embeddings_ptr =
         reinterpret_cast<const T*>(embedding_state->EmbeddingShuffleInEmbeddings(current_iter_));
     if (!enable_quantized_comm) {
-      size_t reverse_unique_cur_rank_embeddings_size =
-          GetCudaAlignedSize(full_elem_cnt * sizeof(T));
-      size_t received_embeddings_size = reverse_unique_cur_rank_embeddings_size;
-
-      CHECK_GE(tmp_buffer->shape_view().elem_cnt(),
-               reverse_unique_cur_rank_embeddings_size + received_embeddings_size);
-
-      T* reverse_unique_cur_rank_embeddings = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
-      T* received_embeddings = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()
-                                                    + reverse_unique_cur_rank_embeddings_size);
       // 1. reverse cur_rank unique, from (num_unique, embedding_size) to (cur_rank_num_ids,
       // embedding_size)
+      void* reverse_unique_cur_rank_embeddings;
+      embedding_state->AllocTmpBuffer(
+          ctx, &reverse_unique_cur_rank_embeddings,
+          GetCudaAlignedSize(cur_rank_num_ids * embedding_size * sizeof(T)));
       GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
           cur_rank_num_ids, cur_rank_embeddings_ptr, Shape({1, num_unique, embedding_size}),
-          reverse_unique_cur_rank_embeddings, 0);
+          reinterpret_cast<T*>(reverse_unique_cur_rank_embeddings), 0);
 
       // 2. send recv embedding, from (cur_rank_num_ids, embedding_size) to
       // (unique_partitioned_num_ids, embedding_size)
+      void* received_embeddings;  // T
+      embedding_state->AllocTmpBuffer(
+          ctx, &received_embeddings,
+          GetCudaAlignedSize(unique_partitioned_num_ids * embedding_size * sizeof(T)));
+
       ShuffleEmbeddings(cuda_stream, comm, parallel_id, parallel_num, num_ids, embedding_size,
-                        data_type, host_num_unique_matrix, reverse_unique_cur_rank_embeddings,
-                        received_embeddings);
+                        data_type, host_num_unique_matrix,
+                        reinterpret_cast<T*>(reverse_unique_cur_rank_embeddings),
+                        reinterpret_cast<T*>(received_embeddings));
+      embedding_state->FreeTmpBuffer(ctx, reverse_unique_cur_rank_embeddings);
 
       // 3. reverse unique_partition, from (unique_partitioned_num_ids, embedding_size) to (num_ids,
       // embedding_size)
       GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
-          num_ids, received_embeddings, Shape({1, unique_partitioned_num_ids, embedding_size}),
-          embeddings->mut_dptr<T>(), 0);
+          num_ids, reinterpret_cast<T*>(received_embeddings),
+          Shape({1, unique_partitioned_num_ids, embedding_size}), embeddings->mut_dptr<T>(), 0);
+      embedding_state->FreeTmpBuffer(ctx, received_embeddings);
     } else {
-      size_t reverse_unique_cur_rank_embeddings_size =
-          GetCudaAlignedSize(full_elem_cnt * sizeof(int8_t));
-      size_t received_embeddings_size = reverse_unique_cur_rank_embeddings_size;
-      size_t quantize_cur_rank_embeddings_size = reverse_unique_cur_rank_embeddings_size;
-      size_t reverse_recv_quantize_cur_rank_embeddings_size =
-          reverse_unique_cur_rank_embeddings_size;
-      size_t cur_rank_quantize_factor_size = GetCudaAlignedSize(parallel_num * num_ids * sizeof(T));
-      size_t reverse_cur_rank_quantize_factor_size = cur_rank_quantize_factor_size;
-      size_t recv_quantize_factor_size = cur_rank_quantize_factor_size;
-      size_t reverse_recv_quantize_factor_size = cur_rank_quantize_factor_size;
-      CHECK_GE(tmp_buffer->shape_view().elem_cnt(),
-               reverse_unique_cur_rank_embeddings_size + received_embeddings_size
-                   + quantize_cur_rank_embeddings_size
-                   + reverse_recv_quantize_cur_rank_embeddings_size + cur_rank_quantize_factor_size
-                   + reverse_cur_rank_quantize_factor_size + recv_quantize_factor_size
-                   + reverse_recv_quantize_factor_size);
-      int8_t* reverse_unique_cur_rank_embeddings =
-          reinterpret_cast<int8_t*>(tmp_buffer->mut_dptr());
-      int8_t* received_embeddings = reinterpret_cast<int8_t*>(
-          tmp_buffer->mut_dptr<char>() + reverse_unique_cur_rank_embeddings_size);
-      int8_t* quantize_cur_rank_embeddings = reinterpret_cast<int8_t*>(
-          tmp_buffer->mut_dptr<char>() + reverse_unique_cur_rank_embeddings_size
-          + received_embeddings_size);
-      int8_t* reverse_recv_quantize_cur_rank_embeddings = reinterpret_cast<int8_t*>(
-          tmp_buffer->mut_dptr<char>() + reverse_unique_cur_rank_embeddings_size
-          + received_embeddings_size + quantize_cur_rank_embeddings_size);
-      T* cur_rank_quantize_factor = reinterpret_cast<T*>(
-          tmp_buffer->mut_dptr<char>() + reverse_unique_cur_rank_embeddings_size
-          + received_embeddings_size + quantize_cur_rank_embeddings_size
-          + reverse_recv_quantize_cur_rank_embeddings_size);
-      T* reverse_cur_rank_quantize_factor = reinterpret_cast<T*>(
-          tmp_buffer->mut_dptr<char>() + reverse_unique_cur_rank_embeddings_size
-          + received_embeddings_size + quantize_cur_rank_embeddings_size
-          + reverse_recv_quantize_cur_rank_embeddings_size + cur_rank_quantize_factor_size);
-      T* recv_quantize_factor = reinterpret_cast<T*>(
-          tmp_buffer->mut_dptr<char>() + reverse_unique_cur_rank_embeddings_size
-          + received_embeddings_size + quantize_cur_rank_embeddings_size
-          + reverse_recv_quantize_cur_rank_embeddings_size + cur_rank_quantize_factor_size
-          + reverse_cur_rank_quantize_factor_size);
-      T* reverse_recv_quantize_factor = reinterpret_cast<T*>(
-          tmp_buffer->mut_dptr<char>() + reverse_unique_cur_rank_embeddings_size
-          + received_embeddings_size + quantize_cur_rank_embeddings_size
-          + reverse_recv_quantize_cur_rank_embeddings_size + cur_rank_quantize_factor_size
-          + reverse_cur_rank_quantize_factor_size + recv_quantize_factor_size);
       // 1. quantize cur_rank_embeddings, from (num_unique, embedding_size) T to (num_unique,
       // embedding_size) int8_t, and get (num_unique,) T factor
+      void* quantize_cur_rank_embeddings;  // int8_t
+      embedding_state->AllocTmpBuffer(
+          ctx, &quantize_cur_rank_embeddings,
+          GetCudaAlignedSize(num_unique * embedding_size * sizeof(int8_t)));
+      void* cur_rank_quantize_factor;  // T
+      embedding_state->AllocTmpBuffer(ctx, &cur_rank_quantize_factor,
+                                      GetCudaAlignedSize(num_unique * sizeof(T)));
       DispatchQuantizeWarpImplPackSize<T, ComputeType>()(
-          cuda_stream, cur_rank_embeddings_ptr, quantize_cur_rank_embeddings,
-          cur_rank_quantize_factor, cur_rank_num_ids, embedding_size);
+          cuda_stream, cur_rank_embeddings_ptr,
+          reinterpret_cast<int8_t*>(quantize_cur_rank_embeddings),
+          reinterpret_cast<T*>(cur_rank_quantize_factor), num_unique, embedding_size);
       // 2. reverse cur_rank unique, from (num_unique, embedding_size) to (cur_rank_num_ids,
       // embedding_size)
+      void* reverse_unique_cur_rank_embeddings;  // int8_t
+
+      embedding_state->AllocTmpBuffer(
+          ctx, &reverse_unique_cur_rank_embeddings,
+          GetCudaAlignedSize(cur_rank_num_ids * embedding_size * sizeof(int8_t)));
+
       GatherKernelUtilImpl<DeviceType::kCUDA, int8_t, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
-          cur_rank_num_ids, quantize_cur_rank_embeddings, Shape({1, num_unique, embedding_size}),
-          reverse_unique_cur_rank_embeddings, 0);
+          cur_rank_num_ids, reinterpret_cast<int8_t*>(quantize_cur_rank_embeddings),
+          Shape({1, num_unique, embedding_size}),
+          reinterpret_cast<int8_t*>(reverse_unique_cur_rank_embeddings), 0);
+      embedding_state->FreeTmpBuffer(ctx, quantize_cur_rank_embeddings);
 
       // 3. reverse cur_rank quantize factor unique, from (num_unique) to (cur_rank_num_ids)
+      void* reverse_cur_rank_quantize_factor;  // T
+      embedding_state->AllocTmpBuffer(ctx, &reverse_cur_rank_quantize_factor,
+                                      GetCudaAlignedSize(cur_rank_num_ids * sizeof(T)));
 
       GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
-          cur_rank_num_ids, cur_rank_quantize_factor, Shape({1, num_unique, 1}),
-          reverse_cur_rank_quantize_factor, 0);
+          cur_rank_num_ids, reinterpret_cast<T*>(cur_rank_quantize_factor),
+          Shape({1, num_unique, 1}), reinterpret_cast<T*>(reverse_cur_rank_quantize_factor), 0);
+      embedding_state->FreeTmpBuffer(ctx, cur_rank_quantize_factor);
       // 4. send recv embedding and factor, from (cur_rank_num_ids, embedding_size) to
       // (unique_partitioned_num_ids, embedding_size)
+      void* received_embeddings;   // int8_t
+      void* recv_quantize_factor;  // T
+      embedding_state->AllocTmpBuffer(
+          ctx, &received_embeddings,
+          GetCudaAlignedSize(unique_partitioned_num_ids * embedding_size * sizeof(int8_t)));
+      embedding_state->AllocTmpBuffer(ctx, &recv_quantize_factor,
+                                      GetCudaAlignedSize(unique_partitioned_num_ids * sizeof(T)));
 
       ShuffleEmbeddings(cuda_stream, comm, parallel_id, parallel_num, num_ids, embedding_size,
-                        data_type, host_num_unique_matrix, reverse_unique_cur_rank_embeddings,
-                        received_embeddings, reverse_cur_rank_quantize_factor,
-                        recv_quantize_factor);
+                        data_type, host_num_unique_matrix,
+                        reinterpret_cast<int8_t*>(reverse_unique_cur_rank_embeddings),
+                        reinterpret_cast<int8_t*>(received_embeddings),
+                        reinterpret_cast<T*>(reverse_cur_rank_quantize_factor),
+                        reinterpret_cast<T*>(recv_quantize_factor));
+      embedding_state->FreeTmpBuffer(ctx, reverse_unique_cur_rank_embeddings);
+      embedding_state->FreeTmpBuffer(ctx, reverse_cur_rank_quantize_factor);
 
       // 5. reverse unique_partition, from (unique_partitioned_num_ids, embedding_size) to (num_ids,
       // embedding_size)
+      void* reverse_recv_quantize_cur_rank_embeddings;  // int8_t
+      embedding_state->AllocTmpBuffer(
+          ctx, &reverse_recv_quantize_cur_rank_embeddings,
+          GetCudaAlignedSize(num_ids * embedding_size * sizeof(int8_t)));
+
       GatherKernelUtilImpl<DeviceType::kCUDA, int8_t, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
-          num_ids, received_embeddings, Shape({1, unique_partitioned_num_ids, embedding_size}),
-          reverse_recv_quantize_cur_rank_embeddings, 0);
+          num_ids, reinterpret_cast<int8_t*>(received_embeddings),
+          Shape({1, unique_partitioned_num_ids, embedding_size}),
+          reinterpret_cast<int8_t*>(reverse_recv_quantize_cur_rank_embeddings), 0);
+      embedding_state->FreeTmpBuffer(ctx, received_embeddings);
+      // 6. reverse unique_partition_factor, from (unique_partitioned_num_ids) to (num_ids)
+      void* reverse_recv_quantize_factor;  // T
+      embedding_state->AllocTmpBuffer(ctx, &reverse_recv_quantize_factor,
+                                      GetCudaAlignedSize(num_ids * sizeof(T)));
 
       GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
-          num_ids, recv_quantize_factor, Shape({1, unique_partitioned_num_ids, 1}),
-          reverse_recv_quantize_factor, 0);
+          num_ids, reinterpret_cast<T*>(recv_quantize_factor),
+          Shape({1, unique_partitioned_num_ids, 1}),
+          reinterpret_cast<T*>(reverse_recv_quantize_factor), 0);
+      embedding_state->FreeTmpBuffer(ctx, recv_quantize_factor);
 
       // 7. dequantize embeddings, from (num_ids, embedding_size) int8_t to (num_ids,
       // embedding_size) T
       int32_t dequantize_row_size = num_ids;
       IDX dequantize_elem_cnt = dequantize_row_size * embedding_size;
       OF_CUDA_CHECK((LaunchDequantizeKernel<T, ComputeType, IDX>(
-          cuda_stream, reverse_recv_quantize_cur_rank_embeddings, reverse_recv_quantize_factor,
-          embeddings->mut_dptr<T>(), embedding_size, dequantize_elem_cnt)));
+          cuda_stream, reinterpret_cast<int8_t*>(reverse_recv_quantize_cur_rank_embeddings),
+          reinterpret_cast<T*>(reverse_recv_quantize_factor), embeddings->mut_dptr<T>(),
+          embedding_size, dequantize_elem_cnt)));
+      embedding_state->FreeTmpBuffer(ctx, reverse_recv_quantize_cur_rank_embeddings);
+      embedding_state->FreeTmpBuffer(ctx, reverse_recv_quantize_factor);
     }
     embedding_state->OnEmbeddingShuffleEnd(ctx, current_iter_);
     current_iter_++;
