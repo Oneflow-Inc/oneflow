@@ -13,23 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import unittest
-import numpy as np
 import oneflow as flow
 import oneflow.unittest
-from oneflow.test_utils.automated_test_util import *
 
 
-@flow.unittest.skip_unless_1n1d()
-class TestDot(flow.unittest.TestCase):
-    @autotest(n=5)
-    def test_dot(test_case):
-        device = random_device()
-        k = random(10, 100)
-        x = random_tensor(ndim=1, dim0=k).to(device)
-        y = random_tensor(ndim=1, dim0=k).to(device)
-        z = torch.dot(x, y)
-        return z
+class TestBiasAdd(flow.unittest.TestCase):
+    def test_b_tensor_numaxes_err(test_case):
+        with test_case.assertRaises(RuntimeError) as context:
+            x = flow.tensor([[1, 1], [2, 2]])
+            y = flow.tensor([[2, 2], [1, 1]])
+            out = flow._C.bias_add(y, x, axis=0)
+        test_case.assertTrue(
+            "Bias tensor has to be a one-dimensional vector" in str(context.exception)
+        )
 
 
 if __name__ == "__main__":
