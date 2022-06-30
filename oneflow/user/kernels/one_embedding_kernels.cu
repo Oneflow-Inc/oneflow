@@ -365,9 +365,10 @@ __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen
 
 template<typename T, typename U, typename IDX>
 void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* kernel_state,
-                          uint32_t num_unique, const int64_t num_ids, const int64_t embedding_size,
+                          uint32_t num_unique, const int64_t embedding_size,
                           const int64_t line_size, const bool is_prefetch, const void* unique_ids,
-                          const void* table_ids, T* values_ptr, void* tmp_buffer_ptr) {
+                          const void* table_ids, void* num_missing_ptr, void* missing_indices,
+                          void* store_values) {
   const auto& generator = kernel_state->generator();
   CHECK_NOTNULL(generator);
   std::shared_ptr<one::CUDAGeneratorImpl> cuda_generator =
@@ -377,16 +378,9 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* kernel_
   embedding::KeyValueStore* store = kernel_state->KeyValueStore();
   const EmbeddingInitializer* initializer_param = kernel_state->Initializers();
   const int8_t* initializer_index = kernel_state->InitializerIndex();
-  bool need_value_buffer = is_prefetch;
-  EmbeddingTmpBufferManager buffer_manager(tmp_buffer_ptr, num_ids, line_size * sizeof(T),
-                                           need_value_buffer);
-  uint32_t* num_missing_ptr =
-      buffer_manager.template Ptr<uint32_t>(EmbeddingBufferType::kNumMissing);
-  uint32_t* missing_indices =
-      buffer_manager.template Ptr<uint32_t>(EmbeddingBufferType::kMissingIndices);
-  T* store_values =
-      need_value_buffer ? buffer_manager.template Ptr<T>(EmbeddingBufferType::kValues) : values_ptr;
-  store->Get(stream, num_unique, unique_ids, store_values, num_missing_ptr, missing_indices);
+  store->Get(stream, num_unique, unique_ids, store_values,
+             reinterpret_cast<uint32_t*>(num_missing_ptr),
+             reinterpret_cast<uint32_t*>(missing_indices));
   void* host_num_keys = kernel_state->HostNumKeys();
   CHECK_GE(sizeof(IDX), sizeof(uint32_t));  // host_num_keys's buffer size is sizeof(IDX)
   OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_missing_ptr, sizeof(uint32_t), cudaMemcpyDefault,
@@ -401,8 +395,9 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* kernel_
     InitValueKernel<T, U>
         <<<num_blocks, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             seed, cuda_gen_state, inc_offset, line_size, embedding_size, initializer_param,
-            initializer_index, reinterpret_cast<const U*>(table_ids), num_missing_ptr,
-            missing_indices, store_values);
+            initializer_index, reinterpret_cast<const U*>(table_ids),
+            reinterpret_cast<uint32_t*>(num_missing_ptr),
+            reinterpret_cast<uint32_t*>(missing_indices), reinterpret_cast<T*>(store_values));
   }
   if (is_prefetch) { store->Put(stream, num_unique, unique_ids, store_values); }
 }
@@ -477,18 +472,29 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     auto* kernel_state = dynamic_cast<EmbeddingKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
     embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
+    embedding_state->OnEmbeddingPrefetchStart(ctx, current_iter_);
     uint32_t num_unique = embedding_state->GetNumUnique(current_iter_);
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     const user_op::Tensor* table_ids = ctx->Tensor4ArgNameAndIndex("table_ids", 0);
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
-    T* values_ptr = nullptr;
-    LookupAndInitMissing<T, U, IDX>(ctx->stream(), kernel_state, num_unique,
-                                    unique_ids->shape_view().elem_cnt(), embedding_size, line_size,
-                                    true, unique_ids->dptr(), table_ids->dptr(), values_ptr,
-                                    tmp_buffer->mut_dptr());
+
+    void* num_missing_ptr;
+    embedding_state->AllocTmpBuffer(ctx, &num_missing_ptr, GetCudaAlignedSize(sizeof(uint32_t)));
+    void* missing_indices_ptr;
+    embedding_state->AllocTmpBuffer(ctx, &missing_indices_ptr,
+                                    GetCudaAlignedSize(num_unique * sizeof(uint32_t)));
+    void* values_ptr;
+    embedding_state->AllocTmpBuffer(ctx, &values_ptr,
+                                    GetCudaAlignedSize(num_unique * line_size * sizeof(T)));
+    LookupAndInitMissing<T, U, IDX>(ctx->stream(), kernel_state, num_unique, embedding_size,
+                                    line_size, true, unique_ids->dptr(), table_ids->dptr(),
+                                    num_missing_ptr, missing_indices_ptr, values_ptr);
+    embedding_state->FreeTmpBuffer(ctx, num_missing_ptr);
+    embedding_state->FreeTmpBuffer(ctx, missing_indices_ptr);
+    embedding_state->FreeTmpBuffer(ctx, values_ptr);
+    embedding_state->OnEmbeddingPrefetchEnd(ctx, current_iter_);
     current_iter_++;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -552,21 +558,26 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     const user_op::Tensor* table_ids = ctx->Tensor4ArgNameAndIndex("table_ids", 0);
     user_op::Tensor* unique_values = ctx->Tensor4ArgNameAndIndex("unique_values", 0);
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
     uint32_t num_unique = embedding_state->GetNumUnique(current_iter_);
-    T* values_ptr = reinterpret_cast<T*>(embedding_state->LookupOutValues(current_iter_));
-    LookupAndInitMissing<T, U, IDX>(ctx->stream(), kernel_state, num_unique,
-                                    unique_ids->shape_view().elem_cnt(), embedding_size, line_size,
-                                    false, unique_ids->dptr(), table_ids->dptr(), values_ptr,
-                                    tmp_buffer->mut_dptr());
+    void* values_ptr = embedding_state->LookupOutValues(current_iter_);
+    void* num_missing_ptr;
+    embedding_state->AllocTmpBuffer(ctx, &num_missing_ptr, GetCudaAlignedSize(sizeof(uint32_t)));
+    void* missing_indices_ptr;
+    embedding_state->AllocTmpBuffer(ctx, &missing_indices_ptr,
+                                    GetCudaAlignedSize(num_unique * sizeof(uint32_t)));
+    LookupAndInitMissing<T, U, IDX>(ctx->stream(), kernel_state, num_unique, embedding_size,
+                                    line_size, false, unique_ids->dptr(), table_ids->dptr(),
+                                    num_missing_ptr, missing_indices_ptr, values_ptr);
+    embedding_state->FreeTmpBuffer(ctx, num_missing_ptr);
+    embedding_state->FreeTmpBuffer(ctx, missing_indices_ptr);
     if (ctx->has_output("embeddings", 0)) {
       void* embeddings_ptr = embedding_state->LookupOutEmbeddings(current_iter_);
       user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
       CopyValuesToEmbeddings<T>(ctx->stream(), num_unique, embedding_size, line_size,
-                                unique_values->data_type(), embeddings->data_type(), values_ptr,
-                                embeddings_ptr);
+                                unique_values->data_type(), embeddings->data_type(),
+                                reinterpret_cast<T*>(values_ptr), embeddings_ptr);
     }
     embedding_state->OnEmbeddingLookupEnd(ctx, current_iter_);
     current_iter_++;

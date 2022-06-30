@@ -32,10 +32,19 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
     num_unique_states_.resize(kRingBufferSize);
     has_lookup_values_ = false;
     has_lookup_embeddings_ = false;
+    // TODO: set mem pool, use cudaMallocFromPoolAsync
   }
   ~DynamicAllocationEmbeddingState() {
     if (has_lookup_values_) { OF_CUDA_CHECK(cudaFree(lookup_values_)); }
     if (has_lookup_embeddings_) { OF_CUDA_CHECK(cudaFree(lookup_embeddings_)); }
+  }
+
+  void OnEmbeddingPrefetchStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    // do nothing
+  }
+
+  void OnEmbeddingPrefetchEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    // do nothing, check ptrs is freed
   }
 
   void OnEmbeddingLookupStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
@@ -49,6 +58,7 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
         GetCudaAlignedSize(num_unique * line_size * GetSizeOfDataType(unique_values->data_type()));
     if (lookup_values_size_ < lookup_values_size) {
       if (has_lookup_values_) { OF_CUDA_CHECK(cudaFreeAsync(lookup_values_, cuda_stream)); }
+      // cudaMallocFromPoolAsync
       OF_CUDA_CHECK(cudaMallocAsync(&lookup_values_, lookup_values_size, cuda_stream));
       has_lookup_values_ = true;
       lookup_values_size_ = lookup_values_size;
@@ -141,11 +151,17 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
   }
 
   void OnEmbeddingPutEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    cudaFreeAsync(updated_values_, ctx->stream()->As<ep::CudaStream>()->cuda_stream());
+    OF_CUDA_CHECK(
+        cudaFreeAsync(updated_values_, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   }
 
-  void AllocTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr, size_t size) override {}
-  void FreeTmpBuffer(user_op::KernelComputeContext* ctx, void* ptr) override {}
+  void AllocTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr, size_t size) override {
+    OF_CUDA_CHECK(cudaMallocAsync(ptr, size, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+  }
+
+  void FreeTmpBuffer(user_op::KernelComputeContext* ctx, void* ptr) override {
+    OF_CUDA_CHECK(cudaFreeAsync(ptr, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+  }
 
   void SetNumUniqueState(uint32_t num_unique, const std::vector<uint32_t>& num_unique_matrix,
                          int64_t iter) override {
@@ -189,6 +205,19 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
  public:
   StaticAllocationEmbeddingState() { num_unique_states_.resize(kRingBufferSize); }
   ~StaticAllocationEmbeddingState() override = default;
+
+  void OnEmbeddingPrefetchStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    tmp_buffer_ptr_ = tmp_buffer->mut_dptr();
+    tmp_buffer_offset_ = 0;
+    tmp_buffer_size_ = tmp_buffer->shape_view().elem_cnt();
+  }
+
+  void OnEmbeddingPrefetchEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    tmp_buffer_ptr_ = nullptr;
+    tmp_buffer_offset_ = 0;
+    tmp_buffer_size_ = 0;
+  }
 
   void OnEmbeddingLookupStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
     user_op::Tensor* unique_values = ctx->Tensor4ArgNameAndIndex("unique_values", 0);
@@ -259,8 +288,16 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
     put_in_values_ = nullptr;
   }
 
-  void AllocTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr, size_t size) override {}
-  void FreeTmpBuffer(user_op::KernelComputeContext* ctx, void* ptr) override {}
+  void AllocTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr, size_t size) override {
+    CHECK(tmp_buffer_ptr_ != nullptr);
+    CHECK_GE(tmp_buffer_offset_, 0);
+    CHECK_LE(tmp_buffer_offset_ + size, tmp_buffer_size_);
+    *ptr = reinterpret_cast<char*>(tmp_buffer_ptr_) + tmp_buffer_offset_;
+    tmp_buffer_offset_ += size;
+  }
+  void FreeTmpBuffer(user_op::KernelComputeContext* ctx, void* ptr) override {
+    // do nothing, can not get the size
+  }
 
   void SetNumUniqueState(uint32_t num_unique, const std::vector<uint32_t>& num_unique_matrix,
                          int64_t iter) override {
@@ -295,6 +332,9 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
   void* update_out_values_;
   const void* put_in_values_;
   std::vector<NumUniqueState> num_unique_states_;
+  void* tmp_buffer_ptr_ = nullptr;
+  int64_t tmp_buffer_offset_ = 0;
+  size_t tmp_buffer_size_ = 0;
   std::mutex mutex_;
 };
 
@@ -358,6 +398,11 @@ void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value
   store->ReserveQueryLength(kDefaultMaxQueryLength);
   CHECK(key_value_store_map_.emplace(map_key, std::move(store)).second)
       << "Can't create an embedding with same name of an existing embedding, the name: " << name;
+
+  cudaMemPool_t mempool = nullptr;
+  cudaDeviceGetDefaultMemPool(&mempool, local_rank_id);
+  uint64_t threshold = UINT64_MAX;
+  cudaMemPoolSetAttribute(mempool, cudaMemPoolAttrReleaseThreshold, &threshold);
 }
 
 void EmbeddingManager::SaveSnapshot(const std::string& embedding_name, int64_t local_rank_id,

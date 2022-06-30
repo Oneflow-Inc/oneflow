@@ -55,6 +55,9 @@ class EmbeddingState {
   EmbeddingState() = default;
   virtual ~EmbeddingState() = default;
 
+  virtual void OnEmbeddingPrefetchStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
+  virtual void OnEmbeddingPrefetchEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
+
   virtual void OnEmbeddingLookupStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
   virtual void* LookupOutValues(int64_t iter) = 0;
   virtual void* LookupOutEmbeddings(int64_t iter) = 0;
@@ -106,6 +109,7 @@ class EmbeddingManager final {
  private:
   HashMap<std::pair<std::string, int64_t>, std::unique_ptr<KeyValueStore>> key_value_store_map_;
   HashMap<std::pair<std::string, int64_t>, std::unique_ptr<EmbeddingState>> embedding_state_map_;
+  cudaMemPool_t mem_pool_;
   std::mutex mutex_;
 };
 
