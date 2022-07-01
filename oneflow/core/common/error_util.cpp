@@ -16,6 +16,7 @@ limitations under the License.
 #include <sstream>
 #include "oneflow/core/common/error_util.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/graph_scope_vars.h"
 
 namespace oneflow {
 
@@ -97,7 +98,9 @@ std::string FormatFunctionOfStackFrame(const std::string& function) {
 
 // msg in stack frame
 Maybe<std::string> FormatMsgOfStackFrame(std::string error_msg, bool is_last_stack_frame) {
-  if (!is_last_stack_frame) { error_msg = *JUST(ShortenMsg(error_msg)); }
+  const bool debug_mode = GetGraphDebugMode();
+  // only shorten the message if it is not the last stack frame AND not in debug mode
+  if (!is_last_stack_frame && !debug_mode) { error_msg = *JUST(ShortenMsg(error_msg)); }
   // error_msg of last stack frame come from "<<"
   if (is_last_stack_frame) { error_msg = StripSpace(error_msg); }
   std::stringstream ss;
@@ -125,8 +128,7 @@ Maybe<std::string> FormatMsgOfErrorType(const std::shared_ptr<ErrorProto>& error
   const google::protobuf::FieldDescriptor* field_des =
       error_ref->GetOneofFieldDescriptor(*error, oneof_field_des);
   CHECK_OR_RETURN(field_des != nullptr);
-  const google::protobuf::Message& error_type = error_ref->GetMessage(*error, field_des);
-  ss << error_type.DebugString();
+  ss << "Error Type: " << field_des->full_name();
   return ss.str();
 }
 

@@ -35,9 +35,9 @@ Maybe<one::Tensor> PreprocessInputTensor4SliceBoxing(const std::shared_ptr<one::
   Symbol<ParallelDesc> new_placement = JUST(ReplaceDeviceType(tensor_placement, DeviceType::kCPU));
 
   const auto& boxing_interpreter =
-      JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
+      JUST(Singleton<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
           tensor_nd_sbp, tensor_nd_sbp, tensor_placement, new_placement, *tensor->shape()));
-  Global<const EagerBoxingLogger>::Get()->Log(
+  Singleton<const EagerBoxingLogger>::Get()->Log(
       *JUST(boxing_interpreter->boxing_interpreter_status()), log_prefix);
   return JUST(boxing_interpreter->Interpret(tensor, tensor_nd_sbp, tensor_nd_sbp, tensor_placement,
                                             new_placement));
@@ -61,10 +61,10 @@ Maybe<one::Tensor> PostprocessOutputTensor4SliceBoxing(const std::shared_ptr<one
 
   if (JUST(tensor->parallel_desc()) == placed_nd_sbp->placement()) { return tensor; }
   const auto& boxing_interpreter =
-      JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
+      JUST(Singleton<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
           placed_nd_sbp->nd_sbp(), placed_nd_sbp->nd_sbp(), JUST(tensor->parallel_desc()),
           placed_nd_sbp->placement(), *tensor->shape()));
-  Global<const EagerBoxingLogger>::Get()->Log(
+  Singleton<const EagerBoxingLogger>::Get()->Log(
       *JUST(boxing_interpreter->boxing_interpreter_status()), log_prefix);
   return JUST(boxing_interpreter->Interpret(tensor, placed_nd_sbp->nd_sbp(),
                                             placed_nd_sbp->nd_sbp(), JUST(tensor->parallel_desc()),

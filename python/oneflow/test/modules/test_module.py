@@ -201,8 +201,7 @@ class TestModule(flow.unittest.TestCase):
         res2 = m()
         test_case.assertTrue(np.array_equal(res1.numpy(), res2.numpy()))
 
-    @flow.unittest.skip_unless_1n4d()
-    def test_save_and_load_global_from_nested_dict(test_case):
+    def _test_save_and_load_global_from_nested_dict(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -254,6 +253,14 @@ class TestModule(flow.unittest.TestCase):
             res2 = m1() + m2()
 
         test_case.assertTrue(np.array_equal(res1.numpy(), res2.numpy()))
+
+    @flow.unittest.skip_unless_1n4d()
+    def test_save_and_load_global_from_nested_dict_1n4d(test_case):
+        test_case._test_save_and_load_global_from_nested_dict()
+
+    @flow.unittest.skip_unless_2n2d()
+    def test_save_and_load_global_from_nested_dict_2n2d(test_case):
+        test_case._test_save_and_load_global_from_nested_dict()
 
     @flow.unittest.skip_unless_1n1d()
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

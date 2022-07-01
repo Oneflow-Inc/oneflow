@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 # RUN: python3 %s | FileCheck %s
-# CHECK-NOT: oneflow.multiply
+# CHECK-NOT: oneflow.broadcast_mul
 
 import os
 import unittest
@@ -64,6 +64,7 @@ def _test_fold_multiply(test_case, module, with_cuda, *args):
 
     if with_cuda:
         model.to("cuda")
+    model.eval()
     eager_res = model(*args)
 
     class MultiplyGraph(nn.Graph):
@@ -86,10 +87,16 @@ def _test_fold_multiply(test_case, module, with_cuda, *args):
 class TestFoldMultiply(oneflow.unittest.TestCase):
     def test_fold_multiply(test_case):
         _test_fold_multiply(test_case, MultiplyModel, with_cuda=False)
+
+    @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "only test cpu cases")
+    def test_fold_multiply_cuda(test_case):
         _test_fold_multiply(test_case, MultiplyModel, with_cuda=True)
 
     def test_fold_multiply_complex(test_case):
         _test_fold_multiply(test_case, MultiplyModelComplex, with_cuda=False)
+
+    @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "only test cpu cases")
+    def test_fold_multiply_complex_cuda(test_case):
         _test_fold_multiply(test_case, MultiplyModelComplex, with_cuda=True)
 
     def test_fold_multiply_with_input(test_case):
@@ -97,8 +104,10 @@ class TestFoldMultiply(oneflow.unittest.TestCase):
         b = flow.tensor([9, -1], dtype=flow.float32)
         _test_fold_multiply(test_case, MultiplyModelWithInput, False, a, b)
 
-        a = a.to("cuda")
-        b = b.to("cuda")
+    @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "only test cpu cases")
+    def test_fold_multiply_with_input_cuda(test_case):
+        a = flow.tensor([3, 7], dtype=flow.float32, device="cuda")
+        b = flow.tensor([9, -1], dtype=flow.float32, device="cuda")
         _test_fold_multiply(test_case, MultiplyModelWithInput, True, a, b)
 
 

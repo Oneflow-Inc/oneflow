@@ -31,11 +31,17 @@ class TestTensor(flow.unittest.TestCase):
     def test_creating_global_tensor(test_case):
         placement = flow.placement("cuda", [0])
         sbp = flow.sbp.broadcast
-        shape = (2, 3)
 
         # Shape -> GlobalTensor
+        shape = (2, 3)
         x = flow.Tensor(*shape, placement=placement, sbp=sbp)
         test_case.assertTrue(x.is_global)
+        test_case.assertTrue(x.size() == shape)
+
+        shape = flow.Size((2, 3))
+        x = flow.Tensor(shape, placement=placement, sbp=sbp)
+        test_case.assertTrue(x.is_global)
+        test_case.assertTrue(x.size() == shape)
 
         # LocalTensor -> GlobalTensor
         x = flow.Tensor(*shape, device="cpu")
@@ -177,6 +183,56 @@ class TestTensor(flow.unittest.TestCase):
 
         flow.nn.init.normal_(wte, std=0.02)
         flow.nn.init.normal_(wpe, std=0.02)
+
+    @flow.unittest.skip_unless_1n2d()
+    def test_copy(test_case):
+        x = flow.zeros(2, 3)
+        y = flow.ones(2, 3)
+        x.copy_(y)
+        test_case.assertTrue(np.array_equal(x.numpy(), y.numpy()))
+
+        x = flow.zeros(
+            4, 6, placement=flow.placement("cuda", [0, 1]), sbp=flow.sbp.broadcast
+        )
+        y = flow.ones(
+            4, 6, placement=flow.placement("cpu", [0]), sbp=flow.sbp.broadcast
+        )
+        x.copy_(y)
+        test_case.assertTrue(np.array_equal(x.numpy(), y.numpy()))
+
+        x = flow.zeros(
+            4, 6, placement=flow.placement("cuda", [0, 1]), sbp=flow.sbp.broadcast
+        )
+        y = flow.ones(
+            4, 6, placement=flow.placement("cuda", [0]), sbp=flow.sbp.broadcast
+        )
+        x.copy_(y)
+        test_case.assertTrue(np.array_equal(x.numpy(), y.numpy()))
+
+        x = flow.zeros(
+            4, 6, placement=flow.placement("cuda", [0, 1]), sbp=flow.sbp.split(0)
+        )
+        y = flow.ones(
+            4, 6, placement=flow.placement("cuda", [0, 1]), sbp=flow.sbp.broadcast
+        )
+        x.copy_(y)
+        test_case.assertTrue(np.array_equal(x.numpy(), y.numpy()))
+
+        x = flow.zeros(
+            4, 6, placement=flow.placement("cuda", [0, 1]), sbp=flow.sbp.broadcast
+        )
+        y = flow.ones(
+            4, 6, placement=flow.placement("cuda", [0, 1]), sbp=flow.sbp.broadcast
+        )
+        x.copy_(y)
+        test_case.assertTrue(np.array_equal(x.numpy(), y.numpy()))
+
+        x = flow.zeros(
+            4, 6, placement=flow.placement("cuda", [0, 1]), sbp=flow.sbp.broadcast
+        )
+        y = np.ones((4, 6), dtype=np.float32)
+        x.copy_(y)
+        test_case.assertTrue(np.array_equal(x.numpy(), y))
 
 
 if __name__ == "__main__":

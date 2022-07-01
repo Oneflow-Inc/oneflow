@@ -51,21 +51,21 @@ class TestExpm1Module(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_expm1_flow_with_random_data(test_case):
         device = random_device()
         input = random_tensor().to(device)
         y = torch.expm1(input)
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_expm1_with_0_size_data(test_case):
         device = random_device()
         x = random_tensor(4, 2, 1, 0, 3).to(device)
         y = torch.expm1(x)
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_expm1_flow_with_0dim_data(test_case):
         device = random_device()
         input = random_tensor(ndim=0).to(device)

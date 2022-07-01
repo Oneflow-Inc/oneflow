@@ -112,8 +112,8 @@ class CudnnTensorDescHelper final {
 
   void CheckParamTensor(const user_op::Tensor* tensor) const {
     CHECK_NOTNULL(tensor);
-    CHECK_EQ(tensor->shape().NumAxes(), 1);
-    CHECK_EQ(tensor->shape().At(0), param_size_);
+    CHECK_EQ(tensor->shape_view().NumAxes(), 1);
+    CHECK_EQ(tensor->shape_view().At(0), param_size_);
     CHECK_EQ(GetCudnnDataType(tensor->data_type()), param_data_type_);
   }
 
@@ -196,12 +196,13 @@ class NormalizationInferenceKernel final : public user_op::OpKernel,
     const auto epsilon = ctx->Attr<float>("epsilon");
 
     const DataType data_type = x->data_type();
-    CHECK_EQ(x->shape(), y->shape());
+    CHECK_EQ(x->shape_view(), y->shape_view());
     CHECK_EQ(y->data_type(), data_type);
     CHECK_GE(axis, 0);
-    CHECK_LT(axis, x->shape().NumAxes());
+    CHECK_LT(axis, x->shape_view().NumAxes());
 
-    const CudnnTensorDescHelper desc_helper(x->shape(), data_type, axis, CUDNN_BATCHNORM_SPATIAL);
+    const CudnnTensorDescHelper desc_helper(x->shape_view(), data_type, axis,
+                                            CUDNN_BATCHNORM_SPATIAL);
     desc_helper.CheckParamTensor(gamma);
     desc_helper.CheckParamTensor(beta);
     desc_helper.CheckParamTensor(moving_mean);
@@ -212,10 +213,10 @@ class NormalizationInferenceKernel final : public user_op::OpKernel,
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), y->data_type());
-      CHECK_EQ(add_to_output->shape(), y->shape());
+      CHECK_EQ(add_to_output->shape_view(), y->shape_view());
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), y->mut_dptr<void>(), add_to_output->dptr<void>(),
-          add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+          add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       sp_beta = CudnnSPOnePtr<T>();
     } else {
       sp_beta = CudnnSPZeroPtr<T>();
@@ -369,11 +370,11 @@ class NormalizationTrainKernel final : public user_op::OpKernel, public user_op:
     const auto momentum = ctx->Attr<float>("momentum");
 
     const DataType data_type = x->data_type();
-    CHECK_EQ(x->shape(), y->shape());
+    CHECK_EQ(x->shape_view(), y->shape_view());
     CHECK_EQ(y->data_type(), data_type);
     CHECK_GE(axis, 0);
-    CHECK_LT(axis, x->shape().NumAxes());
-    const CudnnTensorDescHelper desc_helper(x->shape(), data_type, axis,
+    CHECK_LT(axis, x->shape_view().NumAxes());
+    const CudnnTensorDescHelper desc_helper(x->shape_view(), data_type, axis,
                                             CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
 
     const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
@@ -400,10 +401,10 @@ class NormalizationTrainKernel final : public user_op::OpKernel, public user_op:
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), y->data_type());
-      CHECK_EQ(add_to_output->shape(), y->shape());
+      CHECK_EQ(add_to_output->shape_view(), y->shape_view());
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), y->mut_dptr<void>(), add_to_output->dptr<void>(),
-          add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+          add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       sp_beta = CudnnSPOnePtr<T>();
     } else {
       sp_beta = CudnnSPZeroPtr<T>();
@@ -420,15 +421,15 @@ class NormalizationTrainKernel final : public user_op::OpKernel, public user_op:
         ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
         CUDNN_BATCHNORM_OPS_BN, nullptr, desc_helper.xy_desc(), &reserve_space_size));
     auto* workspace = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    if (reserve_space_size == 0 && workspace_size <= workspace->shape().elem_cnt()) {
+    if (reserve_space_size == 0 && workspace_size <= workspace->shape_view().elem_cnt()) {
       OF_CUDNN_CHECK(cudnnBatchNormalizationForwardTrainingEx(
           ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
           CUDNN_BATCHNORM_OPS_BN, sp_alpha, sp_beta, desc_helper.xy_desc(), x->dptr(), nullptr,
           nullptr, desc_helper.xy_desc(), y->mut_dptr(), desc_helper.param_desc(), gamma->dptr(),
           beta->dptr(), 1.0 - momentum, moving_mean ? moving_mean->mut_dptr() : NULL,
           moving_variance ? moving_variance->mut_dptr() : NULL, epsilon, mean->mut_dptr(),
-          inv_variance->mut_dptr(), nullptr, workspace->mut_dptr(), workspace->shape().elem_cnt(),
-          nullptr, 0));
+          inv_variance->mut_dptr(), nullptr, workspace->mut_dptr(),
+          workspace->shape_view().elem_cnt(), nullptr, 0));
     } else {
       OF_CUDNN_CHECK(cudnnBatchNormalizationForwardTraining(
           ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
@@ -450,7 +451,7 @@ class NormalizationTrainKernel final : public user_op::OpKernel, public user_op:
 
     if (ctx->op_type_name() == "normalization_add_relu") {
       CHECK(!ctx->has_input("_add_to_output", 0));
-      const int64_t elem_cnt = x->shape().elem_cnt();
+      const int64_t elem_cnt = x->shape_view().elem_cnt();
       auto* mask = ctx->Tensor4ArgNameAndIndex("reserve_space", 0);
       if (ctx->has_input("addend", 0)) {
         const auto* addend = ctx->Tensor4ArgNameAndIndex("addend", 0);
@@ -518,14 +519,14 @@ class NormalizationGradUserKernel final : public user_op::OpKernel,
     const auto epsilon = ctx->Attr<float>("epsilon");
 
     const DataType data_type = x->data_type();
-    CHECK_EQ(dy->shape(), x->shape());
+    CHECK_EQ(dy->shape_view(), x->shape_view());
     CHECK_EQ(dy->data_type(), data_type);
-    CHECK_EQ(dx->shape(), x->shape());
+    CHECK_EQ(dx->shape_view(), x->shape_view());
     CHECK_EQ(dx->data_type(), data_type);
     CHECK_GE(axis, 0);
-    CHECK_LT(axis, x->shape().NumAxes());
+    CHECK_LT(axis, x->shape_view().NumAxes());
 
-    const CudnnTensorDescHelper desc_helper(x->shape(), data_type, axis,
+    const CudnnTensorDescHelper desc_helper(x->shape_view(), data_type, axis,
                                             CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
     desc_helper.CheckParamTensor(gamma);
     desc_helper.CheckParamTensor(gamma_diff);
@@ -539,10 +540,10 @@ class NormalizationGradUserKernel final : public user_op::OpKernel,
 
     if (ctx->op_type_name() == "normalization_grad") {
       bn_workspace_ptr = tmp_buffer->mut_dptr();
-      bn_workspace_size = tmp_buffer->shape().elem_cnt();
+      bn_workspace_size = tmp_buffer->shape_view().elem_cnt();
       bn_dy_ptr = dy->dptr();
     } else if (ctx->op_type_name() == "normalization_add_relu_grad") {
-      const int64_t elem_cnt = dy->shape().elem_cnt();
+      const int64_t elem_cnt = dy->shape_view().elem_cnt();
       const auto* mask = ctx->Tensor4ArgNameAndIndex("reserve_space", 0);
       user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
       if (ctx->has_output("addend_diff", 0)) {
@@ -550,12 +551,12 @@ class NormalizationGradUserKernel final : public user_op::OpKernel,
         ReluBackward(ctx->stream(), elem_cnt, mask->dptr<int32_t>(), dy->dptr<T>(),
                      addend_diff->mut_dptr<T>());
         bn_workspace_ptr = tmp_buffer->mut_dptr();
-        bn_workspace_size = tmp_buffer->shape().elem_cnt();
+        bn_workspace_size = tmp_buffer->shape_view().elem_cnt();
         bn_dy_ptr = addend_diff->dptr();
       } else {
-        const size_t tmp_buffer_size = tmp_buffer->shape().elem_cnt();
+        const size_t tmp_buffer_size = tmp_buffer->shape_view().elem_cnt();
         const size_t relu_dx_size =
-            GetCudaAlignedSize(dy->shape().elem_cnt() * GetSizeOfDataType(dy->data_type()));
+            GetCudaAlignedSize(dy->shape_view().elem_cnt() * GetSizeOfDataType(dy->data_type()));
         CHECK_GE(tmp_buffer_size, relu_dx_size);
         ReluBackward(ctx->stream(), elem_cnt, mask->dptr<int32_t>(), dy->dptr<T>(),
                      reinterpret_cast<T*>(tmp_buffer->mut_dptr()));
@@ -703,12 +704,12 @@ class FusedNormalizationAddReluKernel final : public user_op::OpKernel,
     auto* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
     const DataType data_type = x->data_type();
-    CHECK_EQ(x->shape(), y->shape());
+    CHECK_EQ(x->shape_view(), y->shape_view());
     CHECK_EQ(y->data_type(), data_type);
     CHECK_GE(axis, 0);
-    CHECK_LT(axis, x->shape().NumAxes());
+    CHECK_LT(axis, x->shape_view().NumAxes());
 
-    const CudnnTensorDescHelper desc_helper(x->shape(), data_type, axis,
+    const CudnnTensorDescHelper desc_helper(x->shape_view(), data_type, axis,
                                             CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
     desc_helper.CheckParamTensor(gamma);
     desc_helper.CheckParamTensor(beta);
@@ -736,13 +737,13 @@ class FusedNormalizationAddReluKernel final : public user_op::OpKernel,
         ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
         ops, desc_helper.xy_desc(), z_desc, desc_helper.xy_desc(), desc_helper.param_desc(),
         activation_desc.Get(), &min_workspace_size));
-    const size_t workspace_size = tmp_buffer->shape().elem_cnt();
+    const size_t workspace_size = tmp_buffer->shape_view().elem_cnt();
     CHECK_GE(workspace_size, min_workspace_size);
     size_t min_reserve_space_size;
     OF_CUDNN_CHECK(cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
         ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
         ops, activation_desc.Get(), desc_helper.xy_desc(), &min_reserve_space_size));
-    const size_t reserve_space_size = reserve_space->shape().elem_cnt();
+    const size_t reserve_space_size = reserve_space->shape_view().elem_cnt();
     CHECK_GE(reserve_space_size, min_reserve_space_size);
 
     OF_CUDNN_CHECK(cudnnBatchNormalizationForwardTrainingEx(
@@ -792,14 +793,14 @@ class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel,
     const auto epsilon = ctx->Attr<float>("epsilon");
 
     const DataType data_type = x->data_type();
-    CHECK_EQ(dy->shape(), x->shape());
+    CHECK_EQ(dy->shape_view(), x->shape_view());
     CHECK_EQ(dy->data_type(), data_type);
-    CHECK_EQ(dx->shape(), x->shape());
+    CHECK_EQ(dx->shape_view(), x->shape_view());
     CHECK_EQ(dx->data_type(), data_type);
     CHECK_GE(axis, 0);
-    CHECK_LT(axis, x->shape().NumAxes());
+    CHECK_LT(axis, x->shape_view().NumAxes());
 
-    const CudnnTensorDescHelper desc_helper(x->shape(), data_type, axis,
+    const CudnnTensorDescHelper desc_helper(x->shape_view(), data_type, axis,
                                             CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
     desc_helper.CheckParamTensor(gamma);
     desc_helper.CheckParamTensor(beta);
@@ -828,13 +829,13 @@ class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel,
         ops, desc_helper.xy_desc(), desc_helper.xy_desc(), desc_helper.xy_desc(), dz_desc,
         desc_helper.xy_desc(), desc_helper.param_desc(), activation_desc.Get(),
         &min_workspace_size));
-    const size_t workspace_size = tmp_buffer->shape().elem_cnt();
+    const size_t workspace_size = tmp_buffer->shape_view().elem_cnt();
     CHECK_GE(workspace_size, min_workspace_size);
     size_t min_reserve_space_size;
     OF_CUDNN_CHECK(cudnnGetBatchNormalizationTrainingExReserveSpaceSize(
         ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
         ops, activation_desc.Get(), desc_helper.xy_desc(), &min_reserve_space_size));
-    const size_t reserve_space_size = reserve_space->shape().elem_cnt();
+    const size_t reserve_space_size = reserve_space->shape_view().elem_cnt();
     CHECK_GE(reserve_space_size, min_reserve_space_size);
     OF_CUDNN_CHECK(cudnnBatchNormalizationBackwardEx(
         ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
