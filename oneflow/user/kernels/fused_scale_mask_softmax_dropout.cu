@@ -170,8 +170,8 @@ class FusedScaleMaskSoftmaxDropoutKernel final : public user_op::OpKernel {
     const float scale_value = ctx->Attr<float>("scale_value");
     const float dropout_scale_value = ctx->Attr<float>("dropout_scale_value");
     user_op::Tensor* softmax_y = ctx->Tensor4ArgNameAndIndex("softmax_y", 0);
-    const ShapeView& x_shape = x->shape();
-    const ShapeView& mask_shape = mask->shape();
+    const ShapeView& x_shape = x->shape_view();
+    const ShapeView& mask_shape = mask->shape_view();
     CHECK_GE(x_shape.NumAxes(), 2);
     const int64_t elem_cnt = x_shape.elem_cnt();
     const int64_t cols = x_shape.At(x_shape.NumAxes() - 1);
@@ -231,9 +231,9 @@ class FusedScaleMaskSoftmaxDropoutGradKernel final : public user_op::OpKernel {
     const float mask_fill_value = static_cast<float>(0.0);
     const float scale_value = ctx->Attr<float>("scale_value");
     const float dropout_scale_value = ctx->Attr<float>("dropout_scale_value");
-    const ShapeView& dy_shape = dy->shape();
+    const ShapeView& dy_shape = dy->shape_view();
     const int64_t elem_cnt = dy_shape.elem_cnt();
-    const ShapeView& mask_shape = mask->shape();
+    const ShapeView& mask_shape = mask->shape_view();
     CHECK_GE(dy_shape.NumAxes(), 2);
     const int64_t cols = dy_shape.At(dy_shape.NumAxes() - 1);
     const int64_t rows = dy_shape.Count(0, dy_shape.NumAxes() - 1);

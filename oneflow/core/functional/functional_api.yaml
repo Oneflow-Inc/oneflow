@@ -968,6 +968,11 @@
     Double alpha=1.0) => MatMul"
   bind_python: True
 
+- name: "mm"
+  signature:
+    "Tensor (Tensor input, Tensor mat2) => MatMulNoBroadCast"
+  bind_python: True
+
 - name: "mv"
   signature:
     "Tensor (Tensor input, Tensor vec) => Mv"
@@ -1054,6 +1059,10 @@
 - name: "binary_cross_entropy_with_logits_loss_grad"
   signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None) => BinaryCrossEntropyWithLogitsLossGrad"
   bind_python: True
+
+- name: "binary_cross_entropy_with_logits_reduce_mean_loss_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target) => BinaryCrossEntropyWithLogitsReduceMeanLossGrad"
+  bind_python: False
 
 - name: "sparse_cross_entropy"
   signature: "Tensor (Tensor prediction, Tensor label, Int64 depth) => SparseCrossEntropy"
@@ -2237,6 +2246,13 @@
 
 - name: "pin_memory"
   signature: "Tensor (Tensor input) => PinMemory"
+  bind_python: True
+
+- name: "fill_"
+  signature: [
+    "Tensor (Tensor in, Scalar value) => Fill",
+    "Tensor (Tensor in, Tensor value) => FillTensor"
+    ]
   bind_python: True
 
 - name: "rnn_tanh_cell"

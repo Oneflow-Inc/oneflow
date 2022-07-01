@@ -611,6 +611,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.mm,
+    """
+    See :func:`oneflow.mm`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.narrow,
     """
     See :func:`oneflow.narrow`
@@ -1009,7 +1016,7 @@ add_docstr(
     """
     Tensor.fill_(value) → Tensor
 
-    Fills self tensor with the specified value.
+    Fills `self` tensor with the specified value.
     """,
 )
 
@@ -1284,6 +1291,13 @@ add_docstr(
     oneflow.Tensor.arctan,
     """
     See :func:`oneflow.arctan`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.dot,
+    """
+    See :func:`oneflow.dot`
     """,
 )
 
@@ -2078,6 +2092,15 @@ add_docstr(
     Tensor.pin_memory() -> Tensor
 
     Copies the tensor to pinned memory, if it’s not already pinned.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.is_pinned,
+    r"""
+    Tensor.is_pinned() -> bool
+
+    Returns true if this tensor resides in pinned memory.
     """,
 )
 

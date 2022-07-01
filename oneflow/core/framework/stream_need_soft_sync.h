@@ -22,22 +22,16 @@ limitations under the License.
 
 namespace oneflow {
 
-struct NeedSoftSync {
-  static bool Case(StreamRoleCase<StreamRole::kInvalid>, DeviceType) {  // NOLINT
-    LOG(FATAL);
-  }
-  static bool Case(StreamRoleCase<StreamRole::kCompute>, DeviceType device_type) {
-    return device_type != kCPU;
-  }
-  static bool Case(StreamRoleCase<StreamRole::kHost2Device>, DeviceType) { return false; }
-  static bool Case(StreamRoleCase<StreamRole::kDevice2Host>, DeviceType) { return false; }
-  static bool Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>, DeviceType device_type) {
-    return device_type != kCPU;
-  }
-  static bool Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>, DeviceType) {
-    return false;
-  }
-  static bool Case(StreamRoleCase<StreamRole::kCriticalSection>, DeviceType) { return false; }
+struct NeedSoftSync : public StreamRoleVisitor<NeedSoftSync> {
+  static bool VisitCompute(DeviceType device_type) { return device_type != kCPU; }
+  static bool VisitHost2Device(DeviceType) { return false; }
+  static bool VisitDevice2Host(DeviceType) { return false; }
+  static bool VisitSyncedLaunchedCommNet(DeviceType device_type) { return false; }
+  static bool VisitAsyncedLaunchedCommNet(DeviceType) { return false; }
+  static bool VisitBarrier(DeviceType) { return false; }
+  static bool VisitCriticalSection(DeviceType) { return false; }
+  static bool VisitLazyJobLauncher(DeviceType) { return false; }
+  static bool VisitPinnedCompute(DeviceType device_type) { return VisitCompute(device_type); }
 };
 
 }  // namespace oneflow
