@@ -3,16 +3,12 @@
 #include <set>
 #include <sstream>
 
-#include "./py_ast.h"
+#include "py_ast.h"
 
-namespace PythonAST {
+namespace pyast {
 
 typedef std::string identifier;
 typedef void* pointer;
-
-mod_t Module(const std::vector<stmt_t>& body) {
-    return new Module_(body);
-}
 
 stmt_t FunctionDef(const identifier& name, arguments_t args, const
                    std::vector<stmt_t>& body) {
@@ -25,16 +21,6 @@ stmt_t Return(expr_t value) {
 
 stmt_t Assign(const std::vector<expr_t>& targets, expr_t value) {
     return new Assign_(targets, value);
-}
-
-stmt_t For(expr_t target, expr_t iter, const std::vector<stmt_t>& body, const
-           std::vector<stmt_t>& orelse) {
-    return new For_(target, iter, body, orelse);
-}
-
-stmt_t While(expr_t test, const std::vector<stmt_t>& body, const
-             std::vector<stmt_t>& orelse) {
-    return new While_(test, body, orelse);
 }
 
 stmt_t If(expr_t test, const std::vector<stmt_t>& body, const
@@ -54,18 +40,6 @@ stmt_t Expr(expr_t value) {
     return new Expr_(value);
 }
 
-stmt_t Pass() {
-    return new Pass_();
-}
-
-stmt_t Break() {
-    return new Break_();
-}
-
-stmt_t Continue() {
-    return new Continue_();
-}
-
 expr_t BoolOp(boolop_t op, const std::vector<expr_t>& values) {
     return new BoolOp_(op, values);
 }
@@ -76,10 +50,6 @@ expr_t BinOp(expr_t left, operator_t op, expr_t right) {
 
 expr_t Lambda(arguments_t args, expr_t body) {
     return new Lambda_(args, body);
-}
-
-expr_t IfExp(expr_t test, expr_t body, expr_t orelse) {
-    return new IfExp_(test, body, orelse);
 }
 
 expr_t Compare(expr_t left, const std::vector<cmpop_t>& ops, const
@@ -99,12 +69,12 @@ expr_t Constant(double value) {
     return new Constant_(value);
 }
 
-expr_t Attribute(expr_t value, const identifier& attr, expr_context_t ctx) {
-    return new Attribute_(value, attr, ctx);
+expr_t Attribute(expr_t value, const identifier& attr) {
+    return new Attribute_(value, attr);
 }
 
-expr_t Name(const identifier& id, expr_context_t ctx) {
-    return new Name_(id, ctx);
+expr_t Name(const identifier& id) {
+    return new Name_(id);
 }
 
 arguments_t arguments(const std::vector<arg_t>& args) {
@@ -192,18 +162,6 @@ class ToStringVisitor : public BaseVisitor {
     }
 
 public:
-    std::any visitModule(Module_t node) override {
-        std::string result = spaces() + to_string(node) + " Module(";
-        result += "body=" + to_string(node->body);
-        result += ")\n";
-
-        depth += 2;
-        result += follow(node->body);
-        depth -= 2;
-
-        return result;
-    }
-
     std::any visitFunctionDef(FunctionDef_t node) override {
         std::string result = spaces() + to_string(node) + " FunctionDef(";
         result += "name=" + to_string(node->name) + ", " + "args=" +
@@ -238,37 +196,6 @@ public:
 
         depth += 2;
         result += follow(node->targets) + follow(node->value);
-        depth -= 2;
-
-        return result;
-    }
-
-    std::any visitFor(For_t node) override {
-        std::string result = spaces() + to_string(node) + " For(";
-        result += "target=" + to_string(node->target) + ", " + "iter=" +
-                  to_string(node->iter) + ", " + "body=" +
-                  to_string(node->body) + ", " + "orelse=" +
-                  to_string(node->orelse);
-        result += ")\n";
-
-        depth += 2;
-        result += follow(node->target) + follow(node->iter) +
-                  follow(node->body) + follow(node->orelse);
-        depth -= 2;
-
-        return result;
-    }
-
-    std::any visitWhile(While_t node) override {
-        std::string result = spaces() + to_string(node) + " While(";
-        result += "test=" + to_string(node->test) + ", " + "body=" +
-                  to_string(node->body) + ", " + "orelse=" +
-                  to_string(node->orelse);
-        result += ")\n";
-
-        depth += 2;
-        result += follow(node->test) + follow(node->body) +
-                  follow(node->orelse);
         depth -= 2;
 
         return result;
@@ -327,27 +254,6 @@ public:
         return result;
     }
 
-    std::any visitPass(Pass_t node) override {
-        std::string result = spaces() + to_string(node) + " Pass(";
-        result += ")\n";
-
-        return result;
-    }
-
-    std::any visitBreak(Break_t node) override {
-        std::string result = spaces() + to_string(node) + " Break(";
-        result += ")\n";
-
-        return result;
-    }
-
-    std::any visitContinue(Continue_t node) override {
-        std::string result = spaces() + to_string(node) + " Continue(";
-        result += ")\n";
-
-        return result;
-    }
-
     std::any visitBoolOp(BoolOp_t node) override {
         std::string result = spaces() + to_string(node) + " BoolOp(";
         result += "op=" + to_string(node->op) + ", " + "values=" +
@@ -383,21 +289,6 @@ public:
 
         depth += 2;
         result += follow(node->args) + follow(node->body);
-        depth -= 2;
-
-        return result;
-    }
-
-    std::any visitIfExp(IfExp_t node) override {
-        std::string result = spaces() + to_string(node) + " IfExp(";
-        result += "test=" + to_string(node->test) + ", " + "body=" +
-                  to_string(node->body) + ", " + "orelse=" +
-                  to_string(node->orelse);
-        result += ")\n";
-
-        depth += 2;
-        result += follow(node->test) + follow(node->body) +
-                  follow(node->orelse);
         depth -= 2;
 
         return result;
@@ -458,11 +349,11 @@ public:
     std::any visitAttribute(Attribute_t node) override {
         std::string result = spaces() + to_string(node) + " Attribute(";
         result += "value=" + to_string(node->value) + ", " + "attr=" +
-                  to_string(node->attr) + ", " + "ctx=" + to_string(node->ctx);
+                  to_string(node->attr);
         result += ")\n";
 
         depth += 2;
-        result += follow(node->value) + follow(node->attr) + follow(node->ctx);
+        result += follow(node->value) + follow(node->attr);
         depth -= 2;
 
         return result;
@@ -470,39 +361,13 @@ public:
 
     std::any visitName(Name_t node) override {
         std::string result = spaces() + to_string(node) + " Name(";
-        result += "id=" + to_string(node->id) + ", " + "ctx=" +
-                  to_string(node->ctx);
+        result += "id=" + to_string(node->id);
         result += ")\n";
 
         depth += 2;
-        result += follow(node->id) + follow(node->ctx);
+        result += follow(node->id);
         depth -= 2;
 
-        return result;
-    }
-
-    std::any visitExpr_Context(expr_context_t value) override {
-        std::string result;
-        switch (value) {
-            case expr_context_t::kLoad:
-                result = "Load";
-                break;
-            case expr_context_t::kStore:
-                result = "Store";
-                break;
-            case expr_context_t::kDel:
-                result = "Del";
-                break;
-            case expr_context_t::kAugLoad:
-                result = "AugLoad";
-                break;
-            case expr_context_t::kAugStore:
-                result = "AugStore";
-                break;
-            case expr_context_t::kParam:
-                result = "Param";
-                break;
-        }
         return result;
     }
 
@@ -562,18 +427,6 @@ public:
             case cmpop_t::kGtE:
                 result = "GtE";
                 break;
-            case cmpop_t::kIs:
-                result = "Is";
-                break;
-            case cmpop_t::kIsNot:
-                result = "IsNot";
-                break;
-            case cmpop_t::kIn:
-                result = "In";
-                break;
-            case cmpop_t::kNotIn:
-                result = "NotIn";
-                break;
         }
         return result;
     }
@@ -603,51 +456,5 @@ public:
     }
 
 };
-
-std::string to_string(mod_t node) {
-    ToStringVisitor string_visitor;
-    return std::any_cast<std::string>(string_visitor.visit(node));
-}
-
-std::string to_string(stmt_t node) {
-    ToStringVisitor string_visitor;
-    return std::any_cast<std::string>(string_visitor.visit(node));
-}
-
-std::string to_string(expr_t node) {
-    ToStringVisitor string_visitor;
-    return std::any_cast<std::string>(string_visitor.visit(node));
-}
-
-std::string to_string(expr_context_t node) {
-    ToStringVisitor string_visitor;
-    return std::any_cast<std::string>(string_visitor.visit(node));
-}
-
-std::string to_string(boolop_t node) {
-    ToStringVisitor string_visitor;
-    return std::any_cast<std::string>(string_visitor.visit(node));
-}
-
-std::string to_string(operator_t node) {
-    ToStringVisitor string_visitor;
-    return std::any_cast<std::string>(string_visitor.visit(node));
-}
-
-std::string to_string(cmpop_t node) {
-    ToStringVisitor string_visitor;
-    return std::any_cast<std::string>(string_visitor.visit(node));
-}
-
-std::string to_string(arguments_t node) {
-    ToStringVisitor string_visitor;
-    return std::any_cast<std::string>(string_visitor.visit(node));
-}
-
-std::string to_string(arg_t node) {
-    ToStringVisitor string_visitor;
-    return std::any_cast<std::string>(string_visitor.visit(node));
-}
-
 
 }

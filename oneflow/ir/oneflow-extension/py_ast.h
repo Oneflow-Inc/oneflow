@@ -6,18 +6,12 @@
 #include <string>
 #include <any>
 
-namespace PythonAST {
+namespace pyast {
 
 typedef std::string identifier;
 typedef void* pointer;
 
 class BaseVisitor;
-
-struct mod_;
-typedef mod_* mod_t;
-
-struct Module_;
-typedef Module_* Module_t;
 
 struct stmt_;
 typedef stmt_* stmt_t;
@@ -31,12 +25,6 @@ typedef Return_* Return_t;
 struct Assign_;
 typedef Assign_* Assign_t;
 
-struct For_;
-typedef For_* For_t;
-
-struct While_;
-typedef While_* While_t;
-
 struct If_;
 typedef If_* If_t;
 
@@ -49,15 +37,6 @@ typedef Assert_* Assert_t;
 struct Expr_;
 typedef Expr_* Expr_t;
 
-struct Pass_;
-typedef Pass_* Pass_t;
-
-struct Break_;
-typedef Break_* Break_t;
-
-struct Continue_;
-typedef Continue_* Continue_t;
-
 struct expr_;
 typedef expr_* expr_t;
 
@@ -69,9 +48,6 @@ typedef BinOp_* BinOp_t;
 
 struct Lambda_;
 typedef Lambda_* Lambda_t;
-
-struct IfExp_;
-typedef IfExp_* IfExp_t;
 
 struct Compare_;
 typedef Compare_* Compare_t;
@@ -91,15 +67,11 @@ typedef Attribute_* Attribute_t;
 struct Name_;
 typedef Name_* Name_t;
 
-enum class expr_context_t : uint8_t { kLoad=1, kStore=2, kDel=3, kAugLoad=4,
-                                             kAugStore=5, kParam=6 };
-
 enum class boolop_t : uint8_t { kAnd=1, kOr=2 };
 
 enum class operator_t : uint8_t { kAdd=1, kSub=2, kMult=3, kDiv=4, kPow=5 };
 
-enum class cmpop_t : uint8_t { kEq=1, kNotEq=2, kLt=3, kLtE=4, kGt=5, kGtE=6,
-                                    kIs=7, kIsNot=8, kIn=9, kNotIn=10 };
+enum class cmpop_t : uint8_t { kEq=1, kNotEq=2, kLt=3, kLtE=4, kGt=5, kGtE=6 };
 
 struct arguments_;
 typedef arguments_* arguments_t;
@@ -108,25 +80,17 @@ struct arg_;
 typedef arg_* arg_t;
 
 
-struct mod_ {
-    enum class ModKind : uint8_t { kModule=1 } mod_kind;
-    virtual std::any visit(BaseVisitor&) = 0;
-};
-
 struct stmt_ {
     enum class StmtKind : uint8_t { kFunctionDef=1, kReturn=2, kAssign=3,
-                                                  kFor=4, kWhile=5, kIf=6,
-                                                  kRaise=7, kAssert=8, kExpr=9,
-                                                  kPass=10, kBreak=11,
-                                                  kContinue=12 } stmt_kind;
+                                                  kIf=4, kRaise=5, kAssert=6,
+                                                  kExpr=7 } stmt_kind;
     virtual std::any visit(BaseVisitor&) = 0;
 };
 
 struct expr_ {
-    enum class ExprKind : uint8_t { kBoolOp=1, kBinOp=2, kLambda=3, kIfExp=4,
-                                             kCompare=5, kCall=6, kNum=7,
-                                             kConstant=8, kAttribute=9,
-                                             kName=10 } expr_kind;
+    enum class ExprKind : uint8_t { kBoolOp=1, kBinOp=2, kLambda=3, kCompare=4,
+                                             kCall=5, kNum=6, kConstant=7,
+                                             kAttribute=8, kName=9 } expr_kind;
     virtual std::any visit(BaseVisitor&) = 0;
 };
 
@@ -145,20 +109,12 @@ struct arg_ {
 
 class BaseVisitor {
 public:
-    std::any visit(mod_t node) {
-        return node->visit(*this);
-    }
-
     std::any visit(stmt_t node) {
         return node->visit(*this);
     }
 
     std::any visit(expr_t node) {
         return node->visit(*this);
-    }
-
-    std::any visit(expr_context_t node) {
-        return visitExpr_Context(node);
     }
 
     std::any visit(boolop_t node) {
@@ -181,48 +137,27 @@ public:
         return visitArg(node);
     }
 
-    virtual std::any visitModule(Module_t node) = 0;
     virtual std::any visitFunctionDef(FunctionDef_t node) = 0;
     virtual std::any visitReturn(Return_t node) = 0;
     virtual std::any visitAssign(Assign_t node) = 0;
-    virtual std::any visitFor(For_t node) = 0;
-    virtual std::any visitWhile(While_t node) = 0;
     virtual std::any visitIf(If_t node) = 0;
     virtual std::any visitRaise(Raise_t node) = 0;
     virtual std::any visitAssert(Assert_t node) = 0;
     virtual std::any visitExpr(Expr_t node) = 0;
-    virtual std::any visitPass(Pass_t node) = 0;
-    virtual std::any visitBreak(Break_t node) = 0;
-    virtual std::any visitContinue(Continue_t node) = 0;
     virtual std::any visitBoolOp(BoolOp_t node) = 0;
     virtual std::any visitBinOp(BinOp_t node) = 0;
     virtual std::any visitLambda(Lambda_t node) = 0;
-    virtual std::any visitIfExp(IfExp_t node) = 0;
     virtual std::any visitCompare(Compare_t node) = 0;
     virtual std::any visitCall(Call_t node) = 0;
     virtual std::any visitNum(Num_t node) = 0;
     virtual std::any visitConstant(Constant_t node) = 0;
     virtual std::any visitAttribute(Attribute_t node) = 0;
     virtual std::any visitName(Name_t node) = 0;
-    virtual std::any visitExpr_Context(expr_context_t value) = 0;
     virtual std::any visitBoolop(boolop_t value) = 0;
     virtual std::any visitOperator(operator_t value) = 0;
     virtual std::any visitCmpop(cmpop_t value) = 0;
     virtual std::any visitArguments(arguments_t node) = 0;
     virtual std::any visitArg(arg_t node) = 0;
-};
-
-struct Module_ : mod_ {
-    std::vector<stmt_t> body;
-
-    Module_(const std::vector<stmt_t>& body_) : body(body_), mod_() {
-        mod_kind = mod_::ModKind::kModule;
-    }
-
-    std::any visit(BaseVisitor& v) override {
-        return v.visitModule(this);
-    }
-
 };
 
 struct FunctionDef_ : stmt_ {
@@ -266,41 +201,6 @@ struct Assign_ : stmt_ {
 
     std::any visit(BaseVisitor& v) override {
         return v.visitAssign(this);
-    }
-
-};
-
-struct For_ : stmt_ {
-    expr_t target;
-    expr_t iter;
-    std::vector<stmt_t> body;
-    std::vector<stmt_t> orelse;
-
-    For_(expr_t target_, expr_t iter_, const std::vector<stmt_t>& body_, const
-         std::vector<stmt_t>& orelse_) : target(target_), iter(iter_),
-         body(body_), orelse(orelse_), stmt_() {
-        stmt_kind = stmt_::StmtKind::kFor;
-    }
-
-    std::any visit(BaseVisitor& v) override {
-        return v.visitFor(this);
-    }
-
-};
-
-struct While_ : stmt_ {
-    expr_t test;
-    std::vector<stmt_t> body;
-    std::vector<stmt_t> orelse;
-
-    While_(expr_t test_, const std::vector<stmt_t>& body_, const
-           std::vector<stmt_t>& orelse_) : test(test_), body(body_),
-           orelse(orelse_), stmt_() {
-        stmt_kind = stmt_::StmtKind::kWhile;
-    }
-
-    std::any visit(BaseVisitor& v) override {
-        return v.visitWhile(this);
     }
 
 };
@@ -363,42 +263,6 @@ struct Expr_ : stmt_ {
 
 };
 
-struct Pass_ : stmt_ {
-
-    Pass_() : stmt_() {
-        stmt_kind = stmt_::StmtKind::kPass;
-    }
-
-    std::any visit(BaseVisitor& v) override {
-        return v.visitPass(this);
-    }
-
-};
-
-struct Break_ : stmt_ {
-
-    Break_() : stmt_() {
-        stmt_kind = stmt_::StmtKind::kBreak;
-    }
-
-    std::any visit(BaseVisitor& v) override {
-        return v.visitBreak(this);
-    }
-
-};
-
-struct Continue_ : stmt_ {
-
-    Continue_() : stmt_() {
-        stmt_kind = stmt_::StmtKind::kContinue;
-    }
-
-    std::any visit(BaseVisitor& v) override {
-        return v.visitContinue(this);
-    }
-
-};
-
 struct BoolOp_ : expr_ {
     boolop_t op;
     std::vector<expr_t> values;
@@ -441,22 +305,6 @@ struct Lambda_ : expr_ {
 
     std::any visit(BaseVisitor& v) override {
         return v.visitLambda(this);
-    }
-
-};
-
-struct IfExp_ : expr_ {
-    expr_t test;
-    expr_t body;
-    expr_t orelse;
-
-    IfExp_(expr_t test_, expr_t body_, expr_t orelse_) : test(test_),
-           body(body_), orelse(orelse_), expr_() {
-        expr_kind = expr_::ExprKind::kIfExp;
-    }
-
-    std::any visit(BaseVisitor& v) override {
-        return v.visitIfExp(this);
     }
 
 };
@@ -522,10 +370,9 @@ struct Constant_ : expr_ {
 struct Attribute_ : expr_ {
     expr_t value;
     identifier attr;
-    expr_context_t ctx;
 
-    Attribute_(expr_t value_, const identifier& attr_, expr_context_t ctx_) :
-               value(value_), attr(attr_), ctx(ctx_), expr_() {
+    Attribute_(expr_t value_, const identifier& attr_) : value(value_),
+               attr(attr_), expr_() {
         expr_kind = expr_::ExprKind::kAttribute;
     }
 
@@ -537,10 +384,8 @@ struct Attribute_ : expr_ {
 
 struct Name_ : expr_ {
     identifier id;
-    expr_context_t ctx;
 
-    Name_(const identifier& id_, expr_context_t ctx_) : id(id_), ctx(ctx_),
-          expr_() {
+    Name_(const identifier& id_) : id(id_), expr_() {
         expr_kind = expr_::ExprKind::kName;
     }
 
@@ -551,45 +396,26 @@ struct Name_ : expr_ {
 };
 
 
-mod_t Module(const std::vector<stmt_t>& body);
 stmt_t FunctionDef(const identifier& name, arguments_t args, const
                    std::vector<stmt_t>& body);
 stmt_t Return(expr_t value);
 stmt_t Assign(const std::vector<expr_t>& targets, expr_t value);
-stmt_t For(expr_t target, expr_t iter, const std::vector<stmt_t>& body, const
-           std::vector<stmt_t>& orelse);
-stmt_t While(expr_t test, const std::vector<stmt_t>& body, const
-             std::vector<stmt_t>& orelse);
 stmt_t If(expr_t test, const std::vector<stmt_t>& body, const
           std::vector<stmt_t>& orelse);
 stmt_t Raise(expr_t exc, expr_t cause);
 stmt_t Assert(expr_t test, expr_t msg);
 stmt_t Expr(expr_t value);
-stmt_t Pass();
-stmt_t Break();
-stmt_t Continue();
 expr_t BoolOp(boolop_t op, const std::vector<expr_t>& values);
 expr_t BinOp(expr_t left, operator_t op, expr_t right);
 expr_t Lambda(arguments_t args, expr_t body);
-expr_t IfExp(expr_t test, expr_t body, expr_t orelse);
 expr_t Compare(expr_t left, const std::vector<cmpop_t>& ops, const
                std::vector<expr_t>& comparators);
 expr_t Call(expr_t func, const std::vector<expr_t>& args);
 expr_t Num(double n);
 expr_t Constant(double value);
-expr_t Attribute(expr_t value, const identifier& attr, expr_context_t ctx);
-expr_t Name(const identifier& id, expr_context_t ctx);
+expr_t Attribute(expr_t value, const identifier& attr);
+expr_t Name(const identifier& id);
 arguments_t arguments(const std::vector<arg_t>& args);
 arg_t arg(const identifier& arg);
-
-std::string to_string(mod_t node);
-std::string to_string(stmt_t node);
-std::string to_string(expr_t node);
-std::string to_string(expr_context_t node);
-std::string to_string(boolop_t node);
-std::string to_string(operator_t node);
-std::string to_string(cmpop_t node);
-std::string to_string(arguments_t node);
-std::string to_string(arg_t node);
 
 }

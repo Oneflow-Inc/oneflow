@@ -37,13 +37,8 @@ def lr_jit_register(lr_class):
     _ast = ast.parse(_src).body[0]
     transformer = SelfParamsTransformer(lr_class)
     transformer.visit(_ast)
-    try:
-        astpretty.pprint(_ast)
-    except:
-        print(ast.dump(_ast))
 
-    # _ast = _ast.body[0]
-    # res = oneflow._oneflow_internal.ir.compile_and_register_lr_jit(_ast, _id)
+    res = oneflow._oneflow_internal.ir.compile_and_register_lr_jit(_ast, _id)
     # print(res)
 
 
@@ -70,16 +65,16 @@ if __name__ == "__main__":
 
     lr_class_list = [
             WarmupLR(optimizer),
-            StepLR(optimizer, 5),
+            # StepLR(optimizer, 5),
             # SequentialLR(optimizer),
-            PolynomialLR(optimizer, 5),
-            MultiStepLR(optimizer, [10]),
-            LinearLR(optimizer),
-            LambdaLR(optimizer, [lambda step: 0.95 * step]),
-            ExponentialLR(optimizer, 1.1),
-            CosineDecayLR(optimizer, 10),
-            CosineAnnealingLR(optimizer, 50),
-            ConstantLR(optimizer)
+            # PolynomialLR(optimizer, 5),
+            # MultiStepLR(optimizer, [10]),
+            # LinearLR(optimizer),
+            # LambdaLR(optimizer, [lambda step: 0.95 * step]),
+            # ExponentialLR(optimizer, 1.1),
+            # CosineDecayLR(optimizer, 10),
+            # CosineAnnealingLR(optimizer, 50),
+            # ConstantLR(optimizer)
         ]
     for lr_class in lr_class_list:
         lr_jit_register(lr_class)
