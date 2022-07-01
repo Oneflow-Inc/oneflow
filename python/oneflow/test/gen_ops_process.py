@@ -41,7 +41,7 @@ for op_file in op_files:
             if ".. autoclass::" in line:
                 api_str += line.split(".")[-1]
 
-api_list = api_str.strip().replace(" ", "").replace(",", "").split("\n")  # 687
+api_list = api_str.strip().replace(" ", "").replace(",", "").split("\n")  
 
 dir_list = [
     ["../../../python/oneflow/framework/docstr"],

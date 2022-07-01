@@ -43,6 +43,7 @@ Operators for neural networks
         LSTMCell,
         RNN,
         LSTM,
+        GLU, 
         GRU,
         GRUCell, 
         GroupNorm,
