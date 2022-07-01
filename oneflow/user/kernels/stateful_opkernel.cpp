@@ -885,6 +885,25 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, DeviceCtx* device_c
       return std::accumulate(args.begin(), args.end(), static_cast<int64_t>(0), Func);
     };
 #endif
+    profiler::KernelEvent::Description description;
+    {
+      std::stringstream ss;
+      std::size_t hash = 0;
+      // for (const auto& x : *call_ctx->inputs()) {
+      for (size_t i = 0; i < call_ctx->inputs()->size(); i++) {
+        const auto& shape = call_ctx->inputs()->at(i)->shape();
+        ss << shape;
+        if (i != call_ctx->inputs()->size() - 1) {
+          ss << ", ";
+        }
+        AddHash(&hash, shape);
+      }
+      description["shape"] = {ss.str(), hash};
+    }
+    {
+      const std::string attr_str = call_ctx->composed_attrs().ToString();
+      description["attr"] = {attr_str, std::hash<std::string>{}(attr_str)};
+    }
     auto er_guard = CHECK_JUST(profiler::EventRecorder::CreateKernelEventRecorder(
         op_type_name(),
 #if defined(WITH_CUDA)
@@ -892,14 +911,7 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, DeviceCtx* device_c
           return CalMemorySize(compute_ctx->inputs()) + CalMemorySize(compute_ctx->outputs());
         },
 #endif
-        [compute_ctx]() -> std::vector<ShapeView> {
-          std::vector<ShapeView> shapes;
-          for (const auto& pair : compute_ctx->inputs()) {
-            shapes.emplace_back(
-                compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape());
-          }
-          return shapes;
-        }));
+        std::move(description)));
     user_opkernel->Compute(compute_ctx, state, cache);
   } else {
     user_opkernel->Compute(compute_ctx, state, cache);
