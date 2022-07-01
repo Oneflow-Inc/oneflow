@@ -5,6 +5,7 @@
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/IR/Builders.h"
@@ -88,27 +89,31 @@ class EvalVisitor : public BaseVisitor {
 
   mlir::ModuleOp getModule(stmt_t func) {
     theModule = mlir::ModuleOp::create(builder.getUnknownLoc());
-    visit(func);
     if (failed(mlir::verify(theModule))) {
       theModule.emitError("module verification error");
       return nullptr;
     }
     theModule->dump();
+
     return theModule;
   }
 
   std::any visitFunctionDef(FunctionDef_t node) {
+    // crate function
+    ScopedHashTableScope<llvm::StringRef, mlir::Value> varScope(symbolTable);
     builder.setInsertionPointToEnd(theModule.getBody());
-
     llvm::SmallVector<mlir::Type> arg_types(node->args->args.size(),
                                             mlir::Float64Type::getF64(builder.getContext()));
     auto func_type = builder.getFunctionType(arg_types, llvm::None);
     auto function = builder.create<mlir::func::FuncOp>(unknown, node->name, func_type);
+
+    // register args
     mlir::Block& entry_block = function.front();
     for (const auto nameValue : llvm::zip(node->args->args, entry_block.getArguments())) {
       if (failed(declare(std::get<0>(nameValue)->arg, std::get<1>(nameValue)))) return nullptr;
     }
 
+    // build body
     builder.setInsertionPointToStart(&entry_block);
     for (auto stmt : node->body) { visit(stmt); }
   }
@@ -159,9 +164,11 @@ static OwningOpRef<ModuleOp> genModuleForTest() {
                           });
 
   DialectRegistry registry;
-  registry.insert<mlir::func::FuncDialect>();
+  registerAllDialects(registry);
   registerLLVMDialectTranslation(registry);
   MLIRContext context(registry);
+  context.loadDialect<mlir::func::FuncDialect>();
+  context.loadDialect<mlir::arith::ArithmeticDialect>();
   EvalVisitor eval_visitor(context);
   OwningOpRef<ModuleOp> module = eval_visitor.getModule(func);
   return module;
