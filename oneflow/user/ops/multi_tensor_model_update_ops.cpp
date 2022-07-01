@@ -25,13 +25,15 @@ namespace {
 
 Maybe<void> CheckShapeLike(const user_op::TensorDesc* tensor_desc,
                            const user_op::TensorDesc* like) {
-  CHECK_EQ_OR_RETURN(tensor_desc->shape(), like->shape());
+  CHECK_EQ_OR_RETURN(tensor_desc->shape(), like->shape())
+      << "Tensordesc shape should be equal to Like shape. ";
   return Maybe<void>::Ok();
 }
 
 Maybe<void> CheckDataTypeLike(const user_op::TensorDesc* tensor_desc,
                               const user_op::TensorDesc* like) {
-  CHECK_EQ_OR_RETURN(tensor_desc->data_type(), like->data_type());
+  CHECK_EQ_OR_RETURN(tensor_desc->data_type(), like->data_type())
+      << "Tensordesc DataType should be equal to Like DataType. ";
   return Maybe<void>::Ok();
 }
 
@@ -43,7 +45,8 @@ Maybe<void> CheckScalarShape(const user_op::TensorDesc* tensor_desc) {
 }
 
 Maybe<void> CheckScalarDataType(const user_op::TensorDesc* tensor_desc, const DataType data_type) {
-  CHECK_EQ_OR_RETURN(tensor_desc->data_type(), data_type);
+  CHECK_EQ_OR_RETURN(tensor_desc->data_type(), data_type)
+      << "TensorDesc DataType should be equal to Scalar DataType. ";
   return Maybe<void>::Ok();
 }
 
@@ -65,7 +68,7 @@ Maybe<void> CheckLearningRateDataType(user_op::InferContext* ctx) {
 Maybe<void> SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                        const std::string& arg_name, int32_t arg_index) {
   user_op::InputArgModifier* arg_modifier = GetInputArgModifierFn(arg_name, arg_index);
-  CHECK_NOTNULL_OR_RETURN(arg_modifier);
+  CHECK_NOTNULL_OR_RETURN(arg_modifier) << "Arg Modifier should not be null. ";
   arg_modifier->set_is_mutable(true);
   return Maybe<void>::Ok();
 }
@@ -75,7 +78,8 @@ Maybe<void> InferSGDUpdateTensorDesc(user_op::InferContext* ctx) {
   for (int i = 0; i < weight_size; i++) {
     const user_op::TensorDesc& model = ctx->InputTensorDesc("model", i);
     const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", i);
-    CHECK_EQ_OR_RETURN(model_diff.shape(), model.shape());
+    CHECK_EQ_OR_RETURN(model_diff.shape(), model.shape())
+        << "Model Diff shape should be equal to Model shape. ";
   }
   JUST(CheckLearningRateShape(ctx));
   if (ctx->has_input("scale_by_tensor", 0)) {
@@ -116,9 +120,10 @@ Maybe<void> InferAdamUpdateTensorDesc(user_op::InferContext* ctx) {
     const user_op::TensorDesc& m = ctx->InputTensorDesc("m", i);
     const user_op::TensorDesc& v = ctx->InputTensorDesc("v", i);
 
-    CHECK_EQ_OR_RETURN(model_diff.shape(), model.shape());
-    CHECK_EQ_OR_RETURN(m.shape(), model.shape());
-    CHECK_EQ_OR_RETURN(v.shape(), model.shape());
+    CHECK_EQ_OR_RETURN(model_diff.shape(), model.shape())
+        << "Model Diff shape should be equal to Model shape. ";
+    CHECK_EQ_OR_RETURN(m.shape(), model.shape()) << "m shape should be equal to Model shape. ";
+    CHECK_EQ_OR_RETURN(v.shape(), model.shape()) << "v shape should be equal to Model shape. ";
   }
   JUST(CheckLearningRateShape(ctx));
   if (ctx->has_input("scale_by_tensor", 0)) {
@@ -163,8 +168,10 @@ Maybe<void> InferSGDUpdateWithCastTensorDesc(user_op::InferContext* ctx) {
     const user_op::TensorDesc& model = ctx->InputTensorDesc("model", i);
     const user_op::TensorDesc& model_copy = ctx->InputTensorDesc("model_copy", i);
     const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", i);
-    CHECK_EQ_OR_RETURN(model_diff.shape(), model.shape());
-    CHECK_EQ_OR_RETURN(model_copy.shape(), model.shape());
+    CHECK_EQ_OR_RETURN(model_diff.shape(), model.shape())
+        << "Model diff shape should be equal to Model shape. ";
+    CHECK_EQ_OR_RETURN(model_copy.shape(), model.shape())
+        << "Model copy shape should be equal to Model shape. ";
   }
   JUST(CheckLearningRateShape(ctx));
   if (ctx->has_input("scale_by_tensor", 0)) {
@@ -192,10 +199,12 @@ Maybe<void> InferAdamUpdateWithCastTensorDesc(user_op::InferContext* ctx) {
     const user_op::TensorDesc& m = ctx->InputTensorDesc("m", i);
     const user_op::TensorDesc& v = ctx->InputTensorDesc("v", i);
 
-    CHECK_EQ_OR_RETURN(model_diff.shape(), model.shape());
-    CHECK_EQ_OR_RETURN(model_copy.shape(), model.shape());
-    CHECK_EQ_OR_RETURN(m.shape(), model.shape());
-    CHECK_EQ_OR_RETURN(v.shape(), model.shape());
+    CHECK_EQ_OR_RETURN(model_diff.shape(), model.shape())
+        << "Model diff shape should be equal to Model shape. ";
+    CHECK_EQ_OR_RETURN(model_copy.shape(), model.shape())
+        << "Model copy shape should be equal to Model shape. ";
+    CHECK_EQ_OR_RETURN(m.shape(), model.shape()) << "m shape should be equal to Model shape. ";
+    CHECK_EQ_OR_RETURN(v.shape(), model.shape()) << "v shape should be equal to Model shape. ";
   }
   JUST(CheckLearningRateShape(ctx));
   if (ctx->has_input("scale_by_tensor", 0)) {
