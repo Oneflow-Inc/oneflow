@@ -27,6 +27,11 @@ Maybe<void> LocalCallOpKernelPhyInstrOperand::Init() {
   return Maybe<void>::Ok();
 }
 
+
+const ComposedAttrMap& LocalCallOpKernelPhyInstrOperand::composed_attrs() const {
+  return *opkernel_->composed_attrs_for_scheduler_thread();
+}
+
 void LocalCallOpKernelPhyInstrOperand::ForEachConstMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
   const auto& input_list = inputs();

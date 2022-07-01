@@ -49,6 +49,7 @@ struct TensorPool {
   const std::chrono::steady_clock::time_point start_time() { return start_time_; }
   double duration();
   void time_flies(double t);
+  void dataset_time_flies(double t);
   Maybe<void> display();
   Maybe<void> verbose_display();
   void add_recompute_times() { num_recomputation_++; }
@@ -69,6 +70,7 @@ struct TensorPool {
 
  private:
   double duration_;
+  double dataset_time_;
   // vector for eviction, set for non-eviction.
   // std::set<std::weak_ptr<vm::DTREagerBlobObject>> candidates_;
   std::vector<std::weak_ptr<vm::DTREagerBlobObject>> candidates_;

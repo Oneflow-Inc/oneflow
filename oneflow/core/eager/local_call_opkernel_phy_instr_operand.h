@@ -58,6 +58,7 @@ class LocalCallOpKernelPhyInstrOperand : public vm::PhyInstrOperand {
   const std::shared_ptr<one::StatefulLocalOpKernel>& shared_opkernel() const { return opkernel_; }
   const one::EagerBlobObjectListPtr& inputs() const { return inputs_; }
   const one::EagerBlobObjectListPtr& outputs() const { return outputs_; }
+  const ComposedAttrMap& composed_attrs() const;
   const AttrMap& attrs() const { return op_interp_ctx_.attrs; }
   const one::OpExprInterpContext& op_interp_ctx() const { return op_interp_ctx_; }
   const one::DevVmDepObjectConsumeMode& dev_vm_dep_object_consume_mode() const {

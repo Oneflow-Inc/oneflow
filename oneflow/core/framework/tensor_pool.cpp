@@ -29,6 +29,7 @@ namespace dtr {
 
 TensorPool::TensorPool()
     : duration_(0),
+      dataset_time_(0),
       total_memory_bytes_(0),
       num_eager_eviction_(0),
       num_forced_eviction_(0),
@@ -214,6 +215,11 @@ double TensorPool::duration() {
 void TensorPool::time_flies(double t) {
   duration_ += t;
   if (dtr::debug_level() >= 2) { LOG(INFO) << "time flies " << t << " to " << duration_; }
+}
+
+void TensorPool::dataset_time_flies(double t) {
+  dataset_time_ += t;
+  if (dtr::debug_level() >= 2) { LOG(INFO) << "dataset time flies " << t << " to " << duration_; }
 }
 
 Maybe<void> TensorPool::verbose_display() {

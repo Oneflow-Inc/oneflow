@@ -42,6 +42,19 @@ limitations under the License.
 
 #define CHECK_ISNULL(e) CHECK((e) == nullptr)
 
+template<class T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T>& v) {
+  os << "[";
+  for (size_t i = 0; i < v.size(); i++) {
+    os << v[i];
+    if (i != v.size() - 1) {
+      os << ", ";
+    }
+  }
+  os << "]";
+  return os;
+}
+
 namespace oneflow {
 
 inline size_t HashCombine(size_t lhs, size_t rhs) {

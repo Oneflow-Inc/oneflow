@@ -117,6 +117,8 @@ class ComposedAttrMap final {
 
   const AttrMap& base_attr_map() const { return base_; }
 
+  std::string ToString() const;
+
  private:
   AttrMap prior_;
   AttrMap base_;

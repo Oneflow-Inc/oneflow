@@ -44,6 +44,7 @@ limitations under the License.
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/framework/tensor_pool.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
+#include "nlohmann/json.hpp"
 
 namespace oneflow {
 namespace vm {
@@ -408,6 +409,30 @@ static Maybe<double> GetEstimatedComputeTime(vm::LocalCallOpKernelPhyInstrOperan
   return estimated_compute_time;
 }
 
+static double GetDatasetComputeTime(vm::LocalCallOpKernelPhyInstrOperand* operand) {
+  using json = nlohmann::json;
+  static const json j = [&]() {
+    json j;
+    std::ifstream i("/home/dev/op_time_dataset.json");
+    i >> j;
+    return j;
+  }();
+  const std::string op_type_str = operand->opkernel().op_type_name();
+  const std::string input_shape_str = [&]() {
+    std::stringstream ss;
+    for (size_t i = 0; i < operand->inputs()->size(); i++) {
+      ss << operand->inputs()->at(i)->shape();
+      if (i != operand->inputs()->size() - 1) {
+        ss << ", ";
+      }
+    }
+    return ss.str();
+  }();
+  const std::string attr_str = operand->composed_attrs().ToString();
+  const std::string key = op_type_str + " " + input_shape_str + " " + attr_str;
+  return j[key].get<double>();
+}
+
 Maybe<void> _RecursivelyCompute(
     const std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand, DeviceCtx* device_ctx) {
   // PinGuard guard(operand->inputs());
@@ -489,6 +514,7 @@ Maybe<void> _RecursivelyCompute(
 
   // update timestamp
   Global<dtr::TensorPool>::Get()->time_flies(compute_time);
+  Global<dtr::TensorPool>::Get()->dataset_time_flies(GetDatasetComputeTime(operand.get()));
   return Maybe<void>::Ok();
 }
 
