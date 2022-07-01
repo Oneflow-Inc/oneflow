@@ -34,7 +34,7 @@ class ConsistentToConsistentGradFunction : public OpExprGradFunction<ConsistentT
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const ConsistentToConsistentOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     grad_nd_sbp_ = fw_op_expr->grad_nd_sbp();
     return Maybe<void>::Ok();
   }
@@ -42,7 +42,7 @@ class ConsistentToConsistentGradFunction : public OpExprGradFunction<ConsistentT
   Maybe<void> Capture(ConsistentToConsistentState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs,
                       const OpExprInterpContext& interp_ctx) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->parallel_desc = JUST(inputs.at(0)->parallel_desc());
     ctx->nd_sbp = JUST(inputs.at(0)->nd_sbp());
     return Maybe<void>::Ok();
@@ -50,9 +50,11 @@ class ConsistentToConsistentGradFunction : public OpExprGradFunction<ConsistentT
 
   Maybe<void> Apply(const ConsistentToConsistentState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     const auto& out_grad = out_grads.at(0);
-    CHECK_OR_RETURN(out_grad->is_consistent());
+    CHECK_OR_RETURN(out_grad->is_consistent())
+        << Error::RuntimeError()
+        << "Expected global tensor for consistent_to_consistent but got local tensor";
     in_grads->resize(1);
     const auto& grad_nd_sbp = grad_nd_sbp_.value_or(JUST(out_grad->nd_sbp()));
     const auto& grad_sbp_list = JUST(GetSbpList(grad_nd_sbp));
