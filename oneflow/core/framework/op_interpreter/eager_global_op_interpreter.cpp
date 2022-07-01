@@ -136,7 +136,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   for (int i = 0; i < outputs->size(); ++i) {
     if (!outputs->at(i)) {
       const auto& tensor_impl = JUST(EagerGlobalTensorImpl::New(
-          output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
+          output_tensor_metas[i], tensor_device, parallel_id, false, false));
       (*outputs)[i].reset(new GlobalTensor(tensor_impl));
     } else {
       JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(NullOpt));
@@ -210,7 +210,7 @@ Maybe<void> RawGlobalToGlobal(const GlobalToGlobalOpExpr& op_expr, const TensorT
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
   const auto& input = inputs.at(0);
-  CHECK_OR_RETURN(input->is_global());
+  CHECK_OR_RETURN(input->is_global());  // NOLINT
   CHECK_OR_RETURN(ctx.parallel_desc.has_value());
   CHECK_OR_RETURN(ctx.nd_sbp.has_value());
   const auto& in_parallel_desc = JUST(input->parallel_desc());
@@ -234,7 +234,7 @@ Maybe<void> RawGlobalToGlobal(const GlobalToGlobalOpExpr& op_expr, const TensorT
                                  out_parallel_desc);
     const auto& tensor_impl =
         JUST(EagerGlobalTensorImpl::New(SymbolOf(tensor_meta), tensor->requires_grad(), false));
-    outputs->at(0).reset(new GlobalTensor(tensor_impl));
+    (*outputs)[0].reset(new GlobalTensor(tensor_impl));
   }
   CHECK_OR_RETURN(outputs->at(0));
   return Maybe<void>::Ok();

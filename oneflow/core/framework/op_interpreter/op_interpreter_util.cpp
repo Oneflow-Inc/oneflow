@@ -79,16 +79,16 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExp
         return g_eager_mirrored_interpreter;
       }
     } else {
-      if (inputs.at(0)->is_global()) {
+      if (inputs[0]->is_global()) {
         if (inputs.size() == 1) {
           // do nothing
         } else if (inputs.size() == 2) {
-          CHECK_OR_RETURN(inputs.at(1)->is_global())
+          CHECK_OR_RETURN(inputs[1]->is_global())      // NOLINT
               << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
         } else if (inputs.size() == 3) {
-          CHECK_OR_RETURN(inputs.at(1)->is_global())
+          CHECK_OR_RETURN(inputs[1]->is_global())
               << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-          CHECK_OR_RETURN(inputs.at(2)->is_global())
+          CHECK_OR_RETURN(inputs[2]->is_global())
               << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
         } else {
           for (const auto& tensor : inputs) {

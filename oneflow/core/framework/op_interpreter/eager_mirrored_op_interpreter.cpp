@@ -291,7 +291,7 @@ Maybe<void> RawLocalToGlobal(const CastToGlobalOpExpr& op_expr, const TensorTupl
   std::shared_ptr<MirroredTensor> input_mirrored_tensor;
   {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_OR_RETURN(!inputs.at(0)->is_global());
+    CHECK_OR_RETURN(!inputs[0]->is_global());  // NOLINT
     const auto& input_tensor = JUST(inputs.at(0)->detach());
     input_mirrored_tensor = JUST(input_tensor->AsMirroredTensor());
     CHECK_OR_RETURN(input_mirrored_tensor) << Error::InvalidValueError("Tensor Cast Error");
@@ -323,7 +323,7 @@ Maybe<void> RawLocalToGlobal(const CastToGlobalOpExpr& op_expr, const TensorTupl
       global_tensor_impl->reset_cur_rank_phy_tensor(input_mirrored_tensor);
     }
   }
-  outputs->at(0) = global_tensor;
+  (*outputs)[0] = global_tensor;
   return Maybe<void>::Ok();
 }
 
@@ -335,7 +335,7 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToGlobalOpExpr& op_exp
                                                 const TensorTuple& inputs, TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) const {
   JUST(LocalToGlobal(op_expr, inputs, outputs, ctx));
-  const auto& global_tensor = JUST(outputs->at(0)->AsGlobalTensor());
+  const auto& global_tensor = JUST((*outputs)[0]->AsGlobalTensor());
   JUST(WithConsistencyChecked(global_tensor, [&]() -> Maybe<void> {
     if (IsGlobalTensorMetaCheckDisabled()) { return Maybe<void>::Ok(); }
     const auto& parallel_desc = JUST(ctx.parallel_desc);

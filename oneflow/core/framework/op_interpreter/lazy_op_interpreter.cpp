@@ -974,7 +974,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const GlobalToGlobalOpExpr& op_expr,
   CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   const auto& input_tensor = inputs[0];
-  CHECK_OR_RETURN(input_tensor->is_global());
+  CHECK_OR_RETURN(input_tensor->is_global());  // NOLINT
 
   CHECK_OR_RETURN(ctx.parallel_desc.has_value());
   const auto& parallel_desc_sym = JUST(ctx.parallel_desc);

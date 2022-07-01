@@ -24,14 +24,14 @@ namespace oneflow {
 
 /*static*/ Maybe<TransportToken> TransportToken::NewTransportToken(TransportTokenType type) {
   int32_t thread_global_id = JUST(GetThisThreadGlobalId());
-  CHECK_GE_OR_RETURN(thread_global_id, 0);
-  CHECK_LT_OR_RETURN(thread_global_id, MaxNumberOfThreadGlobalUId());
+  CHECK_GE_OR_RETURN(thread_global_id, 0);                             // NOLINT
+  CHECK_LT_OR_RETURN(thread_global_id, MaxNumberOfThreadGlobalUId());  // NOLINT
   return TransportToken(type, thread_global_id);
 }
 
 Maybe<void> TransportToken::CheckThreadGlobalId() const {
   int32_t thread_global_id = JUST(GetThisThreadGlobalId());
-  CHECK_EQ_OR_RETURN(thread_global_id, this->thread_global_id());
+  CHECK_EQ_OR_RETURN(thread_global_id, this->thread_global_id());  // NOLINT
   return Maybe<void>::Ok();
 }
 

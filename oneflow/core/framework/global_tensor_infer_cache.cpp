@@ -85,7 +85,7 @@ Maybe<void> GlobalTensorMetaInferArgs::MakeNdSbpConstraints(
   const auto& input_arg_tuple = *user_op_expr.input_arg_tuple();
   auto* map = nd_sbp_signature->mutable_bn_in_op2nd_sbp();
   for (int i = 0; i < input_arg_tuple.size(); ++i) {
-    const auto& constaint = input_global_tensor_metas_.at(i).consumer_nd_sbp_constraint();
+    const auto& constaint = input_global_tensor_metas_[i].consumer_nd_sbp_constraint();
     if (constaint.has_value()) { (*map)[input_arg_tuple.indexed_bns().at(i)] = *JUST(constaint); }
   }
   return Maybe<void>::Ok();
@@ -97,7 +97,7 @@ Maybe<void> GlobalTensorMetaInferArgs::MakeInputBlobDescs(const UserOpExpr& user
   const auto& input_arg_tuple = *user_op_expr.input_arg_tuple();
   blob_descs->reserve(input_arg_tuple.size());
   for (int i = 0; i < input_arg_tuple.size(); ++i) {
-    const auto& tensor_meta = *input_global_tensor_metas_.at(i).tensor_meta();
+    const auto& tensor_meta = *input_global_tensor_metas_[i].tensor_meta();
     const auto& shape = std::const_pointer_cast<Shape>(tensor_meta.shape_ptr());
     const auto& stride = std::const_pointer_cast<Stride>(tensor_meta.stride_ptr());
     blob_descs->emplace_back(shape, stride, tensor_meta.data_type());
@@ -112,7 +112,7 @@ Maybe<void> GlobalTensorMetaInferArgs::MakeNdSbpInferHints(
   const auto& input_arg_tuple = *user_op_expr.input_arg_tuple();
   hints->reserve(input_arg_tuple.size());
   for (int i = 0; i < input_arg_tuple.size(); ++i) {
-    const auto& tensor_meta = *input_global_tensor_metas_.at(i).tensor_meta();
+    const auto& tensor_meta = *input_global_tensor_metas_[i].tensor_meta();
     const auto* parallel_desc = &*tensor_meta.parallel_desc();
     const auto* blob_desc = &blob_descs.at(i);
     const auto* nd_sbp = &*tensor_meta.nd_sbp();
@@ -145,7 +145,7 @@ Maybe<void> GlobalTensorMetaInferArgs::InitInputGlobalTensorMetas(
     const auto& tensor = *input_tensors.at(i);
     const auto& tensor_meta = JUST(tensor.global_tensor_meta());
     const auto& constraint = JUST(tensor.consumer_nd_sbp_constraint());
-    input_global_tensor_metas_.at(i).assign(tensor_meta, constraint);
+    input_global_tensor_metas_[i].assign(tensor_meta, constraint);
   }
   return Maybe<void>::Ok();
 }
@@ -244,7 +244,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
     const UserOpExpr& user_op_expr, const GlobalTensorMetaInferArgs& infer_args) {
   if (!user_op_expr.device_and_stream_infer_fn()) {
     Symbol<ParallelDesc> parallel_desc =
-        infer_args.input_global_tensor_metas().at(0).tensor_meta()->parallel_desc();
+        infer_args.input_global_tensor_metas()[0].tensor_meta()->parallel_desc();
     return GetDefaultStreamByPlacement(parallel_desc);
   } else {
     UserOpExprDeviceAndStreamInferContext device_and_stream_ctx(&user_op_expr, &infer_args);
@@ -254,9 +254,9 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
 
 /* static */ Maybe<const GlobalTensorInferResult> GlobalTensorInferCache::Infer(
     const UserOpExpr& user_op_expr, const GlobalTensorMetaInferArgs& infer_args) {
-  CHECK_GT_OR_RETURN(infer_args.input_global_tensor_metas().size(), 0);
+  CHECK_GT_OR_RETURN(infer_args.input_global_tensor_metas().size(), 0);  // NOLINT
   Symbol<ParallelDesc> parallel_desc =
-      infer_args.input_global_tensor_metas().at(0).tensor_meta()->parallel_desc();
+      infer_args.input_global_tensor_metas()[0].tensor_meta()->parallel_desc();
   JUST(CheckInputParallelDescIdentical(infer_args));
   JUST(CheckIsDeviceSupportedByOp(*parallel_desc, user_op_expr.op_type_name()));
   std::vector<OpArgMutGlobalTensorMeta> output_mut_metas(user_op_expr.output_size());
@@ -293,13 +293,13 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
                                                           user_op_expr.output_size());
   auto* input_metas = result->mut_input_tensor_metas();
   for (int32_t i = 0; i < user_op_expr.input_size(); ++i) {
-    const auto& old_global_tensor_meta = infer_args.input_global_tensor_metas().at(i).tensor_meta();
+    const auto& old_global_tensor_meta = infer_args.input_global_tensor_metas()[i].tensor_meta();
     const auto& ibn = user_op_expr.input_arg_tuple()->indexed_bns().at(i);
     const auto& nd_sbp = SymbolOf(*JUST(op->NdSbp4BnInOp(ibn)));
     GlobalTensorMeta global_tensor_meta(old_global_tensor_meta->shape_ptr(),
                                         old_global_tensor_meta->dtype(), nd_sbp,
                                         old_global_tensor_meta->parallel_desc());
-    input_metas->at(i) = SymbolOf(global_tensor_meta);
+    (*input_metas)[i] = SymbolOf(global_tensor_meta);
   }
   auto* output_metas = result->mut_output_tensor_metas();
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {

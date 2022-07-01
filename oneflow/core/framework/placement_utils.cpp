@@ -35,7 +35,7 @@ Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> paral
 }
 
 Maybe<void> TouchGlobalTensor(const std::shared_ptr<one::Tensor>& tensor) {
-  CHECK_OR_RETURN(tensor->is_global());
+  CHECK_OR_RETURN(tensor->is_global());  // NOLINT
   return Maybe<void>::Ok();
 }
 

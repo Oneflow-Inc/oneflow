@@ -167,7 +167,7 @@ Maybe<void> GlobalTensor::set_data(const std::shared_ptr<Tensor>& other) {
       << "Only leaf tensor's data can be set, because non-leaf tensor's data has been captured in "
          "the backward graph in autograd.";
   const auto& global_tensor = std::dynamic_pointer_cast<GlobalTensor>(JUST(other->detach()));
-  CHECK_NOTNULL_OR_RETURN(global_tensor);
+  CHECK_NOTNULL_OR_RETURN(global_tensor);  // NOLINT
   JUST(WithConsistencyChecked(global_tensor, [&]() -> Maybe<void> { return Maybe<void>::Ok(); }));
 
   bool old_requires_grad = requires_grad();

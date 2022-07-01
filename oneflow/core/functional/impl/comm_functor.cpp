@@ -206,7 +206,7 @@ class GlobalReduceScatterFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::string& op_type) const {
     {
-      CHECK_OR_RETURN(x->is_global());
+      CHECK_OR_RETURN(x->is_global());  // NOLINT
       if (op_type == "max") {
         CHECK_OR_RETURN(NdSbpIsAllBroadcast(*JUST(x->nd_sbp())))
             << "Tensor's sbp must be broadcast to get reduce_max";
@@ -248,7 +248,7 @@ class GlobalS2SFunctor {
     Symbol<NdSbp> in_nd_sbp = JUST(x->nd_sbp());
     Symbol<NdSbp> out_nd_sbp = JUST(GetNdSbp(sbp_parallels));
     {
-      CHECK_OR_RETURN(x->is_global());
+      CHECK_OR_RETURN(x->is_global());  // NOLINT
       CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(), 1);
       CHECK_OR_RETURN(IsSplitSbp(in_nd_sbp->sbp_parallel(0)));
       CHECK_EQ_OR_RETURN(out_nd_sbp->sbp_parallel_size(), 1);

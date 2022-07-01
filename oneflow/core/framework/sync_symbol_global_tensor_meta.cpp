@@ -46,13 +46,13 @@ struct FlatGlobalTensorMeta final {
   Maybe<void> Check(uint64_t symbol_id, Symbol<one::GlobalTensorMeta> global_tensor_meta) {
     CHECK_EQ_OR_RETURN(this->symbol_id, symbol_id);
     JUST(this->shape.Check(global_tensor_meta->shape()));
-    CHECK_EQ_OR_RETURN(static_cast<DataType>(this->dtype), global_tensor_meta->dtype());
-    CHECK_EQ_OR_RETURN(this->is_dynamic, global_tensor_meta->is_dynamic());
+    CHECK_EQ_OR_RETURN(static_cast<DataType>(this->dtype), global_tensor_meta->dtype());  // NOLINT
+    CHECK_EQ_OR_RETURN(this->is_dynamic, global_tensor_meta->is_dynamic());               // NOLINT
     const auto& nd_sbp = JUST(SyncedSymbolMap<NdSbp>::Symbol4SyncedSymbolId(this->nd_sbp));
-    CHECK_OR_RETURN(nd_sbp == global_tensor_meta->nd_sbp());
+    CHECK_OR_RETURN(nd_sbp == global_tensor_meta->nd_sbp());  // NOLINT
     const auto& parallel_desc =
         JUST(SyncedSymbolMap<ParallelDesc>::Symbol4SyncedSymbolId(this->parallel_desc));
-    CHECK_OR_RETURN(parallel_desc == global_tensor_meta->parallel_desc());
+    CHECK_OR_RETURN(parallel_desc == global_tensor_meta->parallel_desc());  // NOLINT
     return Maybe<void>::Ok();
   }
 
