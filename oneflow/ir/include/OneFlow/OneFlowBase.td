@@ -39,7 +39,7 @@ class OneFlow_Attr<string name, string attrMnemonic, list<Trait> traits = []>
   let mnemonic = attrMnemonic;
 }
 
-def OneFlow_PSig_S_Attr : OneFlow_Attr<"Split", "s"> {
+def OneFlow_SplitAttr : OneFlow_Attr<"Split", "s"> {
   let summary = "Signature S";
   let description = [{
     signature split, representing a sharded tensor at the `axis`
@@ -48,14 +48,14 @@ def OneFlow_PSig_S_Attr : OneFlow_Attr<"Split", "s"> {
   let assemblyFormat = "`<` $axis `>`";
 }
 
-def OneFlow_PSig_B_Attr : OneFlow_Attr<"Broadcast", "b"> {
+def OneFlow_BroadcastAttr : OneFlow_Attr<"Broadcast", "b"> {
   let summary = "Signature B";
   let description = [{
     signature broadcast, representing a tensor to be duplicated
   }];
 }
 
-def OneFlow_PSig_P_Attr : OneFlow_Attr<"PartialSum", "p"> {
+def OneFlow_PartialSumAttr : OneFlow_Attr<"PartialSum", "p"> {
   let summary = "Signature P";
   let description = [{
     signature partial sum, representing a shareded tensor will be reduced lazily
