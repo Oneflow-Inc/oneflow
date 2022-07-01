@@ -75,9 +75,6 @@ void CublasBatchGemm(cublasHandle_t handle, char transa, char transb, int64_t m,
 #else
     UNIMPLEMENTED();
 #endif
-  } else {
-    cublas_gemmStridedBatched<T>(handle, opa, opb, m, n, k, &alpha, a, ldb, stridea, b, ldb,
-                                 strideb, &beta, c, ldc, stridec, batch_size);
   }
 }
 
@@ -106,9 +103,6 @@ void CublasBatchGemm<half>(cublasHandle_t handle, char transa, char transb, int6
         handle, opa, opb, m, n, k, &alpha_f, reinterpret_cast<const void*>(a), data_type, lda,
         stridea, reinterpret_cast<const void*>(b), data_type, ldb, strideb, &beta_f,
         reinterpret_cast<void*>(c), data_type, ldc, stridec, batch_size, comp_type, algo));
-  } else {
-    cublas_gemmStridedBatched<half>(handle, opa, opb, m, n, k, &alpha, a, lda, stridea, b, ldb,
-                                    strideb, &beta, c, ldc, stridec, batch_size);
   }
 }
 

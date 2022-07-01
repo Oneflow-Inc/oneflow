@@ -13,39 +13,38 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_CORE_PROFILER_PROFILE_MANAGER_H_
+#define ONEFLOW_CORE_PROFILER_PROFILE_MANAGER_H_
 
-#ifndef ONEFLOW_CORE_PROFILER_COLLECTION_H_
-#define ONEFLOW_CORE_PROFILER_COLLECTION_H_
-
-#include <functional>
 #include <memory>
-#include <string>
 #include <queue>
+#include <set>
 #include <unordered_map>
-#include <vector>
-#include "nlohmann/json.hpp"
-#include "oneflow/core/profiler/event.h"
-#include "oneflow/core/profiler/util.h"
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/common/singleton.h"
-#include "oneflow/core/common/shape.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/profiler/kineto_shim.h"
 
 namespace oneflow {
-
 namespace profiler {
 
+class IEvent;
 class EventRecorder;
 
-class ProfileMgr {
+class ProfileManager {
  public:
   friend class EventRecorder;
 
-  ProfileMgr(bool use_cpu, bool use_cuda, bool record_shapes, bool record_bandwidth)
+  ProfileManager(bool use_cpu, bool use_cuda, bool record_shapes, bool record_bandwidth)
       : use_cpu_(use_cpu),
         use_cuda_(use_cuda),
         record_shapes_(record_shapes),
-        record_bandwidth_(record_bandwidth) {}
+        record_bandwidth_(record_bandwidth) {
+#if defined(WITH_CUDA)
+    std::set<ActivityType> activities{};
+    if (use_cpu) { activities.insert(ActivityType::CPU); }
+    if (use_cuda) { activities.insert(ActivityType::CUDA); }
+    PrepareTrace(/*cpuOnly*/ false, activities);
+    StartTrace();
+#endif  // WITH_CUDA
+  }
 
   std::string RegisterEventRecorder(const std::shared_ptr<EventRecorder>& event_recorder,
                                     const std::string& name);
@@ -67,42 +66,7 @@ class ProfileMgr {
   std::vector<std::shared_ptr<IEvent>> ExportEvents();
 };
 
-class EventRecorder {
- public:
-  using ShapeGetterFuncType = std::function<std::vector<Shape>(void)>;
-
-  OF_DISALLOW_COPY_AND_MOVE(EventRecorder);
-
-  explicit EventRecorder(const std::shared_ptr<IEvent>& event) : event_(event) {
-    CHECK_JUST(RegisterEventToProfileMgr(event));
-    event_->Start();
-  }
-
-  Maybe<void> RegisterEventToProfileMgr(const std::shared_ptr<IEvent>& event) {
-    auto* pmgr = JUST(SingletonMaybe<ProfileMgr>());
-    pmgr->events_.push(event_);
-    return Maybe<void>::Ok();
-  }
-
-  ~EventRecorder() {
-    if (event_) {
-      event_->Finish();
-      event_.reset();
-    }
-  }
-  static std::shared_ptr<EventRecorder> CreateCustomEventRecorder(const std::string& name);
-
-  static Maybe<EventRecorder> CreateKernelEventRecorder(
-      const std::string& name,
-#if defined(WITH_CUDA)
-      cudaStream_t cuda_stream, const std::function<int64_t()>& memory_size_getter,
-#endif
-      const ShapeGetterFuncType& shape_getter);
-
- private:
-  std::shared_ptr<IEvent> event_;
-};
-
 }  // namespace profiler
 }  // namespace oneflow
-#endif  // ONEFLOW_CORE_PROFILER_COLLECTION_H_
+
+#endif  // ONEFLOW_CORE_PROFILER_PROFILE_MANAGER_H_
