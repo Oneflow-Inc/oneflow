@@ -1031,6 +1031,23 @@ Maybe<void> BoxingCollector::AskSbpCombination4GeneralBasicCommunication(
     const NdSbp& sbp_producer, const NdSbp& sbp_consumer, const BlobDesc& logical_blob_desc,
     const ParallelDesc& producer_parallel_desc, const ParallelDesc& consumer_parallel_desc,
     std::vector<NdSbp>& middle_sbps, int32_t* diag_node_pos) {
+  // (P, X) -> (B, X) || (X , P) -> (X, B), X is any SBP
+  // One step transfer, at most 50% reduction in the transfer cost, do not use middle nodes
+  if (producer_parallel_desc == consumer_parallel_desc
+      && producer_parallel_desc.hierarchy()->NumAxes() == 2
+      && (sbp_producer.sbp_parallel(0) == sbp_consumer.sbp_parallel(0)
+          || sbp_producer.sbp_parallel(1) == sbp_consumer.sbp_parallel(1))) {
+    return Maybe<void>::Ok();
+  }
+
+  // Not enough gain in transfer cost, do not use middle nodes
+  int32_t partial_ratio4producer = PartialRatio4Producer(sbp_producer, producer_parallel_desc);
+  int32_t broadcast_ratio4consumer = BroadcastRatio4Consumer(sbp_consumer, consumer_parallel_desc);
+  if (2 * (partial_ratio4producer + broadcast_ratio4consumer)
+      < partial_ratio4producer * broadcast_ratio4consumer) {
+    return Maybe<void>::Ok();
+  }
+
   bool close2producer = true;
   if (producer_parallel_desc.parallel_num() == consumer_parallel_desc.parallel_num()) {
     // Get close to the one with more splits

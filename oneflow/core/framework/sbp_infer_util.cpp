@@ -69,16 +69,6 @@ int32_t Ratio4Sbp(const NdSbp& nd_sbp, const ParallelDesc& parallel_desc,
   return ratio;
 }
 
-int32_t PartialRatio4Producer(const NdSbp& sbp_producer,
-                              const ParallelDesc& producer_parallel_desc) {
-  return Ratio4Sbp(sbp_producer, producer_parallel_desc, &SbpParallel::has_partial_sum_parallel);
-}
-
-int32_t BroadcastRatio4Consumer(const NdSbp& sbp_consumer,
-                                const ParallelDesc& consumer_parallel_desc) {
-  return Ratio4Sbp(sbp_consumer, consumer_parallel_desc, &SbpParallel::has_broadcast_parallel);
-}
-
 Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sbp_parallel,
                                                   const SbpParallel& consumer_sbp_parallel,
                                                   const BlobDesc& logical_blob_desc,
@@ -432,6 +422,16 @@ void CollaborativeParallelDimReduce(const ParallelDesc& in_parallel_desc,
 }
 
 }  // namespace
+
+int32_t PartialRatio4Producer(const NdSbp& sbp_producer,
+                              const ParallelDesc& producer_parallel_desc) {
+  return Ratio4Sbp(sbp_producer, producer_parallel_desc, &SbpParallel::has_partial_sum_parallel);
+}
+
+int32_t BroadcastRatio4Consumer(const NdSbp& sbp_consumer,
+                                const ParallelDesc& consumer_parallel_desc) {
+  return Ratio4Sbp(sbp_consumer, consumer_parallel_desc, &SbpParallel::has_broadcast_parallel);
+}
 
 void NdSbpDimReduce(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
                     ParallelDesc* reduced_parallel_desc, NdSbp* reduced_nd_sbp) {

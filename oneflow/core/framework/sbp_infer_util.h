@@ -33,6 +33,16 @@ enum Penalty4PartialInConsumerTag : int {
   kStrict = 3   // Not allow a transfer to P
 };
 
+// [2, 3, 4, 5, 9, 100, 8]: (P, S0, P, P, B, S1, P)
+// partial ratio = 2 * 4 * 5 * 8
+int32_t PartialRatio4Producer(const NdSbp& sbp_producer,
+                              const ParallelDesc& producer_parallel_desc);
+
+// [2, 3, 4, 5, 9, 100, 8]: (P, S0, B, P, B, S1, P)
+// broadcast ratio = 4 * 9
+int32_t BroadcastRatio4Consumer(const NdSbp& sbp_consumer,
+                                const ParallelDesc& consumer_parallel_desc);
+
 void NdSbpDimReduce(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
                     ParallelDesc* reduced_parallel_desc, NdSbp* reduced_nd_sbp);
 
