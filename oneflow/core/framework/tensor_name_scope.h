@@ -27,8 +27,10 @@ class TensorNameScope {
  public:
   static TensorNameScope* Global();
 
+  const std::string& Lookup(const Tensor* tensor) const;
   const std::string& Lookup(const std::shared_ptr<Tensor>& tensor) const;
 
+  void Record(const Tensor* tensor, const std::string& name);
   void Record(const std::shared_ptr<Tensor>& tensor, const std::string& name);
 
   void Clear();

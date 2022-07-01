@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 
 namespace oneflow {
 namespace ipc {

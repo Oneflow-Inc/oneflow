@@ -270,7 +270,7 @@ class LocalTensorSharedNumpyDataFunctor {
 
     // Build TensorBuffer
     const auto& Free = [array](char* dptr) {
-      CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+      CHECK_JUST(Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
         Py_DECREF(array);
         return Maybe<void>::Ok();
       }));
@@ -291,7 +291,7 @@ class LocalTensorSharedNumpyDataFunctor {
                                                                  /*ls_leaf=*/true);
 
     // Init blob
-    JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject(), /*pin_memory=*/false));
+    JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject()));
     const auto& stream = JUST(GetDefaultStreamByDevice(device));
     const auto& eager_blob_object = JUST(tensor_impl->eager_blob_object());
     JUST(eager_blob_object->init_producer_stream(stream));

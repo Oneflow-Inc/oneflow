@@ -23,7 +23,8 @@ limitations under the License.
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/profiler/profiler.h"
-#include "oneflow/core/profiler/collection.h"
+#include "oneflow/core/profiler/profile_manager.h"
+#include "oneflow/core/profiler/event_recorder.h"
 #include "oneflow/core/eager/call_context.h"
 
 namespace oneflow {
@@ -874,7 +875,7 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, DeviceCtx* device_c
   UserKernelComputeContext compute_context(compute_ctx_helper_.get(), call_ctx, device_ctx);
   auto* compute_ctx = &compute_context;
   OF_PROFILER_RANGE_GUARD("Compute");
-  if (Global<profiler::ProfileMgr>::Get()) {
+  if (Singleton<profiler::ProfileManager>::Get()) {
 #if defined(WITH_CUDA)
     const auto CalMemorySize = [compute_ctx](const one::ArgVec& args) -> int64_t {
       const auto Func = [compute_ctx](int64_t mem_size, const auto& pair) {
@@ -887,17 +888,14 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, DeviceCtx* device_c
     auto er_guard = CHECK_JUST(profiler::EventRecorder::CreateKernelEventRecorder(
         op_type_name(),
 #if defined(WITH_CUDA)
-        compute_ctx->device_type() == DeviceType::kCUDA
-            ? dynamic_cast<ep::CudaStream*>(compute_ctx->stream())->cuda_stream()
-            : nullptr,
         [compute_ctx, CalMemorySize]() -> int64_t {
           return CalMemorySize(compute_ctx->inputs()) + CalMemorySize(compute_ctx->outputs());
         },
 #endif
-        [compute_ctx]() -> std::vector<Shape> {
-          std::vector<Shape> shapes;
+        [compute_ctx]() -> std::vector<ShapeView> {
+          std::vector<ShapeView> shapes;
           for (const auto& pair : compute_ctx->inputs()) {
-            shapes.push_back(
+            shapes.emplace_back(
                 compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape());
           }
           return shapes;

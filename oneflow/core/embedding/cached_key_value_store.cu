@@ -90,7 +90,15 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
 
   void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
            uint32_t* n_missing, uint32_t* missing_indices) override;
+  void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
+           uint8_t* mask) override;
   void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values) override;
+  void FusedHalfUpdatePut(ep::Stream* stream, uint32_t n_keys, const void* keys, const void* values,
+                          const void* update, const float* lr, float scale) override;
+  bool IsFusionSupported() override {
+    return cache_->Policy() == CacheOptions::Policy::kFull
+           && cache_->ValueType() == DataType::kFloat;
+  }
   bool SnapshotExists(const std::string& name) override;
   void LoadSnapshot(const std::string& name) override;
   void SaveSnapshot(const std::string& name) override;
@@ -148,6 +156,18 @@ void CacheKeyValueStoreImpl<Key, Elem>::Get(ep::Stream* stream, uint32_t num_key
 }
 
 template<typename Key, typename Elem>
+void CacheKeyValueStoreImpl<Key, Elem>::Get(ep::Stream* stream, uint32_t num_keys, const void* keys,
+                                            void* values, uint8_t* mask) {
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
+  if (cache_->Policy() == CacheOptions::Policy::kFull) {
+    cache_->Get(stream, num_keys, keys, values, mask);
+    return;
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+template<typename Key, typename Elem>
 void CacheKeyValueStoreImpl<Key, Elem>::Put(ep::Stream* stream, uint32_t num_keys, const void* keys,
                                             const void* values) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
@@ -159,6 +179,20 @@ void CacheKeyValueStoreImpl<Key, Elem>::Put(ep::Stream* stream, uint32_t num_key
                                 cuda_stream->cuda_stream()));
   CHECK_JUST(cuda_stream->Sync());
   store_->Put(stream, *host_num_buffer_, keys_buffer_, values_buffer_);
+}
+
+template<typename Key, typename Elem>
+void CacheKeyValueStoreImpl<Key, Elem>::FusedHalfUpdatePut(ep::Stream* stream, uint32_t num_keys,
+                                                           const void* keys, const void* values,
+                                                           const void* update, const float* lr,
+                                                           float scale) {
+  std::lock_guard<std::recursive_mutex> lock(mutex_);
+  if (cache_->Policy() != CacheOptions::Policy::kFull || cache_->ValueType() != DataType::kFloat) {
+    UNIMPLEMENTED();
+  }
+  synced_ = false;
+  cache_->FusedHalfUpdatePut(stream, num_keys, keys, values, update, lr, scale, num_buffer_,
+                             keys_buffer_, values_buffer_);
 }
 
 template<typename Key, typename Elem>
@@ -179,7 +213,7 @@ void CacheKeyValueStoreImpl<Key, Elem>::LoadSnapshot(
   CHECK_GT(max_query_length_, 0);
   cache_->Clear();
   auto device =
-      Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index_);
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index_);
   CHECK(device);
   auto* stream = device->CreateStream();
   store_->LoadSnapshot(name, [&](KVIterator* iter) {
@@ -222,7 +256,7 @@ void CacheKeyValueStoreImpl<Key, Elem>::SyncCacheToStore() {
   if (synced_) { return; }
   CudaCurrentDeviceGuard guard(device_index_);
   auto device =
-      Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index_);
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index_);
   CHECK(device);
   auto* stream = device->CreateStream();
   auto* cuda_stream = stream->As<ep::CudaStream>();
