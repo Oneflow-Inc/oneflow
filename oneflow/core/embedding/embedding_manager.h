@@ -30,7 +30,7 @@ namespace embedding {
 
 inline bool UseDynamicMemoryAllocation() {
   static bool use_dynamic_memory_allocation =
-      ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_USE_DYNAMIC_MEMORY_ALLOCATION", true);
+      ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_USE_DYNAMIC_MEMORY_ALLOCATION", false);
 #if CUDA_VERSION >= 11020
   return use_dynamic_memory_allocation;
 #else
