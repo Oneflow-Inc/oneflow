@@ -150,6 +150,7 @@ namespace {
 
 template<typename T, typename G>
 __global__ void MomentumUpdateGpu(int64_t n, T scale, float l1, float l2, float beta,
+                                  float dampening, bool nesterov, bool maximize, 
                                   float weight_decay, float learning_rate_val,
                                   const float* learning_rate, const T* scale_by_ptr,
                                   const int64_t* skip_if, const G* model_diff, T* model,
@@ -159,12 +160,15 @@ __global__ void MomentumUpdateGpu(int64_t n, T scale, float l1, float l2, float 
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   CUDA_1D_KERNEL_LOOP(i, n) {
     MomentumUpdateFunctor<T, G>()(model_diff + i, model + i, momentum + i, scale, l1, l2, beta,
+                                  dampening, nesterov, maximize, 
                                   weight_decay, learning_rate_val);
   }
 }
 
 template<typename T, typename K, typename IDX>
-__global__ void IndexedSlicesMomentumUpdateGpu(T beta, float weight_decay, int64_t feature_size,
+__global__ void IndexedSlicesMomentumUpdateGpu(T beta, 
+                                               float dampening, bool nesterov, bool maximize, 
+                                               float weight_decay, int64_t feature_size,
                                                int64_t lower_bound, int64_t upper_bound,
                                                const IDX* num_unique_instance,
                                                const float* learning_rate, const K* indices,
@@ -178,7 +182,9 @@ __global__ void IndexedSlicesMomentumUpdateGpu(T beta, float weight_decay, int64
     if (instance_id >= lower_bound && instance_id < upper_bound) {
       const IDX model_idx = (instance_id - lower_bound) * feature_size + inner_idx;
       MomentumUpdateFunctor<T, T>()(values + i, model + model_idx, momentum + model_idx,
-                                    static_cast<T>(1), 0.0, 0.0, beta, weight_decay, lr);
+                                    static_cast<T>(1), 0.0, 0.0, beta, 
+                                    dampening, nesterov, maximize, 
+                                    weight_decay, lr);
     }
   }
 }
@@ -188,6 +194,7 @@ __global__ void IndexedSlicesMomentumUpdateGpu(T beta, float weight_decay, int64
 template<typename T, typename G>
 struct MomentumUpdateKernelUtil<DeviceType::kCUDA, T, G> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta,
+                    float dampening, bool nesterov, bool maximize, 
                      float weight_decay, float learning_rate_val, const float* learning_rate,
                      const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
                      T* momentum);
@@ -195,18 +202,23 @@ struct MomentumUpdateKernelUtil<DeviceType::kCUDA, T, G> {
 
 template<typename T, typename G>
 void MomentumUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
-    ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta, float weight_decay,
+    ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta, 
+    float dampening, bool nesterov, bool maximize, 
+    float weight_decay,
     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const G* model_diff, T* model, T* momentum) {
   MomentumUpdateGpu<T, G><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      n, scale, l1, l2, beta, weight_decay, learning_rate_val, learning_rate, scale_by_ptr, skip_if,
+      n, scale, l1, l2, beta, 
+      dampening, nesterov, maximize,
+      weight_decay, learning_rate_val, learning_rate, scale_by_ptr, skip_if,
       model_diff, model, momentum);
 }
 
 template<typename T>
 struct MomentumUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta,
+                     float dampening, bool nesterov, bool maximize, 
                      float weight_decay, float learning_rate_val, const float* learning_rate,
                      const T* scale_by_ptr, const int64_t* skip_if, const float16* model_diff,
                      T* model, T* momentum);
@@ -214,11 +226,13 @@ struct MomentumUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
 
 template<typename T>
 void MomentumUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
-    ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta, float weight_decay,
+    ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta, 
+    float dampening, bool nesterov, bool maximize, 
+    float weight_decay,
     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const float16* model_diff, T* model, T* momentum) {
   MomentumUpdateKernelUtil<DeviceType::kCUDA, T, half>::Update(
-      stream, n, scale, l1, l2, beta, weight_decay, learning_rate_val, learning_rate, scale_by_ptr,
+      stream, n, scale, l1, l2, beta, dampening, nesterov, maximize, weight_decay, learning_rate_val, learning_rate, scale_by_ptr,
       skip_if, reinterpret_cast<const half*>(model_diff), model, momentum);
 }
 
@@ -228,7 +242,9 @@ template struct MomentumUpdateKernelUtil<DeviceType::kCUDA, float, float16>;
 
 template<typename T, typename K, typename IDX>
 struct IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kCUDA, T, K, IDX> {
-  static void Update(ep::Stream* stream, T beta, float weight_decay, int64_t num_instance,
+  static void Update(ep::Stream* stream, T beta, 
+                     float dampening, bool nesterov, bool maximize, 
+                     float weight_decay, int64_t num_instance,
                      int64_t feature_size, int64_t lower_bound, int64_t upper_bound,
                      const IDX* num_unique_instance, const float* learning_rate, const K* indices,
                      const T* values, T* model, T* momentum);
@@ -236,13 +252,15 @@ struct IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kCUDA, T, K, IDX> {
 
 template<typename T, typename K, typename IDX>
 void IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kCUDA, T, K, IDX>::Update(
-    ep::Stream* stream, T beta, float weight_decay, int64_t num_instance, int64_t feature_size,
+    ep::Stream* stream, T beta, 
+    float dampening, bool nesterov, bool maximize, 
+    float weight_decay, int64_t num_instance, int64_t feature_size,
     int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
     const float* learning_rate, const K* indices, const T* values, T* model, T* momentum) {
   IndexedSlicesMomentumUpdateGpu<T, K, IDX>
       <<<BlocksNum4ThreadsNum(num_instance * feature_size), kCudaThreadsNumPerBlock, 0,
          stream->As<ep::CudaStream>()->cuda_stream()>>>(
-          beta, weight_decay, feature_size, lower_bound, upper_bound, num_unique_instance,
+          beta, dampening, nesterov, maximize, weight_decay, feature_size, lower_bound, upper_bound, num_unique_instance,
           learning_rate, indices, values, model, momentum);
 }
 

@@ -100,7 +100,10 @@ class SGD(Optimizer):
         params: Union[Iterator[Parameter], List[Dict]],
         lr: float = 0.001,
         momentum: float = 0.0,
+        dampening: float = 0.0,
         weight_decay: float = 0.0,
+        nesterov: bool= False, 
+        maximize: bool= False, 
     ):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert momentum >= 0.0, f"Invalid momentum: {momentum}"
@@ -108,7 +111,10 @@ class SGD(Optimizer):
         options = dict()
         options["lr"] = lr
         options["momentum"] = momentum
+        options["dampening"] = dampening
         options["weight_decay"] = weight_decay
+        options["nesterov"] = nesterov
+        options["maximize"] = maximize
         super().__init__(params, options)
 
         for param_group in self.param_groups:
@@ -141,24 +147,34 @@ class SGD(Optimizer):
             for param_group in self.param_groups:
                 lr = param_group["lr"]
                 l2 = param_group["weight_decay"]
+                dampening = param_group["dampening"]
+                nesterov = param_group["nesterov"]
+                maximize = param_group["maximize"]
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
                     if param_group["momentum"] == 0.0:
                         flow._C.dispatch_sgd_update(
-                            self._sgd, (param, param.grad), learning_rate=lr, l2=l2
+                            self._sgd, (param, param.grad), learning_rate=lr, l2=l2, 
+                            dampening=dampening,
+                            nesterov=nesterov,
+                            maximize=maximize,
                         )
                     else:
                         if "momentum_buf" not in self._state[param]:
                             self._state[param]["momentum_buf"] = flow.zeros_like(param)
                         momentum_buf = self._state[param]["momentum_buf"]
                         beta = param_group["momentum"]
+                        print("sss: ", dampening)
                         flow._C.dispatch_momentum_update(
                             self._momentum_sgd,
                             (param, param.grad, momentum_buf),
                             learning_rate=lr,
                             l2=l2,
                             beta=beta,
+                            dampening=dampening,
+                            nesterov=nesterov,
+                            maximize=maximize,
                         )
             self._state["step"] = self._state["step"] + 1
             return loss

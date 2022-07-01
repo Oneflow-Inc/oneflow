@@ -260,6 +260,9 @@ class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::Cud
     float l1 = ctx->Attr<float>("l1");
     float l2 = ctx->Attr<float>("l2");
     float beta = ctx->Attr<float>("beta");
+    const float dampening = ctx->Attr<float>("dampening");
+    const bool nesterov = ctx->Attr<bool>("nesterov");
+    const bool maximize = ctx->Attr<bool>("maximize");
     float weight_decay = ctx->Attr<float>("weight_decay");
 
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
@@ -285,6 +288,7 @@ class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::Cud
     }
     MomentumUpdateKernelUtil<device_type, T, G>::Update(
         ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, beta,
+        dampening, nesterov, maximize, 
         weight_decay, learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
         model_diff->dptr<G>(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
   }
@@ -329,6 +333,9 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* momentum = ctx->Tensor4ArgNameAndIndex("momentum", 0);
     const auto beta = ctx->Attr<float>("beta");
+    const float dampening = ctx->Attr<float>("dampening");
+    const bool nesterov = ctx->Attr<bool>("nesterov");
+    const bool maximize = ctx->Attr<bool>("maximize");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const int64_t num_indices = model_diff_indices->shape_view().elem_cnt();
     const int64_t num_values = model_diff_values->shape_view().elem_cnt();
@@ -354,7 +361,9 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
         buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
         buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
     MdUpdateUtilT::Update(
-        ctx->stream(), beta, weight_decay, num_indices, feature_size, kernel_cache->lower(),
+        ctx->stream(), beta, 
+        dampening, nesterov, maximize, 
+        weight_decay, num_indices, feature_size, kernel_cache->lower(),
         kernel_cache->upper(), buffer_manager.NumUniqueDiffIndicesPtr(),
         learning_rate->dptr<float>(), buffer_manager.UniqueDiffIndicesPtr(),
         buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
