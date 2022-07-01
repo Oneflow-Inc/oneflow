@@ -1130,6 +1130,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
             ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false)             \
             && (embedding_size < kMaxColSize);                                                    \
         size_t tmp_size = 0;                                                                      \
+        if (embedding::UseDynamicMemoryAllocation()) { return tmp_size; }                         \
         if (!enable_quantized_comm) {                                                             \
           size_t reverse_cur_rank_embeddings_size = GetCudaAlignedSize(                           \
               cur_rank_max_num_ids * embedding_size * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));    \
@@ -1561,6 +1562,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
             ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false)             \
             && (padded_embedding_size < kMaxColSize);                                             \
         size_t tmp_size = 0;                                                                      \
+        if (embedding::UseDynamicMemoryAllocation()) { return tmp_size; }                         \
         if (!enable_quantized_comm) {                                                             \
           size_t cur_rank_embedding_grad_size = GetCudaAlignedSize(                               \
               cur_rank_embedding_grad_elem_cnt * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));         \

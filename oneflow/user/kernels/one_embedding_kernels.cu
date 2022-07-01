@@ -281,42 +281,6 @@ class EmbeddingPutKernelState final : public user_op::OpKernelState {
   embedding::EmbeddingState* embedding_state_;
 };
 
-enum class EmbeddingBufferType { kNumMissing = 0, kMissingIndices, kValues, kMaxType };
-
-class EmbeddingTmpBufferManager final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(EmbeddingTmpBufferManager);
-  EmbeddingTmpBufferManager(void* ptr, const int64_t num_ids, const int64_t value_byte_size,
-                            const bool need_value_buffer)
-      : offset_(0), offsets_(static_cast<size_t>(EmbeddingBufferType::kMaxType), -1), ptr_(ptr) {
-    AllocBuffer(EmbeddingBufferType::kNumMissing, sizeof(uint32_t));
-    AllocBuffer(EmbeddingBufferType::kMissingIndices, num_ids * sizeof(uint32_t));
-    if (need_value_buffer) { AllocBuffer(EmbeddingBufferType::kValues, num_ids * value_byte_size); }
-  }
-
-  template<typename T = void>
-  T* Ptr(EmbeddingBufferType type) {
-    CHECK(ptr_ != nullptr);
-    int64_t offset = offsets_.at(static_cast<size_t>(type));
-    CHECK_NE(offset, -1);
-    return reinterpret_cast<T*>(reinterpret_cast<char*>(ptr_) + offset);
-  }
-
-  size_t TotalBufferSize() const { return offset_; }
-
- private:
-  void AllocBuffer(EmbeddingBufferType type, size_t size) {
-    const size_t type_id = static_cast<size_t>(type);
-    CHECK_EQ(offsets_.at(type_id), -1);
-    offsets_.at(type_id) = offset_;
-    offset_ += GetCudaAlignedSize(size);
-  }
-
-  size_t offset_;
-  std::vector<int64_t> offsets_;
-  void* ptr_;
-};
-
 template<typename T, typename U>
 __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                                 uint64_t inc_offset, const int32_t line_size,
@@ -452,6 +416,27 @@ void CopyValuesToEmbeddings(ep::Stream* stream, int64_t num_unique, const int32_
   }
 }
 
+template<typename T, bool is_prefetch>
+user_op::InferTmpSizeFn GenEmbeddingInferTmpSizeFn() {
+  return [](user_op::InferContext* ctx) {
+    size_t total_buffer_size = 0;
+    if (embedding::UseDynamicMemoryAllocation()) { return total_buffer_size; }
+    const user_op::TensorDesc& unique_ids = ctx->InputTensorDesc("unique_ids", 0);
+    int64_t num_ids = unique_ids.shape().elem_cnt();
+    size_t num_missing_size = GetCudaAlignedSize(sizeof(uint32_t));
+    size_t missing_indices_size = GetCudaAlignedSize(num_ids * sizeof(uint32_t));
+    size_t value_buffer_size;
+    if (is_prefetch) {
+      size_t value_byte_size = ctx->Attr<int64_t>("line_size") * sizeof(T);
+      value_buffer_size = num_ids * value_byte_size;
+    } else {
+      value_buffer_size = 0;
+    }
+    total_buffer_size = num_missing_size + missing_indices_size + value_buffer_size;
+    return total_buffer_size;
+  };
+}
+
 }  // namespace
 
 template<typename T, typename U, typename IDX>
@@ -524,13 +509,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                       \
           && (user_op::HobDataType("table_ids", 0) == OF_PP_PAIR_SECOND(table_dtype_pair))      \
           && (user_op::HobDataType("num_unique_ids", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair)))  \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
-        const user_op::TensorDesc& unique_ids = ctx->InputTensorDesc("unique_ids", 0);          \
-        EmbeddingTmpBufferManager buffer_manager(                                               \
-            nullptr, unique_ids.shape().elem_cnt(),                                             \
-            ctx->Attr<int64_t>("line_size") * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)), true);    \
-        return buffer_manager.TotalBufferSize();                                                \
-      });
+      .SetInferTmpSizeFn(GenEmbeddingInferTmpSizeFn<OF_PP_PAIR_FIRST(t_dtype_pair), true>());
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_PREFETCH_KERNEL, EMBEDDING_DATA_TYPE_SEQ,
                                  TABLE_ID_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
@@ -596,13 +575,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
           && (user_op::HobDataType("unique_values", 0) == OF_PP_PAIR_SECOND(t_dtype_pair))     \
           && (user_op::HobDataType("table_ids", 0) == OF_PP_PAIR_SECOND(table_dtype_pair))     \
           && (user_op::HobDataType("num_unique_ids", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                      \
-        const user_op::TensorDesc& unique_ids = ctx->InputTensorDesc("unique_ids", 0);         \
-        EmbeddingTmpBufferManager buffer_manager(                                              \
-            nullptr, unique_ids.shape().elem_cnt(),                                            \
-            ctx->Attr<int64_t>("line_size") * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)), false);  \
-        return buffer_manager.TotalBufferSize();                                               \
-      });
+      .SetInferTmpSizeFn(GenEmbeddingInferTmpSizeFn<OF_PP_PAIR_FIRST(t_dtype_pair), false>());
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_LOOKUP_KERNEL, EMBEDDING_DATA_TYPE_SEQ,
                                  TABLE_ID_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
