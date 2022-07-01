@@ -26,6 +26,17 @@ namespace embedding {
 
 constexpr size_t kDefaultMaxQueryLength = 65536;
 
+constexpr int64_t kRingBufferSize = 8;
+
+struct NumUniqueState {
+  NumUniqueState() : num_unique(0), iter(-1) {}
+  uint32_t num_unique;
+  std::vector<uint32_t> num_unique_matrix;
+  int64_t iter;
+};
+
+#if CUDA_VERSION >= 11020
+
 class DynamicAllocationEmbeddingState final : public EmbeddingState {
  public:
   DynamicAllocationEmbeddingState() {
@@ -215,6 +226,8 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
   std::mutex mutex_;
 };
 
+#endif
+
 class StaticAllocationEmbeddingState final : public EmbeddingState {
  public:
   StaticAllocationEmbeddingState() { num_unique_states_.resize(kRingBufferSize); }
@@ -325,6 +338,7 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
     *ptr = reinterpret_cast<char*>(tmp_buffer_ptr_) + tmp_buffer_offset_;
     tmp_buffer_offset_ += size;
   }
+
   void FreeTmpBuffer(user_op::KernelComputeContext* ctx, void* ptr) override {
     // do nothing
   }
@@ -377,9 +391,13 @@ EmbeddingState* EmbeddingManager::GetEmbeddingState(const std::string& embedding
   if (it == embedding_state_map_.end()) {
     LOG(WARNING) << "create embedding state: " << embedding_name << "-" << rank_id;
     if (UseDynamicMemoryAllocation()) {
+#if CUDA_VERSION >= 11020
       it =
           embedding_state_map_.emplace(map_key, std::make_unique<DynamicAllocationEmbeddingState>())
               .first;
+#else
+      UNIMPLEMENTED();
+#endif
     } else {
       it = embedding_state_map_.emplace(map_key, std::make_unique<StaticAllocationEmbeddingState>())
                .first;
@@ -430,10 +448,14 @@ void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value
       << "Can't create an embedding with same name of an existing embedding, the name: " << name;
 
   if (UseDynamicMemoryAllocation()) {
+#if CUDA_VERSION >= 11020
     CHECK(embedding_state_map_.emplace(map_key, std::make_unique<DynamicAllocationEmbeddingState>())
               .second)
         << "Can't create an embedding state with same name of an existing embedding, the name: "
         << name;
+#else
+    UNIMPLEMENTED();
+#endif
   } else {
     CHECK(embedding_state_map_.emplace(map_key, std::make_unique<StaticAllocationEmbeddingState>())
               .second)

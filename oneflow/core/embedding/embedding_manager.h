@@ -42,14 +42,6 @@ inline bool UseDynamicMemoryAllocation() {
 #endif
 }
 
-constexpr int64_t kRingBufferSize = 8;
-
-struct NumUniqueState {
-  uint32_t num_unique;
-  std::vector<uint32_t> num_unique_matrix;
-  int64_t iter;
-};
-
 class EmbeddingState {
  public:
   EmbeddingState() = default;
