@@ -531,8 +531,8 @@ def _is_global(self):
     raise RuntimeError(".is_global has been removed, please use .is_global instead")
 
 
-def _to_global(self, *args, **kwargs):
-    raise RuntimeError(".to_global has been removed, please use .to_global instead")
+def _to_consistent(self, *args, **kwargs):
+    raise RuntimeError(".to_consistent has been removed, please use .to_global instead")
 
 
 def _new_tensor(
@@ -627,7 +627,7 @@ def RegisterMethods():
     Tensor.nonzero = _nonzero
     Tensor.prod = _prod
     Tensor.is_global = _is_global
-    Tensor.to_global = _to_global
+    Tensor.to_consistent = _to_consistent
     Tensor.new_tensor = _new_tensor
     Tensor.cumsum = _cumsum
     Tensor.cumprod = _cumprod
