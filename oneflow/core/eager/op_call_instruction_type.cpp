@@ -35,7 +35,8 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/profiler/profiler.h"
-#include "oneflow/core/profiler/collection.h"
+#include "oneflow/core/profiler/profile_manager.h"
+#include "oneflow/core/profiler/event_recorder.h"
 #include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
