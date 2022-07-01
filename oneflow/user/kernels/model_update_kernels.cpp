@@ -288,9 +288,9 @@ class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::Cud
     }
     MomentumUpdateKernelUtil<device_type, T, G>::Update(
         ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, beta,
-        dampening, nesterov, maximize, 
-        weight_decay, learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
-        model_diff->dptr<G>(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
+        dampening, nesterov, maximize, weight_decay, learning_rate_val, learning_rate_ptr,
+        scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(),
+        momentum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -361,10 +361,8 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
         buffer_manager.UniqueDiffIndicesPtr(), buffer_manager.UniqueDiffValuesPtr(),
         buffer_manager.UniqueWorkspacePtr(), buffer_manager.UniqueWorkspaceBytes());
     MdUpdateUtilT::Update(
-        ctx->stream(), beta, 
-        dampening, nesterov, maximize, 
-        weight_decay, num_indices, feature_size, kernel_cache->lower(),
-        kernel_cache->upper(), buffer_manager.NumUniqueDiffIndicesPtr(),
+        ctx->stream(), beta, dampening, nesterov, maximize, weight_decay, num_indices, feature_size,
+        kernel_cache->lower(), kernel_cache->upper(), buffer_manager.NumUniqueDiffIndicesPtr(),
         learning_rate->dptr<float>(), buffer_manager.UniqueDiffIndicesPtr(),
         buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
   }
