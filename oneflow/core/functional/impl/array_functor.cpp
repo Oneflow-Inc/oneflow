@@ -970,6 +970,11 @@ class ArgSortFunctor {
                            const std::string& direction) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("direction", direction));
+    CHECK_OR_RETURN(direction == "ASCENDING" || direction == "DESCENDING")
+        << Error::RuntimeError()
+        << "expected the input direction parameter value is \"ASCENDING\" or \"DESCENDING\", "
+        << "but found the value is "
+        << "\"" << direction << "\"";
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
   }
 
