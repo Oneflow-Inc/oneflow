@@ -226,9 +226,10 @@ void LaunchWithSimplified(CudaStream* stream, size_t simplified_num_dims,
                                 simplified_dst_strides, dst, attr0, attr1);
 }
 
-template<UnaryOp op, typename Src, typename Dst, size_t pack>
-__global__ void LaunchFillKernel(Dst* dst, const Src* src, size_t pack_count, size_t count,
-                                 UnaryFunctor<DeviceType::kCUDA, op, Src, Dst> functor) {
+template<UnaryOp op, typename Src, typename Dst, size_t pack, bool tail>
+__global__ void LaunchFillKernel(UnaryFunctor<DeviceType::kCUDA, op, Src, Dst> functor, Dst* dst,
+                                 const Src* src, size_t pack_count, size_t count, size_t tail_count,
+                                 Dst* tail_dst) {
   using StorePack = cuda::elementwise::Packed<Dst, pack>;
   StorePack pack_value;
   Dst value = functor(*src);
@@ -236,20 +237,28 @@ __global__ void LaunchFillKernel(Dst* dst, const Src* src, size_t pack_count, si
   for (size_t i = 0; i < pack; ++i) { pack_value.elem[i] = value; }
   StorePack* pack_dst = reinterpret_cast<StorePack*>(dst);
   CUDA_1D_KERNEL_LOOP_T(size_t, i, pack_count) { pack_dst[i] = pack_value; }
-  Dst* tail_dst = dst + pack_count * pack;
-  const size_t tail_count = count - pack_count * pack;
-  CUDA_1D_KERNEL_LOOP_T(size_t, i, tail_count) { tail_dst[i] = value; }
+  if (tail) {
+    CUDA_1D_KERNEL_LOOP_T(size_t, i, tail_count) { tail_dst[i] = value; }
+  }
 }
 
 template<UnaryOp op, typename Src, typename Dst, size_t pack>
 typename std::enable_if<(pack != 0), void>::type LaunchPackFill(CudaStream* stream, Dst* dst,
                                                                 const Src* src, size_t count,
                                                                 Scalar attr0, Scalar attr1) {
-  size_t pack_count = count / pack;
+  const size_t pack_count = count / pack;
+  const size_t tail_offset = pack_count * pack;
+  const size_t tail_count = count - tail_offset;
   auto functor = UnaryFunctor<DeviceType::kCUDA, op, Src, Dst>(attr0, attr1);
-  LaunchFillKernel<op, Src, Dst, pack>
-      <<<BlocksNum4ThreadsNum(pack_count), kCudaThreadsNumPerBlock, 0, stream->cuda_stream()>>>(
-          dst, src, pack_count, count, functor);
+  if (tail_count > 0) {
+    LaunchFillKernel<op, Src, Dst, pack, true>
+        <<<BlocksNum4ThreadsNum(pack_count), kCudaThreadsNumPerBlock, 0, stream->cuda_stream()>>>(
+            functor, dst, src, pack_count, count, tail_count, dst + tail_offset);
+  } else {
+    LaunchFillKernel<op, Src, Dst, pack, false>
+        <<<BlocksNum4ThreadsNum(pack_count), kCudaThreadsNumPerBlock, 0, stream->cuda_stream()>>>(
+            functor, dst, src, pack_count, count, tail_count, dst + tail_offset);
+  }
 }
 
 template<UnaryOp op, typename Src, typename Dst, size_t pack>
