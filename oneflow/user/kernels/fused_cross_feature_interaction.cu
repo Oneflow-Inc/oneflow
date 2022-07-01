@@ -172,7 +172,7 @@ class FusedCrossFeatureInteractionKernel final : public user_op::OpKernel,
                                                  public user_op::CudaGraphSupport {
  public:
   FusedCrossFeatureInteractionKernel() = default;
-  ~FusedCrossFeatureInteractionKernel() = default;
+  ~FusedCrossFeatureInteractionKernel() override = default;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
