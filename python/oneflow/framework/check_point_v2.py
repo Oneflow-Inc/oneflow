@@ -241,7 +241,8 @@ def RegisterMethods():
 
 
 def legacy_load(
-    path: Union[str, Path], global_src_rank: Optional[int] = None,
+    path: Union[str, Path],
+    global_src_rank: Optional[int] = None,
 ) -> Dict[str, "flow.Tensor"]:
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
     rank = flow.env.get_rank()
@@ -279,7 +280,10 @@ def tensor_pickling_context(path: Path, global_src_dst_rank: Optional[int]):
         save_load_path = None
 
 
-def load(path: str, global_src_rank: Optional[int] = None,) -> Any:
+def load(
+    path: str,
+    global_src_rank: Optional[int] = None,
+) -> Any:
     r"""Loads an object saved with oneflow.save() from a directory.
 
     Args:
@@ -322,11 +326,37 @@ def load(path: str, global_src_rank: Optional[int] = None,) -> Any:
     return res["data"]
 
 
+def save_graph(obj: any, path: Union[str, Path], optimized: bool = False):
+    r"""Save a graph to a directory.
+
+    Args:
+        path (str): The directory in which the graph is saved
+        optimized (bool): Whether to save optimized graph
+    """
+    path: Path = Path(path)
+
+    if isinstance(obj, graph_util.Graph):
+
+        graph: graph_util.Graph = obj
+        
+        if not graph._is_compiled:
+            raise RuntimeError("graph must be compiled first.")
+
+        path.mkdir(exist_ok=True)
+
+        serialized_job = str(
+            text_format.MessageToString(
+                graph._full_job_proto if optimized else graph._original_job_proto
+            )
+        )
+        oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path))
+
+
 def save(
     obj: Any,
     path: Union[str, Path],
     global_dst_rank: Optional[int] = None,
-    opt: bool = False,
+    optimized: bool = False,
 ) -> None:
     r"""Save an object to a directory.
 
@@ -338,25 +368,15 @@ def save(
             will be saved by the process whose rank ==
             global_src_rank, while other processes will not do any
             disk I/O.
-        opt (bool): Whether to save optimized object
+        optimized (bool): Whether to save optimized object
     """
     path: Path = Path(path)
 
     if isinstance(obj, graph_util.Graph):
-        graph: graph_util.Graph = obj
-        if not graph._is_compiled:
-            raise RuntimeError("graph must be compiled first.")
 
-        path.mkdir(exist_ok=True)
+        save_graph(obj, path, optimized)
 
-        serialized_job = str(
-            text_format.MessageToString(
-                graph._full_job_proto if opt else graph._original_job_proto
-            )
-        )
-        oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path))
-
-        for x in graph._state():
+        for x in obj._state():
             _save_tensor_to_disk(x.origin, path / f"{x.name_prefix}{x.name}")
 
         return
