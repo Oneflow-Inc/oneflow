@@ -64,8 +64,7 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
     const auto& op_conf = user_op->op_conf();
     CHECK(op_conf.has_user_conf());
 
-    device_tag_ = op_conf.device_tag();
-    device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
+    device_type_ = CHECK_JUST(DeviceType4DeviceTag(op_conf.device_tag()));
     parallel_ctx_ = parallel_ctx;
 
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
@@ -97,7 +96,7 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
   ~UserOpKernelRegContext() = default;
 
   DeviceType device_type() const override { return device_type_; }
-  const std::string& device_tag() const override { return device_tag_; }
+
   const ParallelContext& parallel_ctx() const override { return *parallel_ctx_; }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
@@ -120,7 +119,6 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
   ArgVec inputs_;
   ArgVec outputs_;
   DeviceType device_type_;
-  std::string device_tag_;
   const ParallelContext* parallel_ctx_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
 };
@@ -270,7 +268,7 @@ class UserOpInferContext final : public user_op::InferContext {
   }
   const std::string& op_name() const override { return user_op_conf().op_name(); }
   const std::string& op_type_name() const override { return user_op_conf().op_type_name(); }
-  const std::string& device_tag() const override { return user_op_conf().op_conf().device_tag(); }
+
   const std::string& op_loc() const override { return op_->op_loc(); }
 
  private:
