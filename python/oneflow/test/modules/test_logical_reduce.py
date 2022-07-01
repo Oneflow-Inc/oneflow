@@ -150,12 +150,13 @@ class TestLogicalReduce(flow.unittest.TestCase):
         device = random_device()
         x = torch.empty(0).to(device)
         return torch.all(x)
-    
+
     @autotest(n=5, auto_backward=False)
     def test_reduce_all_0size_tensor(test_case):
         device = random_device()
         x = torch.empty(0, 2).to(device)
         return torch.all(x)
+
 
 if __name__ == "__main__":
     unittest.main()
