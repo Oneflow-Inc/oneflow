@@ -365,8 +365,7 @@ def _gen_tensor_str_template(tensor, is_meta):
         suffixes.append("size=" + str(tuple(tensor.shape)))
     else:
         if tensor.device.type != "cpu" and tensor.device.type != "cuda":
-            with flow.no_grad():
-                tensor_str = _tensor_str(tensor.to("cpu"), indent)
+            tensor_str = _tensor_str(tensor.detach().to("cpu"), indent)
         else:
             tensor_str = _tensor_str(tensor, indent)
 
