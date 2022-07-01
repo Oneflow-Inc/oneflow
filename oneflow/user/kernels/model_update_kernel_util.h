@@ -62,13 +62,23 @@ template<typename T, typename G>
 struct MomentumUpdateFunctor {
   OF_DEVICE_FUNC
   void operator()(const G* model_diff, T* model, T* momentum, T scale, float l1, float l2,
-                  float beta, float weight_decay, float learning_rate) const {
+                  float beta, float damopening, bool nesterov, bool maximize, float weight_decay, float learning_rate) const {
     const T model_val = *model;
     T model_diff_t =
         CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
-    const T next_momentum = beta * *momentum - learning_rate * model_diff_t;
-    *momentum = next_momentum;
-    const T next_model = model_val + next_momentum - learning_rate * weight_decay * model_val;
+
+    T next_momentum = beta * *momentum + (1.0f - damopening) * model_diff_t; 
+    *momentum = next_momentum; 
+
+    T g = next_momentum; 
+    if(nesterov){
+      g += beta * next_momentum; 
+    }
+
+    T next_model = model_val - learning_rate * g - learning_rate * weight_decay * model_val;
+    if(maximize){
+      next_model = model_val + learning_rate * g - learning_rate * weight_decay * model_val;
+    }
     *model = next_model;
   }
 };
