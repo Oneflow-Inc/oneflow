@@ -17,7 +17,6 @@ import os
 import unittest
 import oneflow as flow
 import oneflow.unittest
-from cuda_mem_utils import get_cuda_mem_info
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -27,13 +26,13 @@ class TestEmptyCache(flow.unittest.TestCase):
         if flow._oneflow_internal.flags.with_cuda():
 
             x = flow.randn(512, 3, 512, 512).to("cuda")
-            used_mem1 = flow._oneflow_internal.CUDAGetMemoryUsed()
+            used_mem1 = flow._oneflow_internal.GetCUDAMemoryUsed()
 
             x = x.cpu()
-            used_mem2 = flow._oneflow_internal.CUDAGetMemoryUsed()
+            used_mem2 = flow._oneflow_internal.GetCUDAMemoryUsed()
 
             flow.cuda.empty_cache()
-            used_mem3 = flow._oneflow_internal.CUDAGetMemoryUsed()
+            used_mem3 = flow._oneflow_internal.GetCUDAMemoryUsed()
             test_case.assertTrue((used_mem3 < used_mem1) and (used_mem3 < used_mem2))
 
 
