@@ -19,6 +19,8 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
 class CopyDataContentKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   CopyDataContentKernel() = default;
@@ -41,13 +43,23 @@ class CopyDataContentKernel final : public user_op::OpKernel, public user_op::Cu
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_COPY_DATA_CONTENT_KERNEL(op_type_name)                                         \
-  REGISTER_USER_KERNEL(op_type_name)                                                            \
-      .SetCreateFn<CopyDataContentKernel>()                                                     \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, false));                      \
-        return Maybe<void>::Ok();                                                               \
-      });
+#define REGISTER_COPY_DATA_CONTENT_KERNEL(op_type_name)                              \
+  REGISTER_USER_KERNEL(op_type_name)                                                 \
+      .SetCreateFn<CopyDataContentKernel>()                                          \
+      .SetInplaceProposalFn(                                                         \
+          [](const user_op::InferContext&,                                           \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> { \
+            OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, false));       \
+            return Maybe<void>::Ok();                                                \
+          });
+
+REGISTER_COPY_DATA_CONTENT_KERNEL("squeeze");
+REGISTER_COPY_DATA_CONTENT_KERNEL("reshape_like");
+REGISTER_COPY_DATA_CONTENT_KERNEL("flatten");
+REGISTER_COPY_DATA_CONTENT_KERNEL("expand_dims");
+REGISTER_COPY_DATA_CONTENT_KERNEL("reshape");
+REGISTER_COPY_DATA_CONTENT_KERNEL("amp_white_identity");
+
+}  // namespace
 
 }  // namespace oneflow
