@@ -489,13 +489,14 @@ class ReduceAllWholeFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     bool IsZeroSize = [&]() {
-      for (int i = 0; i < x->shape()->NumAxes(); i++){
+      for (int i = 0; i < x->shape()->NumAxes(); i++) {
         if (x->shape()->at(i) == 0) return true;
       }
       return false;
     }();
-    if (x->shape()->NumAxes() == 0 || IsZeroSize){
-      return JUST(Squeeze(JUST(Constant(Shape{1}, Scalar(1), DType::Bool(), JUST(x->device()))), std::vector<int32_t>({0})));
+    if (x->shape()->NumAxes() == 0 || IsZeroSize) {
+      return JUST(Squeeze(JUST(Constant(Shape{1}, Scalar(1), DType::Bool(), JUST(x->device()))),
+                          std::vector<int32_t>({0})));
     }
     MutableAttrMap attrs;
     std::vector<int32_t> reduce_axis(x->ndim());
