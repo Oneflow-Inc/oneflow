@@ -26,6 +26,7 @@ namespace mlir {
 namespace oneflow {
 
 void OneFlowDialect::initialize() {
+  registerAttributes();
   addOperations<
 #define GET_OP_LIST
 #include "OneFlow/OneFlowOps.cpp.inc"
@@ -149,14 +150,6 @@ mlir::Operation* OneFlowDialect::materializeConstant(mlir::OpBuilder& builder,
                                                      mlir::Location loc) {
   return builder.create<FrozenVariableOp>(loc, type, ValueRange(),
                                           value.cast<mlir::DictionaryAttr>().getValue());
-}
-
-Attribute OneFlowDialect::parseAttribute(mlir::DialectAsmParser&, mlir::Type) const {
-  return mlir::UnitAttr::get(getContext());
-}
-
-void OneFlowDialect::printAttribute(mlir::Attribute, mlir::DialectAsmPrinter&) const {
-  llvm::errs() << "OneFlowDialect::printAttribute\n";
 }
 
 }  // namespace oneflow

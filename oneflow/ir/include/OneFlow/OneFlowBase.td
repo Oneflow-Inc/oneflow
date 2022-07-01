@@ -44,17 +44,8 @@ def OneFlow_PSig_S_Attr : OneFlow_Attr<"Split", "s"> {
   let description = [{
     signature split, representing a sharded tensor at the `axis`
   }];
-  let parameters = (ins "APInt":$axis);
-  let builders = [
-    AttrBuilderWithInferredContext<(ins "Type":$type,
-                                        "const APInt &":$axis), [{
-      return $_get(type.getContext(), type, value);
-    }]>
-  ];
-
-  let assemblyFormat = "`<` $value `>`";
-  let genVerifyDecl = 1;
-  let skipDefaultBuilders = 1;
+  let parameters = (ins "int":$axis);
+  let assemblyFormat = "`<` $axis `>`";
 }
 
 def OneFlow_PSig_B_Attr : OneFlow_Attr<"Broadcast", "b"> {

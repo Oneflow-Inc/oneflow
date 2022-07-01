@@ -18,6 +18,8 @@ add_public_tablegen_target(MLIROneFlowPatternsIncGen)
 # NOTE: seperate conversion and opt with --name
 set(LLVM_TARGET_DEFINITIONS OneFlowOps.td)
 mlir_tablegen(OneFlowPasses.h.inc -gen-pass-decls)
+mlir_tablegen(OneFlowAttributes.h.inc -gen-attrdef-decls)
+mlir_tablegen(OneFlowAttributes.cpp.inc -gen-attrdef-defs)
 add_public_tablegen_target(MLIROneFlowPassIncGen)
 
 set(LLVM_TABLEGEN_FLAGS "")

@@ -19,6 +19,7 @@ oneflow_add_mlir_dialect_library(
   MLIROneFlow
   OneFlowDialect.cpp
   OneFlowTypes.cpp
+  OneFlowAttributes.cpp
   OneFlowOps.cpp
   OneFlowOpTraits.cpp
   OneFlowSupport.cpp

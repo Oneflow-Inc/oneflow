@@ -13,6 +13,9 @@ def OneFlow_Dialect : Dialect {
     let dependentDialects = [
         "func::FuncDialect"
     ];
+    let extraClassDeclaration = [{
+        void registerAttributes();
+    }];
     let hasConstantMaterializer = 1;
     let useDefaultTypePrinterParser = 1;
     let useDefaultAttributePrinterParser = 1;
