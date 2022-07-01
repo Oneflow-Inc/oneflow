@@ -35,15 +35,15 @@ class Narrow : public OpExprGradFunction<NarrowCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(NarrowCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
