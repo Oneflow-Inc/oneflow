@@ -65,17 +65,17 @@ def OneFlow_PartialSumAttr : OneFlow_Attr<"PartialSum", "p"> {
 def OneFlow_ParallelSignatureAttr : OneFlow_Attr<"ParallelSignature", "parallel_signature"> {
   let summary = "Parallel signature of OneFlow Op, aka. SBP";
   let description = [{
-    To represent a signature, passing two listes corepondent to the data input and data output tensors. For example:
+    To represent a signature, with a arrow in beween, pass two listes corepondent to the data input and data output tensors. For example:
     ```
-    #oneflow.parallel_signature<[#oneflow.s<0>], [#oneflow.s<0>]>
+    #oneflow.parallel_signature<[#oneflow.s<0>] -> [#oneflow.s<0>]>
     ```
     One level nested list is used to represent a 2D parallelism signature. For example:
     ```
-    #oneflow.parallel_signature<[[#oneflow.s<0>, #oneflow.p]], [#oneflow.s<0>]>
+    #oneflow.parallel_signature<[[#oneflow.s<0>, #oneflow.p]] -> [#oneflow.s<0>]>
     ```
   }];
   let parameters = (ins "::mlir::ArrayAttr":$inputs, "::mlir::ArrayAttr":$outputs);
-  let assemblyFormat = "`<` params `>`";
+  let assemblyFormat = "`<` $inputs `->` $outputs `>`";
 }
 
 def OneFlow_IsOpConfCompatible : NativeOpTrait<"IsOpConfCompatible">;
