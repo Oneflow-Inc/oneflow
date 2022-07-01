@@ -198,7 +198,7 @@ template<typename T>
 class BinaryCrossEntropyWithLogitsKernel final : public user_op::OpKernel {
  public:
   BinaryCrossEntropyWithLogitsKernel() = default;
-  ~BinaryCrossEntropyWithLogitsKernel() = default;
+  ~BinaryCrossEntropyWithLogitsKernel() override = default;
 
  private:
   using user_op::OpKernel::Compute;
