@@ -82,18 +82,24 @@ namespace std {
 template<>
 struct hash<oneflow::SGDOptimizerKey> {
   size_t operator()(const oneflow::SGDOptimizerKey& key) const {
-    const auto& float_hash = std::hash<float>();
-    const auto& double_hash = std::hash<float>();
+    const auto float_hash = std::hash<float>();
+    const auto double_hash = std::hash<float>();
     const auto& string_hash = std::hash<std::string>();
     const auto& parallel_conf_hash = std::hash<oneflow::ParallelConf>();
     const auto& bool_hash = std::hash<bool>();
     const auto& dtype_hash = std::hash<oneflow::DataType>();
 
-    return string_hash(key.learning_rate) ^ string_hash(key.scale_by_tensor_lbn)
-           ^ string_hash(key.skip_if_lbn) ^ double_hash(key.scale) ^ float_hash(key.l1)
-           ^ float_hash(key.l2) ^ float_hash(key.weight_decay)
-           ^ parallel_conf_hash(key.parallel_conf) ^ bool_hash(key.has_model_copy)
-           ^ dtype_hash(key.model_diff_dtype);
+    size_t hash = string_hash(key.learning_rate);
+    oneflow::HashCombine(&hash, string_hash(key.scale_by_tensor_lbn));
+    oneflow::HashCombine(&hash, string_hash(key.skip_if_lbn));
+    oneflow::HashCombine(&hash, double_hash(key.scale));
+    oneflow::HashCombine(&hash, float_hash(key.l1));
+    oneflow::HashCombine(&hash, float_hash(key.l2));
+    oneflow::HashCombine(&hash, float_hash(key.weight_decay));
+    oneflow::HashCombine(&hash, parallel_conf_hash(key.parallel_conf));
+    oneflow::HashCombine(&hash, bool_hash(key.has_model_copy));
+    oneflow::HashCombine(&hash, dtype_hash(key.model_diff_dtype));
+    return hash;
   }
 };
 
@@ -107,12 +113,22 @@ struct hash<oneflow::AdamOptimizerKey> {
     const auto& parallel_conf_hash = std::hash<oneflow::ParallelConf>();
     const auto& dtype_hash = std::hash<oneflow::DataType>();
 
-    return string_hash(key.learning_rate) ^ string_hash(key.scale_by_tensor_lbn)
-           ^ string_hash(key.skip_if_lbn) ^ double_hash(key.scale) ^ float_hash(key.l1)
-           ^ float_hash(key.l2) ^ float_hash(key.beta1) ^ float_hash(key.beta2)
-           ^ float_hash(key.epsilon) ^ float_hash(key.weight_decay) ^ bool_hash(key.amsgrad)
-           ^ bool_hash(key.do_bias_correction) ^ parallel_conf_hash(key.parallel_conf)
-           ^ bool_hash(key.has_model_copy) ^ dtype_hash(key.model_diff_dtype);
+    size_t hash = string_hash(key.learning_rate);
+    oneflow::HashCombine(&hash, string_hash(key.scale_by_tensor_lbn));
+    oneflow::HashCombine(&hash, string_hash(key.skip_if_lbn));
+    oneflow::HashCombine(&hash, double_hash(key.scale));
+    oneflow::HashCombine(&hash, float_hash(key.l1));
+    oneflow::HashCombine(&hash, float_hash(key.l2));
+    oneflow::HashCombine(&hash, float_hash(key.beta1));
+    oneflow::HashCombine(&hash, float_hash(key.beta2));
+    oneflow::HashCombine(&hash, float_hash(key.epsilon));
+    oneflow::HashCombine(&hash, float_hash(key.weight_decay));
+    oneflow::HashCombine(&hash, bool_hash(key.amsgrad));
+    oneflow::HashCombine(&hash, bool_hash(key.do_bias_correction));
+    oneflow::HashCombine(&hash, parallel_conf_hash(key.parallel_conf));
+    oneflow::HashCombine(&hash, bool_hash(key.has_model_copy));
+    oneflow::HashCombine(&hash, dtype_hash(key.model_diff_dtype));
+    return hash;
   }
 };
 
