@@ -332,9 +332,17 @@ Maybe<double> DTREagerBlobObject::approx_neighbor_cost() const {
   return cost + compute_time_;
 }
 
-Maybe<double> DTREagerBlobObject::cost(const std::string& heuristic) const {
+Maybe<double> DTREagerBlobObject::cost(const std::string& heuristic, size_t override_size) const {
   const double time_since_last_access =
       heuristic == "size" ? 1 : Global<dtr::TensorPool>::Get()->duration() - last_access_time_;
+
+  const double size_d = [&](){
+    if (override_size == 0) {
+      return blob_body_bytes_double();
+    } else {
+      return static_cast<double>(override_size);
+    }
+  }();
 
   if (dtr::debug_level() >= 2) {
     LOG(INFO) << std::dec << "ap compute " << JUST(approx_neighbor_cost()) << ", blob_body_bytes_ "
@@ -349,21 +357,21 @@ Maybe<double> DTREagerBlobObject::cost(const std::string& heuristic) const {
   if (heuristic == "random") {
     return static_cast<double>(rand()) / RAND_MAX;
   } else if (heuristic == "size") {
-    return 1 / blob_body_bytes_double();
+    return 1 / size_d;
   } else if (heuristic == "full") {
-    return JUST(neighbor_cost()) / blob_body_bytes_double() / time_since_last_access;
+    return JUST(neighbor_cost()) / size_d / time_since_last_access;
   } else if (heuristic == "eq") {
-    return JUST(approx_neighbor_cost()) / blob_body_bytes_double() / time_since_last_access;
+    return JUST(approx_neighbor_cost()) / size_d / time_since_last_access;
   } else if (heuristic == "bp_aware") {
     return reverse_cost();
   } else if (heuristic == "depth") {
     return parent_depth() + child_depth();
   } else if (heuristic == "local") {
-    return compute_time_ / blob_body_bytes_double() / time_since_last_access;
+    return compute_time_ / size_d / time_since_last_access;
   } else if (heuristic == "lru") {
     return 1 / time_since_last_access;
   } else if (heuristic == "compute_time_and_size") {
-    return JUST(neighbor_cost()) / blob_body_bytes_double();
+    return JUST(neighbor_cost()) / size_d;
   } else if (heuristic == "compute_time") {
     return JUST(neighbor_cost());
   } else if (heuristic == "eq_compute_time_and_last_access") {
@@ -377,6 +385,15 @@ Maybe<double> DTREagerBlobObject::cost(const std::string& heuristic) const {
   } else {
     return Error::InvalidValueError("");
   }
+}
+
+Maybe<double> DTREagerBlobObject::cost(size_t override_size) const {
+  const auto& heuristic = Global<DTRConfig>::Get()->heuristic;
+  return this->cost(heuristic, override_size);
+}
+
+Maybe<double> DTREagerBlobObject::cost(const std::string& heuristic) const {
+  return this->cost(heuristic, 0);
 }
 
 Maybe<double> DTREagerBlobObject::cost() const {
