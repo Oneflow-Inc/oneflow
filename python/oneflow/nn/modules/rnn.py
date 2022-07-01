@@ -251,7 +251,7 @@ class RNNBase(nn.Module):
 
 
 class RNN(RNNBase):
-    """The interface is consistent with PyTorch.
+    r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.RNN.html.
 
     Applies a multi-layer Elman RNN with \tanhtanh or \text{ReLU}ReLU non-linearity to an input sequence.
@@ -295,6 +295,7 @@ class RNN(RNNBase):
           state for each element in the batch. Defaults to zeros if not provided.
 
         where:
+        
         .. math::
             \begin{aligned}
                 N ={} & \text{batch size} \\
@@ -487,7 +488,7 @@ class RNN(RNNBase):
 
 
 class LSTM(RNNBase):
-    """The interface is consistent with PyTorch.
+    r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/1.10/_modules/torch/nn/modules/rnn.html#LSTM.
 
     Applies a multi-layer long short-term memory (LSTM) RNN to an input sequence.
@@ -787,7 +788,7 @@ class LSTM(RNNBase):
 
 
 class GRU(RNNBase):
-    """The interface is consistent with PyTorch.
+    r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/1.10/_modules/torch/nn/modules/rnn.html#GRU.
 
     Applies a multi-layer gated recurrent unit (GRU) RNN to an input sequence.
@@ -818,27 +819,15 @@ class GRU(RNNBase):
     Args:
         input_size: The number of expected features in the input `x`
         hidden_size: The number of features in the hidden state `h`
-        num_layers: Number of recurrent layers. E.g., setting ``num_layers=2``
-            would mean stacking two GRUs together to form a `stacked GRU`,
-            with the second GRU taking in outputs of the first GRU and
-            computing the final results. Default: 1
-        bias: If ``False``, then the layer does not use bias weights `b_ih` and `b_hh`.
-            Default: ``True``
-        batch_first: If ``True``, then the input and output tensors are provided
-            as `(batch, seq, feature)` instead of `(seq, batch, feature)`.
-            Note that this does not apply to hidden or cell states. See the
-            Inputs/Outputs sections below for details.  Default: ``False``
-        dropout: If non-zero, introduces a `Dropout` layer on the outputs of each
-            GRU layer except the last layer, with dropout probability equal to
-            :attr:`dropout`. Default: 0
+        num_layers: Number of recurrent layers. E.g., setting ``num_layers=2`` would mean stacking two GRUs together to form a `stacked GRU`, with the second GRU taking in outputs of the first GRU and computing the final results. Default: 1
+        bias: If ``False``, then the layer does not use bias weights `b_ih` and `b_hh`. Default: ``True``
+        batch_first: If ``True``, then the input and output tensors are provided as `(batch, seq, feature)` instead of `(seq, batch, feature)`. Note that this does not apply to hidden or cell states. See the Inputs/Outputs sections below for details.  Default: ``False``
+        dropout: If non-zero, introduces a `Dropout` layer on the outputs of each GRU layer except the last layer, with dropout probability equal to :attr:`dropout`. Default: 0
         bidirectional: If ``True``, becomes a bidirectional GRU. Default: ``False``
 
     Inputs: input, h_0
-        * **input**: tensor of shape :math:`(L, N, H_{in})` when ``batch_first=False`` or
-          :math:`(N, L, H_{in})` when ``batch_first=True`` containing the features of
-          the input sequence. 
-        * **h_0**: tensor of shape :math:`(D * \text{num\_layers}, N, H_{out})` containing the initial hidden
-          state for each element in the batch. Defaults to zeros if not provided.
+        * **input**: tensor of shape :math:`(L, N, H_{in})` when ``batch_first=False`` or :math:`(N, L, H_{in})` when ``batch_first=True`` containing the features of the input sequence. 
+        * **h_0**: tensor of shape :math:`(D * \text{num\_layers}, N, H_{out})` containing the initial hidden state for each element in the batch. Defaults to zeros if not provided.
 
         where:
 
@@ -1047,7 +1036,7 @@ class RNNCellBase(nn.Module):
 
 
 class RNNCell(RNNCellBase):
-    """The interface is consistent with PyTorch.
+    r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.RNNCell.html.
     
     An Elman RNN cell with tanh or ReLU non-linearity.
@@ -1169,7 +1158,7 @@ class RNNCell(RNNCellBase):
 
 
 class LSTMCell(RNNCellBase):
-    """The interface is consistent with PyTorch.
+    r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.LSTMCell.html.
     
     A long short-term memory (LSTM) cell.
@@ -1286,7 +1275,7 @@ class LSTMCell(RNNCellBase):
 
 
 class GRUCell(RNNCellBase):
-    """The interface is consistent with PyTorch.
+    r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.GRUCell.html.
     
     A gated recurrent unit (GRU) cell
@@ -1340,6 +1329,7 @@ class GRUCell(RNNCellBase):
     For example:
 
     .. code-block:: python
+
         >>> import oneflow as flow
         >>> import oneflow.nn as nn
 
