@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/graph_verbose_step_lr_util.h"
+#include "oneflow/core/job/graph_scope_vars.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
@@ -29,7 +29,7 @@ class LearningRateScheduleKernel final : public Kernel {
 
  private:
   void VirtualKernelInit(KernelContext* ctx) override {
-    if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       log_stream_ = TeePersistentLogStream::Create("train_step2lr.csv");
       (*log_stream_) << "train_step, lr\n";
     }
@@ -296,7 +296,7 @@ void LearningRateScheduleKernel::ForwardDataContent(KernelContext* ctx) const {
               << std::endl;
   }
   *ctx->BnInOp2Blob("out")->mut_dptr<float>() = learning_rate;
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     (*log_stream_) << std::to_string(train_step) << ", " << std::to_string(learning_rate) << "\n";
     log_stream_->Flush();
   }

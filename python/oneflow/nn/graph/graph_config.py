@@ -17,8 +17,9 @@ import os
 
 from collections import OrderedDict
 
+import oneflow.boxing.nccl as nccl_config
 from oneflow.nn.graph.optimizer import OptDict
-import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
+import oneflow.core.job.job_conf_pb2 as job_conf_pb
 
 
 class GraphConfig(object):
@@ -28,38 +29,22 @@ class GraphConfig(object):
     def __init__(self):
         super().__init__()
         self._outputs_buffer_size = 2
-        self.proto = job_conf_cfg.JobConfigProto()
+        self.proto = job_conf_pb.JobConfigProto()
         self._train(False)
 
     def _train(self, mode: bool = True):
         if mode:
-            self.proto.mutable_train_conf()
+            self.proto.train_conf.SetInParent()
         else:
-            self.proto.mutable_predict_conf()
+            self.proto.predict_conf.SetInParent()
 
     @property
     def training(self):
-        if self.proto.has_train_conf():
+        if self.proto.HasField("train_conf"):
             return True
-        if self.proto.has_predict_conf():
+        if self.proto.HasField("predict_conf"):
             return False
         raise NotImplementedError
-
-    def set_outputs_buffer_size(self, value: int = 2):
-        r"""Set the outputs buffer size of ``nn.Graph``.
-
-        When graph's outputs buffer size is greater than 2, multiple call on the graph can work like a pipeline. This makes multiple call takes less time.
-
-        The default outputs buffer size is 2.
-
-        # TODO (lixiang): Explain the meaning of the size of buffer size and add sample code.
-        # The size of the buffer size indicates the maximum number of iterations that the output of the Graph and the Graph actually executed asynchronously can overlap.
-        # If the buffer size is 1, there is no pipeline. A size of 2 means that it can execute 1 iter ahead of time. A size of 3 means that two iters can be executed ahead of time.
-
-        Args:
-            value (int): graph ouputs buffer size.
-        """
-        self._outputs_buffer_size = value
 
     def enable_amp(self, mode: bool = True):
         r"""If set to true, then graph will use mixed precision mode, it means use both float16 and float32 during model training.
@@ -82,9 +67,71 @@ class GraphConfig(object):
 
         Args:
             mode (bool, optional): The default vaule is True.
+
         """
         assert type(mode) is bool
-        self.proto.set_enable_auto_mixed_precision(mode)
+        self.proto.enable_auto_mixed_precision = mode
+
+    def set_zero_redundancy_optimizer_mode(self, mode: str = "distributed_split"):
+        raise RuntimeError(
+            "`set_zero_redundancy_optimizer_mode` has been changed to `enable_zero`, please use `enable_zero(True)` to activate ZeRO optimization."
+        )
+
+    def enable_zero(
+        self,
+        mode: bool = True,
+        *,
+        stage: int = 2,
+        shard_min_size: int = 1024,
+        shard_restore_level: int = 1,
+    ):
+        r"""Enable ZeRO redundancy optimizer.
+
+        This optimzation will reduce optimizer states memory consumption as described
+        by ZeRO https://arxiv.org/abs/1910.02054 .
+
+        The default zero stage is 2.
+
+        For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+
+            class Graph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.linear = flow.nn.Linear(3, 8, False)
+                    self.config.enable_zero()
+                def build(self, x):
+                    return self.linear(x)
+
+            graph = Graph()
+
+        Args:
+            mode (bool): if set to true, optimizer states of Data Parallel will be sharded across devices.
+            stage (int): optimization stage, range from 1 to 3. 
+            shard_min_size (int): min size of a shard of an optimizer state.
+            shard_restore_level (int): level to restore sharded parameter to whole parameter for consumer operators, level 0 is no restore, level 1 is soft restore, level 2 is hard restore. Note that this paremeter is at pre-alpha stage.
+        """
+        if not mode:
+            self.proto.optimizer_placement_optimization_mode = "none"
+            return
+        assert stage >= 1 and stage <= 3, "ZeRO stage must range form 1 to 3."
+        assert (
+            shard_min_size > 0
+        ), "ZeRO min size of a sharded optimizer state must > 0."
+        assert stage >= 1 and stage <= 3, "ZeRO stage must range form 1 to 3."
+        if stage >= 1:
+            self.proto.optimizer_placement_optimization_mode = "distributed_split"
+            self.proto.optimizer_placement_optimization_threshold = shard_min_size
+            self.proto.optimizer_placement_optimization_shard_restore_level = (
+                shard_restore_level
+            )
+        if stage >= 2:
+            nccl_config.enable_use_compute_stream(True)
+        if stage >= 3:
+            nccl_config.disable_group_boxing_by_dst_parallel(True)
 
     def allow_fuse_model_update_ops(self, mode: bool = True):
         r"""If set to true, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.
@@ -108,7 +155,7 @@ class GraphConfig(object):
         Args:
             mode (bool, optional): The default vaule is True.
         """
-        self.proto.set_enable_fuse_model_update_ops(mode)
+        self.proto.enable_fuse_model_update_ops = mode
 
     def allow_fuse_add_to_output(self, mode: bool = True):
         r"""If set to true, try to fuse a binary element-wise add operetor to one of the predecessors to improve performance.
@@ -134,7 +181,7 @@ class GraphConfig(object):
         Args:
             mode (bool, optional): The default vaule is True.
         """
-        self.proto.set_enable_fuse_add_to_output(mode)
+        self.proto.enable_fuse_add_to_output = mode
 
     def allow_fuse_cast_scale(self, mode: bool = True):
         r"""If set to true, try to fuse cast and scalar_mul_by_tensor to improve performance.
@@ -161,7 +208,7 @@ class GraphConfig(object):
         Args:
             mode (bool, optional): The default vaule is True.
         """
-        self.proto.set_enable_fuse_cast_scale(mode)
+        self.proto.enable_fuse_cast_scale = mode
 
     def set_gradient_accumulation_steps(self, value):
         r"""Set num of steps to accumulate gradient.
@@ -186,163 +233,25 @@ class GraphConfig(object):
         Args:
             value (int): num of steps.
         """
-        self.proto.set_num_gradient_accumulation_steps(value)
+        self.proto.num_gradient_accumulation_steps = value
 
-    def set_zero_redundancy_optimizer_mode(self, mode: str = "distributed_split"):
-        r"""Set mode to remove redundancy of optimizer states.
-        This optimzation will reduce optimizer states memory consumption as described
-        by ZeRO https://arxiv.org/abs/1910.02054 .
+    def set_outputs_buffer_size(self, value: int = 2):
+        r"""Set the outputs buffer size of ``nn.Graph``.
 
-        For example:
+        When graph's outputs buffer size is greater than 2, multiple call on the graph can work like a pipeline. This makes multiple call takes less time.
 
-        .. code-block:: python
+        The default outputs buffer size is 2.
 
-            import oneflow as flow
-
-            class Graph(flow.nn.Graph):
-                def __init__(self):
-                    super().__init__()
-                    self.linear = flow.nn.Linear(3, 8, False)
-                    self.config.set_zero_redundancy_optimizer_mode("distributed_split")
-                def build(self, x):
-                    return self.linear(x)
-
-            graph = Graph()
+        # TODO (lixiang): Explain the meaning of the size of buffer size and add sample code.
+        # The size of the buffer size indicates the maximum number of iterations that the output of the Graph and the Graph actually executed asynchronously can overlap.
+        # If the buffer size is 1, there is no pipeline. A size of 2 means that it can execute 1 iter ahead of time. A size of 3 means that two iters can be executed ahead of time.
 
         Args:
-            mode (str): "distributed_split" or "non_distributed". "distributed_split" mode
-                         will shard each optimizer state across devices. "non_distributed" mode
-                         will place each optimizer state to only one device.
-        """
-        assert mode in ("distributed_split", "non_distributed")
-        self.proto.set_optimizer_placement_optimization_mode(mode)
-
-    def set_zero_redundancy_optimizer_min_size_after_split(self, value):
-        r"""Set the min size of optimizer state/grad/parameter after split.
-
-        For example:
-
-        .. code-block:: python
-
-            import oneflow as flow
-
-            class Graph(flow.nn.Graph):
-                def __init__(self):
-                    super().__init__()
-                    self.linear = flow.nn.Linear(3, 8, False)
-                    self.config.set_zero_redundancy_optimizer_mode("distributed_split")
-                    self.config.set_zero_redundancy_optimizer_min_size_after_split(1)
-                def build(self, x):
-                    return self.linear(x)
-
-            graph = Graph()
-
-        Args:
-            value (int): min size value.
+            value (int): graph ouputs buffer size.
         """
         assert isinstance(value, int)
         assert value >= 1
-        self.proto.set_optimizer_placement_optimization_threshold(value)
-
-    def enable_xla_jit(self, value=True):
-        r"""Whether use xla_jit in xrt or not.
-
-        When this option enable, oneflow will check all operators is supported by xla_jit or not. Clustering supported operators as subgraph, then runing subgraph by xla_jit.
-
-           XLA: https://www.tensorflow.org/xla
-
-        If you need to use XLA to optimize the model running speed, you need to compile the XLA version of oneflow. 
-        
-        Tutorial for build with XLA: 
-        
-        https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/xrt/README.md#build-with-xla
-
-        For example:
-
-        .. code-block:: python
-
-            import oneflow as flow
-
-            class Graph(flow.nn.Graph):
-                def __init__(self):
-                    super().__init__()
-                    self.linear = flow.nn.Linear(3, 8, False)
-                    self.config.enable_xla_jit(True) # Use xla_jit in xrt.
-                def build(self, x):
-                    return self.linear(x)
-
-            graph = Graph()
-
-        Args:
-            value (bool, optional): The default vaule is True.
-        """
-        self.proto.mutable_xrt_config().set_use_xla_jit(value)
-
-    def enable_tensorrt(self, value=True):
-        r"""Whether use tensorrt in xrt or not.
-
-        When this option enable, oneflow will check all operators is supported by tensorrt or not. Clustering supported operators as subgraph, then runing subgraph by tensorrt.
-
-           TensorRT: https://developer.nvidia.com/tensorrt
-
-        If you need to use TensorRT to optimize the model running speed, you need to compile the TensorRT version of oneflow. 
-
-        Tutorial for build with TensorRT: 
-        
-        https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/xrt/README.md#build-with-tensorrt
-
-        For example:
-
-        .. code-block:: python
-
-            import oneflow as flow
-
-            class Graph(flow.nn.Graph):
-                def __init__(self):
-                    super().__init__()
-                    self.linear = flow.nn.Linear(3, 8, False)
-                    self.config.enable_tensorrt(True) # Use tensorrt in xrt.
-                def build(self, x):
-                    return self.linear(x)
-
-            graph = Graph()
-
-        Args:
-            value (bool, optional): The default vaule is True.
-        """
-        self.proto.mutable_xrt_config().set_use_tensorrt(value)
-
-    def enable_openvino(self, value=True):
-        r"""Whether use openvino in xrt or not.
-
-        When this option enable, oneflow will check all operators is supported by openvino or not. Clustering supported operators as subgraph, then runing subgraph by openvino.
-
-           Please note that, openvino only support inference mode.
-
-           OpenVINO: https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html
-
-        It is also necessary to compile the XLA or TensorRT version of oneflow, tutorial: https://github.com/Oneflow-Inc/oneflow/tree/master/oneflow/xrt#readme
-
-        For example:
-
-        .. code-block:: python
-
-            import oneflow as flow
-
-            class Graph(flow.nn.Graph):
-                def __init__(self):
-                    super().__init__()
-                    self.linear = flow.nn.Linear(3, 8, False)
-                    self.config.enable_openvino(True) # Use openvino in xrt.
-                def build(self, x):
-                    return self.linear(x)
-
-            graph = Graph()
-
-        Args:
-            value (bool, optional): The default vaule is True.
-        """
-        self.proto.mutable_xrt_config().set_use_openvino(value)
+        self._outputs_buffer_size = value
 
     def enable_cudnn_conv_heuristic_search_algo(self, mode: bool = True):
         r""" Whether enable cudnn conv operatioin to use heuristic search algorithm.
@@ -367,7 +276,16 @@ class GraphConfig(object):
         Args:
             mode (bool, optional): The default vaule is True.
         """
-        self.proto.set_cudnn_conv_heuristic_search_algo(mode)
+        self.proto.cudnn_conv_heuristic_search_algo = mode
+
+    def enable_straighten_algorithm(self, mode: bool = True):
+        r""" Whether enable the straighten algorithm.
+
+        If using nccl compute stream, turning it on might not speed up the training.
+        If not using nccl compute stream, turning it on might slow down data parallelism by 0.6% and slow down model parallelism by 6%.
+        Considering memory, enabling the straighten algorithm is forbidden with one machine/device only, and not recommended under pipeline parallelism. 
+        """
+        self.proto.enable_straighten_algorithm_in_task_graph = mode
 
     def _generate_optimizer_and_variable_configs(
         self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,

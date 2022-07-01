@@ -19,6 +19,8 @@ limitations under the License.
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/vm/vm_util.h"
 
 #ifdef WITH_CUDA
 
@@ -60,10 +62,10 @@ void CreateNcclComm(ncclComm_t* comm, const int dev, const std::string& key,
   int rank = std::distance(device_vec.cbegin(), it);
   if (rank == 0) {
     OF_NCCL_CHECK(ncclGetUniqueId(&nccl_unique_id));
-    Global<CtrlClient>::Get()->PushKV(key,
-                                      std::string(nccl_unique_id.internal, NCCL_UNIQUE_ID_BYTES));
+    Singleton<CtrlClient>::Get()->PushKV(
+        key, std::string(nccl_unique_id.internal, NCCL_UNIQUE_ID_BYTES));
   } else {
-    Global<CtrlClient>::Get()->PullKV(key, [&nccl_unique_id](const std::string& val) {
+    Singleton<CtrlClient>::Get()->PullKV(key, [&nccl_unique_id](const std::string& val) {
       memcpy(nccl_unique_id.internal, val.data(), NCCL_UNIQUE_ID_BYTES);
     });
   }
@@ -71,9 +73,18 @@ void CreateNcclComm(ncclComm_t* comm, const int dev, const std::string& key,
           << ", nccl_unique_id = " << NcclUniqueId2String(nccl_unique_id) << ", rank = " << rank
           << ", key = {" << key << "}\n";
   OF_NCCL_CHECK(ncclCommInitRank(comm, device_vec.size(), nccl_unique_id, rank));
+  VLOG(2) << " EagerNcclCommMgr::ncclCommInitRank succeed device_vec.size() = " << device_vec.size()
+          << ", nccl_unique_id = " << NcclUniqueId2String(nccl_unique_id) << ", rank = " << rank
+          << ", key = {" << key << "}\n";
+}
+
+bool NeedUnifiedNcclCommInit(const std::string& op_type_name) {
+  return UserKernelUnifiedNcclCommInitRegistry::Instance().IsRegistered(op_type_name);
 }
 
 }  // namespace
+
+const std::string EagerNcclCommMgr::kDefaultStreamName = "DEFAULT";
 
 EagerNcclCommMgr::~EagerNcclCommMgr() {
   for (auto& device_set7device_id2comm : device_set2device_id2comm_) {
@@ -134,6 +145,69 @@ ncclComm_t EagerNcclCommMgr::GetCommForDeviceAndStreamName(
     device7stream2device_id2comm_[key][dev] = comm;
   }
   return comm;
+}
+
+void EagerNcclCommMgr::CreateCommFromPlan(const Plan& plan) {
+  const int64_t rank = GlobalProcessCtx::Rank();
+  const int64_t dev = GlobalProcessCtx::LocalRank();
+  std::map<std::string, std::vector<std::pair<int64_t, int64_t>>> nccl_comm_key2devices;
+
+  for (const auto& task_proto : plan.task()) {
+    if (task_proto.machine_id() != rank) { continue; }
+    if (task_proto.exec_sequence().exec_node_size() != 1) { continue; }
+    const auto& kernel_conf = task_proto.exec_sequence().exec_node(0).kernel_conf();
+    const OpAttribute* op_attr = nullptr;
+    if (kernel_conf.has_op_attribute()) {
+      op_attr = &kernel_conf.op_attribute();
+    } else if (kernel_conf.has_op_attribute_ref()) {
+      const auto& ref_name = kernel_conf.op_attribute_ref();
+      op_attr = &plan.job_id2op_attribute_ref_table()
+                     .at(task_proto.job_id())
+                     .op_name2op_attribute()
+                     .at(ref_name);
+    } else {
+      continue;
+    }
+    const auto& op_conf = op_attr->op_conf();
+    if (!op_conf.has_user_conf()) { continue; }
+    if (!NeedUnifiedNcclCommInit(op_conf.user_conf().op_type_name())) { continue; }
+
+    if (!op_attr->has_parallel_conf_signature()) { continue; }
+    if (!op_attr->parallel_conf_signature().has_op_parallel_conf()) { continue; }
+
+    std::vector<std::pair<int64_t, int64_t>> device_vec;
+    ParallelDesc parallel_desc(op_attr->parallel_conf_signature().op_parallel_conf());
+    for (int64_t parallel_id = 0; parallel_id < parallel_desc.parallel_num(); ++parallel_id) {
+      int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
+      int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
+      device_vec.emplace_back(machine_id, device_id);
+    }
+
+    std::string stream_name = kDefaultStreamName;
+    if (op_conf.has_stream_name_hint()) { stream_name = op_conf.stream_name_hint(); }
+    std::string key = GetNcclUniqueIdRpcKey(device_vec) + "-stream_name_hint:" + stream_name;
+
+    VLOG(3) << " EagerNcclCommMgr create nccl comm for " << op_conf.name() << ", rank = " << rank
+            << ", dev = " << dev << ", key = {" << key << "}\n";
+    nccl_comm_key2devices.emplace(std::move(key), std::move(device_vec));
+  }
+
+  if (nccl_comm_key2devices.size() == 0) { return; }
+
+  CHECK_JUST(vm::CurrentRankSync());
+  CudaCurrentDeviceGuard guard(dev);
+
+  for (const auto& pair : nccl_comm_key2devices) {
+    const auto& key = pair.first;
+    auto device_id2comm_it = device7stream2device_id2comm_.find(key);
+    if (device_id2comm_it != device7stream2device_id2comm_.end()) {
+      auto comm_it = device_id2comm_it->second.find(dev);
+      if (comm_it != device_id2comm_it->second.end()) { continue; }
+    }
+    ncclComm_t comm;
+    CreateNcclComm(&comm, dev, key, pair.second);
+    device7stream2device_id2comm_[key][dev] = comm;
+  }
 }
 
 }  // namespace oneflow

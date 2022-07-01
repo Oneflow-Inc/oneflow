@@ -16,6 +16,7 @@ limitations under the License.
 import unittest
 
 import numpy as np
+from google.protobuf import text_format
 import os
 
 import oneflow
@@ -62,37 +63,40 @@ def _test_user_op_graph(test_case, is_cuda):
         oneflow._oneflow_internal.JobBuildAndInferCtx_Open(
             "cc_test_user_op_expr_job_with_cuda" + str(is_cuda)
         )
-        job_conf = oneflow._oneflow_internal.oneflow.core.job.job_conf.JobConfigProto()
-        job_conf.set_job_name("cc_test_user_op_expr_job_with_cuda" + str(is_cuda))
-        job_conf.mutable_predict_conf()
+        job_conf = oneflow.core.job.job_conf_pb2.JobConfigProto()
+        job_conf.job_name = "cc_test_user_op_expr_job_with_cuda" + str(is_cuda)
+        job_conf.predict_conf.SetInParent()
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
 
-        # input_conf.set_in_0("EagerTensorInput")
-        # input_conf.set_out_0("out_0")
-
-        x0_conf = (
-            oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
-        )
+        x0_conf = oneflow.core.operator.op_conf_pb2.FeedInputOpConf()
+        x0_conf.in_0 = "in_0"
+        x0_conf.out_0 = "out_0"
+        x0_conf_str = text_format.MessageToString(x0_conf)
         x0_op = oneflow._oneflow_internal.one.FeedInputOpExpr(
-            "cc_Input_0", x0_conf, ["in_0"], ["out_0"]
+            "cc_Input_0", x0_conf_str, ["in_0"], ["out_0"]
         )
-        x1_conf = (
-            oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
-        )
+
+        x1_conf = oneflow.core.operator.op_conf_pb2.FeedInputOpConf()
+        x1_conf.in_0 = "in_0"
+        x1_conf.out_0 = "out_0"
+        x1_conf_str = text_format.MessageToString(x1_conf)
         x1_op = oneflow._oneflow_internal.one.FeedInputOpExpr(
-            "cc_Input_1", x1_conf, ["in_0"], ["out_0"]
+            "cc_Input_1", x1_conf_str, ["in_0"], ["out_0"]
         )
-        weight0_conf = (
-            oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedVariableOpConf()
-        )
+
+        weight0_conf = oneflow.core.operator.op_conf_pb2.FeedVariableOpConf()
+        weight0_conf.in_0 = "in_0"
+        weight0_conf.out_0 = "out_0"
+        weight0_conf_str = text_format.MessageToString(weight0_conf)
         weight0_op = oneflow._oneflow_internal.one.FeedVariableOpExpr(
-            "cc_Variable_0", weight0_conf, ["in_0"], ["out_0"]
+            "cc_Variable_0", weight0_conf_str, ["in_0"], ["out_0"]
         )
-        output_conf = (
-            oneflow._oneflow_internal.oneflow.core.operator.op_conf.FetchOutputOpConf()
-        )
+        output_conf = oneflow.core.operator.op_conf_pb2.FetchOutputOpConf()
+        output_conf.in_0 = "in_0"
+        output_conf.out_0 = "out_0"
+        output_conf_str = text_format.MessageToString(output_conf)
         output_op = oneflow._oneflow_internal.one.FetchOutputOpExpr(
-            "cc_Output_0", output_conf, ["in_0"], ["out_0"]
+            "cc_Output_0", output_conf_str, ["in_0"], ["out_0"]
         )
 
         x0_lazy_tensor = _C.dispatch_feed_input(x0_op, x0)

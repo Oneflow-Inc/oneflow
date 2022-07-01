@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/scalar_math_kernels.h"
-#include "oneflow/user/kernels/elementwise_xpu_kernel.cuh"
+#include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
@@ -107,10 +107,9 @@ template<>
 struct ScalarPowGradFunctor<half> {
   OF_DEVICE_FUNC explicit ScalarPowGradFunctor(half exponent) : exponent(exponent) {}
   __device__ half operator()(half x, half dy) const {
-    return __float2half(
-        __half2float(exponent)
-        * (__powf(__half2float(x), __half2float(exponent) - static_cast<float>(1.0)))
-        * __half2float(dy));
+    return __float2half(__half2float(exponent)
+                        * (powf(__half2float(x), __half2float(exponent) - static_cast<float>(1.0)))
+                        * __half2float(dy));
   }
   const half exponent;
 };
@@ -126,7 +125,7 @@ template<>
 struct ScalarReversePowGradFunctor<float> {
   OF_DEVICE_FUNC explicit ScalarReversePowGradFunctor(float exponent) : exponent(exponent) {}
   __device__ float operator()(float x, float dy) const {
-    return __powf(exponent, x) * __logf(exponent) * dy;
+    return powf(exponent, x) * logf(exponent) * dy;
   }
   const float exponent;
 };
@@ -136,7 +135,7 @@ struct ScalarReversePowGradFunctor<half> {
   OF_DEVICE_FUNC explicit ScalarReversePowGradFunctor(half exponent) : exponent(exponent) {}
   __device__ half operator()(half x, half dy) const {
     const float exp = __half2float(exponent);
-    return __float2half(exp * __powf(exp, __half2float(x)) * __logf(exp) * __half2float(dy));
+    return __float2half(exp * powf(exp, __half2float(x)) * logf(exp) * __half2float(dy));
   }
   const half exponent;
 };
@@ -164,7 +163,7 @@ class GpuScalarPowGradKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED();
     }
-    const int32_t elem_cnt = x_tensor->shape().elem_cnt();
+    const int32_t elem_cnt = x_tensor->shape_view().elem_cnt();
     OF_CUDA_CHECK((oneflow::cuda::elementwise::Binary(
         ScalarPowGradFunctor<T>(scalar_operand), elem_cnt, dx_ptr, x_ptr, dy_ptr,
         ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
@@ -204,7 +203,7 @@ class GpuScalarReversePowGradKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED();
     }
-    const int32_t elem_cnt = x_tensor->shape().elem_cnt();
+    const int32_t elem_cnt = x_tensor->shape_view().elem_cnt();
     OF_CUDA_CHECK((oneflow::cuda::elementwise::Binary(
         ScalarReversePowGradFunctor<T>(scalar_operand), elem_cnt, dx_ptr, x_ptr, dy_ptr,
         ctx->stream()->As<ep::CudaStream>()->cuda_stream())));

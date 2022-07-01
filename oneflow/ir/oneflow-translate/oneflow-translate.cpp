@@ -15,7 +15,8 @@ limitations under the License.
 */
 #include "OneFlow/MLIROneFlowTranslation.h"
 #include "mlir/InitAllTranslations.h"
-#include "mlir/Translation.h"
+#include "mlir/Tools/mlir-translate/MlirTranslateMain.h"
+#include "mlir/Tools/mlir-translate/Translation.h"
 #include "mlir/Support/LogicalResult.h"
 
 int32_t main(int32_t argc, char** argv) {

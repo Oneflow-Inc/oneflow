@@ -104,7 +104,7 @@ class SyncDynamicResizeGPUKernel final : public Kernel {
 #define REGISTER_SYNC_DYNAMIC_RESIZE_GPU_KERNEL(stype)                                         \
   NEW_REGISTER_KERNEL(OperatorConf::kSyncDynamicResizeConf, SyncDynamicResizeGPUKernel<stype>) \
       .SetIsMatchedPred([](const KernelConf& kernel_conf) {                                    \
-        return (kernel_conf.op_attribute().op_conf().device_tag() == "gpu"                     \
+        return (kernel_conf.op_attribute().op_conf().device_tag() == "cuda"                    \
                 && GetDataType<stype>::value                                                   \
                        == kernel_conf.sync_dynamic_resize_conf().size_data_type());            \
       })

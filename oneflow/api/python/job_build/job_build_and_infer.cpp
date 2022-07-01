@@ -16,13 +16,16 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <string>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/job_build/job_build_and_infer_api.h"
+#include "oneflow/api/python/job_build/job_build_and_infer.h"
 
 namespace py = pybind11;
+
+namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("JobBuildAndInferCtx_Open", &JobBuildAndInferCtx_Open);
   m.def("JobBuildAndInferCtx_GetCurrentJobName", &JobBuildAndInferCtx_GetCurrentJobName);
+  m.def("JobBuildAndInferCtx_GetCurrentJobId", &JobBuildAndInferCtx_GetCurrentJobId);
   m.def("JobBuildAndInferCtx_Close", &JobBuildAndInferCtx_Close);
 
   m.def("CurJobBuildAndInferCtx_CheckJob", &CurJobBuildAndInferCtx_CheckJob);
@@ -61,7 +64,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("JobBuildAndInferCtx_MirroredBlobGetNumSubLbi",
         &JobBuildAndInferCtx_MirroredBlobGetNumSubLbi);
   m.def("JobBuildAndInferCtx_MirroredBlobGetSerializedSubLbi",
-        &JobBuildAndInferCtx_MirroredBlobGetSerializedSubLbi);
+        &JobBuildAndInferCtx_MirroredBlobGetSubLbi);
   m.def("JobBuildAndInferCtx_CheckLbnValidAndExist", &JobBuildAndInferCtx_CheckLbnValidAndExist);
   m.def("JobBuildAndInferCtx_GetOpBlobLbn", &JobBuildAndInferCtx_GetOpBlobLbn);
 }
+
+}  // namespace oneflow

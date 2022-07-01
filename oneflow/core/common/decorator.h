@@ -20,7 +20,7 @@ limitations under the License.
 #include <unordered_map>
 #include "tuple_hash.h"
 #include "static_check.h"
-#include "oneflow/core/common/env_var.h"
+#include "oneflow/core/common/env_var/env_var.h"
 #include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {

@@ -103,7 +103,8 @@ template<typename T>
 struct CrossEntropyKernelUtil<DeviceType::kCUDA, T> {
   static void ComputeEntropy(ep::Stream* stream, const int64_t num_instances,
                              const int64_t num_classes, const T* x, const T* labels, T* y) {
-    cudaMemset(y, 0, sizeof(T) * num_instances);
+    OF_CUDA_CHECK(cudaMemsetAsync(y, 0, sizeof(T) * num_instances,
+                                  stream->As<ep::CudaStream>()->cuda_stream()));
     ComputeEntropyGpu<<<GetCrossEntropyNumBlocks(num_instances), GetCrossEntropyBlockSize(), 0,
                         stream->As<ep::CudaStream>()->cuda_stream()>>>(num_instances, num_classes,
                                                                        x, labels, y);
@@ -123,7 +124,8 @@ struct CrossEntropyKernelUtil<DeviceType::kCUDA, float16> {
   static void ComputeEntropy(ep::Stream* stream, const int64_t num_instances,
                              const int64_t num_classes, const float16* x, const float16* labels,
                              float16* y) {
-    cudaMemset(y, 0, sizeof(float16) * num_instances);
+    OF_CUDA_CHECK(cudaMemsetAsync(y, 0, sizeof(float16) * num_instances,
+                                  stream->As<ep::CudaStream>()->cuda_stream()));
     ComputeEntropyGpuHalf<<<GetCrossEntropyNumBlocks(num_instances), GetCrossEntropyBlockSize(), 0,
                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
         num_instances, num_classes, reinterpret_cast<const half*>(x),

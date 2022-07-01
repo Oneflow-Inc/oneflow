@@ -26,7 +26,7 @@ _shape_t = Union[int, Tuple[int], flow._oneflow_internal.Size]
 class GroupNorm(Module):
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.GroupNorm.html
+    https://pytorch.org/docs/1.10/generated/torch.nn.GroupNorm.html.
 
     Applies Group Normalization over a mini-batch of inputs as described in
     the paper `Group Normalization <https://arxiv.org/abs/1803.08494>`__
@@ -131,6 +131,69 @@ class GroupNorm(Module):
         return "{num_groups}, {num_channels}, eps={eps}, affine={affine}".format(
             **self.__dict__
         )
+
+
+def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-05):
+    assert len(input.shape) > len(
+        normalized_shape
+    ), "Input tensor dim must greater than normalized dim!"
+    begin_norm_axis = len(input.shape) - len(normalized_shape)
+    begin_params_axis = len(input.shape) - len(normalized_shape)
+
+    elementwise_affine = True if (weight is not None and bias is not None) else False
+
+    for i in range(0, len(normalized_shape)):
+        if input.shape[i + begin_params_axis] != normalized_shape[i]:
+            raise RuntimeError(
+                f"Given normalized_shape={normalized_shape}, expected input with shape [*, {str(normalized_shape)[1:-1]}], but got input of size {input.shape}"
+            )
+
+    if not input.is_cuda:
+        reduce_axis = []
+        for dim in range(len(input.shape)):
+            if dim >= begin_norm_axis:
+                reduce_axis.append(dim)
+        mean = input.mean(dim=reduce_axis, keepdim=True)
+        variance = input.var(dim=reduce_axis, unbiased=False, keepdim=True)
+        params_shape = input.shape[begin_params_axis:]
+        if len(mean.shape) == 1:
+            nd_params_shape = [1] * len(input.shape)
+            nd_params_shape[begin_norm_axis] = params_shape[0]
+            mean = flow.reshape(mean, shape=nd_params_shape)
+            variance = flow.reshape(variance, nd_params_shape)
+            if weight is not None and params_shape[0] == weight.nelement():
+                weight = flow.reshape(weight, shape=nd_params_shape)
+            if bias is not None and params_shape[0] == bias.nelement():
+                bias = flow.reshape(bias, shape=nd_params_shape)
+        elif len(mean.shape) == len(input.shape):
+            pass
+        else:
+            raise ValueError(
+                "shape of mean and variance should be 1D or has number of axes and x's"
+            )
+        variance += eps
+        normalized = (input - mean) * variance.rsqrt()
+        if elementwise_affine:
+            normalized = normalized * weight + bias
+        return normalized
+    else:
+        if elementwise_affine:
+            res = flow._C.layer_norm_affine(
+                input,
+                weight,
+                bias,
+                begin_norm_axis=begin_norm_axis,
+                begin_params_axis=begin_params_axis,
+                epsilon=eps,
+            )
+        else:
+            res = flow._C.layer_norm(
+                input,
+                begin_norm_axis=begin_norm_axis,
+                begin_params_axis=begin_params_axis,
+                epsilon=eps,
+            )
+        return res
 
 
 class LayerNorm(Module):
@@ -239,8 +302,6 @@ class LayerNorm(Module):
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
         self.reset_parameters()
-        self.begin_norm_axis = 1
-        self.begin_params_axis = 1
 
     def reset_parameters(self) -> None:
         if self.elementwise_affine:
@@ -248,69 +309,7 @@ class LayerNorm(Module):
             init.zeros_(self.bias)
 
     def forward(self, x):
-        assert len(x.shape) > len(
-            self.normalized_shape
-        ), "Input tensor dim must greater than normalized dim!"
-        self.begin_norm_axis = len(x.shape) - len(self.normalized_shape)
-        self.begin_params_axis = len(x.shape) - len(self.normalized_shape)
-
-        for i in range(0, len(self.normalized_shape)):
-            if x.shape[i + self.begin_params_axis] != self.normalized_shape[i]:
-                raise RuntimeError(
-                    f"Given normalized_shape={self.normalized_shape}, expected input with shape [*, {str(self.normalized_shape)[1:-1]}], but got input of size {x.shape}"
-                )
-
-        if not x.is_cuda:
-            reduce_axis = []
-            for dim in range(len(x.shape)):
-                if dim >= self.begin_norm_axis:
-                    reduce_axis.append(dim)
-            mean = x.mean(dim=reduce_axis, keepdim=True)
-            variance = x.var(dim=reduce_axis, unbiased=False, keepdim=True)
-            params_shape = x.shape[self.begin_params_axis :]
-            weight = self.weight
-            bias = self.bias
-            if len(mean.shape) == 1:
-                nd_params_shape = [1] * len(x.shape)
-                nd_params_shape[self.begin_norm_axis] = params_shape[0]
-                mean = flow.reshape(mean, shape=nd_params_shape)
-                variance = flow.reshape(variance, nd_params_shape)
-                if (
-                    self.weight is not None
-                    and params_shape[0] == self.weight.nelement()
-                ):
-                    weight = flow.reshape(self.weight, shape=nd_params_shape)
-                if self.bias is not None and params_shape[0] == self.bias.nelement():
-                    bias = flow.reshape(self.bias, shape=nd_params_shape)
-            elif len(mean.shape) == len(x.shape):
-                pass
-            else:
-                raise ValueError(
-                    "shape of mean and variance should be 1D or has number of axes and x's"
-                )
-            variance += self.eps
-            normalized = (x - mean) * variance.rsqrt()
-            if self.elementwise_affine:
-                normalized = normalized * weight + bias
-            return normalized
-        else:
-            if self.elementwise_affine:
-                res = flow._C.layer_norm_affine(
-                    x,
-                    self.weight,
-                    self.bias,
-                    begin_norm_axis=self.begin_norm_axis,
-                    begin_params_axis=self.begin_params_axis,
-                    epsilon=self.eps,
-                )
-            else:
-                res = flow._C.layer_norm(
-                    x,
-                    begin_norm_axis=self.begin_norm_axis,
-                    begin_params_axis=self.begin_params_axis,
-                    epsilon=self.eps,
-                )
-            return res
+        return layer_norm(x, self.normalized_shape, self.weight, self.bias, self.eps)
 
     def extra_repr(self) -> str:
         return "{normalized_shape}, eps={eps}, elementwise_affine={elementwise_affine}".format(

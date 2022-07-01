@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_set.pb.h"
-#include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/operator.h"
@@ -45,7 +44,7 @@ void CheckFunctionConfig(const JobConfigProto& job_conf) {
 JobDesc::JobDesc(const JobConfigProto& job_conf, int64_t job_id)
     : job_conf_(job_conf), job_id_(job_id), symbol_id_(NullOpt) {
   CHECK_JUST(Init());
-  Global<ResourceDesc, ForSession>::Get()->DumpCudnnConf(job_conf);
+  Singleton<ResourceDesc, ForSession>::Get()->DumpCudnnConf(job_conf);
 }
 
 Maybe<JobDesc> JobDesc::New(int64_t symbol_id, const JobConfigProto& job_conf) {
@@ -55,11 +54,6 @@ Maybe<JobDesc> JobDesc::New(int64_t symbol_id, const JobConfigProto& job_conf) {
 }
 
 Maybe<void> JobDesc::Init() {
-  cfg_job_conf_.reset(new cfg::JobConfigProto(job_conf_));
-
-#ifndef WITH_CUDA
-  CHECK_EQ_OR_RETURN((Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum()), 0);
-#endif
   CheckFunctionConfig(job_conf_);
   return Maybe<void>::Ok();
 }
@@ -78,12 +72,12 @@ bool IsInterfaceOpConf(const OperatorConf& op_conf) {
 }
 
 GlobalJobDescScope::GlobalJobDescScope(const JobConfigProto& job_conf, int64_t job_id) {
-  Global<JobDesc>::New(job_conf, job_id);
+  Singleton<JobDesc>::New(job_conf, job_id);
 }
 
-GlobalJobDescScope::~GlobalJobDescScope() { Global<JobDesc>::Delete(); }
+GlobalJobDescScope::~GlobalJobDescScope() { Singleton<JobDesc>::Delete(); }
 
-const JobDesc& GlobalJobDesc() { return *Global<JobDesc>::Get(); }
+const JobDesc& GlobalJobDesc() { return *Singleton<JobDesc>::Get(); }
 
 bool IsPullJob(const std::string& job_name, const InterUserJobInfo& inter_user_job_info) {
   for (const auto& pair : inter_user_job_info.output_or_var_op_name2pull_job_name()) {

@@ -33,6 +33,14 @@ def _test_rand(test_case, device, shape):
     test_case.assertTrue(shape == y1.shape)
 
 
+def _test_rand_tuple_shape(test_case, device, shape):
+    y1 = flow.rand(shape, device=flow.device(device))
+    y2 = flow.rand(shape, device=flow.device(device))
+
+    test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
+    test_case.assertTrue(shape == y1.shape)
+
+
 def _test_0d_rand(test_case, device, shape):
     y1 = flow.rand(*shape, device=flow.device(device))
     y2 = flow.rand(*shape, device=flow.device(device))
@@ -48,9 +56,7 @@ def _test_different_dtype(test_case, device, shape):
     test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
     test_case.assertTrue(shape == y1.shape)
 
-    with test_case.assertRaises(
-        oneflow._oneflow_internal.exception.UnimplementedException
-    ):
+    with test_case.assertRaises(NotImplementedError):
         flow.rand(*shape, dtype=flow.int32, device=flow.device(device))
 
 
@@ -74,6 +80,14 @@ def _test_with_generator(test_case, device, shape):
     test_case.assertTrue(np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
 
 
+def _test_rand_with_flow_size(test_case, device, shape):
+    y1 = flow.rand(flow.Size(shape), device=flow.device(device))
+    y2 = flow.rand(flow.Size(shape), device=flow.device(device))
+
+    test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
+    test_case.assertTrue(shape == y1.shape)
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestRandModule(flow.unittest.TestCase):
     def test_0d_randint(test_case):
@@ -88,14 +102,24 @@ class TestRandModule(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_rand,
+            _test_rand_tuple_shape,
             _test_different_dtype,
             _test_backward,
             _test_with_generator,
+            _test_rand_with_flow_size,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5), (2, 4)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n2d()
+class TestRandOnNonDefaultDevice(flow.unittest.TestCase):
+    def test_non_default_device(test_case):
+        x = flow.rand(2, 3, device="cuda:1")
+        test_case.assertEqual(x.device, flow.device("cuda:1"))
 
 
 if __name__ == "__main__":

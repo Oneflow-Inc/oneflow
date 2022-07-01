@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/to_string.h"
@@ -23,12 +24,14 @@ limitations under the License.
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/job/nd_sbp_infer_hint.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
+#include "oneflow/core/framework/placement_sbp_util.h"
 
 namespace oneflow {
 
@@ -724,7 +727,6 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
           double priority_ratio = ComputeSbpInferPriority(
               producer_infer_hint4ibn->nd_sbp(),
               JUST(VectorAt(nd_sbp_sig_list, i)).bn_in_op2nd_sbp().at(ibn),
-              producer_infer_hint4ibn->logical_blob_desc(),
               producer_infer_hint4ibn->parallel_desc(), *JUST(GetParallelDesc4BnInOp(ibn)),
               requires_same_sbp[ibn_id]);
           sum_priority_ratio += priority_ratio;
@@ -844,9 +846,6 @@ Maybe<void> Operator::InferNdSbpSignature(
     HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
     for (const auto& ibn : input_bns()) {
       const NdSbpInferHint* hint = JUST(NdSbpInferHint4Ibn(ibn));
-      if (hint->nd_sbp().sbp_parallel_size() != 1) {
-        CHECK_OR_RETURN(Is1dSbp(hint->nd_sbp()) || hint->parallel_desc().parallel_num() == 1);
-      }
       ibn2sbp_infer_hint.emplace(ibn,
                                  SbpInferHint(&hint->parallel_desc(), &hint->logical_blob_desc(),
                                               &hint->nd_sbp().sbp_parallel(0)));
@@ -1309,7 +1308,7 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
   }
   if (op_parallel_desc_ && bn2parallel_desc_) {
     if (op_conf().scope_symbol_id() != 0) {
-      const auto& scope_storage = *Global<symbol::Storage<Scope>>::Get();
+      const auto& scope_storage = *Singleton<symbol::Storage<Scope>>::Get();
       const auto& scope = JUST(scope_storage.MaybeGet(op_conf().scope_symbol_id()));
       int64_t parallel_desc_symbol_id = JUST(scope.GetParallelDescSymbolId(op_conf()));
       auto* parallel_signature = op_attribute->mutable_parallel_signature();
@@ -1319,8 +1318,7 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
         if (*pair.second == *op_parallel_desc_) {
           (*symbol_map)[pair.first] = parallel_desc_symbol_id;
         } else {
-          const auto parallel_conf =
-              std::make_shared<cfg::ParallelConf>(pair.second->parallel_conf());
+          ParallelConf parallel_conf = pair.second->parallel_conf();
           const auto MakeParallelDescSymbol = [&parallel_conf]() -> Maybe<int64_t> {
             int64_t symbol_id;
             const auto BuildInstruction =
@@ -1549,14 +1547,36 @@ Maybe<Shape> Get1dHierarchyPhysicalShape(const Shape& logical_shape,
 }
 
 Maybe<Shape> GetNdHierarchyPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
-                                         const Shape& parallel_hierarchy) {
+                                         const ParallelDesc& parallel_desc,
+                                         const int64_t parallel_id) {
+  const auto& parallel_hierarchy = *parallel_desc.hierarchy();
   std::shared_ptr<Shape> physical = std::make_shared<Shape>(logical_shape);
+  Stride hierarch_stride(parallel_hierarchy);
   FOR_RANGE(int64_t, i, 0, parallel_hierarchy.NumAxes()) {
     const auto& sbp_parallel = nd_sbp.sbp_parallel(i);
     if (sbp_parallel.has_split_parallel()) {
       const int64_t split_axis = sbp_parallel.split_parallel().axis();
-      CHECK_EQ_OR_RETURN(physical->At(split_axis) % parallel_hierarchy.At(i), 0);
-      physical->Set(split_axis, physical->At(split_axis) / parallel_hierarchy.At(i));
+      if (LazyMode::is_enabled()) {
+        CHECK_EQ_OR_RETURN(physical->At(split_axis) % parallel_hierarchy.At(i), 0)
+            << Error::RuntimeError() << "In nn.Graph, expected size at split axis (" << split_axis
+            << ") of logical shape must be divisible by parallel num, but got logical_shape: "
+            << logical_shape.ToString()
+            << ", placement: " << *JUST(PlacementToString(SymbolOf(parallel_desc)))
+            << ", nd_sbp: " << NdSbpToString(SymbolOf(nd_sbp));
+        physical->Set(split_axis, physical->At(split_axis) / parallel_hierarchy.At(i));
+      } else {
+        if (physical->At(split_axis) > 0) {
+          CHECK_GE_OR_RETURN(physical->At(split_axis), parallel_hierarchy.At(i))
+              << Error::RuntimeError() << "Expected size at split axis (" << split_axis
+              << ") of logical shape must be be greater than or equal to parallel num, but got "
+                 "logical_shape: "
+              << logical_shape.ToString()
+              << ", placement: " << *JUST(PlacementToString(SymbolOf(parallel_desc)))
+              << ", nd_sbp: " << NdSbpToString(SymbolOf(nd_sbp));
+          const BalancedSplitter bs(physical->At(split_axis), parallel_hierarchy.At(i));
+          physical->Set(split_axis, bs.At(CalcIndex4Axis(parallel_id, hierarch_stride, i)).size());
+        }
+      }
     }
   }
   return physical;
@@ -1573,7 +1593,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
     return Get1dHierarchyPhysicalShape(logical_shape, nd_sbp.sbp_parallel(0),
                                        parallel_desc.hierarchy()->elem_cnt(), parallel_id);
   } else {
-    return GetNdHierarchyPhysicalShape(logical_shape, nd_sbp, *parallel_desc.hierarchy());
+    return GetNdHierarchyPhysicalShape(logical_shape, nd_sbp, parallel_desc, parallel_id);
   }
 }
 

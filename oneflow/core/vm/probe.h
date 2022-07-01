@@ -22,8 +22,7 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class VirtualMachineEngine;
-
+template<typename ProbeFunction>
 class Probe final : public intrusive::Base {
  public:
   Probe(const Probe&) = delete;
@@ -32,15 +31,9 @@ class Probe final : public intrusive::Base {
   Probe() = default;
   ~Probe() = default;
 
-  // return true when this Probe should be removed from virtual machine.
-  using ProbeFunction = std::function<bool(VirtualMachineEngine*)>;
-
   void __Init__(const ProbeFunction& probe_function) { probe_function_ = probe_function; }
 
-  bool probe(VirtualMachineEngine* vm) const {
-    CHECK(static_cast<bool>(probe_function_));
-    return probe_function_(vm);
-  }
+  const ProbeFunction& probe_function() const { return probe_function_; }
 
  private:
   friend class intrusive::Ref;

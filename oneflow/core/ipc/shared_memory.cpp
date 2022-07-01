@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/pcheck.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/optional.h"
-#include "oneflow/core/common/env_var.h"
+#include "oneflow/core/common/env_var/env_var.h"
 #ifdef __linux__
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -113,8 +113,8 @@ Maybe<std::set<std::string>> GetContentsOfShmDirectory() {
 }  // namespace
 
 SharedMemoryManager& SharedMemoryManager::get() {
-  // Must be a static singleton variable instead of Global<SharedMemoryManager>.
-  // Subprocesses don't have chance to call `Global<SharedMemoryManager>::Delete()`
+  // Must be a static singleton variable instead of Singleton<SharedMemoryManager>.
+  // Subprocesses don't have chance to call `Singleton<SharedMemoryManager>::Delete()`
   static SharedMemoryManager shared_memory_manager;
   return shared_memory_manager;
 }
