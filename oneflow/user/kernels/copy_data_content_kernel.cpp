@@ -46,7 +46,7 @@ class CopyDataContentKernel final : public user_op::OpKernel, public user_op::Cu
 #define REGISTER_COPY_DATA_CONTENT_KERNEL(op_type_name)                              \
   REGISTER_USER_KERNEL(op_type_name)                                                 \
       .SetCreateFn<CopyDataContentKernel>()                                          \
-      .SetIsMatchedHob(user_op::HobTrue())                                                                               \
+      .SetIsMatchedHob(user_op::HobTrue())                                           \
       .SetInplaceProposalFn(                                                         \
           [](const user_op::InferContext&,                                           \
              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> { \
