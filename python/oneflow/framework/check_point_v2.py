@@ -241,8 +241,7 @@ def RegisterMethods():
 
 
 def legacy_load(
-    path: Union[str, Path],
-    global_src_rank: Optional[int] = None,
+    path: Union[str, Path], global_src_rank: Optional[int] = None,
 ) -> Dict[str, "flow.Tensor"]:
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
     rank = flow.env.get_rank()
@@ -280,10 +279,7 @@ def tensor_pickling_context(path: Path, global_src_dst_rank: Optional[int]):
         save_load_path = None
 
 
-def load(
-    path: str,
-    global_src_rank: Optional[int] = None,
-) -> Any:
+def load(path: str, global_src_rank: Optional[int] = None,) -> Any:
     r"""Loads an object saved with oneflow.save() from a directory.
 
     Args:
@@ -338,7 +334,7 @@ def save_graph(obj: any, path: Union[str, Path], optimized: bool = False):
     if isinstance(obj, graph_util.Graph):
 
         graph: graph_util.Graph = obj
-        
+
         if not graph._is_compiled:
             raise RuntimeError("graph must be compiled first.")
 
