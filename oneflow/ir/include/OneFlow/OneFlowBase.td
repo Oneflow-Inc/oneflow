@@ -34,6 +34,43 @@ def DTArrayAttr : TypedArrayAttrBase<OneFlow_DataType, ""> {}
 
 def ShapeArrayAttr : TypedArrayAttrBase<ShapeAttr, ""> {}
 
+class OneFlow_Attr<string name, string attrMnemonic, list<Trait> traits = []>
+    : AttrDef<OneFlow_Dialect, name, traits> {
+  let mnemonic = attrMnemonic;
+}
+
+def OneFlow_PSig_S_Attr : OneFlow_Attr<"Split", "s"> {
+  let summary = "Signature S";
+  let description = [{
+    signature split, representing a sharded tensor at the `axis`
+  }];
+  let parameters = (ins "APInt":$axis);
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "Type":$type,
+                                        "const APInt &":$axis), [{
+      return $_get(type.getContext(), type, value);
+    }]>
+  ];
+
+  let assemblyFormat = "`<` $value `>`";
+  let genVerifyDecl = 1;
+  let skipDefaultBuilders = 1;
+}
+
+def OneFlow_PSig_B_Attr : OneFlow_Attr<"Broadcast", "b"> {
+  let summary = "Signature B";
+  let description = [{
+    signature broadcast, representing a tensor to be duplicated
+  }];
+}
+
+def OneFlow_PSig_P_Attr : OneFlow_Attr<"PartialSum", "p"> {
+  let summary = "Signature P";
+  let description = [{
+    signature partial sum, representing a shareded tensor will be reduced lazily
+  }];
+}
+
 def OneFlow_IsOpConfCompatible : NativeOpTrait<"IsOpConfCompatible">;
 def OneFlow_IsImportCompatible : NativeOpTrait<"IsImportCompatible">;
 def OneFlow_AlternativeOp : NativeOpTrait<"IsAlternative">;
