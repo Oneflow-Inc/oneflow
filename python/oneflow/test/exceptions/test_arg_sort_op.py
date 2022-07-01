@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +12,22 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_CORE_KERNEL_UTIL_INTERFACE_BRIDGE_H_
-#define ONEFLOW_CORE_KERNEL_UTIL_INTERFACE_BRIDGE_H_
+"""
 
-#include "oneflow/core/kernel/util/cuda_blas_interface.h"
-#include "oneflow/core/kernel/util/host_blas_interface.h"
+import unittest
+import oneflow as flow
+import oneflow.unittest
 
-#endif  // ONEFLOW_CORE_KERNEL_UTIL_INTERFACE_BRIDGE_H_
+
+class TestArgSort(flow.unittest.TestCase):
+    def test_direction_parameter_err(test_case):
+        with test_case.assertRaises(RuntimeError) as context:
+            x = flow.tensor([5, 10, 7, 8, 9, 1])
+            flow._C.arg_sort(x, direction="NONE")
+        test_case.assertTrue(
+            "expected the input direction parameter value is" in str(context.exception)
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

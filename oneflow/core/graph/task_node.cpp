@@ -337,7 +337,8 @@ void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
   StreamId stream_id = DecodeStreamIdFromInt64(thrd_id_);
-  new_task_id_.reset(new TaskId(Global<IDMgr>::Get()->GetTaskIdGenerator()->Generate(stream_id)));
+  new_task_id_.reset(
+      new TaskId(Singleton<IDMgr>::Get()->GetTaskIdGenerator()->Generate(stream_id)));
   task_id_ = EncodeTaskIdToInt64(*new_task_id_);
 }
 

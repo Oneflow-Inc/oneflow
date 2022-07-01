@@ -81,7 +81,7 @@ void Thread::PollMsgChannel() {
       const int64_t job_id = job_id_it->second;
       id2job_id_.erase(job_id_it);
       id2actor_ptr_.erase(actor_it);
-      Global<RuntimeCtx>::Get()->DecreaseCounter(GetRunningActorCountKeyByJobId(job_id));
+      Singleton<RuntimeCtx>::Get()->DecreaseCounter(GetRunningActorCountKeyByJobId(job_id));
     } else {
       CHECK_EQ(process_msg_ret, 0);
     }
@@ -108,7 +108,7 @@ void Thread::ConstructActor(int64_t actor_id) {
             .second);
   CHECK(id2job_id_.emplace(actor_id, task.job_id()).second);
   id2task_.erase(task_it);
-  Global<RuntimeCtx>::Get()->DecreaseCounter("constructing_actor_cnt");
+  Singleton<RuntimeCtx>::Get()->DecreaseCounter("constructing_actor_cnt");
 }
 
 }  // namespace oneflow

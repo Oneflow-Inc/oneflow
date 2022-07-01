@@ -28,8 +28,9 @@ void LaunchLazyJobPhyInstrOperand::ForEachMutMirroredObject(
   for (const auto& eager_blob_object : *param_blob_objects_) {
     DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
   }
-  DoEach(
-      CHECK_JUST(GlobalMaybe<VirtualMachine>())->FindOrCreateTransportLocalDepObject().Mutable());
+  DoEach(CHECK_JUST(SingletonMaybe<VirtualMachine>())
+             ->FindOrCreateTransportLocalDepObject()
+             .Mutable());
 }
 
 }  // namespace vm
