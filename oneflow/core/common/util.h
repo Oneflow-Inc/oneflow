@@ -39,8 +39,16 @@ limitations under the License.
 #include "oneflow/core/common/meta_util.hpp"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/cpp_attribute.h"
+#include "fmt/ranges.h"
 
 #define CHECK_ISNULL(e) CHECK((e) == nullptr)
+
+template<class T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T>& v) {
+  std::string str = fmt::format("{}", v);
+  os << str;
+  return os;
+}
 
 namespace oneflow {
 

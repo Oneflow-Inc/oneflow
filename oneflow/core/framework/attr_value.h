@@ -93,6 +93,7 @@ class AttrVal {
   virtual ~AttrVal() = default;
 
   virtual size_t hash_value() const = 0;
+  virtual std::string ToString() const = 0;
   virtual bool operator==(const AttrVal& other) const = 0;
   bool operator!=(const AttrVal& other) const { return !(*this == other); }
 
@@ -105,6 +106,12 @@ class TypedAttrValIf : public AttrVal {
  public:
   virtual const T& val() const = 0;
   size_t hash_value() const override { return std::hash<T>()(val()); }
+  std::string ToString() const override {
+    using ::operator<<;
+    std::stringstream ss;
+    ss << val();
+    return ss.str();
+  }
 
   bool operator==(const AttrVal& other) const override {
     auto* that = dynamic_cast<const TypedAttrValIf<T>*>(&other);
