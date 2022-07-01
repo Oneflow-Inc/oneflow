@@ -174,6 +174,7 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   user_op::DeviceAndStreamInferFn device_and_stream_infer_fn_;
   mutable HashMap<Symbol<Stream>, std::shared_ptr<StatefulOpKernel>> stream2kernel_;
   std::shared_ptr<ConsistentTensorInferCache> consistent_tensor_infer_cache_;
+  bool is_inplace_operation;
 };
 
 class ConsistentToConsistentOpExpr : public OpExpr {
