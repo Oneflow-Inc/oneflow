@@ -258,7 +258,7 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
   auto mgr = Singleton<VariableTensorMgr>::Get();
   for (const auto& name : mgr->DumpNames()) {
     if (variable_names.find(name) == variable_names.end()) {
-      if (name.size() > 9 && name.substr(0, 20) == "__internal_variable_") { mgr->Delete(name); }
+      if (VariableTensorMgr::IsVariableNameNewGened(name)) { mgr->Delete(name); }
     }
   }
   return Maybe<void>::Ok();

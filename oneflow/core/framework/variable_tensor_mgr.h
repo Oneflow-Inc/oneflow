@@ -48,6 +48,8 @@ class VariableTensorMgr final {
   void Clear();
   void WalkVariables(
       const std::function<void(const std::string&, const std::shared_ptr<one::Tensor>&)>&);
+  static std::string GenNewVariableName(const std::string& key = "");
+  static bool IsVariableNameNewGened(const std::string& name);
 
  private:
   friend class Singleton<VariableTensorMgr>;

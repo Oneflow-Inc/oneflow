@@ -575,7 +575,7 @@ class Graph(object):
         return self._graph_proto
 
     @property
-    def optimized_graph_proto(self):
+    def _optimized_graph_proto(self):
         if self._full_job_proto is None:
             self.__print(
                 2,
@@ -585,8 +585,8 @@ class Graph(object):
             )
         return self._full_job_proto
 
-    @optimized_graph_proto.setter
-    def optimized_graph_proto(self, full_job_proto):
+    @_optimized_graph_proto.setter
+    def _optimized_graph_proto(self, full_job_proto):
         assert (
             not self._is_compiled
         ), "nn.Graph's full graph proto can only be set before the first compilation."
@@ -596,9 +596,9 @@ class Graph(object):
     @property
     def _full_graph_proto(self):
         logging.warning(
-            "_full_graph_proto is deprecated, please use optimized_graph_proto instead."
+            "_full_graph_proto is deprecated, please use _optimized_graph_proto instead."
         )
-        return self.optimized_graph_proto
+        return self._optimized_graph_proto
 
     @property
     def _compiled_graph_proto(self):

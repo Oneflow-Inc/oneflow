@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <fmt/core.h>
 #include <memory>
 #include <tuple>
 #include <vector>
@@ -76,6 +77,15 @@ std::vector<std::string> VariableTensorMgr::DumpNames() {
 void VariableTensorMgr::WalkVariables(
     const std::function<void(const std::string&, const std::shared_ptr<one::Tensor>&)>& f) {
   for (const auto& x : variables_) { f(x.first, x.second); }
+}
+
+std::string VariableTensorMgr::GenNewVariableName(const std::string& key) {
+  if (key == "") { return fmt::format("__internal_variable_{}", ::oneflow::NewUniqueId()); }
+  return fmt::format("__internal_variable_{}_{}", key, ::oneflow::NewUniqueId());
+}
+
+bool VariableTensorMgr::IsVariableNameNewGened(const std::string& name) {
+  return (name.size() > 9) && (name.substr(0, 20) == "__internal_variable_");
 }
 
 }  // namespace oneflow
