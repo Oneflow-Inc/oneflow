@@ -51,7 +51,7 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
   const one::StatefulOpKernel& opkernel() const { return *opkernel_; }
   const one::EagerBlobObjectListPtr& inputs() const { return call_ctx_.inputs(); }
   const one::EagerBlobObjectListPtr& outputs() const { return call_ctx_.outputs(); }
-  const AttrMap& attrs() const { return call_ctx_.op_interp_ctx().attrs; }
+  const ComposedAttrMap& composed_attrs() const { return call_ctx_.composed_attrs(); }
   const one::OpExprInterpContext& op_interp_ctx() const { return call_ctx_.op_interp_ctx(); }
   const one::DevVmDepObjectConsumeMode& dev_vm_dep_object_consume_mode() const {
     return dev_vm_dep_object_consume_mode_;

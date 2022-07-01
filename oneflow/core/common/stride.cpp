@@ -64,4 +64,9 @@ void Stride::ToProto(Int64ListProto* ret) const {
   *(ret->mutable_dim()) = PbRf<int64_t>(begin(), end());
 }
 
+std::ostream& operator<<(std::ostream& out, const Stride& stride) {
+  out << stride.ToString();
+  return out;
+}
+
 }  // namespace oneflow
