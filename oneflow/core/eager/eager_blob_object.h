@@ -193,6 +193,14 @@ class EagerBlobObject final : public user_op::Tensor,
   }
 
  private:
+  void InitMemPtrForAllocationComputationPipelining() {
+    auto* ptr = tensor_storage_->blob_dptr();
+    CHECK(!inited_mem_ptr_for_allocation_compuation_pipelining_)
+        << "mem_ptr_for_allocation_compuation_pipelining_ has been initialized.";
+    mem_ptr_for_allocation_compuation_pipelining_ = ptr;
+    inited_mem_ptr_for_allocation_compuation_pipelining_ = true;
+  }
+
   bool is_dynamic_;
   std::shared_ptr<MemoryCase> mem_case_;
   DataType data_type_;

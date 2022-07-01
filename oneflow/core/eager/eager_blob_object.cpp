@@ -58,14 +58,10 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   size_t required_body_bytes = AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
     CHECK_ISNULL_OR_RETURN(tensor_storage_->blob_dptr());
-    return Maybe<void>::Ok();
-  }
-  if (tensor_storage_->blob_dptr() != nullptr) {
+  } else if (tensor_storage_->blob_dptr() != nullptr) {
     CHECK_GE_OR_RETURN(tensor_storage_->blob_bytes(), ByteSizeOfBlobBody())
         << "This blob has been allocated memory, but less than needed space.";
-    return Maybe<void>::Ok();
-  }
-  {
+  } else {
     char* dptr = nullptr;
     JUST(allocator->Allocate(&dptr, required_body_bytes));
     // reset tensor_storage_;
@@ -75,9 +71,10 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     };
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
                                    required_body_bytes);
-    InitOrCheckMemPtrForAllocationComputationPipelining();
+    InitMemPtrForAllocationComputationPipelining();
     InitNonPODTypeEagerBlobObjectIfNeed(tensor_storage_->non_pod_allocator(), this);
   }
+  InitOrCheckMemPtrForAllocationComputationPipelining();
   return Maybe<void>::Ok();
 }
 
