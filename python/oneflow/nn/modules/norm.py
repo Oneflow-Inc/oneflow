@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from typing import Union, List, Tuple
-import warnings
 
 
 def norm(input, p="fro", dim=None, keepdim=False, dtype=None):
