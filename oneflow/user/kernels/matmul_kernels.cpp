@@ -286,11 +286,11 @@ class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::Cu
     int64_t n = -1;
     int64_t k = -1;  // tensor a (no trans): batch_dims*m*k, tensor b (no trans): batch_dims*k*n
     if (!transpose_a) {
-      m = a->shape().At(a_num_axes - 2);
-      k = a->shape().At(a_num_axes - 1);
+      m = a->shape_view().At(a_num_axes - 2);
+      k = a->shape_view().At(a_num_axes - 1);
     } else {
-      m = a->shape().At(a_num_axes - 1);
-      k = a->shape().At(a_num_axes - 2);
+      m = a->shape_view().At(a_num_axes - 1);
+      k = a->shape_view().At(a_num_axes - 2);
     }
     if (!transpose_b) {
       n = b->shape_view().At(b_num_axes - 1);
@@ -301,9 +301,9 @@ class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::Cu
     }
     auto broadcast_matmul = NewBroadcastMatmulPrimitive(ctx);
     CHECK(broadcast_matmul);
-    broadcast_matmul->Launch(ctx->stream(), alpha, a_num_axes, a->shape().ptr(), a->dptr(),
-                             b_num_axes, b->shape().ptr(), b->dptr(), beta, out_num_axes,
-                             out->shape().ptr(), out->mut_dptr());
+    broadcast_matmul->Launch(ctx->stream(), alpha, a_num_axes, a->shape_view().ptr(), a->dptr(),
+                             b_num_axes, b->shape_view().ptr(), b->dptr(), beta, out_num_axes,
+                             out->shape_view().ptr(), out->mut_dptr());
   }
 };
 
@@ -350,20 +350,11 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel,
       beta = 1.0;
     }
 
-<<<<<<< HEAD
-    CHECK_EQ(a->shape().NumAxes(), b->shape().NumAxes());
-    int64_t k = a->shape().Count(0, a->shape().NumAxes() - 1);
-    CHECK_EQ(b->shape().Count(0, b->shape().NumAxes() - 1), k);
-    int64_t m = a->shape().At(a->shape().NumAxes() - 1);
-    int64_t n = b->shape().At(b->shape().NumAxes() - 1);
-=======
     CHECK_EQ(a->shape_view().NumAxes(), b->shape_view().NumAxes());
     int64_t k = a->shape_view().Count(0, a->shape_view().NumAxes() - 1);
     CHECK_EQ(b->shape_view().Count(0, b->shape_view().NumAxes() - 1), k);
     int64_t m = a->shape_view().At(a->shape_view().NumAxes() - 1);
     int64_t n = b->shape_view().At(b->shape_view().NumAxes() - 1);
-
->>>>>>> master
     auto matmul = NewMatmulPrimitiveForBroadcastMatmulGradB(ctx);
     CHECK(matmul);
     matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
