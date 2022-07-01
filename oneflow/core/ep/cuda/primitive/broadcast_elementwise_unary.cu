@@ -198,7 +198,7 @@ void DispatchNumDims(CudaStream* stream, size_t pack_size, size_t num_dims, cons
   } else if (num_dims == 4) {
     func = DispatchPackSize<op, Src, Dst, 4>;
   } else if (num_dims <= kMaxNumDims) {
-    func = DispatchPackSize<op, Src, Dst, 8>;
+    func = DispatchPackSize<op, Src, Dst, kMaxNumDims>;
   } else {
     UNIMPLEMENTED();
   }
