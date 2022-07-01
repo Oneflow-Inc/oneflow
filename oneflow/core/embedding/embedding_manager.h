@@ -109,7 +109,6 @@ class EmbeddingManager final {
  private:
   HashMap<std::pair<std::string, int64_t>, std::unique_ptr<KeyValueStore>> key_value_store_map_;
   HashMap<std::pair<std::string, int64_t>, std::unique_ptr<EmbeddingState>> embedding_state_map_;
-  cudaMemPool_t mem_pool_;
   std::mutex mutex_;
 };
 

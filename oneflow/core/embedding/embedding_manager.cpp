@@ -29,14 +29,24 @@ constexpr size_t kDefaultMaxQueryLength = 65536;
 class DynamicAllocationEmbeddingState final : public EmbeddingState {
  public:
   DynamicAllocationEmbeddingState() {
+    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     num_unique_states_.resize(kRingBufferSize);
     has_lookup_values_ = false;
     has_lookup_embeddings_ = false;
-    // TODO: set mem pool, use cudaMallocFromPoolAsync
+    cudaMemPoolProps poolProps = {};
+    poolProps.allocType = cudaMemAllocationTypePinned;
+    poolProps.handleTypes = cudaMemHandleTypePosixFileDescriptor;
+    poolProps.location.type = cudaMemLocationTypeDevice;
+    poolProps.location.id = device_index_;
+    cudaMemPoolCreate(&mem_pool_, &poolProps);
+    uint64_t threshold = UINT64_MAX;
+    cudaMemPoolSetAttribute(mem_pool_, cudaMemPoolAttrReleaseThreshold, &threshold);
   }
   ~DynamicAllocationEmbeddingState() {
+    CudaCurrentDeviceGuard guard(device_index_);
     if (has_lookup_values_) { OF_CUDA_CHECK(cudaFree(lookup_values_)); }
     if (has_lookup_embeddings_) { OF_CUDA_CHECK(cudaFree(lookup_embeddings_)); }
+    OF_CUDA_CHECK(cudaMemPoolDestroy(mem_pool_));
   }
 
   void OnEmbeddingPrefetchStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
@@ -56,21 +66,22 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
     uint32_t num_unique = this->GetNumUnique(iter);
     size_t lookup_values_size =
         GetCudaAlignedSize(num_unique * line_size * GetSizeOfDataType(unique_values->data_type()));
-    if (lookup_values_size_ < lookup_values_size) {
+    if (!has_lookup_values_ || lookup_values_size_ < lookup_values_size) {
       if (has_lookup_values_) { OF_CUDA_CHECK(cudaFreeAsync(lookup_values_, cuda_stream)); }
-      // cudaMallocFromPoolAsync
-      OF_CUDA_CHECK(cudaMallocAsync(&lookup_values_, lookup_values_size, cuda_stream));
+      OF_CUDA_CHECK(
+          cudaMallocFromPoolAsync(&lookup_values_, lookup_values_size, mem_pool_, cuda_stream));
       has_lookup_values_ = true;
       lookup_values_size_ = lookup_values_size;
       if (ctx->has_output("embeddings", 0)) {
         user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
         const size_t lookup_embeddings_size = GetCudaAlignedSize(
             num_unique * embedding_size * GetSizeOfDataType(embeddings->data_type()));
-        if (lookup_embeddings_size_ < lookup_values_size) {
+        if (!has_lookup_embeddings_ || lookup_embeddings_size_ < lookup_values_size) {
           if (has_lookup_embeddings_) {
             OF_CUDA_CHECK(cudaFreeAsync(lookup_embeddings_, cuda_stream));
           }
-          OF_CUDA_CHECK(cudaMallocAsync(&lookup_embeddings_, lookup_embeddings_size, cuda_stream));
+          OF_CUDA_CHECK(cudaMallocFromPoolAsync(&lookup_embeddings_, lookup_embeddings_size,
+                                                mem_pool_, cuda_stream));
           has_lookup_embeddings_ = true;
           lookup_embeddings_size_ = lookup_embeddings_size;
         }
@@ -123,8 +134,8 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
     uint32_t num_unique = this->GetNumUnique(iter);
     size_t update_values_size = GetCudaAlignedSize(
         num_unique * line_size * GetSizeOfDataType(updated_unique_embeddings->data_type()));
-    OF_CUDA_CHECK(cudaMallocAsync(&updated_values_, update_values_size,
-                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+    OF_CUDA_CHECK(cudaMallocFromPoolAsync(&updated_values_, update_values_size, mem_pool_,
+                                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   }
 
   const void* UpdateInValues(int64_t iter) override {
@@ -156,7 +167,8 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
   }
 
   void AllocTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr, size_t size) override {
-    OF_CUDA_CHECK(cudaMallocAsync(ptr, size, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+    OF_CUDA_CHECK(cudaMallocFromPoolAsync(ptr, size, mem_pool_,
+                                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   }
 
   void FreeTmpBuffer(user_op::KernelComputeContext* ctx, void* ptr) override {
@@ -196,8 +208,10 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
   size_t lookup_embeddings_size_;
   bool has_lookup_embeddings_;
   void* updated_values_;
-  uint64_t iter_;
+  int64_t iter_;
   std::vector<NumUniqueState> num_unique_states_;
+  int device_index_;
+  cudaMemPool_t mem_pool_;
   std::mutex mutex_;
 };
 
@@ -312,7 +326,7 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
     tmp_buffer_offset_ += size;
   }
   void FreeTmpBuffer(user_op::KernelComputeContext* ctx, void* ptr) override {
-    // do nothing, can not get the size
+    // do nothing
   }
 
   void SetNumUniqueState(uint32_t num_unique, const std::vector<uint32_t>& num_unique_matrix,
@@ -415,10 +429,17 @@ void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value
   CHECK(key_value_store_map_.emplace(map_key, std::move(store)).second)
       << "Can't create an embedding with same name of an existing embedding, the name: " << name;
 
-  cudaMemPool_t mempool = nullptr;
-  cudaDeviceGetDefaultMemPool(&mempool, local_rank_id);
-  uint64_t threshold = UINT64_MAX;
-  cudaMemPoolSetAttribute(mempool, cudaMemPoolAttrReleaseThreshold, &threshold);
+  if (UseDynamicMemoryAllocation()) {
+    CHECK(embedding_state_map_.emplace(map_key, std::make_unique<DynamicAllocationEmbeddingState>())
+              .second)
+        << "Can't create an embedding state with same name of an existing embedding, the name: "
+        << name;
+  } else {
+    CHECK(embedding_state_map_.emplace(map_key, std::make_unique<StaticAllocationEmbeddingState>())
+              .second)
+        << "Can't create an embedding state with same name of an existing embedding, the name: "
+        << name;
+  }
 }
 
 void EmbeddingManager::SaveSnapshot(const std::string& embedding_name, int64_t local_rank_id,
