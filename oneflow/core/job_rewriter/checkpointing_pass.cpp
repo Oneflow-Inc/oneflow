@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/scope.h"
-#include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/framework.h"
@@ -51,10 +50,10 @@ const std::string kCheckpointingBadOpName = "OneFlow-System-CheckpointPassBadEnd
 
 const Scope& Scope4OpNode(const OpNode* op_node) {
   int64_t scope_symbol_id = op_node->op().op_conf().scope_symbol_id();
-  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
+  CHECK(Singleton<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
       << "rank[" << GlobalProcessCtx::Rank() << "] "
       << "scope_symbol_id: " << scope_symbol_id;
-  return Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
+  return Singleton<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
 }
 
 bool IsForwardPassScope(const Scope& scope) {
@@ -179,7 +178,7 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
       const int64_t old_scope_symbol_id = fake_op_conf.scope_symbol_id();
       // update fake op conf scope from fw to bw
       const int64_t new_scope_symbol_id = JUST(
-          NewScopeSymbolId(old_scope_symbol_id, [](std::shared_ptr<cfg::ScopeProto> new_scope) {
+          NewScopeSymbolId(old_scope_symbol_id, [](const std::shared_ptr<ScopeProto>& new_scope) {
             CHECK_EQ(new_scope->calculation_pass_name(), kForwardPass);
             new_scope->set_calculation_pass_name(kBackwardPass);
           }));

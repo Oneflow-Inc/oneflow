@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/api/python/framework/framework.h"
+#include "oneflow/core/framework/load_library.h"
 
 namespace py = pybind11;
 
@@ -42,10 +43,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetMachine2DeviceIdListOFRecordFromParallelConf",
         &GetSerializedMachineId2DeviceIdListOFRecord);
 
-  m.def("LoadSavedModel", &LoadSavedModel);
+  m.def("LoadSavedModel",
+        [](const std::string& saved_model_meta_file, bool is_prototxt_file) -> Maybe<py::bytes> {
+          return py::bytes(*JUST(LoadSavedModel(saved_model_meta_file, is_prototxt_file)));
+        });
 
   m.def("EagerExecutionEnabled", EagerExecutionEnabled);
-  m.def("LoadLibraryNow", &LoadLibraryNow);
+  m.def("LoadLibrary", &LoadLibrary);
 }
 
 }  // namespace oneflow

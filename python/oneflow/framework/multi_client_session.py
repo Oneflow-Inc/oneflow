@@ -22,6 +22,7 @@ import oneflow._oneflow_internal
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.env_util as env_util
+import oneflow.core.job.resource_pb2 as resource_pb
 
 
 class MultiClientSession(object):
@@ -124,4 +125,7 @@ class MultiClientSession(object):
         self._session_ctx.update_resource(config_proto_str)
 
     def __del__(self):
+        if self._env.is_shutting_down():
+            # After python shutting down, it's not safe to call oneflow
+            return
         self._TryClose()

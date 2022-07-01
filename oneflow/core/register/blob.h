@@ -91,7 +91,7 @@ class Blob final {
     CheckDataType<T>(data_type());
     return static_cast<T*>(dptr_);
   }
-
+  // shape
   const Shape& static_shape() const { return blob_desc_->shape(); }
   const ShapeView& shape_view() const { return *shape_view_; }
   const ShapeView& shape() const { return *shape_view_; }
@@ -99,8 +99,9 @@ class Blob final {
     this->blob_access_checker()->CheckHeaderMutable();
     return mut_shape_view_.get();
   }
-
   MutShapeView* ForceMutShapeView() { return mut_shape_view_.get(); }
+  // stride
+  const Stride& stride() const { return blob_desc_->stride(); }
 
   void reset_dptr(char* dptr) { dptr_ = dptr; }
 
@@ -133,8 +134,8 @@ class Blob final {
   std::unique_ptr<MutShapeView> mut_shape_view_;
 };
 
-#define INIT_GLOBAL_BLOB_MUTABLE_CHECKER(is_header_mutable, is_body_mutable)             \
-  COMMAND(Global<BlobAccessCheckerIf<is_header_mutable, is_body_mutable>>::SetAllocated( \
+#define INIT_GLOBAL_BLOB_MUTABLE_CHECKER(is_header_mutable, is_body_mutable)                \
+  COMMAND(Singleton<BlobAccessCheckerIf<is_header_mutable, is_body_mutable>>::SetAllocated( \
       new BlobAccessCheckerIf<is_header_mutable, is_body_mutable>()))
 
 INIT_GLOBAL_BLOB_MUTABLE_CHECKER(false, false);

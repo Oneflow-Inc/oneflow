@@ -223,7 +223,7 @@ void GenMemChainTasksAndRegsts(
   int64_t mem_chain_id = 0;
 
   bool enable_mem_chain_merge =
-      Global<ResourceDesc, ForSession>::Get()->resource().enable_mem_chain_merge();
+      Singleton<ResourceDesc, ForSession>::Get()->resource().enable_mem_chain_merge();
 
   for (auto& device_chain_pair : device2chain2mem_chain) {
     if (device_chain_pair.second.empty()) { continue; }
@@ -387,9 +387,13 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
         regst2mutual_exclusion_regsts->at(remain_regst).emplace_back(alloc_regst);
       }
       CHECK(remain_regsts.insert(alloc_regst).second);
+      // NOTE(chengcheng): insert time line to regst proto
+      alloc_regst->set_mem_block_total_actor_count(sorted_tasks.size());
+      alloc_regst->set_alloc_before_actor(i);
     }
     for (RegstDescProto* free_regst : free_regsts_timeline->at(i)) {
       CHECK_EQ(remain_regsts.erase(free_regst), 1);
+      free_regst->set_free_after_actor(i);
     }
   }
   CHECK(remain_regsts.empty());
@@ -524,7 +528,7 @@ void MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(
 
 void MemReusedAlgorithm_MemSizeFirstAlgo(
     const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
-    MemBlockResultInfo* result) {
+    const HashMap<RegstDescProto*, int64_t>& regst2alloc_order, MemBlockResultInfo* result) {
   std::vector<RegstDescProto*> order;
   order.reserve(regst2mutual_exclusion_regsts.size());
   HashMap<RegstDescProto*, int64_t> regst_desc2size;
@@ -534,7 +538,10 @@ void MemReusedAlgorithm_MemSizeFirstAlgo(
               .second);
   }
   std::sort(order.begin(), order.end(), [&](RegstDescProto* lhs, RegstDescProto* rhs) {
-    return regst_desc2size.at(lhs) > regst_desc2size.at(rhs);
+    int64_t l_size = regst_desc2size.at(lhs);
+    int64_t r_size = regst_desc2size.at(rhs);
+    if (l_size == r_size) { return regst2alloc_order.at(lhs) < regst2alloc_order.at(rhs); }
+    return l_size > r_size;
   });
   MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(order, regst_desc2size,
                                                        regst2mutual_exclusion_regsts, result);
@@ -542,7 +549,7 @@ void MemReusedAlgorithm_MemSizeFirstAlgo(
 
 void MemReusedAlgorithm_MutualExclusionFirstAlgo(
     const HashMap<RegstDescProto*, std::vector<RegstDescProto*>>& regst2mutual_exclusion_regsts,
-    MemBlockResultInfo* result) {
+    const HashMap<RegstDescProto*, int64_t>& regst2alloc_order, MemBlockResultInfo* result) {
   std::vector<RegstDescProto*> order;
   order.reserve(regst2mutual_exclusion_regsts.size());
   HashMap<RegstDescProto*, int64_t> regst_desc2size;
@@ -552,8 +559,10 @@ void MemReusedAlgorithm_MutualExclusionFirstAlgo(
               .second);
   }
   std::sort(order.begin(), order.end(), [&](RegstDescProto* lhs, RegstDescProto* rhs) {
-    return regst2mutual_exclusion_regsts.at(lhs).size()
-           < regst2mutual_exclusion_regsts.at(rhs).size();
+    int64_t l_size = regst2mutual_exclusion_regsts.at(lhs).size();
+    int64_t r_size = regst2mutual_exclusion_regsts.at(rhs).size();
+    if (l_size == r_size) { return regst2alloc_order.at(lhs) < regst2alloc_order.at(rhs); }
+    return l_size > r_size;
   });
   MemReusedAlgorithm_AllocateByOrderAndMutualExclusion(order, regst_desc2size,
                                                        regst2mutual_exclusion_regsts, result);
@@ -700,12 +709,20 @@ void SelectAlgorithmGenMemBlockOffset4Regsts(
     MemBlockResultInfo* result) {
   CHECK_EQ(result->mem_block_size, 0);
   CHECK(result->regst_desc2offset.empty());
+
+  // NOTE(chengcheng): When mem size or exclusion num equal, there need second order by allocate.
+  HashMap<RegstDescProto*, int64_t> regst2alloc_order;
+  for (int64_t i = 0; i < alloc_regsts_timeline.size(); ++i) {
+    const auto& regsts = alloc_regsts_timeline.at(i);
+    for (RegstDescProto* regst : regsts) { CHECK(regst2alloc_order.emplace(regst, i).second); }
+  }
   switch (algo_id) {
     case kMemSizeFirstAlgo:
-      MemReusedAlgorithm_MemSizeFirstAlgo(regst2mutual_exclusion_regsts, result);
+      MemReusedAlgorithm_MemSizeFirstAlgo(regst2mutual_exclusion_regsts, regst2alloc_order, result);
       break;
     case kMutualExclusionFirstAlgo:
-      MemReusedAlgorithm_MutualExclusionFirstAlgo(regst2mutual_exclusion_regsts, result);
+      MemReusedAlgorithm_MutualExclusionFirstAlgo(regst2mutual_exclusion_regsts, regst2alloc_order,
+                                                  result);
       break;
     case kTimeLineAlgo:
       MemReusedAlgorithm_TimeLineAlgo(alloc_regsts_timeline, free_regsts_timeline, result);
@@ -809,7 +826,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
       }
     }
     CHECK(best_result != nullptr);
-    int64_t mem_block_id = Global<IDMgr>::Get()->NewMemBlockId();
+    int64_t mem_block_id = Singleton<IDMgr>::Get()->NewMemBlockId();
     CHECK_EQ(mem_chain2mem_reused_regsts.at(pair.first).size(),
              (best_result->regst_desc2offset.size()
               + mem_chain2consumer2inplaced_regst.at(pair.first).size()));

@@ -56,7 +56,6 @@ check_unwanted_test_scripts(
         "models",
         "modules",
         "tensor",
-        "xrt",
         "exceptions",
         "expensive",
         "misc",
@@ -68,7 +67,7 @@ check_unwanted_test_scripts(
     python_test_dir=os.path.join(
         src_root, "python/oneflow/compatible/single_client/test"
     ),
-    allowed=["models", "ops", "serving", "xrt",],
+    allowed=["models", "ops", "serving",],
 )
 
 check_dir_empty(os.path.join(src_root, "oneflow/python"))

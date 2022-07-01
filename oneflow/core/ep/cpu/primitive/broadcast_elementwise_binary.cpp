@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/ep/common//primitive/constant_pad.h"
 #include "oneflow/core/ep/common/primitive/broadcast_elementwise_binary.h"
 #include "oneflow/core/ep/cpu/primitive/binary_functor.h"
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
@@ -23,6 +24,8 @@ limitations under the License.
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
+#include "oneflow/core/ep/common/primitive/util.h"
+#include "oneflow/core/ep/common/onednn.h"
 
 namespace oneflow {
 
@@ -42,75 +45,284 @@ float16 GetValue<float16>(Scalar value) {
   return static_cast<float16>(GetValue<float>(value));
 }
 
-template<BinaryOp binary_op, typename Src, typename Dst,
-         void (*binary_func)(ep::Stream* stream, const XpuVarNdarray<Dst>& z,
-                             const XpuVarNdarray<const Src>& x, const XpuVarNdarray<const Src>& y)>
+template<BinaryOp binary_op, typename Src, typename Dst>
+struct BinaryLhsScalarFunctor {
+  BinaryLhsScalarFunctor(Src scalar, Scalar attr0, Scalar attr1)
+      : scalar(scalar), functor(attr0, attr1) {}
+  Dst operator()(Src src) const { return functor(scalar, src); }
+  const Src scalar;
+  BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst> functor;
+};
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+struct BinaryRhsScalarFunctor {
+  BinaryRhsScalarFunctor(Src scalar, Scalar attr0, Scalar attr1)
+      : scalar(scalar), functor(attr0, attr1) {}
+  Dst operator()(Src src) const { return functor(src, scalar); }
+  const Src scalar;
+  BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst> functor;
+};
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+void LaunchElementwise(CpuStream* cpu_stream, size_t simplified_num_dims,
+                       const int64_t* simplified_src0_dims, const Src* src0,
+                       const int64_t* simplified_src1_dims, const Src* src1, Dst* dst, Scalar attr0,
+                       Scalar attr1) {
+  const int64_t elem_cnt = GetElementCount(simplified_num_dims, simplified_src0_dims);
+  auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
+  cpu_stream->ParallelFor(0, elem_cnt, [functor, src0, src1, dst](int64_t begin, int64_t end) {
+    for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i], src1[i]); }
+  });
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+void LaunchBinaryLhsScalar(CpuStream* cpu_stream, Src src0_value, size_t src1_elem_cnt,
+                           const Src* src1, Dst* dst, Scalar attr0, Scalar attr1) {
+  auto functor = BinaryLhsScalarFunctor<binary_op, Src, Dst>(src0_value, attr0, attr1);
+  cpu_stream->ParallelFor(0, src1_elem_cnt, [functor, src1, dst](int64_t begin, int64_t end) {
+    for (int64_t i = begin; i < end; i++) { dst[i] = functor(src1[i]); }
+  });
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+void LaunchBinaryRhsScalar(CpuStream* cpu_stream, Src src1_value, size_t src0_elem_cnt,
+                           const Src* src0, Dst* dst, Scalar attr0, Scalar attr1) {
+  auto functor = BinaryRhsScalarFunctor<binary_op, Src, Dst>(src1_value, attr0, attr1);
+  cpu_stream->ParallelFor(0, src0_elem_cnt, [functor, src0, dst](int64_t begin, int64_t end) {
+    for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i]); }
+  });
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+void LaunchRowWithMatrix(CpuStream* cpu_stream, const int64_t* simplified_src0_dims,
+                         const Src* src0, const int64_t* simplified_src1_dims, const Src* src1,
+                         Dst* dst, Scalar attr0, Scalar attr1) {
+  int64_t rows = simplified_src1_dims[0];
+  int64_t cols = simplified_src0_dims[1];
+  auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
+  cpu_stream->ParallelFor(
+      0, rows,
+      [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
+        for (int64_t row_idx = begin; row_idx < end; row_idx++) {
+          const Src* src1_row = src1 + row_idx * cols;
+          Dst* dst_row = dst + row_idx * cols;
+          for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
+            dst_row[col_idx] = functor(src0[col_idx], src1_row[col_idx]);
+          }
+        }
+      },
+      1);
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+void LaunchMatrixWithRow(CpuStream* cpu_stream, const int64_t* simplified_src0_dims,
+                         const Src* src0, const int64_t* simplified_src1_dims, const Src* src1,
+                         Dst* dst, Scalar attr0, Scalar attr1) {
+  int64_t rows = simplified_src0_dims[0];
+  int64_t cols = simplified_src1_dims[1];
+  auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
+  cpu_stream->ParallelFor(
+      0, rows,
+      [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
+        for (int64_t row_idx = begin; row_idx < end; row_idx++) {
+          const Src* src0_row = src0 + row_idx * cols;
+          Dst* dst_row = dst + row_idx * cols;
+          for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
+            dst_row[col_idx] = functor(src0_row[col_idx], src1[col_idx]);
+          }
+        }
+      },
+      1);
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+void LaunchColWithMatrix(CpuStream* cpu_stream, const int64_t* simplified_src0_dims,
+                         const Src* src0, const int64_t* simplified_src1_dims, const Src* src1,
+                         Dst* dst, Scalar attr0, Scalar attr1) {
+  int64_t rows = simplified_src0_dims[0];
+  int64_t cols = simplified_src1_dims[1];
+  auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
+  cpu_stream->ParallelFor(
+      0, rows,
+      [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
+        for (int64_t row_idx = begin; row_idx < end; row_idx++) {
+          const Src* src1_row = src1 + row_idx * cols;
+          Dst* dst_row = dst + row_idx * cols;
+          for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
+            dst_row[col_idx] = functor(src0[row_idx], src1_row[col_idx]);
+          }
+        }
+      },
+      1);
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+void LaunchMatrixWithCol(CpuStream* cpu_stream, const int64_t* simplified_src0_dims,
+                         const Src* src0, const int64_t* simplified_src1_dims, const Src* src1,
+                         Dst* dst, Scalar attr0, Scalar attr1) {
+  int64_t rows = simplified_src1_dims[0];
+  int64_t cols = simplified_src0_dims[1];
+  auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
+  cpu_stream->ParallelFor(
+      0, rows,
+      [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
+        for (int64_t row_idx = begin; row_idx < end; row_idx++) {
+          const Src* src0_row = src0 + row_idx * cols;
+          Dst* dst_row = dst + row_idx * cols;
+          for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
+            dst_row[col_idx] = functor(src0_row[col_idx], src1[row_idx]);
+          }
+        }
+      },
+      1);
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst, typename IndexType>
+void LaunchGeneral(CpuStream* cpu_stream, size_t simplified_num_dims,
+                   const int64_t* simplified_src0_dims, const Src* src0,
+                   const int64_t* simplified_src1_dims, const Src* src1,
+                   const int64_t* simplified_dst_dims, Dst* dst, int64_t dst_elem_cnt, Scalar attr0,
+                   Scalar attr1) {
+  auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
+  cpu_stream->ParallelFor(
+      0, dst_elem_cnt,
+      [functor, src0, src1, dst, simplified_num_dims, simplified_src0_dims, simplified_src1_dims,
+       simplified_dst_dims](int64_t begin, int64_t end) {
+        auto src0_index_helper =
+            NdIndexOffsetHelper<IndexType, kMaxNumDims>(simplified_src0_dims, simplified_num_dims);
+        auto src1_index_helper =
+            NdIndexOffsetHelper<IndexType, kMaxNumDims>(simplified_src1_dims, simplified_num_dims);
+        auto dst_index_helper = OffsetToIndexCalculator<IndexType, kMaxNumDims>(
+            simplified_dst_dims, simplified_num_dims);
+        IndexType src0_index[kMaxNumDims];
+        IndexType src1_index[kMaxNumDims];
+        IndexType dst_index[kMaxNumDims];
+        for (IndexType offset = begin; offset < end; offset++) {
+          dst_index_helper.OffsetToNdIndex(offset, dst_index, simplified_num_dims);
+          for (int i = 0; i < kMaxNumDims; i++) {
+            if (i < simplified_num_dims) {
+              src0_index[i] = (simplified_src0_dims[i] != 1) ? dst_index[i] : 0;
+              src1_index[i] = (simplified_src1_dims[i] != 1) ? dst_index[i] : 0;
+            } else {
+              src0_index[i] = 0;
+              src1_index[i] = 0;
+            }
+          }
+          const IndexType src0_offset =
+              src0_index_helper.NdIndexToOffset(src0_index, simplified_num_dims);
+          const IndexType src1_offset =
+              src1_index_helper.NdIndexToOffset(src1_index, simplified_num_dims);
+          dst[offset] = functor(src0[src0_offset], src1[src1_offset]);
+        }
+      });
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+void LaunchGeneralDispatchIndexType(CpuStream* cpu_stream, size_t simplified_num_dims,
+                                    const int64_t* simplified_src0_dims, const Src* src0,
+                                    const int64_t* simplified_src1_dims, const Src* src1,
+                                    const int64_t* simplified_dst_dims, Dst* dst, Scalar attr0,
+                                    Scalar attr1) {
+  const int64_t dst_elem_cnt = GetElementCount(simplified_num_dims, simplified_dst_dims);
+  if (dst_elem_cnt < (GetMaxVal<int32_t>() / 2)) {
+    LaunchGeneral<binary_op, Src, Dst, int32_t>(
+        cpu_stream, simplified_num_dims, simplified_src0_dims, src0, simplified_src1_dims, src1,
+        simplified_dst_dims, dst, dst_elem_cnt, attr0, attr1);
+  } else {
+    LaunchGeneral<binary_op, Src, Dst, int64_t>(
+        cpu_stream, simplified_num_dims, simplified_src0_dims, src0, simplified_src1_dims, src1,
+        simplified_dst_dims, dst, dst_elem_cnt, attr0, attr1);
+  }
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+void DispatchLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const Src* src0,
+                    size_t num_src1_dims, const int64_t* src1_dims, const Src* src1, Dst* dst,
+                    Scalar attr0, Scalar attr1) {
+  auto* cpu_stream = stream->As<CpuStream>();
+  size_t simplified_num_dims = 0;
+  int64_t simplified_src0_dims[kMaxNumDims];
+  int64_t simplified_src1_dims[kMaxNumDims];
+  int64_t simplified_dst_dims[kMaxNumDims];
+  SimplifyBroadcastDims<kMaxNumDims>(num_src0_dims, src0_dims, num_src1_dims, src1_dims,
+                                     &simplified_num_dims, simplified_src0_dims,
+                                     simplified_src1_dims, simplified_dst_dims);
+  CheckInplace(simplified_num_dims, simplified_src0_dims, src0, simplified_src1_dims, src1,
+               simplified_dst_dims, dst);
+  if (IsDimsEquals(simplified_num_dims, simplified_src0_dims, simplified_num_dims,
+                   simplified_src1_dims)) {
+    LaunchElementwise<binary_op, Src, Dst>(cpu_stream, simplified_num_dims, simplified_src0_dims,
+                                           src0, simplified_src1_dims, src1, dst, attr0, attr1);
+  } else {
+    if (simplified_num_dims == 1 && simplified_src0_dims[0] == 1) {
+      LaunchBinaryLhsScalar<binary_op, Src, Dst>(cpu_stream, *src0, simplified_src1_dims[0], src1,
+                                                 dst, attr0, attr1);
+    } else if (simplified_num_dims == 1 && simplified_src1_dims[0] == 1) {
+      LaunchBinaryRhsScalar<binary_op, Src, Dst>(cpu_stream, *src1, simplified_src0_dims[0], src0,
+                                                 dst, attr0, attr1);
+    } else if (simplified_num_dims == 2 && simplified_src0_dims[0] == 1) {
+      LaunchRowWithMatrix<binary_op, Src, Dst>(cpu_stream, simplified_src0_dims, src0,
+                                               simplified_src1_dims, src1, dst, attr0, attr1);
+    } else if (simplified_num_dims == 2 && simplified_src1_dims[0] == 1) {
+      LaunchMatrixWithRow<binary_op, Src, Dst>(cpu_stream, simplified_src0_dims, src0,
+                                               simplified_src1_dims, src1, dst, attr0, attr1);
+    } else if (simplified_num_dims == 2 && simplified_src0_dims[1] == 1) {
+      LaunchColWithMatrix<binary_op, Src, Dst>(cpu_stream, simplified_src0_dims, src0,
+                                               simplified_src1_dims, src1, dst, attr0, attr1);
+    } else if (simplified_num_dims == 2 && simplified_src1_dims[1] == 1) {
+      LaunchMatrixWithCol<binary_op, Src, Dst>(cpu_stream, simplified_src0_dims, src0,
+                                               simplified_src1_dims, src1, dst, attr0, attr1);
+    } else {
+      LaunchGeneralDispatchIndexType<binary_op, Src, Dst>(
+          cpu_stream, simplified_num_dims, simplified_src0_dims, src0, simplified_src1_dims, src1,
+          simplified_dst_dims, dst, attr0, attr1);
+    }
+  }
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
 class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BroadcastElementwiseBinaryImpl);
-  BroadcastElementwiseBinaryImpl() = default;
+  BroadcastElementwiseBinaryImpl(Scalar attr0, Scalar attr1) : attr0(attr0), attr1(attr1) {}
   ~BroadcastElementwiseBinaryImpl() override = default;
 
   void Launch(Stream* stream, Scalar src0, size_t num_src1_dims, const int64_t* src1_dims,
-              const void* src1, void* dst) override {
-    int64_t elem_cnt = GetElementCount(num_src1_dims, src1_dims);
-    Src src0_val = GetValue<Src>(src0);
-    binary_func(stream, XpuVarNdarray<Dst>(Shape({elem_cnt}), reinterpret_cast<Dst*>(dst), 1),
-                XpuVarNdarray<const Src>(Shape({1}), &src0_val, 1),
-                XpuVarNdarray<const Src>(Shape({elem_cnt}), reinterpret_cast<const Src*>(src1), 1));
+              const void* src1_ptr, void* dst_ptr) override {
+    auto* cpu_stream = stream->As<CpuStream>();
+    const size_t elem_cnt = GetElementCount(num_src1_dims, src1_dims);
+    Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
+    const Src* src1 = reinterpret_cast<const Src*>(src1_ptr);
+    LaunchBinaryLhsScalar<binary_op, Src, Dst>(cpu_stream, GetValue<Src>(src0), elem_cnt, src1, dst,
+                                               attr0, attr1);
   }
-  void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
-              Scalar src1, void* dst) override {
-    int64_t elem_cnt = GetElementCount(num_src0_dims, src0_dims);
-    Src src1_val = GetValue<Src>(src1);
-    binary_func(stream, XpuVarNdarray<Dst>(Shape({elem_cnt}), reinterpret_cast<Dst*>(dst), 1),
-                XpuVarNdarray<const Src>(Shape({elem_cnt}), reinterpret_cast<const Src*>(src0), 1),
-                XpuVarNdarray<const Src>(Shape({1}), &src1_val, 1));
+  void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0_ptr,
+              Scalar src1, void* dst_ptr) override {
+    auto* cpu_stream = stream->As<CpuStream>();
+    const size_t elem_cnt = GetElementCount(num_src0_dims, src0_dims);
+    Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
+    const Src* src0 = reinterpret_cast<const Src*>(src0_ptr);
+    LaunchBinaryRhsScalar<binary_op, Src, Dst>(cpu_stream, GetValue<Src>(src1), elem_cnt, src0, dst,
+                                               attr0, attr1);
   }
   void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
               size_t num_src1_dims, const int64_t* src1_dims, const void* src1,
               void* dst) override {
-    DimVector src0_dim_vec;
-    DimVector src1_dim_vec;
-    DimVector dst_dim_vec;
-    size_t num_dims = 0;
-    int64_t simplified_src0_dims[kMaxNumDims];
-    int64_t simplified_src1_dims[kMaxNumDims];
-    int64_t simplified_dst_dims[kMaxNumDims];
-    SimplifyBroadcastDims<kMaxNumDims>(num_src0_dims, src0_dims, num_src1_dims, src1_dims,
-                                       &num_dims, simplified_src0_dims, simplified_src1_dims,
-                                       simplified_dst_dims);
-    CheckInplace(num_dims, simplified_src0_dims, src0, simplified_src1_dims, src1,
-                 simplified_dst_dims, dst);
-    for (int64_t i = 0; i < num_dims; ++i) {
-      src0_dim_vec.push_back(simplified_src0_dims[i]);
-      src1_dim_vec.push_back(simplified_src1_dims[i]);
-      dst_dim_vec.push_back(simplified_dst_dims[i]);
-    }
-    binary_func(
-        stream, XpuVarNdarray<Dst>(Shape(dst_dim_vec), reinterpret_cast<Dst*>(dst), num_dims),
-        XpuVarNdarray<const Src>(Shape(src0_dim_vec), reinterpret_cast<const Src*>(src0), num_dims),
-        XpuVarNdarray<const Src>(Shape(src1_dim_vec), reinterpret_cast<const Src*>(src1),
-                                 num_dims));
+    DispatchLaunch<binary_op, Src, Dst>(
+        stream, num_src0_dims, src0_dims, reinterpret_cast<const Src*>(src0), num_src1_dims,
+        src1_dims, reinterpret_cast<const Src*>(src1), reinterpret_cast<Dst*>(dst), attr0, attr1);
   }
+
+ private:
+  Scalar attr0, attr1;
 };
 
-template<BinaryOp binary_op, typename Src, typename Dst,
-         void (*binary_func)(ep::Stream* stream, const XpuVarNdarray<Dst>& z,
-                             const XpuVarNdarray<const Src>& x, const XpuVarNdarray<const Src>& y)>
-std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary() {
+template<BinaryOp binary_op, typename Src, typename Dst>
+std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary(Scalar attr0,
+                                                                          Scalar attr1) {
   return std::unique_ptr<BroadcastElementwiseBinary>(
-      new BroadcastElementwiseBinaryImpl<binary_op, Src, Dst, binary_func>());
+      new BroadcastElementwiseBinaryImpl<binary_op, Src, Dst>(attr0, attr1));
 }
-
-#define BINARY_MATH_OP_NDARRAY_PAIR         \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAdd, Add) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSub, Sub) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMul, Mul) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kDiv, Div) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMax, Max) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMin, Min) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kPow, Pow)
 
 #define NDARRAY_BINARY_TYPE_SEQ \
   CPU_PRIMITIVE_BOOL_TYPE_SEQ   \
@@ -121,17 +333,6 @@ std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary() {
   CPU_PRIMITIVE_FLOAT_TYPE_SEQ  \
   CPU_PRIMITIVE_DOUBLE_TYPE_SEQ \
   CPU_PRIMITIVE_FLOAT16_TYPE_SEQ
-
-#define BINARY_LOGICAL_COMPARISION_OP_NDARRAY_PAIR  \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEqual, EQ)        \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kNotEqual, NE)     \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLessThan, LT)     \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLessEqual, LE)    \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kGreaterThan, GT)  \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kGreaterEqual, GE) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalAnd, AND)  \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalOr, OR)    \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalXor, XOR)
 
 #ifdef WITH_ONEDNN
 
@@ -160,7 +361,7 @@ template<typename T, dnnl::algorithm algorithm, dnnl::memory::data_type src_oned
 class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OneDnnBroadcastElementwiseBinaryImpl);
-  OneDnnBroadcastElementwiseBinaryImpl(){};
+  OneDnnBroadcastElementwiseBinaryImpl(Scalar attr0, Scalar attr1) : attr0(attr0), attr1(attr1) {}
   ~OneDnnBroadcastElementwiseBinaryImpl() override = default;
 
   void Launch(Stream* stream, Scalar src0, size_t num_src1_dims, const int64_t* src1_dims,
@@ -178,63 +379,61 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
   void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
               size_t num_src1_dims, const int64_t* src1_dims, const void* src1,
               void* dst) override {
-    CpuStream* cpu_stream = stream->As<CpuStream>();
-    size_t num_threads = cpu_stream->device()->GetNumThreads();
-    CpuNumThreadsGuard guard(num_threads);
+    stream->As<CpuStream>()->onednn_executor()->Launch([&](dnnl::engine* onednn_engine,
+                                                           dnnl::stream* onednn_stream) {
+      // onednn do not optimize for 3d tensor in our experiments, so expand it
+      // to 4d if needed.
+      // Note that only onednn "internal" dims will be affected, the shape
+      // of oneflow tensor (including the output tensor) will remain unchanged.
+      size_t num_dims = std::max(std::max(num_src0_dims, num_src1_dims), static_cast<size_t>(4));
+      dnnl::memory::dims src_0_dims(num_dims);
+      dnnl::memory::dims src_1_dims(num_dims);
+      dnnl::memory::dims dst_dims(num_dims);
+      const void* onednn_src0 = nullptr;
+      const void* onednn_src1 = nullptr;
 
-    dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
-    dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
-    // onednn do not optimize for 3d tensor in our experiments, so expand it
-    // to 4d if needed.
-    // Note that only onednn "internal" dims will be affected, the shape
-    // of oneflow tensor (including the output tensor) will remain unchanged.
-    size_t num_dims = std::max(std::max(num_src0_dims, num_src1_dims), static_cast<size_t>(4));
-    dnnl::memory::dims src_0_dims(num_dims);
-    dnnl::memory::dims src_1_dims(num_dims);
-    dnnl::memory::dims dst_dims(num_dims);
-    const void* onednn_src0 = nullptr;
-    const void* onednn_src1 = nullptr;
+      // OneDNN inplace operations only support src_0
+      if (src1 == dst) {
+        onednn_src0 = src1;
+        onednn_src1 = src0;
+        OneDnnBroadcastDims(&src_0_dims, num_src1_dims, src1_dims, &src_1_dims, num_src0_dims,
+                            src0_dims, dst_dims);
+      } else {
+        onednn_src0 = src0;
+        onednn_src1 = src1;
+        OneDnnBroadcastDims(&src_0_dims, num_src0_dims, src0_dims, &src_1_dims, num_src1_dims,
+                            src1_dims, dst_dims);
+      }
 
-    // OneDNN inplace operations only support src_0
-    if (src1 == dst) {
-      onednn_src0 = src1;
-      onednn_src1 = src0;
-      OneDnnBroadcastDims(&src_0_dims, num_src1_dims, src1_dims, &src_1_dims, num_src0_dims,
-                          src0_dims, dst_dims);
-    } else {
-      onednn_src0 = src0;
-      onednn_src1 = src1;
-      OneDnnBroadcastDims(&src_0_dims, num_src0_dims, src0_dims, &src_1_dims, num_src1_dims,
-                          src1_dims, dst_dims);
-    }
+      CheckInplace(num_dims, src_0_dims.data(), onednn_src0, src_1_dims.data(), onednn_src1,
+                   dst_dims.data(), dst);
 
-    CheckInplace(num_dims, src_0_dims.data(), onednn_src0, src_1_dims.data(), onednn_src1,
-                 dst_dims.data(), dst);
+      auto src_0_md = dnnl::memory::desc(
+          src_0_dims, src_onednn,
+          static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims - 1]));
+      auto src_1_md = dnnl::memory::desc(
+          src_1_dims, src_onednn,
+          static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims - 1]));
+      auto dst_md = dnnl::memory::desc(
+          dst_dims, dst_onednn,
+          static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims - 1]));
 
-    auto src_0_md =
-        dnnl::memory::desc(src_0_dims, src_onednn,
-                           static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims - 1]));
-    auto src_1_md =
-        dnnl::memory::desc(src_1_dims, src_onednn,
-                           static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims - 1]));
-    auto dst_md =
-        dnnl::memory::desc(dst_dims, dst_onednn,
-                           static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims - 1]));
+      auto src_0_mem = dnnl::memory(src_0_md, *onednn_engine, (void*)onednn_src0);
+      auto src_1_mem = dnnl::memory(src_1_md, *onednn_engine, (void*)onednn_src1);
+      auto dst_mem = dnnl::memory(dst_md, *onednn_engine, dst);
 
-    auto src_0_mem = dnnl::memory(src_0_md, *onednn_engine, (void*)onednn_src0);
-    auto src_1_mem = dnnl::memory(src_1_md, *onednn_engine, (void*)onednn_src1);
-    auto dst_mem = dnnl::memory(dst_md, *onednn_engine, dst);
+      auto binary_d = dnnl::binary::desc(algorithm, src_0_md, src_1_md, dst_md);
+      auto binary_pd = dnnl::binary::primitive_desc(binary_d, *onednn_engine);
+      auto binary_prim = dnnl::binary(binary_pd);
 
-    auto binary_d = dnnl::binary::desc(algorithm, src_0_md, src_1_md, dst_md);
-    auto binary_pd = dnnl::binary::primitive_desc(binary_d, *onednn_engine);
-    auto binary_prim = dnnl::binary(binary_pd);
-
-    std::unordered_map<int, dnnl::memory> binary_args{
-        {DNNL_ARG_SRC_0, src_0_mem}, {DNNL_ARG_SRC_1, src_1_mem}, {DNNL_ARG_DST, dst_mem}};
-
-    binary_prim.execute(*onednn_stream, binary_args);
-    onednn_stream->wait();
+      binary_prim.execute(
+          *onednn_stream,
+          {{DNNL_ARG_SRC_0, src_0_mem}, {DNNL_ARG_SRC_1, src_1_mem}, {DNNL_ARG_DST, dst_mem}});
+    });
   }
+
+ private:
+  Scalar attr0, attr1;
 };
 
 #define CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ                               \
@@ -289,9 +488,10 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
 
 template<typename T, dnnl::algorithm algorithm, dnnl::memory::data_type src_onednn,
          dnnl::memory::data_type dst_onednn>
-std::unique_ptr<BroadcastElementwiseBinary> NewOneDnnBroadcastElementwiseBinary() {
+std::unique_ptr<BroadcastElementwiseBinary> NewOneDnnBroadcastElementwiseBinary(Scalar attr0,
+                                                                                Scalar attr1) {
   return std::unique_ptr<BroadcastElementwiseBinary>(
-      new OneDnnBroadcastElementwiseBinaryImpl<T, algorithm, src_onednn, dst_onednn>());
+      new OneDnnBroadcastElementwiseBinaryImpl<T, algorithm, src_onednn, dst_onednn>(attr0, attr1));
 }
 
 #define MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY(binary_op_pair, data_type_pair) \
@@ -317,77 +517,88 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
   BroadcastElementwiseBinaryFactoryImpl() = default;
   ~BroadcastElementwiseBinaryFactoryImpl() override = default;
 
-  std::unique_ptr<BroadcastElementwiseBinary> New(BinaryOp binary_op, DataType src_type,
-                                                  DataType dst_type, size_t max_num_dims) override {
-    if (max_num_dims > kMaxNumDims) { return nullptr; }
-#define MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY(binary_op_pair, data_type_pair) \
-  {std::make_tuple(OF_PP_PAIR_FIRST(binary_op_pair), OF_PP_PAIR_SECOND(data_type_pair),  \
-                   OF_PP_PAIR_SECOND(data_type_pair)),                                   \
-   NewBroadcastElementwiseBinary<                                                        \
-       OF_PP_PAIR_FIRST(binary_op_pair), OF_PP_PAIR_FIRST(data_type_pair),               \
-       OF_PP_PAIR_FIRST(data_type_pair),                                                 \
-       &NdarrayUtil<DeviceType::kCPU, OF_PP_PAIR_FIRST(data_type_pair)>::OF_PP_CAT(      \
-           Broadcast, OF_PP_PAIR_SECOND(binary_op_pair))>},
+  std::unique_ptr<BroadcastElementwiseBinary> New(BinaryOp op, DataType src_type, DataType dst_type,
+                                                  size_t max_num_dims) override {
+    return New(op, src_type, dst_type, max_num_dims, Scalar(), Scalar());
+  }
 
-#define MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY(                \
-    binary_op_pair, src_data_type_pair, dst_data_type_pair)                                 \
-  {std::make_tuple(OF_PP_PAIR_FIRST(binary_op_pair), OF_PP_PAIR_SECOND(src_data_type_pair), \
-                   OF_PP_PAIR_SECOND(dst_data_type_pair)),                                  \
-   NewBroadcastElementwiseBinary<                                                           \
-       OF_PP_PAIR_FIRST(binary_op_pair), OF_PP_PAIR_FIRST(src_data_type_pair),              \
-       OF_PP_PAIR_FIRST(dst_data_type_pair),                                                \
-       &NdarrayUtil<DeviceType::kCPU, OF_PP_PAIR_FIRST(src_data_type_pair)>::OF_PP_CAT(     \
-           Broadcast, OF_PP_PAIR_SECOND(binary_op_pair))>},
+  std::unique_ptr<BroadcastElementwiseBinary> New(BinaryOp op, DataType src_type, DataType dst_type,
+                                                  size_t max_num_dims, Scalar attr0) override {
+    return New(op, src_type, dst_type, max_num_dims, attr0, Scalar());
+  }
+
+  std::unique_ptr<BroadcastElementwiseBinary> New(BinaryOp binary_op, DataType src_type,
+                                                  DataType dst_type, size_t max_num_dims,
+                                                  Scalar attr0, Scalar attr1) override {
+    if (max_num_dims > kMaxNumDims) { return nullptr; }
+#define MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY(binary_op, data_type_pair) \
+  {std::make_tuple(binary_op, OF_PP_PAIR_SECOND(data_type_pair),                    \
+                   OF_PP_PAIR_SECOND(data_type_pair)),                              \
+   NewBroadcastElementwiseBinary<binary_op, OF_PP_PAIR_FIRST(data_type_pair),       \
+                                 OF_PP_PAIR_FIRST(data_type_pair)>},
+
+#define MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY(      \
+    binary_op, src_data_type_pair, dst_data_type_pair)                            \
+  {std::make_tuple(binary_op, OF_PP_PAIR_SECOND(src_data_type_pair),              \
+                   OF_PP_PAIR_SECOND(dst_data_type_pair)),                        \
+   NewBroadcastElementwiseBinary<binary_op, OF_PP_PAIR_FIRST(src_data_type_pair), \
+                                 OF_PP_PAIR_FIRST(dst_data_type_pair)>},
+
+#define MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_ACTIVATION_GRAD_ENTRY(binary_op, data_type_pair) \
+  {std::make_tuple(binary_op, OF_PP_PAIR_SECOND(data_type_pair),                               \
+                   OF_PP_PAIR_SECOND(data_type_pair)),                                         \
+   NewBroadcastElementwiseBinary<binary_op, OF_PP_PAIR_FIRST(data_type_pair),                  \
+                                 OF_PP_PAIR_FIRST(data_type_pair)>},
+
+    static const std::map<
+        std::tuple<BinaryOp, DataType, DataType>,
+        std::function<std::unique_ptr<BroadcastElementwiseBinary>(Scalar, Scalar)>>
+        new_broadcast_elementwise_binary_handle{
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
+                                             BINARY_MATH_OP_SEQ, NDARRAY_BINARY_TYPE_SEQ)
+
+                OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                    MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
+                    BINARY_LOGICAL_OP_SEQ BINARY_COMPARISION_OP_SEQ, NDARRAY_BINARY_TYPE_SEQ,
+                    CPU_PRIMITIVE_BOOL_TYPE_SEQ)
+
+                    OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                        MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_ACTIVATION_GRAD_ENTRY,
+                        BINARY_ACTIVATION_BACKWARD_OP_SEQ, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)};
+
+#undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY
+#undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY
 
 #ifdef WITH_ONEDNN
-    static const std::map<std::tuple<BinaryOp, DataType, DataType>,
-                          std::function<std::unique_ptr<BroadcastElementwiseBinary>()>>
-        new_broadcast_elementwise_binary_handle{
+    static const std::map<
+        std::tuple<BinaryOp, DataType, DataType>,
+        std::function<std::unique_ptr<BroadcastElementwiseBinary>(Scalar, Scalar)>>
+        new_broadcast_elementwise_binary_onednn_handle{
             // For oneDNN binary op
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                 MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY, BINARY_MATH_OP_ONEDNN_PAIR,
                 CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ)
-            // For OneDNN comparasion binary op
+            // For OneDnn comparasion binary op
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                 MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
                 BINARY_LOGICAL_COMPARISION_OP_ONEDNN_PAIR, CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ,
-                CPU_PRIMITIVE_ONEDNN_BOOl_TYPE_SEQ)
-            // OneDNN unimplemented binary op
-            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
-                                             OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kPow, Pow),
-                                             NDARRAY_BINARY_TYPE_SEQ)
-            // OneDNN unimplemented comparasion binary op
-            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-                MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
-                BINARY_LOGICAL_COMPARISION_OP_ONEDNN_UNIMPLEMENTED, NDARRAY_BINARY_TYPE_SEQ,
-                CPU_PRIMITIVE_BOOL_TYPE_SEQ)
-            // OneDNN unimplemented data type binary op
-            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
-                                             BINARY_MATH_OP_NDARRAY_PAIR,
-                                             CPU_PRIMITIVE_BINARY_ONEDNN_UNIMPLEMENTED_TYPE_SEQ)
-            // OneDNN unimplemented data type comparasion binary op
-            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-                MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
-                BINARY_LOGICAL_COMPARISION_OP_NDARRAY_PAIR,
-                CPU_PRIMITIVE_BINARY_ONEDNN_UNIMPLEMENTED_TYPE_SEQ, CPU_PRIMITIVE_BOOL_TYPE_SEQ)};
-#else
-    static const std::map<std::tuple<BinaryOp, DataType, DataType>,
-                          std::function<std::unique_ptr<BroadcastElementwiseBinary>()>>
-        new_broadcast_elementwise_binary_handle{
-            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
-                                             BINARY_MATH_OP_NDARRAY_PAIR, NDARRAY_BINARY_TYPE_SEQ)
-                OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-                    MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
-                    BINARY_LOGICAL_COMPARISION_OP_NDARRAY_PAIR, NDARRAY_BINARY_TYPE_SEQ,
-                    CPU_PRIMITIVE_BOOL_TYPE_SEQ)};
-#endif
+                CPU_PRIMITIVE_ONEDNN_BOOl_TYPE_SEQ)};
 
-#undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY
-#undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY
-    const auto it = new_broadcast_elementwise_binary_handle.find(
+#undef MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY
+#undef MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY
+    if (OneDnnIsEnabled()) {
+      const auto iter = new_broadcast_elementwise_binary_onednn_handle.find(
+          std::make_tuple(binary_op, src_type, dst_type));
+      if (iter != new_broadcast_elementwise_binary_onednn_handle.end()) {
+        return iter->second(attr0, attr1);
+      }
+    }
+
+#endif
+    const auto iter = new_broadcast_elementwise_binary_handle.find(
         std::make_tuple(binary_op, src_type, dst_type));
-    if (it != new_broadcast_elementwise_binary_handle.end()) {
-      return it->second();
+    if (iter != new_broadcast_elementwise_binary_handle.end()) {
+      return iter->second(attr0, attr1);
     } else {
       return nullptr;
     }

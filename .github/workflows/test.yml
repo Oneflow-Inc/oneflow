@@ -16,7 +16,12 @@ env:
   FLOW_VISION_COMMIT: ca8ebc663b58667cf8cd1b6ef0c861522780b7bb
   LIBAI_SRC: libai
   LIBAI_COMMIT: 7d31d9781e5f2d559dc0820f599e0bed798488ca
-  TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.10.0-cuda11.3-cudnn8-runtime:06001b5bdd1a4f89f888e18d96c26f9ed2cd25d3
+  ONEFLOW_FACE_SRC: oneflow_face
+  ONEFLOW_FACE_COMMIT: 110a97e8d5737a1f1856281a7df556a5ac8f06de
+  ONEFLOW_IREE_SRC: oneflow_iree
+  ONEFLOW_IREE_COMMIT: 4322cbad2545877b1664aa8e0f17a17f6b5f687c
+  TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.10.0-cuda11.3-cudnn8-runtime:afaf913e02a4ba02db92260daee22f99121cef62
+  MLIR_DOCKER_ARGS: "-e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 -e ONEFLOW_MLIR_PREFER_NHWC=0 -e ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION=1"
 
 jobs:
   check-priority-pr:
@@ -24,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
-      - uses: Oneflow-Inc/get-oneflow/priority-pr@update-open-vino-img
+      - uses: Oneflow-Inc/get-oneflow/priority-pr@support-iree-ci
         name: Check priority PR closed
         id: save-cache
         timeout-minutes: 5
@@ -158,13 +163,13 @@ jobs:
           fi
           echo "is_secrets_accessible=1" >> $GITHUB_ENV
       - name: Wait for GPU slot
-        uses: Oneflow-Inc/get-oneflow/wait-for-gpu@update-open-vino-img
+        uses: Oneflow-Inc/get-oneflow/wait-for-gpu@support-iree-ci
         if: env.is_secrets_accessible == '1'
-        timeout-minutes: 150
+        timeout-minutes: 90
         continue-on-error: true
         with:
           token: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
-          timeout-minutes: 5
+          timeout-minutes: 3
           max-try-times: 30
 
   find-build-cache:
@@ -182,7 +187,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@update-open-vino-img
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@support-iree-ci
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -196,9 +201,7 @@ jobs:
           entries: |
             cu102
             cpu
-            cu102_xla
             llvm13
-            openvino
 
   build-oneflow:
     name: "Build OneFlow"
@@ -231,7 +234,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@update-open-vino-img
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-iree-ci
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -245,13 +248,14 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - uses: Oneflow-Inc/get-oneflow@update-open-vino-img
+      - uses: Oneflow-Inc/get-oneflow@support-iree-ci
         name: Build manylinux ${{ matrix.entry }}
         id: build-cpu
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/cpu.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build.sh
+          run-lit: true
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           oneflow-build-env: manylinux
           wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
@@ -266,28 +270,7 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@update-open-vino-img
-        name: Build manylinux ${{ matrix.entry }}
-        id: build-openvino
-        if: ${{ matrix.entry =='openvino' && !matrix.cache-hit }}
-        with:
-          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/serving/openvino.cmake
-          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc7.sh
-          oneflow-src: ${{ env.ONEFLOW_SRC }}
-          oneflow-build-env: openvino
-          wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
-          clear-wheelhouse-dir: true
-          self-hosted: ${{ contains(matrix.runs-on, 'self-hosted') }}
-          cuda-version: none
-          manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
-          docker-run-use-system-http-proxy: false
-          docker-run-use-lld: true
-          retry-failed-build: true
-          wheel-audit: false
-          clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
-          python-versions: |
-            3.6
-      - uses: Oneflow-Inc/get-oneflow@update-open-vino-img
+      - uses: Oneflow-Inc/get-oneflow@support-iree-ci
         name: Build manylinux ${{ matrix.entry }}
         id: build-cuda
         if: ${{ matrix.entry =='cu102' && !matrix.cache-hit }}
@@ -307,27 +290,7 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.7
-      - uses: Oneflow-Inc/get-oneflow@update-open-vino-img
-        name: Build manylinux ${{ matrix.entry }}
-        id: build-xla
-        if: ${{ matrix.entry =='cu102_xla' && !matrix.cache-hit }}
-        with:
-          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/cuda-xla.cmake
-          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc7-xla.sh
-          oneflow-src: ${{ env.ONEFLOW_SRC }}
-          oneflow-build-env: manylinux
-          wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
-          clear-wheelhouse-dir: true
-          self-hosted: ${{ contains(matrix.runs-on, 'self-hosted') }}
-          cuda-version: "10.2"
-          manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
-          docker-run-use-system-http-proxy: true
-          docker-run-use-lld: true
-          retry-failed-build: true
-          clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
-          python-versions: |
-            3.6
-      - uses: Oneflow-Inc/get-oneflow@update-open-vino-img
+      - uses: Oneflow-Inc/get-oneflow@support-iree-ci
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry == 'llvm13' && !matrix.cache-hit }}
         with:
@@ -366,7 +329,7 @@ jobs:
             })
       - name: Upload packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@update-open-vino-img
+        uses: Oneflow-Inc/get-oneflow/digest/upload@support-iree-ci
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -377,7 +340,7 @@ jobs:
           dst-dir: cpack
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@update-open-vino-img
+        uses: Oneflow-Inc/get-oneflow/digest/upload@support-iree-ci
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -389,7 +352,7 @@ jobs:
 
   find-test-cache-distributed:
     name: "Find test cache (distributed)"
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && false
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.labels.*.name, 'need-test-distributed')
     runs-on: ubuntu-latest
     needs: [build-oneflow]
     env:
@@ -402,7 +365,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@update-open-vino-img
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@support-iree-ci
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -433,7 +396,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@update-open-vino-img
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@support-iree-ci
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -449,203 +412,14 @@ jobs:
             module
             misc
             speed-test
-
-  find-benchmark-cache:
-    name: "Find benchmark cache"
-    if: github.event.pull_request.draft == false && github.base_ref == 'master'
-    runs-on: ubuntu-latest
-    needs: [build-oneflow]
-    env:
-      ONEFLOW_SRC: .
-    outputs:
-      matrix: ${{ steps.find-cache.outputs.matrix }}
-    steps:
-      - name: Checkout Oneflow-Inc/oneflow
-        uses: actions/checkout@v2
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@update-open-vino-img
-        name: find cache
-        id: find-cache
-        timeout-minutes: 5
-        with:
-          runner-labels: |
-            self-hosted
-            linux
-          oneflow-src: ${{ env.ONEFLOW_SRC }}
-          devices: |
-            cuda
-          tests: |
             benchmark
-
-  benchmark:
-    name: Benchmark suite
-    needs: [wait_for_gpu_slot, find-benchmark-cache]
-    runs-on: ${{ matrix.runs-on }}
-    if: github.event.pull_request.draft == false && github.base_ref == 'master'
-    timeout-minutes: 120
-    strategy:
-      fail-fast: true
-      max-parallel: 1
-      matrix: ${{ fromJson(needs.find-benchmark-cache.outputs.matrix) }}
-    env:
-      ONEFLOW_SRC: .
-      TEST_CONTAINER_NAME: "ci-benchmark"
-      SSH_TANK_HOST: 192.168.1.13
-      SSH_TANK_PATH: /tank
-    steps:
-      - name: Fix permissions
-        if: ${{ contains(matrix.runs-on, 'self-hosted') }}
-        run: |
-          set -x
-          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
-          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf .pytest_cache
-      - name: Checkout Oneflow-Inc/oneflow
-        uses: actions/checkout@v2
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          repository: ${{github.event.pull_request.head.repo.full_name}}
-      - name: Checkout Oneflow-Inc/vision
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: actions/checkout@v2
-        with:
-          repository: Oneflow-Inc/vision
-          # please use a commit here
-          ref: ${{ env.FLOW_VISION_COMMIT}}
-          path: ${{ env.FLOW_VISION_SRC}}
-      - name: Remove container
-        timeout-minutes: 45
-        if: ${{ contains(matrix.runs-on, 'self-hosted') }}
-        run: |
-          docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@update-open-vino-img
-        name: Save cache if successful
-        id: save-cache
-        timeout-minutes: 5
-        with:
-          oneflow-src: ${{ env.ONEFLOW_SRC }}
-          entry: ${{ matrix.entry }}
-          digest-type: ${{ matrix.digest-type }}
-          mark-as-completed: ${{ contains(matrix.runs-on, 'self-hosted') && github.event.pull_request.head.repo.full_name == github.repository }}
-      - name: Check digest cache result. If this step failed, usually it is caused by new commits pushed when this CI run is running.
-        if: ${{ fromJSON(steps.save-cache.outputs.cache-hit) != matrix.cache-hit }}
-        run: |
-          echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
-          exit 1
-      - name: Download wheel and packed liboneflow
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@update-open-vino-img
-        id: download-digest
-        timeout-minutes: 10
-        with:
-          digest: ${{ steps.save-cache.outputs.build-digest }}
-          entry: ${{ matrix.compute-platform }}
-          ssh-tank-host: ${{ env.SSH_TANK_HOST }}
-          ssh-tank-path: ${{ env.SSH_TANK_PATH }}
-      - name: Set environment variables
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        run: |
-          set -x
-          echo "ONEFLOW_TEST_CACHE_DIR=$HOME/ci-cache/test_cache" >> $GITHUB_ENV
-          echo "ONEFLOW_WHEEL_PATH=${{ steps.download-digest.outputs.entry-dir }}/whl" >> $GITHUB_ENV
-          echo "ONEFLOW_CPACK_PATH=${{ steps.download-digest.outputs.entry-dir }}/cpack" >> $GITHUB_ENV
-      - name: Set environment variables (distributed)
-        if: ${{ fromJson(matrix.is-distributed) }}
-        run: |
-          set -x
-          EXTRA_DOCKER_ARGS+=" --network host "
-          echo "EXTRA_DOCKER_ARGS=${EXTRA_DOCKER_ARGS}" >> $GITHUB_ENV
-      - name: Enable ONEFLOW_TEST_VERBOSE
-        if: ${{ contains(github.event.pull_request.labels.*.name, 'need-test-verbose') }}
-        run: |
-          EXTRA_DOCKER_ARGS+=" --env ONEFLOW_TEST_VERBOSE=1"
-          echo "EXTRA_DOCKER_ARGS=${EXTRA_DOCKER_ARGS}" >> $GITHUB_ENV
-      - name: Start container
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        working-directory: ${{ env.ONEFLOW_SRC }}
-        run: |
-          docker run -d --rm --privileged --shm-size=8g \
-            --pids-limit -1 \
-            --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
-            --runtime=nvidia \
-            -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \
-            -v ${ONEFLOW_WHEEL_PATH}:${ONEFLOW_WHEEL_PATH}:ro \
-            -v $HOME/test-container-cache/dot-local:/root/.local \
-            -v $HOME/test-container-cache/dot-cache:/root/.cache \
-            -e ONEFLOW_WHEEL_PATH=${ONEFLOW_WHEEL_PATH} \
-            -e ONEFLOW_CI=1 \
-            -v $PWD:$PWD \
-            -w $PWD \
-            -v ${ONEFLOW_TEST_CACHE_DIR}:${ONEFLOW_TEST_CACHE_DIR} \
-            -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
-            -e ONEFLOW_TIMEOUT_SECONDS=${{ env.ONEFLOW_TIMEOUT_SECONDS }} \
-            -e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 \
-            --name ${TEST_CONTAINER_NAME} \
-            ${{ env.EXTRA_DOCKER_ARGS }} \
-            ${{ env.TEST_WITH_TORCH_IMG_TAG }} \
-            sleep 5400
-      - name: Test container
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        run: |
-          docker exec ${{ env.TEST_CONTAINER_NAME }} ls
-      - name: Install OneFlow
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        run: |
-          ls ${ONEFLOW_WHEEL_PATH}
-          docker exec ${TEST_CONTAINER_NAME} python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
-          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links=${ONEFLOW_WHEEL_PATH} oneflow
-      - name: Install Flow Vision
-        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        run: |
-          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.FLOW_VISION_SRC}}
-      # start pytest benchmark
-      - name: Benchmark Test
-        timeout-minutes: 100
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'benchmark' && matrix.device == 'cuda' }}
-        uses: Oneflow-Inc/get-oneflow/pytest-benchmark@update-open-vino-img
-        with:
-          collect-path: ${{ env.FLOW_VISION_SRC }}/benchmark
-          container-name: ${{ env.TEST_CONTAINER_NAME }}
-          unknown-threshold: 15
-          error-threshold: 20
-
-      # end pytest benchmark
-      - name: Print stacks in all core files
-        timeout-minutes: 45
-        if: ${{ failure() && contains(matrix.runs-on, 'self-hosted') }}
-        run: |
-          docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/print_stack_in_all_dirs.sh || true
-      - name: Remove automerge
-        if: ${{ failure() && contains(matrix.runs-on, 'self-hosted') && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge') }}
-        uses: actions/github-script@v4
-        with:
-          script: |
-            github.issues.removeLabel({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              name: 'automerge'
-            })
-            github.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: 'CI failed when running job: ${{ matrix.entry }}. PR label automerge has been removed'
-            })
-      - name: Remove container
-        timeout-minutes: 45
-        if: ${{ always() && contains(matrix.runs-on, 'self-hosted') }}
-        run: |
-          docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
 
   test-distributed:
     name: Distributed test suite
-    needs: [wait_for_gpu_slot, find-test-cache-distributed]
+    needs: [wait_for_gpu_slot, find-test-cache-distributed, test]
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 120
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && false
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.labels.*.name, 'need-test-distributed')
     concurrency:
       group: distributed-test-${{ matrix.entry }}-rank-${{ matrix.rank }}
       cancel-in-progress: false
@@ -670,12 +444,36 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
+      - name: Checkout Oneflow-Inc/vision
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/vision
+          # please use a commit here
+          ref: ${{ env.FLOW_VISION_COMMIT}}
+          path: ${{ env.FLOW_VISION_SRC}}
+      - name: Checkout Oneflow-Inc/libai
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/libai
+          # please use a commit here
+          ref: ${{ env.LIBAI_COMMIT}}
+          path: ${{ env.LIBAI_SRC}}
+      - name: Checkout Oneflow-Inc/oneflow_iree
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/oneflow_iree
+          # please use a commit here
+          ref: ${{ env.ONEFLOW_IREE_COMMIT}}
+          path: ${{ env.ONEFLOW_IREE_SRC}}
       - name: Remove container
         timeout-minutes: 45
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@update-open-vino-img
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-iree-ci
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -691,7 +489,7 @@ jobs:
           exit 1
       - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@update-open-vino-img
+        uses: Oneflow-Inc/get-oneflow/digest/download@support-iree-ci
         id: download-digest
         timeout-minutes: 10
         with:
@@ -701,7 +499,7 @@ jobs:
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
       - name: Get primary node
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/master-address@update-open-vino-img
+        uses: Oneflow-Inc/get-oneflow/master-address@support-iree-ci
         id: get-primary-node
         with:
           rank: ${{ matrix.rank }}
@@ -752,7 +550,7 @@ jobs:
             -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
             -e ONEFLOW_TIMEOUT_SECONDS=${{ env.ONEFLOW_TIMEOUT_SECONDS }} \
             -e ONEFLOW_THRAED_LOCAL_CACHED_SIZE=${{ env.ONEFLOW_THRAED_LOCAL_CACHED_SIZE }} \
-            -e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 \
+            ${{ env.MLIR_DOCKER_ARGS }} \
             --name ${TEST_CONTAINER_NAME} \
             ${{ env.EXTRA_DOCKER_ARGS }} \
             ${{ env.TEST_WITH_TORCH_IMG_TAG }} \
@@ -768,6 +566,13 @@ jobs:
           ls ${ONEFLOW_WHEEL_PATH}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links=${ONEFLOW_WHEEL_PATH} oneflow
+      - name: Install downstream libs
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        run: |
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.FLOW_VISION_SRC}}
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install pybind11 --user
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.LIBAI_SRC}}
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.ONEFLOW_IREE_SRC}}
       - name: Module API test (distributed)
         timeout-minutes: 90
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) }}
@@ -820,12 +625,14 @@ jobs:
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     strategy:
       fail-fast: ${{ !contains(github.event.pull_request.labels.*.name, 'need-all-tests-even-fail') }}
-      max-parallel: 5
+      max-parallel: 10
       matrix: ${{ fromJson(needs.find-test-cache.outputs.matrix) }}
     env:
       ONEFLOW_SRC: .
       TEST_CONTAINER_NAME: "pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${{ matrix.entry }}-test"
+      TEST_MANYLINUX_CONTAINER_NAME: "pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${{ matrix.entry }}-test-manylinux"
       TEST_WITH_TF_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-tf-2.3.0:2f831e9354298a11447578e869d983959feb046f
+      TEST_MANYLINUX_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/manylinux2014_x86_64_cuda10.2:4fd9cc268bbe59c6245ca3941b8264fd256a8670
       SSH_TANK_HOST: 192.168.1.13
       SSH_TANK_PATH: /tank
       METRICS_DIR: metrics
@@ -857,12 +664,33 @@ jobs:
           # please use a commit here
           ref: ${{ env.LIBAI_COMMIT}}
           path: ${{ env.LIBAI_SRC}}
+      - name: Checkout Oneflow-Inc/oneflow_face
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/oneflow_face
+          # please use a commit here
+          ref: ${{ env.ONEFLOW_FACE_COMMIT}}
+          path: ${{ env.ONEFLOW_FACE_SRC}}
+      - name: Checkout Oneflow-Inc/oneflow_iree
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/oneflow_iree
+          # please use a commit here
+          ref: ${{ env.ONEFLOW_IREE_COMMIT}}
+          path: ${{ env.ONEFLOW_IREE_SRC}}
       - name: Remove container
         timeout-minutes: 45
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@update-open-vino-img
+      - name: Remove manylinux container
+        timeout-minutes: 45
+        if: ${{ contains(matrix.runs-on, 'self-hosted') }}
+        run: |
+          docker rm -f ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} || true
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-iree-ci
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -878,7 +706,7 @@ jobs:
           exit 1
       - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@update-open-vino-img
+        uses: Oneflow-Inc/get-oneflow/digest/download@support-iree-ci
         id: download-digest
         timeout-minutes: 10
         with:
@@ -958,21 +786,46 @@ jobs:
             -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
             -e ONEFLOW_TIMEOUT_SECONDS=${{ env.ONEFLOW_TIMEOUT_SECONDS }} \
             -e ONEFLOW_THRAED_LOCAL_CACHED_SIZE=${{ env.ONEFLOW_THRAED_LOCAL_CACHED_SIZE }} \
-            -e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 \
+            ${{ env.MLIR_DOCKER_ARGS }} \
             --name ${TEST_CONTAINER_NAME} \
             ${{ env.EXTRA_DOCKER_ARGS }} \
             ${{ env.TEST_IMG_TAG }} \
+            sleep 7200
+      - name: Start manylinux container
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        working-directory: ${{ env.ONEFLOW_SRC }}
+        run: |
+          docker run -d --rm --privileged --shm-size=8g \
+            --pids-limit ${{ env.THREAD_LIMIT }} \
+            --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
+            --runtime=nvidia \
+            -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \
+            -v ${ONEFLOW_WHEEL_PATH}:${ONEFLOW_WHEEL_PATH}:ro \
+            -v $HOME/test-container-cache/dot-local:/root/.local \
+            -v $HOME/test-container-cache/dot-cache:/root/.cache \
+            -e ONEFLOW_WHEEL_PATH=${ONEFLOW_WHEEL_PATH} \
+            -e ONEFLOW_CI=1 \
+            -v $PWD:$PWD \
+            -w $PWD \
+            -v ${ONEFLOW_TEST_CACHE_DIR}:${ONEFLOW_TEST_CACHE_DIR} \
+            -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
+            -e ONEFLOW_TIMEOUT_SECONDS=${{ env.ONEFLOW_TIMEOUT_SECONDS }} \
+            -e ONEFLOW_THRAED_LOCAL_CACHED_SIZE=${{ env.ONEFLOW_THRAED_LOCAL_CACHED_SIZE }} \
+            ${{ env.MLIR_DOCKER_ARGS }} \
+            --name ${TEST_MANYLINUX_CONTAINER_NAME} \
+            ${{ env.EXTRA_DOCKER_ARGS }} \
+            ${{ env.TEST_MANYLINUX_IMG_TAG }} \
             sleep 7200
       - name: Exe test
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         timeout-minutes: 10
         run: |
-          docker exec ${{ env.TEST_CONTAINER_NAME }} ./liboneflow-ci-linux/bin/oneflow_testexe
+          docker exec ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} ./liboneflow-ci-linux/bin/oneflow_testexe
       - name: Exe test (C++ API)
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         timeout-minutes: 10
         run: |
-          docker exec -e ONEFLOW_SERVING_DEBUG=1 ${{ env.TEST_CONTAINER_NAME }} ./liboneflow-ci-linux/bin/oneflow_cpp_api_testexe
+          docker exec -e ONEFLOW_SERVING_DEBUG=1 ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} ./liboneflow-ci-linux/bin/oneflow_cpp_api_testexe
       - name: Test container
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
@@ -990,6 +843,8 @@ jobs:
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.FLOW_VISION_SRC}}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install pybind11 --user
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.LIBAI_SRC}}
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.ONEFLOW_FACE_SRC}}
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.ONEFLOW_IREE_SRC}}
       - name: Run OneFlow doctor
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
@@ -1074,7 +929,7 @@ jobs:
               body: "<details>\n <summary>Speed stats:</summary>\n\n ``` \n${{ steps.speed.outputs.stats }}\n ``` \n\n</details>".replace(/\\n/g, '\n')
             })
       - name: Module API test
-        timeout-minutes: 140
+        timeout-minutes: 60
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
@@ -1092,11 +947,22 @@ jobs:
           docker exec -e ONEFLOW_TEST_DEVICE_NUM=4 -w $PWD/${{ env.LIBAI_SRC }} ${{ env.TEST_CONTAINER_NAME }} python3 -m oneflow.distributed.launch --nproc_per_node 4 -m unittest -f tests/models/test_gpt.py
           docker exec -e ONEFLOW_TEST_DEVICE_NUM=4 -w $PWD/${{ env.LIBAI_SRC }} ${{ env.TEST_CONTAINER_NAME }} python3 -m oneflow.distributed.launch --nproc_per_node 4 -m unittest -f tests/models/test_t5.py
           docker exec -e ONEFLOW_TEST_DEVICE_NUM=4 -w $PWD/${{ env.LIBAI_SRC }} ${{ env.TEST_CONTAINER_NAME }} python3 -m oneflow.distributed.launch --nproc_per_node 4 -m unittest -f tests/models/test_vit.py
+      - name: oneflow_face test
+        timeout-minutes: 30
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cuda' }}
+        run: |
+          docker exec -e ONEFLOW_TEST_DEVICE_NUM=4 -w $PWD/${{ env.ONEFLOW_FACE_SRC }} ${{ env.TEST_CONTAINER_NAME }} python3 -m oneflow.distributed.launch --nproc_per_node 4 -m unittest -f tests/train/test_train.py
+      - name: oneflow_iree test
+        timeout-minutes: 45
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
+        run: |
+          docker exec -w $PWD/${{ env.ONEFLOW_IREE_SRC }} ${{ env.TEST_CONTAINER_NAME }} python3 -m pytest examples
       - name: Expensive tests (models, cases require exclusive access to GPU)
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && (matrix.test-type == 'speed-test' || (matrix.test-type == 'misc' && matrix.device == 'cpu')) && !fromJson(matrix.is-distributed) }}
         run: |
           docker exec \
+            -e ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB=1024 \
             -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/expensive \
             ${{ env.TEST_CONTAINER_NAME }} bash ci/test/expensive_generic_test_multi_client.sh
       - name: Exception API test
@@ -1113,6 +979,15 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/tensor ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
+      - name: Benchmark Test
+        timeout-minutes: 100
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'benchmark' && matrix.device == 'cuda' }}
+        uses: Oneflow-Inc/get-oneflow/pytest-benchmark@support-iree-ci
+        with:
+          collect-path: ${{ env.FLOW_VISION_SRC }}/benchmark
+          container-name: ${{ env.TEST_CONTAINER_NAME }}
+          unknown-threshold: 30
+          error-threshold: 40
       - name: Remove automerge
         if: ${{ failure() && contains(matrix.runs-on, 'self-hosted') && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge') }}
         uses: actions/github-script@v4
@@ -1146,6 +1021,15 @@ jobs:
         if: ${{ always() && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
+      - name: Remove manylinux container
+        timeout-minutes: 45
+        if: ${{ always() && contains(matrix.runs-on, 'self-hosted') }}
+        run: |
+          docker rm -f ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} || true
+      - name: Clean workspace
+        timeout-minutes: 45
+        if: ${{ always() && contains(matrix.runs-on, 'self-hosted') }}
+        run: |
           docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
 
   static_analysis_with_clang_on_diff:
@@ -1160,7 +1044,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@update-open-vino-img
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-iree-ci
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -1177,9 +1061,9 @@ jobs:
       - name: Download OneFlow custom clang-tidy
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         run: |
-          wget https://github.com/Oneflow-Inc/llvm-project/releases/download/llvmorg-13.0.0-maybe/clang-tidy-13.AppImage
+          wget https://github.com/Oneflow-Inc/llvm-project/releases/download/maybe-14.0.4/clang-tidy-14.AppImage
           wget https://raw.githubusercontent.com/oneflow-inc/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py
-          chmod +x clang-tidy-13.AppImage clang-tidy-diff.py
+          chmod +x clang-tidy-14.AppImage clang-tidy-diff.py
       - name: Cache third party dir
         uses: actions/cache@v2
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
@@ -1201,7 +1085,7 @@ jobs:
             -DBUILD_TESTING=OFF \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-          cmake --build . -j$(nproc) --target oneflow_deps of_cfgobj of_protoobj of_functional_obj of_functional_tensor_obj of_op_schema
+          cmake --build . -j$(nproc) --target oneflow_deps of_protoobj of_functional_obj of_functional_tensor_obj of_op_schema
       - name: Fetch upstream
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) && github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name }}
         run: |
@@ -1220,11 +1104,11 @@ jobs:
             -DBUILD_TESTING=OFF \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           cd ..
-          git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-13.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -warnings-as-errors="$(cat ./ci/check/clang_tidy_warnings_as_errors_on_diff)"
+          git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-14.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -warnings-as-errors="$(cat ./ci/check/clang_tidy_warnings_as_errors_on_diff)"
       - name: Check error message absence in changed files
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) && contains(github.event.pull_request.labels.*.name, 'need-check-error-message') }}
         run: |
-          git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-13.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -checks=-*,maybe-need-error-msg -warnings-as-errors=* -skip-line-filter
+          git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-14.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -checks=-*,maybe-need-error-msg -warnings-as-errors=* -skip-line-filter
       - name: Remove automerge
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) && failure() && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge') }}
         uses: actions/github-script@v4

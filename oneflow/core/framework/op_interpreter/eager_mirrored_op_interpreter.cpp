@@ -20,18 +20,16 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
-#include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/framework/stride.h"
-#include "oneflow/core/eager/foreign_boxing_util.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
@@ -59,7 +57,9 @@ Maybe<EagerMirroredTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>&
 
 class MutMirroredTensorMeta : public TensorMeta {
  public:
-  MutMirroredTensorMeta() : TensorMeta(std::make_shared<const Shape>(), kInvalidDataType) {}
+  MutMirroredTensorMeta()
+      : TensorMeta(std::make_shared<const Shape>(), std::make_shared<const Stride>(),
+                   kInvalidDataType) {}
   MutMirroredTensorMeta(const MutMirroredTensorMeta&) = default;
   MutMirroredTensorMeta(MutMirroredTensorMeta&&) = default;
   ~MutMirroredTensorMeta() override = default;
@@ -119,7 +119,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
   // Infer devices
   if (!user_op_expr.has_device_and_stream_infer_fn()) {
-    stream = GetDefaultStreamByDevice(default_device);
+    stream = JUST(GetDefaultStreamByDevice(default_device));
     for (int i = 0; i < outputs->size(); i++) {
       auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
       *JUST(tensor_impl->mut_device()) = default_device;
@@ -131,10 +131,10 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
   // Infer shapes and dtypes
   const auto& device_tag = stream->device()->type();
-  JUST(user_op_expr.InferPhysicalShapeAndDType(
+  JUST(user_op_expr.InferPhysicalTensorDesc(
       attrs, device_tag,
       [&](int32_t i) -> const TensorMeta* {
-        return CHECK_JUST(TensorImpl4Tensor(inputs.at(i)))->mut_tensor_meta();
+        return CHECK_JUST(TensorImpl4Tensor(inputs[i]))->mut_tensor_meta();
       },
       [&](int32_t i) -> TensorMeta* {
         // using thread_local TensorMeta pointer if inplace.
@@ -142,18 +142,26 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
         return output_tensor_metas->at(i);
       }));
 
-  const bool pin_memory = ctx.pin_memory.value_or(false);
   for (int i = 0; i < output_eager_blob_objects->size(); i++) {
     auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
     if (!output_eager_blob_objects->at(i)) {
-      tensor_impl->mut_tensor_meta()->set_stride(std::make_shared<Stride>(*tensor_impl->shape()));
+      // NOTE: if op support stride(non-contiguous input), then output tensor's stride
+      // should be inferred in InferLogicalTensorDesc.
+      // otherwise, it will be set here(according to shape).
+      if (!JUST(user_op_expr.SupportNonContiguous())) {
+        std::shared_ptr<Stride> stride(new Stride(*tensor_impl->shape()));
+        tensor_impl->mut_tensor_meta()->set_stride(stride);
+      }
       const auto& dep_object = NewLocalDepObject();
-      JUST(tensor_impl->InitEagerBlobObject(dep_object, pin_memory));
+      JUST(tensor_impl->InitEagerBlobObject(dep_object));
       output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
     } else {
       // output i is inplaced.
       // check thread_local TensorMeta and tensor_impl TensorMeta.
       CHECK_OR_RETURN(tensor_impl->tensor_meta()->shape() == output_tensor_metas->at(i)->shape());
+      // TODO:(thread_local TensorMeta set stride then check)
+      // CHECK_OR_RETURN(tensor_impl->tensor_meta()->stride() ==
+      // output_tensor_metas->at(i)->stride());
       CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype() == output_tensor_metas->at(i)->dtype());
     }
   }
@@ -166,8 +174,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
 
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      ctx, stream);
+    return builder->Call(kernel, input_eager_blob_objects, output_eager_blob_objects, ctx, stream);
   }));
   return Maybe<void>::Ok();
 }

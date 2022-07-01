@@ -19,6 +19,7 @@ limitations under the License.
 #include <Python.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
+#include "oneflow/api/python/framework/tensortype.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
@@ -30,7 +31,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/functional/functional.h"
@@ -124,26 +125,17 @@ static PyObject* PyTensorObject_subscript(PyObject* self, PyObject* item) {
   END_HANDLE_ERRORS
 }
 
-static int PyTensorObject_ass_subscript(PyObject* self, PyObject* item, PyObject* value) {
-  HANDLE_ERRORS
-  const auto& p = PyTensor_Unpack(self);
-  const auto& v = PyTensor_Unpack(value);
-  functional::PythonArg arg(item);
-  ASSERT(functional::TensorSetItem(p, arg.As<functional::TensorIndex>(), v));
-  return 0;
-  END_HANDLE_ERRORS_RET(-1)
-}
-
 static PySequenceMethods PyTensorObject_as_sequence = {
     (lenfunc)PyTensorObject_length, NULL, /*sq_concat*/
     NULL,                                 /*sq_repeat*/
     (ssizeargfunc)PyTensorObject_getitem, /*sq_item*/
 };
 
+extern int PyTensorObject_setitem(PyObject*, PyObject*, PyObject*);
 static PyMappingMethods PyTensorObject_as_mapping = {
     (lenfunc)PyTensorObject_length,
     (binaryfunc)PyTensorObject_subscript,
-    (objobjargproc)PyTensorObject_ass_subscript,
+    (objobjargproc)PyTensorObject_setitem,
 };
 
 static PyObject* PyTensorObject_storage_offset(PyObject* self, PyObject* unused) {
@@ -155,9 +147,9 @@ static PyObject* PyTensorObject_storage_offset(PyObject* self, PyObject* unused)
 static PyObject* PyTensorObject_stride(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   const auto& stride = ASSERT_PTR(PyTensor_Unpack(self)->stride());
-  PyObject* tup = PyTuple_New(stride->NumAxes());
-  for (int i = 0; i < stride->NumAxes(); ++i) {
-    PyTuple_SetItem(tup, i, PyLong_FromUnsignedLong(stride->At(i)));
+  PyObject* tup = PyTuple_New(stride->size());
+  for (int i = 0; i < stride->size(); ++i) {
+    PyTuple_SetItem(tup, i, PyLong_FromUnsignedLong(stride->at(i)));
   }
   return tup;
   END_HANDLE_ERRORS
@@ -175,9 +167,22 @@ static PyObject* PyTensorObject_contiguous(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_contiguous_(PyObject* self, PyObject* unused) {
+  // NOTE: inplace version of contiguous
+  HANDLE_ERRORS
+  return PyTensor_New(ASSERT_PTR(functional::InplaceToContiguous(PyTensor_Unpack(self))));
+  END_HANDLE_ERRORS
+}
+
 static PyObject* PyTensorObject_pin_memory(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   return PyTensor_New(PyTensor_Unpack(self)->pin_memory());
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_is_pinned(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  return functional::CastToPyObject(CHECK_JUST(PyTensor_Unpack(self)->is_pinned()));
   END_HANDLE_ERRORS
 }
 
@@ -275,6 +280,45 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  const auto& tensor = PyTensor_Unpack(self);
+  PyObject* tensor_type = NULL;
+  int non_blocking = 0;
+  static const char* keywords[3] = {"dtype", "non_blocking", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|Op:type", const_cast<char**>(keywords),
+                                   &tensor_type, &non_blocking)) {
+    return NULL;
+  }
+  // TODO: support non_blocking=True
+  if (non_blocking == 1) {
+    return PyErr_Format(PyExc_TypeError, "non_blocking=True is not supported yet");
+  }
+  if (tensor_type == NULL) {
+    tensor_type =
+        PyTensorType_FromDTypeAndDeviceType(tensor->dtype(), ASSERT(tensor->device())->enum_type());
+    return PyUnicode_FromString(((PyTensorType*)tensor_type)->name);
+  }
+  if (PyUnicode_Check(tensor_type)) {
+    tensor_type = PyTensorType_FromString(PyUnicode_AsUTF8(tensor_type));
+  }
+  if (PyTensorType_Check(tensor_type)) {
+    const auto& dtype = PyTensorType_UnpackDType(tensor_type);
+    DeviceType device_type = PyTensorType_UnpackDevice(tensor_type);
+    if (device_type == ASSERT(tensor->device())->enum_type()) {
+      return PyTensor_New(ASSERT_PTR(functional::To(tensor, dtype, /*copy=*/false)));
+    }
+    Optional<std::string> device = ASSERT(DeviceTag4DeviceType(device_type));
+    return PyTensor_New(ASSERT_PTR(functional::To(tensor, device, dtype, /*copy=*/false)));
+
+  } else if (functional::PyDTypeCheck(tensor_type)) {
+    return PyTensor_New(
+        ASSERT_PTR(functional::To(tensor, functional::PyUnpackDType(tensor_type), /*copy=*/false)));
+  }
+  return PyErr_Format(PyExc_TypeError, "dtype must be a type, str, or dtype object");
+  END_HANDLE_ERRORS
+}
+
 #define DEFINE_TENSOR_METHOD(T, type_proto)                                               \
   static PyObject* PyTensorObject__copy_to_numpy_##T(PyObject* self, PyObject* array) {   \
     HANDLE_ERRORS                                                                         \
@@ -290,6 +334,7 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
     ASSERT(CopyBetweenMirroredTensorAndNumpy<T>(PyTensor_Unpack(self), copied,            \
                                                 BlobNumpyCopyUtil<T>::From, "mut",        \
                                                 /*block_host_until_done=*/false));        \
+    Py_DECREF(copied);                                                                    \
     Py_RETURN_NONE;                                                                       \
     END_HANDLE_ERRORS                                                                     \
   }
@@ -320,12 +365,29 @@ static PyObject* PyTensorObject__register_storage_delete_hook(PyObject* self, Py
   END_HANDLE_ERRORS
 }
 
+static std::vector<PyMethodDef> concat_method_def(PyMethodDef methods[],
+                                                  PyMethodDef extra_methods[]) {
+  int len1 = 0;
+  int len2 = 0;
+  PyMethodDef* p1 = methods;
+  PyMethodDef* p2 = extra_methods;
+  while ((p1++)->ml_name != NULL) { len1++; }
+  while ((p2++)->ml_name != NULL) { len2++; }
+  std::vector<PyMethodDef> total_methods(len1 + len2 + 1);
+  for (int i = 0; i < len1; i++) total_methods[i] = methods[i];
+  for (int i = 0; i < len2; i++) total_methods[i + len1] = extra_methods[i];
+  total_methods[len1 + len2] = {NULL};
+  return total_methods;
+}
+
 static PyMethodDef PyTensorObject_methods[] = {
     {"storage_offset", PyTensorObject_storage_offset, METH_NOARGS, NULL},
     {"stride", PyTensorObject_stride, METH_NOARGS, NULL},
     {"is_contiguous", PyTensorObject_is_contiguous, METH_NOARGS, NULL},
     {"contiguous", PyTensorObject_contiguous, METH_NOARGS, NULL},
+    {"contiguous_", PyTensorObject_contiguous_, METH_NOARGS, NULL},
     {"pin_memory", PyTensorObject_pin_memory, METH_NOARGS, NULL},
+    {"is_pinned", PyTensorObject_is_pinned, METH_NOARGS, NULL},
     {"requires_grad_", (PyCFunction)PyTensorObject_requires_grad_, METH_VARARGS | METH_KEYWORDS,
      NULL},
     {"retain_grad", PyTensorObject_retain_grad, METH_NOARGS, NULL},
@@ -338,6 +400,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"global_id", PyTensorObject_global_id, METH_NOARGS, NULL},
     {"check_meta_consistency", PyTensorObject_check_meta_consistency, METH_NOARGS, NULL},
     {"to_numpy", PyTensorObject_to_numpy, METH_NOARGS, NULL},
+    {"type", (PyCFunction)PyTensorObject_type, METH_VARARGS | METH_KEYWORDS, NULL},
 #define DEFINE_TENSOR_METHOD(T, type_proto)                                \
   {"_copy_to_numpy_" #T, PyTensorObject__copy_to_numpy_##T, METH_O, NULL}, \
       {"_copy_from_numpy_" #T, PyTensorObject__copy_from_numpy_##T, METH_O, NULL},
@@ -531,6 +594,10 @@ static PyHeapTypeObject* MakeTensorMetaclass() {
   return heap_type;
 }
 
+extern PyNumberMethods PyTensorObject_as_number;
+extern PyObject* PyTensorObject_richcompare(PyObject*, PyObject*, int);
+extern PyMethodDef PyTensorObject_extra_methods[];
+
 static PyHeapTypeObject* TensorMetaclass_Type = MakeTensorMetaclass();
 
 static PyTypeObject* MakeTensorType() {
@@ -548,11 +615,16 @@ static PyTypeObject* MakeTensorType() {
   type->tp_init = PyTensorObject_init;
   type->tp_dealloc = PyTensorObject_dealloc;
   type->tp_getset = PyTensorObject_properties;
-  type->tp_methods = PyTensorObject_methods;
 
-  type->tp_as_number = &heap_type->as_number;
+  static std::vector<PyMethodDef> total_methods =
+      concat_method_def(PyTensorObject_methods, PyTensorObject_extra_methods);
+  type->tp_methods = total_methods.data();
+
+  type->tp_as_number = &PyTensorObject_as_number;
   type->tp_as_sequence = &PyTensorObject_as_sequence;
   type->tp_as_mapping = &PyTensorObject_as_mapping;
+  type->tp_richcompare = PyTensorObject_richcompare;
+  type->tp_hash = (hashfunc)_Py_HashPointer;
 
   type->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HEAPTYPE;
 

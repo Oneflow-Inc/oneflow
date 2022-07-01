@@ -28,7 +28,7 @@ limitations under the License.
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/blocking_then_busy.h"
 #include "oneflow/core/vm/virtual_machine.h"
@@ -70,8 +70,8 @@ inline static Maybe<PyObject*> EagerMirroredTensorToNumpy(PyObject* py_tensor) {
   const size_t ndim = tensor->ndim();
   const auto shape = numpy::OFShapeToNumpyShape(tensor->shape()->dim_vec());
   // NumPy strides use bytes. OneFlow strides use element counts.
-  const auto stride = numpy::OFStrideToNumpyStride(JUST(tensor->stride())->StrideVec(),
-                                                   tensor->dtype()->data_type());
+  const auto stride =
+      numpy::OFStrideToNumpyStride(*JUST(tensor->stride()), tensor->dtype()->data_type());
 
   T* data_ptr = nullptr;
   const auto& Callback = [&](uint64_t ofblob_ptr) {
@@ -110,7 +110,7 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
   } else {
     Py_INCREF(array);
     NumPyArrayPtr array_ptr(array, [array]() {
-      CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+      CHECK_JUST(Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
         Py_DECREF(array);
         return Maybe<void>::Ok();
       }));
@@ -141,25 +141,27 @@ Maybe<void> RegisterTensorPostGradAccumulationHook(const std::shared_ptr<Tensor>
 Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor);
 
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
-                                      const Optional<Symbol<Device>>& device, bool requires_grad);
+                                      const Optional<Symbol<Device>>& device,
+                                      const bool requires_grad, const bool pin_memory);
 
 Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                            Symbol<ParallelDesc> placement,
                                            const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                                           bool requires_grad);
+                                           const bool requires_grad);
 
-Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other);
+Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
+                                        const bool pin_memory);
 
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const Optional<Symbol<DType>>& dtype,
                                         const Optional<Symbol<Device>>& device,
-                                        const bool& requires_grad);
+                                        const bool requires_grad, const bool pin_memory);
 
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const Optional<Symbol<DType>>& dtype,
                                         const Symbol<ParallelDesc>& placement,
                                         const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                                        const bool& requires_grad);
+                                        const bool requires_grad);
 
 }  // namespace one
 }  // namespace oneflow

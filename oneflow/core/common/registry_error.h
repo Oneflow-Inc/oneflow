@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_REGISTRY_ERROR_H
 #define ONEFLOW_CORE_COMMON_REGISTRY_ERROR_H
 
+#include <functional>
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {

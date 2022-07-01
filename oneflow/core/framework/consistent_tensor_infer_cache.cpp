@@ -100,7 +100,8 @@ Maybe<void> ConsistentTensorMetaInferArgs::MakeInputBlobDescs(
   for (int i = 0; i < input_arg_tuple.size(); ++i) {
     const auto& tensor_meta = *input_consistent_tensor_metas_.at(i).tensor_meta();
     const auto& shape = std::const_pointer_cast<Shape>(tensor_meta.shape_ptr());
-    blob_descs->emplace_back(shape, tensor_meta.data_type());
+    const auto& stride = std::const_pointer_cast<Stride>(tensor_meta.stride_ptr());
+    blob_descs->emplace_back(shape, stride, tensor_meta.data_type());
   }
   return Maybe<void>::Ok();
 }
@@ -265,7 +266,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
   {
     // Infer OpArgMutConsistentTensorMeta.
     const auto& input_metas = infer_args.input_consistent_tensor_metas();
-    JUST(user_op_expr.InferLogicalShapeAndDType(
+    JUST(user_op_expr.InferLogicalTensorDesc(
         infer_args.attrs(), parallel_desc,
         [&](int32_t i) { return &*input_metas.at(i).tensor_meta(); },
         [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
@@ -329,7 +330,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
       UNIMPLEMENTED();
       return nullptr;
     };
-    JUST(user_op_expr.InferLogicalShapeAndDType(
+    JUST(user_op_expr.InferLogicalTensorDesc(
         infer_args.attrs(), parallel_desc, GetInputTensorMeta,
         [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
   }

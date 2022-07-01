@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace autograd {
@@ -65,7 +66,14 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
       CHECK_OR_RETURN(*(outputs.at(i)->shape()) == *(out_grads.at(i)->shape()))
           << "out_grad's shape must be same as output's (" << outputs.at(i)->shape()->ToString()
           << " vs " << out_grads.at(i)->shape()->ToString() << ")";
-      gradients->at(i) = out_grads.at(i);
+      // if (outputs.at(i)->dtype() != out_grads.at(i)->dtype()) {
+      if (JUST(oneflow::VectorAt(outputs, i))->dtype()
+          != JUST(oneflow::VectorAt(out_grads, i))->dtype()) {
+        JUST(oneflow::VectorAt(*gradients, i)) =
+            JUST(one::functional::Cast(out_grads[i], outputs[i]->dtype(), /*pin_memory=*/false));
+      } else {
+        JUST(oneflow::VectorAt(*gradients, i)) = out_grads[i];
+      }
     }
   }
   return gradients;

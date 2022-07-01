@@ -189,7 +189,7 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
       : device_index_(-1), generator_(CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA))) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
-    key_value_store_ = Global<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
+    key_value_store_ = Singleton<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
         ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
     uint32_t max_query_length =
         ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
@@ -257,7 +257,7 @@ class EmbeddingPutKernelState final : public user_op::OpKernelState {
   explicit EmbeddingPutKernelState(user_op::KernelInitContext* ctx) : device_index_(-1) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
-    key_value_store_ = Global<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
+    key_value_store_ = Singleton<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
         ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
     uint32_t max_query_length =
         ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
@@ -488,10 +488,10 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
     uint32_t num_unique;
     T* values_ptr = nullptr;
-    LookupAndInitMissing<T, U, IDX>(ctx->stream(), embedding_state, unique_ids->shape().elem_cnt(),
-                                    embedding_size, line_size, num_unique_ids->dptr(),
-                                    unique_ids->dptr(), table_ids->dptr(), values_ptr,
-                                    tmp_buffer->mut_dptr(), &num_unique, true);
+    LookupAndInitMissing<T, U, IDX>(ctx->stream(), embedding_state,
+                                    unique_ids->shape_view().elem_cnt(), embedding_size, line_size,
+                                    num_unique_ids->dptr(), unique_ids->dptr(), table_ids->dptr(),
+                                    values_ptr, tmp_buffer->mut_dptr(), &num_unique, true);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -556,9 +556,9 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
     uint32_t num_unique;
     LookupAndInitMissing<T, U, IDX>(
-        ctx->stream(), embedding_state, unique_ids->shape().elem_cnt(), embedding_size, line_size,
-        num_unique_ids->dptr(), unique_ids->dptr(), table_ids->dptr(), unique_values->mut_dptr<T>(),
-        tmp_buffer->mut_dptr(), &num_unique, false);
+        ctx->stream(), embedding_state, unique_ids->shape_view().elem_cnt(), embedding_size,
+        line_size, num_unique_ids->dptr(), unique_ids->dptr(), table_ids->dptr(),
+        unique_values->mut_dptr<T>(), tmp_buffer->mut_dptr(), &num_unique, false);
     if (ctx->has_output("embeddings", 0)) {
       user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
       CopyValuesToEmbeddings<T>(ctx->stream(), num_unique, embedding_size, line_size,

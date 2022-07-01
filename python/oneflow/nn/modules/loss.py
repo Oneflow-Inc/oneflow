@@ -33,7 +33,7 @@ class _WeightedLoss(_Loss):
         self, weight: Optional[Tensor] = None, reduction: str = "mean"
     ) -> None:
         super(_WeightedLoss, self).__init__(reduction=reduction)
-        self.weight = weight
+        self.register_buffer("weight", weight)
 
 
 class L1Loss(_Loss):

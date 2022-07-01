@@ -47,7 +47,7 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   Maybe(const Error& error) : data_or_error_(error.error_proto()) {}
   Maybe(const std::shared_ptr<T>& data) : data_or_error_(data) {}
   Maybe(std::shared_ptr<T>&& data) : data_or_error_(std::move(data)) {}
-  Maybe(const std::shared_ptr<cfg::ErrorProto>& error) : data_or_error_(error) {}
+  Maybe(const std::shared_ptr<ErrorProto>& error) : data_or_error_(error) {}
   Maybe(const Maybe&) = default;
   Maybe(Maybe&& other) : data_or_error_(std::move(other.data_or_error_)) {}
   ~Maybe() = default;
@@ -56,9 +56,7 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   std::shared_ptr<T> Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
     return data_or_error_.template Get<T>();
   }
-  std::shared_ptr<cfg::ErrorProto> error() const {
-    return data_or_error_.template Get<cfg::ErrorProto>();
-  }
+  std::shared_ptr<ErrorProto> error() const { return data_or_error_.template Get<ErrorProto>(); }
 
   std::string GetSerializedError() const {
     CHECK(!IsOk());
@@ -69,7 +67,7 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   Type GetDataAndSerializedErrorProto(std::string* error_str, const Type& default_for_error) const {
     static_assert(std::is_same<T, Type>::value, "error type for argument 1");
     if (IsOk()) {
-      *error_str = cfg::ErrorProto().DebugString();
+      *error_str = ErrorProto().DebugString();
       return *Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
     } else {
       *error_str = this->error()->DebugString();
@@ -78,20 +76,20 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   }
 
   template<typename Type = T>
-  std::pair<Type, std::shared_ptr<cfg::ErrorProto>> GetDataAndErrorProto(
+  std::pair<Type, std::shared_ptr<ErrorProto>> GetDataAndErrorProto(
       const Type& default_for_error) const {
     if (IsOk()) {
       return std::make_pair(*Data_YouAreNotAllowedToCallThisFuncOutsideThisFile(),
-                            std::shared_ptr<cfg::ErrorProto>());
+                            std::shared_ptr<ErrorProto>());
     } else {
       return std::make_pair(default_for_error, error());
     }
   }
 
-  std::pair<std::shared_ptr<T>, std::shared_ptr<cfg::ErrorProto>> GetDataPtrAndErrorProto() const {
+  std::pair<std::shared_ptr<T>, std::shared_ptr<ErrorProto>> GetDataPtrAndErrorProto() const {
     if (IsOk()) {
       return std::make_pair(Data_YouAreNotAllowedToCallThisFuncOutsideThisFile(),
-                            std::shared_ptr<cfg::ErrorProto>());
+                            std::shared_ptr<ErrorProto>());
     } else {
       return std::make_pair(std::shared_ptr<T>(), error());
     }
@@ -109,14 +107,14 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   }
 
  private:
-  EitherPtr<T, cfg::ErrorProto> data_or_error_;
+  EitherPtr<T, ErrorProto> data_or_error_;
 };
 
 template<typename T>
 class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> final {
  public:
   Maybe(const Error& error) : error_or_scalar_(error.error_proto()) { CheckError(); }
-  Maybe(const std::shared_ptr<cfg::ErrorProto>& error) : error_or_scalar_(error) { CheckError(); }
+  Maybe(const std::shared_ptr<ErrorProto>& error) : error_or_scalar_(error) { CheckError(); }
   Maybe(const Maybe&) = default;
   Maybe(Maybe&&) = default;
   ~Maybe() = default;
@@ -125,7 +123,7 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
 
   bool IsOk() const { return error_or_scalar_.IsScalar(); }
   void Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {}
-  std::shared_ptr<cfg::ErrorProto> error() const { return error_or_scalar_.shared_ptr(); }
+  std::shared_ptr<ErrorProto> error() const { return error_or_scalar_.shared_ptr(); }
 
   std::string GetSerializedError() const {
     CHECK(!IsOk());
@@ -134,15 +132,15 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
 
   void GetDataAndSerializedErrorProto(std::string* error_str) const {
     if (IsOk()) {
-      *error_str = cfg::ErrorProto().DebugString();
+      *error_str = ErrorProto().DebugString();
     } else {
       *error_str = this->error()->DebugString();
     }
   }
 
-  std::shared_ptr<cfg::ErrorProto> GetDataAndErrorProto() const {
+  std::shared_ptr<ErrorProto> GetDataAndErrorProto() const {
     if (IsOk()) {
-      return std::shared_ptr<cfg::ErrorProto>();
+      return std::shared_ptr<ErrorProto>();
     } else {
       return error();
     }
@@ -156,13 +154,13 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
  private:
   Maybe() : error_or_scalar_(nullptr) {}
   void CheckError() const {
-    CHECK_NE(this->error()->error_type_case(), cfg::ErrorProto::ERROR_TYPE_NOT_SET);
+    CHECK_NE(this->error()->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET);
   }
 
-  SharedOrScalar<cfg::ErrorProto, void*> error_or_scalar_;
+  SharedOrScalar<ErrorProto, void*> error_or_scalar_;
 };
 
-inline const std::shared_ptr<cfg::ErrorProto>& UninitializedValueError() {
+inline const std::shared_ptr<ErrorProto>& UninitializedValueError() {
   static thread_local const auto& error =
       Error::InvalidValueError("uninitialized value").error_proto();
   return error;
@@ -173,7 +171,7 @@ class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> final {
  public:
   Maybe(T data) : error_or_scalar_(data) {}
   Maybe(const Error& error) : error_or_scalar_(error.error_proto()) { CheckError(); }
-  Maybe(const std::shared_ptr<cfg::ErrorProto>& error) : error_or_scalar_(error) { CheckError(); }
+  Maybe(const std::shared_ptr<ErrorProto>& error) : error_or_scalar_(error) { CheckError(); }
   Maybe() : error_or_scalar_(UninitializedValueError()) {}
   Maybe(const Maybe&) = default;
   Maybe(Maybe&&) = default;
@@ -185,7 +183,7 @@ class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> final {
   T Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
     return error_or_scalar_.scalar_value();
   }
-  std::shared_ptr<cfg::ErrorProto> error() const { return error_or_scalar_.shared_ptr(); }
+  std::shared_ptr<ErrorProto> error() const { return error_or_scalar_.shared_ptr(); }
 
   std::string GetSerializedError() const {
     CHECK(!IsOk());
@@ -194,7 +192,7 @@ class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> final {
 
   T GetDataAndSerializedErrorProto(std::string* error_str, const T& default_for_error) const {
     if (IsOk()) {
-      *error_str = cfg::ErrorProto().DebugString();
+      *error_str = ErrorProto().DebugString();
       return Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
     } else {
       *error_str = this->error()->DebugString();
@@ -202,11 +200,10 @@ class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> final {
     }
   }
 
-  std::pair<T, std::shared_ptr<cfg::ErrorProto>> GetDataAndErrorProto(
-      const T& default_for_error) const {
+  std::pair<T, std::shared_ptr<ErrorProto>> GetDataAndErrorProto(const T& default_for_error) const {
     if (IsOk()) {
       return std::make_pair(Data_YouAreNotAllowedToCallThisFuncOutsideThisFile(),
-                            std::shared_ptr<cfg::ErrorProto>());
+                            std::shared_ptr<ErrorProto>());
     } else {
       return std::make_pair(default_for_error, error());
     }
@@ -219,10 +216,10 @@ class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> final {
 
  private:
   void CheckError() const {
-    CHECK_NE(this->error()->error_type_case(), cfg::ErrorProto::ERROR_TYPE_NOT_SET);
+    CHECK_NE(this->error()->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET);
   }
 
-  SharedOrScalar<cfg::ErrorProto, T> error_or_scalar_;
+  SharedOrScalar<ErrorProto, T> error_or_scalar_;
 };
 
 template<typename T>
@@ -235,7 +232,7 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
  public:
   Maybe(T data) : maybe_ptr_(&data) {}
   Maybe(const Error& error) : maybe_ptr_(error) {}
-  Maybe(const std::shared_ptr<cfg::ErrorProto>& error) : maybe_ptr_(error) {}
+  Maybe(const std::shared_ptr<ErrorProto>& error) : maybe_ptr_(error) {}
   Maybe(const Maybe&) = default;
   Maybe(Maybe&&) = default;
   ~Maybe() = default;
@@ -244,7 +241,7 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   T Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
     return *maybe_ptr_.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
   }
-  std::shared_ptr<cfg::ErrorProto> error() const { return maybe_ptr_.error(); }
+  std::shared_ptr<ErrorProto> error() const { return maybe_ptr_.error(); }
 
   std::string GetSerializedError() const {
     CHECK(!IsOk());
@@ -265,7 +262,7 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
 };
 
 namespace {
-std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& error_proto) {
+std::string GetFormatedSerializedError(const std::shared_ptr<ErrorProto>& error_proto) {
   // return error msg got from formatted function or debugstring.
   const auto& maybe_error = TRY(FormatErrorStr(error_proto));
   const auto& error_str = maybe_error.GetDataAndErrorProto(error_proto->DebugString());
@@ -304,12 +301,12 @@ std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>& e
 
 #define OF_COMPLIE_OPTION_ERROR()                                                         \
   return Error::CompileOptionWrongError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
-         << " Compile option wrong: "
+         << "Compile option wrong: "
 
 #define CHECK_OR_RETURN(expr)                                                      \
   if (!(expr))                                                                     \
   return Error::CheckFailedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
-         << " Check failed: " << OF_PP_STRINGIZE(expr) << " "
+         << "Check failed: " << OF_PP_STRINGIZE(expr) << " "
 
 #define CHECK_EQ_OR_RETURN(lhs, rhs) \
   CHECK_OR_RETURN((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
