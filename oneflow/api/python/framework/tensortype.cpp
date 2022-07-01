@@ -124,7 +124,7 @@ static void generalize_tensor_types() {
       // set name
       std::string name = devicetype.second + "." + dtype.second;
       size_t n = sizeof(tensortype->name);
-      strncpy(tensortype->name, name.c_str(), n);
+      strncpy(tensortype->name, name.c_str(), n - 1);
       tensortype->name[n - 1] = '\0';
 
       // set type
