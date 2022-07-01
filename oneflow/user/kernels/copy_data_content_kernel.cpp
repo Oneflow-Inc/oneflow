@@ -30,15 +30,18 @@ class CopyDataContentKernel final : public user_op::OpKernel, public user_op::Cu
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(in->shape_view().elem_cnt(), out->shape_view().elem_cnt());
+    const int64_t elem_cnt = in->shape_view().elem_cnt();
+    CHECK_EQ(out->shape_view().elem_cnt(), elem_cnt);
     CHECK_EQ(in->data_type(), out->data_type());
-    std::unique_ptr<ep::primitive::Memcpy> primitive =
-        ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(ctx->stream()->device_type(),
-                                                                  ep::primitive::MemcpyKind::kDtoD);
-    CHECK(primitive) << "Can not create Memcpy primitive for device type "
-                     << ctx->stream()->device_type();
-    primitive->Launch(ctx->stream(), out->mut_dptr(), in->dptr(),
-                      in->shape_view().elem_cnt() * GetSizeOfDataType(in->data_type()));
+    if (elem_cnt > 0) {
+      std::unique_ptr<ep::primitive::Memcpy> primitive =
+          ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(
+              ctx->stream()->device_type(), ep::primitive::MemcpyKind::kDtoD);
+      CHECK(primitive) << "Can not create Memcpy primitive for device type "
+                       << ctx->stream()->device_type();
+      primitive->Launch(ctx->stream(), out->mut_dptr(), in->dptr(),
+                        elem_cnt * GetSizeOfDataType(in->data_type()));
+    }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -60,6 +63,11 @@ REGISTER_COPY_DATA_CONTENT_KERNEL("flatten");
 REGISTER_COPY_DATA_CONTENT_KERNEL("expand_dims");
 REGISTER_COPY_DATA_CONTENT_KERNEL("reshape");
 REGISTER_COPY_DATA_CONTENT_KERNEL("amp_white_identity");
+REGISTER_COPY_DATA_CONTENT_KERNEL("identity");
+REGISTER_COPY_DATA_CONTENT_KERNEL("identity_buffer");
+REGISTER_COPY_DATA_CONTENT_KERNEL("parallel_cast");
+REGISTER_COPY_DATA_CONTENT_KERNEL("hierarchical_parallel_cast");
+REGISTER_COPY_DATA_CONTENT_KERNEL("hierarchical_parallel_cast_like");
 
 }  // namespace
 
