@@ -1312,7 +1312,7 @@ def OneFlow_BinaryCrossEntropyWithLogitsGradOp : OneFlow_BaseOp<"binary_cross_en
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_BinaryCrossEntropyWithLogitsReduceMeanOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits_reduce_mean", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BinaryCrossEntropyWithLogitsReduceMeanOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits_reduce_mean", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$input,
     OneFlow_Tensor:$target
@@ -1327,7 +1327,7 @@ def OneFlow_BinaryCrossEntropyWithLogitsReduceMeanOp : OneFlow_BaseOp<"binary_cr
   let has_input_arg_modify_fn = 1;
 }
 
-def OneFlow_BinaryCrossEntropyWithLogitsReduceMeanGradOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits_reduce_mean_grad", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_BinaryCrossEntropyWithLogitsReduceMeanGradOp : OneFlow_BaseOp<"binary_cross_entropy_with_logits_reduce_mean_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$input,
     OneFlow_Tensor:$target,
