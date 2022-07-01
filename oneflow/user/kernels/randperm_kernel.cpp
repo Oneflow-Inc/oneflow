@@ -38,7 +38,6 @@ class CpuRandPermKernelCache final : public user_op::OpKernelCache {
   const int32_t upper_;
 };
 
-template<typename T>
 class CpuRandPermKernel final : public user_op::OpKernel {
  public:
   CpuRandPermKernel() = default;
@@ -72,11 +71,11 @@ class CpuRandPermKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache* cache) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    T* output = out->mut_dptr<T>();
+    int32_t* output = out->mut_dptr<int32_t>();
     const int32_t n = ctx->Attr<int32_t>("n");
     if (n == 0) { return; }
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    T* temp = tmp_buffer->mut_dptr<T>();
+    int32_t* temp = tmp_buffer->mut_dptr<int32_t>();
     auto* distribution_state = dynamic_cast<DistributionKernelState*>(state);
     CHECK_NOTNULL(distribution_state);
     const auto& generator = distribution_state->generator();
@@ -96,20 +95,11 @@ class CpuRandPermKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_RANDPERM_CPU_KERNEL(dtype)                                              \
-  REGISTER_USER_KERNEL("randperm")                                                       \
-      .SetCreateFn<CpuRandPermKernel<dtype>>()                                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                    \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                \
-        const int32_t n = ctx->Attr<int32_t>("n");                                       \
-        return n * sizeof(int32_t);                                                      \
-      });
-
-REGISTER_RANDPERM_CPU_KERNEL(float)
-REGISTER_RANDPERM_CPU_KERNEL(double)
-REGISTER_RANDPERM_CPU_KERNEL(int8_t)
-REGISTER_RANDPERM_CPU_KERNEL(int32_t)
-REGISTER_RANDPERM_CPU_KERNEL(int64_t)
-
+REGISTER_USER_KERNEL("randperm")
+    .SetCreateFn<CpuRandPermKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU))
+    .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
+      const int32_t n = ctx->Attr<int32_t>("n");
+      return n * sizeof(int32_t);
+    });
 }  // namespace oneflow

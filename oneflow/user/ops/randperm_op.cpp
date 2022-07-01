@@ -49,9 +49,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> RandpermOp::InferDataType(user_op::InferContext* ctx) {
-  // *ctx->OutputDType("out", 0) = DataType::kInt32;
-  auto dtype = ctx->Attr<DataType>("dtype");
-  *ctx->OutputDType("out", 0) = dtype;
+  *ctx->OutputDType("out", 0) = DataType::kInt32;
   return Maybe<void>::Ok();
 }
 
