@@ -86,7 +86,7 @@ Maybe<void> Variance::Apply(const VarianceState* ctx, const TensorTuple& out_gra
     Shape unsqueeze_shape(unsqueeze_vector);
     CHECK_EQ_OR_RETURN(unsqueeze_shape.elem_cnt(), out_grad_shape->elem_cnt())
         << Error::RuntimeError()
-        << "inconsistent tensor size, expected tensor to have the same number of elements, but got "
+        << "tensor size mismatch, expected tensor to have the same number of elements, but got "
         << unsqueeze_shape.elem_cnt() << " and " << out_grad_shape->elem_cnt()
         << " elements respectively";
     out_grad = JUST(functional::Reshape(out_grad, unsqueeze_shape));
