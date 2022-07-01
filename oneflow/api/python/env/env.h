@@ -59,6 +59,28 @@ inline Maybe<size_t> GetLocalRank() { return GlobalProcessCtx::LocalRank(); }
 inline Maybe<size_t> CudaGetDeviceCount() {
   return Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(DeviceType::kCUDA);
 }
+
+// NOTE(lixiang): Get the memory of the current device.
+inline Maybe<double> CUDAGetMemoryUsed() {
+  JUST(vm::CurrentRankSync());
+  int deviceCount = 0;
+  cudaError_t error_id = cudaGetDeviceCount(&deviceCount);
+
+  CHECK_OR_RETURN(deviceCount > 0) << "GPU device does not exist";
+
+  size_t gpu_total_size;
+  size_t gpu_free_size;
+
+  cudaError_t cuda_status = cudaMemGetInfo(&gpu_free_size, &gpu_total_size);
+
+  CHECK_OR_RETURN(cudaSuccess == cuda_status)
+      << "Error: CUDAGetMemoryUsed fails :" << cudaGetErrorString(cuda_status);
+
+  double total_memory = double(gpu_total_size) / (1024.0 * 1024.0);
+  double free_memory = double(gpu_free_size) / (1024.0 * 1024.0);
+  return (total_memory - free_memory);
+}
+
 inline Maybe<void> SetFLAGS_alsologtostderr(bool flag) {
   FLAGS_alsologtostderr = flag;
   return Maybe<void>::Ok();

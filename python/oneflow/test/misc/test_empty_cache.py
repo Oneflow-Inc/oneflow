@@ -25,16 +25,15 @@ from cuda_mem_utils import get_cuda_mem_info
 class TestEmptyCache(flow.unittest.TestCase):
     def test_cuda_to_cpu_empty_cache(test_case):
         if flow._oneflow_internal.flags.with_cuda():
-            gpu_id = flow.cuda.current_device()
 
             x = flow.randn(512, 3, 512, 512).to("cuda")
-            _, used_mem1, _ = get_cuda_mem_info(gpu_id)
+            used_mem1 = flow._oneflow_internal.CUDAGetMemoryUsed()
 
             x = x.cpu()
-            _, used_mem2, _ = get_cuda_mem_info(gpu_id)
+            used_mem2 = flow._oneflow_internal.CUDAGetMemoryUsed()
 
             flow.cuda.empty_cache()
-            _, used_mem3, _ = get_cuda_mem_info(gpu_id)
+            used_mem3 = flow._oneflow_internal.CUDAGetMemoryUsed()
             test_case.assertTrue((used_mem3 < used_mem1) and (used_mem3 < used_mem2))
 
 
