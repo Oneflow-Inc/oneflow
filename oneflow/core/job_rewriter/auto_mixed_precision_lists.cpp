@@ -29,7 +29,8 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "cublas_fused_mlp",
                                "fused_matmul_bias_add_relu_dropout",
                                "fused_dot_feature_interaction",
-                               "embedding_lookup_placeholder"};
+                               "embedding_lookup_placeholder",
+                               "binary_cross_entropy_with_logits_reduce_mean"};
   return white_list;
 }
 
