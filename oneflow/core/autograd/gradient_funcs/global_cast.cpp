@@ -35,7 +35,7 @@ class CastToGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const CastToGlobalOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     const std::string& op_name = fw_op_expr->op_name();
     grad_op_ = JUST(one::CastFromGlobalOpExpr::New(GradientOpName(op_name)));
     return Maybe<void>::Ok();
@@ -51,9 +51,11 @@ class CastToGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
 
   Maybe<void> Apply(const CastGlobalCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     std::shared_ptr<Tensor> out_grad = out_grads.at(0);
-    CHECK_OR_RETURN(out_grad->is_global());
+    CHECK_OR_RETURN(out_grad->is_global())
+        << Error::RuntimeError()
+        << "Expected global tensor for cast_to_global but got local tensor";
     {
       Symbol<NdSbp> nd_sbp_constraint = ctx->nd_sbp;
       Symbol<ParallelDesc> parallel_desc_constraint = ctx->parallel_desc;
@@ -75,7 +77,7 @@ class CastFromGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const CastFromGlobalOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     const std::string& op_name = fw_op_expr->op_name();
     grad_op_ = JUST(one::CastToGlobalOpExpr::New(GradientOpName(op_name)));
     return Maybe<void>::Ok();
@@ -84,7 +86,9 @@ class CastFromGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
   Maybe<void> Capture(CastGlobalCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     const auto& input = inputs.at(0);
-    CHECK_OR_RETURN(input->is_global());
+    CHECK_OR_RETURN(input->is_global())
+        << Error::RuntimeError()
+        << "Expected global tensor for cast_from_global but got local tensor";
     ctx->parallel_desc = JUST(input->parallel_desc());
     ctx->nd_sbp = JUST(input->nd_sbp());
     ctx->shape = input->shape();
