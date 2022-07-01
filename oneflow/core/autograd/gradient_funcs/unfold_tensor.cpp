@@ -43,7 +43,7 @@ class UnfoldTensor : public OpExprGradFunction<UnfoldTensorCaptureState> {
 
 Maybe<void> UnfoldTensor::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -63,7 +63,7 @@ Maybe<void> UnfoldTensor::Capture(UnfoldTensorCaptureState* ctx, const TensorTup
 Maybe<void> UnfoldTensor::Apply(const UnfoldTensorCaptureState* ctx, const TensorTuple& out_grads,
                                 TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   const auto& in = ctx->SavedTensors().at(0);
   in_grads->at(0) =
       JUST(functional::UnfoldTensorGrad(out_grads.at(0), in, ctx->dimension, ctx->size, ctx->step));
