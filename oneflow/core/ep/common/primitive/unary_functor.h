@@ -229,6 +229,80 @@ struct UnaryFunctor<device, UnaryOp::kLogicalNot, Dst, Src> {
   OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(!src); }
 };
 
+template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kAbs, Dst, Src> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return src < static_cast<Src>(0) ? -src : src;
+  }
+};
+
+template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kSign, Dst, Src> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return static_cast<Src>((src > static_cast<Src>(0)) - (src < static_cast<Src>(0)));
+  }
+};
+
+template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kNotEqualZero, Dst, Src> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return static_cast<Src>(src != static_cast<Src>(0));
+  }
+};
+
+template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kNegative, Dst, Src> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return -src;
+  }
+};
+
+template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kReciprocal, Dst, Src> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return static_cast<Src>(1.0) / src;
+  }
+};
+
+template<DeviceType device>
+struct UnaryFunctor<device, UnaryOp::kReciprocalNoNan, float, float> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC float operator()(float src) const {
+    if (fabsf(src) <= 0.0f) { return 0.0f; }
+    return 1.0f / src;
+  }
+};
+
+template<DeviceType device>
+struct UnaryFunctor<device, UnaryOp::kReciprocalNoNan, double, double> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC double operator()(double src) const {
+    if (fabs(src) <= 0.0) { return 0.0; }
+    return 1.0 / src;
+  }
+};
+
+template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kSquare, Dst, Src> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return src * src;
+  }
+};
+
 template<DeviceType device, typename Src>
 struct UnaryFunctor<device, UnaryOp::kIsInf, bool, Src> {
   UnaryFunctor(Scalar attr0, Scalar attr1) {}
