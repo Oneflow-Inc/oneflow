@@ -18,10 +18,12 @@ import unittest
 
 import numpy as np
 
-import oneflow
 import oneflow as flow
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.unittest
+import oneflow.framework.config_util as config_util
+import oneflow.framework.attr_util as attr_util
+import random
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -64,8 +66,8 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
 
                 self.config.allow_fuse_model_update_ops(True)
                 self.config.allow_fuse_add_to_output(True)
-                self.config.allow_fuse_cast_scale(True)
                 self.config.set_gradient_accumulation_steps(100)
+                self.config.allow_fuse_cast_scale(True)
                 self.config.enable_zero(True)
                 self.config.enable_cudnn_conv_heuristic_search_algo(False)
 
@@ -79,12 +81,44 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
         g._generate_config_proto()
         print("graph conf: \n", g._config_proto)
 
-        flow.boxing.nccl.enable_use_compute_stream(False)
-        test_case.assertTrue(not g._optimization_conf_proto.nccl_use_compute_stream)
-        flow.boxing.nccl.disable_group_boxing_by_dst_parallel(False)
-        test_case.assertTrue(
-            not g._optimization_conf_proto.disable_group_boxing_by_dst_parallel
-        )
+        # Test the resource config update eagerly
+        # Note: this tests all the apis in oneflow.framework.config_util automatically
+        def test_resource_config_update_apis_eagerly_automatically():
+            attrs_and_values_to_check = []
+            num_api_tested = 0
+
+            for api in config_util.api_attrs_and_type.keys():
+                attrs, type_ = config_util.api_attrs_and_type[api]
+                if type_ is int:
+                    attr_value = random.randint(0, 9999)
+                    attrs_and_values_to_check.append((attrs, attr_value))
+                elif type_ is bool:
+                    attr_value = random.choice([True, False])
+                    attrs_and_values_to_check.append((attrs, attr_value))
+                else:
+                    assert False, "unsupported type!"
+
+                api(attr_value)
+                num_api_tested += 1
+
+            # check all the attributes are set correctly
+            for (attrs, expected_attr_value) in attrs_and_values_to_check:
+                current_attr_value = attr_util.get_nested_attribute(
+                    g._optimization_conf_proto, attrs
+                )
+                test_case.assertTrue(
+                    current_attr_value == expected_attr_value,
+                    str(attrs)
+                    + " : "
+                    + str(current_attr_value)
+                    + " vs "
+                    + str(current_attr_value),
+                )
+
+            print("number of APIs tested: " + str(num_api_tested))
+
+        for i in range(5):
+            test_resource_config_update_apis_eagerly_automatically()
 
         print("optimization conf after session init: \n", g._optimization_conf_proto)
 
