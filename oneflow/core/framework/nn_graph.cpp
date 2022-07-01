@@ -34,7 +34,9 @@ limitations under the License.
 #include "oneflow/core/job/critical_section_instance.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/plan_util.h"
+#include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
@@ -253,7 +255,7 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
   }()
                                                       .GetOrThrow();
 
-  auto mgr = Global<VariableTensorMgr>::Get();
+  auto mgr = Singleton<VariableTensorMgr>::Get();
   for (auto& name : mgr->DumpNames()) {
     if (variable_names.find(name) == variable_names.end()) { mgr->Delete(name); }
   }
@@ -262,10 +264,6 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
   CHECK_OR_RETURN(!runtime_inited_);
-  JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
-  // TODO(chengcheng): CHECK job valid for each rank.
-  job_ = job_ctx->job();
-
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   JUST(RegisterNewVariableOpInJobPass());
   JUST(DeleteOutdatedVariableInVariableTensorMgr());
@@ -273,19 +271,23 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
   one::TensorNameScope::Global()->Clear();
 
-  // NOTE(chengcheng): Global<JobDesc> need be clear before GlobalJobDescScope construct.
-  if (Global<JobDesc>::Get() != nullptr) { Global<JobDesc>::Delete(); }
+  // NOTE(chengcheng): Singleton<JobDesc> need be clear before GlobalJobDescScope construct.
+  if (Singleton<JobDesc>::Get() != nullptr) { Singleton<JobDesc>::Delete(); }
 
-  auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_ctx->job_id());
+  auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id_);
+
+  // NOTE(chengcheng): do job compeleter for each rank.
+  JUST(JobCompleter().Complete(&job_));
+
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     double start = GetCurTime();
     // TODO(chengcheng): new memory reused by chunk
-    Compiler().Compile(&job_, &plan_, /* need_job_complete */ true);
+    Compiler().Compile(&job_, &plan_);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
 
     VLOG(1) << "Graph name: " << name_ << " compile time: " << (GetCurTime() - start) / 1000000000.0
             << " seconds.";
-    if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
       PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
     }
@@ -295,19 +297,24 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
     PlanUtil::PlanMemoryLog(&plan_, name_);
+    if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+      PlanUtil::GenLightPlan(&plan_, name_);
+    }
   }
   if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name = "plan:" + job_name();
     if (GlobalProcessCtx::IsThisProcessMaster()) {
       // TODO(chengcheng): split plan for each rank.
-      Global<CtrlClient>::Get()->PushKV(plan_name, plan_);
+      Singleton<CtrlClient>::Get()->PushKV(plan_name, plan_);
     } else {
-      Global<CtrlClient>::Get()->PullKV(plan_name, &plan_);
+      Singleton<CtrlClient>::Get()->PullKV(plan_name, &plan_);
     }
     OF_SESSION_BARRIER();
     // NOTE(zwx): After barrier plan is synchronized between all ranks,
     //     then it can be cleared for saving mem.
-    if (GlobalProcessCtx::IsThisProcessMaster()) { Global<CtrlClient>::Get()->ClearKV(plan_name); }
+    if (GlobalProcessCtx::IsThisProcessMaster()) {
+      Singleton<CtrlClient>::Get()->ClearKV(plan_name);
+    }
   }
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
@@ -315,6 +322,12 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   NewRuntimeBuffers();
 
   JUST(GetVariableRealBlobAfterSyncPlan());
+
+  // NOTE(strint): Do memory shrink to free cached memory in eager VM before graph runtime init.
+  JUST(vm::CurrentRankSync());
+  auto* vm = JUST(SingletonMaybe<VirtualMachine>());
+  JUST(vm->ShrinkAllMem());
+
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
   runtime_inited_ = true;
   return Maybe<void>::Ok();
@@ -323,16 +336,14 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
   CHECK_OR_RETURN(variable_op_name2eager_blob_object_.empty()) << kOfBugIssueUploadPrompt;
   JUST(vm::CurrentRankSync());
-  JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
-  auto job_id = job_ctx->job_id();
   // Create or Rebuild variable, then get the real blob.
   for (const std::string& var_name : variable_op_names_) {
     auto iter = variable_op_name2tensor_.find(var_name);
     CHECK_OR_RETURN(iter != variable_op_name2tensor_.end()) << var_name << " not found.";
     std::shared_ptr<one::Tensor> tensor = iter->second;
     vm::EagerBlobObject* var_blob = nullptr;
-    if (plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().find(var_name)
-        == plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().end()) {
+    if (plan_.job_id2op_attribute_ref_table().at(job_id_).op_name2op_attribute().find(var_name)
+        == plan_.job_id2op_attribute_ref_table().at(job_id_).op_name2op_attribute().end()) {
       // Deal with variable tensor not used in nn.Graph build.
       CHECK(tensor != NULL)
           << "the tensor of " << var_name
@@ -347,7 +358,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       // Deal with tensors which are not in the nn.Module.
       // We can call these tensors as additional variables.
       const auto& op_attribute =
-          plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().at(var_name);
+          plan_.job_id2op_attribute_ref_table().at(job_id_).op_name2op_attribute().at(var_name);
       // NOTE(chengcheng): handle constant variable created by job pass
       Symbol<ParallelDesc> placement(op_attribute.parallel_conf_signature().op_parallel_conf());
       NdSbp nd_sbp(NdSbpSignature(op_attribute.nd_sbp_signature()).bn_in_op2nd_sbp().at("out"));
@@ -390,7 +401,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
                    "variable.\n";
       }
       // Register
-      *JUST(MapAt(&variable_op_name2tensor_, var_name)) = tensor;
+      JUST(MapAt(variable_op_name2tensor_, var_name)) = tensor;
       // NOTE(chengcheng): Just for tensor lifetime hold by session context in graph lifetime
       // valid.
       session_ctx_->StoreFreeEagerTensorWithNameByGraphName(name_, tensor, var_name);
@@ -400,7 +411,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
     } else if (tensor->is_consistent()) {
       // Deal with tensors which need to change sbp.
       NdSbpSignature var_nd_sbp_signature = NdSbpSignature(plan_.job_id2op_attribute_ref_table()
-                                                               .at(job_id)
+                                                               .at(job_id_)
                                                                .op_name2op_attribute()
                                                                .at(var_name)
                                                                .nd_sbp_signature());
@@ -444,12 +455,12 @@ void NNGraph::NewRuntimeBuffers() {
   //   2. In Pipeline Parallelism, this value need greater than pipeline stage num for pipelining.
   size_t concurrency_width = job_.job_conf().concurrency_width();
   {
-    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
+    auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
     buffer_mgr->NewBuffer(GetSourceTickBufferName(name_), concurrency_width);
     buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(name_), concurrency_width);
   }
   {
-    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
+    auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
     buffer_mgr->NewBuffer(GetInputCriticalSectionWaitBufferName(name_), concurrency_width);
     buffer_mgr->NewBuffer(GetInputCriticalSectionCallbackBufferName(name_), concurrency_width);
     buffer_mgr->NewBuffer(GetOutputCriticalSectionWaitBufferName(name_), concurrency_width);
@@ -466,7 +477,7 @@ void NNGraph::NewRuntimeBuffers() {
 void NNGraph::CloseRuntimeBuffers() {
   if (runtime_inited_) {
     {
-      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
+      auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
       for (const std::string& output_op_name : outputs_op_names_) {
         buffer_mgr->Get(GetOutputBufferName(name_, output_op_name))->Close();
       }
@@ -479,7 +490,7 @@ void NNGraph::CloseRuntimeBuffers() {
       buffer_mgr->Get(GetInputCriticalSectionWaitBufferName(name_))->Close();
     }
     {
-      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
+      auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       buffer_mgr->Get(GetCallbackNotifierBufferName(name_))->Close();
       buffer_mgr->Get(GetSourceTickBufferName(name_))->Close();
     }

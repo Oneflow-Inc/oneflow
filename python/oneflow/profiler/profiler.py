@@ -14,16 +14,53 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow._oneflow_internal
-from typing import Optional
+from enum import Enum
+from typing import Optional, Iterable, Set
 from oneflow.profiler.events import Events
 
 
+class ProfilerActivity(Enum):
+    CPU = 1
+    CUDA = 2
+
+
+def supported_activities() -> Set[ProfilerActivity]:
+    activities = set([ProfilerActivity.CPU])
+    if oneflow.cuda.is_available():
+        activities.add(ProfilerActivity.CUDA)
+    return activities
+
+
 class profile:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        activities: Optional[Iterable[ProfilerActivity]] = None,
+        record_shapes: bool = False,
+        record_bandwidth_for_cuda: bool = False,
+    ) -> None:
+        self.activities = set(activities) if activities else supported_activities()
+        assert (
+            len(self.activities) > 0
+        ), "At least one ProfilerActivity must be specified."
+        for item in self.activities:
+            assert (
+                item in supported_activities()
+            ), f"Unsupported ProfilerActivity {item}"
+        self.record_shapes = record_shapes
+        if not (ProfilerActivity.CUDA in self.activities):
+            assert (
+                record_bandwidth_for_cuda == False
+            ), "record_bandwidth_for_cuda = True can only work with cuda."
+        self.record_bandwidth_for_cuda = record_bandwidth_for_cuda
         self.profile_events: Optional[Events] = None
 
     def __enter__(self):
-        oneflow._oneflow_internal.profiler.EnableProfiler()
+        oneflow._oneflow_internal.profiler.EnableProfiler(
+            ProfilerActivity.CPU in self.activities,
+            ProfilerActivity.CUDA in self.activities,
+            self.record_shapes,
+            self.record_bandwidth_for_cuda,
+        )
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -35,9 +72,11 @@ class profile:
         if self.profile_events is None:
             raise RuntimeError("Profiler didn't finish running")
 
-    def key_averages(self):
+    def key_averages(self, group_by_input_shape=False):
         self.__check_finish()
-        return self.profile_events.key_averages()
+        return self.profile_events.key_averages(
+            group_by_input_shape=group_by_input_shape
+        )
 
     def events(self):
         self.__check_finish()

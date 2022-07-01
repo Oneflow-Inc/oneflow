@@ -18,9 +18,9 @@ limitations under the License.
 
 #include <memory>
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/framework/transport_token.h"
@@ -60,6 +60,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual bool is_lazy() const = 0;
   virtual bool is_eager() const { return !is_lazy(); }
   virtual bool is_contiguous() const = 0;
+  virtual Maybe<bool> is_pinned() const = 0;
   virtual const TensorMeta& tensor_meta() const = 0;
   virtual Maybe<Tensor> data() = 0;
   virtual std::shared_ptr<Tensor> pin_memory() const = 0;
@@ -114,6 +115,8 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   };
   virtual Maybe<MirroredTensor> AsMirroredTensor() = 0;
   virtual Maybe<ConsistentTensor> AsConsistentTensor() = 0;
+
+  Maybe<void> BorrowTensorName(const Tensor* other) const;
 
   // The same tensor instance should share the python object to ensure that
   // their id are consistent in Python. That is if x and y are hold the same tensor,
@@ -204,6 +207,7 @@ class StaticZerosTensor final : public Tensor {
     PRINT_BUG_PROMPT_AND_ABORT();
     return true;
   }
+  Maybe<bool> is_pinned() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   std::shared_ptr<const FunctionNode> grad_fn_node() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
@@ -292,7 +296,9 @@ class TensorIf : public Tensor {
 template<typename DerivedT>
 class ProxyTensor : public TensorIf<DerivedT> {
  public:
-  ProxyTensor(const std::shared_ptr<Tensor>& tensor) : tensor_(tensor) {}
+  ProxyTensor(const std::shared_ptr<Tensor>& tensor) : tensor_(tensor) {
+    if (tensor->is_lazy()) { CHECK_JUST(this->BorrowTensorName(tensor.get())); }
+  }
   virtual ~ProxyTensor() = default;
 
   virtual std::shared_ptr<const Shape> shape() const override { return tensor_->shape(); }
@@ -360,6 +366,7 @@ class ProxyTensor : public TensorIf<DerivedT> {
   virtual bool is_leaf() const override { return tensor_->is_leaf(); }
   virtual bool retain_grad() const override { return tensor_->retain_grad(); }
   virtual bool is_contiguous() const override { return tensor_->is_contiguous(); }
+  virtual Maybe<bool> is_pinned() const override { return tensor_->is_pinned(); }
   virtual Maybe<Tensor> acc_grad() const override { return tensor_->acc_grad(); }
   virtual Maybe<TensorArg> current_grad() const override { return tensor_->current_grad(); }
   virtual Maybe<Tensor> detach() const override { return tensor_->detach(); }
@@ -388,11 +395,10 @@ class ProxyTensor : public TensorIf<DerivedT> {
 
   virtual user_op::TensorDesc* mut_tensor_meta() override { return tensor_->mut_tensor_meta(); }
   virtual Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
-    CHECK_OR_RETURN(is_local() == other->is_local() && is_eager() == other->is_eager())
-        << "You can't assign copy between tensors with different type";
     bool old_requires_grad = tensor_->requires_grad();
     this->tensor_ = JUST(other->detach());
     JUST(this->tensor_->set_requires_grad(old_requires_grad));
+    if (other->is_lazy()) { JUST(this->BorrowTensorName(other.get())); }
     return Maybe<void>::Ok();
   }
 
@@ -488,6 +494,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
   bool is_contiguous() const override { return impl_->is_contiguous(); }
+  Maybe<bool> is_pinned() const override { return impl_->is_pinned(); };
 
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
@@ -515,24 +522,16 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   Maybe<Tensor> detach() const override;
   Maybe<Tensor> clone() const override;
 
-  static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                                          const Symbol<Device>& device, bool is_lazy,
-                                          bool requires_grad, bool is_leaf);
+  static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
+                                          const std::shared_ptr<const Stride>& stride,
+                                          DataType dtype, const Symbol<Device>& device,
+                                          bool is_lazy, bool requires_grad, bool is_leaf);
   MirroredTensorImpl* mut_impl() { return impl_.get(); }
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override {
     return impl_->mut_eager_mirrored_tensor_impl();
   }
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
-  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
-    CHECK_OR_RETURN(this->is_leaf()) << "Can only set leaf tensor's data.";
-    const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(JUST(other->detach()));
-    CHECK_NOTNULL_OR_RETURN(mirrored_tensor);
-    bool old_requires_grad = requires_grad();
-    impl_ = mirrored_tensor->impl_;
-    set_requires_grad(old_requires_grad);
-    grad_fn_node_ = nullptr;
-    return Maybe<void>::Ok();
-  }
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
 
   Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) override {
     return impl_->RegisterStorageDeleteHook(hook);
@@ -578,6 +577,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool is_cuda() const override;
   std::shared_ptr<Tensor> contiguous() const override;
   Maybe<Tensor> data() override { return this->detach(); }
+  Maybe<const Stride> stride() const override { return impl_->stride(); }
   std::shared_ptr<Tensor> pin_memory() const override;
 
   // Getters valid only for EagerMirroredTensor
@@ -604,6 +604,9 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
   bool is_contiguous() const override { return impl_->is_contiguous(); }
+  Maybe<bool> is_pinned() const override {
+    OF_RUNTIME_ERROR() << "Global tensor has no is_pinned method";
+  }
 
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {

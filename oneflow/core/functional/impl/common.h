@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <cstdint>
 #include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/stride.h"
 
 namespace oneflow {
 namespace one {

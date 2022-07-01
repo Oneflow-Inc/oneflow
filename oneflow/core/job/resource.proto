@@ -36,7 +36,6 @@ message CudnnConfig {
 
 message Resource {
   optional int32 machine_num = 1 [default = 0];
-  optional int32 gpu_device_num = 4 [default = 0];
   optional int32 cpu_device_num = 5 [default = 0];
   optional int32 comm_net_worker_num = 6 [default = 4];
   optional int32 max_mdsave_worker_num = 7 [default = 64];
@@ -57,8 +56,6 @@ message Resource {
   optional bool disable_group_boxing_by_dst_parallel = 31 [default = false];
 
   optional CudnnConfig cudnn_conf = 32;
-  
-  // io_conf
-  optional bool enable_model_io_v2 = 41 [default = false];
-  optional bool enable_legacy_model_io = 42 [default = false];
+  optional bool enable_legacy_model_io = 33 [default = true];
+  optional bool enable_legacy_model_io_v2 = 34 [default = false];
 }

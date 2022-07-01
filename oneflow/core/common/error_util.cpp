@@ -16,6 +16,7 @@ limitations under the License.
 #include <sstream>
 #include "oneflow/core/common/error_util.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/graph_scope_vars.h"
 
 namespace oneflow {
 
@@ -97,7 +98,9 @@ std::string FormatFunctionOfStackFrame(const std::string& function) {
 
 // msg in stack frame
 Maybe<std::string> FormatMsgOfStackFrame(std::string error_msg, bool is_last_stack_frame) {
-  if (!is_last_stack_frame) { error_msg = *JUST(ShortenMsg(error_msg)); }
+  const bool debug_mode = GetGraphDebugMode();
+  // only shorten the message if it is not the last stack frame AND not in debug mode
+  if (!is_last_stack_frame && !debug_mode) { error_msg = *JUST(ShortenMsg(error_msg)); }
   // error_msg of last stack frame come from "<<"
   if (is_last_stack_frame) { error_msg = StripSpace(error_msg); }
   std::stringstream ss;
@@ -106,7 +109,7 @@ Maybe<std::string> FormatMsgOfStackFrame(std::string error_msg, bool is_last_sta
 }
 
 // the error_summary and msg in error proto
-std::string FormatErrorSummaryAndMsgOfErrorProto(const std::shared_ptr<cfg::ErrorProto>& error) {
+std::string FormatErrorSummaryAndMsgOfErrorProto(const std::shared_ptr<ErrorProto>& error) {
   std::stringstream ss;
   if (error->has_error_summary()) { ss << error->error_summary(); }
   if (error->has_msg()) { ss << (ss.str().size() != 0 ? "\n" + error->msg() : error->msg()); }
@@ -114,34 +117,31 @@ std::string FormatErrorSummaryAndMsgOfErrorProto(const std::shared_ptr<cfg::Erro
 }
 
 // the msg in error type instance.
-Maybe<std::string> FormatMsgOfErrorType(const std::shared_ptr<cfg::ErrorProto>& error) {
-  CHECK_NE_OR_RETURN(error->error_type_case(), cfg::ErrorProto::ERROR_TYPE_NOT_SET);
+Maybe<std::string> FormatMsgOfErrorType(const std::shared_ptr<ErrorProto>& error) {
+  CHECK_NE_OR_RETURN(error->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET)
+      << Error::RuntimeError() << "Parse error failed, unknown error type";
   std::stringstream ss;
-  ErrorProto pb_error;
-  error->ToProto(&pb_error);
-  const google::protobuf::Descriptor* pb_error_des = pb_error.GetDescriptor();
+  const google::protobuf::Descriptor* error_des = error->GetDescriptor();
   const google::protobuf::OneofDescriptor* oneof_field_des =
-      pb_error_des->FindOneofByName("error_type");
-  const google::protobuf::Reflection* pb_error_ref = pb_error.GetReflection();
+      error_des->FindOneofByName("error_type");
+  const google::protobuf::Reflection* error_ref = error->GetReflection();
   const google::protobuf::FieldDescriptor* field_des =
-      pb_error_ref->GetOneofFieldDescriptor(pb_error, oneof_field_des);
+      error_ref->GetOneofFieldDescriptor(*error, oneof_field_des);
   CHECK_OR_RETURN(field_des != nullptr);
-  const google::protobuf::Message& error_type = pb_error_ref->GetMessage(pb_error, field_des);
-  ss << error_type.DebugString();
+  ss << "Error Type: " << field_des->full_name();
   return ss.str();
 }
 
 }  // namespace
 
-Maybe<std::string> FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>& error) {
+Maybe<std::string> FormatErrorStr(const std::shared_ptr<ErrorProto>& error) {
   std::stringstream ss;
   // Get msg from stack frame of error proto
   for (auto stack_frame = error->mutable_stack_frame()->rbegin();
        stack_frame < error->mutable_stack_frame()->rend(); stack_frame++) {
-    ss << FormatFileOfStackFrame(*stack_frame->mutable_file())
-       << FormatLineOfStackFrame(*stack_frame->mutable_line())
-       << FormatFunctionOfStackFrame(*stack_frame->mutable_function())
-       << *JUST(FormatMsgOfStackFrame(*stack_frame->mutable_error_msg(),
+    ss << FormatFileOfStackFrame(stack_frame->file()) << FormatLineOfStackFrame(stack_frame->line())
+       << FormatFunctionOfStackFrame(stack_frame->function())
+       << *JUST(FormatMsgOfStackFrame(stack_frame->error_msg(),
                                       stack_frame == error->mutable_stack_frame()->rend() - 1));
   }
   // Get msg from error summary and msg of error proto

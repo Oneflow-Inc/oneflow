@@ -38,9 +38,7 @@ limitations under the License.
 #include "oneflow/core/hardware/node_device_descriptor_manager.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
-#include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
-#include "oneflow/core/operator/op_conf.cfg.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
@@ -77,16 +75,6 @@ void InitLogging(const CppLoggingConf& logging_conf) {
 
 int32_t GetDefaultCpuDeviceNum() { return std::thread::hardware_concurrency(); }
 
-int32_t GetDefaultGpuDeviceNum() {
-#ifndef WITH_CUDA
-  return 0;
-#else
-  int device_count = 0;
-  cudaGetDeviceCount(&device_count);
-  return device_count;
-#endif
-}
-
 Resource GetDefaultResource(const EnvProto& env_proto) {
   Resource resource;
   if (env_proto.has_ctrl_bootstrap_conf()) {
@@ -95,13 +83,12 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
     resource.set_machine_num(env_proto.machine_size());
   }
   resource.set_cpu_device_num(GetDefaultCpuDeviceNum());
-  resource.set_gpu_device_num(GetDefaultGpuDeviceNum());
   return resource;
 }
 
 void SetCpuDeviceManagerNumThreads() {
   ep::CpuDeviceManager* cpu_device_manager = dynamic_cast<ep::CpuDeviceManager*>(
-      Global<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(DeviceType::kCPU));
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(DeviceType::kCPU));
   constexpr size_t kDefaultUsedNumThreads = 2;
   int64_t cpu_logic_core = std::thread::hardware_concurrency();
   int64_t default_num_threads =
@@ -110,32 +97,18 @@ void SetCpuDeviceManagerNumThreads() {
   cpu_device_manager->SetDeviceNumThreads(num_threads);
 }
 
-void ClearAllSymbolAndIdCache() {
-  Global<symbol::Storage<Scope>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::ScopeProto>>::Get()->ClearAll();
-
-  Global<symbol::Storage<JobDesc>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::JobConfigProto>>::Get()->ClearAll();
-
-  Global<symbol::Storage<ParallelDesc>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::ParallelConf>>::Get()->ClearAll();
-
-  Global<symbol::Storage<OperatorConfSymbol>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::OperatorConf>>::Get()->ClearAll();
+void ClearAllSymbol() {
+  Singleton<symbol::Storage<Scope>>::Get()->ClearAll();
+  Singleton<symbol::Storage<JobDesc>>::Get()->ClearAll();
+  Singleton<symbol::Storage<ParallelDesc>>::Get()->ClearAll();
+  Singleton<symbol::Storage<OperatorConfSymbol>>::Get()->ClearAll();
 }
 
-#if defined(__linux__) && defined(WITH_RDMA)
+#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
-bool CommNetIBEnabled() {
-  bool user_enabled = ParseBooleanFromEnv("ONEFLOW_COMM_NET_IB_ENABLE", false);
-  if (user_enabled) {
-    return ibv::IsAvailable();
-  } else {
-    return false;
-  }
-}
+bool CommNetIBEnabled() { return ibv::IsAvailable(); }
 
-#endif
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX
 
 }  // namespace
 
@@ -151,18 +124,18 @@ EnvGlobalObjectsScope::EnvGlobalObjectsScope(const EnvProto& env_proto) {
 }
 
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
-  CHECK(Global<EnvGlobalObjectsScope>::Get() == nullptr);
-  Global<EnvGlobalObjectsScope>::SetAllocated(this);
+  CHECK(Singleton<EnvGlobalObjectsScope>::Get() == nullptr);
+  Singleton<EnvGlobalObjectsScope>::SetAllocated(this);
 
   InitLogging(env_proto.cpp_logging_conf());
-  Global<EnvDesc>::New(env_proto);
-  Global<ProcessCtx>::New();
+  Singleton<EnvDesc>::New(env_proto);
+  Singleton<ProcessCtx>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
-  if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef RPC_BACKEND_LOCAL
     LOG(INFO) << "Using rpc backend: dry-run";
-    Global<RpcManager>::SetAllocated(new DryRunRpcManager());
+    Singleton<RpcManager>::SetAllocated(new DryRunRpcManager());
 #else
     static_assert(false, "Requires rpc backend dry-run to dry run oneflow");
 #endif  // RPC_BACKEND_LOCAL
@@ -171,56 +144,47 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
                  && env_proto.ctrl_bootstrap_conf().world_size() == 1)) /*single process*/ {
 #ifdef RPC_BACKEND_LOCAL
     LOG(INFO) << "Using rpc backend: local";
-    Global<RpcManager>::SetAllocated(new LocalRpcManager());
+    Singleton<RpcManager>::SetAllocated(new LocalRpcManager());
 #else
     static_assert(false, "Requires rpc backend local to run oneflow in single processs");
 #endif  // RPC_BACKEND_LOCAL
   } else /*multi process, multi machine*/ {
 #ifdef RPC_BACKEND_GRPC
     LOG(INFO) << "Using rpc backend: gRPC";
-    Global<RpcManager>::SetAllocated(new GrpcRpcManager());
+    Singleton<RpcManager>::SetAllocated(new GrpcRpcManager());
 #else
     UNIMPLEMENTED() << "To run distributed oneflow, you must enable at least one multi-node rpc "
                        "backend by adding cmake argument, for instance: -DRPC_BACKEND=GRPC";
 #endif  // RPC_BACKEND_GRPC
   }
-  CHECK_JUST(Global<RpcManager>::Get()->CreateServer());
-  CHECK_JUST(Global<RpcManager>::Get()->Bootstrap());
-  CHECK_JUST(Global<RpcManager>::Get()->CreateClient());
-  Global<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto),
-                                    GlobalProcessCtx::NumOfProcessPerNode());
-  Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto),
-                                        GlobalProcessCtx::NumOfProcessPerNode());
-  Global<hardware::NodeDeviceDescriptorManager>::SetAllocated(
+  CHECK_JUST(Singleton<RpcManager>::Get()->CreateServer());
+  CHECK_JUST(Singleton<RpcManager>::Get()->Bootstrap());
+  CHECK_JUST(Singleton<RpcManager>::Get()->CreateClient());
+  Singleton<ResourceDesc, ForEnv>::New(GetDefaultResource(env_proto),
+                                       GlobalProcessCtx::NumOfProcessPerNode());
+  Singleton<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto),
+                                           GlobalProcessCtx::NumOfProcessPerNode());
+  Singleton<hardware::NodeDeviceDescriptorManager>::SetAllocated(
       new hardware::NodeDeviceDescriptorManager());
-  if (Global<ResourceDesc, ForEnv>::Get()->enable_debug_mode()) {
-    Global<hardware::NodeDeviceDescriptorManager>::Get()->DumpSummary("devices");
+  if (Singleton<ResourceDesc, ForEnv>::Get()->enable_debug_mode()) {
+    Singleton<hardware::NodeDeviceDescriptorManager>::Get()->DumpSummary("devices");
   }
-  Global<ep::DeviceManagerRegistry>::New();
-  Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
+  Singleton<ep::DeviceManagerRegistry>::New();
+  Singleton<ThreadPool>::New(Singleton<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
   SetCpuDeviceManagerNumThreads();
 #ifdef WITH_CUDA
-  Global<EagerNcclCommMgr>::New();
-  Global<CudnnConvAlgoCache>::New();
-  Global<embedding::EmbeddingManager>::New();
+  Singleton<EagerNcclCommMgr>::New();
+  Singleton<CudnnConvAlgoCache>::New();
+  Singleton<embedding::EmbeddingManager>::New();
 #endif
-  Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
-  Global<EagerJobBuildAndInferCtxMgr>::New();
-  if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+  Singleton<vm::VirtualMachineScope>::New(Singleton<ResourceDesc, ForSession>::Get()->resource());
+  Singleton<EagerJobBuildAndInferCtxMgr>::New();
+  if (!Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
-    Global<EpollCommNet>::New();
-    Global<Transport>::New();
-    if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
-#ifdef WITH_RDMA
-      if (CommNetIBEnabled()) {
-        Global<IBVerbsCommNet>::New();
-        Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get());
-      } else {
-        Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
-      }
-#else
-      Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
-#endif  // WITH_RDMA
+    Singleton<EpollCommNet>::New();
+    Singleton<Transport>::New();
+    if (Singleton<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
+      Singleton<CommNet>::SetAllocated(Singleton<EpollCommNet>::Get());
     }
 #endif  // __linux__
   }
@@ -236,7 +200,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
       kernel_observers.emplace_back(new BlobAccessCheckerKernelObserver());
     }
     kernel_observers.emplace_back(new ProfilerKernelObserver());
-    Global<KernelObserver>::SetAllocated(new ChainKernelObserver(kernel_observers));
+    Singleton<KernelObserver>::SetAllocated(new ChainKernelObserver(kernel_observers));
   }
   TensorBufferPool::New();
   return Maybe<void>::Ok();
@@ -247,43 +211,80 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   OF_ENV_BARRIER();
   if (is_normal_exit_.has_value() && !CHECK_JUST(is_normal_exit_)) { return; }
   TensorBufferPool::Delete();
-  Global<KernelObserver>::Delete();
-  if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+  Singleton<KernelObserver>::Delete();
+  if (!Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
-    if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
-      if (Global<EpollCommNet>::Get() != static_cast<EpollCommNet*>(Global<CommNet>::Get())) {
-        Global<CommNet>::Delete();
+    if (Singleton<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
+      if (Singleton<EpollCommNet>::Get()
+          != dynamic_cast<EpollCommNet*>(Singleton<CommNet>::Get())) {
+        Singleton<CommNet>::Delete();
       }
     }
-    Global<Transport>::Delete();
-    Global<EpollCommNet>::Delete();
+    Singleton<Transport>::Delete();
+    Singleton<EpollCommNet>::Delete();
 #endif  // __linux__
   }
-  Global<EagerJobBuildAndInferCtxMgr>::Delete();
-  Global<vm::VirtualMachineScope>::Delete();
+  Singleton<EagerJobBuildAndInferCtxMgr>::Delete();
+  Singleton<vm::VirtualMachineScope>::Delete();
 #ifdef WITH_CUDA
-  Global<embedding::EmbeddingManager>::Delete();
-  Global<CudnnConvAlgoCache>::Delete();
-  Global<EagerNcclCommMgr>::Delete();
+  Singleton<embedding::EmbeddingManager>::Delete();
+  Singleton<CudnnConvAlgoCache>::Delete();
+  Singleton<EagerNcclCommMgr>::Delete();
 #endif
-  Global<ThreadPool>::Delete();
-  Global<ep::DeviceManagerRegistry>::Delete();
-  if (Global<ResourceDesc, ForSession>::Get() != nullptr) {
-    Global<ResourceDesc, ForSession>::Delete();
+  Singleton<ThreadPool>::Delete();
+  Singleton<ep::DeviceManagerRegistry>::Delete();
+  if (Singleton<ResourceDesc, ForSession>::Get() != nullptr) {
+    Singleton<ResourceDesc, ForSession>::Delete();
   }
-  Global<ResourceDesc, ForEnv>::Delete();
-  Global<hardware::NodeDeviceDescriptorManager>::Delete();
-  CHECK_NOTNULL(Global<CtrlClient>::Get());
-  CHECK_NOTNULL(Global<EnvDesc>::Get());
-  Global<RpcManager>::Delete();
-  Global<ProcessCtx>::Delete();
-  Global<EnvDesc>::Delete();
-  ClearAllSymbolAndIdCache();
-  if (Global<EnvGlobalObjectsScope>::Get() != nullptr) {
-    Global<EnvGlobalObjectsScope>::SetAllocated(nullptr);
+  Singleton<ResourceDesc, ForEnv>::Delete();
+  Singleton<hardware::NodeDeviceDescriptorManager>::Delete();
+  CHECK_NOTNULL(Singleton<CtrlClient>::Get());
+  CHECK_NOTNULL(Singleton<EnvDesc>::Get());
+  Singleton<RpcManager>::Delete();
+  Singleton<ProcessCtx>::Delete();
+  Singleton<EnvDesc>::Delete();
+  ClearAllSymbol();
+  if (Singleton<EnvGlobalObjectsScope>::Get() != nullptr) {
+    Singleton<EnvGlobalObjectsScope>::SetAllocated(nullptr);
   }
   VLOG(2) << "Finish closing env global objects scope." << std::endl;
   google::ShutdownGoogleLogging();
+}
+
+Maybe<void> InitRDMA() {
+  if (!Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+#ifdef __linux__
+    if (Singleton<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
+#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
+      if (CommNetIBEnabled()) {
+        if (Singleton<IBVerbsCommNet>::Get() == nullptr) {
+          Singleton<IBVerbsCommNet>::New();
+          Singleton<CommNet>::SetAllocated(Singleton<IBVerbsCommNet>::Get());
+        } else {
+          LOG(WARNING) << "Skip init RDMA because RDMA is already initialized!";
+        }
+      } else {
+        LOG(WARNING) << "Skip init RDMA because RDMA is unavailable!";
+      }
+#else
+      LOG(WARNING) << "Skip init RDMA because RDMA is not compiled!";
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX
+    } else {
+      LOG(WARNING) << "Skip init RDMA because only one process in this group!";
+    }
+#endif  // __linux__
+  } else {
+    LOG(WARNING) << "Skip init RDMA in dry run mode!";
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<bool> RDMAIsInitialized() {
+#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
+  return Singleton<IBVerbsCommNet>::Get() != nullptr;
+#else
+  return false;
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX
 }
 
 }  // namespace oneflow

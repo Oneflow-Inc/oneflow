@@ -17,35 +17,34 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/device/event_record.h"
-#include "oneflow/core/job/job_conf.cfg.h"
-#include "oneflow/core/job/placement.cfg.h"
-#include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
-#include "oneflow/core/framework/object_storage.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/id_util.h"
-#include "oneflow/core/operator/interface_blob_conf.cfg.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/consume_local_dep_object_phy_instr_operand.h"
-#include "oneflow/core/eager/release_tensor_arg_phy_instr_operand.h"
+#include "oneflow/core/eager/release_tensor_instruction_type.h"
+#include "oneflow/core/eager/blob_instruction_type.h"
+#include "oneflow/core/eager/op_call_instruction_type.h"
+#include "oneflow/core/vm/barrier_instruction_type.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/eager/local_dep_object.h"
+#include "oneflow/core/eager/critical_section_instruction_type.h"
+#include "oneflow/core/eager/lazy_job_instruction_type.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/stream_need_soft_sync.h"
-#include "oneflow/core/framework/stream_get_call_instruction_name.h"
-#include "oneflow/core/framework/stream_get_release_instruction_name.h"
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/profiler/profiler.h"
@@ -62,24 +61,29 @@ Maybe<Symbol<Stream>> RawGetCriticalSectionStream() {
 static constexpr auto* GetCriticalSectionStream =
     DECORATE(&RawGetCriticalSectionStream, ThreadLocal);
 
+Maybe<Symbol<Stream>> RawGetLazyJobLauncherStream() {
+  return Stream::New(JUST(Device::New("cpu")), StreamRole::kLazyJobLauncher);
+}
+
+static constexpr auto* GetLazyJobLauncherStream =
+    DECORATE(&RawGetLazyJobLauncherStream, ThreadLocal);
+
 }  // namespace
 
 template<typename PhyInstrOperandT>
 Maybe<void> InstructionsBuilder::MakeCriticalSectionBegin(
-    const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand) {
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      Global<VirtualMachine>::Get()->mut_vm(), "CriticalSectionBegin",
-      std::shared_ptr<const ParallelDesc>(), phy_instr_operand);
+    vm::Stream* vm_stream, const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand) {
+  auto instruction = intrusive::make_shared<vm::Instruction>(
+      vm_stream, SingletonPtr<vm::CriticalSectionBeginInstructionType>(), phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
 
 template<typename PhyInstrOperandT>
 Maybe<void> InstructionsBuilder::MakeCriticalSectionEnd(
-    const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand) {
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      Global<VirtualMachine>::Get()->mut_vm(), "CriticalSectionEnd",
-      std::shared_ptr<const ParallelDesc>(), phy_instr_operand);
+    vm::Stream* vm_stream, const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand) {
+  auto instruction = intrusive::make_shared<vm::Instruction>(
+      vm_stream, SingletonPtr<vm::CriticalSectionEndInstructionType>(), phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
@@ -143,10 +147,13 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr
         const auto& event_record = std::make_shared<SharedEventRecord>();
         CHECK_OR_RETURN(input_op_name2end_event_record->emplace(op_name, event_record).second);
       }
+
+      auto stream = JUST(GetCriticalSectionStream());
+      auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
       const auto& phy_instr_operand =
           std::make_shared<vm::InputCriticalSectionBeginPhyInstrOperand>(
-              nn_graph, inputs, input_op_name2end_event_record);
-      JUST(MakeCriticalSectionBegin(phy_instr_operand));
+              nn_graph, inputs, input_op_name2end_event_record, vm_stream);
+      JUST(MakeCriticalSectionBegin(vm_stream, phy_instr_operand));
     }
     const auto& output_op_name2end_event_record =
         std::make_shared<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>();
@@ -155,34 +162,39 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr
         const auto& event_record = std::make_shared<SharedEventRecord>();
         CHECK_OR_RETURN(output_op_name2end_event_record->emplace(op_name, event_record).second);
       }
+      auto stream = JUST(GetCriticalSectionStream());
+      auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
       const auto& phy_instr_operand =
           std::make_shared<vm::OutputCriticalSectionBeginPhyInstrOperand>(
-              nn_graph, outputs, output_op_name2end_event_record);
-      JUST(MakeCriticalSectionBegin(phy_instr_operand));
+              nn_graph, outputs, output_op_name2end_event_record, vm_stream);
+      JUST(MakeCriticalSectionBegin(vm_stream, phy_instr_operand));
     }
     {
       const auto& phy_instr_operand =
           std::make_shared<vm::LaunchLazyJobPhyInstrOperand>(nn_graph, parameters);
-      auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-          Global<VirtualMachine>::Get()->mut_vm(), "LaunchLazyJob",
-          std::shared_ptr<const ParallelDesc>(), phy_instr_operand);
+      auto stream = JUST(GetLazyJobLauncherStream());
+      auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
+      auto instruction = intrusive::make_shared<vm::Instruction>(
+          vm_stream, SingletonPtr<vm::LaunchLazyJobInstructionType>(), phy_instr_operand);
       instruction_list_->EmplaceBack(std::move(instruction));
     }
+    auto stream = JUST(GetCriticalSectionStream());
+    auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
     for (int i = 0; i < nn_graph->inputs_op_names().size(); ++i) {
       const auto& eager_blob_object = inputs->at(i);
       const auto& op_name = nn_graph->inputs_op_names().at(i);
       const auto& event_record = JUST(MapAt(*input_op_name2end_event_record, op_name));
       const auto& phy_instr_operand = std::make_shared<vm::InputCriticalSecondEndPhyInstrOperand>(
-          eager_blob_object, event_record);
-      JUST(MakeCriticalSectionEnd(phy_instr_operand));
+          eager_blob_object, event_record, vm_stream);
+      JUST(MakeCriticalSectionEnd(vm_stream, phy_instr_operand));
     }
     for (int i = 0; i < nn_graph->outputs_op_names().size(); ++i) {
       const auto& eager_blob_object = outputs->at(i);
       const auto& op_name = nn_graph->outputs_op_names().at(i);
       const auto& event_record = JUST(MapAt(*output_op_name2end_event_record, op_name));
       const auto& phy_instr_operand = std::make_shared<vm::OutputCriticalSecondEndPhyInstrOperand>(
-          eager_blob_object, event_record);
-      JUST(MakeCriticalSectionEnd(phy_instr_operand));
+          eager_blob_object, event_record, vm_stream);
+      JUST(MakeCriticalSectionEnd(vm_stream, phy_instr_operand));
     }
   }
   return Maybe<void>::Ok();
@@ -196,74 +208,77 @@ Maybe<void> InstructionsBuilder::SoftSyncNNGraphBuffers(
   return Maybe<void>::Ok();
 }
 
-Maybe<int64_t> InstructionsBuilder::CreateSymbolId(const cfg::JobConfigProto& job_conf) {
-  int64_t symbol_id = JUST(id_generator_->NewSymbolId());
-  JUST(AddSymbol<cfg::JobConfigProto, JobConfigProto, JobDesc>(symbol_id, job_conf));
-  return symbol_id;
+namespace {
+
+int64_t NewSymbolId() {
+  static std::atomic<int64_t> cnt(0);
+  return cnt.fetch_add(1, std::memory_order_relaxed);
 }
 
-Maybe<int64_t> InstructionsBuilder::CreateSymbolId(const cfg::ParallelConf& parallel_conf) {
-  int64_t symbol_id = JUST(id_generator_->NewSymbolId());
-  JUST(AddSymbol<cfg::ParallelConf, ParallelConf, ParallelDesc>(symbol_id, parallel_conf));
-  return symbol_id;
+}  // namespace
+
+Maybe<JobDesc> InstructionsBuilder::GetJobConfSymbol(const JobConfigProto& job_conf) {
+  return Singleton<symbol::Storage<JobDesc>>::Get()->FindOrCreate(job_conf, &NewSymbolId);
 }
 
-Maybe<int64_t> InstructionsBuilder::CreateSymbolId(const cfg::ScopeProto& scope_proto) {
-  int64_t symbol_id = JUST(id_generator_->NewSymbolId());
-  JUST(AddSymbol<cfg::ScopeProto, ScopeProto, Scope>(symbol_id, scope_proto));
-  return symbol_id;
+Maybe<ParallelDesc> InstructionsBuilder::GetParallelDescSymbol(const ParallelConf& parallel_conf) {
+  return Singleton<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(parallel_conf, &NewSymbolId);
 }
 
-Maybe<int64_t> InstructionsBuilder::CreateSymbolId(const cfg::OperatorConf& op_conf) {
-  int64_t symbol_id = JUST(id_generator_->NewSymbolId());
-  JUST(AddSymbol<cfg::OperatorConf, OperatorConf, OperatorConfSymbol>(symbol_id, op_conf));
-  return symbol_id;
+Maybe<Scope> InstructionsBuilder::GetScopeSymbol(const ScopeProto& scope_proto) {
+  return Singleton<symbol::Storage<Scope>>::Get()->FindOrCreate(scope_proto, &NewSymbolId);
 }
 
-Maybe<JobDesc> InstructionsBuilder::GetJobConfSymbol(
-    const std::shared_ptr<cfg::JobConfigProto>& job_conf) {
-  int64_t symbol_id = JUST(FindOrCreateSymbolId(*job_conf));
-  return Global<symbol::Storage<JobDesc>>::Get()->MaybeGetPtr(symbol_id);
-}
-
-Maybe<ParallelDesc> InstructionsBuilder::GetParallelDescSymbol(
-    const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
-  int64_t symbol_id = JUST(FindOrCreateSymbolId(*parallel_conf));
-  return Global<symbol::Storage<ParallelDesc>>::Get()->MaybeGetPtr(symbol_id);
-}
-
-Maybe<Scope> InstructionsBuilder::GetScopeSymbol(
-    const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
-  int64_t symbol_id = JUST(FindOrCreateSymbolId(*scope_proto));
-  return Global<symbol::Storage<Scope>>::Get()->MaybeGetPtr(symbol_id);
-}
-
-Maybe<OperatorConfSymbol> InstructionsBuilder::GetOpConfSymbol(
-    const std::shared_ptr<cfg::OperatorConf>& op_conf) {
-  int64_t symbol_id = JUST(FindOrCreateSymbolId(*op_conf));
-  return Global<symbol::Storage<OperatorConfSymbol>>::Get()->MaybeGetPtr(symbol_id);
+Maybe<OperatorConfSymbol> InstructionsBuilder::GetOpConfSymbol(const OperatorConf& op_conf) {
+  return Singleton<symbol::Storage<OperatorConfSymbol>>::Get()->FindOrCreate(op_conf, &NewSymbolId);
 }
 
 Maybe<Scope> InstructionsBuilder::BuildInitialScope(
-    int64_t session_id, const std::shared_ptr<cfg::JobConfigProto>& job_conf,
-    const std::string& device_tag, const std::vector<std::string>& machine_device_ids,
-    const std::shared_ptr<Shape>& hierarchy, bool is_mirrored) {
-  std::shared_ptr<cfg::ScopeProto> scope_proto = std::make_shared<cfg::ScopeProto>();
-  scope_proto->set_session_id(session_id);
+    int64_t session_id, const JobConfigProto& job_conf, const std::string& device_tag,
+    const std::vector<std::string>& machine_device_ids, const std::shared_ptr<Shape>& hierarchy,
+    bool is_mirrored) {
+  ScopeProto scope_proto;
+  scope_proto.set_session_id(session_id);
   std::shared_ptr<JobDesc> job_conf_sym = JUST(GetJobConfSymbol(job_conf));
-  scope_proto->set_job_desc_symbol_id(JUST(job_conf_sym->symbol_id()));
-  std::shared_ptr<cfg::ParallelConf> parallel_conf =
+  scope_proto.set_job_desc_symbol_id(JUST(job_conf_sym->symbol_id()));
+  std::shared_ptr<ParallelConf> parallel_conf =
       JUST(MakeParallelConf(device_tag, machine_device_ids, hierarchy));
   std::shared_ptr<ParallelDesc> device_parallel_desc_sym =
-      JUST(GetParallelDescSymbol(parallel_conf));
-  scope_proto->set_device_parallel_desc_symbol_id(JUST(device_parallel_desc_sym->symbol_id()));
+      JUST(GetParallelDescSymbol(*parallel_conf));
+  scope_proto.set_device_parallel_desc_symbol_id(JUST(device_parallel_desc_sym->symbol_id()));
   parallel_conf = JUST(MakeParallelConf("cpu", machine_device_ids, hierarchy));
-  std::shared_ptr<ParallelDesc> host_parallel_desc_sym = JUST(GetParallelDescSymbol(parallel_conf));
-  scope_proto->set_host_parallel_desc_symbol_id(JUST(host_parallel_desc_sym->symbol_id()));
+  std::shared_ptr<ParallelDesc> host_parallel_desc_sym =
+      JUST(GetParallelDescSymbol(*parallel_conf));
+  scope_proto.set_host_parallel_desc_symbol_id(JUST(host_parallel_desc_sym->symbol_id()));
   if (is_mirrored) {
-    scope_proto->mutable_opt_mirrored_parallel_conf()->mutable_mirrored_parallel();
+    scope_proto.mutable_opt_mirrored_parallel_conf()->mutable_mirrored_parallel();
   } else {
-    scope_proto->mutable_opt_mirrored_parallel_conf()->clear_mirrored_parallel();
+    scope_proto.mutable_opt_mirrored_parallel_conf()->clear_mirrored_parallel();
+  }
+  return GetScopeSymbol(scope_proto);
+}
+
+Maybe<Scope> InstructionsBuilder::BuildInitialScopeWithPlacement(int64_t session_id,
+                                                                 const JobConfigProto& job_conf,
+                                                                 Symbol<ParallelDesc> placement,
+                                                                 bool is_mirrored) {
+  ScopeProto scope_proto;
+  scope_proto.set_session_id(session_id);
+  std::shared_ptr<JobDesc> job_conf_sym = JUST(GetJobConfSymbol(job_conf));
+  scope_proto.set_job_desc_symbol_id(JUST(job_conf_sym->symbol_id()));
+
+  std::shared_ptr<ParallelDesc> device_parallel_desc_sym =
+      JUST(GetParallelDescSymbol(placement->parallel_conf()));
+  scope_proto.set_device_parallel_desc_symbol_id(JUST(device_parallel_desc_sym->symbol_id()));
+
+  Symbol<ParallelDesc> new_placement = JUST(ReplaceDeviceType(placement, DeviceType::kCPU));
+  std::shared_ptr<ParallelDesc> host_parallel_desc_sym =
+      JUST(GetParallelDescSymbol(new_placement->parallel_conf()));
+  scope_proto.set_host_parallel_desc_symbol_id(JUST(host_parallel_desc_sym->symbol_id()));
+  if (is_mirrored) {
+    scope_proto.mutable_opt_mirrored_parallel_conf()->mutable_mirrored_parallel();
+  } else {
+    scope_proto.mutable_opt_mirrored_parallel_conf()->clear_mirrored_parallel();
   }
   return GetScopeSymbol(scope_proto);
 }
@@ -272,14 +287,14 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelDesc(
     const std::shared_ptr<Scope>& scope, const std::string& device_tag,
     const std::vector<std::string>& machine_device_ids, const std::shared_ptr<Shape>& hierarchy) {
   const auto SetScopeProto = [this, &device_tag, &machine_device_ids,
-                              &hierarchy](const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
-    std::shared_ptr<cfg::ParallelConf> parallel_conf =
+                              &hierarchy](const std::shared_ptr<ScopeProto>& scope_proto) {
+    std::shared_ptr<ParallelConf> parallel_conf =
         CHECK_JUST(MakeParallelConf(device_tag, machine_device_ids, hierarchy));
     std::shared_ptr<ParallelDesc> device_parallel_desc_sym =
-        CHECK_JUST(GetParallelDescSymbol(parallel_conf));
+        CHECK_JUST(GetParallelDescSymbol(*parallel_conf));
     parallel_conf = CHECK_JUST(MakeParallelConf("cpu", machine_device_ids, hierarchy));
     std::shared_ptr<ParallelDesc> host_parallel_desc_sym =
-        CHECK_JUST(GetParallelDescSymbol(parallel_conf));
+        CHECK_JUST(GetParallelDescSymbol(*parallel_conf));
     scope_proto->set_device_parallel_desc_symbol_id(
         CHECK_JUST(device_parallel_desc_sym->symbol_id()));
     scope_proto->set_host_parallel_desc_symbol_id(CHECK_JUST(host_parallel_desc_sym->symbol_id()));
@@ -288,17 +303,14 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelDesc(
   return BuildScopeByProtoSetter(scope, SetScopeProto);
 }
 
-Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelConf(
-    const std::shared_ptr<Scope>& scope, const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
-  const std::shared_ptr<
-      std::tuple<std::string, std::vector<std::string>, std::shared_ptr<cfg::ShapeProto>>>&
-      tag_and_dev_ids_and_hierarchy =
-          JUST(GetDeviceTagAndMachineDeviceIdsAndHierarchy(parallel_conf));
+Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelConf(const std::shared_ptr<Scope>& scope,
+                                                                const ParallelConf& parallel_conf) {
+  const std::shared_ptr<std::tuple<std::string, std::vector<std::string>,
+                                   std::shared_ptr<ShapeProto>>>& tag_and_dev_ids_and_hierarchy =
+      JUST(GetDeviceTagAndMachineDeviceIdsAndHierarchy(parallel_conf));
   std::shared_ptr<Shape> hierarchy;
   if (std::get<2>(*tag_and_dev_ids_and_hierarchy)) {
-    ShapeProto hierarchy_proto;
-    parallel_conf->hierarchy().ToProto(&hierarchy_proto);
-    hierarchy.reset(new Shape(hierarchy_proto));
+    hierarchy.reset(new Shape(parallel_conf.hierarchy()));
   }
   return BuildScopeWithNewParallelDesc(scope, std::get<0>(*tag_and_dev_ids_and_hierarchy),
                                        std::get<1>(*tag_and_dev_ids_and_hierarchy), hierarchy);
@@ -306,7 +318,7 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelConf(
 
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewIsMirrored(const std::shared_ptr<Scope>& scope,
                                                               bool is_mirrored) {
-  const auto SetScopeProto = [is_mirrored](const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
+  const auto SetScopeProto = [is_mirrored](const std::shared_ptr<ScopeProto>& scope_proto) {
     if (is_mirrored) {
       scope_proto->mutable_opt_mirrored_parallel_conf()->mutable_mirrored_parallel();
     } else {
@@ -318,8 +330,8 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewIsMirrored(const std::shared_
 }
 
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewScopeName(const std::shared_ptr<Scope>& scope,
-                                                             std::string scope_name) {
-  const auto SetScopeProto = [&scope_name](const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
+                                                             const std::string& scope_name) {
+  const auto SetScopeProto = [&scope_name](const std::shared_ptr<ScopeProto>& scope_proto) {
     scope_proto->add_scope_op_name_prefixes(scope_name);
   };
 
@@ -328,38 +340,44 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewScopeName(const std::shared_p
 
 Maybe<Scope> InstructionsBuilder::BuildScopeByProtoSetter(
     const std::shared_ptr<Scope>& scope,
-    const std::function<void(const std::shared_ptr<cfg::ScopeProto>&)>& Setter) {
-  std::shared_ptr<cfg::ScopeProto> scope_proto = JUST(scope->MakeChildScopeProto());
+    const std::function<void(const std::shared_ptr<ScopeProto>&)>& Setter) {
+  std::shared_ptr<ScopeProto> scope_proto = JUST(scope->MakeChildScopeProto());
   Setter(scope_proto);
-  return GetScopeSymbol(scope_proto);
+  return GetScopeSymbol(*scope_proto);
 }
 
-Maybe<void> InstructionsBuilder::LocalCallOpKernel(
-    const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
-    const one::EagerBlobObjectListPtr& input_eager_blob_objects,
-    const one::EagerBlobObjectListPtr& output_eager_blob_objects,
-    const one::OpExprInterpContext& ctx, Symbol<Stream> stream) {
-  return LocalCallOpKernel(opkernel, input_eager_blob_objects, output_eager_blob_objects, nullptr,
-                           ctx, stream);
+Maybe<Scope> InstructionsBuilder::BuildScopeByProtoStrSetter(
+    const std::shared_ptr<Scope>& scope,
+    const std::function<std::string(const std::string&)>& StrSetter) {
+  std::shared_ptr<ScopeProto> scope_proto = JUST(scope->MakeChildScopeProto());
+  std::string serialized_scope_proto = PbMessage2TxtString(*scope_proto);
+  std::string new_serialized_scope_proto = StrSetter(serialized_scope_proto);
+  CHECK_OR_RETURN(TxtString2PbMessage(new_serialized_scope_proto, scope_proto.get()))
+      << Error::RuntimeError() << "scope_proto parse failed";
+  return GetScopeSymbol(*scope_proto);
 }
 
-Maybe<void> InstructionsBuilder::LocalCallOpKernel(
-    const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+Maybe<void> InstructionsBuilder::Call(const std::shared_ptr<one::StatefulOpKernel>& opkernel,
+                                      const one::EagerBlobObjectListPtr& input_eager_blob_objects,
+                                      const one::EagerBlobObjectListPtr& output_eager_blob_objects,
+                                      const one::OpExprInterpContext& ctx, Symbol<Stream> stream) {
+  return Call(opkernel, input_eager_blob_objects, output_eager_blob_objects, nullptr, ctx, stream);
+}
+
+Maybe<void> InstructionsBuilder::Call(
+    const std::shared_ptr<one::StatefulOpKernel>& opkernel,
     const one::EagerBlobObjectListPtr& input_eager_blob_objects,
     const one::EagerBlobObjectListPtr& output_eager_blob_objects,
     const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
     const one::OpExprInterpContext& ctx, Symbol<Stream> stream) {
-  const auto& parallel_desc_sym = JUST(Placement4Device(stream->device())).shared_from_symbol();
   JUST(SoftSyncStream(output_eager_blob_objects, stream));
   JUST(SoftSyncStream(input_eager_blob_objects, stream));
-  auto phy_instr_operand = JUST(vm::LocalCallOpKernelPhyInstrOperand::New(
-      opkernel, input_eager_blob_objects, output_eager_blob_objects, consistent_tensor_infer_result,
-      ctx, *one::CurrentDevVmDepObjectConsumeMode()));
-  const auto& instruction_name = JUST(StreamRoleSwitch<GetCallInstructionName>(
-      stream->stream_role(), stream->device()->enum_type()));
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      Global<VirtualMachine>::Get()->mut_vm(), instruction_name, parallel_desc_sym,
-      phy_instr_operand);
+  auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
+  auto phy_instr_operand = JUST(vm::OpCallPhyInstrOperand::New(
+      vm_stream, opkernel, input_eager_blob_objects, output_eager_blob_objects,
+      consistent_tensor_infer_result, ctx, *one::CurrentDevVmDepObjectConsumeMode()));
+  auto instruction = intrusive::make_shared<vm::Instruction>(
+      vm_stream, SingletonPtr<vm::OpCallInstructionType>(), phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   for (const auto& output : *output_eager_blob_objects) {
     if (!output->producer_stream().has_value()) { JUST(output->init_producer_stream(stream)); }
@@ -369,14 +387,13 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
 }
 
 Maybe<void> InstructionsBuilder::ReleaseTensor(
-    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-  if (pthread_fork::IsForkedSubProcess() && parallel_desc
-      && parallel_desc->device_type() != DeviceType::kCPU) {
-    return Maybe<void>::Ok();
-  }
+    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
   const auto& last_used_stream = JUST(eager_blob_object->last_used_stream());
   const auto& producer_stream = JUST(eager_blob_object->producer_stream());
+  if (pthread_fork::IsForkedSubProcess()
+      && producer_stream->device()->enum_type() != DeviceType::kCPU) {
+    return Maybe<void>::Ok();
+  }
   if (last_used_stream != producer_stream) {
     JUST(SoftSyncStream({JUST(eager_blob_object->compute_local_dep_object())}, "mut",
                         last_used_stream));
@@ -384,23 +401,26 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   Optional<Symbol<Stream>> stream{};
   if (*one::CurrentDevVmDepObjectConsumeMode() == one::DevVmDepObjectConsumeMode::NONE) {
     stream = Optional<Symbol<Stream>>(NullOpt);
-  } else if (StreamRoleSwitch<IsCommNetStream>(last_used_stream->stream_role())) {
+  } else if (IsCommNetStream::Visit(last_used_stream->stream_role())) {
     // Disable inter-device instruction sequential for tensor used by communicative stream.
     // It's not acceptable for us that cuda compute stream is blocked by cuda nccl stream.
     stream = Optional<Symbol<Stream>>(NullOpt);
-  } else if (StreamRoleSwitch<IsCommNetStream>(producer_stream->stream_role())) {
+  } else if (IsCommNetStream::Visit(producer_stream->stream_role())) {
     // Disable inter-device instruction sequential for tensor produced by communicative stream.
     stream = Optional<Symbol<Stream>>(NullOpt);
   } else {
     stream = producer_stream;
   }
+  auto vm_stream = stream.map([](Symbol<Stream> stream) -> vm::Stream* {
+    return CHECK_JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
+  });
   const auto& phy_instr_operand =
-      std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(eager_blob_object, stream);
+      std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(eager_blob_object, vm_stream);
+  StreamRole stream_role = producer_stream->stream_role();
   DeviceType device_type = producer_stream->device()->enum_type();
-  const auto& instruction_name = JUST(
-      StreamRoleSwitch<GetReleaseInstructionName>(producer_stream->stream_role(), device_type));
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      Global<VirtualMachine>::Get()->mut_vm(), instruction_name, parallel_desc, phy_instr_operand);
+  auto instruction = intrusive::make_shared<vm::Instruction>(
+      JUST(Singleton<VirtualMachine>::Get()->GetVmStream(producer_stream)),
+      JUST(GetReleaseInstructionType::Visit(stream_role, device_type)), phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
@@ -432,38 +452,21 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
 
 Maybe<void> InstructionsBuilder::SoftSyncStream(
     std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
-    const std::string& modifier, Symbol<Stream> stream) {
-  DeviceType device_type = stream->device()->enum_type();
-  if (!StreamRoleSwitch<NeedSoftSync>(stream->stream_role(), device_type)) {
+    const std::string& modifier, Symbol<Stream> last_used_stream) {
+  DeviceType device_type = last_used_stream->device()->enum_type();
+  if (!NeedSoftSync::Visit(last_used_stream->stream_role(), device_type)) {
     return Maybe<void>::Ok();
   }
   OF_PROFILER_RANGE_GUARD("SoftStream");
-  const auto& parallel_desc = JUST(Placement4Device(stream->device())).shared_from_symbol();
   const auto& phy_instr_operand = std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(
       std::move(compute_local_dep_objects), modifier);
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      Global<VirtualMachine>::Get()->mut_vm(), parallel_desc->device_tag() + ".RecordEvent",
-      parallel_desc, phy_instr_operand);
+  StreamRole stream_role = last_used_stream->stream_role();
+  auto instruction = intrusive::make_shared<vm::Instruction>(
+      JUST(Singleton<VirtualMachine>::Get()->GetVmStream(last_used_stream)),
+      JUST(GetRecordEventInstructionType::Visit(stream_role, device_type)), phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
-
-namespace {
-
-const std::shared_ptr<const ParallelDesc>& GetParallelDesc(
-    const std::shared_ptr<one::MirroredTensor> tensor) {
-  const auto& device = CHECK_JUST(tensor->device());
-  const auto& placement = CHECK_JUST(Placement4Device(device));
-  return placement.shared_from_symbol();
-}
-
-const std::shared_ptr<const ParallelDesc>& GetParallelDesc(
-    const one::EagerMirroredTensorImpl* tensor) {
-  const auto& placement = CHECK_JUST(Placement4Device(tensor->device()));
-  return placement.shared_from_symbol();
-}
-
-}  // namespace
 
 template<typename T>
 Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
@@ -517,17 +520,41 @@ template Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
     const one::EagerMirroredTensorImpl* tensor, const std::shared_ptr<BlockingThenBusy>& btb,
     const std::function<void(uint64_t)>& Callback, const std::string& modifier);
 
+namespace {
+
+Maybe<Symbol<Device>> GetDevice(const std::shared_ptr<one::MirroredTensor>& tensor) {
+  return tensor->device();  // return Maybe<Symbol<Device>>
+}
+
+Maybe<Symbol<Device>> GetDevice(const one::EagerMirroredTensorImpl* tensor) {
+  return tensor->device();  // return const Symbol<Device>&
+}
+
+}  // namespace
+
 template<typename T>
 Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
                                                       const std::function<void(uint64_t)>& callback,
                                                       const std::string& modifier) {
-  const auto& parallel_desc = GetParallelDesc(tensor);
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
   const auto& phy_instr_operand =
       std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(eager_blob_object, callback, modifier);
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      Global<VirtualMachine>::Get()->mut_vm(),
-      parallel_desc->device_tag() + ".AccessBlobByCallback", parallel_desc, phy_instr_operand);
+  Symbol<Device> device = JUST(GetDevice(tensor));
+  Symbol<Stream> stream = JUST(GetDefaultStreamByDevice(device));
+  // Do not use producer_stream or last_used_stream.
+  // Bug case when using producer_stream or last_used_stream:
+  //
+  // ```python
+  // tensor = oneflow.ones((1024, 1024, 1024), device='cuda').cpu()
+  // ndarray = tensor.numpy() # share memory
+  //
+  // ```
+  // `ndarray` may not be ones because instruction AccessBlobByCallback is prescheduled before
+  // oneflow.ones actually finished.
+  auto instruction = intrusive::make_shared<vm::Instruction>(
+      // Never replace `stream` with producer_stream or last_used_stream.
+      JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream)),
+      SingletonPtr<vm::AccessBlobByCallbackInstructionType>(), phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
@@ -540,29 +567,38 @@ template Maybe<void> InstructionsBuilder::AccessBlobByCallback(
     const one::EagerMirroredTensorImpl* tensor, const std::function<void(uint64_t)>& callback,
     const std::string& modifier);
 
-Maybe<void> InstructionsBuilder::ComputeRankFrontSeqCallback(
-    const std::function<void()>& callback) {
-  const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>(callback);
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      Global<VirtualMachine>::Get()->mut_vm(), "ComputeRankFrontSeqCallback",
-      std::shared_ptr<const ParallelDesc>(), phy_instr_operand);
+namespace {
+
+Maybe<Symbol<Stream>> GetBarrierStream() {
+  auto device = JUST(Device::New("cpu"));
+  return Stream::New(device, StreamRole::kBarrier);
+}
+
+}  // namespace
+
+Maybe<void> InstructionsBuilder::GlobalSync() {
+  const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>([]() {});
+  auto stream = JUST(GetBarrierStream());
+  auto instruction = intrusive::make_shared<vm::Instruction>(
+      JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream)),
+      SingletonPtr<vm::GlobalSyncInstructionType>(), phy_instr_operand);
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::ComputeGlobalFrontSeqBarrier() {
-  const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>([] {});
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      Global<VirtualMachine>::Get()->mut_vm(), "ComputeGlobalFrontSeqBarrier",
-      std::shared_ptr<const ParallelDesc>(), phy_instr_operand);
+Maybe<void> InstructionsBuilder::Barrier(const std::function<void()>& Callback) {
+  const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>(Callback);
+  auto stream = JUST(GetBarrierStream());
+  auto instruction = intrusive::make_shared<vm::Instruction>(
+      JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream)),
+      SingletonPtr<vm::BarrierInstructionType>(), phy_instr_operand);
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
-  vm::InstructionMsgList instruction_list;
-  InstructionsBuilder instructions_builder(std::make_shared<vm::PhysicalIdGenerator>(),
-                                           &instruction_list);
+  vm::InstructionList instruction_list;
+  InstructionsBuilder instructions_builder(&instruction_list);
   JUST(Build(&instructions_builder));
   JUST(vm::Run(instructions_builder.mut_instruction_list()));
   return Maybe<void>::Ok();

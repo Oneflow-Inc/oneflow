@@ -27,22 +27,23 @@ limitations under the License.
 #include "oneflow/core/job/graph_scope_vars.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/rpc/include/base.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
 inline Maybe<std::string> CurrentResource() {
-  CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForSession>::Get()));
-  return PbMessage2TxtString(Global<ResourceDesc, ForSession>::Get()->resource());
+  CHECK_NOTNULL_OR_RETURN((Singleton<ResourceDesc, ForSession>::Get()));
+  return PbMessage2TxtString(Singleton<ResourceDesc, ForSession>::Get()->resource());
 }
 
 inline Maybe<std::string> EnvResource() {
-  CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForEnv>::Get()));
-  return PbMessage2TxtString(Global<ResourceDesc, ForEnv>::Get()->resource());
+  CHECK_NOTNULL_OR_RETURN((Singleton<ResourceDesc, ForEnv>::Get()));
+  return PbMessage2TxtString(Singleton<ResourceDesc, ForEnv>::Get()->resource());
 }
 
 inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {
-  CHECK_NOTNULL_OR_RETURN((Global<bool, EagerExecution>::Get()));
-  *Global<bool, EagerExecution>::Get() = enable_eager_execution;
+  CHECK_NOTNULL_OR_RETURN((Singleton<bool, EagerExecution>::Get()));
+  *Singleton<bool, EagerExecution>::Get() = enable_eager_execution;
   return Maybe<void>::Ok();
 }
 
@@ -53,7 +54,7 @@ inline Maybe<size_t> GetWorldSize() { return GlobalProcessCtx::WorldSize(); }
 inline Maybe<size_t> GetNodeSize() { return GlobalProcessCtx::NodeSize(); }
 inline Maybe<size_t> GetLocalRank() { return GlobalProcessCtx::LocalRank(); }
 inline Maybe<size_t> CudaGetDeviceCount() {
-  return Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
+  return Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(DeviceType::kCUDA);
 }
 inline Maybe<void> SetFLAGS_alsologtostderr(bool flag) {
   FLAGS_alsologtostderr = flag;

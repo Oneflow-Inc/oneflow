@@ -27,7 +27,6 @@ device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
 locals()["dtype"] = oneflow._oneflow_internal.dtype
 locals()["bool"] = oneflow._oneflow_internal.bool
-locals()["char"] = oneflow._oneflow_internal.char
 locals()["float16"] = oneflow._oneflow_internal.float16
 locals()["half"] = oneflow._oneflow_internal.float16
 locals()["float32"] = oneflow._oneflow_internal.float32
@@ -92,6 +91,7 @@ from oneflow._C import logical_not
 from oneflow._C import gelu
 from oneflow._C import mish
 from oneflow._C import repeat
+from oneflow._C import repeat_interleave
 from oneflow._C import tile
 from oneflow._C import sigmoid
 from oneflow._C import tanh
@@ -152,6 +152,8 @@ from oneflow._C import rsqrt
 from oneflow._C import sqrt
 from oneflow._C import square
 from oneflow._C import matmul
+from oneflow._C import mm
+from oneflow._C import mv
 from oneflow._C import bernoulli
 from oneflow._C import round
 from oneflow._C import softplus
@@ -215,10 +217,8 @@ import atexit
 
 import oneflow.framework.c_api_util
 import oneflow.framework.register_class_method_util as register_class_method_util
-import oneflow.framework.register_python_callback
 
 
-INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
 register_class_method_util.RegisterMethod4Class()
 import oneflow.framework.env_util as env_util
 import oneflow.framework.scope_util as scope_util
@@ -232,13 +232,12 @@ oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
-from oneflow.framework import python_callback, register_python_callback
+from oneflow.framework import python_callback
 
 oneflow._oneflow_internal.RegisterGlobalForeignCallback(
     python_callback.global_python_callback
 )
 del python_callback
-del register_python_callback
 
 
 class ExitHook:
@@ -345,9 +344,6 @@ from oneflow.nn.modules.distributed_partial_fc_sample import (
 )
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flip import flip_op as flip
-from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
-from oneflow.nn.modules.logical_ops import logical_or_op as logical_or
-from oneflow.nn.modules.logical_ops import logical_xor_op as logical_xor
 from oneflow.nn.modules.tensor_ops import is_floating_point
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
@@ -364,13 +360,13 @@ from oneflow.nn.modules.random_ops import randperm_op as randperm
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.slice import slice_op as slice
-from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
-from oneflow.nn.modules.slice import logical_slice_op as logical_slice
+from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.sort import sort_op as sort
 from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
     tensor_buffer_to_tensor_op as tensor_buffer_to_tensor,
 )
+from oneflow.nn.modules.tensordot import tensordot
 from oneflow.nn.modules.as_tensor import as_tensor
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
 from oneflow.nn.modules.global_cast import local_to_global_op as local_to_global
@@ -415,6 +411,7 @@ import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
 import oneflow.one_embedding
+import oneflow.profiler
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__

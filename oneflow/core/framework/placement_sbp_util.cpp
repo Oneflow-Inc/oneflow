@@ -40,10 +40,10 @@ namespace {
 using IndexVector = DimVector;
 
 Maybe<void> GetIndexesFromOffset(const Stride& strides, int64_t offset, IndexVector* indexes) {
-  indexes->resize(strides.NumAxes());
-  for (int i = 0; i < strides.NumAxes(); ++i) {
-    indexes->at(i) = offset / strides.At(i);
-    offset = offset % strides.At(i);
+  indexes->resize(strides.size());
+  for (int i = 0; i < strides.size(); ++i) {
+    indexes->at(i) = offset / strides.at(i);
+    offset = offset % strides.at(i);
   }
   CHECK_EQ_OR_RETURN(offset, 0);
   return Maybe<void>::Ok();
@@ -51,10 +51,10 @@ Maybe<void> GetIndexesFromOffset(const Stride& strides, int64_t offset, IndexVec
 
 Maybe<void> GetOffsetFromIndexes(const Stride& strides, const IndexVector& indexes,
                                  int64_t* offset) {
-  CHECK_EQ_OR_RETURN(strides.NumAxes(), indexes.size())
+  CHECK_EQ_OR_RETURN(strides.size(), indexes.size())
       << Error::RuntimeError() << "Expected size of strides to match that of indexes";
   *offset = 0;
-  for (int i = 0; i < strides.NumAxes(); ++i) { *offset += indexes.at(i) * strides.At(i); }
+  for (int i = 0; i < strides.size(); ++i) { *offset += indexes.at(i) * strides.at(i); }
   return Maybe<void>::Ok();
 }
 
@@ -124,7 +124,7 @@ Maybe<Symbol<ParallelDesc>> CalcSubParallelDesc4Axis(Symbol<ParallelDesc> parall
 
   int64_t index = CalcIndex4Axis(parallel_id, hierarchy_strides, axis);
 
-  int64_t stride = hierarchy_strides.At(axis);
+  int64_t stride = hierarchy_strides.at(axis);
 
   int64_t start_parallel_id = parallel_id - index * stride;
   ParallelConf parallel_conf;
@@ -637,14 +637,15 @@ Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> CalcBroadcastGroup(
         const auto& src_process_ids = node_iter->second;
         int64_t src_process_index = (node_id2counter[node_id]++) % src_process_ids.size();
         int64_t src_process_id = src_process_ids.at(src_process_index);
-        JUST(MapAt(&process_id2group, src_process_id))->emplace_back(process_id);
+        JUST(MapAt(process_id2group, src_process_id)).emplace_back(process_id);
       }
     }
   }
   // put remainder process ids into src groups.
   for (int i = 0; i < remainder_process_ids.size(); ++i) {
     int64_t src_process_id = src_process_ids.at(i % src_process_ids.size());
-    JUST(MapAt(&process_id2group, src_process_id))->emplace_back(remainder_process_ids.at(i));
+    JUST(MapAt(process_id2group, src_process_id))
+        .emplace_back(JUST(oneflow::VectorAt(remainder_process_ids, i)));
   }
   const auto& map = std::make_shared<std::unordered_map<int64_t, Symbol<ParallelDesc>>>();
   for (const auto& pair : process_id2group) {
@@ -707,13 +708,12 @@ Maybe<void> RawCheckIsNdSbpBoxingAcyclicWithDecompose(Symbol<PlacedNdSbp> in,
 }  // namespace
 
 int64_t CalcIndex4Axis(int64_t offset, const Stride& stride, int axis) {
-  CHECK_LT(axis, stride.NumAxes())
-      << "Expected axis (" << axis << ") to be less than size of stride (" << stride.NumAxes()
-      << ")";
+  CHECK_LT(axis, stride.size()) << "Expected axis (" << axis << ") to be less than size of stride ("
+                                << stride.size() << ")";
   if (axis == 0) {
-    return offset / stride.At(0);
+    return offset / stride.at(0);
   } else {
-    return offset % stride.At(axis - 1) / stride.At(axis);
+    return offset % stride.at(axis - 1) / stride.at(axis);
   }
 }
 

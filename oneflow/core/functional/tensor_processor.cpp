@@ -47,7 +47,7 @@ bool CheckHasDifferentInputDType(const TensorTuple& tensor_tuple) {
 Maybe<void> CastToSameType(TensorTuple& tensor_tuple, const Symbol<DType>& common_dtype) {
   for (auto& tensor_ptr : tensor_tuple) {
     if (tensor_ptr->dtype() != common_dtype) {
-      tensor_ptr = JUST(functional::Cast(tensor_ptr, common_dtype));
+      tensor_ptr = JUST(functional::Cast(tensor_ptr, common_dtype, /*pin_memory=*/false));
     }
   }
   return Maybe<void>::Ok();
@@ -92,7 +92,8 @@ Maybe<void> TensorProcessor::Apply() {
       if (base_dtype->data_type()
           && DType::priority_order[base_dtype->data_type()]
                  > DType::priority_order[tensor_tuple_.at(i)->dtype()->data_type()]) {
-        tensor_tuple_.at(i) = JUST(one::functional::Cast(tensor_tuple_.at(i), base_dtype));
+        tensor_tuple_[i] =
+            JUST(one::functional::Cast(tensor_tuple_[i], base_dtype, /*pin_memory=*/false));
       }
     }
   }

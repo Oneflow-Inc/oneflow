@@ -163,7 +163,7 @@ class Adagrad(Optimizer):
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
-            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+            optimizer_conf = train_conf.optimizer_conf.add()
 
             lr = (
                 param_group["initial_lr"]
@@ -175,19 +175,19 @@ class Adagrad(Optimizer):
             lr_decay = param_group["lr_decay"]
             epsilon = param_group["eps"]
 
-            optimizer_conf.set_base_learning_rate(lr)
-            optimizer_conf.mutable_adagrad_conf().set_initial_accumulator_value(
+            optimizer_conf.base_learning_rate = lr
+            optimizer_conf.adagrad_conf.initial_accumulator_value = (
                 initial_accumulator_value
             )
-            optimizer_conf.mutable_adagrad_conf().set_lr_decay(lr_decay)
-            optimizer_conf.mutable_adagrad_conf().set_epsilon(epsilon)
+            optimizer_conf.adagrad_conf.lr_decay = lr_decay
+            optimizer_conf.adagrad_conf.epsilon = epsilon
 
             self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 
             for param in param_group.parameters:
                 vars_conf[param].l2 = l2
                 if param.requires_grad:
-                    optimizer_conf.add_variable_op_names(vars_conf[param].name)
+                    optimizer_conf.variable_op_names.append(vars_conf[param].name)
 
             new_opt_confs.append(optimizer_conf)
         return new_opt_confs

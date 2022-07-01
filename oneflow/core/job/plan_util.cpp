@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/graph/plan_task_graph.h"
@@ -23,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
@@ -55,7 +58,7 @@ void PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan) {
       RegstDescProto* regst_desc = &pair.second;
       if (regst_desc->mem_block_id() == -1) {
         CHECK_EQ(regst_desc->mem_block_offset(), -1);
-        regst_desc->set_mem_block_id(Global<IDMgr>::Get()->NewMemBlockId());
+        regst_desc->set_mem_block_id(Singleton<IDMgr>::Get()->NewMemBlockId());
         regst_desc->set_mem_block_offset(0);
       }
     }
@@ -98,7 +101,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
   for (auto& pair : mzuid2mem_blocks) {
     int64_t mem_zone_uid = pair.first;
     std::vector<const ChunkProto*> exist_chunks;
-    Global<ChunkMgr>::Get()->GetChunkProtosByMemZoneUniqueId(mem_zone_uid, &exist_chunks);
+    Singleton<ChunkMgr>::Get()->GetChunkProtosByMemZoneUniqueId(mem_zone_uid, &exist_chunks);
     auto chunk_it = exist_chunks.begin();
     auto& mem_blocks = pair.second;
     int64_t current_chunk_offset = 0;
@@ -146,7 +149,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
       auto remain_block_it = remain_blocks.begin();
       MemBlockProto* first_block = *remain_block_it;
       ChunkProto new_chunk;
-      new_chunk.set_chunk_id(Global<IDMgr>::Get()->NewChunkId());
+      new_chunk.set_chunk_id(Singleton<IDMgr>::Get()->NewChunkId());
       new_chunk.set_machine_id(first_block->machine_id());
       *new_chunk.mutable_mem_case() = first_block->mem_case();
       new_chunk.set_mem_size(first_block->mem_size());
@@ -171,7 +174,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
       all_chunks.emplace_back(new_chunk);
       CHECK(unique_chunk_ids.insert(new_chunk.chunk_id()).second);
 
-      Global<ChunkMgr>::Get()->AddChunkProto(new_chunk);
+      Singleton<ChunkMgr>::Get()->AddChunkProto(new_chunk);
     }
   }
 
@@ -258,7 +261,7 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     }
 
     if (regst_separated_size > 0) {
-      int64_t separated_mem_block_id = Global<IDMgr>::Get()->NewMemBlockId();
+      int64_t separated_mem_block_id = Singleton<IDMgr>::Get()->NewMemBlockId();
       regst_desc->set_separated_header_mem_block_id(separated_mem_block_id);
       MemBlockProto mem_block;
       mem_block.set_mem_block_id(separated_mem_block_id);
@@ -385,8 +388,9 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
 }
 
 void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
-  const auto& process_ranks = Global<ResourceDesc, ForSession>::Get()->process_ranks();
-  size_t gpu_device_num = Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
+  const auto& process_ranks = Singleton<ResourceDesc, ForSession>::Get()->process_ranks();
+  size_t gpu_device_num =
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(DeviceType::kCUDA);
   std::map<int64_t, std::map<int64_t, std::vector<std::vector<std::string>>>>
       machine_id2job_id_device_id2node_list;
   for (size_t i : process_ranks) {
@@ -852,37 +856,265 @@ void PlanUtil::GenRegisterHint(Plan* plan) {
   }
 }
 
+namespace {
+
+struct MemBlockMemoryInfo {
+  int64_t mem_block_id;
+  int64_t mem_block_mem_size;
+  bool is_reused;
+  std::vector<std::string> ordered_op_names;
+  MemBlockMemoryInfo() : mem_block_id(-1), mem_block_mem_size(-1), is_reused(false) {}
+};
+
+struct ChunkMemoryInfo {
+  int64_t chunk_id;
+  int64_t chunk_mem_size;
+  std::vector<int64_t> mem_block_ids;
+  ChunkMemoryInfo() : chunk_id(-1), chunk_mem_size(-1) {}
+};
+
+struct RankDeviceMemoryInfo {
+  int64_t rank_id;
+  int64_t device_id;
+  ChunkMemoryInfo chunk_info;
+  int64_t total_mem_size;
+  int64_t not_reused_mem_size;
+  int64_t eager_variable_total_mem_size;
+  std::vector<int64_t> eager_variable_mem_block_ids;
+  RankDeviceMemoryInfo()
+      : rank_id(-1),
+        device_id(-1),
+        total_mem_size(0),
+        not_reused_mem_size(0),
+        eager_variable_total_mem_size(0) {}
+};
+
+}  // namespace
+
 void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
-  HashMap<std::pair<int64_t, int64_t>, int64_t> rank_device2size;
-  auto AddMemSizeByRankDeviceIds = [&](int64_t rank_id, int64_t device_id, int64_t mem_size) {
-    auto key = std::make_pair(rank_id, device_id);
-    auto it = rank_device2size.find(key);
-    if (it == rank_device2size.end()) { it = rank_device2size.emplace(key, 0).first; }
-    it->second += mem_size;
+  std::vector<const TaskProto*> ordered_tasks;
+  for (const TaskProto& task : plan->task()) { ordered_tasks.push_back(&task); }
+  auto CompTask = [](const TaskProto* a, const TaskProto* b) {
+    return a->task_set_info().order_in_graph() < b->task_set_info().order_in_graph();
   };
+  std::sort(ordered_tasks.begin(), ordered_tasks.end(), CompTask);
+
+  std::vector<RankDeviceMemoryInfo> rank_device_memory_infos(GlobalProcessCtx::WorldSize(),
+                                                             RankDeviceMemoryInfo());
+  HashMap<int64_t, MemBlockMemoryInfo> mem_block_id2info;
 
   for (const ChunkProto& chunk : plan->block_chunk_list().chunk()) {
+    int64_t rank_id = chunk.machine_id();
+    auto& info = rank_device_memory_infos[rank_id];
+    info.rank_id = rank_id;
     if (chunk.mem_case().has_device_cuda_mem()) {
-      AddMemSizeByRankDeviceIds(chunk.machine_id(), chunk.mem_case().device_cuda_mem().device_id(),
-                                chunk.mem_size());
+      info.device_id = chunk.mem_case().device_cuda_mem().device_id();
     }
+    info.total_mem_size += chunk.mem_size();
+    info.chunk_info.chunk_id = chunk.chunk_id();
+    info.chunk_info.chunk_mem_size = chunk.mem_size();
   }
 
   for (const MemBlockProto& mem_block : plan->block_chunk_list().mem_block()) {
-    if (mem_block.has_chunk_id() || mem_block.has_chunk_offset()) { continue; }
+    int64_t mem_block_id = mem_block.mem_block_id();
+    mem_block_id2info.emplace(mem_block_id, MemBlockMemoryInfo());
+    auto& info = mem_block_id2info.at(mem_block_id);
+    info.mem_block_id = mem_block_id;
+    info.mem_block_mem_size = mem_block.mem_size();
+    auto& rank_memory_info = rank_device_memory_infos.at(mem_block.machine_id());
     if (mem_block.mem_case().has_device_cuda_mem()) {
-      AddMemSizeByRankDeviceIds(mem_block.machine_id(),
-                                mem_block.mem_case().device_cuda_mem().device_id(),
-                                mem_block.mem_size());
+      if (mem_block.has_chunk_id()) {
+        rank_memory_info.chunk_info.mem_block_ids.push_back(mem_block_id);
+        info.is_reused = true;
+      } else {
+        rank_memory_info.chunk_info.mem_block_ids.push_back(mem_block_id);
+        info.is_reused = false;
+        rank_memory_info.not_reused_mem_size += mem_block.mem_size();
+        rank_memory_info.total_mem_size += mem_block.mem_size();
+        if (mem_block.has_variable_op_name()) {
+          rank_memory_info.eager_variable_mem_block_ids.push_back(mem_block_id);
+          rank_memory_info.eager_variable_total_mem_size += mem_block.mem_size();
+        }
+      }
     }
   }
 
-  for (auto pair : rank_device2size) {
-    int64_t rank_id = pair.first.first;
-    int64_t device_id = pair.first.second;
-    double mem_size = pair.second * 1.0 / 1000000.0;
-    LOG(INFO) << "Graph name " << plan_name << " needs to allocate [ " << mem_size
-              << " MiB ] device memory in Rank: " << rank_id << " , Device: " << device_id << ".";
+  for (const auto* task : ordered_tasks) {
+    for (const auto& pair : task->produced_regst_desc()) {
+      const auto& regst = pair.second;
+      if (regst.regst_desc_type().has_data_regst_desc()
+          && mem_block_id2info.find(regst.mem_block_id()) != mem_block_id2info.end()) {
+        const auto data_regst = regst.regst_desc_type().data_regst_desc();
+        std::string op_name = data_regst.lbi2blob_desc(0).lbi().op_name();
+        mem_block_id2info.at(regst.mem_block_id()).ordered_op_names.push_back(op_name);
+      }
+    }
+  }
+
+  auto CompMemBlock = [&](int64_t a, int64_t b) {
+    return mem_block_id2info[a].mem_block_mem_size > mem_block_id2info[b].mem_block_mem_size;
+  };
+
+  auto B2MiB = [](int64_t val) { return val * 1.0 / 1000000.0; };
+
+  for (auto& rank_memory_info : rank_device_memory_infos) {
+    std::sort(rank_memory_info.chunk_info.mem_block_ids.begin(),
+              rank_memory_info.chunk_info.mem_block_ids.end(), CompMemBlock);
+    LOG(INFO) << " Graph name " << plan_name << " in Rank: " << rank_memory_info.rank_id
+              << ", Device: " << rank_memory_info.device_id << " needs to allocate [ "
+              << B2MiB(rank_memory_info.total_mem_size)
+              << " MiB ] device memory. \n In general, Chunk id: "
+              << rank_memory_info.chunk_info.chunk_id << "  memory is [ "
+              << B2MiB(rank_memory_info.chunk_info.chunk_mem_size)
+              << " MiB ]; \n Memory out of Chunk is  [ "
+              << B2MiB(rank_memory_info.not_reused_mem_size)
+              << " MiB ]; and in particular: Eager Variable Tensor total memory is [ "
+              << B2MiB(rank_memory_info.eager_variable_total_mem_size) << " MiB ].";
+  }
+
+  for (const auto& rank_memory_info : rank_device_memory_infos) {
+    int64_t chunk_id = rank_memory_info.chunk_info.chunk_id;
+    int64_t device_id = rank_memory_info.device_id;
+    int64_t not_reuse_size = rank_memory_info.not_reused_mem_size;
+    VLOG(2) << " For detail: Chunk id: " << chunk_id << " has "
+            << rank_memory_info.chunk_info.mem_block_ids.size() << " MemBlocks"
+            << " not reused size = " << B2MiB(not_reuse_size);
+    for (int64_t mem_block_id : rank_memory_info.chunk_info.mem_block_ids) {
+      CHECK(mem_block_id2info.find(mem_block_id) != mem_block_id2info.end());
+      const auto& mem_block_info = mem_block_id2info.at(mem_block_id);
+      VLOG(2) << "     In Device: " << device_id << " Chunk id: " << chunk_id
+              << " MemBlock id: " << mem_block_id
+              << " has num = " << mem_block_info.ordered_op_names.size()
+              << " ops with mem size = " << B2MiB(mem_block_info.mem_block_mem_size)
+              << " is reused " << mem_block_info.is_reused;
+      for (int64_t i = 0; i < mem_block_info.ordered_op_names.size(); ++i) {
+        VLOG(3) << "         In Device: " << device_id << " Chunk id: " << chunk_id
+                << " In MemBlock id: " << mem_block_id << " order: " << i << " is reused "
+                << mem_block_info.is_reused
+                << " op_name: " << mem_block_info.ordered_op_names.at(i);
+      }
+    }
+  }
+}
+
+void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
+  std::vector<const TaskProto*> ordered_tasks;
+  for (const TaskProto& task : plan->task()) { ordered_tasks.push_back(&task); }
+  auto CompTask = [](const TaskProto* a, const TaskProto* b) {
+    return a->task_set_info().order_in_graph() < b->task_set_info().order_in_graph();
+  };
+  std::sort(ordered_tasks.begin(), ordered_tasks.end(), CompTask);
+
+  HashMap<int64_t, std::string> task_id2name;
+  HashMap<int64_t, const TaskProto*> task_id2proto;
+  HashMap<int64_t, std::string> regst_id2name;
+  HashMap<int64_t, const RegstDescProto&> regst_id2proto;
+  for (const auto* task : ordered_tasks) {
+    const auto& exec_seq = task->exec_sequence();
+    std::string name;
+    if (exec_seq.exec_node_size() >= 1) {
+      const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
+      if (kernel_conf.has_op_attribute_ref()) {
+        name = kernel_conf.op_attribute_ref();
+      } else {
+        name = kernel_conf.op_attribute().op_conf().name();
+      }
+    } else {
+      name = TaskType_Name(task->task_type());
+    }
+    task_id2name.emplace(task->task_id(), name);
+    task_id2proto.emplace(task->task_id(), task);
+    CHECK(!name.empty());
+    for (const auto& pair : task->produced_regst_desc()) {
+      std::string regst_name = name + "/" + pair.first;
+      regst_id2name.emplace(pair.second.regst_desc_id(), regst_name);
+      regst_id2proto.emplace(pair.second.regst_desc_id(), pair.second);
+    }
+  }
+
+  auto RegstId2TensorStr = [&](int64_t regst_id) {
+    std::string ret;
+    CHECK(regst_id2proto.find(regst_id) != regst_id2proto.end())
+        << " regst_id2proto cannot find: " << regst_id;
+    const RegstDescProto& regst = regst_id2proto.at(regst_id);
+    ret += " regst_num: " + std::to_string(regst.register_num());
+    std::string mem = ", cpu ";
+    if (regst.mem_case().has_device_cuda_mem()) { mem = ", cuda "; }
+    ret += mem;
+    if (regst.regst_desc_type().has_data_regst_desc()) {
+      const DataRegstDesc& data = regst.regst_desc_type().data_regst_desc();
+      ret += ", time_shape: " + Shape(data.time_shape()).ToString();
+      const BlobDescProto& blob = data.lbi2blob_desc(0).blob_desc();
+      ret += ", shape: " + Shape(blob.shape()).ToString()
+             + " , dtype: " + DataType_Name(blob.data_type());
+    } else {
+      ret += ", ctrl ";
+    }
+    return ret;
+  };
+  std::vector<std::vector<const TaskProto*>> rank2ordered_task(GlobalProcessCtx::WorldSize(),
+                                                               std::vector<const TaskProto*>());
+  for (const auto* task : ordered_tasks) {
+    CHECK_LT(task->machine_id(), rank2ordered_task.size());
+    rank2ordered_task.at(task->machine_id()).push_back(task);
+  }
+  for (int64_t rank = 0; rank < GlobalProcessCtx::WorldSize(); ++rank) {
+    auto file_stream =
+        TeePersistentLogStream::Create(plan_name + "_rank_" + std::to_string(rank) + "_light_plan");
+    file_stream << "rank : " << std::to_string(rank) << "\n";
+    CHECK_LT(rank, rank2ordered_task.size());
+    const auto& ordered_task_in_rank = rank2ordered_task.at(rank);
+    for (int64_t i = 0; i < ordered_task_in_rank.size(); ++i) {
+      CHECK_LT(i, ordered_task_in_rank.size());
+      const auto* task = ordered_task_in_rank.at(i);
+      int64_t task_id = task->task_id();
+      CHECK(task_id2name.find(task_id) != task_id2name.end())
+          << " task_id2name cannot find" << task_id;
+      int64_t thrd_id = task->thrd_id();
+      StreamId stream_id = DecodeStreamIdFromInt64(thrd_id);
+      file_stream << "order : " << std::to_string(i) << " , actor id : " << std::to_string(task_id)
+                  << " name : " << task_id2name.at(task_id) << " thrd : " << std::to_string(thrd_id)
+                  << " device_type : " << DeviceType_Name(stream_id.device_type())
+                  << " stream_index : " << std::to_string(stream_id.stream_index()) << " {\n";
+      for (const auto& key2consume_regst : task->consumed_regst_desc_id()) {
+        std::string key = key2consume_regst.first;
+        for (int64_t consume_regst_id : key2consume_regst.second.regst_desc_id()) {
+          std::string other_rank_str = "";
+          CHECK(regst_id2proto.find(consume_regst_id) != regst_id2proto.end())
+              << " regst_id2proto cannot find: " << consume_regst_id;
+          int64_t consume_task_id = regst_id2proto.at(consume_regst_id).producer_task_id();
+          CHECK(task_id2proto.find(consume_task_id) != task_id2proto.end())
+              << " task_id2proto cannot find: " << consume_task_id;
+          int64_t other_rank = task_id2proto.at(consume_task_id)->machine_id();
+          if (other_rank != rank) { other_rank_str = " , rank: " + std::to_string(other_rank); }
+          CHECK(regst_id2name.find(consume_regst_id) != regst_id2name.end())
+              << " regst_id2name cannot find: " << consume_regst_id;
+          file_stream << "  consume : " << key << " : <- [ " << regst_id2name.at(consume_regst_id)
+                      << " ] ( actor_id: " << std::to_string(consume_task_id) << other_rank_str
+                      << ", regst: " << RegstId2TensorStr(consume_regst_id) << " )\n";
+        }
+      }
+      for (const auto& key2produce_regst : task->produced_regst_desc()) {
+        const RegstDescProto& regst = key2produce_regst.second;
+        file_stream << "  produce : " << key2produce_regst.first
+                    << " regst: " << RegstId2TensorStr(regst.regst_desc_id()) << " {\n";
+        for (int64_t consumer_task_id : regst.consumer_task_id()) {
+          std::string other_rank_str = "";
+          CHECK(task_id2proto.find(consumer_task_id) != task_id2proto.end())
+              << " task_id2proto cannot find " << consumer_task_id;
+          CHECK(task_id2name.find(consumer_task_id) != task_id2name.end())
+              << " task_id2name cannot find " << consumer_task_id;
+          int64_t other_rank = task_id2proto.at(consumer_task_id)->machine_id();
+          if (other_rank != rank) { other_rank_str = " , rank: " + std::to_string(other_rank); }
+          file_stream << "    -> [ " << task_id2name.at(consumer_task_id)
+                      << " ] ( actor_id: " << std::to_string(consumer_task_id) << other_rank_str
+                      << " )\n";
+        }
+        file_stream << "  }\n";
+      }
+
+      file_stream << "}\n";
+    }
   }
 }
 

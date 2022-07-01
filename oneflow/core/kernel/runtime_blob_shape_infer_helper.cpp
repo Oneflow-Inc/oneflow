@@ -68,6 +68,7 @@ void RuntimeBlobShapeInferHelper::UpdateInputBlobDescs7OpInferCacheKey(
     if (blob == nullptr) { return Symbol<Shape>(); }
     BlobDesc* blob_desc = BlobDesc4BnInOp(ibn, blob->blob_desc());
     blob_desc->mut_shape().LeftOnesExtendedAssign(blob->shape());
+    blob_desc->mut_stride().CheckNumAxesIdenticalAndAssign(blob->stride());
     return SymbolOf(blob_desc->shape());
   };
   const auto& input_bns = op_->input_bns();
@@ -107,7 +108,7 @@ void RuntimeBlobShapeInferHelper::InferShape(
     }
     return std::shared_ptr<const OpInferCacheValue>(ret);
   };
-  size_t cache_size = Global<ResourceDesc, ForSession>::Get()->thread_local_cache_max_size();
+  size_t cache_size = Singleton<ResourceDesc, ForSession>::Get()->thread_local_cache_max_size();
   const auto& shape_infer_ret = ThreadLocalCachedCall(cache_size, Infer, op_infer_cache_key_);
   const auto& obn_idx2shape_sym = shape_infer_ret->obn_idx2shape_sym;
   FOR_RANGE(int, i, 0, op_->output_bns().size()) {

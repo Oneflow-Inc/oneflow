@@ -33,7 +33,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@update-open-vino-img
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@support-iree-ci
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -45,7 +45,7 @@ jobs:
             release
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entries: |
-            cu115
+            cu116
             cu112
             cu102
             cpu
@@ -74,7 +74,7 @@ jobs:
           python3 -m pip install -U pip setuptools wheel --user
           python3 -m pip install oss2  --user
       - uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow@update-open-vino-img
+      - uses: Oneflow-Inc/get-oneflow@support-iree-ci
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry !='cpu' }}
         with:
@@ -98,7 +98,7 @@ jobs:
             3.8
             3.9
             3.10
-      - uses: Oneflow-Inc/get-oneflow@update-open-vino-img
+      - uses: Oneflow-Inc/get-oneflow@support-iree-ci
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cpu' }}
         with:

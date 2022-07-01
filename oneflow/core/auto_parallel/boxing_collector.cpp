@@ -20,7 +20,9 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/nd_sbp_util.h"
+#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/register/blob_desc.h"
@@ -494,6 +496,26 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
   if (ParseBooleanFromEnv("ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK", false)) {
     return Maybe<void>::Ok();
   }
+  // If compute_cost==false + 2D sbp + same placment + nccl logical + not (p->b),
+  // Use nccl logical send recv instead of middle node.
+  // Note that in op sbp inference, cost of middle nodes is still used for the moment.
+#ifdef WITH_CUDA
+  if (compute_cost == false && producer_parallel_desc.hierarchy()->NumAxes() == 2
+      && producer_parallel_desc == consumer_parallel_desc
+      && !(NdSbpHasPartialParallel(sbp_consumer)) &&
+      // TODO(): When same dim 0 finished dealing with (*, P) -> (*, S) in nccl logical pass, open
+      // this condition. When dealing with (P, P) -> (B, S0), middle node will change it to (P, P)
+      // -> (P, S0) -> (B, S0), neither same dim 0 or send recv in nccl logical pass can deal with
+      // (P, P) -> (P, S0) at the moment.
+      // !(NdSbpHasPartialParallel(sbp_producer) && NdSbpHasBroadcastParallel(sbp_consumer)) &&
+      Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+    VLOG(3) << "Middle node insertion is skipped when src sbp is " << NdSbpToString(sbp_producer)
+            << " dst sbp is " << NdSbpToString(sbp_consumer)
+            << ", because nccl logical send/recv can handle this.";
+    return Maybe<void>::Ok();
+  }
+#endif  // WITH_CUDA
+
   // Dealing with 1D sbp to 1D sbp
   // Specifically, S -> P.
   if (Is1dSbp(sbp_producer) && Is1dSbp(sbp_consumer)) {

@@ -28,7 +28,7 @@ from oneflow.test_utils.test_util import GenArgList
 @flow.unittest.skip_unless_1n4d()
 class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
     def test_to_global_flatten_hierarchy(test_case):
-        x = flow.ones((16, 16), dtype=flow.int32)
+        x = flow.ones((4, 4), dtype=flow.int32)
         sbp = (flow.sbp.partial_sum,)
         y = x.to_global(
             placement=flow.placement("cpu", ranks=[[0, 1], [2, 3]]),
@@ -38,11 +38,11 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
         y = y.to_global(placement=placement, sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (16, 16))
+        test_case.assertEqual(tuple(y.shape), (4, 4))
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_to_global_flatten_hierarchy_cpu_to_gpu(test_case):
-        x = flow.ones((16, 16), dtype=flow.int32)
+        x = flow.ones((4, 4), dtype=flow.int32)
         sbp = (flow.sbp.partial_sum,)
         y = x.to_global(
             placement=flow.placement("cpu", ranks=[[0, 1], [2, 3]]),
@@ -52,11 +52,11 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
         y = y.to_global(placement=placement, sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (16, 16))
+        test_case.assertEqual(tuple(y.shape), (4, 4))
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_to_global_flatten_hierarchy_gpu_to_cpu(test_case):
-        x = flow.ones((16, 16), dtype=flow.int32)
+        x = flow.ones((4, 4), dtype=flow.int32)
         sbp = (flow.sbp.partial_sum,)
         y = x.to_global(
             placement=flow.placement("cuda", ranks=[[0, 1], [2, 3]]),
@@ -66,11 +66,11 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
         y = y.to_global(placement=placement, sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (16, 16))
+        test_case.assertEqual(tuple(y.shape), (4, 4))
 
     def test_to_global_broadcast_shape_dtype(test_case):
         if int(os.getenv("RANK")) < 2:
-            x = flow.ones((16, 16), dtype=flow.int32)
+            x = flow.ones((4, 4), dtype=flow.int32)
         else:
             x = flow.zeros((1,), dtype=flow.float)
         placement = flow.placement("cpu", ranks=[0, 1])
@@ -78,50 +78,50 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
         y = x.to_global(placement=placement, sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (32, 16))
+        test_case.assertEqual(tuple(y.shape), (8, 4))
         test_case.assertEqual(y.dtype, flow.int32)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_local_to_global_2d_sbp(test_case):
-        x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
+        x = flow.ones((4, 4), device=flow.device("cuda"), dtype=flow.int32)
         placement = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
         sbp = (flow.sbp.split(0), flow.sbp.partial_sum)
         y = x.to_global(placement=placement, sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (32, 16))
+        test_case.assertEqual(tuple(y.shape), (8, 4))
         test_case.assertEqual(y.dtype, flow.int32)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_local_to_global_sp_2_bb(test_case):
-        x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
+        x = flow.ones((4, 4), device=flow.device("cuda"), dtype=flow.int32)
         placement = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
         sbp = (flow.sbp.split(0), flow.sbp.partial_sum)
         y = x.to_global(placement=placement, sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (32, 16))
+        test_case.assertEqual(tuple(y.shape), (8, 4))
         test_case.assertEqual(y.dtype, flow.int32)
         y = y.to_global(sbp=(flow.sbp.broadcast, flow.sbp.broadcast))
         test_case.assertEqual(y.sbp, (flow.sbp.broadcast, flow.sbp.broadcast))
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (32, 16))
+        test_case.assertEqual(tuple(y.shape), (8, 4))
         test_case.assertEqual(y.dtype, flow.int32)
         z = y.to_local()
         test_case.assertTrue(
-            np.array_equal(z.numpy(), np.ones((32, 16), dtype=np.int32) * 2)
+            np.array_equal(z.numpy(), np.ones((8, 4), dtype=np.int32) * 2)
         )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_local_to_global_ps0_2_s0s0(test_case):
-        x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
+        x = flow.ones((4, 4), device=flow.device("cuda"), dtype=flow.int32)
         x = x * int(os.getenv("RANK"))
         placement = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
         sbp = (flow.sbp.partial_sum, flow.sbp.split(0))
         y = x.to_global(placement=placement, sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (32, 16))
+        test_case.assertEqual(tuple(y.shape), (8, 4))
         test_case.assertEqual(y.dtype, flow.int32)
         sbp = (flow.sbp.split(0), flow.sbp.split(0))
         y = y.to_global(sbp=sbp)
@@ -131,19 +131,19 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
         else:
             scale = 4
         test_case.assertTrue(
-            np.array_equal(z.numpy(), np.ones((8, 16), dtype=np.int32) * scale)
+            np.array_equal(z.numpy(), np.ones((2, 4), dtype=np.int32) * scale)
         )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_local_to_global_s0p_2_s0s0(test_case):
-        x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
+        x = flow.ones((4, 4), device=flow.device("cuda"), dtype=flow.int32)
         x = x * int(os.getenv("RANK"))
         placement = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
         sbp = (flow.sbp.split(0), flow.sbp.partial_sum)
         y = x.to_global(placement=placement, sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (32, 16))
+        test_case.assertEqual(tuple(y.shape), (8, 4))
         test_case.assertEqual(y.dtype, flow.int32)
         sbp = (flow.sbp.split(0), flow.sbp.split(0))
         y = y.to_global(sbp=sbp)
@@ -153,17 +153,17 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
         else:
             scale = 5
         test_case.assertTrue(
-            np.array_equal(z.numpy(), np.ones((8, 16), dtype=np.int32) * scale)
+            np.array_equal(z.numpy(), np.ones((2, 4), dtype=np.int32) * scale)
         )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_to_global_loop_broadcast_shape_dtype(test_case):
         if int(os.getenv("RANK")) < 2:
-            x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
-            a = flow.ones((16, 16), device=flow.device("cpu"), dtype=flow.int32)
+            x = flow.ones((4, 4), device=flow.device("cuda"), dtype=flow.int32)
+            a = flow.ones((4, 4), device=flow.device("cpu"), dtype=flow.int32)
         else:
             x = flow.zeros((1,), dtype=flow.float)
-            a = flow.zeros((16, 16), device=flow.device("cpu"), dtype=flow.int32)
+            a = flow.zeros((4, 4), device=flow.device("cpu"), dtype=flow.int32)
         placement = flow.placement("cuda", ranks=[0, 1])
         sbp = (flow.sbp.split(0),)
         for i in range(1000):
@@ -173,7 +173,7 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
             b = a.to_global(placement=placement, sbp=flow.sbp.broadcast)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (32, 16))
+        test_case.assertEqual(tuple(y.shape), (8, 4))
         test_case.assertEqual(y.dtype, flow.int32)
 
 
@@ -181,7 +181,7 @@ class TestConsistentCastModule_1n4d(flow.unittest.TestCase):
 class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
     def test_to_global_broadcast_shape_dtype(test_case):
         if os.getenv("RANK") == "0":
-            x = flow.ones((16, 16), dtype=flow.int32)
+            x = flow.ones((4, 4), dtype=flow.int32)
         else:
             x = flow.zeros((1,), dtype=flow.float)
         placement = flow.placement("cpu", ranks=[0])
@@ -189,66 +189,60 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
         y = x.to_global(placement=placement, sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (16, 16))
+        test_case.assertEqual(tuple(y.shape), (4, 4))
         test_case.assertEqual(y.dtype, flow.int32)
 
     def test_local_to_global_broadcast_data(test_case):
         if int(os.getenv("RANK")) == 0:
-            x = flow.ones((16, 16), dtype=flow.int32)
+            x = flow.ones((4, 4), dtype=flow.int32)
         else:
-            x = flow.zeros((16, 16), dtype=flow.int32)
+            x = flow.zeros((4, 4), dtype=flow.int32)
         placement = flow.placement("cpu", ranks=[0, 1])
         sbp = (flow.sbp.broadcast,)
         y = x.to_global(placement=placement, sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (16, 16))
+        test_case.assertEqual(tuple(y.shape), (4, 4))
         test_case.assertEqual(y.dtype, flow.int32)
         z = y.to_local()
-        test_case.assertTrue(
-            np.array_equal(z.numpy(), np.ones((16, 16), dtype=np.int32))
-        )
+        test_case.assertTrue(np.array_equal(z.numpy(), np.ones((4, 4), dtype=np.int32)))
 
     def test_cuda_global_to_global_cpu_s2b(test_case):
-        x = flow.ones((16, 16), device=flow.device("cpu"), dtype=flow.int32)
+        x = flow.ones((4, 4), device=flow.device("cpu"), dtype=flow.int32)
         placement = flow.placement("cpu", ranks=[0, 1])
         y = x.to_global(placement=placement, sbp=flow.sbp.split(0))
         sbp = (flow.sbp.broadcast,)
         y = y.to_global(sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (32, 16))
+        test_case.assertEqual(tuple(y.shape), (8, 4))
         test_case.assertEqual(y.dtype, flow.int32)
         z = y.to_local()
-        test_case.assertTrue(
-            np.array_equal(z.numpy(), np.ones((32, 16), dtype=np.int32))
-        )
+        test_case.assertTrue(np.array_equal(z.numpy(), np.ones((8, 4), dtype=np.int32)))
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cuda_global_to_global_s2b(test_case):
-        x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
+        x = flow.ones((4, 4), device=flow.device("cuda"), dtype=flow.int32)
         placement = flow.placement("cuda", ranks=[0, 1])
         y = x.to_global(placement=placement, sbp=flow.sbp.split(0))
         sbp = (flow.sbp.broadcast,)
         y = y.to_global(sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (32, 16))
+        test_case.assertEqual(tuple(y.shape), (8, 4))
         test_case.assertEqual(y.dtype, flow.int32)
         z = y.to_local()
-        test_case.assertTrue(
-            np.array_equal(z.numpy(), np.ones((32, 16), dtype=np.int32))
-        )
+        test_case.assertTrue(np.array_equal(z.numpy(), np.ones((8, 4), dtype=np.int32)))
 
     def test_cuda_global_to_global_cpu_s2p(test_case):
-        x = flow.ones((16, 16), device=flow.device("cpu"), dtype=flow.int32)
+        x = flow.ones((4, 4), device=flow.device("cpu"), dtype=flow.int32)
         placement = flow.placement("cpu", ranks=[0, 1])
         y = x.to_global(placement=placement, sbp=flow.sbp.split(0))
         sbp = (flow.sbp.partial_sum,)
         y = y.to_global(sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (32, 16))
+        test_case.assertEqual(tuple(y.shape), (8, 4))
         test_case.assertEqual(y.dtype, flow.int32)
         z = y.to_local()
         if int(os.getenv("RANK")) == 0:
@@ -257,8 +251,8 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
                     z.numpy(),
                     np.concatenate(
                         (
-                            np.ones((16, 16), dtype=np.int32),
-                            np.zeros((16, 16), dtype=np.int32),
+                            np.ones((4, 4), dtype=np.int32),
+                            np.zeros((4, 4), dtype=np.int32),
                         ),
                         axis=0,
                     ),
@@ -270,8 +264,8 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
                     z.numpy(),
                     np.concatenate(
                         (
-                            np.zeros((16, 16), dtype=np.int32),
-                            np.ones((16, 16), dtype=np.int32),
+                            np.zeros((4, 4), dtype=np.int32),
+                            np.ones((4, 4), dtype=np.int32),
                         ),
                         axis=0,
                     ),
@@ -280,14 +274,14 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cuda_global_to_global_s2p(test_case):
-        x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
+        x = flow.ones((4, 4), device=flow.device("cuda"), dtype=flow.int32)
         placement = flow.placement("cuda", ranks=[0, 1])
         y = x.to_global(placement=placement, sbp=flow.sbp.split(0))
         sbp = (flow.sbp.partial_sum,)
         y = y.to_global(sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (32, 16))
+        test_case.assertEqual(tuple(y.shape), (8, 4))
         test_case.assertEqual(y.dtype, flow.int32)
         z = y.to_local()
         if int(os.getenv("RANK")) == 0:
@@ -296,8 +290,8 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
                     z.numpy(),
                     np.concatenate(
                         (
-                            np.ones((16, 16), dtype=np.int32),
-                            np.zeros((16, 16), dtype=np.int32),
+                            np.ones((4, 4), dtype=np.int32),
+                            np.zeros((4, 4), dtype=np.int32),
                         ),
                         axis=0,
                     ),
@@ -309,8 +303,8 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
                     z.numpy(),
                     np.concatenate(
                         (
-                            np.zeros((16, 16), dtype=np.int32),
-                            np.ones((16, 16), dtype=np.int32),
+                            np.zeros((4, 4), dtype=np.int32),
+                            np.ones((4, 4), dtype=np.int32),
                         ),
                         axis=0,
                     ),
@@ -319,91 +313,87 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cuda_global_to_global_b2p(test_case):
-        x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
+        x = flow.ones((4, 4), device=flow.device("cuda"), dtype=flow.int32)
         placement = flow.placement("cuda", ranks=[0, 1])
         y = x.to_global(placement=placement, sbp=flow.sbp.broadcast)
         sbp = (flow.sbp.partial_sum,)
         y = y.to_global(sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (16, 16))
+        test_case.assertEqual(tuple(y.shape), (4, 4))
         test_case.assertEqual(y.dtype, flow.int32)
         z = y.to_local()
         if int(os.getenv("RANK")) == 0:
             test_case.assertTrue(
-                np.array_equal(z.numpy(), np.ones((16, 16), dtype=np.int32))
+                np.array_equal(z.numpy(), np.ones((4, 4), dtype=np.int32))
             )
         else:
             test_case.assertTrue(
-                np.array_equal(z.numpy(), np.zeros((16, 16), dtype=np.int32))
+                np.array_equal(z.numpy(), np.zeros((4, 4), dtype=np.int32))
             )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cuda_global_to_global_b2s(test_case):
-        x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
+        x = flow.ones((4, 4), device=flow.device("cuda"), dtype=flow.int32)
         placement = flow.placement("cuda", ranks=[0, 1])
         y = x.to_global(placement=placement, sbp=flow.sbp.broadcast)
         sbp = (flow.sbp.split(0),)
         y = y.to_global(sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (16, 16))
+        test_case.assertEqual(tuple(y.shape), (4, 4))
         test_case.assertEqual(y.dtype, flow.int32)
         z = y.to_local()
-        test_case.assertTrue(
-            np.array_equal(z.numpy(), np.ones((8, 16), dtype=np.int32))
-        )
+        test_case.assertTrue(np.array_equal(z.numpy(), np.ones((2, 4), dtype=np.int32)))
 
     def test_cuda_global_to_global_cpu_p2s(test_case):
-        x = flow.ones((16, 16), device=flow.device("cpu"), dtype=flow.int32)
+        x = flow.ones((4, 4), device=flow.device("cpu"), dtype=flow.int32)
         placement = flow.placement("cpu", ranks=[0, 1])
         y = x.to_global(placement=placement, sbp=flow.sbp.partial_sum)
         sbp = (flow.sbp.split(0),)
         y = y.to_global(sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (16, 16))
+        test_case.assertEqual(tuple(y.shape), (4, 4))
         test_case.assertEqual(y.dtype, flow.int32)
         z = y.to_local()
         test_case.assertTrue(
-            np.array_equal(z.numpy(), np.ones((8, 16), dtype=np.int32) * 2)
+            np.array_equal(z.numpy(), np.ones((2, 4), dtype=np.int32) * 2)
         )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cuda_global_to_global_p2s(test_case):
-        x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
+        x = flow.ones((4, 4), device=flow.device("cuda"), dtype=flow.int32)
         placement = flow.placement("cuda", ranks=[0, 1])
         y = x.to_global(placement=placement, sbp=flow.sbp.partial_sum)
         sbp = (flow.sbp.split(0),)
         y = y.to_global(sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (16, 16))
+        test_case.assertEqual(tuple(y.shape), (4, 4))
         test_case.assertEqual(y.dtype, flow.int32)
         z = y.to_local()
         test_case.assertTrue(
-            np.array_equal(z.numpy(), np.ones((8, 16), dtype=np.int32) * 2)
+            np.array_equal(z.numpy(), np.ones((2, 4), dtype=np.int32) * 2)
         )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cuda_global_to_global_cuda_h2d(test_case):
-        x = flow.ones((16, 16), device=flow.device("cpu"), dtype=flow.int32)
+        x = flow.ones((4, 4), device=flow.device("cpu"), dtype=flow.int32)
         placement = flow.placement("cpu", ranks=[0, 1])
         cuda_placement = flow.placement("cuda", ranks=[0, 1])
         y = x.to_global(placement=placement, sbp=flow.sbp.partial_sum)
         y = y.to_global(placement=cuda_placement, sbp=flow.sbp.partial_sum)
         test_case.assertEqual(y.sbp, (flow.sbp.partial_sum,))
         test_case.assertEqual(y.placement, cuda_placement)
-        test_case.assertEqual(tuple(y.shape), (16, 16))
+        test_case.assertEqual(tuple(y.shape), (4, 4))
         test_case.assertEqual(y.dtype, flow.int32)
         z = y.to_local()
-        test_case.assertTrue(
-            np.array_equal(z.numpy(), np.ones((16, 16), dtype=np.int32))
-        )
+        test_case.assertTrue(np.array_equal(z.numpy(), np.ones((4, 4), dtype=np.int32)))
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cuda_global_to_global_cpu_p2b(test_case):
-        x = flow.ones((16, 16), device=flow.device("cpu"), dtype=flow.int32)
+        x = flow.ones((4, 4), device=flow.device("cpu"), dtype=flow.int32)
         placement = flow.placement("cpu", ranks=[0, 1])
         cuda_placement = flow.placement("cuda", ranks=[0, 1])
         y = x.to_global(placement=placement, sbp=flow.sbp.partial_sum)
@@ -415,40 +405,40 @@ class TestConsistentCastModule_1n2d(flow.unittest.TestCase):
         y = y.to_global(placement=placement, sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (16, 16))
+        test_case.assertEqual(tuple(y.shape), (4, 4))
         test_case.assertEqual(y.dtype, flow.int32)
         z = y.to_local()
         test_case.assertTrue(
-            np.array_equal(z.numpy(), np.ones((16, 16), dtype=np.int32) * 2)
+            np.array_equal(z.numpy(), np.ones((4, 4), dtype=np.int32) * 2)
         )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_cuda_global_to_global_p2b(test_case):
-        x = flow.ones((16, 16), device=flow.device("cuda"), dtype=flow.int32)
+        x = flow.ones((4, 4), device=flow.device("cuda"), dtype=flow.int32)
         placement = flow.placement("cuda", ranks=[0, 1])
         y = x.to_global(placement=placement, sbp=flow.sbp.partial_sum)
         sbp = (flow.sbp.broadcast,)
         y = y.to_global(sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (16, 16))
+        test_case.assertEqual(tuple(y.shape), (4, 4))
         test_case.assertEqual(y.dtype, flow.int32)
         z = y.to_local()
         test_case.assertTrue(
-            np.array_equal(z.numpy(), np.ones((16, 16), dtype=np.int32) * 2)
+            np.array_equal(z.numpy(), np.ones((4, 4), dtype=np.int32) * 2)
         )
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestConsistentCastModule_1n1d(flow.unittest.TestCase):
     def test_to_global(test_case):
-        x = flow.ones((16, 16))
+        x = flow.ones((4, 4))
         placement = flow.placement("cpu", ranks=[0])
         sbp = (flow.sbp.broadcast,)
         y = x.to_global(placement=placement, sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (16, 16))
+        test_case.assertEqual(tuple(y.shape), (4, 4))
 
 
 def _test_cpu_p2b_with_random_parameter(test_case, device_list):

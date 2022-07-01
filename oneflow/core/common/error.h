@@ -18,21 +18,22 @@ limitations under the License.
 
 #include <sstream>
 #include <vector>
-#include "oneflow/core/common/error.cfg.h"
+#include "oneflow/core/common/error.pb.h"
 
 namespace oneflow {
 
 class Error final {
  public:
-  Error(const std::shared_ptr<cfg::ErrorProto>& error_proto) : error_proto_(error_proto) {}
+  Error(const std::shared_ptr<ErrorProto>& error_proto) : error_proto_(error_proto) {}
   Error(const Error&) = default;
   ~Error() = default;
 
-  std::shared_ptr<cfg::ErrorProto> error_proto() const { return error_proto_; }
-  const cfg::ErrorProto* operator->() const { return error_proto_.get(); }
-  cfg::ErrorProto* operator->() { return error_proto_.get(); }
+  std::shared_ptr<ErrorProto> error_proto() const { return error_proto_; }
+  const ErrorProto* operator->() const { return error_proto_.get(); }
+  ErrorProto* operator->() { return error_proto_.get(); }
   operator std::string() const;
   void Assign(const Error& other) { error_proto_ = other.error_proto_; }
+  void Merge(const Error& other);
 
   // r-value reference is used to supporting expressions like `Error().AddStackFrame("foo.cpp",
   // ,"line", "Bar") << "invalid value"` because operator<<() need r-value reference
@@ -89,11 +90,11 @@ class Error final {
   static Error InputDeviceNotMatchError();
 
  private:
-  std::shared_ptr<cfg::ErrorProto> error_proto_;
+  std::shared_ptr<ErrorProto> error_proto_;
 };
 
-void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error);
-const std::shared_ptr<cfg::ErrorProto>& ThreadLocalError();
+void ThrowError(const std::shared_ptr<ErrorProto>& error);
+const std::shared_ptr<ErrorProto>& ThreadLocalError();
 
 template<typename T>
 Error& operator<<(Error& error, const T& x) {
@@ -129,7 +130,7 @@ inline Error&& operator<<(Error&& error, const std::ostream& x) {
 
 template<>
 inline Error&& operator<<(Error&& error, const Error& other) {
-  error.Assign(other);
+  error.Merge(other);
   return std::move(error);
 }
 

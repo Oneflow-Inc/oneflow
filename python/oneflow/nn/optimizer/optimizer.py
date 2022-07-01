@@ -159,7 +159,13 @@ class Optimizer(object):
                 if value.is_local:
                     value = value.to(param.device)
                 else:
-                    value = value.to_global(placement=param.placement, sbp=param.sbp)
+                    cpu_value_placement = flow.placement("cpu", value.placement.ranks)
+                    cpu_param_placement = flow.placement("cpu", param.placement.ranks)
+                    value = (
+                        value.to_global(placement=cpu_value_placement)
+                        .to_global(placement=cpu_param_placement, sbp=param.sbp)
+                        .to_global(placement=param.placement)
+                    )
                 return value
             elif isinstance(value, dict):
                 return {k: cast(param, v) for k, v in value.items()}
@@ -329,11 +335,9 @@ class Optimizer(object):
         assert "clip_grad_norm_type" in param_group
         max_norm = float(param_group["clip_grad_max_norm"])
         norm_type = float(param_group["clip_grad_norm_type"])
-        clip_grad_norm = (
-            optimizer_conf.mutable_clip_conf().mutable_clip_by_global_norm()
-        )
-        clip_grad_norm.set_max_norm(max_norm)
-        clip_grad_norm.set_norm_type(norm_type)
+        clip_grad_norm = optimizer_conf.clip_conf.clip_by_global_norm
+        clip_grad_norm.max_norm = max_norm
+        clip_grad_norm.norm_type = norm_type
 
     @property
     def support_sparse(self):
@@ -377,6 +381,6 @@ class Optimizer(object):
                 if not param.requires_grad:
                     continue
 
-                sparse_opt_conf = job_conf.mutable_indexed_slices_optimizer_conf()
-                sparse_variable_op_names = sparse_opt_conf.mutable_include_op_names()
-                sparse_variable_op_names.add_op_name(vars_conf[param].name)
+                sparse_opt_conf = job_conf.indexed_slices_optimizer_conf
+                sparse_variable_op_names = sparse_opt_conf.include_op_names
+                sparse_variable_op_names.op_name.append(vars_conf[param].name)
