@@ -409,7 +409,22 @@ static Maybe<double> GetEstimatedComputeTime(vm::LocalCallOpKernelPhyInstrOperan
   return estimated_compute_time;
 }
 
-static double GetDatasetComputeTime(vm::LocalCallOpKernelPhyInstrOperand* operand) {
+static Maybe<double> GetDatasetComputeTime(vm::LocalCallOpKernelPhyInstrOperand* operand) {
+  if (
+      operand->opkernel().op_type_name() == "empty"
+      || operand->opkernel().op_type_name() == "constant"
+      || operand->opkernel().op_type_name() == "copy"
+      || operand->opkernel().op_type_name() == "zero_like"
+      || operand->opkernel().op_type_name() == "flatten"
+      || operand->opkernel().op_type_name() == "reduce_sum"
+      || operand->opkernel().op_type_name() == "reshape"
+      || operand->opkernel().op_type_name() == "reshape_like"
+      || operand->opkernel().op_type_name() == "transpose"
+      || operand->opkernel().op_type_name() == "nll"
+      || operand->opkernel().op_type_name() == "nll_grad"
+      ) {
+    return 0;
+  }
   using json = nlohmann::json;
   static const json j = [&]() {
     json j;
@@ -430,6 +445,8 @@ static double GetDatasetComputeTime(vm::LocalCallOpKernelPhyInstrOperand* operan
   }();
   const std::string attr_str = operand->composed_attrs().ToString();
   const std::string key = op_type_str + " " + input_shape_str + " " + attr_str;
+  CHECK_OR_RETURN(j.contains(key)) << "key " << key << " not found";
+  CHECK_OR_RETURN(j[key].is_number_float()) << "key " << key << " is not float, but " << j[key];
   return j[key].get<double>();
 }
 
@@ -514,7 +531,7 @@ Maybe<void> _RecursivelyCompute(
 
   // update timestamp
   Global<dtr::TensorPool>::Get()->time_flies(compute_time);
-  Global<dtr::TensorPool>::Get()->dataset_time_flies(GetDatasetComputeTime(operand.get()));
+  Global<dtr::TensorPool>::Get()->dataset_time_flies(JUST(GetDatasetComputeTime(operand.get())));
   return Maybe<void>::Ok();
 }
 
