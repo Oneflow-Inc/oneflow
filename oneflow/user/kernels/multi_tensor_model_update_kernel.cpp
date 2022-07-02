@@ -91,9 +91,11 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
                        && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
 
+#ifdef WITH_CUDA
 REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
+#endif
 
 template<DeviceType device_type, typename T, typename G>
 class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
@@ -198,9 +200,11 @@ class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
                        && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
 
+#ifdef WITH_CUDA
 REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
+#endif
 
 template<DeviceType device_type, typename T, typename G>
 class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
@@ -275,8 +279,10 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value) \
                        && (user_op::HobDataType("model_copy", 0) == GetDataType<float16>::value));
 
+#ifdef WITH_CUDA
 REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float16);
+#endif
 
 template<DeviceType device_type, typename T, typename G>
 class MultiTensorAdamUpdateWithCastKernel final : public user_op::OpKernel,
@@ -384,8 +390,10 @@ class MultiTensorAdamUpdateWithCastKernel final : public user_op::OpKernel,
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value) \
                        && (user_op::HobDataType("model_copy", 0) == GetDataType<float16>::value));
 
+#ifdef WITH_CUDA
 REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float16);
+#endif
 
 }  // namespace
 
