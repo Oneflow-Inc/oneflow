@@ -24,7 +24,8 @@ void NcclSendRecvBoxingTaskNode::Init(int64_t machine_id, int64_t thrd_id, const
                                       const ParallelDesc& src_parallel_desc,
                                       const ParallelDesc& dst_parallel_desc,
                                       const int64_t parallel_id, const ParallelDesc& parallel_desc,
-                                      const bool has_input, const bool has_output) {
+                                      const bool has_input, const bool has_output,
+                                      const std::string& stream_name) {
   set_machine_id(machine_id);
   set_thrd_id(thrd_id);
   set_lbi(lbi);
@@ -39,6 +40,7 @@ void NcclSendRecvBoxingTaskNode::Init(int64_t machine_id, int64_t thrd_id, const
   has_input_ = has_input;
   has_output_ = has_output;
   data_type_ = data_type;
+  stream_name_ = stream_name;
 }
 
 void NcclSendRecvBoxingTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -59,6 +61,7 @@ void NcclSendRecvBoxingTaskNode::BuildExecGphAndRegst() {
   OperatorConf op_conf;
   op_conf.set_name("System-Nccl-Send-Recv-Boxing-" + NewUniqueId());
   op_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(this->device_type())));
+  op_conf.set_stream_name_hint(stream_name_);
   auto* nccl_send_recv_boxing_conf = op_conf.mutable_nccl_send_recv_boxing_conf();
   *nccl_send_recv_boxing_conf->mutable_lbi() = lbi();
   logical_shape_.ToProto(nccl_send_recv_boxing_conf->mutable_logical_shape());

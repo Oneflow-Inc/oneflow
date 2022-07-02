@@ -30,7 +30,8 @@ class NcclSendRecvBoxingTaskNode : public TransportTaskNode {
             const Shape& logical_shape, const DataType& data_type, const NdSbp& src_nd_sbp,
             const NdSbp& dst_nd_sbp, const ParallelDesc& src_parallel_desc,
             const ParallelDesc& dst_parallel_desc, const int64_t parallel_id,
-            const ParallelDesc& parallel_desc, const bool has_input, const bool has_output);
+            const ParallelDesc& parallel_desc, const bool has_input, const bool has_output,
+            const std::string& stream_name);
   TaskType GetTaskType() const override { return TaskType::kNcclSendRecvBoxing; }
   const ParallelContext* parallel_ctx() const override { return &parallel_ctx_; }
 
@@ -50,6 +51,7 @@ class NcclSendRecvBoxingTaskNode : public TransportTaskNode {
   ParallelContext parallel_ctx_;
   bool has_input_;
   bool has_output_;
+  std::string stream_name_;
 };
 
 }  // namespace oneflow

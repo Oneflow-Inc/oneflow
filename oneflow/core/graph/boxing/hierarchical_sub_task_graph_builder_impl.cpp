@@ -127,18 +127,18 @@ class NDNcclSendRecvBoxingSubTskGphBuilder final : public HierarchicalSubTskGphB
       ParallelDesc merged_parallel_desc(merged_parallel_conf);
       TaskNode* first_in_node = sorted_in_tasks.front();
       sorted_ctrl_tasks->resize(out_parallel_desc.parallel_num());
+      std::string stream_name = "NCCL_SEND_RECV_BOXING" + NewUniqueId();
       FOR_RANGE(int64_t, id, 0, merged_parallel_desc.parallel_num()) {
         NcclSendRecvBoxingTaskNode* node = ctx->task_graph()->NewNode<NcclSendRecvBoxingTaskNode>();
         const int64_t machine_id = JUST(merged_parallel_desc.MachineId4ParallelId(id));
         int64_t device_index = JUST(merged_parallel_desc.DeviceId4ParallelId(id));
-        int64_t thrd_id = EncodeStreamIdToInt64(
-            GenerateNamedTaskStreamId(machine_id, merged_parallel_desc.device_type(), device_index,
-                                      "NCCL_SEND_RECV_BOXING" + NewUniqueId()));
+        int64_t thrd_id = EncodeStreamIdToInt64(GenerateNamedTaskStreamId(
+            machine_id, merged_parallel_desc.device_type(), device_index, stream_name));
         bool has_input = in_parallel_desc.Containing(machine_id, device_index);
         bool has_output = out_parallel_desc.Containing(machine_id, device_index);
         node->Init(machine_id, thrd_id, lbi, logical_blob_desc.shape(),
                    logical_blob_desc.data_type(), in_nd_sbp, out_nd_sbp, in_parallel_desc,
-                   out_parallel_desc, id, merged_parallel_desc, has_input, has_output);
+                   out_parallel_desc, id, merged_parallel_desc, has_input, has_output, stream_name);
         if (has_input) {
           int64_t in_id =
               JUST(in_parallel_desc.ParallelId4MachineDeviceId(machine_id, device_index));
