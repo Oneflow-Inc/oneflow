@@ -33,7 +33,7 @@ constexpr char kJsonKeyPCIBusID[] = "pci_bus_id";
 void GetPCIBusID(const std::string& name, std::string* pci_bus_id) {
 #ifdef __linux__
   const std::string device_path = "/sys/class/net/" + name + "/device";
-  const char* device_real_path = realpath(device_path.data(), nullptr);
+  char* device_real_path = realpath(device_path.data(), nullptr);
   if (device_real_path == nullptr) { return; }
   const std::string device_real_path_str = device_real_path;
   free(device_real_path);
