@@ -63,6 +63,10 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
 
   void ForEachMut2MirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const {}
 
+  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
+    for (const auto& eager_blob_object : *param_blob_objects_) { DoEach(eager_blob_object.get()); }
+  }
+
  private:
   std::shared_ptr<NNGraphIf> nn_graph_;
   one::EagerBlobObjectListPtr param_blob_objects_;
