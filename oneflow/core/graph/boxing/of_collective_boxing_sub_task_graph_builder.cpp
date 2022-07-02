@@ -541,7 +541,7 @@ class OfcclCollectiveBoxingAll2AllSubTskGphBuilder final : public SubTskGphBuild
 OfCollectiveBoxingSubTskGphBuilder::OfCollectiveBoxingSubTskGphBuilder() {
   // TODO: (Panlichen) maybe we need to extend this in resoure.proto
   const CollectiveBoxingConf collective_boxing_conf =
-      Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
+      Singleton<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new OfcclCollectiveBoxingAllReduceSubTskGphBuilder());
   builders.emplace_back(new OfcclCollectiveBoxingReduceScatterSubTskGphBuilder());

@@ -213,7 +213,7 @@ void CacheKeyValueStoreImpl<Key, Elem>::LoadSnapshot(
   CHECK_GT(max_query_length_, 0);
   cache_->Clear();
   auto device =
-      Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index_);
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index_);
   CHECK(device);
   auto* stream = device->CreateStream();
   store_->LoadSnapshot(name, [&](KVIterator* iter) {
@@ -256,7 +256,7 @@ void CacheKeyValueStoreImpl<Key, Elem>::SyncCacheToStore() {
   if (synced_) { return; }
   CudaCurrentDeviceGuard guard(device_index_);
   auto device =
-      Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index_);
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index_);
   CHECK(device);
   auto* stream = device->CreateStream();
   auto* cuda_stream = stream->As<ep::CudaStream>();

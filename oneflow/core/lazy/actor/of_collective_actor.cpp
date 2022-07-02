@@ -76,42 +76,42 @@ class KernelContextImpl : public KernelContext, public ActorContextProvider {
 };
 
 void KernelContextImpl::WillForward(KernelContext* kernel_ctx, const Kernel* kernel) {
-  Global<KernelObserver>::Get()->WillForward(kernel_ctx, kernel);
+  Singleton<KernelObserver>::Get()->WillForward(kernel_ctx, kernel);
   if (stream_kernel_observer_ != nullptr) {
     stream_kernel_observer_->WillForward(kernel_ctx, kernel);
   }
 }
 
 void KernelContextImpl::DidForward(KernelContext* kernel_ctx, const Kernel* kernel) {
-  Global<KernelObserver>::Get()->DidForward(kernel_ctx, kernel);
+  Singleton<KernelObserver>::Get()->DidForward(kernel_ctx, kernel);
   if (stream_kernel_observer_ != nullptr) {
     stream_kernel_observer_->DidForward(kernel_ctx, kernel);
   }
 }
 
 void KernelContextImpl::WillForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) {
-  Global<KernelObserver>::Get()->WillForwardHeader(kernel_ctx, kernel);
+  Singleton<KernelObserver>::Get()->WillForwardHeader(kernel_ctx, kernel);
   if (stream_kernel_observer_ != nullptr) {
     stream_kernel_observer_->WillForwardHeader(kernel_ctx, kernel);
   }
 }
 
 void KernelContextImpl::DidForwardHeader(KernelContext* kernel_ctx, const Kernel* kernel) {
-  Global<KernelObserver>::Get()->DidForwardHeader(kernel_ctx, kernel);
+  Singleton<KernelObserver>::Get()->DidForwardHeader(kernel_ctx, kernel);
   if (stream_kernel_observer_ != nullptr) {
     stream_kernel_observer_->DidForwardHeader(kernel_ctx, kernel);
   }
 }
 
 void KernelContextImpl::WillForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) {
-  Global<KernelObserver>::Get()->WillForwardDataContent(kernel_ctx, kernel);
+  Singleton<KernelObserver>::Get()->WillForwardDataContent(kernel_ctx, kernel);
   if (stream_kernel_observer_ != nullptr) {
     stream_kernel_observer_->WillForwardDataContent(kernel_ctx, kernel);
   }
 }
 
 void KernelContextImpl::DidForwardDataContent(KernelContext* kernel_ctx, const Kernel* kernel) {
-  Global<KernelObserver>::Get()->DidForwardDataContent(kernel_ctx, kernel);
+  Singleton<KernelObserver>::Get()->DidForwardDataContent(kernel_ctx, kernel);
   if (stream_kernel_observer_ != nullptr) {
     stream_kernel_observer_->DidForwardDataContent(kernel_ctx, kernel);
   }
@@ -153,10 +153,10 @@ void OfCollectiveActor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   const ExecNodeProto& node = actor_ctx->task_proto().exec_sequence().exec_node()[0];
   op_name_ = node.kernel_conf().op_attribute().op_conf().name();
 
-  const OfRequestId& request_id = Global<CollectiveMgr>::Get()->GetOfRequestIdByName(op_name_);
-  auto* token = Global<CollectiveMgr>::Get()->CreateOfRequestEntryToken(request_id);
-  auto* request_entry = Global<CollectiveMgr>::Get()->GetOfRequestEntry(token);
-  Global<CollectiveMgr>::Get()->DestroyOfRequestEntryToken(token);
+  const OfRequestId& request_id = Singleton<CollectiveMgr>::Get()->GetOfRequestIdByName(op_name_);
+  auto* token = Singleton<CollectiveMgr>::Get()->CreateOfRequestEntryToken(request_id);
+  auto* request_entry = Singleton<CollectiveMgr>::Get()->GetOfRequestEntry(token);
+  Singleton<CollectiveMgr>::Get()->DestroyOfRequestEntryToken(token);
   nego_tree_info_ = request_entry->nego_tree_topo()[actor_id_];
   is_nego_root_ = (nego_tree_info_.upstream_id == -1);
   is_nego_leaf_ = (nego_tree_info_.downstream_id.size() == 0);
@@ -195,7 +195,7 @@ void OfCollectiveActor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   eord_regst_desc_ids_.clear();
 
   for (const auto& pair : task_proto.produced_regst_desc()) {
-    Global<RegstMgr>::Get()->NewRegsts(pair.second, [this](Regst* regst) {
+    Singleton<RegstMgr>::Get()->NewRegsts(pair.second, [this](Regst* regst) {
       produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
     });
     int64_t regst_desc_id = pair.second.regst_desc_id();
@@ -306,10 +306,10 @@ void OfCollectiveActor::InitBnInOp2BlobInfo(const TaskProto& task_proto) {
     // Map<string, int>
     auto regst_desc_id_it = node.bn_in_op2regst_desc_id().find(bn);
     if (regst_desc_id_it != node.bn_in_op2regst_desc_id().end()
-        && Global<RegstMgr>::Get()->HasRegstDescId(regst_desc_id_it->second)) {
+        && Singleton<RegstMgr>::Get()->HasRegstDescId(regst_desc_id_it->second)) {
       const int64_t regst_desc_id = regst_desc_id_it->second;
       blob_info.regst_desc_id = regst_desc_id;
-      const RtRegstDesc& regst_desc = Global<RegstMgr>::Get()->RegstDesc4RegstDescId(regst_desc_id);
+      const RtRegstDesc& regst_desc = Singleton<RegstMgr>::Get()->RegstDesc4RegstDescId(regst_desc_id);
       blob_info.ordinal = regst_desc.GetOrdinalForLbi(blob_info.lbi);
       if (naive_produced_rs_.HasRegstDescId(regst_desc_id)) {
         blob_info.rs = &naive_produced_rs_;
@@ -401,7 +401,7 @@ int OfCollectiveActor::HandlerNormal(const ActorMsg& msg) {
           }
           Regst* regst = msg.regst();
           CHECK(naive_consumed_rs_.HasRegstDescId(msg.regst_desc_id()));
-          CHECK(Global<RegstMgr>::Get()->HasProducerTaskId4RegstDescId(msg.regst_desc_id()));
+          CHECK(Singleton<RegstMgr>::Get()->HasProducerTaskId4RegstDescId(msg.regst_desc_id()));
           CHECK_EQ(0, naive_consumed_rs_.TryPushBackRegst(regst, msg.regst_desc_id()));
           const auto& rdeq = naive_consumed_rs_.RegstDeq4RegstDescId(msg.regst_desc_id());
           CHECK(rdeq.empty() == false);
@@ -648,7 +648,7 @@ void OfCollectiveActor::Act() {
   AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* { return nullptr; });
   int64_t actor_id = actor_id_;
   AddCallback([actor_id](){
-    Global<ActorMsgBus>::Get()->SendMsg(
+    Singleton<ActorMsgBus>::Get()->SendMsg(
       ActorMsg::BuildCollectiveMsg(actor_id, actor_id, CollectiveNegoCmd::kCollectiveDone)
     );
   });
@@ -660,7 +660,7 @@ void OfCollectiveActor::Act() {
 }
 
 void OfCollectiveActor::SyncSendMsg(const ActorMsg& msg) {
-  Global<ActorMsgBus>::Get()->SendMsg(msg);
+  Singleton<ActorMsgBus>::Get()->SendMsg(msg);
 }
 
 void OfCollectiveActor::AsyncSendNaiveProducedRegstMsgToConsumer() {
@@ -744,7 +744,7 @@ void OfCollectiveActor::AsyncSendConsumedCtrlRegstMsgToProducer() {
   naive_consumed_rs_.ForChosenRegstDeq(
       IsChosenRegstDescId, [&](int64_t regst_desc_id, const std::deque<Regst*>& reg_deq) {
         CHECK(reg_deq.empty() == false);
-        auto producer_task_id = Global<RegstMgr>::Get()->ProducerTaskId4RegstDescId(regst_desc_id);
+        auto producer_task_id = Singleton<RegstMgr>::Get()->ProducerTaskId4RegstDescId(regst_desc_id);
         Regst* regst = reg_deq.front();
         CHECK_GE(reg_deq.size(), 1);
         // must access regst before sending it to producer
@@ -774,7 +774,7 @@ void OfCollectiveActor::AsyncRetInplaceConsumedRegstIfNoConsumer() {
 
 void OfCollectiveActor::EnqueueAsyncMsg(const ActorMsg& msg) {
   if (is_kernel_launch_synchronized_ && thrd_id_ == ThrdId4ActorId(msg.dst_actor_id())) {
-    Global<ActorMsgBus>::Get()->SendMsg(msg);
+    Singleton<ActorMsgBus>::Get()->SendMsg(msg);
   } else {
     async_msg_queue_.emplace_back(msg);
   }
@@ -786,7 +786,7 @@ void OfCollectiveActor::AsyncSendEORDMsgForAllProducedRegstDesc() {
     const RtRegstDesc* regst_desc = pair.second.front()->regst_desc();
     AddCallback([regst_desc]() {
       for (int64_t consumer : regst_desc->consumers_actor_id()) {
-        Global<ActorMsgBus>::Get()->SendMsg(
+        Singleton<ActorMsgBus>::Get()->SendMsg(
             ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id()));
       }
     });
@@ -831,7 +831,7 @@ void OfCollectiveActor::AsyncSendQueuedMsg() {
     std::deque<ActorMsg> msgs;
     msgs.swap(async_msg_queue_);
     AddCallback([msgs]() {
-      for (const ActorMsg& msg : msgs) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
+      for (const ActorMsg& msg : msgs) { Singleton<ActorMsgBus>::Get()->SendMsg(msg); }
     });
   }
 }

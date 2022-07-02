@@ -35,9 +35,9 @@ OfCollectiveBoxingActorContext* GetOfCollectiveBoxingActorContext(KernelContext*
 //  public:
 //   OF_DISALLOW_COPY_AND_MOVE(OfCollectiveBoxingKernelState);
 //   explicit OfCollectiveBoxingKernelState(const RankDesc& rank_desc)
-//       : request_handle_(Global<Scheduler>::Get()->CreateRequestHandle(rank_desc)) {}
+//       : request_handle_(Singleton<Scheduler>::Get()->CreateRequestHandle(rank_desc)) {}
 //   ~OfCollectiveBoxingKernelState() override {
-//     Global<Scheduler>::Get()->DestroyRequestHandle(request_handle_);
+//     Singleton<Scheduler>::Get()->DestroyRequestHandle(request_handle_);
 //   }
 //   RequestHandle* request_handle() { return request_handle_; }
 

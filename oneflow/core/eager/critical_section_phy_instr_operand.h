@@ -75,6 +75,10 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
   void FinishInvalidInterfaceEventRecords();
   void Finish();
 
+  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
+    for (const auto& eager_blob_object : *eager_blob_objects_) { DoEach(eager_blob_object.get()); }
+  }
+
  protected:
   std::shared_ptr<NNGraphIf> nn_graph_;
   one::EagerBlobObjectListPtr eager_blob_objects_;
@@ -214,6 +218,10 @@ class CriticalSectionEndPhyInstrOperand : public PhyInstrOperand {
   void ForEachMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
 
   void ForEachMutMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
+
+  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
+    DoEach(eager_blob_object_.get());
+  }
 
  private:
   std::shared_ptr<EagerBlobObject> eager_blob_object_;

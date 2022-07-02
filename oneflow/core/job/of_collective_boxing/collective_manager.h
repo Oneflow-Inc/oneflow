@@ -45,7 +45,7 @@ class CollectiveMgr final {
   OfRequestEntry* GetOfRequestEntry(void* token);
 
  private:
-  friend class Global<CollectiveMgr>;
+  friend class Singleton<CollectiveMgr>;
   CollectiveMgr();
 
   struct Impl;
