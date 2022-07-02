@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_PRIMITIVE_COMMON_BINARY_FUNCTOR_H_
 
 #include "oneflow/core/ep/include/primitive/binary_op.h"
+#include "oneflow/core/ep/common/primitive/unary_functor.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/scalar.h"
 
@@ -312,6 +313,98 @@ struct BinaryFunctor<device, BinaryOp::kThresholdBackwardWithDyX, Src, Dst> {
     return static_cast<Dst>((x <= threshold) ? 0 : dy);
   }
   const Src threshold;
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kAbsBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    if (x == static_cast<Src>(0))
+      return static_cast<Dst>(0);
+    else
+      return x < static_cast<Src>(0) ? -dy : dy;
+  }
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kAcosBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    return dy * -rsqrt_functor(static_cast<Src>(1) - x * x);
+  }
+
+  UnaryFunctor<device, UnaryOp::kRsqrt, Src, Dst> rsqrt_functor;
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kAcoshBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    return dy * rsqrt_functor(x * x - static_cast<Src>(1));
+  }
+
+  UnaryFunctor<device, UnaryOp::kRsqrt, Src, Dst> rsqrt_functor;
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kAsinBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    return dy * rsqrt_functor(static_cast<Src>(1) - x * x);
+  }
+
+  UnaryFunctor<device, UnaryOp::kRsqrt, Src, Dst> rsqrt_functor;
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kAsinhBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    return dy * rsqrt_functor(static_cast<Src>(1) + x * x);
+  }
+
+  UnaryFunctor<device, UnaryOp::kRsqrt, Src, Dst> rsqrt_functor;
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kAtanBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    return dy * (static_cast<Src>(1) / (static_cast<Src>(1) + x * x));
+  }
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kAtanhBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    return dy * (static_cast<Src>(1) / (static_cast<Src>(1) - x * x));
+  }
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kNotEqualZeroBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    return static_cast<Src>(0);
+  }
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kNotEqualZeroBackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    return static_cast<Src>(0);
+  }
 };
 
 }  // namespace broadcast_elementwise_binary
