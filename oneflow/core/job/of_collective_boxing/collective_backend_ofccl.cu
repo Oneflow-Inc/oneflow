@@ -144,10 +144,10 @@ class CommGroup final {
     if (local_ranks.front() == 0) {
       OF_NCCL_CHECK(ncclGetUniqueId(&nccl_unique_id));
       if (local_rank_count != global_rank_count_) {
-        Global<CtrlClient>::Get()->PushKV(unique_name, NcclUniqueIdToString(nccl_unique_id));
+        Singleton<CtrlClient>::Get()->PushKV(unique_name, NcclUniqueIdToString(nccl_unique_id));
       }
     } else {
-      Global<CtrlClient>::Get()->PullKV(unique_name, [&nccl_unique_id](const std::string& val) {
+      Singleton<CtrlClient>::Get()->PullKV(unique_name, [&nccl_unique_id](const std::string& val) {
         NcclUniqueIdFromString(val, &nccl_unique_id);
       });
     }
@@ -289,7 +289,7 @@ CollectiveBackendOfccl::CollectiveBackendOfccl() = default;
 CollectiveBackendOfccl::~CollectiveBackendOfccl() = default;
 
 void CollectiveBackendOfccl::Init(std::shared_ptr<OfRequestStore> request_store) {
-  impl_ = std::make_unique<Impl>(Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf(),
+  impl_ = std::make_unique<Impl>(Singleton<ResourceDesc, ForSession>::Get()->collective_boxing_conf(),
                                  request_store);
 }
 
