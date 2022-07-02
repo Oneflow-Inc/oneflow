@@ -27,7 +27,7 @@ class CudaBackendAllocator final : public Allocator {
   explicit CudaBackendAllocator(int64_t device_id) : device_id_(device_id) {}
   ~CudaBackendAllocator() override = default;
 
-  void Allocate(char** mem_ptr, std::size_t size) override;
+  Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
   void DeviceReset() override;
 
@@ -35,9 +35,10 @@ class CudaBackendAllocator final : public Allocator {
   int64_t device_id_;
 };
 
-void CudaBackendAllocator::Allocate(char** mem_ptr, std::size_t size) {
+Maybe<void> CudaBackendAllocator::Allocate(char** mem_ptr, std::size_t size) {
   cudaSetDevice(device_id_);
   if (cudaMalloc(mem_ptr, size) != cudaSuccess) { *mem_ptr = nullptr; }
+  return Maybe<void>::Ok();
 }
 
 void CudaBackendAllocator::Deallocate(char* mem_ptr, std::size_t size) {
@@ -78,7 +79,7 @@ TEST(CudaBinAllocator, cuda_allocator) {
   std::vector<char*> ptrs;
   for (int i = 0; i < 512; ++i) {
     char* ptr = nullptr;
-    a->Allocate(&ptr, 1);
+    CHECK_JUST(a->Allocate(&ptr, 1));
     ASSERT_TRUE(ptr != nullptr);
     ptrs.emplace_back(ptr);
   }
@@ -94,7 +95,7 @@ TEST(CudaBinAllocator, cuda_allocator) {
   ptrs.clear();
   for (int i = 0; i < 2048; ++i) {
     char* ptr = nullptr;
-    a->Allocate(&ptr, 10000);
+    CHECK_JUST(a->Allocate(&ptr, 10000));
     ASSERT_TRUE(ptr != nullptr);
     ptrs.emplace_back(ptr);
   }
@@ -108,10 +109,10 @@ TEST(CudaBinAllocator, cuda_allocator) {
   }
 
   char* data_ptr_1 = nullptr;
-  a->Allocate(&data_ptr_1, 2048 * sizeof(float));
+  CHECK_JUST(a->Allocate(&data_ptr_1, 2048 * sizeof(float)));
 
   char* data_ptr_2 = nullptr;
-  a->Allocate(&data_ptr_2, 4096 * sizeof(double));
+  CHECK_JUST(a->Allocate(&data_ptr_2, 4096 * sizeof(double)));
 
   ASSERT_TRUE(data_ptr_1 != data_ptr_2);
   if (data_ptr_1 < data_ptr_2) {
