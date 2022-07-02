@@ -24,8 +24,8 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void ControlStreamType::Compute(Instruction* instruction) const {
-  instruction->instruction_type().Compute(instruction);
+void ControlStreamType::Run(Instruction* instruction) const {
+  instruction->Compute();
   auto* status_buffer = instruction->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer())->set_done();
 }
