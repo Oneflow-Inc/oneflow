@@ -13,26 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_CPU_ALLOCATOR_H_
-#define ONEFLOW_CORE_VM_CPU_ALLOCATOR_H_
-
-#include <cstdint>
-#include "oneflow/core/vm/allocator.h"
+#include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/framework/stream_on_independent_thread.h"
+#include "oneflow/core/common/env_var/vm.h"
 
 namespace oneflow {
 namespace vm {
 
-class CpuAllocator final : public Allocator {
- public:
-  explicit CpuAllocator() = default;
-  ~CpuAllocator() override = default;
-
-  Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
-  void Deallocate(char* mem_ptr, std::size_t size) override;
-  void DeviceReset() override {}
-};
+bool StreamType::OnSchedulerThread(StreamRole stream_role) const {
+  if (StreamOnIndependentThread::Visit(stream_role)) { return false; }
+  return ThreadLocalEnvBool<ONEFLOW_VM_WORKLOAD_ON_SCHEDULER_THREAD>();
+}
 
 }  // namespace vm
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_VM_CPU_ALLOCATOR_H_

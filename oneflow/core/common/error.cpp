@@ -230,6 +230,12 @@ Error Error::RuntimeError() {
   return error;
 }
 
+Error Error::OutOfMemoryError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_out_of_memory_error();
+  return error;
+}
+
 Error Error::BoxingNotSupportedError() {
   auto error = std::make_shared<ErrorProto>();
   error->mutable_boxing_not_supported_error();
