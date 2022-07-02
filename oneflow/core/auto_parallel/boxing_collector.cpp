@@ -1044,7 +1044,7 @@ Maybe<void> BoxingCollector::AskSbpCombination4GeneralBasicCommunication(
   int32_t partial_ratio4producer = PartialRatio4Producer(sbp_producer, producer_parallel_desc);
   int32_t broadcast_ratio4consumer = BroadcastRatio4Consumer(sbp_consumer, consumer_parallel_desc);
   if (2 * (partial_ratio4producer + broadcast_ratio4consumer)
-      < partial_ratio4producer * broadcast_ratio4consumer) {
+      >= partial_ratio4producer * broadcast_ratio4consumer) {
     return Maybe<void>::Ok();
   }
 
