@@ -40,7 +40,7 @@ class NLLGradFunction : public OpExprGradFunction<NLLCaptureState> {
 
 Maybe<void> NLLGradFunction::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -65,12 +65,10 @@ Maybe<void> NLLGradFunction::Apply(const NLLCaptureState* ctx, const TensorTuple
                                    TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
-  CHECK_EQ_OR_RETURN(out_grads.size(), 2)
-      << Error::RuntimeError() << "The number of out_grads is expected to be 2, got "
-      << out_grads.size();
+  CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // NOLINT(maybe-need-error-msg)
   CHECK_GE_OR_RETURN(ctx->SavedTensors().size(), 2)
       << Error::RuntimeError()
-      << "The number of saved tensors is expected to be greater than or equal to 2, got "
+      << "The number of saved tensors is expected to be greater than or equal to 2, but got "
       << ctx->SavedTensors().size();
   const auto& out_grad = out_grads[0];
   const auto& input = ctx->SavedTensors()[0];
