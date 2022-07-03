@@ -58,7 +58,7 @@ class LayerNorm : public OpExprGradFunction<LayerNormCaptureState> {
 
 Maybe<void> LayerNorm::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   op_name_ = fw_op_expr->op_name();
   return Maybe<void>::Ok();
@@ -73,8 +73,8 @@ Maybe<void> LayerNorm::Capture(LayerNormCaptureState* ctx, const TensorTuple& in
   ctx->begin_params_axis = JUST(composed_attrs.GetAttr<int64_t>("begin_params_axis"));
   ctx->epsilon = JUST(composed_attrs.GetAttr<double>("epsilon"));
 
-  CHECK_EQ_OR_RETURN(inputs.size(), ctx->center + ctx->scale + 1);
-  CHECK_EQ_OR_RETURN(outputs.size(), 3);
+  CHECK_EQ_OR_RETURN(inputs.size(), ctx->center + ctx->scale + 1);  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(outputs.size(), 3);                            // NOLINT(maybe-need-error-msg)
 
   bool has_gamma_diff = ctx->scale && inputs.at(1)->requires_grad();
   bool has_beta_diff = ctx->center && inputs.at(2)->requires_grad();
