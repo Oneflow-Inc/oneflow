@@ -13,25 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from contextlib import contextmanager
+
 import os
 import warnings
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
-from pathlib import Path
 import pickle
-
 import numpy as np
+from pathlib import Path
+from contextlib import contextmanager
 from google.protobuf import text_format
+from typing import Any, Dict, Optional, Sequence, Tuple, Union
+
 
 import oneflow
-import oneflow as flow
 import oneflow._oneflow_internal
-import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
+import oneflow as flow
 import oneflow.framework.dtype as dtype_util
 import oneflow.framework.id_util as id_util
-from oneflow.framework.tensor import Tensor
 import oneflow.nn.graph.graph as graph_util
-import pickle
+import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
+from oneflow.framework.tensor import Tensor
 
 SNAPSHOT_DONE_FILENAME = "snapshot_done"
 META_INFO_FILENAME = "meta"
@@ -322,30 +322,36 @@ def load(path: str, global_src_rank: Optional[int] = None,) -> Any:
     return res["data"]
 
 
-def save_graph(obj: any, path: Union[str, Path], optimized: bool = False):
+def save_graph(
+    graph: graph_util.Graph, path: Union[str, Path], optimized: bool = False
+):
     r"""Save a graph to a directory.
 
     Args:
         path (str): The directory in which the graph is saved
         optimized (bool): Whether to save optimized graph
     """
+
+    if not isinstance(graph, graph_util.Graph):
+        raise ValueError("Only Graph can be saved when using flow.save_graph.")
+
+    if not graph._is_compiled:
+        raise RuntimeError("graph must be compiled first.")
+
     path: Path = Path(path)
 
-    if isinstance(obj, graph_util.Graph):
+    path.mkdir(exist_ok=True)
 
-        graph: graph_util.Graph = obj
-
-        if not graph._is_compiled:
-            raise RuntimeError("graph must be compiled first.")
-
-        path.mkdir(exist_ok=True)
-
-        serialized_job = str(
-            text_format.MessageToString(
-                graph._full_job_proto if optimized else graph._original_job_proto
-            )
+    serialized_job = str(
+        text_format.MessageToString(
+            graph._full_job_proto if optimized else graph._original_job_proto
         )
-        oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path))
+    )
+
+    oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path))
+
+    for x in graph._state():
+        _save_tensor_to_disk(x.origin, path / f"{x.name_prefix}{x.name}")
 
 
 def save(
@@ -364,16 +370,17 @@ def save(
             will be saved by the process whose rank ==
             global_src_rank, while other processes will not do any
             disk I/O.
-        optimized (bool): Whether to save optimized object
+        optimized (bool): Whether to save optimized graph
     """
     path: Path = Path(path)
 
     if isinstance(obj, graph_util.Graph):
 
-        save_graph(obj, path, optimized)
+        warnings.warn(
+            "Using flow.save to save graph will be deprecated in next version. Please use oneflow.save_graph instead."
+        )
 
-        for x in obj._state():
-            _save_tensor_to_disk(x.origin, path / f"{x.name_prefix}{x.name}")
+        save_graph(obj, path, optimized)
 
         return
 

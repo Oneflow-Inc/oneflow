@@ -25,6 +25,8 @@ limitations under the License.
 
 namespace oneflow {
 
+const std::string VariableTensorMgr::NewVariableNamePrefix_ = "__internal_variable_";
+
 void VariableTensorMgr::Set(const std::string& variable_op_name,
                             const std::shared_ptr<one::Tensor>& variable_tensor) {
   variables_[variable_op_name] = variable_tensor;
@@ -80,12 +82,13 @@ void VariableTensorMgr::WalkVariables(
 }
 
 std::string VariableTensorMgr::GenNewVariableName(const std::string& key) {
-  if (key == "") { return fmt::format("__internal_variable_{}", ::oneflow::NewUniqueId()); }
-  return fmt::format("__internal_variable_{}_{}", key, ::oneflow::NewUniqueId());
+  if (key == "") { return fmt::format("{}{}", NewVariableNamePrefix_, ::oneflow::NewUniqueId()); }
+  return fmt::format("{}{}_{}", NewVariableNamePrefix_, key, ::oneflow::NewUniqueId());
 }
 
 bool VariableTensorMgr::IsVariableNameNewGened(const std::string& name) {
-  return (name.size() > 9) && (name.substr(0, 20) == "__internal_variable_");
+  return (name.size() > NewVariableNamePrefix_.size())
+         && (name.substr(0, NewVariableNamePrefix_.size()) == NewVariableNamePrefix_);
 }
 
 }  // namespace oneflow

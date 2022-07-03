@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import logging
-import os
 import time
 import inspect
 from collections import OrderedDict
@@ -569,7 +567,7 @@ class Graph(object):
 
     @property
     def _forward_job_proto(self):
-        logging.warning(
+        warnings.warn(
             "_forward_job_proto is deprecated, please use _graph_proto instead."
         )
         return self._graph_proto
@@ -595,7 +593,7 @@ class Graph(object):
 
     @property
     def _full_graph_proto(self):
-        logging.warning(
+        warnings.warn(
             "_full_graph_proto is deprecated, please use _optimized_graph_proto instead."
         )
         return self._optimized_graph_proto

@@ -54,6 +54,7 @@ class VariableTensorMgr final {
  private:
   friend class Singleton<VariableTensorMgr>;
   VariableTensorMgr() = default;
+  static const std::string NewVariableNamePrefix_;
 
   std::map<std::string, std::shared_ptr<one::Tensor>> variables_;
 };

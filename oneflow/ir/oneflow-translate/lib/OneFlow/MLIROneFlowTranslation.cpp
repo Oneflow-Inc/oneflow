@@ -796,19 +796,21 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
 
   if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION", false)
       && job_wrapper.job()->job_conf().has_predict_conf()) {
-    const auto graph_is_global = []() -> bool {
-      const auto mgr = ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get();
-      bool is_global = false;
-      mgr->WalkVariables([&is_global](const std::string& name,
-                                      const std::shared_ptr<::oneflow::one::Tensor>& tensor) {
-        if (tensor->is_consistent()) { is_global = true; }
-      });
-      return is_global;
-    };
-    if (!graph_is_global()) {
-      pm.addPass(oneflow::createPreConvertInferenceOpPass());
-      pm.addPass(oneflow::createConvertInferenceOpPass());
-      pm.addPass(oneflow::createPostConvertInferenceOpPass());
+    const auto mgr = ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get();
+    if (mgr != nullptr) {
+      const auto graph_is_global = [mgr]() -> bool {
+        bool is_global = false;
+        mgr->WalkVariables([&is_global](const std::string& name,
+                                        const std::shared_ptr<::oneflow::one::Tensor>& tensor) {
+          if (tensor->is_consistent()) { is_global = true; }
+        });
+        return is_global;
+      };
+      if (!graph_is_global()) {
+        pm.addPass(oneflow::createPreConvertInferenceOpPass());
+        pm.addPass(oneflow::createConvertInferenceOpPass());
+        pm.addPass(oneflow::createPostConvertInferenceOpPass());
+      }
     }
   }
   pm.addPass(createCanonicalizerPass());
