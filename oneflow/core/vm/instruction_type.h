@@ -17,7 +17,9 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_INSTRUCTION_TYPE_H_
 
 #include <glog/logging.h>
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace vm {
@@ -35,12 +37,23 @@ class InstructionType {
  public:
   virtual ~InstructionType() = default;
 
+  Maybe<void> PrepareIf(Instruction* instruction) const {
+    OF_PROFILER_RANGE_GUARD(std::string("Prepare:") + DebugName(*instruction));
+    InitOrCheckInputBlobsMemPtrForAllocationCompuationPipelining(instruction);
+    return Prepare(instruction);
+  }
+
+  void ComputeIf(Instruction* instruction) const {
+    OF_PROFILER_RANGE_GUARD(std::string("Compute:") + DebugName(*instruction));
+    Compute(instruction);
+  }
+
   virtual bool IsBarrier() const { return false; }
   virtual InstructionFuseType fuse_type() const { return kDisableInstructionFuse; }
-  virtual void Compute(Instruction* instruction) const = 0;
   void InitInstructionStatusIf(Instruction* instruction) const {
     InitInstructionStatus(instruction);
   }
+
   void DeleteInstructionStatusIf(Instruction* instruction) const {
     DeleteInstructionStatus(instruction);
   }
@@ -51,8 +64,15 @@ class InstructionType {
   InstructionType() = default;
 
  private:
+  // Allocating tensors, deallocating tensors, preparing opkernel states and preparing opkernel
+  // caches.
+  virtual Maybe<void> Prepare(Instruction* instruction) const = 0;
+
+  virtual void Compute(Instruction* instruction) const = 0;
+
   virtual void InitInstructionStatus(Instruction* instruction) const;
   virtual void DeleteInstructionStatus(Instruction* instruction) const;
+  void InitOrCheckInputBlobsMemPtrForAllocationCompuationPipelining(Instruction* instruction) const;
 };
 
 }  // namespace vm
