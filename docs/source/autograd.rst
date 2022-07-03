@@ -24,7 +24,6 @@ Tensor autograd functions
    oneflow.Tensor.is_leaf
    oneflow.Tensor.backward
    oneflow.Tensor.detach
-   oneflow.Tensor.detach_
    oneflow.Tensor.register_hook
    oneflow.Tensor.retain_grad
 

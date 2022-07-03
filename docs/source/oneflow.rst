@@ -90,6 +90,7 @@ Indexing, Slicing, Joining, Mutating Ops
     unsqueeze
     where
 
+.. _random-sampling:
 
 Random sampling
 -------------------------------------------
@@ -227,7 +228,7 @@ Pointwise Ops
     logical_and 
     logical_not 
     logical_or 
-    logical_slice 
+     
     logical_xor 
     mul 
     neg 
@@ -299,7 +300,6 @@ Other Ops
     broadcast_like 
     cumprod 
     cumsum 
-    clone
     diag 
     diagonal 
     einsum 

@@ -109,7 +109,7 @@ Graph Config option
     allow_fuse_cast_scale
     set_gradient_accumulation_steps
     enable_cudnn_conv_heuristic_search_algo
-    disable_straighten_algorithm
+    
 
 Block Config option
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
