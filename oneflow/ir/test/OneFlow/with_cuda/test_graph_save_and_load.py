@@ -68,7 +68,7 @@ class GraphSaveTestCase(flow.unittest.TestCase):
         saved_path = os.path.join("saved_model", graph.name)
         if not os.path.exists(saved_path):
             os.makedirs(saved_path)
-        flow.save(graph, saved_path)
+        flow.save_graph(graph, saved_path)
 
         saved_ir_path = os.path.join(saved_path, "model.mlir")
         serialized_job = oneflow._oneflow_internal.nn.graph.LoadSerializedJobFromIR(
