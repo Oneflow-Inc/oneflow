@@ -23,9 +23,6 @@ from test_util import GenArgList
 
 import oneflow as flow
 
-os.environ["ONEFLOW_ENABLE_MULTI_TENSOR_MODEL_UPDATE"] = "1"
-os.environ["ONEFLOW_FUSE_MODEL_UPDATE_CAST"] = "1"
-
 
 def compare_with_numpy_adam(
     test_case,
@@ -40,6 +37,9 @@ def compare_with_numpy_adam(
     do_bias_correction,
     amsgrad,
 ):
+    os.environ["ONEFLOW_ENABLE_MULTI_TENSOR_MODEL_UPDATE"] = "1"
+    os.environ["ONEFLOW_FUSE_MODEL_UPDATE_CAST"] = "1"
+
     random_weight_seq = []
     init_value_seq = []
 
