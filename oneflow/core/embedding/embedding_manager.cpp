@@ -39,11 +39,18 @@ struct NumUniqueState {
 
 class DynamicAllocationEmbeddingState final : public EmbeddingState {
  public:
-  DynamicAllocationEmbeddingState() {
+  OF_DISALLOW_COPY_AND_MOVE(DynamicAllocationEmbeddingState);
+  DynamicAllocationEmbeddingState()
+      : lookup_values_(nullptr),
+        lookup_values_size_(0),
+        has_lookup_values_(false),
+        lookup_embeddings_(nullptr),
+        lookup_embeddings_size_(0),
+        has_lookup_embeddings_(false),
+        updated_values_(nullptr),
+        iter_(-1) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     num_unique_states_.resize(kRingBufferSize);
-    has_lookup_values_ = false;
-    has_lookup_embeddings_ = false;
     cudaMemPoolProps poolProps = {};
     poolProps.allocType = cudaMemAllocationTypePinned;
     poolProps.handleTypes = cudaMemHandleTypePosixFileDescriptor;
@@ -65,7 +72,7 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
   }
 
   void OnEmbeddingPrefetchEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    // do nothing, check ptrs is freed
+    // do nothing
   }
 
   void OnEmbeddingLookupStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
@@ -135,8 +142,13 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
     // do nothing
   }
 
-  void OnEmbeddingGradientShuffleStart(user_op::KernelComputeContext* ctx, int64_t iter) override {}
-  void OnEmbeddingGradientShuffleEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {}
+  void OnEmbeddingGradientShuffleStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    // do nothing
+  }
+
+  void OnEmbeddingGradientShuffleEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    // do nothing
+  }
 
   void OnEmbeddingUpdateStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
     const user_op::Tensor* updated_unique_embeddings =
@@ -163,6 +175,7 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
   void OnEmbeddingUpdateEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
     // do nothing
   }
+
   void OnEmbeddingPutStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
     // do nothing
   }
@@ -221,8 +234,8 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
   void* updated_values_;
   int64_t iter_;
   std::vector<NumUniqueState> num_unique_states_;
-  int device_index_;
-  cudaMemPool_t mem_pool_;
+  int device_index_{};
+  cudaMemPool_t mem_pool_{};
   std::mutex mutex_;
 };
 
@@ -230,7 +243,20 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
 
 class StaticAllocationEmbeddingState final : public EmbeddingState {
  public:
-  StaticAllocationEmbeddingState() { num_unique_states_.resize(kRingBufferSize); }
+  OF_DISALLOW_COPY_AND_MOVE(StaticAllocationEmbeddingState);
+  StaticAllocationEmbeddingState()
+      : lookup_out_values_(nullptr),
+        lookup_out_embeddings_(nullptr),
+        has_lookup_out_embeddings_(false),
+        embedding_shuffle_in_embeddings_(nullptr),
+        update_in_values_(nullptr),
+        update_out_values_(nullptr),
+        put_in_values_(nullptr),
+        tmp_buffer_ptr_(nullptr),
+        tmp_buffer_offset_(0),
+        tmp_buffer_size_(0) {
+    num_unique_states_.resize(kRingBufferSize);
+  }
   ~StaticAllocationEmbeddingState() override = default;
 
   void OnEmbeddingPrefetchStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
@@ -376,9 +402,9 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
   void* update_out_values_;
   const void* put_in_values_;
   std::vector<NumUniqueState> num_unique_states_;
-  void* tmp_buffer_ptr_ = nullptr;
-  int64_t tmp_buffer_offset_ = 0;
-  size_t tmp_buffer_size_ = 0;
+  void* tmp_buffer_ptr_;
+  int64_t tmp_buffer_offset_;
+  size_t tmp_buffer_size_;
   std::mutex mutex_;
 };
 
