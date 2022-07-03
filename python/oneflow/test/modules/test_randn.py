@@ -28,9 +28,10 @@ from oneflow.test_utils.automated_test_util import *
 
 def _test_randn(test_case, device, shape):
     y1 = flow.randn(*shape, device=flow.device(device))
-    y2 = flow.randn(*shape, device=flow.device(device))
+    y2 = flow.randn(size=shape, device=flow.device(device))
     test_case.assertTrue(not np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
     test_case.assertTrue(shape == y1.shape)
+    test_case.assertTrue(shape == y2.shape)
 
 
 def _test_0d_rand(test_case, device, shape):
