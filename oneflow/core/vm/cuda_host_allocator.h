@@ -26,6 +26,8 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
+static constexpr int kCudaHostMaxGranularity = 64;
+
 class CudaHostAllocator final : public Allocator {
  public:
   CudaHostAllocator(const CudaHostAllocator&) = delete;
@@ -36,15 +38,14 @@ class CudaHostAllocator final : public Allocator {
   explicit CudaHostAllocator(int64_t device_id) : Allocator(), device_id_(device_id) {}
   ~CudaHostAllocator() override;
 
-  void Allocate(char** mem_ptr, std::size_t size) override;
+  Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
-
-  static const int kMaxGranularity = 64;
+  void DeviceReset() override {}
 
  private:
   int64_t device_id_;
   std::mutex mutex_;
-  std::array<std::vector<char*>, kMaxGranularity> granularity2free_ptrs_;
+  std::array<std::vector<char*>, kCudaHostMaxGranularity> granularity2free_ptrs_;
   std::unordered_map<char*, size_t> occupied_ptr2granularity_;
 };
 
