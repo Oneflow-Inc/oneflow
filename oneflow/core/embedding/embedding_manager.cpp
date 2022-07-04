@@ -280,17 +280,25 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
   }
   ~StaticAllocationEmbeddingState() override = default;
 
-  void OnEmbeddingPrefetchStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
+  void InitTmpBufferPtr(user_op::KernelComputeContext* ctx) {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     tmp_buffer_ptr_ = tmp_buffer->mut_dptr();
     tmp_buffer_offset_ = 0;
     tmp_buffer_size_ = tmp_buffer->shape_view().elem_cnt();
   }
 
-  void OnEmbeddingPrefetchEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
+  void ResetTmpBufferPtr() {
     tmp_buffer_ptr_ = nullptr;
     tmp_buffer_offset_ = 0;
     tmp_buffer_size_ = 0;
+  }
+
+  void OnEmbeddingPrefetchStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    this->InitTmpBufferPtr(ctx);
+  }
+
+  void OnEmbeddingPrefetchEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    this->ResetTmpBufferPtr();
   }
 
   void OnEmbeddingLookupStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
@@ -301,6 +309,7 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
       has_lookup_embeddings_ = true;
       lookup_embeddings_ = embeddings->mut_dptr();
     }
+    this->InitTmpBufferPtr(ctx);
   }
 
   void* LookupUniqueValues(int64_t iter) override { return lookup_unique_values_; }
@@ -314,16 +323,14 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
     lookup_unique_values_ = nullptr;
     lookup_embeddings_ = nullptr;
     has_lookup_embeddings_ = false;
+    this->ResetTmpBufferPtr();
   }
 
   void OnEmbeddingShuffleStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
     const user_op::Tensor* cur_rank_embeddings =
         ctx->Tensor4ArgNameAndIndex("cur_rank_embeddings", 0);
     embedding_shuffle_cur_rank_embeddings_ = cur_rank_embeddings->dptr();
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    tmp_buffer_ptr_ = tmp_buffer->mut_dptr();
-    tmp_buffer_offset_ = 0;
-    tmp_buffer_size_ = tmp_buffer->shape_view().elem_cnt();
+    this->InitTmpBufferPtr(ctx);
   }
 
   const void* EmbeddingShuffleCurRankEmbeddings(int64_t iter) override {
@@ -332,22 +339,15 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
 
   void OnEmbeddingShuffleEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
     embedding_shuffle_cur_rank_embeddings_ = nullptr;
-    tmp_buffer_ptr_ = nullptr;
-    tmp_buffer_offset_ = 0;
-    tmp_buffer_size_ = 0;
+    this->ResetTmpBufferPtr();
   }
 
   void OnEmbeddingGradientShuffleStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    tmp_buffer_ptr_ = tmp_buffer->mut_dptr();
-    tmp_buffer_offset_ = 0;
-    tmp_buffer_size_ = tmp_buffer->shape_view().elem_cnt();
+    this->InitTmpBufferPtr(ctx);
   }
 
   void OnEmbeddingGradientShuffleEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    tmp_buffer_ptr_ = nullptr;
-    tmp_buffer_offset_ = 0;
-    tmp_buffer_size_ = 0;
+    this->ResetTmpBufferPtr();
   }
 
   void OnEmbeddingUpdateStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
