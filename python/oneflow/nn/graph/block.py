@@ -295,14 +295,18 @@ class ModuleBlock(Block):
             )
 
         return args, kwargs
-    
+
     def _get_or_create_identity(self, input_tensor: Tensor = None):
         key = input_tensor
-        
+
         if key not in self._belonged_graph._unique_identity_op_dict:
-            ident_name_scope = graph_build_util.make_new_name_scope(self.prev_scope, self.name_prefix + self.name)
+            ident_name_scope = graph_build_util.make_new_name_scope(
+                self.prev_scope, self.name_prefix + self.name
+            )
             with graph_build_util.BlockScopeContext(self.prev_scope, ident_name_scope):
-                self._belonged_graph._unique_identity_op_dict[key] = oneflow._C.identity(input_tensor)
+                self._belonged_graph._unique_identity_op_dict[
+                    key
+                ] = oneflow._C.identity(input_tensor)
 
         return self._belonged_graph._unique_identity_op_dict[key]
 
