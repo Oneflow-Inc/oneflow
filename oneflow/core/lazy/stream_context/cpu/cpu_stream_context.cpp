@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/stream/include/stream_context.h"
+#include "oneflow/core/lazy/stream_context/include/stream_context.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/device/event_record.h"
