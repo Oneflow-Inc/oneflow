@@ -51,12 +51,12 @@ class EmbeddingState {
   virtual void OnEmbeddingPrefetchEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
 
   virtual void OnEmbeddingLookupStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
-  virtual void* LookupOutValues(int64_t iter) = 0;
-  virtual void* LookupOutEmbeddings(int64_t iter) = 0;
+  virtual void* LookupUniqueValues(int64_t iter) = 0;
+  virtual void* LookupEmbeddings(int64_t iter) = 0;
   virtual void OnEmbeddingLookupEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
 
   virtual void OnEmbeddingShuffleStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
-  virtual const void* EmbeddingShuffleInEmbeddings(int64_t iter) = 0;
+  virtual const void* EmbeddingShuffleCurRankEmbeddings(int64_t iter) = 0;
   virtual void OnEmbeddingShuffleEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
 
   virtual void OnEmbeddingGradientShuffleStart(user_op::KernelComputeContext* ctx,
@@ -64,23 +64,22 @@ class EmbeddingState {
   virtual void OnEmbeddingGradientShuffleEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
 
   virtual void OnEmbeddingUpdateStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
-  virtual const void* UpdateInValues(int64_t iter) = 0;
-  virtual void* UpdateOutValues(int64_t iter) = 0;
+  virtual const void* EmbeddingUpdateUniqueEmbeddings(int64_t iter) = 0;
+  virtual void* EmbeddingUpdateUpdatedUniqueEmbeddings(int64_t iter) = 0;
   virtual void OnEmbeddingUpdateEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
 
   virtual void OnEmbeddingPutStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
-  virtual const void* PutInValues(int64_t iter) = 0;
+  virtual const void* EmbeddingPutUniqueEmbeddings(int64_t iter) = 0;
   virtual void OnEmbeddingPutEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
 
   virtual void AllocTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr, size_t size) = 0;
   virtual void FreeTmpBuffer(user_op::KernelComputeContext* ctx, void* ptr) = 0;
 
-  virtual void SetNumUniqueState(uint32_t num_unique,
-                                 const std::vector<uint32_t>& num_unique_matrix, int64_t iter) = 0;
-
-  virtual uint32_t GetNumUnique(int64_t iter) = 0;
-
-  virtual const std::vector<uint32_t>& GetNumUniqueMatrix(int64_t iter) = 0;
+  virtual void SetIdFinalNumUnique(uint32_t final_num_unique, int64_t iter) = 0;
+  virtual void SetIdNumUniqueMatrix(const std::vector<uint32_t>& num_unique_matrix,
+                                    int64_t iter) = 0;
+  virtual uint32_t GetIdNumUnique(int64_t iter) = 0;
+  virtual const std::vector<uint32_t>& GetIdNumUniqueMatrix(int64_t iter) = 0;
 };
 
 class EmbeddingManager final {
