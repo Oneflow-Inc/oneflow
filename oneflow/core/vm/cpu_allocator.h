@@ -27,8 +27,9 @@ class CpuAllocator final : public Allocator {
   explicit CpuAllocator() = default;
   ~CpuAllocator() override = default;
 
-  void Allocate(char** mem_ptr, std::size_t size) override;
+  Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
+  void DeviceReset() override {}
 };
 
 }  // namespace vm
