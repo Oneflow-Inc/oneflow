@@ -531,7 +531,6 @@ def _is_global(self):
     raise RuntimeError(".is_global has been removed, please use .is_global instead")
 
 
-
 def _new_tensor(
     self, data, dtype=None, device=None, requires_grad=False, placement=None, sbp=None
 ):
