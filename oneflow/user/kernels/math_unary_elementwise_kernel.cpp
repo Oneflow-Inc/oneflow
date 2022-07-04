@@ -21,7 +21,8 @@ namespace oneflow {
 namespace {
 
 template<typename Context>
-std::unique_ptr<ep::primitive::ElementwiseUnary> NewElementwiseUnaryPrimitive(Context* ctx, ep::primitive::UnaryOp unary_op) {
+std::unique_ptr<ep::primitive::ElementwiseUnary> NewElementwiseUnaryPrimitive(
+    Context* ctx, ep::primitive::UnaryOp unary_op) {
   const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("y", 0);
   return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnary>(
@@ -29,7 +30,8 @@ std::unique_ptr<ep::primitive::ElementwiseUnary> NewElementwiseUnaryPrimitive(Co
 }
 
 template<typename Context>
-std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> NewElementwiseBinaryPrimitive(Context* ctx, ep::primitive::BinaryOp binary_op) {
+std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> NewElementwiseBinaryPrimitive(
+    Context* ctx, ep::primitive::BinaryOp binary_op) {
   const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
   const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
   return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinary>(
@@ -38,7 +40,7 @@ std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> NewElementwiseBinaryP
 
 }  // namespace
 
-#define REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD(math_type_pair)        \
+#define REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD(math_type_pair)                                           \
   REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                                           \
       .SetCreateFn([]() {\
         return user_op::NewOpKernel<UnaryPrimitiveKernel>(\

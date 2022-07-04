@@ -54,7 +54,7 @@ struct UnaryFunctor<device, UnaryOp::kCelu, Dst, Src> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kHardSwish, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     if (src <= static_cast<Src>(-3)) {
@@ -69,7 +69,7 @@ struct UnaryFunctor<device, UnaryOp::kHardSwish, Dst, Src> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kHardSigmoid, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     if (src <= static_cast<Src>(-3)) {
@@ -124,7 +124,7 @@ struct UnaryFunctor<device, UnaryOp::kLeakyRelu, Dst, Src> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kMish, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     Src soft_plus_val = log(static_cast<Src>(1) + exp(src));
@@ -137,7 +137,7 @@ struct UnaryFunctor<device, UnaryOp::kMish, Dst, Src> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kRelu, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     const Src zero_val = static_cast<Src>(0.0);
@@ -151,7 +151,7 @@ struct UnaryFunctor<device, UnaryOp::kRelu, Dst, Src> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kSilu, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     return static_cast<Dst>(src / (static_cast<Src>(1) + exp(-src)));
@@ -160,7 +160,7 @@ struct UnaryFunctor<device, UnaryOp::kSilu, Dst, Src> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kSelu, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     return static_cast<Dst>((src > static_cast<Src>(0.0))
@@ -173,7 +173,7 @@ struct UnaryFunctor<device, UnaryOp::kSelu, Dst, Src> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kSoftSign, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     return static_cast<Dst>(src / (static_cast<Src>(1) + abs(src)));
@@ -224,23 +224,21 @@ struct UnaryFunctor<device, UnaryOp::kThreshold, Dst, Src> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kLogicalNot, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(!src); }
 };
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kAbs, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const {
-    return src < static_cast<Src>(0) ? -src : src;
-  }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return src < static_cast<Src>(0) ? -src : src; }
 };
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kSign, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     return static_cast<Src>((src > static_cast<Src>(0)) - (src < static_cast<Src>(0)));
@@ -249,7 +247,8 @@ struct UnaryFunctor<device, UnaryOp::kSign, Dst, Src> {
 
 template<DeviceType device, typename Src, typename Dst>
 struct UnaryFunctor<device, UnaryOp::kLogSigmoid, Src, Dst> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1)
+      : log_functor(attr0, attr1), exp_functor(attr0, attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     return -log_functor(static_cast<Src>(1) + exp_functor(-src));
@@ -261,7 +260,7 @@ struct UnaryFunctor<device, UnaryOp::kLogSigmoid, Src, Dst> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kNotEqualZero, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     return static_cast<Src>(src != static_cast<Src>(0));
@@ -270,25 +269,21 @@ struct UnaryFunctor<device, UnaryOp::kNotEqualZero, Dst, Src> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kNegative, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const {
-    return -src;
-  }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return -src; }
 };
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kReciprocal, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const {
-    return static_cast<Src>(1.0) / src;
-  }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Src>(1.0) / src; }
 };
 
 template<DeviceType device>
 struct UnaryFunctor<device, UnaryOp::kReciprocalNoNan, float, float> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC float operator()(float src) const {
     if (fabsf(src) <= 0.0f) { return 0.0f; }
@@ -298,7 +293,7 @@ struct UnaryFunctor<device, UnaryOp::kReciprocalNoNan, float, float> {
 
 template<DeviceType device>
 struct UnaryFunctor<device, UnaryOp::kReciprocalNoNan, double, double> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC double operator()(double src) const {
     if (fabs(src) <= 0.0) { return 0.0; }
@@ -307,8 +302,8 @@ struct UnaryFunctor<device, UnaryOp::kReciprocalNoNan, double, double> {
 };
 
 template<DeviceType device, typename Src, typename Dst>
-struct UnaryFunctor<device, UnaryOp::kSigmoidV2, Src, Dst> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+struct UnaryFunctor<device, UnaryOp::kSigmoid, Src, Dst> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) : exp_functor(attr0, attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     return static_cast<Src>(1) / (static_cast<Src>(1) + exp_functor(-src));
@@ -319,23 +314,21 @@ struct UnaryFunctor<device, UnaryOp::kSigmoidV2, Src, Dst> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kSquare, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const {
-    return src * src;
-  }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return src * src; }
 };
 
 template<DeviceType device, typename Src>
 struct UnaryFunctor<device, UnaryOp::kIsInf, bool, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC bool operator()(Src src) const { return false; }
 };
 
 template<DeviceType device, typename Src>
 struct UnaryFunctor<device, UnaryOp::kIsNan, bool, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC bool operator()(Src src) const { return false; }
 };

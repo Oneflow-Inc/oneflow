@@ -71,7 +71,7 @@ enum class UnaryOp {
   kRint,
   kRound,
   kRsqrt,
-  kSigmoidV2,
+  kSigmoid,
   kSign,
   kSin,
   kSinh,

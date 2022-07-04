@@ -13,13 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/ep/common/primitive/unary_functor.h"
+#include "oneflow/core/ep/cpu/primitive/unary_functor.h"
 #include "oneflow/core/ep/common/primitive/binary_functor.h"
 
 namespace oneflow {
 
 namespace ep {
 namespace primitive {
-namespace broadcast_elementwise_binary {
 
 template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kPow, Src, Dst> {
@@ -69,7 +70,6 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTanhBackwardWithDyX, Src, Dst>
   }
 };
 
-}  // namespace broadcast_elementwise_binary
 }  // namespace primitive
 }  // namespace ep
 }  // namespace oneflow
