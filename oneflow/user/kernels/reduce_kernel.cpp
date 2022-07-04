@@ -100,8 +100,8 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     if (input_tensor->shape_view().elem_cnt() == 0) {
       if (output_tensor->shape_view().elem_cnt() != 0) {
         Scalar init_value = [&]() {
-          if (std::is_same<BinaryFunc<T>, BinaryFuncAny<T>>::value){ return Scalar(0); }
-          if (std::is_same<BinaryFunc<T>, BinaryFuncAll<T>>::value){ return Scalar(1); }
+          if (std::is_same<BinaryFunc<T>, BinaryFuncAny<T>>::value) { return Scalar(0); }
+          if (std::is_same<BinaryFunc<T>, BinaryFuncAll<T>>::value) { return Scalar(1); }
           UNIMPLEMENTED();
         }();
         CHECK_GE(output_elem_cnt, 0);
