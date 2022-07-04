@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/vm/fuse_phy_instr_operand.h"
 #include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/allocator.h"
-#include "oneflow/core/vm/shrinkable_cache.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/cpp_attribute.h"
@@ -325,8 +324,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
         // Shrinks allocator to reduce fragmentation of memory.
         {
           auto* allocator = stream->device_ctx()->mut_allocator();
-          auto* shrinkable_cache = dynamic_cast<ShrinkableCache*>(allocator);
-          if (shrinkable_cache != nullptr) { shrinkable_cache->Shrink(); }
+          if(allocator) { allocator->ShrinkCache(); }
         }
         // Infers the instruction again.
         CHECK_JUST_MSG(instruction->Prepare(), std::stringstream() << DebugDeviceReset(stream));

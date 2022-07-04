@@ -33,7 +33,7 @@ class ThreadSafeAllocator final : public Allocator {
 
   Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
-  void ShrinkCache() override { backend_allocator_->ShrinkCache(); }
+  void ShrinkCache() override; 
   void DeviceReset() override;
 
  private:
@@ -51,15 +51,9 @@ class SingleThreadOnlyAllocator final : public Allocator {
 
   Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
-<<<<<<< HEAD
 
-  void ShrinkCache() override {
-    backend_allocator_->ShrinkCache();
-  }
-=======
-  void Shrink() override;
+  void ShrinkCache() override;
   void DeviceReset() override;
->>>>>>> 6f24d92fff981bbba2639b114af9221390eb6c23
 
  private:
   void CheckUniqueThreadAccess();
