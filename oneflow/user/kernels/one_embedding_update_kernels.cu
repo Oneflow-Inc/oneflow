@@ -276,10 +276,10 @@ class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
     }
     // update kernel
     const T* unique_embeddings_ptr =
-        reinterpret_cast<const T*>(embedding_state->UpdateInValues(current_iter_));
-    T* updated_unique_embeddings_ptr =
-        reinterpret_cast<T*>(embedding_state->UpdateOutValues(current_iter_));
-    const uint32_t num_unique = embedding_state->GetNumUnique(current_iter_);
+        reinterpret_cast<const T*>(embedding_state->EmbeddingUpdateUniqueEmbeddings(current_iter_));
+    T* updated_unique_embeddings_ptr = reinterpret_cast<T*>(
+        embedding_state->EmbeddingUpdateUpdatedUniqueEmbeddings(current_iter_));
+    const uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
     const int64_t embedding_grad_elem_cnt = num_unique * embedding_size;
     SGDUpdateKernel<T, G, IDX>
         <<<BlocksNum4ThreadsNum(embedding_grad_elem_cnt), kCudaThreadsNumPerBlock, 0,
@@ -368,10 +368,10 @@ class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
     }
     // update kernel
     const T* unique_embeddings_ptr =
-        reinterpret_cast<const T*>(embedding_state->UpdateInValues(current_iter_));
-    T* updated_unique_embeddings_ptr =
-        reinterpret_cast<T*>(embedding_state->UpdateOutValues(current_iter_));
-    const uint32_t num_unique = embedding_state->GetNumUnique(current_iter_);
+        reinterpret_cast<const T*>(embedding_state->EmbeddingUpdateUniqueEmbeddings(current_iter_));
+    T* updated_unique_embeddings_ptr = reinterpret_cast<T*>(
+        embedding_state->EmbeddingUpdateUpdatedUniqueEmbeddings(current_iter_));
+    const uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
     const int64_t embedding_grad_elem_cnt = num_unique * embedding_size;
     MomentumUpdateKernel<T, G, IDX>
         <<<BlocksNum4ThreadsNum(embedding_grad_elem_cnt), kCudaThreadsNumPerBlock, 0,
@@ -472,10 +472,10 @@ class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
     }
     // update kernel
     const T* unique_embeddings_ptr =
-        reinterpret_cast<const T*>(embedding_state->UpdateInValues(current_iter_));
-    T* updated_unique_embeddings_ptr =
-        reinterpret_cast<T*>(embedding_state->UpdateOutValues(current_iter_));
-    const uint32_t num_unique = embedding_state->GetNumUnique(current_iter_);
+        reinterpret_cast<const T*>(embedding_state->EmbeddingUpdateUniqueEmbeddings(current_iter_));
+    T* updated_unique_embeddings_ptr = reinterpret_cast<T*>(
+        embedding_state->EmbeddingUpdateUpdatedUniqueEmbeddings(current_iter_));
+    const uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
     const int64_t embedding_grad_elem_cnt = num_unique * embedding_size;
     AdamUpdateKernel<T, G, IDX>
         <<<BlocksNum4ThreadsNum(embedding_grad_elem_cnt), kCudaThreadsNumPerBlock, 0,
@@ -568,10 +568,10 @@ class AdagradEmbeddingUpdateKernel final : public user_op::OpKernel {
     }
     // update kernel
     const T* unique_embeddings_ptr =
-        reinterpret_cast<const T*>(embedding_state->UpdateInValues(current_iter_));
-    T* updated_unique_embeddings_ptr =
-        reinterpret_cast<T*>(embedding_state->UpdateOutValues(current_iter_));
-    const uint32_t num_unique = embedding_state->GetNumUnique(current_iter_);
+        reinterpret_cast<const T*>(embedding_state->EmbeddingUpdateUniqueEmbeddings(current_iter_));
+    T* updated_unique_embeddings_ptr = reinterpret_cast<T*>(
+        embedding_state->EmbeddingUpdateUpdatedUniqueEmbeddings(current_iter_));
+    const uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
     const int64_t embedding_grad_elem_cnt = num_unique * embedding_size;
     AdagradUpdateKernel<T, G, IDX>
         <<<BlocksNum4ThreadsNum(embedding_grad_elem_cnt), kCudaThreadsNumPerBlock, 0,
@@ -662,10 +662,10 @@ class FtrlEmbeddingUpdateKernel final : public user_op::OpKernel {
     }
     // update kernel
     const T* unique_embeddings_ptr =
-        reinterpret_cast<const T*>(embedding_state->UpdateInValues(current_iter_));
-    T* updated_unique_embeddings_ptr =
-        reinterpret_cast<T*>(embedding_state->UpdateOutValues(current_iter_));
-    const uint32_t num_unique = embedding_state->GetNumUnique(current_iter_);
+        reinterpret_cast<const T*>(embedding_state->EmbeddingUpdateUniqueEmbeddings(current_iter_));
+    T* updated_unique_embeddings_ptr = reinterpret_cast<T*>(
+        embedding_state->EmbeddingUpdateUpdatedUniqueEmbeddings(current_iter_));
+    const uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
     const int64_t embedding_grad_elem_cnt = num_unique * embedding_size;
     FtrlUpdateKernel<T, G, IDX>
         <<<BlocksNum4ThreadsNum(embedding_grad_elem_cnt), kCudaThreadsNumPerBlock, 0,

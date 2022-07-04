@@ -460,13 +460,14 @@ class IdShuffleKernel final : public user_op::OpKernel {
     std::memcpy(num_unique_matrix_vec.data(), host_num_unique_matrix,
                 parallel_num * parallel_num * sizeof(IDX));
     CHECK_EQ(sizeof(IDX), sizeof(uint32_t));
+    embedding_state->SetIdNumUniqueMatrix(num_unique_matrix_vec, current_iter_);
     // reuse HostNumUniqueMatrix ptr
     IDX* host_num_unique = host_num_unique_matrix;
     OF_CUDA_CHECK(cudaMemcpyAsync(host_num_unique, cur_rank_num_unique->dptr(), sizeof(IDX),
                                   cudaMemcpyDefault, cuda_stream));
     CHECK_JUST(ctx->stream()->Sync());
-    uint32_t num_unique = *host_num_unique;
-    embedding_state->SetNumUniqueState(num_unique, num_unique_matrix_vec, current_iter_);
+    uint32_t final_num_unique = *host_num_unique;
+    embedding_state->SetIdFinalNumUnique(final_num_unique, current_iter_);
     current_iter_++;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -962,11 +963,11 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     }
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     const std::vector<uint32_t>& num_unique_matrix_vec =
-        embedding_state->GetNumUniqueMatrix(current_iter_);
+        embedding_state->GetIdNumUniqueMatrix(current_iter_);
     CHECK_EQ(sizeof(IDX), sizeof(uint32_t));
     std::memcpy(host_num_unique_matrix, num_unique_matrix_vec.data(),
                 parallel_num * parallel_num * sizeof(IDX));
-    uint32_t num_unique = embedding_state->GetNumUnique(current_iter_);
+    uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
 
     int64_t cur_rank_num_ids = 0;
     for (int64_t i = 0; i < parallel_num; ++i) {
@@ -976,8 +977,8 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     for (int64_t i = 0; i < parallel_num; ++i) {
       unique_partitioned_num_ids += host_num_unique_matrix[parallel_id * parallel_num + i];
     }
-    const T* cur_rank_embeddings_ptr =
-        reinterpret_cast<const T*>(embedding_state->EmbeddingShuffleInEmbeddings(current_iter_));
+    const T* cur_rank_embeddings_ptr = reinterpret_cast<const T*>(
+        embedding_state->EmbeddingShuffleCurRankEmbeddings(current_iter_));
     if (!enable_quantized_comm) {
       // 1. reverse cur_rank unique, from (num_unique, embedding_size) to (cur_rank_num_ids,
       // embedding_size)
@@ -1388,11 +1389,11 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     }
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     const std::vector<uint32_t>& num_unique_matrix_vec =
-        embedding_state->GetNumUniqueMatrix(current_iter_);
+        embedding_state->GetIdNumUniqueMatrix(current_iter_);
     CHECK_EQ(sizeof(IDX), sizeof(uint32_t));
     std::memcpy(host_num_unique_matrix, num_unique_matrix_vec.data(),
                 parallel_num * parallel_num * sizeof(IDX));
-    uint32_t num_unique = embedding_state->GetNumUnique(current_iter_);
+    uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
 
     int64_t cur_rank_num_ids = 0;
     for (int64_t i = 0; i < parallel_num; ++i) {
