@@ -136,7 +136,7 @@ class VectorMatrixProductGradAKernel final : public user_op::OpKernel,
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     size_t m = 1;
     size_t k = dy->shape_view().At(0);
-    size_t n = b->shape_view().At(1);
+    size_t n = b->shape_view().At(0);
     const double alpha = 1.0;
     double beta = 0.0;
     auto matmul = NewVectorMatrixProductGradAPrimitive(ctx);
