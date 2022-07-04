@@ -1028,6 +1028,16 @@
     "Tensor (Tensor a, Tensor b) => VectorMatrixProduct"
   bind_python: False
 
+- name: "vector_matrix_product_grad_a"
+  signature: 
+    "Tensor (Tensor dy, Tensor b) => VectorMatrixProductGradA"
+  bind_python: False
+
+- name: "vector_matrix_product_grad_b"
+  signature: 
+    "Tensor (Tensor dy, Tensor a) => VectorMatrixProductGradB"
+  bind_python: False
+
 - name: "tensordot"
   signature: [
     "Tensor (Tensor a, Tensor b, Int32List dims_a, Int32List dims_b) => TensorDot",

@@ -1160,6 +1160,36 @@ class MatrixVectorProductGradBFunctor {
   std::shared_ptr<OpExpr> matrix_vector_product_grad_b_op_;
 };
 
+class VectorMatrixProductGradAFunctor {
+ public:
+  VectorMatrixProductGradAFunctor() {
+    vector_matrix_product_grad_a_op_ = CHECK_JUST(
+        one::OpBuilder("vector_matrix_product_grad_a").Input("dy").Input("b").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& b) const {
+    return OpInterpUtil::Dispatch<Tensor>(*vector_matrix_product_grad_a_op_, {dy, b});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> vector_matrix_product_grad_a_op_;
+};
+
+class VectorMatrixProductGradBFunctor {
+ public:
+  VectorMatrixProductGradBFunctor() {
+    vector_matrix_product_grad_b_op_ = CHECK_JUST(
+        one::OpBuilder("vector_matrix_product_grad_b").Input("dy").Input("a").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& a) const {
+    return OpInterpUtil::Dispatch<Tensor>(*vector_matrix_product_grad_b_op_, {dy, a});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> vector_matrix_product_grad_b_op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1207,6 +1237,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "BinaryCrossEntropyWithLogitsReduceMeanLossGrad");
   m.add_functor<impl::MatrixVectorProductGradAFunctor>("MatrixVectorProductGradA");
   m.add_functor<impl::MatrixVectorProductGradBFunctor>("MatrixVectorProductGradB");
+  m.add_functor<impl::VectorMatrixProductGradAFunctor>("VectorMatrixProductGradA");
+  m.add_functor<impl::VectorMatrixProductGradBFunctor>("VectorMatrixProductGradB");
 };
 
 }  // namespace functional

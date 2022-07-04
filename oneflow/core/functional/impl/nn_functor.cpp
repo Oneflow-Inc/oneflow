@@ -313,7 +313,7 @@ class MatMulFunctor {
     JUST(attrs.SetAttr<double>("alpha", alpha));
     const int64_t a_num_axes = a_shape->NumAxes();
     const int64_t b_num_axes = b_shape->NumAxes();
-    // if (a_num_axes == 1 && b_num_axes == 2) { return VectorMatrixProduct(a, b); }
+    if (a_num_axes == 1 && b_num_axes == 2) { return VectorMatrixProduct(a, b); }
     if (a_num_axes == 2 && b_num_axes == 1) { return MatrixVectorProduct(a, b); }
     if (a_num_axes == 2 && b_num_axes == 2) {
       return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
