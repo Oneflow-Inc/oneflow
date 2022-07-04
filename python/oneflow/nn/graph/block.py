@@ -299,7 +299,7 @@ class ModuleBlock(Block):
     def __get_or_create_global(self, input_tensor: Tensor = None, placement=None):
         assert input_tensor is not None
         assert placement is not None
-        key = id(input_tensor) + str(placement)
+        key = str(id(input_tensor)) + str(placement)
 
         # input_tensor + placement -> unique_global_tensor
         if key not in self._belonged_graph._unique_global_op_dict:
