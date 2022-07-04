@@ -151,7 +151,7 @@ REGISTER_USER_OP_GRAD("vector_matrix_product")
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("dy", 0))
       .Split(user_op::OpArg("b", 0), 0)
-      .Split(user_op::OpArg("dx", 0), 1)
+      .Split(user_op::OpArg("dx", 0), 0)
       .Build();
   ctx->NewBuilder()
       .Split(user_op::OpArg("dy", 0), 0)
@@ -198,22 +198,17 @@ REGISTER_USER_OP_GRAD("vector_matrix_product")
       .Build();
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("a", 0))
-      .Split(user_op::OpArg("dy", 0), 1)
+      .Split(user_op::OpArg("dy", 0), 0)
       .Split(user_op::OpArg("dx", 0), 1)
       .Build();
   ctx->NewBuilder()
-      .Split(user_op::OpArg("dy", 0), 0)
-      .Split(user_op::OpArg("a", 0), 0)
-      .PartialSum(user_op::OpArg("dx", 0))
-      .Build();
-  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("a", 0))
       .PartialSum(user_op::OpArg("dy", 0))
-      .Broadcast(user_op::OpArg("b", 0))
       .PartialSum(user_op::OpArg("dx", 0))
       .Build();
   ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("a", 0))
       .Broadcast(user_op::OpArg("dy", 0))
-      .PartialSum(user_op::OpArg("b", 0))
       .PartialSum(user_op::OpArg("dx", 0))
       .Build();
   return Maybe<void>::Ok();
