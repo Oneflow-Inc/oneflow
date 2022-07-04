@@ -33,15 +33,15 @@ class Slice : public OpExprGradFunction<SliceCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr) << "Slice op_expr is null";
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(SliceCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1) << "Slice input size must be 1";
-    CHECK_EQ_OR_RETURN(outputs.size(), 1) << "Slice output size must be 1";
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->start = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("start"));
@@ -77,7 +77,7 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr) << "SliceUpdate op_expr is null";
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
 
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
@@ -85,8 +85,8 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
 
   Maybe<void> Capture(SliceUpdateCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2) << "SliceUpdate input size must be 2";
-    CHECK_EQ_OR_RETURN(outputs.size(), 1) << "SliceUpdate output size must be 1";
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad_ref = inputs[0]->requires_grad();
     ctx->requires_grad_value = inputs[1]->requires_grad();
     if (!ctx->requires_grad_ref && !ctx->requires_grad_value) { return Maybe<void>::Ok(); }

@@ -28,7 +28,7 @@ def _test_consistent_normal(
     x = flow.normal(
         mean,
         std,
-        *shape,
+        shape,
         placement=placement,
         sbp=sbp,
         dtype=dtype,

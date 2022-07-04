@@ -126,6 +126,9 @@ class Instruction final : public intrusive::Base {
   const OutEdgeList& out_edges() const { return out_edges_; }
   const DependenceAccessList& access_list() const { return access_list_; }
 
+  Maybe<void> Prepare();
+  void Compute();
+
   // Setters
   Stream* mut_stream() { return stream_; }
   InstructionStatusBuffer* mut_status_buffer() { return &status_buffer_; }

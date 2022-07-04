@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,19 +12,23 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_CORE_KERNEL_UTIL_DNN_INTERFACE_H_
-#define ONEFLOW_CORE_KERNEL_UTIL_DNN_INTERFACE_H_
+"""
 
-#include "oneflow/core/job/resource.pb.h"
-#include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/common/data_type.h"
+import unittest
+import oneflow as flow
+import oneflow.unittest
 
-namespace oneflow {
 
-template<DeviceType>
-struct DnnIf;
+class TestBiasAdd(flow.unittest.TestCase):
+    def test_b_tensor_numaxes_err(test_case):
+        with test_case.assertRaises(RuntimeError) as context:
+            x = flow.tensor([[1, 1], [2, 2]])
+            y = flow.tensor([[2, 2], [1, 1]])
+            out = flow._C.bias_add(y, x, axis=0)
+        test_case.assertTrue(
+            "Bias tensor has to be a one-dimensional vector" in str(context.exception)
+        )
 
-}  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_UTIL_DNN_INTERFACE_H_
+if __name__ == "__main__":
+    unittest.main()

@@ -40,29 +40,34 @@ void SumSquares2(int64_t n, const T* src0, T* dst0, const T* src1, T* dst1) {
 
 }  // namespace
 
-template<typename T, typename G>
-struct SGDUpdateKernelUtil<DeviceType::kCPU, T, G> {
+template<typename T, typename G, typename C>
+struct SGDUpdateKernelUtil<DeviceType::kCPU, T, G, C> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
                      float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, const G* model_diff, T* model);
+                     const int64_t* skip_if, const G* model_diff, T* model, C* model_copy);
 };
 
-template<typename T, typename G>
-void SGDUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
+template<typename T, typename G, typename C>
+void SGDUpdateKernelUtil<DeviceType::kCPU, T, G, C>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
-    const int64_t* skip_if, const G* model_diff, T* model) {
+    const int64_t* skip_if, const G* model_diff, T* model, C* model_copy) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   for (int64_t i = 0; i != n; ++i) {
-    SGDUpdateFunctor<T, G>()(model_diff + i, model + i, scale, l1, l2, weight_decay,
-                             learning_rate_val);
+    if (model_copy != nullptr) {
+      FusedSGDUpdateFunctor<T, G, C>()(model_diff + i, model + i, model_copy + i, scale, l1, l2,
+                                       weight_decay, learning_rate_val);
+    } else {
+      SGDUpdateFunctor<T, G>()(model_diff + i, model + i, scale, l1, l2, weight_decay,
+                               learning_rate_val);
+    }
   }
 }
 
-template struct SGDUpdateKernelUtil<DeviceType::kCPU, float, float>;
-template struct SGDUpdateKernelUtil<DeviceType::kCPU, double, double>;
+template struct SGDUpdateKernelUtil<DeviceType::kCPU, float, float, float16>;
+template struct SGDUpdateKernelUtil<DeviceType::kCPU, double, double, float16>;
 
 template<typename T, typename K, typename IDX>
 struct IndexedSlicesSGDUpdateKernelUtil<DeviceType::kCPU, T, K, IDX> {
@@ -161,25 +166,25 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_INDEXED_SLICES_MOMENTUM_MODEL_UPDAT
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 #undef INSTANTIATE_INDEXED_SLICES_MOMENTUM_MODEL_UPDATE_KERNEL_UTIL_CPU
 
-template<typename T, typename G>
-struct AdamUpdateKernelUtil<DeviceType::kCPU, T, G> {
+template<typename T, typename G, typename C>
+struct AdamUpdateKernelUtil<DeviceType::kCPU, T, G, C> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1,
                      float beta2, float epsilon, float weight_decay, bool amsgrad,
                      bool do_bias_correction, float learning_rate_val, float bias_correction1_val,
                      float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, const float* bias_correction1,
-                     const float* bias_correction2, const G* model_diff, T* model, T* m, T* v,
-                     T* max_v);
+                     const float* bias_correction2, const G* model_diff, T* model, C* model_copy,
+                     T* m, T* v, T* max_v);
 };
 
-template<typename T, typename G>
-void AdamUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
+template<typename T, typename G, typename C>
+void AdamUpdateKernelUtil<DeviceType::kCPU, T, G, C>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta1, float beta2,
     float epsilon, float weight_decay, bool amsgrad, bool do_bias_correction,
     float learning_rate_val, float bias_correction1_val, float bias_correction2_val,
     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
     const float* bias_correction1_ptr, const float* bias_correction2_ptr, const G* model_diff,
-    T* model, T* m, T* v, T* max_v) {
+    T* model, C* model_copy, T* m, T* v, T* max_v) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
@@ -187,14 +192,21 @@ void AdamUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
   if (bias_correction2_ptr != nullptr) { bias_correction2_val = *bias_correction2_ptr; }
 
   FOR_RANGE(int64_t, i, 0, n) {
-    AdamUpdateFunctor<T, G>()(model_diff + i, model + i, m + i, v + i, max_v + i, scale, l1, l2,
-                              beta1, beta2, epsilon, weight_decay, amsgrad, bias_correction1_val,
-                              bias_correction2_val, learning_rate_val);
+    if (model_copy != nullptr) {
+      FusedAdamUpdateFunctor<T, G, C>()(model_diff + i, model + i, model_copy + i, m + i, v + i,
+                                        max_v + i, scale, l1, l2, beta1, beta2, epsilon,
+                                        weight_decay, amsgrad, bias_correction1_val,
+                                        bias_correction2_val, learning_rate_val);
+    } else {
+      AdamUpdateFunctor<T, G>()(model_diff + i, model + i, m + i, v + i, max_v + i, scale, l1, l2,
+                                beta1, beta2, epsilon, weight_decay, amsgrad, bias_correction1_val,
+                                bias_correction2_val, learning_rate_val);
+    }
   }
 }
 
-template struct AdamUpdateKernelUtil<DeviceType::kCPU, float, float>;
-template struct AdamUpdateKernelUtil<DeviceType::kCPU, double, double>;
+template struct AdamUpdateKernelUtil<DeviceType::kCPU, float, float, float16>;
+template struct AdamUpdateKernelUtil<DeviceType::kCPU, double, double, float16>;
 
 template<typename T, typename K, typename IDX>
 struct IndexedSlicesAdamMdUpdateKernelUtil<DeviceType::kCPU, T, K, IDX> {

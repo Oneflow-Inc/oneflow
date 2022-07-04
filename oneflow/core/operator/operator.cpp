@@ -719,9 +719,12 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
     for (int32_t i = 0; i < nd_sbp_sig_list.size(); ++i) {
       double total_copy_cost = 0.0;
       double sum_priority_ratio = 0.0;
+      bool same_sbp_before_reduce = true;
       for (int32_t ibn_id = 0; ibn_id < input_bns().size(); ibn_id++) {
         const auto& ibn = input_bns().at(ibn_id);
         const auto& producer_infer_hint4ibn = JUST(NdSbpInferHint4Ibn(ibn));
+        same_sbp_before_reduce &= producer_infer_hint4ibn->nd_sbp()
+                                  == JUST(VectorAt(nd_sbp_sig_list, i)).bn_in_op2nd_sbp().at(ibn);
         // Skip the computation of priority ratio if SBP_INFER_RULE_TAG = 3
         if (infer_rule != SbpInferRuleTag::kMinCost) {
           double priority_ratio = ComputeSbpInferPriority(
@@ -751,7 +754,8 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
         if (infer_rule != SbpInferRuleTag::kAllMatch && total_copy_cost > min_copy_cost) { break; }
       }
       // For SBP_INFER_RULE_TAG = 1, select the all-matched case if found
-      if (infer_rule == SbpInferRuleTag::kAllMatch && sum_priority_ratio == 0.0) {
+      if (infer_rule == SbpInferRuleTag::kAllMatch && same_sbp_before_reduce
+          && sum_priority_ratio == 0.0) {
         select_sbp_idx = i;
         break;
       }
@@ -759,8 +763,6 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
       if (total_copy_cost <= min_copy_cost) {
         select_sbp_idx = i;
         min_copy_cost = total_copy_cost;
-        // Reduce inquiries if the copy cost is 0.
-        if (total_copy_cost == 0.0) { break; }
       }
     }
     // Can't find any available sbp

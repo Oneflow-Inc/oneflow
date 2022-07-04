@@ -52,19 +52,23 @@ class TmpTensor final : public user_op::Tensor {
   }
   DataType data_type() const override { return DataType::kChar; }
   const MemoryCase& mem_case() const override { return *mem_case_; }
-  const void* raw_dptr() const override { return tmp_buffer_ptr_.get(); }
-  void* mut_raw_dptr() override { return tmp_buffer_ptr_.get(); }
+  const void* raw_dptr() const override { return tmp_buffer_ptr_; }
+  void* mut_raw_dptr() override { return tmp_buffer_ptr_; }
 
   int64_t tmp_buffer_size() const { return tmp_buffer_size_; }
   void set_tmp_buffer_size(int64_t val) { tmp_buffer_size_ = val; }
-  std::unique_ptr<char, std::function<void(char*)>>& mut_tmp_buffer_ptr() {
-    return tmp_buffer_ptr_;
+
+  char* mut_tmp_buffer_ptr() { return tmp_buffer_ptr_; }
+
+  void init_tmp_buffer_ptr(char* ptr) {
+    CHECK_EQ(tmp_buffer_ptr_, nullptr);
+    tmp_buffer_ptr_ = ptr;
   }
 
  private:
   std::shared_ptr<MemoryCase> mem_case_;
   int64_t tmp_buffer_size_;
-  std::unique_ptr<char, std::function<void(char*)>> tmp_buffer_ptr_;
+  char* tmp_buffer_ptr_;
 };
 
 class CallContext {
