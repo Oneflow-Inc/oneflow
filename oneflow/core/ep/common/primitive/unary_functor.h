@@ -247,6 +247,18 @@ struct UnaryFunctor<device, UnaryOp::kSign, Dst, Src> {
   }
 };
 
+template<DeviceType device, typename Src, typename Dst>
+struct UnaryFunctor<device, UnaryOp::kLogSigmoid, Src, Dst> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return -log_functor(static_cast<Src>(1) + exp_functor(-src));
+  }
+
+  UnaryFunctor<device, UnaryOp::kLog, Src, Dst> log_functor;
+  UnaryFunctor<device, UnaryOp::kExp, Src, Dst> exp_functor;
+};
+
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kNotEqualZero, Dst, Src> {
   UnaryFunctor(Scalar attr0, Scalar attr1) {}
@@ -292,6 +304,17 @@ struct UnaryFunctor<device, UnaryOp::kReciprocalNoNan, double, double> {
     if (fabs(src) <= 0.0) { return 0.0; }
     return 1.0 / src;
   }
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct UnaryFunctor<device, UnaryOp::kSigmoidV2, Src, Dst> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return static_cast<Src>(1) / (static_cast<Src>(1) + exp_functor(-src));
+  }
+
+  UnaryFunctor<device, UnaryOp::kExp, Src, Dst> exp_functor;
 };
 
 template<DeviceType device, typename Dst, typename Src>

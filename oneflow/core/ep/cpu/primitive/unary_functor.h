@@ -210,15 +210,6 @@ struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kLog1p, Dst, Src> {
 };
 
 template<typename Dst, typename Src>
-struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kLogSigmoid, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC Dst operator()(Src src) const {
-    return std::log(static_cast<Src>(1.0) + std::exp(-src));
-  }
-};
-
-template<typename Dst, typename Src>
 struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kRint, Dst, Src> {
   UnaryFunctor(Scalar attr0, Scalar attr1) {}
 

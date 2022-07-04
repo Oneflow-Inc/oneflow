@@ -89,7 +89,7 @@ enum class BinaryOp {
   kRintBackwardWithDyX,
   kRoundBackwardWithDyX,
   kRsqrtBackwardWithDyX,
-  kSigmoidBackwardWithDyX,
+  kSigmoidV2BackwardWithDyX,
   kSignBackwardWithDyX,
   kSinBackwardWithDyX,
   kSinhBackwardWithDyX,

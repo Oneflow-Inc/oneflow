@@ -601,6 +601,18 @@ struct BinaryFunctor<device, BinaryOp::kRsqrtBackwardWithDyX, Src, Dst> {
 };
 
 template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kSigmoidV2BackwardWithDyX, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    float y = static_cast<Src>(1) / (static_cast<Src>(1) + exp_functor(-x));
+    return dy * (y * (static_cast<Src>(1) - y));
+  }
+
+  UnaryFunctor<device, UnaryOp::kExp, Src, Dst> exp_functor;
+};
+
+template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kSignBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 

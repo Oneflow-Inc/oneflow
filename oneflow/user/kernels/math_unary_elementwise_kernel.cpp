@@ -13,75 +13,51 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/math_unary_elementwise_func.h"
+#include "oneflow/user/ops/math_unary_elementwise_seq.h"
+#include "oneflow/user/kernels/elementwise_primitive_kernel.h"
 
 namespace oneflow {
 
-template<template<typename> class UnaryFunctor, typename T>
-class MathUnaryElementwiseCpuKernel final : public user_op::OpKernel {
- public:
-  MathUnaryElementwiseCpuKernel() = default;
-  ~MathUnaryElementwiseCpuKernel() = default;
+namespace {
 
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const T* x = tensor_x->dptr<T>();
-    T* y = tensor_y->mut_dptr<T>();
-    int64_t n = tensor_x->shape_view().elem_cnt();
-    CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    for (int32_t i = 0; i < n; ++i) { y[i] = UnaryFunctor<T>::Forward(x[i]); }
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
+template<typename Context>
+std::unique_ptr<ep::primitive::ElementwiseUnary> NewElementwiseUnaryPrimitive(Context* ctx, ep::primitive::UnaryOp unary_op) {
+  const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+  return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnary>(
+      ctx->device_type(), unary_op, src->data_type(), dst->data_type(), 1);
+}
 
-template<template<typename> class UnaryFunctor, typename T>
-class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
- public:
-  MathUnaryElementwiseGradCpuKernel() = default;
-  ~MathUnaryElementwiseGradCpuKernel() = default;
+template<typename Context>
+std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> NewElementwiseBinaryPrimitive(Context* ctx, ep::primitive::BinaryOp binary_op) {
+  const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+  const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
+  return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinary>(
+      ctx->device_type(), binary_op, src->data_type(), dst->data_type(), 1);
+}
 
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    const user_op::Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    user_op::Tensor* tensor_dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+}  // namespace
 
-    const T* x = tensor_x->dptr<T>();
-    const T* dy = tensor_dy->dptr<T>();
-    T* dx = tensor_dx->mut_dptr<T>();
-    int64_t n = tensor_x->shape_view().elem_cnt();
-    CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    for (int32_t i = 0; i < n; ++i) { dx[i] = UnaryFunctor<T>::Backward(x[i], dy[i]); }
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-#define REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD(math_type_pair, data_type_pair)        \
+#define REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD(math_type_pair)        \
   REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                                           \
-      .SetCreateFn<                                                                                \
-          MathUnaryElementwiseCpuKernel<OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor),     \
-                                        OF_PP_PAIR_FIRST(data_type_pair)>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                              \
-                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair))      \
-                       && (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(data_type_pair)));    \
+      .SetCreateFn([]() {\
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(\
+            "y", "x", [](user_op::KernelComputeContext* ctx) {\
+              return NewElementwiseUnaryPrimitive<user_op::KernelComputeContext>(ctx, OF_PP_CAT(ep::primitive::UnaryOp::k, OF_PP_PAIR_SECOND(math_type_pair)));\
+            });\
+      })                       \
+      .SetIsMatchedHob(UnaryPrimitiveExists(OF_PP_CAT(ep::primitive::UnaryOp::k, OF_PP_PAIR_SECOND(math_type_pair)));    \
                                                                                                    \
   REGISTER_USER_KERNEL((std::string("") + OF_PP_PAIR_FIRST(math_type_pair) + "_grad"))             \
-      .SetCreateFn<                                                                                \
-          MathUnaryElementwiseGradCpuKernel<OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor), \
-                                            OF_PP_PAIR_FIRST(data_type_pair)>>()                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                              \
-                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
+      .SetCreateFn([]() {\
+        return user_op::NewOpKernel<BinaryPrimitiveKernel>(\
+            "dx", "dy", [](user_op::KernelComputeContext* ctx) {\
+              return NewElementwiseBinaryPrimitive<user_op::KernelComputeContext>(ctx, OF_PP_CAT(OF_PP_CAT(ep::primitive::BinaryOp::k, OF_PP_PAIR_SECOND(math_type_pair)), BackwardWithDyX)); \
+            });\
+      })                   \
+      .SetIsMatchedHob(UnaryPrimitiveExists(OF_PP_CAT(OF_PP_CAT(ep::primitive::BinaryOp::k, OF_PP_PAIR_SECOND(math_type_pair)), BackwardWithDyX));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
-                                 MATH_UNARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ)
-
-// For some special dtype kernel register.
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
-                                 OF_PP_MAKE_TUPLE_SEQ("abs", Abs), UNSIGNED_INT_DATA_TYPE_SEQ)
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
-                                 OF_PP_MAKE_TUPLE_SEQ("abs", Abs), INT_DATA_TYPE_SEQ)
+                                 MATH_UNARY_ELEMENTWISE_FUNC_SEQ)
 
 }  // namespace oneflow

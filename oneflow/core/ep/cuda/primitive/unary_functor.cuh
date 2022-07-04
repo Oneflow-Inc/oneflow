@@ -396,24 +396,6 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kLog1p, double, double> {
 };
 
 template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kLogSigmoid, float, float> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC float operator()(float src) const {
-    return logf(1.0f + expf(-src));
-  }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kLogSigmoid, double, double> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC double operator()(double src) const {
-    return log(1.0 + exp(-src));
-  }
-};
-
-template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kRint, float, float> {
   UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
