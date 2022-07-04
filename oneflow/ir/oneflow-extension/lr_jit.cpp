@@ -86,9 +86,7 @@ class MLIRGenImpl {
  public:
   explicit MLIRGenImpl(mlir::MLIRContext& context) : builder(&context) {}
 
-  void dump(){
-    theModule->dump();
-  }
+  void dump() { theModule->dump(); }
 
   void mlirGen(stmt_& stmt) {
     llvm::TypeSwitch<stmt_*>(&stmt)
@@ -98,33 +96,22 @@ class MLIRGenImpl {
         // .Case<Raise_>([&](auto* node) { mlirGen(cast<Raise_*>(node)); })
         // .Case<Assert_>([&](auto* node) { mlirGen(cast<Assert_*>(node)); })
         // .Case<Expr_>([&](auto* node) { mlirGen(cast<Expr_*>(node)); })
-        .Default([&](auto* node) {
-          llvm::errs() << "StmtKind " << stmt.get_kind() << " not support yet";
-        });
+        .Default([&](auto* node) { theModule->emitError("StmtKind not support yet"); });
   }
 
   mlir::Value mlirGen(expr_& stmt) {
-    auto node = &stmt;
-    switch (stmt.get_kind()) {
-      case expr_::kBinOp: return mlirGen(*dynamic_cast<BinOp_*>(node));
-      case expr_::kCall: return mlirGen(*dynamic_cast<Call_*>(node));
-      case expr_::kConstant: return mlirGen(*dynamic_cast<Constant_*>(node));
-      case expr_::kName: return mlirGen(*dynamic_cast<Name_*>(node));
-      default: llvm::errs() << "ExprKind " << stmt.get_kind() << " not support yet";
-    }
-    // return llvm::TypeSwitch<expr_*, mlir::Value>(&stmt)
-    //     // .Case<BoolOp_>([&](auto* node) { mlirGen(cast<BoolOp_*>(node)); })
-    //     .Case<BinOp_>([&](auto* node) { return mlirGen(*dynamic_cast<BinOp_*>(node)); })
-    //     //     .Case<Lambda_>([&](auto* node) { mlirGen(cast<Lambda_*>(node)); })
-    //     //     .Case<Compare_>([&](auto* node) { mlirGen(cast<Compare_*>(node)); })
-    //     .Case<Call_>([&](auto* node) { return mlirGen(*dynamic_cast<Call_*>(node)); })
-    //     //     .Case<Num_>([&](auto* node) { mlirGen(cast<Num_*>(node)); })
-    //     .Case<Constant_>([&](auto* node) { return mlirGen(*dynamic_cast<Constant_*>(node)); })
-    //     //     .Case<Attribute_>([&](auto* node) { mlirGen(cast<Attribute_*>(node)); })
-    //     .Case<Name_>([&](auto* node) { return mlirGen(*dynamic_cast<Name_*>(node)); })
-    //     .Default([&](auto* node) {
-    //       llvm::errs() << "ExprKind " << stmt.get_kind() << " not support yet";
-    //     });
+    mlir::Value res;
+    llvm::TypeSwitch<expr_*>(&stmt)
+        .Case<BinOp_>([&](auto* node) { res = mlirGen(*dynamic_cast<BinOp_*>(node)); })
+        //     .Case<Lambda_>([&](auto* node) { mlirGen(cast<Lambda_*>(node)); })
+        //     .Case<Compare_>([&](auto* node) { mlirGen(cast<Compare_*>(node)); })
+        .Case<Call_>([&](auto* node) { res = mlirGen(*dynamic_cast<Call_*>(node)); })
+        //     .Case<Num_>([&](auto* node) { mlirGen(cast<Num_*>(node)); })
+        .Case<Constant_>([&](auto* node) { res = mlirGen(*dynamic_cast<Constant_*>(node)); })
+        //     .Case<Attribute_>([&](auto* node) { mlirGen(cast<Attribute_*>(node)); })
+        .Case<Name_>([&](auto* node) { res = mlirGen(*dynamic_cast<Name_*>(node)); })
+        .Default([&](auto* node) { theModule->emitError("ExprKind not support yet"); });
+    return res;
   }
 
   mlir::Value mlirGen(BinOp_& expr) {
@@ -142,14 +129,16 @@ class MLIRGenImpl {
 
   mlir::Value mlirGen(Call_& expr) {
     if (expr.get_func()->get_kind() != expr_::kAttribute) {
-      llvm::errs() << "only support call func is attribute node";
+      theModule->emitError("only support call func is attribute node");
     }
     auto func = *dynamic_cast<Attribute_*>(expr.get_func().get());
     if (func.get_value()->get_kind() != expr_::kName
         || dynamic_cast<Name_*>(func.get_value().get())->get_id() != "math") {
-      llvm::errs() << "only support call func is python math lib";
+      theModule->emitError("only support call func is python math lib");
     }
-    if (expr.get_args().size() != 1) { llvm::errs() << "only support call func with one param"; }
+    if (expr.get_args().size() != 1) {
+      theModule->emitError("only support call func with one param");
+    }
     auto value = mlirGen(*expr.get_args()[0].get());
     auto attr = func.get_attr();
     mlir::Value res;
@@ -157,7 +146,7 @@ class MLIRGenImpl {
       res = builder.create<math::FloorOp>(loc(), value);
       return res;
     } else {
-      llvm::errs() << attr << " not support yet";
+      theModule->emitError(attr + " not support yet");
     }
     return res;
   }
@@ -174,7 +163,7 @@ class MLIRGenImpl {
     auto value = mlirGen(*stmt.get_value().get());
     for (const auto& target : stmt.get_targets()) {
       if (target->get_kind() != expr_::kName) {
-        llvm::errs() << "only support assign to name node";
+        theModule->emitError("only support assign to name node");
       }
       auto name = dynamic_cast<Name_*>(target.get())->get_id();
       declare(name, value);
