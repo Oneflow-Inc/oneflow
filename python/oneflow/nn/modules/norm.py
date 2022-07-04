@@ -106,4 +106,3 @@ def norm(input, p="fro", dim=None, keepdim=False, dtype=None):
         (tensor(3.7417, dtype=oneflow.float32), tensor(11.2250, dtype=oneflow.float32))
     """
     return flow._C.norm(input=input, ord=p, dim=dim, keepdim=keepdim, dtype=dtype)
-
