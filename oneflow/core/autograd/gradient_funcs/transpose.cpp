@@ -41,7 +41,7 @@ class Transpose : public OpExprGradFunction<TransposeCaptureState> {
 
 Maybe<void> Transpose::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -59,7 +59,7 @@ Maybe<void> Transpose::Capture(TransposeCaptureState* ctx, const TensorTuple& in
 Maybe<void> Transpose::Apply(const TransposeCaptureState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   std::vector<int32_t> grad_perm;
   grad_perm.resize(ctx->perm.size());
   FOR_RANGE(int32_t, i, 0, ctx->perm.size()) { grad_perm.at(ctx->perm.at(i)) = i; }
