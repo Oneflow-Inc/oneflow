@@ -15,23 +15,14 @@ class SelfParamsTransformer(ast.NodeTransformer):
             _attr = getattr(self.lr_def_class, _name)
             return ast.Constant(_attr, None)
 
-def lr_def(func):
-    @wraps(func)
-    def wrapper(self, base_lr:float, step:int, last_lr:float=0):
-        _id = self.__class__.__name__
-        _src = textwrap.dedent(inspect.getsource(func))
-        _ast = ast.parse(_src).body[0]
-        transformer = SelfParamsTransformer(self)
-        print(ast.dump(_ast))
-        transformer.visit(_ast)
-        print(ast.dump(_ast))
-        res = oneflow._oneflow_internal.ir.compile_and_register_lr_jit(_ast, _id)
-        print(res)
+    def visit_arguments(self, node: ast.arguments):
+        for index,item in enumerate(node.args):
+            if item.arg == "self":
+                node.args.pop(index)
+        return node
 
-    return wrapper
 
 def lr_jit_register(lr_class):
-    import astpretty
     _id = lr_class.__class__.__name__
     _src = textwrap.dedent(inspect.getsource(lr_class.get_lr))
     _ast = ast.parse(_src).body[0]
@@ -39,7 +30,6 @@ def lr_jit_register(lr_class):
     transformer.visit(_ast)
 
     res = oneflow._oneflow_internal.ir.compile_and_register_lr_jit(_ast, _id)
-    # print(res)
 
 
 
