@@ -84,8 +84,8 @@ bool IsShapeCanExpandTo(const Shape& shape, const Shape& expand_shape) {
 
 Maybe<void> CheckShapeCanExpandTo(const Shape& shape, const Shape& expand_shape) {
   CHECK_OR_RETURN(IsShapeCanExpandTo(shape, expand_shape))
-      << Error::RuntimeError() << "Can not expand shape " << shape.ToString() << " to "
-      << expand_shape.ToString();
+      << Error::RuntimeError() << "Tensor with shape " << expand_shape.ToString()
+      << " doesn't match the broadcast shape";
   return Maybe<void>::Ok();
 }
 
