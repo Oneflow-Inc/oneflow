@@ -107,8 +107,3 @@ def norm(input, p="fro", dim=None, keepdim=False, dtype=None):
     """
     return flow._C.norm(input=input, ord=p, dim=dim, keepdim=keepdim, dtype=dtype)
 
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
