@@ -304,7 +304,7 @@ class MatMulFunctor {
     // TODO(): Support 1-d tensor by dot.
     CHECK_GE_OR_RETURN(a_shape->NumAxes(), 2)
         << Error::RuntimeError() << "Tensor a's dim should >= 2";
-    CHECK_GE_OR_RETURN(b_shape->NumAxes(), 2)
+    CHECK_GE_OR_RETURN(b_shape->NumAxes(), 1)
         << Error::RuntimeError() << "Tensor b's dim should >= 2";
 
     MutableAttrMap attrs;
@@ -313,6 +313,7 @@ class MatMulFunctor {
     JUST(attrs.SetAttr<double>("alpha", alpha));
     const int64_t a_num_axes = a_shape->NumAxes();
     const int64_t b_num_axes = b_shape->NumAxes();
+    if (a_num_axes == 2 && b_num_axes == 1) { return MatrixVectorProduct(a, b); }
     if (a_num_axes == 2 && b_num_axes == 2) {
       return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
     }
@@ -367,6 +368,31 @@ class BatchMatMulFunctor {
 
  private:
   std::shared_ptr<OpExpr> batch_matmul_op_;
+};
+
+class MatrixVectorProductFunctor {
+ public:
+  MatrixVectorProductFunctor() {
+    matrix_vector_product_op_ = CHECK_JUST(
+        one::OpBuilder("matrix_vector_product").Input("a").Input("b").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
+                           const std::shared_ptr<one::Tensor>& b) const {
+    const auto& a_shape = a->shape();
+    const auto& b_shape = b->shape();
+    CHECK_EQ_OR_RETURN(a_shape->NumAxes(), 2)
+        << Error::RuntimeError() << "Expected A is 2-dimensional tensor, but got "
+        << a_shape->NumAxes() << "-dimensional tensor for argument #1";
+    CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 1)
+        << Error::RuntimeError() << "Expected B is 1-dimensional tensor, but got "
+        << b_shape->NumAxes() << "-dimensional tensor for argument #2";
+    CHECK_EQ_OR_RETURN(a_shape->At(1), b_shape->At(0))
+        << Error::RuntimeError() << "Matmul dim not match, please check input!";
+    return OpInterpUtil::Dispatch<Tensor>(*matrix_vector_product_op_, {a, b});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> matrix_vector_product_op_;
 };
 
 class TensorDotIntDimsFunctor {
@@ -3415,6 +3441,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MatMulNoBroadCastFunctor>("MatMulNoBroadCast");
   m.add_functor<impl::MvFunctor>("Mv");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
+  m.add_functor<impl::MatrixVectorProductFunctor>("MatrixVectorProduct");
   m.add_functor<impl::TensorDotFunctor>("TensorDot");
   m.add_functor<impl::TensorDotIntDimsFunctor>("TensorDotIntDims");
   m.add_functor<impl::FusedMLPFunctor>("FusedMLP");

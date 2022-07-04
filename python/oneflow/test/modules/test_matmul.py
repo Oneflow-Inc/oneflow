@@ -49,20 +49,20 @@ class TestModule(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim0=k).to(device)
         return x.matmul(y)
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_tensor_x_broadcast_y_matmul(test_case):
         device = random_device()
         k = random(1, 6).to(int)
-        x = random_pytorch_tensor(ndim=2, dim1=k).to(device)
-        y = random_pytorch_tensor(ndim=4, dim2=k).to(device)
+        x = random_tensor(ndim=2, dim1=k).to(device)
+        y = random_tensor(ndim=4, dim2=k).to(device)
         return x.matmul(y)
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_tensor_broadcast_matmul_with_same_dims(test_case):
         device = random_device()
         k = random(1, 6).to(int)
-        x = random_pytorch_tensor(ndim=4, dim1=1, dim3=k).to(device)
-        y = random_pytorch_tensor(ndim=4, dim0=1, dim2=k).to(device)
+        x = random_tensor(ndim=4, dim1=1, dim3=k).to(device)
+        y = random_tensor(ndim=4, dim0=1, dim2=k).to(device)
         return x.matmul(y)
 
     @autotest(check_graph=True)
