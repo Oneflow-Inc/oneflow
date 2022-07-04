@@ -13,26 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_CPU_ALLOCATOR_H_
-#define ONEFLOW_CORE_VM_CPU_ALLOCATOR_H_
-
-#include <cstdint>
-#include "oneflow/core/vm/allocator.h"
+#include "oneflow/core/vm/touch_tensors_instruction_type.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 
 namespace oneflow {
 namespace vm {
 
-class CpuAllocator final : public Allocator {
- public:
-  explicit CpuAllocator() = default;
-  ~CpuAllocator() override = default;
-
-  Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
-  void Deallocate(char* mem_ptr, std::size_t size) override;
-  void DeviceReset() override {}
-};
+TouchTensorsPhyInstrOperand::TouchTensorsPhyInstrOperand(
+    const std::vector<std::shared_ptr<EagerBlobObject>>& eager_blob_objects)
+    : eager_blob_objects_(eager_blob_objects) {
+  const auto& Insert = SetInserter(&input_dependences_);
+  for (const auto& eager_blob_object : eager_blob_objects_) {
+    Insert(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
+  }
+}
 
 }  // namespace vm
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_VM_CPU_ALLOCATOR_H_

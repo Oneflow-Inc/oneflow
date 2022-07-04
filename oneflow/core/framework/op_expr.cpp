@@ -174,7 +174,6 @@ class UserOpExprInferContext : public user_op::InferContext {
                          const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex)
       : user_op_expr_(user_op_expr),
         composed_attrs_(attrs, user_op_expr->base_attrs()),
-        device_tag_(device_tag),
         tensor_meta4input_index_(TensorMeta4InputIndex),
         tensor_meta4output_index_(TensorMeta4OutputIndex) {
     loc_ = DispatchFrame::get_str();
@@ -300,7 +299,6 @@ class UserOpExprInferContext : public user_op::InferContext {
   }
   const std::string& op_name() const override { return user_op_expr_->op_name(); }
   const std::string& op_type_name() const override { return user_op_expr_->op_type_name(); }
-  const std::string& device_tag() const override { return device_tag_; }
   const std::string& op_loc() const override { return loc_; }
 
  private:
@@ -310,7 +308,6 @@ class UserOpExprInferContext : public user_op::InferContext {
   }
   const UserOpExpr* user_op_expr_;
   const ComposedAttrMap composed_attrs_;
-  const std::string& device_tag_;
   const std::function<const TensorMeta*(int32_t)>& tensor_meta4input_index_;
   const std::function<TensorMeta*(int32_t)>& tensor_meta4output_index_;
   std::string loc_;

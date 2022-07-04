@@ -50,6 +50,8 @@ class ConsumeLocalDepObjectPhyInstrOperand : public PhyInstrOperand {
 
   void ForEachMut2Dependence(const std::function<void(Dependence* compute)>&) const;
 
+  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {}
+
  private:
   std::vector<intrusive::shared_ptr<LocalDepObject>> compute_local_dep_objects_;
   const std::string modifier_;

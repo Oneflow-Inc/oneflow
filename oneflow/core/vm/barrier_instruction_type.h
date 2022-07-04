@@ -36,6 +36,7 @@ class BarrierInstructionType : public InstructionType {
   bool IsBarrier() const override { return true; }
 
   std::string DebugName(const vm::Instruction& instruction) const override { return "Barrier"; }
+  Maybe<void> Prepare(Instruction* instruction) const override { return Maybe<void>::Ok(); }
   void Compute(Instruction* instruction) const override { Run(*instruction); }
 
  protected:
@@ -55,6 +56,7 @@ class GlobalSyncInstructionType : public InstructionType {
   bool IsBarrier() const override { return true; }
 
   std::string DebugName(const Instruction& instruction) const override { return "GlobalSync"; }
+  Maybe<void> Prepare(Instruction* instruction) const override { return Maybe<void>::Ok(); }
   void Compute(Instruction* instruction) const override { OF_ENV_BARRIER(); }
 };
 
