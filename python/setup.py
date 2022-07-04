@@ -45,7 +45,7 @@ REQUIRED_PACKAGES = [
     "tqdm",
     "requests",
     "pillow",
-    "prettytable",
+    "rich",
 ]
 # if python version < 3.7.x, than need pip install dataclasses
 if sys.version_info.minor < 7:

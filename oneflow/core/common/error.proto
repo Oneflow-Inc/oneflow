@@ -85,6 +85,8 @@ message UnimplementedError { }
 
 message RuntimeError { }
 
+message OutOfMemoryError { }
+
 message BoxingNotSupportedError { }
 
 message GradientFunctionNotFoundError { }
@@ -158,6 +160,7 @@ message ErrorProto {
     IndexError index_error = 28;
     TypeError type_error = 29;
     RuntimeError runtime_error = 30;
+    OutOfMemoryError out_of_memory_error = 32;
     TimeoutError timeout_error = 40;
     ValueNotFoundError value_not_found_error = 31;
     
