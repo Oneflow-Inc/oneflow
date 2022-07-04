@@ -43,7 +43,7 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
@@ -63,7 +63,7 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
       beta = inputs.at(2);
       ctx->track_running_stats = false;
     } else {
-      CHECK_EQ_OR_RETURN(inputs.size(), 5);
+      CHECK_EQ_OR_RETURN(inputs.size(), 5);  // NOLINT(maybe-need-error-msg)
       gamma = inputs.at(3);
       beta = inputs.at(4);
       ctx->track_running_stats = true;
@@ -107,7 +107,9 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
     }
     const auto& results = JUST(functional::NormalizationGrad(y_grad, x, mean, inv_variance, gamma,
                                                              ctx->epsilon, ctx->axis));
-    CHECK_EQ_OR_RETURN(results->size(), 3);
+    CHECK_EQ_OR_RETURN(results->size(), 3)
+        << Error::RuntimeError() << "The number of results is expected to be 3, but got "
+        << results->size();
 
     if (ctx->track_running_stats) {
       // The normalization op has 5 inputs which are x, moving_mean, moving_variance, gamma and
