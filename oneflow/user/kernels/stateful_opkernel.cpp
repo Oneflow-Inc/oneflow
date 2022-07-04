@@ -23,7 +23,8 @@ limitations under the License.
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/profiler/profiler.h"
-#include "oneflow/core/profiler/collection.h"
+#include "oneflow/core/profiler/profile_manager.h"
+#include "oneflow/core/profiler/event_recorder.h"
 #include "oneflow/core/eager/call_context.h"
 
 namespace oneflow {
@@ -123,24 +124,20 @@ class ZeroCopyBaseContextHelper {
 
 class UserKernelBaseContextHelper final : public ZeroCopyBaseContextHelper {
  public:
-  UserKernelBaseContextHelper(const std::string& device_tag,
+  UserKernelBaseContextHelper(DeviceType device_type,
                               const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                               const std::shared_ptr<const ArgTuple>& output_arg_tuple)
-      : ZeroCopyBaseContextHelper(input_arg_tuple, output_arg_tuple),
-        device_tag_(device_tag),
-        device_type_(CHECK_JUST(DeviceType4DeviceTag(device_tag_))) {}
+      : ZeroCopyBaseContextHelper(input_arg_tuple, output_arg_tuple), device_type_(device_type) {}
 
   ~UserKernelBaseContextHelper() = default;
 
   DeviceType device_type() const { return device_type_; }
-  const std::string& device_tag() const { return device_tag_; }
   const JobDesc& job_desc() const {
     UNIMPLEMENTED();
     return *(const JobDesc*)nullptr;
   }
 
  private:
-  const std::string device_tag_;
   const DeviceType device_type_;
 };
 
@@ -274,7 +271,6 @@ class UserOpInferContextHelper final {
   }
   const std::string& op_name() const { return user_op_conf().op_name(); }
   const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
-  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
   const std::string& op_loc() const { return user_op_conf_->op_conf().loc(); }
 
   const user_op::UserOpConfWrapper& user_op_conf() const { return *user_op_conf_; }
@@ -391,7 +387,6 @@ class UserOpInferContext : public user_op::InferContext {
   }
   const std::string& op_name() const override { return helper_->op_name(); }
   const std::string& op_type_name() const override { return helper_->op_type_name(); }
-  const std::string& device_tag() const override { return helper_->device_tag(); }
   const std::string& op_loc() const override { return helper_->op_loc(); }
 
  private:
@@ -406,12 +401,12 @@ class UserOpInferContext : public user_op::InferContext {
 
 class UserKernelComputeContextHelper final {
  public:
-  UserKernelComputeContextHelper(const std::string& device_tag,
+  UserKernelComputeContextHelper(DeviceType device_type,
                                  const user_op::UserOpConfWrapper* user_op_conf,
                                  const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                  const std::shared_ptr<const ArgTuple>& output_arg_tuple)
       : user_op_conf_(user_op_conf),
-        base_ctx_helper_(device_tag, input_arg_tuple, output_arg_tuple) {}
+        base_ctx_helper_(device_type, input_arg_tuple, output_arg_tuple) {}
 
   ~UserKernelComputeContextHelper() = default;
 
@@ -492,16 +487,14 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
 
 class UserKernelRegContextHelper final {
  public:
-  UserKernelRegContextHelper(const std::string& device_tag,
-                             const user_op::UserOpConfWrapper* user_op_conf,
+  UserKernelRegContextHelper(DeviceType device_type, const user_op::UserOpConfWrapper* user_op_conf,
                              const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                              const std::shared_ptr<const ArgTuple>& output_arg_tuple)
       : user_op_conf_(user_op_conf),
-        base_ctx_helper_(device_tag, input_arg_tuple, output_arg_tuple) {}
+        base_ctx_helper_(device_type, input_arg_tuple, output_arg_tuple) {}
   ~UserKernelRegContextHelper() = default;
 
   DeviceType device_type() const { return base_ctx_helper_.device_type(); }
-  const std::string& device_tag() const { return base_ctx_helper_.device_tag(); }
   const ParallelContext& parallel_ctx(eager::CallContext* call_ctx) const {
     return base_ctx_helper_.parallel_ctx(call_ctx);
   }
@@ -532,7 +525,6 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
   ~UserKernelRegContext() = default;
 
   DeviceType device_type() const override { return helper_->device_type(); }
-  const std::string& device_tag() const override { return helper_->device_tag(); }
   const ParallelContext& parallel_ctx() const override { return helper_->parallel_ctx(call_ctx_); }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
@@ -557,12 +549,12 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
 
 class UserKernelInitAndCacheContextHelper final {
  public:
-  UserKernelInitAndCacheContextHelper(const std::string& device_tag,
+  UserKernelInitAndCacheContextHelper(DeviceType device_type,
                                       const user_op::UserOpConfWrapper* user_op_conf,
                                       const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                       const std::shared_ptr<const ArgTuple>& output_arg_tuple)
       : user_op_conf_(user_op_conf),
-        base_ctx_helper_(device_tag, input_arg_tuple, output_arg_tuple) {}
+        base_ctx_helper_(device_type, input_arg_tuple, output_arg_tuple) {}
 
   ~UserKernelInitAndCacheContextHelper() = default;
 
@@ -750,18 +742,18 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   opkernel->output_arg_tuple_ = output_arg_tuple;
   opkernel->need_check_mem_case_ = true;
 
-  const std::string& device_tag = op_conf->device_tag();
+  const DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(op_conf->device_tag()));
   const user_op::UserOpConfWrapper* user_op_conf = opkernel->user_op_conf_.get();
   opkernel->op_infer_ctx_helper_.reset(
       new UserOpInferContextHelper(user_op_conf, input_arg_tuple, output_arg_tuple));
 
   opkernel->init_and_cache_ctx_helper_.reset(new UserKernelInitAndCacheContextHelper(
-      opkernel->op_conf_->device_tag(), opkernel->user_op_conf_.get(), opkernel->input_arg_tuple_,
+      device_type, opkernel->user_op_conf_.get(), opkernel->input_arg_tuple_,
       opkernel->output_arg_tuple_));
   opkernel->compute_ctx_helper_.reset(new UserKernelComputeContextHelper(
-      device_tag, user_op_conf, input_arg_tuple, output_arg_tuple));
+      device_type, user_op_conf, input_arg_tuple, output_arg_tuple));
   opkernel->reg_ctx_helper_.reset(
-      new UserKernelRegContextHelper(device_tag, user_op_conf, input_arg_tuple, output_arg_tuple));
+      new UserKernelRegContextHelper(device_type, user_op_conf, input_arg_tuple, output_arg_tuple));
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(user_op_conf->op_type_name());
   CHECK_NOTNULL_OR_RETURN(op_reg_val);
@@ -874,7 +866,7 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, DeviceCtx* device_c
   UserKernelComputeContext compute_context(compute_ctx_helper_.get(), call_ctx, device_ctx);
   auto* compute_ctx = &compute_context;
   OF_PROFILER_RANGE_GUARD("Compute");
-  if (Singleton<profiler::ProfileMgr>::Get()) {
+  if (Singleton<profiler::ProfileManager>::Get()) {
 #if defined(WITH_CUDA)
     const auto CalMemorySize = [compute_ctx](const one::ArgVec& args) -> int64_t {
       const auto Func = [compute_ctx](int64_t mem_size, const auto& pair) {
@@ -887,17 +879,14 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, DeviceCtx* device_c
     auto er_guard = CHECK_JUST(profiler::EventRecorder::CreateKernelEventRecorder(
         op_type_name(),
 #if defined(WITH_CUDA)
-        compute_ctx->device_type() == DeviceType::kCUDA
-            ? dynamic_cast<ep::CudaStream*>(compute_ctx->stream())->cuda_stream()
-            : nullptr,
         [compute_ctx, CalMemorySize]() -> int64_t {
           return CalMemorySize(compute_ctx->inputs()) + CalMemorySize(compute_ctx->outputs());
         },
 #endif
-        [compute_ctx]() -> std::vector<Shape> {
-          std::vector<Shape> shapes;
+        [compute_ctx]() -> std::vector<ShapeView> {
+          std::vector<ShapeView> shapes;
           for (const auto& pair : compute_ctx->inputs()) {
-            shapes.push_back(
+            shapes.emplace_back(
                 compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape());
           }
           return shapes;

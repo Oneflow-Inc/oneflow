@@ -58,7 +58,7 @@ class MaxPoolNdGrad : public OpExprGradFunction<MaxPoolCaptureState> {
 
 Maybe<void> MaxPoolNdGrad::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -85,7 +85,7 @@ Maybe<void> MaxPoolNdGrad::Capture(MaxPoolCaptureState* ctx, const TensorTuple& 
 Maybe<void> MaxPoolNdGrad::Apply(const MaxPoolCaptureState* ctx, const TensorTuple& out_grads,
                                  TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_LE_OR_RETURN(out_grads.size(), 2);
+  CHECK_LE_OR_RETURN(out_grads.size(), 2);  // NOLINT(maybe-need-error-msg)
 
   int32_t ndims = ctx->kernel_size.size();
   const auto& input = ctx->SavedTensors().at(ctx->input_index);

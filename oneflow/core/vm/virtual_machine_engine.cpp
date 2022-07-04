@@ -18,6 +18,8 @@ limitations under the License.
 #include "oneflow/core/vm/fuse_instruction_type.h"
 #include "oneflow/core/vm/fuse_phy_instr_operand.h"
 #include "oneflow/core/vm/barrier_phy_instr_operand.h"
+#include "oneflow/core/vm/allocator.h"
+#include "oneflow/core/vm/shrinkable_cache.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/cpp_attribute.h"
@@ -30,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/common/foreign_lock_helper.h"
 
 namespace oneflow {
+
 namespace vm {
 
 void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
@@ -155,6 +158,7 @@ void VirtualMachineEngine::InsertProbe(
 }
 
 void VirtualMachineEngine::HandleLocalProbe() {
+  OF_PROFILER_RANGE_GUARD("HandleLocalProbe");
   if (unlikely(local_probe_list_.size())) {
     OF_PROFILER_RANGE_PUSH("HandleLocalProbe");
     INTRUSIVE_FOR_EACH_PTR(probe, &local_probe_list_) {
@@ -267,9 +271,9 @@ bool VirtualMachineEngine::Dispatchable(Instruction* instruction) const {
 
 // Dispatch ready instructions and put prescheduled instructions onto ready_instruction_list_.
 void VirtualMachineEngine::DispatchAndPrescheduleInstructions(const ScheduleCtx& schedule_ctx) {
+  OF_PROFILER_RANGE_GUARD("DispatchAndPrescheduleInstructions");
   ReadyInstructionList tmp_ready_instruction_list;
   mut_ready_instruction_list()->MoveTo(&tmp_ready_instruction_list);
-  OF_PROFILER_RANGE_GUARD("DispatchAndPrescheduleInstructions");
   INTRUSIVE_FOR_EACH(instruction, &tmp_ready_instruction_list) {
     // Erases `instruction` from tmp_ready_instruction_list before dispatching, because
     // `instruction.dispatched_instruction_hook_` are used in DispatchInstruction.
@@ -287,14 +291,53 @@ void VirtualMachineEngine::DispatchAndPrescheduleInstructions(const ScheduleCtx&
   }
 }
 
+namespace {
+
+void StreamWaitPreviousInstructionsDone(vm::Stream* stream, vm::Instruction* instruction) {
+  auto* running_list = stream->mut_running_instruction_list();
+  CHECK_GE(running_list->size(), 1);
+  CHECK_EQ(running_list->Last(), instruction);
+  if (running_list->size() == 1) { return; }
+  auto* prev = running_list->Prev(instruction);
+  // busy wait the previous instruction done.
+  while (!prev->Done()) {}
+}
+
+std::string DebugDeviceReset(vm::Stream* stream) {
+  stream->device_ctx()->mut_allocator()->DeviceReset();
+  return "reset device";
+}
+
+}  // namespace
+
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
                                                const ScheduleCtx& schedule_ctx) {
   auto* stream = instruction->mut_stream();
   stream->mut_running_instruction_list()->PushBack(instruction);
   if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
-  const auto& stream_type = stream->stream_type();
-  if (OnSchedulerThread(stream_type)) {
-    stream_type.Run(instruction);
+  // Prepare
+  {
+    const auto& ret = TRY(instruction->Prepare());
+    if (unlikely(!ret.IsOk())) {
+      if (ret.error()->has_out_of_memory_error()) {
+        // Waits previous instructions done before shrinking memory..
+        StreamWaitPreviousInstructionsDone(stream, instruction);
+        // Shrinks allocator to reduce fragmentation of memory.
+        {
+          auto* allocator = stream->device_ctx()->mut_allocator();
+          auto* shrinkable_cache = dynamic_cast<ShrinkableCache*>(allocator);
+          if (shrinkable_cache != nullptr) { shrinkable_cache->Shrink(); }
+        }
+        // Infers the instruction again.
+        CHECK_JUST_MSG(instruction->Prepare(), std::stringstream() << DebugDeviceReset(stream));
+      } else {
+        CHECK_JUST(ret);
+      }
+    }
+  }
+  // Compute
+  if (OnSchedulerThread(*stream)) {
+    stream->stream_type().Run(instruction);
   } else {
     stream->mut_thread_ctx()->mut_worker_pending_instruction_list()->PushBack(instruction);
     schedule_ctx.OnWorkerLoadPending(stream->mut_thread_ctx());
@@ -313,8 +356,8 @@ Maybe<bool> VirtualMachineEngine::Receive(InstructionList* compute_instruction_l
   return old_list_empty;
 }
 
-bool VirtualMachineEngine::OnSchedulerThread(const StreamType& stream_type) {
-  return stream_type.OnSchedulerThread() || pthread_fork::IsForkedSubProcess();
+bool VirtualMachineEngine::OnSchedulerThread(const Stream& stream) {
+  return stream.on_scheduler_thread() || pthread_fork::IsForkedSubProcess();
 }
 
 // Barrier instructions are run after all previous lively instructions.
@@ -383,11 +426,11 @@ void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_
   if (likely(sequnential_instruction != mut_lively_instruction_list()->Begin())) { return; }
   // All instructions before `sequnential_instruction` are handled now, it's time to handle
   // `sequnential_instruction`.
-  OF_PROFILER_RANGE_GUARD("RunBarrierInstruction");
+  OF_PROFILER_RANGE_GUARD("TryRunBarrierInstruction");
   const auto& instruction_type = sequnential_instruction->instruction_type();
   CHECK(instruction_type.IsBarrier());
+  CHECK(OnSchedulerThread(sequnential_instruction->stream()));
   const StreamType& stream_type = sequnential_instruction->stream().stream_type();
-  CHECK(OnSchedulerThread(stream_type));
   stream_type.Run(sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
   LivelyInstructionListErase(sequnential_instruction);
@@ -412,7 +455,7 @@ void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
   } else if (unlikely(pending_instruction_list().thread_unsafe_size())) {
     // MoveTo is under a lock.
     mut_pending_instruction_list()->MoveTo(mut_local_pending_instruction_list());
-    HandleLocalPending();
+    if (local_pending_instruction_list().size()) { HandleLocalPending(); }
   }
   // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_ready_instruction_list()->size())) {
@@ -423,7 +466,7 @@ void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
     HandleLocalProbe();
   } else if (unlikely(probe_list_.thread_unsafe_size())) {
     probe_list_.MoveTo(&local_probe_list_);
-    HandleLocalProbe();
+    if (local_probe_list_.size()) { HandleLocalProbe(); }
   }
 }
 
