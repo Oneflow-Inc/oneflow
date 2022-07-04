@@ -592,7 +592,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     CHECK(kernel_state != nullptr);
     embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
     embedding_state->OnEmbeddingPrefetchStart(ctx, current_iter_);
-    uint32_t num_unique = embedding_state->GetNumUnique(current_iter_);
+    uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     const user_op::Tensor* table_ids = ctx->Tensor4ArgNameAndIndex("table_ids", 0);
@@ -674,10 +674,10 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
     const bool has_output_embeddings = ctx->has_output("embeddings", 0);
-    uint32_t num_unique = embedding_state->GetNumUnique(current_iter_);
-    void* values_ptr = embedding_state->LookupOutValues(current_iter_);
+    uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
+    void* values_ptr = embedding_state->LookupUniqueValues(current_iter_);
     if (has_output_embeddings && kernel_state->KeyValueStore()->IsFusionSupported()) {
-      void* embeddings_ptr = embedding_state->LookupOutEmbeddings(current_iter_);
+      void* embeddings_ptr = embedding_state->LookupEmbeddings(current_iter_);
       user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
       void* lookup_mask_ptr;
       embedding_state->AllocTmpBuffer(ctx, &lookup_mask_ptr,
@@ -700,7 +700,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
       embedding_state->FreeTmpBuffer(ctx, num_missing_ptr);
       embedding_state->FreeTmpBuffer(ctx, missing_indices_ptr);
       if (has_output_embeddings) {
-        void* embeddings_ptr = embedding_state->LookupOutEmbeddings(current_iter_);
+        void* embeddings_ptr = embedding_state->LookupEmbeddings(current_iter_);
         user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
         CopyValuesToEmbeddings<T>(ctx->stream(), num_unique, embedding_size, line_size,
                                   unique_values->data_type(), embeddings->data_type(),
@@ -752,9 +752,9 @@ class EmbeddingPutKernel final : public user_op::OpKernel {
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
-    uint32_t num_unique = embedding_state->GetNumUnique(current_iter_);
+    uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
     store->Put(ctx->stream(), num_unique, unique_ids->dptr(),
-               embedding_state->PutInValues(current_iter_));
+               embedding_state->EmbeddingPutUniqueEmbeddings(current_iter_));
     embedding_state->OnEmbeddingPutEnd(ctx, current_iter_);
     current_iter_++;
   }
@@ -769,5 +769,52 @@ class EmbeddingPutKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("num_unique_ids", 0) == typeproto));
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_PUT_KERNEL, IDX_DATA_TYPE_SEQ)
+
+template<typename IDX>
+class FusedSgdEmbeddingUpdatePutKernel final : public user_op::OpKernel {
+ public:
+  FusedSgdEmbeddingUpdatePutKernel() : current_iter_(0){};
+  ~FusedSgdEmbeddingUpdatePutKernel() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<EmbeddingPutKernelState>(ctx);
+  }
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
+    auto* kernel_state = dynamic_cast<EmbeddingPutKernelState*>(state);
+    CHECK(kernel_state != nullptr);
+    embedding::KeyValueStore* store = kernel_state->KeyValueStore();
+    embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
+    embedding_state->OnEmbeddingFusedUpdatePutStart(ctx, current_iter_);
+    const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
+    const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);
+    const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+    const float* learning_rate_ptr = learning_rate->dptr<float>();
+    const auto scale = ctx->Attr<double>("scale");
+    uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
+    store->FusedHalfUpdatePut(
+        ctx->stream(), num_unique, unique_ids->dptr(),
+        embedding_state->EmbeddingFusedUpdatePutUniqueEmbeddings(current_iter_),
+        embedding_grad->dptr(), learning_rate_ptr, scale);
+    embedding_state->OnEmbeddingFusedUpdatePutEnd(ctx, current_iter_);
+    current_iter_++;
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  mutable int64_t current_iter_;
+};
+
+#define REGISTER_CUDA_FUSED_SGD_EMBEDDING_UPDATE_PUT_KERNEL(dtype, typeproto)                \
+  REGISTER_USER_KERNEL("fused_sgd_embedding_update_put")                                     \
+      .SetCreateFn<FusedSgdEmbeddingUpdatePutKernel<dtype>>()                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                       \
+                       && (user_op::HobDataType("num_unique_ids", 0) == typeproto)           \
+                       && (user_op::HobDataType("unique_embeddings", 0) == DataType::kFloat) \
+                       && (user_op::HobDataType("embedding_grad", 0) == DataType::kFloat16));
+
+OF_PP_FOR_EACH_TUPLE(REGISTER_CUDA_FUSED_SGD_EMBEDDING_UPDATE_PUT_KERNEL, IDX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

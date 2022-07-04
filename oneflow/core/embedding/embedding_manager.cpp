@@ -28,9 +28,9 @@ constexpr size_t kDefaultMaxQueryLength = 65536;
 
 constexpr int64_t kRingBufferSize = 8;
 
-struct NumUniqueState {
-  NumUniqueState() : num_unique(0), iter(-1) {}
-  uint32_t num_unique;
+struct IdStatistics {
+  IdStatistics() : final_num_unique(0), iter(-1) {}
+  uint32_t final_num_unique;
   std::vector<uint32_t> num_unique_matrix;
   int64_t iter;
 };
@@ -50,7 +50,7 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
         updated_values_(nullptr),
         iter_(-1) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
-    num_unique_states_.resize(kRingBufferSize);
+    id_statistics_vec_.resize(kRingBufferSize);
     cudaMemPoolProps poolProps = {};
     poolProps.allocType = cudaMemAllocationTypePinned;
     poolProps.handleTypes = cudaMemHandleTypePosixFileDescriptor;
@@ -81,7 +81,7 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
     user_op::Tensor* unique_values = ctx->Tensor4ArgNameAndIndex("unique_values", 0);
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
-    uint32_t num_unique = this->GetNumUnique(iter);
+    uint32_t num_unique = this->GetIdNumUnique(iter);
     size_t lookup_values_size =
         GetCudaAlignedSize(num_unique * line_size * GetSizeOfDataType(unique_values->data_type()));
     if (!has_lookup_values_ || lookup_values_size_ < lookup_values_size) {
@@ -109,13 +109,13 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
     }
   }
 
-  void* LookupOutValues(int64_t iter) override {
+  void* LookupUniqueValues(int64_t iter) override {
     CHECK_EQ(iter_, iter);
     CHECK(has_lookup_values_);
     return lookup_values_;
   }
 
-  void* LookupOutEmbeddings(int64_t iter) override {
+  void* LookupEmbeddings(int64_t iter) override {
     CHECK_EQ(iter_, iter);
     CHECK(has_lookup_embeddings_);
     return lookup_embeddings_;
@@ -129,7 +129,7 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
     // do nothing
   }
 
-  const void* EmbeddingShuffleInEmbeddings(int64_t iter) override {
+  const void* EmbeddingShuffleCurRankEmbeddings(int64_t iter) override {
     if (has_lookup_embeddings_) {
       return lookup_embeddings_;
     } else {
@@ -154,20 +154,20 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
     const user_op::Tensor* updated_unique_embeddings =
         ctx->Tensor4ArgNameAndIndex("updated_unique_embeddings", 0);
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
-    uint32_t num_unique = this->GetNumUnique(iter);
+    uint32_t num_unique = this->GetIdNumUnique(iter);
     size_t update_values_size = GetCudaAlignedSize(
         num_unique * line_size * GetSizeOfDataType(updated_unique_embeddings->data_type()));
     OF_CUDA_CHECK(cudaMallocFromPoolAsync(&updated_values_, update_values_size, mem_pool_,
                                           ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   }
 
-  const void* UpdateInValues(int64_t iter) override {
+  const void* EmbeddingUpdateUniqueEmbeddings(int64_t iter) override {
     CHECK_EQ(iter_, iter);
     CHECK(has_lookup_values_);
     return lookup_values_;
   }
 
-  void* UpdateOutValues(int64_t iter) override {
+  void* EmbeddingUpdateUpdatedUniqueEmbeddings(int64_t iter) override {
     CHECK_EQ(iter_, iter);
     return updated_values_;
   }
@@ -180,7 +180,7 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
     // do nothing
   }
 
-  const void* PutInValues(int64_t iter) override {
+  const void* EmbeddingPutUniqueEmbeddings(int64_t iter) override {
     CHECK_EQ(iter_, iter);
     return updated_values_;
   }
@@ -188,6 +188,20 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
   void OnEmbeddingPutEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
     OF_CUDA_CHECK(
         cudaFreeAsync(updated_values_, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+  }
+
+  void OnEmbeddingFusedUpdatePutStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    // do nothing
+  }
+
+  const void* EmbeddingFusedUpdatePutUniqueEmbeddings(int64_t iter) override {
+    CHECK_EQ(iter_, iter);
+    CHECK(has_lookup_values_);
+    return lookup_values_;
+  }
+
+  void OnEmbeddingFusedUpdatePutEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    // do nothing
   }
 
   void AllocTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr, size_t size) override {
@@ -199,29 +213,36 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
     OF_CUDA_CHECK(cudaFreeAsync(ptr, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   }
 
-  void SetNumUniqueState(uint32_t num_unique, const std::vector<uint32_t>& num_unique_matrix,
-                         int64_t iter) override {
+  void SetIdFinalNumUnique(uint32_t final_num_unique, int64_t iter) override {
     std::unique_lock<std::mutex> lock(mutex_);
     int64_t index = iter % kRingBufferSize;
-    num_unique_states_.at(index).num_unique = num_unique;
-    num_unique_states_.at(index).num_unique_matrix = num_unique_matrix;
-    num_unique_states_.at(index).iter = iter;
+    id_statistics_vec_.at(index).final_num_unique = final_num_unique;
+    id_statistics_vec_.at(index).iter = iter;
   }
 
-  uint32_t GetNumUnique(int64_t iter) override {
+  void SetIdNumUniqueMatrix(const std::vector<uint32_t>& num_unique_matrix, int64_t iter) override {
     std::unique_lock<std::mutex> lock(mutex_);
     int64_t index = iter % kRingBufferSize;
-    const NumUniqueState& state = num_unique_states_.at(index);
-    CHECK_EQ(state.iter, iter) << "saved iter: " << state.iter << " current iter: " << iter;
-    return state.num_unique;
+    id_statistics_vec_.at(index).num_unique_matrix = num_unique_matrix;
+    id_statistics_vec_.at(index).iter = iter;
   }
 
-  const std::vector<uint32_t>& GetNumUniqueMatrix(int64_t iter) override {
+  uint32_t GetIdNumUnique(int64_t iter) override {
     std::unique_lock<std::mutex> lock(mutex_);
     int64_t index = iter % kRingBufferSize;
-    const NumUniqueState& state = num_unique_states_.at(index);
-    CHECK_EQ(state.iter, iter) << "saved iter: " << state.iter << " current iter: " << iter;
-    return state.num_unique_matrix;
+    const IdStatistics& statistics = id_statistics_vec_.at(index);
+    CHECK_EQ(statistics.iter, iter)
+        << "saved iter: " << statistics.iter << " current iter: " << iter;
+    return statistics.final_num_unique;
+  }
+
+  const std::vector<uint32_t>& GetIdNumUniqueMatrix(int64_t iter) override {
+    std::unique_lock<std::mutex> lock(mutex_);
+    int64_t index = iter % kRingBufferSize;
+    const IdStatistics& statistics = id_statistics_vec_.at(index);
+    CHECK_EQ(statistics.iter, iter)
+        << "saved iter: " << statistics.iter << " current iter: " << iter;
+    return statistics.num_unique_matrix;
   }
 
  private:
@@ -233,7 +254,7 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
   bool has_lookup_embeddings_;
   void* updated_values_;
   int64_t iter_;
-  std::vector<NumUniqueState> num_unique_states_;
+  std::vector<IdStatistics> id_statistics_vec_;
   int device_index_{};
   cudaMemPool_t mem_pool_{};
   std::mutex mutex_;
@@ -245,17 +266,17 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StaticAllocationEmbeddingState);
   StaticAllocationEmbeddingState()
-      : lookup_out_values_(nullptr),
-        lookup_out_embeddings_(nullptr),
-        has_lookup_out_embeddings_(false),
-        embedding_shuffle_in_embeddings_(nullptr),
-        update_in_values_(nullptr),
-        update_out_values_(nullptr),
-        put_in_values_(nullptr),
+      : lookup_unique_values_(nullptr),
+        lookup_embeddings_(nullptr),
+        has_lookup_embeddings_(false),
+        embedding_shuffle_cur_rank_embeddings_(nullptr),
+        embeding_update_unique_embeddings_(nullptr),
+        embeding_update_updated_unique_embeddings_(nullptr),
+        embedding_put_unique_embeddings_(nullptr),
         tmp_buffer_ptr_(nullptr),
         tmp_buffer_offset_(0),
         tmp_buffer_size_(0) {
-    num_unique_states_.resize(kRingBufferSize);
+    id_statistics_vec_.resize(kRingBufferSize);
   }
   ~StaticAllocationEmbeddingState() override = default;
 
@@ -274,43 +295,43 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
 
   void OnEmbeddingLookupStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
     user_op::Tensor* unique_values = ctx->Tensor4ArgNameAndIndex("unique_values", 0);
-    lookup_out_values_ = unique_values->mut_dptr();
+    lookup_unique_values_ = unique_values->mut_dptr();
     if (ctx->has_output("embeddings", 0)) {
       user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
-      has_lookup_out_embeddings_ = true;
-      lookup_out_embeddings_ = embeddings->mut_dptr();
+      has_lookup_embeddings_ = true;
+      lookup_embeddings_ = embeddings->mut_dptr();
     }
   }
 
-  void* LookupOutValues(int64_t iter) override { return lookup_out_values_; }
+  void* LookupUniqueValues(int64_t iter) override { return lookup_unique_values_; }
 
-  void* LookupOutEmbeddings(int64_t iter) override {
-    CHECK(has_lookup_out_embeddings_);
-    return lookup_out_embeddings_;
+  void* LookupEmbeddings(int64_t iter) override {
+    CHECK(has_lookup_embeddings_);
+    return lookup_embeddings_;
   }
 
   void OnEmbeddingLookupEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    lookup_out_values_ = nullptr;
-    lookup_out_embeddings_ = nullptr;
-    has_lookup_out_embeddings_ = false;
+    lookup_unique_values_ = nullptr;
+    lookup_embeddings_ = nullptr;
+    has_lookup_embeddings_ = false;
   }
 
   void OnEmbeddingShuffleStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
     const user_op::Tensor* cur_rank_embeddings =
         ctx->Tensor4ArgNameAndIndex("cur_rank_embeddings", 0);
-    embedding_shuffle_in_embeddings_ = cur_rank_embeddings->dptr();
+    embedding_shuffle_cur_rank_embeddings_ = cur_rank_embeddings->dptr();
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     tmp_buffer_ptr_ = tmp_buffer->mut_dptr();
     tmp_buffer_offset_ = 0;
     tmp_buffer_size_ = tmp_buffer->shape_view().elem_cnt();
   }
 
-  const void* EmbeddingShuffleInEmbeddings(int64_t iter) override {
-    return embedding_shuffle_in_embeddings_;
+  const void* EmbeddingShuffleCurRankEmbeddings(int64_t iter) override {
+    return embedding_shuffle_cur_rank_embeddings_;
   }
 
   void OnEmbeddingShuffleEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    embedding_shuffle_in_embeddings_ = nullptr;
+    embedding_shuffle_cur_rank_embeddings_ = nullptr;
     tmp_buffer_ptr_ = nullptr;
     tmp_buffer_offset_ = 0;
     tmp_buffer_size_ = 0;
@@ -333,28 +354,47 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
     const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
     user_op::Tensor* updated_unique_embeddings =
         ctx->Tensor4ArgNameAndIndex("updated_unique_embeddings", 0);
-    update_in_values_ = unique_embeddings->dptr();
-    update_out_values_ = updated_unique_embeddings->mut_dptr();
+    embeding_update_unique_embeddings_ = unique_embeddings->dptr();
+    embeding_update_updated_unique_embeddings_ = updated_unique_embeddings->mut_dptr();
   }
 
-  const void* UpdateInValues(int64_t iter) override { return update_in_values_; }
+  const void* EmbeddingUpdateUniqueEmbeddings(int64_t iter) override {
+    return embeding_update_unique_embeddings_;
+  }
 
-  void* UpdateOutValues(int64_t iter) override { return update_out_values_; }
+  void* EmbeddingUpdateUpdatedUniqueEmbeddings(int64_t iter) override {
+    return embeding_update_updated_unique_embeddings_;
+  }
 
   void OnEmbeddingUpdateEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    update_in_values_ = nullptr;
-    update_out_values_ = nullptr;
+    embeding_update_unique_embeddings_ = nullptr;
+    embeding_update_updated_unique_embeddings_ = nullptr;
   }
 
   void OnEmbeddingPutStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
     const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
-    put_in_values_ = unique_embeddings->dptr();
+    embedding_put_unique_embeddings_ = unique_embeddings->dptr();
   }
 
-  const void* PutInValues(int64_t iter) override { return put_in_values_; }
+  const void* EmbeddingPutUniqueEmbeddings(int64_t iter) override {
+    return embedding_put_unique_embeddings_;
+  }
 
   void OnEmbeddingPutEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    put_in_values_ = nullptr;
+    embedding_put_unique_embeddings_ = nullptr;
+  }
+
+  void OnEmbeddingFusedUpdatePutStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
+    embedding_fused_update_put_unique_embeddings_ = unique_embeddings->dptr();
+  }
+
+  const void* EmbeddingFusedUpdatePutUniqueEmbeddings(int64_t iter) override {
+    return embedding_fused_update_put_unique_embeddings_;
+  }
+
+  void OnEmbeddingFusedUpdatePutEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    embedding_fused_update_put_unique_embeddings_ = nullptr;
   }
 
   void AllocTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr, size_t size) override {
@@ -369,39 +409,47 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
     // do nothing
   }
 
-  void SetNumUniqueState(uint32_t num_unique, const std::vector<uint32_t>& num_unique_matrix,
-                         int64_t iter) override {
+  void SetIdFinalNumUnique(uint32_t final_num_unique, int64_t iter) override {
     std::unique_lock<std::mutex> lock(mutex_);
     int64_t index = iter % kRingBufferSize;
-    num_unique_states_.at(index).num_unique = num_unique;
-    num_unique_states_.at(index).num_unique_matrix = num_unique_matrix;
-    num_unique_states_.at(index).iter = iter;
+    id_statistics_vec_.at(index).final_num_unique = final_num_unique;
+    id_statistics_vec_.at(index).iter = iter;
   }
 
-  uint32_t GetNumUnique(int64_t iter) override {
+  void SetIdNumUniqueMatrix(const std::vector<uint32_t>& num_unique_matrix, int64_t iter) override {
     std::unique_lock<std::mutex> lock(mutex_);
     int64_t index = iter % kRingBufferSize;
-    const NumUniqueState& state = num_unique_states_.at(index);
-    CHECK_EQ(state.iter, iter) << "saved iter: " << state.iter << " current iter: " << iter;
-    return state.num_unique;
+    id_statistics_vec_.at(index).num_unique_matrix = num_unique_matrix;
+    id_statistics_vec_.at(index).iter = iter;
   }
 
-  const std::vector<uint32_t>& GetNumUniqueMatrix(int64_t iter) override {
+  uint32_t GetIdNumUnique(int64_t iter) override {
     std::unique_lock<std::mutex> lock(mutex_);
     int64_t index = iter % kRingBufferSize;
-    const NumUniqueState& state = num_unique_states_.at(index);
-    CHECK_EQ(state.iter, iter) << "saved iter: " << state.iter << " current iter: " << iter;
-    return state.num_unique_matrix;
+    const IdStatistics& statistics = id_statistics_vec_.at(index);
+    CHECK_EQ(statistics.iter, iter)
+        << "saved iter: " << statistics.iter << " current iter: " << iter;
+    return statistics.final_num_unique;
   }
 
-  void* lookup_out_values_;
-  void* lookup_out_embeddings_;
-  bool has_lookup_out_embeddings_;
-  const void* embedding_shuffle_in_embeddings_;
-  const void* update_in_values_;
-  void* update_out_values_;
-  const void* put_in_values_;
-  std::vector<NumUniqueState> num_unique_states_;
+  const std::vector<uint32_t>& GetIdNumUniqueMatrix(int64_t iter) override {
+    std::unique_lock<std::mutex> lock(mutex_);
+    int64_t index = iter % kRingBufferSize;
+    const IdStatistics& statistics = id_statistics_vec_.at(index);
+    CHECK_EQ(statistics.iter, iter)
+        << "saved iter: " << statistics.iter << " current iter: " << iter;
+    return statistics.num_unique_matrix;
+  }
+
+  void* lookup_unique_values_;
+  void* lookup_embeddings_;
+  bool has_lookup_embeddings_;
+  const void* embedding_shuffle_cur_rank_embeddings_;
+  const void* embeding_update_unique_embeddings_;
+  void* embeding_update_updated_unique_embeddings_;
+  const void* embedding_put_unique_embeddings_;
+  const void* embedding_fused_update_put_unique_embeddings_;
+  std::vector<IdStatistics> id_statistics_vec_;
   void* tmp_buffer_ptr_;
   int64_t tmp_buffer_offset_;
   size_t tmp_buffer_size_;
