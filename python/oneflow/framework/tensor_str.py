@@ -339,6 +339,14 @@ def get_summarized_data(self):
         )
 
 
+def _format_tensor_on_cpu(tensor):
+    if tensor.is_global:
+        device = tensor.placement.type
+    else:
+        device = tensor.device.type
+    return device != "cpu" and device != "cuda"
+
+
 def _gen_tensor_str_template(tensor, is_meta):
     is_meta = is_meta or tensor.is_lazy
     prefix = "tensor("
@@ -364,7 +372,7 @@ def _gen_tensor_str_template(tensor, is_meta):
         tensor_str = "..."
         suffixes.append("size=" + str(tuple(tensor.shape)))
     else:
-        if tensor.device.type != "cpu" and tensor.device.type != "cuda":
+        if _format_tensor_on_cpu(tensor):
             tensor_str = _tensor_str(tensor.detach().to("cpu"), indent)
         else:
             tensor_str = _tensor_str(tensor, indent)
