@@ -504,6 +504,28 @@ class BinaryCrossEntropyWithLogitsLossGradFunctor {
   std::shared_ptr<OpExpr> op_weight_pos_;
 };
 
+class BinaryCrossEntropyWithLogitsReduceMeanLossGradFunctor {
+ public:
+  BinaryCrossEntropyWithLogitsReduceMeanLossGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits_reduce_mean_grad")
+                         .Input("dy")
+                         .Input("input")
+                         .Input("target")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target) const {
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, input, target});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_weight_;
+  std::shared_ptr<OpExpr> op_pos_;
+  std::shared_ptr<OpExpr> op_weight_pos_;
+};
 class CombinedMarginLossGradFunctor {
  public:
   CombinedMarginLossGradFunctor() {
@@ -1151,6 +1173,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "FusedCrossFeatureInteractionV1Grad");
   m.add_functor<impl::FusedCrossFeatureInteractionV2GradFunctor>(
       "FusedCrossFeatureInteractionV2Grad");
+  m.add_functor<impl::BinaryCrossEntropyWithLogitsReduceMeanLossGradFunctor>(
+      "BinaryCrossEntropyWithLogitsReduceMeanLossGrad");
 };
 
 }  // namespace functional

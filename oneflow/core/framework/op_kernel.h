@@ -76,7 +76,6 @@ class KernelInitContext {
   }
   const std::string& op_name() const { return user_op_conf().op_name(); }
   const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
-  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
   const OperatorConf& op_conf() const { return user_op_conf().op_conf(); }
 
   template<typename T>
@@ -133,7 +132,6 @@ class KernelCacheContext {
   }
   const std::string& op_name() const { return user_op_conf().op_name(); }
   const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
-  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
   const OperatorConf& op_conf() const { return user_op_conf().op_conf(); }
 
   template<typename T>
@@ -188,7 +186,6 @@ class KernelInferContext {
   }
   const std::string& op_name() const { return user_op_conf().op_name(); }
   const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
-  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
 
   template<typename T>
   const T& Attr(const std::string& attr_name) const {
@@ -249,7 +246,6 @@ class KernelComputeContext {
   }
   const std::string& op_name() const { return user_op_conf().op_name(); }
   const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
-  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
 
   template<typename T>
   const T& Attr(const std::string& attr_name) const {

@@ -13,19 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_KERNEL_UTIL_BLAS_INTERFACE_H_
-#define ONEFLOW_CORE_KERNEL_UTIL_BLAS_INTERFACE_H_
+#ifndef ONEFLOW_CORE_VM_CPU_ALLOCATOR_H_
+#define ONEFLOW_CORE_VM_CPU_ALLOCATOR_H_
 
-#include "oneflow/core/job/resource.pb.h"
-#include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/blas.h"
+#include <cstdint>
+#include "oneflow/core/vm/allocator.h"
 
 namespace oneflow {
+namespace vm {
 
-template<DeviceType>
-struct BlasIf;
+class CpuAllocator final : public Allocator {
+ public:
+  explicit CpuAllocator() = default;
+  ~CpuAllocator() override = default;
 
+  Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
+  void Deallocate(char* mem_ptr, std::size_t size) override;
+  void DeviceReset() override {}
+};
+
+}  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_UTIL_BLAS_INTERFACE_H_
+#endif  // ONEFLOW_CORE_VM_CPU_ALLOCATOR_H_

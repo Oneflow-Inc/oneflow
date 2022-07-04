@@ -35,30 +35,37 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/profiler/profiler.h"
-#include "oneflow/core/profiler/collection.h"
+#include "oneflow/core/profiler/profile_manager.h"
+#include "oneflow/core/profiler/event_recorder.h"
 #include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
 namespace vm {
 
 struct OpCallInstructionUtil final {
-  static inline Maybe<void> Compute(const vm::Instruction& instruction) {
+  static inline Maybe<void> Prepare(const vm::Instruction& instruction) {
     auto* operand = GetCallPhyInstrOperand(instruction);
     DeviceCtx* device_ctx = instruction.stream().device_ctx().get();
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     if (unlikely(operand->need_temp_storage())) {
-      OF_PROFILER_RANGE_GUARD("TryAllocateTempStorage");
       InferTempStorageSize(operand);
       JUST(TryAllocateTempStorage(operand, device_ctx));
+      // Since memory block is cached in allocator, it's safe to deallocate tmp buffer before
+      // kernel executed.
+      DeallocateTempStorage(operand, device_ctx);
     }
+    return Maybe<void>::Ok();
+  }
+
+  static inline void Compute(const vm::Instruction& instruction) {
+    auto* operand = GetCallPhyInstrOperand(instruction);
+    DeviceCtx* device_ctx = instruction.stream().device_ctx().get();
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
     if (operand->user_opkernel()->has_state_or_cache()) {
       TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
     }
     OpKernelCompute(operand, device_ctx, state, cache);
-    if (unlikely(operand->need_temp_storage())) { DeallocateTempStorage(operand, device_ctx); }
-    return Maybe<void>::Ok();
   }
 
   static inline OpCallPhyInstrOperand* GetCallPhyInstrOperand(const vm::Instruction& instruction) {
@@ -68,7 +75,7 @@ struct OpCallInstructionUtil final {
 
  private:
   static inline void InferTempStorageSize(OpCallPhyInstrOperand* operand) {
-    auto* tmp_tensor = operand->call_ctx_.mut_tmp_tensor();
+    auto* tmp_tensor = operand->mut_call_ctx()->mut_tmp_tensor();
     size_t temp_size =
         operand->opkernel().InferTmpSize(&operand->call_ctx_, operand->user_opkernel());
     tmp_tensor->set_tmp_buffer_size(temp_size);
@@ -100,24 +107,19 @@ struct OpCallInstructionUtil final {
 
   static inline Maybe<void> TryAllocateTempStorage(OpCallPhyInstrOperand* operand,
                                                    DeviceCtx* device_ctx) {
-    auto* tmp_tensor = operand->call_ctx_.mut_tmp_tensor();
+    OF_PROFILER_RANGE_GUARD("TryAllocateTempStorage");
+    auto* tmp_tensor = operand->mut_call_ctx()->mut_tmp_tensor();
     size_t byte_size = tmp_tensor->tmp_buffer_size();
     if (byte_size > 0) {
       char* mem_ptr = nullptr;
-      device_ctx->mut_allocator()->Allocate(&mem_ptr, byte_size);
-      const auto Free = [device_ctx, mem_ptr, byte_size](char* ptr) {
-        CHECK(mem_ptr == ptr);
-        device_ctx->mut_allocator()->Deallocate(mem_ptr, byte_size);
-      };
-      using CharUniquePtr = std::unique_ptr<char, std::function<void(char*)>>;
-      tmp_tensor->mut_tmp_buffer_ptr() = CharUniquePtr(mem_ptr, Free);
+      JUST(device_ctx->mut_allocator()->Allocate(&mem_ptr, byte_size));
+      tmp_tensor->init_tmp_buffer_ptr(mem_ptr);
     }
     return Maybe<void>::Ok();
   }
 
   static inline void OpKernelCompute(OpCallPhyInstrOperand* operand, DeviceCtx* device_ctx,
-                                     user_op::OpKernelState* state,
-                                     const user_op::OpKernelCache* cache) {
+                                     user_op::OpKernelState* state, user_op::OpKernelCache* cache) {
     auto* call_ctx = &operand->call_ctx_;
     auto* user_kernel = operand->user_opkernel();
     operand->mut_opkernel()->Compute(call_ctx, device_ctx, user_kernel, state, cache);
@@ -125,12 +127,18 @@ struct OpCallInstructionUtil final {
 
   static inline void DeallocateTempStorage(OpCallPhyInstrOperand* operand, DeviceCtx* device_ctx) {
     OF_PROFILER_RANGE_GUARD("DeallocateTempStorage");
-    operand->call_ctx_.mut_tmp_tensor()->mut_tmp_buffer_ptr().reset();
+    auto* tmp_tensor = operand->mut_call_ctx()->mut_tmp_tensor();
+    device_ctx->mut_allocator()->Deallocate(tmp_tensor->mut_tmp_buffer_ptr(),
+                                            tmp_tensor->tmp_buffer_size());
   }
 };
 
+Maybe<void> OpCallInstructionType::Prepare(vm::Instruction* instruction) const {
+  return OpCallInstructionUtil::Prepare(*instruction);
+}
+
 void OpCallInstructionType::Compute(vm::Instruction* instruction) const {
-  CHECK_JUST(OpCallInstructionUtil::Compute(*instruction));
+  OpCallInstructionUtil::Compute(*instruction);
 }
 
 std::string OpCallInstructionType::DebugName(const vm::Instruction& instruction) const {

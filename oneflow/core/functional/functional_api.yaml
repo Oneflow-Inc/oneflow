@@ -644,8 +644,12 @@
   signature: [
     "Tensor (Float mean, Float std, Shape size, *, Tensor out=None, DataType dtype=None, Device device=None, 
     Generator generator=None, Bool requires_grad=False) => Normal",
+    "Tensor (Float mean, Float std, Int32 size, *, Tensor out=None, DataType dtype=None, Device device=None, 
+    Generator generator=None, Bool requires_grad=False) => Normal2",
     "Tensor (Float mean, Float std, Shape size, *, Tensor out=None, Placement placement, SbpList sbp, DataType dtype=None,
     Generator generator=None, Bool requires_grad=False) => ConsistentNormal",
+    "Tensor (Float mean, Float std, Int32 size, *, Tensor out=None, Placement placement, SbpList sbp, DataType dtype=None,
+    Generator generator=None, Bool requires_grad=False) => ConsistentNormal2",
     ]
   bind_python: True
 
@@ -1059,6 +1063,10 @@
 - name: "binary_cross_entropy_with_logits_loss_grad"
   signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None) => BinaryCrossEntropyWithLogitsLossGrad"
   bind_python: True
+
+- name: "binary_cross_entropy_with_logits_reduce_mean_loss_grad"
+  signature: "Tensor(Tensor dy, Tensor input, Tensor target) => BinaryCrossEntropyWithLogitsReduceMeanLossGrad"
+  bind_python: False
 
 - name: "sparse_cross_entropy"
   signature: "Tensor (Tensor prediction, Tensor label, Int64 depth) => SparseCrossEntropy"
@@ -1951,9 +1959,9 @@
       Device device=None, Generator generator=None, Bool requires_grad=False)=> RandInt",
       "Tensor (Int64 high, Shape size, *, DataType dtype=None,
       Device device=None, Generator generator=None, Bool requires_grad=False)=> RandInt",
-      "Tensor (Int64 low, Int64 high, Shape size, *, Placement placement, SbpList sbp_tuple,
+      "Tensor (Int64 low, Int64 high, Shape size, *, Placement placement, SbpList sbp,
       DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> ConsistentRandInt",
-      "Tensor (Int64 high, Shape size, *, Placement placement, SbpList sbp_tuple,
+      "Tensor (Int64 high, Shape size, *, Placement placement, SbpList sbp,
       DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> ConsistentRandInt",
     ]
   bind_python: True
@@ -2317,4 +2325,12 @@
 
 - name: "pack_padded_sequence"
   signature: "TensorTuple (Tensor input, Tensor lengths, Bool batch_first) => PackPaddedSequence"
+  bind_python: True
+
+- name: "multi_tensor_sgd_update"
+  signature: "Void (TensorTuple model, TensorTuple model_diff, Tensor learning_rate, Double scale, Float weight_decay) => MultiTensorSgdUpdate"
+  bind_python: True
+
+- name: "multi_tensor_adam_update"
+  signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple m, TensorTuple v, Tensor learning_rate, Float beta1, Float beta2, Float bias_correction1_val, Float bias_correction2_val, Bool do_bias_correction, Double scale, Float weight_decay) => MultiTensorAdamUpdate"
   bind_python: True
