@@ -139,6 +139,7 @@ class Graph(object):
         self._cur_index_of_ouputs_buffer = 0
 
         # For graph level op rewrite
+        self._unique_global_op_dict = dict()
         self._unique_identity_op_dict = dict()
 
         self._session = session_ctx.GetDefaultSession()
@@ -966,6 +967,10 @@ class Graph(object):
             self._c_nn_graph.register_variable_op_names_and_tensors(
                 state_op_names, self._state_tensor_tuple
             )
+
+		# Clear useless dict used in graph build.
+        self._unique_global_op_dict.clear()
+        self._unique_identity_op_dict.clear()
 
         # Always pack outputs to remain type of outputs
         return (
