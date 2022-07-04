@@ -29,14 +29,14 @@ GenericStreamContext::GenericStreamContext(const StreamId& stream_id) : stream_(
   stream_ = dynamic_cast<ep::Stream*>(device_->CreateStream());
   CHECK(stream_ != nullptr);
   poller_thread_ = std::thread([this]() {
-    stream_->OnExecutionContextSetup();
+    CHECK_JUST(stream_->OnExecutionContextSetup());
     std::pair<ep::Event*, std::function<void()>> cb_event;
     while (cb_event_chan_.Receive(&cb_event) == kChannelStatusSuccess) {
       CHECK_JUST(cb_event.first->Sync());
       cb_event.second();
       device_->DestroyEvent(cb_event.first);
     }
-    stream_->OnExecutionContextTeardown();
+    CHECK_JUST(stream_->OnExecutionContextTeardown());
   });
 }
 

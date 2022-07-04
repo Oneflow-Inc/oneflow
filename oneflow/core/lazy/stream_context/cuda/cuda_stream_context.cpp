@@ -72,7 +72,7 @@ CudaStreamContext::CudaStreamContext(int device_index)
   kernel_observer_.reset(new ChainKernelObserver(kernel_observers));
 
   poller_thread_ = std::thread([this]() {
-    stream_->OnExecutionContextSetup();
+    CHECK_JUST(stream_->OnExecutionContextSetup());
     OF_PROFILER_NAME_THIS_HOST_THREAD("_cuda" + std::to_string(device_index_) + " Poller : ("
                                       + std::to_string(device_index_) + ")");
     std::pair<ep::Event*, std::function<void()>> cb_event;
@@ -81,7 +81,7 @@ CudaStreamContext::CudaStreamContext(int device_index)
       cb_event.second();
       device_->DestroyEvent(cb_event.first);
     }
-    stream_->OnExecutionContextTeardown();
+    CHECK_JUST(stream_->OnExecutionContextTeardown());
   });
 }
 
