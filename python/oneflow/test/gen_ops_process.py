@@ -22,6 +22,7 @@ import re
 def get_api(rst_dir):
     """
     Extract operator names from rst files. 
+    
     `currentmodule` is not regarded as operators. 
     `autoclass` and `automodule` are regarded as operators in the absence of `members`.
     """
@@ -67,7 +68,7 @@ def get_api(rst_dir):
 
 def get_test_func(path):
     """
-    Iterate through all files under `path` to find out all operator names, 
+    Iterate through files under `path` to find out all operator names, 
     and update code links to file_func_map_list by file_func_map. 
     """
     files = os.listdir(path)
