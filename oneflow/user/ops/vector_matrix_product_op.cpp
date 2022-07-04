@@ -23,7 +23,6 @@ namespace {
 Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
   const user_op::TensorDesc& a = ctx->InputTensorDesc("a", 0);
   const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
-  int64_t m = 1;
   int64_t k = a.shape().At(0);
   CHECK_EQ_OR_RETURN(k, b.shape().At(0)) << "Dim K should be equal to vector b's dim0. ";
   int64_t n = b.shape().At(1);

@@ -313,7 +313,7 @@ class MatMulFunctor {
     JUST(attrs.SetAttr<double>("alpha", alpha));
     const int64_t a_num_axes = a_shape->NumAxes();
     const int64_t b_num_axes = b_shape->NumAxes();
-    if (a_num_axes == 1 && b_num_axes == 2) { return VectorMatrixProduct(a, b); }
+    // if (a_num_axes == 1 && b_num_axes == 2) { return VectorMatrixProduct(a, b); }
     if (a_num_axes == 2 && b_num_axes == 1) { return MatrixVectorProduct(a, b); }
     if (a_num_axes == 2 && b_num_axes == 2) {
       return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
@@ -369,31 +369,6 @@ class BatchMatMulFunctor {
 
  private:
   std::shared_ptr<OpExpr> batch_matmul_op_;
-};
-
-class MatrixVectorProductFunctor {
- public:
-  MatrixVectorProductFunctor() {
-    matrix_vector_product_op_ = CHECK_JUST(
-        one::OpBuilder("matrix_vector_product").Input("a").Input("b").Output("out").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
-                           const std::shared_ptr<one::Tensor>& b) const {
-    const auto& a_shape = a->shape();
-    const auto& b_shape = b->shape();
-    CHECK_EQ_OR_RETURN(a_shape->NumAxes(), 2)
-        << Error::RuntimeError() << "Expected A is 2-dimensional tensor, but got "
-        << a_shape->NumAxes() << "-dimensional tensor for argument #1";
-    CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 1)
-        << Error::RuntimeError() << "Expected B is 1-dimensional tensor, but got "
-        << b_shape->NumAxes() << "-dimensional tensor for argument #2";
-    CHECK_EQ_OR_RETURN(a_shape->At(1), b_shape->At(0))
-        << Error::RuntimeError() << "Matmul dim not match, please check input!";
-    return OpInterpUtil::Dispatch<Tensor>(*matrix_vector_product_op_, {a, b});
-  }
-
- private:
-  std::shared_ptr<OpExpr> matrix_vector_product_op_;
 };
 
 class VectorMatrixProductFunctor {
@@ -3428,8 +3403,13 @@ class RocAucScoreFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class MvFunctor {
+class MatrixVectorProductFunctor {
  public:
+  MatrixVectorProductFunctor() {
+    matrix_vector_product_op_ = CHECK_JUST(
+        one::OpBuilder("matrix_vector_product").Input("a").Input("b").Output("out").Build());
+  }
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& vec) const {
     const auto& input_shape = input->shape();
@@ -3441,14 +3421,11 @@ class MvFunctor {
         << Error::RuntimeError() << "size mismatch, got " << std::to_string(input_shape->at(0))
         << ", " << std::to_string(input_shape->at(0)) << "x" << std::to_string(input_shape->at(1))
         << ", " << std::to_string(vec_shape->at(0));
-    // TODO(zhongshsh): speedup
-    const std::shared_ptr<Tensor> reshape_vec =
-        JUST(Reshape(vec, Shape(DimVector{vec_shape->at(0), 1})));
-    std::shared_ptr<Tensor> out = JUST(MatMul(input, reshape_vec, false, false, 1.0));
-    std::shared_ptr<Tensor> reshape_out = JUST(Squeeze(
-        JUST(Reshape(out, Shape(DimVector{1, input_shape->at(0)}))), std::vector<int32_t>({0})));
-    return reshape_out;
+    return OpInterpUtil::Dispatch<Tensor>(*matrix_vector_product_op_, {input, vec});
   }
+
+ private:
+  std::shared_ptr<OpExpr> matrix_vector_product_op_;
 };
 
 }  // namespace impl
@@ -3465,7 +3442,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::EmbeddingFunctor>("Embedding");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::MatMulNoBroadCastFunctor>("MatMulNoBroadCast");
-  m.add_functor<impl::MvFunctor>("Mv");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::MatrixVectorProductFunctor>("MatrixVectorProduct");
   m.add_functor<impl::VectorMatrixProductFunctor>("VectorMatrixProduct");
