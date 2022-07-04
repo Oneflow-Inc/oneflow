@@ -1018,6 +1018,11 @@
     "Tensor (Tensor a, Tensor b) => MatrixVectorProduct"
   bind_python: False
 
+- name: "vector_matrix_product"
+  signature: 
+    "Tensor (Tensor a, Tensor b) => VectorMatrixProduct"
+  bind_python: False
+
 - name: "tensordot"
   signature: [
     "Tensor (Tensor a, Tensor b, Int32List dims_a, Int32List dims_b) => TensorDot",

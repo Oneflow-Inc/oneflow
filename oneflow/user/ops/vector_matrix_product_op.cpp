@@ -23,10 +23,11 @@ namespace {
 Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
   const user_op::TensorDesc& a = ctx->InputTensorDesc("a", 0);
   const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
-  int64_t m = a.shape().At(0);
-  int64_t k = a.shape().At(1);
+  int64_t m = 1;
+  int64_t k = a.shape().At(0);
   CHECK_EQ_OR_RETURN(k, b.shape().At(0)) << "Dim K should be equal to vector b's dim0. ";
-  *ctx->OutputShape("out", 0) = Shape({m});
+  int64_t n = b.shape().At(1);
+  *ctx->OutputShape("out", 0) = Shape({n});
   return Maybe<void>::Ok();
 }
 
@@ -40,22 +41,22 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
 
 }  // namespace
 
-/* static */ Maybe<void> MatrixVectorProductOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> VectorMatrixProductOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDesc4Matmul(ctx);
 }
 
-/*static*/ Maybe<void> MatrixVectorProductOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> VectorMatrixProductOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> MatrixVectorProductOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> VectorMatrixProductOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
-      .Split(user_op::OpArg("a", 0), 0)
-      .Broadcast(user_op::OpArg("b", 0))
+      .Broadcast(user_op::OpArg("a", 0))
+      .Split(user_op::OpArg("b", 0), 1)
       .Split(user_op::OpArg("out", 0), 0)
       .Build();
   ctx->NewBuilder()
-      .Split(user_op::OpArg("a", 0), 1)
+      .Split(user_op::OpArg("a", 0), 0)
       .Split(user_op::OpArg("b", 0), 0)
       .PartialSum(user_op::OpArg("out", 0))
       .Build();
@@ -72,7 +73,7 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> MatrixVectorProductOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> VectorMatrixProductOp::InferDataType(user_op::InferContext* ctx) {
   return InferDataType4Matmul(ctx);
 }
 

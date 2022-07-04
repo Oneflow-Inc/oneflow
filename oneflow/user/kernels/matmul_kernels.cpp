@@ -364,6 +364,39 @@ REGISTER_USER_KERNEL("matrix_vector_product")
     .SetCreateFn<MatrixVectorProductKernel>()
     .SetIsMatchedHob(MatrixVectorProductPrimitiveExists());
 
+class VectorMatrixProductKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+ public:
+  VectorMatrixProductKernel() = default;
+  ~VectorMatrixProductKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
+    CHECK_EQ(a->shape_view().NumAxes(), 1) << "A Numdims should be equal to 1. ";
+    const DataType data_type = a->data_type();
+    const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
+    CHECK_EQ(b->shape_view().NumAxes(), 2) << "B Numdims should be equal to 2. ";
+    CHECK_EQ(b->data_type(), data_type) << "Matrix A Datatype should be equal to Vector B";
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK_EQ(out->shape_view().NumAxes(), 1) << "Out Numdims should be equal to 1. ";
+    CHECK_EQ(out->data_type(), data_type) << "Out Datatype should be equal to input's. ";
+    size_t m = 1;
+    size_t k = a->shape_view().At(0);
+    size_t n = b->shape_view().At(1);
+    const double alpha = 1.0;
+    double beta = 0.0;
+    auto matmul = NewMatrixVectorProductPrimitive(ctx);
+    CHECK(matmul);
+    matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
+  }
+};
+
+REGISTER_USER_KERNEL("vector_matrix_product")
+    .SetCreateFn<VectorMatrixProductKernel>()
+    .SetIsMatchedHob(MatrixVectorProductPrimitiveExists());
+
 template<typename Context>
 std::unique_ptr<ep::primitive::Matmul> NewMatmulPrimitiveForBroadcastMatmulGradB(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
