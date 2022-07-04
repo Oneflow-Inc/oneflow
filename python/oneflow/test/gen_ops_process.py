@@ -16,46 +16,58 @@ limitations under the License.
 import os
 import subprocess
 import glob
+import re
 
 
-op_files = glob.glob("../../../docs/source/*.rst")
-op_files.remove("../../../docs/source/graph.rst")
-op_prefix = ""
-api_list = []
-api_str = ""
-for op_file in op_files:
-    with open(op_file, "r") as f:
-        line = True
-        while line:
+def get_api(rst_dir):
+    """
+    Extract operator names from rst files. 
+    """
+    op_files = glob.glob(rst_dir + "/*.rst")
+    op_files.remove(rst_dir + "/graph.rst")
+    api_list = []
+    api_str = ""
+    for op_file in op_files:
+        with open(op_file, "r") as f:
             line = f.readline()
-            if ":members:" in line:
-                api_str += line.replace(":members:", "")
-                line = f.readline()
-                while line and ":" not in line:
-                    api_str += line
+            pre = ""
+            while line:
+                skip = False
+                if ".. currentmodule::" in line:
+                    pre = line.strip().replace(".. currentmodule::", "") + "."
+                elif ".. autofunction::" in line:
+                    if "oneflow" not in line:
+                        api_str += pre
+                    api_str += line.replace(".. autofunction::", "")
+                elif ".. automodule::" in line or ".. autoclass:: " in line:
+                    pre_a = line.replace(".. automodule:: ", "").replace(
+                        ".. autoclass:: ", ""
+                    )
                     line = f.readline()
-            if ".. autofunction::" in line:
-                api_str += line.replace(".. autofunction::", "")
-            if ".. currentmodule::" in line:
-                api_str += line.split(".")[-1]
-            if ".. autoclass::" in line:
-                api_str += line.split(".")[-1]
+                    skip = True
+                    if ":members:" in line and len(line) > 14:
+                        pre_a = pre_a.strip() + "."
+                        api_str += pre_a + line.replace(":members:", "")
+                        line = f.readline()
+                        while (
+                            line and ":" not in line and len(line.replace(" ", "")) > 1
+                        ):
+                            api_str += pre_a + line
+                            line = f.readline()
+                    else:
+                        api_str += pre_a
+                if not skip:
+                    line = f.readline()
 
-api_list = api_str.strip().replace(" ", "").replace(",", "").split("\n")  
-
-dir_list = [
-    ["../../../python/oneflow/framework/docstr"],
-    ["../../../python/oneflow/test/modules", "../../../python/oneflow/test/tensor"],
-    ["../../../python/oneflow/test/exceptions"],
-]
-num_cols = 4
-
-test_func_list = list()
-file_func_map = dict()
-file_func_map_list = []
+    api_list = api_str.strip().replace(" ", "").replace(",", "").split("\n")
+    return api_list
 
 
 def get_test_func(path):
+    """
+    Iterate through all files under path, find out all operator names, 
+    and update code links to file_func_map_list by file_func_map. 
+    """
     files = os.listdir(path)
     commit_bytes = subprocess.check_output(["git", "rev-parse", "HEAD"])
     commit_str = commit_bytes.decode("utf-8").replace("\n", "")
@@ -68,10 +80,16 @@ def get_test_func(path):
             line_num = 1
             for line in iter_f:
                 line = line.strip()
-                if line.startswith("def test_") and line.endswith("(test_case):"):
-                    result_func_list.append(line[9:-12])
-                    file_func_map[line[9:-12]] = (
-                        f" [{line[9:-12]}]("
+                if "def " in line and "test_case" in line and "#" not in line:
+                    func_name = (
+                        re.match("def (.*)\(test_case.*", line)
+                        .group(1)
+                        .replace("_test_", "")
+                        .replace("test_", "")
+                    )
+                    result_func_list.append(func_name)
+                    file_func_map[func_name] = (
+                        f" [{func_name}]("
                         + "https://github.com/Oneflow-Inc/oneflow/blob/"
                         + commit_str
                         + "/python/oneflow/test/"
@@ -97,19 +115,12 @@ def get_test_func(path):
     return result_func_list
 
 
-for i in range(0, len(dir_list)):
-    tmp_func_list = list()
-    file_func_map = dict()
-    for path in dir_list[i]:
-        tmp_func_list.extend(get_test_func(path))
-    test_func_list.append(tmp_func_list)
-    file_func_map_list.append(file_func_map)
-
-
 def pure_match(x, y):
-    x = x.lower()
-    x = x.split("_")[0]
-    y = y.lower()
+    """
+    y in x ?
+    """
+    x = x.lower().replace("_", "")
+    y = y.lower().replace("_", "")
     pos = x.find(y)
     if pos != -1:
         return True
@@ -118,6 +129,12 @@ def pure_match(x, y):
 
 
 def match_test_func(func, func_list):
+    """
+    func: operator name
+    func_list: names of all operators
+
+    func in func_list ? If yes, return matching content, or else return "". 
+    """
     match_res = ""
     for i in range(len(func_list)):
         if pure_match(func_list[i], func):
@@ -126,67 +143,76 @@ def match_test_func(func, func_list):
     return match_res
 
 
-result_list = []
-result_list.append(f"## Ops Version : Alpha")
-result_list.append(f"")
-result_list.append(f"")
-table_head = f"|op name   | Doc Test | Compatiable/Completeness Test | Exception |"
-result_list.append(table_head)
-result_list.append(
-    f"| ------------------------- | ------------- | ----------------------------- | --------- |"
-)
+if __name__ == "__main__":
+    api_list = get_api("../../../docs/source")
+    dir_list = [
+        ["../../../python/oneflow/framework/docstr"],
+        ["../../../python/oneflow/test/modules", "../../../python/oneflow/test/tensor"],
+        ["../../../python/oneflow/test/exceptions"],
+    ]
+    num_cols = 4
+    test_func_list = list()
+    file_func_map = dict()
+    file_func_map_list = []
 
-cnt0 = 0
-cnt1 = 0
-cnt2 = 0
+    for i in range(0, len(dir_list)):
+        tmp_func_list = list()
+        file_func_map = dict()
+        for path in dir_list[i]:
+            tmp_func_list.extend(get_test_func(path))
+        test_func_list.append(tmp_func_list)
+        file_func_map_list.append(file_func_map)
 
-pre = ""
+    result_list = []
+    result_list.append(f"## Ops Version : Alpha")
+    result_list.append(f"")
+    result_list.append(f"")
+    table_head = f"|Op Name   | Doc Test | Compatiable/Completeness Test | Exception |"
+    result_list.append(table_head)
+    result_list.append(
+        f"| ------------------------- | ------------- | ----------------------------- | --------- |"
+    )
 
-for name in api_list:
-    if name == "Tensor":
-        pre = "oneflow."
-    elif name == "Adagrad":
-        pre = "oneflow.optim."
-    elif name == "ChainedScheduler":
-        pre = "oneflow.optim.lr_scheduler."
-    elif name == "AdaptiveAvgPool1d":
-        pre = "oneflow.nn."
-    elif name == "adaptive_avg_pool1d" and pre == "oneflow.nn.":
-        pre = "oneflow.nn.functional."
-    elif name == "CalcGain":
-        pre = "oneflow.nn.init."
-    table_line = f"| {pre+name} |"
-    for i in range(3):
-        match_name = match_test_func(name, test_func_list[i])
-        if match_name != "":
-            if i == 0:
-                cnt0 += 1
-            elif i == 1:
-                cnt1 += 1
-            else:
-                cnt2 += 1
-            table_line += file_func_map_list[i][match_name]
-        table_line += "  |"
-    result_list.append(table_line)
+    cnt0 = 0
+    cnt1 = 0
+    cnt2 = 0
+    pre = ""
 
-doc_test_ratio = cnt0 * 1.0 / len(api_list)
-compatiable_completeness_test_ratio = cnt1 * 1.0 / len(api_list)
-exception_test_ratio = cnt2 * 1.0 / len(api_list)
+    for name in api_list:
+        table_line = f"| {name} |"
+        name = name.split(".")[-1]
+        for i in range(3):
+            match_name = match_test_func(name, test_func_list[i])
+            if match_name != "":
+                if i == 0:
+                    cnt0 += 1
+                elif i == 1:
+                    cnt1 += 1
+                else:
+                    cnt2 += 1
+                table_line += file_func_map_list[i][match_name]
+            table_line += "  |"
+        result_list.append(table_line)
 
-result_list.append(f"## Test Data Summary")
+    doc_test_ratio = cnt0 * 1.0 / len(api_list)
+    compatiable_completeness_test_ratio = cnt1 * 1.0 / len(api_list)
+    exception_test_ratio = cnt2 * 1.0 / len(api_list)
 
-result_list.append(f"- OneFlow Total API Number: ====================>{len(api_list)}")
-result_list.append(
-    f"- Doc Test Ratio: ====================>{100*doc_test_ratio:.2f}% = {cnt0} / {len(api_list)}"
-)
-result_list.append(
-    f"- Compatiable/Completeness Test Ratio: ====================>{100*compatiable_completeness_test_ratio:.2f}% = {cnt1} / {len(api_list)}"
-)
-result_list.append(
-    f"- Exception Test Ratio: ====================>{100*exception_test_ratio:.2f}% = {cnt2} / {len(api_list)}"
-)
+    result_list.append(f"## Test Data Summary")
+    result_list.append(
+        f"- OneFlow Total API Number: {len(api_list)}"
+    )
+    result_list.append(
+        f"- Doc Test Ratio: {100*doc_test_ratio:.2f}% ({cnt0} / {len(api_list)})"
+    )
+    result_list.append(
+        f"- Compatiable/Completeness Test Ratio: {100*compatiable_completeness_test_ratio:.2f}% ({cnt1} / {len(api_list)})"
+    )
+    result_list.append(
+        f"- Exception Test Ratio: {100*exception_test_ratio:.2f}% ({cnt2} / {len(api_list)})"
+    )
 
-f = open("./README.md", "w")
-for line in result_list:
-    f.write(line + "\n")
-f.close()
+    f = open("./README.md", "w")
+    for line in result_list:
+        f.write(line + "\n")
+    f.close()
