@@ -77,7 +77,7 @@ namespace oneflow {
     CHECK_EQ_OR_RETURN(x_tensor.shape(), like_tensor.shape())
         << Error::RuntimeError()
         << "The shape of the x tensor must be consistent to the shape of the like tensor"
-        << " when input empty axis list ";
+        << " when the input axis list is empty";
   }
 
   user_op::TensorDesc* y_tensor = ctx->OutputTensorDesc("y", 0);
