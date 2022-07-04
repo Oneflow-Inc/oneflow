@@ -99,10 +99,11 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
 
     if (input_tensor->shape_view().elem_cnt() == 0) {
       if (output_tensor->shape_view().elem_cnt() != 0) {
-        Scalar init_value = Scalar(0);
-        if (std::is_same<BinaryFunc<T>, BinaryFuncAll<T>>::value){
-          init_value = Scalar(1);
-        }
+        Scalar init_value = [&]() {
+          if (std::is_same<BinaryFunc<T>, BinaryFuncAny<T>>::value){ return Scalar(0); }
+          if (std::is_same<BinaryFunc<T>, BinaryFuncAll<T>>::value){ return Scalar(1); }
+          UNIMPLEMENTED();
+        }();
         CHECK_GE(output_elem_cnt, 0);
         if (output_elem_cnt == 0) { return; }
         std::unique_ptr<ep::primitive::Fill> fill = NewFillPrimitive(ctx);
@@ -139,7 +140,7 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
                        && (user_op::HobDataType("input_tensor", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("output_tensor", 0) == DataType::kBool)          \
-                       && FillPrimitiveExists() == true)                                         \
+                       && FillPrimitiveExists())                                                 \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
         const Shape& in_shape = ctx->InputShape("input_tensor", 0);                              \
         return in_shape.elem_cnt() * sizeof(dtype);                                              \
