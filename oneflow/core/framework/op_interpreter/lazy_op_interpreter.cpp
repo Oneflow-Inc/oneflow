@@ -205,8 +205,8 @@ Maybe<Tensor> GradAccTryInsertUnpackAfterInput(
         << " the input tensor of nn.Graph will be unpacked by 0th dim into multiple micro-batches "
         << " and exec them in order.\n";
 
-    user_op::UserOpConfWrapperBuilder unpack_builder("System-GradientAccumulation-InputUnpack-"
-                                                     + input_conf.name() + "-" + NewUniqueId());
+    user_op::UserOpConfWrapperBuilder unpack_builder("Sys-GradAcc-InputUnpack-" + input_conf.name()
+                                                     + "-" + NewUniqueId());
     const std::string input_tensor_lbn = GenLogicalBlobName(input_conf.name(), "out");
     const auto unpack_op = unpack_builder.OpTypeName("unpack")
                                .Input("in", input_tensor_lbn)
@@ -249,8 +249,8 @@ Maybe<Tensor> GradAccTryInsertRepeatAfterVar(
         << " the var tensor of nn.Graph will be repeated exec for multiple micro-batches. \n";
 
     const std::string var_tensor_lbn = GenLogicalBlobName(var_conf.name(), "out");
-    user_op::UserOpConfWrapperBuilder repeat_builder("System-GradientAccumulation-VariableRepeat-"
-                                                     + var_conf.name() + "-" + NewUniqueId());
+    user_op::UserOpConfWrapperBuilder repeat_builder("Sys-GradAcc-VarRepeat-" + var_conf.name()
+                                                     + "-" + NewUniqueId());
     const auto repeat_op = repeat_builder.OpTypeName("repeat")
                                .Input("in", var_tensor_lbn)
                                .Output("out")
@@ -293,8 +293,7 @@ Maybe<Tensor> GradAccTryInsertPackBeforeOutput(const std::shared_ptr<Scope>& sco
         << " the output tensor of nn.Graph will be packed to a big tensor by 0th dim, after exec \n"
         << " for multiple micro-batches. \n";
 
-    user_op::UserOpConfWrapperBuilder pack_builder("System-GradientAccumulation-OutputPack-"
-                                                   + output_op_name);
+    user_op::UserOpConfWrapperBuilder pack_builder("Sys-GradAcc-OutputPack-" + output_op_name);
     const auto output_pack_op = pack_builder.OpTypeName("pack")
                                     .Input("in", output_in_lbn)
                                     .Output("out")
@@ -339,8 +338,7 @@ Maybe<void> GradAccTryInsertRepeatTickBeforeSource(
 
     // Insert Tick
     OperatorConf tick_conf{};
-    tick_conf.set_name("System-GradientAccumulation-RepeatTick-DeviceTick-"
-                       + source_op_conf->name());
+    tick_conf.set_name("Sys-GradAcc-RepeatTick-DeviceTick-" + source_op_conf->name());
     tick_conf.set_device_tag(source_op_conf->device_tag());
     tick_conf.mutable_device_tick_conf()->set_out("out");
     tick_conf.set_scope_symbol_id(source_op_conf->scope_symbol_id());
@@ -352,8 +350,8 @@ Maybe<void> GradAccTryInsertRepeatTickBeforeSource(
             << " infer and and op attr : \n"
             << tick_op_attr.DebugString() << std::endl;
 
-    user_op::UserOpConfWrapperBuilder repeat_builder(
-        "System-GradientAccumulation-RepeatTick-Repeat-" + source_op_conf->name());
+    user_op::UserOpConfWrapperBuilder repeat_builder("Sys-GradAcc-RepeatTick-Repeat-"
+                                                     + source_op_conf->name());
     const auto repeat_op = repeat_builder.OpTypeName("repeat")
                                .Input("in", tick_lbn)
                                .Output("out")
@@ -389,8 +387,8 @@ Maybe<std::string> GradAccTryInsertRepeatAfterFreeVar(const OperatorConf& var_co
         << " Once call nn.Graph in OneFlow, it indicates a mini-batch. When grad acc steps > 1, \n"
         << " the free var tensor of nn.Graph will be repeated exec for multiple micro-batches. \n";
 
-    user_op::UserOpConfWrapperBuilder repeat_builder("System-GradientAccumulation-VariableRepeat-"
-                                                     + var_conf.name() + "-" + NewUniqueId());
+    user_op::UserOpConfWrapperBuilder repeat_builder("Sys-GradAcc-VarRepeat-" + var_conf.name()
+                                                     + "-" + NewUniqueId());
     const auto repeat_op = repeat_builder.OpTypeName("repeat")
                                .Input("in", var_tensor_lbn)
                                .Output("out")

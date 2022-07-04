@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -64,7 +65,8 @@ namespace {
 
 REGISTER_USER_OP_GRAD("acc").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx)
                                                         -> Maybe<void> {
-  const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
+  const auto grad_op_name =
+      "Sys-GradAcc-VarAcc" + GenLogicalBlobId(ctx->FwOp().input("in", 0)).op_name();
   ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("repeat")
         .InputBind("in", ctx->FwOp().output_grad("out", 0))
