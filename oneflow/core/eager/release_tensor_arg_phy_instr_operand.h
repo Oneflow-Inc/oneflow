@@ -56,6 +56,10 @@ class ReleaseTensorArgPhyInstrOperand : public PhyInstrOperand {
   }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
+  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
+    DoEach(eager_blob_object_.get());
+  }
+
  private:
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
   DependenceVector output_dependences_;

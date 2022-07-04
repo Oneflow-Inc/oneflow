@@ -158,8 +158,8 @@ void BinAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
   DeallocatePiece(rhs);
 }
 
-bool BinAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
-  CHECK(IsAlignedSize(aligned_size, alignment_));
+Maybe<bool> BinAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
+  CHECK_OR_RETURN(IsAlignedSize(aligned_size, alignment_)) << "not aligned";
 
   size_t allocate_bytes = aligned_size;
   if (allocate_bytes < 1048576) {
@@ -177,7 +177,7 @@ bool BinAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   if (final_allocate_bytes < aligned_size) { return false; }
 
   char* mem_ptr = nullptr;
-  backend_->Allocate(&mem_ptr, final_allocate_bytes);
+  JUST(backend_->Allocate(&mem_ptr, final_allocate_bytes));
   if (mem_ptr == nullptr) { return false; }
 
   // extend sucess
@@ -193,7 +193,7 @@ bool BinAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   InsertPiece2Bin(piece);
   MarkPiece(piece);
 
-  CHECK(mem_ptr2block_.emplace(mem_ptr, Block(piece)).second);
+  CHECK_OR_RETURN(mem_ptr2block_.emplace(mem_ptr, Block(piece)).second) << "existed mem_ptr";
 
   return true;
 }
@@ -251,24 +251,22 @@ bool BinAllocator::DeallocateFreeBlockForGarbageCollection() {
   return total_free_bytes > 0;
 }
 
-void BinAllocator::Allocate(char** mem_ptr, std::size_t size) {
+Maybe<void> BinAllocator::Allocate(char** mem_ptr, std::size_t size) {
   if (size == 0) {
     *mem_ptr = nullptr;
-    return;
+    return Maybe<void>::Ok();
   }
   size_t aligned_size = MemAlignedBytes(size, alignment_);
 
   Piece* piece = FindPiece(aligned_size);
 
   if (piece == nullptr) {
-    if (AllocateBlockToExtendTotalMem(aligned_size)) { piece = FindPiece(aligned_size); }
+    if (JUST(AllocateBlockToExtendTotalMem(aligned_size))) { piece = FindPiece(aligned_size); }
   }
 
-  if (piece == nullptr) {
-    if (DeallocateFreeBlockForGarbageCollection() && AllocateBlockToExtendTotalMem(aligned_size)) {
-      piece = FindPiece(aligned_size);
-    }
-  }
+  CHECK_NOTNULL_OR_RETURN(piece)
+      << Error::OutOfMemoryError() << "Error! : Out of memory when allocate size : " << size
+      << ".\n The total_memory_bytes allocated by this BinAllocator is : " << total_memory_bytes_;
 
   if (piece == nullptr) {
     backend_->DeviceReset();
@@ -276,9 +274,10 @@ void BinAllocator::Allocate(char** mem_ptr, std::size_t size) {
                << ".\n The total_memory_bytes allocated by this BinAllocator is : "
                << total_memory_bytes_;
   }
-  CHECK_NOTNULL(piece->ptr);
-  CHECK(ptr2piece_.find(piece->ptr) != ptr2piece_.end());
+  CHECK_NOTNULL_OR_RETURN(piece->ptr) << "invalid piece null ptr";
+  CHECK_OR_RETURN(ptr2piece_.find(piece->ptr) != ptr2piece_.end()) << "piece is not found";
   *mem_ptr = piece->ptr;
+  return Maybe<void>::Ok();
 }
 
 void BinAllocator::Deallocate(char* mem_ptr, std::size_t size) {

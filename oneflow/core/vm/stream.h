@@ -62,6 +62,7 @@ class Stream final : public intrusive::Base {
   Symbol<Device> device() const { return device_; }
   StreamRole stream_role() const { return stream_role_; }
   const StreamType& stream_type() const;
+  bool on_scheduler_thread() const { return on_scheduler_thread_; }
 
   const intrusive::shared_ptr<MirroredObject>& schedule_local_dep_object() const {
     return schedule_local_dep_object_;
@@ -84,6 +85,7 @@ class Stream final : public intrusive::Base {
         device_(),
         stream_role_(StreamRole::kInvalid),
         stream_type_(),
+        on_scheduler_thread_(false),
         device_ctx_(),
         running_instruction_list_(),
         active_stream_hook_(),
@@ -94,6 +96,7 @@ class Stream final : public intrusive::Base {
   Symbol<Device> device_;
   StreamRole stream_role_;
   const StreamType* stream_type_;
+  bool on_scheduler_thread_;
   std::unique_ptr<DeviceCtx> device_ctx_;
   // lists
   DispatchedInstructionList running_instruction_list_;
