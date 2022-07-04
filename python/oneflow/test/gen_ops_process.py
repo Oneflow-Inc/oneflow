@@ -22,6 +22,8 @@ import re
 def get_api(rst_dir):
     """
     Extract operator names from rst files. 
+    `currentmodule` is not regarded as operators. 
+    `autoclass` and `automodule` are regarded as operators in the absence of `members`.
     """
     op_files = glob.glob(rst_dir + "/*.rst")
     op_files.remove(rst_dir + "/graph.rst")
@@ -65,7 +67,7 @@ def get_api(rst_dir):
 
 def get_test_func(path):
     """
-    Iterate through all files under path, find out all operator names, 
+    Iterate through all files under `path` to find out all operator names, 
     and update code links to file_func_map_list by file_func_map. 
     """
     files = os.listdir(path)
@@ -113,7 +115,13 @@ def get_test_func(path):
 
 def pure_match(x, y):
     """
-    y in x ?
+    Check whether x contains y.
+    
+    The purpose of identifying "." is to accurately match operator documents. 
+    For example, if we make pos = x.find(y) while y = clip_, either oneflow.Tensor.clip or oneflow.Tensor.clip_ is right.
+
+    Besides, identifying "_" is important. 
+    For example, if we make pos = x.find(y) while y = squeeze, either test of squeeze or unsqueeze is right.
     """
     x = x.lower()
     y = y.lower()
@@ -121,7 +129,7 @@ def pure_match(x, y):
     if "." in x:
         x = x.split(".")
         for i in x:
-            if i == y: 
+            if i == y:
                 pos = 1
                 break
     elif "_" in y:
@@ -129,7 +137,7 @@ def pure_match(x, y):
     else:
         x = x.split("_")
         for i in x:
-            if i == y: 
+            if i == y:
                 pos = 1
                 break
     return pos != -1
@@ -140,7 +148,7 @@ def match_test_func(func, func_list):
     func: operator name
     func_list: names of all operators
 
-    func in func_list ? If yes, return matching content, or else return "". 
+    Check whether func_list contains func. If yes, return matching content, or else return "". 
     """
     match_res = ""
     for i in range(len(func_list)):
@@ -174,16 +182,15 @@ if __name__ == "__main__":
     result_list.append(f"## Ops Version : Alpha")
     result_list.append(f"")
     result_list.append(f"")
-    table_head = f"|Op Name   | Doc Test | Compatiable/Completeness Test | Exception |"
+    table_head = f"| Op Name | Doc Test | Compatiable/Completeness Test | Exception |"
     result_list.append(table_head)
     result_list.append(
         f"| ------------------------- | ------------- | ----------------------------- | --------- |"
     )
 
-    cnt0 = 0
-    cnt1 = 0
-    cnt2 = 0
-    pre = ""
+    cnt0 = 0  # the number of doc_test
+    cnt1 = 0  # the number of compatiable_completeness_test
+    cnt2 = 0  # the number of exception_test
 
     for name in api_list:
         table_line = f"| {name} |"
@@ -206,9 +213,7 @@ if __name__ == "__main__":
     exception_test_ratio = cnt2 * 1.0 / len(api_list)
 
     result_list.append(f"## Test Data Summary")
-    result_list.append(
-        f"- OneFlow Total API Number: {len(api_list)}"
-    )
+    result_list.append(f"- OneFlow Total API Number: {len(api_list)}")
     result_list.append(
         f"- Doc Test Ratio: {100*doc_test_ratio:.2f}% ({cnt0} / {len(api_list)})"
     )
