@@ -45,7 +45,7 @@ class Test_Diag_module(flow.unittest.TestCase):
         x = random_tensor(ndim=1, dim0=random()).to(device, torch.bool)
         return torch.diag(x)
     
-    def test_diag_0size_dim(test_case):
+    def test_diag_0size_tensor(test_case):
         torch_tensor = ori_torch.empty(0).diag()
         flow_tensor = flow.empty(0).diag()
         test_case.assertTrue(
