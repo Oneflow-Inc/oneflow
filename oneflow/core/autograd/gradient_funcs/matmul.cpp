@@ -103,16 +103,16 @@ Maybe<void> Matmul::Apply(const MatmulCaptureState* ctx, const TensorTuple& out_
 }
 
 struct BroadcastMatmulCaptureState : public AutoGradCaptureState {
-  bool transpose_a;
-  bool transpose_b;
-  double alpha;
-  bool requires_grad_a;
-  bool requires_grad_b;
-  size_t a_index;
-  size_t b_index;
-  bool broadcast_a;
-  bool broadcast_b;
-  int64_t b_num_axes;
+  bool transpose_a = false;
+  bool transpose_b = false;
+  double alpha = 1.0;
+  bool requires_grad_a = true;
+  bool requires_grad_b = true;
+  size_t a_index = 0;
+  size_t b_index = 1;
+  bool broadcast_a = false;
+  bool broadcast_b = false;
+  int64_t b_num_axes = 0;
 };
 
 class BroadcastMatmul : public OpExprGradFunction<BroadcastMatmulCaptureState> {
