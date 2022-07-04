@@ -16,12 +16,6 @@ limitations under the License.
 import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
-add_docstr(
-    oneflow.nn.Module.to_global,
-    """
-    This interface is no longer available, please use :func:`oneflow.nn.Module.to_global` instead.
-    """,
-)
 
 add_docstr(
     oneflow.nn.Module.to_global,
