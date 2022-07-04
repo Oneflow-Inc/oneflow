@@ -6,68 +6,69 @@
 #include <memory>
 
 namespace pyast {
+using namespace std;
 
-typedef std::string identifier;
+typedef string identifier;
 
 class stmt_;
-typedef std::shared_ptr<stmt_> stmt_ptr;
+typedef shared_ptr<stmt_> stmt_ptr;
 
 class FunctionDef_;
-typedef std::shared_ptr<FunctionDef_> FunctionDef_ptr;
+typedef shared_ptr<FunctionDef_> FunctionDef_ptr;
 
 class Return_;
-typedef std::shared_ptr<Return_> Return_ptr;
+typedef shared_ptr<Return_> Return_ptr;
 
 class Assign_;
-typedef std::shared_ptr<Assign_> Assign_ptr;
+typedef shared_ptr<Assign_> Assign_ptr;
 
 class If_;
-typedef std::shared_ptr<If_> If_ptr;
+typedef shared_ptr<If_> If_ptr;
 
 class Raise_;
-typedef std::shared_ptr<Raise_> Raise_ptr;
+typedef shared_ptr<Raise_> Raise_ptr;
 
 class Assert_;
-typedef std::shared_ptr<Assert_> Assert_ptr;
+typedef shared_ptr<Assert_> Assert_ptr;
 
 class Expr_;
-typedef std::shared_ptr<Expr_> Expr_ptr;
+typedef shared_ptr<Expr_> Expr_ptr;
 
 class expr_;
-typedef std::shared_ptr<expr_> expr_ptr;
+typedef shared_ptr<expr_> expr_ptr;
 
 class BoolOp_;
-typedef std::shared_ptr<BoolOp_> BoolOp_ptr;
+typedef shared_ptr<BoolOp_> BoolOp_ptr;
 
 class BinOp_;
-typedef std::shared_ptr<BinOp_> BinOp_ptr;
+typedef shared_ptr<BinOp_> BinOp_ptr;
 
 class Lambda_;
-typedef std::shared_ptr<Lambda_> Lambda_ptr;
+typedef shared_ptr<Lambda_> Lambda_ptr;
 
 class Compare_;
-typedef std::shared_ptr<Compare_> Compare_ptr;
+typedef shared_ptr<Compare_> Compare_ptr;
 
 class Call_;
-typedef std::shared_ptr<Call_> Call_ptr;
+typedef shared_ptr<Call_> Call_ptr;
 
 class Num_;
-typedef std::shared_ptr<Num_> Num_ptr;
+typedef shared_ptr<Num_> Num_ptr;
 
 class Constant_;
-typedef std::shared_ptr<Constant_> Constant_ptr;
+typedef shared_ptr<Constant_> Constant_ptr;
 
 class Attribute_;
-typedef std::shared_ptr<Attribute_> Attribute_ptr;
+typedef shared_ptr<Attribute_> Attribute_ptr;
 
 class Name_;
-typedef std::shared_ptr<Name_> Name_ptr;
+typedef shared_ptr<Name_> Name_ptr;
 
 class arguments_;
-typedef std::shared_ptr<arguments_> arguments_ptr;
+typedef shared_ptr<arguments_> arguments_ptr;
 
 class arg_;
-typedef std::shared_ptr<arg_> arg_ptr;
+typedef shared_ptr<arg_> arg_ptr;
 
 class arg_ {
   identifier arg;
@@ -78,11 +79,11 @@ class arg_ {
 };
 
 class arguments_ {
-  std::vector<arg_ptr> args;
+  vector<arg_ptr> args;
 
  public:
-  explicit arguments_(std::vector<arg_ptr> args_) : args(std::move(args_)) {}
-  std::vector<arg_ptr> get_args() { return args; }
+  explicit arguments_(vector<arg_ptr> args_) : args(move(args_)) {}
+  vector<arg_ptr> get_args() { return args; }
 };
 
 class stmt_ {
@@ -128,18 +129,15 @@ class expr_ {
 class FunctionDef_ : public stmt_ {
   identifier name;
   arguments_ptr args;
-  std::vector<stmt_ptr> body;
+  vector<stmt_ptr> body;
 
  public:
-  FunctionDef_(identifier name_, arguments_ptr args_, std::vector<stmt_ptr> body_)
-      : stmt_(kFunctionDef),
-        name(std::move(name_)),
-        args(std::move(args_)),
-        body(std::move(body_)) {}
+  FunctionDef_(identifier name_, arguments_ptr args_, vector<stmt_ptr> body_)
+      : stmt_(kFunctionDef), name(move(name_)), args(move(args_)), body(move(body_)) {}
 
   identifier get_name() { return name; }
   arguments_ptr get_args() { return args; }
-  std::vector<stmt_ptr> get_body() { return body; }
+  vector<stmt_ptr> get_body() { return body; }
 
   static bool classof(const stmt_* c) { return c->get_kind() == kFunctionDef; }
 };
@@ -155,31 +153,31 @@ class Return_ : public stmt_ {
 };
 
 class Assign_ : public stmt_ {
-  std::vector<expr_ptr> targets;
+  vector<expr_ptr> targets;
   expr_ptr value;
 
  public:
-  Assign_(std::vector<expr_ptr> targets_, expr_ptr value_)
+  Assign_(vector<expr_ptr> targets_, expr_ptr value_)
       : stmt_(kAssign), targets(targets_), value(value_) {}
 
   expr_ptr get_value() { return value; }
-  std::vector<expr_ptr> get_targets() { return targets; }
+  vector<expr_ptr> get_targets() { return targets; }
 
   static bool classof(const stmt_* c) { return c->get_kind() == kAssign; }
 };
 
 class If_ : public stmt_ {
   expr_ptr test;
-  std::vector<stmt_ptr> body;
-  std::vector<stmt_ptr> orelse;
+  vector<stmt_ptr> body;
+  vector<stmt_ptr> orelse;
 
  public:
-  If_(expr_ptr test_, const std::vector<stmt_ptr>& body_, const std::vector<stmt_ptr>& orelse_)
+  If_(expr_ptr test_, const vector<stmt_ptr>& body_, const vector<stmt_ptr>& orelse_)
       : stmt_(kIf), test(test_), body(body_), orelse(orelse_) {}
 
   expr_ptr get_test() { return test; }
-  std::vector<stmt_ptr> get_body() { return body; }
-  std::vector<stmt_ptr> get_orelse() { return orelse; }
+  vector<stmt_ptr> get_body() { return body; }
+  vector<stmt_ptr> get_orelse() { return orelse; }
   static bool classof(const stmt_* c) { return c->get_kind() == kIf; }
 };
 
@@ -223,16 +221,16 @@ class BoolOp_ : public expr_ {
     kAnd,
     kOr,
   };
-  BoolOp_(boolop_t op_, const std::vector<expr_ptr>& values_)
+  BoolOp_(boolop_t op_, const vector<expr_ptr>& values_)
       : expr_(kBoolOp), op(op_), values(values_) {}
 
   boolop_t get_op() { return op; }
-  std::vector<expr_ptr> get_values() { return values; }
+  vector<expr_ptr> get_values() { return values; }
   static bool classof(const expr_* c) { return c->get_kind() == kBoolOp; }
 
  private:
   boolop_t op;
-  std::vector<expr_ptr> values;
+  vector<expr_ptr> values;
 };
 
 class BinOp_ : public expr_ {
@@ -246,7 +244,7 @@ class BinOp_ : public expr_ {
   };
 
   BinOp_(expr_ptr left_, operator_t op_, expr_ptr right_)
-      : expr_(kBinOp), left(std::move(left_)), op(op_), right(std::move(right_)) {}
+      : expr_(kBinOp), left(move(left_)), op(op_), right(move(right_)) {}
 
   operator_t get_op() { return op; }
   expr_ptr get_left() { return left; }
@@ -280,30 +278,29 @@ class Compare_ : public expr_ {
     kGt,
     kGtE,
   };
-  Compare_(expr_ptr left_, const std::vector<cmpop_t>& ops_,
-           const std::vector<expr_ptr>& comparators_)
-      : expr_(kCompare), left(std::move(left_)), ops(ops_), comparators(comparators_) {}
+  Compare_(expr_ptr left_, const vector<cmpop_t>& ops_, const vector<expr_ptr>& comparators_)
+      : expr_(kCompare), left(move(left_)), ops(ops_), comparators(comparators_) {}
 
-  std::vector<cmpop_t> get_ops() { return ops; }
-  std::vector<expr_ptr> get_comparators() { return comparators; }
+  vector<cmpop_t> get_ops() { return ops; }
+  vector<expr_ptr> get_comparators() { return comparators; }
   static bool classof(const expr_* c) { return c->get_kind() == kCompare; }
 
  private:
   expr_ptr left;
-  std::vector<cmpop_t> ops;
-  std::vector<expr_ptr> comparators;
+  vector<cmpop_t> ops;
+  vector<expr_ptr> comparators;
 };
 
 class Call_ : public expr_ {
   expr_ptr func;
-  std::vector<expr_ptr> args;
+  vector<expr_ptr> args;
 
  public:
-  Call_(expr_ptr func_, const std::vector<expr_ptr>& args_)
-      : expr_(kCall), func(std::move(func_)), args(args_) {}
+  Call_(expr_ptr func_, const vector<expr_ptr>& args_)
+      : expr_(kCall), func(move(func_)), args(args_) {}
 
   expr_ptr get_func() { return func; }
-  std::vector<expr_ptr> get_args() { return args; }
+  vector<expr_ptr> get_args() { return args; }
   static bool classof(const expr_* c) { return c->get_kind() == kCall; }
 };
 
@@ -333,7 +330,7 @@ class Attribute_ : public expr_ {
 
  public:
   Attribute_(expr_ptr value_, const identifier& attr_)
-      : expr_(kAttribute), value(std::move(value_)), attr(attr_) {}
+      : expr_(kAttribute), value(move(value_)), attr(attr_) {}
 
   expr_ptr get_value() { return value; }
   identifier get_attr() { return attr; }
@@ -350,65 +347,54 @@ class Name_ : public expr_ {
   static bool classof(const expr_* c) { return c->get_kind() == kName; }
 };
 
-stmt_ptr FunctionDef(const identifier& name, arguments_ptr args,
-                     const std::vector<stmt_ptr>& body) {
-  return std::make_shared<FunctionDef_>(name, std::move(args), body);
+stmt_ptr FunctionDef(const identifier& name, arguments_ptr args, const vector<stmt_ptr>& body) {
+  return make_shared<FunctionDef_>(name, move(args), body);
 }
 
-stmt_ptr Return(expr_ptr value) { return std::make_shared<Return_>(value); }
+stmt_ptr Return(expr_ptr value) { return make_shared<Return_>(value); }
 
-stmt_ptr Assign(const std::vector<expr_ptr>& targets, expr_ptr value) {
-  return std::make_shared<Assign_>(targets, value);
+stmt_ptr Assign(const vector<expr_ptr>& targets, expr_ptr value) {
+  return make_shared<Assign_>(targets, value);
 }
 
-stmt_ptr If(expr_ptr test, const std::vector<stmt_ptr>& body, const std::vector<stmt_ptr>& orelse) {
-  return std::make_shared<If_>(test, body, orelse);
+stmt_ptr If(expr_ptr test, const vector<stmt_ptr>& body, const vector<stmt_ptr>& orelse) {
+  return make_shared<If_>(test, body, orelse);
 }
 
-stmt_ptr Raise(expr_ptr exc, expr_ptr cause) {
-  return std::make_shared<Raise_>(exc, cause);
-}
+stmt_ptr Raise(expr_ptr exc, expr_ptr cause) { return make_shared<Raise_>(exc, cause); }
 
-stmt_ptr Assert(expr_ptr test, expr_ptr msg) {
-  return std::make_shared<Assert_>(test, msg);
-}
-stmt_ptr Expr(expr_ptr value) {
-  return std::make_shared<Expr_>(value);
-}
+stmt_ptr Assert(expr_ptr test, expr_ptr msg) { return make_shared<Assert_>(test, msg); }
+stmt_ptr Expr(expr_ptr value) { return make_shared<Expr_>(value); }
 
-expr_ptr BoolOp(BoolOp_::boolop_t op, const std::vector<expr_ptr>& values) {
-  return std::make_shared<BoolOp_>(op, values);
+expr_ptr BoolOp(BoolOp_::boolop_t op, const vector<expr_ptr>& values) {
+  return make_shared<BoolOp_>(op, values);
 }
 
 expr_ptr BinOp(expr_ptr left, BinOp_::operator_t op, expr_ptr right) {
-  return std::make_shared<BinOp_>(left, op, right);
+  return make_shared<BinOp_>(left, op, right);
 }
 
-expr_ptr Lambda(arguments_ptr args, expr_ptr body) {
-  return std::make_shared<Lambda_>(args, body);
+expr_ptr Lambda(arguments_ptr args, expr_ptr body) { return make_shared<Lambda_>(args, body); }
+
+expr_ptr Compare(expr_ptr left, const vector<Compare_::cmpop_t>& ops,
+                 const vector<expr_ptr>& comparators) {
+  return make_shared<Compare_>(left, ops, comparators);
 }
 
-expr_ptr Compare(expr_ptr left, const std::vector<Compare_::cmpop_t>& ops,
-                 const std::vector<expr_ptr>& comparators) {
-  return std::make_shared<Compare_>(left, ops, comparators);
+expr_ptr Call(expr_ptr func, const vector<expr_ptr>& args) {
+  return make_shared<Call_>(func, args);
 }
+expr_ptr Num(double n) { return make_shared<Num_>(n); }
 
-expr_ptr Call(expr_ptr func, const std::vector<expr_ptr>& args) {
-  return std::make_shared<Call_>(func, args);
-}
-expr_ptr Num(double n) { return std::make_shared<Num_>(n); }
-
-expr_ptr Constant(double value) { return std::make_shared<Constant_>(value); }
+expr_ptr Constant(double value) { return make_shared<Constant_>(value); }
 
 expr_ptr Attribute(expr_ptr value, const identifier& attr) {
-  return std::make_shared<Attribute_>(value, attr);
+  return make_shared<Attribute_>(value, attr);
 }
-expr_ptr Name(const identifier& id) { return std::make_shared<Name_>(id); }
+expr_ptr Name(const identifier& id) { return make_shared<Name_>(id); }
 
-arguments_ptr arguments(const std::vector<arg_ptr>& args) {
-  return std::make_shared<arguments_>(args);
-}
+arguments_ptr arguments(const vector<arg_ptr>& args) { return make_shared<arguments_>(args); }
 
-arg_ptr arg(const identifier& arg) { return std::make_shared<arg_>(arg); }
+arg_ptr arg(const identifier& arg) { return make_shared<arg_>(arg); }
 
 }  // namespace pyast
