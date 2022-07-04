@@ -377,19 +377,18 @@ class VectorMatrixProductFunctor {
     vector_matrix_product_op_ = CHECK_JUST(
         one::OpBuilder("vector_matrix_product").Input("a").Input("b").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
-                           const std::shared_ptr<one::Tensor>& b) const {
-    const auto& a_shape = a->shape();
-    const auto& b_shape = b->shape();
-    CHECK_EQ_OR_RETURN(a_shape->NumAxes(), 1)
-        << Error::RuntimeError() << "Expected A is 1-dimensional tensor, but got "
-        << a_shape->NumAxes() << "-dimensional tensor for argument #1";
-    CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 2)
-        << Error::RuntimeError() << "Expected B is 2-dimensional tensor, but got "
-        << b_shape->NumAxes() << "-dimensional tensor for argument #2";
-    CHECK_EQ_OR_RETURN(a_shape->At(0), b_shape->At(0))
-        << Error::RuntimeError() << "Matmul dim not match, please check input!";
-    return OpInterpUtil::Dispatch<Tensor>(*vector_matrix_product_op_, {a, b});
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& vec,
+                           const std::shared_ptr<one::Tensor>& input) const {
+    const auto& vec_shape = vec->shape();
+    const auto& input_shape = input->shape();
+    CHECK_OR_RETURN(input_shape->NumAxes() == 2 && vec_shape->NumAxes() == 1)
+        << Error::RuntimeError() << "vector @ matrix expected, got "
+        << "1, " << input_shape->NumAxes() << ", " << vec_shape->NumAxes();
+    CHECK_EQ_OR_RETURN(vec_shape->at(0), input_shape->at(0))
+        << Error::RuntimeError() << "size mismatch, got " << 1 << ", "
+        << std::to_string(vec_shape->at(0)) << " x " << std::to_string(input_shape->at(0)) << ", "
+        << std::to_string(input_shape->at(1));
+    return OpInterpUtil::Dispatch<Tensor>(*vector_matrix_product_op_, {vec, input});
   }
 
  private:

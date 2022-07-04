@@ -1025,7 +1025,7 @@
 
 - name: "vector_matrix_product"
   signature: 
-    "Tensor (Tensor a, Tensor b) => VectorMatrixProduct"
+    "Tensor (Tensor vec, Tensor input) => VectorMatrixProduct"
   bind_python: False
 
 - name: "vector_matrix_product_grad_a"

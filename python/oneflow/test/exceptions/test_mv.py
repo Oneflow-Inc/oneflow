@@ -43,6 +43,7 @@ class TestMv(flow.unittest.TestCase):
             mat = flow.randn(2, 3)
             vec = flow.randn(4)
             out = flow.mv(mat, vec)
+        print("Exception: ", str(exp.exception))
         test_case.assertTrue("size mismatch" in str(exp.exception))
 
 
