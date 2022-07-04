@@ -38,7 +38,7 @@ namespace oneflow {
       out_dim_vec[0] = std::min(in_shape.At(0) + diagonal, in_shape.At(1));
     }
     // For 0-size Tensor.
-    CHECK_GE_OR_RETURN(out_dim_vec[0], 0);
+    CHECK_GE_OR_RETURN(out_dim_vec[0], 0); // NOLINT
   }
 
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
