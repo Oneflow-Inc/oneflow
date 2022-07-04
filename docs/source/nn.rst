@@ -39,6 +39,8 @@ Convolution Layers
     nn.ConvTranspose1d 
     nn.ConvTranspose2d 
     nn.ConvTranspose3d
+    nn.Unfold
+    nn.Fold
 
 Pooling Layers
 ----------------------------------
@@ -67,6 +69,8 @@ Padding Layers
     nn.ConstantPad1d 
     nn.ConstantPad2d 
     nn.ConstantPad3d
+    nn.ReflectionPad2d
+    nn.ReplicationPad2d
     nn.ZeroPad2d
 
 Non-linear Activations (weighted sum, nonlinearity)
@@ -78,13 +82,15 @@ Non-linear Activations (weighted sum, nonlinearity)
     :template: classtemplate.rst
 
     nn.ELU 
+    nn.Hardshrink
     nn.Hardsigmoid 
     nn.Hardswish 
     nn.Hardtanh 
     nn.LeakyReLU 
     nn.LogSigmoid 
     nn.PReLU 
-    nn.ReLU 
+    nn.ReLU
+    nn.ReLU6 
     nn.SELU 
     nn.CELU 
     nn.GELU 
@@ -127,6 +133,21 @@ Normalization Layers
     nn.InstanceNorm3d 
     nn.LayerNorm
 
+Recurrent Layers
+----------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template:
+
+    nn.RNN
+    nn.LSTM
+    nn.GRU
+    nn.RNNCell
+    nn.LSTMCell
+    nn.GRUCell
+
 Linear Layers
 ----------------------------------
 
@@ -154,6 +175,16 @@ Sparse Layers
     :nosignatures:
 
     nn.Embedding
+
+Distance Functions
+------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template:
+
+    nn.CosineSimilarity
 
 Loss Functions
 ----------------------------------
@@ -187,20 +218,46 @@ Vision Layers
     nn.UpsamplingBilinear2d 
     nn.UpsamplingNearest2d
 
-DataParallel Layers
-----------------------------------
+DataParallel Layers (multi-GPU, distributed)
+--------------------------------------------
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
     
-    nn.utils.clip_grad_norm_ 
-    nn.utils.weight_norm 
-    nn.utils.remove_weight_norm
+    nn.parallel.DistributedDataParallel
 
+Utilities
+---------
 
+From the ``oneflow.nn.utils`` module
 
-.. autofunction:: oneflow.nn.parallel.DistributedDataParallel
+.. currentmodule:: oneflow.nn.utils
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
 
+    clip_grad_norm_
+    clip_grad_value_
+    weight_norm
+    remove_weight_norm
 
+Utility functions in other modules
 
+.. currentmodule:: oneflow
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    nn.utils.rnn.PackedSequence
+    nn.utils.rnn.pack_padded_sequence
+    nn.utils.rnn.pad_packed_sequence
+    nn.utils.rnn.pad_sequence
+    nn.utils.rnn.pack_sequence
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template:
+
+    nn.Flatten

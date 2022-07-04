@@ -1,15 +1,17 @@
 oneflow.linalg
 ===================================
-OneFlow linear algebra operations.
-----------------------------------
+
+Common linear algebra operations.
+
+Matrix Properties
+-----------------
 
 .. currentmodule:: oneflow.linalg
-
 .. autosummary::
     :toctree: generated
     :nosignatures:
 
-    matrix_norm
     norm 
     vector_norm
+    matrix_norm
 
