@@ -968,7 +968,7 @@ class Graph(object):
                 state_op_names, self._state_tensor_tuple
             )
 
-		# Clear useless dict used in graph build.
+        # Clear useless dict used in graph build.
         self._unique_global_op_dict.clear()
         self._unique_identity_op_dict.clear()
 
