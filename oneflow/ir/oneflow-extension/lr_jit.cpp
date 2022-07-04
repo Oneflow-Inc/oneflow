@@ -65,26 +65,26 @@ namespace {
 using namespace pyast;
 
 class MLIRGenImpl {
-  mlir::OpBuilder builder;
-  mlir::ModuleOp theModule;
-  std::map<std::string, mlir::Value> symbolTable;
+  OpBuilder builder;
+  ModuleOp theModule;
+  map<string, Value> symbolTable;
 
-  mlir::LogicalResult declare(const std::string& var, mlir::Value value) {
-    if (symbolTable.count(var)) return mlir::failure();
+  LogicalResult declare(const string& var, Value value) {
+    if (symbolTable.count(var)) return failure();
     symbolTable[var] = value;
-    return mlir::success();
+    return success();
   }
 
-  mlir::Value lookup(const std::string& var) {
+  Value lookup(const string& var) {
     if (symbolTable.count(var) == 1) { return symbolTable[var]; }
     theModule->emitError("error: unknown variable '" + var + "'");
     return nullptr;
   }
 
-  mlir::Location loc() { return mlir::FileLineColLoc::get(builder.getStringAttr("unknown"), 0, 0); }
+  Location loc() { return FileLineColLoc::get(builder.getStringAttr("unknown"), 0, 0); }
 
  public:
-  explicit MLIRGenImpl(mlir::MLIRContext& context) : builder(&context) {}
+  explicit MLIRGenImpl(MLIRContext& context) : builder(&context) {}
 
   void dump() { theModule->dump(); }
 
@@ -99,8 +99,8 @@ class MLIRGenImpl {
         .Default([&](auto* node) { theModule->emitError("StmtKind not support yet"); });
   }
 
-  mlir::Value mlirGen(expr_& stmt) {
-    mlir::Value res;
+  Value mlirGen(expr_& stmt) {
+    Value res;
     llvm::TypeSwitch<expr_*>(&stmt)
         .Case<BinOp_>([&](auto* node) { res = mlirGen(*dynamic_cast<BinOp_*>(node)); })
         //     .Case<Lambda_>([&](auto* node) { mlirGen(cast<Lambda_*>(node)); })
@@ -114,10 +114,10 @@ class MLIRGenImpl {
     return res;
   }
 
-  mlir::Value mlirGen(BinOp_& expr) {
+  Value mlirGen(BinOp_& expr) {
     auto lhs = mlirGen(*expr.get_left().get());
     auto rhs = mlirGen(*expr.get_right().get());
-    mlir::Value res;
+    Value res;
     switch (expr.get_op()) {
       case BinOp_::kDiv: res = builder.create<arith::DivFOp>(loc(), lhs, rhs); break;
       case BinOp_::kMult: res = builder.create<arith::MulFOp>(loc(), lhs, rhs); break;
@@ -127,7 +127,7 @@ class MLIRGenImpl {
     return res;
   }
 
-  mlir::Value mlirGen(Call_& expr) {
+  Value mlirGen(Call_& expr) {
     if (expr.get_func()->get_kind() != expr_::kAttribute) {
       theModule->emitError("only support call func is attribute node");
     }
@@ -141,7 +141,7 @@ class MLIRGenImpl {
     }
     auto value = mlirGen(*expr.get_args()[0].get());
     auto attr = func.get_attr();
-    mlir::Value res;
+    Value res;
     if (attr == "floor") {
       res = builder.create<math::FloorOp>(loc(), value);
       return res;
@@ -151,13 +151,13 @@ class MLIRGenImpl {
     return res;
   }
 
-  mlir::Value mlirGen(Constant_& expr) {
+  Value mlirGen(Constant_& expr) {
     float value = expr.get_value();
     auto constant = builder.create<arith::ConstantOp>(loc(), builder.getF32FloatAttr(value));
     return constant;
   }
 
-  mlir::Value mlirGen(Name_& expr) { return lookup(expr.get_id()); }
+  Value mlirGen(Name_& expr) { return lookup(expr.get_id()); }
 
   void mlirGen(Assign_& stmt) {
     auto value = mlirGen(*stmt.get_value().get());
@@ -175,10 +175,10 @@ class MLIRGenImpl {
     builder.create<func::ReturnOp>(loc(), ValueRange({value}));
   }
 
-  mlir::ModuleOp mlirGen(FunctionDef_& func) {
-    theModule = mlir::ModuleOp::create(loc());
+  ModuleOp mlirGen(FunctionDef_& func) {
+    theModule = ModuleOp::create(loc());
 
-    if (failed(mlir::verify(theModule))) {
+    if (failed(verify(theModule))) {
       theModule.emitError("module verification error");
       return nullptr;
     }
@@ -186,20 +186,18 @@ class MLIRGenImpl {
     builder.setInsertionPointToEnd(theModule.getBody());
 
     auto args = func.get_args()->get_args();
-    llvm::SmallVector<mlir::Type> arg_types(args.size(), Float32Type::getF32(builder.getContext()));
-    llvm::SmallVector<mlir::Type> res_types(1, Float32Type::getF32(builder.getContext()));
+    llvm::SmallVector<Type> arg_types(args.size(), Float32Type::getF32(builder.getContext()));
+    llvm::SmallVector<Type> res_types(1, Float32Type::getF32(builder.getContext()));
 
     auto func_type = builder.getFunctionType(arg_types, res_types);
 
-    auto function = mlir::func::FuncOp::create(loc(), func.get_name(), func_type);
+    auto function = func::FuncOp::create(loc(), func.get_name(), func_type);
     auto* entry_block = function.addEntryBlock();
     theModule.push_back(function);
     builder.setInsertionPointToStart(entry_block);
 
     for (const auto nameValue : llvm::zip(args, entry_block->getArguments())) {
-      if (failed(declare(std::get<0>(nameValue)->get_arg(), std::get<1>(nameValue)))) {
-        return nullptr;
-      }
+      if (failed(declare(get<0>(nameValue)->get_arg(), get<1>(nameValue)))) { return nullptr; }
     }
 
     builder.setInsertionPointToStart(entry_block);
@@ -256,7 +254,7 @@ static LogicalResult lowerToLLVMDialect(ModuleOp module) {
   return pm.run(module);
 }
 static OwningOpRef<ModuleOp> genModuleForBuild(MLIRContext& context) {
-  std::string moduleStr = R"mlir(
+  string moduleStr = R"mlir(
   func.func @get_lr(%arg0 : f32, %arg1 : i32) -> f32 attributes { llvm.emit_c_interface } {
     return %arg0 : f32
   }
@@ -270,9 +268,9 @@ JIT_Engine::JIT_Engine(PyASTNodeWrapper& ast) {
   registerAllDialects(registry);
   registerLLVMDialectTranslation(registry);
   MLIRContext context(registry);
-  context.loadDialect<mlir::func::FuncDialect>();
-  context.loadDialect<mlir::arith::ArithmeticDialect>();
-  context.loadDialect<mlir::math::MathDialect>();
+  context.loadDialect<func::FuncDialect>();
+  context.loadDialect<arith::ArithmeticDialect>();
+  context.loadDialect<math::MathDialect>();
 
   auto module = genModuleForTest(context);
   CHECK(!!module) << "failed to parse module";
@@ -298,7 +296,7 @@ void LR_JIT::Register(const string& function_id, PyASTNodeWrapper& ast) {
   function_id2engine_[function_id] = jit;
 }
 
-std::shared_ptr<JIT_Engine> LR_JIT::LookUp(const std::string& function_id) {
+shared_ptr<JIT_Engine> LR_JIT::LookUp(const string& function_id) {
   if (function_id2engine_.count(function_id)) { return function_id2engine_[function_id]; }
   return nullptr;
 };
