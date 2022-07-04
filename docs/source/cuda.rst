@@ -1,21 +1,40 @@
-oneflow.cuda
-===================================
 ONEFLOW.CUDA 
-----------------------------------
-.. currentmodule:: oneflow.cuda
+===================================
+
 .. automodule:: oneflow.cuda
-    :members: is_available,
-        device_count,
-        current_device,
-        set_device,
-        synchronize,
-        manual_seed_all,
-        manual_seed,
-        HalfTensor,
-        FloatTensor,
-        DoubleTensor,
-        BoolTensor,
-        ByteTensor,
-        CharTensor,
-        IntTensor,
-        LongTensor,
+.. currentmodule:: oneflow.cuda
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    is_available
+    device_count
+    current_device
+    set_device
+    synchronize
+
+Random Number Generator
+-------------------------
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    manual_seed_all
+    manual_seed
+
+
+GPU tensor
+-----------------------------
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    HalfTensor
+    FloatTensor
+    DoubleTensor
+    BoolTensor
+    ByteTensor
+    CharTensor
+    IntTensor
+    LongTensor
