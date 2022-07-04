@@ -41,7 +41,7 @@ namespace oneflow {
   const Shape& like_shape = ctx->InputShape("like", 0);
   CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), like_shape.elem_cnt())
       << Error::RuntimeError()
-      << "The element number of in tensor must be equal to the element number of "
+      << "The element number of the in tensor must be equal to the element number of the "
          "like tensor, "
       << "but got " << in_shape.elem_cnt() << " and " << like_shape.elem_cnt();
   *ctx->OutputShape("out", 0) = like_shape;

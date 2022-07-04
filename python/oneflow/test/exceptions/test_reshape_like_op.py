@@ -21,13 +21,14 @@ import oneflow.unittest
 
 
 class TestReshapeLikeOp(flow.unittest.TestCase):
-    def test_element_number_match_err(test_case):
+    def test_reshape_like_size_match_err(test_case):
         a = flow.tensor([1, 1])
         b = flow.tensor([[1, 1, 1], [1, 1, 1]])
         with test_case.assertRaises(RuntimeError) as ctx:
             flow._C.reshape_like(a, b)
+        print(str(ctx.exception))
         test_case.assertTrue(
-            "The element number of in tensor must be equal to the element number of like tensor"
+            "The element number of the in tensor must be equal to the element number of the like tensor"
             in str(ctx.exception)
         )
 

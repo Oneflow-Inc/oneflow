@@ -21,7 +21,7 @@ import oneflow.unittest
 
 
 class TestReduceLikeOps(flow.unittest.TestCase):
-    def test_empty_axis_case_err(test_case):
+    def test_reduce_like_empty_axis_case_err(test_case):
         a = flow.tensor([1, 1])
         b = flow.tensor([1, 1, 1])
         with test_case.assertRaises(RuntimeError) as ctx:
@@ -31,17 +31,15 @@ class TestReduceLikeOps(flow.unittest.TestCase):
             in str(ctx.exception)
         )
 
-    def test_tensor_type_err(test_case):
+    def test_reduce_like_type_err(test_case):
         a = flow.tensor([1, 1], dtype=flow.int64)
         b = flow.tensor([1, 1], dtype=flow.float64)
         with test_case.assertRaises(TypeError) as ctx:
             flow._C.reduce_sum_like(a, b, [1])
         test_case.assertTrue(
-            "Tensors x and like must have the same type"
+            "X and like must have the same type"
             in str(ctx.exception)
         )
-    
-   
 
 
 if __name__ == "__main__":

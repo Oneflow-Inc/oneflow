@@ -21,7 +21,7 @@ import oneflow.unittest
 
 
 class TestRandpermOp(flow.unittest.TestCase):
-    def test_n_value_err_mes(test_case):
+    def test_randperm_n_value_err_mes(test_case):
         with test_case.assertRaises(RuntimeError) as ctx:
             a = flow.randperm(-1)
         test_case.assertTrue(
