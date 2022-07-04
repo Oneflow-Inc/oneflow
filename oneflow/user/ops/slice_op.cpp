@@ -115,8 +115,12 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   FOR_RANGE(int64_t, axis, 0, input_desc.shape().NumAxes()) {
     if (IsFullSlice(start_vec[axis], stop_vec[axis], step_vec[axis], in_shape.At(axis))) {
       ctx->NewBuilder().Split(ctx->inputs(), axis).Split(ctx->outputs(), axis).Build();
+    } else {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("x", 0), axis)
+          .PartialSum(user_op::OpArg("y", 0))
+          .Build();
     }
-    // TODO(wyg): support S->P in slice dims
   }
   ctx->NewBuilder().PartialSum(user_op::OpArg("x", 0)).PartialSum(user_op::OpArg("y", 0)).Build();
   return Maybe<void>::Ok();
