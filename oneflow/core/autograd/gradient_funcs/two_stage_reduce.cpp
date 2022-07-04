@@ -38,14 +38,14 @@ class ReduceDevice : public OpExprGradFunction<ReduceDeviceCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(op_expr);
+    CHECK_NOTNULL_OR_RETURN(op_expr);  // NOLINT(maybe-need-error-msg)
     base_attrs_ = MakeAttrMapFromUserOpConf(op_expr->proto());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(ReduceDeviceCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -60,7 +60,7 @@ class ReduceDevice : public OpExprGradFunction<ReduceDeviceCaptureState> {
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
-    CHECK_EQ_OR_RETURN(out_grads.size(), 3);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 3);  // NOLINT(maybe-need-error-msg)
     const auto& mask = ctx->SavedTensors().at(ctx->mask_index);
     const auto& count = ctx->SavedTensors().at(ctx->count_index);
     in_grads->resize(1);
@@ -94,15 +94,15 @@ class ReduceGlobal : public OpExprGradFunction<ReduceGlobalCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(ReduceGlobalCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
-    CHECK_EQ_OR_RETURN(outputs.size(), 2);
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 2);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -117,7 +117,7 @@ class ReduceGlobal : public OpExprGradFunction<ReduceGlobalCaptureState> {
   Maybe<void> Apply(const ReduceGlobalCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-    CHECK_EQ_OR_RETURN(out_grads.size(), 2);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // NOLINT(maybe-need-error-msg)
     const auto& mask = ctx->SavedTensors().at(ctx->mask_index);
     const auto& device_count = ctx->SavedTensors().at(ctx->device_count_index);
     in_grads->resize(2);
