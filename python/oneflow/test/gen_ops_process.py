@@ -80,13 +80,9 @@ def get_test_func(path):
             line_num = 1
             for line in iter_f:
                 line = line.strip()
-                if "def " in line and "test_case" in line and "#" not in line:
-                    func_name = (
-                        re.match("def (.*)\(test_case.*", line)
-                        .group(1)
-                        .replace("_test_", "")
-                        .replace("test_", "")
-                    )
+                rem = re.match("def .*?(test_.*)\(test_case.*", line)
+                if rem and "#" not in line:
+                    func_name = rem.group(1).replace("_test_", "").replace("test_", "")
                     result_func_list.append(func_name)
                     file_func_map[func_name] = (
                         f" [{func_name}]("
@@ -119,13 +115,24 @@ def pure_match(x, y):
     """
     y in x ?
     """
-    x = x.lower().replace("_", "")
-    y = y.lower().replace("_", "")
-    pos = x.find(y)
-    if pos != -1:
-        return True
+    x = x.lower()
+    y = y.lower()
+    pos = -1
+    if "." in x:
+        x = x.split(".")
+        for i in x:
+            if i == y: 
+                pos = 1
+                break
+    elif "_" in y:
+        pos = x.find(y)
     else:
-        return False
+        x = x.split("_")
+        for i in x:
+            if i == y: 
+                pos = 1
+                break
+    return pos != -1
 
 
 def match_test_func(func, func_list):
