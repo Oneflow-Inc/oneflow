@@ -3420,6 +3420,92 @@ class RocAucScoreFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class MultiTensorSgdUpdateFunctor {
+ public:
+  MultiTensorSgdUpdateFunctor() {
+    // This functor is just for unittest
+    op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+    for (int n = 0; n < op_.size(); ++n) {
+      op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_sgd_update")
+                              .Input("model", n + 1)
+                              .Input("model_diff", n + 1)
+                              .Input("learning_rate")
+                              .Build());
+    }
+  }
+
+  Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
+                         const std::shared_ptr<one::Tensor>& learning_rate, const double& scale,
+                         const float& weight_decay) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("scale", scale));
+    JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
+    const int64_t weight_size = model.size();
+    for (int i = 0; i < weight_size; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < weight_size ? kMaxInputCount : weight_size - i;
+      TensorTuple input(2 * size + 1);
+      std::copy(model.begin() + i, model.begin() + i + size, input.begin());
+      std::copy(model_diff.begin() + i, model_diff.begin() + size, input.begin() + size);
+      input[2 * size] = learning_rate;
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[size - 1], input, attrs));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> op_;
+};
+
+class MultiTensorAdamUpdateFunctor {
+ public:
+  MultiTensorAdamUpdateFunctor() {
+    // This functor is just for unittest
+    op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+    for (int n = 0; n < op_.size(); ++n) {
+      op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_adam_update")
+                              .Input("model", n + 1)
+                              .Input("model_diff", n + 1)
+                              .Input("m", n + 1)
+                              .Input("v", n + 1)
+                              .Input("learning_rate")
+                              .Build());
+    }
+  }
+
+  Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
+                         const TensorTuple& m, const TensorTuple& v,
+                         const std::shared_ptr<one::Tensor>& learning_rate, const float& beta1,
+                         const float& beta2, const float& bias_correction1_val,
+                         const float& bias_correction2_val, const bool& do_bias_correction,
+                         const double& scale, const float& weight_decay) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("scale", scale));
+    JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
+    JUST(attrs.SetAttr<float>("beta1", beta1));
+    JUST(attrs.SetAttr<float>("beta2", beta2));
+    JUST(attrs.SetAttr<float>("bias_correction1_val", bias_correction1_val));
+    JUST(attrs.SetAttr<float>("bias_correction2_val", bias_correction2_val));
+    JUST(attrs.SetAttr<bool>("do_bias_correction", do_bias_correction));
+
+    const int64_t weight_size = model.size();
+
+    for (int i = 0; i < weight_size; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < weight_size ? kMaxInputCount : weight_size - i;
+      TensorTuple input(4 * size + 1);
+      std::copy(model.begin() + i, model.begin() + i + size, input.begin());
+      std::copy(model_diff.begin() + i, model_diff.begin() + i + size, input.begin() + size);
+      std::copy(m.begin() + i, m.begin() + i + size, input.begin() + 2 * size);
+      std::copy(v.begin() + i, v.begin() + i + size, input.begin() + 3 * size);
+      input[4 * size] = learning_rate;
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[size - 1], input, attrs));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> op_;
+};
+
 class MvFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
@@ -3538,6 +3624,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingAdagradUpdateFunctor>("OneEmbeddingAdagradUpdate");
   m.add_functor<impl::OneEmbeddingFtrlUpdateFunctor>("OneEmbeddingFtrlUpdate");
   m.add_functor<impl::RocAucScoreFunctor>("RocAucScore");
+  m.add_functor<impl::MultiTensorSgdUpdateFunctor>("MultiTensorSgdUpdate");
+  m.add_functor<impl::MultiTensorAdamUpdateFunctor>("MultiTensorAdamUpdate");
 }
 
 }  // namespace functional
