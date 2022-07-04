@@ -36,7 +36,7 @@ class CudaStreamContext : public StreamContext, public KernelObserverProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaStreamContext);
   explicit CudaStreamContext(int device_index);
-  virtual ~CudaStreamContext();
+  ~CudaStreamContext() override;
 
   Maybe<void> AddCallback(std::function<void()> callback) override;
   DeviceType device_type() const override { return DeviceType::kCUDA; }

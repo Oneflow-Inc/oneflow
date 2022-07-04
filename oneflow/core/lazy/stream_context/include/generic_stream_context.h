@@ -29,7 +29,7 @@ class GenericStreamContext : public StreamContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GenericStreamContext);
   explicit GenericStreamContext(const StreamId& stream_id);
-  virtual ~GenericStreamContext();
+  ~GenericStreamContext() override;
 
   Maybe<void> AddCallback(std::function<void()> callback) override;
   DeviceType device_type() const override { return stream_->device_type(); }

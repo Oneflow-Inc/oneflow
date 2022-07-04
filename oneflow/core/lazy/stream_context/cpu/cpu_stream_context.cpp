@@ -30,7 +30,7 @@ class CpuStreamContext : public StreamContext, public KernelObserverProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuStreamContext);
   CpuStreamContext();
-  virtual ~CpuStreamContext();
+  ~CpuStreamContext() override;
 
   ep::Stream* stream() override;
   Maybe<void> AddCallback(std::function<void()> callback) override;
