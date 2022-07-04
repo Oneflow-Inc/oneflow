@@ -109,7 +109,7 @@
 
 // Group: ASSIGN
 // assign, assign_if, assign_if_not
-// Total: 4
+// Total: 3
 
 #ifdef GET_ONEFLOW_ASSIGN_OP_DEFINITIONS
 
