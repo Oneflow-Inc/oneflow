@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/consume_local_dep_object_phy_instr_operand.h"
 #include "oneflow/core/eager/release_tensor_instruction_type.h"
+#include "oneflow/core/vm/touch_tensors_instruction_type.h"
 #include "oneflow/core/eager/blob_instruction_type.h"
 #include "oneflow/core/eager/op_call_instruction_type.h"
 #include "oneflow/core/vm/barrier_instruction_type.h"
@@ -421,6 +422,19 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(producer_stream)),
       JUST(GetReleaseInstructionType::Visit(stream_role, device_type)), phy_instr_operand);
+  instruction_list_->EmplaceBack(std::move(instruction));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::TouchTensors(
+    const one::EagerBlobObjectListPtr& eager_blob_object) {
+  const auto& phy_instr_operand =
+      std::make_shared<vm::TouchTensorsPhyInstrOperand>(*eager_blob_object);
+  Symbol<Device> device = JUST(Device::New("cpu"));
+  Symbol<Stream> stream = JUST(GetDefaultStreamByDevice(device));
+  auto instruction = intrusive::make_shared<vm::Instruction>(
+      JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream)),
+      SingletonPtr<vm::TouchTensorsInstructionType>(), phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }

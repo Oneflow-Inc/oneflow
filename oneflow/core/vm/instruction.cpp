@@ -41,6 +41,9 @@ void Instruction::__Init__(Stream* stream, const InstructionType* instruction_ty
 
 void Instruction::InitStatus() { instruction_type().InitInstructionStatusIf(this); }
 
+Maybe<void> Instruction::Prepare() { return instruction_type().PrepareIf(this); }
+void Instruction::Compute() { return instruction_type().ComputeIf(this); }
+
 void Instruction::DeleteStatusAndClearEdges() {
   OF_PROFILER_RANGE_GUARD("Instruction::DeleteStatusAndClearEdges");
   instruction_type().DeleteInstructionStatusIf(this);

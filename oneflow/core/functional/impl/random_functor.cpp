@@ -264,7 +264,7 @@ class GlobalRandIntFunctor {
 
   Maybe<Tensor> operator()(const int64_t low, const int64_t high, const Shape& shape,
                            const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
+                           const std::vector<Symbol<SbpParallel>>& sbp,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
@@ -282,7 +282,7 @@ class GlobalRandIntFunctor {
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
-    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    const auto& nd_sbp = JUST(GetNdSbp(sbp));
     if (LazyMode::is_enabled()) {
       JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
     }
@@ -301,13 +301,12 @@ class GlobalRandInt2Functor {
  public:
   Maybe<Tensor> operator()(const int64_t high, const Shape& shape,
                            const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
+                           const std::vector<Symbol<SbpParallel>>& sbp,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    return GlobalRandInt(/*low*/ 0, high, shape, placement, sbp_tuple, dtype, generator,
-                         requires_grad);
+    return GlobalRandInt(/*low*/ 0, high, shape, placement, sbp, dtype, generator, requires_grad);
   }
 };
 
@@ -329,7 +328,7 @@ class RandPermFunctor {
 
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
-    return result;
+    return functional::Cast(result, dtype, /*pin_memory=*/false);
   }
 
  private:
@@ -361,7 +360,7 @@ class GlobalRandPermFunctor {
         *randperm_op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
 
     JUST(result->set_requires_grad(requires_grad));
-    return result;
+    return functional::Cast(result, dtype, /*pin_memory=*/false);
   }
 
  private:
