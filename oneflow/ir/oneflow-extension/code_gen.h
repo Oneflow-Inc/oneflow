@@ -227,6 +227,8 @@ mlir::Value MLIRGenImpl::mlirGen(pyast::BinOp* expr) {
   mlir::Value res;
 
   switch (expr->get_op()) {
+    case pyast::BinOp::kAdd: res = builder.create<mlir::arith::AddFOp>(loc(), lhs, rhs); break;
+    case pyast::BinOp::kSub: res = builder.create<mlir::arith::SubFOp>(loc(), lhs, rhs); break;
     case pyast::BinOp::kDiv: res = builder.create<mlir::arith::DivFOp>(loc(), lhs, rhs); break;
     case pyast::BinOp::kMult: res = builder.create<mlir::arith::MulFOp>(loc(), lhs, rhs); break;
     case pyast::BinOp::kPow: res = builder.create<mlir::math::PowFOp>(loc(), lhs, rhs); break;

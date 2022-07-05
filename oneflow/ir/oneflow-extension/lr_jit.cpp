@@ -77,7 +77,7 @@ static mlir::OwningOpRef<mlir::ModuleOp> genModuleForTest(mlir::MLIRContext& con
           If::If_(Compare::Compare_(Name::Name_("step"), {Compare::kLt}, {Constant::Constant_(5)}),
                   {
                       Assign::Assign_({Name::Name_("base_lr")},
-                                      (BinOp::BinOp_(Name::Name_("base_lr"), BinOp::kMult,
+                                      (BinOp::BinOp_(Name::Name_("base_lr"), BinOp::kAdd,
                                                      Constant::Constant_(1.0 / 3)))),
                   },
                   {}),
@@ -146,6 +146,7 @@ JIT_Engine::JIT_Engine(pyast::FunctionDef& ast) {
   context.loadDialect<mlir::AffineDialect>();
 
   auto module = genModule(context, ast);
+  // auto module = genModuleForTest(context);
   CHECK(!!module) << "failed to parse module";
   CHECK(succeeded(lowerToLLVMDialect(*module))) << "failed to lower to llvm dialect";
   auto jit_or_err = mlir::ExecutionEngine::create(*module);

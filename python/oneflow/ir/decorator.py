@@ -214,10 +214,14 @@ if __name__ == "__main__":
 
     class Test:
         def get_lr(base_lr:float, step:float):
-            return step + base_lr
+            if step > 5:
+                return step + base_lr * step
+            return step
 
     id = lr_jit_register(Test)
     res = oneflow._oneflow_internal.ir.get_lr(id, 4, 5)
+    print(res)
+    res = oneflow._oneflow_internal.ir.get_lr(id, 4, 6)
     print(res)
 
     # lr_class_list = [
