@@ -127,6 +127,7 @@ elseif(USE_CXX11_ABI)
 endif()
 message(STATUS "USE_CXX11_ABI: ${USE_CXX11_ABI}")
 
+add_definitions(-DONE_FLOW_PYTHON_BASE_DIR=\"${PROJECT_SOURCE_DIR}/python\")
 if(WITH_MLIR)
   add_definitions(-DWITH_MLIR)
   if(WITH_MLIR_CUDA_CODEGEN)

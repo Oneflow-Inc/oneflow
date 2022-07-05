@@ -27,16 +27,53 @@ namespace one {
 namespace functional {
 
 namespace {
+
+// get a formatted stack frame representation
+// example: Python Stack[-10]: '__call__' at '.../graph/graph.py': line 219
+std::string get_python_frame_str_repr(int32_t stack_index, PyFrameObject* frame) {
+  if (frame == NULL) return "";
+  PyCodeObject* code = PyFrame_GetCode(frame);
+  std::string repr = "Python Stack[" + std::to_string(stack_index) + "]: ";
+  std::string file_name = PyObjectToReprStr(code->co_filename);
+  std::string code_name = PyObjectToReprStr(code->co_name);
+  int line_number = PyFrame_GetLineNumber(frame);
+
+  return repr + code_name + " at " + file_name + ": line " + std::to_string(line_number) + "; ";
+}
+
+bool check_if_python_file_is_a_user_file(const std::string& path) {
+  std::string python_files_base_dir_path = ONE_FLOW_PYTHON_BASE_DIR;
+  if (path.size() <= python_files_base_dir_path.size()) { return true; }
+  return path.substr(0, python_files_base_dir_path.size()) != python_files_base_dir_path;
+}
+
 std::string get_cur_frame_stack_str(int32_t max_stack_depth) {
   std::string cur_f_str;
   PyFrameObject* cur_frame = PyEval_GetFrame();
-  for (int32_t i = 0; i < max_stack_depth; i++) {
+
+  int i = 0;
+  while (i < max_stack_depth) {
     if (cur_frame == NULL) break;
+
     const int32_t stack_index = (-1) * i - 1;
-    cur_f_str = "Python Stack[" + std::to_string(stack_index)
-                + "]: " + PyObjectToReprStr((PyObject*)cur_frame) + "; " + cur_f_str;
+
+    std::string cur_frame_file_name = PyObjectToReprStr(PyFrame_GetCode(cur_frame)->co_filename);
+    cur_frame_file_name =
+        cur_frame_file_name.substr(1, cur_frame_file_name.size() - 2);  // get rid of ' '
+
+    bool only_show_user_code_loc = GetGraphDebugOnlyShowUserCodeLoc();
+    if (only_show_user_code_loc && !check_if_python_file_is_a_user_file(cur_frame_file_name)) {
+      cur_frame = cur_frame->f_back;
+      continue;
+    }
+
+    i++;
+    cur_f_str = get_python_frame_str_repr(stack_index, cur_frame) + cur_f_str;
     cur_frame = cur_frame->f_back;
   }
+
+  if (cur_frame != NULL) { cur_f_str += " ... more"; }
+
   return cur_f_str;
 }
 
@@ -51,18 +88,7 @@ int32_t get_cur_stack_depth() {
 }
 
 std::string get_cur_frame_stack_str() {
-  const bool debug_mode = GetGraphDebugMode();
   const int32_t max_stack_depth = GetGraphDebugMaxPyStackDepth();
-  if (debug_mode) {  // show more info for the stack trace in debug mode
-    int32_t current_stack_depth = get_cur_stack_depth();
-    std::string cur_f_str = get_cur_frame_stack_str(max_stack_depth);
-    if (current_stack_depth > max_stack_depth) {  // show how many stack depth remaining to be shown
-      int32_t remaining_stack_depth = current_stack_depth - max_stack_depth;
-      cur_f_str += " ... " + std::to_string(remaining_stack_depth) + " more; ";
-    }
-    return cur_f_str;
-  }
-
   return get_cur_frame_stack_str(max_stack_depth);
 }
 }  // namespace

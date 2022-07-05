@@ -146,7 +146,9 @@ def _get_iden_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc):
 
 
 def operators_repr(
-    ops: protobuf.pyext._message.RepeatedCompositeContainer, graph_proto: job_pb.Job
+    ops: protobuf.pyext._message.RepeatedCompositeContainer,
+    graph_proto: job_pb.Job,
+    show_op_loc: bool,
 ) -> List[str]:
     r"""Generate operators' string representation of this module
     """
@@ -173,7 +175,7 @@ def operators_repr(
         signature_template = Template(
             op.name
             + "($input) -> ($output)"
-            + ":placement=("
+            + ", placement=("
             + op2placement[op.name]
             + ")"
         )
@@ -200,6 +202,10 @@ def operators_repr(
         op_str += signature_template.substitute(
             input=input_sig_str, output=output_sig_str
         )
+
+        if show_op_loc and op.loc:
+            op_str += ", location=(" + op.loc + ")"
+
         op_str += ")"
 
         return True, op_str
