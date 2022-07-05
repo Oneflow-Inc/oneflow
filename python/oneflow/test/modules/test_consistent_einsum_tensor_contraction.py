@@ -27,7 +27,11 @@ def _test_einsum_tensor_contraction(test_case, placement, sbp):
     dim0 = random(1, 3) * 8
     dim1 = random(1, 3) * 8
     x = random_tensor(
-        ndim=4, dim0=random(1, 3) * 8, dim1=dim0, dim2=dim1, dim3=random(1, 3) * 8,
+        ndim=4,
+        dim0=random(1, 3) * 8,
+        dim1=dim0,
+        dim2=dim1,
+        dim3=random(1, 3) * 8,
     )
     y = random_tensor(
         ndim=5,
@@ -47,7 +51,12 @@ class TestEinsumConsistent(flow.unittest.TestCase):
     @globaltest
     def test_einsum_tensor_contraction(test_case):
         for placement in all_placement():
-            if np.array(placement.ranks).shape == (2, 2):
+            if len(np.array(placement.ranks).shape) > 1 and all(
+                dim != 1 for dim in np.array(placement.ranks).shape
+            ):
+                print(
+                    f"[{flow.env.get_rank()}] skip TestEinsumConsistent.test_einsum_tensor_contraction with {placement}"
+                )
                 continue
 
             for sbp in all_sbp(placement, max_dim=4):
