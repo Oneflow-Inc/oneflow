@@ -306,9 +306,10 @@ class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
     const float l2 = ctx->Attr<float>("l2");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const auto beta = ctx->Attr<float>("beta");
-    const float dampening = ctx->Attr<float>("dampening");
-    const bool nesterov = ctx->Attr<bool>("nesterov");
-    const bool maximize = ctx->Attr<bool>("maximize");
+    // TODO: Suppoprt dampening, nesterov, maximize in OneEmbeddingMomentumUpdate(zhengzekang).
+    const float dampening = 0.0;
+    const bool nesterov = false;
+    const bool maximize = false;
     const auto scale = ctx->Attr<double>("scale");
     const T* scale_by_ptr = nullptr;
     if (ctx->has_input("scale_by_tensor", 0)) {

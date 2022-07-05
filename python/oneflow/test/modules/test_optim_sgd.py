@@ -92,6 +92,9 @@ def compare_with_numpy_sgd(
 
                 if nesterov:
                     grad += momentum * next_momentum
+                else:
+                    grad = next_momentum
+
                 alpha = -learning_rate
                 if maximize:
                     alpha = learning_rate
@@ -198,6 +201,9 @@ def compare_with_numpy_sgd_clip_grad(
 
                 if nesterov:
                     grad += momentum * next_momentum
+                else:
+                    grad = next_momentum
+
                 alpha = -learning_rate
                 if maximize:
                     alpha = learning_rate

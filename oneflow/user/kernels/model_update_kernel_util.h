@@ -71,7 +71,11 @@ struct MomentumUpdateFunctor {
     T next_momentum = beta * *momentum + (1.0f - dampening) * model_diff_t;
     *momentum = next_momentum;
 
-    if (nesterov) { model_diff_t += beta * next_momentum; }
+    if (!nesterov) {
+      model_diff_t = next_momentum;
+    } else {
+      model_diff_t += beta * next_momentum;
+    }
 
     T alpha = -learning_rate;
     if (maximize) { alpha = learning_rate; }
