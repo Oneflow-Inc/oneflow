@@ -58,7 +58,7 @@ struct GetStreamType final : public StreamRoleVisitor<GetStreamType> {
     return SingletonPtr<vm::PinnedEpStreamType>();
   }
   static Maybe<const vm::StreamType*> VisitTmpCompute(DeviceType device_type) {
-    return VisitCompute(device_type);
+    return SingletonPtr<vm::EventRecordedEpStreamType>();
   }
 };
 
