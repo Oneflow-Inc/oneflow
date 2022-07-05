@@ -43,7 +43,10 @@ def lr_jit_register(lr_class):
     # transformer.visit(_ast)
     # feed transformed as to C++
     print(ast.dump(_ast))
-    res = oneflow._oneflow_internal.ir.compile_and_register_lr_jit(_id)
+    _arg = oneflow._oneflow_internal.ir.arg_("test")
+    _args = oneflow._oneflow_internal.ir.arguments_([_arg])
+    _ast = oneflow._oneflow_internal.ir.FunctionDef_("test", _args, [])
+    res = oneflow._oneflow_internal.ir.compile_and_register_lr_jit(_id, _ast)
 
 
 from oneflow.nn.optimizer.constant_lr import ConstantLR

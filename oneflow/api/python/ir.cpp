@@ -20,6 +20,7 @@ limitations under the License.
 #include <algorithm>
 #include <string>
 #include <iostream>
+#include <pybind11/stl.h>
 #include <tuple>
 #include <vector>
 #include "oneflow/core/common/singleton.h"
@@ -39,12 +40,9 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
   m.def("load_jit_shared_lib",
         [](const std::string& lib_path) { MutSharedLibPaths()->insert(lib_path); });
   m.def("compile_and_register_lr_jit",
-        [](const std::string& function_id
-           //  ,const pyast::FunctionDef& func = pyast::FunctionDef::get_FunctionDef()) {
-        ) {
-          const pyast::FunctionDef& func = pyast::FunctionDef("test", {}, {});
+        [](const std::string& function_id, const std::shared_ptr<pyast::FunctionDef>& func) {
           Singleton<LR_JIT>::New();
-          Singleton<LR_JIT>::Get()->Register(function_id, func);
+          Singleton<LR_JIT>::Get()->Register(function_id, *func.get());
           auto engine = Singleton<LR_JIT>::Get()->LookUp(function_id);
           auto lr = Singleton<LR_JIT>::Get()->Invoke(engine, 1, 2);
           std::cout << lr << std::endl;
