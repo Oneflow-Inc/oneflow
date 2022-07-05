@@ -1113,7 +1113,7 @@ class FusedMLPGradFunctor {
  public:
   FusedMLPGradFunctor() {
 #if CUDA_VERSION >= 11060
-    fused_op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+    fused_op_.resize(kMaxInputCount /*the maximum number of layers*/);
     for (int n = 1; n < fused_op_.size(); ++n) {
       fused_op_[n] = CHECK_JUST(one::OpBuilder("cublas_fused_mlp_grad")
                                     .Input("dy")

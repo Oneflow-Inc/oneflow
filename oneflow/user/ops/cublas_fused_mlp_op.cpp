@@ -175,7 +175,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
 
         AddOp(fused_mlp_grad_op);
 
-        for (int32_t hidden_layer_idx = weight_num - 1; hidden_layer_idx > -1; hidden_layer_idx--) {
+        for (int32_t hidden_layer_idx = weight_num - 1; hidden_layer_idx >= 0; hidden_layer_idx--) {
           if (op.NeedGenGradTensor4OpInput("biases", hidden_layer_idx)) {
             op.BindGradTensorWithOpInput(fused_mlp_grad_op.output("d_biases", hidden_layer_idx),
                                          "biases", hidden_layer_idx);

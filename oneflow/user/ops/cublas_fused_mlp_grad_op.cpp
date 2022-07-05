@@ -26,7 +26,7 @@ namespace {
 Maybe<void> InferTensorDesc4FusedMatmulBackward(user_op::InferContext* ctx) {
   const int64_t weight_num = ctx->input_size("weights");
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-  for (int idx = weight_num - 1; idx > -1; idx--) {
+  for (int idx = weight_num - 1; idx >= 0; idx--) {
     const user_op::TensorDesc& weight_desc = ctx->InputTensorDesc("weights", idx);
     *ctx->OutputShape("d_weights", idx) = weight_desc.shape();
     *ctx->OutputShape("d_biases", idx) = Shape({weight_desc.shape().At(0)});
@@ -43,7 +43,7 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx) {
   CHECK_EQ(weight_num, dbias_size) << "The number of d_biases should be equal to weight_num. "
                                       "Because last layer's bias_grad is computed by ReduceSum. ";
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-  for (int idx = weight_num - 1; idx > -1; idx--) {
+  for (int idx = weight_num - 1; idx >= 0; idx--) {
     *ctx->OutputDType("d_weights", idx) = dy_desc.data_type();
     *ctx->OutputDType("d_biases", idx) = dy_desc.data_type();
   }
