@@ -235,10 +235,6 @@ void CacheKeyValueStoreImpl<Key, Elem>::LoadSnapshot(
         if (*host_num_buffer_ == 0) { return; }
         cache_->Put(stream, *host_num_buffer_, keys_buffer_, values_buffer_, num_buffer_, nullptr,
                     nullptr);
-        OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, num_buffer_, sizeof(uint32_t),
-                                      cudaMemcpyDefault, cuda_stream->cuda_stream()));
-        CHECK_JUST(stream->Sync());
-        CHECK_EQ(*host_num_buffer_, 0);
       }
     }
     if (Hook) {
