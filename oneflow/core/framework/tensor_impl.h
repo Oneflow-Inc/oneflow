@@ -64,6 +64,7 @@ class TensorImpl {
   virtual Maybe<bool> has_eager_blob_object() const = 0;
   virtual Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
   virtual bool is_contiguous() const = 0;
+  virtual Maybe<bool> is_pinned() const { OF_UNIMPLEMENTED(); }
 
   // Getters for autograd
   Maybe<Tensor> acc_grad() const;
@@ -201,6 +202,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
     // but should return real status while stride/view mechanism is ready in lazy-mirrored mode
     return true;
   }
+  Maybe<bool> is_pinned() const override { return false; }
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
@@ -229,6 +231,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   Maybe<MirroredTensorImpl> detach() const override;
   bool is_lazy() const override { return false; }
   bool is_contiguous() const override { return tensor_meta_->is_contiguous(); }
+  Maybe<bool> is_pinned() const override;
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
@@ -247,8 +250,6 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
 
   Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object);
-  Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object,
-                                  const bool pin_memory);
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override { return this; }
 
   Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) override;

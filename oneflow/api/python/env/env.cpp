@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/api/python/env/env.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/shut_down_util.h"
@@ -30,7 +30,7 @@ namespace oneflow {
 Maybe<void> SwitchToShuttingDownPhase(EnvGlobalObjectsScope* env, bool is_normal_exit) {
   if (is_normal_exit) {
     JUST(vm::ClusterSync());
-    auto* vm = JUST(GlobalMaybe<VirtualMachine>());
+    auto* vm = JUST(SingletonMaybe<VirtualMachine>());
     JUST(vm->CloseVMThreads());
   }
   JUST(env->init_is_normal_exit(is_normal_exit));
@@ -58,10 +58,12 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("InitRDMA", &InitRDMA);
   m.def("RDMAIsInitialized", &RDMAIsInitialized);
   m.def("CudaGetDeviceCount", &CudaGetDeviceCount);
+  m.def("EmptyCache", &EmptyCache);
 #ifdef WITH_CUDA
   m.def("GetCudaDeviceIndex", &GetCudaDeviceIndex);
   m.def("SetCudaDeviceIndex", &SetCudaDeviceIndex);
   m.def("CudaSynchronize", &CudaSynchronize);
+  m.def("GetCUDAMemoryUsed", &GetCUDAMemoryUsed);
 #endif  // WITH_CUDA
   m.def("SetFLAGS_alsologtostderr", &SetFLAGS_alsologtostderr);
   m.def("GetFLAGS_alsologtostderr", &GetFLAGS_alsologtostderr);

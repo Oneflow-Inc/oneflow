@@ -49,11 +49,11 @@ void ForEachObnAndIsMutableByConsumer(KernelContext* kernel_ctx, const Kernel* k
 }
 
 void SetOutputBlobProducerInferAccessChecker(KernelContext* kernel_ctx, const Kernel* kernel) {
-  ForEachObnAndIsHeaderInferedBeforeCompute(kernel_ctx, kernel,
-                                            [&](const std::string& obn, bool _) {
-                                              kernel_ctx->BnInOp2Blob(obn)->set_blob_access_checker(
-                                                  Global<BlobAccessCheckerIf<true, false>>::Get());
-                                            });
+  ForEachObnAndIsHeaderInferedBeforeCompute(
+      kernel_ctx, kernel, [&](const std::string& obn, bool _) {
+        kernel_ctx->BnInOp2Blob(obn)->set_blob_access_checker(
+            Singleton<BlobAccessCheckerIf<true, false>>::Get());
+      });
 }
 
 void SetOutputBlobProducerComputeAccessChecker(KernelContext* kernel_ctx, const Kernel* kernel) {
@@ -61,25 +61,25 @@ void SetOutputBlobProducerComputeAccessChecker(KernelContext* kernel_ctx, const 
       kernel_ctx, kernel, [&](const std::string& obn, bool is_header_infered_before_compute) {
         const BlobAccessChecker* checker = nullptr;
         if (is_header_infered_before_compute) {
-          checker = Global<BlobAccessCheckerIf<false, true>>::Get();
+          checker = Singleton<BlobAccessCheckerIf<false, true>>::Get();
         } else {
-          checker = Global<BlobAccessCheckerIf<true, true>>::Get();
+          checker = Singleton<BlobAccessCheckerIf<true, true>>::Get();
         }
         kernel_ctx->BnInOp2Blob(obn)->set_blob_access_checker(checker);
       });
 }
 
 void SetOutputBlobConsumerAccessChecker(KernelContext* kernel_ctx, const Kernel* kernel) {
-  ForEachObnAndIsMutableByConsumer(kernel_ctx, kernel,
-                                   [&](const std::string& obn, bool is_mutable) {
-                                     const BlobAccessChecker* checker = nullptr;
-                                     if (is_mutable) {
-                                       checker = Global<BlobAccessCheckerIf<false, true>>::Get();
-                                     } else {
-                                       checker = Global<BlobAccessCheckerIf<false, false>>::Get();
-                                     }
-                                     kernel_ctx->BnInOp2Blob(obn)->set_blob_access_checker(checker);
-                                   });
+  ForEachObnAndIsMutableByConsumer(
+      kernel_ctx, kernel, [&](const std::string& obn, bool is_mutable) {
+        const BlobAccessChecker* checker = nullptr;
+        if (is_mutable) {
+          checker = Singleton<BlobAccessCheckerIf<false, true>>::Get();
+        } else {
+          checker = Singleton<BlobAccessCheckerIf<false, false>>::Get();
+        }
+        kernel_ctx->BnInOp2Blob(obn)->set_blob_access_checker(checker);
+      });
 }
 
 }  // namespace

@@ -82,30 +82,30 @@ std::string JobBuildAndInferCtxMgr::structure_graph() const {
 }
 
 Maybe<void> LazyJobBuildAndInferCtxMgr::VirtualCloseJob() {
-  const JobDesc* job_desc = Global<JobDesc>::Get();
+  const JobDesc* job_desc = Singleton<JobDesc>::Get();
   if (job_desc == nullptr) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(job_desc->job_name(), *JUST(GetCurrentJobName()));
   CHECK_EQ_OR_RETURN(job_desc->job_id(), mut_job_set()->job_size() - 1);
-  Global<JobDesc>::Delete();
+  Singleton<JobDesc>::Delete();
   return Maybe<void>::Ok();
 }
 
 Maybe<void> EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
-  const JobDesc* job_desc = Global<JobDesc>::Get();
+  const JobDesc* job_desc = Singleton<JobDesc>::Get();
   if (job_desc != nullptr) {
     CHECK_EQ_OR_RETURN(job_desc->job_name(), *JUST(GetCurrentJobName()));
     CHECK_EQ_OR_RETURN(job_desc->job_id(), mut_job_set()->job_size() - 1);
-    Global<JobDesc>::Delete();
+    Singleton<JobDesc>::Delete();
   }
   mut_job_set()->clear_job();
   clear_job_name2infer_ctx();
   return Maybe<void>::Ok();
 }
 
-bool EagerExecutionEnabled() { return *Global<bool, EagerExecution>::Get(); }
+bool EagerExecutionEnabled() { return *Singleton<bool, EagerExecution>::Get(); }
 
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
-  return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
+  return JUST(SingletonMaybe<LazyJobBuildAndInferCtxMgr>());
 }
 
 Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name) {

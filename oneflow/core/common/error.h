@@ -33,6 +33,7 @@ class Error final {
   ErrorProto* operator->() { return error_proto_.get(); }
   operator std::string() const;
   void Assign(const Error& other) { error_proto_ = other.error_proto_; }
+  void Merge(const Error& other);
 
   // r-value reference is used to supporting expressions like `Error().AddStackFrame("foo.cpp",
   // ,"line", "Bar") << "invalid value"` because operator<<() need r-value reference
@@ -67,6 +68,7 @@ class Error final {
   static Error TodoError();
   static Error UnimplementedError();
   static Error RuntimeError();
+  static Error OutOfMemoryError();
   static Error BoxingNotSupportedError();
   static Error MemoryZoneOutOfMemoryError(int64_t machine_id, int64_t mem_zone_id, uint64_t calc,
                                           uint64_t available, const std::string& device_type);
@@ -129,7 +131,7 @@ inline Error&& operator<<(Error&& error, const std::ostream& x) {
 
 template<>
 inline Error&& operator<<(Error&& error, const Error& other) {
-  error.Assign(other);
+  error.Merge(other);
   return std::move(error);
 }
 

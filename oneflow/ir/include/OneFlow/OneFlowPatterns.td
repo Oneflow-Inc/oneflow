@@ -5,7 +5,7 @@
 include "mlir/IR/PatternBase.td"
 include "OneFlow/OneFlowOps.td"
 include "mlir/Dialect/MemRef/IR/MemRefOps.td"
-include "mlir/Dialect/GPU/GPUOps.td"
+include "mlir/Dialect/GPU/IR/GPUOps.td"
 
 def IsNotNestedInJit: Constraint<CPred<"($0.getDefiningOp()->getParentOfType<::mlir::oneflow::Job>())">, "">;
 def IsScalarTensor: Constraint<CPred<"::mlir::oneflow::IsScalarTensor($0)">, "">;
@@ -22,7 +22,8 @@ def MulCastPattern : Pat<
         $cast_device_name,
         $cast_scope_symbol_id,
         $cast_hierarchy,
-        $cast_dtype
+        $cast_dtype,
+        $cast_pin_memory
     ),
     $scalar,
     $mul_op_name,
@@ -434,7 +435,8 @@ def DeleteSameDtypeCastOpPattern : Pat<
      $cast_device_name,
      $cast_scope_symbol_id,
      $cast_hierarchy,
-     $dtype
+     $dtype,
+     $pin_memory
   ),
   (
     replaceWithValue $x

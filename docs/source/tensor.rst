@@ -46,6 +46,7 @@ OneFlow Tensor Class
             cpu, 
             cuda,
             data, 
+            dot,
             detach, 
             device, 
             placement,
@@ -104,6 +105,8 @@ OneFlow Tensor Class
             masked_fill, 
             masked_select, 
             matmul, 
+            mm, 
+            mv, 
             max, 
             mean, 
             min, 
@@ -193,4 +196,5 @@ OneFlow Tensor Class
             zero_, 
             nms,
             pin_memory,
+            is_pinned,
 

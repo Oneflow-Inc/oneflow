@@ -25,89 +25,18 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/b21_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/one_to_one_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/job/sbp_parallel.h"
 
 namespace oneflow {
 
 namespace {
 
-void ParallelDimReduce(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
-                       ParallelDesc* reduced_parallel_desc, NdSbp* reduced_nd_sbp) {
-  const auto& hierarchy = parallel_desc.hierarchy();
-  DimVector reduced_hierarchy;
-  FOR_RANGE(int64_t, i, 0, hierarchy->NumAxes()) {
-    if (hierarchy->At(i) != 1) {
-      if (reduced_nd_sbp->sbp_parallel().empty()
-          || (nd_sbp.sbp_parallel(i)
-              != reduced_nd_sbp->sbp_parallel(reduced_nd_sbp->sbp_parallel_size() - 1))) {
-        reduced_hierarchy.emplace_back(hierarchy->At(i));
-        *reduced_nd_sbp->add_sbp_parallel() = nd_sbp.sbp_parallel(i);
-      } else {
-        reduced_hierarchy.back() *= hierarchy->At(i);
-      }
-    }
-  }
-  if (reduced_hierarchy.empty()) {
-    reduced_hierarchy.emplace_back(hierarchy->At(0));
-    *reduced_nd_sbp->add_sbp_parallel() = nd_sbp.sbp_parallel(0);
-  }
-  ParallelConf reduced_parallel_conf = parallel_desc.parallel_conf();
-  Shape(reduced_hierarchy).ToProto(reduced_parallel_conf.mutable_hierarchy());
-  *reduced_parallel_desc = ParallelDesc(reduced_parallel_conf);
-}
-
-void CollaborativeParallelDimReduce(const ParallelDesc& in_parallel_desc,
-                                    const ParallelDesc& out_parallel_desc, const NdSbp& in_nd_sbp,
-                                    const NdSbp& out_nd_sbp, ParallelDesc* reduced_in_parallel_desc,
-                                    ParallelDesc* reduced_out_parallel_desc,
-                                    NdSbp* reduced_in_nd_sbp, NdSbp* reduced_out_nd_sbp) {
-  const auto& in_hierarchy = in_parallel_desc.hierarchy();
-  const auto& out_hierarchy = out_parallel_desc.hierarchy();
-  CHECK_EQ(in_hierarchy->NumAxes(), out_hierarchy->NumAxes());
-
-  DimVector reduced_in_hierarchy;
-  DimVector reduced_out_hierarchy;
-  FOR_RANGE(int64_t, i, 0, in_hierarchy->NumAxes()) {
-    if (in_hierarchy->At(i) != 1 || out_hierarchy->At(i) != 1) {
-      if (reduced_in_nd_sbp->sbp_parallel().empty()
-          || (in_nd_sbp.sbp_parallel(i)
-                  != reduced_in_nd_sbp->sbp_parallel(reduced_in_nd_sbp->sbp_parallel_size() - 1)
-              || out_nd_sbp.sbp_parallel(i)
-                     != reduced_out_nd_sbp->sbp_parallel(reduced_out_nd_sbp->sbp_parallel_size()
-                                                         - 1))) {
-        reduced_in_hierarchy.emplace_back(in_hierarchy->At(i));
-        *reduced_in_nd_sbp->add_sbp_parallel() = in_nd_sbp.sbp_parallel(i);
-
-        reduced_out_hierarchy.emplace_back(out_hierarchy->At(i));
-        *reduced_out_nd_sbp->add_sbp_parallel() = out_nd_sbp.sbp_parallel(i);
-      } else {
-        reduced_in_hierarchy.back() *= in_hierarchy->At(i);
-        reduced_out_hierarchy.back() *= out_hierarchy->At(i);
-      }
-    }
-  }
-  if (reduced_in_hierarchy.empty()) {
-    reduced_in_hierarchy.emplace_back(in_hierarchy->At(0));
-    *reduced_in_nd_sbp->add_sbp_parallel() = in_nd_sbp.sbp_parallel(0);
-
-    reduced_out_hierarchy.emplace_back(out_hierarchy->At(0));
-    *reduced_out_nd_sbp->add_sbp_parallel() = out_nd_sbp.sbp_parallel(0);
-  }
-
-  ParallelConf reduced_in_parallel_conf = in_parallel_desc.parallel_conf();
-  Shape(reduced_in_hierarchy).ToProto(reduced_in_parallel_conf.mutable_hierarchy());
-  *reduced_in_parallel_desc = ParallelDesc(reduced_in_parallel_conf);
-
-  ParallelConf reduced_out_parallel_conf = out_parallel_desc.parallel_conf();
-  Shape(reduced_out_hierarchy).ToProto(reduced_out_parallel_conf.mutable_hierarchy());
-  *reduced_out_parallel_desc = ParallelDesc(reduced_out_parallel_conf);
-}
-
 std::shared_ptr<ChainSubTskGphBuilder> Make1DSubTskGphBuilder() {
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new OneToOneSubTskGphBuilder());
   builders.emplace_back(new B21SubTskGphBuilder());
-  if (!Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+  if (!Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
     builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
   }
   builders.emplace_back(new SliceBoxingSubTskGphBuilder());
@@ -118,28 +47,6 @@ std::shared_ptr<ChainSubTskGphBuilder> Make1DSubTskGphBuilder() {
 }
 
 }  // namespace
-
-void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
-                            const ParallelDesc& out_parallel_desc, const NdSbp& in_nd_sbp,
-                            const NdSbp& out_nd_sbp, ParallelDesc* reduced_in_parallel_desc,
-                            ParallelDesc* reduced_out_parallel_desc, NdSbp* reduced_in_nd_sbp,
-                            NdSbp* reduced_out_nd_sbp) {
-  const int64_t in_hierarchy_axes = in_parallel_desc.hierarchy()->NumAxes();
-  const int64_t out_hierarchy_axes = out_parallel_desc.hierarchy()->NumAxes();
-  if (in_hierarchy_axes == 1 && out_hierarchy_axes == 1) {
-    *reduced_in_parallel_desc = in_parallel_desc;
-    *reduced_out_parallel_desc = out_parallel_desc;
-    *reduced_in_nd_sbp = in_nd_sbp;
-    *reduced_out_nd_sbp = out_nd_sbp;
-  } else if (in_hierarchy_axes != out_hierarchy_axes) {
-    ParallelDimReduce(in_parallel_desc, in_nd_sbp, reduced_in_parallel_desc, reduced_in_nd_sbp);
-    ParallelDimReduce(out_parallel_desc, out_nd_sbp, reduced_out_parallel_desc, reduced_out_nd_sbp);
-  } else {
-    CollaborativeParallelDimReduce(in_parallel_desc, out_parallel_desc, in_nd_sbp, out_nd_sbp,
-                                   reduced_in_parallel_desc, reduced_out_parallel_desc,
-                                   reduced_in_nd_sbp, reduced_out_nd_sbp);
-  }
-}
 
 class FlatSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
  public:

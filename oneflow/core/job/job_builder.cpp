@@ -196,8 +196,8 @@ void JobBuilder::AddOps(const ParallelConf& parallel_conf,
 
 void JobBuilder::AddOpToModuleConf(const OperatorConf& op_conf) {
   // set up the module config
-  if (Global<symbol::Storage<Scope>>::Get()->Has(op_conf.scope_symbol_id())) {
-    const auto& scope = Global<symbol::Storage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
+  if (Singleton<symbol::Storage<Scope>>::Get()->Has(op_conf.scope_symbol_id())) {
+    const auto& scope = Singleton<symbol::Storage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
     if (scope.scope_proto().has_module_name()) {
       const auto& module_name = scope.scope_proto().module_name();
       auto* module_name2module_conf = job_->mutable_module_name2module_conf();
