@@ -248,7 +248,7 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
 
   std::shared_ptr<Tensor> broadcast_tensor = JUST(
       functional::LocalToConsistent(local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)),
-                                    shape, local_tensor->dtype(), /* check_data */ true));
+                                    shape, local_tensor->dtype(), /* sync_data */ true));
 
   std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
   auto consistent_tensor = JUST(functional::ToConsistent(broadcast_tensor, placement, sbp_tuple,

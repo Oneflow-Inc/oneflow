@@ -2625,7 +2625,7 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
     tensor = JUST(LocalTensorTo(tensor, device->type(), device->device_id(), dtype, copy));
     JUST(tensor->set_requires_grad(x->requires_grad()));
     return JUST(LocalToConsistent(tensor, placement, sbp_tuple, *(x->shape()), dtype,
-                                  /* check_data */ true));
+                                  /* sync_data */ true));
   }
 }
 

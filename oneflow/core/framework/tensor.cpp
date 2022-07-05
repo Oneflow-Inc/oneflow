@@ -135,7 +135,7 @@ Maybe<Tensor> ConsistentTensor::clone() const {
   DisableCheckConsistentTensorMetaScope disable_meta_check{};
   return functional::LocalToConsistent(cloned_local_tensor, JUST(parallel_desc()),
                                        *JUST(GetSbpList(JUST(nd_sbp()))), *shape(), dtype(),
-                                       /* check_data */ true);
+                                       /* sync_data */ true);
 }
 
 Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
