@@ -47,7 +47,7 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerAllPasses();
   mlir::registerTestOneFlowTraitsPass();
   mlir::registerLowerOneFlowToTosaPassPass();
-  mlir::registerMapSCFToGPUPassPass();
+  mlir::registerGpuMapParallelLoopsPassPass();
   mlir::registerBufferHostRegisterPassPass();
   mlir::registerGpuCopyArgPassPass();
 #ifdef WITH_MLIR_CUDA_CODEGEN

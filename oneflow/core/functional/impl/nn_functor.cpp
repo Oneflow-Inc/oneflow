@@ -267,6 +267,25 @@ class EmbeddingFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class MatMulNoBroadCastFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& mat2) const {
+    const auto& input_shape = input->shape();
+    const auto& mat2_shape = mat2->shape();
+    CHECK_EQ_OR_RETURN(input_shape->NumAxes(), 2)
+        << Error::RuntimeError() << "self must be a matrix";
+    CHECK_EQ_OR_RETURN(mat2_shape->NumAxes(), 2)
+        << Error::RuntimeError() << "mat2 must be a matrix";
+    CHECK_EQ_OR_RETURN(input_shape->at(1), mat2_shape->at(0))
+        << Error::RuntimeError() << "mat1 and mat2 shapes cannot be multiplied ("
+        << std::to_string(input_shape->at(0)) << "x" << std::to_string(input_shape->at(1))
+        << " and " << std::to_string(mat2_shape->at(0)) << "x" << std::to_string(mat2_shape->at(1))
+        << ")";
+    return JUST(functional::MatMul(input, mat2, false, false, 1.0));
+  }
+};
+
 class MatMulFunctor {
  public:
   MatMulFunctor() {
@@ -1063,6 +1082,11 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
                                     .Input("pos_weight")
                                     .Output("out")
                                     .Build());
+    op_reduce_mean_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits_reduce_mean")
+                                     .Input("input")
+                                     .Input("target")
+                                     .Output("out")
+                                     .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
@@ -1086,6 +1110,9 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
         out = JUST(
             OpInterpUtil::Dispatch<Tensor>(*op_pos_, {input, target, JUST(pos_weight)}, attrs));
       } else {
+        if (reduction == "mean") {
+          return OpInterpUtil::Dispatch<Tensor>(*op_reduce_mean_, {input, target});
+        }
         out = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs));
       }
     }
@@ -1097,6 +1124,7 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
   std::shared_ptr<OpExpr> op_weight_;
   std::shared_ptr<OpExpr> op_pos_;
   std::shared_ptr<OpExpr> op_weight_pos_;
+  std::shared_ptr<OpExpr> op_reduce_mean_;
 };
 
 class NLLLossFunctor {
@@ -1785,6 +1813,20 @@ class NormalFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class Normal2Functor {
+ public:
+  Maybe<Tensor> operator()(const float& mean, const float& std, const int32_t& shape,
+                           const Optional<one::Tensor>& out,
+                           const Optional<Symbol<DType>>& optional_dtype,
+                           const Optional<Symbol<Device>>& optional_device,
+                           const Optional<one::Generator>& optional_generator,
+                           const bool& requires_grad) const {
+    const Shape size = Shape({shape});
+    return Normal(mean, std, size, out, optional_dtype, optional_device, optional_generator,
+                  requires_grad);
+  }
+};
+
 class ConsistentNormalFunctor {
  public:
   ConsistentNormalFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
@@ -1846,6 +1888,20 @@ class ConsistentNormalFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class ConsistentNormal2Functor {
+ public:
+  Maybe<Tensor> operator()(const float& mean, const float& std, const int32_t& shape,
+                           const Optional<one::Tensor>& out, const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
+                           const Optional<Symbol<DType>>& optional_dtype,
+                           const Optional<one::Generator>& optional_generator,
+                           const bool& requires_grad) const {
+    const Shape size = Shape({shape});
+    return ConsistentNormal(mean, std, size, out, placement, sbp_tuple, optional_dtype,
+                            optional_generator, requires_grad);
+  }
 };
 
 class NormalizationFunctor {
@@ -3340,6 +3396,115 @@ class RocAucScoreFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class MultiTensorSgdUpdateFunctor {
+ public:
+  MultiTensorSgdUpdateFunctor() {
+    // This functor is just for unittest
+    op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+    for (int n = 0; n < op_.size(); ++n) {
+      op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_sgd_update")
+                              .Input("model", n + 1)
+                              .Input("model_diff", n + 1)
+                              .Input("learning_rate")
+                              .Build());
+    }
+  }
+
+  Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
+                         const std::shared_ptr<one::Tensor>& learning_rate, const double& scale,
+                         const float& weight_decay) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("scale", scale));
+    JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
+    const int64_t weight_size = model.size();
+    for (int i = 0; i < weight_size; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < weight_size ? kMaxInputCount : weight_size - i;
+      TensorTuple input(2 * size + 1);
+      std::copy(model.begin() + i, model.begin() + i + size, input.begin());
+      std::copy(model_diff.begin() + i, model_diff.begin() + size, input.begin() + size);
+      input[2 * size] = learning_rate;
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[size - 1], input, attrs));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> op_;
+};
+
+class MultiTensorAdamUpdateFunctor {
+ public:
+  MultiTensorAdamUpdateFunctor() {
+    // This functor is just for unittest
+    op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+    for (int n = 0; n < op_.size(); ++n) {
+      op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_adam_update")
+                              .Input("model", n + 1)
+                              .Input("model_diff", n + 1)
+                              .Input("m", n + 1)
+                              .Input("v", n + 1)
+                              .Input("learning_rate")
+                              .Build());
+    }
+  }
+
+  Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
+                         const TensorTuple& m, const TensorTuple& v,
+                         const std::shared_ptr<one::Tensor>& learning_rate, const float& beta1,
+                         const float& beta2, const float& bias_correction1_val,
+                         const float& bias_correction2_val, const bool& do_bias_correction,
+                         const double& scale, const float& weight_decay) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("scale", scale));
+    JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
+    JUST(attrs.SetAttr<float>("beta1", beta1));
+    JUST(attrs.SetAttr<float>("beta2", beta2));
+    JUST(attrs.SetAttr<float>("bias_correction1_val", bias_correction1_val));
+    JUST(attrs.SetAttr<float>("bias_correction2_val", bias_correction2_val));
+    JUST(attrs.SetAttr<bool>("do_bias_correction", do_bias_correction));
+
+    const int64_t weight_size = model.size();
+
+    for (int i = 0; i < weight_size; i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < weight_size ? kMaxInputCount : weight_size - i;
+      TensorTuple input(4 * size + 1);
+      std::copy(model.begin() + i, model.begin() + i + size, input.begin());
+      std::copy(model_diff.begin() + i, model_diff.begin() + i + size, input.begin() + size);
+      std::copy(m.begin() + i, m.begin() + i + size, input.begin() + 2 * size);
+      std::copy(v.begin() + i, v.begin() + i + size, input.begin() + 3 * size);
+      input[4 * size] = learning_rate;
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[size - 1], input, attrs));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> op_;
+};
+
+class MvFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& vec) const {
+    const auto& input_shape = input->shape();
+    const auto& vec_shape = vec->shape();
+    CHECK_OR_RETURN(input_shape->NumAxes() == 2 && vec_shape->NumAxes() == 1)
+        << Error::RuntimeError() << "vector + matrix @ vector expected, got "
+        << "1, " << input_shape->NumAxes() << ", " << vec_shape->NumAxes();
+    CHECK_EQ_OR_RETURN(input_shape->at(1), vec_shape->at(0))
+        << Error::RuntimeError() << "size mismatch, got " << std::to_string(input_shape->at(0))
+        << ", " << std::to_string(input_shape->at(0)) << "x" << std::to_string(input_shape->at(1))
+        << ", " << std::to_string(vec_shape->at(0));
+    // TODO(zhongshsh): speedup
+    const std::shared_ptr<Tensor> reshape_vec =
+        JUST(Reshape(vec, Shape(DimVector{vec_shape->at(0), 1})));
+    std::shared_ptr<Tensor> out = JUST(MatMul(input, reshape_vec, false, false, 1.0));
+    std::shared_ptr<Tensor> reshape_out = JUST(Squeeze(
+        JUST(Reshape(out, Shape(DimVector{1, input_shape->at(0)}))), std::vector<int32_t>({0})));
+    return reshape_out;
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -3353,6 +3518,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::EmbeddingReNormFunctor>("EmbeddingReNorm");
   m.add_functor<impl::EmbeddingFunctor>("Embedding");
   m.add_functor<impl::MatMulFunctor>("MatMul");
+  m.add_functor<impl::MatMulNoBroadCastFunctor>("MatMulNoBroadCast");
+  m.add_functor<impl::MvFunctor>("Mv");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::TensorDotFunctor>("TensorDot");
   m.add_functor<impl::TensorDotIntDimsFunctor>("TensorDotIntDims");
@@ -3425,12 +3592,16 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingLookupFunctor>("OneEmbeddingLookup");
   m.add_functor<impl::OneEmbeddingUniqueKeyValuePairFunctor>("OneEmbeddingUniqueKeyValuePair");
   m.add_functor<impl::NormalFunctor>("Normal");
+  m.add_functor<impl::Normal2Functor>("Normal2");
   m.add_functor<impl::ConsistentNormalFunctor>("ConsistentNormal");
+  m.add_functor<impl::ConsistentNormal2Functor>("ConsistentNormal2");
   m.add_functor<impl::OneEmbeddingSgdUpdateFunctor>("OneEmbeddingSgdUpdate");
   m.add_functor<impl::OneEmbeddingAdamUpdateFunctor>("OneEmbeddingAdamUpdate");
   m.add_functor<impl::OneEmbeddingAdagradUpdateFunctor>("OneEmbeddingAdagradUpdate");
   m.add_functor<impl::OneEmbeddingFtrlUpdateFunctor>("OneEmbeddingFtrlUpdate");
   m.add_functor<impl::RocAucScoreFunctor>("RocAucScore");
+  m.add_functor<impl::MultiTensorSgdUpdateFunctor>("MultiTensorSgdUpdate");
+  m.add_functor<impl::MultiTensorAdamUpdateFunctor>("MultiTensorAdamUpdate");
 }
 
 }  // namespace functional

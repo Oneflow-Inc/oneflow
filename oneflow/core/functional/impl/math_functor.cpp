@@ -488,6 +488,16 @@ class ReduceAllWholeFunctor {
         one::OpBuilder("reduce_all").Input("input_tensor").Output("output_tensor").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    bool IsZeroSize = [&]() {
+      for (int i = 0; i < x->shape()->NumAxes(); i++) {
+        if (x->shape()->at(i) == 0) return true;
+      }
+      return false;
+    }();
+    if (x->shape()->NumAxes() == 0 || IsZeroSize) {
+      return JUST(Squeeze(JUST(Constant(Shape{1}, Scalar(1), DType::Bool(), JUST(x->device()))),
+                          std::vector<int32_t>({0})));
+    }
     MutableAttrMap attrs;
     std::vector<int32_t> reduce_axis(x->ndim());
     std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
@@ -1089,13 +1099,8 @@ class CastFunctor {
     if (x->dtype() == dtype) { return x; }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    if (x->is_local()) {
-      bool cast_pin_memory = JUST(x->device())->type() == "cuda" ? false : pin_memory;
-      return OpInterpUtil::Dispatch<Tensor>(
-          *op_, {x}, OpExprInterpContext(attrs, JUST(x->device()), /*pin_memory=*/cast_pin_memory));
-    } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-    }
+    JUST(attrs.SetAttr<bool>("pin_memory", pin_memory));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:

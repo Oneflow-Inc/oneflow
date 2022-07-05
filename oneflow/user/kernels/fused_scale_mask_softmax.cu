@@ -111,8 +111,8 @@ class FusedScaleMaskSoftmaxKernel final : public user_op::OpKernel {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const float mask_fill_value = ctx->Attr<float>("mask_fill_value");
     const float scale_value = ctx->Attr<float>("scale_value");
-    const ShapeView& x_shape = x->shape();
-    const ShapeView& mask_shape = mask->shape();
+    const ShapeView& x_shape = x->shape_view();
+    const ShapeView& mask_shape = mask->shape_view();
     CHECK_GE(x_shape.NumAxes(), 2);
     const int64_t elem_cnt = x_shape.elem_cnt();
     const int64_t cols = x_shape.At(x_shape.NumAxes() - 1);
@@ -167,8 +167,8 @@ class FusedScaleMaskSoftmaxGradKernel final : public user_op::OpKernel {
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const float scale_value = ctx->Attr<float>("scale_value");
     const float mask_fill_value = static_cast<float>(0.0);
-    const ShapeView& dy_shape = dy->shape();
-    const ShapeView& mask_shape = mask->shape();
+    const ShapeView& dy_shape = dy->shape_view();
+    const ShapeView& mask_shape = mask->shape_view();
     CHECK_GE(dy_shape.NumAxes(), 2);
     const int64_t elem_cnt = dy_shape.elem_cnt();
     const int64_t cols = dy_shape.At(dy_shape.NumAxes() - 1);

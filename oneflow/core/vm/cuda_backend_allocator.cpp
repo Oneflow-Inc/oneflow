@@ -23,9 +23,13 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void CudaBackendAllocator::Allocate(char** mem_ptr, std::size_t size) {
+Maybe<void> CudaBackendAllocator::Allocate(char** mem_ptr, std::size_t size) {
   cudaSetDevice(device_id_);
-  if (cudaMalloc(mem_ptr, size) != cudaSuccess) { *mem_ptr = nullptr; }
+  if (cudaMalloc(mem_ptr, size) != cudaSuccess) {
+    *mem_ptr = nullptr;
+    return Error::OutOfMemoryError() << "cuda allocator out of memory";
+  }
+  return Maybe<void>::Ok();
 }
 
 void CudaBackendAllocator::Deallocate(char* mem_ptr, std::size_t size) {

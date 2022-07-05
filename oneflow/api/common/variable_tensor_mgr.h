@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_API_COMMON_VARIABLE_TENSOR_MGR_H_
 #define ONEFLOW_API_COMMON_VARIABLE_TENSOR_MGR_H_
 
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
 
@@ -25,17 +25,17 @@ namespace oneflow {
 inline Maybe<void> FillVariableTensorMgr(
     const std::vector<std::string>& variable_op_names,
     const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors) {
-  auto mgr = Global<VariableTensorMgr>::Get();
+  auto mgr = Singleton<VariableTensorMgr>::Get();
   return mgr->Fill(variable_op_names, variable_tensors);
 }
 inline void ClearVariableTensorMgr() {
-  auto mgr = Global<VariableTensorMgr>::Get();
+  auto mgr = Singleton<VariableTensorMgr>::Get();
   mgr->Clear();
 }
 
 inline std::tuple<std::vector<std::string>, std::vector<std::shared_ptr<one::Tensor>>>
 DumpVariableTensorMgr() {
-  auto mgr = Global<VariableTensorMgr>::Get();
+  auto mgr = Singleton<VariableTensorMgr>::Get();
   return mgr->Dump();
 }
 
