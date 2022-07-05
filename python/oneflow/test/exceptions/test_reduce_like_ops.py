@@ -37,8 +37,7 @@ class TestReduceSumLikeOps(flow.unittest.TestCase):
         with test_case.assertRaises(TypeError) as ctx:
             flow._C.reduce_sum_like(a, b, [1])
         test_case.assertTrue(
-            "Tensors x and like must have the same type"
-            in str(ctx.exception)
+            "Tensors x and like must have the same type" in str(ctx.exception)
         )
 
 

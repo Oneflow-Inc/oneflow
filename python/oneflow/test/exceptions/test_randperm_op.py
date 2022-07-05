@@ -25,8 +25,7 @@ class TestRandpermOp(flow.unittest.TestCase):
         with test_case.assertRaises(RuntimeError) as ctx:
             a = flow.randperm(-1)
         test_case.assertTrue(
-            "Trying to create tensor with negative dimension"
-            in str(ctx.exception)
+            "Trying to create tensor with negative dimension" in str(ctx.exception)
         )
 
 
