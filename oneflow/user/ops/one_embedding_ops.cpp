@@ -282,6 +282,34 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+/* static */ Maybe<void> FusedSgdEmbeddingUpdatePutOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> FusedSgdEmbeddingUpdatePutOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> FusedSgdEmbeddingUpdatePutOp::GetSbp(user_op::SbpContext* ctx) {
+  auto builder = ctx->NewBuilder()
+                     .Broadcast(user_op::OpArg("learning_rate", 0))
+                     .Broadcast(user_op::OpArg("num_unique_ids", 0))
+                     .Split(user_op::OpArg("unique_ids", 0), 0)
+                     .Split(user_op::OpArg("embedding_grad", 0), 0);
+  if (embedding::UseDynamicMemoryAllocation()) {
+    builder.Broadcast(user_op::OpArg("unique_embeddings", 0)).Build();
+  } else {
+    builder.Split(user_op::OpArg("unique_embeddings", 0), 0).Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> FusedSgdEmbeddingUpdatePutOp::InferDataType(user_op::InferContext* ctx) {
+  return Maybe<void>::Ok();
+}
+
 /* static */ Maybe<void> SgdEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");

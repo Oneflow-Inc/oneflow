@@ -366,6 +366,139 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* kernel_
   if (is_prefetch) { store->Put(stream, num_unique, unique_ids, store_values); }
 }
 
+template<typename T, size_t pack_size>
+struct alignas(sizeof(T) * pack_size) Pack {
+  T elem[pack_size];
+};
+
+template<typename T, typename U, typename V, int pack_size>
+__global__ void FusedInitSliceCast(const int32_t elem_cnt, uint64_t seed,
+                                   one::CUDAGeneratorState* cuda_gen_state, uint64_t inc_offset,
+                                   const int32_t line_size, const int32_t embedding_size,
+                                   const int32_t line_num_pack, const int32_t embedding_num_pack,
+                                   const EmbeddingInitializer* initializer_param,
+                                   const int8_t* initializer_index, const U* table_ids,
+                                   const uint8_t* lookup_mask, Pack<T, pack_size>* values,
+                                   Pack<V, pack_size>* embeddings) {
+  int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+  curandStatePhilox4_32_10_t state;
+  curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+    int row = i / line_num_pack;
+    int col = i - row * line_num_pack;
+    Pack<T, pack_size> value_i;
+    if (!lookup_mask[row]) {
+      const int32_t table_idx = table_ids[row];
+#pragma unroll
+      for (int k = 0; k < pack_size; ++k) {
+        const int32_t initializer_idx =
+            initializer_index[table_idx * line_size + col * pack_size + k];
+        EmbeddingInitializer initializer = initializer_param[initializer_idx];
+        T value;
+        if (initializer.type == InitializerType::kUniform) {
+          const float low = initializer.uniform_param.low;
+          const float high = initializer.uniform_param.high;
+          value = curand_uniform(&state) * (high - low) + low;
+        } else if (initializer.type == InitializerType::kNormal) {
+          const float mean = initializer.normal_param.mean;
+          const float std = initializer.normal_param.std;
+          value = curand_normal(&state) * std + mean;
+        } else if (initializer.type == InitializerType::kConstant) {
+          value = initializer.constant_param.value;
+        } else {
+          __trap();
+        }
+        value_i.elem[k] = value;
+      }
+      values[i] = value_i;
+    } else {
+      value_i = values[i];
+    }
+    if (embeddings != nullptr && col < embedding_num_pack) {
+      int64_t embedding_offset = row * embedding_num_pack + col;
+      Pack<V, pack_size> embedding_i;
+#pragma unroll
+      for (int k = 0; k < pack_size; ++k) { embedding_i.elem[k] = static_cast<V>(value_i.elem[k]); }
+      embeddings[embedding_offset] = embedding_i;
+    }
+  }
+}
+
+template<typename T, typename U, typename V>
+void InitMissingAndSliceCast(cudaStream_t cuda_stream, uint32_t num_unique,
+                             const int64_t embedding_size, const int64_t line_size, uint64_t seed,
+                             one::CUDAGeneratorState* cuda_gen_state,
+                             const EmbeddingInitializer* initializer_param,
+                             const int8_t* initializer_index, const void* table_ids,
+                             const uint8_t* mask, T* values_ptr, V* embeddings_ptr) {
+  int32_t pack_size;
+  if (embedding_size % 4 == 0 && line_size % 4 == 0) {
+    pack_size = 4;
+  } else if (embedding_size % 2 == 0 && line_size % 2 == 0) {
+    pack_size = 2;
+  } else {
+    pack_size = 1;
+  }
+  int32_t embedding_num_pack = embedding_size / pack_size;
+  int32_t line_num_pack = line_size / pack_size;
+  int64_t value_elem_cnt = num_unique * line_size;
+  int64_t value_elem_num_pack = value_elem_cnt / pack_size;
+  const int64_t num_blocks = BlocksNum4ThreadsNum(value_elem_num_pack);
+  const uint64_t inc_offset = std::ceil(value_elem_cnt / num_blocks / kCudaThreadsNumPerBlock);
+  if (pack_size == 4) {
+    FusedInitSliceCast<T, U, V, 4><<<num_blocks, kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
+        value_elem_num_pack, seed, cuda_gen_state, inc_offset, line_size, embedding_size,
+        line_num_pack, embedding_num_pack, initializer_param, initializer_index,
+        reinterpret_cast<const U*>(table_ids), mask, reinterpret_cast<Pack<T, 4>*>(values_ptr),
+        reinterpret_cast<Pack<V, 4>*>(embeddings_ptr));
+  } else if (pack_size == 2) {
+    FusedInitSliceCast<T, U, V, 2><<<num_blocks, kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
+        value_elem_num_pack, seed, cuda_gen_state, inc_offset, line_size, embedding_size,
+        line_num_pack, embedding_num_pack, initializer_param, initializer_index,
+        reinterpret_cast<const U*>(table_ids), mask, reinterpret_cast<Pack<T, 2>*>(values_ptr),
+        reinterpret_cast<Pack<V, 2>*>(embeddings_ptr));
+  } else {
+    FusedInitSliceCast<T, U, V, 1><<<num_blocks, kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
+        value_elem_num_pack, seed, cuda_gen_state, inc_offset, line_size, embedding_size,
+        line_num_pack, embedding_num_pack, initializer_param, initializer_index,
+        reinterpret_cast<const U*>(table_ids), mask, reinterpret_cast<Pack<T, 1>*>(values_ptr),
+        reinterpret_cast<Pack<V, 1>*>(embeddings_ptr));
+  }
+}
+
+template<typename T, typename U, typename IDX>
+void LookupAndFusedInitMissingSliceCast(ep::Stream* stream, EmbeddingKernelState<IDX>* kernel_state,
+                                        uint32_t num_unique, const int64_t embedding_size,
+                                        const int64_t line_size, DataType value_dtype,
+                                        DataType embedding_dtype, const void* unique_ids,
+                                        const void* table_ids, uint8_t* lookup_mask_ptr,
+                                        void* values_ptr, void* embeddings_ptr) {
+  const auto& generator = kernel_state->generator();
+  CHECK_NOTNULL(generator);
+  std::shared_ptr<one::CUDAGeneratorImpl> cuda_generator =
+      CHECK_JUST(generator->template Get<one::CUDAGeneratorImpl>(stream->device()->device_index()));
+  uint64_t seed = cuda_generator->current_seed();
+  one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
+  embedding::KeyValueStore* store = kernel_state->KeyValueStore();
+  const EmbeddingInitializer* initializer_param = kernel_state->Initializers();
+  const int8_t* initializer_index = kernel_state->InitializerIndex();
+  cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
+  store->Get(stream, num_unique, unique_ids, values_ptr, lookup_mask_ptr);
+  if (embedding_dtype == value_dtype) {
+    InitMissingAndSliceCast<T, U, T>(
+        cuda_stream, num_unique, embedding_size, line_size, seed, cuda_gen_state, initializer_param,
+        initializer_index, reinterpret_cast<const U*>(table_ids), lookup_mask_ptr,
+        reinterpret_cast<T*>(values_ptr), reinterpret_cast<T*>(embeddings_ptr));
+  } else if (embedding_dtype == DataType::kFloat16) {
+    InitMissingAndSliceCast<T, U, half>(
+        cuda_stream, num_unique, embedding_size, line_size, seed, cuda_gen_state, initializer_param,
+        initializer_index, reinterpret_cast<const U*>(table_ids), lookup_mask_ptr,
+        reinterpret_cast<T*>(values_ptr), reinterpret_cast<half*>(embeddings_ptr));
+  } else {
+    UNIMPLEMENTED() << "Unimplemented data_type " << embedding_dtype;
+  }
+}
+
 template<typename T, typename U>
 __global__ void Copy2D(int64_t out_elem_cnt, const int32_t in_cols, const int32_t out_cols,
                        const T* in, U* out) {
@@ -539,24 +672,39 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     user_op::Tensor* unique_values = ctx->Tensor4ArgNameAndIndex("unique_values", 0);
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
+    const bool has_output_embeddings = ctx->has_output("embeddings", 0);
     uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
     void* values_ptr = embedding_state->LookupUniqueValues(current_iter_);
-    void* num_missing_ptr;
-    embedding_state->AllocTmpBuffer(ctx, &num_missing_ptr, GetCudaAlignedSize(sizeof(uint32_t)));
-    void* missing_indices_ptr;
-    embedding_state->AllocTmpBuffer(ctx, &missing_indices_ptr,
-                                    GetCudaAlignedSize(num_unique * sizeof(uint32_t)));
-    LookupAndInitMissing<T, U, IDX>(ctx->stream(), kernel_state, num_unique, embedding_size,
-                                    line_size, false, unique_ids->dptr(), table_ids->dptr(),
-                                    num_missing_ptr, missing_indices_ptr, values_ptr);
-    embedding_state->FreeTmpBuffer(ctx, num_missing_ptr);
-    embedding_state->FreeTmpBuffer(ctx, missing_indices_ptr);
-    if (ctx->has_output("embeddings", 0)) {
+    if (has_output_embeddings && kernel_state->KeyValueStore()->IsFusionSupported()) {
       void* embeddings_ptr = embedding_state->LookupEmbeddings(current_iter_);
       user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
-      CopyValuesToEmbeddings<T>(ctx->stream(), num_unique, embedding_size, line_size,
-                                unique_values->data_type(), embeddings->data_type(),
-                                reinterpret_cast<T*>(values_ptr), embeddings_ptr);
+      void* lookup_mask_ptr;
+      embedding_state->AllocTmpBuffer(ctx, &lookup_mask_ptr,
+                                      GetCudaAlignedSize(num_unique * sizeof(uint8_t)));
+      LookupAndFusedInitMissingSliceCast<T, U, IDX>(
+          ctx->stream(), kernel_state, num_unique, embedding_size, line_size,
+          unique_values->data_type(), embeddings->data_type(), unique_ids->dptr(),
+          table_ids->dptr(), reinterpret_cast<uint8_t*>(lookup_mask_ptr), values_ptr,
+          embeddings_ptr);
+      embedding_state->FreeTmpBuffer(ctx, lookup_mask_ptr);
+    } else {
+      void* num_missing_ptr;
+      embedding_state->AllocTmpBuffer(ctx, &num_missing_ptr, GetCudaAlignedSize(sizeof(uint32_t)));
+      void* missing_indices_ptr;
+      embedding_state->AllocTmpBuffer(ctx, &missing_indices_ptr,
+                                      GetCudaAlignedSize(num_unique * sizeof(uint32_t)));
+      LookupAndInitMissing<T, U, IDX>(ctx->stream(), kernel_state, num_unique, embedding_size,
+                                      line_size, false, unique_ids->dptr(), table_ids->dptr(),
+                                      num_missing_ptr, missing_indices_ptr, values_ptr);
+      embedding_state->FreeTmpBuffer(ctx, num_missing_ptr);
+      embedding_state->FreeTmpBuffer(ctx, missing_indices_ptr);
+      if (has_output_embeddings) {
+        void* embeddings_ptr = embedding_state->LookupEmbeddings(current_iter_);
+        user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
+        CopyValuesToEmbeddings<T>(ctx->stream(), num_unique, embedding_size, line_size,
+                                  unique_values->data_type(), embeddings->data_type(),
+                                  reinterpret_cast<T*>(values_ptr), embeddings_ptr);
+      }
     }
     embedding_state->OnEmbeddingLookupEnd(ctx, current_iter_);
     current_iter_++;
@@ -620,5 +768,52 @@ class EmbeddingPutKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("num_unique_ids", 0) == typeproto));
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_PUT_KERNEL, IDX_DATA_TYPE_SEQ)
+
+template<typename IDX>
+class FusedSgdEmbeddingUpdatePutKernel final : public user_op::OpKernel {
+ public:
+  FusedSgdEmbeddingUpdatePutKernel() : current_iter_(0){};
+  ~FusedSgdEmbeddingUpdatePutKernel() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<EmbeddingPutKernelState>(ctx);
+  }
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
+    auto* kernel_state = dynamic_cast<EmbeddingPutKernelState*>(state);
+    CHECK(kernel_state != nullptr);
+    embedding::KeyValueStore* store = kernel_state->KeyValueStore();
+    embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
+    embedding_state->OnEmbeddingFusedUpdatePutStart(ctx, current_iter_);
+    const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
+    const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);
+    const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+    const float* learning_rate_ptr = learning_rate->dptr<float>();
+    const auto scale = ctx->Attr<double>("scale");
+    uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
+    store->FusedHalfUpdatePut(
+        ctx->stream(), num_unique, unique_ids->dptr(),
+        embedding_state->EmbeddingFusedUpdatePutUniqueEmbeddings(current_iter_),
+        embedding_grad->dptr(), learning_rate_ptr, scale);
+    embedding_state->OnEmbeddingFusedUpdatePutEnd(ctx, current_iter_);
+    current_iter_++;
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  mutable int64_t current_iter_;
+};
+
+#define REGISTER_CUDA_FUSED_SGD_EMBEDDING_UPDATE_PUT_KERNEL(dtype, typeproto)                \
+  REGISTER_USER_KERNEL("fused_sgd_embedding_update_put")                                     \
+      .SetCreateFn<FusedSgdEmbeddingUpdatePutKernel<dtype>>()                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                       \
+                       && (user_op::HobDataType("num_unique_ids", 0) == typeproto)           \
+                       && (user_op::HobDataType("unique_embeddings", 0) == DataType::kFloat) \
+                       && (user_op::HobDataType("embedding_grad", 0) == DataType::kFloat16));
+
+OF_PP_FOR_EACH_TUPLE(REGISTER_CUDA_FUSED_SGD_EMBEDDING_UPDATE_PUT_KERNEL, IDX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

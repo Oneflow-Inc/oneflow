@@ -190,6 +190,20 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
         cudaFreeAsync(updated_values_, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   }
 
+  void OnEmbeddingFusedUpdatePutStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    // do nothing
+  }
+
+  const void* EmbeddingFusedUpdatePutUniqueEmbeddings(int64_t iter) override {
+    CHECK_EQ(iter_, iter);
+    CHECK(has_lookup_values_);
+    return lookup_values_;
+  }
+
+  void OnEmbeddingFusedUpdatePutEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    // do nothing
+  }
+
   void AllocTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr, size_t size) override {
     OF_CUDA_CHECK(cudaMallocFromPoolAsync(ptr, size, mem_pool_,
                                           ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
@@ -370,6 +384,19 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
     embedding_put_unique_embeddings_ = nullptr;
   }
 
+  void OnEmbeddingFusedUpdatePutStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
+    embedding_fused_update_put_unique_embeddings_ = unique_embeddings->dptr();
+  }
+
+  const void* EmbeddingFusedUpdatePutUniqueEmbeddings(int64_t iter) override {
+    return embedding_fused_update_put_unique_embeddings_;
+  }
+
+  void OnEmbeddingFusedUpdatePutEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
+    embedding_fused_update_put_unique_embeddings_ = nullptr;
+  }
+
   void AllocTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr, size_t size) override {
     CHECK(tmp_buffer_ptr_ != nullptr);
     CHECK_GE(tmp_buffer_offset_, 0);
@@ -421,6 +448,7 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
   const void* embeding_update_unique_embeddings_;
   void* embeding_update_updated_unique_embeddings_;
   const void* embedding_put_unique_embeddings_;
+  const void* embedding_fused_update_put_unique_embeddings_;
   std::vector<IdStatistics> id_statistics_vec_;
   void* tmp_buffer_ptr_;
   int64_t tmp_buffer_offset_;
