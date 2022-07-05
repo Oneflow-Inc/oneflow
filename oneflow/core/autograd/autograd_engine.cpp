@@ -151,10 +151,10 @@ Maybe<void> AutogradEngine::RunBackwardAndSaveGrads4LeafTensorIf(const TensorTup
   JUST(CheckConsistentTensorsMeta(outputs));
   JUST(CheckConsistentTensorsMeta(out_grads));
   DisableCheckConsistentTensorMetaScope disable_meta_check;
-  // Put outputs into kTmpCompute stream for reducing blocking time of outputs.numpy() in main
+  // Put outputs into kTmpCompute stream for reducing blocking time of outputs[i].numpy() in main
   // thread.
-  JUST(TouchInTmpComputeStream(outputs));
   auto copied_outputs = JUST(TryCopyForSmallTensor(outputs));
+  JUST(TouchInTmpComputeStream(outputs));
   return RunBackwardAndSaveGrads4LeafTensor(*copied_outputs, out_grads, retain_graph, create_graph);
 }
 

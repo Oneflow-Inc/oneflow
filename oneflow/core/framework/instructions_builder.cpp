@@ -435,6 +435,7 @@ Maybe<void> InstructionsBuilder::TouchTensors(
 
 Maybe<void> InstructionsBuilder::TouchTensors(const one::EagerBlobObjectListPtr& eager_blob_objects,
                                               Symbol<Stream> stream) {
+  JUST(SoftSyncStream(eager_blob_objects, stream));
   const auto& phy_instr_operand =
       std::make_shared<vm::TouchTensorsPhyInstrOperand>(*eager_blob_objects);
   auto instruction = intrusive::make_shared<vm::Instruction>(
