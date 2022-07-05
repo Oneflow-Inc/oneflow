@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/vm/ep_event.h"
 #include "oneflow/core/vm/bin_allocator.h"
-#include "oneflow/core/vm/thread_safe_allocator.h"
 #include "oneflow/core/common/single_thread_obj_pool.h"
 #include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ep/include/device.h"
@@ -48,8 +47,9 @@ class EpDeviceCtx : public DeviceCtx {
         device_(device),
         ep_event_provier_(),
         ep_stream_(nullptr),
-        ep_allocator_(new ThreadSafeAllocator(std::make_unique<BinAllocator>(
-            ep::kMaxAlignmentRequirement, std::move(backend_allocator)))) {}
+        // ep_allocator_(new ThreadSafeAllocator(std::make_unique<BinAllocator>(
+        //     ep::kMaxAlignmentRequirement, std::move(backend_allocator)))) {}
+        ep_allocator_(std::move(backend_allocator)) {}
 
   ep::Stream* stream() override { return GetOrCreateEpStream(); }
 

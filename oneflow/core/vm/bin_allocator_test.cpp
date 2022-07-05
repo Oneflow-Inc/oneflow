@@ -13,10 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <memory>
 #ifdef WITH_CUDA
 #include "gtest/gtest.h"
 #include "oneflow/core/vm/bin_allocator.h"
-#include "oneflow/core/vm/thread_safe_allocator.h"
+#include "oneflow/core/vm/thread_safe_guard.h"
 #include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
@@ -73,8 +74,7 @@ TEST(CudaBinAllocator, cuda_allocator) {
     return;
   }
   std::unique_ptr<Allocator> allo(
-      new BinAllocator(kCudaMemAllocAlignSize, std::make_unique<CudaBackendAllocator>(0)));
-  allo.reset(new SingleThreadOnlyAllocator(std::move(allo)));
+      new BinAllocator<CudaBackendAllocator, SingleThreadGuard>(kCudaMemAllocAlignSize, std::make_unique<CudaBackendAllocator>(0), std::make_unique<SingleThreadGuard>()));
   Allocator* a = allo.get();
   std::vector<char*> ptrs;
   for (int i = 0; i < 512; ++i) {
