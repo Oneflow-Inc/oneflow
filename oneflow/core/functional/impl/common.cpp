@@ -65,12 +65,12 @@ Maybe<void> CheckInplaceCastValid(const std::shared_ptr<Tensor>& x,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CheckShapeCanExpandTo(const Shape& shape, const Shape& expand_shape) {
+Maybe<void> CheckInplaceShapeCanExpandTo(const Shape& shape, const Shape& expand_shape) {
   if (shape == expand_shape) { return Maybe<void>::Ok(); }
 
   CHECK_OR_RETURN(expand_shape.NumAxes() >= shape.NumAxes())
-      << Error::RuntimeError() << "Can not expand shape " << shape.ToString() << " to "
-      << expand_shape.ToString();
+      << Error::RuntimeError() << "Can not expand origin shape " << shape.ToString() << " to "
+      << expand_shape.ToString() << " in an inplace operation";
 
   int shift = expand_shape.NumAxes() - shape.NumAxes();
   for (int i = expand_shape.NumAxes() - 1; i >= 0; --i) {
@@ -80,7 +80,7 @@ Maybe<void> CheckShapeCanExpandTo(const Shape& shape, const Shape& expand_shape)
       int dim_b = shape.At(index);
       CHECK_OR_RETURN(!(dim_a != dim_b && (dim_a <= 0 || dim_b != 1)))
           << Error::RuntimeError() << "Tensor with shape " << expand_shape.ToString()
-          << " doesn't match the broadcast shape";
+          << " doesn't match the broadcast shape in an inplace operation";
     } else {
       CHECK_OR_RETURN(expand_shape.At(i) > 0);
     }
