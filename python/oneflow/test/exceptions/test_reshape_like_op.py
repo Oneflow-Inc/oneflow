@@ -26,7 +26,6 @@ class TestReshapeLikeOp(flow.unittest.TestCase):
         b = flow.tensor([[1, 1, 1], [1, 1, 1]])
         with test_case.assertRaises(RuntimeError) as ctx:
             flow._C.reshape_like(a, b)
-        print(str(ctx.exception))
         test_case.assertTrue(
             "The element number of the in tensor must be equal to the element number of the like tensor"
             in str(ctx.exception)
