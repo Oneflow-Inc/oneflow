@@ -292,6 +292,24 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
   BroadcastElementwiseUnaryImpl(Scalar attr0, Scalar attr1) : attr0(attr0), attr1(attr1) {}
   ~BroadcastElementwiseUnaryImpl() override = default;
 
+  void Launch(Stream* stream, size_t num_src_dims, const int64_t* src_dims, const void* src,
+              size_t num_dst_dims, const int64_t* dst_dims, void* dst) override {
+    int64_t src_strides[kMaxNumDims];
+    int64_t dst_strides[kMaxNumDims];
+    // init stride
+    for (int i = num_src_dims - 1; i < kMaxNumDims; ++i) { src_strides[i] = 1; }
+    for (int i = num_src_dims - 2; i >= 0; --i) {
+      src_strides[i] = src_dims[i + 1] * src_strides[i + 1];
+    }
+
+    for (int i = num_dst_dims - 1; i < kMaxNumDims; ++i) { dst_strides[i] = 1; }
+    for (int i = num_dst_dims - 2; i >= 0; --i) {
+      dst_strides[i] = dst_dims[i + 1] * dst_strides[i + 1];
+    }
+    Launch(stream, num_src_dims, src_dims, src_strides, src, num_dst_dims, dst_dims, dst_strides,
+           dst);
+  }
+
   void Launch(Stream* stream, size_t num_src_dims, const int64_t* src_dims,
               const int64_t* src_strides, const void* src_ptr, size_t num_dst_dims,
               const int64_t* dst_dims, const int64_t* dst_strides, void* dst_ptr) override {
@@ -307,8 +325,8 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
                                        dst_strides, &simplified_num_dims, simplified_src_dims,
                                        simplified_src_strides, simplified_dst_dims,
                                        simplified_dst_strides);
-    CheckInplace(simplified_num_dims, simplified_src_dims, src, nullptr, nullptr,
-                 simplified_dst_dims, dst);
+    CheckInplace(simplified_num_dims, simplified_src_dims, src, simplified_dst_dims, dst);
+    CheckInplace(simplified_num_dims, simplified_src_strides, src, simplified_dst_strides, dst);
     if (simplified_num_dims == 1 && simplified_src_dims[0] == 1) {
       const int64_t elem_cnt = simplified_dst_dims[0];
       LaunchFill<unary_op, Src, Dst>(cuda_stream, dst, src, elem_cnt, attr0, attr1);

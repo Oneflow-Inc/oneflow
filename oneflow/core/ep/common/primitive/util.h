@@ -37,21 +37,12 @@ bool IsPackSizeSupported(const size_t pack_size, size_t num_dims, const int64_t*
          && (reinterpret_cast<std::uintptr_t>(ptr) % (pack_size * sizeof(T)) == 0);
 }
 
-inline void CheckInplace(size_t num_dims, const int64_t* src_dims, const void* src,
-                         const int64_t* dst_dims, const void* dst) {
+inline void CheckInplace(size_t num_dims, const int64_t* src_dims_or_strides, const void* src,
+                         const int64_t* dst_dims_or_strides, const void* dst) {
   if (src == dst) {
     for (int64_t i = 0; i < num_dims; ++i) {
-      CHECK_EQ(src_dims[i], dst_dims[i]);
+      CHECK_EQ(src_dims_or_strides[i], dst_dims_or_strides[i]);
     }
-  }
-}
-
-inline void CheckInplace(size_t num_dims, const int64_t* src0_dims, const void* src0,
-                         const int64_t* src1_dims, const void* src1, const int64_t* dst_dims,
-                         const void* dst) {
-  for (int64_t i = 0; i < num_dims; ++i) {
-    if (src0 == dst) { CHECK_EQ(src0_dims[i], dst_dims[i]); }
-    if (src1 == dst) { CHECK_EQ(src1_dims[i], dst_dims[i]); }
   }
 }
 
@@ -63,11 +54,13 @@ inline void SimplifyBroadcastDims(size_t num_src_dims, const int64_t* src_dims,
                                   int64_t* simplified_src_strides, int64_t* simplified_dst_dims,
                                   int64_t* simplified_dst_strides) {
   *simplified_num_dims = 0;
-  std::vector<std::pair<int64_t, size_t>> sorted_dst_strides(num_dst_dims);
-  std::vector<int64_t> new_dst_dims(num_dst_dims), new_src_dims(num_dst_dims);
-  std::vector<int64_t> new_dst_strides(num_dst_dims), new_src_strides(num_dst_dims);
+  std::pair<int64_t, size_t> sorted_dst_strides[max_num_dims];
+  int64_t new_dst_dims[max_num_dims];
+  int64_t new_src_dims[max_num_dims];
+  int64_t new_dst_strides[max_num_dims];
+  int64_t new_src_strides[max_num_dims];
   for (size_t i = 0; i < num_dst_dims; i++) { sorted_dst_strides[i] = {dst_strides[i], i}; }
-  std::sort(std::begin(sorted_dst_strides), std::end(sorted_dst_strides),
+  std::sort(sorted_dst_strides, sorted_dst_strides + num_dst_dims,
             [](auto pair1, auto pair2) { return pair1.first > pair2.first; });
   const int64_t num_src_padding_dims = num_dst_dims - num_src_dims;
   // dimension completion & permutation
