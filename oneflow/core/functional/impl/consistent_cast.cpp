@@ -446,6 +446,7 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<Shape>("shape", *shape));
   JUST(attrs.SetAttr<DataType>("dtype", dtype));
+  JUST(attrs.SetAttr<bool>("sync_data", true));
   const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
   return output;
@@ -463,7 +464,7 @@ class LocalToConsistentFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                           const Shape& shape, const Symbol<DType>& dtype) const {
+                           const Shape& shape, const Symbol<DType>& dtype, bool sync_data) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope no_recursive_meta_info_conisitency_check_scope;
     JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, 1, /* force_check */ false));
@@ -490,6 +491,7 @@ class LocalToConsistentFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    JUST(attrs.SetAttr<bool>("sync_data", sync_data));
     DisableCheckConsistentTensorMetaScope scope{};
     const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
         *op_, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
@@ -520,8 +522,23 @@ class ToConsistentFunctor {
     if (x->is_consistent()) {
       tensor = JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, grad_sbp_parallels));
     } else {
-      tensor = JUST(
-          LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_, check_meta));
+      DeviceType device_type = parallel_desc->device_type();
+      if (device_type == DeviceType::kCPU || device_type == DeviceType::kCUDA) {
+        tensor = JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_,
+                                        check_meta));
+      } else {
+        // Assuming that the newly adapted hardware device does not support collective
+        // communication, since local to global may need to synchronize data (through the
+        // broadcast API), if device_type is neither cpu nor cuda, generate global tensor
+        // with the corresponding cpu placement first, then convert the cpu global tensor
+        // to the desired placement.
+        Symbol<ParallelDesc> cpu_parallel_desc =
+            JUST(ReplaceDeviceType(parallel_desc, DeviceType::kCPU));
+        std::shared_ptr<Tensor> cpu_tensor = JUST(LocalToConsistent(
+            x, cpu_parallel_desc, sbp_parallels, local_to_consistent_op_, check_meta));
+        tensor = JUST(
+            ConsistentToConsistent(cpu_tensor, parallel_desc, sbp_parallels, GetNoneSbpList()));
+      }
     }
     return tensor;
   }

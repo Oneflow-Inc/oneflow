@@ -75,7 +75,8 @@ Maybe<one::Tensor> NaiveBToS(const std::shared_ptr<one::Tensor>& tensor, Symbol<
   }
 
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(), *sbp_list,
-                                                 *tensor->shape(), tensor->dtype()));
+                                                 *tensor->shape(), tensor->dtype(),
+                                                 /* check_data */ false));
 }
 
 static constexpr auto* NaiveBToSWithAutoConvert =
