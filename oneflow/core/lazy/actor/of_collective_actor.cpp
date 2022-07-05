@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/lazy/actor/actor_message.h"
 #include "oneflow/core/lazy/actor/actor_message_bus.h"
-#include "oneflow/core/stream/include/stream_context.h"
+#include "oneflow/core/lazy/stream_context/include/stream_context.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
 
 namespace oneflow {
