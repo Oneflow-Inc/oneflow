@@ -51,14 +51,15 @@ class CublasFusedMLP : public OpExprGradFunction<CublasFusedMLPCaptureState> {
 
 Maybe<void> CublasFusedMLP::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> CublasFusedMLP::Capture(CublasFusedMLPCaptureState* ctx, const TensorTuple& inputs,
                                     const TensorTuple& outputs, const AttrMap& attrs) const {
-  CHECK_OR_RETURN(inputs.size() % 2 == 1) << "Both weight and bias should be passed together. ";
+  CHECK_OR_RETURN(inputs.size() % 2 == 1)
+      << Error::RuntimeError() << "Both weight and bias should be passed together";
   int32_t weight_num = (inputs.size() - 1) / 2;
   ctx->weight_num = weight_num;
   ctx->x_requires_grad = JUST(VectorAt(inputs, 0))->requires_grad();

@@ -48,6 +48,7 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
   std::string DebugName(const vm::Instruction& instruction) const override {
     return "CriticalSectionBegin";
   }
+  Maybe<void> Prepare(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }
   void Compute(vm::Instruction* instruction) const override {
     OF_PROFILER_RANGE_GUARD("CriticalSectionBegin");
     {
@@ -121,6 +122,7 @@ class CriticalSectionEndInstructionType final : public InstructionType {
   std::string DebugName(const vm::Instruction& instruction) const override {
     return "CriticalSectionEnd";
   }
+  Maybe<void> Prepare(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }
   void Compute(vm::Instruction* instruction) const override {
     const auto* ptr = instruction->phy_instr_operand().get();
     const auto* phy_instr_operand = dynamic_cast<const CriticalSectionEndPhyInstrOperand*>(ptr);

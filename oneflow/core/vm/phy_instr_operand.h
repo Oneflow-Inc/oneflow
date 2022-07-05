@@ -26,6 +26,7 @@ namespace oneflow {
 namespace vm {
 
 class MirroredObject;
+class EagerBlobObject;
 
 using DependenceVector = std::vector<MirroredObject*>;
 
@@ -47,6 +48,8 @@ class PhyInstrOperand {
       if (existed->insert(object).second) { dependences->push_back(object); }
     };
   }
+
+  virtual void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const = 0;
 
  protected:
   PhyInstrOperand() : stream_sequential_dependence_(nullptr) {}

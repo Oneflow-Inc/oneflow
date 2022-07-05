@@ -3,12 +3,12 @@ oneflow.one_embedding
 OneFlow one_embedding operations.
 ----------------------------------
 .. currentmodule:: oneflow.one_embedding
-.. autoclass:: MultiTableEmbedding
+.. autoclass:: oneflow.one_embedding.MultiTableEmbedding
     :members: forward,
               save_snapshot,
               load_snapshot,
 .. autofunction:: oneflow.one_embedding.MultiTableEmbedding.forward
-.. autoclass:: MultiTableMultiColumnEmbedding
+.. autoclass:: oneflow.one_embedding.MultiTableMultiColumnEmbedding
     :members: forward,
               save_snapshot,
               load_snapshot,
