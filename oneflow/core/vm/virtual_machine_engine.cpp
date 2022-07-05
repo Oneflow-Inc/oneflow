@@ -256,7 +256,7 @@ void VirtualMachineEngine::ConsumeMirroredObjects(Instruction* instruction) {
 }
 
 bool VirtualMachineEngine::EdgeDispatchable(const Instruction* src, const Instruction* dst) const {
-  return (&src->stream() == &dst->stream()) /* same stream*/
+  return dst->instruction_type().Prescheduleable(&src->stream(), &dst->stream())
          && !src->dispatched_instruction_hook().empty() /* dispatched */;
 }
 

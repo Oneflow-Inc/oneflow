@@ -25,6 +25,10 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
+bool StreamWaitInstructionType::Prescheduleable(const Stream* src, const Stream* dst) const {
+  return &src->thread_ctx() == &dst->thread_ctx();
+}
+
 void StreamWaitInstructionType::InitInstructionStatus(Instruction* instruction) const {
   auto* phy_instr_operand = instruction->phy_instr_operand().get();
   auto* operand = dynamic_cast<StreamWaitPhyInstrOperand*>(phy_instr_operand);

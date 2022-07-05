@@ -39,7 +39,11 @@ namespace oneflow {
 /*static*/ Maybe<void> ReshapeLikeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
   const Shape& like_shape = ctx->InputShape("like", 0);
-  CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), like_shape.elem_cnt());
+  CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), like_shape.elem_cnt())
+      << Error::RuntimeError()
+      << "The element number of the in tensor must be equal to the element number of the "
+         "like tensor, "
+      << "but got " << in_shape.elem_cnt() << " and " << like_shape.elem_cnt();
   *ctx->OutputShape("out", 0) = like_shape;
   return Maybe<void>::Ok();
 }
@@ -53,7 +57,7 @@ namespace oneflow {
 /*static*/ Maybe<void> ReshapeLikeOp::ModifyInputArg(
     const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
-  CHECK_NOTNULL_OR_RETURN(like_modifier);
+  CHECK_NOTNULL_OR_RETURN(like_modifier);  // NOLINT(maybe-need-error-msg)
   like_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();
 }
