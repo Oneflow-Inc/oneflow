@@ -132,11 +132,18 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
  private:
   Maybe<void> SoftSyncStream(const one::EagerBlobObjectListPtr& eager_blob_objects,
                              Symbol<Stream> stream);
-  Maybe<void> SoftSyncStream(
-      std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
-      const std::string& modifier, Symbol<Stream> stream);
 
- private:
+  Maybe<void> SoftSyncStreamBetween(
+      std::vector<intrusive::shared_ptr<LocalDepObject>>&& dependences, Symbol<Stream> from_stream,
+      Symbol<Stream> to_stream);
+
+  Maybe<void> StreamWait(std::vector<intrusive::shared_ptr<LocalDepObject>>&& dependences,
+                         Symbol<Stream> from_stream, Symbol<Stream> to_stream);
+
+  Maybe<void> RecordEvent(
+      std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
+      Symbol<Stream> stream);
+
   template<typename PhyInstrOperandT>
   Maybe<void> MakeCriticalSectionBegin(vm::Stream* vm_stream,
                                        const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);

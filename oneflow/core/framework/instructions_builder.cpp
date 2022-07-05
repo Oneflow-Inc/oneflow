@@ -36,6 +36,7 @@ limitations under the License.
 #include "oneflow/core/eager/blob_instruction_type.h"
 #include "oneflow/core/eager/op_call_instruction_type.h"
 #include "oneflow/core/vm/barrier_instruction_type.h"
+#include "oneflow/core/vm/stream_wait_instruction_type.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
@@ -47,6 +48,8 @@ limitations under the License.
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/stream_need_soft_sync.h"
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
+#include "oneflow/core/framework/stream_support_stream_wait.h"
+#include "oneflow/core/framework/stream_on_independent_thread.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
@@ -396,8 +399,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
     return Maybe<void>::Ok();
   }
   if (last_used_stream != producer_stream) {
-    JUST(SoftSyncStream({JUST(eager_blob_object->compute_local_dep_object())}, "mut",
-                        last_used_stream));
+    JUST(RecordEvent({JUST(eager_blob_object->compute_local_dep_object())}, last_used_stream));
   }
   Optional<Symbol<Stream>> stream{};
   if (*one::CurrentDevVmDepObjectConsumeMode() == one::DevVmDepObjectConsumeMode::NONE) {
@@ -459,19 +461,59 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
       }
       eager_blob_object->set_last_used_stream(stream);
     }
-    JUST(SoftSyncStream(std::move(dep_objects), "mut", last_used_stream));
+    JUST(RecordEvent(std::move(dep_objects), last_used_stream));
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::SoftSyncStream(
+namespace {
+
+bool SupportingStreamWait(Symbol<Stream> from_stream, Symbol<Stream> to_stream) {
+  DeviceType from_device_type = from_stream->device()->enum_type();
+  DeviceType to_device_type = from_stream->device()->enum_type();
+  return from_stream->device() == to_stream->device()
+         && from_stream->device()->enum_type() == DeviceType::kCUDA
+         && StreamSupportStreamWait::Visit(from_stream->stream_role(), from_device_type)
+         && StreamSupportStreamWait::Visit(to_stream->stream_role(), to_device_type)
+         && !StreamOnIndependentThread::Visit(from_stream->stream_role())
+         && !StreamOnIndependentThread::Visit(to_stream->stream_role());
+}
+
+}  // namespace
+
+Maybe<void> InstructionsBuilder::SoftSyncStreamBetween(
+    std::vector<intrusive::shared_ptr<LocalDepObject>>&& dependences, Symbol<Stream> from_stream,
+    Symbol<Stream> to_stream) {
+  CHECK(from_stream != to_stream) << "synchronization is unecessary";
+  if (SupportingStreamWait(from_stream, to_stream)) {
+    JUST(StreamWait(std::move(dependences), from_stream, to_stream));
+  } else {
+    JUST(RecordEvent(std::move(dependences), from_stream));
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::StreamWait(
+    std::vector<intrusive::shared_ptr<LocalDepObject>>&& dependences, Symbol<Stream> from_stream,
+    Symbol<Stream> to_stream) {
+  auto* from_vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(from_stream));
+  const auto& phy_instr_operand =
+      std::make_shared<vm::StreamWaitPhyInstrOperand>(std::move(dependences), from_vm_stream);
+  auto* to_vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(to_stream));
+  auto instruction = intrusive::make_shared<vm::Instruction>(
+      to_vm_stream, SingletonPtr<vm::StreamWaitInstructionType>(), phy_instr_operand);
+  instruction_list_->EmplaceBack(std::move(instruction));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::RecordEvent(
     std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
-    const std::string& modifier, Symbol<Stream> last_used_stream) {
+    Symbol<Stream> last_used_stream) {
   DeviceType device_type = last_used_stream->device()->enum_type();
   if (!NeedSoftSync::Visit(last_used_stream->stream_role(), device_type)) {
     return Maybe<void>::Ok();
   }
-  OF_PROFILER_RANGE_GUARD("SoftStream");
+  std::string modifier = "mut";
   const auto& phy_instr_operand = std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(
       std::move(compute_local_dep_objects), modifier);
   StreamRole stream_role = last_used_stream->stream_role();
