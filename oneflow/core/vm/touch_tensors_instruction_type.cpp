@@ -13,22 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cub/cub.cuh>
-#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/vm/touch_tensors_instruction_type.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 
 namespace oneflow {
+namespace vm {
 
-int GetCudaSmVersion() {
-  int sm_version, device_ordinal;
-  OF_CUDA_CHECK(cudaGetDevice(&device_ordinal));
-  OF_CUDA_CHECK(cub::SmVersion(sm_version, device_ordinal));
-  return sm_version;
+TouchTensorsPhyInstrOperand::TouchTensorsPhyInstrOperand(
+    const std::vector<std::shared_ptr<EagerBlobObject>>& eager_blob_objects)
+    : eager_blob_objects_(eager_blob_objects) {
+  const auto& Insert = SetInserter(&input_dependences_);
+  for (const auto& eager_blob_object : eager_blob_objects_) {
+    Insert(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
+  }
 }
 
-int GetCudaPtxVersion() {
-  int ptx_version;
-  OF_CUDA_CHECK(cub::PtxVersion(ptx_version));
-  return ptx_version;
-}
-
+}  // namespace vm
 }  // namespace oneflow

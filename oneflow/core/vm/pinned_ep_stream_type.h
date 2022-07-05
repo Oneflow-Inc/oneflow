@@ -37,8 +37,7 @@ class PinnedEpStreamType final : public StreamType {
                                InstructionStatusBuffer* status_buffer) const override;
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
-  void Compute(Instruction* instruction) const override;
-  bool OnSchedulerThread() const override { return true; }
+  void Run(Instruction* instruction) const override;
   bool SupportingTransportInstructions() const override { return true; }
 };
 
