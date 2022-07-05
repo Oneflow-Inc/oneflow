@@ -28,7 +28,8 @@ class TestRoiAlignOp(flow.unittest.TestCase):
             flow.roi_align(x, rois, 2.0, 14, 14, 2, True)
         test_case.assertTrue(
             "The dimension of x tensor must be equal to 4, but got"
-            in str(ctx.exception))
+            in str(ctx.exception)
+        )
 
     def test_rol_align_rois_tensor_dimension_err(test_case):
         x = flow.randn(2, 3, 64, 5)
@@ -37,7 +38,8 @@ class TestRoiAlignOp(flow.unittest.TestCase):
             flow.roi_align(x, rois, 2.0, 14, 14, 2, True)
         test_case.assertTrue(
             "The dimension of rois tensor must be equal to 2, but got"
-            in str(ctx.exception))
+            in str(ctx.exception)
+        )
 
     def test_rol_align_rois_tensor_size_err(test_case):
         x = flow.randn(2, 3, 64, 5)
@@ -46,7 +48,8 @@ class TestRoiAlignOp(flow.unittest.TestCase):
             flow.roi_align(x, rois, 2.0, 14, 14, 2, True)
         test_case.assertTrue(
             "The size of rois tensor must be equal to 5 at dimension 1, but got"
-            in str(ctx.exception))
+            in str(ctx.exception)
+        )
 
 
 if __name__ == "__main__":
