@@ -70,14 +70,7 @@ class MatmulGradKernelState final : public user_op::OpKernelState {
     if_need_comm_ = false;
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const int64_t d_weights_size = ctx->output_size("d_weights");
-      bool has_d_weight_broadcast = false;
-      for (int i = 0; i < d_weights_size; i++) {
-        if (ctx->SbpParallel4ArgNameAndIndex("d_weights", i).has_broadcast_parallel()) {
-          has_d_weight_broadcast = true;
-          break;
-        }
-      }
-      if (has_d_weight_broadcast) {
+      if (ctx->SbpParallel4ArgNameAndIndex("d_weights", 0).has_broadcast_parallel()) {
         for (int i = 0; i < d_weights_size; i++) {
           CHECK(ctx->SbpParallel4ArgNameAndIndex("d_weights", i).has_broadcast_parallel())
               << "All d_weight's SBP should be Broadcast. ";
@@ -383,26 +376,24 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUBLAS_FUSED_MLP_GRAD_KERNEL(dtype)                                               \
-  REGISTER_USER_KERNEL("cublas_fused_mlp_grad")                                                    \
-      .SetCreateFn<CublasFusedMLPGradKernel<dtype>>()                                              \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value))             \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
-        const int64_t weight_num = ctx->input_size("weights");                                     \
-        const Shape& dy_shape = ctx->InputShape("dy", 0);                                          \
-        int64_t m = dy_shape.At(0);                                                                \
-        int64_t k = dy_shape.At(1);                                                                \
-        int64_t tmp_buffer_size = 0;                                                               \
-        if (m > 1024 * 1024) {                                                                     \
-          tmp_buffer_size += GetCudaAlignedSize(m * sizeof(dtype)); /*For last layer's bias grad*/ \
-        }                                                                                          \
-        for (int idx = weight_num - 1; idx > 0; idx--) {                                           \
-          const Shape& weight_shape = ctx->InputShape("weights", idx);                             \
-          k = weight_shape.At(1);                                                                  \
-          tmp_buffer_size += GetCudaAlignedSize(m * k * sizeof(dtype));                            \
-        }                                                                                          \
-        return tmp_buffer_size;                                                                    \
+#define REGISTER_CUBLAS_FUSED_MLP_GRAD_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("cublas_fused_mlp_grad")                                                  \
+      .SetCreateFn<CublasFusedMLPGradKernel<dtype>>()                                            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                           \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value))           \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
+        const int64_t weight_num = ctx->input_size("weights");                                   \
+        const Shape& dy_shape = ctx->InputShape("dy", 0);                                        \
+        int64_t m = dy_shape.At(0);                                                              \
+        int64_t k = dy_shape.At(1);                                                              \
+        int64_t tmp_buffer_size = 0;                                                             \
+        tmp_buffer_size += GetCudaAlignedSize(m * sizeof(dtype)); /*For last layer's bias grad*/ \
+        for (int idx = weight_num - 1; idx > 0; idx--) {                                         \
+          const Shape& weight_shape = ctx->InputShape("weights", idx);                           \
+          k = weight_shape.At(1);                                                                \
+          tmp_buffer_size += GetCudaAlignedSize(m * k * sizeof(dtype));                          \
+        }                                                                                        \
+        return tmp_buffer_size;                                                                  \
       });
 
 REGISTER_CUBLAS_FUSED_MLP_GRAD_KERNEL(float)
