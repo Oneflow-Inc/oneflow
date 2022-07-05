@@ -46,7 +46,7 @@ class Matmul : public OpExprGradFunction<MatmulCaptureState> {
 
 Maybe<void> Matmul::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
 
   return Maybe<void>::Ok();
@@ -74,7 +74,7 @@ Maybe<void> Matmul::Capture(MatmulCaptureState* ctx, const TensorTuple& inputs,
 Maybe<void> Matmul::Apply(const MatmulCaptureState* ctx, const TensorTuple& out_grads,
                           TensorTuple* in_grads) const {
   if (!ctx->requires_grad_a && !ctx->requires_grad_b) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
 
   in_grads->resize(2);
   if (ctx->requires_grad_a) {
@@ -140,6 +140,7 @@ Maybe<void> BroadcastMatmul::Capture(BroadcastMatmulCaptureState* ctx, const Ten
   ctx->requires_grad_a = inputs.at(0)->requires_grad();
   ctx->requires_grad_b = inputs.at(1)->requires_grad();
   if (!ctx->requires_grad_a && !ctx->requires_grad_b) { return Maybe<void>::Ok(); }
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
 
   const auto a_shape = inputs.at(0)->shape();
   const auto b_shape = inputs.at(1)->shape();

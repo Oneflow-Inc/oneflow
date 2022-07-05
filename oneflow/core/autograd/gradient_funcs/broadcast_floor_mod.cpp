@@ -29,14 +29,14 @@ class BroadcastFMod : public OpExprGradFunction<BroadcastFModCaptureState> {
 
   Maybe<void> Capture(BroadcastFModCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(0)->requires_grad();
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const BroadcastFModCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(2);
     if (ctx->requires_grad) { in_grads->at(0) = out_grads.at(0); }
     return Maybe<void>::Ok();
