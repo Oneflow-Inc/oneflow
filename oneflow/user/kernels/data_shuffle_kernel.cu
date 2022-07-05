@@ -459,7 +459,8 @@ class IdShuffleKernel final : public user_op::OpKernel {
     std::vector<uint32_t> num_unique_matrix_vec(parallel_num * parallel_num);
     std::memcpy(num_unique_matrix_vec.data(), host_num_unique_matrix,
                 parallel_num * parallel_num * sizeof(IDX));
-    CHECK_EQ(sizeof(IDX), sizeof(uint32_t));
+    CHECK_EQ(sizeof(IDX), sizeof(uint32_t)) << "assume sizeof(IDX) equals to sizeof(uint32_t)";
+    ;
     embedding_state->SetIdNumUniqueMatrix(num_unique_matrix_vec, current_iter_);
     // reuse HostNumUniqueMatrix ptr
     IDX* host_num_unique = host_num_unique_matrix;
@@ -964,7 +965,8 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     const std::vector<uint32_t>& num_unique_matrix_vec =
         embedding_state->GetIdNumUniqueMatrix(current_iter_);
-    CHECK_EQ(sizeof(IDX), sizeof(uint32_t));
+    CHECK_EQ(sizeof(IDX), sizeof(uint32_t)) << "assume sizeof(IDX) equals to sizeof(uint32_t)";
+    ;
     std::memcpy(host_num_unique_matrix, num_unique_matrix_vec.data(),
                 parallel_num * parallel_num * sizeof(IDX));
     uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
@@ -1390,7 +1392,8 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     const std::vector<uint32_t>& num_unique_matrix_vec =
         embedding_state->GetIdNumUniqueMatrix(current_iter_);
-    CHECK_EQ(sizeof(IDX), sizeof(uint32_t));
+    CHECK_EQ(sizeof(IDX), sizeof(uint32_t)) << "assume sizeof(IDX) equals to sizeof(uint32_t)";
+    ;
     std::memcpy(host_num_unique_matrix, num_unique_matrix_vec.data(),
                 parallel_num * parallel_num * sizeof(IDX));
     uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
