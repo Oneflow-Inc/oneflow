@@ -31,6 +31,7 @@ struct IsCommNetStream final : public StreamRoleVisitor<IsCommNetStream> {
   static bool VisitCriticalSection() { return false; }
   static bool VisitLazyJobLauncher() { return false; }
   static bool VisitPinnedCompute() { return VisitCompute(); }
+  static bool VisitTmpCompute() { return VisitCompute(); }
 };
 
 }  // namespace oneflow

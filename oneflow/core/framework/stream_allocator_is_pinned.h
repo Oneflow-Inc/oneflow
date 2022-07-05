@@ -31,6 +31,7 @@ struct IsStreamAllocatorPinned : public StreamRoleVisitor<IsStreamAllocatorPinne
   static bool VisitCriticalSection() { return false; }
   static bool VisitLazyJobLauncher() { return false; }
   static bool VisitPinnedCompute() { return true; }
+  static bool VisitTmpCompute() { return false; }
 };
 
 }  // namespace oneflow

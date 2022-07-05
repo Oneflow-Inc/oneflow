@@ -427,11 +427,16 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
 }
 
 Maybe<void> InstructionsBuilder::TouchTensors(
-    const one::EagerBlobObjectListPtr& eager_blob_object) {
-  const auto& phy_instr_operand =
-      std::make_shared<vm::TouchTensorsPhyInstrOperand>(*eager_blob_object);
+    const one::EagerBlobObjectListPtr& eager_blob_objects) {
   Symbol<Device> device = JUST(Device::New("cpu"));
   Symbol<Stream> stream = JUST(GetDefaultStreamByDevice(device));
+  return TouchTensors(eager_blob_objects, stream);
+}
+
+Maybe<void> InstructionsBuilder::TouchTensors(const one::EagerBlobObjectListPtr& eager_blob_objects,
+                                              Symbol<Stream> stream) {
+  const auto& phy_instr_operand =
+      std::make_shared<vm::TouchTensorsPhyInstrOperand>(*eager_blob_objects);
   auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream)),
       SingletonPtr<vm::TouchTensorsInstructionType>(), phy_instr_operand);

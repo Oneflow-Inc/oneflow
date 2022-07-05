@@ -90,6 +90,9 @@ struct GetRecordEventInstructionType : public StreamRoleVisitor<GetRecordEventIn
   static Maybe<const vm::InstructionType*> VisitPinnedCompute(DeviceType device_type) {
     return VisitCompute(device_type);
   }
+  static Maybe<const vm::InstructionType*> VisitTmpCompute(DeviceType device_type) {
+    return VisitCompute(device_type);
+  }
 };
 
 }  // namespace oneflow

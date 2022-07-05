@@ -31,6 +31,7 @@ struct StreamOnIndependentThread : public StreamRoleVisitor<StreamOnIndependentT
   static bool VisitCriticalSection() { return true; }
   static bool VisitLazyJobLauncher() { return true; }
   static bool VisitPinnedCompute() { return VisitCompute(); }
+  static bool VisitTmpCompute() { return VisitCompute(); }
 };
 
 }  // namespace oneflow

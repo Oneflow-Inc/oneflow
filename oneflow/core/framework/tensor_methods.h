@@ -20,6 +20,9 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 
 namespace oneflow {
+
+class Stream;
+
 namespace one {
 
 class Tensor;
@@ -67,7 +70,11 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offse
                        const int32_t dim1, const int32_t dim2);
 
 }  // namespace view
+
+Maybe<void> Touch(std::shared_ptr<Tensor> input, Symbol<Stream> stream);
+
 }  // namespace one
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_METHOD_H_
