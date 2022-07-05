@@ -3,21 +3,32 @@
 #include <functional>
 #include <memory>
 #include "llvm/ADT/StringRef.h"
+#include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Dialect/Func/Transforms/Passes.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/TypeRange.h"
 #include "mlir/IR/Value.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/ExecutionEngine/MemRefUtils.h"
@@ -35,14 +46,11 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include <numeric>
 
+#include "mlir/Transforms/Passes.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowAstJIT.h"
 #include "py_ast.h"
 
 using llvm::ArrayRef;
-using llvm::cast;
-using llvm::dyn_cast;
-using llvm::isa;
-using llvm::makeArrayRef;
 using llvm::ScopedHashTableScope;
 using llvm::SmallVector;
 using llvm::StringRef;
@@ -70,8 +78,15 @@ class MLIRGenImpl {
   map<string, Value> symbolTable;
 
   LogicalResult declare(const string& var, Value value) {
-    if (symbolTable.count(var)) return failure();
-    symbolTable[var] = value;
+    if (symbolTable.count(var)) {
+      auto key = symbolTable[var];
+      builder.create<memref::StoreOp>(loc(), value, key);
+      return failure();
+    }
+    auto type = MemRefType::get({}, Float32Type::getF32(builder.getContext()));
+    auto key = builder.create<memref::AllocOp>(loc(), type);
+    builder.create<memref::StoreOp>(loc(), value, key);
+    symbolTable[var] = key;
     return success();
   }
 
@@ -81,7 +96,9 @@ class MLIRGenImpl {
     return nullptr;
   }
 
-  Location loc() { return FileLineColLoc::get(builder.getStringAttr("unknown"), 0, 0); }
+  Location loc(const string& file_name = "unknown") {
+    return FileLineColLoc::get(builder.getStringAttr(file_name), 0, 0);
+  }
 
  public:
   explicit MLIRGenImpl(MLIRContext& context) : builder(&context) {}
@@ -89,10 +106,12 @@ class MLIRGenImpl {
   void dump() { theModule->dump(); }
 
   void mlirGen(stmt_& stmt) {
+    // cout << stmt.get_kind() << endl;
+    // dump();
     llvm::TypeSwitch<stmt_*>(&stmt)
         .Case<Return_>([&](auto* node) { mlirGen(*dynamic_cast<Return_*>(node)); })
         .Case<Assign_>([&](auto* node) { mlirGen(*dynamic_cast<Assign_*>(node)); })
-        // .Case<If_>([&](auto* node) { mlirGen(cast<If_*>(node)); })
+        .Case<If_>([&](auto* node) { mlirGen(*dynamic_cast<If_*>(node)); })
         // .Case<Raise_>([&](auto* node) { mlirGen(cast<Raise_*>(node)); })
         // .Case<Assert_>([&](auto* node) { mlirGen(cast<Assert_*>(node)); })
         // .Case<Expr_>([&](auto* node) { mlirGen(cast<Expr_*>(node)); })
@@ -100,17 +119,63 @@ class MLIRGenImpl {
   }
 
   Value mlirGen(expr_& stmt) {
+    // cout << stmt.get_kind() << endl;
+    // dump();
     Value res;
     llvm::TypeSwitch<expr_*>(&stmt)
         .Case<BinOp_>([&](auto* node) { res = mlirGen(*dynamic_cast<BinOp_*>(node)); })
         //     .Case<Lambda_>([&](auto* node) { mlirGen(cast<Lambda_*>(node)); })
-        //     .Case<Compare_>([&](auto* node) { mlirGen(cast<Compare_*>(node)); })
+        .Case<Compare_>([&](auto* node) { res = mlirGen(*dynamic_cast<Compare_*>(node)); })
         .Case<Call_>([&](auto* node) { res = mlirGen(*dynamic_cast<Call_*>(node)); })
         //     .Case<Num_>([&](auto* node) { mlirGen(cast<Num_*>(node)); })
         .Case<Constant_>([&](auto* node) { res = mlirGen(*dynamic_cast<Constant_*>(node)); })
         //     .Case<Attribute_>([&](auto* node) { mlirGen(cast<Attribute_*>(node)); })
         .Case<Name_>([&](auto* node) { res = mlirGen(*dynamic_cast<Name_*>(node)); })
         .Default([&](auto* node) { theModule->emitError("ExprKind not support yet"); });
+    return res;
+  }
+
+  void mlirGen(If_& stmt) {
+    auto test = mlirGen(*stmt.get_test());
+    Block* then_block = builder.createBlock(builder.getBlock()->getParent());
+    Block* else_block = builder.createBlock(builder.getBlock()->getParent());
+    Block* after_block = builder.createBlock(builder.getBlock()->getParent());
+    builder.setInsertionPointAfterValue(test);
+    auto if_ = builder.create<cf::CondBranchOp>(loc(), test, then_block, llvm::None, else_block,
+                                                llvm::None);
+
+    builder.setInsertionPointToStart(then_block);
+    for (const auto& stmt : stmt.get_body()) { mlirGen(*stmt.get()); }
+    if (then_block->empty() || !dyn_cast<func::ReturnOp>(then_block->back())) {
+      builder.create<cf::BranchOp>(loc(), after_block);
+    }
+
+    builder.setInsertionPointToStart(else_block);
+    for (const auto& stmt : stmt.get_orelse()) { mlirGen(*stmt.get()); }
+    if (else_block->empty() || !dyn_cast<func::ReturnOp>(else_block->back())) {
+      builder.create<cf::BranchOp>(loc(), after_block);
+    }
+
+    builder.setInsertionPointToStart(after_block);
+  }
+
+  Value mlirGen(Compare_& stmt) {
+    if (stmt.get_comparators().size() != 1 || stmt.get_ops().size() != 1) {
+      theModule->emitError("compare only support once compare now");
+    }
+    arith::CmpFPredicate op = arith::CmpFPredicate::OEQ;
+    switch (stmt.get_ops()[0]) {
+      case Compare_::kEq: op = arith::CmpFPredicate::OEQ; break;
+      case Compare_::kNotEq: op = arith::CmpFPredicate::ONE; break;
+      case Compare_::kLt: op = arith::CmpFPredicate::OLT; break;
+      case Compare_::kLtE: op = arith::CmpFPredicate::OLE; break;
+      case Compare_::kGt: op = arith::CmpFPredicate::OGT; break;
+      case Compare_::kGtE: op = arith::CmpFPredicate::OGE; break;
+      default: theModule->emitError("compare_ not support op now");
+    }
+    auto lhs = mlirGen(*stmt.get_left());
+    auto rhs = mlirGen(*stmt.get_comparators()[0]);
+    auto res = builder.create<arith::CmpFOp>(loc(), op, lhs, rhs);
     return res;
   }
 
@@ -157,7 +222,12 @@ class MLIRGenImpl {
     return constant;
   }
 
-  Value mlirGen(Name_& expr) { return lookup(expr.get_id()); }
+  Value mlirGen(Name_& expr) {
+    auto key = lookup(expr.get_id());
+    builder.setInsertionPointToEnd(builder.getInsertionBlock());
+    auto value = builder.create<memref::LoadOp>(loc(), key);
+    return value;
+  }
 
   void mlirGen(Assign_& stmt) {
     auto value = mlirGen(*stmt.get_value().get());
@@ -203,6 +273,7 @@ class MLIRGenImpl {
     builder.setInsertionPointToStart(entry_block);
     for (const auto& stmt : func.get_body()) { mlirGen(*stmt.get()); }
 
+    function->setAttr("llvm.emit_c_interface", UnitAttr::get(builder.getContext()));
     return theModule;
   }
 };
@@ -217,23 +288,36 @@ static OwningOpRef<ModuleOp> genModuleForTest(MLIRContext& context) {
                       arg("step"),
                   }),
                   {
-                      Assign(
-                          {
-                              Name("step_stage"),
-                          },
-                          Call(pyast::Attribute(Name("math"), "floor"),
-                               {BinOp(Name("step"), BinOp_::operator_t::kDiv, Constant(5))})),
-                      Assign(
-                          {
-                              Name("factor"),
-                          },
-                          BinOp(Constant(0.1), BinOp_::operator_t::kPow, Name("step_stage"))),
-                      Return(BinOp(Name("base_lr"), BinOp_::operator_t::kMult, Name("factor"))),
+                      If(Compare(Name("step"), {Compare_::kLt}, {Constant(5)}),
+                         {
+                             Assign({Name("base_lr")},
+                                    (BinOp(Name("base_lr"), BinOp_::kMult, Constant(1.0 / 3)))),
+                         },
+                         {}),
+                      Return(Name("base_lr")),
                   });
+  // FunctionDef("get_lr",
+  //             arguments({
+  //                 arg("base_lr"),
+  //                 arg("step"),
+  //             }),
+  //             {
+  //                 Assign(
+  //                     {
+  //                         Name("step_stage"),
+  //                     },
+  //                     Call(pyast::Attribute(Name("math"), "floor"),
+  //                          {BinOp(Name("step"), BinOp_::operator_t::kDiv, Constant(5))})),
+  //                 Assign(
+  //                     {
+  //                         Name("factor"),
+  //                     },
+  //                     BinOp(Constant(0.1), BinOp_::operator_t::kPow, Name("step_stage"))),
+  //                 Return(BinOp(Name("base_lr"), BinOp_::operator_t::kMult, Name("factor"))),
+  //             });
 
   MLIRGenImpl mlir_gen(context);
   OwningOpRef<ModuleOp> module = mlir_gen.mlirGen(*dynamic_cast<FunctionDef_*>(func.get()));
-  mlir_gen.dump();
   return module;
 }
 
@@ -246,10 +330,15 @@ static struct LLVMInitializer {
 
 static LogicalResult lowerToLLVMDialect(ModuleOp module) {
   PassManager pm(module.getContext());
+
+  pm.addPass(createCSEPass());
+  pm.addPass(createCanonicalizerPass());
   pm.addPass(createMemRefToLLVMPass());
-  pm.addNestedPass<func::FuncOp>(createConvertMathToLLVMPass());
-  pm.addNestedPass<func::FuncOp>(arith::createConvertArithmeticToLLVMPass());
   pm.addPass(createConvertFuncToLLVMPass());
+  pm.addPass(createConvertSCFToCFPass());
+  pm.addPass(cf::createConvertControlFlowToLLVMPass());
+  pm.addPass(createConvertMathToLLVMPass());
+  pm.addPass(arith::createConvertArithmeticToLLVMPass());
   pm.addPass(createReconcileUnrealizedCastsPass());
   return pm.run(module);
 }
@@ -268,9 +357,13 @@ JIT_Engine::JIT_Engine(PyASTNodeWrapper& ast) {
   registerAllDialects(registry);
   registerLLVMDialectTranslation(registry);
   MLIRContext context(registry);
+  context.loadDialect<memref::MemRefDialect>();
   context.loadDialect<func::FuncDialect>();
   context.loadDialect<arith::ArithmeticDialect>();
   context.loadDialect<math::MathDialect>();
+  context.loadDialect<scf::SCFDialect>();
+  context.loadDialect<cf::ControlFlowDialect>();
+  context.loadDialect<AffineDialect>();
 
   auto module = genModuleForTest(context);
   CHECK(!!module) << "failed to parse module";

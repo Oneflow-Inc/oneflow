@@ -282,6 +282,7 @@ class Compare_ : public expr_ {
       : expr_(kCompare), left(move(left_)), ops(ops_), comparators(comparators_) {}
 
   vector<cmpop_t> get_ops() { return ops; }
+  expr_ptr get_left() { return left; }
   vector<expr_ptr> get_comparators() { return comparators; }
   static bool classof(const expr_* c) { return c->get_kind() == kCompare; }
 

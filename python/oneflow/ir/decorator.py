@@ -32,6 +32,7 @@ def lr_jit_register(lr_class):
     transformer = SelfParamsTransformer(lr_class)
     transformer.visit(_ast)
     # feed transformed as to C++
+    print(ast.dump(_ast))
     res = oneflow._oneflow_internal.ir.compile_and_register_lr_jit(_ast, _id)
 
 
@@ -55,9 +56,9 @@ if __name__ == "__main__":
     optimizer = SGD([param], lr=0.001)
 
     lr_class_list = [
-        WarmupLR(optimizer),
+        # WarmupLR(optimizer),
         # StepLR(optimizer, 5),
-        # SequentialLR(optimizer),
+        # # SequentialLR(optimizer),
         # PolynomialLR(optimizer, 5),
         # MultiStepLR(optimizer, [10]),
         # LinearLR(optimizer),
@@ -65,7 +66,7 @@ if __name__ == "__main__":
         # ExponentialLR(optimizer, 1.1),
         # CosineDecayLR(optimizer, 10),
         # CosineAnnealingLR(optimizer, 50),
-        # ConstantLR(optimizer)
+        ConstantLR(optimizer)
     ]
     for lr_class in lr_class_list:
         lr_jit_register(lr_class)
