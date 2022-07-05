@@ -19,9 +19,9 @@ class LR_JIT final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LR_JIT);
   ~LR_JIT() = default;
-  void Register(const std::string& function_id, const pyast::FunctionDef& ast);
+  void Register(const std::string& function_id, pyast::FunctionDef& ast);
   std::shared_ptr<JIT_Engine> LookUp(const std::string& function_id);
-  double Invoke(std::shared_ptr<JIT_Engine> engine, double base_lr, int64_t step);
+  double Invoke(std::shared_ptr<JIT_Engine> engine, double base_lr, double step);
 
  private:
   friend class oneflow::Singleton<LR_JIT>;

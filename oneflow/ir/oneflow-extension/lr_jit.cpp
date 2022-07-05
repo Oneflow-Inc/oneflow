@@ -61,8 +61,8 @@ class JIT_Engine final {
   std::unique_ptr<mlir::ExecutionEngine> _engine;
 
  public:
-  explicit JIT_Engine(const pyast::FunctionDef& ast);
-  double Invoke(double base_lr, int64_t step);
+  explicit JIT_Engine(pyast::FunctionDef& ast);
+  double Invoke(double base_lr, double step);
 };
 
 static mlir::OwningOpRef<mlir::ModuleOp> genModuleForTest(mlir::MLIRContext& context) {
@@ -85,8 +85,7 @@ static mlir::OwningOpRef<mlir::ModuleOp> genModuleForTest(mlir::MLIRContext& con
       });
 
   MLIRGenImpl mlir_gen(context);
-  mlir::OwningOpRef<mlir::ModuleOp> module =
-      mlir_gen.mlirGen(func.get());
+  mlir::OwningOpRef<mlir::ModuleOp> module = mlir_gen.mlirGen(func.get());
   module->dump();
   return module;
 }
@@ -124,7 +123,16 @@ static mlir::OwningOpRef<mlir::ModuleOp> genModuleForBuild(mlir::MLIRContext& co
   return module;
 }
 
-JIT_Engine::JIT_Engine(const pyast::FunctionDef& ast) {
+static mlir::OwningOpRef<mlir::ModuleOp> genModule(mlir::MLIRContext& context,
+                                                   pyast::FunctionDef& ast) {
+  using namespace pyast;
+
+  MLIRGenImpl mlir_gen(context);
+  mlir::OwningOpRef<mlir::ModuleOp> module = mlir_gen.mlirGen(&ast);
+  module->dump();
+  return module;
+}
+JIT_Engine::JIT_Engine(pyast::FunctionDef& ast) {
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
   mlir::registerLLVMDialectTranslation(registry);
@@ -137,7 +145,7 @@ JIT_Engine::JIT_Engine(const pyast::FunctionDef& ast) {
   context.loadDialect<mlir::cf::ControlFlowDialect>();
   context.loadDialect<mlir::AffineDialect>();
 
-  auto module = genModuleForTest(context);
+  auto module = genModule(context, ast);
   CHECK(!!module) << "failed to parse module";
   CHECK(succeeded(lowerToLLVMDialect(*module))) << "failed to lower to llvm dialect";
   auto jit_or_err = mlir::ExecutionEngine::create(*module);
@@ -147,16 +155,16 @@ JIT_Engine::JIT_Engine(const pyast::FunctionDef& ast) {
   _engine = cantFail(move(jit_or_err));
 }
 
-double JIT_Engine::Invoke(double base_lr, int64_t step) {
+double JIT_Engine::Invoke(double base_lr, double step) {
   float res = 0;
   auto&& out = mlir::ExecutionEngine::result(res);
   auto base_lr_jit = static_cast<float>(base_lr);
-  auto step_jit = static_cast<int>(step);
+  auto step_jit = static_cast<float>(step);
   auto err = _engine->invoke("get_lr", base_lr_jit, step_jit, out);
   return res;
 }
 
-void LR_JIT::Register(const std::string& function_id, const pyast::FunctionDef& ast) {
+void LR_JIT::Register(const std::string& function_id, pyast::FunctionDef& ast) {
   auto jit = std::make_shared<JIT_Engine>(ast);
   function_id2engine_[function_id] = jit;
 }
@@ -166,7 +174,7 @@ std::shared_ptr<JIT_Engine> LR_JIT::LookUp(const std::string& function_id) {
   return nullptr;
 };
 
-double LR_JIT::Invoke(std::shared_ptr<JIT_Engine> engine, double base_lr, int64_t step) {
+double LR_JIT::Invoke(std::shared_ptr<JIT_Engine> engine, double base_lr, double step) {
   if (engine == nullptr) llvm::errs() << "engine is null";
   return engine->Invoke(base_lr, step);
 };

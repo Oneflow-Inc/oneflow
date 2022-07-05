@@ -202,7 +202,7 @@ class Expr : public stmt {
 class BoolOp : public expr {
  public:
   enum boolop_t {
-    kAnd,
+    kAnd = 1,
     kOr,
   };
   BoolOp(boolop_t op, vector<shared_ptr<expr>> values)
@@ -225,7 +225,7 @@ class BoolOp : public expr {
 class BinOp : public expr {
  public:
   enum operator_t {
-    kAdd,
+    kAdd = 1,
     kSub,
     kMult,
     kDiv,
@@ -235,9 +235,15 @@ class BinOp : public expr {
   BinOp(shared_ptr<expr> left, operator_t op, shared_ptr<expr> right)
       : expr(kBinOp), left(move(left)), right(move(right)), op(move(op)) {}
 
-  static shared_ptr<BinOp> BinOp_(shared_ptr<expr> left, operator_t op, shared_ptr<expr> right) {
+  BinOp(shared_ptr<expr> left, int op, shared_ptr<expr> right)
+      : expr(kBinOp), left(move(left)), right(move(right)), op(int2op(op)) {}
+
+  static shared_ptr<BinOp> BinOp_(shared_ptr<expr> left, int op, shared_ptr<expr> right) {
     return make_shared<BinOp>(left, op, right);
   }
+
+  static operator_t int2op(int op) { return operator_t(op); }
+
   operator_t get_op() { return op; }
   shared_ptr<expr> get_left() { return left; }
   shared_ptr<expr> get_right() { return right; }
@@ -271,19 +277,29 @@ class Lambda : public expr {
 class Compare : public expr {
  public:
   enum cmpop_t {
-    kEq,
+    kEq = 1,
     kNotEq,
     kLt,
     kLtE,
     kGt,
     kGtE,
   };
+
   Compare(shared_ptr<expr> left, vector<cmpop_t> ops, vector<shared_ptr<expr>> comparators)
       : expr(kCompare), left(move(left)), ops(move(ops)), comparators(move(comparators)) {}
 
-  static shared_ptr<Compare> Compare_(shared_ptr<expr> left, vector<cmpop_t> ops,
+  Compare(shared_ptr<expr> left, const vector<int>& ops, vector<shared_ptr<expr>> comparators)
+      : expr(kCompare), left(move(left)), ops(int2op(ops)), comparators(move(comparators)) {}
+
+  static shared_ptr<Compare> Compare_(shared_ptr<expr> left, vector<int> ops,
                                       vector<shared_ptr<expr>> comparators) {
     return make_shared<Compare>(left, ops, comparators);
+  }
+
+  static vector<cmpop_t> int2op(const vector<int>& op) {
+    vector<cmpop_t> res;
+    for (auto i : op) res.emplace_back(cmpop_t(i));
+    return res;
   }
 
   vector<cmpop_t> get_ops() { return ops; }

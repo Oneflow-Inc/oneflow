@@ -145,8 +145,8 @@ class MLIRGenImpl : public BuilderWithSymbolTable {
 };
 
 void MLIRGenImpl::mlirGen(pyast::stmt* stmt) {
-  std::cout << "stmt" << stmt->get_kind() << std::endl;
-  dump();
+  // std::cout << "stmt" << stmt->get_kind() << std::endl;
+  // dump();
   llvm::TypeSwitch<pyast::stmt*>(stmt)
       .Case<pyast::Return>([&](auto* node) { mlirGen(dynamic_cast<pyast::Return*>(node)); })
       .Case<pyast::Assign>([&](auto* node) { mlirGen(dynamic_cast<pyast::Assign*>(node)); })
@@ -158,8 +158,8 @@ void MLIRGenImpl::mlirGen(pyast::stmt* stmt) {
 }
 
 mlir::Value MLIRGenImpl::mlirGen(pyast::expr* expr) {
-  std::cout << "expr" << expr->get_kind() << std::endl;
-  dump();
+  // std::cout << "expr" << expr->get_kind() << std::endl;
+  // dump();
   mlir::Value res;
   llvm::TypeSwitch<pyast::expr*>(expr)
       .Case<pyast::BinOp>([&](auto* node) { res = mlirGen(dynamic_cast<pyast::BinOp*>(node)); })
