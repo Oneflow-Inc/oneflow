@@ -46,6 +46,7 @@ Maybe<one::Tensor> ReinterpterConsistentTensor(const std::shared_ptr<one::Tensor
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<Shape>("shape", shape));
   JUST(attrs.SetAttr<DataType>("dtype", tensor->dtype()->data_type()));
+  JUST(attrs.SetAttr<bool>("sync_data", false));
   const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
   std::shared_ptr<Shape> pyhsical_shape =
       JUST(GetPhysicalShape(shape, *nd_sbp, *parallel_desc, JUST(*parallel_id)));

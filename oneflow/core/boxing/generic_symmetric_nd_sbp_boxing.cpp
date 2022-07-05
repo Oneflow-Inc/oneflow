@@ -177,7 +177,7 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
 
       output = JUST(one::functional::LocalToConsistent(
           local_tensor, in_parallel_desc, *JUST(GetSbpList(new_nd_sbp)), *logical_shape,
-          local_tensor->dtype(), /* sync_data */ true));
+          local_tensor->dtype(), /* sync_data */ false));
     }
 
     CHECK_OR_RETURN(IsAllBroadcastNdSbpAfterDim(JUST(output->nd_sbp()), first_diff_sbp_dim))
