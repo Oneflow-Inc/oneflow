@@ -27,12 +27,13 @@ namespace vm {
 template<typename RawAllocator, typename ThreadGuard>
 class BinAllocator final : public CachingAllocator {
  public:
-  explicit BinAllocator(size_t alignment, std::unique_ptr<RawAllocator>&& backend, std::unique_ptr<ThreadGuard>&& guard);
+  explicit BinAllocator(size_t alignment, std::unique_ptr<RawAllocator>&& backend,
+                        std::unique_ptr<ThreadGuard>&& guard);
   ~BinAllocator();
 
   Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
-  void DeviceReset() override { 
+  void DeviceReset() override {
     auto thread_gurad = guard_->GetGuard();
     backend_->DeviceReset();
   }
@@ -145,8 +146,10 @@ static const size_t kPieceSplitThreshold = 128 << 20;  // 128MiB
 
 }  // namespace
 
-template <typename RawAllocator, typename ThreadGuard>
-BinAllocator<RawAllocator, ThreadGuard>::BinAllocator(size_t alignment, std::unique_ptr<RawAllocator>&& backend, std::unique_ptr<ThreadGuard>&& guard)
+template<typename RawAllocator, typename ThreadGuard>
+BinAllocator<RawAllocator, ThreadGuard>::BinAllocator(size_t alignment,
+                                                      std::unique_ptr<RawAllocator>&& backend,
+                                                      std::unique_ptr<ThreadGuard>&& guard)
     : CachingAllocator(),
       alignment_(alignment),
       backend_(std::move(backend)),
@@ -166,7 +169,7 @@ BinAllocator<RawAllocator, ThreadGuard>::BinAllocator(size_t alignment, std::uni
   }
 }
 
-template <typename RawAllocator, typename ThreadGuard>
+template<typename RawAllocator, typename ThreadGuard>
 BinAllocator<RawAllocator, ThreadGuard>::~BinAllocator() {
   if (total_memory_bytes_ == 0) {
     CHECK_EQ(mem_ptr2block_.size(), 0);
@@ -175,7 +178,7 @@ BinAllocator<RawAllocator, ThreadGuard>::~BinAllocator() {
   for (auto& pair : mem_ptr2block_) { backend_->Deallocate(pair.first, pair.second.size); }
 }
 
-template <typename RawAllocator, typename ThreadGuard>
+template<typename RawAllocator, typename ThreadGuard>
 void BinAllocator<RawAllocator, ThreadGuard>::InsertPiece2Bin(Piece* piece) {
   CHECK(piece->is_free && piece->bin_num == kInvalidBinNum);
   int32_t bin_num = BinNum4BinSize(piece->size);
@@ -183,7 +186,7 @@ void BinAllocator<RawAllocator, ThreadGuard>::InsertPiece2Bin(Piece* piece) {
   CHECK(bins_.at(bin_num).pieces.insert(piece).second);
 }
 
-template <typename RawAllocator, typename ThreadGuard>
+template<typename RawAllocator, typename ThreadGuard>
 void BinAllocator<RawAllocator, ThreadGuard>::RemovePieceFromBin(Piece* piece) {
   CHECK(piece->is_free);
   CHECK_NE(piece->bin_num, kInvalidBinNum);
@@ -191,7 +194,7 @@ void BinAllocator<RawAllocator, ThreadGuard>::RemovePieceFromBin(Piece* piece) {
   piece->bin_num = kInvalidBinNum;
 }
 
-template <typename RawAllocator, typename ThreadGuard>
+template<typename RawAllocator, typename ThreadGuard>
 typename BinAllocator<RawAllocator, ThreadGuard>::Piece*
 BinAllocator<RawAllocator, ThreadGuard>::AllocatePiece() {
   if (recycle_piece_list_) {
@@ -204,7 +207,7 @@ BinAllocator<RawAllocator, ThreadGuard>::AllocatePiece() {
   }
 }
 
-template <typename RawAllocator, typename ThreadGuard>
+template<typename RawAllocator, typename ThreadGuard>
 void BinAllocator<RawAllocator, ThreadGuard>::DeallocatePiece(Piece* piece) {
   piece->ptr = nullptr;
   piece->size = 0;
@@ -215,12 +218,12 @@ void BinAllocator<RawAllocator, ThreadGuard>::DeallocatePiece(Piece* piece) {
   recycle_piece_list_ = piece;
 }
 
-template <typename RawAllocator, typename ThreadGuard>
+template<typename RawAllocator, typename ThreadGuard>
 void BinAllocator<RawAllocator, ThreadGuard>::MarkPiece(Piece* piece) {
   CHECK_NOTNULL(piece->ptr);
   CHECK(ptr2piece_.emplace(piece->ptr, piece).second);
 }
-template <typename RawAllocator, typename ThreadGuard>
+template<typename RawAllocator, typename ThreadGuard>
 void BinAllocator<RawAllocator, ThreadGuard>::UnMarkPiece(Piece* piece) {
   CHECK_NOTNULL(piece->ptr);
   auto it = ptr2piece_.find(piece->ptr);
@@ -228,8 +231,9 @@ void BinAllocator<RawAllocator, ThreadGuard>::UnMarkPiece(Piece* piece) {
   ptr2piece_.erase(it);
 }
 
-template <typename RawAllocator, typename ThreadGuard>
-typename BinAllocator<RawAllocator, ThreadGuard>::Piece* BinAllocator<RawAllocator, ThreadGuard>::FindPiece(size_t aligned_size) {
+template<typename RawAllocator, typename ThreadGuard>
+typename BinAllocator<RawAllocator, ThreadGuard>::Piece*
+BinAllocator<RawAllocator, ThreadGuard>::FindPiece(size_t aligned_size) {
   CHECK(IsAlignedSize(aligned_size, alignment_));
   for (int32_t bin_num = BinNum4BinSize(aligned_size); bin_num < kBinNumSize; ++bin_num) {
     Bin* bin = &bins_.at(bin_num);
@@ -269,7 +273,7 @@ typename BinAllocator<RawAllocator, ThreadGuard>::Piece* BinAllocator<RawAllocat
   return nullptr;
 }
 
-template <typename RawAllocator, typename ThreadGuard>
+template<typename RawAllocator, typename ThreadGuard>
 void BinAllocator<RawAllocator, ThreadGuard>::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
   CHECK(lhs->is_free);
   CHECK(rhs->is_free);
@@ -284,8 +288,9 @@ void BinAllocator<RawAllocator, ThreadGuard>::MergeNeighbourFreePiece(Piece* lhs
   DeallocatePiece(rhs);
 }
 
-template <typename RawAllocator, typename ThreadGuard>
-Maybe<bool> BinAllocator<RawAllocator, ThreadGuard>::AllocateBlockToExtendTotalMem(size_t aligned_size) {
+template<typename RawAllocator, typename ThreadGuard>
+Maybe<bool> BinAllocator<RawAllocator, ThreadGuard>::AllocateBlockToExtendTotalMem(
+    size_t aligned_size) {
   CHECK_OR_RETURN(IsAlignedSize(aligned_size, alignment_)) << "not aligned";
 
   size_t allocate_bytes = aligned_size;
@@ -325,7 +330,7 @@ Maybe<bool> BinAllocator<RawAllocator, ThreadGuard>::AllocateBlockToExtendTotalM
   return true;
 }
 
-template <typename RawAllocator, typename ThreadGuard>
+template<typename RawAllocator, typename ThreadGuard>
 bool BinAllocator<RawAllocator, ThreadGuard>::DeallocateFreeBlockForGarbageCollection() {
   size_t total_free_bytes = 0;
   HashSet<char*> free_block_ptrs;
@@ -379,7 +384,7 @@ bool BinAllocator<RawAllocator, ThreadGuard>::DeallocateFreeBlockForGarbageColle
   return total_free_bytes > 0;
 }
 
-template <typename RawAllocator, typename ThreadGuard>
+template<typename RawAllocator, typename ThreadGuard>
 Maybe<void> BinAllocator<RawAllocator, ThreadGuard>::Allocate(char** mem_ptr, std::size_t size) {
   auto thread_gurad = guard_->GetGuard();
   if (size == 0) {
@@ -410,7 +415,7 @@ Maybe<void> BinAllocator<RawAllocator, ThreadGuard>::Allocate(char** mem_ptr, st
   return Maybe<void>::Ok();
 }
 
-template <typename RawAllocator, typename ThreadGuard>
+template<typename RawAllocator, typename ThreadGuard>
 void BinAllocator<RawAllocator, ThreadGuard>::Deallocate(char* mem_ptr, std::size_t size) {
   if (mem_ptr == nullptr) { return; }
   auto thread_gurad = guard_->GetGuard();

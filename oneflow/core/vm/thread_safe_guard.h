@@ -34,7 +34,7 @@ class ThreadSafeGuard final {
   std::unique_lock<std::mutex> GetGuard() {
     std::unique_lock<std::mutex> lock(mutex4backend_allocator_);
     return lock;
-  } 
+  }
 
  private:
   std::mutex mutex4backend_allocator_;
@@ -50,7 +50,7 @@ class SingleThreadGuard final {
     std::unique_lock<std::mutex> lock(mutex4accessed_thread_id_);
     CHECK(accessed_thread_id_ == std::this_thread::get_id());
     return true;
-  } 
+  }
 
  private:
   void CheckUniqueThreadAccess();

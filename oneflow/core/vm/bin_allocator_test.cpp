@@ -73,8 +73,9 @@ TEST(CudaBinAllocator, cuda_allocator) {
         << "CudaBinAllocator Test: Skip because of allocator mem bytes less than 50MiB in GPU 0";
     return;
   }
-  std::unique_ptr<Allocator> allo(
-      new BinAllocator<CudaBackendAllocator, SingleThreadGuard>(kCudaMemAllocAlignSize, std::make_unique<CudaBackendAllocator>(0), std::make_unique<SingleThreadGuard>()));
+  std::unique_ptr<Allocator> allo(new BinAllocator<CudaBackendAllocator, SingleThreadGuard>(
+      kCudaMemAllocAlignSize, std::make_unique<CudaBackendAllocator>(0),
+      std::make_unique<SingleThreadGuard>()));
   Allocator* a = allo.get();
   std::vector<char*> ptrs;
   for (int i = 0; i < 512; ++i) {
