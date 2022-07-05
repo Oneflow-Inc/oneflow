@@ -23,6 +23,14 @@ class SelfParamsTransformer(ast.NodeTransformer):
         return node
 
 
+class ASTTransformer(ast.NodeTransformer):
+    def visit_arg(self, node: ast.arg):
+       return oneflow._oneflow_internal.ir.arg(node.arg)
+
+    def visit_arguments(self, node: ast.arguments):
+       list = [ self.visit_arg(i) for i in node.args]
+       return oneflow._oneflow_internal.ir.arguments(list)
+
 def lr_jit_register(lr_class):
     _id = lr_class.__class__.__name__
     # load source txt
@@ -31,9 +39,11 @@ def lr_jit_register(lr_class):
     # transform param self
     transformer = SelfParamsTransformer(lr_class)
     transformer.visit(_ast)
+    # transformer = ASTTransformer()
+    # transformer.visit(_ast)
     # feed transformed as to C++
     print(ast.dump(_ast))
-    res = oneflow._oneflow_internal.ir.compile_and_register_lr_jit(_ast, _id)
+    res = oneflow._oneflow_internal.ir.compile_and_register_lr_jit(_id)
 
 
 from oneflow.nn.optimizer.constant_lr import ConstantLR

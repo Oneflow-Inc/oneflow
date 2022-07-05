@@ -11,22 +11,7 @@
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/util.h"
-
-class PyASTNode;
-
-class PyASTNodeWrapper {
-  std::shared_ptr<PyASTNode> _node;
-
- public:
-  explicit PyASTNodeWrapper(std::shared_ptr<PyASTNode> node) : _node(std::move(node)){};
-  std::string GetName();
-  std::vector<std::string> GetFields();
-  PyASTNodeWrapper Visit(const std::string& name);
-  int AsInt();
-  std::string AsStr();
-  float AsFloat();
-  std::vector<PyASTNodeWrapper> AsList();
-};
+#include "oneflow/ir/oneflow-extension/include/OneFlow/py_ast.h"
 
 class JIT_Engine;
 
@@ -34,7 +19,7 @@ class LR_JIT final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LR_JIT);
   ~LR_JIT() = default;
-  void Register(const std::string& function_id, PyASTNodeWrapper& ast);
+  void Register(const std::string& function_id, const pyast::FunctionDef& ast);
   std::shared_ptr<JIT_Engine> LookUp(const std::string& function_id);
   double Invoke(std::shared_ptr<JIT_Engine> engine, double base_lr, int64_t step);
 

@@ -48,7 +48,8 @@
 
 #include "mlir/Transforms/Passes.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowAstJIT.h"
-#include "py_ast.h"
+
+#include "./code_gen.h"
 
 using llvm::ArrayRef;
 using llvm::ScopedHashTableScope;
@@ -56,268 +57,37 @@ using llvm::SmallVector;
 using llvm::StringRef;
 using llvm::Twine;
 
-using namespace pyast;
-using namespace std;
-using namespace mlir;
-
 class JIT_Engine final {
-  unique_ptr<ExecutionEngine> _engine;
+  std::unique_ptr<mlir::ExecutionEngine> _engine;
 
  public:
-  explicit JIT_Engine(unique_ptr<ExecutionEngine> _engine) : _engine(move(_engine)){};
-  explicit JIT_Engine(PyASTNodeWrapper& ast);
+  explicit JIT_Engine(const pyast::FunctionDef& ast);
   double Invoke(double base_lr, int64_t step);
 };
 
-namespace {
-using namespace pyast;
-
-class MLIRGenImpl {
-  OpBuilder builder;
-  ModuleOp theModule;
-  map<string, Value> symbolTable;
-
-  LogicalResult declare(const string& var, Value value) {
-    if (symbolTable.count(var)) {
-      auto key = symbolTable[var];
-      builder.create<memref::StoreOp>(loc(), value, key);
-      return failure();
-    }
-    auto type = MemRefType::get({}, Float32Type::getF32(builder.getContext()));
-    auto key = builder.create<memref::AllocOp>(loc(), type);
-    builder.create<memref::StoreOp>(loc(), value, key);
-    symbolTable[var] = key;
-    return success();
-  }
-
-  Value lookup(const string& var) {
-    if (symbolTable.count(var) == 1) { return symbolTable[var]; }
-    theModule->emitError("error: unknown variable '" + var + "'");
-    return nullptr;
-  }
-
-  Location loc(const string& file_name = "unknown") {
-    return FileLineColLoc::get(builder.getStringAttr(file_name), 0, 0);
-  }
-
- public:
-  explicit MLIRGenImpl(MLIRContext& context) : builder(&context) {}
-
-  void dump() { theModule->dump(); }
-
-  void mlirGen(stmt_& stmt) {
-    // cout << stmt.get_kind() << endl;
-    // dump();
-    llvm::TypeSwitch<stmt_*>(&stmt)
-        .Case<Return_>([&](auto* node) { mlirGen(*dynamic_cast<Return_*>(node)); })
-        .Case<Assign_>([&](auto* node) { mlirGen(*dynamic_cast<Assign_*>(node)); })
-        .Case<If_>([&](auto* node) { mlirGen(*dynamic_cast<If_*>(node)); })
-        // .Case<Raise_>([&](auto* node) { mlirGen(cast<Raise_*>(node)); })
-        // .Case<Assert_>([&](auto* node) { mlirGen(cast<Assert_*>(node)); })
-        // .Case<Expr_>([&](auto* node) { mlirGen(cast<Expr_*>(node)); })
-        .Default([&](auto* node) { theModule->emitError("StmtKind not support yet"); });
-  }
-
-  Value mlirGen(expr_& stmt) {
-    // cout << stmt.get_kind() << endl;
-    // dump();
-    Value res;
-    llvm::TypeSwitch<expr_*>(&stmt)
-        .Case<BinOp_>([&](auto* node) { res = mlirGen(*dynamic_cast<BinOp_*>(node)); })
-        //     .Case<Lambda_>([&](auto* node) { mlirGen(cast<Lambda_*>(node)); })
-        .Case<Compare_>([&](auto* node) { res = mlirGen(*dynamic_cast<Compare_*>(node)); })
-        .Case<Call_>([&](auto* node) { res = mlirGen(*dynamic_cast<Call_*>(node)); })
-        //     .Case<Num_>([&](auto* node) { mlirGen(cast<Num_*>(node)); })
-        .Case<Constant_>([&](auto* node) { res = mlirGen(*dynamic_cast<Constant_*>(node)); })
-        //     .Case<Attribute_>([&](auto* node) { mlirGen(cast<Attribute_*>(node)); })
-        .Case<Name_>([&](auto* node) { res = mlirGen(*dynamic_cast<Name_*>(node)); })
-        .Default([&](auto* node) { theModule->emitError("ExprKind not support yet"); });
-    return res;
-  }
-
-  void mlirGen(If_& stmt) {
-    auto test = mlirGen(*stmt.get_test());
-    Block* then_block = builder.createBlock(builder.getBlock()->getParent());
-    Block* else_block = builder.createBlock(builder.getBlock()->getParent());
-    Block* after_block = builder.createBlock(builder.getBlock()->getParent());
-    builder.setInsertionPointAfterValue(test);
-    auto if_ = builder.create<cf::CondBranchOp>(loc(), test, then_block, llvm::None, else_block,
-                                                llvm::None);
-
-    builder.setInsertionPointToStart(then_block);
-    for (const auto& stmt : stmt.get_body()) { mlirGen(*stmt.get()); }
-    if (then_block->empty() || !dyn_cast<func::ReturnOp>(then_block->back())) {
-      builder.create<cf::BranchOp>(loc(), after_block);
-    }
-
-    builder.setInsertionPointToStart(else_block);
-    for (const auto& stmt : stmt.get_orelse()) { mlirGen(*stmt.get()); }
-    if (else_block->empty() || !dyn_cast<func::ReturnOp>(else_block->back())) {
-      builder.create<cf::BranchOp>(loc(), after_block);
-    }
-
-    builder.setInsertionPointToStart(after_block);
-  }
-
-  Value mlirGen(Compare_& stmt) {
-    if (stmt.get_comparators().size() != 1 || stmt.get_ops().size() != 1) {
-      theModule->emitError("compare only support once compare now");
-    }
-    arith::CmpFPredicate op = arith::CmpFPredicate::OEQ;
-    switch (stmt.get_ops()[0]) {
-      case Compare_::kEq: op = arith::CmpFPredicate::OEQ; break;
-      case Compare_::kNotEq: op = arith::CmpFPredicate::ONE; break;
-      case Compare_::kLt: op = arith::CmpFPredicate::OLT; break;
-      case Compare_::kLtE: op = arith::CmpFPredicate::OLE; break;
-      case Compare_::kGt: op = arith::CmpFPredicate::OGT; break;
-      case Compare_::kGtE: op = arith::CmpFPredicate::OGE; break;
-      default: theModule->emitError("compare_ not support op now");
-    }
-    auto lhs = mlirGen(*stmt.get_left());
-    auto rhs = mlirGen(*stmt.get_comparators()[0]);
-    auto res = builder.create<arith::CmpFOp>(loc(), op, lhs, rhs);
-    return res;
-  }
-
-  Value mlirGen(BinOp_& expr) {
-    auto lhs = mlirGen(*expr.get_left().get());
-    auto rhs = mlirGen(*expr.get_right().get());
-    Value res;
-    switch (expr.get_op()) {
-      case BinOp_::kDiv: res = builder.create<arith::DivFOp>(loc(), lhs, rhs); break;
-      case BinOp_::kMult: res = builder.create<arith::MulFOp>(loc(), lhs, rhs); break;
-      case BinOp_::kPow: res = builder.create<math::PowFOp>(loc(), lhs, rhs); break;
-      default: break;
-    }
-    return res;
-  }
-
-  Value mlirGen(Call_& expr) {
-    if (expr.get_func()->get_kind() != expr_::kAttribute) {
-      theModule->emitError("only support call func is attribute node");
-    }
-    auto func = *dynamic_cast<Attribute_*>(expr.get_func().get());
-    if (func.get_value()->get_kind() != expr_::kName
-        || dynamic_cast<Name_*>(func.get_value().get())->get_id() != "math") {
-      theModule->emitError("only support call func is python math lib");
-    }
-    if (expr.get_args().size() != 1) {
-      theModule->emitError("only support call func with one param");
-    }
-    auto value = mlirGen(*expr.get_args()[0].get());
-    auto attr = func.get_attr();
-    Value res;
-    if (attr == "floor") {
-      res = builder.create<math::FloorOp>(loc(), value);
-      return res;
-    } else {
-      theModule->emitError(attr + " not support yet");
-    }
-    return res;
-  }
-
-  Value mlirGen(Constant_& expr) {
-    float value = expr.get_value();
-    auto constant = builder.create<arith::ConstantOp>(loc(), builder.getF32FloatAttr(value));
-    return constant;
-  }
-
-  Value mlirGen(Name_& expr) {
-    auto key = lookup(expr.get_id());
-    builder.setInsertionPointToEnd(builder.getInsertionBlock());
-    auto value = builder.create<memref::LoadOp>(loc(), key);
-    return value;
-  }
-
-  void mlirGen(Assign_& stmt) {
-    auto value = mlirGen(*stmt.get_value().get());
-    for (const auto& target : stmt.get_targets()) {
-      if (target->get_kind() != expr_::kName) {
-        theModule->emitError("only support assign to name node");
-      }
-      auto name = dynamic_cast<Name_*>(target.get())->get_id();
-      declare(name, value);
-    }
-  }
-  void mlirGen(Return_& stmt) {
-    auto value = mlirGen(*stmt.get_value().get());
-
-    builder.create<func::ReturnOp>(loc(), ValueRange({value}));
-  }
-
-  ModuleOp mlirGen(FunctionDef_& func) {
-    theModule = ModuleOp::create(loc());
-
-    if (failed(verify(theModule))) {
-      theModule.emitError("module verification error");
-      return nullptr;
-    }
-
-    builder.setInsertionPointToEnd(theModule.getBody());
-
-    auto args = func.get_args()->get_args();
-    llvm::SmallVector<Type> arg_types(args.size(), Float32Type::getF32(builder.getContext()));
-    llvm::SmallVector<Type> res_types(1, Float32Type::getF32(builder.getContext()));
-
-    auto func_type = builder.getFunctionType(arg_types, res_types);
-
-    auto function = func::FuncOp::create(loc(), func.get_name(), func_type);
-    auto* entry_block = function.addEntryBlock();
-    theModule.push_back(function);
-    builder.setInsertionPointToStart(entry_block);
-
-    for (const auto nameValue : llvm::zip(args, entry_block->getArguments())) {
-      if (failed(declare(get<0>(nameValue)->get_arg(), get<1>(nameValue)))) { return nullptr; }
-    }
-
-    builder.setInsertionPointToStart(entry_block);
-    for (const auto& stmt : func.get_body()) { mlirGen(*stmt.get()); }
-
-    function->setAttr("llvm.emit_c_interface", UnitAttr::get(builder.getContext()));
-    return theModule;
-  }
-};
-
-}  // namespace
-
-static OwningOpRef<ModuleOp> genModuleForTest(MLIRContext& context) {
-  auto func =
-      FunctionDef("get_lr",
-                  arguments({
-                      arg("base_lr"),
-                      arg("step"),
-                  }),
+static mlir::OwningOpRef<mlir::ModuleOp> genModuleForTest(mlir::MLIRContext& context) {
+  using namespace pyast;
+  auto func = FunctionDef::FunctionDef_(
+      "get_lr",
+      arguments::arguments_({
+          arg::arg_("base_lr"),
+          arg::arg_("step"),
+      }),
+      {
+          If::If_(Compare::Compare_(Name::Name_("step"), {Compare::kLt}, {Constant::Constant_(5)}),
                   {
-                      If(Compare(Name("step"), {Compare_::kLt}, {Constant(5)}),
-                         {
-                             Assign({Name("base_lr")},
-                                    (BinOp(Name("base_lr"), BinOp_::kMult, Constant(1.0 / 3)))),
-                         },
-                         {}),
-                      Return(Name("base_lr")),
-                  });
-  // FunctionDef("get_lr",
-  //             arguments({
-  //                 arg("base_lr"),
-  //                 arg("step"),
-  //             }),
-  //             {
-  //                 Assign(
-  //                     {
-  //                         Name("step_stage"),
-  //                     },
-  //                     Call(pyast::Attribute(Name("math"), "floor"),
-  //                          {BinOp(Name("step"), BinOp_::operator_t::kDiv, Constant(5))})),
-  //                 Assign(
-  //                     {
-  //                         Name("factor"),
-  //                     },
-  //                     BinOp(Constant(0.1), BinOp_::operator_t::kPow, Name("step_stage"))),
-  //                 Return(BinOp(Name("base_lr"), BinOp_::operator_t::kMult, Name("factor"))),
-  //             });
+                      Assign::Assign_({Name::Name_("base_lr")},
+                                      (BinOp::BinOp_(Name::Name_("base_lr"), BinOp::kMult,
+                                                     Constant::Constant_(1.0 / 3)))),
+                  },
+                  {}),
+          Return::Return_(Name::Name_("base_lr")),
+      });
 
   MLIRGenImpl mlir_gen(context);
-  OwningOpRef<ModuleOp> module = mlir_gen.mlirGen(*dynamic_cast<FunctionDef_*>(func.get()));
+  mlir::OwningOpRef<mlir::ModuleOp> module =
+      mlir_gen.mlirGen(func.get());
+  module->dump();
   return module;
 }
 
@@ -328,47 +98,49 @@ static struct LLVMInitializer {
   }
 } initializer;
 
-static LogicalResult lowerToLLVMDialect(ModuleOp module) {
-  PassManager pm(module.getContext());
+static mlir::LogicalResult lowerToLLVMDialect(mlir::ModuleOp module) {
+  mlir::PassManager pm(module.getContext());
 
-  pm.addPass(createCSEPass());
-  pm.addPass(createCanonicalizerPass());
-  pm.addPass(createMemRefToLLVMPass());
-  pm.addPass(createConvertFuncToLLVMPass());
-  pm.addPass(createConvertSCFToCFPass());
-  pm.addPass(cf::createConvertControlFlowToLLVMPass());
-  pm.addPass(createConvertMathToLLVMPass());
-  pm.addPass(arith::createConvertArithmeticToLLVMPass());
-  pm.addPass(createReconcileUnrealizedCastsPass());
+  pm.addPass(mlir::createCSEPass());
+  pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(mlir::createMemRefToLLVMPass());
+  pm.addPass(mlir::createConvertFuncToLLVMPass());
+  pm.addPass(mlir::createConvertSCFToCFPass());
+  pm.addPass(mlir::cf::createConvertControlFlowToLLVMPass());
+  pm.addPass(mlir::createConvertMathToLLVMPass());
+  pm.addPass(mlir::arith::createConvertArithmeticToLLVMPass());
+  pm.addPass(mlir::createReconcileUnrealizedCastsPass());
   return pm.run(module);
 }
-static OwningOpRef<ModuleOp> genModuleForBuild(MLIRContext& context) {
-  string moduleStr = R"mlir(
+
+static mlir::OwningOpRef<mlir::ModuleOp> genModuleForBuild(mlir::MLIRContext& context) {
+  std::string moduleStr = R"mlir(
   func.func @get_lr(%arg0 : f32, %arg1 : i32) -> f32 attributes { llvm.emit_c_interface } {
     return %arg0 : f32
   }
   )mlir";
-  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(moduleStr, &context);
+  mlir::OwningOpRef<mlir::ModuleOp> module =
+      mlir::parseSourceString<mlir::ModuleOp>(moduleStr, &context);
   return module;
 }
 
-JIT_Engine::JIT_Engine(PyASTNodeWrapper& ast) {
-  DialectRegistry registry;
-  registerAllDialects(registry);
-  registerLLVMDialectTranslation(registry);
-  MLIRContext context(registry);
-  context.loadDialect<memref::MemRefDialect>();
-  context.loadDialect<func::FuncDialect>();
-  context.loadDialect<arith::ArithmeticDialect>();
-  context.loadDialect<math::MathDialect>();
-  context.loadDialect<scf::SCFDialect>();
-  context.loadDialect<cf::ControlFlowDialect>();
-  context.loadDialect<AffineDialect>();
+JIT_Engine::JIT_Engine(const pyast::FunctionDef& ast) {
+  mlir::DialectRegistry registry;
+  mlir::registerAllDialects(registry);
+  mlir::registerLLVMDialectTranslation(registry);
+  mlir::MLIRContext context(registry);
+  context.loadDialect<mlir::memref::MemRefDialect>();
+  context.loadDialect<mlir::func::FuncDialect>();
+  context.loadDialect<mlir::arith::ArithmeticDialect>();
+  context.loadDialect<mlir::math::MathDialect>();
+  context.loadDialect<mlir::scf::SCFDialect>();
+  context.loadDialect<mlir::cf::ControlFlowDialect>();
+  context.loadDialect<mlir::AffineDialect>();
 
   auto module = genModuleForTest(context);
   CHECK(!!module) << "failed to parse module";
   CHECK(succeeded(lowerToLLVMDialect(*module))) << "failed to lower to llvm dialect";
-  auto jit_or_err = ExecutionEngine::create(*module);
+  auto jit_or_err = mlir::ExecutionEngine::create(*module);
   CHECK(jit_or_err) << "failed to create JIT exe engine, "
                     << llvm::toString(jit_or_err.takeError());
 
@@ -377,24 +149,24 @@ JIT_Engine::JIT_Engine(PyASTNodeWrapper& ast) {
 
 double JIT_Engine::Invoke(double base_lr, int64_t step) {
   float res = 0;
-  auto&& out = ExecutionEngine::result(res);
+  auto&& out = mlir::ExecutionEngine::result(res);
   auto base_lr_jit = static_cast<float>(base_lr);
   auto step_jit = static_cast<int>(step);
   auto err = _engine->invoke("get_lr", base_lr_jit, step_jit, out);
   return res;
 }
 
-void LR_JIT::Register(const string& function_id, PyASTNodeWrapper& ast) {
-  auto jit = make_shared<JIT_Engine>(ast);
+void LR_JIT::Register(const std::string& function_id, const pyast::FunctionDef& ast) {
+  auto jit = std::make_shared<JIT_Engine>(ast);
   function_id2engine_[function_id] = jit;
 }
 
-shared_ptr<JIT_Engine> LR_JIT::LookUp(const string& function_id) {
+std::shared_ptr<JIT_Engine> LR_JIT::LookUp(const std::string& function_id) {
   if (function_id2engine_.count(function_id)) { return function_id2engine_[function_id]; }
   return nullptr;
 };
 
-double LR_JIT::Invoke(shared_ptr<JIT_Engine> engine, double base_lr, int64_t step) {
+double LR_JIT::Invoke(std::shared_ptr<JIT_Engine> engine, double base_lr, int64_t step) {
   if (engine == nullptr) llvm::errs() << "engine is null";
   return engine->Invoke(base_lr, step);
 };

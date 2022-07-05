@@ -23,6 +23,7 @@ limitations under the License.
 #include <tuple>
 #include <vector>
 #include "oneflow/core/common/singleton.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/py_ast.h"
 #ifdef WITH_MLIR
 
 #include "oneflow/ir/include/OneFlow/Extension.h"
@@ -33,84 +34,40 @@ limitations under the License.
 #include <functional>
 #include <utility>
 
-class PyASTNode {
-  pybind11::object _node;
-
- public:
-  explicit PyASTNode(pybind11::object node) : _node(std::move(node)){};
-  std::string GetName() {
-    auto cls = _node.attr("__class__");
-    auto name = cls.attr("__name__");
-    return name.cast<pybind11::str>();
-  }
-
-  std::vector<std::string> GetFields() {
-    auto fields = _node.attr("_fields");
-    std::vector<std::string> res;
-    std::for_each(fields.begin(), fields.end(),
-                  [&res](pybind11::handle field) { res.push_back(field.cast<pybind11::str>()); });
-    return res;
-  }
-
-  PyASTNode Visit(const std::string& name) { return PyASTNode(_node.attr(name.c_str())); }
-
-  std::vector<PyASTNode> AsList() {
-    std::vector<PyASTNode> res;
-    for (auto item : _node) {
-      auto node = PyASTNode(item.cast<pybind11::object>());
-      res.push_back(node);
-    }
-    return res;
-  }
-
-  int AsInt() { return _node.cast<pybind11::int_>(); }
-
-  std::string AsStr() { return _node.cast<pybind11::str>(); }
-
-  float AsFloat() { return _node.cast<pybind11::float_>(); }
-};
-
-std::string PyASTNodeWrapper::GetName() { return _node->GetName(); }
-
-std::vector<std::string> PyASTNodeWrapper::GetFields() { return _node->GetFields(); }
-
-PyASTNodeWrapper PyASTNodeWrapper::Visit(const std::string& name) {
-  auto _py_ast_node = std::make_shared<PyASTNode>(_node->Visit(name));
-  return PyASTNodeWrapper(_py_ast_node);
-}
-
-int PyASTNodeWrapper::AsInt() { return _node->AsInt(); }
-
-std::string PyASTNodeWrapper::AsStr() { return _node->AsStr(); }
-
-float PyASTNodeWrapper::AsFloat() { return _node->AsFloat(); }
-
-std::vector<PyASTNodeWrapper> PyASTNodeWrapper::AsList() {
-  std::vector<PyASTNodeWrapper> res;
-  auto list = _node->AsList();
-  for (auto item : list) {
-    auto item_wrapper = PyASTNodeWrapper(std::make_shared<PyASTNode>(item));
-    res.push_back(item_wrapper);
-  }
-  return res;
-}
-
-
-
 namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("ir", m) {
   m.def("load_jit_shared_lib",
         [](const std::string& lib_path) { MutSharedLibPaths()->insert(lib_path); });
   m.def("compile_and_register_lr_jit",
-        [](const pybind11::object& ast, const std::string& function_id) {
+        [](const std::string& function_id
+           //  ,const pyast::FunctionDef& func = pyast::FunctionDef::get_FunctionDef()) {
+        ) {
+          const pyast::FunctionDef& func = pyast::FunctionDef("test", {}, {});
           Singleton<LR_JIT>::New();
-          auto _py_ast_node = std::make_shared<PyASTNode>(ast);
-          auto _py_ast_node_wrapper = PyASTNodeWrapper(_py_ast_node);
-          Singleton<LR_JIT>::Get()->Register(function_id, _py_ast_node_wrapper);
+          Singleton<LR_JIT>::Get()->Register(function_id, func);
           auto engine = Singleton<LR_JIT>::Get()->LookUp(function_id);
           auto lr = Singleton<LR_JIT>::Get()->Invoke(engine, 1, 2);
           std::cout << lr << std::endl;
         });
+
+  pybind11::class_<pyast::FunctionDef>(m, "FunctionDef");
+  pybind11::class_<pyast::Return>(m, "Return");
+  pybind11::class_<pyast::Assign>(m, "Assign");
+  pybind11::class_<pyast::If>(m, "If");
+  pybind11::class_<pyast::Raise>(m, "Raise");
+  pybind11::class_<pyast::Assert>(m, "Assert");
+  pybind11::class_<pyast::Expr>(m, "Expr");
+  pybind11::class_<pyast::BoolOp>(m, "BoolOp");
+  pybind11::class_<pyast::BinOp>(m, "BinOp");
+  pybind11::class_<pyast::Lambda>(m, "Lambda");
+  pybind11::class_<pyast::Compare>(m, "Compare");
+  pybind11::class_<pyast::Call>(m, "Call");
+  pybind11::class_<pyast::Num>(m, "Num");
+  pybind11::class_<pyast::Constant>(m, "Constant");
+  pybind11::class_<pyast::Attribute>(m, "Attribute");
+  pybind11::class_<pyast::Name>(m, "Name");
+  pybind11::class_<pyast::arguments>(m, "arguments");
+  pybind11::class_<pyast::arg>(m, "arg");
 }
 
 }  // namespace oneflow
