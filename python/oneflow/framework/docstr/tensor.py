@@ -1295,6 +1295,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.dot,
+    """
+    See :func:`oneflow.dot`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.selu,
     """
     See :func:`oneflow.selu`

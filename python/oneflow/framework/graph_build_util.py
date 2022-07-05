@@ -183,6 +183,22 @@ def make_new_block_scope(prev_scope, block):
     return _make_new_scope(prev_scope, scope_proto_str_setter)
 
 
+def make_new_name_scope(prev_scope, name):
+    assert prev_scope is not None
+
+    def scope_proto_str_setter(serialized_scope_proto: str):
+        scope_proto = text_format.Parse(
+            serialized_scope_proto, scope_pb2_util.ScopeProto()
+        )
+        # append name prefix
+        scope_proto.ClearField("scope_op_name_prefixes")
+        scope_proto.scope_op_name_prefixes.append(name)
+        scope_proto.module_name = name
+        return str(text_format.MessageToString(scope_proto))
+
+    return _make_new_scope(prev_scope, scope_proto_str_setter)
+
+
 def scope_to_proto(scope):
     return text_format.Parse(scope._proto_str, scope_pb2_util.ScopeProto())
 

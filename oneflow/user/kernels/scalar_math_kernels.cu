@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/scalar_math_kernels.h"
-#include "oneflow/user/kernels/elementwise_xpu_kernel.cuh"
+#include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 

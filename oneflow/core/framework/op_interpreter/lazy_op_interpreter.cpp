@@ -51,7 +51,7 @@ namespace {
 Maybe<Tensor> BuildTensor(const OpAttribute& op_attribute, const std::string& bn_in_op,
                           const std::shared_ptr<ParallelDesc>& parallel_desc, const bool is_lazy,
                           const bool is_local) {
-  CHECK_OR_RETURN(op_attribute.has_logical_blob_desc_signature());
+  CHECK_OR_RETURN(op_attribute.has_logical_blob_desc_signature());  // NOLINT(maybe-need-error-msg)
   const auto& blob_desc_sign_map = op_attribute.logical_blob_desc_signature().bn_in_op2blob_desc();
   auto blob_desc_it = blob_desc_sign_map.find(bn_in_op);
   CHECK_OR_RETURN(blob_desc_it != blob_desc_sign_map.end())
@@ -83,9 +83,9 @@ Maybe<void> CheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
                                  const OpAttribute& op_attribute, const std::string& bn_in_op,
                                  const std::shared_ptr<ParallelDesc>& parallel_desc,
                                  const bool is_local) {
-  CHECK_EQ_OR_RETURN(tensor->is_local(), is_local);
+  CHECK_EQ_OR_RETURN(tensor->is_local(), is_local);  // NOLINT(maybe-need-error-msg)
 
-  CHECK_OR_RETURN(op_attribute.has_logical_blob_desc_signature());
+  CHECK_OR_RETURN(op_attribute.has_logical_blob_desc_signature());  // NOLINT(maybe-need-error-msg)
   const auto& blob_desc_sign_map = op_attribute.logical_blob_desc_signature().bn_in_op2blob_desc();
   auto blob_desc_it = blob_desc_sign_map.find(bn_in_op);
   CHECK_OR_RETURN(blob_desc_it != blob_desc_sign_map.end())
@@ -93,12 +93,12 @@ Maybe<void> CheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
 
   auto shape = std::make_shared<Shape>(blob_desc_it->second.shape());
   auto dtype = blob_desc_it->second.data_type();
-  CHECK_EQ_OR_RETURN(*tensor->shape(), *shape);
-  CHECK_EQ_OR_RETURN(tensor->dtype()->data_type(), dtype);
+  CHECK_EQ_OR_RETURN(*tensor->shape(), *shape);             // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(tensor->dtype()->data_type(), dtype);  // NOLINT(maybe-need-error-msg)
 
   if (is_local) {
     const auto& device = JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
-    CHECK_OR_RETURN(JUST(tensor->device()) == device);
+    CHECK_OR_RETURN(JUST(tensor->device()) == device);  // NOLINT(maybe-need-error-msg)
   } else {
     const auto& nd_sbp_sign_map = op_attribute.nd_sbp_signature().bn_in_op2nd_sbp();
     auto nd_sbp_it = nd_sbp_sign_map.find(bn_in_op);
@@ -108,7 +108,8 @@ Maybe<void> CheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
     CHECK_OR_RETURN(JUST(tensor->nd_sbp()) == SymbolOf(nd_sbp))
         << "The input sbp is not valid for an inplace operation, please try to use non-inplace. "
         << NdSbpToString(JUST(tensor->nd_sbp())) << " vs " << NdSbpToString(nd_sbp);
-    CHECK_OR_RETURN(JUST(tensor->parallel_desc()) == SymbolOf(*parallel_desc));
+    CHECK_OR_RETURN(JUST(tensor->parallel_desc())  // NOLINT(maybe-need-error-msg)
+                    == SymbolOf(*parallel_desc));  // NOLINT(maybe-need-error-msg)
   }
   return Maybe<void>::Ok();
 }
@@ -174,7 +175,7 @@ Maybe<Scope> NewScopeWithParallelConfAndCurScope(const ParallelConf& parallel_co
   }));
   // NOTE(chengcheng): need sync vm for get scope right now
   JUST(vm::CurrentRankSync());
-  CHECK_OR_RETURN(new_scope);
+  CHECK_OR_RETURN(new_scope);  // NOLINT(maybe-need-error-msg)
   return new_scope;
 }
 
@@ -201,9 +202,9 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
     JUST(vm::CurrentRankSync());
   }
 
-  CHECK_OR_RETURN(input_tensor->is_eager());
+  CHECK_OR_RETURN(input_tensor->is_eager());  // NOLINT(maybe-need-error-msg)
   const std::string& empty_lbn = TensorNameScope::Global()->Lookup(input_tensor);
-  CHECK_OR_RETURN(empty_lbn.empty());
+  CHECK_OR_RETURN(empty_lbn.empty());  // NOLINT(maybe-need-error-msg)
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
   OperatorConf op_conf;
   op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
@@ -392,10 +393,10 @@ Maybe<void> GradAccTryInsertRepeatTickBeforeSource(
 Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const OpExprInterpContext& ctx) const {
   // NOTE(chengcheng): inputs[0] is the EagerTensor
-  CHECK_EQ_OR_RETURN(inputs.size(), 1);
-  CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);         // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);  // NOLINT(maybe-need-error-msg)
   const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
-  CHECK_OR_RETURN(input_tensor->is_eager());
+  CHECK_OR_RETURN(input_tensor->is_eager());  // NOLINT(maybe-need-error-msg)
 
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
 
@@ -432,9 +433,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   auto blob_parallel_desc = JUST(GetSymbol<ParallelDesc>(parallel_desc_sym_id));
 
   // Check outputs num and setup output tensor properties.
-  CHECK_EQ_OR_RETURN(outputs->size(), 1);
-  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
-  CHECK_OR_RETURN(!(*outputs)[0]);
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);        // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);  // NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(!(*outputs)[0]);               // NOLINT(maybe-need-error-msg)
   const std::string obn = "out";  // NOTE(chengcheng): obn is NOT op_expr.indexed_obns
   auto origin_input = JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true,
                                        /* is_local= */ input_tensor->is_local()));
@@ -447,10 +448,10 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
 Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const OpExprInterpContext& ctx) const {
   // NOTE(chengcheng): inputs[0] is the EagerTensor
-  CHECK_EQ_OR_RETURN(inputs.size(), 1);
-  CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);         // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);  // NOLINT(maybe-need-error-msg)
   const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
-  CHECK_OR_RETURN(input_tensor->is_eager());
+  CHECK_OR_RETURN(input_tensor->is_eager());  // NOLINT(maybe-need-error-msg)
 
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
 
@@ -489,9 +490,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   auto blob_parallel_desc = JUST(GetSymbol<ParallelDesc>(parallel_desc_sym_id));
 
   // Check outputs num and setup output tensor properties.
-  CHECK_EQ_OR_RETURN(outputs->size(), 1);
-  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
-  CHECK_OR_RETURN(!(*outputs)[0]);
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);        // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);  // NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(!(*outputs)[0]);               // NOLINT(maybe-need-error-msg)
 
   const std::string obn = "out";  // NOTE(chengcheng): obn is NOT op_expr.indexed_obns
   auto origin_var = JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true,
@@ -508,15 +509,15 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
 Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const OpExprInterpContext& ctx) const {
   // NOTE(chengcheng): inputs[0] is the LazyTensor
-  CHECK_EQ_OR_RETURN(inputs.size(), 1);
-  CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);         // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);  // NOLINT(maybe-need-error-msg)
   const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
   std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   // Lazy tensor must has lbn.
   // Eager tensor may has lbn if it has already been treated as an output of a variable op
   // or an output of an inplace op.
   if (input_lbn.empty()) {
-    CHECK_OR_RETURN(input_tensor->is_eager());
+    CHECK_OR_RETURN(input_tensor->is_eager());  // NOLINT(maybe-need-error-msg)
     // This output tensor is a new free eager tensor, so treat it as a new variable op output.
     JUST(AddFreeEagerTensorToVariableOp(input_tensor));
     input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
@@ -557,9 +558,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   auto blob_parallel_desc = JUST(GetSymbol<ParallelDesc>(parallel_desc_sym_id));
 
   // Check outputs num and setup output tensor properties.
-  CHECK_EQ_OR_RETURN(outputs->size(), 1);
-  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
-  CHECK_OR_RETURN(!(*outputs)[0]);
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);        // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);  // NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(!(*outputs)[0]);               // NOLINT(maybe-need-error-msg)
   const std::string obn = "out";  // NOTE(chengcheng): obn is NOT op_expr.indexed_obns
   (*outputs)[0] = JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ false,
                                    /* is_local= */ input_tensor->is_local()));
@@ -569,11 +570,11 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
 Maybe<void> LazyInterpreter::ApplyImpl(const ImageDecoderRandomCropResizeOpExpr& op_expr,
                                        const TensorTuple& inputs, TensorTuple* outputs,
                                        const OpExprInterpContext& ctx) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), 1);
-  CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);         // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);  // NOLINT(maybe-need-error-msg)
   const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
   const std::string& input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
-  CHECK_OR_RETURN(!input_lbn.empty());  // lbn must exist.
+  CHECK_OR_RETURN(!input_lbn.empty());  // NOLINT(maybe-need-error-msg)
 
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
   std::string device_tag;
@@ -611,9 +612,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ImageDecoderRandomCropResizeOpExpr&
   auto blob_parallel_desc = JUST(GetSymbol<ParallelDesc>(parallel_desc_sym_id));
 
   // Check outputs num and setup output tensor properties.
-  CHECK_EQ_OR_RETURN(outputs->size(), 1);
-  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
-  CHECK_OR_RETURN(!(*outputs)[0]);
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);        // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);  // NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(!(*outputs)[0]);               // NOLINT(maybe-need-error-msg)
   const std::string obn = "out";  // NOTE(chengcheng): obn is NOT op_expr.indexed_obns
   (*outputs)[0] = JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true,
                                    /* is_local= */ input_tensor->is_local()));
@@ -631,14 +632,14 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
   std::shared_ptr<const ParallelDesc> parallel_desc;
   if (ctx.parallel_desc.has_value()) {
     // NOTE(chengcheng): consistent
-    CHECK_OR_RETURN(!ctx.device.has_value());
+    CHECK_OR_RETURN(!ctx.device.has_value());  // NOLINT(maybe-need-error-msg)
     const auto& parallel_desc_sym = JUST(ctx.parallel_desc);
     parallel_desc = parallel_desc_sym.shared_from_symbol();
     JUST(MetaInfoConsistencyCheck(parallel_desc_sym, ctx.nd_sbp, 1, /* force_check */ false));
     is_local = false;
   } else {
     // NOTE(chengcheng): local
-    CHECK_OR_RETURN(!ctx.nd_sbp.has_value());
+    CHECK_OR_RETURN(!ctx.nd_sbp.has_value());  // NOLINT(maybe-need-error-msg)
     if (ctx.device.has_value()) {
       const auto& device = JUST(ctx.device);
       const auto& placement = JUST(Placement4Device(device));
@@ -689,9 +690,9 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
   auto blob_parallel_desc = JUST(GetSymbol<ParallelDesc>(parallel_desc_sym_id));
 
   // Check outputs num and setup output tensor properties.
-  CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());
+  CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());  // NOLINT(maybe-need-error-msg)
   for (int i = 0; i < op_expr.output_size(); ++i) {
-    CHECK_OR_RETURN(!(*outputs)[i]);
+    CHECK_OR_RETURN(!(*outputs)[i]);  // NOLINT(maybe-need-error-msg)
     const std::string& obn = op_expr.indexed_obns().at(i);
     (*outputs)[i] =
         JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true, is_local));
@@ -704,21 +705,21 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
                                                       const TensorTuple& inputs,
                                                       TensorTuple* outputs,
                                                       const OpExprInterpContext& ctx) {
-  CHECK_OR_RETURN(op_expr.op_type_name() == "copy");
-  CHECK_EQ_OR_RETURN(inputs.size(), 1);
-  CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
+  CHECK_OR_RETURN(op_expr.op_type_name() == "copy");  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);               // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);        // NOLINT(maybe-need-error-msg)
   const std::shared_ptr<Tensor>& input_tensor = inputs.at(0);
   std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   if (input_lbn.empty()) {
     JUST(AddFreeEagerTensorToVariableOp(input_tensor));
     input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   }
-  CHECK_OR_RETURN(!input_lbn.empty());  // lbn must exist.
+  CHECK_OR_RETURN(!input_lbn.empty());  // NOLINT(maybe-need-error-msg)
   std::string device_type = JUST(ctx.attrs.GetAttr<std::string>("device_type"));
   int64_t device_id = JUST(ctx.attrs.GetAttr<int64_t>("device_id"));
 
-  CHECK_EQ_OR_RETURN(outputs->size(), 1);
-  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);        // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);  // NOLINT(maybe-need-error-msg)
   if (input_tensor->is_local()) {
     (*outputs)[0] = JUST(MirroredTensor::MakeTensor(
         input_tensor->shape(), JUST(input_tensor->stride()), input_tensor->dtype()->data_type(),
@@ -744,7 +745,7 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
 
 Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const OpExprInterpContext& ctx) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), op_expr.input_size());
+  CHECK_EQ_OR_RETURN(inputs.size(), op_expr.input_size());  // NOLINT(maybe-need-error-msg)
 
   // NOTE(chengcheng): Handle special UserOp such as:
   //     1. [Source UserOp] : OFRecordReader, CoinFlip
@@ -770,7 +771,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
 
   // NOTE(chengcheng):
   //   Normal UserOp inputs size >= 1 for infer parallel_desc.
-  CHECK_GE_OR_RETURN(inputs.size(), 1);
+  CHECK_GE_OR_RETURN(inputs.size(), 1);  // NOLINT(maybe-need-error-msg)
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(JUST(VectorAt(inputs, 0))));
   op_conf->set_scope_symbol_id(JUST(scope->symbol_id()));
@@ -787,7 +788,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
 
   for (int i = 0; i < inputs.size(); ++i) {
     const auto& input_tensor = inputs.at(i);
-    CHECK_EQ_OR_RETURN(is_local, input_tensor->is_local());
+    CHECK_EQ_OR_RETURN(is_local, input_tensor->is_local());  // NOLINT(maybe-need-error-msg)
     if (is_local) {
       CHECK_OR_RETURN(device_tag == JUST(GetDeviceTagOfTensor(input_tensor)))
           << Error::RuntimeError() << "Lazy nn.Graph name: " << graph_name
@@ -816,7 +817,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
       JUST(AddFreeEagerTensorToVariableOp(input_tensor));
       lbn = TensorNameScope::Global()->Lookup(input_tensor);
     }
-    CHECK_OR_RETURN(!lbn.empty());  // NOTE(chengcheng): lbn must not empty now.
+    CHECK_OR_RETURN(!lbn.empty());  // NOLINT(maybe-need-error-msg)
     ReplaceInputLbnInOpCustomizedConf(op_conf.get(), ibn, lbn);
   }
 
@@ -834,7 +835,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   }
 
   // Check outputs num and setup output tensor properties.
-  CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());
+  CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());  // NOLINT(maybe-need-error-msg)
 
   // Disable boxing if the computation is inplace.
   for (int i = 0; i < op_expr.output_size(); ++i) {
@@ -884,21 +885,21 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const Tens
 Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_expr,
                                        const TensorTuple& inputs, TensorTuple* outputs,
                                        const OpExprInterpContext& ctx) const {
-  CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
-  CHECK_EQ_OR_RETURN(inputs.size(), 1);
+  CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);         // NOLINT(maybe-need-error-msg)
   const auto& input_tensor = inputs[0];
-  CHECK_OR_RETURN(input_tensor->is_consistent());
+  CHECK_OR_RETURN(input_tensor->is_consistent());  // NOLINT(maybe-need-error-msg)
 
-  CHECK_OR_RETURN(ctx.parallel_desc.has_value());
+  CHECK_OR_RETURN(ctx.parallel_desc.has_value());  // NOLINT(maybe-need-error-msg)
   const auto& parallel_desc_sym = JUST(ctx.parallel_desc);
-  CHECK_OR_RETURN(ctx.nd_sbp.has_value());
+  CHECK_OR_RETURN(ctx.nd_sbp.has_value());  // NOLINT(maybe-need-error-msg)
   const auto& sbp_sym = JUST(ctx.nd_sbp);
 
   std::string input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   if (input_lbn.empty()) {
     JUST(AddFreeEagerTensorToVariableOp(input_tensor));
     input_lbn = TensorNameScope::Global()->Lookup(input_tensor);
-    CHECK_OR_RETURN(!input_lbn.empty());
+    CHECK_OR_RETURN(!input_lbn.empty());  // NOLINT(maybe-need-error-msg)
   }
 
   std::shared_ptr<Tensor> input_proxy;
@@ -914,9 +915,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
     TensorNameScope::Global()->Record(input_proxy, input_lbn);
   }
 
-  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
-  CHECK_EQ_OR_RETURN(outputs->size(), 1);
-  CHECK_OR_RETURN(!(*outputs)[0]);
+  CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);        // NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(!(*outputs)[0]);               // NOLINT(maybe-need-error-msg)
 
   if (!op_expr.grad_nd_sbp().has_value() && sbp_sym == JUST(input_tensor->nd_sbp())) {
     // NOTE(chengcheng):  if to_global ONLY change placement (nd_sbp and grad_nd_sbp is same),

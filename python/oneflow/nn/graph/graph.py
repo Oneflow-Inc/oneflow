@@ -138,6 +138,10 @@ class Graph(object):
         self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
 
+        # For graph level op rewrite
+        self._unique_global_op_dict = dict()
+        self._unique_identity_op_dict = dict()
+
         self._session = session_ctx.GetDefaultSession()
         assert type(self._session) is MultiClientSession
         self._session.TryInit()
@@ -778,12 +782,7 @@ class Graph(object):
             return outputs
         except:
             self.__print(
-                2,
-                0,
-                "[ERROR]"
-                + self._shallow_repr()
-                + " building graph got error: "
-                + sys_exc_error_msg(),
+                2, 0, "[ERROR]" + self._shallow_repr() + " building graph got error."
             )
             raise
 
@@ -830,12 +829,7 @@ class Graph(object):
             )
         except:
             self.__print(
-                2,
-                0,
-                "[ERROR]"
-                + self._shallow_repr()
-                + " building plan got error: "
-                + sys_exc_error_msg(),
+                2, 0, "[ERROR]" + self._shallow_repr() + " building plan got error."
             )
             raise
 
@@ -987,6 +981,10 @@ class Graph(object):
             self._c_nn_graph.register_variable_op_names_and_tensors(
                 state_op_names, self._state_tensor_tuple
             )
+
+        # Clear useless dict used in graph build.
+        self._unique_global_op_dict.clear()
+        self._unique_identity_op_dict.clear()
 
         # Always pack outputs to remain type of outputs
         return (
