@@ -31,6 +31,7 @@ struct StreamSupportStreamWait : public StreamRoleVisitor<StreamSupportStreamWai
   static bool VisitCriticalSection(DeviceType device_type) { return false; }
   static bool VisitLazyJobLauncher(DeviceType device_type) { return false; }
   static bool VisitPinnedCompute(DeviceType device_type) { return VisitCompute(device_type); }
+  static bool VisitTmpCompute(DeviceType device_type) { return VisitCompute(device_type); }
 
  private:
   static bool Supported(DeviceType device_type) { return device_type == kCUDA; }
