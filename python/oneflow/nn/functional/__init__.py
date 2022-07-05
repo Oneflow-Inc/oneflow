@@ -68,3 +68,4 @@ from oneflow._C import cross_entropy
 from oneflow.nn.modules.sparse import embedding
 from oneflow.nn.modules.linear import linear
 from oneflow.nn.modules.activation import relu6
+from oneflow.nn.modules.upsampling import Upsample as upsample

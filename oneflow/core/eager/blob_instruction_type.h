@@ -35,6 +35,7 @@ class AccessBlobByCallbackInstructionType final : public vm::InstructionType {
   std::string DebugName(const vm::Instruction& instruction) const override {
     return "AccessBlobByCallback";
   }
+  Maybe<void> Prepare(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }
   void Compute(vm::Instruction* instruction) const override;
 };
 
@@ -55,6 +56,7 @@ class EpRecordEventInstructionType final : public vm::InstructionType {
     auto* data_ptr = status_buffer->mut_buffer();
     EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_ep_event(ep_event);
   }
+  Maybe<void> Prepare(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }
   std::string DebugName(const vm::Instruction&) const override { return "RecordEvent"; }
   void Compute(vm::Instruction* instruction) const override {}
 };

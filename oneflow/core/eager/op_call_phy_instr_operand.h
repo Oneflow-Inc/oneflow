@@ -85,6 +85,10 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
 
   eager::CallContext* mut_call_ctx() { return &call_ctx_; }
 
+  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
+    for (const auto& eager_blob_object : *call_ctx_.inputs()) { DoEach(eager_blob_object.get()); }
+  }
+
  private:
   friend struct OpCallInstructionUtil;
   OpCallPhyInstrOperand(
