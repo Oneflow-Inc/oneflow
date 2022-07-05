@@ -43,8 +43,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input) -> Maybe<Tensor> {
         // Pack output when do grad acc
         const auto& pack_input = JUST(GradAccTryInsertPackBeforeOutput(input));
-        const auto& output = JUST(OpInterpUtil::Dispatch<Tensor>(*op, {pack_input}));
-        return output;
+        return OpInterpUtil::Dispatch<Tensor>(*op, {pack_input});
       });
   m.add_functor("DispatchFeedVariable",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
