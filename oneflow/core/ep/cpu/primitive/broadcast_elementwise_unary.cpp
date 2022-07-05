@@ -30,12 +30,113 @@ namespace broadcast_elementwise_unary {
 
 namespace {
 
+bool IsContiguous(size_t num_dims, const int64_t* dims, const int64_t* strides) {
+  for (int i = num_dims - 1; i >= 0; i--) {
+    if ((i == num_dims - 1 && strides[i] != 1)
+        || (i != num_dims - 1 && strides[i] != dims[i + 1] * strides[i + 1])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template<UnaryOp unary_op, typename Src, typename Dst>
+void LaunchScalarFill(CpuStream* stream, Dst* dst, const Src* src, size_t count, size_t stride, Scalar attr0,
+                Scalar attr1) {
+  auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Src, Dst>(attr0, attr1);
+  Dst scalar_value = functor(*src);
+  stream->ParallelFor(0, count,
+                      [dst, stride, scalar_value](int64_t begin, int64_t end) {
+                        for (int64_t i = begin; i < end; i++) {
+                          dst[i * stride] = scalar_value;
+                        }
+                      });
+}
+
+template<UnaryOp unary_op, typename Src, typename Dst>
+void LaunchTensorFill(CpuStream* stream, Dst* dst, const Src* src, size_t count,
+                      size_t dst_stride, size_t src_stride, Scalar attr0, Scalar attr1) {
+  auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Src, Dst>(attr0, attr1);
+  stream->ParallelFor(0, count, 
+      [functor, src, dst, src_stride, dst_stride](int64_t begin, int64_t end) {
+        for (int64_t i = begin; i < end; i++) {
+          dst[i * dst_stride] = functor(src[i * src_stride]);
+        }
+      });
+}
+
+template<UnaryOp unary_op, typename Src, typename Dst>
+void LaunchGeneral(CpuStream* stream, Dst* dst, const Src* src, size_t num_dims,
+                   const int64_t* dst_dims, const int64_t* src_dims, 
+                   const int64_t* dst_stride, const int64_t* src_stride, Scalar attr0, Scalar attr1) {
+  bool contiguous_output = IsContiguous(num_dims, dst_dims, dst_stride);
+      const int64_t elem_cnt = GetElementCount(num_dims, dst_dims);
+      auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Src, Dst>(attr0, attr1);
+  stream->ParallelFor(0, elem_cnt,
+    [functor, src, dst, num_dims, src_dims, dst_dims,
+      src_stride, dst_stride,
+      contiguous_output](int64_t begin, int64_t end) {
+      auto src_index_to_offset_helper =
+          IndexToOffsetWithStrideCalculator<int64_t, kMaxNumDims>(src_stride,
+                                                                  num_dims);
+      auto dst_offset_to_index_helper =
+          OffsetToIndexWithStrideCalculator<int64_t, kMaxNumDims>(dst_dims,
+                                                                  num_dims);
+      auto dst_index_to_offset_helper =
+          IndexToOffsetWithStrideCalculator<int64_t, kMaxNumDims>(dst_stride,
+                                                                  num_dims);
+      int64_t src_index[kMaxNumDims];
+      int64_t dst_index[kMaxNumDims];
+      for (int64_t offset = begin; offset < end; offset++) {
+        dst_offset_to_index_helper.OffsetToNdIndex(offset, dst_index, num_dims);
+        for (int i = 0; i < kMaxNumDims; i++) {
+          if (i < num_dims) {
+            src_index[i] = (src_dims[i] != 1) ? dst_index[i] : 0;
+          } else {
+            src_index[i] = 0;
+          }
+        }
+        const int64_t src_offset =
+            src_index_to_offset_helper.NdIndexToOffset(src_index, num_dims);
+        if (!contiguous_output) {
+          const int64_t dst_offset =
+              dst_index_to_offset_helper.NdIndexToOffset(dst_index, num_dims);
+          dst[dst_offset] = functor(src[src_offset]);
+        } else {
+          dst[offset] = functor(src[src_offset]);
+        }
+      }
+    });
+}
+
 template<UnaryOp unary_op, typename Src, typename Dst>
 class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BroadcastElementwiseUnaryImpl);
   BroadcastElementwiseUnaryImpl(Scalar attr0, Scalar attr1) : attr0(attr0), attr1(attr1) {}
   ~BroadcastElementwiseUnaryImpl() override = default;
+
+  void Launch(Stream* stream, size_t num_src_dims, const int64_t* src_dims, const void* src,
+                      size_t num_dst_dims, const int64_t* dst_dims, void* dst) override {
+    int64_t src_strides[kMaxNumDims];
+    int64_t dst_strides[kMaxNumDims];
+    // init stride
+    for (int i = num_src_dims - 1; i < kMaxNumDims; ++i) {
+      src_strides[i] = 1;
+    }
+    for (int i = num_src_dims - 2; i >= 0; --i) {
+      src_strides[i] = src_dims[i + 1] * src_strides[i + 1];
+    }
+
+    for (int i = num_dst_dims - 1; i < kMaxNumDims; ++i) {
+      dst_strides[i] = 1;
+    }
+    for (int i = num_dst_dims - 2; i >= 0; --i) {
+      dst_strides[i] = dst_dims[i + 1] * dst_strides[i + 1];
+    }
+    Launch(stream, num_src_dims, src_dims, src_strides, src,
+           num_dst_dims, dst_dims, dst_strides, dst);
+  }
 
   void Launch(Stream* stream, size_t num_src_dims, const int64_t* src_dims,
               const int64_t* src_strides, const void* src_ptr, size_t num_dst_dims,
@@ -55,77 +156,19 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
     CheckInplace(simplified_num_dims, simplified_src_dims, src, nullptr, nullptr,
                  simplified_dst_dims, dst);
     if (simplified_num_dims == 1 && simplified_src_dims[0] == 1) {
-      auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Src, Dst>(attr0, attr1);
-      Dst scalar_value = functor(*src);
       const int64_t elem_cnt = simplified_dst_dims[0];
       const int64_t dst_stride = simplified_dst_strides[0];
-      cpu_stream->ParallelFor(0, elem_cnt,
-                              [dst, dst_stride, scalar_value](int64_t begin, int64_t end) {
-                                for (int64_t i = begin; i < end; i++) {
-                                  dst[i * dst_stride] = scalar_value;
-                                }
-                              });
+      LaunchScalarFill<unary_op, Src, Dst>(cpu_stream, dst, src, elem_cnt, dst_stride, attr0, attr1);
     } else if (simplified_num_dims == 1) {
       const int64_t elem_cnt = simplified_src_dims[0];
       const int64_t src_stride = simplified_src_strides[0];
       const int64_t dst_stride = simplified_dst_strides[0];
-      auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Src, Dst>(attr0, attr1);
-      cpu_stream->ParallelFor(
-          0, elem_cnt, [functor, src, dst, src_stride, dst_stride](int64_t begin, int64_t end) {
-            for (int64_t i = begin; i < end; i++) {
-              dst[i * dst_stride] = functor(src[i * src_stride]);
-            }
-          });
+      LaunchTensorFill<unary_op, Src, Dst>(cpu_stream, dst, src, elem_cnt, dst_stride, src_stride, attr0, attr1);
     } else {
-      bool continuous_output = true;
-      for (int i = simplified_num_dims - 1; i >= 0; i--) {
-        if ((i == simplified_num_dims - 1 && simplified_dst_strides[i] != 1)
-            || (i != simplified_num_dims - 1
-                && simplified_dst_strides[i]
-                       != simplified_dst_strides[i + 1] * simplified_dst_dims[i + 1])) {
-          continuous_output = false;
-          break;
-        }
-      }
-      const int64_t elem_cnt = GetElementCount(simplified_num_dims, simplified_dst_dims);
-      auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Src, Dst>(attr0, attr1);
-
-      cpu_stream->ParallelFor(
-          0, elem_cnt,
-          [functor, src, dst, simplified_num_dims, simplified_src_dims, simplified_dst_dims,
-           simplified_src_strides, simplified_dst_strides,
-           continuous_output](int64_t begin, int64_t end) {
-            auto src_index_to_offset_helper =
-                IndexToOffsetWithStrideCalculator<int64_t, kMaxNumDims>(simplified_src_strides,
-                                                                        simplified_num_dims);
-            auto dst_offset_to_index_helper =
-                OffsetToIndexWithStrideCalculator<int64_t, kMaxNumDims>(simplified_dst_dims,
-                                                                        simplified_num_dims);
-            auto dst_index_to_offset_helper =
-                IndexToOffsetWithStrideCalculator<int64_t, kMaxNumDims>(simplified_dst_strides,
-                                                                        simplified_num_dims);
-            int64_t src_index[kMaxNumDims];
-            int64_t dst_index[kMaxNumDims];
-            for (int64_t offset = begin; offset < end; offset++) {
-              dst_offset_to_index_helper.OffsetToNdIndex(offset, dst_index, simplified_num_dims);
-              for (int i = 0; i < kMaxNumDims; i++) {
-                if (i < simplified_num_dims) {
-                  src_index[i] = (simplified_src_dims[i] != 1) ? dst_index[i] : 0;
-                } else {
-                  src_index[i] = 0;
-                }
-              }
-              const int64_t src_offset =
-                  src_index_to_offset_helper.NdIndexToOffset(src_index, simplified_num_dims);
-              if (!continuous_output) {
-                const int64_t dst_offset =
-                    dst_index_to_offset_helper.NdIndexToOffset(dst_index, simplified_num_dims);
-                dst[dst_offset] = functor(src[src_offset]);
-              } else {
-                dst[offset] = functor(src[src_offset]);
-              }
-            }
-          });
+      LaunchGeneral<unary_op, Src, Dst>(cpu_stream, dst, src, simplified_num_dims,
+                                        simplified_dst_dims, simplified_src_dims,
+                                        simplified_dst_strides, simplified_src_strides,
+                                        attr0, attr1);
     }
   }
 

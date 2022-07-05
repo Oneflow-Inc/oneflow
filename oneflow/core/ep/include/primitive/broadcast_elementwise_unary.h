@@ -34,6 +34,9 @@ class BroadcastElementwiseUnary : public Primitive {
   virtual void Launch(Stream* stream, size_t num_src_dims, const int64_t* src_dims,
                       const int64_t* src_strides, const void* src, size_t num_dst_dims,
                       const int64_t* dst_dims, const int64_t* dst_strides, void* dst) = 0;
+
+  virtual void Launch(Stream* stream, size_t num_src_dims, const int64_t* src_dims, const void* src,
+                      size_t num_dst_dims, const int64_t* dst_dims, void* dst) = 0;
 };
 
 class BroadcastElementwiseUnaryFactory : public Factory<BroadcastElementwiseUnary> {

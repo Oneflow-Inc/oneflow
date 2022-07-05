@@ -53,7 +53,7 @@ struct BroadcastElementwiseUnaryParams {
   IndexType count{};
   const Src* src{};
   Dst* dst{};
-  bool dst_is_continous;
+  bool dst_is_contiguous;
   Scalar attr0;
   Scalar attr1;
 };
@@ -104,7 +104,7 @@ __global__ void BroadcastElementwiseUnaryGpu(
 #pragma unroll
     for (int j = 0; j < pack_size; ++j) { dst_pack.elem[j] = functor(src_pack.elem[j]); }
     IndexType dst_offset = offset;
-    if (!params.dst_is_continous) {
+    if (!params.dst_is_contiguous) {
       dst_offset = params.dst_index_to_offset_helper.NdIndexToOffset(dst_index, num_dims);
     }
     dst[dst_offset] = dst_pack;
@@ -139,7 +139,7 @@ void LaunchKernel(CudaStream* stream, size_t num_dims, const int64_t* src_dims,
   params.count = static_cast<IndexType>(count);
   params.attr0 = attr0;
   params.attr1 = attr1;
-  params.dst_is_continous = continuous_output;
+  params.dst_is_contiguous = continuous_output;
 
   BroadcastElementwiseUnaryGpu<op, Src, Dst, max_dims, pack_size, IndexType>
       <<<BlocksNum4ThreadsNum(params.count), kCudaThreadsNumPerBlock, 0, stream->cuda_stream()>>>(

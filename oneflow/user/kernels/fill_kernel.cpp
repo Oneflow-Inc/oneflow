@@ -32,7 +32,7 @@ std::unique_ptr<ep::primitive::BroadcastElementwiseUnary> NewBroadcastUnaryPrimi
   const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("value", 0);
   const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);
   return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseUnaryFactory>(
-      ctx->device_type(), ep::primitive::UnaryOp::kIdentity, src->data_type(), dst->data_type(), 1);
+      ctx->device_type(), ep::primitive::UnaryOp::kIdentity, src->data_type(), dst->data_type(), dst->shape().NumAxes());
 }
 
 }  // namespace
@@ -85,9 +85,10 @@ class FillTensorKernel final : public user_op::OpKernel {
     auto primitive = NewBroadcastUnaryPrimitive(ctx);
     CHECK(primitive);
 
-    primitive->Launch(ctx->stream(), value->shape_view().NumAxes(), value->shape_view().data(),
-                      value->stride().data(), value->dptr(), out->shape_view().NumAxes(),
-                      out->shape_view().data(), out->stride().data(), out->mut_dptr());
+    if(value->shape_view().elem_cnt() != 0) {
+      primitive->Launch(ctx->stream(), value->shape_view().NumAxes(), value->shape_view().data(), value->dptr(),
+                        out->shape_view().NumAxes(), out->shape_view().data(), out->mut_dptr());
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
