@@ -22,26 +22,26 @@ import oneflow.unittest
 
 class TestRoiAlignOp(flow.unittest.TestCase):
     def test_rol_align_x_tensor_dimension_err(test_case):
-        x = flow.tensor(np.random.randn(2, 3, 64))
-        rois = flow.tensor(np.random.randn(2, 3, 64, 64))
+        x = flow.randn(2, 3, 64)
+        rois = flow.randn(2, 3, 64, 64)
         with test_case.assertRaises(RuntimeError) as ctx:
             flow.roi_align(x, rois, 2.0, 14, 14, 2, True)
         test_case.assertTrue(
-            "The demensions of x tensor must be equal to 4, but got"
+            "The dimension of x tensor must be equal to 4, but got"
             in str(ctx.exception))
 
     def test_rol_align_rois_tensor_dimension_err(test_case):
-        x = flow.tensor(np.random.randn(2, 3, 64, 5))
-        rois = flow.tensor(np.random.randn(2, 3, 64, 64))
+        x = flow.randn(2, 3, 64, 5)
+        rois = flow.randn(2, 3, 64, 64)
         with test_case.assertRaises(RuntimeError) as ctx:
             flow.roi_align(x, rois, 2.0, 14, 14, 2, True)
         test_case.assertTrue(
-            "The demensions of rois tensor must be equal to 2, but got"
+            "The dimension of rois tensor must be equal to 2, but got"
             in str(ctx.exception))
 
     def test_rol_align_rois_tensor_size_err(test_case):
-        x = flow.tensor(np.random.randn(2, 3, 64, 5))
-        rois = flow.tensor(np.random.randn(2, 3))
+        x = flow.randn(2, 3, 64, 5)
+        rois = flow.randn(2, 3)
         with test_case.assertRaises(RuntimeError) as ctx:
             flow.roi_align(x, rois, 2.0, 14, 14, 2, True)
         test_case.assertTrue(

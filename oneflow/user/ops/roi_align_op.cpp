@@ -33,11 +33,11 @@ namespace oneflow {
   const int32_t pooled_w = ctx->Attr<int32_t>("pooled_w");
   // x: feature map (N, C, H, W)
   CHECK_EQ_OR_RETURN(x_shape.NumAxes(), 4)
-      << Error::RuntimeError() << "The demensions of x tensor must be equal to 4, "
+      << Error::RuntimeError() << "The dimension of x tensor must be equal to 4, "
       << "but got " << x_shape.NumAxes();
   // rois: (R, 5)
   CHECK_EQ_OR_RETURN(rois_shape.NumAxes(), 2)
-      << Error::RuntimeError() << "The demensions of rois tensor must be equal to 2, "
+      << Error::RuntimeError() << "The dimension of rois tensor must be equal to 2, "
       << "but got " << rois_shape.NumAxes();
   CHECK_EQ_OR_RETURN(rois_shape.At(1), 5)
       << Error::RuntimeError() << "The size of rois tensor must be equal to 5 at dimension 1, "
@@ -81,12 +81,12 @@ namespace oneflow {
   const int32_t pooled_w = ctx->Attr<int32_t>("pooled_w");
   // x: feature map (N, C, H, W)
   CHECK_EQ_OR_RETURN(x_like_shape.NumAxes(), 4)
-      << Error::RuntimeError() << "The dimensions of tensor x_like equal to four, "
+      << Error::RuntimeError() << "The dimension of x_like tensor must be equal to 4, "
       << "but got " << x_like_shape.NumAxes();
 
   // rois: (R, 5)
   CHECK_EQ_OR_RETURN(rois_shape.NumAxes(), 2)
-      << Error::RuntimeError() << "The dimensions of tensor rois equal to 2, "
+      << Error::RuntimeError() << "The dimension of rois tensor must be equal to 2, "
       << "but got " << rois_shape.NumAxes();
   CHECK_EQ_OR_RETURN(rois_shape.At(1), 5)
       << Error::RuntimeError() << "The size of rois tensor must be equal to 5 "

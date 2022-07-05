@@ -43,7 +43,9 @@ Maybe<Shape> ReshapeUserOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
     int64_t dim = reshape.At(axis);
     dim_vec.emplace_back(dim);
     if (dim == -1) {
-      CHECK_OR_RETURN(has_minus_1 == false) << Error::RuntimeError() << "Only one `-1' supported";
+      CHECK_OR_RETURN(has_minus_1 == false)
+          << Error::RuntimeError()
+          << "There are multiple '-1' in the shape list, only one '-1' can be inferred";
       has_minus_1 = true;
       minus_1_axis = axis;
     } else if (dim > 0) {
@@ -94,11 +96,11 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
     HashMap<int, int>* group_start_in_axis2out_axis) {
   CHECK_GE_OR_RETURN(in_shape.NumAxes(), 0)
       << Error::RuntimeError()
-      << "The demensions of input tensor must be greater than or equal to zero, "
+      << "The dimension of input tensor must be greater than or equal to zero, "
       << "but got " << in_shape.NumAxes();  // support 0D tensor
   CHECK_GE_OR_RETURN(out_shape.NumAxes(), 0)
       << Error::RuntimeError()
-      << "The demensions of output tensor must be greater than or equal to zero, "
+      << "The dimension of output tensor must be greater than or equal to zero, "
       << "but got " << out_shape.NumAxes();  // support 0D tensor
   CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), out_shape.elem_cnt())
       << Error::RuntimeError()
