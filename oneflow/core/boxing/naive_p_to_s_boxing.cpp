@@ -34,6 +34,7 @@ bool RawIsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_
 
 static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocalCached);
 
+// NOLINTBEGIN(maybe-need-error-msg)
 Maybe<void> RawCheckNaivePToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                               const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
@@ -44,6 +45,7 @@ Maybe<void> RawCheckNaivePToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
   return Maybe<void>::Ok();
 }
+// NOLINTEND(maybe-need-error-msg)
 
 static constexpr auto* CheckNaivePToS = DECORATE(&RawCheckNaivePToS, ThreadLocalCachedCopiable);
 
@@ -52,9 +54,14 @@ static constexpr auto* CheckNaivePToS = DECORATE(&RawCheckNaivePToS, ThreadLocal
 Maybe<one::Tensor> NaivePToS(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
                              Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
-  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
+  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp())
+      << Error::RuntimeError() << "The sbp of input tensor (" << NdSbpToString(tensor_nd_sbp)
+      << ") must match the input sbp (" << NdSbpToString(in->nd_sbp()) << ")";
   const auto& tensor_placement = JUST(tensor->parallel_desc());
-  CHECK_OR_RETURN(tensor_placement == in->placement());
+  CHECK_OR_RETURN(tensor_placement == in->placement())
+      << Error::RuntimeError() << "The placement of input tensor ("
+      << *JUST(PlacementToString(tensor_placement)) << ") must match the input placement ("
+      << *JUST(PlacementToString(in->placement())) << ")";
   const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
   std::shared_ptr<one::Tensor> local_tensor = JUST(tensor->cur_rank_phy_tensor());
   {

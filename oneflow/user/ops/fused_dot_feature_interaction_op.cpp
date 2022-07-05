@@ -39,10 +39,6 @@ namespace oneflow {
     *ctx->OutputShape("out", 0) = Shape({batch_size, vector_size});
     return Maybe<void>::Ok();
   }
-  const int64_t align_dim = 16;
-  const int64_t concated_padded_dim =
-      std::ceil(static_cast<float>(features_concated_dim) / static_cast<float>(align_dim))
-      * align_dim;
   const bool self_interaction = ctx->Attr<bool>("self_interaction");
   const int32_t output_padding = ctx->Attr<int32_t>("output_padding");
   const int64_t interaction_dim = self_interaction
@@ -56,10 +52,6 @@ namespace oneflow {
     out_dim += output_concat_shape.At(1);
   }
   *ctx->OutputShape("out", 0) = Shape({batch_size, out_dim});
-  if (ctx->has_output("padded_concated_features", 0)) {
-    *ctx->OutputShape("padded_concated_features", 0) =
-        Shape({batch_size, concated_padded_dim, vector_size});
-  }
   return Maybe<void>::Ok();
 }
 
@@ -84,25 +76,17 @@ namespace oneflow {
     CHECK_EQ_OR_RETURN(first_feature_dtype, ctx->InputDType("output_concat", 0));
   }
   *ctx->OutputDType("out", 0) = first_feature_dtype;
-  if (ctx->has_output("padded_concated_features", 0)) {
-    *ctx->OutputDType("padded_concated_features", 0) = first_feature_dtype;
-  }
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> FusedDotFeatureInteractionGradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  if (ctx->has_input("padded_concated_features", 0)) {
-    const Shape& padded_concated_features_shape = ctx->InputShape("padded_concated_features", 0);
-    CHECK_EQ_OR_RETURN(dy_shape.NumAxes(), 2) << dy_shape.NumAxes();
-    CHECK_EQ_OR_RETURN(padded_concated_features_shape.NumAxes(), 3)
-        << padded_concated_features_shape.NumAxes();
-  }
   const int64_t batch_size = dy_shape.At(0);
-  CHECK_EQ_OR_RETURN(ctx->output_size("features_grad"), ctx->input_size("features_grad_like"));
+  CHECK_EQ_OR_RETURN(ctx->output_size("features_grad"), ctx->input_size("features"))
+      << "features_grad and features must have same size";
   for (int64_t i = 0; i < ctx->output_size("features_grad"); ++i) {
-    *ctx->OutputShape("features_grad", i) = ctx->InputShape("features_grad_like", i);
+    *ctx->OutputShape("features_grad", i) = ctx->InputShape("features", i);
   }
   if (ctx->has_output("output_concat_grad", 0)) {
     const int32_t output_concat_grad_dim = ctx->Attr<int32_t>("output_concat_grad_dim");
@@ -141,11 +125,8 @@ REGISTER_USER_OP_GRAD("fused_dot_feature_interaction")
           .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
           .Attr<bool>("self_interaction", op.attr<bool>("self_interaction"))
           .Attr<std::string>("pooling", op.attr<std::string>("pooling"));
-      if (op.user_op_conf().has_output("padded_concated_features", 0)) {
-        builder.Input("padded_concated_features", op.output("padded_concated_features", 0));
-      }
       for (int64_t i = 0; i < op.input_size("features"); ++i) {
-        builder.Input("features_grad_like", op.input("features", i));
+        builder.Input("features", op.input("features", i));
       }
       if (op.user_op_conf().has_input("output_concat", 0)) {
         builder.Output("output_concat_grad")

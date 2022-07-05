@@ -13,16 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import List, Optional, Union
-
+from typing import List, Union
 import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
 
 
 def arange_op(
-    start: int = 0,
-    end: int = None,
+    start: Union[int, flow.Tensor] = None,
+    end: Union[int, flow.Tensor] = None,
     step: int = 1,
     dtype: flow.dtype = None,
     device: Union[str, flow.device] = None,
@@ -30,9 +27,21 @@ def arange_op(
     sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
     requires_grad: bool = False,
 ):
+    if start is None:
+        start = 0
+    elif flow.is_tensor(start):
+        # support start as a Scalar Tensor
+        assert len(start.shape) == 0, "start must be a Scalar"
+        start = int(start.numpy())
+
     if end is None:
         end = start
         start = 0
+    elif flow.is_tensor(end):
+        # support end as a Scalar Tensor
+        assert len(end.shape) == 0, "end must be a Scalar"
+        end = int(end.numpy())
+
     if placement is None:
         if isinstance(device, str):
             device = flow.device(device)

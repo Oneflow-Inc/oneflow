@@ -1275,6 +1275,74 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.mv,
+    r"""
+    mv(input, vec) -> Tensor
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.mv.html.
+
+    Performs a matrix-vector product of the matrix :attr:`input` and the vector :attr:`vec`.
+
+    If :attr:`input` is a :math:`(n \times m)` tensor, :attr:`vec` is a
+    1-D tensor of size `m`, :attr:`out` will be a 1-D tensor of size `n`.
+    
+    .. note:: This function does not broadcast.
+
+    Args:
+        input (oneflow.Tensor): matrix to be matrix multiplied
+        vec (oneflow.Tensor): vector to be matrix multiplied
+    Returns:
+        oneflow.Tensor: the output Tensor
+    
+    For example:
+
+    .. code-block:: python
+    
+        >>> import oneflow as flow
+        >>> mat = flow.randn(2, 3)
+        >>> vec = flow.randn(3)
+        >>> out = flow.mv(mat, vec)
+        >>> out.shape
+        oneflow.Size([2])
+    """,
+)
+
+add_docstr(
+    oneflow.mm,
+    r"""
+    mm(input, mat2) -> Tensor
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.mm.html.
+    
+    Performs a matrix multiplication of the matrices :attr:`input` and :attr:`mat2`.
+
+    If :attr:`input` is a :math:`(n \times m)` tensor, :attr:`mat2` is a
+    :math:`(m \times p)` tensor, :attr:`out` will be a :math:`(n \times p)` tensor.
+
+    .. note:: This function does not broadcast.
+            For broadcasting matrix products, see :func:`oneflow.matmul`.
+
+    Args:
+        input (oneflow.Tensor): the first matrix to be matrix multiplied
+        mat2 (oneflow.Tensor): the second matrix to be matrix multiplied
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> mat1 = flow.randn(2, 3)
+        >>> mat2 = flow.randn(3, 3)
+        >>> of_out = flow.mm(mat1, mat2)
+        >>> of_out.shape
+        oneflow.Size([2, 3])
+    """,
+)
+
+add_docstr(
     oneflow.round,
     r"""This operator rounds the value of Blob to the nearest integer.
     Args:
@@ -1365,31 +1433,6 @@ add_docstr(
     """,
 )
 
-add_docstr(
-    oneflow.logical_not,
-    r"""
-    Computes the element-wise logical NOT of the given input tensors.
-    Zeros are treated as False and nonzeros are treated as True.
-    Args:
-        input (oneflow.Tensor): The input Tensor
-        other (oneflow.Tensor): The Tensor to compute NOT with
-
-    Returns:
-        oneflow.Tensor: The output Tensor
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-
-        >>> input = flow.tensor([1, 0, -1], dtype=flow.float32)
-        >>> out = flow.logical_not(input)
-        >>> out
-        tensor([False,  True, False], dtype=oneflow.bool)
-
-    """,
-)
 
 add_docstr(
     oneflow.dot,
@@ -1700,8 +1743,8 @@ add_docstr(
 
         >>> import oneflow as flow
 
-        >>> input = flow.rand(3,4,5,6)
-        >>> output = flow.vsplit(input,(1,3))
+        >>> input = flow.rand(4, 4, 5, 6)
+        >>> output = flow.vsplit(input, (1, 3))
         >>> output[0].size()
         oneflow.Size([1, 4, 5, 6])
         >>> output[1].size()

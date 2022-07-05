@@ -13,22 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 namespace vm {
-
-namespace {
-
-HashMap<std::string, InstrTypeId>* InstrTypeId4InstructionName() {
-  static HashMap<std::string, InstrTypeId> map;
-  return &map;
-}
-
-}  // namespace
 
 void InstructionType::InitInstructionStatus(Instruction* instruction) const {
   instruction->stream_type().InitInstructionStatus(instruction->stream(),
@@ -40,22 +31,18 @@ void InstructionType::DeleteInstructionStatus(Instruction* instruction) const {
                                                      instruction->mut_status_buffer());
 }
 
-const InstrTypeId& LookupInstrTypeId(const std::string& name) {
-  const auto& map = *InstrTypeId4InstructionName();
-  const auto& iter = map.find(name);
-  CHECK(iter != map.end()) << "instruction type name: " << name;
-  return iter->second;
+namespace {
+
+void InitOrCheckMemPtrForAllocationCompuationPipelining(EagerBlobObject* eager_blob_object) {
+  eager_blob_object->InitOrCheckMemPtrForAllocationComputationPipelining();
 }
 
-void ForEachInstrTypeId(std::function<void(const InstrTypeId&)> DoEach) {
-  for (const auto& pair : *InstrTypeId4InstructionName()) { DoEach(pair.second); }
-}
+}  // namespace
 
-void RegisterInstrTypeId(const std::string& instruction_name, const StreamType* stream_type,
-                         const InstructionType* instruction_type) {
-  InstrTypeId instr_type_id;
-  instr_type_id.__Init__(stream_type, instruction_type);
-  CHECK(InstrTypeId4InstructionName()->emplace(instruction_name, instr_type_id).second);
+void InstructionType::InitOrCheckInputBlobsMemPtrForAllocationCompuationPipelining(
+    Instruction* instruction) const {
+  const auto& operand = *instruction->phy_instr_operand();
+  operand.ForEachInputEagerBlobObjects(&InitOrCheckMemPtrForAllocationCompuationPipelining);
 }
 
 }  // namespace vm

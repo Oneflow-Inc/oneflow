@@ -205,14 +205,14 @@ class MaxPool1dKernel final : public user_op::OpKernel {
     const auto* pool_cache = dynamic_cast<const PoolOpKernelCache*>(cache);
     const MaxPoolParams3D& params_3d = pool_cache->GetParams3D();
 
-    const int64_t elem_num = y->shape().elem_cnt();
+    const int64_t elem_num = y->shape_view().elem_cnt();
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
     int64_t* indice_ptr = indice->mut_dptr<int64_t>();
 
     DimVector y_vector(2);
-    y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
-    y_vector.at(1) = y->shape().At(2);
+    y_vector.at(0) = y->shape_view().At(0) * y->shape_view().At(1);
+    y_vector.at(1) = y->shape_view().At(2);
     if (elem_num < GetMaxVal<int32_t>()) {
       NdIndexOffsetHelper<int32_t, 2> index_helper(y_vector.data());
       PoolKernelUtil<device_type, T, int32_t>::Maxpool1dForward(
@@ -247,14 +247,14 @@ class MaxPool1dGradKernel final : public user_op::OpKernel {
     const auto* pool_cache = dynamic_cast<const PoolOpKernelCache*>(cache);
     const MaxPoolParams3D& params_3d = pool_cache->GetParams3D();
 
-    const int64_t elem_num = dy->shape().elem_cnt();
+    const int64_t elem_num = dy->shape_view().elem_cnt();
     const T* src = dy->dptr<T>();
     const int64_t* indice_ptr = indice->dptr<int64_t>();
     T* dest = dx->mut_dptr<T>();
     DimVector dy_vector(2);
-    dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
-    dy_vector.at(1) = dy->shape().At(2);
-    size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
+    dy_vector.at(0) = dy->shape_view().At(0) * dy->shape_view().At(1);
+    dy_vector.at(1) = dy->shape_view().At(2);
+    size_t out_bytes_size = dx->shape_view().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
     if (elem_num < GetMaxVal<int32_t>()) {
@@ -291,7 +291,7 @@ class MaxPool2dKernel final : public user_op::OpKernel {
     const auto* pool_cache = dynamic_cast<const PoolOpKernelCache*>(cache);
     const MaxPoolParams3D& params_3d = pool_cache->GetParams3D();
 
-    const int64_t elem_num = y->shape().elem_cnt();
+    const int64_t elem_num = y->shape_view().elem_cnt();
 
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
@@ -300,9 +300,9 @@ class MaxPool2dKernel final : public user_op::OpKernel {
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     if (data_format == "channels_first") {
       DimVector y_vector(3);
-      y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
-      y_vector.at(1) = y->shape().At(2);
-      y_vector.at(2) = y->shape().At(3);
+      y_vector.at(0) = y->shape_view().At(0) * y->shape_view().At(1);
+      y_vector.at(1) = y->shape_view().At(2);
+      y_vector.at(2) = y->shape_view().At(3);
       if (elem_num < GetMaxVal<int32_t>()) {
         NdIndexOffsetHelper<int32_t, 3> index_helper(y_vector.data());
         PoolKernelUtil<device_type, T, int32_t>::Maxpool2dForwardCFirst(
@@ -314,7 +314,7 @@ class MaxPool2dKernel final : public user_op::OpKernel {
       }
     } else if (data_format == "channels_last") {
       DimVector y_vector;
-      y->shape().ToDimVector(&y_vector);
+      y->shape_view().ToDimVector(&y_vector);
       if (elem_num < GetMaxVal<int32_t>()) {
         NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
         PoolKernelUtil<device_type, T, int32_t>::Maxpool2dForwardCLast(
@@ -352,21 +352,21 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
     const auto* pool_cache = dynamic_cast<const PoolOpKernelCache*>(cache);
     const MaxPoolParams3D& params_3d = pool_cache->GetParams3D();
 
-    const int64_t elem_num = dy->shape().elem_cnt();
+    const int64_t elem_num = dy->shape_view().elem_cnt();
     const T* src = dy->dptr<T>();
     const int64_t* indice_ptr = indice->dptr<int64_t>();
     T* dest = dx->mut_dptr<T>();
 
-    size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
+    size_t out_bytes_size = dx->shape_view().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
     const std::string& data_format = ctx->Attr<std::string>("data_format");
 
     if (data_format == "channels_first") {
       DimVector dy_vector(3);
-      dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
-      dy_vector.at(1) = dy->shape().At(2);
-      dy_vector.at(2) = dy->shape().At(3);
+      dy_vector.at(0) = dy->shape_view().At(0) * dy->shape_view().At(1);
+      dy_vector.at(1) = dy->shape_view().At(2);
+      dy_vector.at(2) = dy->shape_view().At(3);
       if (elem_num < GetMaxVal<int32_t>()) {
         NdIndexOffsetHelper<int32_t, 3> index_helper(dy_vector.data());
         PoolKernelUtil<device_type, T, int32_t>::Maxpool2dBackwardCFirst(
@@ -378,7 +378,7 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
       }
     } else if (data_format == "channels_last") {
       DimVector dy_vector;
-      dy->shape().ToDimVector(&dy_vector);
+      dy->shape_view().ToDimVector(&dy_vector);
       if (elem_num < GetMaxVal<int32_t>()) {
         NdIndexOffsetHelper<int32_t, 4> index_helper(dy_vector.data());
         PoolKernelUtil<device_type, T, int32_t>::Maxpool2dBackwardCLast(
@@ -416,16 +416,16 @@ class MaxPool3dKernel final : public user_op::OpKernel {
     const auto* pool_cache = dynamic_cast<const PoolOpKernelCache*>(cache);
     const MaxPoolParams3D& params_3d = pool_cache->GetParams3D();
 
-    const int64_t elem_num = y->shape().elem_cnt();
+    const int64_t elem_num = y->shape_view().elem_cnt();
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
     int64_t* indice_ptr = indice->mut_dptr<int64_t>();
 
     DimVector y_vector(4);
-    y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
-    y_vector.at(1) = y->shape().At(2);
-    y_vector.at(2) = y->shape().At(3);
-    y_vector.at(3) = y->shape().At(4);
+    y_vector.at(0) = y->shape_view().At(0) * y->shape_view().At(1);
+    y_vector.at(1) = y->shape_view().At(2);
+    y_vector.at(2) = y->shape_view().At(3);
+    y_vector.at(3) = y->shape_view().At(4);
 
     if (elem_num < GetMaxVal<int32_t>()) {
       NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
@@ -461,18 +461,18 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
     const auto* pool_cache = dynamic_cast<const PoolOpKernelCache*>(cache);
     const MaxPoolParams3D& params_3d = pool_cache->GetParams3D();
 
-    const int64_t elem_num = dy->shape().elem_cnt();
+    const int64_t elem_num = dy->shape_view().elem_cnt();
     const T* src = dy->dptr<T>();
     const int64_t* indice_ptr = indice->dptr<int64_t>();
     T* dest = dx->mut_dptr<T>();
 
     DimVector dy_vector(4);
-    dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
-    dy_vector.at(1) = dy->shape().At(2);
-    dy_vector.at(2) = dy->shape().At(3);
-    dy_vector.at(3) = dy->shape().At(4);
+    dy_vector.at(0) = dy->shape_view().At(0) * dy->shape_view().At(1);
+    dy_vector.at(1) = dy->shape_view().At(2);
+    dy_vector.at(2) = dy->shape_view().At(3);
+    dy_vector.at(3) = dy->shape_view().At(4);
 
-    size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
+    size_t out_bytes_size = dx->shape_view().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
     if (elem_num < GetMaxVal<int32_t>()) {

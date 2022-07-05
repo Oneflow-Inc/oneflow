@@ -155,18 +155,166 @@ __global__ void LookupKernel(uint32_t value_length, const Elem* cache_values,
   }
 }
 
-template<typename Elem, typename Index>
+template<typename Key, typename Elem, typename Index, uint32_t block_size>
+__global__ void EncodeLookupKernel(uint32_t value_length, const Elem* cache_values,
+                                   uint32_t values_elem_cnt, const Key* keys, const Index* context,
+                                   Elem* values, uint32_t* n_missing, Key* missing_keys,
+                                   uint32_t* missing_indices, const size_t capacity,
+                                   Key* table_keys, Index* table_indices) {
+  constexpr uint32_t warp_size = 32;
+  constexpr uint32_t n_warp_per_block = block_size / warp_size;
+  const uint32_t warp_id = threadIdx.x / warp_size;
+  const uint32_t lane_id = threadIdx.x % warp_size;
+  const uint32_t global_warp_id = blockIdx.x * n_warp_per_block + warp_id;
+  const uint32_t global_n_warp = gridDim.x * n_warp_per_block;
+  const uint32_t n_keys = values_elem_cnt / value_length;
+  __shared__ Key batch_keys[n_warp_per_block][warp_size];
+  __shared__ Index batch_row_ids[n_warp_per_block][warp_size];
+  __shared__ Key batch_missing_keys[n_warp_per_block][warp_size];
+  __shared__ uint32_t batch_missing_indices[n_warp_per_block][warp_size];
+  __shared__ uint32_t batch_n_missing[n_warp_per_block];
+  for (uint32_t batch_start = global_warp_id * warp_size; batch_start < n_keys;
+       batch_start += global_n_warp * warp_size) {
+    const uint32_t batch_n_key = min(n_keys - batch_start, warp_size);
+    if (lane_id == 0) { batch_n_missing[warp_id] = 0; }
+    __syncwarp();
+    const uint32_t key_offset = batch_start + lane_id;
+    if (key_offset < n_keys) {
+      const Key key = keys[batch_start + lane_id];
+      const uint64_t hash = FullCacheHash()(key);
+      Index row;
+      GetOne<Key, Index>(capacity, table_keys, table_indices, key, hash, &row);
+      batch_row_ids[warp_id][lane_id] = row;
+      if (row == 0) {
+        const uint32_t batch_missing_idx = atomicAdd(batch_n_missing + warp_id, 1);
+        batch_missing_keys[warp_id][batch_missing_idx] = key;
+        batch_missing_indices[warp_id][batch_missing_idx] = key_offset;
+      }
+    }
+    __syncwarp();
+    const uint32_t batch_n_missing_t = batch_n_missing[warp_id];
+    if (lane_id == 0) {
+      const uint32_t old_n_missing =
+          cuda::atomic::Add(n_missing, static_cast<uint32_t>(batch_n_missing_t));
+      batch_n_missing[warp_id] = old_n_missing;
+    }
+    __syncwarp();
+    if (lane_id < batch_n_missing_t) {
+      missing_keys[batch_n_missing[warp_id] + lane_id] = batch_missing_keys[warp_id][lane_id];
+      missing_indices[batch_n_missing[warp_id] + lane_id] = batch_missing_indices[warp_id][lane_id];
+    }
+    for (int i = 0; i < batch_n_key; ++i) {
+      const Key key = batch_keys[warp_id][i];
+      const Index row = batch_row_ids[warp_id][i];
+      if (row == 0) { continue; }
+      for (int col = lane_id; col < value_length; col += warp_size) {
+        values[(batch_start + i) * value_length + col] =
+            cache_values[(row - 1) * value_length + col];
+      }
+    }
+    __syncwarp();
+  }
+}
+
+template<typename T, size_t pack_size>
+struct alignas(sizeof(T) * pack_size) Pack {
+  T elem[pack_size];
+};
+
+template<typename Key, typename Elem, typename Index, uint32_t block_size, uint32_t pack_size>
+__global__ void EncodeLookupMaskKernel(uint32_t value_length, const Elem* __restrict__ cache_values,
+                                       uint32_t values_elem_cnt, const Key* __restrict__ keys,
+                                       const Index* __restrict__ context, Elem* __restrict__ values,
+                                       uint8_t* __restrict__ mask, const size_t capacity,
+                                       Key* __restrict__ table_keys,
+                                       Index* __restrict__ table_indices) {
+  const uint32_t packed_cols = value_length / pack_size;
+  auto* packed_values = reinterpret_cast<Pack<Elem, pack_size>*>(values);
+  const auto* packed_cache_values = reinterpret_cast<const Pack<Elem, pack_size>*>(cache_values);
+  constexpr uint32_t warp_size = 32;
+  constexpr uint32_t n_warp_per_block = block_size / warp_size;
+  const uint32_t warp_id = threadIdx.x / warp_size;
+  const uint32_t lane_id = threadIdx.x % warp_size;
+  const uint32_t global_warp_id = blockIdx.x * n_warp_per_block + warp_id;
+  const uint32_t global_n_warp = gridDim.x * n_warp_per_block;
+  const uint32_t n_keys = values_elem_cnt / value_length;
+  __shared__ Key batch_keys[n_warp_per_block][warp_size];
+  __shared__ Index batch_row_ids[n_warp_per_block][warp_size];
+  for (uint32_t batch_start = global_warp_id * warp_size; batch_start < n_keys;
+       batch_start += global_n_warp * warp_size) {
+    const uint32_t batch_n_key = min(n_keys - batch_start, warp_size);
+    const uint32_t key_offset = batch_start + lane_id;
+    if (key_offset < n_keys) {
+      const Key key = keys[batch_start + lane_id];
+      const uint64_t hash = FullCacheHash()(key);
+      Index row;
+      GetOne<Key, Index>(capacity, table_keys, table_indices, key, hash, &row);
+      batch_row_ids[warp_id][lane_id] = row;
+      mask[key_offset] = row > 0;
+    }
+    __syncwarp();
+    for (int i = 0; i < batch_n_key; ++i) {
+      const Key key = batch_keys[warp_id][i];
+      const Index row = batch_row_ids[warp_id][i];
+      if (row == 0) { continue; }
+#pragma unroll 4
+      for (int col = lane_id; col < packed_cols; col += warp_size) {
+        packed_values[(batch_start + i) * packed_cols + col] =
+            packed_cache_values[(row - 1) * packed_cols + col];
+      }
+    }
+    __syncwarp();
+  }
+}
+
+template<typename Elem, typename Index, size_t pack_size>
 __global__ void UpdateKernel(uint32_t value_length, Elem* cache_values, uint32_t values_elem_cnt,
                              const Index* context, const Elem* values) {
-  CUDA_1D_KERNEL_LOOP(i, values_elem_cnt) {
-    const uint64_t key_id = i / value_length;
+  const int packed_values_elem_cnt = values_elem_cnt / pack_size;
+  const uint32_t packed_elem_cnt = value_length / pack_size;
+  auto* packed_cache_values = reinterpret_cast<Pack<Elem, pack_size>*>(cache_values);
+  auto* packed_values = reinterpret_cast<const Pack<Elem, pack_size>*>(values);
+  CUDA_1D_KERNEL_LOOP(i, packed_values_elem_cnt) {
+    const uint64_t key_id = i / packed_elem_cnt;
     const uint64_t ctx = context[key_id];
     if (ctx == 0) { continue; }
     const uint64_t row_id = ctx - 1;
-    const uint64_t col_id = i - key_id * value_length;
-    const Elem elem = values[i];
-    cache_values[row_id * value_length + col_id] = elem;
+    const uint64_t col_id = i - key_id * packed_elem_cnt;
+    packed_cache_values[row_id * packed_elem_cnt + col_id] = packed_values[i];
   }
+}
+
+template<typename Elem, typename Index, size_t pack_size>
+__global__ typename std::enable_if<std::is_same<Elem, float>::value, void>::type
+FusedHalfUpdateKernel(uint32_t value_length, Elem* __restrict__ cache_values,
+                      uint32_t values_elem_cnt, const Index* __restrict__ context,
+                      const Elem* __restrict__ values, const half* __restrict__ update,
+                      const float* __restrict__ lr, float scale) {
+  const int packed_values_elem_cnt = values_elem_cnt / pack_size;
+  const uint32_t packed_elem_cnt = value_length / pack_size;
+  auto* packed_cache_values = reinterpret_cast<Pack<Elem, pack_size>*>(cache_values);
+  auto* packed_values = reinterpret_cast<const Pack<Elem, pack_size>*>(values);
+  auto* packed_update = reinterpret_cast<const Pack<half, pack_size>*>(update);
+  const float alpha = -*lr * scale;
+  CUDA_1D_KERNEL_LOOP(i, packed_values_elem_cnt) {
+    const uint64_t key_id = i / packed_elem_cnt;
+    const uint64_t ctx = context[key_id];
+    if (ctx == 0) { continue; }
+    const uint64_t row_id = ctx - 1;
+    const uint64_t col_id = i - key_id * packed_elem_cnt;
+    Pack<Elem, pack_size> m = packed_values[i];
+    Pack<half, pack_size> u = packed_update[i];
+    for (size_t j = 0; j < pack_size; ++j) { m.elem[j] += static_cast<Elem>(u.elem[j]) * alpha; }
+    packed_cache_values[row_id * packed_elem_cnt + col_id] = m;
+  }
+}
+
+template<typename Elem, typename Index, size_t pack_size>
+__global__ typename std::enable_if<!std::is_same<Elem, float>::value, void>::type
+FusedHalfUpdateKernel(uint32_t value_length, Elem* cache_values, uint32_t values_elem_cnt,
+                      const Index* context, const Elem* values, const half* update, const float* lr,
+                      float scale) {
+  __trap();
 }
 
 template<typename Key, typename Elem, typename Index>
@@ -235,6 +383,10 @@ class OrdinalEncoder {
 
   uint64_t TableCapacity() const { return table_capacity_; }
 
+  Key* table_keys() const { return table_keys_; }
+
+  Index* table_indices() const { return table_indices_; }
+
  private:
   int device_index_{};
   Key* table_keys_;
@@ -245,7 +397,7 @@ class OrdinalEncoder {
   Index* table_size_host_{};
 };
 
-template<typename Key, typename Elem, typename Index>
+template<typename Key, typename Elem, typename Index, size_t pack_size>
 class CacheImpl : public Cache {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CacheImpl);
@@ -288,6 +440,8 @@ class CacheImpl : public Cache {
 
   uint32_t ValueSize() const override { return options_.value_size; }
 
+  DataType ValueType() const override { return options_.value_type; }
+
   uint32_t MaxQueryLength() const override { return max_query_length_; }
 
   void ReserveQueryLength(uint32_t query_length) override {
@@ -306,9 +460,14 @@ class CacheImpl : public Cache {
   void Get(ep::Stream* stream, uint32_t n_keys, const void* keys, void* values, uint32_t* n_missing,
            void* missing_keys, uint32_t* missing_indices) override;
 
+  void Get(ep::Stream* stream, uint32_t n_keys, const void* keys, void* values,
+           uint8_t* mask) override;
+
   void Put(ep::Stream* stream, uint32_t n_keys, const void* keys, const void* values,
            uint32_t* n_evicted, void* evicted_keys, void* evicted_values) override;
-
+  void FusedHalfUpdatePut(ep::Stream* stream, uint32_t n_keys, const void* keys, const void* values,
+                          const void* update, const float* lr, float scale, uint32_t* n_evicted,
+                          void* evicted_keys, void* evicted_values) override;
   void Dump(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
             uint32_t* n_dumped, void* keys, void* values) override;
 
@@ -324,10 +483,10 @@ class CacheImpl : public Cache {
   uint32_t max_query_length_;
 };
 
-template<typename Key, typename Elem, typename Index>
-void CacheImpl<Key, Elem, Index>::Test(ep::Stream* stream, uint32_t n_keys, const void* keys,
-                                       uint32_t* n_missing, void* missing_keys,
-                                       uint32_t* missing_indices) {
+template<typename Key, typename Elem, typename Index, size_t pack_size>
+void CacheImpl<Key, Elem, Index, pack_size>::Test(ep::Stream* stream, uint32_t n_keys,
+                                                  const void* keys, uint32_t* n_missing,
+                                                  void* missing_keys, uint32_t* missing_indices) {
   OF_CUDA_CHECK(
       cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
   if (n_keys == 0) { return; }
@@ -340,40 +499,77 @@ void CacheImpl<Key, Elem, Index>::Test(ep::Stream* stream, uint32_t n_keys, cons
                   missing_indices);
 }
 
-template<typename Key, typename Elem, typename Index>
-void CacheImpl<Key, Elem, Index>::Get(ep::Stream* stream, uint32_t n_keys, const void* keys,
-                                      void* values, uint32_t* n_missing, void* missing_keys,
-                                      uint32_t* missing_indices) {
+template<typename Key, typename Elem, typename Index, size_t pack_size>
+void CacheImpl<Key, Elem, Index, pack_size>::Get(ep::Stream* stream, uint32_t n_keys,
+                                                 const void* keys, void* values,
+                                                 uint32_t* n_missing, void* missing_keys,
+                                                 uint32_t* missing_indices) {
   OF_CUDA_CHECK(
       cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
   if (n_keys == 0) { return; }
   CHECK_LE(n_keys, max_query_length_);
-  encoder_.template Encode<false>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
+  constexpr uint32_t block_size = 128;
+  uint32_t grid_size = (n_keys + block_size - 1) / block_size;
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
-  RUN_CUDA_KERNEL((LookupKernel<Key, Elem, Index, true>), stream, values_elem_cnt,
-                  num_elem_per_value_, values_, values_elem_cnt, static_cast<const Key*>(keys),
-                  encoding_buffer_, static_cast<Elem*>(values), n_missing,
-                  static_cast<Key*>(missing_keys), missing_indices);
+  EncodeLookupKernel<Key, Elem, Index, block_size>
+      <<<grid_size, block_size, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          num_elem_per_value_, values_, values_elem_cnt, static_cast<const Key*>(keys),
+          encoding_buffer_, static_cast<Elem*>(values), n_missing, static_cast<Key*>(missing_keys),
+          missing_indices, encoder_.TableCapacity(), encoder_.table_keys(),
+          encoder_.table_indices());
 }
 
-template<typename Key, typename Elem, typename Index>
-void CacheImpl<Key, Elem, Index>::Put(ep::Stream* stream, uint32_t n_keys, const void* keys,
-                                      const void* values, uint32_t* n_evicted, void* evicted_keys,
-                                      void* evicted_values) {
+template<typename Key, typename Elem, typename Index, size_t pack_size>
+void CacheImpl<Key, Elem, Index, pack_size>::Get(ep::Stream* stream, uint32_t n_keys,
+                                                 const void* keys, void* values, uint8_t* mask) {
+  if (n_keys == 0) { return; }
+  CHECK_LE(n_keys, max_query_length_);
+  constexpr uint32_t block_size = 128;
+  uint32_t grid_size = (n_keys + block_size - 1) / block_size;
+  const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
+  EncodeLookupMaskKernel<Key, Elem, Index, block_size, pack_size>
+      <<<grid_size, block_size, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          num_elem_per_value_, values_, values_elem_cnt, static_cast<const Key*>(keys),
+          encoding_buffer_, static_cast<Elem*>(values), mask, encoder_.TableCapacity(),
+          encoder_.table_keys(), encoder_.table_indices());
+}
+
+template<typename Key, typename Elem, typename Index, size_t pack_size>
+void CacheImpl<Key, Elem, Index, pack_size>::Put(ep::Stream* stream, uint32_t n_keys,
+                                                 const void* keys, const void* values,
+                                                 uint32_t* n_evicted, void* evicted_keys,
+                                                 void* evicted_values) {
   OF_CUDA_CHECK(
       cudaMemsetAsync(n_evicted, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
   if (n_keys == 0) { return; }
   CHECK_LE(n_keys, max_query_length_);
   encoder_.template Encode<true>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
-  RUN_CUDA_KERNEL((UpdateKernel<Elem, Index>), stream, values_elem_cnt, num_elem_per_value_,
-                  values_, values_elem_cnt, encoding_buffer_, static_cast<const Elem*>(values));
+  RUN_CUDA_KERNEL((UpdateKernel<Elem, Index, pack_size>), stream, values_elem_cnt / pack_size,
+                  num_elem_per_value_, values_, values_elem_cnt, encoding_buffer_,
+                  static_cast<const Elem*>(values));
 }
 
-template<typename Key, typename Elem, typename Index>
-void CacheImpl<Key, Elem, Index>::Dump(ep::Stream* stream, uint64_t start_key_index,
-                                       uint64_t end_key_index, uint32_t* n_dumped, void* keys,
-                                       void* values) {
+template<typename Key, typename Elem, typename Index, size_t pack_size>
+void CacheImpl<Key, Elem, Index, pack_size>::FusedHalfUpdatePut(
+    ep::Stream* stream, uint32_t n_keys, const void* keys, const void* values, const void* update,
+    const float* lr, float scale, uint32_t* n_evicted, void* evicted_keys, void* evicted_values) {
+  if (!std::is_same<Elem, float>::value) { UNIMPLEMENTED(); }
+  OF_CUDA_CHECK(
+      cudaMemsetAsync(n_evicted, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
+  if (n_keys == 0) { return; }
+  CHECK_LE(n_keys, max_query_length_);
+  encoder_.template Encode<true>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
+  const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
+  RUN_CUDA_KERNEL((FusedHalfUpdateKernel<Elem, Index, pack_size>), stream,
+                  values_elem_cnt / pack_size, num_elem_per_value_, values_, values_elem_cnt,
+                  encoding_buffer_, static_cast<const Elem*>(values),
+                  static_cast<const half*>(update), lr, scale);
+}
+template<typename Key, typename Elem, typename Index, size_t pack_size>
+void CacheImpl<Key, Elem, Index, pack_size>::Dump(ep::Stream* stream, uint64_t start_key_index,
+                                                  uint64_t end_key_index, uint32_t* n_dumped,
+                                                  void* keys, void* values) {
   encoder_.Dump(stream, start_key_index, end_key_index, n_dumped, static_cast<Key*>(keys),
                 encoding_buffer_);
   RUN_CUDA_KERNEL((DumpValueKernel<Key, Elem, Index>), stream,
@@ -381,23 +577,33 @@ void CacheImpl<Key, Elem, Index>::Dump(ep::Stream* stream, uint64_t start_key_in
                   n_dumped, encoding_buffer_, values_, static_cast<Elem*>(values));
 }
 
-template<typename Key, typename Elem, typename Index>
-void CacheImpl<Key, Elem, Index>::Clear() {
+template<typename Key, typename Elem, typename Index, size_t pack_size>
+void CacheImpl<Key, Elem, Index, pack_size>::Clear() {
   encoder_.Clear();
 }
 
 template<typename Key, typename Index>
 std::unique_ptr<Cache> DispatchValueType(const CacheOptions& options) {
-  if (options.value_size % sizeof(ulonglong2) == 0) {
-    return std::unique_ptr<Cache>(new CacheImpl<Key, ulonglong2, Index>(options));
+  if (options.value_type == DataType::kFloat) {
+    const size_t value_elem_cnt = options.value_size / sizeof(float);
+    const size_t half_warp = 16;
+    if (value_elem_cnt % 4 == 0 && value_elem_cnt / 4 > half_warp) {
+      return std::unique_ptr<Cache>(new CacheImpl<Key, float, Index, 4>(options));
+    } else if (value_elem_cnt % 2 == 0 && value_elem_cnt / 2 > half_warp) {
+      return std::unique_ptr<Cache>(new CacheImpl<Key, float, Index, 2>(options));
+    } else {
+      return std::unique_ptr<Cache>(new CacheImpl<Key, float, Index, 1>(options));
+    }
+  } else if (options.value_size % sizeof(ulonglong2) == 0) {
+    return std::unique_ptr<Cache>(new CacheImpl<Key, ulonglong2, Index, 1>(options));
   } else if (options.value_size % sizeof(uint64_t) == 0) {
-    return std::unique_ptr<Cache>(new CacheImpl<Key, uint64_t, Index>(options));
+    return std::unique_ptr<Cache>(new CacheImpl<Key, uint64_t, Index, 1>(options));
   } else if (options.value_size % sizeof(uint32_t) == 0) {
-    return std::unique_ptr<Cache>(new CacheImpl<Key, uint32_t, Index>(options));
+    return std::unique_ptr<Cache>(new CacheImpl<Key, uint32_t, Index, 1>(options));
   } else if (options.value_size % sizeof(uint16_t) == 0) {
-    return std::unique_ptr<Cache>(new CacheImpl<Key, uint16_t, Index>(options));
+    return std::unique_ptr<Cache>(new CacheImpl<Key, uint16_t, Index, 1>(options));
   } else {
-    return std::unique_ptr<Cache>(new CacheImpl<Key, uint8_t, Index>(options));
+    return std::unique_ptr<Cache>(new CacheImpl<Key, uint8_t, Index, 1>(options));
   }
 }
 

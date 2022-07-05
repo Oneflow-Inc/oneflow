@@ -28,7 +28,7 @@ class CudaBackendAllocator final : public Allocator {
   explicit CudaBackendAllocator(int64_t device_id) : device_id_(device_id) {}
   ~CudaBackendAllocator() override = default;
 
-  void Allocate(char** mem_ptr, std::size_t size) override;
+  Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
   void DeviceReset() override;
 

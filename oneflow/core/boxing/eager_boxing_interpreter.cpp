@@ -18,14 +18,16 @@ limitations under the License.
 #include "oneflow/core/common/registry_error.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 
 namespace {
 Maybe<void> CheckEagerBoxingDataType(DataType val) {
   CHECK_OR_RETURN(val != DataType::kTensorBuffer && val != DataType::kOFRecord)
-      << "EagerBoxing only support POD data type.";
+      << Error::RuntimeError() << "invalid boxing data type " << ToString(val);
   return Maybe<void>::Ok();
 }
 }  // namespace
@@ -41,8 +43,13 @@ Maybe<one::Tensor> EagerBoxingInterpreter::Interpret(const std::shared_ptr<one::
       JUST(InterpretImpl(input, in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
-  CHECK_OR_RETURN(tensor_nd_sbp == out_nd_sbp) << typeid(*this).name();
-  CHECK_OR_RETURN(tensor_placement == out_parallel_desc) << typeid(*this).name();
+  CHECK_OR_RETURN(tensor_nd_sbp == out_nd_sbp)
+      << Error::RuntimeError() << "The sbp of output tensor (" << NdSbpToString(tensor_nd_sbp)
+      << ") must match the output sbp (" << NdSbpToString(out_nd_sbp) << ")";
+  CHECK_OR_RETURN(tensor_placement == out_parallel_desc)
+      << Error::RuntimeError() << "The placement of output tensor ("
+      << *JUST(PlacementToString(tensor_placement)) << ") must match the output placement ("
+      << *JUST(PlacementToString(out_parallel_desc)) << ")";
   return tensor;
 }
 
@@ -81,9 +88,9 @@ void RegisterBoxingFunction(const std::string& method_name, const BoxingCheckerT
                             const BoxingFunctionT& BoxingFunction) {
   CatchRegistryError([&]() -> Maybe<void> {
     CHECK_OR_RETURN(MutName2BoxingChecker()->emplace(method_name, Checker).second)
-        << "boxing_method_name: " << method_name;
+        << Error::RuntimeError() << "register boxing checker failed: " << method_name;
     CHECK_OR_RETURN(MutName2BoxingFunction()->emplace(method_name, BoxingFunction).second)
-        << "boxing_method_name: " << method_name;
+        << Error::RuntimeError() << "register boxing function failed: " << method_name;
     return Maybe<void>::Ok();
   });
 }
@@ -119,12 +126,35 @@ Maybe<BoxingFunctionT> DivideAndConquerBoxingExpr::GetBoxingFunction(
   const auto& middle = JUST((*boxing_dividor_)(in, out));
   const auto& lhs_boxing_func = JUST(lhs_conquer_->GetBoxingFunction(in, middle, logical_shape));
   const auto& rhs_boxing_func = JUST(rhs_conquer_->GetBoxingFunction(middle, out, logical_shape));
-  BoxingFunctionT boxing_function = [lhs_boxing_func, rhs_boxing_func, middle, in, out](
-                                        const std::shared_ptr<one::Tensor>& tensor,
-                                        Symbol<PlacedNdSbp> arg_in,
-                                        Symbol<PlacedNdSbp> arg_out) -> Maybe<one::Tensor> {
-    CHECK_OR_RETURN(in == arg_in);
-    CHECK_OR_RETURN(out == arg_out);
+  BoxingFunctionT boxing_function =
+      [lhs_boxing_func, rhs_boxing_func, middle, in, out, &logical_shape](
+          const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> arg_in,
+          Symbol<PlacedNdSbp> arg_out) -> Maybe<one::Tensor> {
+    // Always true, if check failed, there is a bug in oneflow needed to be resolved.
+    CHECK_OR_RETURN(in == arg_in) << Error::RuntimeError() << "The placement ("
+                                  << *JUST(PlacementToString(arg_in->placement())) << ") and sbp ("
+                                  << NdSbpToString(in->nd_sbp())
+                                  << ") of input tensor must match the placement ("
+                                  << *JUST(PlacementToString(in->placement())) << ") and sbp ("
+                                  << NdSbpToString(arg_in->nd_sbp())
+                                  << ") used for get this boxing function! Please submit an issue "
+                                     "in `https://github.com/Oneflow-Inc/oneflow/issues` "
+                                     "and we will fix it as soon as possible";
+    CHECK_OR_RETURN(logical_shape == *tensor->shape())
+        << Error::RuntimeError() << "The logical_shape " << tensor->shape()->ToString()
+        << " of input tensor must match the logical_shape " << logical_shape.ToString()
+        << " used for get this boxing function! Please submit an issue in "
+           "`https://github.com/Oneflow-Inc/oneflow/issues` and we will fix it "
+           "as soon as possible";
+    CHECK_OR_RETURN(out == arg_out)
+        << Error::RuntimeError() << "The placement ("
+        << *JUST(PlacementToString(arg_out->placement())) << ") and sbp ("
+        << NdSbpToString(arg_out->nd_sbp()) << ") of output tensor must match the placement ("
+        << *JUST(PlacementToString(out->placement())) << ") and sbp ("
+        << NdSbpToString(out->nd_sbp())
+        << ") used for get this boxing function! Please submit "
+           "an issue in `https://github.com/Oneflow-Inc/oneflow/issues` and we will fix it "
+           "as soon as possible";
     const auto& middle_tensor = JUST((*lhs_boxing_func)(tensor, in, middle));
     return JUST((*rhs_boxing_func)(middle_tensor, middle, out));
   };

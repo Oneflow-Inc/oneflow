@@ -29,7 +29,7 @@ limitations under the License.
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
@@ -119,7 +119,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
   // Infer devices
   if (!user_op_expr.has_device_and_stream_infer_fn()) {
-    stream = GetDefaultStreamByDevice(default_device);
+    stream = JUST(GetDefaultStreamByDevice(default_device));
     for (int i = 0; i < outputs->size(); i++) {
       auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
       *JUST(tensor_impl->mut_device()) = default_device;
@@ -142,7 +142,6 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
         return output_tensor_metas->at(i);
       }));
 
-  const bool pin_memory = ctx.pin_memory.value_or(false);
   for (int i = 0; i < output_eager_blob_objects->size(); i++) {
     auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
     if (!output_eager_blob_objects->at(i)) {
@@ -154,7 +153,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
         tensor_impl->mut_tensor_meta()->set_stride(stride);
       }
       const auto& dep_object = NewLocalDepObject();
-      JUST(tensor_impl->InitEagerBlobObject(dep_object, pin_memory));
+      JUST(tensor_impl->InitEagerBlobObject(dep_object));
       output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
     } else {
       // output i is inplaced.
@@ -175,8 +174,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
 
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      ctx, stream);
+    return builder->Call(kernel, input_eager_blob_objects, output_eager_blob_objects, ctx, stream);
   }));
   return Maybe<void>::Ok();
 }

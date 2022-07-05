@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
-#if CUDA_VERSION >= 11040
+#if CUDA_VERSION >= 11060
 
 namespace oneflow {
 
@@ -51,14 +51,15 @@ class CublasFusedMLP : public OpExprGradFunction<CublasFusedMLPCaptureState> {
 
 Maybe<void> CublasFusedMLP::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> CublasFusedMLP::Capture(CublasFusedMLPCaptureState* ctx, const TensorTuple& inputs,
                                     const TensorTuple& outputs, const AttrMap& attrs) const {
-  CHECK_OR_RETURN(inputs.size() % 2 == 1) << "Both weight and bias should be passed together. ";
+  CHECK_OR_RETURN(inputs.size() % 2 == 1)
+      << Error::RuntimeError() << "Both weight and bias should be passed together";
   int32_t weight_num = (inputs.size() - 1) / 2;
   ctx->weight_num = weight_num;
   ctx->x_requires_grad = JUST(VectorAt(inputs, 0))->requires_grad();
@@ -94,6 +95,20 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
                                   const TensorTuple& out_grads, TensorTuple* in_grads) const {
   int32_t weight_num = ctx->weight_num;
   in_grads->resize(1 + 2 * weight_num);
+  std::shared_ptr<one::Tensor> last_bias_dy = JUST(VectorAt(out_grads, 0));
+
+  if (!ctx->skip_final_activation) {
+    // step1: use dy and final output to get last layer's relu grad.
+    last_bias_dy = JUST(functional::ReluGrad(JUST(VectorAt(out_grads, 0)),
+                                             JUST(VectorAt(ctx->SavedTensors(), 1 + weight_num))));
+  }
+
+  // step2: use reduce_sum to get last layer's bias grad.
+  std::vector<int32_t> reduce_axes_vec{0};
+  if (JUST(VectorAt(ctx->biases_requires_grad, weight_num - 1))) {
+    JUST(VectorAt(*in_grads, 2 * weight_num)) =
+        JUST(functional::ReduceSum(last_bias_dy, reduce_axes_vec, false));
+  }
 
   TensorTuple hiddens(weight_num - 1);
   TensorTuple weights(weight_num);
@@ -101,7 +116,6 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
   TensorTuple dgrad(weight_num);
 
   std::shared_ptr<one::Tensor> x = JUST(VectorAt(ctx->SavedTensors(), 0));
-  std::shared_ptr<one::Tensor> out = JUST(VectorAt(ctx->SavedTensors(), 1 + weight_num));
 
   for (int32_t i = 0; i < weight_num; ++i) {
     weights[i] = JUST(VectorAt(ctx->SavedTensors(), 1 + i));
@@ -113,33 +127,6 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
 
   for (int32_t i = 0; i < weight_num - 1; ++i) {
     hiddens[i] = JUST(VectorAt(ctx->SavedTensors(), i + 2 + 2 * weight_num));
-  }
-
-  std::shared_ptr<one::Tensor> last_bias_dy = JUST(VectorAt(out_grads, 0));
-
-  if (!ctx->skip_final_activation) {
-    // step1: use dy and final output to get last layer's relu grad.
-    last_bias_dy = JUST(functional::ReluGrad(JUST(VectorAt(out_grads, 0)), out));
-  }
-
-  const bool last_layer_weight_requires_grad =
-      JUST(VectorAt(ctx->weights_requires_grad, weight_num - 1));
-  const bool last_layer_bias_requires_grad =
-      JUST(VectorAt(ctx->biases_requires_grad, weight_num - 1));
-
-  // For last layer, we use CublasMatmulBiasAddGrad to get wgrad and b grad.
-  if ((last_layer_weight_requires_grad || last_layer_bias_requires_grad)) {
-    // If there is only 1 layer, we use CublasMatmulBiasAddGrad to calculate first layer's dw.
-    std::shared_ptr<one::Tensor> last_layer_x = x;
-    if (weight_num != 1) { last_layer_x = JUST(VectorAt(hiddens, weight_num - 2)); }
-    const auto& last_layer_wgrad_bgrad =
-        JUST(functional::CublasMatmulBiasAddGrad(last_bias_dy, last_layer_x));
-    if (last_layer_weight_requires_grad) {
-      JUST(VectorAt(*in_grads, weight_num)) = JUST(VectorAt(*last_layer_wgrad_bgrad, 0));
-    }
-    if (last_layer_bias_requires_grad) {
-      JUST(VectorAt(*in_grads, 2 * weight_num)) = JUST(VectorAt(*last_layer_wgrad_bgrad, 1));
-    }
   }
 
   std::shared_ptr<one::Tensor> cublas_dy = last_bias_dy;
@@ -154,7 +141,7 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
     */
     const auto& matmul_relu_bias_bgrad = JUST(functional::CublasBiasAddReluMatmulGrad(
         cublas_dy, JUST(VectorAt(weights, hidden_layer_idx)),
-        JUST(VectorAt(cublas_auxs, hidden_layer_idx - 1))));
+        JUST(VectorAt(cublas_auxs, hidden_layer_idx - 1)), /*alpha=*/1.0));
 
     // dgrad
     dgrad.at(hidden_layer_idx) = matmul_relu_bias_bgrad->at(0);  // NOLINT
@@ -164,10 +151,8 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
       JUST(VectorAt(*in_grads, weight_num + hidden_layer_idx)) =
           matmul_relu_bias_bgrad->at(1);  // NOLINT
     }
-    // dw, need to skip final layer, cause final layer's wgrad has used CublasMatmulBiasAddGrad to
-    // calculate.
-    if (JUST(VectorAt(ctx->weights_requires_grad, hidden_layer_idx))
-        && hidden_layer_idx != weight_num - 1) {
+    // dw
+    if (JUST(VectorAt(ctx->weights_requires_grad, hidden_layer_idx))) {
       JUST(VectorAt(*in_grads, (1 + hidden_layer_idx))) = JUST(functional::MatMul(
           cublas_dy, JUST(VectorAt(hiddens, hidden_layer_idx - 1)), true, false, 1.0));
     }
@@ -186,12 +171,10 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
     JUST(VectorAt(*in_grads, 0)) =
         JUST(functional::MatMul(last_dy, JUST(VectorAt(weights, 0)), false, false, 1.0));
   }
-  if (JUST(VectorAt(ctx->weights_requires_grad, 0)) && weight_num >= 2) {
-    // If weight_num == 1, dw has been calculated by CublasMatmulBiasAddGrad, so we need to skip.
+  if (JUST(VectorAt(ctx->weights_requires_grad, 0))) {
     // dw:
     JUST(VectorAt(*in_grads, 1)) =
-        JUST(functional::MatMul(last_dy, JUST(VectorAt(ctx->SavedTensors(), 0)), true, false,
-                                1.0));  // use x instead just vectorat
+        JUST(functional::MatMul(last_dy, JUST(VectorAt(ctx->SavedTensors(), 0)), true, false, 1.0));
   }
 
   return Maybe<void>::Ok();
@@ -202,4 +185,4 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("cublas_fused_mlp", CublasFusedMLP);
 }  // namespace one
 
 }  // namespace oneflow
-#endif  // CUDA_VERSION >= 11040
+#endif  // CUDA_VERSION >= 11060

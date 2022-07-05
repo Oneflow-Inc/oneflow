@@ -89,26 +89,81 @@ def _test_slice_ellipsis_type(test_case, placement, sbp):
     _check_forward_and_backward(test_case, input, of_out, torch_out)
 
 
-def _test_logical_slice(test_case, placement, sbp):
-    x = random_tensor(2, 8, 8, requires_grad=False).oneflow
-    x_numpy = x.detach().cpu().numpy()
-
-    x = x.to_global(placement=placement, sbp=sbp)
-    y = flow.logical_slice(x, slice_tup_list=[[0, 1, 1]])
-
-    test_case.assertTrue(y.sbp in [(flow.sbp.partial_sum,), (oneflow.sbp.broadcast,)])
-    test_case.assertTrue(np.array_equal(y.numpy(), x_numpy[0:1:1]))
-
-
-def _test_logical_slice_with_bool(test_case, placement, sbp):
+def _test_slice_with_bool(test_case, placement, sbp):
     x = random_tensor(2, 8, 8).oneflow > 0.5
     x_numpy = x.detach().cpu().numpy()
 
     x = x.to_global(placement=placement, sbp=sbp)
-    y = flow.logical_slice(x, slice_tup_list=[[0, 1, 1]])
+    y = flow.slice(x, slice_tup_list=[[0, 1, 1]])
 
-    test_case.assertTrue(y.sbp in [(flow.sbp.partial_sum,), (oneflow.sbp.broadcast,)])
     test_case.assertTrue(np.array_equal(y.numpy(), x_numpy[0:1:1]))
+
+
+@autotest(
+    n=2, auto_backward=False, check_graph=False,
+)
+def _test_slice_with_grad(test_case, placement):
+    sbp = random_sbp(placement, max_dim=2).value()
+
+    # out_sbp
+    sbp_map = {
+        flow.sbp.broadcast: flow.sbp.broadcast,
+        flow.sbp.split(0): flow.sbp.split(0),
+        flow.sbp.split(1): flow.sbp.partial_sum(),
+        flow.sbp.partial_sum: flow.sbp.partial_sum(),
+    }
+    assert sbp is not None
+    out_sbp = tuple([sbp_map[in_sbp] for in_sbp in sbp])
+
+    x = random_tensor(2, 8, 16, requires_grad=True).oneflow
+    x_numpy = x.detach().cpu().numpy()
+
+    class SliceWithGrad(flow.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.input_grad = flow.nn.Parameter(flow.zeros(8, 16))
+
+        def forward(self, input):
+            x = input + self.input_grad
+            x = x.to_global(placement, sbp)
+            return x[:, :8]
+
+    slice_with_grad_m = SliceWithGrad().to_global(
+        placement, [flow.sbp.broadcast,] * len(sbp)
+    )
+
+    of_sgd = flow.optim.SGD(slice_with_grad_m.parameters(), lr=1.0, momentum=0.0)
+
+    class SliceTrainGraph(flow.nn.Graph):
+        def __init__(self):
+            super().__init__()
+            self.module = slice_with_grad_m
+            self.add_optimizer(of_sgd)
+
+        def build(self, x):
+            out = self.module(x)
+            test_case.assertEqual(
+                out.sbp,
+                out_sbp,
+                f"input sbp is {sbp}, but output sbp is {out.sbp} with placement: {placement}",
+            )
+            z = out.sum()
+            z.backward()
+            return out
+
+    graph = SliceTrainGraph()
+
+    input = x.to_global(placement=placement, sbp=sbp)
+    y = graph(input)
+
+    # output
+    test_case.assertTrue(np.array_equal(y.numpy(), x_numpy[:, :8]))
+    # input_grad
+    x_grad_np = np.zeros((8, 16))
+    x_grad_np[:, :8] = 1
+    test_case.assertTrue(
+        np.array_equal(-graph.module.input_grad.origin.numpy(), x_grad_np)
+    )
 
 
 class TestSlice(flow.unittest.TestCase):
@@ -121,18 +176,17 @@ class TestSlice(flow.unittest.TestCase):
                 _test_slice_1dim(test_case, placement, sbp)
                 _test_negative_index(test_case, placement, sbp)
                 _test_slice_ellipsis_type(test_case, placement, sbp)
+                _test_slice_with_bool(test_case, placement, sbp)
 
-
-class TestLogicalSlice(flow.unittest.TestCase):
     @globaltest
-    def test_logical_slice(test_case):
+    def test_graph_slice(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=2):
-                # logical slice not support 2d sbp currently
-                if len(sbp) > 1:
-                    continue
-                _test_logical_slice(test_case, placement, sbp)
-                _test_logical_slice_with_bool(test_case, placement, sbp)
+            # TODO(wyg): It will be infer all broadcast sbp when 1n1d,
+            #            slice_update will get error when doing inplace operator.
+            #            Remove this judgement after refactor sbp infer method in Operator class.
+            if placement.ranks.size == 1:
+                continue
+            _test_slice_with_grad(test_case, placement)
 
 
 if __name__ == "__main__":

@@ -443,6 +443,9 @@ void OpGraph::ForEachDataAndCtrlInNode(OpNode* node,
                                        const std::function<void(OpNode*)>& Handler) const {
   node->ForEachNodeOnInEdge(Handler);
   for (const auto& ctrl_in_op_name : node->op().op_conf().ctrl_in_op_name()) {
+    CHECK(op_name2op_node_.find(ctrl_in_op_name) != op_name2op_node_.end())
+        << " cannot find ctrl_in_op_name: [" << ctrl_in_op_name << "] of op: ["
+        << node->op().op_name() << "] in OpGraph. ";
     Handler(op_name2op_node_.at(ctrl_in_op_name));
   }
 }
@@ -453,6 +456,9 @@ void OpGraph::ForEachDataAndCtrlOutNode(OpNode* node,
   const auto& op_name_it = producer_op_name2ctrl_consumer_op_names_.find(node->op().op_name());
   if (op_name_it == producer_op_name2ctrl_consumer_op_names_.end()) { return; }
   for (const std::string& ctrl_consumer_op_name : op_name_it->second) {
+    CHECK(op_name2op_node_.find(ctrl_consumer_op_name) != op_name2op_node_.end())
+        << " cannot find ctrl_consumer_op_name: [" << ctrl_consumer_op_name << "] of op: ["
+        << node->op().op_name() << "] in OpGraph.";
     Handler(op_name2op_node_.at(ctrl_consumer_op_name));
   }
 }
@@ -466,8 +472,7 @@ void OpGraph::TopoForEachNodeWithCtrlEdge(const std::function<void(OpNode*)>& No
                                               const std::function<void(OpNode*)>& Handler) {
     ForEachDataAndCtrlOutNode(node, Handler);
   };
-  TopoForEachNode(DataOrCtrlSourceNodes(), OpGraphForEachInDataAndCtrlNode,
-                  OpGraphForEachOutDataAndCtrlNode, NodeHandler);
+  TopoForEachNode(OpGraphForEachInDataAndCtrlNode, OpGraphForEachOutDataAndCtrlNode, NodeHandler);
 }
 
 std::function<bool(const std::string&, const std::string&)>

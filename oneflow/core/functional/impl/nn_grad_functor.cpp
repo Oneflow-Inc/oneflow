@@ -110,6 +110,30 @@ class ConvDataGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class EmbeddingGradFunctor {
+ public:
+  EmbeddingGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("embedding_grad")
+                         .Input("dy")
+                         .Input("weight")
+                         .Input("indices")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& indices, const int64_t& padding_idx,
+                           const bool& scale_grad_by_freq) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("padding_idx", padding_idx));
+    JUST(attrs.SetAttr<bool>("scale_grad_by_freq", scale_grad_by_freq));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, weight, indices}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class MaxPoolNdGradFunctor {
  public:
   MaxPoolNdGradFunctor() {
@@ -339,39 +363,37 @@ class KLDivLossGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class NllLossGradFunctor {
+class NLLGradFunctor {
  public:
-  NllLossGradFunctor() {
+  NLLGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("nll_grad")
+                         .Input("out_grad")
                          .Input("input")
                          .Input("target")
-                         .Input("total_weight")
-                         .Input("dy")
-                         .Output("dx")
+                         .Output("in_grad")
                          .Build());
+
     op_weight_ = CHECK_JUST(one::OpBuilder("nll_grad")
+                                .Input("out_grad")
                                 .Input("input")
                                 .Input("target")
-                                .Input("total_weight")
                                 .Input("weight")
-                                .Input("dy")
-                                .Output("dx")
+                                .Output("in_grad")
                                 .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& out_grad,
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
-                           const Optional<one::Tensor>& weight,
-                           const std::shared_ptr<one::Tensor>& total_weight,
-                           const int64_t ignore_index) const {
+                           const Optional<one::Tensor>& weight, const int64_t ignore_index) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
 
     if (weight) {
-      return OpInterpUtil::Dispatch<one::Tensor>(
-          *op_weight_, {input, target, total_weight, JUST(weight), dy}, attrs);
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_,
+                                                 {out_grad, input, target, JUST(weight)}, attrs);
     } else {
-      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {input, target, total_weight, dy}, attrs);
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {out_grad, input, target}, attrs);
     }
   }
 
@@ -482,6 +504,28 @@ class BinaryCrossEntropyWithLogitsLossGradFunctor {
   std::shared_ptr<OpExpr> op_weight_pos_;
 };
 
+class BinaryCrossEntropyWithLogitsReduceMeanLossGradFunctor {
+ public:
+  BinaryCrossEntropyWithLogitsReduceMeanLossGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits_reduce_mean_grad")
+                         .Input("dy")
+                         .Input("input")
+                         .Input("target")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target) const {
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, input, target});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_weight_;
+  std::shared_ptr<OpExpr> op_pos_;
+  std::shared_ptr<OpExpr> op_weight_pos_;
+};
 class CombinedMarginLossGradFunctor {
  public:
   CombinedMarginLossGradFunctor() {
@@ -703,22 +747,41 @@ class NormalizationAddReluGradFunctor {
                                 .Output("beta_diff")
                                 .Output("addend_diff")
                                 .Build());
+    no_addend_op_ = CHECK_JUST(one::OpBuilder("normalization_add_relu_grad")
+                                   .Input("x")
+                                   .Input("dy")
+                                   .Input("mean")
+                                   .Input("inv_variance")
+                                   .Input("gamma")
+                                   .Input("beta")
+                                   .Input("reserve_space")
+                                   .Input("y")
+                                   .Output("dx")
+                                   .Output("gamma_diff")
+                                   .Output("beta_diff")
+                                   .Build());
   }
   Maybe<TensorTuple> operator()(
       const std::shared_ptr<one::Tensor>& x, const std::shared_ptr<one::Tensor>& grad,
       const std::shared_ptr<one::Tensor>& mean, const std::shared_ptr<one::Tensor>& inv_variance,
       const std::shared_ptr<one::Tensor>& gamma, const std::shared_ptr<one::Tensor>& beta,
       const std::shared_ptr<one::Tensor>& reserve_space, const std::shared_ptr<one::Tensor>& y,
-      const int32_t& axis, const float& epsilon) const {
+      const int32_t& axis, const float& epsilon, bool has_addend) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", axis));
     JUST(attrs.SetAttr<float>("epsilon", epsilon));
-    return OpInterpUtil::Dispatch<TensorTuple>(
-        *addend_op_, {x, grad, mean, inv_variance, gamma, beta, reserve_space, y}, attrs);
+    if (has_addend) {
+      return OpInterpUtil::Dispatch<TensorTuple>(
+          *addend_op_, {x, grad, mean, inv_variance, gamma, beta, reserve_space, y}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<TensorTuple>(
+          *no_addend_op_, {x, grad, mean, inv_variance, gamma, beta, reserve_space, y}, attrs);
+    }
   }
 
  private:
   std::shared_ptr<OpExpr> addend_op_;
+  std::shared_ptr<OpExpr> no_addend_op_;
 };
 
 class LayerNormGradFunctor {
@@ -906,8 +969,11 @@ class CublasBiasAddReluMatmulGradFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
                                 const std::shared_ptr<one::Tensor>& weight,
-                                const std::shared_ptr<one::Tensor>& aux) const {
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, weight, aux});
+                                const std::shared_ptr<one::Tensor>& aux,
+                                const double& alpha) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("alpha", alpha));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, weight, aux}, attrs);
   }
 
  private:
@@ -933,6 +999,23 @@ class CublasMatmulBiasAddGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedReluDropoutGradFunctor {
+ public:
+  FusedReluDropoutGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("fused_relu_dropout_grad").Input("dy").Input("mask").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
+    MutableAttrMap attr_map;
+    JUST(attr_map.SetAttr<float>("scale", scale));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, mask}, attr_map);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class FusedDotFeatureInteractionGradFunctor {
  public:
   FusedDotFeatureInteractionGradFunctor() {
@@ -942,8 +1025,7 @@ class FusedDotFeatureInteractionGradFunctor {
       ops_has_output_concat_grad_[n] =
           CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction_grad")
                          .Input("dy")
-                         .Input("features_grad_like", n + 1)
-                         .Input("padded_concated_features")
+                         .Input("features", n + 1)
                          .Output("features_grad", n + 1)
                          .Output("output_concat_grad")
                          .Build());
@@ -952,25 +1034,13 @@ class FusedDotFeatureInteractionGradFunctor {
       ops_no_output_concat_grad_[n] =
           CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction_grad")
                          .Input("dy")
-                         .Input("features_grad_like", n + 1)
-                         .Input("padded_concated_features")
-                         .Output("features_grad", n + 1)
-                         .Build());
-    }
-    ops_no_padded_concated_features_.resize(kMaxInputCount);
-    for (int n = 0; n < ops_no_padded_concated_features_.size(); ++n) {
-      ops_no_padded_concated_features_[n] =
-          CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction_grad")
-                         .Input("dy")
-                         .Input("features_grad_like", n + 1)
+                         .Input("features", n + 1)
                          .Output("features_grad", n + 1)
                          .Build());
     }
   }
 
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
-                                const Optional<one::Tensor>& padded_concated_features,
-                                const TensorTuple& features_grad_like,
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy, const TensorTuple& features,
                                 const bool& has_output_concat, const bool& self_interaction,
                                 const int32_t& output_concat_grad_dim,
                                 const std::string& pooling) const {
@@ -980,25 +1050,12 @@ class FusedDotFeatureInteractionGradFunctor {
     JUST(attrs.SetAttr<std::string>("pooling", pooling));
     CHECK_OR_RETURN(pooling == "sum" || pooling == "none")
         << Error::RuntimeError() << "pooling should be sum or none, but get " << pooling << ". ";
-    const int64_t n_features_grad = features_grad_like.size();
+    const int64_t n_features_grad = features.size();
     CHECK_LE_OR_RETURN(n_features_grad, kMaxInputCount)
-        << Error::RuntimeError()
-        << "The number of tensors in features_grad_like should be less than 128.";
-    TensorTuple inputs;
-    if (padded_concated_features) {
-      inputs.resize(n_features_grad + 2);
-    } else {
-      inputs.resize(n_features_grad + 1);
-    }
+        << Error::RuntimeError() << "The number of tensors in features should be less than 128.";
+    TensorTuple inputs(n_features_grad + 1);
     inputs[0] = dy;
-    for (int32_t i = 0; i < n_features_grad; ++i) { inputs[i + 1] = features_grad_like[i]; }
-    if (padded_concated_features) {
-      inputs[n_features_grad + 1] = JUST(padded_concated_features);
-    } else {
-      return OpInterpUtil::Dispatch<TensorTuple>(
-          *JUST(oneflow::VectorAt(ops_no_padded_concated_features_, n_features_grad - 1)), inputs,
-          attrs);
-    }
+    for (int32_t i = 0; i < n_features_grad; ++i) { inputs[i + 1] = features[i]; }
     if (has_output_concat) {
       return OpInterpUtil::Dispatch<TensorTuple>(
           *JUST(oneflow::VectorAt(ops_has_output_concat_grad_, n_features_grad - 1)), inputs,
@@ -1012,7 +1069,65 @@ class FusedDotFeatureInteractionGradFunctor {
  private:
   std::vector<std::shared_ptr<OpExpr>> ops_has_output_concat_grad_;
   std::vector<std::shared_ptr<OpExpr>> ops_no_output_concat_grad_;
-  std::vector<std::shared_ptr<OpExpr>> ops_no_padded_concated_features_;
+};
+
+class FusedCrossFeatureInteractionV1GradFunctor {
+ public:
+  FusedCrossFeatureInteractionV1GradFunctor() {
+    v1_grad_op_ = CHECK_JUST(one::OpBuilder("fused_cross_feature_interaction_v1_grad")
+                                 .Input("dy")
+                                 .Input("weight")
+                                 .Input("x")
+                                 .Input("x0")
+                                 .Input("matmul_result")
+                                 .Output("dx")
+                                 .Output("dw")
+                                 .Output("dx0")
+                                 .Output("dbias")
+                                 .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                                const std::shared_ptr<one::Tensor>& weight,
+                                const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& x0,
+                                const std::shared_ptr<one::Tensor>& matmul_result) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*v1_grad_op_, {dy, weight, x, x0, matmul_result});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> v1_grad_op_;
+};
+
+class FusedCrossFeatureInteractionV2GradFunctor {
+ public:
+  FusedCrossFeatureInteractionV2GradFunctor() {
+    v2_grad_op_ = CHECK_JUST(one::OpBuilder("fused_cross_feature_interaction_v2_grad")
+                                 .Input("dy")
+                                 .Input("weight")
+                                 .Input("bias")
+                                 .Input("x")
+                                 .Input("x0")
+                                 .Input("matmul_result")
+                                 .Output("dx")
+                                 .Output("dw")
+                                 .Output("dx0")
+                                 .Output("dbias")
+                                 .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                                const std::shared_ptr<one::Tensor>& weight,
+                                const std::shared_ptr<one::Tensor>& bias,
+                                const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& x0,
+                                const std::shared_ptr<one::Tensor>& matmul_result) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*v2_grad_op_,
+                                               {dy, weight, bias, x, x0, matmul_result});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> v2_grad_op_;
 };
 
 }  // namespace impl
@@ -1021,10 +1136,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConvBiasGradFunctor>("ConvBiasGrad");
   m.add_functor<impl::ConvFilterGradFunctor>("ConvFilterGrad");
   m.add_functor<impl::ConvDataGradFunctor>("ConvDataGrad");
+  m.add_functor<impl::EmbeddingGradFunctor>("EmbeddingGrad");
   m.add_functor<impl::TFPoolNdGradFunctor>("TFPoolNdGrad");
   m.add_functor<impl::AdaptivePoolNdGradFunctor>("AdaptivePoolNdGrad");
   m.add_functor<impl::KLDivLossGradFunctor>("KLDivLossGrad");
-  m.add_functor<impl::NllLossGradFunctor>("NllLossGrad");
+  m.add_functor<impl::NLLGradFunctor>("NLLGrad");
   m.add_functor<impl::BinaryCrossEntropyLossGradFunctor>("BinaryCrossEntropyLossGrad");
   m.add_functor<impl::BinaryCrossEntropyWithLogitsLossGradFunctor>(
       "BinaryCrossEntropyWithLogitsLossGrad");
@@ -1051,7 +1167,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedScaleMaskSoftmaxDropoutGradFunctor>("FusedScaleMaskSoftmaxDropoutGrad");
   m.add_functor<impl::CublasBiasAddReluMatmulGradFunctor>("CublasBiasAddReluMatmulGrad");
   m.add_functor<impl::CublasMatmulBiasAddGradFunctor>("CublasMatmulBiasAddGrad");
+  m.add_functor<impl::FusedReluDropoutGradFunctor>("FusedReluDropoutGrad");
   m.add_functor<impl::FusedDotFeatureInteractionGradFunctor>("FusedDotFeatureInteractionGrad");
+  m.add_functor<impl::FusedCrossFeatureInteractionV1GradFunctor>(
+      "FusedCrossFeatureInteractionV1Grad");
+  m.add_functor<impl::FusedCrossFeatureInteractionV2GradFunctor>(
+      "FusedCrossFeatureInteractionV2Grad");
+  m.add_functor<impl::BinaryCrossEntropyWithLogitsReduceMeanLossGradFunctor>(
+      "BinaryCrossEntropyWithLogitsReduceMeanLossGrad");
 };
 
 }  // namespace functional

@@ -196,7 +196,7 @@ void StaticGroupCoordinator::AddRequest(void* coordinator_token) {
 }
 
 void StaticGroupCoordinator::DumpSummary(const int64_t job_id) const {
-  if (!Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { return; }
+  if (!Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { return; }
   auto group_ls = TeePersistentLogStream::Create(StrCat("boxing/collective/job_", job_id));
   const auto& it = impl_->job_id2static_group_requests_info_.find(job_id);
 
