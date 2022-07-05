@@ -81,7 +81,7 @@ class SbpGraph {
 
   // Check and eliminate one node with only one degree-in and one degree-out
   int32_t NodeElimination(SbpNode<SbpSignature>* this_node);
-  // Merge all parallel edges with given StartNode and EndNode
+  // Merge all parallel edges with given start_node_ and end_node_
   int32_t EdgeElimination(SbpNode<SbpSignature>* this_node);
   // Ckeck and eliminate one child node
   int32_t ChildElimination(SbpNode<SbpSignature>* this_node);
@@ -243,7 +243,7 @@ double SbpGraph<SbpSignature>::ComputeCost() {
 
     GraphCost += this_node->Cost[this_id];
     for (const auto& edge_out : this_node->EdgesOut) {
-      GraphCost += edge_out->Cost[this_id][edge_out->EndNode->FinalSbpSignatureId];
+      GraphCost += edge_out->cost_[this_id][edge_out->end_node_->FinalSbpSignatureId];
     }
   }
   return GraphCost;
@@ -253,8 +253,8 @@ template<class SbpSignature>
 int32_t SbpGraph<SbpSignature>::NodeElimination(SbpNode<SbpSignature>* this_node) {
   if (this_node->EdgesIn.size() + this_node->EdgesOut.size() == 2) {
     std::vector<SbpNode<SbpSignature>*> TwoNode;
-    for (const auto& one_edge : this_node->EdgesIn) TwoNode.emplace_back(one_edge->StartNode);
-    for (const auto& one_edge : this_node->EdgesOut) TwoNode.emplace_back(one_edge->EndNode);
+    for (const auto& one_edge : this_node->EdgesIn) TwoNode.emplace_back(one_edge->start_node_);
+    for (const auto& one_edge : this_node->EdgesOut) TwoNode.emplace_back(one_edge->end_node_);
 
     // If a node is pointing to itself, could happen when shrink from a circle
     if (TwoNode[0] == TwoNode[1]) {
@@ -285,9 +285,9 @@ int32_t SbpGraph<SbpSignature>::NodeElimination(SbpNode<SbpSignature>* this_node
     for (int32_t i = EdgesInSize; i < 2; i++) {
       CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(TwoNode[i]->EdgesIn, TwoEdge[i]);
     }
-    // Let e take control of EdgeList completely by disconnecting MidNode
-    e->MidNode->EdgesOut.clear();
-    e->MidNode->EdgesIn.clear();
+    // Let e take control of edge_list_ completely by disconnecting MidNode
+    e->mid_node_->EdgesOut.clear();
+    e->mid_node_->EdgesIn.clear();
 
     // Insert new compound edge into graph
     TwoNode[0]->EdgesOut.emplace_back(e);
@@ -308,94 +308,93 @@ template<class SbpSignature>
 int32_t SbpGraph<SbpSignature>::NodeAndEdgeEliminations() {
   // Total elimination number
   int32_t TtlElmNum = 0;
-  int32_t EliminationsNumber = 1;
+  int32_t elimiational_num = 1;
   // repeat these kinds of elimination until stuck
-  while (EliminationsNumber > 0) {
-    EliminationsNumber = 0;
+  while (elimiational_num > 0) {
+    elimiational_num = 0;
     for (int32_t i = NodeList.size() - 1; i >= 0; i--) {
-      EliminationsNumber += NodeElimination(NodeList[i]);
+      elimiational_num += NodeElimination(NodeList[i]);
     }
 
     for (int32_t i = NodeList.size() - 1; i >= 0; i--) {
-      EliminationsNumber += EdgeElimination(NodeList[i]);
+      elimiational_num += EdgeElimination(NodeList[i]);
     }
 
     for (int32_t i = NodeList.size() - 1; i >= 0; i--) {
-      EliminationsNumber += ChildElimination(NodeList[i]);
+      elimiational_num += ChildElimination(NodeList[i]);
     }
 
-    if (EliminationsNumber == 0 && NodeList.size() > 2) {
-      EliminationsNumber += PickAndMerge();
+    if (elimiational_num == 0 && NodeList.size() > 2) {
+      elimiational_num += PickAndMerge();
       for (int32_t i = NodeList.size() - 1; i >= 0; i--) {
-        EliminationsNumber += EdgeElimination(NodeList[i]);
+        elimiational_num += EdgeElimination(NodeList[i]);
       }
     }
 
-    TtlElmNum += EliminationsNumber;
+    TtlElmNum += elimiational_num;
   }
 
   return TtlElmNum;
 }
 
 template<class SbpSignature>
-int32_t LookForParallelEdge(SbpEdge<SbpSignature>*& e, SbpNode<SbpSignature>* start_node,
-                            SbpNode<SbpSignature>* end_node, bool ifReverse, int32_t stopsign) {
-  // elimination edges with specific start node and end node in
-  // start_node->EdgesOut from index stopsign to the end.
-  // start_node->EdgesOut[Stopsign] not included and need special treatment
-  // after this process.
-  int32_t EliminationsNumber = 0;
-  for (int32_t j = start_node->EdgesOut.size() - 1; j > stopsign; j--) {
-    if (end_node == start_node->EdgesOut[j]->EndNode) {
-      if (!e) {
-        if (ifReverse) {
-          e = new SbpEdge<SbpSignature>(end_node, start_node);
-        } else {
-          e = new SbpEdge<SbpSignature>(start_node, end_node);
-        }
-      }
-      // edge elimination
-      e->EdgeList.emplace_back(start_node->EdgesOut[j]);
-      EliminationsNumber++;
-      RemoveFrom<SbpEdge<SbpSignature>*>(start_node->EdgesOut, j);
-    }
-  }
-  return EliminationsNumber;
-}
-
-// Remove all edges with (start_node -> end_node) from EdgesIn of end_node
-template<class SbpSignature>
-void RemoveFromEdgesIn(SbpNode<SbpSignature>* start_node, SbpNode<SbpSignature>* end_node) {
-  for (int32_t i = end_node->EdgesIn.size() - 1; i >= 0; i--) {
-    if (start_node == end_node->EdgesIn[i]->StartNode) {
-      RemoveFrom<SbpEdge<SbpSignature>*>(end_node->EdgesIn, i);
-    }
-  }
-}
-
-template<class SbpSignature>
 int32_t SbpGraph<SbpSignature>::EdgeElimination(SbpNode<SbpSignature>* this_node) {
-  int32_t EliminationsNumber = 0;
+  // Remove all edges with (start_node -> end_node) from EdgesIn of end_node
+  auto RemoveFromEdgesIn = [](SbpNode<SbpSignature>* start_node,
+                              SbpNode<SbpSignature>* end_node) -> void {
+    for (int32_t i = end_node->EdgesIn.size() - 1; i >= 0; i--) {
+      if (start_node == end_node->EdgesIn[i]->start_node_) {
+        RemoveFrom<SbpEdge<SbpSignature>*>(end_node->EdgesIn, i);
+      }
+    }
+  };
+  auto LookForParallelEdge = [](SbpEdge<SbpSignature>*& e, SbpNode<SbpSignature>* start_node,
+                                SbpNode<SbpSignature>* end_node, bool if_reverse,
+                                int32_t stopsign) -> int32_t {
+    // elimination edges with specific start node and end node in
+    // start_node->EdgesOut from index stopsign to the end.
+    // start_node->EdgesOut[Stopsign] not included and need special treatment
+    // after this process.
+    int32_t elimiational_num = 0;
+    for (int32_t j = start_node->EdgesOut.size() - 1; j > stopsign; j--) {
+      if (end_node == start_node->EdgesOut[j]->end_node_) {
+        if (!e) {
+          if (if_reverse) {
+            e = new SbpEdge<SbpSignature>(end_node, start_node);
+          } else {
+            e = new SbpEdge<SbpSignature>(start_node, end_node);
+          }
+        }
+        // edge elimination
+        e->edge_list_.emplace_back(start_node->EdgesOut[j]);
+        elimiational_num++;
+        RemoveFrom<SbpEdge<SbpSignature>*>(start_node->EdgesOut, j);
+      }
+    }
+    return elimiational_num;
+  };
+
+  int32_t elimiational_num = 0;
 
   for (int32_t i = 0; i < this_node->EdgesOut.size(); i++) {
-    SbpEdge<SbpSignature>* e = NULL;
+    SbpEdge<SbpSignature>* e = nullptr;
     // Find and delete Parallel Edges from EdgesOut
-    EliminationsNumber +=
-        LookForParallelEdge<SbpSignature>(e, this_node, this_node->EdgesOut[i]->EndNode, false, i);
-    EliminationsNumber +=
-        LookForParallelEdge<SbpSignature>(e, this_node->EdgesOut[i]->EndNode, this_node, true, -1);
+    elimiational_num += LookForParallelEdge(e, this_node, this_node->EdgesOut[i]->end_node_,
+                                            /*if_reverse=*/false, i);
+    elimiational_num += LookForParallelEdge(e, this_node->EdgesOut[i]->end_node_, this_node,
+                                            /*if_reverse=*/true, /*stopsign=*/-1);
     if (e) {
       // Delete Parallel Edges from EdgesIn
-      RemoveFromEdgesIn<SbpSignature>(this_node, e->EndNode);
-      RemoveFromEdgesIn<SbpSignature>(e->EndNode, this_node);
+      RemoveFromEdgesIn(this_node, e->end_node_);
+      RemoveFromEdgesIn(e->end_node_, this_node);
       // Add the compound edge
-      e->EdgeList.emplace_back(this_node->EdgesOut[i]);
+      e->edge_list_.emplace_back(this_node->EdgesOut[i]);
       this_node->EdgesOut[i] = e;
       e->SummarizeCost();
-      e->EndNode->EdgesIn.emplace_back(e);
+      e->end_node_->EdgesIn.emplace_back(e);
     }
   }
-  return EliminationsNumber;
+  return elimiational_num;
 }
 
 template<class SbpSignature>
@@ -403,13 +402,13 @@ int32_t SbpGraph<SbpSignature>::ChildElimination(SbpNode<SbpSignature>* this_nod
   if (this_node->EdgesIn.size() + this_node->EdgesOut.size() == 1) {
     if (this_node->EdgesIn.size()) {
       // edge in graph: father -> this_node
-      SbpNode<SbpSignature>* father = this_node->EdgesIn[0]->StartNode;
+      SbpNode<SbpSignature>* father = this_node->EdgesIn[0]->start_node_;
       father->Children.emplace_back(this_node);
       CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(father->EdgesOut, this_node->EdgesIn[0]);
       father->SummarizeCost();
     } else {
       // edge in graph: this_node -> father
-      SbpNode<SbpSignature>* father = this_node->EdgesOut[0]->EndNode;
+      SbpNode<SbpSignature>* father = this_node->EdgesOut[0]->end_node_;
       father->Children.emplace_back(this_node);
       CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(father->EdgesIn, this_node->EdgesOut[0]);
       father->SummarizeCost();
@@ -808,7 +807,7 @@ int32_t SbpGraph<SbpSignature>::PickAndMerge() {
 
   if (merging_edge != nullptr) {
     // Merge two nodes on the edge with the minimum cut ratio
-    return NodeMerging(merging_edge->StartNode, merging_edge->EndNode);
+    return NodeMerging(merging_edge->start_node_, merging_edge->end_node_);
   } else {
     // Pick the couple with the largest similar neighborhood
     std::vector<BinarySet> NodeBinarySets(NodeList.size());
@@ -817,10 +816,10 @@ int32_t SbpGraph<SbpSignature>::PickAndMerge() {
       NodeBinarySets[i].Initialize(NodeList.size());
       NodeBinarySets[i].AddEntry(i);
       for (const SbpEdge<SbpSignature>* edge_in : NodeList[i]->EdgesIn) {
-        NodeBinarySets[i].AddEntry(edge_in->StartNode->NodeListId);
+        NodeBinarySets[i].AddEntry(edge_in->start_node_->NodeListId);
       }
       for (const SbpEdge<SbpSignature>* edge_out : NodeList[i]->EdgesOut) {
-        NodeBinarySets[i].AddEntry(edge_out->StartNode->NodeListId);
+        NodeBinarySets[i].AddEntry(edge_out->start_node_->NodeListId);
       }
     }
     // Find two nodes with largest common subset
@@ -858,8 +857,8 @@ int32_t SbpGraph<SbpSignature>::PickAndMerge() {
 // Clip an edge, remove it from graph
 template<class SbpSignature>
 void SbpGraph<SbpSignature>::ClipEdge(SbpEdge<SbpSignature>* this_edge) {
-  CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(this_edge->EndNode->EdgesIn, this_edge);
-  CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(this_edge->StartNode->EdgesOut, this_edge);
+  CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(this_edge->end_node_->EdgesIn, this_edge);
+  CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(this_edge->start_node_->EdgesOut, this_edge);
   delete this_edge;
 }
 
