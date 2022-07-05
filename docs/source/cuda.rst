@@ -11,6 +11,7 @@ ONEFLOW.CUDA
         synchronize,
         manual_seed_all,
         manual_seed,
+        empty_cache,
         HalfTensor,
         FloatTensor,
         DoubleTensor,
