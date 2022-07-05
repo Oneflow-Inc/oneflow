@@ -111,7 +111,7 @@ static constexpr auto* TorchConsistentTensor =
 
 Maybe<void> CheckConsistentTensorsMeta(const TensorTuple& tensor_tuple) {
   for (const auto& tensor : tensor_tuple) {
-    if (tensor->is_consistent()) { JUST(TorchConsistentTensor(tensor)); }
+    if (tensor->is_consistent() && tensor->is_eager()) { JUST(TorchConsistentTensor(tensor)); }
   }
   return Maybe<void>::Ok();
 }

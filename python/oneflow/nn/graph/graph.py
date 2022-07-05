@@ -689,11 +689,11 @@ class Graph(object):
         for state_block in self._state():
             if (
                 state_block.type == BlockType.PARAMETER
-                and state_block.lazy_origin is not None
-                and state_block.lazy_origin.grad is not None
+                and state_block.origin.grad is not None
+                and state_block.origin.grad.is_lazy
             ):
                 variable_op_name = state_block.name_prefix + state_block.name
-                variable_gradients[variable_op_name] = state_block.lazy_origin.grad
+                variable_gradients[variable_op_name] = state_block.origin.grad
         oneflow._oneflow_internal.nn.graph.MarkVariableGradients(variable_gradients)
 
     @staticmethod

@@ -198,7 +198,6 @@ def build_graph_input_arg(op_name, arg):
         op_name, input_conf_str, ["in_0"], ["out_0"]
     )
     lazy_arg = _C.dispatch_feed_input(input_op, arg)
-    lazy_arg.requires_grad = arg.requires_grad
     return lazy_arg
 
 
@@ -219,7 +218,6 @@ def build_graph_state(op_name, state_tensor, state_config):
 
     assert isinstance(state_tensor, Tensor)
     lazy_tensor = _C.dispatch_feed_variable(var_op, state_tensor, l2=l2)
-    lazy_tensor.requires_grad = state_tensor.requires_grad
     return lazy_tensor
 
 
@@ -235,5 +233,4 @@ def build_graph_output(op_name, out):
         op_name, output_conf_str, ["in_0"], ["out_0"]
     )
     fake_eager_out = _C.dispatch_fetch_output(output_op, out)
-    fake_eager_out.requires_grad = out.requires_grad
     return fake_eager_out
