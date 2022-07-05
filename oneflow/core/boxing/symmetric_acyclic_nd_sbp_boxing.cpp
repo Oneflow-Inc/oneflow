@@ -29,31 +29,17 @@ namespace oneflow {
 
 namespace {
 
-Maybe<one::OpExpr> MakeToConsistentOpExpr() {
-  std::shared_ptr<one::OpExpr> op_expr =
-      JUST(one::CastToConsistentOpExpr::New(*JUST(UniqueStr("cast_to_consistent"))));
-  return op_expr;
-}
-
-static constexpr auto* GetLocalToConsistentOpExpr =
-    DECORATE(&MakeToConsistentOpExpr, ThreadLocalCachedCopiable);
-
 Maybe<one::Tensor> ReinterpterConsistentTensor(const std::shared_ptr<one::Tensor>& tensor,
                                                const Shape& shape,
                                                Symbol<ParallelDesc> parallel_desc,
                                                Symbol<NdSbp> nd_sbp) {
-  const auto& op = JUST(GetLocalToConsistentOpExpr());
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<Shape>("shape", shape));
-  JUST(attrs.SetAttr<DataType>("dtype", tensor->dtype()->data_type()));
-  JUST(attrs.SetAttr<bool>("sync_data", false));
   const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
   std::shared_ptr<Shape> pyhsical_shape =
       JUST(GetPhysicalShape(shape, *nd_sbp, *parallel_desc, JUST(*parallel_id)));
   std::shared_ptr<one::Tensor> x = JUST(tensor->cur_rank_phy_tensor());
   if (*x->shape() != *pyhsical_shape) { x = JUST(one::functional::Reshape(x, *pyhsical_shape)); }
-  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(
-      *op, {x}, one::OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
+  return JUST(one::functional::LocalToConsistent(x, parallel_desc, *JUST(GetSbpList(nd_sbp)), shape,
+                                                 tensor->dtype(), /* sync_data */ false));
 }
 
 Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input, Symbol<NdSbp> in_nd_sbp,
