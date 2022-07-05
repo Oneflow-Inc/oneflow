@@ -362,6 +362,7 @@ def pad_packed_sequence(
         device=sequence.data.device,
         requires_grad=sequence.data.requires_grad,
     )
+    padded_output = padded_output.clone()
 
     # This will be modified at every iteration, but we reserve memory for it now.
     tmp_view_size = output_size  # == [-1, -1, *sequence.data.size()[1:]]
