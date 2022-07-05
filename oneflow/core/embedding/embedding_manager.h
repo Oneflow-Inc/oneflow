@@ -34,7 +34,7 @@ inline bool UseDynamicMemoryAllocation() {
 #else
   if (use_dynamic_memory_allocation) {
     LOG(WARNING)
-        << "Dynamic memory allocation only support when cuda_version greater equal than 11200. ";
+        << "Dynamic memory allocation only support when cuda_version greater equal than 11.2. ";
   }
   return false;
 #endif
