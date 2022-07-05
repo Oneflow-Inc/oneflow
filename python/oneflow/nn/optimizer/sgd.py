@@ -152,11 +152,11 @@ class SGD(Optimizer):
             for param_group in self.param_groups:
                 lr = param_group["lr"]
                 l2 = param_group["weight_decay"]
-                maximize = param_group["maximize"]
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
                     if param_group["momentum"] == 0.0:
+                        # TODO: Support param `maximize` in Naive SGD Optimizer. (zhengzekang)
                         flow._C.dispatch_sgd_update(
                             self._sgd, (param, param.grad), learning_rate=lr, l2=l2
                         )
@@ -167,6 +167,7 @@ class SGD(Optimizer):
                         beta = param_group["momentum"]
                         dampening = param_group["dampening"]
                         nesterov = param_group["nesterov"]
+                        maximize = param_group["maximize"]
                         flow._C.dispatch_momentum_update(
                             self._momentum_sgd,
                             (param, param.grad, momentum_buf),
@@ -191,12 +192,19 @@ class SGD(Optimizer):
             )
             beta = param_group["momentum"]
             l2 = param_group["weight_decay"]
+            dampening = param_group["dampening"]
+            nesterov = param_group["nesterov"]
+            maximize = param_group["maximize"]
 
             optimizer_conf.base_learning_rate = lr
             if beta == 0:
                 optimizer_conf.naive_conf.SetInParent()
             else:
                 optimizer_conf.momentum_conf.beta = beta
+                # Only Momentum Optimizer support these params.
+                optimizer_conf.momentum_conf.dampening = dampening
+                optimizer_conf.momentum_conf.nesterov = nesterov
+                optimizer_conf.momentum_conf.maximize = maximize
 
             self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 
