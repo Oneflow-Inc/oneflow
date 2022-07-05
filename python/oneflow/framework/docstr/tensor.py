@@ -457,6 +457,12 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.Tensor.to_consistent,
+    """
+    This interface is no longer available, please use :func:`oneflow.Tensor.to_global` instead.
+    """,
+)
 
 add_docstr(
     oneflow.Tensor.to_local,

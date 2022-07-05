@@ -29,15 +29,15 @@ from oneflow.test_utils.automated_test_util import *
 @flow.unittest.skip_unless_1n2d()
 class TestToGlobalError(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_tensor_to_global(self):
+    def test_tensor_to_consistent(self):
         with self.assertRaises(Exception) as context:
             data = flow.rand(2, dtype=flow.float32)
             placement = flow.env.all_device_placement("cuda")
             sbp = flow.sbp.split(0)
-            global_data = data.to_global(placement=placement, sbp=sbp)
+            global_data = data.to_consistent(placement=placement, sbp=sbp)
 
         self.assertTrue(
-            ".to_global has been removed, please use .to_global instead"
+            ".to_consistent has been removed, please use .to_global instead"
             in str(context.exception)
         )
 
@@ -45,23 +45,23 @@ class TestToGlobalError(flow.unittest.TestCase):
     def test_tensor_is_global(self):
         with self.assertRaises(Exception) as context:
             data = flow.rand(2, dtype=flow.float32)
-            print(data.is_global())
+            print(data.is_consistent())
 
         self.assertTrue(
-            ".is_global has been removed, please use .is_global instead"
+            ".is_consistent has been removed, please use .is_global instead"
             in str(context.exception)
         )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_module_to_global(self):
+    def test_module_to_consistent(self):
         with self.assertRaises(Exception) as context:
             m = flow.nn.Conv2d(1, 1, 1)
             placement = flow.env.all_device_placement("cuda")
             sbp = flow.sbp.split(0)
-            m.to_global(placement=placement, sbp=sbp)
+            m.to_consistent(placement=placement, sbp=sbp)
 
         self.assertTrue(
-            ".to_global has been removed, please use .to_global instead"
+            ".to_consistent has been removed, please use .to_global instead"
             in str(context.exception)
         )
 
