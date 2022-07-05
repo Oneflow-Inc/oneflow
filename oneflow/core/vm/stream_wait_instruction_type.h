@@ -66,6 +66,7 @@ class StreamWaitInstructionType final : public vm::InstructionType {
 
   std::string DebugName(const vm::Instruction&) const override { return "StreamWait"; }
 
+  bool Prescheduleable(const Stream* src, const Stream* dst) const override;
   void InitInstructionStatus(Instruction* instruction) const override;
   void DeleteInstructionStatus(Instruction* instruction) const override;
   Maybe<void> Prepare(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }
