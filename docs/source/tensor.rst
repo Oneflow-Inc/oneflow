@@ -174,6 +174,7 @@ OneFlow Tensor Class
             local_to_global,
             global_to_global,
             to_global,
+            to_consistent,
             to_local,
             tolist, 
             topk, 
