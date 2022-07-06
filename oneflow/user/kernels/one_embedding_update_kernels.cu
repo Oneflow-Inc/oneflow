@@ -381,11 +381,10 @@ class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
     MomentumUpdateKernel<T, G, IDX>
         <<<BlocksNum4ThreadsNum(embedding_grad_elem_cnt), kCudaThreadsNumPerBlock, 0,
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-            line_size, embedding_size, scale, l1, l2, weight_decay, beta,
-            beta, dampening, nesterov, maximize, 
-            reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
-            down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings_ptr,
-            updated_unique_embeddings_ptr);
+            line_size, embedding_size, scale, l1, l2, weight_decay, beta, dampening, nesterov,
+            maximize, reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr,
+            scale_by_ptr, down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(),
+            unique_embeddings_ptr, updated_unique_embeddings_ptr);
     embedding_state->OnEmbeddingUpdateEnd(ctx, current_iter_);
     current_iter_++;
   }
