@@ -68,9 +68,9 @@ class BuilderWithSymbolTable {
 };
 
 mlir::LogicalResult BuilderWithSymbolTable::declare(const std::string& var, mlir::Value value) {
-  if (symbolTable.count(var)) {
-    auto key = symbolTable[var];
-    builder.create<mlir::memref::StoreOp>(loc(), value, key);
+  auto iter = symbolTable.find(var);
+  if (iter != symbolTable.end()) {
+    builder.create<mlir::memref::StoreOp>(loc(), value, iter->second);
     return mlir::failure();
   }
 
