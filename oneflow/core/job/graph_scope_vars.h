@@ -26,8 +26,8 @@ void SetGraphDebugMaxPyStackDepth(int32_t depth);
 int32_t GetGraphDebugMaxPyStackDepth();
 void SetGraphDebugMode(bool mode);
 bool GetGraphDebugMode();
-void SetGraphDebugOnlyShowUserCodeLoc(bool flag);
-bool GetGraphDebugOnlyShowUserCodeLoc();
+void SetGraphDebugOnlyUserPyStack(bool flag);
+bool GetGraphDebugOnlyUserPyStack();
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_GRAPH_SCOPE_VARS_H_

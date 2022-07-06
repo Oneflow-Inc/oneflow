@@ -94,7 +94,7 @@ class DebugScopeContext(object):
         v_level=0,
         mode=False,
         max_py_stack_depth=2,
-        only_show_user_code_loc=True,
+        only_user_py_stack=True,
     ):
         self._prev_v = oneflow._oneflow_internal.GetFLAGS_v()
         self._prev_logtostderr = oneflow._oneflow_internal.GetFLAGS_alsologtostderr()
@@ -102,8 +102,8 @@ class DebugScopeContext(object):
         self._prev_max_py_stack_depth = (
             oneflow._oneflow_internal.GetGraphDebugMaxPyStackDepth()
         )
-        self._prev_only_show_user_code_loc = (
-            oneflow._oneflow_internal.GetGraphDebugOnlyShowUserCodeLoc()
+        self._prev_only_user_py_stack = (
+            oneflow._oneflow_internal.GetGraphDebugOnlyUserPyStack()
         )
         self._v = max(v_level, self._prev_v)
         self._mode = mode
@@ -111,7 +111,7 @@ class DebugScopeContext(object):
         self._max_py_stack_depth = max(
             max_py_stack_depth, self._prev_max_py_stack_depth
         )
-        self._only_show_user_code_loc = only_show_user_code_loc
+        self._only_user_py_stack = only_user_py_stack
 
     def __enter__(self):
         oneflow._oneflow_internal.SetFLAGS_v(self._v)
@@ -119,9 +119,7 @@ class DebugScopeContext(object):
         if self._s == 0 and self._v >= 1:
             oneflow._oneflow_internal.SetFLAGS_alsologtostderr(True)
         oneflow._oneflow_internal.SetGraphDebugMaxPyStackDepth(self._max_py_stack_depth)
-        oneflow._oneflow_internal.SetGraphDebugOnlyShowUserCodeLoc(
-            self._only_show_user_code_loc
-        )
+        oneflow._oneflow_internal.SetGraphDebugOnlyUserPyStack(self._only_user_py_stack)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self._s == 0 and self._v >= 1:
@@ -131,8 +129,8 @@ class DebugScopeContext(object):
         oneflow._oneflow_internal.SetGraphDebugMaxPyStackDepth(
             self._prev_max_py_stack_depth
         )
-        oneflow._oneflow_internal.SetGraphDebugOnlyShowUserCodeLoc(
-            self._prev_only_show_user_code_loc
+        oneflow._oneflow_internal.SetGraphDebugOnlyUserPyStack(
+            self._prev_only_user_py_stack
         )
 
 

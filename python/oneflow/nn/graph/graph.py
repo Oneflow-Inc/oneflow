@@ -135,8 +135,8 @@ class Graph(object):
         self._debug_min_s_level = 2
         self._debug_max_v_level = 0
         self._debug_max_py_stack_depth = 2
-        self._debug_print_op_loc = False
-        self._debug_only_show_user_code_loc = True
+        self._debug_op_repr_with_py_stack = False
+        self._debug_only_user_py_stack = True
         self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
 
@@ -426,8 +426,8 @@ class Graph(object):
         *,
         ranks: Optional[Union[int, List[int]]] = None,
         max_py_stack_depth: int = 2,
-        print_op_loc=False,
-        only_show_user_code_loc=True,
+        op_repr_with_py_stack=False,
+        only_user_py_stack=True,
     ) -> None:
         r"""Open or close debug mode of the graph.
 
@@ -447,9 +447,9 @@ class Graph(object):
 
         Use ``max_py_stack_depth`` to specify the max Python stack depth for the debug information.
 
-        Use ``print_op_loc`` to print operators' locations when printing nn.Graph's repr.
+        Use ``op_repr_with_py_stack `` to print operators' locations when printing nn.Graph's repr.
 
-        Use ``only_show_user_code_loc`` to only print the operators' locations which are from users' code or models.
+        Use ``only_user_py_stack`` to only print the operators' locations which are from users' code or models.
 
         For example:
 
@@ -470,8 +470,8 @@ class Graph(object):
         assert v_level <= 3, "The max verbose debug info level is 3."
         assert max_py_stack_depth >= 0, "The min max stack depth is 0."
         assert isinstance(max_py_stack_depth, int)
-        assert isinstance(only_show_user_code_loc, bool)
-        assert isinstance(print_op_loc, bool)
+        assert isinstance(only_user_py_stack, bool)
+        assert isinstance(op_repr_with_py_stack, bool)
 
         if ranks is None:
             rank_list = [0]
@@ -494,13 +494,13 @@ class Graph(object):
                     v_level,
                     ranks=ranks,
                     max_py_stack_depth=max_py_stack_depth,
-                    only_show_user_code_loc=only_show_user_code_loc,
-                    print_op_loc=print_op_loc,
+                    only_user_py_stack=only_user_py_stack,
+                    op_repr_with_py_stack=op_repr_with_py_stack,
                 )
 
         self._debug_max_py_stack_depth = max_py_stack_depth
-        self._debug_print_op_loc = print_op_loc
-        self._debug_only_show_user_code_loc = only_show_user_code_loc
+        self._debug_op_repr_with_py_stack = op_repr_with_py_stack
+        self._debug_only_user_py_stack = only_user_py_stack
 
     def __repr__(self):
         r"""For printing the graph structure.
@@ -558,7 +558,9 @@ class Graph(object):
         if self._is_compiled and self._compiled_graph_proto is not None:
             module_conf = self._compiled_graph_proto.module_name2module_conf[self.name]
             return operators_repr(
-                module_conf.ops, self._compiled_graph_proto, self._debug_print_op_loc
+                module_conf.ops,
+                self._compiled_graph_proto,
+                self._debug_op_repr_with_py_stack,
             )
 
         return []
@@ -775,7 +777,7 @@ class Graph(object):
                 self._debug_max_v_level,
                 self._debug,
                 self._debug_max_py_stack_depth,
-                self._debug_only_show_user_code_loc,
+                self._debug_only_user_py_stack,
             ):
                 outputs = self.__build_graph(*args, **kwargs)
             build_graph_end = time.perf_counter()
@@ -819,7 +821,7 @@ class Graph(object):
                 self._debug_max_v_level,
                 self._debug,
                 self._debug_max_py_stack_depth,
-                self._debug_only_show_user_code_loc,
+                self._debug_only_user_py_stack,
             ):
                 self._c_nn_graph.complie_and_init_runtime()
             # Get compiled job

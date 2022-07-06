@@ -34,9 +34,9 @@ bool* GetGraphDebugModeFlag() {
   return &graph_debug_mode_flag;
 }
 
-bool* GetGraphDebugOnlyShowUserCodeLocFlag() {
-  static thread_local bool graph_debug_only_show_user_code_loc = true;
-  return &graph_debug_only_show_user_code_loc;
+bool* GetGraphDebugOnlyUserPyStackFlag() {
+  static thread_local bool graph_debug_only_user_py_stack = true;
+  return &graph_debug_only_user_py_stack;
 }
 }  // namespace
 
@@ -57,6 +57,6 @@ int32_t GetGraphDebugMaxPyStackDepth() { return *GetGraphDebugMaxPyStackDepthVar
 void SetGraphDebugMode(bool mode) { *GetGraphDebugModeFlag() = mode; }
 bool GetGraphDebugMode() { return *GetGraphDebugModeFlag(); }
 
-void SetGraphDebugOnlyShowUserCodeLoc(bool flag) { *GetGraphDebugOnlyShowUserCodeLocFlag() = flag; }
-bool GetGraphDebugOnlyShowUserCodeLoc() { return *GetGraphDebugOnlyShowUserCodeLocFlag(); }
+void SetGraphDebugOnlyUserPyStack(bool flag) { *GetGraphDebugOnlyUserPyStackFlag() = flag; }
+bool GetGraphDebugOnlyUserPyStack() { return *GetGraphDebugOnlyUserPyStackFlag(); }
 }  // namespace oneflow

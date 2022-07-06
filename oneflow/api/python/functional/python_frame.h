@@ -44,21 +44,24 @@ std::string get_python_frame_str_repr(int32_t stack_index, PyFrameObject* frame)
   return repr + code_name + " at " + file_name + ": line " + std::to_string(line_number) + "; ";
 }
 
-// all the files except those specified in paths_to_be_kepted in oneflow/python should be filtered
-const static std::vector<std::string> paths_to_be_filtered = {ONE_FLOW_PYTHON_BASE_DIR};
+// all the files except those specified in paths_to_be_kepted in 'oneflow/python' should be filtered
+const static std::vector<std::string> paths_to_be_filtered = {ONEFLOW_PYTHON_BASE_DIR};
 
-// keep the files in python/test for running and debugging tests
-const static std::vector<std::string> paths_to_be_kepted = {ONE_FLOW_PYTHON_TESTS_BASE_DIR};
+// keep the files in 'python/oneflow/test' and 'python/oneflow/nn/modules' for running and debugging
+// tests
+const static std::vector<std::string> paths_to_be_kepted = {
+    std::string(ONEFLOW_PYTHON_BASE_DIR) + "/oneflow/test",
+    std::string(ONEFLOW_PYTHON_BASE_DIR) + "/oneflow/nn/modules"};
 
 bool check_if_python_file_should_be_filtered(const std::string& path) {
-  for (int i = 0; i < paths_to_be_kepted.size(); i++) {
+  for (int i = 0; i < paths_to_be_kepted.size(); ++i) {
     const std::string& path_to_keep = paths_to_be_kepted[i];
     if (path.size() > path_to_keep.size()) {
       if (path.substr(0, path_to_keep.size()) == path_to_keep) { return false; }
     }
   }
 
-  for (int i = 0; i < paths_to_be_filtered.size(); i++) {
+  for (int i = 0; i < paths_to_be_filtered.size(); ++i) {
     const std::string& path_to_filter = paths_to_be_filtered[i];
     if (path.size() > path_to_filter.size()) {
       if (path.substr(0, path_to_filter.size()) == path_to_filter) { return true; }
@@ -75,8 +78,8 @@ bool check_if_frame_should_be_filtered(PyFrameObject* frame) {
 }
 
 bool check_if_should_skip_this_frame(PyFrameObject* frame) {
-  const bool only_show_user_code_loc = GetGraphDebugOnlyShowUserCodeLoc();
-  if (only_show_user_code_loc) { return check_if_frame_should_be_filtered(frame); }
+  const bool only_user_py_stack = GetGraphDebugOnlyUserPyStack();
+  if (only_user_py_stack) { return check_if_frame_should_be_filtered(frame); }
   return false;
 }
 

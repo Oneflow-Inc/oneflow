@@ -76,8 +76,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetGraphDebugMaxPyStackDepth", &GetGraphDebugMaxPyStackDepth);
   m.def("SetGraphDebugMode", &SetGraphDebugMode);
   m.def("GetGraphDebugMode", &GetGraphDebugMode);
-  m.def("SetGraphDebugOnlyShowUserCodeLoc", &SetGraphDebugOnlyShowUserCodeLoc);
-  m.def("GetGraphDebugOnlyShowUserCodeLoc", &GetGraphDebugOnlyShowUserCodeLoc);
+  m.def("SetGraphDebugOnlyUserPyStack", &SetGraphDebugOnlyUserPyStack);
+  m.def("GetGraphDebugOnlyUserPyStack", &GetGraphDebugOnlyUserPyStack);
 }
 
 }  // namespace oneflow
