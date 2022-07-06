@@ -234,8 +234,8 @@ if __name__ == "__main__":
         # WarmupLR(optimizer),
         StepLR(optimizer, 5),
         # SequentialLR(optimizer),
-        # PolynomialLR(optimizer, 5), # arith.maxf
-        # MultiStepLR(optimizer, [10]),
+        PolynomialLR(optimizer, 5),
+        # MultiStepLR(optimizer, [10]), # biselect
         LinearLR(optimizer),
         # LambdaLR(optimizer, [lambda step: 0.95 * step]),
         ExponentialLR(optimizer, 1.1),

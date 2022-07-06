@@ -9,6 +9,7 @@
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
 #include "mlir/Dialect/Func/Transforms/Passes.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
@@ -107,6 +108,7 @@ static mlir::LogicalResult lowerToLLVMDialect(mlir::ModuleOp module) {
   pm.addPass(mlir::createConvertSCFToCFPass());
   pm.addPass(mlir::cf::createConvertControlFlowToLLVMPass());
   pm.addPass(mlir::createConvertMathToLLVMPass());
+  pm.addPass(mlir::arith::createArithmeticExpandOpsPass());
   pm.addPass(mlir::arith::createConvertArithmeticToLLVMPass());
   pm.addPass(mlir::createReconcileUnrealizedCastsPass());
   return pm.run(module);
