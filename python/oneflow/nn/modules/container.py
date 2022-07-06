@@ -101,6 +101,7 @@ class ModuleList(get_list(Module)):
         
 
     """
+
     pass
 
 
@@ -159,6 +160,7 @@ class ModuleDict(get_dict(Module)):
           (pool): MaxPool2d(kernel_size=(3, 3), stride=(3, 3), padding=(0, 0), dilation=(1, 1))
         )
     """
+
     pass
 
 
@@ -206,6 +208,7 @@ class ParameterList(get_para_list(Module)):
             (9): Parameter containing: [<class 'oneflow.nn.Parameter'> of size 10x10]
         )
     """
+
     pass
 
 
@@ -259,6 +262,7 @@ class ParameterDict(get_para_dict(Module)):
             (right): Parameter containing: [<class 'oneflow.nn.Parameter'> of size 5x10]
         )
     """
+
     pass
 
 
