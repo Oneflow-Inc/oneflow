@@ -147,9 +147,8 @@ static const size_t kPieceSplitThreshold = 128 << 20;  // 128MiB
 }  // namespace
 
 template<typename ThreadGuard>
-BinAllocator<ThreadGuard>::BinAllocator(size_t alignment,
-                                                      std::unique_ptr<Allocator>&& backend,
-                                                      std::unique_ptr<ThreadGuard>&& guard)
+BinAllocator<ThreadGuard>::BinAllocator(size_t alignment, std::unique_ptr<Allocator>&& backend,
+                                        std::unique_ptr<ThreadGuard>&& guard)
     : CachingAllocator(),
       alignment_(alignment),
       backend_(std::move(backend)),
@@ -195,8 +194,7 @@ void BinAllocator<ThreadGuard>::RemovePieceFromBin(Piece* piece) {
 }
 
 template<typename ThreadGuard>
-typename BinAllocator<ThreadGuard>::Piece*
-BinAllocator<ThreadGuard>::AllocatePiece() {
+typename BinAllocator<ThreadGuard>::Piece* BinAllocator<ThreadGuard>::AllocatePiece() {
   if (recycle_piece_list_) {
     Piece* ret = recycle_piece_list_;
     recycle_piece_list_ = recycle_piece_list_->next;
@@ -232,8 +230,8 @@ void BinAllocator<ThreadGuard>::UnMarkPiece(Piece* piece) {
 }
 
 template<typename ThreadGuard>
-typename BinAllocator<ThreadGuard>::Piece*
-BinAllocator<ThreadGuard>::FindPiece(size_t aligned_size) {
+typename BinAllocator<ThreadGuard>::Piece* BinAllocator<ThreadGuard>::FindPiece(
+    size_t aligned_size) {
   CHECK(IsAlignedSize(aligned_size, alignment_));
   for (int32_t bin_num = BinNum4BinSize(aligned_size); bin_num < kBinNumSize; ++bin_num) {
     Bin* bin = &bins_.at(bin_num);
@@ -289,8 +287,7 @@ void BinAllocator<ThreadGuard>::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) 
 }
 
 template<typename ThreadGuard>
-Maybe<bool> BinAllocator<ThreadGuard>::AllocateBlockToExtendTotalMem(
-    size_t aligned_size) {
+Maybe<bool> BinAllocator<ThreadGuard>::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   CHECK_OR_RETURN(IsAlignedSize(aligned_size, alignment_)) << "not aligned";
 
   size_t allocate_bytes = aligned_size;
