@@ -31,14 +31,15 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void EpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const {
-  DeviceType device_type = stream->device()->enum_type();
-  size_t device_index = stream->device()->device_id();
+void EpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
+                                 Symbol<Device> device) const {
+  DeviceType device_type = device->enum_type();
+  size_t device_index = device->device_id();
   auto ep_device =
       Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
   auto ep_backend_allocator =
       std::make_unique<EpBackendAllocator>(ep_device, ep::AllocationOptions{});
-  device_ctx->reset(new EpDeviceCtx(stream->device(), std::move(ep_backend_allocator)));
+  device_ctx->reset(new EpDeviceCtx(device, std::move(ep_backend_allocator)));
 }
 
 void EpStreamType::InitInstructionStatus(const Stream& stream,
