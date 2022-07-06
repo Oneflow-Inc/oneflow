@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
@@ -180,17 +181,38 @@ inline Maybe<void> AddTensorAsGraphLoss(const std::shared_ptr<one::Tensor>& t) {
   return JUST(GetCurInferCtx())->AddLossLogicalBlobName(loss_lbn);
 }
 
-inline Maybe<void> MarkVariableGradients(
-    const std::map<std::string, std::shared_ptr<one::Tensor>>& variable_gradients) {
-  CHECK_OR_RETURN(LazyMode::is_enabled());
+inline Maybe<void> MarkVariableGradients(const one::TensorTuple& variables,
+                                         const one::TensorTuple& gradients) {
+  CHECK_OR_RETURN(LazyMode::is_enabled());                 // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(variables.size(), gradients.size());  // NOLINT(maybe-need-error-msg)
   HashMap<std::string, std::string> variable_gradient_lbns;
-  for (const auto& it : variable_gradients) {
-    CHECK_OR_RETURN(it.second->is_lazy())
-        << "gradient expected to be a lazy tensor for variable " << it.first;
-    const std::string& lbn = one::TensorNameScope::Global()->Lookup(it.second);
-    variable_gradient_lbns.emplace(it.first, lbn);
+  for (int i = 0; i < variables.size(); ++i) {
+    const std::string& variable_lbn = one::TensorNameScope::Global()->Lookup(variables[i]);
+    CHECK_OR_RETURN(!variable_lbn.empty())
+        << "variable which index is " << i << " expected to have a tensor name";
+    const std::string& gradient_lbn = one::TensorNameScope::Global()->Lookup(gradients[i]);
+    CHECK_OR_RETURN(!gradient_lbn.empty())
+        << "gradient which index is " << i << " expected to have a tensor name";
+    variable_gradient_lbns.emplace(variable_lbn, gradient_lbn);
   }
   return JUST(GetCurInferCtx())->MarkVariableGradientBlobNames(variable_gradient_lbns);
+}
+
+inline Maybe<void> MarkOutputGradients(const one::TensorTuple& outputs,
+                                       const one::TensorTuple& gradients) {
+  CHECK_OR_RETURN(LazyMode::is_enabled());               // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(outputs.size(), gradients.size());  // NOLINT(maybe-need-error-msg)
+  HashMap<std::string, std::string> output_gradient_lbns;
+  for (int i = 0; i < outputs.size(); ++i) {
+    const std::string& output_lbn = one::TensorNameScope::Global()->Lookup(outputs[i]);
+    CHECK_OR_RETURN(!output_lbn.empty())
+        << "output which index is " << i << " expected to have a tensor name";
+    const std::string& gradient_lbn = one::TensorNameScope::Global()->Lookup(gradients[i]);
+    CHECK_OR_RETURN(!gradient_lbn.empty())
+        << "gradient which index is " << i << " expected to have a tensor name";
+    output_gradient_lbns.emplace(output_lbn, gradient_lbn);
+  }
+  return JUST(GetCurInferCtx())->MarkOutputGradientBlobNames(output_gradient_lbns);
 }
 
 }  // namespace oneflow

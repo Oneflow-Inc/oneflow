@@ -137,6 +137,7 @@ message DynamicLossScalePolicy {
 message TrainConf {
   repeated OptimizerConf optimizer_conf = 1;
   repeated string loss_lbn = 2;
+  repeated string loss_grad_lbn = 6;
   optional string train_step_lbn = 3;
   oneof loss_scale_policy {
     float loss_scale_factor = 4 [default = 1];

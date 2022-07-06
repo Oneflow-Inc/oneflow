@@ -635,7 +635,6 @@ Maybe<void> JobBuildAndInferCtx::AddLossConsistentBlobName(const std::string& lb
 
 Maybe<void> JobBuildAndInferCtx::MarkVariableGradientBlobNames(
     const HashMap<std::string, std::string>& variable_gradient_lbns) {
-  if (variable_gradient_lbns.empty()) { return Maybe<void>::Ok(); }
   CHECK_OR_RETURN(job_->job_conf().has_train_conf())
       << Error::UnknownJobBuildAndInferError()
       << "job has no TrainConf when add variable gradient logical blob name";
@@ -643,12 +642,27 @@ Maybe<void> JobBuildAndInferCtx::MarkVariableGradientBlobNames(
   for (int i = 0; i < train_conf->optimizer_conf_size(); ++i) {
     auto* optimizer_conf = train_conf->mutable_optimizer_conf(i);
     for (const auto& variable_op_name : optimizer_conf->variable_op_names()) {
-      const auto& it = variable_gradient_lbns.find(variable_op_name);
+      const auto& it = variable_gradient_lbns.find(variable_op_name + "/out");
       CHECK_OR_RETURN(it != variable_gradient_lbns.end())
           << Error::UnknownJobBuildAndInferError() << "gradient is missing for trainable variable "
           << variable_op_name;
       optimizer_conf->add_variable_gradient_lbns(it->second);
     }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> JobBuildAndInferCtx::MarkOutputGradientBlobNames(
+    const HashMap<std::string, std::string>& output_gradient_lbns) {
+  CHECK_OR_RETURN(job_->job_conf().has_train_conf())
+      << Error::UnknownJobBuildAndInferError()
+      << "job has no TrainConf when add variable gradient logical blob name";
+  auto* train_conf = job_->mutable_job_conf()->mutable_train_conf();
+  for (const auto& loss_lbn : train_conf->loss_lbn()) {
+    const auto& it = output_gradient_lbns.find(loss_lbn);
+    CHECK_OR_RETURN(it != output_gradient_lbns.end())
+        << Error::UnknownJobBuildAndInferError() << "gradient is missing for loss " << loss_lbn;
+    train_conf->add_loss_grad_lbn(it->second);
   }
   return Maybe<void>::Ok();
 }

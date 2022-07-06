@@ -18,6 +18,7 @@ limitations under the License.
 #include <memory>
 #include <vector>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/api/python/job_build/job_build_and_infer.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -76,6 +77,7 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
       }
     }
   }
+  if (LazyMode::is_enabled()) { JUST(MarkOutputGradients(outputs, *gradients)); }
   return gradients;
 }
 

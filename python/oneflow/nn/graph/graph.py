@@ -689,16 +689,17 @@ class Graph(object):
                 state2lazy_builder[state_tensor] = state_block.lazy_origin_builder()
 
     def _mark_variable_gradients(self):
-        variable_gradients = {}
+        variable = []
+        gradients = []
         for state_block in self._state():
             if (
                 state_block.type == BlockType.PARAMETER
                 and state_block.origin.grad is not None
                 and state_block.origin.grad.is_lazy
             ):
-                variable_op_name = state_block.name_prefix + state_block.name
-                variable_gradients[variable_op_name] = state_block.origin.grad
-        oneflow._oneflow_internal.nn.graph.MarkVariableGradients(variable_gradients)
+                variable.append(state_block.origin)
+                gradients.append(state_block.origin.grad)
+        oneflow._oneflow_internal.nn.graph.MarkVariableGradients(variable, gradients)
 
     @staticmethod
     def to_graph(func):
