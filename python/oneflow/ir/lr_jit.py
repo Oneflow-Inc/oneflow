@@ -72,8 +72,6 @@ class ASTTransformer(ast.NodeTransformer):
         node.ast = oneflow._oneflow_internal.ir.Assign_(targets, node.value.ast)
         return node
 
-
-
     def visit_If(self, node: ast.If):
         self.visit(node.test)
         for arg in node.body:
@@ -228,6 +226,7 @@ from oneflow.nn import Parameter
 if __name__ == "__main__":
     param = Parameter(oneflow.ones(3, 4))
     optimizer = SGD([param], lr=0.001)
+
     lr_jit =  oneflow._oneflow_internal.ir.create_global_lr_jit()
 
     lr_class_list = [
@@ -244,13 +243,14 @@ if __name__ == "__main__":
         ConstantLR(optimizer)
     ]
 
-    for lr_class in lr_class_list:
-        print(lr_class.__class__.__name__)
-        id_ = lr_jit_register(lr_class)
+    for lr_obj in lr_class_list:
+        print(lr_obj.__class__.__name__)
+        id_ = lr_jit_register(lr_obj)
 
         base_lr = 000.5
         step = 5
-        lr = lr_class.get_lr(base_lr, step)
+        lr = lr_obj.get_lr(base_lr, step)
         lr_jit =  oneflow._oneflow_internal.ir.get_lr(id_, base_lr, step)
+
         print("lr: ", lr)
         print("lr_jit: ", lr_jit)

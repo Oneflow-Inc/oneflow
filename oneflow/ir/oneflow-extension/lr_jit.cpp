@@ -167,17 +167,17 @@ double JIT_Engine::Invoke(double base_lr, double step) {
   return res;
 }
 
-void LR_JIT::Register(const std::string& function_id, pyast::FunctionDef& ast) {
+void LRJITRegistry::Register(const std::string& function_id, pyast::FunctionDef& ast) {
   auto jit = std::make_shared<JIT_Engine>(ast);
   function_id2engine_[function_id] = jit;
 }
 
-std::shared_ptr<JIT_Engine> LR_JIT::LookUp(const std::string& function_id) {
+std::shared_ptr<JIT_Engine> LRJITRegistry::LookUp(const std::string& function_id) {
   if (function_id2engine_.count(function_id)) { return function_id2engine_[function_id]; }
   return nullptr;
 };
 
-double LR_JIT::Invoke(std::shared_ptr<JIT_Engine> engine, double base_lr, double step) {
+double LRJITRegistry::Invoke(std::shared_ptr<JIT_Engine> engine, double base_lr, double step) {
   if (engine == nullptr) llvm::errs() << "engine is null";
   return engine->Invoke(base_lr, step);
 };

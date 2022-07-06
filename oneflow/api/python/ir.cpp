@@ -40,16 +40,16 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
   m.def("load_jit_shared_lib",
         [](const std::string& lib_path) { MutSharedLibPaths()->insert(lib_path); });
 
-  m.def("create_global_lr_jit", []() { Singleton<LR_JIT>::New(); });
+  m.def("create_global_lr_jit", []() { Singleton<LRJITRegistry>::New(); });
 
   m.def("compile_and_register_lr_jit",
         [](const std::string& function_id, std::shared_ptr<pyast::FunctionDef>& func) {
-          Singleton<LR_JIT>::Get()->Register(function_id, *func.get());
+          Singleton<LRJITRegistry>::Get()->Register(function_id, *func.get());
         });
 
   m.def("get_lr", [](const std::string& function_id, float base_lr, float step) {
-    auto engine = Singleton<LR_JIT>::Get()->LookUp(function_id);
-    return Singleton<LR_JIT>::Get()->Invoke(engine, base_lr, step);
+    auto engine = Singleton<LRJITRegistry>::Get()->LookUp(function_id);
+    return Singleton<LRJITRegistry>::Get()->Invoke(engine, base_lr, step);
   });
 
   pybind11::class_<pyast::stmt, std::shared_ptr<pyast::stmt>>(m, "smt");

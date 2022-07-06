@@ -15,17 +15,18 @@
 
 class JIT_Engine;
 
-class LR_JIT final {
+class LRJITRegistry final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LR_JIT);
-  ~LR_JIT() = default;
+  OF_DISALLOW_COPY_AND_MOVE(LRJITRegistry);
+  ~LRJITRegistry() = default;
+
   void Register(const std::string& function_id, pyast::FunctionDef& ast);
   std::shared_ptr<JIT_Engine> LookUp(const std::string& function_id);
   double Invoke(std::shared_ptr<JIT_Engine> engine, double base_lr, double step);
 
  private:
-  friend class oneflow::Singleton<LR_JIT>;
-  LR_JIT() = default;
+  friend class oneflow::Singleton<LRJITRegistry>;
+  LRJITRegistry() = default;
   std::unordered_map<std::string, std::shared_ptr<JIT_Engine>> function_id2engine_;
 };
 
