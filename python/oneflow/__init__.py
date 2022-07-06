@@ -367,6 +367,7 @@ from oneflow.nn.modules.tensor_buffer import (
     tensor_buffer_to_tensor_op as tensor_buffer_to_tensor,
 )
 from oneflow.nn.modules.tensordot import tensordot
+from oneflow.nn.modules.norm import norm
 from oneflow.nn.modules.as_tensor import as_tensor
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
 from oneflow.nn.modules.global_cast import local_to_global_op as local_to_global
