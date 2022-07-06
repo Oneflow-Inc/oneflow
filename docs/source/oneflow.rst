@@ -110,6 +110,7 @@ oneflow
             new_ones,
             nonzero,
             normal,
+            norm,
             numel, 
             ne, 
             empty,
