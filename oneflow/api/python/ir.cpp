@@ -49,7 +49,7 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
 
   m.def("get_lr", [](const std::string& function_id, float base_lr, float step) {
     auto engine = Singleton<LRJITRegistry>::Get()->LookUp(function_id);
-    return Singleton<LRJITRegistry>::Get()->Invoke(engine, base_lr, step);
+    return engine(base_lr, step);
   });
 
   pybind11::class_<pyast::stmt, std::shared_ptr<pyast::stmt>>(m, "smt");

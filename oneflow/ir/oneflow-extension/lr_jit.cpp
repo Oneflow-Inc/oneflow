@@ -58,14 +58,6 @@ using llvm::SmallVector;
 using llvm::StringRef;
 using llvm::Twine;
 
-class JIT_Engine final {
-  std::unique_ptr<mlir::ExecutionEngine> _engine;
-
- public:
-  explicit JIT_Engine(pyast::FunctionDef& ast);
-  double Invoke(double base_lr, double step);
-};
-
 static mlir::OwningOpRef<mlir::ModuleOp> genModuleForTest(mlir::MLIRContext& context) {
   using namespace pyast;
   auto func = FunctionDef::FunctionDef_(
@@ -134,7 +126,7 @@ static mlir::OwningOpRef<mlir::ModuleOp> genModule(mlir::MLIRContext& context,
   // module->dump();
   return module;
 }
-JIT_Engine::JIT_Engine(pyast::FunctionDef& ast) {
+static std::function<double(double, double)> genFunc(pyast::FunctionDef& ast) {
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
   mlir::registerLLVMDialectTranslation(registry);
@@ -155,29 +147,25 @@ JIT_Engine::JIT_Engine(pyast::FunctionDef& ast) {
   CHECK(jit_or_err) << "failed to create JIT exe engine, "
                     << llvm::toString(jit_or_err.takeError());
 
-  _engine = cantFail(move(jit_or_err));
-}
+  std::shared_ptr<mlir::ExecutionEngine> engine_ = cantFail(move(jit_or_err));
 
-double JIT_Engine::Invoke(double base_lr, double step) {
-  float res = 0;
-  auto&& out = mlir::ExecutionEngine::result(res);
-  auto base_lr_jit = static_cast<float>(base_lr);
-  auto step_jit = static_cast<float>(step);
-  auto err = _engine->invoke("get_lr", base_lr_jit, step_jit, out);
-  return res;
+  return [engine_](double base_lr, double step) {
+    float res = 0;
+    auto&& out = mlir::ExecutionEngine::result(res);
+    auto base_lr_jit = static_cast<float>(base_lr);
+    auto step_jit = static_cast<float>(step);
+    auto err = engine_->invoke("get_lr", base_lr_jit, step_jit, out);
+    return res;
+  };
 }
 
 void LRJITRegistry::Register(const std::string& function_id, pyast::FunctionDef& ast) {
-  auto jit = std::make_shared<JIT_Engine>(ast);
+  auto jit = genFunc(ast);
   function_id2engine_[function_id] = jit;
 }
 
-std::shared_ptr<JIT_Engine> LRJITRegistry::LookUp(const std::string& function_id) {
+std::function<double(double, double)> LRJITRegistry::LookUp(const std::string& function_id) {
   if (function_id2engine_.count(function_id)) { return function_id2engine_[function_id]; }
+  llvm::errs() << "function '" << function_id << "' not be registered before lookup.";
   return nullptr;
-};
-
-double LRJITRegistry::Invoke(std::shared_ptr<JIT_Engine> engine, double base_lr, double step) {
-  if (engine == nullptr) llvm::errs() << "engine is null";
-  return engine->Invoke(base_lr, step);
 };
