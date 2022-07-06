@@ -204,7 +204,8 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
     // do nothing
   }
 
-  void AllocPrefetchTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr, size_t size) override {
+  void AllocPrefetchTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr,
+                              size_t size) override {
     this->AllocTmpBuffer(ctx, ptr, size);
   }
 
@@ -413,10 +414,11 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
     embedding_fused_update_put_unique_embeddings_ = nullptr;
   }
 
-  void AllocPrefetchTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr, size_t size) override {
+  void AllocPrefetchTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr,
+                              size_t size) override {
     CHECK(prefetch_tmp_buffer_ptr_ != nullptr);
     CHECK_GE(prefetch_tmp_buffer_offset_, 0);
-    CHECK_LE(prefetch_tmp_buffer_offset_ + size, tmp_buffer_size_);
+    CHECK_LE(prefetch_tmp_buffer_offset_ + size, prefetch_tmp_buffer_size_);
     *ptr = reinterpret_cast<char*>(prefetch_tmp_buffer_ptr_) + prefetch_tmp_buffer_offset_;
     prefetch_tmp_buffer_offset_ += size;
   }
