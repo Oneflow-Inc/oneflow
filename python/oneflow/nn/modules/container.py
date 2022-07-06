@@ -18,10 +18,10 @@ from oneflow.nn.module import Module
 
 
 class Sequential(get_seq(Module)):
-    """The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.Sequential.html?highlight=sequential#torch.nn.Sequential.
-    
-    A sequential container.
+    """A sequential container.
+
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Sequential.html?#torch.nn.Sequential.
     
     Modules will be added to it in the order they are passed in the constructor.
     Alternatively, an ordered dict of modules can also be passed in.
@@ -58,10 +58,10 @@ class Sequential(get_seq(Module)):
 
 
 class ModuleList(get_list(Module)):
-    """The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.ModuleList.html?highlight=modulelist#torch.nn.ModuleList.
-    
-    Holds submodules in a list.
+    """Holds submodules in a list.
+
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.ModuleList.html?#torch.nn.ModuleList.
     
     :class:`~oneflow.nn.ModuleList` can be indexed like a regular Python list, but
     modules it contains are properly registered, and will be visible by all
@@ -105,10 +105,10 @@ class ModuleList(get_list(Module)):
 
 
 class ModuleDict(get_dict(Module)):
-    """The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.ModuleDict.html?highlight=moduledict#torch.nn.ModuleDict.
-    
-    Holds submodules in a dictionary.
+    """Holds submodules in a dictionary.
+
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.ModuleDict.html?#torch.nn.ModuleDict.
 
     :class:`~oneflow.nn.ModuleDict` can be indexed like a regular Python dictionary,
     but modules it contains are properly registered, and will be visible by all
@@ -163,10 +163,10 @@ class ModuleDict(get_dict(Module)):
 
 
 class ParameterList(get_para_list(Module)):
-    """The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.ParameterList.html?highlight=parameterlist#torch.nn.ParameterList.
-    
-    Holds parameters in a list.
+    """Holds parameters in a list.
+
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.ParameterList.html?#torch.nn.ParameterList.
 
     :class:`~oneflow.nn.ParameterList` can be indexed like a regular Python
     list, but parameters it contains are properly registered, and will be
@@ -211,7 +211,7 @@ class ParameterList(get_para_list(Module)):
 
 class ParameterDict(get_para_dict(Module)):
     """The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.ParameterDict.html?highlight=parameterdict#torch.nn.ParameterDict.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.ParameterDict.html?#torch.nn.ParameterDict.
     
     Holds parameters in a dictionary.
 
