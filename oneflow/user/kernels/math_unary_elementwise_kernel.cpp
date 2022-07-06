@@ -40,26 +40,30 @@ std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> NewElementwiseBinaryP
 
 }  // namespace
 
-#define REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD(math_type_pair)                                                     \
-  REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                                           \
-      .SetCreateFn([]() {\
-        return user_op::NewOpKernel<UnaryPrimitiveKernel>(\
-            "y", "x", [](user_op::KernelComputeContext* ctx) {\
-              return NewElementwiseUnaryPrimitive<user_op::KernelComputeContext>(ctx, OF_PP_CAT(ep::primitive::UnaryOp::k, OF_PP_PAIR_SECOND(math_type_pair)));\
-            });\
-      })                       \
-      .SetIsMatchedHob(UnaryPrimitiveExists(OF_PP_CAT(ep::primitive::UnaryOp::k, OF_PP_PAIR_SECOND(math_type_pair)), "y", "x");    \
+#define REGISTER_MATH_UNARY_ELEMENTWISE_KERNEL_AND_GRAD(op_type_name, op_cls)                      \
+  REGISTER_USER_KERNEL(op_type_name)                                                               \
+      .SetCreateFn([]() {                                                                          \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                         \
+            "y", "x", [](user_op::KernelComputeContext* ctx) {                                     \
+              return NewElementwiseUnaryPrimitive<user_op::KernelComputeContext>(                  \
+                  ctx, OF_PP_CAT(ep::primitive::UnaryOp::k, op_cls));                              \
+            });                                                                                    \
+      })                                                                                           \
+      .SetIsMatchedHob(                                                                            \
+          UnaryPrimitiveExists(OF_PP_CAT(ep::primitive::UnaryOp::k, op_cls), "y", "x"));           \
                                                                                                    \
-  REGISTER_USER_KERNEL((std::string("") + OF_PP_PAIR_FIRST(math_type_pair) + "_grad"))             \
-      .SetCreateFn([]() {\
-        return user_op::NewOpKernel<BinaryPrimitiveKernel>(\
-            "dx", "dy", [](user_op::KernelComputeContext* ctx) {\
-              return NewElementwiseBinaryPrimitive<user_op::KernelComputeContext>(ctx, OF_PP_CAT(OF_PP_CAT(ep::primitive::BinaryOp::k, OF_PP_PAIR_SECOND(math_type_pair)), BackwardWithDyX)); \
-            });\
-      })                   \
-      .SetIsMatchedHob(BinaryPrimitiveExists(OF_PP_CAT(OF_PP_CAT(ep::primitive::BinaryOp::k, OF_PP_PAIR_SECOND(math_type_pair)), BackwardWithDyX), "dx", "dy");
+  REGISTER_USER_KERNEL((std::string("") + op_type_name + "_grad"))                                 \
+      .SetCreateFn([]() {                                                                          \
+        return user_op::NewOpKernel<BinaryPrimitiveKernel>(                                        \
+            "dx", "dy", "x", [](user_op::KernelComputeContext* ctx) {                              \
+              return NewElementwiseBinaryPrimitive<user_op::KernelComputeContext>(                 \
+                  ctx, OF_PP_CAT(OF_PP_CAT(ep::primitive::BinaryOp::k, op_cls), BackwardWithDyX)); \
+            });                                                                                    \
+      })                                                                                           \
+      .SetIsMatchedHob(BinaryPrimitiveExists(                                                      \
+          OF_PP_CAT(OF_PP_CAT(ep::primitive::BinaryOp::k, op_cls), BackwardWithDyX), "dx", "dy"));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CPU_KERNEL_AND_GRAD,
-                                 MATH_UNARY_ELEMENTWISE_FUNC_SEQ)
+OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_KERNEL_AND_GRAD,
+                     MATH_UNARY_ELEMENTWISE_FUNC_SEQ)
 
 }  // namespace oneflow

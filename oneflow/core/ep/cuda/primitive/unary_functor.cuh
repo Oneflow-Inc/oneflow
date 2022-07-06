@@ -53,354 +53,179 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTanh, half, half> {
   OF_DEVICE_FUNC half operator()(half src) const { return __float2half(tanhf(__half2float(src))); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kRsqrt, float, float> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kRsqrt, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC float operator()(float src) const { return rsqrtf(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return rsqrt(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kRsqrt, double, double> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAcos, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC double operator()(double src) const { return rsqrt(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return acos(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAcos, float, float> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAcosh, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC float operator()(float src) const { return acosf(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return acosh(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAcos, double, double> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAsin, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC double operator()(double src) const { return rsqrt(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return asin(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAcosh, float, float> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAsinh, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC float operator()(float src) const { return acoshf(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return asinh(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAcosh, double, double> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAtan, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC double operator()(double src) const { return acosh(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return atan(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAsin, float, float> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAtanh, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC float operator()(float src) const { return asinf(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return atanh(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAsin, double, double> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCeil, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC double operator()(double src) const { return asin(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return ceil(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAsinh, float, float> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCos, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC float operator()(float src) const { return asinhf(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return cos(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAsinh, double, double> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCosh, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC double operator()(double src) const { return asinh(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return cosh(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAtan, float, float> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kErf, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC float operator()(float src) const { return atanf(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return erf(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAtan, double, double> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kErfc, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC double operator()(double src) const { return atan(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return erfc(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAtanh, float, float> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kExp, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC float operator()(float src) const { return atanhf(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return exp(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kAtanh, double, double> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kExpm1, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC double operator()(double src) const { return atanh(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return expm1(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCeil, float, float> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kFloor, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC float operator()(float src) const { return ceilf(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return floor(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCeil, double, double> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kLgamma, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC double operator()(double src) const { return ceil(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return lgamma(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCos, float, float> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kLog, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC float operator()(float src) const { return cosf(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return log(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCos, double, double> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kLog2, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC double operator()(double src) const { return cos(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return log2(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCosh, float, float> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kLog1p, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC float operator()(float src) const { return coshf(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return log1p(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCosh, double, double> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kRint, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC double operator()(double src) const { return cosh(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return rint(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kErf, float, float> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kRound, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC float operator()(float src) const { return erff(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return nearbyint(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kErf, double, double> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kSin, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC double operator()(double src) const { return erf(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return sin(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kErfc, float, float> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kSinh, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC float operator()(float src) const { return erfcf(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return sinh(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kErfc, double, double> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kSqrt, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC double operator()(double src) const { return erfc(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return sqrt(src); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kExp, float, float> {
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTan, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC float operator()(float src) const { return expf(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kExp, double, double> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC double operator()(double src) const { return exp(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kExpm1, float, float> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC float operator()(float src) const { return expm1f(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kExpm1, double, double> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC double operator()(double src) const { return expm1(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kFloor, float, float> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC float operator()(float src) const { return floor(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kFloor, double, double> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC double operator()(double src) const { return floor(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kLgamma, float, float> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC float operator()(float src) const { return lgammaf(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kLgamma, double, double> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC double operator()(double src) const { return lgamma(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kLog, float, float> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC float operator()(float src) const { return logf(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kLog, double, double> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC double operator()(double src) const { return log(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kLog2, float, float> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC float operator()(float src) const { return log2f(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kLog2, double, double> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC double operator()(double src) const { return log2(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kLog1p, float, float> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC float operator()(float src) const { return log1pf(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kLog1p, double, double> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC double operator()(double src) const { return log1p(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kRint, float, float> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC float operator()(float src) const { return rintf(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kRint, double, double> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC double operator()(double src) const { return rint(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kRound, float, float> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC float operator()(float src) const { return nearbyintf(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kRound, double, double> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC double operator()(double src) const { return nearbyint(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kSin, float, float> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC float operator()(float src) const { return sinf(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kSin, double, double> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC double operator()(double src) const { return sin(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kSinh, float, float> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC float operator()(float src) const { return sinhf(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kSinh, double, double> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC double operator()(double src) const { return sinh(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kSqrt, float, float> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC float operator()(float src) const { return sqrtf(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kSqrt, double, double> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC double operator()(double src) const { return sqrt(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTan, float, float> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC float operator()(float src) const { return tanf(src); }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTan, double, double> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC double operator()(double src) const { return tan(src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return tan(src); }
 };
 
 template<>

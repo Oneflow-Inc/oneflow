@@ -254,8 +254,8 @@ struct UnaryFunctor<device, UnaryOp::kLogSigmoid, Src, Dst> {
     return -log_functor(static_cast<Src>(1) + exp_functor(-src));
   }
 
-  UnaryFunctor<device, UnaryOp::kLog, Src, Dst> log_functor;
-  UnaryFunctor<device, UnaryOp::kExp, Src, Dst> exp_functor;
+  UnaryFunctor<device, UnaryOp::kLog, Src, Src> log_functor;
+  UnaryFunctor<device, UnaryOp::kExp, Src, Src> exp_functor;
 };
 
 template<DeviceType device, typename Dst, typename Src>
@@ -309,7 +309,7 @@ struct UnaryFunctor<device, UnaryOp::kSigmoid, Src, Dst> {
     return static_cast<Src>(1) / (static_cast<Src>(1) + exp_functor(-src));
   }
 
-  UnaryFunctor<device, UnaryOp::kExp, Src, Dst> exp_functor;
+  UnaryFunctor<device, UnaryOp::kExp, Src, Src> exp_functor;
 };
 
 template<DeviceType device, typename Dst, typename Src>
