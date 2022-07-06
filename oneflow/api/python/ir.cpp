@@ -39,9 +39,11 @@ namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("ir", m) {
   m.def("load_jit_shared_lib",
         [](const std::string& lib_path) { MutSharedLibPaths()->insert(lib_path); });
+
+  m.def("create_global_lr_jit", []() { Singleton<LR_JIT>::New(); });
+
   m.def("compile_and_register_lr_jit",
         [](const std::string& function_id, std::shared_ptr<pyast::FunctionDef>& func) {
-          Singleton<LR_JIT>::New();
           Singleton<LR_JIT>::Get()->Register(function_id, *func.get());
         });
 

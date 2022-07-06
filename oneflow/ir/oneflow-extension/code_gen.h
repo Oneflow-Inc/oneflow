@@ -21,6 +21,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Block.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/TypeRange.h"
 #include "mlir/IR/Value.h"
@@ -48,12 +49,14 @@
 
 #include "mlir/Transforms/Passes.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowAstJIT.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/py_ast.h"
 
 class BuilderWithSymbolTable {
  protected:
   mlir::OpBuilder builder;
   mlir::ModuleOp theModule;
   std::map<std::string, mlir::Value> symbolTable;
+  mlir::Block* symbolTableForDeclareBlock;
 
   BuilderWithSymbolTable(mlir::MLIRContext& context) : builder(&context) {}
   virtual ~BuilderWithSymbolTable() = default;
@@ -70,9 +73,17 @@ mlir::LogicalResult BuilderWithSymbolTable::declare(const std::string& var, mlir
     builder.create<mlir::memref::StoreOp>(loc(), value, key);
     return mlir::failure();
   }
+
+  auto history_block = builder.getInsertionBlock();
+  auto history_point = builder.getInsertionPoint();
+
+  builder.setInsertionPointToStart(symbolTableForDeclareBlock);
+
   auto single_type = mlir::Float32Type::getF32(builder.getContext());
   auto type = mlir::MemRefType::get({}, single_type);
   auto key = builder.create<mlir::memref::AllocOp>(loc(), type);
+
+  builder.setInsertionPoint(history_block, history_point);
   builder.create<mlir::memref::StoreOp>(loc(), value, key);
   symbolTable[var] = key;
   return mlir::success();
@@ -127,6 +138,7 @@ class MLIRGenImpl : public BuilderWithSymbolTable {
     auto function = mlir::func::FuncOp::create(loc(), func->get_name(), func_type);
 
     auto* entry_block = function.addEntryBlock();
+    symbolTableForDeclareBlock = entry_block;
     theModule.push_back(function);
     builder.setInsertionPointToStart(entry_block);
 
@@ -177,6 +189,14 @@ mlir::Value MLIRGenImpl::mlirGen(pyast::expr* expr) {
 
 void MLIRGenImpl::mlirGen(pyast::If* expr) {
   auto test = mlirGen(expr->get_test().get());
+
+  if (test.getType().isF32()) {
+    auto eq = mlir::arith::CmpFPredicate::ONE;
+    auto zero_attr = builder.getF32FloatAttr(0);
+    auto zero = builder.create<mlir::arith::ConstantOp>(loc(), zero_attr);
+    test = builder.create<mlir::arith::CmpFOp>(loc(), eq, test, zero);
+  }
+
   mlir::Block* then_block = builder.createBlock(builder.getBlock()->getParent());
   mlir::Block* else_block = builder.createBlock(builder.getBlock()->getParent());
   mlir::Block* after_block = builder.createBlock(builder.getBlock()->getParent());
@@ -239,31 +259,57 @@ mlir::Value MLIRGenImpl::mlirGen(pyast::BinOp* expr) {
 }
 
 mlir::Value MLIRGenImpl::mlirGen(pyast::Call* expr) {
-  if (expr->get_func()->get_kind() != pyast::expr::kAttribute) {
-    theModule->emitError("only support call func is attribute node");
-  }
-  auto func_ = expr->get_func().get();
-  auto func = *dynamic_cast<pyast::Attribute*>(func_);
-  auto func_value = func.get_value();
-
-  if (func_value->get_kind() != pyast::expr::kName
-      || dynamic_cast<pyast::Name*>(func_value.get())->get_id() != "math") {
-    theModule->emitError("only support call func is python math lib");
-  }
-  if (expr->get_args().size() != 1) {
-    theModule->emitError("only support call func with one param");
-  }
-
-  auto value = mlirGen(expr->get_args()[0].get());
-  auto attr = func.get_attr();
-
   mlir::Value res;
-  if (attr == "floor") {
-    res = builder.create<mlir::math::FloorOp>(loc(), value);
-    return res;
+  if (expr->get_func()->get_kind() == pyast::expr::kAttribute) {
+    auto func_ = expr->get_func().get();
+    auto func = *dynamic_cast<pyast::Attribute*>(func_);
+    auto func_value = func.get_value();
+
+    if (func_value->get_kind() != pyast::expr::kName
+        || dynamic_cast<pyast::Name*>(func_value.get())->get_id() != "math") {
+      theModule->emitError("only support call func is python math lib");
+    }
+    if (expr->get_args().size() != 1) {
+      theModule->emitError("attribute node only support call func with one param");
+    }
+
+    auto value = mlirGen(expr->get_args()[0].get());
+    auto attr = func.get_attr();
+
+    if (attr == "floor") {
+      res = builder.create<mlir::math::FloorOp>(loc(), value);
+    } else if (attr == "cos") {
+      res = builder.create<mlir::math::CosOp>(loc(), value);
+    } else if (attr == "ceil") {
+      res = builder.create<mlir::math::CeilOp>(loc(), value);
+    } else {
+      theModule->emitError(attr + " not support yet");
+    }
+  } else if (expr->get_func()->get_kind() == pyast::expr::kName) {
+    auto func_ = expr->get_func().get();
+    auto func = *dynamic_cast<pyast::Name*>(func_);
+
+    if (expr->get_args().size() != 2) {
+      theModule->emitError("name node only support call func with two param");
+    }
+
+    auto left = mlirGen(expr->get_args()[0].get());
+    auto right = mlirGen(expr->get_args()[1].get());
+
+    auto attr = func.get_id();
+
+    if (attr == "max") {
+      res = builder.create<mlir::arith::MaxFOp>(loc(), left, right);
+    } else if (attr == "min") {
+      res = builder.create<mlir::arith::MinFOp>(loc(), left, right);
+    } else {
+      theModule->emitError(attr + " not support yet");
+    }
+
   } else {
-    theModule->emitError(attr + " not support yet");
+    theModule->emitError("only support call func is attribute and name node");
   }
+
   return res;
 }
 

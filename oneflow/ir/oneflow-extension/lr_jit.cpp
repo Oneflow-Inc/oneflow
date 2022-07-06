@@ -129,7 +129,7 @@ static mlir::OwningOpRef<mlir::ModuleOp> genModule(mlir::MLIRContext& context,
 
   MLIRGenImpl mlir_gen(context);
   mlir::OwningOpRef<mlir::ModuleOp> module = mlir_gen.mlirGen(&ast);
-  module->dump();
+  // module->dump();
   return module;
 }
 JIT_Engine::JIT_Engine(pyast::FunctionDef& ast) {

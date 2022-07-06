@@ -4,6 +4,17 @@ import textwrap
 import inspect
 import oneflow
 
+class MathParamsTransformer(ast.NodeTransformer):
+    def visit_Attribute(self, node):
+        import math
+        list = ["pi"]
+        if node.value.id == "math":
+            if node.attr in list:
+                _name = node.attr
+                _attr = getattr(math, _name)
+                return ast.Constant(_attr, None)
+        return node
+
 
 class SelfParamsTransformer(ast.NodeTransformer):
     def __init__(self, lr_def_class):
@@ -15,6 +26,7 @@ class SelfParamsTransformer(ast.NodeTransformer):
             _name = node.attr
             _attr = getattr(self.lr_def_class, _name)
             return ast.Constant(_attr, None)
+        return node
 
     def visit_arguments(self, node: ast.arguments):
         for index, item in enumerate(node.args):
@@ -180,15 +192,20 @@ def lr_jit_register(lr_class):
     _src = textwrap.dedent(inspect.getsource(lr_class.get_lr))
     _ast = ast.parse(_src).body[0]
     # transform param self
+    # print(ast.dump(_ast))
     transformer = SelfParamsTransformer(lr_class)
     transformer.visit(_ast)
+    # print(ast.dump(_ast))
+
+    transformer = MathParamsTransformer()
+    transformer.visit(_ast)
+    # print(ast.dump(_ast))
+
     transformer = ASTTransformer()
     transformer.visit(_ast)
+    # print(ast.dump(_ast))
+
     # feed transformed as to C++
-    print(ast.dump(_ast))
-    # _arg = oneflow._oneflow_internal.ir.arg_("test")
-    # _args = oneflow._oneflow_internal.ir.arguments_([_arg])
-    # _ast = oneflow._oneflow_internal.ir.FunctionDef_("test", _args, [])
     oneflow._oneflow_internal.ir.compile_and_register_lr_jit(_id, _ast.ast)
     return _id
 
@@ -211,31 +228,29 @@ from oneflow.nn import Parameter
 if __name__ == "__main__":
     param = Parameter(oneflow.ones(3, 4))
     optimizer = SGD([param], lr=0.001)
+    lr_jit =  oneflow._oneflow_internal.ir.create_global_lr_jit()
 
-    class Test:
-        def get_lr(base_lr:float, step:float):
-            if step > 5:
-                return step + base_lr * step
-            return step
+    lr_class_list = [
+        # WarmupLR(optimizer),
+        StepLR(optimizer, 5),
+        # SequentialLR(optimizer),
+        # PolynomialLR(optimizer, 5), # arith.maxf
+        # MultiStepLR(optimizer, [10]),
+        LinearLR(optimizer),
+        # LambdaLR(optimizer, [lambda step: 0.95 * step]),
+        ExponentialLR(optimizer, 1.1),
+        CosineDecayLR(optimizer, 10),
+        CosineAnnealingLR(optimizer, 50),
+        ConstantLR(optimizer)
+    ]
 
-    id = lr_jit_register(Test)
-    res = oneflow._oneflow_internal.ir.get_lr(id, 4, 5)
-    print(res)
-    res = oneflow._oneflow_internal.ir.get_lr(id, 4, 6)
-    print(res)
+    for lr_class in lr_class_list:
+        print(lr_class.__class__.__name__)
+        id_ = lr_jit_register(lr_class)
 
-    # lr_class_list = [
-    #     # WarmupLR(optimizer),
-    #     # StepLR(optimizer, 5),
-    #     # # SequentialLR(optimizer),
-    #     # PolynomialLR(optimizer, 5),
-    #     # MultiStepLR(optimizer, [10]),
-    #     # LinearLR(optimizer),
-    #     # LambdaLR(optimizer, [lambda step: 0.95 * step]),
-    #     # ExponentialLR(optimizer, 1.1),
-    #     # CosineDecayLR(optimizer, 10),
-    #     # CosineAnnealingLR(optimizer, 50),
-    #     ConstantLR(optimizer)
-    # ]
-    # for lr_class in lr_class_list:
-    #     lr_jit_register(lr_class)
+        base_lr = 000.5
+        step = 5
+        lr = lr_class.get_lr(base_lr, step)
+        lr_jit =  oneflow._oneflow_internal.ir.get_lr(id_, base_lr, step)
+        print("lr: ", lr)
+        print("lr_jit: ", lr_jit)
