@@ -43,7 +43,8 @@ class EpDeviceCtx : public DeviceCtx {
     }
   }
 
-  EpDeviceCtx(Symbol<Device> device, std::unique_ptr<BinAllocator<ThreadSafeGuard>>&& backend_allocator)
+  EpDeviceCtx(Symbol<Device> device,
+              std::unique_ptr<BinAllocator<ThreadSafeGuard>>&& backend_allocator)
       : DeviceCtx(),
         device_(device),
         ep_event_provier_(),
