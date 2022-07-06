@@ -391,7 +391,7 @@ def pad_packed_sequence(
         prev_batch_size = batch_size
 
     if batch_first:
-        permute_dims = (1, 0)
+        permute_dims = [1, 0]
         for i in range(2, padded_output.ndim):
             permute_dims.append(i)
         padded_output = padded_output.permute(permute_dims)
