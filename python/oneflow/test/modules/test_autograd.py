@@ -149,6 +149,19 @@ class TestAutograd(flow.unittest.TestCase):
             z.sum().backward()
         return (x.grad, y.grad)
 
+    def test_autograd_set_acc_grad_and_backward(test_case):
+        for _ in range(5):
+            ndim = 2
+            dims = [random(1, 5).to(int).value() for _ in range(ndim)]
+            x = torch.randn(*dims).requires_grad_()
+            np_arr = np.random.rand(*dims)
+            init_grad = torch.tensor(np_arr).to(x.dtype)
+            x.pytorch.grad = init_grad.pytorch
+            x.oneflow.grad = init_grad.oneflow
+
+            x.sum().backward()
+            test_case.assertTrue(np.allclose(x.grad.oneflow.numpy(), x.grad.pytorch.cpu().detach().numpy()))
+
 
 if __name__ == "__main__":
     unittest.main()

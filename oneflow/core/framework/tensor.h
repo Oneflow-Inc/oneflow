@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/common/error.h"
+#include "oneflow/core/autograd/autograd_engine.h"
 
 namespace oneflow {
 
@@ -498,6 +499,10 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
 
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
+    if (!grad_fn_node_ && requires_grad()) {
+      CHECK_OR_RETURN(is_leaf()) << "only leaf tensor maybe not have grad_fn";
+      AddAccumulateFunctionNode(shared_from_this());
+    }
     return impl_->set_acc_grad(grad);
   }
   Maybe<void> set_requires_grad(bool requires_grad) override {
@@ -610,6 +615,10 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
 
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
+    if (!grad_fn_node_ && requires_grad()) {
+      CHECK_OR_RETURN(is_leaf()) << "only leaf tensor maybe not have grad_fn";
+      AddAccumulateFunctionNode(shared_from_this());
+    }
     return impl_->set_acc_grad(grad);
   }
   Maybe<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
