@@ -1,5 +1,3 @@
-set(CMAKE_CXX_STANDARD 17)
-
 oneflow_add_mlir_library(
   MLIROneFlowExtension
   extension.cpp
