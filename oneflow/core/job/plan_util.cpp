@@ -864,7 +864,7 @@ struct MemBlockMemoryInfo {
   int64_t mem_block_mem_size;
   int64_t regst_num;
   std::vector<int64_t> ordered_regst_desc_id;
-  MemBlockMemoryInfo() : mem_block_id(-1), mem_block_mem_size(-1) {}
+  MemBlockMemoryInfo() : mem_block_id(-1), mem_block_mem_size(-1), regst_num(-1) {}
 };
 
 struct ChunkMemoryInfo {
