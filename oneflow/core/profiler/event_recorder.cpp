@@ -15,13 +15,13 @@ limitations under the License.
 */
 #include "oneflow/core/profiler/event_recorder.h"
 #include "oneflow/core/profiler/profile_manager.h"
-#include "oneflow/core/common/shape_view.h"
+#include "oneflow/core/common/shape.h"
 
 namespace oneflow {
 namespace profiler {
 
 Maybe<void> EventRecorder::RegisterEventToProfileManager(const std::shared_ptr<IEvent>& event) {
-  auto* pmgr = JUST(SingletonMaybe<ProfileManager>());
+  auto* pmgr = JUST(GlobalMaybe<ProfileManager>());
   pmgr->events_.push(event_);
   return Maybe<void>::Ok();
 }
@@ -36,7 +36,7 @@ Maybe<EventRecorder> EventRecorder::CreateKernelEventRecorder(
     const std::function<int64_t()>& memory_size_getter,
 #endif
     const ShapeGetterFuncType& shape_getter) {
-  auto pmgr = Singleton<ProfileManager>::Get();
+  auto pmgr = Global<ProfileManager>::Get();
   if (pmgr) {
 #if defined(WITH_CUDA)
     if (pmgr->use_cpu_ || pmgr->use_cuda_) {
