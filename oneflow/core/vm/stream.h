@@ -95,9 +95,8 @@ class Stream final : public intrusive::Base {
   ThreadCtx* thread_ctx_;
   Symbol<Device> device_;
   StreamRole stream_role_;
-  const StreamType* stream_type_;
+  std::shared_ptr<StreamPolicy> stream_policy_;
   bool on_scheduler_thread_;
-  std::unique_ptr<DeviceCtx> device_ctx_;
   // lists
   DispatchedInstructionList running_instruction_list_;
 
