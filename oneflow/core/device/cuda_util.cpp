@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/platform/include/pthread_fork.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/vm/vm_util.h"
 
 #ifdef WITH_CUDA
 
@@ -174,6 +175,28 @@ int GetCudaDeviceCount() {
   CudaCurrentDeviceGuard dev_guard(GetCudaDeviceIndex());
   OF_CUDA_CHECK(cudaGetDeviceCount(&cuda_device_count));
   return cuda_device_count;
+}
+
+// NOTE(lixiang): Get the memory of the current device.
+Maybe<double> GetCUDAMemoryUsed() {
+  JUST(vm::CurrentRankSync());
+
+  int deviceCount = 0;
+  cudaError_t error_id = cudaGetDeviceCount(&deviceCount);
+
+  CHECK_OR_RETURN(deviceCount > 0) << "GPU device does not exist";
+
+  size_t gpu_total_size;
+  size_t gpu_free_size;
+
+  cudaError_t cuda_status = cudaMemGetInfo(&gpu_free_size, &gpu_total_size);
+
+  CHECK_OR_RETURN(cudaSuccess == cuda_status)
+      << "Error: GetCUDAMemoryUsed fails :" << cudaGetErrorString(cuda_status);
+
+  double total_memory = double(gpu_total_size) / (1024.0 * 1024.0);
+  double free_memory = double(gpu_free_size) / (1024.0 * 1024.0);
+  return (total_memory - free_memory);
 }
 
 void InitCudaContextOnce(int device_id) {
