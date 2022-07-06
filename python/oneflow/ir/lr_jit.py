@@ -7,38 +7,8 @@ import oneflow
 from ast_gen_transformer import ASTTransformer
 from math_params_transformer import MathParamsTransformer
 from self_params_transformer import SelfParamsTransformer
+from bisect_transformer import BisectTransformer
 
-
-class BisectTransformer(ast.NodeTransformer):
-    def visit_FunctionDef(self, node: ast.FunctionDef):
-        self.body_index = 0
-        self.body = node.body
-        for stmt in node.body:
-            self.visit(stmt)
-        self.body_index += 1
-        return node
-
-    def visit_Call(self, node:ast.Call):
-        if(isinstance(node.func, ast.Attribute)):
-            func:ast.Attribute = node.func
-            if func.value.id == "bisect":
-                if func.attr == "bisect_right":
-                    if not isinstance(node.args[0], ast.List):
-                        raise "only support bisect.bisect_right(list, x)"
-                    ls = node.args[0].elts
-                    cmp  = node.args[1]
-                    index = 0
-                    for i in ls[::-1]:
-                        test = ast.Compare(cmp, [ast.Lt()], [i])
-                        assign = ast.Assign([ast.Name("tmp")], ast.Constant(len(ls) - index - 1 ,None))
-                        if 'orelse' in locals():
-                            orelse = ast.If(test,[assign] , [orelse])
-                        else:
-                            orelse = ast.If(test,[assign], [])
-                        index += 1
-                    self.body.insert(self.body_index, orelse)
-                    return ast.Name("tmp")
-        return node
 
 def lr_jit_register(lr_obj, is_dump=False):
     _id = lr_obj.__class__.__name__
@@ -91,22 +61,22 @@ if __name__ == "__main__":
     lr_jit =  oneflow._oneflow_internal.ir.create_global_lr_jit()
 
     lr_obj_list = [
-        # # WarmupLR(optimizer),
-        # StepLR(optimizer, 5),
-        # # SequentialLR(optimizer),
-        # PolynomialLR(optimizer, 5),
+        # WarmupLR(optimizer),
+        StepLR(optimizer, 5),
+        # SequentialLR(optimizer),
+        PolynomialLR(optimizer, 5),
         MultiStepLR(optimizer, [10, 20, 30]), # biselect
-        # LinearLR(optimizer),
-        # # LambdaLR(optimizer, [lambda step: 0.95 * step]),
-        # ExponentialLR(optimizer, 1.1),
-        # CosineDecayLR(optimizer, 10),
-        # CosineAnnealingLR(optimizer, 50),
-        # ConstantLR(optimizer)
+        LinearLR(optimizer),
+        # LambdaLR(optimizer, [lambda step: 0.95 * step]),
+        ExponentialLR(optimizer, 1.1),
+        CosineDecayLR(optimizer, 10),
+        CosineAnnealingLR(optimizer, 50),
+        ConstantLR(optimizer)
     ]
 
     for lr_obj in lr_obj_list:
         print(lr_obj.__class__.__name__)
-        id_ = lr_jit_register(lr_obj, True)
+        id_ = lr_jit_register(lr_obj, False)
 
         ls = [[0.005, 5], [0.01, 10], [0.02, 21]]
         for elem in ls:
