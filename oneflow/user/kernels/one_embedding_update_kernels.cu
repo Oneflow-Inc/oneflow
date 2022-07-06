@@ -56,6 +56,7 @@ __device__ void GetMomentumOffset(const int32_t line_size, const int32_t embeddi
 template<typename T, typename G, typename IDX>
 __global__ void MomentumUpdateKernel(const int64_t line_size, const int64_t embedding_size, T scale,
                                      float l1, float l2, float weight_decay, float beta,
+                                     float dampening, bool nesterov, bool maximize,
                                      const IDX* num_unique_ids, const float* learning_rate,
                                      const T* scale_by_ptr, const T* down_scale_by_ptr,
                                      const int64_t* skip_if, const G* model_diff,
@@ -76,7 +77,7 @@ __global__ void MomentumUpdateKernel(const int64_t line_size, const int64_t embe
       updated_unique_values[momentum_offset] = unique_values[momentum_offset];
       MomentumUpdateFunctor<T, G>()(model_diff + i, updated_unique_values + model_offset,
                                     updated_unique_values + momentum_offset, scale, l1, l2, beta,
-                                    weight_decay, learning_rate_val);
+                                    dampening, nesterov, maximize, weight_decay, learning_rate_val);
     }
   }
 }
@@ -342,6 +343,10 @@ class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
     const float l2 = ctx->Attr<float>("l2");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const auto beta = ctx->Attr<float>("beta");
+    // TODO: Suppoprt dampening, nesterov, maximize in OneEmbeddingMomentumUpdate(zhengzekang).
+    const float dampening = 0.0;
+    const bool nesterov = false;
+    const bool maximize = false;
     const auto scale = ctx->Attr<double>("scale");
     const T* scale_by_ptr = nullptr;
     if (ctx->has_input("scale_by_tensor", 0)) {
@@ -376,10 +381,10 @@ class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
     MomentumUpdateKernel<T, G, IDX>
         <<<BlocksNum4ThreadsNum(embedding_grad_elem_cnt), kCudaThreadsNumPerBlock, 0,
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-            line_size, embedding_size, scale, l1, l2, weight_decay, beta,
-            reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
-            down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings_ptr,
-            updated_unique_embeddings_ptr);
+            line_size, embedding_size, scale, l1, l2, weight_decay, beta, dampening, nesterov,
+            maximize, reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr,
+            scale_by_ptr, down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(),
+            unique_embeddings_ptr, updated_unique_embeddings_ptr);
     embedding_state->OnEmbeddingUpdateEnd(ctx, current_iter_);
     current_iter_++;
   }
