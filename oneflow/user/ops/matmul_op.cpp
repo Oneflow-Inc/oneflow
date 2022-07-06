@@ -321,10 +321,12 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
     k = a.shape().At(num_a_dims - 2);
   }
   if (!transpose_b) {
-    CHECK_EQ_OR_RETURN(k, b.shape().At(num_b_dims - 2));
+    CHECK_EQ_OR_RETURN(k, b.shape().At(num_b_dims - 2))
+        << "K dim should be equal to b.shape().At(num_b_dims - 2). ";
     n = b.shape().At(num_b_dims - 1);
   } else {
-    CHECK_EQ_OR_RETURN(k, b.shape().At(num_b_dims - 1));
+    CHECK_EQ_OR_RETURN(k, b.shape().At(num_b_dims - 1))
+        << "K dim should be equal to b.shape().At(num_b_dims - 1). ";
     n = b.shape().At(num_b_dims - 2);
   }
   out_dim_vec.at(num_max_batch_dims) = m;
@@ -356,7 +358,7 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
   const int64_t b_num_axes = b_shape.NumAxes();
 
   int32_t m_a_axis = -1;
-  int32_t k_a_axis = a_num_axes - 1;
+  int32_t k_a_axis = -1;
   int32_t k_b_axis = -1;
   int32_t n_axis = -1;
 

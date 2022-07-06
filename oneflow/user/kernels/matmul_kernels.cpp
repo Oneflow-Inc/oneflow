@@ -282,23 +282,6 @@ class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::Cu
     const int64_t a_num_axes = a->shape_view().NumAxes();
     const int64_t b_num_axes = b->shape_view().NumAxes();
     const int64_t out_num_axes = out->shape_view().NumAxes();
-    int64_t m = -1;
-    int64_t n = -1;
-    int64_t k = -1;  // tensor a (no trans): batch_dims*m*k, tensor b (no trans): batch_dims*k*n
-    if (!transpose_a) {
-      m = a->shape_view().At(a_num_axes - 2);
-      k = a->shape_view().At(a_num_axes - 1);
-    } else {
-      m = a->shape_view().At(a_num_axes - 1);
-      k = a->shape_view().At(a_num_axes - 2);
-    }
-    if (!transpose_b) {
-      n = b->shape_view().At(b_num_axes - 1);
-      CHECK_EQ(k, b->shape_view().At(b_num_axes - 2));
-    } else {
-      n = b->shape_view().At(b_num_axes - 2);
-      CHECK_EQ(k, b->shape_view().At(b_num_axes - 1));
-    }
     auto broadcast_matmul = NewBroadcastMatmulPrimitive(ctx);
     CHECK(broadcast_matmul);
     broadcast_matmul->Launch(ctx->stream(), alpha, a_num_axes, a->shape_view().ptr(), a->dptr(),
