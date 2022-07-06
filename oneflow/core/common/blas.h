@@ -18,9 +18,6 @@ limitations under the License.
 
 #include <type_traits>
 #include <utility>
-#ifdef WITH_CUDA
-#include <cuda_fp16.h>
-#endif  // WITH_CUDA
 #include "oneflow/core/common/cblas.h"
 #include "oneflow/core/common/preprocessor.h"
 
