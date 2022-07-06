@@ -447,6 +447,10 @@ class Graph(object):
 
         Use ``max_py_stack_depth`` to specify the max Python stack depth for the debug information.
 
+        Use ``print_op_loc`` to print operators' locations when printing nn.Graph's repr.
+
+        Use ``only_show_user_code_loc`` to only print the operators' locations which are from users' code or models.
+
         For example:
 
         .. code-block:: python
