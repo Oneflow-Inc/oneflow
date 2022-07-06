@@ -320,6 +320,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
     const auto& ret = TRY(instruction->Prepare());
     if (unlikely(!ret.IsOk())) {
       if (ret.error()->has_out_of_memory_error()) {
+        TODO(); // Waits and shrinks all stream allocators within stream->device();
         // Waits previous instructions done before shrinking memory..
         StreamWaitPreviousInstructionsDone(stream, instruction);
         // Shrinks allocator to reduce fragmentation of memory.
