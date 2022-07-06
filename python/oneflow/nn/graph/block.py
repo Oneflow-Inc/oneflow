@@ -243,6 +243,7 @@ class ModuleBlock(Block):
             self._debug_max_v_level,
             self._debug,
             self._debug_max_py_stack_depth,
+            self._debug_only_show_user_code_loc,
         ):
             result = self.__block_forward(*args, **kwargs)
 

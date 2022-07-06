@@ -17,6 +17,9 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_FRAME_H_
 
 #include <Python.h>
+#include <pyframe.h>
+#include <cstdint>
+#include <string>
 
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/core/framework/op_interpreter/dispatch_frame.h"
@@ -42,9 +45,35 @@ std::string get_python_frame_str_repr(int32_t stack_index, PyFrameObject* frame)
 }
 
 bool check_if_python_file_is_a_user_file(const std::string& path) {
-  std::string python_files_base_dir_path = ONE_FLOW_PYTHON_BASE_DIR;
+  const std::string python_files_base_dir_path = ONE_FLOW_PYTHON_BASE_DIR;
   if (path.size() <= python_files_base_dir_path.size()) { return true; }
   return path.substr(0, python_files_base_dir_path.size()) != python_files_base_dir_path;
+}
+
+bool check_if_frame_is_from_a_user_file(PyFrameObject* frame) {
+  std::string frame_file_name = PyObjectToReprStr(PyFrame_GetCode(frame)->co_filename);
+  frame_file_name = frame_file_name.substr(1, frame_file_name.size() - 2);  // get rid of ' '
+  return check_if_python_file_is_a_user_file(frame_file_name);
+}
+
+bool check_if_should_skip_this_frame(PyFrameObject* frame) {
+  const bool only_show_user_code_loc = GetGraphDebugOnlyShowUserCodeLoc();
+  return only_show_user_code_loc && !check_if_frame_is_from_a_user_file(frame);
+}
+
+int32_t get_cur_stack_depth() {
+  int32_t current_stack_depth = 0;
+  PyFrameObject* f = PyEval_GetFrame();
+  while (f) {
+    if (check_if_should_skip_this_frame(f)) {
+      f = f->f_back;
+      continue;
+    }
+
+    current_stack_depth++;
+    f = f->f_back;
+  }
+  return current_stack_depth;
 }
 
 std::string get_cur_frame_stack_str(int32_t max_stack_depth) {
@@ -57,12 +86,7 @@ std::string get_cur_frame_stack_str(int32_t max_stack_depth) {
 
     const int32_t stack_index = (-1) * i - 1;
 
-    std::string cur_frame_file_name = PyObjectToReprStr(PyFrame_GetCode(cur_frame)->co_filename);
-    cur_frame_file_name =
-        cur_frame_file_name.substr(1, cur_frame_file_name.size() - 2);  // get rid of ' '
-
-    bool only_show_user_code_loc = GetGraphDebugOnlyShowUserCodeLoc();
-    if (only_show_user_code_loc && !check_if_python_file_is_a_user_file(cur_frame_file_name)) {
+    if (check_if_should_skip_this_frame(cur_frame)) {
       cur_frame = cur_frame->f_back;
       continue;
     }
@@ -72,19 +96,18 @@ std::string get_cur_frame_stack_str(int32_t max_stack_depth) {
     cur_frame = cur_frame->f_back;
   }
 
-  if (cur_frame != NULL) { cur_f_str += " ... more"; }
+  const bool debug_mode =
+      GetGraphDebugMode();  // show how may stack frames remain to be shown in debug mode
+  if (debug_mode) {
+    const int32_t current_stack_depth = get_cur_stack_depth();
+    if (current_stack_depth > max_stack_depth) {
+      cur_f_str += "... " + std::to_string(current_stack_depth - max_stack_depth) + " more";
+    }
+  } else {
+    if (cur_frame != NULL) { cur_f_str += " ... more"; }
+  }
 
   return cur_f_str;
-}
-
-int32_t get_cur_stack_depth() {
-  int32_t current_stack_depth = 0;
-  PyFrameObject* f = PyEval_GetFrame();
-  while (f) {
-    current_stack_depth++;
-    f = f->f_back;
-  }
-  return current_stack_depth;
 }
 
 std::string get_cur_frame_stack_str() {

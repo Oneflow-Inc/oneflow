@@ -767,6 +767,7 @@ class Graph(object):
                 self._debug_max_v_level,
                 self._debug,
                 self._debug_max_py_stack_depth,
+                self._debug_only_show_user_code_loc,
             ):
                 outputs = self.__build_graph(*args, **kwargs)
             build_graph_end = time.perf_counter()
@@ -810,6 +811,7 @@ class Graph(object):
                 self._debug_max_v_level,
                 self._debug,
                 self._debug_max_py_stack_depth,
+                self._debug_only_show_user_code_loc,
             ):
                 self._c_nn_graph.complie_and_init_runtime()
             # Get compiled job
