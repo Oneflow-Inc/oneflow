@@ -68,7 +68,7 @@ inline void SimplifyBroadcastDims(size_t num_src_dims, const int64_t* src_dims,
   int64_t expanded_src_strides[max_num_dims];
   for (int64_t i = num_dst_dims - 1; i >= 0; i--) {
     expanded_src_dims[i] = i < num_src_padding_dims ? 1 : src_dims[i - num_src_padding_dims];
-    expanded_src_strides[i] = i < num_src_padding_dims ? 1 : src_strides[i - num_src_padding_dims];
+    expanded_src_strides[i] = i < num_src_padding_dims ? 0 : src_strides[i - num_src_padding_dims];
   }
   // dimension permutation
   for (int64_t i = num_dst_dims - 1; i >= 0; i--) {
