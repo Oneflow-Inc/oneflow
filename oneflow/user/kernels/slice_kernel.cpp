@@ -257,8 +257,13 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
                             small->shape_view(), &small_slice_param);
   CHECK_EQ(large_slice_param.elem_cnt(), small_slice_param.elem_cnt());
   if (from_large_to_small) {
-    SliceKernelUtil<device_type, T>::Forward(ctx->stream(), large_slice_param, small_slice_param,
-                                             src->dptr<T>(), dst->mut_dptr<T>());
+    if (small_slice_param.elem_cnt() == small->shape_view().elem_cnt()) {
+      SliceKernelUtil<device_type, T>::Forward(ctx->stream(), large_slice_param, src->dptr<T>(),
+                                               dst->mut_dptr<T>());
+    } else {
+      SliceKernelUtil<device_type, T>::Forward(ctx->stream(), large_slice_param, small_slice_param,
+                                               src->dptr<T>(), dst->mut_dptr<T>());
+    }
   } else {
     SliceKernelUtil<device_type, T>::Forward(ctx->stream(), small_slice_param, large_slice_param,
                                              src->dptr<T>(), dst->mut_dptr<T>());
