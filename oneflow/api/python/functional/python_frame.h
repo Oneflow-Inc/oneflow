@@ -35,7 +35,7 @@ namespace {
 // example: Python Stack[-10]: '__call__' at '.../graph/graph.py': line 219
 std::string get_python_frame_str_repr(int32_t stack_index, PyFrameObject* frame) {
   if (frame == NULL) return "";
-  PyCodeObject* code = PyFrame_GetCode(frame);
+  PyCodeObject* code = frame->f_code;
   std::string repr = "Python Stack[" + std::to_string(stack_index) + "]: ";
   std::string file_name = PyObjectToReprStr(code->co_filename);
   std::string code_name = PyObjectToReprStr(code->co_name);
@@ -69,7 +69,7 @@ bool check_if_python_file_should_be_filtered(const std::string& path) {
 }
 
 bool check_if_frame_should_be_filtered(PyFrameObject* frame) {
-  std::string frame_file_name = PyObjectToReprStr(PyFrame_GetCode(frame)->co_filename);
+  std::string frame_file_name = PyObjectToReprStr(frame->f_code->co_filename);
   frame_file_name = frame_file_name.substr(1, frame_file_name.size() - 2);  // get rid of ' '
   return check_if_python_file_should_be_filtered(frame_file_name);
 }
