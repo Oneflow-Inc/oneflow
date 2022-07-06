@@ -599,19 +599,20 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
 
     void* num_missing_ptr;
-    embedding_state->AllocTmpBuffer(ctx, &num_missing_ptr, GetCudaAlignedSize(sizeof(uint32_t)));
+    embedding_state->AllocPrefetchTmpBuffer(ctx, &num_missing_ptr,
+                                            GetCudaAlignedSize(sizeof(uint32_t)));
     void* missing_indices_ptr;
-    embedding_state->AllocTmpBuffer(ctx, &missing_indices_ptr,
-                                    GetCudaAlignedSize(num_unique * sizeof(uint32_t)));
+    embedding_state->AllocPrefetchTmpBuffer(ctx, &missing_indices_ptr,
+                                            GetCudaAlignedSize(num_unique * sizeof(uint32_t)));
     void* values_ptr;
-    embedding_state->AllocTmpBuffer(ctx, &values_ptr,
-                                    GetCudaAlignedSize(num_unique * line_size * sizeof(T)));
+    embedding_state->AllocPrefetchTmpBuffer(ctx, &values_ptr,
+                                            GetCudaAlignedSize(num_unique * line_size * sizeof(T)));
     LookupAndInitMissing<T, U, IDX>(ctx->stream(), kernel_state, num_unique, embedding_size,
                                     line_size, true, unique_ids->dptr(), table_ids->dptr(),
                                     num_missing_ptr, missing_indices_ptr, values_ptr);
-    embedding_state->FreeTmpBuffer(ctx, num_missing_ptr);
-    embedding_state->FreeTmpBuffer(ctx, missing_indices_ptr);
-    embedding_state->FreeTmpBuffer(ctx, values_ptr);
+    embedding_state->FreePrefetchTmpBuffer(ctx, num_missing_ptr);
+    embedding_state->FreePrefetchTmpBuffer(ctx, missing_indices_ptr);
+    embedding_state->FreePrefetchTmpBuffer(ctx, values_ptr);
     embedding_state->OnEmbeddingPrefetchEnd(ctx, current_iter_);
     current_iter_++;
   }
