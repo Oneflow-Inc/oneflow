@@ -76,7 +76,8 @@ int32_t get_cur_stack_depth() {
   return current_stack_depth;
 }
 
-std::string get_cur_frame_stack_str(int32_t max_stack_depth) {
+std::string get_cur_frame_stack_str() {
+  const int32_t max_stack_depth = GetGraphDebugMaxPyStackDepth();
   std::string cur_f_str;
   PyFrameObject* cur_frame = PyEval_GetFrame();
 
@@ -110,10 +111,6 @@ std::string get_cur_frame_stack_str(int32_t max_stack_depth) {
   return cur_f_str;
 }
 
-std::string get_cur_frame_stack_str() {
-  const int32_t max_stack_depth = GetGraphDebugMaxPyStackDepth();
-  return get_cur_frame_stack_str(max_stack_depth);
-}
 }  // namespace
 
 class PythonFrameGuard {
