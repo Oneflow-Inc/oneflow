@@ -71,9 +71,8 @@ struct SwitchUtil {
 #undef SWITCH_ENTRY
 };
 
+template<DeviceType device_type>
 size_t InferTempStorageBytesSize(user_op::InferContext* ctx) {
-  const std::string& device_tag = ctx->device_tag();
-  DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(device_tag));
   const Shape& input_shape = ctx->InputShape("input", 0);
   if (input_shape.NumAxes() == 0) { return 0; }
   const DataType& input_dtype = ctx->InputDType("input", 0);
@@ -92,7 +91,7 @@ size_t InferTempStorageBytesSize(user_op::InferContext* ctx) {
                        && (user_op::HobDataType("input", 0) == GetDataType<itype>::value)        \
                        && (user_op::HobDataType("output", 0) == GetDataType<otype>::value)       \
                        && (user_op::HobDataType("output_size", 0) == GetDataType<otype>::value)) \
-      .SetInferTmpSizeFn(InferTempStorageBytesSize);
+      .SetInferTmpSizeFn(InferTempStorageBytesSize<device>);
 
 #define REGISTER_ARG_WHERE_KERNEL_WITH_DTYPE_PAIR(device, itype_pair, otype_pair) \
   REGISTER_ARG_WHERE_KERNEL(device, OF_PP_PAIR_FIRST(itype_pair), OF_PP_PAIR_FIRST(otype_pair))

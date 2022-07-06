@@ -29,11 +29,11 @@ CudaHostAllocator::~CudaHostAllocator() {
   for (const auto& pair : occupied_ptr2granularity_) { OF_CUDA_CHECK(cudaFreeHost(pair.first)); }
 }
 
-void CudaHostAllocator::Allocate(char** mem_ptr, std::size_t size) {
+Maybe<void> CudaHostAllocator::Allocate(char** mem_ptr, std::size_t size) {
   std::size_t granularity = std::ceil(std::log2(size));
-  CHECK_GE(granularity, 0);
-  CHECK_LT(granularity, kMaxGranularity);
-  CHECK_LE(size, 1 << granularity);
+  CHECK_GE_OR_RETURN(granularity, 0) << "out of range";
+  CHECK_LT_OR_RETURN(granularity, kCudaHostMaxGranularity) << "invalid granularity";
+  CHECK_LE_OR_RETURN(size, 1 << granularity) << "out of range";
   CudaCurrentDeviceGuard guard(device_id_);
   std::unique_lock<std::mutex> lock(mutex_);
   auto* vec = &granularity2free_ptrs_[granularity];
@@ -45,6 +45,7 @@ void CudaHostAllocator::Allocate(char** mem_ptr, std::size_t size) {
   *mem_ptr = vec->back();
   vec->pop_back();
   occupied_ptr2granularity_[*mem_ptr] = granularity;
+  return Maybe<void>::Ok();
 }
 
 void CudaHostAllocator::Deallocate(char* mem_ptr, std::size_t size) {

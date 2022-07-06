@@ -102,7 +102,7 @@ class VirtualMachineEngine final : public intrusive::Base {
                                      InstructionList* /*out*/ pending_instructions);
   void TryRunBarrierInstruction(const ScheduleCtx& schedule_ctx);
   void DispatchAndPrescheduleInstructions(const ScheduleCtx& schedule_ctx);
-  bool OnSchedulerThread(const StreamType& stream_type);
+  bool OnSchedulerThread(const vm::Stream& stream);
 
   void ReleaseInstruction(Instruction* instruction);
 

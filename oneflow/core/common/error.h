@@ -68,6 +68,7 @@ class Error final {
   static Error TodoError();
   static Error UnimplementedError();
   static Error RuntimeError();
+  static Error OutOfMemoryError();
   static Error BoxingNotSupportedError();
   static Error MemoryZoneOutOfMemoryError(int64_t machine_id, int64_t mem_zone_id, uint64_t calc,
                                           uint64_t available, const std::string& device_type);
