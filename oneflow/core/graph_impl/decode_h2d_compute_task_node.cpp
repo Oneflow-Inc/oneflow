@@ -56,11 +56,7 @@ void DecodeH2DCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-#ifdef WITH_CUDA
-
 REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(DeviceType::kCUDA, TaskType::kDecodeH2D, "DECODE_H2D")
-
-#endif
 
 namespace {
 

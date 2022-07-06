@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
@@ -100,11 +101,9 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     if (input_tensor->shape_view().elem_cnt() == 0) {
       if (output_tensor->shape_view().elem_cnt() != 0) {
         Scalar init_value = [&]() {
-          if (std::is_same<BinaryFunc<T>, BinaryFuncAny<T>>::value){ return Scalar(0); }
-          if (std::is_same<BinaryFunc<T>, BinaryFuncAll<T>>::value){ return Scalar(1); }
-          Memset<device_type>(
-            ctx->stream(), output_tensor->mut_dptr<K>(), 0,
-            output_tensor->shape_view().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()));
+          if (std::is_same<BinaryFunc<T>, BinaryFuncAny<T>>::value) { return Scalar(0); }
+          if (std::is_same<BinaryFunc<T>, BinaryFuncAll<T>>::value) { return Scalar(1); }
+          return Scalar(0);
         }();
         CHECK_GE(output_elem_cnt, 0);
         if (output_elem_cnt == 0) { return; }

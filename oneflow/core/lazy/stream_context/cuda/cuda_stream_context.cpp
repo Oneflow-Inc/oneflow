@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/stream/include/stream_context.h"
+#include "oneflow/core/lazy/stream_context/include/stream_context.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/device_type.h"
@@ -36,7 +36,7 @@ class CudaStreamContext : public StreamContext, public KernelObserverProvider {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaStreamContext);
   explicit CudaStreamContext(int device_index);
-  virtual ~CudaStreamContext();
+  ~CudaStreamContext() override;
 
   Maybe<void> AddCallback(std::function<void()> callback) override;
   DeviceType device_type() const override { return DeviceType::kCUDA; }
@@ -52,8 +52,6 @@ class CudaStreamContext : public StreamContext, public KernelObserverProvider {
   std::unique_ptr<KernelObserver> kernel_observer_;
   std::shared_ptr<ep::CudaDevice> device_;
 };
-
-}  // namespace
 
 CudaStreamContext::CudaStreamContext(int device_index)
     : stream_(nullptr), device_index_(device_index) {
@@ -74,16 +72,16 @@ CudaStreamContext::CudaStreamContext(int device_index)
   kernel_observer_.reset(new ChainKernelObserver(kernel_observers));
 
   poller_thread_ = std::thread([this]() {
-    stream_->OnExecutionContextSetup();
+    CHECK_JUST(stream_->OnExecutionContextSetup());
     OF_PROFILER_NAME_THIS_HOST_THREAD("_cuda" + std::to_string(device_index_) + " Poller : ("
                                       + std::to_string(device_index_) + ")");
     std::pair<ep::Event*, std::function<void()>> cb_event;
     while (cb_event_chan_.Receive(&cb_event) == kChannelStatusSuccess) {
-      cb_event.first->Sync();
+      CHECK_JUST(cb_event.first->Sync());
       cb_event.second();
       device_->DestroyEvent(cb_event.first);
     }
-    stream_->OnExecutionContextTeardown();
+    CHECK_JUST(stream_->OnExecutionContextTeardown());
   });
 }
 
@@ -110,6 +108,8 @@ REGISTER_STREAM_CONTEXT_CREATOR_WITH_STREAM_ID(
       CHECK_EQ(stream_id.device_type(), DeviceType::kCUDA);
       return new CudaStreamContext(stream_id.device_index());
     }));
+
+}  // namespace
 
 }  // namespace oneflow
 

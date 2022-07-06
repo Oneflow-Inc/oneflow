@@ -276,7 +276,7 @@ class ModuleBlock(Block):
 
             def insert_to_global(t):
                 assert isinstance(t, Tensor)
-                return t.to_global(placement=self.config._stage_placement)
+                return self.__get_or_create_global(t, self.config._stage_placement)
 
             args, kwargs = self.__map_io(
                 "input", insert_to_global, "insert_to_global", *args, **kwargs
@@ -288,13 +288,48 @@ class ModuleBlock(Block):
 
             def insert_identity(t):
                 assert isinstance(t, Tensor)
-                return oneflow._C.identity(t)
+                return self.__get_or_create_identity(t)
 
             args, kwargs = self.__map_io(
                 "input", insert_identity, "insert_identity", *args, **kwargs
             )
 
         return args, kwargs
+
+    def __get_or_create_global(self, input_tensor: Tensor = None, placement=None):
+        assert input_tensor is not None
+        assert placement is not None
+        key = str(id(input_tensor)) + str(placement)
+
+        # input_tensor + placement -> unique_global_tensor
+        if key not in self._belonged_graph._unique_global_op_dict:
+            # store input tensor to avoid tensor id recycle
+            self._belonged_graph._unique_global_op_dict[key] = (
+                input_tensor.to_global(placement=placement),
+                input_tensor,
+            )
+
+        return self._belonged_graph._unique_global_op_dict[key][0]
+
+    def __get_or_create_identity(self, input_tensor: Tensor = None):
+        assert input_tensor is not None
+        key = input_tensor
+
+        # input_tensor(with placement) -> unique_identity_tensor
+        # When placement is different, the input tensor(output tensor of __get_or_create_global) is different, so the
+        # key can use only input tensor.
+        if key not in self._belonged_graph._unique_identity_op_dict:
+            # Reuse current module name for indentity op
+            ident_name_scope = graph_build_util.make_new_name_scope(
+                self.prev_scope, self.name_prefix + self.name
+            )
+            with graph_build_util.BlockScopeContext(self.prev_scope, ident_name_scope):
+                # store input tensor to avoid tensor id recycle
+                self._belonged_graph._unique_identity_op_dict[
+                    key
+                ] = oneflow._C.identity(input_tensor)
+
+        return self._belonged_graph._unique_identity_op_dict[key]
 
     def add_module(self, name: str, module: Optional[Module]) -> None:
         self.__setattr__(
