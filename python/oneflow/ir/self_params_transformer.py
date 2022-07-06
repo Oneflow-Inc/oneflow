@@ -10,6 +10,9 @@ class SelfParamsTransformer(ast.NodeTransformer):
         if node.value.id == "self":
             _name = node.attr
             _attr = getattr(self.lr_obj, _name)
+            if isinstance(_attr, list):
+                ls = [ast.Constant(elem, None) for elem in _attr]
+                return ast.List(ls)
             return ast.Constant(_attr, None)
         return node
 

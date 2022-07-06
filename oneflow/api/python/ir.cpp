@@ -43,8 +43,8 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
   m.def("create_global_lr_jit", []() { Singleton<LRJITRegistry>::New(); });
 
   m.def("compile_and_register_lr_jit",
-        [](const std::string& function_id, std::shared_ptr<pyast::FunctionDef>& func) {
-          Singleton<LRJITRegistry>::Get()->Register(function_id, *func.get());
+        [](const std::string& function_id, std::shared_ptr<pyast::FunctionDef>& func, bool is_dump) {
+          Singleton<LRJITRegistry>::Get()->Register(function_id, *func.get(), is_dump);
         });
 
   m.def("get_lr", [](const std::string& function_id, float base_lr, float step) {

@@ -45,8 +45,9 @@ class ASTTransformer(ast.NodeTransformer):
         for arg in node.body:
             self.visit(arg)
 
-        for arg in node.orelse:
-            self.visit(arg)
+        if node.orelse:
+            for arg in node.orelse:
+                self.visit(arg)
 
         test = node.test.ast
         body = [ arg.ast for arg in node.body]

@@ -126,7 +126,7 @@ static mlir::OwningOpRef<mlir::ModuleOp> genModule(mlir::MLIRContext& context,
   // module->dump();
   return module;
 }
-static std::function<double(double, double)> genFunc(pyast::FunctionDef& ast) {
+static std::function<double(double, double)> genFunc(pyast::FunctionDef& ast, bool is_dump) {
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
   mlir::registerLLVMDialectTranslation(registry);
@@ -140,6 +140,7 @@ static std::function<double(double, double)> genFunc(pyast::FunctionDef& ast) {
   context.loadDialect<mlir::AffineDialect>();
 
   auto module = genModule(context, ast);
+  if (is_dump) { module->dump(); }
   // auto module = genModuleForTest(context);
   CHECK(!!module) << "failed to parse module";
   CHECK(succeeded(lowerToLLVMDialect(*module))) << "failed to lower to llvm dialect";
@@ -159,8 +160,9 @@ static std::function<double(double, double)> genFunc(pyast::FunctionDef& ast) {
   };
 }
 
-void LRJITRegistry::Register(const std::string& function_id, pyast::FunctionDef& ast) {
-  auto jit = genFunc(ast);
+void LRJITRegistry::Register(const std::string& function_id, pyast::FunctionDef& ast,
+                             bool is_dump) {
+  auto jit = genFunc(ast, is_dump);
   function_id2engine_[function_id] = jit;
 }
 

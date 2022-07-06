@@ -18,7 +18,7 @@ class LRJITRegistry final {
   OF_DISALLOW_COPY_AND_MOVE(LRJITRegistry);
   ~LRJITRegistry() = default;
 
-  void Register(const std::string& function_id, pyast::FunctionDef& ast);
+  void Register(const std::string& function_id, pyast::FunctionDef& ast, bool is_dump);
   std::function<double(double, double)> LookUp(const std::string& function_id);
 
  private:
