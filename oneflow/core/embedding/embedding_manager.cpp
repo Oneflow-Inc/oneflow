@@ -204,6 +204,15 @@ class DynamicAllocationEmbeddingState final : public EmbeddingState {
     // do nothing
   }
 
+  void AllocPrefetchTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr,
+                              size_t size) override {
+    this->AllocTmpBuffer(ctx, ptr, size);
+  }
+
+  void FreePrefetchTmpBuffer(user_op::KernelComputeContext* ctx, void* ptr) override {
+    this->FreeTmpBuffer(ctx, ptr);
+  }
+
   void AllocTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr, size_t size) override {
     OF_CUDA_CHECK(cudaMallocFromPoolAsync(ptr, size, mem_pool_,
                                           ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
@@ -275,7 +284,10 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
         embedding_put_unique_embeddings_(nullptr),
         tmp_buffer_ptr_(nullptr),
         tmp_buffer_offset_(0),
-        tmp_buffer_size_(0) {
+        tmp_buffer_size_(0),
+        prefetch_tmp_buffer_ptr_(nullptr),
+        prefetch_tmp_buffer_offset_(0),
+        prefetch_tmp_buffer_size_(0) {
     id_statistics_vec_.resize(kRingBufferSize);
   }
   ~StaticAllocationEmbeddingState() override = default;
@@ -294,11 +306,16 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
   }
 
   void OnEmbeddingPrefetchStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    this->InitTmpBufferPtr(ctx);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    prefetch_tmp_buffer_ptr_ = tmp_buffer->mut_dptr();
+    prefetch_tmp_buffer_offset_ = 0;
+    prefetch_tmp_buffer_size_ = tmp_buffer->shape_view().elem_cnt();
   }
 
   void OnEmbeddingPrefetchEnd(user_op::KernelComputeContext* ctx, int64_t iter) override {
-    this->ResetTmpBufferPtr();
+    prefetch_tmp_buffer_ptr_ = nullptr;
+    prefetch_tmp_buffer_offset_ = 0;
+    prefetch_tmp_buffer_size_ = 0;
   }
 
   void OnEmbeddingLookupStart(user_op::KernelComputeContext* ctx, int64_t iter) override {
@@ -397,6 +414,19 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
     embedding_fused_update_put_unique_embeddings_ = nullptr;
   }
 
+  void AllocPrefetchTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr,
+                              size_t size) override {
+    CHECK(prefetch_tmp_buffer_ptr_ != nullptr);
+    CHECK_GE(prefetch_tmp_buffer_offset_, 0);
+    CHECK_LE(prefetch_tmp_buffer_offset_ + size, prefetch_tmp_buffer_size_);
+    *ptr = reinterpret_cast<char*>(prefetch_tmp_buffer_ptr_) + prefetch_tmp_buffer_offset_;
+    prefetch_tmp_buffer_offset_ += size;
+  }
+
+  void FreePrefetchTmpBuffer(user_op::KernelComputeContext* ctx, void* ptr) override {
+    // do nothing
+  }
+
   void AllocTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr, size_t size) override {
     CHECK(tmp_buffer_ptr_ != nullptr);
     CHECK_GE(tmp_buffer_offset_, 0);
@@ -453,6 +483,9 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
   void* tmp_buffer_ptr_;
   int64_t tmp_buffer_offset_;
   size_t tmp_buffer_size_;
+  void* prefetch_tmp_buffer_ptr_;
+  int64_t prefetch_tmp_buffer_offset_;
+  size_t prefetch_tmp_buffer_size_;
   std::mutex mutex_;
 };
 
