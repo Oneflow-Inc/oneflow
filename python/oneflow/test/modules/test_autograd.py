@@ -160,7 +160,11 @@ class TestAutograd(flow.unittest.TestCase):
             x.oneflow.grad = init_grad.oneflow
 
             x.sum().backward()
-            test_case.assertTrue(np.allclose(x.grad.oneflow.numpy(), x.grad.pytorch.cpu().detach().numpy()))
+            test_case.assertTrue(
+                np.allclose(
+                    x.grad.oneflow.numpy(), x.grad.pytorch.cpu().detach().numpy()
+                )
+            )
 
 
 if __name__ == "__main__":
