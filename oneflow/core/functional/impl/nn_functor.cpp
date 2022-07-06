@@ -301,7 +301,6 @@ class MatMulFunctor {
     const auto& a_shape = a->shape();
     const auto& b_shape = b->shape();
 
-    // TODO(): Support 1-d tensor by dot.
     CHECK_GE_OR_RETURN(a_shape->NumAxes(), 1)
         << Error::RuntimeError() << "Tensor a's dim should >= 1";
     CHECK_GE_OR_RETURN(b_shape->NumAxes(), 1)
@@ -3429,7 +3428,6 @@ class RocAucScoreFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
-
 
 class MultiTensorSgdUpdateFunctor {
  public:
