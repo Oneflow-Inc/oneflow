@@ -319,10 +319,11 @@ struct BinaryFunctor<device, BinaryOp::kAbsBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    if (x == static_cast<Src>(0))
+    if (x == static_cast<Src>(0)) {
       return static_cast<Dst>(0);
-    else
+    } else {
       return x < static_cast<Src>(0) ? -dy : dy;
+    }
   }
 };
 
@@ -392,14 +393,14 @@ template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kNotEqualZeroBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { return static_cast<Src>(0); }
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { return static_cast<Dst>(0); }
 };
 
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kCeilBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { return static_cast<Src>(0); }
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { return static_cast<Dst>(0); }
 };
 
 template<DeviceType device, typename Src, typename Dst>
@@ -422,24 +423,24 @@ struct BinaryFunctor<device, BinaryOp::kCoshBackwardWithDyX, Src, Dst> {
 
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kErfBackwardWithDyX, Src, Dst> {
-  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : rsqrt_functor(attr0, attr1) {}
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : exp_functor(attr0, attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    return dy * static_cast<Src>(2) * rsqrt_functor(M_PI) * expf(-x * x);
+    return dy * static_cast<Src>(M_2_SQRTPI) * exp_functor(-x * x);
   }
 
-  UnaryFunctor<device, UnaryOp::kRsqrt, Src, Dst> rsqrt_functor;
+  UnaryFunctor<device, UnaryOp::kExp, Src, Dst> exp_functor;
 };
 
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kErfcBackwardWithDyX, Src, Dst> {
-  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : rsqrt_functor(attr0, attr1) {}
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : exp_functor(attr0, attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    return dy * static_cast<Src>(-2) * rsqrt_functor(M_PI) * expf(-x * x);
+    return dy * static_cast<Src>(M_2_SQRTPI) * exp_functor(-x * x);
   }
 
-  UnaryFunctor<device, UnaryOp::kRsqrt, Src, Dst> rsqrt_functor;
+  UnaryFunctor<device, UnaryOp::kExp, Src, Dst> exp_functor;
 };
 
 template<DeviceType device, typename Src, typename Dst>
@@ -464,7 +465,7 @@ template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kFloorBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { return static_cast<Src>(0); }
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { return static_cast<Dst>(0); }
 };
 
 template<DeviceType device, typename Src, typename Dst>
@@ -537,8 +538,11 @@ struct BinaryFunctor<device, BinaryOp::kReciprocalNoNanBackwardWithDyX, float, f
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC float operator()(float dy, float x) const {
-    if (fabsf(x) <= 0.0f) { return 0.0f; }
-    return dy * (-1.0f / (x * x));
+    if (fabsf(x) <= 0.0f) {
+      return 0.0f;
+    } else {
+      return dy * (-1.0f / (x * x));
+    }
   }
 };
 
@@ -556,14 +560,14 @@ template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kRintBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { return static_cast<Src>(0); }
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { return static_cast<Dst>(0); }
 };
 
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kRoundBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { return static_cast<Src>(0); }
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { return static_cast<Dst>(0); }
 };
 
 template<DeviceType device, typename Src, typename Dst>
@@ -593,7 +597,7 @@ template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kSignBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { return static_cast<Src>(0); }
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const { return static_cast<Dst>(0); }
 };
 
 template<DeviceType device, typename Src, typename Dst>
