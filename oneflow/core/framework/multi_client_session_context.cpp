@@ -46,16 +46,6 @@ namespace oneflow {
 
 namespace {
 
-int32_t GetGpuDeviceNum() {
-#ifndef WITH_CUDA
-  return 0;
-#else
-  int device_count = 0;
-  cudaGetDeviceCount(&device_count);
-  return device_count;
-#endif
-}
-
 int32_t GetCpuDeviceNum() { return std::thread::hardware_concurrency(); }
 
 }  // namespace
@@ -82,18 +72,16 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
 
     {
       // NOTE(chengcheng):
-      //   In multi-client, user can NOT config gpu_device_num and cpu_device_num.
+      //   In multi-client, user can NOT config cpu_device_num.
       //
       //   cpu_device_num is a confusing name, it should be explained as:
       //       in current rank, assign CPU actor compute stream in this optional range.
       //       That is, the number of independent CPU devices that can be abstracted from
       //       this machine and this process.
-      //   gpu_device_num is the number of visible GPUs one current machine.
       //
-      //   NOTE: gpu_device_num and cpu_device_num NOT necessarily equal to the num of process
+      //   NOTE: cpu_device_num NOT necessarily equal to the num of process
       //       on this machine.
       resource.set_machine_num(GlobalProcessCtx::NodeSize());
-      resource.set_gpu_device_num(GetGpuDeviceNum());
       resource.set_cpu_device_num(GetCpuDeviceNum());
     }
 
@@ -107,11 +95,6 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
     Singleton<TaskStreamIndexManager>::New();
     // TODO(chengcheng): refactor JobBuildAndInferCtxMgr
     Singleton<LazyJobBuildAndInferCtxMgr>::New();
-
-    for (const std::string& lib_path : config_proto.load_lib_path()) {
-      // TODO(chengcheng): remove load_lib_path in config proto. using LoadLibraryNow
-      JUST(LoadLibrary(lib_path));
-    }
 
     {
       // NOTE(chengcheng): init runtime global objects

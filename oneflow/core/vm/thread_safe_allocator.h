@@ -32,13 +32,10 @@ class ThreadSafeAllocator final : public Allocator, public ShrinkableCache {
       : Allocator(), backend_allocator_(std::move(backend_allocator)) {}
   ~ThreadSafeAllocator() override = default;
 
-  void Allocate(char** mem_ptr, std::size_t size) override;
+  Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
-
-  void Shrink() override {
-    auto* cache = dynamic_cast<ShrinkableCache*>(backend_allocator_.get());
-    if (cache != nullptr) { cache->Shrink(); }
-  }
+  void Shrink() override;
+  void DeviceReset() override;
 
  private:
   std::unique_ptr<Allocator> backend_allocator_;
@@ -53,13 +50,10 @@ class SingleThreadOnlyAllocator final : public Allocator, public ShrinkableCache
         accessed_thread_id_(std::this_thread::get_id()) {}
   ~SingleThreadOnlyAllocator() override = default;
 
-  void Allocate(char** mem_ptr, std::size_t size) override;
+  Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
-
-  void Shrink() override {
-    auto* cache = dynamic_cast<ShrinkableCache*>(backend_allocator_.get());
-    if (cache != nullptr) { cache->Shrink(); }
-  }
+  void Shrink() override;
+  void DeviceReset() override;
 
  private:
   void CheckUniqueThreadAccess();

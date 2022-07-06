@@ -58,7 +58,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Singleton<JobSetCompileCtx>::New();
     Singleton<RuntimeBufferManagersScope>::New();
   }
-  for (const std::string& lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
+
   {
     // NOTE(chengcheng): Init Global(singleton) Runtime objects.
     Singleton<RuntimeCtx>::New();
@@ -80,7 +80,6 @@ Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto
   Singleton<ResourceDesc, ForSession>::Delete();
   DumpVersionInfo();
   Singleton<ResourceDesc, ForSession>::New(config_proto.resource());
-  for (const std::string& lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
   return Maybe<void>::Ok();
 }
 

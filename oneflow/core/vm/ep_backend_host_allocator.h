@@ -38,8 +38,9 @@ class EpBackendHostAllocator final : public Allocator {
       : ep_device_(ep_device), allocation_options_(allocation_options) {}
   ~EpBackendHostAllocator() override = default;
 
-  void Allocate(char** mem_ptr, std::size_t size) override;
+  Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
+  void DeviceReset() override {}
 
  private:
   std::shared_ptr<ep::Device> ep_device_;

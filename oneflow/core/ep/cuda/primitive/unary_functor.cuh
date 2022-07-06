@@ -53,6 +53,48 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTanh, half, half> {
   OF_DEVICE_FUNC half operator()(half src) const { return __float2half(tanhf(__half2float(src))); }
 };
 
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsInf, bool, half> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(half src) const { return isinf(__half2float(src)); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsInf, bool, float> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(float src) const { return isinf(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsInf, bool, double> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(double src) const { return isinf(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsNan, bool, half> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(half src) const { return isnan(__half2float(src)); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsNan, bool, float> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(float src) const { return isnan(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsNan, bool, double> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(double src) const { return isnan(src); }
+};
+
 #define SPECIALIZATION_PSEUDO_HALF_UNARY_FUNCTOR(op)                          \
   template<>                                                                  \
   struct UnaryFunctor<DeviceType::kCUDA, op, half, half> {                    \
@@ -104,6 +146,20 @@ SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kSoftSign);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kSoftPlus);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kTanh);
 SPECIALIZATION_PSEUDO_BFLOAT16_UNARY_FUNCTOR(UnaryOp::kThreshold);
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsInf, bool, nv_bfloat16> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(nv_bfloat16 src) const { return isinf(__bfloat162float(src)); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsNan, bool, nv_bfloat16> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(nv_bfloat16 src) const { return isnan(__bfloat162float(src)); }
+};
 
 #endif
 
