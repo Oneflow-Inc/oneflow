@@ -128,6 +128,7 @@ endif()
 message(STATUS "USE_CXX11_ABI: ${USE_CXX11_ABI}")
 
 add_definitions(-DONE_FLOW_PYTHON_BASE_DIR=\"${PROJECT_SOURCE_DIR}/python\")
+add_definitions(-DONE_FLOW_PYTHON_TESTS_BASE_DIR=\"${PROJECT_SOURCE_DIR}/python/oneflow/test\")
 if(WITH_MLIR)
   add_definitions(-DWITH_MLIR)
   if(WITH_MLIR_CUDA_CODEGEN)

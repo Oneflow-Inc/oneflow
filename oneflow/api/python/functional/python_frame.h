@@ -20,6 +20,7 @@ limitations under the License.
 #include <pyframe.h>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/core/framework/op_interpreter/dispatch_frame.h"
@@ -44,21 +45,40 @@ std::string get_python_frame_str_repr(int32_t stack_index, PyFrameObject* frame)
   return repr + code_name + " at " + file_name + ": line " + std::to_string(line_number) + "; ";
 }
 
-bool check_if_python_file_is_a_user_file(const std::string& path) {
-  const std::string python_files_base_dir_path = ONE_FLOW_PYTHON_BASE_DIR;
-  if (path.size() <= python_files_base_dir_path.size()) { return true; }
-  return path.substr(0, python_files_base_dir_path.size()) != python_files_base_dir_path;
+// all the files except those specified in paths_to_be_kepted in oneflow/python should be filtered
+const static std::vector<std::string> paths_to_be_filtered = {ONE_FLOW_PYTHON_BASE_DIR};
+
+// keep the files in python/test for running and debugging tests
+const static std::vector<std::string> paths_to_be_kepted = {ONE_FLOW_PYTHON_TESTS_BASE_DIR};
+
+bool check_if_python_file_should_be_filtered(const std::string& path) {
+  for (int i = 0; i < paths_to_be_kepted.size(); i++) {
+    const std::string& path_to_keep = paths_to_be_kepted[i];
+    if (path.size() > path_to_keep.size()) {
+      if (path.substr(0, path_to_keep.size()) == path_to_keep) { return false; }
+    }
+  }
+
+  for (int i = 0; i < paths_to_be_filtered.size(); i++) {
+    const std::string& path_to_filter = paths_to_be_filtered[i];
+    if (path.size() > path_to_filter.size()) {
+      if (path.substr(0, path_to_filter.size()) == path_to_filter) { return true; }
+    }
+  }
+
+  return false;
 }
 
-bool check_if_frame_is_from_a_user_file(PyFrameObject* frame) {
+bool check_if_frame_should_be_filtered(PyFrameObject* frame) {
   std::string frame_file_name = PyObjectToReprStr(PyFrame_GetCode(frame)->co_filename);
   frame_file_name = frame_file_name.substr(1, frame_file_name.size() - 2);  // get rid of ' '
-  return check_if_python_file_is_a_user_file(frame_file_name);
+  return check_if_python_file_should_be_filtered(frame_file_name);
 }
 
 bool check_if_should_skip_this_frame(PyFrameObject* frame) {
   const bool only_show_user_code_loc = GetGraphDebugOnlyShowUserCodeLoc();
-  return only_show_user_code_loc && !check_if_frame_is_from_a_user_file(frame);
+  if (only_show_user_code_loc) { return check_if_frame_should_be_filtered(frame); }
+  return false;
 }
 
 int32_t get_cur_stack_depth() {

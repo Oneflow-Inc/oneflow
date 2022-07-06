@@ -54,7 +54,9 @@ def _test_linear_graph(test_case, device):
             return self.my_linear(x)
 
     linear_g = LinearGraph()
+    linear_g.debug(0, print_op_loc=True, max_py_stack_depth=14)
     of_lazy_out = linear_g(x)
+    print(linear_g)
     test_case.assertTrue(np.array_equal(of_lazy_out.numpy(), of_eager_out.numpy()))
 
 
