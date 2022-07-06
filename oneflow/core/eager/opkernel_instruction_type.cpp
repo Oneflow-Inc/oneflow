@@ -190,7 +190,7 @@ struct LocalCallOpKernelUtil final {
     const auto CalMemorySize = [compute_ctx](const one::ArgVec& args) -> int64_t {
       const auto Func = [compute_ctx](int64_t mem_size, const auto& pair) {
         const auto tensor = compute_ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
-        return mem_size + tensor->shape_view().elem_cnt() * GetSizeOfDataType(tensor->data_type());
+        return mem_size + tensor->shape().elem_cnt() * GetSizeOfDataType(tensor->data_type());
       };
       return std::accumulate(args.begin(), args.end(), static_cast<int64_t>(0), Func);
     };
@@ -202,8 +202,8 @@ struct LocalCallOpKernelUtil final {
           return CalMemorySize(compute_ctx->inputs()) + CalMemorySize(compute_ctx->outputs());
         },
 #endif
-        [compute_ctx]() -> std::vector<ShapeView> {
-          std::vector<ShapeView> shapes;
+        [compute_ctx]() -> std::vector<Shape> {
+          std::vector<Shape> shapes;
           for (const auto& pair : compute_ctx->inputs()) {
             shapes.emplace_back(
                 compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape());
