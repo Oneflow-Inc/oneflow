@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/vm/ep_event.h"
 #include "oneflow/core/vm/bin_allocator.h"
+#include "oneflow/core/vm/thread_safe_guard.h"
 #include "oneflow/core/common/single_thread_obj_pool.h"
 #include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ep/include/device.h"
@@ -42,7 +43,7 @@ class EpDeviceCtx : public DeviceCtx {
     }
   }
 
-  EpDeviceCtx(Symbol<Device> device, std::unique_ptr<CachingAllocator>&& backend_allocator)
+  EpDeviceCtx(Symbol<Device> device, std::unique_ptr<BinAllocator<ThreadSafeGuard>>&& backend_allocator)
       : DeviceCtx(),
         device_(device),
         ep_event_provier_(),
@@ -85,7 +86,7 @@ class EpDeviceCtx : public DeviceCtx {
   std::unique_ptr<EpEventProvider> ep_event_provier_;
   mutable std::shared_ptr<ep::Device> ep_device_;
   mutable ep::Stream* ep_stream_;
-  std::unique_ptr<CachingAllocator> ep_allocator_;
+  std::unique_ptr<BinAllocator<ThreadSafeGuard>> ep_allocator_;
 };
 
 }  // namespace vm
