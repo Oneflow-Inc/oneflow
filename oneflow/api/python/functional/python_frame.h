@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_FRAME_H_
 
 #include <Python.h>
-#include <pyframe.h>
 #include <cstdint>
 #include <string>
 #include <vector>
