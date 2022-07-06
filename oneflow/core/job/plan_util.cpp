@@ -1018,6 +1018,14 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
         const auto& lbi2blob_desc_pair = data_regst.lbi2blob_desc(0);
         std::string tensor_name = GenLogicalBlobName(lbi2blob_desc_pair.lbi());
         const auto& blob_desc = lbi2blob_desc_pair.blob_desc();
+        std::string alloc_order = "inplaced";
+        if (regst->has_alloc_before_actor()) {
+          alloc_order = std::to_string(regst->alloc_before_actor());
+        }
+        std::string free_order = "inplaced";
+        if (regst->has_free_after_actor()) {
+          free_order = std::to_string(regst->free_after_actor());
+        }
         VLOG(3) << "In Chunk id: " << chunk_id << ", MemBlock id: " << mem_block_id
                 << " Order: " << i
                 << " ,duration: " << (regst->free_after_actor() - regst->alloc_before_actor() + 1)
@@ -1025,8 +1033,7 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
                 << " MiB, name: " << tensor_name
                 << "\nshape: " << Shape(blob_desc.shape()).ToString()
                 << " ,dtype: " << DataType_Name(blob_desc.data_type())
-                << " ,alloc_order: " << regst->alloc_before_actor()
-                << " ,free_order: " << regst->free_after_actor();
+                << " ,alloc_order: " << alloc_order << " ,free_order: " << free_order;
       }
     }
 

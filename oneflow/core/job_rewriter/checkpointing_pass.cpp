@@ -164,7 +164,7 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     }
     if (bw_consumers.empty()) { continue; }
 
-    std::vector<LogicalBlobId> checkpointing_tensor;
+    HashSet<LogicalBlobId> checkpointing_tensor;
 
     HashMap<std::string, const OpNode*> subgraph_op_name2op_node;
     ParallelConf parallel_conf;
@@ -221,7 +221,7 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
             list_s.set_s(i, kCheckpointingFakeOpNamePrefix + old_lbn);
           } else {
             source_node_in_fake_subgraph.insert(fake_op_name);
-            checkpointing_tensor.push_back(old_lbi);
+            checkpointing_tensor.insert(old_lbi);
           }
         }
       }
