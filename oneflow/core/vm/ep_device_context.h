@@ -47,8 +47,6 @@ class EpDeviceCtx : public DeviceCtx {
         device_(device),
         ep_event_provier_(),
         ep_stream_(nullptr),
-        // ep_allocator_(new ThreadSafeAllocator(std::make_unique<BinAllocator>(
-        //     ep::kMaxAlignmentRequirement, std::move(backend_allocator)))) {}
         ep_allocator_(std::move(backend_allocator)) {}
 
   ep::Stream* stream() override { return GetOrCreateEpStream(); }
