@@ -38,7 +38,7 @@ def graph_build_context(config_proto, session):
     assert type(config_proto) is job_conf_pb.JobConfigProto, type(config_proto)
     config_proto_str = text_format.MessageToString(config_proto)
     new_scope = oneflow._oneflow_internal.MakeInitialScope(
-        config_proto_str, oneflow.placement("cpu", [0]), False,  # is_mirrored
+        config_proto_str, oneflow.placement("cpu", [0]), False,  # is_local
     )
 
     graph_scope = _make_new_graph_scope(new_scope, config_proto.job_name)

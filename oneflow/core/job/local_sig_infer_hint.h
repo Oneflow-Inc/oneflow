@@ -20,17 +20,17 @@ limitations under the License.
 
 namespace oneflow {
 
-class MirroredSigInferHint final {
+class LocalSigInferHint final {
  public:
-  MirroredSigInferHint(const ParallelDesc* parallel_desc, bool is_mirrored_parallel_view)
-      : parallel_desc_(parallel_desc), is_mirrored_parallel_view_(is_mirrored_parallel_view) {}
+  LocalSigInferHint(const ParallelDesc* parallel_desc, bool is_local_parallel_view)
+      : parallel_desc_(parallel_desc), is_local_parallel_view_(is_local_parallel_view) {}
 
   const ParallelDesc& parallel_desc() const { return *parallel_desc_; }
-  bool is_mirrored_parallel_view() const { return is_mirrored_parallel_view_; }
+  bool is_local_parallel_view() const { return is_local_parallel_view_; }
 
  private:
   const ParallelDesc* parallel_desc_;
-  bool is_mirrored_parallel_view_;
+  bool is_local_parallel_view_;
 };
 
 }  // namespace oneflow
