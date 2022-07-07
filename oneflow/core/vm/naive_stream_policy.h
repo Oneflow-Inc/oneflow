@@ -53,7 +53,7 @@ class NaiveStreamPolicy final : public StreamPolicy {
     return stream_type_->SupportingTransportInstructions();
   }
 
-  // Ep device ctx api
+  // Ep device ctx methods
   EpEventProvider* ep_event_provider() override {
     auto* ep_device_ctx = dynamic_cast<EpDeviceCtx*>(device_ctx_.get());
     CHECK_NOTNULL(ep_device_ctx);
@@ -66,7 +66,7 @@ class NaiveStreamPolicy final : public StreamPolicy {
     return ep_device_ctx->GetOrCreateEpDevice();
   }
 
-  // Lazy job device ctx api
+  // Lazy job device ctx methods
   virtual void WaitUntilQueueEmptyIfFrontNNGraphNotEquals(
       const std::shared_ptr<NNGraphIf>& nn_graph) {
     auto* lazy_job_device_ctx = dynamic_cast<LazyJobDeviceCtx*>(device_ctx_.get());
