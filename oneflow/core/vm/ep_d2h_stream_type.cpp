@@ -44,8 +44,7 @@ void EpD2HStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
 void EpD2HStreamType::InitInstructionStatus(const Stream& stream,
                                             InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(EpOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
-  auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream.device_ctx().get());  // NOLINT
-  auto* ep_event_provider = ep_device_ctx->ep_event_provider();
+  auto* ep_event_provider = const_cast<Stream&>(stream).mut_stream_policy()->ep_event_provider();
   auto* data_ptr = status_buffer->mut_buffer();
   const auto& ep_event = CHECK_NOTNULL(ep_event_provider)->GetReusedEpEvent();
   EpOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, ep_event);
@@ -65,12 +64,12 @@ bool EpD2HStreamType::QueryInstructionStatusDone(
 void EpD2HStreamType::Run(Instruction* instruction) const {
   OF_PROFILER_RANGE_GUARD("S:" + instruction->DebugName());
   auto* stream = instruction->mut_stream();
-  auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());  // NOLINT
-  auto* ep_device = ep_device_ctx->GetOrCreateEpDevice();
+  auto* ep_device = stream->mut_stream_policy()->GetOrCreateEpDevice();
   ep_device->SetAsActiveDevice();
   instruction->Compute();
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer();
-  EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(ep_device_ctx);
+  EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(
+      stream->mut_stream_policy()->stream());
 }
 
 }  // namespace vm

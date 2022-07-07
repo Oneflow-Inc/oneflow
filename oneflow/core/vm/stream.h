@@ -44,10 +44,6 @@ class Stream final : public intrusive::Base {
   const StreamPolicy& stream_policy() const { return *stream_policy_; }
   const ThreadCtx& thread_ctx() const { return *thread_ctx_; }
   bool has_thread_ctx() const { return thread_ctx_ != nullptr; }
-  const std::unique_ptr<DeviceCtx>& device_ctx() const {
-    auto* naive_stream_policy = static_cast<NaiveStreamPolicy*>(stream_policy_.get());
-    return naive_stream_policy->device_ctx();
-  }
   const intrusive::ListHook& active_stream_hook() const { return active_stream_hook_; }
   const DispatchedInstructionList& running_instruction_list() const {
     return running_instruction_list_;

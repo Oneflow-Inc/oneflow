@@ -19,17 +19,26 @@ limitations under the License.
 #include <string>
 #include <typeindex>
 #include <glog/logging.h>
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/framework/nn_graph_if.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
 
+class EpEventProvider;
+
+namespace ep {
+
 class Device;
+class Stream;
+
+}  // namespace ep
 
 namespace vm {
 
+class Allocator;
 class Stream;
 class InstructionStatusBuffer;
 class Instruction;
@@ -45,9 +54,6 @@ class StreamPolicy {
   }
   virtual DeviceType device_type() const = 0;
 
-  // virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
-  //                            Symbol<Device> device) const = 0;
-
   virtual void InitInstructionStatus(const Stream& stream,
                                      InstructionStatusBuffer* status_buffer) const = 0;
   virtual void DeleteInstructionStatus(const Stream& stream,
@@ -58,6 +64,27 @@ class StreamPolicy {
 
   virtual bool OnSchedulerThread(StreamRole stream_role) const;
   virtual bool SupportingTransportInstructions() const = 0;
+
+  // Ep device ctx api
+  virtual EpEventProvider* ep_event_provider() {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+
+  virtual ep::Device* GetOrCreateEpDevice() const {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+
+  // Lazy job device ctx api
+  virtual void WaitUntilQueueEmptyIfFrontNNGraphNotEquals(
+      const std::shared_ptr<NNGraphIf>& nn_graph) {
+    UNIMPLEMENTED();
+  }
+
+  virtual void EnqueueNNGraph(const std::shared_ptr<NNGraphIf>& nn_graph) { UNIMPLEMENTED(); }
+
+  virtual void DequeueNNGraph() { UNIMPLEMENTED(); }
 
  protected:
   StreamPolicy() = default;

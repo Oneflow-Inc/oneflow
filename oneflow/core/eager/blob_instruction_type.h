@@ -50,8 +50,7 @@ class EpRecordEventInstructionType final : public vm::InstructionType {
     auto* status_buffer = instruction->mut_status_buffer();
     auto* stream = instruction->mut_stream();
     instruction->stream_policy().InitInstructionStatus(*stream, status_buffer);
-    auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());
-    auto* ep_event_provider = ep_device_ctx->ep_event_provider();
+    auto* ep_event_provider = stream->mut_stream_policy()->ep_event_provider();
     const auto& ep_event = CHECK_NOTNULL(ep_event_provider)->GetReusedEpEvent();
     auto* data_ptr = status_buffer->mut_buffer();
     EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_ep_event(ep_event);

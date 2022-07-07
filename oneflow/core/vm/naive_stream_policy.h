@@ -18,7 +18,8 @@ limitations under the License.
 
 #include "oneflow/core/vm/stream_policy.h"
 #include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/vm/ep_device_context.h"
+#include "oneflow/core/vm/lazy_job_device_context.h"
 
 namespace oneflow {
 namespace vm {
@@ -33,12 +34,6 @@ class NaiveStreamPolicy final : public StreamPolicy {
   ep::Stream* stream() override { return device_ctx_->stream(); }
   vm::Allocator* mut_allocator() override { return device_ctx_->mut_allocator(); }
   DeviceType device_type() const override { return device_ctx_->device_type(); }
-
-  const std::unique_ptr<DeviceCtx>& device_ctx() const { return device_ctx_; }
-  std::unique_ptr<DeviceCtx>* mut_device_ctx() { return &device_ctx_; }
-
-  // void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
-  //                            Symbol<Device> device) const = 0;
 
   void InitInstructionStatus(const Stream& stream,
                              InstructionStatusBuffer* status_buffer) const override {
@@ -56,6 +51,39 @@ class NaiveStreamPolicy final : public StreamPolicy {
 
   bool SupportingTransportInstructions() const override {
     return stream_type_->SupportingTransportInstructions();
+  }
+
+  // Ep device ctx api
+  EpEventProvider* ep_event_provider() override {
+    auto* ep_device_ctx = dynamic_cast<EpDeviceCtx*>(device_ctx_.get());
+    CHECK_NOTNULL(ep_device_ctx);
+    return ep_device_ctx->ep_event_provider();
+  }
+
+  ep::Device* GetOrCreateEpDevice() const override {
+    auto* ep_device_ctx = dynamic_cast<EpDeviceCtx*>(device_ctx_.get());
+    CHECK_NOTNULL(ep_device_ctx);
+    return ep_device_ctx->GetOrCreateEpDevice();
+  }
+
+  // Lazy job device ctx api
+  virtual void WaitUntilQueueEmptyIfFrontNNGraphNotEquals(
+      const std::shared_ptr<NNGraphIf>& nn_graph) {
+    auto* lazy_job_device_ctx = dynamic_cast<LazyJobDeviceCtx*>(device_ctx_.get());
+    CHECK_NOTNULL(lazy_job_device_ctx);
+    lazy_job_device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(nn_graph);
+  }
+
+  virtual void EnqueueNNGraph(const std::shared_ptr<NNGraphIf>& nn_graph) {
+    auto* lazy_job_device_ctx = dynamic_cast<LazyJobDeviceCtx*>(device_ctx_.get());
+    CHECK_NOTNULL(lazy_job_device_ctx);
+    lazy_job_device_ctx->EnqueueNNGraph(nn_graph);
+  }
+
+  virtual void DequeueNNGraph() {
+    auto* lazy_job_device_ctx = dynamic_cast<LazyJobDeviceCtx*>(device_ctx_.get());
+    CHECK_NOTNULL(lazy_job_device_ctx);
+    lazy_job_device_ctx->DequeueNNGraph();
   }
 
  private:
