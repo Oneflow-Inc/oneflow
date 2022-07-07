@@ -20,31 +20,31 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-MirroredTensorMeta::MirroredTensorMeta()
+LocalTensorMeta::LocalTensorMeta()
     : TensorMeta(std::make_shared<const Shape>(), std::make_shared<const Stride>(),
                  DataType::kInvalidDataType),
       device_(Symbol<Device>()),
       storage_offset_(0) {}
 
-MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                                       Symbol<Device> device)
+LocalTensorMeta::LocalTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
+                                 Symbol<Device> device)
     : TensorMeta(shape, std::make_shared<const Stride>(*shape), dtype),
       device_(device),
       storage_offset_(0) {}
 
-MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape,
-                                       const std::shared_ptr<const Stride>& stride, DataType dtype,
-                                       Symbol<Device> device, int64_t storage_offset)
+LocalTensorMeta::LocalTensorMeta(const std::shared_ptr<const Shape>& shape,
+                                 const std::shared_ptr<const Stride>& stride, DataType dtype,
+                                 Symbol<Device> device, int64_t storage_offset)
     : TensorMeta(shape, stride, dtype), device_(device), storage_offset_(storage_offset) {}
 
-bool MirroredTensorMeta::operator==(const MirroredTensorMeta& other) const {
+bool LocalTensorMeta::operator==(const LocalTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
   return *this->shape_ptr() == *other.shape_ptr() && this->dtype() == other.dtype()
          && *this->device() == *other.device() && this->stride() == other.stride()
          && this->storage_offset() == other.storage_offset();
 }
 
-size_t MirroredTensorMeta::CalcHashValue() const {
+size_t LocalTensorMeta::CalcHashValue() const {
   // It's correct to ignore is_dynamic_ field.
   return std::hash<Shape>()(*shape_ptr()) ^ std::hash<DataType>()(dtype())
          ^ std::hash<Device>()(*device()) ^ std::hash<Stride>()(stride()) ^ storage_offset();
