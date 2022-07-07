@@ -24,7 +24,7 @@ namespace embedding {
 
 #ifdef WITH_CUDA
 
-constexpr size_t kDefaultMaxQueryLength = 65536;
+constexpr size_t kDefaultMaxQueryLength = 262144;
 
 constexpr int64_t kRingBufferSize = 8;
 
