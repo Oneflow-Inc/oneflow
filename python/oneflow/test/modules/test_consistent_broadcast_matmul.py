@@ -20,7 +20,7 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=1, check_graph=False)
-def test_flow_tensor_broadcast_matmul_with_random_data(
+def _test_flow_tensor_consistent_broadcast_matmul_with_random_data(
     test_case, placement, x_sbp, y_sbp
 ):
     k = random(1, 6)
@@ -30,7 +30,9 @@ def test_flow_tensor_broadcast_matmul_with_random_data(
 
 
 @autotest(n=1, check_graph=False)
-def test_flow_tensor_x_broadcast_y_matmul(test_case, placement, x_sbp, y_sbp):
+def _test_flow_tensor_consistent_x_broadcast_y_matmul(
+    test_case, placement, x_sbp, y_sbp
+):
     k = random(1, 6).to(int)
     x = random_tensor(ndim=2, dim1=k).to_global(placement=placement, sbp=x_sbp)
     y = random_tensor(ndim=3, dim1=k).to_global(placement=placement, sbp=y_sbp)
@@ -38,7 +40,7 @@ def test_flow_tensor_x_broadcast_y_matmul(test_case, placement, x_sbp, y_sbp):
 
 
 @autotest(n=1, check_graph=False)
-def test_flow_tensor_broadcast_matmul_with_same_dims(
+def _test_flow_tensor_consistent_broadcast_matmul_with_same_dims(
     test_case, placement, x_sbp, y_sbp
 ):
     k = random(1, 6).to(int)
@@ -47,19 +49,19 @@ def test_flow_tensor_broadcast_matmul_with_same_dims(
     return x.matmul(y)
 
 
-class TestBroadcastMatmulModule(flow.unittest.TestCase):
+class TestConsistentBroadcastMatmulModule(flow.unittest.TestCase):
     @globaltest
-    def test_broadcast_matmul(test_case):
+    def test_consistent_broadcast_matmul(test_case):
         for placement in all_placement():
             for x_sbp in all_sbp(placement, max_dim=2):
                 for y_sbp in all_sbp(placement, max_dim=2):
-                    test_flow_tensor_broadcast_matmul_with_random_data(
+                    _test_flow_tensor_consistent_broadcast_matmul_with_random_data(
                         test_case, placement, x_sbp, y_sbp
                     )
-                    test_flow_tensor_x_broadcast_y_matmul(
+                    _test_flow_tensor_consistent_x_broadcast_y_matmul(
                         test_case, placement, x_sbp, y_sbp
                     )
-                    test_flow_tensor_broadcast_matmul_with_same_dims(
+                    _test_flow_tensor_consistent_broadcast_matmul_with_same_dims(
                         test_case, placement, x_sbp, y_sbp
                     )
 
