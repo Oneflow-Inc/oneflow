@@ -90,12 +90,6 @@ class StreamPolicy {
   StreamPolicy() = default;
 };
 
-template<typename T>
-const StreamPolicy* StaticGlobalStreamPolicy() {
-  static const StreamPolicy* stream_policy = new T();
-  return stream_policy;
-}
-
 }  // namespace vm
 }  // namespace oneflow
 
