@@ -42,6 +42,9 @@ class MatmulGradKernelState final : public user_op::OpKernelState {
         ParseIntegerFromEnv("ONEFLOW_EP_CUDA_CUBLAS_WORKSPACE_SIZE_MB", kDefaultWorkspaceSizeMb)
         * 1024 * 1024;
     OF_CUDA_CHECK(cudaMalloc(&workspace_, workspace_size_));
+    if (ctx->parallel_ctx().parallel_num() > 1) {
+      parallel_conf_ = ctx->parallel_desc().parallel_conf();
+    }
   }
   ~MatmulGradKernelState() {
     OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_));
@@ -64,7 +67,12 @@ class MatmulGradKernelState final : public user_op::OpKernelState {
 
   bool IfNeedComm() const { return if_need_comm_; }
 
-  ncclComm_t comm() const { return comm_->comm; }
+  ncclComm_t comm() { return GetOrCreate().comm; }
+
+  const Comm& GetOrCreate() {
+    if (!comm_) { InitCommMgr(); }
+    return *comm_;
+  }
 
   void InitNeedComm(user_op::KernelInitContext* ctx) {
     if_need_comm_ = false;
@@ -84,12 +92,12 @@ class MatmulGradKernelState final : public user_op::OpKernelState {
     }
   }
 
-  void InitCommMgr(user_op::KernelInitContext* ctx) {
+  void InitCommMgr() {
     std::set<std::pair<int64_t, int64_t>> device_set;
-    for (int64_t parallel_id = 0; parallel_id < ctx->parallel_desc().parallel_num();
-         ++parallel_id) {
-      int64_t machine_id = CHECK_JUST(ctx->parallel_desc().MachineId4ParallelId(parallel_id));
-      int64_t device_id = CHECK_JUST(ctx->parallel_desc().DeviceId4ParallelId(parallel_id));
+    const ParallelDesc parallel_desc(parallel_conf_);
+    for (int64_t parallel_id = 0; parallel_id < parallel_desc.parallel_num(); ++parallel_id) {
+      int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
+      int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
       device_set.emplace(std::make_pair(machine_id, device_id));
     }
     EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
@@ -107,6 +115,7 @@ class MatmulGradKernelState final : public user_op::OpKernelState {
   std::string stream_name_;
   std::unique_ptr<Comm> comm_;
   bool if_need_comm_;
+  ParallelConf parallel_conf_;
 };
 
 template<typename T>
@@ -135,7 +144,6 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
     std::shared_ptr<MatmulGradKernelState> kernel_state =
         std::make_shared<MatmulGradKernelState>(ctx);
     kernel_state->InitNeedComm(ctx);
-    if (kernel_state->IfNeedComm()) { kernel_state->InitCommMgr(ctx); }
     return kernel_state;
   }
 
