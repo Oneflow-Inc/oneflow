@@ -76,13 +76,25 @@ template<typename T, typename G>
 struct MomentumUpdateFunctor {
   OF_DEVICE_FUNC
   void operator()(const G* model_diff, T* model, T* momentum, T scale, float l1, float l2,
-                  float beta, float weight_decay, float learning_rate) const {
+                  float beta, float dampening, bool nesterov, bool maximize, float weight_decay,
+                  float learning_rate) const {
     const T model_val = *model;
     T model_diff_t =
         CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
-    const T next_momentum = beta * *momentum - learning_rate * model_diff_t;
+
+    T next_momentum = beta * *momentum + (1.0f - dampening) * model_diff_t;
     *momentum = next_momentum;
-    const T next_model = model_val + next_momentum - learning_rate * weight_decay * model_val;
+
+    if (!nesterov) {
+      model_diff_t = next_momentum;
+    } else {
+      model_diff_t += beta * next_momentum;
+    }
+
+    T alpha = -learning_rate;
+    if (maximize) { alpha = learning_rate; }
+    const T next_model =
+        model_val + alpha * model_diff_t - learning_rate * weight_decay * model_val;
     *model = next_model;
   }
 };
@@ -254,17 +266,18 @@ struct BiasCorrectionFactorKernelUtil {
 template<DeviceType device_type, typename T, typename G>
 struct MomentumUpdateKernelUtil {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta,
-                     float weight_decay, float learning_rate_val, const float* learning_rate,
-                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
-                     T* momentum);
+                     float dampening, bool nesterov, bool maximize, float weight_decay,
+                     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
+                     const int64_t* skip_if, const G* model_diff, T* model, T* momentum);
 };
 
 template<DeviceType device_type, typename T, typename K, typename IDX>
 struct IndexedSlicesMomentumMdUpdateKernelUtil {
-  static void Update(ep::Stream* stream, T beta, float weight_decay, int64_t num_instance,
-                     int64_t feature_size, int64_t lower_bound, int64_t upper_bound,
-                     const IDX* num_unique_instance, const float* learning_rate, const K* indices,
-                     const T* values, T* model, T* momentum);
+  static void Update(ep::Stream* stream, T beta, float dampening, bool nesterov, bool maximize,
+                     float weight_decay, int64_t num_instance, int64_t feature_size,
+                     int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
+                     const float* learning_rate, const K* indices, const T* values, T* model,
+                     T* momentum);
 };
 
 template<DeviceType device_type, typename T, typename G, typename C>
