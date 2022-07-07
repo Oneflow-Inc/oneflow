@@ -20,7 +20,7 @@ import oneflow.unittest
 
 
 class TestAddcdiv(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_addcdiv(test_case):
         device = random_device()
         ndim = random(2, 4).to(int).value()
@@ -32,7 +32,7 @@ class TestAddcdiv(flow.unittest.TestCase):
         output = torch.addcdiv(input, tensor1, tensor2, value=value)
         return output
 
-    @autotest()
+    @autotest(n=5)
     def test_tensor_addcdiv(test_case):
         device = random_device()
         ndim = random(2, 4).to(int).value()
@@ -44,7 +44,7 @@ class TestAddcdiv(flow.unittest.TestCase):
         output = input.addcdiv(tensor1, tensor2, value=value)
         return output
 
-    @autotest()
+    @autotest(n=5)
     def test_tensor_addcdiv_inplace(test_case):
         device = random_device()
         ndim = random(2, 4).to(int).value()
