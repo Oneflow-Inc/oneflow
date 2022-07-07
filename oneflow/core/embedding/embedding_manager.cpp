@@ -40,7 +40,7 @@ struct IdStatistics {
 class DynamicTmpBufferAllocator final : public TmpBufferAllocator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DynamicTmpBufferAllocator);
-  DynamicTmpBufferAllocator(cudaStream_t stream, cudaMemPool_t pool) : stream_(), mem_pool_() {}
+  DynamicTmpBufferAllocator(cudaStream_t stream, cudaMemPool_t pool) : stream_(stream), mem_pool_(pool) {}
   ~DynamicTmpBufferAllocator() override = default;
 
   void Allocate(void** ptr, size_t size) override {
