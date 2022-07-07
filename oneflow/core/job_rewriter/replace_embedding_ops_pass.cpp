@@ -995,7 +995,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     const int64_t embedding_size = embedding_op.attr<int64_t>("embedding_size");
     const int64_t parallel_num = op_node->parallel_desc().parallel_num();
     const bool use_system_gather =
-        (parallel_num == 1 && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_USE_SYSTEM_GATHER", true)
+        (parallel_num == 1 && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_USE_SYSTEM_GATHER", false)
          && !embedding::UseDynamicMemoryAllocation());
     std::vector<OperatorConf> add_ops;
     std::vector<std::string> delete_op_names;
