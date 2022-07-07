@@ -31,7 +31,7 @@ class CudaBackendAllocator final : public CachingAllocator {
   Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
   void DeviceReset() override;
-  void Shrink() override {};
+  void Shrink() override{};
 
  private:
   int64_t device_id_;
