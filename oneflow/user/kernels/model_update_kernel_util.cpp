@@ -108,22 +108,23 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_INDEXED_SLICES_SGD_UPDATE_KERNEL_UTIL_
 template<typename T, typename G>
 struct MomentumUpdateKernelUtil<DeviceType::kCPU, T, G> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta,
-                     float weight_decay, float learning_rate_val, const float* learning_rate,
-                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
-                     T* momentum);
+                     float dampening, bool nesterov, bool maximize, float weight_decay,
+                     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
+                     const int64_t* skip_if, const G* model_diff, T* model, T* momentum);
 };
 
 template<typename T, typename G>
 void MomentumUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
-    ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta, float weight_decay,
-    float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
-    const int64_t* skip_if, const G* model_diff, T* model, T* momentum) {
+    ep::Stream* stream, int64_t n, T scale, float l1, float l2, float beta, float dampening,
+    bool nesterov, bool maximize, float weight_decay, float learning_rate_val,
+    const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
+    T* model, T* momentum) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   for (int64_t i = 0; i != n; ++i) {
     MomentumUpdateFunctor<T, G>()(model_diff + i, model + i, momentum + i, scale, l1, l2, beta,
-                                  weight_decay, learning_rate_val);
+                                  dampening, nesterov, maximize, weight_decay, learning_rate_val);
   }
 }
 
@@ -132,17 +133,19 @@ template struct MomentumUpdateKernelUtil<DeviceType::kCPU, double, double>;
 
 template<typename T, typename K, typename IDX>
 struct IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kCPU, T, K, IDX> {
-  static void Update(ep::Stream* stream, T beta, float weight_decay, int64_t num_instance,
-                     int64_t feature_size, int64_t lower_bound, int64_t upper_bound,
-                     const IDX* num_unique_instance, const float* learning_rate, const K* indices,
-                     const T* values, T* model, T* momentum);
+  static void Update(ep::Stream* stream, T beta, float dampening, bool nesterov, bool maximize,
+                     float weight_decay, int64_t num_instance, int64_t feature_size,
+                     int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
+                     const float* learning_rate, const K* indices, const T* values, T* model,
+                     T* momentum);
 };
 
 template<typename T, typename K, typename IDX>
 void IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kCPU, T, K, IDX>::Update(
-    ep::Stream* stream, T beta, float weight_decay, int64_t num_instance, int64_t feature_size,
-    int64_t lower_bound, int64_t upper_bound, const IDX* num_unique_instance,
-    const float* learning_rate, const K* indices, const T* values, T* model, T* momentum) {
+    ep::Stream* stream, T beta, float dampening, bool nesterov, bool maximize, float weight_decay,
+    int64_t num_instance, int64_t feature_size, int64_t lower_bound, int64_t upper_bound,
+    const IDX* num_unique_instance, const float* learning_rate, const K* indices, const T* values,
+    T* model, T* momentum) {
   const int64_t n = *num_unique_instance * feature_size;
   const T lr = *learning_rate;
   for (int64_t i = 0; i != n; ++i) {
@@ -152,7 +155,7 @@ void IndexedSlicesMomentumMdUpdateKernelUtil<DeviceType::kCPU, T, K, IDX>::Updat
     if (instance_id >= lower_bound && instance_id < upper_bound) {
       const IDX model_idx = (instance_id - lower_bound) * feature_size + inner_idx;
       MomentumUpdateFunctor<T, T>()(values + i, model + model_idx, momentum + model_idx, 1.0, 0.0,
-                                    0.0, beta, weight_decay, lr);
+                                    0.0, beta, dampening, nesterov, maximize, weight_decay, lr);
     }
   }
 }
