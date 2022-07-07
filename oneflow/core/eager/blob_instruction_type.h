@@ -49,7 +49,7 @@ class EpRecordEventInstructionType final : public vm::InstructionType {
   void InitInstructionStatus(Instruction* instruction) const override {
     auto* status_buffer = instruction->mut_status_buffer();
     auto* stream = instruction->mut_stream();
-    instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
+    instruction->stream_policy().InitInstructionStatus(*stream, status_buffer);
     auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());
     auto* ep_event_provider = ep_device_ctx->ep_event_provider();
     const auto& ep_event = CHECK_NOTNULL(ep_event_provider)->GetReusedEpEvent();

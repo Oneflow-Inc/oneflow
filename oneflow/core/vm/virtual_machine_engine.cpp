@@ -337,7 +337,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
   }
   // Compute
   if (OnSchedulerThread(*stream)) {
-    stream->stream_type().Run(instruction);
+    stream->stream_policy().Run(instruction);
   } else {
     stream->mut_thread_ctx()->mut_worker_pending_instruction_list()->PushBack(instruction);
     schedule_ctx.OnWorkerLoadPending(stream->mut_thread_ctx());
@@ -430,8 +430,8 @@ void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_
   const auto& instruction_type = sequnential_instruction->instruction_type();
   CHECK(instruction_type.IsBarrier());
   CHECK(OnSchedulerThread(sequnential_instruction->stream()));
-  const StreamType& stream_type = sequnential_instruction->stream().stream_type();
-  stream_type.Run(sequnential_instruction);
+  const StreamPolicy& stream_policy = sequnential_instruction->stream().stream_policy();
+  stream_policy.Run(sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
   LivelyInstructionListErase(sequnential_instruction);
 }
