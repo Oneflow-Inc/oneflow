@@ -20,40 +20,40 @@ import oneflow.unittest
 
 
 class TestAddcdiv(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest()
     def test_addcdiv(test_case):
         device = random_device()
-        ndim = random(low=2).to(int).value()
-        shape = [random(low=2, high=4) for i in range(ndim)]
-        input = random_tensor(len(shape), *shape).to(device)
-        tensor1 = random_tensor(len(shape), *shape).to(device)
-        tensor2 = random_tensor(len(shape), *shape).to(device)
-        value = random(3, 6).to(int)
+        ndim = random(2, 4).to(int).value()
+        shape = [random(2, 4) for i in range(ndim)]
+        input = random_tensor(ndim, *shape).to(device)
+        tensor1 = random_tensor(ndim, *shape).to(device)
+        tensor2 = random_tensor(ndim, *shape).to(device)
+        value = random(2, 4).to(int)
         output = torch.addcdiv(input, tensor1, tensor2, value=value)
         return output
 
-    @autotest(check_graph=False)
+    @autotest()
     def test_tensor_addcdiv(test_case):
         device = random_device()
-        ndim = random(low=2).to(int).value()
-        shape = [random(low=2, high=4) for i in range(ndim)]
-        input = random_tensor(len(shape), *shape).to(device)
-        tensor1 = random_tensor(len(shape), *shape).to(device)
-        tensor2 = random_tensor(len(shape), *shape).to(device)
-        value = random(3, 6).to(int)
+        ndim = random(2, 4).to(int).value()
+        shape = [random(2, 4) for i in range(ndim)]
+        input = random_tensor(ndim, *shape).to(device)
+        tensor1 = random_tensor(ndim, *shape).to(device)
+        tensor2 = random_tensor(ndim, *shape).to(device)
+        value = random(2, 4).to(int)
         output = input.addcdiv(tensor1, tensor2, value=value)
         return output
 
-    @autotest(check_graph=False)
+    @autotest()
     def test_tensor_addcdiv_inplace(test_case):
         device = random_device()
-        ndim = random(low=2).to(int).value()
-        shape = [random(low=2, high=4) for i in range(ndim)]
-        input = random_tensor(len(shape), *shape).to(device)
+        ndim = random(2, 4).to(int).value()
+        shape = [random(2, 4) for i in range(ndim)]
+        input = random_tensor(ndim, *shape).to(device)
         input = input + 1.0
-        tensor1 = random_tensor(len(shape), *shape).to(device)
-        tensor2 = random_tensor(len(shape), *shape).to(device)
-        value = random(3, 6).to(int)
+        tensor1 = random_tensor(ndim, *shape).to(device)
+        tensor2 = random_tensor(ndim, *shape).to(device)
+        value = random(2, 4).to(int)
         input.addcdiv_(tensor1, tensor2, value=value)
         return input
 

@@ -2920,7 +2920,11 @@ class InplaceAddCDivFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& tensor1,
                            const std::shared_ptr<one::Tensor>& tensor2, const Scalar& value) const {
-    return JUST(Add(input, JUST(ScalarMul(JUST(Div(tensor1, tensor2)), value, false)), 1, true));
+    JUST(CheckInplaceValid(input));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = input;
+    JUST(Add(input, JUST(ScalarMul(JUST(Div(tensor1, tensor2)), value, false)), 1, true));
+    return outputs->at(0);
   }
 };
 
