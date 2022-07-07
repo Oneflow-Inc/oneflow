@@ -62,7 +62,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> SiluGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("x", 0))
-      << Error::RuntimeError() << "Expected dy and x have same dtype, but found "
+      << Error::TypeError() << "Expected dy and x have same dtype, but found "
       << DataType_Name(ctx->InputDType("dy", 0)) << " and "
       << DataType_Name(ctx->InputDType("x", 0));
   *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);

@@ -40,7 +40,7 @@ class TestSoftmaxCrossEntropyError(flow.unittest.TestCase):
         )
 
     def test_softmax_cross_entropy_dtype_err(test_case):
-        with test_case.assertRaises(RuntimeError) as context:
+        with test_case.assertRaises(TypeError) as context:
             prediction = flow.randn(1, 10, dtype=flow.float32)
             label = flow.randn(1, 10, dtype=flow.float64)
             flow._C.softmax_cross_entropy(prediction, label)
@@ -67,7 +67,7 @@ class TestSoftmaxCrossEntropyError(flow.unittest.TestCase):
             prob = flow.randn(10, 10, 5)
             flow._C.softmax_cross_entropy_grad(dy, label, prob)
         test_case.assertTrue(
-            "Expected dy have one less diemensions than prob" in str(context.exception)
+            "Expected the dimension of dy is one smaller than that of prob, but got" in str(context.exception)
         )
 
     def test_softmax_cross_entropy_grad_dy_i_shape_err(test_case):
@@ -87,7 +87,7 @@ class TestSoftmaxCrossEntropyError(flow.unittest.TestCase):
         test_case.assertTrue("must match the size of prob" in str(context.exception))
 
     def test_softmax_cross_entropy_grad_label_dtype_err(test_case):
-        with test_case.assertRaises(RuntimeError) as context:
+        with test_case.assertRaises(TypeError) as context:
             dy = flow.randn(10, 10, dtype=flow.float64)
             label = flow.randn(10, 10, 5, dtype=flow.float32)
             prob = flow.randn(10, 10, 5, dtype=flow.float64)
@@ -98,11 +98,12 @@ class TestSoftmaxCrossEntropyError(flow.unittest.TestCase):
         )
 
     def test_softmax_cross_entropy_grad_dy_dtype_err(test_case):
-        with test_case.assertRaises(RuntimeError) as context:
+        with test_case.assertRaises(TypeError) as context:
             dy = flow.randn(10, 10, dtype=flow.float32)
             label = flow.randn(10, 10, 5, dtype=flow.float64)
             prob = flow.randn(10, 10, 5, dtype=flow.float64)
             flow._C.softmax_cross_entropy_grad(dy, label, prob)
+            print(str(context.exception))
         test_case.assertTrue(
             "Expected dy and prob have same dtype, but found" in str(context.exception)
         )

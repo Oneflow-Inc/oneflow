@@ -41,7 +41,7 @@ class TestSmoothL1LossError(flow.unittest.TestCase):
         )
 
     def test_smooth_l1_loss_dtype_err(test_case):
-        with test_case.assertRaises(RuntimeError) as context:
+        with test_case.assertRaises(TypeError) as context:
             input = flow.randn(10, dtype=flow.float32)
             target = flow.randn(10, dtype=flow.float64)
             reduction = "mean"

@@ -65,7 +65,7 @@ namespace oneflow {
   const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
   CHECK_EQ_OR_RETURN(label_desc.data_type(), prediction_desc.data_type())
-      << Error::RuntimeError() << "Expected label and prediction have same dtype, but found "
+      << Error::TypeError() << "Expected label and prediction have same dtype, but found "
       << DataType_Name(label_desc.data_type()) << " and "
       << DataType_Name(prediction_desc.data_type());
   *ctx->OutputDType("prob", 0) = ctx->InputDType("prediction", 0);
@@ -105,7 +105,8 @@ namespace oneflow {
       << Error::RuntimeError() << "The dimension of prob must greater than or equal to 2, but got "
       << prob_desc.shape().NumAxes();
   CHECK_EQ_OR_RETURN(dy_desc.shape().NumAxes(), prob_desc.shape().NumAxes() - 1)
-      << Error::RuntimeError() << "Expected dy have one less diemensions than prob, but got "
+      << Error::RuntimeError()
+      << "Expected the dimension of dy is one smaller than that of prob, but got "
       << dy_desc.shape().NumAxes() << " and " << prob_desc.shape().NumAxes() - 1;
   FOR_RANGE(int64_t, i, 0, dy_desc.shape().NumAxes()) {
     CHECK_EQ_OR_RETURN(dy_desc.shape().At(i), label_desc.shape().At(i))
@@ -128,10 +129,10 @@ namespace oneflow {
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   CHECK_EQ_OR_RETURN(label_desc.data_type(), prob_desc.data_type())
-      << Error::RuntimeError() << "Expected label and prob have same dtype, but found "
+      << Error::TypeError() << "Expected label and prob have same dtype, but found "
       << DataType_Name(label_desc.data_type()) << " and " << DataType_Name(prob_desc.data_type());
   CHECK_EQ_OR_RETURN(dy_desc.data_type(), prob_desc.data_type())
-      << Error::RuntimeError() << "Expected dy and prob have same dtype, but found "
+      << Error::TypeError() << "Expected dy and prob have same dtype, but found "
       << DataType_Name(dy_desc.data_type()) << " and " << DataType_Name(prob_desc.data_type());
   *ctx->OutputDType("prediction_diff", 0) = ctx->InputDType("prob", 0);
   return Maybe<void>::Ok();

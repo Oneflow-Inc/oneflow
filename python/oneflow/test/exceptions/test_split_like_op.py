@@ -27,7 +27,7 @@ class TestSplitLikeError(flow.unittest.TestCase):
             axis = 0
             flow._C.split_like(x, like, axis)
         test_case.assertTrue(
-            ") should be less than or equal to input tensor (" in str(context.exception)
+            ") should be less than or equal to input (" in str(context.exception)
         )
 
     def test_split_like_split_axes_err(test_case):
@@ -37,7 +37,7 @@ class TestSplitLikeError(flow.unittest.TestCase):
             axis = 3
             flow._C.split_like(x, like, axis)
         test_case.assertTrue(
-            "should be less than the num axes of like tensor" in str(context.exception)
+            "should be less than the dimension of like" in str(context.exception)
         )
 
     def test_split_like_like_i_axes_err(test_case):
@@ -47,7 +47,7 @@ class TestSplitLikeError(flow.unittest.TestCase):
             axis = 0
             flow._C.split_like(x, like, axis)
         test_case.assertTrue(
-            "must match the num axes of the first like tensor" in str(context.exception)
+            "must match the dimension of the first like" in str(context.exception)
         )
 
     def test_split_like_x_i_shape_err(test_case):
@@ -58,14 +58,14 @@ class TestSplitLikeError(flow.unittest.TestCase):
             flow._C.split_like(x, like, axis)
         test_case.assertTrue("must match the size of like_i" in str(context.exception))
 
-    def test_split_like_static_dim_err(test_case):
+    def test_split_like_non_dynamic_static_dim_err(test_case):
         with test_case.assertRaises(RuntimeError) as context:
             x = flow.randn(4, 4)
             like = (flow.randn(2, 4), flow.randn(3, 4))
             axis = 0
             flow._C.split_like(x, like, axis)
         test_case.assertTrue(
-            "shape situation, the static dim size" in str(context.exception)
+            "shape situation, the total size of like" in str(context.exception)
         )
 
 

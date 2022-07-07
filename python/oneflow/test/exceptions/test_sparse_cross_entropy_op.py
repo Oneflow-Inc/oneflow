@@ -38,7 +38,7 @@ class TestSparseCrossEntropyError(flow.unittest.TestCase):
             depth = 10
             flow._C.sparse_cross_entropy(prediction, label, depth)
         test_case.assertTrue(
-            "Expected label have one less diemensions than prediction"
+            "Expected the dimension of label is one smaller than that of prediction"
             in str(context.exception)
         )
 

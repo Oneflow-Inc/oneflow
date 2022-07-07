@@ -69,17 +69,17 @@ namespace oneflow {
   const int64_t in_num_axes = ctx->InputTensorDesc("in", 0).shape().NumAxes();
   const int64_t like_num_axes = ctx->InputTensorDesc("like", 0).shape().NumAxes();
   CHECK_LE_OR_RETURN(like_num_axes, in_num_axes)
-      << Error::RuntimeError() << "The num axes of like tensor (" << like_num_axes
-      << ") should be less than or equal to input tensor (" << in_num_axes << ")";
+      << Error::RuntimeError() << "The dimension of like (" << like_num_axes
+      << ") should be less than or equal to input (" << in_num_axes << ")";
   CHECK_LT_OR_RETURN(axis, like_num_axes)
-      << Error::RuntimeError() << "The axis(" << axis
-      << ") should be less than the num axes of like tensor (" << like_num_axes << ")";
+      << Error::RuntimeError() << "The axis (" << axis
+      << ") should be less than the dimension of like (" << like_num_axes << ")";
   FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
     const user_op::TensorDesc& like_i_desc = ctx->InputTensorDesc("like", i);
     user_op::TensorDesc* out_i_desc = ctx->OutputTensorDesc("out", i);
     CHECK_EQ_OR_RETURN(like_i_desc.shape().NumAxes(), like_num_axes)
-        << Error::RuntimeError() << "The num axes of like_i (" << like_i_desc.shape().NumAxes()
-        << ") must match the num axes of the first like tensor (" << like_num_axes << ")";
+        << Error::RuntimeError() << "The dimension of like_i (" << like_i_desc.shape().NumAxes()
+        << ") must match the dimension of the first like (" << like_num_axes << ")";
     FOR_RANGE(int64_t, j, 0, like_num_axes) {
       if (j == axis) {
         if (like_i_desc.is_dynamic()) {
@@ -103,14 +103,14 @@ namespace oneflow {
   }
   if (dynamic_dim_size == 0) {
     CHECK_EQ_OR_RETURN(static_dim_size, in_desc.shape().At(axis))
-        << Error::RuntimeError() << "In non dynamic shape situation, the static dim size ("
-        << static_dim_size << ") should be equal to input tensor size (" << in_desc.shape().At(axis)
-        << ")";
+        << Error::RuntimeError() << "In non dynamic shape situation, the total size of like ("
+        << static_dim_size << ") should be equal to the size of input (" << in_desc.shape().At(axis)
+        << ") at dimension " << axis;
   } else {
     CHECK_LE_OR_RETURN(static_dim_size, in_desc.shape().At(axis))
-        << Error::RuntimeError() << "In dynamic shape situation, the static dim size ("
-        << static_dim_size << ") should be equal to input tensor size (" << in_desc.shape().At(axis)
-        << ")";
+        << Error::RuntimeError() << "In dynamic shape situation, the total size of like ("
+        << static_dim_size << ") should be less than or equal to the size of input ("
+        << in_desc.shape().At(axis) << ") at dimension " << axis;
   }
   return Maybe<void>::Ok();
 }
@@ -138,10 +138,9 @@ namespace oneflow {
 /*static*/ Maybe<void> SplitLikeOp::CheckAttr(const user_op::UserOpDefWrapper&,
                                               const user_op::UserOpConfWrapper& op_conf) {
   CHECK_OR_RETURN(op_conf.input_size("like") >= 1)
-      << Error::RuntimeError() << "The number of like tensor should be greater than or equal to 1";
+      << Error::RuntimeError() << "The number of like should be greater than or equal to 1";
   CHECK_OR_RETURN(op_conf.output_size("out") >= 1)
-      << Error::RuntimeError()
-      << "The number of output tensor should be greater than or equal to 1";
+      << Error::RuntimeError() << "The number of output should be greater than or equal to 1";
   return Maybe<void>::Ok();
 }
 

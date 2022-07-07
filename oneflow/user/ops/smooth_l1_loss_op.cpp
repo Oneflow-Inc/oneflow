@@ -53,7 +53,7 @@ namespace oneflow {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_EQ_OR_RETURN(input_desc.data_type(), target_desc.data_type())
-      << Error::RuntimeError() << "Expected input and target have same dtype, but found "
+      << Error::TypeError() << "Expected input and target have same dtype, but found "
       << DataType_Name(input_desc.data_type()) << " and " << DataType_Name(target_desc.data_type());
 
   *ctx->OutputDType("out", 0) = ctx->InputDType("input", 0);
@@ -112,7 +112,7 @@ namespace oneflow {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_EQ_OR_RETURN(input_desc.data_type(), target_desc.data_type())
-      << Error::RuntimeError() << "Expected input and target have same dtype, but found "
+      << Error::TypeError() << "Expected input and target have same dtype, but found "
       << DataType_Name(input_desc.data_type()) << " and " << DataType_Name(target_desc.data_type());
 
   *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);

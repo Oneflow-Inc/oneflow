@@ -63,7 +63,7 @@ namespace oneflow {
   for (int64_t i = 1; i < ctx->input_size("x"); ++i) {
     const user_op::TensorDesc& x_i = ctx->InputTensorDesc("x", i);
     CHECK_EQ_OR_RETURN(x_i.data_type(), x_0.data_type())
-        << Error::RuntimeError()
+        << Error::TypeError()
         << "Expected all tensors to be the same dtype, but found at least two dtypes, "
         << DataType_Name(x_i.data_type()) << " and " << DataType_Name(x_0.data_type());
   }

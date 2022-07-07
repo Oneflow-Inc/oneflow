@@ -33,7 +33,7 @@ Maybe<void> CheckPredictionLabelDesc(const user_op::TensorDesc* prediction_desc,
   const int64_t num_out_axes = prediction_desc->shape().NumAxes() - 1;
   CHECK_EQ_OR_RETURN(label_desc->shape().NumAxes(), num_out_axes)
       << Error::RuntimeError()
-      << "Expected label have one less diemensions than prediction, but got "
+      << "Expected the dimension of label is one smaller than that of prediction, but got "
       << label_desc->shape().NumAxes() << " and " << num_out_axes;
   FOR_RANGE(int64_t, i, 0, num_out_axes) {
     CHECK_EQ_OR_RETURN(prediction_desc->shape().At(i), label_desc->shape().At(i))
@@ -60,8 +60,8 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   JUST(CheckPredictionLabelDesc(&prediction_desc, &label_desc));
   CHECK_EQ_OR_RETURN(dy_desc.shape(), label_desc.shape())
-      << Error::RuntimeError() << "Expected dy and label have same dtype, but found "
-      << DataType_Name(dy_desc.data_type()) << " and " << DataType_Name(label_desc.data_type());
+      << Error::RuntimeError() << "The size of dy " << dy_desc.shape()
+      << " must match the size of label " << label_desc.shape();
   *ctx->OutputShape("prediction_diff", 0) = prediction_desc.shape();
   *ctx->OutputIsDynamic("prediction_diff", 0) = prediction_desc.is_dynamic();
   return Maybe<void>::Ok();
@@ -86,7 +86,7 @@ Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
       << Error::TypeError() << "The dtype of label must be integer, but got "
       << DataType_Name(label_desc.data_type());
   CHECK_EQ_OR_RETURN(dy_desc.data_type(), prediction_desc.data_type())
-      << Error::RuntimeError() << "Expected dy and prediction have same dtype, but found "
+      << Error::TypeError() << "Expected dy and prediction have same dtype, but found "
       << DataType_Name(dy_desc.data_type()) << " and "
       << DataType_Name(prediction_desc.data_type());
   *ctx->OutputDType("prediction_diff", 0) = prediction_desc.data_type();

@@ -36,7 +36,7 @@ class TestSparseSoftmaxCrossEntropyError(flow.unittest.TestCase):
             label = flow.randint(0, 10, (10, 10, 5), dtype=flow.int64)
             flow._C.sparse_softmax_cross_entropy(prediction, label)
         test_case.assertTrue(
-            "Expected label have one less diemensions than prediction"
+            "Expected the dimension of label is one smaller than that of prediction"
             in str(context.exception)
         )
 
