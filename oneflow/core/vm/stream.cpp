@@ -26,8 +26,8 @@ namespace vm {
 
 void Stream::__Init__(
     ThreadCtx* thread_ctx, Symbol<Device> device, StreamRole stream_role,
-    const intrusive::shared_ptr<MirroredObject>& schedule_local_dep_object,
-    const Optional<intrusive::shared_ptr<MirroredObject>>& transport_local_dep_object) {
+    const intrusive::shared_ptr<Dependence>& schedule_local_dep_object,
+    const Optional<intrusive::shared_ptr<Dependence>>& transport_local_dep_object) {
   set_thread_ctx(thread_ctx);
   device_ = device;
   stream_role_ = stream_role;

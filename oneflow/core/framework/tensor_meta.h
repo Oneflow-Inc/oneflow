@@ -73,16 +73,15 @@ class TensorMeta : public user_op::TensorDesc {
   bool is_dynamic_;
 };
 
-class MirroredTensorMeta : public TensorMeta {
+class LocalTensorMeta : public TensorMeta {
  public:
-  // uninitialized MirroredTensorMeta.
-  MirroredTensorMeta();
-  MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                     Symbol<Device> device);
-  MirroredTensorMeta(const std::shared_ptr<const Shape>& shape,
-                     const std::shared_ptr<const Stride>& stride, DataType dtype,
-                     Symbol<Device> device, int64_t storage_offset);
-  virtual ~MirroredTensorMeta() = default;
+  // uninitialized LocalTensorMeta.
+  LocalTensorMeta();
+  LocalTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype, Symbol<Device> device);
+  LocalTensorMeta(const std::shared_ptr<const Shape>& shape,
+                  const std::shared_ptr<const Stride>& stride, DataType dtype,
+                  Symbol<Device> device, int64_t storage_offset);
+  virtual ~LocalTensorMeta() = default;
 
   const Symbol<Device>& device() const { return device_; }
   int64_t storage_offset() const { return storage_offset_; }
@@ -90,7 +89,7 @@ class MirroredTensorMeta : public TensorMeta {
   Symbol<Device>* mut_device() { return &device_; }
   void set_storage_offset(int64_t offset) { storage_offset_ = offset; }
 
-  bool operator==(const MirroredTensorMeta& other) const;
+  bool operator==(const LocalTensorMeta& other) const;
   size_t CalcHashValue() const;
 
  private:

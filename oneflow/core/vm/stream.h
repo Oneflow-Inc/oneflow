@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/stream_role.h"
-#include "oneflow/core/vm/naive_stream_policy.h"
+#include "oneflow/core/vm/stream_policy.h"
 
 namespace oneflow {
 
@@ -30,9 +30,8 @@ class Device;
 namespace vm {
 
 class ThreadCtx;
-class StreamPolicy;
-class NaiveStreamPolicy;
 class MirroredObject;
+class Dependence;
 
 class Stream final : public intrusive::Base {
  public:
@@ -58,18 +57,18 @@ class Stream final : public intrusive::Base {
 
   // methods
   void __Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamRole stream_role,
-                const intrusive::shared_ptr<MirroredObject>& schedule_local_dep_object,
-                const Optional<intrusive::shared_ptr<MirroredObject>>& transport_local_dep_object);
+                const intrusive::shared_ptr<Dependence>& schedule_local_dep_object,
+                const Optional<intrusive::shared_ptr<Dependence>>& transport_local_dep_object);
   int64_t device_id() const;
   Symbol<Device> device() const { return device_; }
   StreamRole stream_role() const { return stream_role_; }
   bool on_scheduler_thread() const { return on_scheduler_thread_; }
 
-  const intrusive::shared_ptr<MirroredObject>& schedule_local_dep_object() const {
+  const intrusive::shared_ptr<Dependence>& schedule_local_dep_object() const {
     return schedule_local_dep_object_;
   }
 
-  const Optional<intrusive::shared_ptr<MirroredObject>>& transport_local_dep_object() const {
+  const Optional<intrusive::shared_ptr<Dependence>>& transport_local_dep_object() const {
     return transport_local_dep_object_;
   }
 
@@ -100,8 +99,8 @@ class Stream final : public intrusive::Base {
   // lists
   DispatchedInstructionList running_instruction_list_;
 
-  intrusive::shared_ptr<MirroredObject> schedule_local_dep_object_;
-  Optional<intrusive::shared_ptr<MirroredObject>> transport_local_dep_object_;
+  intrusive::shared_ptr<Dependence> schedule_local_dep_object_;
+  Optional<intrusive::shared_ptr<Dependence>> transport_local_dep_object_;
 
  public:
   // list hooks
