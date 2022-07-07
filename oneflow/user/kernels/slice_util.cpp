@@ -81,12 +81,18 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
     SliceIndexHelper<NDIM> sliced_splitted_large_idx_cvtr(entire_params.size);
     SliceIndexHelper<NDIM> entire_full_small_idx_cvtr(sliced_params.dims);
     SliceIndexHelper<NDIM> sliced_full_small_idx_cvtr(sliced_params.size);
-    FOR_RANGE(int, i, 0, elem_cnt) {
-      int64_t entire_offset = SliceOffsetToEntireOffset<NDIM>(
+    // Calculate the length of continuous part
+    int cnt = 1;
+    for (int i = NDIM - 1; i >= 0; i--) {
+      if (entire_params.step[i] == 1) { cnt *= entire_params.size[i]; }
+      if (!sliced_params.IsFullSlice(i) || !sliced_params.IsFullSlice(i)) { break; }
+    }
+    for (int i = 0; i < elem_cnt; i += cnt) {
+      const int64_t entire_offset = SliceOffsetToEntireOffset<NDIM>(
           i, entire_params, entire_splitted_large_idx_cvtr, sliced_splitted_large_idx_cvtr);
-      int64_t sliced_offset = SliceOffsetToEntireOffset<NDIM>(
+      const int64_t sliced_offset = SliceOffsetToEntireOffset<NDIM>(
           i, sliced_params, entire_full_small_idx_cvtr, sliced_full_small_idx_cvtr);
-      sliced[sliced_offset] = entire[entire_offset];
+      std::copy(entire + entire_offset, entire + entire_offset + cnt, sliced + sliced_offset);
     }
   }
 
