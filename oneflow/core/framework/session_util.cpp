@@ -44,8 +44,7 @@ Maybe<void> SetDefaultSessionId(int64_t val) {
 
 }  // namespace
 
-Session::Session(int64_t id)
-    : id_(id), is_mirrored_strategy_enabled_stack_(new std::vector<bool>()) {
+Session::Session(int64_t id) : id_(id), is_local_strategy_enabled_stack_(new std::vector<bool>()) {
   instruction_list_.reset(new vm::InstructionList());
 }
 
@@ -55,22 +54,20 @@ const std::shared_ptr<vm::InstructionList>& Session::instruction_list() const {
   return instruction_list_;
 }
 
-Maybe<void> Session::PushMirroredStrategyEnabled(bool is_mirrored) {
-  is_mirrored_strategy_enabled_stack_->emplace_back(is_mirrored);
+Maybe<void> Session::PushLocalStrategyEnabled(bool is_local) {
+  is_local_strategy_enabled_stack_->emplace_back(is_local);
   return Maybe<void>::Ok();
 }
-Maybe<void> Session::PopMirroredStrategyEnabled() {
-  is_mirrored_strategy_enabled_stack_->pop_back();
+Maybe<void> Session::PopLocalStrategyEnabled() {
+  is_local_strategy_enabled_stack_->pop_back();
   return Maybe<void>::Ok();
 }
 
-Maybe<bool> Session::IsMirroredStrategyEnabled() const {
-  return is_mirrored_strategy_enabled_stack_->size() > 0
-         && is_mirrored_strategy_enabled_stack_->back();
+Maybe<bool> Session::IsLocalStrategyEnabled() const {
+  return is_local_strategy_enabled_stack_->size() > 0 && is_local_strategy_enabled_stack_->back();
 }
 Maybe<bool> Session::IsConsistentStrategyEnabled() const {
-  return is_mirrored_strategy_enabled_stack_->size() > 0
-         && !is_mirrored_strategy_enabled_stack_->back();
+  return is_local_strategy_enabled_stack_->size() > 0 && !is_local_strategy_enabled_stack_->back();
 }
 
 Maybe<int64_t> GetDefaultSessionId() {
