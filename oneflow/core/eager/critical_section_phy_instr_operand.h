@@ -24,13 +24,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace one {
-
-using EagerBlobObjectListPtr =
-    std::shared_ptr<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>;
-
-}
-
 namespace vm {
 
 class Stream;

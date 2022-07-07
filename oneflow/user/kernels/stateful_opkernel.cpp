@@ -785,7 +785,7 @@ size_t StatefulOpKernel::InferTmpSize(eager::CallContext* call_ctx,
 Maybe<void> StatefulOpKernel::ChooseOpKernel(eager::CallContext* call_ctx,
                                              const user_op::OpKernel** user_opkernel,
                                              bool* need_temp_storage) {
-  OF_PROFILER_RANGE_GUARD("ChooseOpKernel");
+  //  OF_PROFILER_RANGE_GUARD("ChooseOpKernel");
   DataType primary_dtype = kInvalidDataType;
   const auto& inputs = call_ctx->inputs();
   const auto& outputs = call_ctx->outputs();

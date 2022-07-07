@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/stride.h"
+#include "oneflow/core/common/small_vector.h"
 
 namespace oneflow {
 
@@ -28,10 +29,6 @@ namespace one {
 
 class StatefulLocalOpKernel;
 class ConsistentTensorInferResult;
-
-using EagerBlobObjectList = std::vector<std::shared_ptr<vm::EagerBlobObject>>;
-using EagerBlobObjectListPtr =
-    std::shared_ptr<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>;
 
 }  // namespace one
 

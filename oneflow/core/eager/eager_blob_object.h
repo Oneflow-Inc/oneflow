@@ -222,6 +222,16 @@ class EagerBlobObject final : public user_op::Tensor,
 };
 
 }  // namespace vm
+
+namespace one {
+
+constexpr static int kEagerBlobObjectListReservedSize = 4;
+using EagerBlobObjectList =
+    small_vector<std::shared_ptr<vm::EagerBlobObject>, kEagerBlobObjectListReservedSize>;
+using EagerBlobObjectListPtr = std::shared_ptr<const EagerBlobObjectList>;
+
+}  // namespace one
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_EAGER_BLOB_OBJECT_H_

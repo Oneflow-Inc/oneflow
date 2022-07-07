@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace one {
@@ -125,6 +126,7 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExp
 template<>
 /* static */ Maybe<TensorTuple> OpInterpUtil::Dispatch<TensorTuple>(
     const OpExpr& op_expr, const TensorTuple& inputs, const OpExprInterpContext& ctx) {
+  OF_PROFILER_RANGE_GUARD("Dispatch");
   auto outputs = std::make_shared<TensorTuple>(op_expr.output_size());
   JUST(Dispatch(op_expr, inputs, outputs.get(), ctx));
   return outputs;
@@ -134,12 +136,14 @@ template<>
 /* static */ Maybe<Tensor> OpInterpUtil::Dispatch<Tensor>(const OpExpr& op_expr,
                                                           const TensorTuple& inputs,
                                                           const OpExprInterpContext& ctx) {
+  OF_PROFILER_RANGE_GUARD("Dispatch");
   return JUST(Dispatch<TensorTuple>(op_expr, inputs, ctx))->at(0);
 }
 
 /* static */ Maybe<void> OpInterpUtil::Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
                                                 TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) {
+  OF_PROFILER_RANGE_GUARD("Dispatch");
   return JUST(GetInterpreter(inputs, ctx, op_expr))->Apply(op_expr, inputs, outputs, ctx);
 }
 

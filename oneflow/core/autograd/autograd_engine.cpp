@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/global_param_grad_sync_mode.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace one {
@@ -396,6 +397,7 @@ Maybe<TensorTuple> GraphAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
 Maybe<FunctionNode> GraphAutogradEngine::AddNode(
     const std::string& name, const std::shared_ptr<BackwardFunction>& backward_fn,
     const TensorTuple& inputs, TensorTuple* outputs) {
+  OF_PROFILER_RANGE_PUSH("AddAccumulateFunctionNode");
   // Firstly push function_node of tensor in stack which is leaf and requires_grad
   for (const std::shared_ptr<Tensor>& in_tensor : inputs) {
     if (in_tensor->is_leaf() && in_tensor->requires_grad()) {
@@ -403,11 +405,14 @@ Maybe<FunctionNode> GraphAutogradEngine::AddNode(
     }
   }
 
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("set_grad_fn_node");
   std::shared_ptr<FunctionNode> func_node =
       GraphFunctionNode::New(name, backward_fn, inputs, *outputs);
   for (const std::shared_ptr<Tensor>& out_tensor : *outputs) {
     out_tensor->set_grad_fn_node(func_node);
   }
+  OF_PROFILER_RANGE_POP();
   return func_node;
 }
 
