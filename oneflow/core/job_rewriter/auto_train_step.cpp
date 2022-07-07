@@ -59,7 +59,15 @@ Maybe<void> AutoTrainStep::Apply(Job* job, JobPassCtx* ctx) const {
       GenLogicalBlobName(identity_op_conf.name(), identity_conf->out());
 
   JobBuilder job_builder(job);
-  const ParallelConf& parallel_conf = GenParallelConfOfCpuZeroOnMaster();
+  ParallelConf parallel_conf;
+  if (ParseBooleanFromEnv("ONEFLOW_GRAPH_PLACE_TRAINING_STATE_ON_ALL_RANKS", false)) {
+    parallel_conf = GenParallelConfOfCpuOnAllRanks();
+
+
+
+  } else {
+    parallel_conf = GenParallelConfOfCpuZeroOnMaster();
+  }
   int64_t scope_symbol_id = 0;
   {
     const auto& opt_scope_symbol_id =
