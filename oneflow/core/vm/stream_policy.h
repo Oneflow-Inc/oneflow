@@ -65,7 +65,7 @@ class StreamPolicy {
   virtual bool OnSchedulerThread(StreamRole stream_role) const;
   virtual bool SupportingTransportInstructions() const = 0;
 
-  // Ep device ctx api
+  // Ep device ctx methods
   virtual EpEventProvider* ep_event_provider() {
     UNIMPLEMENTED();
     return nullptr;
@@ -76,7 +76,7 @@ class StreamPolicy {
     return nullptr;
   }
 
-  // Lazy job device ctx api
+  // Lazy job device ctx methods
   virtual void WaitUntilQueueEmptyIfFrontNNGraphNotEquals(
       const std::shared_ptr<NNGraphIf>& nn_graph) {
     UNIMPLEMENTED();
