@@ -433,7 +433,7 @@ struct BinaryFunctor<device, BinaryOp::kErfcBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : exp_functor(attr0, attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    return dy * static_cast<Src>(M_2_SQRTPI) * exp_functor(-x * x);
+    return dy * static_cast<Src>(-M_2_SQRTPI) * exp_functor(-x * x);
   }
 
   UnaryFunctor<device, UnaryOp::kExp, Src, Src> exp_functor;
