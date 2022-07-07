@@ -43,9 +43,12 @@ namespace oneflow {
 namespace vm {
 
 struct OpCallInstructionUtil final {
-  static inline Maybe<void> Prepare(vm::Instruction* instruction) {
-    auto* operand = GetCallPhyInstrOperand(*instruction);
-    vm::Allocator* allocator = instruction->mut_stream()->mut_stream_policy()->mut_allocator();
+  static inline Maybe<void> Prepare(const vm::Instruction& instruction) {
+    auto* operand = GetCallPhyInstrOperand(instruction);
+    vm::Allocator* allocator = const_cast<vm::Instruction&>(instruction)
+                                   .mut_stream()
+                                   ->mut_stream_policy()
+                                   ->mut_allocator();
     JUST(AllocateOutputBlobsMemory(operand, allocator));
     if (unlikely(operand->need_temp_storage())) {
       InferTempStorageSize(operand);
@@ -57,9 +60,10 @@ struct OpCallInstructionUtil final {
     return Maybe<void>::Ok();
   }
 
-  static inline void Compute(vm::Instruction* instruction) {
-    auto* operand = GetCallPhyInstrOperand(*instruction);
-    ep::Stream* stream = instruction->mut_stream()->mut_stream_policy()->stream();
+  static inline void Compute(const vm::Instruction& instruction) {
+    auto* operand = GetCallPhyInstrOperand(instruction);
+    ep::Stream* stream =
+        const_cast<vm::Instruction&>(instruction).mut_stream()->mut_stream_policy()->stream();
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
     if (operand->user_opkernel()->has_state_or_cache()) {
@@ -134,11 +138,11 @@ struct OpCallInstructionUtil final {
 };
 
 Maybe<void> OpCallInstructionType::Prepare(vm::Instruction* instruction) const {
-  return OpCallInstructionUtil::Prepare(instruction);
+  return OpCallInstructionUtil::Prepare(*instruction);
 }
 
 void OpCallInstructionType::Compute(vm::Instruction* instruction) const {
-  OpCallInstructionUtil::Compute(instruction);
+  OpCallInstructionUtil::Compute(*instruction);
 }
 
 std::string OpCallInstructionType::DebugName(const vm::Instruction& instruction) const {
