@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
-#include "oneflow/core/job/mirrored_sig_infer_hint.h"
+#include "oneflow/core/job/local_sig_infer_hint.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
@@ -70,11 +70,11 @@ REGISTER_OP(OperatorConf::kIdentityConf, IdentityOpTpl<IdentityOp>);
 struct CopyOp {};
 REGISTER_OP(OperatorConf::kCopyConf, IdentityOpTpl<CopyOp>);
 
-class MirroredCastOp : public Operator {
+class LocalCastOp : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(MirroredCastOp);
-  MirroredCastOp() = default;
-  virtual ~MirroredCastOp() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(LocalCastOp);
+  LocalCastOp() = default;
+  virtual ~LocalCastOp() override = default;
 
   Maybe<void> InitFromOpConf() override {
     EnrollInputBn("in");
@@ -97,11 +97,11 @@ class MirroredCastOp : public Operator {
 
 namespace {
 
-class CastToMirroredOp : public MirroredCastOp {
+class CastToLocalOp : public LocalCastOp {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CastToMirroredOp);
-  CastToMirroredOp() = default;
-  virtual ~CastToMirroredOp() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(CastToLocalOp);
+  CastToLocalOp() = default;
+  virtual ~CastToLocalOp() override = default;
 
  private:
   Maybe<void> InferLogicalOutBlobDescs(
@@ -109,7 +109,7 @@ class CastToMirroredOp : public MirroredCastOp {
       const ParallelDesc& parallel_desc) const override {
     BlobDesc* out = BlobDesc4BnInOp("out");
     *out = *BlobDesc4BnInOp("in");
-    const SbpParallel& conf_sbp = SbpParallel(op_conf().cast_to_mirrored_conf().sbp_parallel());
+    const SbpParallel& conf_sbp = SbpParallel(op_conf().cast_to_local_conf().sbp_parallel());
     if (conf_sbp.has_split_parallel()) {
       const int64_t axis = conf_sbp.split_parallel().axis();
       CHECK_GE_OR_RETURN(axis, 0);
@@ -127,43 +127,42 @@ class CastToMirroredOp : public MirroredCastOp {
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
-    CHECK_NE_OR_RETURN(op_conf().cast_to_mirrored_conf().sbp_parallel().parallel_type_case(),
+    CHECK_NE_OR_RETURN(op_conf().cast_to_local_conf().sbp_parallel().parallel_type_case(),
                        SbpParallel::PARALLEL_TYPE_NOT_SET)
         << "attribute sbp_parallel not set.";
     const auto& ibn_hint = *JUST(SbpInferHint4Ibn("in"));
     CHECK_EQ_OR_RETURN(ibn_hint.parallel_desc().parallel_num(), parallel_desc.parallel_num());
     auto* map = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    const SbpParallel& conf_sbp = SbpParallel(op_conf().cast_to_mirrored_conf().sbp_parallel());
+    const SbpParallel& conf_sbp = SbpParallel(op_conf().cast_to_local_conf().sbp_parallel());
     CHECK_OR_RETURN(ibn_hint.sbp_parallel() == conf_sbp);
     (*map)["in"] = ibn_hint.sbp_parallel();
     (*map)["out"] = conf_sbp;
     return Maybe<void>::Ok();
   }
-  Maybe<void> InferMirroredSignature(
-      std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
-          MirroredSigInferHint4Ibn,
-      bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc) override {
-    const auto& in_infer_hint = *JUST(MirroredSigInferHint4Ibn("in"));
-    CHECK_OR_RETURN(!in_infer_hint.is_mirrored_parallel_view())
-        << "error use of CastToMirroredOp. `in' shouldn't be a mirrored blob";
+  Maybe<void> InferLocalSignature(
+      std::function<Maybe<const LocalSigInferHint*>(const std::string&)> LocalSigInferHint4Ibn,
+      bool is_local_parallel_view_conf, const ParallelDesc& parallel_desc) override {
+    const auto& in_infer_hint = *JUST(LocalSigInferHint4Ibn("in"));
+    CHECK_OR_RETURN(!in_infer_hint.is_local_parallel_view())
+        << "error use of CastToLocalOp. `in' shouldn't be a local blob";
     CHECK_EQ_OR_RETURN(in_infer_hint.parallel_desc().parallel_num(), parallel_desc.parallel_num());
-    MutOptMirroredParallel("in")->clear_mirrored_parallel();
-    MutOptMirroredParallel("out")->mutable_mirrored_parallel();
+    MutOptLocalParallel("in")->clear_local_parallel();
+    MutOptLocalParallel("out")->mutable_local_parallel();
     return Maybe<void>::Ok();
   }
 };
 
-REGISTER_OP(OperatorConf::kCastToMirroredConf, CastToMirroredOp);
+REGISTER_OP(OperatorConf::kCastToLocalConf, CastToLocalOp);
 
 }  // namespace
 
 namespace {
 
-class CastFromMirroredOp : public MirroredCastOp {
+class CastFromLocalOp : public LocalCastOp {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CastFromMirroredOp);
-  CastFromMirroredOp() = default;
-  virtual ~CastFromMirroredOp() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(CastFromLocalOp);
+  CastFromLocalOp() = default;
+  virtual ~CastFromLocalOp() override = default;
 
  private:
   Maybe<void> InferLogicalOutBlobDescs(
@@ -171,7 +170,7 @@ class CastFromMirroredOp : public MirroredCastOp {
       const ParallelDesc& parallel_desc) const override {
     BlobDesc* out = BlobDesc4BnInOp("out");
     *out = *BlobDesc4BnInOp("in");
-    const SbpParallel& conf_sbp = SbpParallel(op_conf().cast_from_mirrored_conf().sbp_parallel());
+    const SbpParallel& conf_sbp = SbpParallel(op_conf().cast_from_local_conf().sbp_parallel());
     if (conf_sbp.has_split_parallel()) {
       const int64_t axis = conf_sbp.split_parallel().axis();
       CHECK_GE_OR_RETURN(axis, 0);
@@ -185,31 +184,30 @@ class CastFromMirroredOp : public MirroredCastOp {
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
-    CHECK_NE_OR_RETURN(op_conf().cast_from_mirrored_conf().sbp_parallel().parallel_type_case(),
+    CHECK_NE_OR_RETURN(op_conf().cast_from_local_conf().sbp_parallel().parallel_type_case(),
                        SbpParallel::PARALLEL_TYPE_NOT_SET)
         << "attribute sbp_parallel not set.";
     const auto& ibn_hint = *JUST(SbpInferHint4Ibn("in"));
     CHECK_EQ_OR_RETURN(ibn_hint.parallel_desc().parallel_num(), parallel_desc.parallel_num());
     auto* map = sbp_signature->mutable_bn_in_op2sbp_parallel();
     (*map)["in"] = ibn_hint.sbp_parallel();
-    (*map)["out"] = SbpParallel(op_conf().cast_from_mirrored_conf().sbp_parallel());
+    (*map)["out"] = SbpParallel(op_conf().cast_from_local_conf().sbp_parallel());
     return Maybe<void>::Ok();
   }
-  Maybe<void> InferMirroredSignature(
-      std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
-          MirroredSigInferHint4Ibn,
-      bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc) override {
-    const auto& in_infer_hint = *JUST(MirroredSigInferHint4Ibn("in"));
-    CHECK_OR_RETURN(in_infer_hint.is_mirrored_parallel_view())
-        << "error use of CastFromMirroredOp. `in' should be a mirrored blob";
+  Maybe<void> InferLocalSignature(
+      std::function<Maybe<const LocalSigInferHint*>(const std::string&)> LocalSigInferHint4Ibn,
+      bool is_local_parallel_view_conf, const ParallelDesc& parallel_desc) override {
+    const auto& in_infer_hint = *JUST(LocalSigInferHint4Ibn("in"));
+    CHECK_OR_RETURN(in_infer_hint.is_local_parallel_view())
+        << "error use of CastFromLocalOp. `in' should be a local blob";
     CHECK_EQ_OR_RETURN(in_infer_hint.parallel_desc().parallel_num(), parallel_desc.parallel_num());
-    MutOptMirroredParallel("in")->mutable_mirrored_parallel();
-    MutOptMirroredParallel("out")->clear_mirrored_parallel();
+    MutOptLocalParallel("in")->mutable_local_parallel();
+    MutOptLocalParallel("out")->clear_local_parallel();
     return Maybe<void>::Ok();
   }
 };
 
-REGISTER_OP(OperatorConf::kCastFromMirroredConf, CastFromMirroredOp);
+REGISTER_OP(OperatorConf::kCastFromLocalConf, CastFromLocalOp);
 
 }  // namespace
 

@@ -328,7 +328,7 @@ def _fill(self, value):
 
 
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
-    method_name = eager_local_tensor._get_copy_mirrored_tensor_from_numpy_func_name()
+    method_name = eager_local_tensor._get_copy_local_tensor_from_numpy_func_name()
     copy_from_numpy = getattr(eager_local_tensor, method_name)
     assert np_arr.dtype == flow.convert_oneflow_dtype_to_numpy_dtype(
         eager_local_tensor.dtype
