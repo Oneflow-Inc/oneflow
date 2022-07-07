@@ -41,13 +41,17 @@ namespace oneflow {
   }
   if (ctx->has_input("sparse_feature", 0)) {
     CHECK_OR_RETURN(pooling == "none") << "only none pooling support sparse feature.";
-    CHECK_OR_RETURN(ctx->has_input("sparse_indices", 0));
+    CHECK_OR_RETURN(ctx->has_input("sparse_indices", 0))
+        << "if input sparse_feature exists, must have input sparse_indices.";
     const Shape& sparse_feature_shape = ctx->InputShape("sparse_feature", 0);
     const Shape& sparse_indices_shape = ctx->InputShape("sparse_indices", 0);
-    CHECK_EQ_OR_RETURN(sparse_indices_shape.NumAxes(), 2);
-    CHECK_EQ_OR_RETURN(sparse_indices_shape.At(0), batch_size);
-    // CHECK_EQ_OR_RETURN(sparse_feature_shape.NumAxes(), 2);
-    CHECK_EQ_OR_RETURN(sparse_feature_shape.At(sparse_feature_shape.NumAxes() - 1), vector_size);
+    CHECK_EQ_OR_RETURN(sparse_indices_shape.NumAxes(), 2)
+        << "sparse_indices num_axes must be 2, but get " << sparse_indices_shape.NumAxes();
+    CHECK_EQ_OR_RETURN(sparse_indices_shape.At(0), batch_size)
+        << "get " << sparse_indices_shape.At(0) << " and " << batch_size;
+    CHECK_EQ_OR_RETURN(sparse_feature_shape.At(sparse_feature_shape.NumAxes() - 1), vector_size)
+        << "get " << sparse_feature_shape.At(sparse_feature_shape.NumAxes() - 1) << " and "
+        << vector_size;
     features_concated_dim += sparse_indices_shape.At(1);
   }
   const bool self_interaction = ctx->Attr<bool>("self_interaction");
@@ -91,7 +95,8 @@ namespace oneflow {
     CHECK_EQ_OR_RETURN(first_feature_dtype, ctx->InputDType("output_concat", 0));
   }
   if (ctx->has_input("sparse_feature", 0)) {
-    CHECK_EQ_OR_RETURN(first_feature_dtype, ctx->InputDType("sparse_feature", 0));
+    CHECK_EQ_OR_RETURN(first_feature_dtype, ctx->InputDType("sparse_feature", 0))
+        << "get " << first_feature_dtype << " and " << ctx->InputDType("sparse_feature", 0);
   }
   *ctx->OutputDType("out", 0) = first_feature_dtype;
   return Maybe<void>::Ok();
