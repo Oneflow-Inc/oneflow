@@ -1,4 +1,4 @@
-ONEFLOW.CUDA 
+oneflow.cuda
 ===================================
 
 .. automodule:: oneflow.cuda
