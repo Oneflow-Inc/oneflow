@@ -139,9 +139,6 @@ class JobBuildAndInferCtx {
   Maybe<const LogicalBlobId*> GetSubLbi(int64_t scope_symbol_id, const LogicalBlobId& lbi,
                                         int32_t index);
   Maybe<bool> AllInputsBroadcastParallel(const Operator& op) const;
-  Maybe<void> InferBlobBackwardSignature(Operator* op);
-  Maybe<void> InferBlobBackwardSignature(
-      const Operator& op, std::function<bool(const LogicalBlobId&)>* IsLbiBackwardUsed);
 
   Job* job_;
   int64_t job_id_;
