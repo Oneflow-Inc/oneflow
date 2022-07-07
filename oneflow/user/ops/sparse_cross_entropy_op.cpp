@@ -28,7 +28,7 @@ Maybe<void> CheckPredictionLabelDesc(const user_op::TensorDesc* prediction_desc,
       << prediction_desc->is_dynamic() << " and " << label_desc->is_dynamic();
   CHECK_GE_OR_RETURN(prediction_desc->shape().NumAxes(), 2)
       << Error::RuntimeError()
-      << "The dimension of prediction must greater than or equal to 2, but got "
+      << "The dimension of prediction must greater than or equal to 2, but found "
       << prediction_desc->shape().NumAxes();
   const int64_t num_out_axes = prediction_desc->shape().NumAxes() - 1;
   CHECK_EQ_OR_RETURN(label_desc->shape().NumAxes(), num_out_axes)
@@ -71,7 +71,7 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
   CHECK_OR_RETURN(IsIndexDataType(label_desc.data_type()))
-      << Error::TypeError() << "The dtype of label must be integer, but got "
+      << Error::TypeError() << "The dtype of label must be integer, but found "
       << DataType_Name(label_desc.data_type());
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
   *out_desc->mut_data_type() = prediction_desc.data_type();
@@ -83,7 +83,7 @@ Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
   CHECK_OR_RETURN(IsIndexDataType(label_desc.data_type()))
-      << Error::TypeError() << "The dtype of label must be integer, but got "
+      << Error::TypeError() << "The dtype of label must be integer, but found "
       << DataType_Name(label_desc.data_type());
   CHECK_EQ_OR_RETURN(dy_desc.data_type(), prediction_desc.data_type())
       << Error::TypeError() << "dy and prediction are expected to have the same dtype, but found "

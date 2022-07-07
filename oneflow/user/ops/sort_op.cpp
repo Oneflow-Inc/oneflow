@@ -44,7 +44,7 @@ namespace oneflow {
   CHECK_OR_RETURN(direction == "ASCENDING" || direction == "DESCENDING")
       << Error::RuntimeError()
       << "The input direction parameter value is expected to be ASCENDING or DESCENDING, "
-      << "but found " << direction;
+      << "but found it to be " << direction;
   return Maybe<void>::Ok();
 }
 

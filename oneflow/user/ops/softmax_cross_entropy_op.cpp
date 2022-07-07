@@ -41,7 +41,7 @@ namespace oneflow {
       << prediction_desc.is_dynamic() << " and " << label_desc.is_dynamic();
   CHECK_GE_OR_RETURN(prediction_desc.shape().NumAxes(), 2)
       << Error::RuntimeError()
-      << "The dimension of prediction must greater than or equal to 2, but got "
+      << "The dimension of prediction must greater than or equal to 2, but found "
       << prediction_desc.shape().NumAxes();
   CHECK_EQ_OR_RETURN(label_desc.shape(), prediction_desc.shape())
       << Error::RuntimeError() << "The size of label " << label_desc.shape()
@@ -103,7 +103,8 @@ namespace oneflow {
       << "prob and label are expected to have the same dynamic property, but found "
       << prob_desc.is_dynamic() << " and " << label_desc.is_dynamic();
   CHECK_GE_OR_RETURN(prob_desc.shape().NumAxes(), 2)
-      << Error::RuntimeError() << "The dimension of prob must greater than or equal to 2, but got "
+      << Error::RuntimeError()
+      << "The dimension of prob must greater than or equal to 2, but found "
       << prob_desc.shape().NumAxes();
   CHECK_EQ_OR_RETURN(dy_desc.shape().NumAxes(), prob_desc.shape().NumAxes() - 1)
       << Error::RuntimeError()
