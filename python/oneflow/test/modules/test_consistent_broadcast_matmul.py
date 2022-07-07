@@ -19,7 +19,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1, check_graph=False)
 def test_flow_tensor_broadcast_matmul_with_random_data(
     test_case, placement, x_sbp, y_sbp
 ):
@@ -29,7 +29,7 @@ def test_flow_tensor_broadcast_matmul_with_random_data(
     return x.matmul(y)
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1, check_graph=False)
 def test_flow_tensor_x_broadcast_y_matmul(test_case, placement, x_sbp, y_sbp):
     k = random(1, 6).to(int)
     x = random_tensor(ndim=2, dim1=k).to_global(placement=placement, sbp=x_sbp)
@@ -37,7 +37,7 @@ def test_flow_tensor_x_broadcast_y_matmul(test_case, placement, x_sbp, y_sbp):
     return x.matmul(y)
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1, check_graph=False)
 def test_flow_tensor_broadcast_matmul_with_same_dims(
     test_case, placement, x_sbp, y_sbp
 ):
