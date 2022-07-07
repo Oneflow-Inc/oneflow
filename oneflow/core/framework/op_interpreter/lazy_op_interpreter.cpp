@@ -128,7 +128,7 @@ Maybe<void> GenNdSbpByTensor(NdSbp* nd_sbp, const std::shared_ptr<Tensor>& tenso
   nd_sbp->clear_sbp_parallel();
   if (tensor->is_local()) {
     // NOTE(chengcheng):
-    //   OneFlow Lazy is always consistent(global). LocalTensor is a special case of GlobalTensor
+    //   OneFlow Lazy is always global. LocalTensor is a special case of GlobalTensor
     //   which placement is only this rank, and SbpParallel is Broadcast.
     nd_sbp->add_sbp_parallel()->mutable_broadcast_parallel();
   } else {
