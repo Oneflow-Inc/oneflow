@@ -49,6 +49,10 @@ class NaiveStreamPolicy final : public StreamPolicy {
   }
   void Run(Instruction* instruction) const override { stream_type_->Run(instruction); }
 
+  bool OnSchedulerThread(StreamRole stream_role) const override {
+    return stream_type_->OnSchedulerThread(stream_role);
+  }
+
   bool SupportingTransportInstructions() const override {
     return stream_type_->SupportingTransportInstructions();
   }
