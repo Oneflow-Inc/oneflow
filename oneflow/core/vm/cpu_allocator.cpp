@@ -20,8 +20,9 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void CpuAllocator::Allocate(char** mem_ptr, std::size_t size) {
+Maybe<void> CpuAllocator::Allocate(char** mem_ptr, std::size_t size) {
   *mem_ptr = reinterpret_cast<char*>(aligned_alloc(kHostAlignSize, size));
+  return Maybe<void>::Ok();
 }
 
 void CpuAllocator::Deallocate(char* mem_ptr, std::size_t size) { std::free(mem_ptr); }

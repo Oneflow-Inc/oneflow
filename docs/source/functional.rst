@@ -50,3 +50,5 @@ Functional operations for neural networks
 .. autofunction:: linear
 .. autofunction:: cosine_similarity
 .. autofunction:: cross_entropy
+.. autofunction:: relu6
+.. autofunction:: upsample

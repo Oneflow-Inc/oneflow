@@ -84,7 +84,9 @@ class TensorStorage {
   std::vector<std::function<void()>> storage_delete_hooks_;
 };
 
-class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc {
+class EagerBlobObject final : public user_op::Tensor,
+                              public user_op::TensorDesc,
+                              public std::enable_shared_from_this<EagerBlobObject> {
  public:
   EagerBlobObject(const EagerBlobObject&) = delete;
   EagerBlobObject(EagerBlobObject&&) = delete;
@@ -116,7 +118,11 @@ class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc
   MutShapeView mut_shape_view() override { return *shape_; }
   const MemoryCase& mem_case() const override { return *mem_case_; }
   const void* raw_dptr() const override {
-    return tensor_storage_->blob_dptr() + storage_offset_ * GetSizeOfDataType(data_type_);
+    CHECK(inited_mem_ptr_for_allocation_compuation_pipelining_)
+        << "mem_ptr_for_allocation_compuation_pipelining_ not initialized. Please check if there "
+           "are any EagerBlobObjects created outside vm";
+    return mem_ptr_for_allocation_compuation_pipelining_
+           + storage_offset_ * GetSizeOfDataType(data_type_);
   }
   void* mut_raw_dptr() override { return const_cast<void*>(raw_dptr()); }
 
@@ -176,7 +182,25 @@ class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc
   const char* header_ptr() const { return reinterpret_cast<const char*>(shape_->dim_vec().data()); }
   char* mut_header_ptr() { return reinterpret_cast<char*>(shape_->dim_vec().data()); }
 
+  void InitOrCheckMemPtrForAllocationComputationPipelining() {
+    auto* ptr = tensor_storage_->blob_dptr();
+    if (inited_mem_ptr_for_allocation_compuation_pipelining_) {
+      CHECK_EQ(mem_ptr_for_allocation_compuation_pipelining_, ptr);
+    } else {
+      mem_ptr_for_allocation_compuation_pipelining_ = ptr;
+      inited_mem_ptr_for_allocation_compuation_pipelining_ = true;
+    }
+  }
+
  private:
+  void InitMemPtrForAllocationComputationPipelining() {
+    auto* ptr = tensor_storage_->blob_dptr();
+    CHECK(!inited_mem_ptr_for_allocation_compuation_pipelining_)
+        << "mem_ptr_for_allocation_compuation_pipelining_ has been initialized.";
+    mem_ptr_for_allocation_compuation_pipelining_ = ptr;
+    inited_mem_ptr_for_allocation_compuation_pipelining_ = true;
+  }
+
   bool is_dynamic_;
   std::shared_ptr<MemoryCase> mem_case_;
   DataType data_type_;
@@ -184,6 +208,10 @@ class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc
   std::shared_ptr<Stride> stride_;
   int64_t storage_offset_;
   std::shared_ptr<TensorStorage> tensor_storage_;
+  // For allocation-computation pipeline, the value of mem_ptr_for_allocation_compuation_pipelining_
+  // are kept even after tensor_storage_.reset().
+  char* mem_ptr_for_allocation_compuation_pipelining_;
+  bool inited_mem_ptr_for_allocation_compuation_pipelining_;
   std::atomic<bool> is_shape_synced_;
   bool pin_memory_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;

@@ -72,29 +72,27 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
   ~LaunchLazyJobInstructionType() = default;
 
   std::string DebugName(const vm::Instruction&) const override { return "LaunchLazyJob"; }
+  Maybe<void> Prepare(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }
   void Compute(vm::Instruction* instruction) const override {
     const auto& cur_nn_graph = GetCurNNGraph(instruction);
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);
 
     static thread_local int64_t run_id = 0;
-    OF_PROFILER_RANGE_PUSH("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
-    device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(cur_nn_graph);
-    OF_PROFILER_RANGE_POP();  // WaitUntilQueueEmptyIfFrontNNGraphNotEquals
     {
-      OF_PROFILER_RANGE_PUSH("i=" + std::to_string(run_id++) + "-MakeJobInstance");
+      OF_PROFILER_RANGE_GUARD("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
+      device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(cur_nn_graph);
+    }
+    {
+      OF_PROFILER_RANGE_GUARD("Send all buffers to BufferMgr");
       const auto& job_instance = MakeJobInstance(instruction);
-      OF_PROFILER_RANGE_POP();  // MakeJobInstance
-      OF_PROFILER_RANGE_PUSH("Send all buffers to BufferMgr");
       const auto& job_name = job_instance->job_name();
       auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
       buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Push(job_instance);
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Push(job_instance);
-      OF_PROFILER_RANGE_POP();  // BufferMgr
     }
     OF_UNUSED(run_id);  // disable compiler warning.
-    OF_PROFILER_RANGE_PUSH("EnqueueNNGraph");
+    OF_PROFILER_RANGE_GUARD("EnqueueNNGraph");
     device_ctx->EnqueueNNGraph(cur_nn_graph);
-    OF_PROFILER_RANGE_POP();  // EnqueueNNGraph
   }
 
  private:

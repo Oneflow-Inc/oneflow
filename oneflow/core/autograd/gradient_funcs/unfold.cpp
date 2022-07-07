@@ -44,7 +44,7 @@ class Unfold : public OpExprGradFunction<UnfoldInterpState> {
 
 Maybe<void> Unfold::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -70,7 +70,7 @@ Maybe<void> Unfold::Capture(UnfoldInterpState* ctx, const TensorTuple& inputs,
 Maybe<void> Unfold::Apply(const UnfoldInterpState* ctx, const TensorTuple& out_grads,
                           TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   in_grads->resize(1);
   in_grads->at(0) =
       JUST(functional::Fold(out_grads.at(0), ctx->data_format, ctx->output_size, ctx->kernel_size,
