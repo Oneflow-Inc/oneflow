@@ -259,10 +259,12 @@ def full_like_op(input,
     sbp: flow._oneflow_internal.sbp.sbp = None,
     requires_grad: bool = False):
     """
+    full_like(input, fill_value, \\*, dtype=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
+
     Returns a tensor with the same size as :attr:`input` filled with :attr:`fill_value`.
     ``oneflow.full_like(input, fill_value)`` is equivalent to
     ``oneflow.full(input.size(), fill_value, dtype=input.dtype, device=input.device)``.
-    
+
     Args:
         input(oneflow.Tensor)
         fill_value(Scalar): the value to fill the output tensor with.
