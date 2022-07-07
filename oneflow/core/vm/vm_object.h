@@ -41,9 +41,9 @@ class DependenceAccess final
   // Getters
   OperandAccessType access_type() const { return access_type_; }
   bool has_instruction() const { return instruction_ != nullptr; }
-  bool has_local_object() const { return local_object_ != nullptr; }
+  bool has_dependence() const { return dependence_ != nullptr; }
   const Instruction& instruction() const { return *instruction_; }
-  const Dependence& local_object() const { return *local_object_; }
+  const Dependence& dependence() const { return *dependence_; }
   const intrusive::ListHook& rw_mutexed_object_access_hook() const {
     return rw_mutexed_object_access_hook_;
   }
@@ -51,14 +51,14 @@ class DependenceAccess final
   // Setters
   void set_access_type(OperandAccessType val) { access_type_ = val; }
   void set_instruction(Instruction* val) { instruction_ = val; }
-  void set_local_object(Dependence* val) { local_object_ = val; }
+  void set_dependence(Dependence* val) { dependence_ = val; }
   void clear_instruction() { instruction_ = nullptr; }
-  void clear_local_object() { local_object_ = nullptr; }
+  void clear_dependence() { dependence_ = nullptr; }
   Instruction* mut_instruction() { return instruction_; }
-  Dependence* mut_local_object() { return local_object_; }
+  Dependence* mut_dependence() { return dependence_; }
 
   // methods
-  void __Init__(Instruction* instruction, Dependence* local_object, OperandAccessType access_type);
+  void __Init__(Instruction* instruction, Dependence* dependence, OperandAccessType access_type);
 
   bool is_const_operand() const { return kConstOperandAccess == access_type(); }
   bool is_mut_operand() const { return kMutableOperandAccess == access_type(); }
@@ -73,14 +73,14 @@ class DependenceAccess final
       : intrusive_ref_(),
         access_type_(),
         instruction_(),
-        local_object_(),
+        dependence_(),
         instruction_access_hook_(),
         rw_mutexed_object_access_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
   OperandAccessType access_type_;
   Instruction* instruction_;
-  Dependence* local_object_;
+  Dependence* dependence_;
 
  public:
   // list hooks

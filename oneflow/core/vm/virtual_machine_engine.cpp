@@ -41,9 +41,9 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
   INTRUSIVE_FOR_EACH(access, access_list) {
     CHECK_GT(access->ref_cnt(), 1);
     access_list->Erase(access.Mutable());
-    auto* local_object = access->mut_local_object();
+    auto* dependence = access->mut_dependence();
     if (unlikely(!access->rw_mutexed_object_access_hook().empty())) {
-      local_object->mut_access_list()->Erase(access.Mutable());
+      dependence->mut_access_list()->Erase(access.Mutable());
     }
   }
   auto* out_edges = instruction->mut_out_edges();
@@ -192,12 +192,12 @@ void VirtualMachineEngine::ReleaseFinishedInstructions(const ScheduleCtx& schedu
 }
 
 DependenceAccess* VirtualMachineEngine::AccessDependence(OperandAccessType access_type,
-                                                         Dependence* local_object,
+                                                         Dependence* dependence,
                                                          Instruction* instruction) {
-  auto access = access_pool_.make_shared(instruction, local_object, access_type);
+  auto access = access_pool_.make_shared(instruction, dependence, access_type);
   auto* ptr = access.Mutable();
   instruction->mut_access_list()->PushBack(ptr);
-  local_object->mut_access_list()->EmplaceBack(std::move(access));
+  dependence->mut_access_list()->EmplaceBack(std::move(access));
   return ptr;
 }
 
@@ -212,9 +212,9 @@ void VirtualMachineEngine::TryConnectInstruction(Instruction* src_instruction,
 
 void VirtualMachineEngine::ConnectInstructionsByWrite(DependenceAccess* dst_access) {
   CHECK(dst_access->is_mut_operand());
-  auto* local_object = dst_access->mut_local_object();
+  auto* dependence = dst_access->mut_dependence();
   auto* dst_instruction = dst_access->mut_instruction();
-  auto* access_list = local_object->mut_access_list();
+  auto* access_list = dependence->mut_access_list();
   if (likely(access_list->Begin() == dst_access)) { return; }
   INTRUSIVE_FOR_EACH_PTR(src_access, access_list) {
     if (unlikely(src_access == dst_access)) { break; }
@@ -225,9 +225,9 @@ void VirtualMachineEngine::ConnectInstructionsByWrite(DependenceAccess* dst_acce
 
 void VirtualMachineEngine::ConnectInstructionsByRead(DependenceAccess* dst_access) {
   CHECK(dst_access->is_const_operand());
-  auto* local_object = dst_access->mut_local_object();
+  auto* dependence = dst_access->mut_dependence();
   auto* dst_instruction = dst_access->mut_instruction();
-  auto* first = local_object->mut_access_list()->Begin();
+  auto* first = dependence->mut_access_list()->Begin();
   if (first->is_mut_operand()) {
     TryConnectInstruction(first->mut_instruction(), dst_instruction);
   } else if (first->is_const_operand()) {
@@ -245,11 +245,11 @@ void VirtualMachineEngine::ConsumeDependences(Instruction* instruction) {
         AccessDependence(kMutableOperandAccess, stream_sequential_dep, instruction));
   }
   // Connect instructions by write before connecting by read.
-  for (auto* local_object : phy_instr_operand->output_dependences()) {
-    ConnectInstructionsByWrite(AccessDependence(kMutableOperandAccess, local_object, instruction));
+  for (auto* dependence : phy_instr_operand->output_dependences()) {
+    ConnectInstructionsByWrite(AccessDependence(kMutableOperandAccess, dependence, instruction));
   }
-  for (auto* local_object : phy_instr_operand->input_dependences()) {
-    ConnectInstructionsByRead(AccessDependence(kConstOperandAccess, local_object, instruction));
+  for (auto* dependence : phy_instr_operand->input_dependences()) {
+    ConnectInstructionsByRead(AccessDependence(kConstOperandAccess, dependence, instruction));
   }
 }
 
