@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/scope.pb.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/blocking_then_busy.h"
@@ -73,6 +73,8 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<OperatorConfSymbol> GetOpConfSymbol(const OperatorConf& op_conf);
 
   Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object);
+
+  Maybe<void> TouchTensors(const one::EagerBlobObjectListPtr& eager_blob_object);
 
   template<typename T>
   Maybe<void> SyncAccessBlobByCallback(const T tensor, const std::shared_ptr<BlockingThenBusy>& btb,

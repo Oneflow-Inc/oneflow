@@ -29,7 +29,9 @@ namespace oneflow {
 /*static*/ Maybe<void> RandpermOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   Shape* out_shape = ctx->OutputShape("out", 0);
   int32_t n = ctx->Attr<int32_t>("n");
-  CHECK_GE_OR_RETURN(n, 0);
+  CHECK_GE_OR_RETURN(n, 0) << Error::RuntimeError()
+                           << "Trying to create tensor with negative dimension " << n << ":"
+                           << " [" << n << "]";
   *out_shape = Shape({n});
   return Maybe<void>::Ok();
 }

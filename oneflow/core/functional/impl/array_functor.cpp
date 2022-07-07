@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/container_util.h"
@@ -970,6 +970,11 @@ class ArgSortFunctor {
                            const std::string& direction) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("direction", direction));
+    CHECK_OR_RETURN(direction == "ASCENDING" || direction == "DESCENDING")
+        << Error::RuntimeError()
+        << "expected the input direction parameter value is \"ASCENDING\" or \"DESCENDING\", "
+        << "but found the value is "
+        << "\"" << direction << "\"";
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
   }
 

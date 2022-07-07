@@ -31,7 +31,7 @@ namespace oneflow {
 namespace vm {
 
 Maybe<void> Run(vm::InstructionList* instruction_list) {
-  auto* virtual_machine = JUST(GlobalMaybe<VirtualMachine>());
+  auto* virtual_machine = JUST(SingletonMaybe<VirtualMachine>());
   JUST(virtual_machine->Receive(instruction_list));
   return Maybe<void>::Ok();
 }

@@ -48,7 +48,7 @@ class EagerNcclOpKernelCache final : public user_op::OpKernelCache {
       int64_t device_id = CHECK_JUST(parallel_desc_->DeviceId4ParallelId(parallel_id));
       device_set.emplace(std::make_pair(machine_id, device_id));
     }
-    comm_ = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
+    comm_ = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
   }
 
   Symbol<ParallelDesc> parallel_desc_;

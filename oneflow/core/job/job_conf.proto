@@ -16,6 +16,9 @@ message NaiveModelUpdateConf {
 
 message MomentumModelUpdateConf {
   optional float beta = 1 [default = 0.9];
+  optional float dampening = 2 [default = 0.0];
+  optional bool nesterov = 3 [default = false];
+  optional bool maximize = 4 [default = false];
 }
 
 message RMSPropModelUpdateConf {

@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/vm_object.h"
-#include "oneflow/core/vm/vm_resource_desc.h"
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/intrusive/mutexed_list.h"
 #include "oneflow/core/intrusive/object_pool.h"
@@ -103,7 +102,7 @@ class VirtualMachineEngine final : public intrusive::Base {
                                      InstructionList* /*out*/ pending_instructions);
   void TryRunBarrierInstruction(const ScheduleCtx& schedule_ctx);
   void DispatchAndPrescheduleInstructions(const ScheduleCtx& schedule_ctx);
-  bool OnSchedulerThread(const StreamType& stream_type);
+  bool OnSchedulerThread(const vm::Stream& stream);
 
   void ReleaseInstruction(Instruction* instruction);
 
