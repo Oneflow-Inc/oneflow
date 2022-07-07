@@ -1217,10 +1217,10 @@ class InplaceToContiguousFunctor {
         << "Both ref and value must be local tensor.";
     std::shared_ptr<Stride> stride(new Stride(*input->shape()));
     // update stride
-    JUST(input->mut_eager_mirrored_tensor_impl())->mut_tensor_meta()->set_stride(stride);
+    JUST(input->mut_eager_local_tensor_impl())->mut_tensor_meta()->set_stride(stride);
     const auto& blob_object = JUST(input->eager_blob_object());
     // update eager_blob_object
-    JUST(JUST(input->mut_eager_mirrored_tensor_impl())
+    JUST(JUST(input->mut_eager_local_tensor_impl())
              ->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object())));
     // assign contiguous tensor data
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*assign_op_, {input, contiguous_tensor}));
@@ -3018,7 +3018,7 @@ class PinMemoryFunctor {
     CHECK_OR_RETURN(input->is_local() && !(LazyMode::is_enabled()))
         << Error::RuntimeError() << "Tensor.pin_memory() only support local tensor for now!";
     // if tensor already pinned, then just return
-    if (JUST(JUST(input->AsMirroredTensor())->is_pinned())) { return input; }
+    if (JUST(JUST(input->AsLocalTensor())->is_pinned())) { return input; }
     auto shape = input->shape();
     auto device = JUST(input->device());
     const bool requires_grad = input->requires_grad();
