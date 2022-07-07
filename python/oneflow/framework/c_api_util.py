@@ -119,11 +119,9 @@ def CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf_proto):
     return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
 
 
-def CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf_proto):
+def CurJobBuildAndInferCtx_AddAndInferLocalOp(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    add_and_infer = (
-        oneflow._oneflow_internal.CurJobBuildAndInferCtx_AddAndInferMirroredOp
-    )
+    add_and_infer = oneflow._oneflow_internal.CurJobBuildAndInferCtx_AddAndInferLocalOp
     op_attribute_str = add_and_infer(serialized_op_conf)
     return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
 
@@ -140,24 +138,24 @@ def CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid):
     )
 
 
-def JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn):
+def JobBuildAndInferCtx_IsLocalBlob(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    return oneflow._oneflow_internal.JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn)
+    return oneflow._oneflow_internal.JobBuildAndInferCtx_IsLocalBlob(job_name, lbn)
 
 
-def JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(job_name, lbn):
+def JobBuildAndInferCtx_LocalBlobGetNumSubLbi(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    return oneflow._oneflow_internal.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(
+    return oneflow._oneflow_internal.JobBuildAndInferCtx_LocalBlobGetNumSubLbi(
         job_name, lbn
     )
 
 
-def JobBuildAndInferCtx_MirroredBlobGetSubLbi(job_name, lbn, index):
+def JobBuildAndInferCtx_LocalBlobGetSubLbi(job_name, lbn, index):
     job_name = str(job_name)
     lbn = str(lbn)
-    ret = oneflow._oneflow_internal.JobBuildAndInferCtx_MirroredBlobGetSerializedSubLbi(
+    ret = oneflow._oneflow_internal.JobBuildAndInferCtx_LocalBlobGetSerializedSubLbi(
         job_name, lbn, index
     )
     return text_format.Parse(ret, logical_blob_id_util.LogicalBlobId())
