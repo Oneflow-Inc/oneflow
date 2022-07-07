@@ -22,9 +22,9 @@ import oneflow.unittest
 class TestSoftmaxCrossEntropyError(flow.unittest.TestCase):
     def test_softmax_cross_entropy_prediction_numaxes_err(test_case):
         with test_case.assertRaises(RuntimeError) as context:
-            logits = flow.randn(10)
+            prediction = flow.randn(10)
             label = flow.randn(1, 10)
-            flow._C.softmax_cross_entropy(logits, label)
+            flow._C.softmax_cross_entropy(prediction, label)
         test_case.assertTrue(
             "The dimension of prediction must greater than or equal to 2, but got"
             in str(context.exception)
@@ -32,18 +32,18 @@ class TestSoftmaxCrossEntropyError(flow.unittest.TestCase):
 
     def test_softmax_cross_entropy_prediction_shape_err(test_case):
         with test_case.assertRaises(RuntimeError) as context:
-            logits = flow.randn(1, 10)
+            prediction = flow.randn(1, 10)
             label = flow.randn(1, 11)
-            flow._C.softmax_cross_entropy(logits, label)
+            flow._C.softmax_cross_entropy(prediction, label)
         test_case.assertTrue(
             "must match the size of prediction" in str(context.exception)
         )
 
     def test_softmax_cross_entropy_dtype_err(test_case):
         with test_case.assertRaises(RuntimeError) as context:
-            logits = flow.randn(1, 10, dtype=flow.float32)
+            prediction = flow.randn(1, 10, dtype=flow.float32)
             label = flow.randn(1, 10, dtype=flow.float64)
-            flow._C.softmax_cross_entropy(logits, label)
+            flow._C.softmax_cross_entropy(prediction, label)
         test_case.assertTrue(
             "Expected label and prediction have same dtype, but found"
             in str(context.exception)

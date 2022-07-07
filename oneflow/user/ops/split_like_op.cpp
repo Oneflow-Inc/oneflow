@@ -79,8 +79,7 @@ namespace oneflow {
     user_op::TensorDesc* out_i_desc = ctx->OutputTensorDesc("out", i);
     CHECK_EQ_OR_RETURN(like_i_desc.shape().NumAxes(), like_num_axes)
         << Error::RuntimeError() << "The num axes of like_i (" << like_i_desc.shape().NumAxes()
-        << ") must match the num axes of the first like tensor (" << like_num_axes
-        << ") at dimension " << i;
+        << ") must match the num axes of the first like tensor (" << like_num_axes << ")";
     FOR_RANGE(int64_t, j, 0, like_num_axes) {
       if (j == axis) {
         if (like_i_desc.is_dynamic()) {
@@ -92,7 +91,7 @@ namespace oneflow {
         CHECK_EQ_OR_RETURN(in_desc.shape().At(j), like_i_desc.shape().At(j))
             << Error::RuntimeError() << "The size of input (" << in_desc.shape().At(j)
             << ") must match the size of like_i (" << like_i_desc.shape().At(j) << ") at dimension "
-            << i;
+            << j;
       }
     }
     DimVector out_i_dim_vec = like_i_desc.shape().dim_vec();
@@ -104,13 +103,13 @@ namespace oneflow {
   }
   if (dynamic_dim_size == 0) {
     CHECK_EQ_OR_RETURN(static_dim_size, in_desc.shape().At(axis))
-        << Error::RuntimeError() << "In non dynamic shape situation, the static dim size("
-        << static_dim_size << ") should be equal to input tensor size(" << in_desc.shape().At(axis)
+        << Error::RuntimeError() << "In non dynamic shape situation, the static dim size ("
+        << static_dim_size << ") should be equal to input tensor size (" << in_desc.shape().At(axis)
         << ")";
   } else {
     CHECK_LE_OR_RETURN(static_dim_size, in_desc.shape().At(axis))
-        << Error::RuntimeError() << "In dynamic shape situation, the static dim size("
-        << static_dim_size << ") should be equal to input tensor size(" << in_desc.shape().At(axis)
+        << Error::RuntimeError() << "In dynamic shape situation, the static dim size ("
+        << static_dim_size << ") should be equal to input tensor size (" << in_desc.shape().At(axis)
         << ")";
   }
   return Maybe<void>::Ok();

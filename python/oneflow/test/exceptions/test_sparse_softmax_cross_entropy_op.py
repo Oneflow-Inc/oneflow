@@ -22,9 +22,9 @@ import oneflow.unittest
 class TestSparseSoftmaxCrossEntropyError(flow.unittest.TestCase):
     def test_sparse_softmax_cross_entropy_prediction_numaxes_err(test_case):
         with test_case.assertRaises(RuntimeError) as context:
-            logits = flow.randn(10)
+            prediction = flow.randn(10)
             label = flow.randint(0, 10, (10, 10), dtype=flow.int64)
-            flow._C.sparse_softmax_cross_entropy(logits, label)
+            flow._C.sparse_softmax_cross_entropy(prediction, label)
         test_case.assertTrue(
             "The dimension of prediction must greater than or equal to 2, but got"
             in str(context.exception)
@@ -32,9 +32,9 @@ class TestSparseSoftmaxCrossEntropyError(flow.unittest.TestCase):
 
     def test_sparse_softmax_cross_entropy_label_numaxes_err(test_case):
         with test_case.assertRaises(RuntimeError) as context:
-            logits = flow.randn(10, 10, 5)
+            prediction = flow.randn(10, 10, 5)
             label = flow.randint(0, 10, (10, 10, 5), dtype=flow.int64)
-            flow._C.sparse_softmax_cross_entropy(logits, label)
+            flow._C.sparse_softmax_cross_entropy(prediction, label)
         test_case.assertTrue(
             "Expected label have one less diemensions than prediction"
             in str(context.exception)
@@ -42,16 +42,16 @@ class TestSparseSoftmaxCrossEntropyError(flow.unittest.TestCase):
 
     def test_sparse_softmax_cross_entropy_prediction_i_shape_err(test_case):
         with test_case.assertRaises(RuntimeError) as context:
-            logits = flow.randn(10, 10, 5)
+            prediction = flow.randn(10, 10, 5)
             label = flow.randint(0, 10, (10, 9), dtype=flow.int64)
-            flow._C.sparse_softmax_cross_entropy(logits, label)
+            flow._C.sparse_softmax_cross_entropy(prediction, label)
         test_case.assertTrue("must match the size of label" in str(context.exception))
 
     def test_sparse_softmax_cross_entropy_label_dtype_err(test_case):
         with test_case.assertRaises(TypeError) as context:
-            logits = flow.randn(10, 10, 5)
+            prediction = flow.randn(10, 10, 5)
             label = flow.randn(10, 10, dtype=flow.float32)
-            flow._C.sparse_softmax_cross_entropy(logits, label)
+            flow._C.sparse_softmax_cross_entropy(prediction, label)
         test_case.assertTrue(
             "The dtype of label must be integer, but got " in str(context.exception)
         )
