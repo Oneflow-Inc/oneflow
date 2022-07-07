@@ -250,8 +250,12 @@ struct UnaryFunctor<device, UnaryOp::kLogSigmoid, Src, Dst> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1)
       : log_functor(attr0, attr1), exp_functor(attr0, attr1) {}
 
+  // Original formula: logsigmoid(x) = -log (1 + exp(-x))
+  // For numerical stability, we use the log-sum-exp trick:
+  // Reference: https://hips.seas.harvard.edu/blog/2013/01/09/computing-log-sum-exp/
   OF_DEVICE_FUNC Dst operator()(Src src) const {
-    return -log_functor(static_cast<Src>(1) + exp_functor(-src));
+    Src temp = (-src > static_cast<Src>(0)) ? -src : static_cast<Src>(0);
+    return -temp - log_functor(exp_functor(-temp) + exp_functor(-src - temp));
   }
 
   UnaryFunctor<device, UnaryOp::kLog, Src, Src> log_functor;
