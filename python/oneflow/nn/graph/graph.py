@@ -427,7 +427,7 @@ class Graph(object):
         ranks: Optional[Union[int, List[int]]] = None,
         max_py_stack_depth: int = 2,
         only_user_py_stack=True,
-        op_repr_with_py_stack=False
+        op_repr_with_py_stack=False,
     ) -> None:
         r"""Open or close debug mode of the graph.
 
