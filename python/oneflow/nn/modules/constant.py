@@ -208,7 +208,7 @@ class Full(_ConstantBase):
 
 def full_op(
     size: Union[_size_any_t, flow.Size],
-    value: Union[float, int],
+    fill_value: Union[float, int],
     dtype: Optional[flow.dtype] = None,
     device: Union[flow.device, str, None] = None,
     placement: flow.placement = None,
@@ -241,16 +241,62 @@ def full_op(
         tensor([[5., 5., 5.],
                 [5., 5., 5.]], dtype=oneflow.float32)
         >>> placement = flow.placement("cpu", ranks=[0])
-        >>> y = flow.full((2,3),5.0, placement=placement, sbp=flow.sbp.broadcast)  # construct global tensor
+        >>> y = flow.full((2,3), 5.0, placement=placement, sbp=flow.sbp.broadcast)  # construct global tensor
         >>> y.is_global
         True
 
     """
     size = _handle_size_arg(size)
     if dtype is None:
-        dtype = flow.tensor(value).dtype
-    return Full(size, value, dtype, device, placement, sbp, requires_grad)()
+        dtype = flow.tensor(fill_value).dtype
+    return Full(size, fill_value, dtype, device, placement, sbp, requires_grad)()
 
+def full_like_op(input, 
+    fill_value, 
+    dtype: Optional[flow.dtype] = None,
+    device: Union[flow.device, str, None] = None,
+    placement: flow.placement = None,
+    sbp: flow._oneflow_internal.sbp.sbp = None,
+    requires_grad: bool = False):
+    """
+    Returns a tensor with the same size as :attr:`input` filled with :attr:`fill_value`.
+    ``oneflow.full_like(input, fill_value)`` is equivalent to
+    ``oneflow.full(input.size(), fill_value, dtype=input.dtype, device=input.device)``.
+    
+    Args:
+        input(oneflow.Tensor)
+        fill_value(Scalar): the value to fill the output tensor with.
+        dtype (flow.dtype, optional): the desired data type of returned tensor.
+        device (flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        placement (flow.placement, optional): the desired placement of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.randn(2, 3)
+        >>> y = flow.full_like(x, 2.0)
+        >>> y
+        tensor([[2., 2., 2.],
+                [2., 2., 2.]], dtype=oneflow.float32)
+        >>> y = flow.full_like(x, 2, dtype=flow.int32)
+        >>> y
+        tensor([[2, 2, 2],
+                [2, 2, 2]], dtype=oneflow.int32)
+        >>> placement = flow.placement("cpu", ranks=[0])
+        >>> y = flow.full_like(x, 5.0, placement=placement, sbp=flow.sbp.broadcast)  # construct global tensor
+        >>> y.is_global
+        True
+
+    """
+    if dtype is None:
+        dtype = input.dtype
+    if device is None and placement is None:
+        device = input.device
+    return Full(input.size(), fill_value, dtype, device, placement, sbp, requires_grad)()
 
 def new_ones_op(
     x, size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False
@@ -373,4 +419,4 @@ def new_zeros_op(
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=True)
+    doctest.testmod(raise_on_error=False)
