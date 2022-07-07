@@ -31,10 +31,15 @@ class ThreadSafeLock final {
   ~ThreadSafeLock() = default;
   OF_DISALLOW_COPY_AND_MOVE(ThreadSafeLock);
 
-  std::unique_lock<std::mutex> Guard() {
-    std::unique_lock<std::mutex> lock(mutex4guard);
-    return lock;
-  }
+  class RAIIGuard final {
+   public:
+    explicit RAIIGuard(ThreadSafeLock& lock) : guard_(lock.mutex4guard) { }
+    ~RAIIGuard() = default;
+    OF_DISALLOW_COPY_AND_MOVE(RAIIGuard);
+
+   private:
+    std::unique_lock<std::mutex> guard_;
+  };
 
  private:
   std::mutex mutex4guard;

@@ -33,11 +33,11 @@ class BinAllocator final : public CachingAllocator {
   Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
   void DeviceReset() override {
-    auto thread_guard = thread_lock_.Guard();
+    typename ThreadLock::RAIIGuard guard(thread_lock_);
     backend_->DeviceReset();
   }
   void Shrink() override {
-    auto thread_guard = thread_lock_.Guard();
+    typename ThreadLock::RAIIGuard guard(thread_lock_);
     DeallocateFreeBlockForGarbageCollection();
   }
 
@@ -380,7 +380,7 @@ bool BinAllocator<ThreadLock>::DeallocateFreeBlockForGarbageCollection() {
 
 template<typename ThreadLock>
 Maybe<void> BinAllocator<ThreadLock>::Allocate(char** mem_ptr, std::size_t size) {
-  auto thread_guard = thread_lock_.Guard();
+  typename ThreadLock::RAIIGuard guard(thread_lock_);
   if (size == 0) {
     *mem_ptr = nullptr;
     return Maybe<void>::Ok();
@@ -412,7 +412,7 @@ Maybe<void> BinAllocator<ThreadLock>::Allocate(char** mem_ptr, std::size_t size)
 template<typename ThreadLock>
 void BinAllocator<ThreadLock>::Deallocate(char* mem_ptr, std::size_t size) {
   if (mem_ptr == nullptr) { return; }
-  auto thread_guard = thread_lock_.Guard();
+  typename ThreadLock::RAIIGuard guard(thread_lock_);
 
   auto it = ptr2piece_.find(mem_ptr);
   CHECK(it != ptr2piece_.end()) << "Error! : Try deallocate mem_ptr non-existent. mem ptr = "
