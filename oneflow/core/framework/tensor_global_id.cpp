@@ -45,7 +45,7 @@ Maybe<void> InitGlobalId(TensorTuple* outputs) {
     CHECK_OR_RETURN(output);
     const auto& global_tensor = JUST(output->AsGlobalTensor());
     CHECK_OR_RETURN(global_tensor)
-        << Error::UnimplementedError() << "consistent tensors suppported only.";
+        << Error::UnimplementedError() << "global tensors suppported only.";
     const auto& transport_token = JUST(NewTensorGlobalId());
     JUST(global_tensor->mut_impl()->set_transport_token(transport_token));
   }
