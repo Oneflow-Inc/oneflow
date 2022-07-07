@@ -754,6 +754,92 @@ Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder*
   return Maybe<void>::Ok();
 }
 
+void ScaleInitialDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
+                                 HashMap<LogicalBlobId, LogicalBlobId>* loss_lbi2initial_diff_lbi) {
+  const TrainConf& train_conf = ctx->job_desc().job_conf().train_conf();
+  for (auto& it : *loss_lbi2initial_diff_lbi) {
+    const auto& loss_lbi = it.first;
+    const auto& initial_diff_lbi = it.second;
+    const OpNode* initial_diff_node = op_graph.OpNode4OpName(initial_diff_lbi.op_name());
+    int64_t scope_symbol_id = initial_diff_node->op().op_conf().scope_symbol_id();
+    const auto& parallel_conf = initial_diff_node->parallel_desc().parallel_conf();
+
+    std::string loss_scale_val_lbn;
+    if (train_conf.has_dynamic_loss_scale_policy()) {
+      const auto& dynamic_loss_scale_state =
+          CHECK_JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
+      loss_scale_val_lbn = dynamic_loss_scale_state.loss_scale_val_lbn();
+    } else if (train_conf.has_loss_scale_factor()) {
+      OperatorConf constant_like_op{};
+      constant_like_op.set_name(loss_lbi.op_name() + "_" + loss_lbi.blob_name() + "_loss_scale");
+      constant_like_op.set_scope_symbol_id(scope_symbol_id);
+      ConstantLikeOpConf* constant_like_conf = constant_like_op.mutable_constant_like_conf();
+      constant_like_conf->set_like(GenLogicalBlobName(initial_diff_lbi));
+      constant_like_conf->set_out("out");
+      constant_like_conf->set_float_operand(train_conf.loss_scale_factor());
+      job_builder->AddOps(parallel_conf, {constant_like_op});
+      loss_scale_val_lbn = GenLogicalBlobName(constant_like_op.name(), constant_like_conf->out());
+    }
+    const DataType data_type = op_graph.GetLogicalBlobDesc(initial_diff_lbi).data_type();
+    if (data_type != DataType::kFloat) {
+      auto cast_op = user_op::UserOpConfWrapperBuilder(
+                         loss_lbi.op_name() + "_" + loss_lbi.blob_name() + "_loss_scale-cast_f2h")
+                         .Op("cast")
+                         .Input("in", loss_scale_val_lbn)
+                         .Output("out")
+                         .Attr<DataType>("dtype", data_type)
+                         .ScopeSymbolId(scope_symbol_id)
+                         .Build();
+      job_builder->AddOps(parallel_conf, {cast_op.op_conf()});
+      loss_scale_val_lbn = cast_op.output("out", 0);
+    }
+    const int64_t time_shape_elem_cnt =
+        CHECK_JUST(initial_diff_node->op().GetInputBlobFastestTimeShape())->elem_cnt();
+    if (time_shape_elem_cnt != 1) {
+      const auto repeat_op =
+          user_op::UserOpConfWrapperBuilder(loss_lbi.op_name() + "_" + loss_lbi.blob_name()
+                                            + "_loss_scale-repeat")
+              .OpTypeName("repeat")
+              .Input("in", loss_scale_val_lbn)
+              .Output("out")
+              .Attr<int32_t>("repeat_num", time_shape_elem_cnt)
+              .ScopeSymbolId(scope_symbol_id)
+              .Build();
+      job_builder->AddOps(parallel_conf, {repeat_op.op_conf()});
+      loss_scale_val_lbn = repeat_op.output("out", 0);
+    }
+    auto scalar_mul_op =
+        user_op::UserOpConfWrapperBuilder(initial_diff_lbi.op_name() + "_"
+                                          + initial_diff_lbi.blob_name() + "_grad_scale")
+            .Op("scalar_mul_by_tensor")
+            .Input("x", GenLogicalBlobName(initial_diff_lbi))
+            .Input("scalar", loss_scale_val_lbn)
+            .Output("y")
+            .ScopeSymbolId(scope_symbol_id)
+            .Build();
+    job_builder->AddOps(parallel_conf, {scalar_mul_op.op_conf()});
+    auto scaled_initial_diff_lbi = GenLogicalBlobId(scalar_mul_op.output("y", 0));
+    // update consumer input by scalar_mul_op output
+    initial_diff_node->ForEachNodeOnOutEdge([&](const OpNode* out_node) {
+      for (const std::string& ibn : out_node->op().input_bns()) {
+        if (out_node->op().BnInOp2Lbi(ibn) == initial_diff_lbi) {
+          if (!CHECK_JUST(job_builder->IsInMutOpTransaction(out_node->op().op_name()))) {
+            CHECK_JUST(job_builder->MutOpTransactionMut(out_node->op().op_conf()));
+          }
+          OperatorConf& mut_consumer_op =
+              CHECK_JUST(job_builder->MutOpTransactionGet(out_node->op().op_name()));
+          const auto& old_lbn = ReplaceInputLbnInOpCustomizedConf(
+              &mut_consumer_op, ibn, GenLogicalBlobName(scaled_initial_diff_lbi));
+          CHECK_EQ(old_lbn, GenLogicalBlobName(initial_diff_lbi));
+        }
+      }
+    });
+    job_builder->MutOpTransactionCommit();
+    // update initial diff lbi
+    it.second = scaled_initial_diff_lbi;
+  }
+}
+
 void ScaleModelDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                                HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
   auto ProducerOpNode4Lbi = [&](const LogicalBlobId& lbi) {

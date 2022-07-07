@@ -93,8 +93,19 @@ Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* jo
 
 Maybe<void> GenerateOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx) const {
   if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+  const auto& train_conf = job->job_conf().train_conf();
+  // loss initial gradients
+  HashMap<LogicalBlobId, LogicalBlobId> loss_lbi2initial_diff_lbi;
+  CHECK_OR_RETURN(train_conf.loss_lbn_size() == train_conf.loss_grad_lbn_size())
+      << "loss_lbn and loss_grad_lbn size mismatch";
+  for (int i = 0; i < train_conf.loss_lbn_size(); ++i) {
+    auto loss_lbi = GenLogicalBlobId(train_conf.loss_lbn(i));
+    auto loss_grad_lbi = GenLogicalBlobId(train_conf.loss_grad_lbn(i));
+    loss_lbi2initial_diff_lbi.emplace(loss_lbi, loss_grad_lbi);
+  }
+  // variable gradients
   HashMap<LogicalBlobId, LogicalBlobId> model_lbi2model_diff_lbi;
-  for (const auto& optimizer_conf : job->job_conf().train_conf().optimizer_conf()) {
+  for (const auto& optimizer_conf : train_conf.optimizer_conf()) {
     CHECK_OR_RETURN(optimizer_conf.variable_op_names_size()
                     == optimizer_conf.variable_gradient_lbns_size())
         << "variable_op_names and variable_gradient_lbns size mismatch";
@@ -113,6 +124,7 @@ Maybe<void> GenerateOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx) const {
     AddDiffStaticShapeCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     AddDiffParallelCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     JUST(ScaleModelDiffByLossInstanceNum(op_graph, job_builder.get(), &model_lbi2model_diff_lbi));
+    ScaleInitialDiffByLossScale(ctx, op_graph, job_builder.get(), &loss_lbi2initial_diff_lbi);
     ScaleModelDiffByLossScale(ctx, op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     JUST(CountNotFiniteIfNeeded(ctx, op_graph, job_builder.get(), model_lbi2model_diff_lbi));
     for (const auto& optimizer_conf : job->job_conf().train_conf().optimizer_conf()) {

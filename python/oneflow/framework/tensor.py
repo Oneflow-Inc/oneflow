@@ -30,7 +30,6 @@ def _ndim(self):
 
 
 def _backward(self, gradient=None, retain_graph=False, create_graph=False):
-    flow.autograd.backward(self, gradient, retain_graph, create_graph)
     if lazy_mode.is_enabled():
         assert (
             self.is_lazy
@@ -42,6 +41,7 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
             not create_graph
         ), "nn.Graph donot accept 'create_graph' argument in backward() at the moment."
         flow._oneflow_internal.nn.graph.AddTensorAsGraphLoss(self)
+    flow.autograd.backward(self, gradient, retain_graph, create_graph)
 
 
 def _str(self):
