@@ -561,7 +561,7 @@ user_op::InferTmpSizeFn GenEmbeddingInferTmpSizeFn() {
     size_t value_buffer_size;
     if (is_prefetch) {
       size_t value_byte_size = ctx->Attr<int64_t>("line_size") * sizeof(T);
-      value_buffer_size = num_ids * value_byte_size;
+      value_buffer_size = GetCudaAlignedSize(num_ids * value_byte_size);
     } else {
       value_buffer_size = 0;
     }
@@ -600,11 +600,11 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
 
     void* num_missing_ptr;
-    allocator->Allocate(&num_missing_ptr, GetCudaAlignedSize(sizeof(uint32_t)));
+    allocator->Allocate(&num_missing_ptr, sizeof(uint32_t));
     void* missing_indices_ptr;
-    allocator->Allocate(&missing_indices_ptr, GetCudaAlignedSize(num_unique * sizeof(uint32_t)));
+    allocator->Allocate(&missing_indices_ptr, num_unique * sizeof(uint32_t));
     void* values_ptr;
-    allocator->Allocate(&values_ptr, GetCudaAlignedSize(num_unique * line_size * sizeof(T)));
+    allocator->Allocate(&values_ptr, num_unique * line_size * sizeof(T));
     LookupAndInitMissing<T, U, IDX>(ctx->stream(), kernel_state, num_unique, embedding_size,
                                     line_size, true, unique_ids->dptr(), table_ids->dptr(),
                                     num_missing_ptr, missing_indices_ptr, values_ptr);
@@ -679,7 +679,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
       void* embeddings_ptr = embedding_state->LookupEmbeddings(current_iter_);
       user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
       void* lookup_mask_ptr;
-      allocator->Allocate(&lookup_mask_ptr, GetCudaAlignedSize(num_unique * sizeof(uint8_t)));
+      allocator->Allocate(&lookup_mask_ptr, num_unique * sizeof(uint8_t));
       LookupAndFusedInitMissingSliceCast<T, U, IDX>(
           ctx->stream(), kernel_state, num_unique, embedding_size, line_size,
           unique_values->data_type(), embeddings->data_type(), unique_ids->dptr(),
@@ -688,9 +688,9 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
       allocator->Free(lookup_mask_ptr);
     } else {
       void* num_missing_ptr;
-      allocator->Allocate(&num_missing_ptr, GetCudaAlignedSize(sizeof(uint32_t)));
+      allocator->Allocate(&num_missing_ptr, sizeof(uint32_t));
       void* missing_indices_ptr;
-      allocator->Allocate(&missing_indices_ptr, GetCudaAlignedSize(num_unique * sizeof(uint32_t)));
+      allocator->Allocate(&missing_indices_ptr, num_unique * sizeof(uint32_t));
       LookupAndInitMissing<T, U, IDX>(ctx->stream(), kernel_state, num_unique, embedding_size,
                                       line_size, false, unique_ids->dptr(), table_ids->dptr(),
                                       num_missing_ptr, missing_indices_ptr, values_ptr);

@@ -45,7 +45,7 @@ class DynamicTmpBufferAllocator final : public TmpBufferAllocator {
   ~DynamicTmpBufferAllocator() override = default;
 
   void Allocate(void** ptr, size_t size) override {
-    OF_CUDA_CHECK(cudaMallocFromPoolAsync(ptr, size, mem_pool_, stream_));
+    OF_CUDA_CHECK(cudaMallocFromPoolAsync(ptr, GetCudaAlignedSize(size), mem_pool_, stream_));
   }
   void Free(void* ptr) override { OF_CUDA_CHECK(cudaFreeAsync(ptr, stream_)); }
 
@@ -269,9 +269,10 @@ class StaticTmpBufferAllocator final : public TmpBufferAllocator {
   void Allocate(void** ptr, size_t size) override {
     CHECK(ptr_ != nullptr);
     CHECK_GE(offset_, 0);
-    CHECK_LE(offset_ + size, size_);
+    size_t aligned_size = GetCudaAlignedSize(size);
+    CHECK_LE(offset_ + aligned_size, size_);
     *ptr = reinterpret_cast<char*>(ptr_) + offset_;
-    offset_ += size;
+    offset_ += aligned_size;
   }
 
   void Free(void* ptr) override {
