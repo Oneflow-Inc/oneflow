@@ -292,6 +292,15 @@ def get_fake_program_more_detail(oneflow, mode, func, args=None, kwargs=None):
     print("\n\n")
 
 
+def get_global_test_device(oneflow_args,oneflow_kwargs):
+    if(isinstance(oneflow_args[0],tuple)):
+        return oneflow_args[0][0].placement.type
+    elif(isinstance(oneflow_args[0],flow.Tensor)):
+        return oneflow_args[0].placement.type
+    else :
+        return oneflow_kwargs["device"]
+
+
 # NOTE(lixiang): When oneflow is of type nn.Module, build the following Graph for testing.
 #   graph_train_oneflow: is a deepcopy of oneflow.
 def get_module_graph_test(graph_train_oneflow, oneflow, verbose, oneflow_args, *args):
@@ -381,6 +390,8 @@ def get_functional_graph_res(
                 pass
         elif oneflow.__name__ == "Parameter":
             # nn.Graph donot deal with Parameter creation.
+            test_g_res = oneflow_res
+        elif is_global() and get_global_test_device(oneflow_args,oneflow_kwargs) == "cpu":
             test_g_res = oneflow_res
         else:
             test_g = TestGraphOfFunctional()
