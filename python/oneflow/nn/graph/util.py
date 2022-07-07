@@ -163,7 +163,7 @@ def _get_output_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc):
     op_output_conf = op_conf.output_conf
     input_lbn = getattr(op_output_conf, "in")
     output_lbn = op_conf.name + "/" + op_output_conf.out
-    nd_sbp = bn2nd_sbp[op_output_conf.out]
+
     input_sig_str = (
         input_lbn
         + ":"
@@ -171,6 +171,8 @@ def _get_output_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc):
         + ", "
         + _blob_desc_repr(lbn2blob_desc[output_lbn])
     )
+
+    nd_sbp = bn2nd_sbp[op_output_conf.out]
     output_sig_str = (
         output_lbn
         + ":"
