@@ -144,6 +144,21 @@ def _get_iden_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc):
 
     return input_sig_str, output_sig_str
 
+def _get_input_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc):
+    op_input_conf = op_conf.input_conf 
+    output_lbn = op_conf.name + "/" + op_input_conf.out
+    nd_sbp = bn2nd_sbp[op_input_conf.out]
+    output_sig_str = output_lbn + ":" + _nd_sbp2repr(nd_sbp) +", " + _blob_desc_repr(lbn2blob_desc[output_lbn])
+    return "", output_sig_str
+
+def _get_output_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc):
+    op_output_conf = op_conf.output_conf 
+    input_lbn = getattr(op_output_conf, "in")
+    output_lbn = op_conf.name + "/" + op_output_conf.out 
+    nd_sbp = bn2nd_sbp[op_output_conf.out]
+    input_sig_str = input_lbn + ":" + _nd_sbp2repr(bn2nd_sbp["in"]) +", " + _blob_desc_repr(lbn2blob_desc[output_lbn])
+    output_sig_str= output_lbn + ":" + _nd_sbp2repr(nd_sbp)  + ", " + _blob_desc_repr(lbn2blob_desc[output_lbn])
+    return input_sig_str,output_sig_str
 
 def operators_repr(
     ops: protobuf.pyext._message.RepeatedCompositeContainer,
@@ -195,6 +210,14 @@ def operators_repr(
             input_sig_str, output_sig_str = _get_iden_op_io_repr(
                 op, bn2nd_sbp, lbn2blob_desc
             )
+        elif op.HasField("input_conf"):
+            input_sig_str, output_sig_str = _get_input_op_io_repr(
+                op, bn2nd_sbp, lbn2blob_desc
+            ) 
+        elif op.HasField("output_conf"):
+            input_sig_str, output_sig_str = _get_output_op_io_repr(
+                op, bn2nd_sbp, lbn2blob_desc
+            )  
         elif op.name.startswith("System-"):
             return False, ""
 
