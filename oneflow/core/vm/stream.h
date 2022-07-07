@@ -58,10 +58,6 @@ class Stream final : public intrusive::Base {
   ThreadCtx* mut_thread_ctx() { return thread_ctx_; }
   void set_thread_ctx(ThreadCtx* val) { thread_ctx_ = val; }
   void clear_thread_ctx() { thread_ctx_ = nullptr; }
-  std::unique_ptr<DeviceCtx>* mut_device_ctx() {
-    auto* naive_stream_policy = static_cast<NaiveStreamPolicy*>(stream_policy_.get());
-    return naive_stream_policy->mut_device_ctx();
-  }
   DispatchedInstructionList* mut_running_instruction_list() { return &running_instruction_list_; }
 
   // methods

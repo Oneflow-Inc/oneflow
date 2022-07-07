@@ -304,7 +304,7 @@ void StreamWaitPreviousInstructionsDone(vm::Stream* stream, vm::Instruction* ins
 }
 
 std::string DebugDeviceReset(vm::Stream* stream) {
-  stream->device_ctx()->mut_allocator()->DeviceReset();
+  stream->mut_stream_policy()->mut_allocator()->DeviceReset();
   return "reset device";
 }
 
@@ -324,7 +324,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
         StreamWaitPreviousInstructionsDone(stream, instruction);
         // Shrinks allocator to reduce fragmentation of memory.
         {
-          auto* allocator = stream->device_ctx()->mut_allocator();
+          auto* allocator = stream->mut_stream_policy()->mut_allocator();
           auto* shrinkable_cache = dynamic_cast<ShrinkableCache*>(allocator);
           if (shrinkable_cache != nullptr) { shrinkable_cache->Shrink(); }
         }
