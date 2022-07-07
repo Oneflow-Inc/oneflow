@@ -16,69 +16,82 @@ limitations under the License.
 import os
 import sys
 import traceback
+from typing import Callable, List, Union
 
 import oneflow._oneflow_internal
 import oneflow.core.job.resource_pb2 as resource_util
-import oneflow.framework.hob as hob
 import oneflow.framework.session_context as session_ctx
-import oneflow.support.enable_if as enable_if
+import oneflow.framework.attr_util as attr_util
 
 
-def _set_attr_to_resource(attr_name, attr_value):
-    sess = session_ctx.GetDefaultSession()
-    if sess.status_ == sess.Status.INITED:
-        reso_config = resource_util.Resource()
-        setattr(reso_config, attr_name, attr_value)
-        sess.update_resource_eagerly(reso_config)
-    else:
-        setattr(sess.config_proto.resource, attr_name, attr_value)
+def _set_resource_attr(attrs_chain: Union[List[str], str], attr_value, type_):
+    r"""
+    set the attribute of config_proto.resource to attr_value.
+    the attribute is specified as a string or a list of string.
+
+    for example, if we want to do this:
+        `config_proto.resource.machine_num = 1`
+
+    we can call `_set_resource_attr("machine_num", 1)`
+
+    if we want to do:
+        `config_proto.resource.collective_boxing_conf.nccl_num_streams = 1`
+    
+    we can call `_set_resource_attr(["collective_boxing_conf", "nccl_num_streams"], 1)`
+`
+    """
+    assert isinstance(attr_value, type_), (
+        "Attribute "
+        + repr(attrs_chain)
+        + " type unmatched! Expected: "
+        + str(type_)
+        + " but get: "
+        + str(type(attr_value))
+    )
+
+    if isinstance(attrs_chain, str):
+        attrs_chain = [attrs_chain]
+
+    session = session_ctx.GetDefaultSession()
+
+    # get the current resource config
+    resource_config = (
+        session.config_proto.resource
+        if session.status_ != session.Status.INITED
+        else session.resource
+    )
+
+    # update the current resource config
+    setattr(
+        attr_util.get_nested_attribute(
+            resource_config, attrs_chain[0:-1]
+        ),  # the owning object of the attribute to be updated
+        attrs_chain[-1],  # the attribute needs to be updated
+        attr_value,
+    )
+
+    # update the resource config eagerly if the session is already initialized
+    if session.status_ == session.Status.INITED:
+        session.update_resource_eagerly(resource_config)
 
 
 def api_load_library(val: str) -> None:
-    """Load necessary library for job
-
-    Args:
-        val (str): path to shared object file
-    """
-    return enable_if.unique([load_library, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def load_library(val):
-    assert type(val) is str
-    sess = session_ctx.GetDefaultSession()
-    sess.config_proto.load_lib_path.append(val)
-
-
-def api_load_library_now(val: str) -> None:
     """Load necessary library for job now
-
     Args:
         val (str): path to shared object file
     """
-    return enable_if.unique([load_library_now, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def load_library_now(val):
     assert type(val) is str
-    oneflow._oneflow_internal.LoadLibraryNow(val)
+    oneflow._oneflow_internal.LoadLibrary(val)
 
 
 def api_machine_num(val: int) -> None:
-    """Set available number of machine/node for  running job .
+    """Set available number of machine/node for running job.
 
     Args:
         val (int): available number of machines
     """
-    return enable_if.unique([machine_num, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def machine_num(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.resource.machine_num = val
+    attrs, type_ = api_attrs_and_type[api_machine_num]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_gpu_device_num(val: int) -> None:
@@ -88,21 +101,10 @@ def api_gpu_device_num(val: int) -> None:
         val (int): number of GPUs. It is identical on every machine. In other words,
         you can't specify different number of GPUs you would like to use on each machine.
     """
-    if oneflow._oneflow_internal.flags.with_cuda():
-        return enable_if.unique([gpu_device_num, do_nothing])(val)
-    else:
-        print(
-            "INFO: for CPU-only OneFlow, oneflow.config.gpu_device_num is equivalent to oneflow.config.cpu_device_num"
-        )
-        print(traceback.format_stack()[-2])
-        return enable_if.unique([cpu_device_num, do_nothing])(val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def gpu_device_num(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.resource.gpu_device_num = val
+    print(
+        "'gpu_device_num' has been deprecated, has no effect and will be removed in the future."
+    )
 
 
 def api_cpu_device_num(val: int) -> None:
@@ -111,14 +113,9 @@ def api_cpu_device_num(val: int) -> None:
     Args:
         val (int): number of CPUs. It is identical on every machine.
     """
-    return enable_if.unique([cpu_device_num, do_nothing])(val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def cpu_device_num(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.resource.cpu_device_num = val
+    attrs, type_ = api_attrs_and_type[api_cpu_device_num]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_comm_net_worker_num(val: int) -> None:
@@ -128,14 +125,8 @@ def api_comm_net_worker_num(val: int) -> None:
     Args:
         val (int): number of workers
     """
-    return enable_if.unique([comm_net_worker_num, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def comm_net_worker_num(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.resource.comm_net_worker_num = val
+    attrs, type_ = api_attrs_and_type[api_comm_net_worker_num]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_max_mdsave_worker_num(val: int) -> None:
@@ -144,14 +135,9 @@ def api_max_mdsave_worker_num(val: int) -> None:
     Args:
         val (int):  max number of workers
     """
-    return enable_if.unique([max_mdsave_worker_num, do_nothing])(val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def max_mdsave_worker_num(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.resource.max_mdsave_worker_num = val
+    attrs, type_ = api_attrs_and_type[api_max_mdsave_worker_num]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_numa_aware_cuda_malloc_host(val: bool = True) -> None:
@@ -171,14 +157,9 @@ def api_compute_thread_pool_size(val: int) -> None:
     Args:
         val (int): size of  thread pool
     """
-    return enable_if.unique([compute_thread_pool_size, do_nothing])(val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def compute_thread_pool_size(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.resource.compute_thread_pool_size = val
+    attrs, type_ = api_attrs_and_type[api_compute_thread_pool_size]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_reserved_host_mem_mbyte(val: int) -> None:
@@ -187,14 +168,9 @@ def api_reserved_host_mem_mbyte(val: int) -> None:
     Args:
         val (int):  memory size, e.g. 1024(mb)
     """
-    return enable_if.unique([reserved_host_mem_mbyte, do_nothing])(val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def reserved_host_mem_mbyte(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.resource.reserved_host_mem_mbyte = val
+    attrs, type_ = api_attrs_and_type[api_reserved_host_mem_mbyte]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_reserved_device_mem_mbyte(val: int) -> None:
@@ -203,14 +179,9 @@ def api_reserved_device_mem_mbyte(val: int) -> None:
     Args:
         val (int):  memory size, e.g. 1024(mb)
     """
-    return enable_if.unique([reserved_device_mem_mbyte, do_nothing])(val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def reserved_device_mem_mbyte(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.resource.reserved_device_mem_mbyte = val
+    attrs, type_ = api_attrs_and_type[api_reserved_device_mem_mbyte]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_enable_cudnn_fused_normalization_add_relu(val: bool) -> None:
@@ -219,18 +190,9 @@ def api_enable_cudnn_fused_normalization_add_relu(val: bool) -> None:
     Args:
         val (bool): whether enable or not
     """
-    return enable_if.unique([enable_cudnn_fused_normalization_add_relu, do_nothing])(
-        val
-    )
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def enable_cudnn_fused_normalization_add_relu(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.cudnn_conf.enable_cudnn_fused_normalization_add_relu = (
-        val
-    )
+    attrs, type_ = api_attrs_and_type[api_enable_cudnn_fused_normalization_add_relu]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_enable_debug_mode(val: bool) -> None:
@@ -239,14 +201,9 @@ def api_enable_debug_mode(val: bool) -> None:
     Args:
         val (bool):  True or False
     """
-    return enable_if.unique([enable_debug_mode, do_nothing])(val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def enable_debug_mode(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.enable_debug_mode = val
+    attrs, type_ = api_attrs_and_type[api_enable_debug_mode]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_legacy_model_io_enabled():
@@ -260,30 +217,20 @@ def api_enable_legacy_model_io(val: bool = True):
     Args:
         val ([type]): True or False
     """
-    return enable_if.unique([enable_legacy_model_io, do_nothing])(val)
+
+    attrs, type_ = api_attrs_and_type[api_enable_legacy_model_io]
+    _set_resource_attr(attrs, val, type_)
 
 
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def enable_legacy_model_io(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.enable_legacy_model_io = val
-
-
-def api_enable_model_io_v2(val):
+def api_enable_model_io_v2(val: bool):
     """Whether or not use version2  of model input/output function.
 
     Args:
         val ([type]): True or False
     """
-    return enable_if.unique([enable_model_io_v2, do_nothing])(val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def enable_model_io_v2(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.enable_model_io_v2 = val
+    attrs, type_ = api_attrs_and_type[api_enable_model_io_v2]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_enable_fusion(val: bool = True) -> None:
@@ -292,14 +239,9 @@ def api_enable_fusion(val: bool = True) -> None:
     Args:
         val (bool, optional): True or False. Defaults to True.
     """
-    return enable_if.unique([enable_fusion, do_nothing])(val=val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def enable_fusion(val=True):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.collective_boxing_conf.enable_fusion = val
+    attrs, type_ = api_attrs_and_type[api_enable_fusion]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_num_callback_threads(val: int) -> None:
@@ -309,14 +251,9 @@ def api_num_callback_threads(val: int) -> None:
     Args:
         val (int): number of  callback threads
     """
-    return enable_if.unique([num_callback_threads, do_nothing])(val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def num_callback_threads(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.resource.collective_boxing_conf.num_callback_threads = val
+    attrs, type_ = api_attrs_and_type[api_num_callback_threads]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_enable_tensor_float_32_compute(val: bool = True) -> None:
@@ -325,14 +262,8 @@ def api_enable_tensor_float_32_compute(val: bool = True) -> None:
     Args:
         val (bool, optional): True or False. Defaults to True.
     """
-    return enable_if.unique([enable_tensor_float_32_compute, do_nothing])(val=val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def enable_tensor_float_32_compute(val=True):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.enable_tensor_float_32_compute = val
+    attrs, type_ = api_attrs_and_type[api_enable_tensor_float_32_compute]
+    _set_resource_attr(attrs, val, type_)
     if not val:
         os.environ["ONEFLOW_EP_CUDA_ENABLE_TF32_EXECUTION"] = "0"
 
@@ -343,14 +274,9 @@ def api_enable_mem_chain_merge(val: bool = True) -> None:
     Args:
         val (bool, optional): True or False. Defaults to True.
     """
-    return enable_if.unique([enable_mem_chain_merge, do_nothing])(val=val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def enable_mem_chain_merge(val=True):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.enable_mem_chain_merge = val
+    attrs, type_ = api_attrs_and_type[api_enable_mem_chain_merge]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_use_compute_stream(val: bool = False) -> None:
@@ -359,8 +285,9 @@ def api_nccl_use_compute_stream(val: bool = False) -> None:
     Args:
         val (bool, optional): True or False. Defaults to False.
     """
-    assert type(val) is bool
-    _set_attr_to_resource("nccl_use_compute_stream", val)
+
+    attrs, type_ = api_attrs_and_type[api_nccl_use_compute_stream]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_disable_group_boxing_by_dst_parallel(val: bool = False) -> None:
@@ -369,8 +296,9 @@ def api_disable_group_boxing_by_dst_parallel(val: bool = False) -> None:
     Args:
         val (bool, optional): True or False. Defaults to False.
     """
-    assert type(val) is bool
-    _set_attr_to_resource("disable_group_boxing_by_dst_parallel", val)
+
+    attrs, type_ = api_attrs_and_type[api_disable_group_boxing_by_dst_parallel]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_num_streams(val: int) -> None:
@@ -379,14 +307,9 @@ def api_nccl_num_streams(val: int) -> None:
     Args:
         val (int): number of streams
     """
-    return enable_if.unique([nccl_num_streams, do_nothing])(val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def nccl_num_streams(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.resource.collective_boxing_conf.nccl_num_streams = val
+    attrs, type_ = api_attrs_and_type[api_nccl_num_streams]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_fusion_threshold_mb(val: int) -> None:
@@ -395,14 +318,9 @@ def api_nccl_fusion_threshold_mb(val: int) -> None:
     Args:
         val (int): int number, e.g. 10(mb)
     """
-    return enable_if.unique([nccl_fusion_threshold_mb, do_nothing])(val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def nccl_fusion_threshold_mb(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.resource.collective_boxing_conf.nccl_fusion_threshold_mb = val
+    attrs, type_ = api_attrs_and_type[api_nccl_fusion_threshold_mb]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_fusion_all_reduce_use_buffer(val: bool) -> None:
@@ -411,16 +329,9 @@ def api_nccl_fusion_all_reduce_use_buffer(val: bool) -> None:
     Args:
         val (bool): True or False
     """
-    return enable_if.unique([nccl_fusion_all_reduce_use_buffer, do_nothing])(val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def nccl_fusion_all_reduce_use_buffer(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.collective_boxing_conf.nccl_fusion_all_reduce_use_buffer = (
-        val
-    )
+    attrs, type_ = api_attrs_and_type[api_nccl_fusion_all_reduce_use_buffer]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_fusion_all_reduce(val: bool) -> None:
@@ -429,14 +340,9 @@ def api_nccl_fusion_all_reduce(val: bool) -> None:
     Args:
         val (bool):  True or False
     """
-    return enable_if.unique([nccl_fusion_all_reduce, do_nothing])(val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def nccl_fusion_all_reduce(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.collective_boxing_conf.nccl_fusion_all_reduce = val
+    attrs, type_ = api_attrs_and_type[api_nccl_fusion_all_reduce]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_fusion_reduce_scatter(val: bool) -> None:
@@ -445,14 +351,9 @@ def api_nccl_fusion_reduce_scatter(val: bool) -> None:
     Args:
         val (bool): True or False
     """
-    return enable_if.unique([nccl_fusion_reduce_scatter, do_nothing])(val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def nccl_fusion_reduce_scatter(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.collective_boxing_conf.nccl_fusion_reduce_scatter = val
+    attrs, type_ = api_attrs_and_type[api_nccl_fusion_reduce_scatter]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_fusion_all_gather(val: bool) -> None:
@@ -461,14 +362,9 @@ def api_nccl_fusion_all_gather(val: bool) -> None:
     Args:
         val (bool): True or False
     """
-    return enable_if.unique([nccl_fusion_all_gather, do_nothing])(val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def nccl_fusion_all_gather(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.collective_boxing_conf.nccl_fusion_all_gather = val
+    attrs, type_ = api_attrs_and_type[api_nccl_fusion_all_gather]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_fusion_reduce(val: bool) -> None:
@@ -477,14 +373,9 @@ def api_nccl_fusion_reduce(val: bool) -> None:
     Args:
         val (bool): True or False
     """
-    return enable_if.unique([nccl_fusion_reduce, do_nothing])(val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def nccl_fusion_reduce(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.collective_boxing_conf.nccl_fusion_reduce = val
+    attrs, type_ = api_attrs_and_type[api_nccl_fusion_reduce]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_fusion_broadcast(val: bool) -> None:
@@ -493,14 +384,9 @@ def api_nccl_fusion_broadcast(val: bool) -> None:
     Args:
         val (bool): True or False
     """
-    return enable_if.unique([nccl_fusion_broadcast, do_nothing])(val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def nccl_fusion_broadcast(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.collective_boxing_conf.nccl_fusion_broadcast = val
+    attrs, type_ = api_attrs_and_type[api_nccl_fusion_broadcast]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_fusion_max_ops(val: int) -> None:
@@ -509,14 +395,9 @@ def api_nccl_fusion_max_ops(val: int) -> None:
     Args:
         val (int): Maximum number of ops
     """
-    return enable_if.unique([nccl_fusion_max_ops, do_nothing])(val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def nccl_fusion_max_ops(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.resource.collective_boxing_conf.nccl_fusion_max_ops = val
+    attrs, type_ = api_attrs_and_type[api_nccl_fusion_max_ops]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_enable_all_to_all(val: bool) -> None:
@@ -525,14 +406,9 @@ def api_nccl_enable_all_to_all(val: bool) -> None:
     Args:
         val (bool): True or False
     """
-    return enable_if.unique([nccl_enable_all_to_all, do_nothing])(val)
 
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def nccl_enable_all_to_all(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.collective_boxing_conf.nccl_enable_all_to_all = val
+    attrs, type_ = api_attrs_and_type[api_nccl_enable_all_to_all]
+    _set_resource_attr(attrs, val, type_)
 
 
 def api_nccl_enable_mixed_fusion(val: bool) -> None:
@@ -541,16 +417,68 @@ def api_nccl_enable_mixed_fusion(val: bool) -> None:
     Args:
         val (bool): True or False
     """
-    return enable_if.unique([nccl_enable_mixed_fusion, do_nothing])(val)
+
+    attrs, type_ = api_attrs_and_type[api_nccl_enable_mixed_fusion]
+    _set_resource_attr(attrs, val, type_)
 
 
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def nccl_enable_mixed_fusion(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.resource.collective_boxing_conf.nccl_enable_mixed_fusion = val
-
-
-@enable_if.condition(hob.in_normal_mode & hob.session_initialized)
-def do_nothing(*args, **kwargs):
-    print("This action donot working because session is initialized.", file=sys.stderr)
+api_attrs_and_type = {
+    api_machine_num: ("machine_num", int),
+    api_comm_net_worker_num: ("comm_net_worker_num", int),
+    api_max_mdsave_worker_num: ("max_mdsave_worker_num", int),
+    api_cpu_device_num: ("cpu_device_num", int),
+    api_compute_thread_pool_size: ("compute_thread_pool_size", int),
+    api_reserved_host_mem_mbyte: ("reserved_host_mem_mbyte", int),
+    api_reserved_device_mem_mbyte: ("reserved_device_mem_mbyte", int),
+    api_enable_cudnn_fused_normalization_add_relu: (
+        ["cudnn_conf", "enable_cudnn_fused_normalization_add_relu"],
+        bool,
+    ),
+    api_enable_debug_mode: ("enable_debug_mode", bool),
+    api_enable_legacy_model_io: ("enable_legacy_model_io", bool),
+    api_enable_model_io_v2: ("enable_legacy_model_io_v2", bool),
+    api_enable_fusion: (["collective_boxing_conf", "enable_fusion"], bool),
+    api_num_callback_threads: (["collective_boxing_conf", "num_callback_threads"], int),
+    api_enable_tensor_float_32_compute: ("enable_tensor_float_32_compute", bool),
+    api_enable_mem_chain_merge: ("enable_mem_chain_merge", bool),
+    api_nccl_use_compute_stream: ("nccl_use_compute_stream", bool),
+    api_disable_group_boxing_by_dst_parallel: (
+        "disable_group_boxing_by_dst_parallel",
+        bool,
+    ),
+    api_nccl_num_streams: (["collective_boxing_conf", "nccl_num_streams"], int),
+    api_nccl_fusion_threshold_mb: (
+        ["collective_boxing_conf", "nccl_fusion_threshold_mb"],
+        int,
+    ),
+    api_nccl_fusion_all_reduce_use_buffer: (
+        ["collective_boxing_conf", "nccl_fusion_all_reduce_use_buffer"],
+        bool,
+    ),
+    api_nccl_fusion_all_reduce: (
+        ["collective_boxing_conf", "nccl_fusion_all_reduce"],
+        bool,
+    ),
+    api_nccl_fusion_reduce_scatter: (
+        ["collective_boxing_conf", "nccl_fusion_reduce_scatter"],
+        bool,
+    ),
+    api_nccl_fusion_all_gather: (
+        ["collective_boxing_conf", "nccl_fusion_all_gather"],
+        bool,
+    ),
+    api_nccl_fusion_reduce: (["collective_boxing_conf", "nccl_fusion_reduce"], bool),
+    api_nccl_fusion_broadcast: (
+        ["collective_boxing_conf", "nccl_fusion_broadcast"],
+        bool,
+    ),
+    api_nccl_fusion_max_ops: (["collective_boxing_conf", "nccl_fusion_max_ops"], int),
+    api_nccl_enable_all_to_all: (
+        ["collective_boxing_conf", "nccl_enable_all_to_all"],
+        bool,
+    ),
+    api_nccl_enable_mixed_fusion: (
+        ["collective_boxing_conf", "nccl_enable_mixed_fusion"],
+        bool,
+    ),
+}

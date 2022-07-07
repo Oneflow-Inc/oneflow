@@ -16,86 +16,120 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_PROFILER_EVENT_H_
 #define ONEFLOW_CORE_PROFILER_EVENT_H_
 
+#include <functional>
+#include <memory>
+#include <vector>
 #include "nlohmann/json.hpp"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/shape.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 
 namespace profiler {
 
-enum class EventType { kCustom, kKernel };
+class ProfileManager;
+
+enum class EventType {
+  kCustom,        // has three kinds
+  kOneflowKernel  // OneFlow cpu/cuda kernel
+};
+enum class CustomEventType {
+  kDefault,     // for record_function
+  kCudaKernel,  // cuda kernel
+  kCudaRuntime  // something like cudaLaunchKernel
+};
+enum class EventTimeUnit { kNS, kUS };
 
 class IEvent {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IEvent);
 
   IEvent() = delete;
-  explicit IEvent(const std::string& name) : name_(name) {}
+  IEvent(const std::string& name, EventTimeUnit time_unit) : name_(name), time_unit_(time_unit) {}
 
   virtual std::string Key() = 0;
   virtual nlohmann::json ToJson();
   virtual ~IEvent() = default;
+
   virtual void Start();
   virtual void Finish();
+  bool IsChildOf(const IEvent* e);
 
   const std::string& GetName() const;
-  time_t GetDuration();
+  template<typename T>
+  const T GetDuration(EventTimeUnit time_unit = EventTimeUnit::kUS) const;
+  template<typename T>
+  const T GetStartedAt(EventTimeUnit time_unit = EventTimeUnit::kUS) const;
+  template<typename T>
+  const T GetFinishedAt(EventTimeUnit time_unit = EventTimeUnit::kUS) const;
 
  protected:
+  virtual void SetStartedAt(double t);
+  virtual void SetFinishedAt(double t);
+
   std::string name_;
-  time_t started_at_ = 0;
-  time_t finished_at_ = 0;
+  EventTimeUnit time_unit_;
+  double started_at_ = 0;
+  double finished_at_ = 0;
 };
+
+inline double ConvertTime(double time_, EventTimeUnit src_time_unit, EventTimeUnit dst_time_unit) {
+  if (src_time_unit == EventTimeUnit::kNS && dst_time_unit == EventTimeUnit::kUS) {
+    return time_ / 1000;
+  }
+  if (src_time_unit == EventTimeUnit::kUS && dst_time_unit == EventTimeUnit::kNS) {
+    return time_ * 1000;
+  }
+  return time_;
+}
+
+template<>
+const inline double IEvent::GetStartedAt<double>(EventTimeUnit time_unit) const {
+  return ConvertTime(started_at_, time_unit_, time_unit);
+}
+
+template<>
+const inline time_t IEvent::GetStartedAt<time_t>(EventTimeUnit time_unit) const {
+  return static_cast<time_t>(GetStartedAt<double>(time_unit));
+}
+
+template<>
+const inline double IEvent::GetFinishedAt<double>(EventTimeUnit time_unit) const {
+  return ConvertTime(finished_at_, time_unit_, time_unit);
+}
+
+template<>
+const inline time_t IEvent::GetFinishedAt<time_t>(EventTimeUnit time_unit) const {
+  return static_cast<time_t>(GetFinishedAt<double>(time_unit));
+}
+
+template<>
+const inline double IEvent::GetDuration<double>(EventTimeUnit time_unit) const {
+  return GetFinishedAt<double>(time_unit) - GetStartedAt<double>(time_unit);
+}
+
+template<>
+const inline time_t IEvent::GetDuration<time_t>(EventTimeUnit time_unit) const {
+  return static_cast<time_t>(GetDuration<double>(time_unit));
+}
 
 class CustomEvent final : public IEvent {
  public:
+  friend class ProfileManager;
   std::string Key() override;
 
   nlohmann::json ToJson() override;
 
-  static std::shared_ptr<CustomEvent> Create(const std::string& name);
+  static std::shared_ptr<CustomEvent> Create(const std::string& name,
+                                             CustomEventType type = CustomEventType::kDefault);
 
  private:
-  explicit CustomEvent(const std::string& custom_name) : IEvent(custom_name) {}
+  CustomEventType type_;
+  CustomEvent(const std::string& custom_name, CustomEventType type)
+      : IEvent(custom_name,
+               type == CustomEventType::kDefault ? EventTimeUnit::kNS : EventTimeUnit::kUS),
+        type_(type) {}
 };
-
-#if defined(WITH_CUDA)
-
-class CUDAEventPair {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CUDAEventPair);
-
-  explicit CUDAEventPair(cudaStream_t cuda_stream) : cuda_stream_(cuda_stream) {
-    OF_CUDA_CHECK(cudaEventCreate(&cuda_event_start_));
-    OF_CUDA_CHECK(cudaEventCreate(&cuda_event_finish_));
-  }
-
-  void Start() { OF_CUDA_CHECK(cudaEventRecord(cuda_event_start_, cuda_stream_)); }
-
-  void Finish() { OF_CUDA_CHECK(cudaEventRecord(cuda_event_finish_, cuda_stream_)); }
-
-  double ElapsedTime() const {
-    float elapsed_time_ms = 0;
-    OF_CUDA_CHECK(cudaEventSynchronize(cuda_event_start_));
-    OF_CUDA_CHECK(cudaEventSynchronize(cuda_event_finish_));
-    OF_CUDA_CHECK(cudaEventElapsedTime(&elapsed_time_ms, cuda_event_start_, cuda_event_finish_));
-    return elapsed_time_ms * 1000.0;  // convert to us
-  }
-
-  ~CUDAEventPair() {
-    if (cuda_event_start_) { OF_CUDA_CHECK(cudaEventDestroy(cuda_event_start_)); }
-    if (cuda_event_finish_) { OF_CUDA_CHECK(cudaEventDestroy(cuda_event_finish_)); }
-  }
-
- private:
-  cudaStream_t cuda_stream_ = nullptr;
-  cudaEvent_t cuda_event_start_ = nullptr;
-  cudaEvent_t cuda_event_finish_ = nullptr;
-};
-
-#endif  // WITH_CUDA
 
 class KernelEvent final : public IEvent {
  public:
@@ -104,38 +138,51 @@ class KernelEvent final : public IEvent {
   nlohmann::json ToJson() override;
 
   static std::shared_ptr<KernelEvent> Create(
-      const std::string& name, const std::function<std::vector<Shape>(void)>& shape_getter);
+      const std::string& name, const std::function<std::vector<ShapeView>(void)>& shape_getter);
 
-  void RecordShape(const Shape& shape);
-
-  void Start() override;
-  void Finish() override;
+  void RecordShape(const ShapeView& shape);
 
 #if defined(WITH_CUDA)
-  void InitCudaEventPair(cudaStream_t cuda_stream) {
-    cuda_event_pair_ = std::make_shared<CUDAEventPair>(cuda_stream);
-  }
-
   void SetMemorySize(int64_t memory_size) { memory_size_ = memory_size; }
+  void AddChildEvent(const std::shared_ptr<IEvent>& e) { children_.emplace(e); }
+  bool AddChildEventIfSo(const std::shared_ptr<IEvent>& e) {
+    if (e->IsChildOf(dynamic_cast<IEvent*>(this))) {
+      children_.emplace(e);
+      return true;
+    }
+    return false;
+  }
+  bool HasChildEvent(const std::shared_ptr<IEvent>& e) { return children_.count(e); }
+  void WalkAmongChildren(const std::function<void(const std::shared_ptr<IEvent>& e)>& f) const {
+    for (const auto& x : children_) { f(x); }
+  }
 #endif  // WITH_CUDA
 
  private:
-  explicit KernelEvent(const std::string& kernel_name,
-                       const std::function<std::vector<Shape>(void)>& shape_getter)
-      : IEvent(kernel_name) {
+  KernelEvent(const std::string& kernel_name,
+              const std::function<std::vector<ShapeView>(void)>& shape_getter)
+      : IEvent(kernel_name, EventTimeUnit::kNS) {
     if (shape_getter) { input_shapes_ = shape_getter(); }
   }
 
 #if defined(WITH_CUDA)
-  std::shared_ptr<CUDAEventPair> cuda_event_pair_ = nullptr;
   int64_t memory_size_ = -1;
+  std::set<std::shared_ptr<IEvent>> children_;
 #endif  // WITH_CUDA
 
-  std::vector<Shape> input_shapes_;
-  std::string FormatShapes(size_t max_num_to_format = 4);
+  std::vector<ShapeView> input_shapes_;
+  std::string GetFormatedInputShapes(size_t max_num_to_format = 4);
 };
 
 }  // namespace profiler
 }  // namespace oneflow
+
+namespace nlohmann {
+
+inline void to_json(json& j, const std::shared_ptr<::oneflow::profiler::IEvent>& event) {
+  j = event->ToJson();
+}
+
+}  // namespace nlohmann
 
 #endif  // ONEFLOW_CORE_PROFILER_EVENT_H_

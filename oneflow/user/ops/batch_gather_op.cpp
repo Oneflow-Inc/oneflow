@@ -20,18 +20,37 @@ namespace oneflow {
 
 /* static */ Maybe<void> BatchGatherOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-  CHECK_GT_OR_RETURN(in.shape().NumAxes(), 0);
+  CHECK_GT_OR_RETURN(in.shape().NumAxes(), 0)
+      << Error::RuntimeError() << "The dimension of the input tensor should be greater than zero, "
+      << "but got " << in.shape().NumAxes();
   const user_op::TensorDesc& indices = ctx->InputTensorDesc("indices", 0);
-  CHECK_GT_OR_RETURN(indices.shape().NumAxes(), 0);
+  CHECK_GT_OR_RETURN(indices.shape().NumAxes(), 0)
+      << Error::RuntimeError()
+      << "The dimension of the indices tensor should be greater than zero, "
+      << "but got " << indices.shape().NumAxes();
   user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
-  CHECK_LE_OR_RETURN(indices.shape().dim_vec().size(), in.shape().dim_vec().size());
+  CHECK_LE_OR_RETURN(indices.shape().dim_vec().size(), in.shape().dim_vec().size())
+      << Error::RuntimeError()
+      << "The dimension of the input tensor should be greater than or equal to the dimension of "
+         "the indices tensor, "
+      << "but found that the dimension of the input tensor is " << in.shape().dim_vec().size()
+      << ", and the dimension of the indices tensor is " << indices.shape().dim_vec().size();
   FOR_RANGE(int64_t, i, 0, indices.shape().dim_vec().size() - 1) {
     if (in.is_dynamic() && indices.is_dynamic() == false) {
-      CHECK_GE_OR_RETURN(indices.shape().dim_vec().at(i), in.shape().dim_vec().at(i));
+      CHECK_GE_OR_RETURN(indices.shape().dim_vec().at(i), in.shape().dim_vec().at(i))
+          << Error::RuntimeError()
+          << "The size of indices tensor should be greater than or equal to the "
+             "size of input tensor "
+          << " at dimension " << i
+          << " when the input tensor is dynamic and the indices tensor is not dynamic";
     } else if (in.is_dynamic() == false && indices.is_dynamic()) {
-      UNIMPLEMENTED();
+      LOG(FATAL)
+          << "The indices tensor is not allowed to be dynamic when the input tensor is not dynamic";
     } else {
-      CHECK_EQ_OR_RETURN(indices.shape().dim_vec().at(i), in.shape().dim_vec().at(i));
+      CHECK_EQ_OR_RETURN(indices.shape().dim_vec().at(i), in.shape().dim_vec().at(i))
+          << Error::RuntimeError()
+          << "The size of indices tensor must match the size of input tensor"
+          << " at dimension " << i << " when two tensors are both dynamic or neither";
     }
   }
 
@@ -68,14 +87,15 @@ namespace oneflow {
 /* static */ Maybe<void> BatchGatherOp::ModifyInputArg(
     const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
-  CHECK_OR_RETURN(indices_modifier != nullptr);
+  CHECK_OR_RETURN(indices_modifier != nullptr);  // NOLINT(maybe-need-error-msg)
   indices_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> BatchGatherOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& indices = ctx->InputTensorDesc("indices", 0);
-  CHECK_OR_RETURN(IsIndexDataType(indices.data_type()));
+  CHECK_OR_RETURN(IsIndexDataType(indices.data_type()))
+      << Error::TypeError() << "The dtype of the indices tensor must be int32 or int64";
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
   *out->mut_data_type() = in.data_type();

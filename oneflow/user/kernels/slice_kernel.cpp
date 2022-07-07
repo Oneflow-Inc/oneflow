@@ -305,8 +305,22 @@ class SliceKernel final : public user_op::OpKernel {
       // split_axis == SPLIT_AXIS_FOR_NON_SPLIT means the sbp attribute is not 'split'
       CHECK_JUST(slice_ctx.PushSplitInfo(SPLIT_AXIS_FOR_NON_SPLIT, 0, 0, 0));
     } else {
-      const NdSbp& in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("x", 0);
       const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
+      NdSbp in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("x", 0);
+      {
+        const NdSbp& y_nd_sbp = ctx->NdSbp4ArgNameAndIndex("y", 0);
+        // If x and y both split in the same axis(must be full slice),
+        // we can consider the physical tensor is broadcast in this axis.
+        FOR_RANGE(int32_t, i, 0, parallel_hierarchy.NumAxes()) {
+          const SbpParallel& x_sbp = in_nd_sbp.sbp_parallel(i);
+          const SbpParallel& y_sbp = y_nd_sbp.sbp_parallel(i);
+          if (x_sbp.has_split_parallel() && y_sbp.has_split_parallel()) {
+            CHECK_EQ(x_sbp.split_parallel().axis(), y_sbp.split_parallel().axis());
+            in_nd_sbp.mutable_sbp_parallel(i)->clear_split_parallel();
+            in_nd_sbp.mutable_sbp_parallel(i)->mutable_broadcast_parallel();
+          }
+        }
+      }
       const Shape& logical_shape = ctx->LogicalTensorDesc4ArgNameAndIndex("x", 0)->shape();
       const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
       const TensorSliceView& slice_view =
@@ -354,7 +368,7 @@ class SliceUpdateKernel final : public user_op::OpKernel {
       const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
       NdSbp ref_nd_sbp = ctx->NdSbp4ArgNameAndIndex("ref", 0);
       {
-        const NdSbp value_nd_sbp = ctx->NdSbp4ArgNameAndIndex("value", 0);
+        const NdSbp& value_nd_sbp = ctx->NdSbp4ArgNameAndIndex("value", 0);
         // If ref and value both split in the same axis(full slice),
         // we can consider the physical tensor is broadcast in this axis.
         for (int i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
