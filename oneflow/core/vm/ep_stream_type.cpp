@@ -39,8 +39,8 @@ void EpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream*
       Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
   auto ep_backend_allocator =
       std::make_unique<EpBackendAllocator>(ep_device, ep::AllocationOptions{});
-  auto bin_allo = std::make_unique<BinAllocator<ThreadSafeLock>>(
-      ep::kMaxAlignmentRequirement, std::move(ep_backend_allocator));
+  auto bin_allo = std::make_unique<BinAllocator<ThreadSafeLock>>(ep::kMaxAlignmentRequirement,
+                                                                 std::move(ep_backend_allocator));
   device_ctx->reset(new EpDeviceCtx(stream->device(), std::move(bin_allo)));
 }
 

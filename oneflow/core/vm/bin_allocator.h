@@ -227,8 +227,7 @@ void BinAllocator<ThreadLock>::UnMarkPiece(Piece* piece) {
 }
 
 template<typename ThreadLock>
-typename BinAllocator<ThreadLock>::Piece* BinAllocator<ThreadLock>::FindPiece(
-    size_t aligned_size) {
+typename BinAllocator<ThreadLock>::Piece* BinAllocator<ThreadLock>::FindPiece(size_t aligned_size) {
   CHECK(IsAlignedSize(aligned_size, alignment_));
   for (int32_t bin_num = BinNum4BinSize(aligned_size); bin_num < kBinNumSize; ++bin_num) {
     Bin* bin = &bins_.at(bin_num);
