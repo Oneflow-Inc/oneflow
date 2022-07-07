@@ -435,7 +435,7 @@ def get_tensor_graph_res(
 
     try:
         # Set test_g_res = None, check_eager_graph_tensor will return True, the purpose is to temporarily skip the Graph global test on cpu.
-        if is_global() and oneflow.placement.type == "cpu":
+        if is_global() and (get_global_test_device((oneflow,)) == "cpu"):
             test_g_res = None
         else:
             test_g = TestGraphOfTensorMethod()
