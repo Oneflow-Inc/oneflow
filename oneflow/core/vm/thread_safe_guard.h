@@ -33,7 +33,7 @@ class ThreadSafeLock final {
 
   class RAIIGuard final {
    public:
-    explicit RAIIGuard(ThreadSafeLock& lock) : guard_(lock.mutex4guard) { }
+    explicit RAIIGuard(ThreadSafeLock& lock) : guard_(lock.mutex4guard) {}
     ~RAIIGuard() = default;
     OF_DISALLOW_COPY_AND_MOVE(RAIIGuard);
 
