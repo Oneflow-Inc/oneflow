@@ -24,21 +24,20 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-template<typename ThreadGuard>
+template<typename ThreadLock>
 class BinAllocator final : public CachingAllocator {
  public:
-  explicit BinAllocator(size_t alignment, std::unique_ptr<Allocator>&& backend,
-                        std::unique_ptr<ThreadGuard>&& guard);
+  explicit BinAllocator(size_t alignment, std::unique_ptr<Allocator>&& backend);
   ~BinAllocator();
 
   Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
   void DeviceReset() override {
-    auto thread_gurad = guard_->GetGuard();
+    auto thread_guard = thread_lock_.Guard();
     backend_->DeviceReset();
   }
   void Shrink() override {
-    auto thread_gurad = guard_->GetGuard();
+    auto thread_guard = thread_lock_.Guard();
     DeallocateFreeBlockForGarbageCollection();
   }
 
@@ -126,7 +125,7 @@ class BinAllocator final : public CachingAllocator {
 
   const size_t alignment_;
   const std::unique_ptr<Allocator> backend_;
-  const std::unique_ptr<ThreadGuard> guard_;
+  ThreadLock thread_lock_;
   size_t total_memory_bytes_;
   HashMap<char*, Block> mem_ptr2block_;
 
@@ -146,13 +145,11 @@ static const size_t kPieceSplitThreshold = 128 << 20;  // 128MiB
 
 }  // namespace
 
-template<typename ThreadGuard>
-BinAllocator<ThreadGuard>::BinAllocator(size_t alignment, std::unique_ptr<Allocator>&& backend,
-                                        std::unique_ptr<ThreadGuard>&& guard)
+template<typename ThreadLock>
+BinAllocator<ThreadLock>::BinAllocator(size_t alignment, std::unique_ptr<Allocator>&& backend)
     : CachingAllocator(),
       alignment_(alignment),
       backend_(std::move(backend)),
-      guard_(std::move(guard)),
       total_memory_bytes_(0),
       recycle_piece_list_(nullptr) {
   CHECK_GE(alignment, 1);
@@ -168,8 +165,8 @@ BinAllocator<ThreadGuard>::BinAllocator(size_t alignment, std::unique_ptr<Alloca
   }
 }
 
-template<typename ThreadGuard>
-BinAllocator<ThreadGuard>::~BinAllocator() {
+template<typename ThreadLock>
+BinAllocator<ThreadLock>::~BinAllocator() {
   if (total_memory_bytes_ == 0) {
     CHECK_EQ(mem_ptr2block_.size(), 0);
     return;
@@ -177,24 +174,24 @@ BinAllocator<ThreadGuard>::~BinAllocator() {
   for (auto& pair : mem_ptr2block_) { backend_->Deallocate(pair.first, pair.second.size); }
 }
 
-template<typename ThreadGuard>
-void BinAllocator<ThreadGuard>::InsertPiece2Bin(Piece* piece) {
+template<typename ThreadLock>
+void BinAllocator<ThreadLock>::InsertPiece2Bin(Piece* piece) {
   CHECK(piece->is_free && piece->bin_num == kInvalidBinNum);
   int32_t bin_num = BinNum4BinSize(piece->size);
   piece->bin_num = bin_num;
   CHECK(bins_.at(bin_num).pieces.insert(piece).second);
 }
 
-template<typename ThreadGuard>
-void BinAllocator<ThreadGuard>::RemovePieceFromBin(Piece* piece) {
+template<typename ThreadLock>
+void BinAllocator<ThreadLock>::RemovePieceFromBin(Piece* piece) {
   CHECK(piece->is_free);
   CHECK_NE(piece->bin_num, kInvalidBinNum);
   CHECK_GT(bins_.at(piece->bin_num).pieces.erase(piece), 0);
   piece->bin_num = kInvalidBinNum;
 }
 
-template<typename ThreadGuard>
-typename BinAllocator<ThreadGuard>::Piece* BinAllocator<ThreadGuard>::AllocatePiece() {
+template<typename ThreadLock>
+typename BinAllocator<ThreadLock>::Piece* BinAllocator<ThreadLock>::AllocatePiece() {
   if (recycle_piece_list_) {
     Piece* ret = recycle_piece_list_;
     recycle_piece_list_ = recycle_piece_list_->next;
@@ -205,8 +202,8 @@ typename BinAllocator<ThreadGuard>::Piece* BinAllocator<ThreadGuard>::AllocatePi
   }
 }
 
-template<typename ThreadGuard>
-void BinAllocator<ThreadGuard>::DeallocatePiece(Piece* piece) {
+template<typename ThreadLock>
+void BinAllocator<ThreadLock>::DeallocatePiece(Piece* piece) {
   piece->ptr = nullptr;
   piece->size = 0;
   piece->bin_num = kInvalidBinNum;
@@ -216,21 +213,21 @@ void BinAllocator<ThreadGuard>::DeallocatePiece(Piece* piece) {
   recycle_piece_list_ = piece;
 }
 
-template<typename ThreadGuard>
-void BinAllocator<ThreadGuard>::MarkPiece(Piece* piece) {
+template<typename ThreadLock>
+void BinAllocator<ThreadLock>::MarkPiece(Piece* piece) {
   CHECK_NOTNULL(piece->ptr);
   CHECK(ptr2piece_.emplace(piece->ptr, piece).second);
 }
-template<typename ThreadGuard>
-void BinAllocator<ThreadGuard>::UnMarkPiece(Piece* piece) {
+template<typename ThreadLock>
+void BinAllocator<ThreadLock>::UnMarkPiece(Piece* piece) {
   CHECK_NOTNULL(piece->ptr);
   auto it = ptr2piece_.find(piece->ptr);
   CHECK(it != ptr2piece_.end());
   ptr2piece_.erase(it);
 }
 
-template<typename ThreadGuard>
-typename BinAllocator<ThreadGuard>::Piece* BinAllocator<ThreadGuard>::FindPiece(
+template<typename ThreadLock>
+typename BinAllocator<ThreadLock>::Piece* BinAllocator<ThreadLock>::FindPiece(
     size_t aligned_size) {
   CHECK(IsAlignedSize(aligned_size, alignment_));
   for (int32_t bin_num = BinNum4BinSize(aligned_size); bin_num < kBinNumSize; ++bin_num) {
@@ -271,8 +268,8 @@ typename BinAllocator<ThreadGuard>::Piece* BinAllocator<ThreadGuard>::FindPiece(
   return nullptr;
 }
 
-template<typename ThreadGuard>
-void BinAllocator<ThreadGuard>::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
+template<typename ThreadLock>
+void BinAllocator<ThreadLock>::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
   CHECK(lhs->is_free);
   CHECK(rhs->is_free);
   CHECK(lhs->next == rhs);
@@ -286,8 +283,8 @@ void BinAllocator<ThreadGuard>::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) 
   DeallocatePiece(rhs);
 }
 
-template<typename ThreadGuard>
-Maybe<bool> BinAllocator<ThreadGuard>::AllocateBlockToExtendTotalMem(size_t aligned_size) {
+template<typename ThreadLock>
+Maybe<bool> BinAllocator<ThreadLock>::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   CHECK_OR_RETURN(IsAlignedSize(aligned_size, alignment_)) << "not aligned";
 
   size_t allocate_bytes = aligned_size;
@@ -327,8 +324,8 @@ Maybe<bool> BinAllocator<ThreadGuard>::AllocateBlockToExtendTotalMem(size_t alig
   return true;
 }
 
-template<typename ThreadGuard>
-bool BinAllocator<ThreadGuard>::DeallocateFreeBlockForGarbageCollection() {
+template<typename ThreadLock>
+bool BinAllocator<ThreadLock>::DeallocateFreeBlockForGarbageCollection() {
   size_t total_free_bytes = 0;
   HashSet<char*> free_block_ptrs;
   for (const auto& pair : mem_ptr2block_) {
@@ -381,9 +378,9 @@ bool BinAllocator<ThreadGuard>::DeallocateFreeBlockForGarbageCollection() {
   return total_free_bytes > 0;
 }
 
-template<typename ThreadGuard>
-Maybe<void> BinAllocator<ThreadGuard>::Allocate(char** mem_ptr, std::size_t size) {
-  auto thread_gurad = guard_->GetGuard();
+template<typename ThreadLock>
+Maybe<void> BinAllocator<ThreadLock>::Allocate(char** mem_ptr, std::size_t size) {
+  auto thread_guard = thread_lock_.Guard();
   if (size == 0) {
     *mem_ptr = nullptr;
     return Maybe<void>::Ok();
@@ -412,10 +409,10 @@ Maybe<void> BinAllocator<ThreadGuard>::Allocate(char** mem_ptr, std::size_t size
   return Maybe<void>::Ok();
 }
 
-template<typename ThreadGuard>
-void BinAllocator<ThreadGuard>::Deallocate(char* mem_ptr, std::size_t size) {
+template<typename ThreadLock>
+void BinAllocator<ThreadLock>::Deallocate(char* mem_ptr, std::size_t size) {
   if (mem_ptr == nullptr) { return; }
-  auto thread_gurad = guard_->GetGuard();
+  auto thread_guard = thread_lock_.Guard();
 
   auto it = ptr2piece_.find(mem_ptr);
   CHECK(it != ptr2piece_.end()) << "Error! : Try deallocate mem_ptr non-existent. mem ptr = "

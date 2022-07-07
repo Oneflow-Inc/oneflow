@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class CudaBackendAllocator final : public Allocator {
+class CudaBackendAllocator final : public CachingAllocator {
  public:
   explicit CudaBackendAllocator(int64_t device_id) : device_id_(device_id) {}
   ~CudaBackendAllocator() override = default;
@@ -31,6 +31,7 @@ class CudaBackendAllocator final : public Allocator {
   Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
   void DeviceReset() override;
+  void Shrink() override {};
 
  private:
   int64_t device_id_;
@@ -73,9 +74,8 @@ TEST(CudaBinAllocator, cuda_allocator) {
         << "CudaBinAllocator Test: Skip because of allocator mem bytes less than 50MiB in GPU 0";
     return;
   }
-  std::unique_ptr<Allocator> allo(new BinAllocator<SingleThreadGuard>(
-      kCudaMemAllocAlignSize, std::make_unique<CudaBackendAllocator>(0),
-      std::make_unique<SingleThreadGuard>()));
+  std::unique_ptr<Allocator> allo(new BinAllocator<ThreadSafeLock>(
+      kCudaMemAllocAlignSize, std::make_unique<CudaBackendAllocator>(0)));
   Allocator* a = allo.get();
   std::vector<char*> ptrs;
   for (int i = 0; i < 512; ++i) {

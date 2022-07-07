@@ -44,7 +44,7 @@ class EpDeviceCtx : public DeviceCtx {
   }
 
   EpDeviceCtx(Symbol<Device> device,
-              std::unique_ptr<BinAllocator<ThreadSafeGuard>>&& backend_allocator)
+              std::unique_ptr<BinAllocator<ThreadSafeLock>>&& backend_allocator)
       : DeviceCtx(),
         device_(device),
         ep_event_provier_(),
@@ -87,7 +87,7 @@ class EpDeviceCtx : public DeviceCtx {
   std::unique_ptr<EpEventProvider> ep_event_provier_;
   mutable std::shared_ptr<ep::Device> ep_device_;
   mutable ep::Stream* ep_stream_;
-  std::unique_ptr<BinAllocator<ThreadSafeGuard>> ep_allocator_;
+  std::unique_ptr<BinAllocator<ThreadSafeLock>> ep_allocator_;
 };
 
 }  // namespace vm

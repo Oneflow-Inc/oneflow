@@ -25,38 +25,19 @@ limitations under the License.
 namespace oneflow {
 
 namespace vm {
-class ThreadSafeGuard final {
+class ThreadSafeLock final {
  public:
-  ThreadSafeGuard() = default;
-  ~ThreadSafeGuard() = default;
-  OF_DISALLOW_COPY_AND_MOVE(ThreadSafeGuard);
+  ThreadSafeLock() = default;
+  ~ThreadSafeLock() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ThreadSafeLock);
 
-  std::unique_lock<std::mutex> GetGuard() {
-    std::unique_lock<std::mutex> lock(mutex4backend_allocator_);
+  std::unique_lock<std::mutex> Guard() {
+    std::unique_lock<std::mutex> lock(mutex4guard);
     return lock;
   }
 
  private:
-  std::mutex mutex4backend_allocator_;
-};
-
-class SingleThreadGuard final {
- public:
-  SingleThreadGuard() : accessed_thread_id_(std::this_thread::get_id()) {}
-  ~SingleThreadGuard() = default;
-  OF_DISALLOW_COPY_AND_MOVE(SingleThreadGuard);
-
-  bool GetGuard() {
-    std::unique_lock<std::mutex> lock(mutex4accessed_thread_id_);
-    CHECK(accessed_thread_id_ == std::this_thread::get_id());
-    return true;
-  }
-
- private:
-  void CheckUniqueThreadAccess();
-
-  std::thread::id accessed_thread_id_;
-  std::mutex mutex4accessed_thread_id_;
+  std::mutex mutex4guard;
 };
 
 }  // namespace vm
