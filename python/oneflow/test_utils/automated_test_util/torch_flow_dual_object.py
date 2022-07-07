@@ -292,13 +292,13 @@ def get_fake_program_more_detail(oneflow, mode, func, args=None, kwargs=None):
     print("\n\n")
 
 
-def get_global_test_device(oneflow_args,oneflow_kwargs):
-    if(isinstance(oneflow_args[0],tuple)):
-        return oneflow_args[0][0].placement.type
-    elif(isinstance(oneflow_args[0],flow.Tensor)):
+# NOTE(lixiang): When the graph global test is executed, the func is used to get the device type.
+#   There is no oneflow_kwargs["device"] case for graph global test.
+def get_global_test_device(oneflow_args):
+    if isinstance(oneflow_args[0], flow.Tensor):
         return oneflow_args[0].placement.type
-    else :
-        return oneflow_kwargs["device"]
+    else:
+        return oneflow_args[0][0].placement.type
 
 
 # NOTE(lixiang): When oneflow is of type nn.Module, build the following Graph for testing.
@@ -391,7 +391,8 @@ def get_functional_graph_res(
         elif oneflow.__name__ == "Parameter":
             # nn.Graph donot deal with Parameter creation.
             test_g_res = oneflow_res
-        elif is_global() and get_global_test_device(oneflow_args,oneflow_kwargs) == "cpu":
+        # When doing the global op test, get_global_test_device() will be executed, and temporarily skipping the graph autotest on cpu device.
+        elif is_global() and (get_global_test_device(oneflow_args) == "cpu"):
             test_g_res = oneflow_res
         else:
             test_g = TestGraphOfFunctional()
@@ -433,8 +434,12 @@ def get_tensor_graph_res(
             return graph_tensor_oneflow(*tensor_graph_args, **tensor_graph_kwargs)
 
     try:
-        test_g = TestGraphOfTensorMethod()
-        test_g_res = test_g()
+        # Set test_g_res = None, check_eager_graph_tensor will return True, the purpose is to temporarily skip the Graph global test on cpu.
+        if is_global() and oneflow.placement.type == "cpu":
+            test_g_res = None
+        else:
+            test_g = TestGraphOfTensorMethod()
+            test_g_res = test_g()
     except Exception as e:
         if not verbose:
             get_fake_program_more_detail(
@@ -490,8 +495,12 @@ def oneflow_eager_run_with_graph_check(
             test_g = get_module_graph_test(
                 graph_train_oneflow, oneflow, verbose, oneflow_args, *args
             )
-            # When testing module methods, kwargs are not considered.
-            test_g_res = test_g(*graph_args)
+            # When doing the global op test, get_global_test_device() will be executed, and temporarily skipping the graph autotest on cpu device.
+            if is_global() and (get_global_test_device(oneflow_args) == "cpu"):
+                test_g_res = oneflow_res
+            else:
+                # When testing module methods, kwargs are not considered.
+                test_g_res = test_g(*graph_args)
         elif oneflow.__name__ in ignore_apis_list:
             find_check_module_func = False
         # 1. "oneflow.nn.modules" not in oneflow.__module__: For avoid run nn.Module branch graph test, like fold op call Fold Module actually.
