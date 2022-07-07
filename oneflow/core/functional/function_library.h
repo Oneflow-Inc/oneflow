@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/functional/packed_functor.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/framework/tensor_methods.h"
+#include "oneflow/core/common/throw.h"
 
 namespace oneflow {
 namespace one {
