@@ -103,7 +103,7 @@ namespace oneflow {
   }
   if (dynamic_dim_size == 0) {
     CHECK_EQ_OR_RETURN(static_dim_size, in_desc.shape().At(axis))
-        << Error::RuntimeError() << "In non dynamic shape situation, the total size of like ("
+        << Error::RuntimeError() << "In non-dynamic shape situation, the total size of like ("
         << static_dim_size << ") should be equal to the size of input (" << in_desc.shape().At(axis)
         << ") at dimension " << axis;
   } else {
