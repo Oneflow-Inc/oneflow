@@ -90,12 +90,8 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
                                     const std::vector<std::shared_ptr<one::Tensor>>& gradients) {
     one::TensorTuple variable_tuple(variables.size());
     one::TensorTuple gradient_tuple(gradients.size());
-    for (int i = 0; i < variables.size(); ++i) {
-      variable_tuple[i] = variables[i];
-    }
-    for (int i = 0; i < gradients.size(); ++i) {
-      gradient_tuple[i] = gradients[i];
-    }
+    for (int i = 0; i < variables.size(); ++i) { variable_tuple[i] = variables[i]; }
+    for (int i = 0; i < gradients.size(); ++i) { gradient_tuple[i] = gradients[i]; }
     return MarkVariableGradients(variable_tuple, gradient_tuple);
   });
   m.def("ConvertJobToTosaIR", [](const std::string& serialized_job) -> Maybe<std::string> {

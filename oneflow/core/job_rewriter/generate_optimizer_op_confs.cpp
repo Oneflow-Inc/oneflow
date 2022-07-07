@@ -109,6 +109,7 @@ Maybe<void> GenerateOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx) const {
   const JobBuilder* old_job_builder = job_builder.get();
   job_builder = JUST(WithCalculationPassScope(kOptimizerPass, job, [&]() -> Maybe<void> {
     CHECK(old_job_builder == job_builder.get());  // Check this lambda never been async called
+    AddDiffHalf2FloatCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     AddDiffStaticShapeCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     AddDiffParallelCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     JUST(ScaleModelDiffByLossInstanceNum(op_graph, job_builder.get(), &model_lbi2model_diff_lbi));

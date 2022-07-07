@@ -29,6 +29,8 @@ Maybe<void> MakePredicatorNeedBackwardOp(const OpGraph& op_graph,
 Maybe<void> AutoGrad(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                      HashMap<LogicalBlobId, LogicalBlobId>* out_lbi2out_diff_lbi,
                      OpBlobArgPairs* identical_sbp_oba_pairs);
+void AddDiffHalf2FloatCast(const OpGraph& op_graph, JobBuilder* job_builder,
+                           HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
                          HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void AddDiffStaticShapeCast(const OpGraph& op_graph, JobBuilder* job_builder,

@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/dynamic_loss_scale_job_pass_state.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/job_rewriter/clip_by_global_norm_job_pass_state.h"
+#include "oneflow/core/job_rewriter/pass_util.h"
 
 namespace oneflow {
 
@@ -1167,6 +1168,28 @@ void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
     job_builder->AddOps(model_op_node->parallel_desc().parallel_conf(),
                         {parallel_cast_op.op_conf()});
     diff_lbi = GenLogicalBlobId(parallel_cast_op.output("out", 0));
+  }
+}
+
+void AddDiffHalf2FloatCast(const OpGraph& op_graph, JobBuilder* job_builder,
+                           HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
+  for (auto& pair : *lbi2diff_lbi) {
+    LogicalBlobId& diff_lbi = pair.second;
+    auto data_type = op_graph.GetLogicalBlobDesc(diff_lbi).data_type();
+    if (data_type != DataType::kFloat) {
+      std::string lbn = GenLogicalBlobName(diff_lbi);
+      const OpNode* op_node = op_graph.OpNode4OpName(diff_lbi.op_name());
+      int64_t scope_symbol_id = op_node->op().op_conf().scope_symbol_id();
+      auto cast_op = user_op::UserOpConfWrapperBuilder(ReplaceSlashToDash4Lbn(lbn) + "-cast_h2f")
+                         .Op("cast")
+                         .Input("in", lbn)
+                         .Output("out")
+                         .Attr<DataType>("dtype", DataType::kFloat)
+                         .ScopeSymbolId(scope_symbol_id)
+                         .Build();
+      job_builder->AddOps(op_node->parallel_desc().parallel_conf(), {cast_op.op_conf()});
+      diff_lbi = GenLogicalBlobId(cast_op.output("out", 0));
+    }
   }
 }
 
