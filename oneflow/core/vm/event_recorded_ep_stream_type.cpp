@@ -61,13 +61,13 @@ bool EventRecordedEpStreamType::QueryInstructionStatusDone(
   return EpOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer())->done();
 }
 
-void EventRecordedEpStreamType::Compute(Instruction* instruction) const {
+void EventRecordedEpStreamType::Run(Instruction* instruction) const {
   OF_PROFILER_RANGE_GUARD("S:" + instruction->DebugName());
   auto* stream = instruction->mut_stream();
   auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());  // NOLINT
   auto* ep_device = ep_device_ctx->GetOrCreateEpDevice();
   ep_device->SetAsActiveDevice();
-  instruction->instruction_type().Compute(instruction);
+  instruction->Compute();
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer();
   EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(ep_device_ctx);
 }

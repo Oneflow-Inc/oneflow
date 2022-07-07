@@ -47,9 +47,7 @@ bool LazyJobStreamType::QueryInstructionStatusDone(
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer())->done();
 }
 
-void LazyJobStreamType::Compute(Instruction* instruction) const {
-  instruction->instruction_type().Compute(instruction);
-}
+void LazyJobStreamType::Run(Instruction* instruction) const { instruction->Compute(); }
 
 }  // namespace vm
 }  // namespace oneflow

@@ -62,6 +62,7 @@ class FusePhyInstrOperand : public PhyInstrOperand {
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
   InstructionList* mut_instruction_list() { return &instruction_list_; }
+  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {}
 
  private:
   InstructionList instruction_list_;
