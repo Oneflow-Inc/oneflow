@@ -43,8 +43,8 @@ namespace oneflow {
   const std::string& direction = op_conf.attr<std::string>("direction");
   CHECK_OR_RETURN(direction == "ASCENDING" || direction == "DESCENDING")
       << Error::RuntimeError()
-      << "Expected the input direction parameter value is \"ASCENDING\" or \"DESCENDING\", "
-      << "but found the value is " << direction;
+      << "The input direction parameter value is expected to be ASCENDING or DESCENDING, "
+      << "but found " << direction;
   return Maybe<void>::Ok();
 }
 

@@ -65,7 +65,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> SoftmaxGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("y", 0))
-      << Error::TypeError() << "Expected dy and y have same dtype, but found "
+      << Error::TypeError() << "dy and y are expected to have the same dtype, but found "
       << DataType_Name(ctx->InputDType("dy", 0)) << " and "
       << DataType_Name(ctx->InputDType("y", 0));
   *ctx->OutputDType("dx", 0) = ctx->InputDType("y", 0);

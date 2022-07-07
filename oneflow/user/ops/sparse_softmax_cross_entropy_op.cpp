@@ -25,7 +25,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
   CHECK_EQ_OR_RETURN(prediction_desc.is_dynamic(), label_desc.is_dynamic())
       << Error::RuntimeError()
-      << "Expected both prediction and label to be dynamic or neither, but found "
+      << "prediction and label are expected to have the same dynamic property, but found "
       << prediction_desc.is_dynamic() << " and " << label_desc.is_dynamic();
   CHECK_GE_OR_RETURN(prediction_desc.shape().NumAxes(), 2)
       << Error::RuntimeError()
@@ -34,7 +34,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   const int64_t num_out_axes = prediction_desc.shape().NumAxes() - 1;
   CHECK_EQ_OR_RETURN(label_desc.shape().NumAxes(), num_out_axes)
       << Error::RuntimeError()
-      << "Expected the dimension of label is one smaller than that of prediction, but got "
+      << "The dimension of label is expected to be less than that of prediction by 1, but found "
       << label_desc.shape().NumAxes() << " and " << num_out_axes;
   FOR_RANGE(int64_t, i, 0, num_out_axes) {
     CHECK_EQ_OR_RETURN(prediction_desc.shape().At(i), label_desc.shape().At(i))
@@ -56,7 +56,7 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   CHECK_EQ_OR_RETURN(prob_desc.is_dynamic(), label_desc.is_dynamic())
       << Error::RuntimeError()
-      << "Expected both prob and label to be dynamic or neither, but found "
+      << "prob and label are expected to have the same dynamic property, but found "
       << prob_desc.is_dynamic() << " and " << label_desc.is_dynamic();
   CHECK_GE_OR_RETURN(prob_desc.shape().NumAxes(), 2)
       << Error::RuntimeError() << "The dimension of prob must greater than or equal to 2, but got "
@@ -64,7 +64,7 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   const int64_t num_out_axes = prob_desc.shape().NumAxes() - 1;
   CHECK_EQ_OR_RETURN(label_desc.shape().NumAxes(), num_out_axes)
       << Error::RuntimeError()
-      << "Expected the dimension of label is one smaller than that of prediction, but got "
+      << "The dimension of label is expected to be less than that of prediction by 1, but found "
       << label_desc.shape().NumAxes() << " and " << num_out_axes;
   FOR_RANGE(int64_t, i, 0, num_out_axes) {
     CHECK_EQ_OR_RETURN(prob_desc.shape().At(i), label_desc.shape().At(i))
@@ -97,7 +97,7 @@ Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
       << DataType_Name(label_desc.data_type());
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   CHECK_EQ_OR_RETURN(dy_desc.data_type(), prob_desc.data_type())
-      << Error::TypeError() << "Expected dy and prob have same dtype, but found "
+      << Error::TypeError() << "dy and prob are expected to have the same dtype, but found "
       << DataType_Name(dy_desc.data_type()) << " and " << DataType_Name(prob_desc.data_type());
   *ctx->OutputDType("prediction_diff", 0) = prob_desc.data_type();
   return Maybe<void>::Ok();

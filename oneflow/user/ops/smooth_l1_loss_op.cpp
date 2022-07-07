@@ -31,13 +31,13 @@ namespace oneflow {
   const auto& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_EQ_OR_RETURN(input_desc.is_dynamic(), target_desc.is_dynamic())
       << Error::RuntimeError()
-      << "Expected both input and target to be dynamic or neither, but found "
+      << "input and target are expected to have the same dynamic property, but found "
       << input_desc.is_dynamic() << " and " << target_desc.is_dynamic();
   CHECK_EQ_OR_RETURN(input_desc.shape(), target_desc.shape())
       << Error::RuntimeError() << "The size of input " << input_desc.shape()
       << " must match the size of target " << target_desc.shape();
   CHECK_GE_OR_RETURN(ctx->Attr<float>("beta"), 0)
-      << Error::RuntimeError() << "beta must be greater than or equal to 0, but found to be "
+      << Error::RuntimeError() << "beta must be greater than or equal to 0, but found it to be "
       << ctx->Attr<float>("beta");
 
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
@@ -53,7 +53,7 @@ namespace oneflow {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_EQ_OR_RETURN(input_desc.data_type(), target_desc.data_type())
-      << Error::TypeError() << "Expected input and target have same dtype, but found "
+      << Error::TypeError() << "input and target are expected to have the same dtype, but found "
       << DataType_Name(input_desc.data_type()) << " and " << DataType_Name(target_desc.data_type());
 
   *ctx->OutputDType("out", 0) = ctx->InputDType("input", 0);
@@ -86,7 +86,7 @@ namespace oneflow {
   const auto& dy_desc = ctx->InputTensorDesc("dy", 0);
   CHECK_EQ_OR_RETURN(input_desc.is_dynamic(), target_desc.is_dynamic())
       << Error::RuntimeError()
-      << "Expected both input and target to be dynamic or neither, but found "
+      << "input and target are expected to have the same dynamic property, but found "
       << input_desc.is_dynamic() << " and " << target_desc.is_dynamic();
   CHECK_EQ_OR_RETURN(input_desc.shape(), target_desc.shape())
       << Error::RuntimeError() << "The size of input " << input_desc.shape()
@@ -96,7 +96,7 @@ namespace oneflow {
       << " must match the size of target " << target_desc.shape();
 
   CHECK_GE_OR_RETURN(ctx->Attr<float>("beta"), 0)
-      << Error::RuntimeError() << "beta must be greater than or equal to 0, but found to be "
+      << Error::RuntimeError() << "beta must be greater than or equal to 0, but found it to be "
       << ctx->Attr<float>("beta");
 
   user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
@@ -112,7 +112,7 @@ namespace oneflow {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_EQ_OR_RETURN(input_desc.data_type(), target_desc.data_type())
-      << Error::TypeError() << "Expected input and target have same dtype, but found "
+      << Error::TypeError() << "input and target are expected to have the same dtype, but found "
       << DataType_Name(input_desc.data_type()) << " and " << DataType_Name(target_desc.data_type());
 
   *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
