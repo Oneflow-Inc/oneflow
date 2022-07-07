@@ -294,7 +294,8 @@ class StaticAllocationEmbeddingState final : public EmbeddingState {
         embedding_shuffle_cur_rank_embeddings_(nullptr),
         embeding_update_unique_embeddings_(nullptr),
         embeding_update_updated_unique_embeddings_(nullptr),
-        embedding_put_unique_embeddings_(nullptr) {
+        embedding_put_unique_embeddings_(nullptr),
+        embedding_fused_update_put_unique_embeddings_(nullptr) {
     id_statistics_vec_.resize(kRingBufferSize);
   }
   ~StaticAllocationEmbeddingState() override = default;
