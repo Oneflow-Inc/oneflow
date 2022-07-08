@@ -238,33 +238,33 @@ void ScaleModelDiffByConstantLossInstanceNum(const OpGraph& op_graph, JobBuilder
   }
 }
 
-Maybe<void> TryMirroredCastTotalLossInstanceNum(
+Maybe<void> TryLocalCastTotalLossInstanceNum(
     JobBuilder* job_builder, const HashMap<LogicalBlobId, OpNode*>& loss_lbi2loss_node,
     LogicalBlobId* total_loss_instance_num_lbi) {
-  auto IsMirrored4Lbi = [](const LogicalBlobId& lbi, OpNode* op_node) -> Maybe<bool> {
+  auto IsLocal4Lbi = [](const LogicalBlobId& lbi, OpNode* op_node) -> Maybe<bool> {
     const auto& obn = *JUST(op_node->op().obn4lbi(lbi));
-    const auto& opt_mirrored_parallel = *JUST(op_node->op().OptMirroredParallel4BnInOp(obn));
-    return opt_mirrored_parallel.has_mirrored_parallel();
+    const auto& opt_local_parallel = *JUST(op_node->op().OptLocalParallel4BnInOp(obn));
+    return opt_local_parallel.has_local_parallel();
   };
   const auto& begin = *loss_lbi2loss_node.begin();
-  bool is_mirrored = JUST(IsMirrored4Lbi(begin.first, begin.second));
+  bool is_local = JUST(IsLocal4Lbi(begin.first, begin.second));
   for (const auto& pair : loss_lbi2loss_node) {
-    bool is_other_mirrored = JUST(IsMirrored4Lbi(pair.first, pair.second));
-    CHECK_EQ_OR_RETURN(is_mirrored, is_other_mirrored);
+    bool is_other_local = JUST(IsLocal4Lbi(pair.first, pair.second));
+    CHECK_EQ_OR_RETURN(is_local, is_other_local);  // NOLINT
   }
-  if (is_mirrored) {
+  if (is_local) {
     OperatorConf op_conf;
-    op_conf.set_name("System-Cast-Mirrored-TotalLossInstanceNum" + NewUniqueId());
-    CastFromMirroredOpConf* cast_from_mirrored = op_conf.mutable_cast_from_mirrored_conf();
-    cast_from_mirrored->set_in(GenLogicalBlobName(*total_loss_instance_num_lbi));
-    cast_from_mirrored->set_out("out");
-    cast_from_mirrored->mutable_sbp_parallel()->mutable_partial_sum_parallel();
+    op_conf.set_name("System-Cast-Local-TotalLossInstanceNum" + NewUniqueId());
+    CastFromLocalOpConf* cast_from_local = op_conf.mutable_cast_from_local_conf();
+    cast_from_local->set_in(GenLogicalBlobName(*total_loss_instance_num_lbi));
+    cast_from_local->set_out("out");
+    cast_from_local->mutable_sbp_parallel()->mutable_partial_sum_parallel();
     const auto& parallel_conf = JUST(job_builder->ParallelConf4Lbi(*total_loss_instance_num_lbi));
     int64_t scope_symbol_id = 0;
     {
       const auto& opt_scope_symbol_id = JUST(MakeInitialScope(job_builder->job().job_conf(),
                                                               SymbolOf(ParallelDesc(parallel_conf)),
-                                                              /* is_mirrored */ false))
+                                                              /* is_local */ false))
                                             ->symbol_id();
       CHECK_OR_RETURN(opt_scope_symbol_id.has_value())
           << Error::RuntimeError() << "symbol_id not initialized";
@@ -322,7 +322,7 @@ void ScaleModelDiffByDynamicLossInstanceNum(
       const auto& opt_scope_symbol_id =
           CHECK_JUST(MakeInitialScope(job_builder->job().job_conf(),
                                       SymbolOf(ParallelDesc(parallel_conf)),
-                                      /* is_mirrored */ false))
+                                      /* is_local */ false))
               ->symbol_id();
       if (!opt_scope_symbol_id.has_value()) { THROW(RuntimeError) << "symbol_id not initialized"; }
       scope_symbol_id = CHECK_JUST(opt_scope_symbol_id);
@@ -335,8 +335,8 @@ void ScaleModelDiffByDynamicLossInstanceNum(
   } else {
     UNIMPLEMENTED();
   }
-  CHECK_JUST(TryMirroredCastTotalLossInstanceNum(job_builder, loss_lbi2loss_node,
-                                                 &total_loss_instance_num_lbi));
+  CHECK_JUST(TryLocalCastTotalLossInstanceNum(job_builder, loss_lbi2loss_node,
+                                              &total_loss_instance_num_lbi));
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;
@@ -422,7 +422,7 @@ void ForEachAggregatedParamGroup(
 int64_t MakeScopeSymbolId(const JobConfigProto& job_conf, const ParallelConf& parallel_conf) {
   const auto& opt_scope_symbol_id =
       CHECK_JUST(MakeInitialScope(job_conf, SymbolOf(ParallelDesc(parallel_conf)),
-                                  /* is_mirrored */ false))
+                                  /* is_local */ false))
           ->symbol_id();
   if (!opt_scope_symbol_id.has_value()) { THROW(RuntimeError) << "symbol_id not initialized"; }
   return CHECK_JUST(opt_scope_symbol_id);
