@@ -334,10 +334,8 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
               ShrinkStream(stream);
             } else {
               auto* running_list = current_stream->mut_running_instruction_list();
-              if (running_list->size() > 0) {
-                // buzy loop to make sure running instructions all done.
-                while (running_list->Last() && !running_list->Last()->Done()) {}
-              }
+              // buzy loop to make sure running instructions all done.
+              while (!running_list->empty() && !running_list->Last()->Done()) {}
               ShrinkStream(current_stream);
             }
           }
