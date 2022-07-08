@@ -58,12 +58,7 @@ class NcclSendRecvBoxingKernel final : public Kernel {
       device_set.emplace(std::make_pair(machine_id, device_id));
     }
     EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
-    ncclComm_t comm;
-    if (has_independent_stream_) {
-      comm = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
-    } else {
-      comm = comm_mgr->GetCommForDevice(device_set);
-    }
+    ncclComm_t comm = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
     comm_.reset(new Comm(comm));
   }
 
@@ -75,7 +70,6 @@ class NcclSendRecvBoxingKernel final : public Kernel {
   void VirtualKernelInit(KernelContext* ctx) override;
   void ForwardDataContent(KernelContext* ctx) const override;
 
-  bool has_independent_stream_;
   std::string stream_name_;
   ParallelConf parallel_conf_;
   mutable std::unique_ptr<Comm> comm_;
@@ -187,8 +181,11 @@ void NcclSendRecvBoxingKernel::ForwardDataContent(KernelContext* ctx) const {
 
 void NcclSendRecvBoxingKernel::VirtualKernelInit(KernelContext* ctx) {
   const NcclSendRecvBoxingOpConf& conf = this->op_conf().nccl_send_recv_boxing_conf();
-  has_independent_stream_ = this->op_conf().has_stream_name_hint();
-  if (has_independent_stream_) { stream_name_ = this->op_conf().stream_name_hint(); }
+  if (this->op_conf().has_stream_name_hint()) { 
+    stream_name_ = this->op_conf().stream_name_hint(); 
+  } else {
+    stream_name_ = EagerNcclCommMgr::kDefaultStreamName;
+  }
   parallel_conf_ = conf.parallel_conf();
   const int64_t parallel_id = this->kernel_conf().parallel_ctx().parallel_id();
   ParallelDesc parallel_desc(parallel_conf_);

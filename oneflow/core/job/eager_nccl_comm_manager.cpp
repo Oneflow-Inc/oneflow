@@ -169,14 +169,18 @@ void EagerNcclCommMgr::CreateCommFromPlan(const Plan& plan) {
       continue;
     }
     const auto& op_conf = op_attr->op_conf();
-    if (!op_conf.has_user_conf()) { continue; }
-    if (!NeedUnifiedNcclCommInit(op_conf.user_conf().op_type_name())) { continue; }
-
-    if (!op_attr->has_parallel_conf_signature()) { continue; }
-    if (!op_attr->parallel_conf_signature().has_op_parallel_conf()) { continue; }
-
+    ParallelConf parallel_conf;
+    if(op_conf.has_nccl_send_recv_boxing_conf()) {
+      parallel_conf = op_conf.nccl_send_recv_boxing_conf().parallel_conf();
+    } else {
+      if (!op_conf.has_user_conf()) { continue; }
+      if (!NeedUnifiedNcclCommInit(op_conf.user_conf().op_type_name())) { continue; }
+      if (!op_attr->has_parallel_conf_signature()) { continue; }
+      if (!op_attr->parallel_conf_signature().has_op_parallel_conf()) { continue; }
+      parallel_conf = op_attr->parallel_conf_signature().op_parallel_conf();
+    }
     std::vector<std::pair<int64_t, int64_t>> device_vec;
-    ParallelDesc parallel_desc(op_attr->parallel_conf_signature().op_parallel_conf());
+    ParallelDesc parallel_desc(parallel_conf);
     for (int64_t parallel_id = 0; parallel_id < parallel_desc.parallel_num(); ++parallel_id) {
       int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
       int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
