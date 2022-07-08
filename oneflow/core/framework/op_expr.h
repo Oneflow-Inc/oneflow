@@ -251,8 +251,8 @@ using FetchOutputOpExpr = BuiltinOpExprImpl<FetchOutputOpConf>;
 using ImageDecoderRandomCropResizeOpExpr = BuiltinOpExprImpl<ImageDecoderRandomCropResizeOpConf>;
 
 using VariableOpExpr = BuiltinOpExprImpl<VariableOpConf>;
-using CastToMirroredOpExpr = BuiltinOpExprImpl<CastToMirroredOpConf>;
-using CastFromMirroredOpExpr = BuiltinOpExprImpl<CastFromMirroredOpConf>;
+using CastToLocalOpExpr = BuiltinOpExprImpl<CastToLocalOpConf>;
+using CastFromLocalOpExpr = BuiltinOpExprImpl<CastFromLocalOpConf>;
 using DistributeSplitOpExpr = BuiltinOpExprImpl<DistributeSplitOpConf>;
 using DistributeCloneOpExpr = BuiltinOpExprImpl<DistributeCloneOpConf>;
 using DistributeConcatOpExpr = BuiltinOpExprImpl<DistributeConcatOpConf>;

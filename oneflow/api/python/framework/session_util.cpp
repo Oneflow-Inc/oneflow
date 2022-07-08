@@ -24,12 +24,12 @@ namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Session, std::shared_ptr<Session>>(m, "Session")
       .def_property_readonly("id", &Session::id)
-      .def("push_mirrored_strategy_enabled", &Session::PushMirroredStrategyEnabled)
-      .def("pop_mirrored_strategy_enabled", &Session::PopMirroredStrategyEnabled)
-      .def("is_mirrored_strategy_enabled", &Session::IsMirroredStrategyEnabled)
+      .def("push_local_strategy_enabled", &Session::PushLocalStrategyEnabled)
+      .def("pop_local_strategy_enabled", &Session::PopLocalStrategyEnabled)
+      .def("is_local_strategy_enabled", &Session::IsLocalStrategyEnabled)
       .def("is_consistent_strategy_enabled", &Session::IsConsistentStrategyEnabled)
-      .def("is_mirrored_strategy_enabled_stack_size",
-           [](const Session* sess) { return sess->is_mirrored_strategy_enabled_stack()->size(); });
+      .def("is_local_strategy_enabled_stack_size",
+           [](const Session* sess) { return sess->is_local_strategy_enabled_stack()->size(); });
 
   m.def("GetDefaultSessionId", &GetDefaultSessionId);
   m.def("RegsiterSession", &RegsiterSession);
