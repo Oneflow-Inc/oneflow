@@ -26,7 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/autograd/autograd_engine.h"
-#include "oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.h"
+#include "oneflow/core/framework/op_interpreter/eager_local_op_interpreter.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -42,9 +42,9 @@ Maybe<void> Tensor::BorrowTensorName(const Tensor* other) const {
   return Maybe<void>::Ok();
 }
 
-Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
-  CHECK_OR_RETURN(is_local());
-  return std::dynamic_pointer_cast<MirroredTensor>(
+Maybe<LocalTensor> StaticZerosTensor::AsLocalTensor() {
+  CHECK_OR_RETURN(is_local());  // NOLINT
+  return std::dynamic_pointer_cast<LocalTensor>(
       JUST(functional::Constant(*shape_, Scalar(0), CHECK_JUST(DType::Get(dtype_)), device_)));
 }
 
@@ -59,52 +59,52 @@ std::shared_ptr<Tensor> Parameter::pin_memory() const {
   return CHECK_JUST(functional::PinMemory(tensor));
 }
 
-/* static */ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
-    const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const Stride>& stride,
-    DataType dtype, const Symbol<Device>& device, bool is_lazy, bool requires_grad, bool is_leaf) {
+/* static */ Maybe<LocalTensor> LocalTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
+                                                        const std::shared_ptr<const Stride>& stride,
+                                                        DataType dtype,
+                                                        const Symbol<Device>& device, bool is_lazy,
+                                                        bool requires_grad, bool is_leaf) {
   const auto& tensor_meta =
-      std::make_shared<MirroredTensorMeta>(std::make_shared<Shape>(*shape), dtype, device);
+      std::make_shared<LocalTensorMeta>(std::make_shared<Shape>(*shape), dtype, device);
   if (is_lazy) {
-    const auto& impl =
-        std::make_shared<LazyMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
-    return std::make_shared<MirroredTensor>(impl);
+    const auto& impl = std::make_shared<LazyLocalTensorImpl>(tensor_meta, requires_grad, is_leaf);
+    return std::make_shared<LocalTensor>(impl);
   } else {
-    const auto& impl =
-        std::make_shared<EagerMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
-    return std::make_shared<MirroredTensor>(impl);
+    const auto& impl = std::make_shared<EagerLocalTensorImpl>(tensor_meta, requires_grad, is_leaf);
+    return std::make_shared<LocalTensor>(impl);
   }
 }
 
-bool MirroredTensor::is_cuda() const { return CHECK_JUST(device())->type() == "cuda"; }
+bool LocalTensor::is_cuda() const { return CHECK_JUST(device())->type() == "cuda"; }
 
-Maybe<Tensor> MirroredTensor::detach() const {
-  std::shared_ptr<Tensor> tensor = std::make_shared<MirroredTensor>(JUST(impl_->detach()));
+Maybe<Tensor> LocalTensor::detach() const {
+  std::shared_ptr<Tensor> tensor = std::make_shared<LocalTensor>(JUST(impl_->detach()));
   if (this->is_lazy()) { JUST(tensor->BorrowTensorName(this)); }
   return tensor;
 }
 
-std::shared_ptr<Tensor> MirroredTensor::contiguous() const {
+std::shared_ptr<Tensor> LocalTensor::contiguous() const {
   std::shared_ptr<Tensor> tensor = std::const_pointer_cast<Tensor>(shared_from_this());
   if (tensor->is_contiguous()) { return tensor; }
   return CHECK_JUST(functional::ToContiguous(tensor));
 }
 
-std::shared_ptr<Tensor> MirroredTensor::pin_memory() const {
+std::shared_ptr<Tensor> LocalTensor::pin_memory() const {
   std::shared_ptr<Tensor> tensor = std::const_pointer_cast<Tensor>(shared_from_this());
   return CHECK_JUST(functional::PinMemory(tensor));
 }
 
-Maybe<Tensor> MirroredTensor::clone() const {
+Maybe<Tensor> LocalTensor::clone() const {
   const auto& device_type = JUST(this->device())->type();
   int64_t device_id = JUST(this->device())->device_id();
   std::shared_ptr<Tensor> input = std::const_pointer_cast<Tensor>(shared_from_this());
-  const bool pin_memory = JUST(JUST(input->AsMirroredTensor())->is_pinned());
+  const bool pin_memory = JUST(JUST(input->AsLocalTensor())->is_pinned());
   return JUST(functional::Copy(input, device_type, device_id, /*pin_memory=*/pin_memory));
 }
 
-Maybe<void> MirroredTensor::set_data(const std::shared_ptr<Tensor>& other) {
+Maybe<void> LocalTensor::set_data(const std::shared_ptr<Tensor>& other) {
   CHECK_OR_RETURN(this->is_leaf()) << "Can only set leaf tensor's data.";
-  const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(JUST(other->detach()));
+  const auto& mirrored_tensor = std::dynamic_pointer_cast<LocalTensor>(JUST(other->detach()));
   CHECK_NOTNULL_OR_RETURN(mirrored_tensor)
       << "Can not set a global tensor to the data of a local tensor";
   bool old_requires_grad = requires_grad();

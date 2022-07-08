@@ -1130,6 +1130,47 @@ class FusedCrossFeatureInteractionV2GradFunctor {
   std::shared_ptr<OpExpr> v2_grad_op_;
 };
 
+class FusedMLPGradFunctor {
+ public:
+  FusedMLPGradFunctor() {
+#if CUDA_VERSION >= 11060
+    fused_op_.resize(kMaxInputCount /*the maximum number of layers*/);
+    for (int n = 1; n < fused_op_.size(); ++n) {
+      fused_op_[n] = CHECK_JUST(one::OpBuilder("cublas_fused_mlp_grad")
+                                    .Input("dy")
+                                    .Input("x")
+                                    .Input("weights", n)
+                                    .Input("cublas_aux", n)
+                                    .Input("hidden", n)
+                                    .Output("d_x")
+                                    .Output("d_biases", n)
+                                    .Output("d_weights", n)
+                                    .Build());
+    }
+#endif
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                                const std::shared_ptr<one::Tensor>& x, const TensorTuple& weights,
+                                const TensorTuple& cublas_aux, const TensorTuple& hidden) const {
+    const int64_t weight_size = weights.size();
+    TensorTuple input(2 + 3 * weight_size);
+    input[0] = dy;
+    input[1] = x;
+    std::copy(weights.begin(), weights.end(), input.begin() + 2);
+    std::copy(cublas_aux.begin(), cublas_aux.end(), input.begin() + 2 + weight_size);
+    std::copy(hidden.begin(), hidden.end(), input.begin() + 2 + 2 * weight_size);
+#if CUDA_VERSION >= 11060
+    return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_[weight_size], input);
+#endif
+    UNIMPLEMENTED_THEN_RETURN() << "Only Support in CUDA_VERSION >= 11060";
+  }
+
+ private:
+#if CUDA_VERSION >= 11060
+  std::vector<std::shared_ptr<OpExpr>> fused_op_;
+#endif
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1173,6 +1214,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "FusedCrossFeatureInteractionV1Grad");
   m.add_functor<impl::FusedCrossFeatureInteractionV2GradFunctor>(
       "FusedCrossFeatureInteractionV2Grad");
+  m.add_functor<impl::FusedMLPGradFunctor>("FusedMLPGrad");
   m.add_functor<impl::BinaryCrossEntropyWithLogitsReduceMeanLossGradFunctor>(
       "BinaryCrossEntropyWithLogitsReduceMeanLossGrad");
 };

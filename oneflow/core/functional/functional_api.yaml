@@ -987,6 +987,11 @@
     "Tensor (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation) => FusedMLP"
   bind_python: True
 
+- name: "fused_mlp_grad"
+  signature:
+    "TensorTuple (Tensor dy, Tensor x, TensorTuple weights, TensorTuple cublas_aux, TensorTuple hidden) => FusedMLPGrad"
+  bind_python: False
+
 - name: "cublas_bias_add_relu_matmul_grad"
   signature:
     "TensorTuple (Tensor dy, Tensor weight, Tensor aux, Double alpha=1.0) => CublasBiasAddReluMatmulGrad"
