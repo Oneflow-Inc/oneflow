@@ -67,14 +67,15 @@ def logspace_op(
     Example::
 
         >>> import oneflow as flow
-        >>> flow.logspace(start=-10, end=10, steps=5)
-        tensor([1.0000e-10, 1.0000e-05, 1.0000e+00, 1.0000e+05, 1.0000e+10], dtype=oneflow.float32)
+        >>> flow.logspace(start=-10, end=10, steps=2)
+        tensor([1.0000e-10, 1.0000e+10], dtype=oneflow.float32)
         >>> flow.logspace(start=0.1, end=1.0, steps=5)
         tensor([ 1.2589,  2.1135,  3.5481,  5.9566, 10.0000], dtype=oneflow.float32)
         >>> flow.logspace(start=0.1, end=1.0, steps=1)
         tensor([1.2589], dtype=oneflow.float32)
         >>> flow.logspace(start=2, end=2, steps=1, base=2)
         tensor([4.], dtype=oneflow.float32)
+
     """
     indice = flow.linspace(
         start=start,
