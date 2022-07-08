@@ -1,5 +1,6 @@
 #include "oneflow/ir/oneflow-extension/include/PyAst/AstMlirGen.h"
 
+// declare any scope variables in the front of function block to ensure the enough lifetime.
 mlir::LogicalResult BuilderWithSymbolTable::declare(const std::string& var, mlir::Value value) {
   auto iter = symbolTable.find(var);
   if (iter != symbolTable.end()) {
@@ -22,18 +23,22 @@ mlir::LogicalResult BuilderWithSymbolTable::declare(const std::string& var, mlir
   return mlir::success();
 }
 
+// look up memref of the special symbol with variable name
 mlir::Value BuilderWithSymbolTable::lookup(const std::string& var) {
   if (symbolTable.count(var) == 1) { return symbolTable[var]; }
   theModule->emitError("error: unknown variable '" + var + "'");
   return nullptr;
 }
 
+// generate a location of mlir for ops
 mlir::Location BuilderWithSymbolTable::loc(const std::string& file_name, int line, int col) {
   return mlir::FileLineColLoc::get(builder.getStringAttr(file_name), line, col);
 }
 
+// dump the current whole module up
 void BuilderWithSymbolTable::dump() { theModule.dump(); }
 
+// generate a module op for lr jit registry from a ast
 mlir::ModuleOp MLIRGenImpl::genModule(pyast::FunctionDef* func) {
   theModule = mlir::ModuleOp::create(loc());
 
@@ -69,12 +74,14 @@ mlir::ModuleOp MLIRGenImpl::genModule(pyast::FunctionDef* func) {
   return theModule;
 }
 
+// use llvm rtti to dispatch respective code gen tasks of stmt
 void MLIRGenImpl::mlirGen(pyast::stmt* stmt) {
   llvm::TypeSwitch<pyast::stmt*>(stmt)
       .Case<pyast::Return, pyast::Assign, pyast::If>([&](auto* node) { mlirGen(node); })
       .Default([&](auto* node) { theModule->emitError("StmtKind not support yet"); });
 }
 
+// use llvm rtti to dispatch respective code gen tasks of expr
 mlir::Value MLIRGenImpl::mlirGen(pyast::expr* expr) {
   mlir::Value res;
   llvm::TypeSwitch<pyast::expr*>(expr)
