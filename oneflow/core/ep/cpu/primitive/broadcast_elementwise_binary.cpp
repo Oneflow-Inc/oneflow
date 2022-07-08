@@ -247,8 +247,8 @@ void DispatchLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src0_di
   SimplifyBroadcastDims<kMaxNumDims>(num_src0_dims, src0_dims, num_src1_dims, src1_dims,
                                      &simplified_num_dims, simplified_src0_dims,
                                      simplified_src1_dims, simplified_dst_dims);
-  CheckInplace(simplified_num_dims, simplified_src0_dims, src0, simplified_src1_dims, src1,
-               simplified_dst_dims, dst);
+  CheckInplace(simplified_num_dims, simplified_src0_dims, src0, simplified_dst_dims, dst);
+  CheckInplace(simplified_num_dims, simplified_src1_dims, src1, simplified_dst_dims, dst);
   if (IsDimsEquals(simplified_num_dims, simplified_src0_dims, simplified_num_dims,
                    simplified_src1_dims)) {
     LaunchElementwise<binary_op, Src, Dst>(cpu_stream, simplified_num_dims, simplified_src0_dims,
@@ -405,8 +405,8 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
                             src1_dims, dst_dims);
       }
 
-      CheckInplace(num_dims, src_0_dims.data(), onednn_src0, src_1_dims.data(), onednn_src1,
-                   dst_dims.data(), dst);
+      CheckInplace(num_dims, src_0_dims.data(), onednn_src0, dst_dims.data(), dst);
+      CheckInplace(num_dims, src_1_dims.data(), onednn_src1, dst_dims.data(), dst);
 
       auto src_0_md = dnnl::memory::desc(
           src_0_dims, src_onednn,

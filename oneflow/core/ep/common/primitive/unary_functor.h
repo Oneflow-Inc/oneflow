@@ -29,8 +29,15 @@ template<DeviceType device, UnaryOp unary_op, typename Dst, typename Src>
 struct UnaryFunctor;
 
 template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kIdentity, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(src); }
+};
+
+template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kElu, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<double>()) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<double>()) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     return static_cast<Dst>(
@@ -41,7 +48,7 @@ struct UnaryFunctor<device, UnaryOp::kElu, Dst, Src> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kCelu, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1)
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1)
       : alpha(attr0.Value<double>()), inv_alpha(1.0f / attr0.Value<double>()) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
@@ -84,7 +91,7 @@ struct UnaryFunctor<device, UnaryOp::kHardSigmoid, Dst, Src> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kHardShrink, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) : lambd(attr0.Value<double>()) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) : lambd(attr0.Value<double>()) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     return (src <= lambd && src >= -lambd) ? static_cast<Dst>(0) : static_cast<Dst>(src);
@@ -95,7 +102,7 @@ struct UnaryFunctor<device, UnaryOp::kHardShrink, Dst, Src> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kHardTanh, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1)
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1)
       : min_val(attr0.Value<double>()), max_val(attr1.Value<double>()) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
@@ -114,7 +121,7 @@ struct UnaryFunctor<device, UnaryOp::kHardTanh, Dst, Src> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kLeakyRelu, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<float>()) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<float>()) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     return static_cast<Dst>((src > static_cast<Src>(0.0)) ? src : alpha * src);
@@ -182,7 +189,7 @@ struct UnaryFunctor<device, UnaryOp::kSoftSign, Dst, Src> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kSoftPlus, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1)
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1)
       : beta(attr0.Value<double>()), threshold(attr1.Value<double>()) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
@@ -196,7 +203,7 @@ struct UnaryFunctor<device, UnaryOp::kSoftPlus, Dst, Src> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kSoftShrink, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<double>()) {}
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<double>()) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     if (src <= alpha && src >= -alpha) {
@@ -212,7 +219,7 @@ struct UnaryFunctor<device, UnaryOp::kSoftShrink, Dst, Src> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kThreshold, Dst, Src> {
-  UnaryFunctor(Scalar attr0, Scalar attr1)
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1)
       : threshold(attr0.Value<double>()), value(attr1.Value<double>()) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {

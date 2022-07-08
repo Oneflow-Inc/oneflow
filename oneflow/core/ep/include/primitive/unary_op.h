@@ -22,6 +22,7 @@ namespace ep {
 namespace primitive {
 
 enum class UnaryOp {
+  kIdentity,
   // activation op
   kElu,
   kCelu,
