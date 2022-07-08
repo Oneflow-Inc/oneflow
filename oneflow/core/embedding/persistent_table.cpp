@@ -705,9 +705,9 @@ void PersistentTableImpl<Key, Engine>::LoadSnapshot(
     const std::string& name, const std::function<void(Iterator* iter)>& Hook) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   int mmap_flags = MAP_SHARED;
-  if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_PERSISTENT_TABLE_SNAPSHOT_LOAD_MMAP_LOCKED",
+  if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_PERSISTENT_TABLE_SNAPSHOT_LOAD_MAP_POPULATE",
                           true)) {
-    mmap_flags |= MAP_LOCKED;
+    mmap_flags |= MAP_POPULATE;
   }
   const std::string snapshot_base = SnapshotDirPath(name);
   const std::string snapshot_list = SnapshotListFilePath(name);
