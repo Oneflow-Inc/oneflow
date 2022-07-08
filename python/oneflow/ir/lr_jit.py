@@ -1,8 +1,25 @@
-from functools import wraps
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import ast
 import textwrap
 import inspect
 import oneflow
+
+import unittest
+import oneflow.unittest
 
 from ast_gen_transformer import ASTTransformer
 from math_params_transformer import MathParamsTransformer
@@ -17,44 +34,42 @@ def lr_jit_register(lr_obj, is_dump=False):
     _ast = ast.parse(_src).body[0]
 
     # transform param self
-    # print(ast.dump(_ast))
     transformer = SelfParamsTransformer(lr_obj)
     transformer.visit(_ast)
-    # print(ast.dump(_ast))
 
+    # transform for bisect lib
     transformer = BisectTransformer()
     transformer.visit(_ast)
-    # print(ast.dump(_ast))
 
+    # transform for math lib
     transformer = MathParamsTransformer()
     transformer.visit(_ast)
-    # print(ast.dump(_ast))
-
-    transformer = ASTTransformer()
-    transformer.visit(_ast)
-    # print(ast.dump(_ast))
 
     # feed transformed as to C++
+    transformer = ASTTransformer()
+    transformer.visit(_ast)
+
     oneflow._oneflow_internal.ir.compile_and_register_lr_jit(_id, _ast.ast, is_dump)
     return _id
 
 
-from oneflow.nn.optimizer.constant_lr import ConstantLR
-from oneflow.nn.optimizer.cosine_annealing_lr import CosineAnnealingLR
-from oneflow.nn.optimizer.cosine_decay_lr import CosineDecayLR
-from oneflow.nn.optimizer.exponential_lr import ExponentialLR
-from oneflow.nn.optimizer.lambda_lr import LambdaLR
-from oneflow.nn.optimizer.linear_lr import LinearLR
-from oneflow.nn.optimizer.multistep_lr import MultiStepLR
-from oneflow.nn.optimizer.polynomial_lr import PolynomialLR
-from oneflow.nn.optimizer.sequential_lr import SequentialLR
-from oneflow.nn.optimizer.step_lr import StepLR
-from oneflow.nn.optimizer.warmup_lr import WarmupLR
 
-from oneflow.optim import SGD
-from oneflow.nn import Parameter
 
-if __name__ == "__main__":
+def _test_current_lr_jit(testcase):
+    from oneflow.nn.optimizer.constant_lr import ConstantLR
+    from oneflow.nn.optimizer.cosine_annealing_lr import CosineAnnealingLR
+    from oneflow.nn.optimizer.cosine_decay_lr import CosineDecayLR
+    from oneflow.nn.optimizer.exponential_lr import ExponentialLR
+    from oneflow.nn.optimizer.lambda_lr import LambdaLR
+    from oneflow.nn.optimizer.linear_lr import LinearLR
+    from oneflow.nn.optimizer.multistep_lr import MultiStepLR
+    from oneflow.nn.optimizer.polynomial_lr import PolynomialLR
+    from oneflow.nn.optimizer.sequential_lr import SequentialLR
+    from oneflow.nn.optimizer.step_lr import StepLR
+    from oneflow.nn.optimizer.warmup_lr import WarmupLR
+
+    from oneflow.optim import SGD
+    from oneflow.nn import Parameter
     param = Parameter(oneflow.ones(3, 4))
     optimizer = SGD([param], lr=0.001)
 
@@ -65,7 +80,7 @@ if __name__ == "__main__":
         StepLR(optimizer, 5),
         # SequentialLR(optimizer),
         PolynomialLR(optimizer, 5),
-        MultiStepLR(optimizer, [10, 20, 30]), # biselect
+        MultiStepLR(optimizer, [10, 20, 30]),
         LinearLR(optimizer),
         # LambdaLR(optimizer, [lambda step: 0.95 * step]),
         ExponentialLR(optimizer, 1.1),
@@ -87,3 +102,11 @@ if __name__ == "__main__":
 
             print("lr: ", lr)
             print("lr_jit: ", lr_jit)
+
+@oneflow.unittest.skip_unless_1n1d()
+class TestCurrentLRJIT(oneflow.unittest.TestCase):
+    def test_current_lr_jit(test_case):
+        _test_current_lr_jit(test_case)
+
+if __name__ == "__main__":
+    unittest.main()
