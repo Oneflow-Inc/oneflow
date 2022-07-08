@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/graph/nccl_send_recv_boxing_task_node.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/graph/task_stream_id.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
@@ -68,6 +69,16 @@ void MergeParallelConf(const ParallelDesc& parallel_desc_0, const ParallelDesc& 
     parallel_conf->add_device_name("@" + std::to_string(pair.first) + ":"
                                    + std::to_string(pair.second));
   }
+}
+
+inline std::string NewUniqueIdGbc() {
+  static std::atomic<int64_t> counter(0);
+  static std::atomic<int64_t> curr_job_id(0);
+  if (curr_job_id != GlobalJobDesc().job_id()) {
+    curr_job_id = GlobalJobDesc().job_id();
+    counter = 0;
+  }
+  return std::to_string(counter.fetch_add(1, std::memory_order_relaxed));
 }
 
 }  // namespace
@@ -127,7 +138,7 @@ class NDNcclSendRecvBoxingSubTskGphBuilder final : public HierarchicalSubTskGphB
       ParallelDesc merged_parallel_desc(merged_parallel_conf);
       TaskNode* first_in_node = sorted_in_tasks.front();
       sorted_ctrl_tasks->resize(out_parallel_desc.parallel_num());
-      std::string stream_name = "NCCL_SEND_RECV_BOXING" + NewUniqueId();
+      std::string stream_name = "NCCL_SEND_RECV_BOXING" + NewUniqueIdGbc();
       FOR_RANGE(int64_t, id, 0, merged_parallel_desc.parallel_num()) {
         NcclSendRecvBoxingTaskNode* node = ctx->task_graph()->NewNode<NcclSendRecvBoxingTaskNode>();
         const int64_t machine_id = JUST(merged_parallel_desc.MachineId4ParallelId(id));
