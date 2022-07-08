@@ -308,7 +308,12 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
     // For example: A(16, 1, 4, 8) B(1, 8, 8, 6)
     // We First set the previous batch dims to broadcasted shape: C(16, 8)
     // Then we emplace back m, n -> C(16, 8, 4, 6)
-    out_dim_vec[i] = std::max(GetABatchDim(i), GetBBatchDim(i));
+    const int64_t a_batch_dim = GetABatchDim(i);
+    const int64_t b_batch_dim = GetBBatchDim(i);
+    CHECK(((a_batch_dim != 1 && b_batch_dim == 1) || (a_batch_dim == 1 && b_batch_dim != 1)
+           || (a_batch_dim == 1 && b_batch_dim == 1)))
+        << "Batch Dims could not broadcast, please check. ";
+    out_dim_vec[i] = std::max(a_batch_dim, b_batch_dim);
   }
   int64_t m = 0;
   int64_t n = 0;
@@ -383,6 +388,8 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
     out_and_add_to_output_args.emplace_back("_add_to_output", 0);
   }
 
+  const int64_t a_batch_dims = a_num_axes - 2;
+  const int64_t b_batch_dims = b_num_axes - 2;
   const int64_t max_num_axes = std::max(a_num_axes, b_num_axes);
   const size_t num_max_batch_dims = max_num_axes - 2;
   auto MakeGetBatchDim = [num_max_batch_dims](size_t num_dims, const Shape& shape_dim) {
@@ -398,24 +405,25 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
   for (int i = 0; i < num_max_batch_dims; i++) {
     const int64_t a_batch_dim = GetABatchDim(i);
     const int64_t b_batch_dim = GetBBatchDim(i);
+
     if (a_batch_dim == b_batch_dim && a_batch_dim != 1) {
       // S(b axis) x S(b axis) -> S(b axis)
       ctx->NewBuilder()
-          .Split(user_op::OpArg("a", 0), i)
-          .Split(user_op::OpArg("b", 0), i)
+          .Split(user_op::OpArg("a", 0), i - (num_max_batch_dims - a_batch_dims))
+          .Split(user_op::OpArg("b", 0), i - (num_max_batch_dims - b_batch_dims))
           .Split(out_and_add_to_output_args, i)
           .Build();
-    } else if (a_batch_dim == 1) {
+    } else if (a_batch_dim == 1 && b_batch_dim != 1) {
       // B x S(b axis) -> S(b axis)
       ctx->NewBuilder()
           .Broadcast(user_op::OpArg("a", 0))
-          .Split(user_op::OpArg("b", 0), i)
+          .Split(user_op::OpArg("b", 0), i - (num_max_batch_dims - b_batch_dims))
           .Split(out_and_add_to_output_args, i)
           .Build();
-    } else if (b_batch_dim == 1) {
+    } else if (b_batch_dim == 1 && a_batch_dim != 1) {
       // S(b axis) x B -> S(b axis)
       ctx->NewBuilder()
-          .Split(user_op::OpArg("a", 0), i)
+          .Split(user_op::OpArg("a", 0), i - (num_max_batch_dims - a_batch_dims))
           .Broadcast(user_op::OpArg("b", 0))
           .Split(out_and_add_to_output_args, i)
           .Build();
