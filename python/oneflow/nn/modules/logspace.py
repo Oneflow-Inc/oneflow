@@ -59,21 +59,22 @@ def logspace_op(
             Default: if None, uses the global default dtype (see oneflow.get_default_dtype())
             when both :attr:`start` and :attr:`end` are real,
             and corresponding complex dtype when either is complex.
-        device (flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
-        placement (flow.placement, optional): the desired placement of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        device (oneflow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        placement (oneflow.placement, optional): the desired placement of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (oneflow.sbp.sbp or tuple of oneflow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
     Example::
 
-        >>> oneflow.logspace(start=-10, end=10, steps=5)
-        tensor([ 1.0000e-10,  1.0000e-05,  1.0000e+00,  1.0000e+05,  1.0000e+10])
-        >>> oneflow.logspace(start=0.1, end=1.0, steps=5)
-        tensor([  1.2589,   2.1135,   3.5481,   5.9566,  10.0000])
-        >>> oneflow.logspace(start=0.1, end=1.0, steps=1)
-        tensor([1.2589])
-        >>> oneflow.logspace(start=2, end=2, steps=1, base=2)
-        tensor([4.0])
+        >>> import oneflow as flow
+        >>> flow.logspace(start=-10, end=10, steps=5)
+        tensor([1.0000e-10, 1.0000e-05, 1.0000e+00, 1.0000e+05, 1.0000e+10], dtype=oneflow.float32)
+        >>> flow.logspace(start=0.1, end=1.0, steps=5)
+        tensor([ 1.2589,  2.1135,  3.5481,  5.9566, 10.0000], dtype=oneflow.float32)
+        >>> flow.logspace(start=0.1, end=1.0, steps=1)
+        tensor([1.2589], dtype=oneflow.float32)
+        >>> flow.logspace(start=2, end=2, steps=1, base=2)
+        tensor([4.], dtype=oneflow.float32)
     """
     indice = flow.linspace(
         start=start,
