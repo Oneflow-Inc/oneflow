@@ -32,13 +32,8 @@ limitations under the License.
 
 namespace oneflow {
 
-<<<<<<< HEAD
-static const std::string kAutoMirroredBlobNamePrefix =
-    "System-Mirrored-Blob-Auto-Converted-From-Global-Blob";
-=======
 static const std::string kAutoLocalBlobNamePrefix =
-    "System-Local-Blob-Auto-Converted-From-Consistent-Blob";
->>>>>>> master
+    "System-Local-Blob-Auto-Converted-From-Global-Blob";
 
 namespace {
 
@@ -922,7 +917,7 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatible
       PushBackSubLbi(op_conf.name(), blob_name);
     }
   } else {
-    OF_UNIMPLEMENTED() << "`P' consistant blob is not compatible to local blob";
+    OF_UNIMPLEMENTED() << "`P' global blob is not compatible to local blob";
   }
   {
     const auto& producer_op_conf = JUST(Op4OpName(lbi.op_name()))->op_conf();
