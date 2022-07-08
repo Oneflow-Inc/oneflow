@@ -192,13 +192,13 @@ add_docstr(
           Can be a variable number of arguments or a collection like a list or tuple or oneflow.Size.
 
     Keyword args:
-        dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.int64``.
-        generator (flow.Generator, optional) – a pseudorandom number generator for sampling
-        device (flow.device, optional): The desired device of returned local tensor. If None, uses the
+        dtype (oneflow.dtype, optional): The desired data type of returned tensor. Default: ``flow.int64``.
+        generator (oneflow.Generator, optional) – a pseudorandom number generator for sampling
+        device (oneflow.device, optional): The desired device of returned local tensor. If None, uses the
           current device.
-        placement (flow.placement, optional): The desired device of returned global tensor. If None, will
+        placement (oneflow.placement, optional): The desired device of returned global tensor. If None, will
           construct local tensor.
-        sbp (flow.sbp, optional): The desired sbp of returned global tensor. It must be equal with the
+        sbp (oneflow.sbp, optional): The desired sbp of returned global tensor. It must be equal with the
           numbers of placement.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
@@ -231,7 +231,6 @@ add_docstr(
 
     Returns a tensor filled with random integers generated uniformly between low (inclusive) and high (exclusive).
 
-
     Args:
         input (oneflow.Tensor): the size of ``input`` will determine size of the output tensor.
         low (int, optional):  Lowest integer to be drawn from the distribution. Default: 0.
@@ -239,13 +238,13 @@ add_docstr(
 
 
     Keyword args:
-        dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.int64``.
-        generator (flow.Generator, optional) – a pseudorandom number generator for sampling
-        device (flow.device, optional): The desired device of returned local tensor. If None, uses the
+        dtype (oneflow.dtype, optional): The desired data type of returned tensor. Default: ``flow.int64``.
+        generator (oneflow.Generator, optional) – a pseudorandom number generator for sampling
+        device (oneflow.device, optional): The desired device of returned local tensor. If None, uses the
           current device.
-        placement (flow.placement, optional): The desired device of returned global tensor. If None, will
+        placement (oneflow.placement, optional): The desired device of returned global tensor. If None, will
           construct local tensor.
-        sbp (flow.sbp, optional): The desired sbp of returned global tensor. It must be equal with the
+        sbp (oneflow.sbp, optional): The desired sbp of returned global tensor. It must be equal with the
           numbers of placement.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
