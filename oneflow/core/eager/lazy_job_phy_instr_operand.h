@@ -46,9 +46,9 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
         param_blob_objects_(param_blob_objects),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstMirroredObject(SetInserter(&input_dependences_));
-    ForEachMutMirroredObject(SetInserter(&output_dependences_));
-    ForEachMut2MirroredObject(SetInserter(&output_dependences_));
+    ForEachConstDependence(SetInserter(&input_dependences_));
+    ForEachMutDependence(SetInserter(&output_dependences_));
+    ForEachMut2Dependence(SetInserter(&output_dependences_));
     stream_sequential_dependence_ = nullptr;
   }
 
@@ -57,11 +57,11 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  void ForEachConstMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const {}
+  void ForEachConstDependence(const std::function<void(vm::Dependence* compute)>&) const {}
 
-  void ForEachMutMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
+  void ForEachMutDependence(const std::function<void(vm::Dependence* compute)>&) const;
 
-  void ForEachMut2MirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const {}
+  void ForEachMut2Dependence(const std::function<void(vm::Dependence* compute)>&) const {}
 
   void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
     for (const auto& eager_blob_object : *param_blob_objects_) { DoEach(eager_blob_object.get()); }

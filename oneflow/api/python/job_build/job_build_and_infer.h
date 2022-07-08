@@ -69,12 +69,12 @@ inline Maybe<bool> CurJobBuildAndInferCtx_HasJobConf() {
   return JUST(GetCurInferCtx())->HasJobConf();
 }
 
-inline Maybe<std::string> CurJobBuildAndInferCtx_AddAndInferMirroredOp(
+inline Maybe<std::string> CurJobBuildAndInferCtx_AddAndInferLocalOp(
     const std::string& op_conf_str) {
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
   auto* ctx = JUST(GetCurInferCtx());
-  const auto& op_attribute = JUST(ctx->AddAndInferMirroredOp(op_conf));
+  const auto& op_attribute = JUST(ctx->AddAndInferLocalOp(op_conf));
   return PbMessage2TxtString(*op_attribute);
 }
 
@@ -139,23 +139,23 @@ inline Maybe<void> CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::stri
   return JUST(GetCurInferCtx())->AddLossLogicalBlobName(lbn);
 }
 
-inline Maybe<bool> JobBuildAndInferCtx_IsMirroredBlob(const std::string& job_name,
-                                                      const std::string& lbn) {
+inline Maybe<bool> JobBuildAndInferCtx_IsLocalBlob(const std::string& job_name,
+                                                   const std::string& lbn) {
   auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return ctx->IsMirroredBlob(lbn);
+  return ctx->IsLocalBlob(lbn);
 }
 
-inline Maybe<int> JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(const std::string& job_name,
-                                                               const std::string& lbn) {
+inline Maybe<int> JobBuildAndInferCtx_LocalBlobGetNumSubLbi(const std::string& job_name,
+                                                            const std::string& lbn) {
   auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return ctx->MirroredBlobGetNumSubLbi(lbn);
+  return ctx->LocalBlobGetNumSubLbi(lbn);
 }
 
-inline Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetSubLbi(const std::string& job_name,
-                                                                    const std::string& lbn,
-                                                                    int index) {
+inline Maybe<std::string> JobBuildAndInferCtx_LocalBlobGetSubLbi(const std::string& job_name,
+                                                                 const std::string& lbn,
+                                                                 int index) {
   auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return PbMessage2TxtString(*JUST(ctx->MirroredBlobGetSubLbi(lbn, index)));
+  return PbMessage2TxtString(*JUST(ctx->LocalBlobGetSubLbi(lbn, index)));
 }
 
 inline Maybe<void> JobBuildAndInferCtx_CheckLbnValidAndExist(const std::string& job_name,
