@@ -114,7 +114,7 @@ Maybe<one::Tensor> NcclP2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());  // NOLINT(maybe-need-error-msg)
 
-  return JUST(one::functional::ConsistentAllReduce(tensor));
+  return JUST(one::functional::GlobalAllReduce(tensor));
 }
 
 Maybe<one::Tensor> NcclP2S(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
@@ -124,7 +124,7 @@ Maybe<one::Tensor> NcclP2S(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());  // NOLINT(maybe-need-error-msg)
 
-  return JUST(one::functional::ConsistentReduceScatter(tensor, "sum"));
+  return JUST(one::functional::GlobalReduceScatter(tensor, "sum"));
 }
 
 Maybe<one::Tensor> NcclS2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
@@ -134,7 +134,7 @@ Maybe<one::Tensor> NcclS2B(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());  // NOLINT(maybe-need-error-msg)
 
-  return JUST(one::functional::ConsistentAllGather(tensor));
+  return JUST(one::functional::GlobalAllGather(tensor));
 }
 
 Maybe<one::Tensor> NcclS2S(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
@@ -143,7 +143,7 @@ Maybe<one::Tensor> NcclS2S(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());  // NOLINT(maybe-need-error-msg)
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());  // NOLINT(maybe-need-error-msg)
-  return JUST(one::functional::ConsistentS2S(tensor, *JUST(GetSbpList(out->nd_sbp()))));
+  return JUST(one::functional::GlobalS2S(tensor, *JUST(GetSbpList(out->nd_sbp()))));
 }
 
 COMMAND(RegisterBoxingFunction("nccl-p-to-b", CheckNcclP2B, &NcclP2B));
