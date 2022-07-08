@@ -2,7 +2,7 @@
 // RUN: -split-input-file \
 // RUN: -lower-oneflow-to-tosa \
 // RUN: -verify-diagnostics -o - \
-// RUN: | ireec \
+// RUN: | python3 -m iree.compiler.tools.scripts.ireec \
 // RUN: --iree-input-type=tosa \
 // RUN: --iree-vm-bytecode-module-output-format=flatbuffer-binary \
 // RUN: -iree-hal-target-backends=dylib-llvm-aot \

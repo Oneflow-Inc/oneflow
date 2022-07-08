@@ -193,6 +193,7 @@ Maybe<EagerBoxingInterpreter> EagerBoxingInterpreterManager::GetEagerBoxingInter
                                          logical_shape));
 }
 
-COMMAND(Global<EagerBoxingInterpreterManager>::SetAllocated(new EagerBoxingInterpreterManager()));
+COMMAND(
+    Singleton<EagerBoxingInterpreterManager>::SetAllocated(new EagerBoxingInterpreterManager()));
 
 }  // namespace oneflow

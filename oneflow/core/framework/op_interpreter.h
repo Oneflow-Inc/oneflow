@@ -37,8 +37,6 @@ struct OpExprInterpContext {
       : attrs(attrs_arg), inplace(inplace) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg)
       : attrs(attrs_arg), device(device_arg) {}
-  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg, const bool pin_memory)
-      : attrs(attrs_arg), device(device_arg), pin_memory(pin_memory) {}
   OpExprInterpContext(const AttrMap& attrs_arg, std::shared_ptr<user_op::OpKernelState> state_arg)
       : attrs(attrs_arg), state(state_arg) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg,
@@ -57,7 +55,6 @@ struct OpExprInterpContext {
   Optional<Symbol<Device>> device;               // for local op
   Optional<Symbol<ParallelDesc>> parallel_desc;  // for consistent op
   Optional<Symbol<NdSbp>> nd_sbp;                // for consistent op
-  Optional<bool> pin_memory;                     // for pin_memory related op
   Optional<bool> inplace;                        // for inplace operation op
   std::shared_ptr<user_op::OpKernelState> state;
 };
@@ -84,8 +81,8 @@ class OpExprInterpreter {
   _macro(UserOp);                    \
   _macro(SelectTopNOp);              \
   _macro(VariableOp);                \
-  _macro(CastToMirroredOp);          \
-  _macro(CastFromMirroredOp);        \
+  _macro(CastToLocalOp);             \
+  _macro(CastFromLocalOp);           \
   _macro(ConsistentToConsistentOp);  \
   _macro(CastToConsistentOp);        \
   _macro(CastFromConsistentOp);      \
@@ -154,10 +151,10 @@ class EagerConsistentInterpreter : public EagerInterpreter {
   FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);
 };
 
-class EagerMirroredInterpreter : public EagerInterpreter {
+class EagerLocalInterpreter : public EagerInterpreter {
  public:
-  EagerMirroredInterpreter() : EagerInterpreter() {}
-  virtual ~EagerMirroredInterpreter() = default;
+  EagerLocalInterpreter() : EagerInterpreter() {}
+  virtual ~EagerLocalInterpreter() = default;
 
  private:
   FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);

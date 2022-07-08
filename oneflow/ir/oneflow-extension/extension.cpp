@@ -77,8 +77,8 @@ OpaqueMemRefDescriptor CreateMemRefDescriptor(user_op::Tensor* tensor) {
   auto desc = new MemRefType();
   *desc = mlir::detail::makeStridedMemRefDescriptor<N>(
       tensor->dptr<T>(), tensor->dptr<T>(),
-      {tensor->shape().ptr(), tensor->shape().ptr() + tensor->shape().NumAxes()},
-      {tensor->shape().ptr(), tensor->shape().ptr() + tensor->shape().NumAxes()});
+      {tensor->shape_view().ptr(), tensor->shape_view().ptr() + tensor->shape_view().NumAxes()},
+      {tensor->shape_view().ptr(), tensor->shape_view().ptr() + tensor->shape_view().NumAxes()});
   auto deleter = [](void const* data) {
     auto p = static_cast<MemRefType const*>(data);
     delete p;
@@ -92,8 +92,8 @@ OpaqueMemRefDescriptor CreateMutMemRefDescriptor(user_op::Tensor* tensor) {
   auto desc = new MemRefType();
   *desc = mlir::detail::makeStridedMemRefDescriptor<N>(
       tensor->mut_dptr<T>(), tensor->mut_dptr<T>(),
-      {tensor->shape().ptr(), tensor->shape().ptr() + tensor->shape().NumAxes()},
-      {tensor->shape().ptr(), tensor->shape().ptr() + tensor->shape().NumAxes()});
+      {tensor->shape_view().ptr(), tensor->shape_view().ptr() + tensor->shape_view().NumAxes()},
+      {tensor->shape_view().ptr(), tensor->shape_view().ptr() + tensor->shape_view().NumAxes()});
   auto deleter = [](void const* data) {
     auto p = static_cast<MemRefType const*>(data);
     delete p;
@@ -120,13 +120,13 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
   for (auto& pair : ctx->inputs()) {
     auto tensor = ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
     auto ref = SwitchCreateMemRefDescriptor(
-        SwitchCase(tensor->shape().NumAxes(), tensor->data_type()), tensor);
+        SwitchCase(tensor->shape_view().NumAxes(), tensor->data_type()), tensor);
     args.push_back(ref);
   }
   for (auto& pair : ctx->outputs()) {
     auto tensor = ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
     auto ref = SwitchCreateMutMemRefDescriptor(
-        SwitchCase(tensor->shape().NumAxes(), tensor->data_type()), tensor);
+        SwitchCase(tensor->shape_view().NumAxes(), tensor->data_type()), tensor);
     args.push_back(ref);
   }
   return args;

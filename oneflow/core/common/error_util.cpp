@@ -128,8 +128,7 @@ Maybe<std::string> FormatMsgOfErrorType(const std::shared_ptr<ErrorProto>& error
   const google::protobuf::FieldDescriptor* field_des =
       error_ref->GetOneofFieldDescriptor(*error, oneof_field_des);
   CHECK_OR_RETURN(field_des != nullptr);
-  const google::protobuf::Message& error_type = error_ref->GetMessage(*error, field_des);
-  ss << error_type.DebugString();
+  ss << "Error Type: " << field_des->full_name();
   return ss.str();
 }
 

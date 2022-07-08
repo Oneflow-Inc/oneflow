@@ -138,6 +138,10 @@ class Graph(object):
         self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
 
+        # For graph level op rewrite
+        self._unique_global_op_dict = dict()
+        self._unique_identity_op_dict = dict()
+
         self._session = session_ctx.GetDefaultSession()
         assert type(self._session) is MultiClientSession
         self._session.TryInit()
@@ -531,7 +535,7 @@ class Graph(object):
         return shallow_repr
 
     def _ops_repr(self):
-        r"""Generate operators' string representation of this graph 
+        r"""Generate operators' string representation of this graph
         """
         if self._is_compiled and self._compiled_graph_proto is not None:
             module_conf = self._compiled_graph_proto.module_name2module_conf[self.name]
@@ -766,12 +770,7 @@ class Graph(object):
             return outputs
         except:
             self.__print(
-                2,
-                0,
-                "[ERROR]"
-                + self._shallow_repr()
-                + " building graph got error: "
-                + sys_exc_error_msg(),
+                2, 0, "[ERROR]" + self._shallow_repr() + " building graph got error."
             )
             raise
 
@@ -818,12 +817,7 @@ class Graph(object):
             )
         except:
             self.__print(
-                2,
-                0,
-                "[ERROR]"
-                + self._shallow_repr()
-                + " building plan got error: "
-                + sys_exc_error_msg(),
+                2, 0, "[ERROR]" + self._shallow_repr() + " building plan got error."
             )
             raise
 
@@ -973,6 +967,10 @@ class Graph(object):
             self._c_nn_graph.register_variable_op_names_and_tensors(
                 state_op_names, self._state_tensor_tuple
             )
+
+        # Clear useless dict used in graph build.
+        self._unique_global_op_dict.clear()
+        self._unique_identity_op_dict.clear()
 
         # Always pack outputs to remain type of outputs
         return (
@@ -1360,6 +1358,13 @@ class Graph(object):
         )
 
     def __del__(self):
+        # Ensure vm has finished running this graph.
+        if self._session._env.is_shutting_down():
+            # After python shutting down, it's not safe to call oneflow._oneflow_internal.eager.
+            # But shutting down will do sync in SwitchToShuttingDownPhase.
+            # So it's safe to skip sync here.
+            return
+        oneflow._oneflow_internal.eager.Sync()
         current_env_enable_mlir_inference_opt = os.getenv(
             "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
         )
@@ -1369,13 +1374,6 @@ class Graph(object):
             os.environ[
                 "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
             ] = self.env_enable_mlir_inference_opt
-        # Ensure vm has finished running this graph.
-        if self._session._env.is_shutting_down():
-            # After python shutting down, it's not safe to call oneflow._oneflow_internal.eager.
-            # But shutting down will do sync in SwitchToShuttingDownPhase.
-            # So it's safe to skip sync here.
-            return
-        oneflow._oneflow_internal.eager.Sync()
         oneflow._oneflow_internal.ClearVariableTensorMgr()
 
     def __ensure_input_tensors_contiguous(self, *args, **kwargs):

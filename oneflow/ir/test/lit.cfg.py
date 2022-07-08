@@ -107,7 +107,8 @@ tools.extend(
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 try:
-    import oneflow_iree.compiler
+    from iree import runtime as ireert
+    from iree.compiler import compile_str
 
     config.WITH_ONEFLOW_IREE = True
 except ImportError:

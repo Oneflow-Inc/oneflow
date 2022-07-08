@@ -33,6 +33,8 @@ using EagerBlobObjectListPtr =
 
 namespace vm {
 
+class Stream;
+
 class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
  public:
   CriticalSectionBeginPhyInstrOperand(const CriticalSectionBeginPhyInstrOperand&) = delete;
@@ -46,17 +48,19 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
       const std::shared_ptr<NNGraphIf>& nn_graph,
       const one::EagerBlobObjectListPtr& eager_blob_objects,
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>&
-          op_name2end_event_record)
+          op_name2end_event_record,
+      vm::Stream* vm_stream)
       : nn_graph_(nn_graph),
         eager_blob_objects_(eager_blob_objects),
-        op_name2end_event_record_(op_name2end_event_record) {}
+        op_name2end_event_record_(op_name2end_event_record),
+        vm_stream_(vm_stream) {}
 
   const std::shared_ptr<NNGraphIf>& nn_graph() const { return nn_graph_; }
   const one::EagerBlobObjectListPtr& eager_blob_objects() const { return eager_blob_objects_; }
 
-  void ForEachMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
+  void ForEachDependence(const std::function<void(vm::Dependence* compute)>&) const;
 
-  void ForEachMutMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
+  void ForEachMutDependence(const std::function<void(vm::Dependence* compute)>&) const;
 
   virtual const std::vector<std::string>& interfaces_op_names() const = 0;
   virtual const std::vector<bool>& interfaces_valid() const = 0;
@@ -71,12 +75,17 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
   void FinishInvalidInterfaceEventRecords();
   void Finish();
 
+  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
+    for (const auto& eager_blob_object : *eager_blob_objects_) { DoEach(eager_blob_object.get()); }
+  }
+
  protected:
   std::shared_ptr<NNGraphIf> nn_graph_;
   one::EagerBlobObjectListPtr eager_blob_objects_;
   std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>
       op_name2end_event_record_;
   HashMap<std::string, size_t> op_name2interface_index_;
+  vm::Stream* vm_stream_;
 };
 
 class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeginPhyInstrOperand {
@@ -85,13 +94,15 @@ class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeg
       const std::shared_ptr<NNGraphIf>& nn_graph,
       const one::EagerBlobObjectListPtr& eager_blob_objects,
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>&
-          op_name2end_event_record)
-      : CriticalSectionBeginPhyInstrOperand(nn_graph, eager_blob_objects, op_name2end_event_record),
+          op_name2end_event_record,
+      vm::Stream* vm_stream)
+      : CriticalSectionBeginPhyInstrOperand(nn_graph, eager_blob_objects, op_name2end_event_record,
+                                            vm_stream),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstMirroredObject(SetInserter(&input_dependences_));
-    ForEachMutMirroredObject(SetInserter(&output_dependences_));
-    ForEachMut2MirroredObject(SetInserter(&output_dependences_));
+    ForEachConstDependence(SetInserter(&input_dependences_));
+    ForEachMutDependence(SetInserter(&output_dependences_));
+    ForEachMut2Dependence(SetInserter(&output_dependences_));
     CHECK_EQ(nn_graph->inputs_op_names().size(), eager_blob_objects->size());
     CHECK_EQ(nn_graph->inputs_op_names().size(), nn_graph->inputs_valid().size());
     for (int i = 0; i < nn_graph->inputs_op_names().size(); ++i) {
@@ -105,9 +116,8 @@ class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeg
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
   // for inputs
-  void ForEachConstMirroredObject(
-      const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-    ForEachMirroredObject(DoEach);
+  void ForEachConstDependence(const std::function<void(vm::Dependence* compute)>& DoEach) const {
+    ForEachDependence(DoEach);
   }
 
   // for outputs
@@ -128,7 +138,7 @@ class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeg
     return GetInputCriticalSectionWaitBufferName(job_name);
   }
   void AccessBlobByOpName(uint64_t of_blob_ptr, const std::string& op_name) override;
-  void ForEachMut2MirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const {}
+  void ForEachMut2Dependence(const std::function<void(vm::Dependence* compute)>&) const {}
 
  private:
   DependenceVector input_dependences_;
@@ -141,13 +151,15 @@ class OutputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBe
       const std::shared_ptr<NNGraphIf>& nn_graph,
       const one::EagerBlobObjectListPtr& eager_blob_objects,
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>&
-          op_name2end_event_record)
-      : CriticalSectionBeginPhyInstrOperand(nn_graph, eager_blob_objects, op_name2end_event_record),
+          op_name2end_event_record,
+      vm::Stream* vm_stream)
+      : CriticalSectionBeginPhyInstrOperand(nn_graph, eager_blob_objects, op_name2end_event_record,
+                                            vm_stream),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstMirroredObject(SetInserter(&input_dependences_));
-    ForEachMutMirroredObject(SetInserter(&output_dependences_));
-    ForEachMut2MirroredObject(SetInserter(&output_dependences_));
+    ForEachConstDependence(SetInserter(&input_dependences_));
+    ForEachMutDependence(SetInserter(&output_dependences_));
+    ForEachMut2Dependence(SetInserter(&output_dependences_));
     CHECK_EQ(nn_graph->outputs_op_names().size(), eager_blob_objects->size());
     CHECK_EQ(nn_graph->outputs_op_names().size(), nn_graph->outputs_valid().size());
     for (int i = 0; i < nn_graph->outputs_op_names().size(); ++i) {
@@ -161,12 +173,11 @@ class OutputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBe
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
   // for inputs
-  void ForEachConstMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const {}
+  void ForEachConstDependence(const std::function<void(vm::Dependence* compute)>&) const {}
 
   // for outputs
-  void ForEachMut2MirroredObject(
-      const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-    ForEachMirroredObject(DoEach);
+  void ForEachMut2Dependence(const std::function<void(vm::Dependence* compute)>& DoEach) const {
+    ForEachDependence(DoEach);
   }
 
   const std::vector<std::string>& interfaces_op_names() const override {
@@ -195,43 +206,49 @@ class OutputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBe
 class CriticalSectionEndPhyInstrOperand : public PhyInstrOperand {
  public:
   CriticalSectionEndPhyInstrOperand(const std::shared_ptr<EagerBlobObject>& eager_blob_object,
-                                    const std::shared_ptr<SharedEventRecord>& event_record)
-      : eager_blob_object_(eager_blob_object), event_record_(event_record) {}
+                                    const std::shared_ptr<SharedEventRecord>& event_record,
+                                    vm::Stream* vm_stream)
+      : eager_blob_object_(eager_blob_object), event_record_(event_record), vm_stream_(vm_stream) {}
   virtual ~CriticalSectionEndPhyInstrOperand() = default;
 
   const std::shared_ptr<SharedEventRecord>& event_record() const { return event_record_; }
 
-  void ForEachMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
+  void ForEachDependence(const std::function<void(vm::Dependence* compute)>&) const;
 
-  void ForEachMutMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
+  void ForEachMutDependence(const std::function<void(vm::Dependence* compute)>&) const;
+
+  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
+    DoEach(eager_blob_object_.get());
+  }
 
  private:
   std::shared_ptr<EagerBlobObject> eager_blob_object_;
   std::shared_ptr<SharedEventRecord> event_record_;
+  vm::Stream* vm_stream_;
 };
 
 class InputCriticalSecondEndPhyInstrOperand final : public CriticalSectionEndPhyInstrOperand {
  public:
   InputCriticalSecondEndPhyInstrOperand(const std::shared_ptr<EagerBlobObject>& eager_blob_object,
-                                        const std::shared_ptr<SharedEventRecord>& event_record)
-      : CriticalSectionEndPhyInstrOperand(eager_blob_object, event_record),
+                                        const std::shared_ptr<SharedEventRecord>& event_record,
+                                        vm::Stream* vm_stream)
+      : CriticalSectionEndPhyInstrOperand(eager_blob_object, event_record, vm_stream),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstMirroredObject(SetInserter(&input_dependences_));
-    ForEachMutMirroredObject(SetInserter(&output_dependences_));
-    ForEachMut2MirroredObject(SetInserter(&output_dependences_));
+    ForEachConstDependence(SetInserter(&input_dependences_));
+    ForEachMutDependence(SetInserter(&output_dependences_));
+    ForEachMut2Dependence(SetInserter(&output_dependences_));
   }
   ~InputCriticalSecondEndPhyInstrOperand() override = default;
 
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  void ForEachConstMirroredObject(
-      const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-    ForEachMirroredObject(DoEach);
+  void ForEachConstDependence(const std::function<void(vm::Dependence* compute)>& DoEach) const {
+    ForEachDependence(DoEach);
   }
 
-  void ForEachMut2MirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const {}
+  void ForEachMut2Dependence(const std::function<void(vm::Dependence* compute)>&) const {}
 
  private:
   DependenceVector input_dependences_;
@@ -241,13 +258,14 @@ class InputCriticalSecondEndPhyInstrOperand final : public CriticalSectionEndPhy
 class OutputCriticalSecondEndPhyInstrOperand final : public CriticalSectionEndPhyInstrOperand {
  public:
   OutputCriticalSecondEndPhyInstrOperand(const std::shared_ptr<EagerBlobObject>& eager_blob_object,
-                                         const std::shared_ptr<SharedEventRecord>& event_record)
-      : CriticalSectionEndPhyInstrOperand(eager_blob_object, event_record),
+                                         const std::shared_ptr<SharedEventRecord>& event_record,
+                                         vm::Stream* vm_stream)
+      : CriticalSectionEndPhyInstrOperand(eager_blob_object, event_record, vm_stream),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstMirroredObject(SetInserter(&input_dependences_));
-    ForEachMutMirroredObject(SetInserter(&output_dependences_));
-    ForEachMut2MirroredObject(SetInserter(&output_dependences_));
+    ForEachConstDependence(SetInserter(&input_dependences_));
+    ForEachMutDependence(SetInserter(&output_dependences_));
+    ForEachMut2Dependence(SetInserter(&output_dependences_));
   }
   ~OutputCriticalSecondEndPhyInstrOperand() override = default;
 
@@ -255,12 +273,11 @@ class OutputCriticalSecondEndPhyInstrOperand final : public CriticalSectionEndPh
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
   // for inputs
-  void ForEachConstMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const {}
+  void ForEachConstDependence(const std::function<void(vm::Dependence* compute)>&) const {}
 
   // for outputs
-  void ForEachMut2MirroredObject(
-      const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-    ForEachMirroredObject(DoEach);
+  void ForEachMut2Dependence(const std::function<void(vm::Dependence* compute)>& DoEach) const {
+    ForEachDependence(DoEach);
   }
 
  private:

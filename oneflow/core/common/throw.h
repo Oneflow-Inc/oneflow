@@ -38,7 +38,7 @@ struct Throw final {
   if (!(expr))                                                                           \
   oneflow::details::Throw() =                                                            \
       oneflow::Error::CheckFailedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
-      << " Check failed: " << OF_PP_STRINGIZE(expr) << ": "
+      << "Check failed: " << OF_PP_STRINGIZE(expr) << ": "
 
 #define CHECK_EQ_OR_THROW(lhs, rhs) \
   CHECK_OR_THROW((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "

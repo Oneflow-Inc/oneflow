@@ -31,9 +31,9 @@ class AssignKernel final : public user_op::OpKernel {
     user_op::Tensor* ref_tensor = ctx->Tensor4ArgNameAndIndex("ref", 0);
     if (value_tensor->dptr() == ref_tensor->dptr()) { return; }
     size_t tensor_bytes_size =
-        ref_tensor->shape().elem_cnt() * GetSizeOfDataType(ref_tensor->data_type());
+        ref_tensor->shape_view().elem_cnt() * GetSizeOfDataType(ref_tensor->data_type());
     size_t val_tensor_bytes_size =
-        value_tensor->shape().elem_cnt() * GetSizeOfDataType(value_tensor->data_type());
+        value_tensor->shape_view().elem_cnt() * GetSizeOfDataType(value_tensor->data_type());
     CHECK_EQ(tensor_bytes_size, val_tensor_bytes_size);
     AutoMemcpy(ctx->stream(), ref_tensor->mut_dptr(), value_tensor->dptr(), tensor_bytes_size,
                ref_tensor->mem_case(), value_tensor->mem_case());

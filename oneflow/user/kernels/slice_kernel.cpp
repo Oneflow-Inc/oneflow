@@ -165,30 +165,30 @@ SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
-  const int64_t ndim = entire->shape().NumAxes();
+  const int64_t ndim = entire->shape_view().NumAxes();
   CHECK_LE(ndim, kSliceMaxDims);
-  if (entire->shape().NumAxes() == 1) {
-    CHECK_LE(sliced->shape().NumAxes(), 1);
+  if (entire->shape_view().NumAxes() == 1) {
+    CHECK_LE(sliced->shape_view().NumAxes(), 1);
   } else {
-    CHECK_EQ(sliced->shape().NumAxes(), ndim);
+    CHECK_EQ(sliced->shape_view().NumAxes(), ndim);
   }
   CHECK_EQ(start_vec.size(), ndim);
   CHECK_EQ(stop_vec.size(), ndim);
   CHECK_EQ(step_vec.size(), ndim);
 
   SliceParams params;
-  if (entire->shape().NumAxes() == 1 && sliced->shape().NumAxes() == 0) {
+  if (entire->shape_view().NumAxes() == 1 && sliced->shape_view().NumAxes() == 0) {
     params.ndim = ndim;
-    params.dims[0] = entire->shape().At(0);
-    params.start[0] = RegulateSliceStart(start_vec.at(0), entire->shape().At(0));
+    params.dims[0] = entire->shape_view().At(0);
+    params.start[0] = RegulateSliceStart(start_vec.at(0), entire->shape_view().At(0));
     params.step[0] = step_vec.at(0);
     params.size[0] = 1;
     return params;
   }
   params.ndim = ndim;
   FOR_RANGE(int, i, 0, params.ndim) {
-    const int64_t dim_size = entire->shape().At(i);
-    const int64_t slice_size = sliced->shape().At(i);
+    const int64_t dim_size = entire->shape_view().At(i);
+    const int64_t slice_size = sliced->shape_view().At(i);
     const int64_t step = step_vec.at(i);
     CHECK_NE(step, 0);
     const int64_t start = RegulateSliceStart(start_vec.at(i), dim_size);
@@ -217,7 +217,7 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
   // Check physical tensor's shape
   for (const auto& split_info : slice_ctx.GetSplitInfo()) {
     if (split_info.split_axis != SPLIT_AXIS_FOR_NON_SPLIT) {
-      CHECK_EQ(large->shape().At(split_info.split_axis), split_info.upper - split_info.lower)
+      CHECK_EQ(large->shape_view().At(split_info.split_axis), split_info.upper - split_info.lower)
           << "split_info shape mismatch physical tensor shape";
     }
   }
@@ -235,7 +235,7 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
     for (int i = 0; i < ndim; i++) {
       if (!slice_ctx.IsAxisPushed(i)) {
         // axis is not split, logical shape is same as physical shape
-        logical_dims[i] = large->shape().At(i);
+        logical_dims[i] = large->shape_view().At(i);
       }
     }
     for (const auto& split_info : slice_ctx.GetSplitInfo()) {
@@ -252,9 +252,9 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
   SliceParams large_slice_param;
   SliceParams small_slice_param;
   ConstructSliceParamsLarge(slice_ctx, positive_start_vec, positive_stop_vec, step_attr,
-                            large->shape(), &large_slice_param);
+                            large->shape_view(), &large_slice_param);
   ConstructSliceParamsSmall(slice_ctx, positive_start_vec, positive_stop_vec, step_attr,
-                            small->shape(), &small_slice_param);
+                            small->shape_view(), &small_slice_param);
   CHECK_EQ(large_slice_param.elem_cnt(), small_slice_param.elem_cnt());
 
   const int64_t elem_cnt = large_slice_param.elem_cnt();
@@ -305,8 +305,22 @@ class SliceKernel final : public user_op::OpKernel {
       // split_axis == SPLIT_AXIS_FOR_NON_SPLIT means the sbp attribute is not 'split'
       CHECK_JUST(slice_ctx.PushSplitInfo(SPLIT_AXIS_FOR_NON_SPLIT, 0, 0, 0));
     } else {
-      const NdSbp& in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("x", 0);
       const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
+      NdSbp in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("x", 0);
+      {
+        const NdSbp& y_nd_sbp = ctx->NdSbp4ArgNameAndIndex("y", 0);
+        // If x and y both split in the same axis(must be full slice),
+        // we can consider the physical tensor is broadcast in this axis.
+        FOR_RANGE(int32_t, i, 0, parallel_hierarchy.NumAxes()) {
+          const SbpParallel& x_sbp = in_nd_sbp.sbp_parallel(i);
+          const SbpParallel& y_sbp = y_nd_sbp.sbp_parallel(i);
+          if (x_sbp.has_split_parallel() && y_sbp.has_split_parallel()) {
+            CHECK_EQ(x_sbp.split_parallel().axis(), y_sbp.split_parallel().axis());
+            in_nd_sbp.mutable_sbp_parallel(i)->clear_split_parallel();
+            in_nd_sbp.mutable_sbp_parallel(i)->mutable_broadcast_parallel();
+          }
+        }
+      }
       const Shape& logical_shape = ctx->LogicalTensorDesc4ArgNameAndIndex("x", 0)->shape();
       const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
       const TensorSliceView& slice_view =
@@ -325,15 +339,15 @@ class SliceKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    if (y_tensor->shape().elem_cnt() == 0) { return; }
+    if (y_tensor->shape_view().elem_cnt() == 0) { return; }
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const SliceContext& slice_ctx =
         dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
     AutoMemset(ctx->stream(), y_tensor->mut_dptr(), 0,
-               y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()),
+               y_tensor->shape_view().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()),
                y_tensor->mem_case());
-    SwitchWriteSlice(SwitchCase(y_tensor->shape().NumAxes(), y_tensor->data_type()), ctx, x_tensor,
-                     y_tensor, slice_ctx, true);
+    SwitchWriteSlice(SwitchCase(y_tensor->shape_view().NumAxes(), y_tensor->data_type()), ctx,
+                     x_tensor, y_tensor, slice_ctx, true);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -354,7 +368,7 @@ class SliceUpdateKernel final : public user_op::OpKernel {
       const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
       NdSbp ref_nd_sbp = ctx->NdSbp4ArgNameAndIndex("ref", 0);
       {
-        const NdSbp value_nd_sbp = ctx->NdSbp4ArgNameAndIndex("value", 0);
+        const NdSbp& value_nd_sbp = ctx->NdSbp4ArgNameAndIndex("value", 0);
         // If ref and value both split in the same axis(full slice),
         // we can consider the physical tensor is broadcast in this axis.
         for (int i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
@@ -387,18 +401,18 @@ class SliceUpdateKernel final : public user_op::OpKernel {
     const user_op::Tensor* value_tensor = ctx->Tensor4ArgNameAndIndex("value", 0);
     user_op::Tensor* ref_tensor = ctx->Tensor4ArgNameAndIndex("ref", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    if (y_tensor->shape().elem_cnt() == 0) { return; }
+    if (y_tensor->shape_view().elem_cnt() == 0) { return; }
     // When eager executing, y_tensor shared the same memory with ref_tensor
     if (ref_tensor->dptr<T>() != y_tensor->dptr<T>()) {
       // lazy run
       AutoMemcpy(ctx->stream(), y_tensor->mut_dptr<T>(), ref_tensor->dptr<T>(),
-                 y_tensor->shape().elem_cnt() * sizeof(T), ref_tensor->mem_case(),
+                 y_tensor->shape_view().elem_cnt() * sizeof(T), ref_tensor->mem_case(),
                  y_tensor->mem_case());
     }
     const SliceContext& slice_ctx =
         dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
-    SwitchWriteSlice(SwitchCase(value_tensor->shape().NumAxes(), value_tensor->data_type()), ctx,
-                     value_tensor, y_tensor, slice_ctx, false);
+    SwitchWriteSlice(SwitchCase(value_tensor->shape_view().NumAxes(), value_tensor->data_type()),
+                     ctx, value_tensor, y_tensor, slice_ctx, false);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -431,9 +445,9 @@ class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGrap
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    size_t dx_byte_size = dx_tensor->shape().elem_cnt() * sizeof(T);
+    size_t dx_byte_size = dx_tensor->shape_view().elem_cnt() * sizeof(T);
     Memset<device_type>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0, dx_byte_size);
-    if (dy_tensor->shape().elem_cnt() == 0) { return; }
+    if (dy_tensor->shape_view().elem_cnt() == 0) { return; }
     SliceParams params = ConstructSliceParams(ctx, dx_tensor, dy_tensor);
     SliceKernelUtil<device_type, T>::Backward(ctx->stream(), params, dy_tensor->dptr<T>(),
                                               dx_tensor->mut_dptr<T>());
