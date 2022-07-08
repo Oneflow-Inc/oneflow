@@ -23,9 +23,13 @@ from oneflow.test_utils.automated_test_util import *
 def _test_flow_tensor_consistent_broadcast_matmul_with_random_data(
     test_case, placement, x_sbp, y_sbp
 ):
-    k = random(1, 6)
-    x = random_tensor(ndim=3, dim2=k).to_global(placement=placement, sbp=x_sbp)
-    y = random_tensor(ndim=2, dim0=k).to_global(placement=placement, sbp=y_sbp)
+    k = random(1, 6) * 4
+    x = random_tensor(ndim=3, dim0=constant(2), dim1=constant(2), dim2=k).to_global(
+        placement=placement, sbp=x_sbp
+    )
+    y = random_tensor(ndim=2, dim0=k, dim1=constant(2)).to_global(
+        placement=placement, sbp=y_sbp
+    )
     return x.matmul(y)
 
 
@@ -33,9 +37,11 @@ def _test_flow_tensor_consistent_broadcast_matmul_with_random_data(
 def _test_flow_tensor_consistent_x_broadcast_y_matmul(
     test_case, placement, x_sbp, y_sbp
 ):
-    k = random(1, 6).to(int)
-    x = random_tensor(ndim=2, dim1=k).to_global(placement=placement, sbp=x_sbp)
-    y = random_tensor(ndim=3, dim1=k).to_global(placement=placement, sbp=y_sbp)
+    k = random(1, 6) * 4
+    x = random_tensor(ndim=2, dim0=1, dim1=k).to_global(placement=placement, sbp=x_sbp)
+    y = random_tensor(ndim=3, dim0=constant(2), dim1=k, dim2=constant(2)).to_global(
+        placement=placement, sbp=y_sbp
+    )
     return x.matmul(y)
 
 
@@ -43,7 +49,7 @@ def _test_flow_tensor_consistent_x_broadcast_y_matmul(
 def _test_flow_tensor_consistent_broadcast_matmul_with_same_dims(
     test_case, placement, x_sbp, y_sbp
 ):
-    k = random(1, 6).to(int)
+    k = random(1, 6) * 4
     x = random_tensor(ndim=2, dim0=1, dim1=k).to_global(placement=placement, sbp=x_sbp)
     y = random_tensor(ndim=2, dim0=k, dim1=1).to_global(placement=placement, sbp=y_sbp)
     return x.matmul(y)
