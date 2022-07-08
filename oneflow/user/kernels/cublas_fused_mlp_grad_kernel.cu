@@ -90,6 +90,9 @@ class MatmulGradKernelState final : public user_op::OpKernelState {
         }
       }
     }
+    if(ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_UNABLE_ALLREDUCE", false)){
+      if_need_comm_ = false;
+    }
   }
 
   void InitCommMgr() {
