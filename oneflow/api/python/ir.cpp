@@ -24,12 +24,13 @@ limitations under the License.
 #include <tuple>
 #include <vector>
 #include "oneflow/core/common/singleton.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/py_ast.h"
+#include "oneflow/ir/oneflow-extension/include/PyAst/Ast.h"
+
 #ifdef WITH_MLIR
 
 #include "oneflow/ir/include/OneFlow/Extension.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowRoundTrip.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowAstJIT.h"
+#include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowLRJITRegistry.h"
 #include <glog/logging.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include <functional>

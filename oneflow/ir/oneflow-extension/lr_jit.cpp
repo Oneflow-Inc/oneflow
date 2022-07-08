@@ -48,9 +48,8 @@
 #include <numeric>
 
 #include "mlir/Transforms/Passes.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowAstJIT.h"
-
-#include "./code_gen.h"
+#include "oneflow/ir/oneflow-extension/include/PyAst/Ast.h"
+#include "oneflow/ir/oneflow-extension/include/PyAst/AstMlirGen.h"
 
 using llvm::ArrayRef;
 using llvm::ScopedHashTableScope;
@@ -78,7 +77,7 @@ static mlir::OwningOpRef<mlir::ModuleOp> genModuleForTest(mlir::MLIRContext& con
       });
 
   MLIRGenImpl mlir_gen(context);
-  mlir::OwningOpRef<mlir::ModuleOp> module = mlir_gen.mlirGen(func.get());
+  mlir::OwningOpRef<mlir::ModuleOp> module = mlir_gen.genModule(func.get());
   module->dump();
   return module;
 }
@@ -122,11 +121,11 @@ static mlir::OwningOpRef<mlir::ModuleOp> genModule(mlir::MLIRContext& context,
   using namespace pyast;
 
   MLIRGenImpl mlir_gen(context);
-  mlir::OwningOpRef<mlir::ModuleOp> module = mlir_gen.mlirGen(&ast);
+  mlir::OwningOpRef<mlir::ModuleOp> module = mlir_gen.genModule(&ast);
   // module->dump();
   return module;
 }
-static std::function<double(double, double)> genFunc(pyast::FunctionDef& ast, bool is_dump) {
+static LRJITRegistry_Store_ genFunc(pyast::FunctionDef& ast, bool is_dump) {
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
   mlir::registerLLVMDialectTranslation(registry);
@@ -148,16 +147,22 @@ static std::function<double(double, double)> genFunc(pyast::FunctionDef& ast, bo
   CHECK(jit_or_err) << "failed to create JIT exe engine, "
                     << llvm::toString(jit_or_err.takeError());
 
-  std::shared_ptr<mlir::ExecutionEngine> engine_ = cantFail(move(jit_or_err));
+  std::shared_ptr<mlir::ExecutionEngine> engine = cantFail(move(jit_or_err));
 
-  return [engine_](double base_lr, double step) {
+  std::weak_ptr<mlir::ExecutionEngine> engine_ = engine;
+
+  auto func = [engine_](double base_lr, double step) {
     float res = 0;
-    auto&& out = mlir::ExecutionEngine::result(res);
-    auto base_lr_jit = static_cast<float>(base_lr);
-    auto step_jit = static_cast<float>(step);
-    auto err = engine_->invoke("get_lr", base_lr_jit, step_jit, out);
+    if (!engine_.expired()) {
+      auto engine = engine_.lock();
+      auto&& out = mlir::ExecutionEngine::result(res);
+      auto base_lr_jit = static_cast<float>(base_lr);
+      auto step_jit = static_cast<float>(step);
+      auto err = engine->invoke("get_lr", base_lr_jit, step_jit, out);
+    }
     return res;
   };
+  return {engine, func};
 }
 
 void LRJITRegistry::Register(const std::string& function_id, pyast::FunctionDef& ast,
@@ -168,7 +173,7 @@ void LRJITRegistry::Register(const std::string& function_id, pyast::FunctionDef&
 
 std::function<double(double, double)> LRJITRegistry::LookUp(const std::string& function_id) {
   auto iter = function_id2engine_.find(function_id);
-  if (iter != function_id2engine_.end()) { return iter->second; }
+  if (iter != function_id2engine_.end()) { return iter->second.second; }
   llvm::errs() << "function '" << function_id << "' not be registered before lookup.";
   return nullptr;
 };

@@ -1,71 +1,5 @@
-#include <glog/logging.h>
-#include <any>
-#include <functional>
-#include <memory>
-#include "llvm/ADT/StringRef.h"
-#include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
-#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
-#include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
-#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
-#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
-#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
-#include "mlir/Dialect/Func/Transforms/Passes.h"
-#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
-#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Math/IR/Math.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/Block.h"
-#include "mlir/IR/OperationSupport.h"
-#include "mlir/IR/TypeRange.h"
-#include "mlir/IR/Value.h"
-#include "mlir/InitAllDialects.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/Parser/Parser.h"
-#include "mlir/Pass/PassManager.h"
-#include "mlir/Support/LogicalResult.h"
-#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
-#include "mlir/ExecutionEngine/ExecutionEngine.h"
-#include "mlir/ExecutionEngine/MemRefUtils.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/OwningOpRef.h"
-#include "mlir/Dialect/Linalg/Passes.h"
-#include "mlir/IR/Verifier.h"
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/raw_ostream.h"
-#include "mlir/IR/MLIRContext.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopedHashTable.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/ADT/TypeSwitch.h"
-#include <numeric>
+#include "oneflow/ir/oneflow-extension/include/PyAst/AstMlirGen.h"
 
-#include "mlir/Transforms/Passes.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowAstJIT.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/py_ast.h"
-
-class BuilderWithSymbolTable {
- protected:
-  mlir::OpBuilder builder;
-  mlir::ModuleOp theModule;
-  std::map<std::string, mlir::Value> symbolTable;
-  mlir::Block* symbolTableForDeclareBlock;
-
-  BuilderWithSymbolTable(mlir::MLIRContext& context) : builder(&context) {}
-  virtual ~BuilderWithSymbolTable() = default;
-
-  mlir::LogicalResult declare(const std::string& var, mlir::Value value);
-  mlir::Value lookup(const std::string& var);
-  mlir::Location loc(const std::string& file_name = "unknown", int line = 0, int col = 0);
-  void dump();
-};
 
 mlir::LogicalResult BuilderWithSymbolTable::declare(const std::string& var, mlir::Value value) {
   auto iter = symbolTable.find(var);
@@ -101,60 +35,41 @@ mlir::Location BuilderWithSymbolTable::loc(const std::string& file_name, int lin
 
 void BuilderWithSymbolTable::dump() { theModule.dump(); }
 
-class MLIRGenImpl : public BuilderWithSymbolTable {
- public:
-  explicit MLIRGenImpl(mlir::MLIRContext& context) : BuilderWithSymbolTable(context) {}
+mlir::ModuleOp MLIRGenImpl::genModule(pyast::FunctionDef* func) {
+  theModule = mlir::ModuleOp::create(loc());
 
-  mlir::Value mlirGen(pyast::Compare* expr);
-  mlir::Value mlirGen(pyast::BinOp* expr);
-  mlir::Value mlirGen(pyast::Call* expr);
-  mlir::Value mlirGen(pyast::Constant* expr);
-  mlir::Value mlirGen(pyast::Name* expr);
+  if (failed(verify(theModule))) {
+    theModule.emitError("module verification error");
+    return nullptr;
+  }
 
-  mlir::Value mlirGen(pyast::expr* expr);
+  builder.setInsertionPointToEnd(theModule.getBody());
 
-  void mlirGen(pyast::If* stmt);
-  void mlirGen(pyast::Assign* stmt);
-  void mlirGen(pyast::Return* stmt);
+  auto args = func->get_args()->get_args();
+  auto type = mlir::Float32Type::getF32(builder.getContext());
+  llvm::SmallVector<mlir::Type> arg_types(args.size(), type);
+  llvm::SmallVector<mlir::Type> res_types(1, type);
 
-  void mlirGen(pyast::stmt* stmt);
+  auto func_type = builder.getFunctionType(arg_types, res_types);
+  auto function = mlir::func::FuncOp::create(loc(), func->get_name(), func_type);
 
-  mlir::ModuleOp mlirGen(pyast::FunctionDef* func) {
-    theModule = mlir::ModuleOp::create(loc());
+  auto* entry_block = function.addEntryBlock();
+  symbolTableForDeclareBlock = entry_block;
+  theModule.push_back(function);
+  builder.setInsertionPointToStart(entry_block);
 
-    if (failed(verify(theModule))) {
-      theModule.emitError("module verification error");
+  for (const auto nameValue : llvm::zip(args, entry_block->getArguments())) {
+    if (failed(declare(std::get<0>(nameValue)->get_arg(), std::get<1>(nameValue)))) {
       return nullptr;
     }
-
-    builder.setInsertionPointToEnd(theModule.getBody());
-
-    auto args = func->get_args()->get_args();
-    auto type = mlir::Float32Type::getF32(builder.getContext());
-    llvm::SmallVector<mlir::Type> arg_types(args.size(), type);
-    llvm::SmallVector<mlir::Type> res_types(1, type);
-
-    auto func_type = builder.getFunctionType(arg_types, res_types);
-    auto function = mlir::func::FuncOp::create(loc(), func->get_name(), func_type);
-
-    auto* entry_block = function.addEntryBlock();
-    symbolTableForDeclareBlock = entry_block;
-    theModule.push_back(function);
-    builder.setInsertionPointToStart(entry_block);
-
-    for (const auto nameValue : llvm::zip(args, entry_block->getArguments())) {
-      if (failed(declare(std::get<0>(nameValue)->get_arg(), std::get<1>(nameValue)))) {
-        return nullptr;
-      }
-    }
-
-    builder.setInsertionPointToStart(entry_block);
-    for (auto& stmt : func->get_body()) { mlirGen(stmt.get()); }
-
-    function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(builder.getContext()));
-    return theModule;
   }
-};
+
+  builder.setInsertionPointToStart(entry_block);
+  for (auto& stmt : func->get_body()) { mlirGen(stmt.get()); }
+
+  function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(builder.getContext()));
+  return theModule;
+}
 
 void MLIRGenImpl::mlirGen(pyast::stmt* stmt) {
   // std::cout << "stmt" << stmt->get_kind() << std::endl;

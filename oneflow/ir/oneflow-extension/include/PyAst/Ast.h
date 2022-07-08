@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_PYAST_AST_H_
+#define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_PYAST_AST_H_
 
 #include <utility>
 #include <vector>
@@ -387,3 +388,5 @@ class Name : public expr {
 };
 
 }  // namespace pyast
+
+#endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_PYAST_AST_H_

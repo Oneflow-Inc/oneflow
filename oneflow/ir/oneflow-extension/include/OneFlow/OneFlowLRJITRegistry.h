@@ -11,7 +11,14 @@
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/ir/oneflow-extension/include/OneFlow/py_ast.h"
+#include "oneflow/ir/oneflow-extension/include/PyAst/Ast.h"
+
+namespace mlir {
+class ExecutionEngine;
+}
+
+typedef std::pair<std::shared_ptr<mlir::ExecutionEngine>, std::function<double(double, double)>>
+    LRJITRegistry_Store_;
 
 class LRJITRegistry final {
  public:
@@ -24,7 +31,8 @@ class LRJITRegistry final {
  private:
   friend class oneflow::Singleton<LRJITRegistry>;
   LRJITRegistry() = default;
-  std::unordered_map<std::string, std::function<double(double, double)>> function_id2engine_;
+
+  std::unordered_map<std::string, LRJITRegistry_Store_> function_id2engine_;
 };
 
 #endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_AST_JIT_H_
