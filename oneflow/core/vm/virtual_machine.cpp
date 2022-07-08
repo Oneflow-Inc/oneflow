@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <typeinfo>
+#include "oneflow/core/vm/caching_allocator.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
@@ -21,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/allocator.h"
-#include "oneflow/core/vm/shrinkable_cache.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/singleton_ptr.h"
@@ -181,7 +181,7 @@ Maybe<void> VirtualMachine::ShrinkAllMem() {
       INTRUSIVE_FOR_EACH_PTR(stream, thread_ctx->mut_stream_list()) {
         vm::Allocator* allocator = stream->mut_stream_policy()->mut_allocator();
         if (allocator) {
-          auto* cache = dynamic_cast<vm::ShrinkableCache*>(allocator);
+          auto* cache = dynamic_cast<vm::CachingAllocator*>(allocator);
           if (cache != nullptr) { cache->Shrink(); }
         }
       }
