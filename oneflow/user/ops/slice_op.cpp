@@ -73,8 +73,8 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
-  CHECK_OR_RETURN(!ref_desc.is_dynamic()) << Error::RuntimeError()
-                                          << "The ref tensor is not dynamic";
+  CHECK_OR_RETURN(!ref_desc.is_dynamic())
+      << Error::RuntimeError() << "The ref tensor is not dynamic";
   FOR_RANGE(size_t, i, 0, step_vec.size()) {
     const int64_t step = step_vec.at(i);
     const int64_t start = start_vec.at(i);
