@@ -70,28 +70,16 @@ mlir::ModuleOp MLIRGenImpl::genModule(pyast::FunctionDef* func) {
 }
 
 void MLIRGenImpl::mlirGen(pyast::stmt* stmt) {
-  // std::cout << "stmt" << stmt->get_kind() << std::endl;
-  // dump();
   llvm::TypeSwitch<pyast::stmt*>(stmt)
       .Case<pyast::Return, pyast::Assign, pyast::If>([&](auto* node) { mlirGen(node); })
-      // TODO:
-      // .Case<Raise_>
-      // .Case<Assert_>
-      // .Case<Expr_>
       .Default([&](auto* node) { theModule->emitError("StmtKind not support yet"); });
 }
 
 mlir::Value MLIRGenImpl::mlirGen(pyast::expr* expr) {
-  // std::cout << "expr" << expr->get_kind() << std::endl;
-  // dump();
   mlir::Value res;
   llvm::TypeSwitch<pyast::expr*>(expr)
       .Case<pyast::BinOp, pyast::Compare, pyast::Call, pyast::Constant, pyast::Name>(
           [&](auto* node) { res = mlirGen(node); })
-      // TODO:
-      // .Case<Lambda>
-      // .Case<Num>
-      // .Case<Attribute>
       .Default([&](auto* node) { theModule->emitError("ExprKind not support yet"); });
   return res;
 }
