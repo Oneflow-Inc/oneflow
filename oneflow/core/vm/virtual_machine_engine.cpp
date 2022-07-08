@@ -323,7 +323,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
         INTRUSIVE_FOR_EACH_PTR(thread_ctx, mut_thread_ctx_list()) {
           INTRUSIVE_FOR_EACH_PTR(stream, thread_ctx->mut_stream_list()) {
             if (stream->device() == current_stream->device()
-                && !stream->active_stream_hook().empty()) {
+                && stream->active_stream_hook().empty()) {
               // Waits previous instructions done before shrinking memory..
               StreamWaitPreviousInstructionsDone(current_stream, instruction);
               // Shrinks allocator to reduce fragmentation of memory.
