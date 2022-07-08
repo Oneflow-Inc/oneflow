@@ -167,7 +167,8 @@ void LRJITRegistry::Register(const std::string& function_id, pyast::FunctionDef&
 }
 
 std::function<double(double, double)> LRJITRegistry::LookUp(const std::string& function_id) {
-  if (function_id2engine_.count(function_id)) { return function_id2engine_[function_id]; }
+  auto iter = function_id2engine_.find(function_id);
+  if (iter != function_id2engine_.end()) { return iter->second; }
   llvm::errs() << "function '" << function_id << "' not be registered before lookup.";
   return nullptr;
 };
