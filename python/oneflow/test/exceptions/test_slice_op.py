@@ -1,4 +1,3 @@
-# - name: "slice_update"
 import unittest
 import oneflow as flow
 import oneflow.unittest
