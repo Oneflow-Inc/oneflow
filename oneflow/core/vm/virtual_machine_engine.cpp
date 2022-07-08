@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/virtual_machine_engine.h"
+#include "oneflow/core/vm/caching_allocator.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/fuse_instruction_type.h"
 #include "oneflow/core/vm/fuse_phy_instr_operand.h"
 #include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/allocator.h"
-#include "oneflow/core/vm/shrinkable_cache.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/cpp_attribute.h"
@@ -323,7 +323,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
         // Shrinks allocator to reduce fragmentation of memory.
         {
           auto* allocator = stream->device_ctx()->mut_allocator();
-          auto* shrinkable_cache = dynamic_cast<ShrinkableCache*>(allocator);
+          auto* shrinkable_cache = dynamic_cast<CachingAllocator*>(allocator);
           if (shrinkable_cache != nullptr) { shrinkable_cache->Shrink(); }
         }
         // Infers the instruction again.
