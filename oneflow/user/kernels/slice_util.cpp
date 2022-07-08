@@ -85,7 +85,7 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
     int cnt = 1;
     for (int i = NDIM - 1; i >= 0; i--) {
       if (entire_params.step[i] == 1) { cnt *= entire_params.size[i]; }
-      if (!sliced_params.IsFullSlice(i) || !sliced_params.IsFullSlice(i)) { break; }
+      if (!entire_params.IsFullSlice(i) || !sliced_params.IsFullSlice(i)) { break; }
     }
     for (int i = 0; i < elem_cnt; i += cnt) {
       const int64_t entire_offset = SliceOffsetToEntireOffset<NDIM>(
