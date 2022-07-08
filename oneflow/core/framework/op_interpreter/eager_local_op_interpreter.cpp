@@ -50,23 +50,23 @@ Maybe<Symbol<Device>> GetDefaultDevice(const OpExprInterpContext& ctx) {
   return Device::New("cpu", 0);
 }
 
-Maybe<EagerMirroredTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& tensor) {
+Maybe<EagerLocalTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& tensor) {
   CHECK_OR_RETURN(static_cast<bool>(tensor));
-  return tensor->mut_eager_mirrored_tensor_impl();
+  return tensor->mut_eager_local_tensor_impl();
 }
 
-class MutMirroredTensorMeta : public TensorMeta {
+class MutLocalTensorMeta : public TensorMeta {  // NOLINT
  public:
-  MutMirroredTensorMeta()
+  MutLocalTensorMeta()
       : TensorMeta(std::make_shared<const Shape>(), std::make_shared<const Stride>(),
                    kInvalidDataType) {}
-  MutMirroredTensorMeta(const MutMirroredTensorMeta&) = default;
-  MutMirroredTensorMeta(MutMirroredTensorMeta&&) = default;
-  ~MutMirroredTensorMeta() override = default;
+  MutLocalTensorMeta(const MutLocalTensorMeta&) = default;
+  MutLocalTensorMeta(MutLocalTensorMeta&&) = default;
+  ~MutLocalTensorMeta() override = default;
 };
 
 std::vector<TensorMeta*>* ThreadLocalDefaultOutputMutTensorMetas(int64_t size) {
-  static thread_local std::vector<MutMirroredTensorMeta> struct_vec;
+  static thread_local std::vector<MutLocalTensorMeta> struct_vec;
   static thread_local std::vector<TensorMeta*> ptr_vec;
   struct_vec.resize(size);
   ptr_vec.resize(size);
@@ -105,8 +105,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   auto* output_tensor_metas = ThreadLocalDefaultOutputMutTensorMetas(outputs->size());
   for (int i = 0; i < outputs->size(); i++) {
     if (!outputs->at(i)) {
-      const auto& tensor_impl = std::make_shared<EagerMirroredTensorImpl>();
-      outputs->at(i) = std::make_shared<MirroredTensor>(tensor_impl);
+      const auto& tensor_impl = std::make_shared<EagerLocalTensorImpl>();
+      (*outputs)[i] = std::make_shared<LocalTensor>(tensor_impl);
       output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
     } else {
       bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
@@ -191,21 +191,21 @@ static Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTu
   return NaiveInterpret(user_op_expr, inputs, default_device, outputs, ctx);
 }
 
-Maybe<void> EagerMirroredInterpreter::ApplyImpl(const UserOpExpr& op_expr,
-                                                const TensorTuple& inputs, TensorTuple* outputs,
-                                                const OpExprInterpContext& ctx) const {
+Maybe<void> EagerLocalInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
+                                             TensorTuple* outputs,
+                                             const OpExprInterpContext& ctx) const {
   return NaiveInterpret(op_expr, inputs, outputs, ctx);
 }
 
-Maybe<void> EagerMirroredInterpreter::ApplyImpl(const VariableOpExpr& op_expr,
-                                                const TensorTuple& inputs, TensorTuple* outputs,
-                                                const OpExprInterpContext& ctx) const {
+Maybe<void> EagerLocalInterpreter::ApplyImpl(const VariableOpExpr& op_expr,
+                                             const TensorTuple& inputs, TensorTuple* outputs,
+                                             const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
-static Maybe<void> BuildAndRunMirroredCastInstruction(const BuiltinOpExpr& op_expr,
-                                                      const TensorTuple& inputs,
-                                                      TensorTuple* outputs) {
+static Maybe<void> BuildAndRunLocalCastInstruction(const BuiltinOpExpr& op_expr,
+                                                   const TensorTuple& inputs,
+                                                   TensorTuple* outputs) {
   // TODO()
   OF_UNIMPLEMENTED();
 }
@@ -278,9 +278,9 @@ Maybe<Tensor> TryReshapeTensor(const std::shared_ptr<Tensor>& tensor,
 
 }  // namespace
 
-Maybe<void> EagerMirroredInterpreter::ApplyImpl(const GlobalToGlobalOpExpr& op_expr,
-                                                const TensorTuple& inputs, TensorTuple* outputs,
-                                                const OpExprInterpContext& ctx) const {
+Maybe<void> EagerLocalInterpreter::ApplyImpl(const GlobalToGlobalOpExpr& op_expr,
+                                             const TensorTuple& inputs, TensorTuple* outputs,
+                                             const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
@@ -288,16 +288,16 @@ namespace {
 
 Maybe<void> RawLocalToGlobal(const CastToGlobalOpExpr& op_expr, const TensorTuple& inputs,
                              TensorTuple* outputs, const OpExprInterpContext& ctx) {
-  std::shared_ptr<MirroredTensor> input_mirrored_tensor;
+  std::shared_ptr<LocalTensor> input_local_tensor;
   {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_OR_RETURN(!inputs[0]->is_global());  // NOLINT
     const auto& input_tensor = JUST(inputs.at(0)->detach());
-    input_mirrored_tensor = JUST(input_tensor->AsMirroredTensor());
-    CHECK_OR_RETURN(input_mirrored_tensor) << Error::InvalidValueError("Tensor Cast Error");
+    input_local_tensor = JUST(input_tensor->AsLocalTensor());
+    CHECK_OR_RETURN(input_local_tensor) << Error::InvalidValueError("Tensor Cast Error");  // NOLINT
     bool requires_grad = autograd::GradMode::is_enabled() && inputs.at(0)->requires_grad();
-    JUST(input_mirrored_tensor->set_requires_grad(requires_grad));
-    input_mirrored_tensor->set_is_leaf(!requires_grad);
+    JUST(input_local_tensor->set_requires_grad(requires_grad));
+    input_local_tensor->set_is_leaf(!requires_grad);
   }
   std::shared_ptr<GlobalTensor> global_tensor;
   {
@@ -311,6 +311,7 @@ Maybe<void> RawLocalToGlobal(const CastToGlobalOpExpr& op_expr, const TensorTupl
                                  parallel_desc);
     Optional<int64_t> parallel_id{};
     const auto& device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
+<<<<<<< HEAD:oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.cpp
     const auto& global_tensor_impl = JUST(EagerGlobalTensorImpl::New(
         SymbolOf(tensor_meta), device, parallel_id, input_mirrored_tensor->requires_grad(),
         !input_mirrored_tensor->requires_grad()));
@@ -321,6 +322,18 @@ Maybe<void> RawLocalToGlobal(const CastToGlobalOpExpr& op_expr, const TensorTupl
       CHECK_EQ_OR_RETURN(*pyhsical_shape, *input_mirrored_tensor_shape);
       CHECK_OR_RETURN(dtype == input_mirrored_tensor->dtype()->data_type());
       global_tensor_impl->reset_cur_rank_phy_tensor(input_mirrored_tensor);
+=======
+    const auto& consistent_tensor_impl = JUST(EagerConsistentTensorImpl::New(
+        SymbolOf(tensor_meta), device, parallel_id, input_local_tensor->requires_grad(),
+        !input_local_tensor->requires_grad()));
+    consistent_tensor = std::make_shared<ConsistentTensor>(consistent_tensor_impl);
+    if (parallel_id.has_value()) {
+      const auto& pyhsical_shape = JUST(GetPhysicalShape(tensor_meta));
+      const auto& input_local_tensor_shape = input_local_tensor->shape();
+      CHECK_EQ_OR_RETURN(*pyhsical_shape, *input_local_tensor_shape);      // NOLINT
+      CHECK_OR_RETURN(dtype == input_local_tensor->dtype()->data_type());  // NOLINT
+      consistent_tensor_impl->reset_cur_rank_phy_tensor(input_local_tensor);
+>>>>>>> master:oneflow/core/framework/op_interpreter/eager_local_op_interpreter.cpp
     }
   }
   (*outputs)[0] = global_tensor;
@@ -331,6 +344,7 @@ static constexpr auto* LocalToGlobal = DECORATE(&RawLocalToGlobal, NonRecursiveI
 
 }  // namespace
 
+<<<<<<< HEAD:oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.cpp
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToGlobalOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) const {
@@ -338,6 +352,15 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToGlobalOpExpr& op_exp
   const auto& global_tensor = JUST((*outputs)[0]->AsGlobalTensor());
   JUST(WithConsistencyChecked(global_tensor, [&]() -> Maybe<void> {
     if (IsGlobalTensorMetaCheckDisabled()) { return Maybe<void>::Ok(); }
+=======
+Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastToConsistentOpExpr& op_expr,
+                                             const TensorTuple& inputs, TensorTuple* outputs,
+                                             const OpExprInterpContext& ctx) const {
+  JUST(LocalToConsistent(op_expr, inputs, outputs, ctx));
+  const auto& consistent_tensor = JUST(outputs->at(0)->AsConsistentTensor());
+  JUST(WithConsistencyChecked(consistent_tensor, [&]() -> Maybe<void> {
+    if (IsConsistentTensorMetaCheckDisabled()) { return Maybe<void>::Ok(); }
+>>>>>>> master:oneflow/core/framework/op_interpreter/eager_local_op_interpreter.cpp
     const auto& parallel_desc = JUST(ctx.parallel_desc);
     const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
     if (!parallel_id->has_value()) { return Maybe<void>::Ok(); }
@@ -347,30 +370,43 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToGlobalOpExpr& op_exp
     const auto& reshaped_tensor = JUST(TryReshapeTensor(local_tensor, tensor_meta));
     const auto& synced_tensor =
         JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp));
+<<<<<<< HEAD:oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.cpp
     auto* global_tensor_impl = reinterpret_cast<EagerGlobalTensorImpl*>(global_tensor->mut_impl());
     CHECK_NOTNULL_OR_RETURN(global_tensor_impl);
     global_tensor_impl->reset_cur_rank_phy_tensor(JUST(synced_tensor->AsMirroredTensor()));
+=======
+    auto* consistent_tensor_impl =
+        reinterpret_cast<EagerConsistentTensorImpl*>(consistent_tensor->mut_impl());
+    CHECK_NOTNULL_OR_RETURN(consistent_tensor_impl);
+    consistent_tensor_impl->reset_cur_rank_phy_tensor(JUST(synced_tensor->AsLocalTensor()));
+>>>>>>> master:oneflow/core/framework/op_interpreter/eager_local_op_interpreter.cpp
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
 }
 
+<<<<<<< HEAD:oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.cpp
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastFromGlobalOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) const {
+=======
+Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastFromConsistentOpExpr& op_expr,
+                                             const TensorTuple& inputs, TensorTuple* outputs,
+                                             const OpExprInterpContext& ctx) const {
+>>>>>>> master:oneflow/core/framework/op_interpreter/eager_local_op_interpreter.cpp
   OF_UNIMPLEMENTED();
 }
 
-Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToMirroredOpExpr& op_expr,
-                                                const TensorTuple& inputs, TensorTuple* outputs,
-                                                const OpExprInterpContext& ctx) const {
-  return BuildAndRunMirroredCastInstruction(op_expr, inputs, outputs);
+Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastToLocalOpExpr& op_expr,
+                                             const TensorTuple& inputs, TensorTuple* outputs,
+                                             const OpExprInterpContext& ctx) const {
+  return BuildAndRunLocalCastInstruction(op_expr, inputs, outputs);
 }
 
-Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastFromMirroredOpExpr& op_expr,
-                                                const TensorTuple& inputs, TensorTuple* outputs,
-                                                const OpExprInterpContext& ctx) const {
-  return BuildAndRunMirroredCastInstruction(op_expr, inputs, outputs);
+Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastFromLocalOpExpr& op_expr,
+                                             const TensorTuple& inputs, TensorTuple* outputs,
+                                             const OpExprInterpContext& ctx) const {
+  return BuildAndRunLocalCastInstruction(op_expr, inputs, outputs);
 }
 
 static Maybe<void> BuildAndRunDistributeSplitOrCloneInstruction(const BuiltinOpExpr& op_expr,
@@ -380,15 +416,15 @@ static Maybe<void> BuildAndRunDistributeSplitOrCloneInstruction(const BuiltinOpE
   OF_UNIMPLEMENTED();
 }
 
-Maybe<void> EagerMirroredInterpreter::ApplyImpl(const DistributeSplitOpExpr& op_expr,
-                                                const TensorTuple& inputs, TensorTuple* outputs,
-                                                const OpExprInterpContext& ctx) const {
+Maybe<void> EagerLocalInterpreter::ApplyImpl(const DistributeSplitOpExpr& op_expr,
+                                             const TensorTuple& inputs, TensorTuple* outputs,
+                                             const OpExprInterpContext& ctx) const {
   return BuildAndRunDistributeSplitOrCloneInstruction(op_expr, inputs, outputs);
 }
 
-Maybe<void> EagerMirroredInterpreter::ApplyImpl(const DistributeCloneOpExpr& op_expr,
-                                                const TensorTuple& inputs, TensorTuple* outputs,
-                                                const OpExprInterpContext& ctx) const {
+Maybe<void> EagerLocalInterpreter::ApplyImpl(const DistributeCloneOpExpr& op_expr,
+                                             const TensorTuple& inputs, TensorTuple* outputs,
+                                             const OpExprInterpContext& ctx) const {
   return BuildAndRunDistributeSplitOrCloneInstruction(op_expr, inputs, outputs);
 }
 
@@ -399,21 +435,21 @@ static Maybe<void> BuildAndRunDistributeConcatAndAddInstruction(const BuiltinOpE
   OF_UNIMPLEMENTED();
 }
 
-Maybe<void> EagerMirroredInterpreter::ApplyImpl(const DistributeConcatOpExpr& op_expr,
-                                                const TensorTuple& inputs, TensorTuple* outputs,
-                                                const OpExprInterpContext& ctx) const {
+Maybe<void> EagerLocalInterpreter::ApplyImpl(const DistributeConcatOpExpr& op_expr,
+                                             const TensorTuple& inputs, TensorTuple* outputs,
+                                             const OpExprInterpContext& ctx) const {
   return BuildAndRunDistributeConcatAndAddInstruction(op_expr, inputs, outputs);
 }
 
-Maybe<void> EagerMirroredInterpreter::ApplyImpl(const DistributeAddOpExpr& op_expr,
-                                                const TensorTuple& inputs, TensorTuple* outputs,
-                                                const OpExprInterpContext& ctx) const {
+Maybe<void> EagerLocalInterpreter::ApplyImpl(const DistributeAddOpExpr& op_expr,
+                                             const TensorTuple& inputs, TensorTuple* outputs,
+                                             const OpExprInterpContext& ctx) const {
   return BuildAndRunDistributeConcatAndAddInstruction(op_expr, inputs, outputs);
 }
 
-Maybe<void> EagerMirroredInterpreter::ApplyImpl(const SelectTopNOpExpr& op_expr,
-                                                const TensorTuple& inputs, TensorTuple* outputs,
-                                                const OpExprInterpContext& ctx) const {
+Maybe<void> EagerLocalInterpreter::ApplyImpl(const SelectTopNOpExpr& op_expr,
+                                             const TensorTuple& inputs, TensorTuple* outputs,
+                                             const OpExprInterpContext& ctx) const {
   int top_n = JUST(ctx.attrs.GetAttr<int32_t>("top_n"));
   outputs->resize(top_n);
   for (int i = 0; i < top_n; ++i) { (*outputs)[i] = JUST(JUST(VectorAt(inputs, i))->detach()); }

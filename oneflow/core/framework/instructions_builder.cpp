@@ -237,7 +237,7 @@ Maybe<OperatorConfSymbol> InstructionsBuilder::GetOpConfSymbol(const OperatorCon
 Maybe<Scope> InstructionsBuilder::BuildInitialScope(
     int64_t session_id, const JobConfigProto& job_conf, const std::string& device_tag,
     const std::vector<std::string>& machine_device_ids, const std::shared_ptr<Shape>& hierarchy,
-    bool is_mirrored) {
+    bool is_local) {
   ScopeProto scope_proto;
   scope_proto.set_session_id(session_id);
   std::shared_ptr<JobDesc> job_conf_sym = JUST(GetJobConfSymbol(job_conf));
@@ -251,10 +251,10 @@ Maybe<Scope> InstructionsBuilder::BuildInitialScope(
   std::shared_ptr<ParallelDesc> host_parallel_desc_sym =
       JUST(GetParallelDescSymbol(*parallel_conf));
   scope_proto.set_host_parallel_desc_symbol_id(JUST(host_parallel_desc_sym->symbol_id()));
-  if (is_mirrored) {
-    scope_proto.mutable_opt_mirrored_parallel_conf()->mutable_mirrored_parallel();
+  if (is_local) {
+    scope_proto.mutable_opt_local_parallel_conf()->mutable_local_parallel();
   } else {
-    scope_proto.mutable_opt_mirrored_parallel_conf()->clear_mirrored_parallel();
+    scope_proto.mutable_opt_local_parallel_conf()->clear_local_parallel();
   }
   return GetScopeSymbol(scope_proto);
 }
@@ -262,7 +262,7 @@ Maybe<Scope> InstructionsBuilder::BuildInitialScope(
 Maybe<Scope> InstructionsBuilder::BuildInitialScopeWithPlacement(int64_t session_id,
                                                                  const JobConfigProto& job_conf,
                                                                  Symbol<ParallelDesc> placement,
-                                                                 bool is_mirrored) {
+                                                                 bool is_local) {
   ScopeProto scope_proto;
   scope_proto.set_session_id(session_id);
   std::shared_ptr<JobDesc> job_conf_sym = JUST(GetJobConfSymbol(job_conf));
@@ -276,10 +276,10 @@ Maybe<Scope> InstructionsBuilder::BuildInitialScopeWithPlacement(int64_t session
   std::shared_ptr<ParallelDesc> host_parallel_desc_sym =
       JUST(GetParallelDescSymbol(new_placement->parallel_conf()));
   scope_proto.set_host_parallel_desc_symbol_id(JUST(host_parallel_desc_sym->symbol_id()));
-  if (is_mirrored) {
-    scope_proto.mutable_opt_mirrored_parallel_conf()->mutable_mirrored_parallel();
+  if (is_local) {
+    scope_proto.mutable_opt_local_parallel_conf()->mutable_local_parallel();
   } else {
-    scope_proto.mutable_opt_mirrored_parallel_conf()->clear_mirrored_parallel();
+    scope_proto.mutable_opt_local_parallel_conf()->clear_local_parallel();
   }
   return GetScopeSymbol(scope_proto);
 }
@@ -317,13 +317,13 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelConf(const std::share
                                        std::get<1>(*tag_and_dev_ids_and_hierarchy), hierarchy);
 }
 
-Maybe<Scope> InstructionsBuilder::BuildScopeWithNewIsMirrored(const std::shared_ptr<Scope>& scope,
-                                                              bool is_mirrored) {
-  const auto SetScopeProto = [is_mirrored](const std::shared_ptr<ScopeProto>& scope_proto) {
-    if (is_mirrored) {
-      scope_proto->mutable_opt_mirrored_parallel_conf()->mutable_mirrored_parallel();
+Maybe<Scope> InstructionsBuilder::BuildScopeWithNewIsLocal(const std::shared_ptr<Scope>& scope,
+                                                           bool is_local) {
+  const auto SetScopeProto = [is_local](const std::shared_ptr<ScopeProto>& scope_proto) {
+    if (is_local) {
+      scope_proto->mutable_opt_local_parallel_conf()->mutable_local_parallel();
     } else {
-      scope_proto->mutable_opt_mirrored_parallel_conf()->clear_mirrored_parallel();
+      scope_proto->mutable_opt_local_parallel_conf()->clear_local_parallel();
     }
   };
 
@@ -527,20 +527,20 @@ Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
 }
 
 template Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
-    const std::shared_ptr<one::MirroredTensor> tensor, const std::shared_ptr<BlockingThenBusy>& btb,
+    const std::shared_ptr<one::LocalTensor> tensor, const std::shared_ptr<BlockingThenBusy>& btb,
     const std::function<void(uint64_t)>& Callback, const std::string& modifier);
 
 template Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
-    const one::EagerMirroredTensorImpl* tensor, const std::shared_ptr<BlockingThenBusy>& btb,
+    const one::EagerLocalTensorImpl* tensor, const std::shared_ptr<BlockingThenBusy>& btb,
     const std::function<void(uint64_t)>& Callback, const std::string& modifier);
 
 namespace {
 
-Maybe<Symbol<Device>> GetDevice(const std::shared_ptr<one::MirroredTensor>& tensor) {
+Maybe<Symbol<Device>> GetDevice(const std::shared_ptr<one::LocalTensor>& tensor) {
   return tensor->device();  // return Maybe<Symbol<Device>>
 }
 
-Maybe<Symbol<Device>> GetDevice(const one::EagerMirroredTensorImpl* tensor) {
+Maybe<Symbol<Device>> GetDevice(const one::EagerLocalTensorImpl* tensor) {
   return tensor->device();  // return const Symbol<Device>&
 }
 
@@ -574,11 +574,11 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
 }
 
 template Maybe<void> InstructionsBuilder::AccessBlobByCallback(
-    const std::shared_ptr<one::MirroredTensor> tensor,
-    const std::function<void(uint64_t)>& callback, const std::string& modifier);
+    const std::shared_ptr<one::LocalTensor> tensor, const std::function<void(uint64_t)>& callback,
+    const std::string& modifier);
 
 template Maybe<void> InstructionsBuilder::AccessBlobByCallback(
-    const one::EagerMirroredTensorImpl* tensor, const std::function<void(uint64_t)>& callback,
+    const one::EagerLocalTensorImpl* tensor, const std::function<void(uint64_t)>& callback,
     const std::string& modifier);
 
 namespace {

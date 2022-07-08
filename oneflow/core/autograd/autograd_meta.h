@@ -36,7 +36,7 @@ namespace one {
 
 class Tensor;
 class TensorArg;
-class MirroredTensor;
+class LocalTensor;
 
 class AutogradMeta final {
  public:

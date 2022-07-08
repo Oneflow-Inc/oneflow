@@ -14,7 +14,7 @@ import "oneflow/core/job/module_conf.proto";
 
 message JobParallelViewConf {
   map<string, SbpSignature> op_name2sbp_signature_conf = 1;
-  map<string, bool> op_name2is_mirrored_parallel_view = 2;
+  map<string, bool> op_name2is_local_parallel_view = 2;
   map<string, NdSbpSignature> op_name2nd_sbp_signature_conf = 3;
 }
 

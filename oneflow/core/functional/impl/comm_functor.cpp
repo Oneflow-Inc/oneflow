@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.h"
+#include "oneflow/core/framework/op_interpreter/eager_local_op_interpreter.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
@@ -172,7 +172,7 @@ class LocalAllReduceFunctor {
         JUST(CachedRankGroupAndDeviceType2AllReduceOpExpr(rank_group, device_type));
     auto op_input = x;
     if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(x)) {
-      op_input = std::dynamic_pointer_cast<Tensor>(JUST(static_zeros_tensor->AsMirroredTensor()));
+      op_input = std::dynamic_pointer_cast<Tensor>(JUST(static_zeros_tensor->AsLocalTensor()));
     }
     if (inplace) {
       JUST(CheckInplaceValid(op_input));
