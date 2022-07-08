@@ -230,7 +230,7 @@ add_docstr(
 add_docstr(
     oneflow._C.randint_like,
     """
-    randint_like(Tensor, low=0, high, size, *, dtype=None, generator=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
+    randint_like(input, low=0, high, size, *, dtype=None, generator=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
 
     The interface is consistent with PyTorch.    
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.randint_like.html.

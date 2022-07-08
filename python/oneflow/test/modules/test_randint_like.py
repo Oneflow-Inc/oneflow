@@ -87,7 +87,7 @@ def _test_0rank(test_case, device, shape, low, high):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestRandint(flow.unittest.TestCase):
+class TestRandIntLike(flow.unittest.TestCase):
     def test_global_different_types(test_case):
         for dtype in [
             flow.int8,
@@ -151,7 +151,7 @@ class TestRandint(flow.unittest.TestCase):
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
-class TestRandintLikeOnNonDefaultDevice(flow.unittest.TestCase):
+class TestRandIntLikeOnNonDefaultDevice(flow.unittest.TestCase):
     def test_non_default_device(test_case):
         x_ = flow.randn((2, 3))
         x = flow.randint_like(x_, low=1, high=2, device="cuda:1")
