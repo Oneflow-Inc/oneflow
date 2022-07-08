@@ -48,8 +48,8 @@ DEFINE_OPEXPR_OP_TYPE_NAME(FeedVariableOpConf, "feed_variable");
 DEFINE_OPEXPR_OP_TYPE_NAME(FetchOutputOpConf, "fetch_output");
 DEFINE_OPEXPR_OP_TYPE_NAME(ImageDecoderRandomCropResizeOpConf, "image_gpu_decode");
 DEFINE_OPEXPR_OP_TYPE_NAME(VariableOpConf, "variable");
-DEFINE_OPEXPR_OP_TYPE_NAME(CastToMirroredOpConf, "cast_to_mirrored");
-DEFINE_OPEXPR_OP_TYPE_NAME(CastFromMirroredOpConf, "cast_from_mirrored");
+DEFINE_OPEXPR_OP_TYPE_NAME(CastToLocalOpConf, "cast_to_local");
+DEFINE_OPEXPR_OP_TYPE_NAME(CastFromLocalOpConf, "cast_from_local");
 DEFINE_OPEXPR_OP_TYPE_NAME(DistributeSplitOpConf, "distribute_split");
 DEFINE_OPEXPR_OP_TYPE_NAME(DistributeCloneOpConf, "distribute_clone");
 DEFINE_OPEXPR_OP_TYPE_NAME(DistributeConcatOpConf, "distribute_concat");
@@ -93,10 +93,8 @@ DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FetchOut
 DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(VariableOpConf, true);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(
     ImageDecoderRandomCropResizeOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastToMirroredOpConf,
-                                                                        false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastFromMirroredOpConf,
-                                                                        false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastToLocalOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastFromLocalOpConf, false);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeSplitOpConf,
                                                                         false);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeCloneOpConf,
@@ -619,33 +617,32 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<VariableOpConf>::GetOrCreateOpGradClo
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<CastToMirroredOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                                 const AttrMap& attrs) const {
+Maybe<void> BuiltinOpExprImpl<CastToLocalOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                              const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
-  *(op_conf->mutable_cast_to_mirrored_conf()) = op_proto_;
+  *(op_conf->mutable_cast_to_local_conf()) = op_proto_;
   *(op_conf->mutable_loc()) = DispatchFrame::get_str();
   return Maybe<void>::Ok();
 }
 
 template<>
-Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastToMirroredOpConf>::GetOrCreateOpGradClosure() const {
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastToLocalOpConf>::GetOrCreateOpGradClosure() const {
   UNIMPLEMENTED_THEN_RETURN();
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<CastFromMirroredOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                                   const AttrMap& attrs) const {
+Maybe<void> BuiltinOpExprImpl<CastFromLocalOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                                const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
-  *(op_conf->mutable_cast_from_mirrored_conf()) = op_proto_;
+  *(op_conf->mutable_cast_from_local_conf()) = op_proto_;
   *(op_conf->mutable_loc()) = DispatchFrame::get_str();
   return Maybe<void>::Ok();
 }
 
 template<>
-Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastFromMirroredOpConf>::GetOrCreateOpGradClosure()
-    const {
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastFromLocalOpConf>::GetOrCreateOpGradClosure() const {
   UNIMPLEMENTED_THEN_RETURN();
 }
 
