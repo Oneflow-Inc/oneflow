@@ -26,7 +26,7 @@ Maybe<void> SyncAccessTensorWithTimeOut(const std::shared_ptr<Tensor>& tensor,
                                         const std::function<void(uint64_t)>& Callback,
                                         const std::string& modifier) {
   auto btb = std::make_shared<BlockingThenBusy>(1);
-  auto local_tensor = JUST(tensor->AsMirroredTensor());
+  auto local_tensor = JUST(tensor->AsLocalTensor());
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, modifier);
   }));

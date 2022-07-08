@@ -31,18 +31,18 @@ class Session {
   int64_t id() const;
   const std::shared_ptr<vm::InstructionList>& instruction_list() const;
 
-  std::shared_ptr<const std::vector<bool>> is_mirrored_strategy_enabled_stack() const {
-    return is_mirrored_strategy_enabled_stack_;
+  std::shared_ptr<const std::vector<bool>> is_local_strategy_enabled_stack() const {
+    return is_local_strategy_enabled_stack_;
   }
-  Maybe<void> PushMirroredStrategyEnabled(bool is_mirrored);
-  Maybe<void> PopMirroredStrategyEnabled();
-  Maybe<bool> IsMirroredStrategyEnabled() const;
+  Maybe<void> PushLocalStrategyEnabled(bool is_local);
+  Maybe<void> PopLocalStrategyEnabled();
+  Maybe<bool> IsLocalStrategyEnabled() const;
   Maybe<bool> IsConsistentStrategyEnabled() const;
 
  private:
   int64_t id_;
   std::shared_ptr<vm::InstructionList> instruction_list_;
-  std::shared_ptr<std::vector<bool>> is_mirrored_strategy_enabled_stack_;
+  std::shared_ptr<std::vector<bool>> is_local_strategy_enabled_stack_;
 };
 
 Maybe<int64_t> GetDefaultSessionId();
