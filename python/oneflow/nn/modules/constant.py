@@ -251,18 +251,21 @@ def full_op(
         dtype = flow.tensor(fill_value).dtype
     return Full(size, fill_value, dtype, device, placement, sbp, requires_grad)()
 
-def full_like_op(input, 
-    fill_value, 
+
+def full_like_op(
+    input,
+    fill_value,
     dtype: Optional[flow.dtype] = None,
     device: Union[flow.device, str, None] = None,
     placement: flow.placement = None,
     sbp: flow._oneflow_internal.sbp.sbp = None,
-    requires_grad: bool = False):
+    requires_grad: bool = False,
+):
     """
-    full_like(input, fill_value, \\*, dtype=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
+    full_like(input, fill_value, \*, dtype=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
 
     The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.full_like.html?#torch.full_like.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.full_like.html.
 
     Returns a tensor with the same size as :attr:`input` filled with :attr:`fill_value`.
     ``oneflow.full_like(input, fill_value)`` is equivalent to
@@ -301,7 +304,10 @@ def full_like_op(input,
         dtype = input.dtype
     if device is None and placement is None:
         device = input.device
-    return Full(input.size(), fill_value, dtype, device, placement, sbp, requires_grad)()
+    return Full(
+        input.size(), fill_value, dtype, device, placement, sbp, requires_grad
+    )()
+
 
 def new_ones_op(
     x, size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False
