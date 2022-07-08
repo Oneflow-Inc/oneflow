@@ -265,21 +265,21 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromConsistentOpExpr
                                                   const OpExprInterpContext& ctx) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   const auto& input_tensor = inputs.at(0);
-  const auto& mirrored_tensor = JUST(JUST(input_tensor->cur_rank_phy_tensor())->detach());
+  const auto& local_tensor = JUST(JUST(input_tensor->cur_rank_phy_tensor())->detach());
   bool requires_grad = autograd::GradMode::is_enabled() && input_tensor->requires_grad();
-  JUST(mirrored_tensor->set_requires_grad(requires_grad));
-  mirrored_tensor->set_is_leaf(!requires_grad);
-  outputs->at(0) = mirrored_tensor;
+  JUST(local_tensor->set_requires_grad(requires_grad));
+  local_tensor->set_is_leaf(!requires_grad);
+  (*outputs)[0] = local_tensor;
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToMirroredOpExpr& op_expr,
+Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToLocalOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
 }
 
-Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromMirroredOpExpr& op_expr,
+Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromLocalOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
