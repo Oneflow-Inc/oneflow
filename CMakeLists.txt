@@ -45,7 +45,7 @@ set(LLVM_PROVIDER "in-tree" CACHE STRING "in-tree, install")
 
 if(NOT WITH_MLIR)
   set(LLVM_PROVIDER "install"
-    CACHE STRING "in-tree will build LLVM's ALL, not what we want when not building MLIR" FORCE)
+      CACHE STRING "in-tree will build LLVM's ALL, not what we want when not building MLIR" FORCE)
 endif(NOT WITH_MLIR)
 
 set(RPC_BACKEND "GRPC,LOCAL" CACHE STRING "")
@@ -72,7 +72,7 @@ endif()
 if(NOT CMAKE_BUILD_TYPE MATCHES "^(Debug|Release|RelWithDebInfo|MinSizeRel)$")
   message(
     FATAL_ERROR
-    "Expected CMAKE_BUILD_TYPE is Debug, Release, RelWithDebInfo or MinSizeRel, got ${CMAKE_BUILD_TYPE}"
+      "Expected CMAKE_BUILD_TYPE is Debug, Release, RelWithDebInfo or MinSizeRel, got ${CMAKE_BUILD_TYPE}"
   )
 endif()
 
@@ -95,7 +95,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     if(CPU_THREADING_RUNTIME STREQUAL "OMP")
       message(
         FATAL_ERROR
-        "libopenmp is not supported under clang10, please use TBB with '-DCPU_THREADING_RUNTIME=TBB'."
+          "libopenmp is not supported under clang10, please use TBB with '-DCPU_THREADING_RUNTIME=TBB'."
       )
     endif()
   endif()
@@ -203,14 +203,14 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(THIRD_PARTY_DIR "${PROJECT_BINARY_DIR}/third_party_install"
-  CACHE PATH "Where to install third party headers and libs")
+    CACHE PATH "Where to install third party headers and libs")
 
 set(ONEFLOW_PYTHON_DIR "${PROJECT_SOURCE_DIR}/python" CACHE PATH "oneflow python src dir")
 
 if(WIN32)
   set(CMAKE_BUILD_TYPE Debug)
   add_definitions(-DNOMINMAX -D_WIN32_WINNT=0x0A00 -DLANG_CXX11 -DCOMPILER_MSVC
-    -D__VERSION__=\"MSVC\")
+                  -D__VERSION__=\"MSVC\")
   add_definitions(
     -DWIN32
     -DOS_WIN
@@ -267,13 +267,13 @@ endif(BUILD_PYTHON)
 
 if(CPU_THREADING_RUNTIME STREQUAL "TBB")
   set(ONETBB_URL
-    https://github.com/oneapi-src/oneTBB/archive/3db67b5ba2a81bd1288325c5847e09e13c46f4d7.zip)
+      https://github.com/oneapi-src/oneTBB/archive/3db67b5ba2a81bd1288325c5847e09e13c46f4d7.zip)
   use_mirror(VARIABLE ONETBB_URL URL ${ONETBB_URL})
   set(ONETBB_MD5 7545d4084baff17af73da2dae5ab8005)
 endif()
 
 set(ROBIN_HOOD_HASHING_URL
-  https://github.com/martinus/robin-hood-hashing/archive/refs/tags/3.11.5.tar.gz)
+    https://github.com/martinus/robin-hood-hashing/archive/refs/tags/3.11.5.tar.gz)
 use_mirror(VARIABLE ROBIN_HOOD_HASHING_URL URL ${ROBIN_HOOD_HASHING_URL})
 set(ROBIN_HOOD_HASHING_MD5 a78bd30a7582f25984f8592652836467)
 
@@ -282,7 +282,7 @@ use_mirror(VARIABLE FMT_URL URL ${FMT_URL})
 set(FMT_MD5 45925a979ed7195e0c88a70be691de09)
 
 set(KINETO_URL
-  https://github.com/pytorch/kineto/archive/ff8dba20499a660650632952be76450bd70a52a6.zip)
+    https://github.com/pytorch/kineto/archive/ff8dba20499a660650632952be76450bd70a52a6.zip)
 use_mirror(VARIABLE KINETO_URL URL ${KINETO_URL})
 set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
 
