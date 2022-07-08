@@ -40,8 +40,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurJobBuildAndInferCtx_AddAndInferLocalOp", &CurJobBuildAndInferCtx_AddAndInferLocalOp,
         py::call_guard<py::gil_scoped_release>());
 
-  m.def("CurJobBuildAndInferCtx_AddAndInferConsistentOp",
-        &CurJobBuildAndInferCtx_AddAndInferConsistentOp);
+  m.def("CurJobBuildAndInferCtx_AddAndInferGlobalOp", &CurJobBuildAndInferCtx_AddAndInferGlobalOp);
   m.def("CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair",
         &CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair);
 
