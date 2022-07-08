@@ -185,12 +185,12 @@ class LocalAllReduceFunctor {
   }
 };
 
-class ConsistentAllReduceFunctor {
+class GlobalAllReduceFunctor {
  public:
-  ConsistentAllReduceFunctor() = default;
+  GlobalAllReduceFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     {
-      CHECK_OR_RETURN(x->is_consistent()) << "Tensor is not consistent";
+      CHECK_OR_RETURN(x->is_global()) << "Tensor is not global";
       CHECK_OR_RETURN(NdSbpIsAllPartialSum(*JUST(x->nd_sbp())))
           << "Tensor's sbp must be partial_sum";
     }
@@ -200,13 +200,13 @@ class ConsistentAllReduceFunctor {
   }
 };
 
-class ConsistentReduceScatterFunctor {
+class GlobalReduceScatterFunctor {
  public:
-  ConsistentReduceScatterFunctor() = default;
+  GlobalReduceScatterFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::string& op_type) const {
     {
-      CHECK_OR_RETURN(x->is_consistent());
+      CHECK_OR_RETURN(x->is_global());  // NOLINT
       if (op_type == "max") {
         CHECK_OR_RETURN(NdSbpIsAllBroadcast(*JUST(x->nd_sbp())))
             << "Tensor's sbp must be broadcast to get reduce_max";
@@ -225,12 +225,12 @@ class ConsistentReduceScatterFunctor {
   }
 };
 
-class ConsistentAllGatherFunctor {
+class GlobalAllGatherFunctor {
  public:
-  ConsistentAllGatherFunctor() = default;
+  GlobalAllGatherFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     {
-      CHECK_OR_RETURN(x->is_consistent()) << "Tensor is not consistent";
+      CHECK_OR_RETURN(x->is_global()) << "Tensor is not global";
       CHECK_OR_RETURN(NdSbpIsAllSplit(*JUST(x->nd_sbp()), 0))
           << "Tensor's sbp must be split to get all_gather";
     }
@@ -240,15 +240,15 @@ class ConsistentAllGatherFunctor {
   }
 };
 
-class ConsistentS2SFunctor {
+class GlobalS2SFunctor {
  public:
-  ConsistentS2SFunctor() = default;
+  GlobalS2SFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<Symbol<SbpParallel>>& sbp_parallels) const {
     Symbol<NdSbp> in_nd_sbp = JUST(x->nd_sbp());
     Symbol<NdSbp> out_nd_sbp = JUST(GetNdSbp(sbp_parallels));
     {
-      CHECK_OR_RETURN(x->is_consistent());
+      CHECK_OR_RETURN(x->is_global());  // NOLINT
       CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(), 1);
       CHECK_OR_RETURN(IsSplitSbp(in_nd_sbp->sbp_parallel(0)));
       CHECK_EQ_OR_RETURN(out_nd_sbp->sbp_parallel_size(), 1);
@@ -386,10 +386,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::StreamTouchFunctor>("StreamTouch");
   m.add_functor<impl::BroadcastFunctor>("Broadcast");
   m.add_functor<impl::LocalAllReduceFunctor>("LocalAllReduce");
-  m.add_functor<impl::ConsistentAllReduceFunctor>("ConsistentAllReduce");
-  m.add_functor<impl::ConsistentReduceScatterFunctor>("ConsistentReduceScatter");
-  m.add_functor<impl::ConsistentAllGatherFunctor>("ConsistentAllGather");
-  m.add_functor<impl::ConsistentS2SFunctor>("ConsistentS2S");
+  m.add_functor<impl::GlobalAllReduceFunctor>("GlobalAllReduce");
+  m.add_functor<impl::GlobalReduceScatterFunctor>("GlobalReduceScatter");
+  m.add_functor<impl::GlobalAllGatherFunctor>("GlobalAllGather");
+  m.add_functor<impl::GlobalS2SFunctor>("GlobalS2S");
   m.add_functor<impl::SendFunctor>("Send");
   m.add_functor<impl::RecvFunctor>("Recv");
   m.add_functor<impl::LocalReduceFunctor>("LocalReduce");
