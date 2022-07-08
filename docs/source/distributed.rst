@@ -1,6 +1,95 @@
 oneflow.distributed
 =========================================================
 
+.. note ::
+    Please refer to `oneflow Distributed Overview <https://docs.oneflow.org/master/parallelism/01_introduction.html>`__
+    for a brief introduction to all features related to distributed training.
+
+OneFlow introduces the concept of **Global View** to simplify distributed training. Simply , in OneFlow's global view, a cluster is abstracted as a "supercomputing device".
+
+OneFlow's **Global View**  relies on several important concepts: ``Placement``, ``SBP`` and ``SBP Signature``.
+
+Basics
+--------------------------------------------------------------
+
+Placement
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The Tensor in the OneFlow global view has a placement attribute, which allows you to specify the physical device on which the Tensor is stored.
+
+.. autoclass:: oneflow.placement
+
+SBP
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+SBP is a concept invented by OneFlow that describes the mapping of data in the global view of a "supercomputing device" to data on real physical devices in a cluster, and is a combination of the initials split, broadcast, and partial.
+
+.. autoclass::  oneflow.sbp.sbp
+
+SBP Signature
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Create global tensor
+--------------------------------------------------------------
+Global Tensor is a Tensor designed to facilitate distributed execution on multiple machines and devices, and is an interface for implementing Global View programming.
+
+In each of the two consoles, import oneflow and create x
+
+::
+
+    >>>import oneflow as flow
+    >>> # Place a global tensor on cuda device of rank(process) 0 and 1
+    >>> placement = flow.placement(type="cuda", ranks=[0, 1])
+    >>> # Each rank's local data is a part data as a result of spliting global data on dim 0
+    >>> sbp = flow.sbp.split(dim=0)
+    >>> # Create a global tensor by randn
+    >>> x = flow.randn(4, 5, placement=placement, sbp=sbp)
+    >>> x.shape
+    oneflow.Size([4, 5])
+
+
+
+Post-Initialization
+--------------------------------------------------------------
+.. currentmodule:: oneflow.env
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    get_world_size
+    get_rank
+    get_local_rank
+    get_node_size
+    init_rdma
+    rdma_is_initialized
+
+
+Communication collectives
+--------------------------------------------------------------
+.. currentmodule:: oneflow.comm
+    
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+        all_reduce
+        all_gather
+        all_to_all
+        broadcast
+        barrier
+        gather
+        reduce
+        reduce_scatter
+        recv
+        scatter
+        send
+
+
+Launching distributed training
+--------------------------------------------------------------
+
 .. currentmodule:: oneflow.distributed
 
 run commands below to see more about usage.
