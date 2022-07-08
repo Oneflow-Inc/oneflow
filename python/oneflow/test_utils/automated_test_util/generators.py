@@ -508,9 +508,9 @@ class all_sbp(generator):
     def _calc_all_sbp(self):
         # scalar only use broadcast sbp
         if self.max_dim == 0:
-            return [
+            return tuple(
                 [flow.sbp.broadcast for i in range(self.dim)],
-            ]
+            )
         all_sbps = []
         if not self.except_split:
             for i in range(self.max_dim):
