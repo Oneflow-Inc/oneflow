@@ -446,10 +446,10 @@ class Graph(object):
         Use ``ranks`` to choose which rank to print the debug information.
 
         Use ``max_py_stack_depth`` to specify the max Python stack depth for the debug information.
-
-        Use ``op_repr_with_py_stack `` to print operators' locations when printing nn.Graph's repr.
-
+        
         Use ``only_user_py_stack`` to only print the operators' locations which are from users' code or models.
+
+        Use ``op_repr_with_py_stack`` to print operators' locations when printing nn.Graph's repr.
 
         For example:
 
