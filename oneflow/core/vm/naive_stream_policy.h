@@ -31,9 +31,27 @@ class NaiveStreamPolicy final : public StreamPolicy {
 
   ~NaiveStreamPolicy() override = default;
 
-  ep::Stream* stream() override { return device_ctx_->stream(); }
-  vm::Allocator* mut_allocator() override { return device_ctx_->mut_allocator(); }
-  DeviceType device_type() const override { return device_ctx_->device_type(); }
+  ep::Stream* stream() override {
+    if (device_ctx_) {
+      return device_ctx_->stream();
+    } else {
+      return nullptr;
+    }
+  }
+  vm::Allocator* mut_allocator() override {
+    if (device_ctx_) {
+      return device_ctx_->mut_allocator();
+    } else {
+      return nullptr;
+    }
+  }
+  DeviceType device_type() const override {
+    if (device_ctx_) {
+      return device_ctx_->device_type();
+    } else {
+      return DeviceType::kInvalidDevice;
+    }
+  }
 
   void InitInstructionStatus(const Stream& stream,
                              InstructionStatusBuffer* status_buffer) const override {
