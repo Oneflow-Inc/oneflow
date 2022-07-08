@@ -35,7 +35,7 @@ Maybe<void> DataTypeInferFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& scalar = ctx->InputTensorDesc("scalar", 0);
   CHECK_EQ_OR_RETURN(x.data_type(), scalar.data_type())
-      << Error::TypeError() << "Tensors x and scalar have diffence type";
+      << Error::TypeError() << "Tensors x and scalar have different type";
   user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
   *y->mut_data_type() = x.data_type();
   return Maybe<void>::Ok();
