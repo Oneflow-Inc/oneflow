@@ -68,11 +68,11 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  void ForEachConstMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
+  void ForEachConstDependence(const std::function<void(vm::Dependence* compute)>&) const;
 
-  void ForEachMutMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
+  void ForEachMutDependence(const std::function<void(vm::Dependence* compute)>&) const;
 
-  void ForEachMut2MirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
+  void ForEachMut2Dependence(const std::function<void(vm::Dependence* compute)>&) const;
 
   bool need_temp_storage() const { return need_temp_storage_; }
   const user_op::OpKernel* user_opkernel() const { return user_opkernel_; }

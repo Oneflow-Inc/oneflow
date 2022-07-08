@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <utility>
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
@@ -20,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
-#include "oneflow/core/job/mirrored_sig_infer_hint.h"
+#include "oneflow/core/job/local_sig_infer_hint.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/sbp_parallel.h"
@@ -886,57 +887,57 @@ Maybe<void> Operator::InferNdSbpSignature(
   }
 }
 
-Maybe<void> Operator::InferMirroredSignatureIf(
-    std::function<Maybe<const MirroredSigInferHint*>(const std::string&)> MirroredSigInferHint4Ibn,
-    bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc) {
-  return InferMirroredSignature(MirroredSigInferHint4Ibn, is_mirrored_parallel_view_conf,
-                                parallel_desc);
+Maybe<void> Operator::InferLocalSignatureIf(
+    std::function<Maybe<const LocalSigInferHint*>(const std::string&)> LocalSigInferHint4Ibn,
+    bool is_local_parallel_view_conf, const ParallelDesc& parallel_desc) {
+  return InferLocalSignature(std::move(LocalSigInferHint4Ibn), is_local_parallel_view_conf,
+                             parallel_desc);
 }
 
-std::string DebugString4MirroredHint(
-    std::function<Maybe<const MirroredSigInferHint*>(const std::string&)> MirroredSigInferHint4Ibn,
+std::string DebugString4LocalHint(
+    std::function<Maybe<const LocalSigInferHint*>(const std::string&)> LocalSigInferHint4Ibn,
     const Operator& op) {
   std::string ret;
   for (const auto& ibn : op.input_bns()) {
-    const auto& infer_hint = *CHECK_JUST(MirroredSigInferHint4Ibn(ibn));
-    bool is_mirrored = infer_hint.is_mirrored_parallel_view();
-    ret += "arg: " + ibn + ", is_mirrored: " + (is_mirrored ? "true" : "false") + "\n";
+    const auto& infer_hint = *CHECK_JUST(LocalSigInferHint4Ibn(ibn));
+    bool is_local = infer_hint.is_local_parallel_view();
+    ret += "arg: " + ibn + ", is_local: " + (is_local ? "true" : "false") + "\n";
   }
   return ret;
 }
 
-Maybe<void> Operator::InferMirroredSignature(
-    std::function<Maybe<const MirroredSigInferHint*>(const std::string&)> MirroredSigInferHint4Ibn,
-    bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc) {
-  HashSet<bool> is_mirrored_parallel_view_values;
+Maybe<void> Operator::InferLocalSignature(
+    std::function<Maybe<const LocalSigInferHint*>(const std::string&)>
+        LocalSigInferHint4Ibn,  // NOLINT
+    bool is_local_parallel_view_conf, const ParallelDesc& parallel_desc) {
+  HashSet<bool> is_local_parallel_view_values;
   for (const auto& ibn : input_bns()) {
-    const auto& infer_hint = *JUST(MirroredSigInferHint4Ibn(ibn));
-    is_mirrored_parallel_view_values.insert(infer_hint.is_mirrored_parallel_view());
+    const auto& infer_hint = *JUST(LocalSigInferHint4Ibn(ibn));
+    is_local_parallel_view_values.insert(infer_hint.is_local_parallel_view());
   }
-  CHECK_LE_OR_RETURN(is_mirrored_parallel_view_values.size(), 1)
+  CHECK_LE_OR_RETURN(is_local_parallel_view_values.size(), 1)
       << "mixed parallel_views are disallowed."
       << "\n=========== is_mirrrored_conf ===========\n"
-      << DebugString4MirroredHint(MirroredSigInferHint4Ibn, *this)
-      << "\n=========== op_cnf ===========\n"
+      << DebugString4LocalHint(LocalSigInferHint4Ibn, *this) << "\n=========== op_cnf ===========\n"
       << op_conf().DebugString();
-  if (is_mirrored_parallel_view_values.size() == 1) {
-    is_mirrored_parallel_view_conf = *is_mirrored_parallel_view_values.begin();
+  if (is_local_parallel_view_values.size() == 1) {
+    is_local_parallel_view_conf = *is_local_parallel_view_values.begin();
   }
-  if (is_mirrored_parallel_view_conf) {
+  if (is_local_parallel_view_conf) {
     for (const auto& ibn : input_bns()) {
-      const auto& infer_hint = *JUST(MirroredSigInferHint4Ibn(ibn));
+      const auto& infer_hint = *JUST(LocalSigInferHint4Ibn(ibn));
       CHECK_EQ_OR_RETURN(infer_hint.parallel_desc().parallel_num(), parallel_desc.parallel_num());
     }
   }
-  const auto SetIsMirroredParallel = [&](const std::string& bn_in_op) {
-    if (is_mirrored_parallel_view_conf) {
-      MutOptMirroredParallel(bn_in_op)->mutable_mirrored_parallel();
+  const auto SetIsLocalParallel = [&](const std::string& bn_in_op) {
+    if (is_local_parallel_view_conf) {
+      MutOptLocalParallel(bn_in_op)->mutable_local_parallel();
     } else {
-      MutOptMirroredParallel(bn_in_op)->clear_mirrored_parallel();
+      MutOptLocalParallel(bn_in_op)->clear_local_parallel();
     }
   };
-  for (const auto& ibn : input_bns()) { SetIsMirroredParallel(ibn); }
-  for (const auto& obn : output_bns()) { SetIsMirroredParallel(obn); }
+  for (const auto& ibn : input_bns()) { SetIsLocalParallel(ibn); }
+  for (const auto& obn : output_bns()) { SetIsLocalParallel(obn); }
   return Maybe<void>::Ok();
 }
 
@@ -979,19 +980,18 @@ Maybe<const NdSbp*> Operator::NdSbp4BnInOp(const std::string& bn_in_op) const {
   return &iter->second;
 }
 
-Maybe<const OptMirroredParallel*> Operator::OptMirroredParallel4BnInOp(
+Maybe<const OptLocalParallel*> Operator::OptLocalParallel4BnInOp(
     const std::string& bn_in_op) const {
-  CHECK_OR_RETURN(mirrored_signature_) << "mirrored signature not infered";
-  const auto& map = mirrored_signature_->bn_in_op2opt_mirrored_parallel();
+  CHECK_OR_RETURN(local_signature_) << "local signature not infered";
+  const auto& map = local_signature_->bn_in_op2opt_local_parallel();
   const auto& iter = map.find(bn_in_op);
-  CHECK_OR_RETURN(iter != map.end())
-      << "blob_name " << bn_in_op << " not found in mirrored signature";
+  CHECK_OR_RETURN(iter != map.end()) << "blob_name " << bn_in_op << " not found in local signature";
   return &iter->second;
 }
 
-OptMirroredParallel* Operator::MutOptMirroredParallel(const std::string& bn_in_op) {
-  if (!mirrored_signature_) { mirrored_signature_.reset(new MirroredSignature()); }
-  auto* map = mirrored_signature_->mutable_bn_in_op2opt_mirrored_parallel();
+OptLocalParallel* Operator::MutOptLocalParallel(const std::string& bn_in_op) {
+  if (!local_signature_) { local_signature_.reset(new LocalSignature()); }
+  auto* map = local_signature_->mutable_bn_in_op2opt_local_parallel();
   return &(*map)[bn_in_op];
 }
 
@@ -1282,10 +1282,10 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
   } else {
     op_attribute->clear_nd_sbp_signature();
   }
-  if (mirrored_signature_) {
-    *op_attribute->mutable_mirrored_signature() = *mirrored_signature_;
+  if (local_signature_) {
+    *op_attribute->mutable_local_signature() = *local_signature_;
   } else {
-    op_attribute->clear_mirrored_signature();
+    op_attribute->clear_local_signature();
   }
   if (input_index2logical_blob_desc_) {
     JUST(FillLogicalBlobDescSignature(
@@ -1455,23 +1455,22 @@ Maybe<void> InferOpOutSbpParallel(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferMirroredSignature(Operator* op, const OpNodeSignature& upstream_signature,
-                                   bool is_mirrored, const ParallelDesc& parallel_desc) {
-  HashMap<std::string, MirroredSigInferHint> ibn2mirrored_sig_infer_hint;
+Maybe<void> InferLocalSignature(Operator* op, const OpNodeSignature& upstream_signature,
+                                bool is_local, const ParallelDesc& parallel_desc) {
+  HashMap<std::string, LocalSigInferHint> ibn2local_sig_infer_hint;
   for (const std::string& ibn : op->input_bns()) {
-    const auto& map = upstream_signature.mirrored_signature().bn_in_op2opt_mirrored_parallel();
-    const auto& opt_mirrored_parallel = map.at(ibn);
-    ibn2mirrored_sig_infer_hint.emplace(
-        ibn, MirroredSigInferHint(&parallel_desc, opt_mirrored_parallel.has_mirrored_parallel()));
+    const auto& map = upstream_signature.local_signature().bn_in_op2opt_local_parallel();
+    const auto& opt_local_parallel = map.at(ibn);
+    ibn2local_sig_infer_hint.emplace(
+        ibn, LocalSigInferHint(&parallel_desc, opt_local_parallel.has_local_parallel()));
   }
-  const auto& MirroredSigInferHint4Ibn =
-      [&](const std::string& ibn) -> Maybe<const MirroredSigInferHint*> {
-    const auto& iter = ibn2mirrored_sig_infer_hint.find(ibn);
-    CHECK_OR_RETURN(iter != ibn2mirrored_sig_infer_hint.end())
-        << "input blob not found. ibn: " << ibn;
+  const auto& LocalSigInferHint4Ibn =
+      [&](const std::string& ibn) -> Maybe<const LocalSigInferHint*> {
+    const auto& iter = ibn2local_sig_infer_hint.find(ibn);
+    CHECK_OR_RETURN(iter != ibn2local_sig_infer_hint.end()) << "input blob not found. ibn: " << ibn;
     return &iter->second;
   };
-  JUST(op->InferMirroredSignatureIf(MirroredSigInferHint4Ibn, is_mirrored, parallel_desc));
+  JUST(op->InferLocalSignatureIf(LocalSigInferHint4Ibn, is_local, parallel_desc));
   return Maybe<void>::Ok();
 }
 
@@ -1485,11 +1484,11 @@ Maybe<void> CheckOpInputSignature(const Operator& op, const OpNodeSignature& ups
     {
       CHECK_OR_RETURN(upstream_signature.has_sbp_signature());
       const auto& map = upstream_signature.sbp_signature().bn_in_op2sbp_parallel();
-      CHECK_OR_RETURN(map.find(ibn) != map.end());
+      CHECK_OR_RETURN(map.find(ibn) != map.end());  // NOLINT
     }
     {
-      CHECK_OR_RETURN(upstream_signature.has_mirrored_signature());
-      const auto& map = upstream_signature.mirrored_signature().bn_in_op2opt_mirrored_parallel();
+      CHECK_OR_RETURN(upstream_signature.has_local_signature());  // NOLINT
+      const auto& map = upstream_signature.local_signature().bn_in_op2opt_local_parallel();
       CHECK_OR_RETURN(map.find(ibn) != map.end());
     }
   }
@@ -1501,7 +1500,7 @@ Maybe<void> CheckOpInputSignature(const Operator& op, const OpNodeSignature& ups
 Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
                                     const OpNodeSignature& upstream_signature, const Scope& scope) {
   const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
-  bool is_mirrored = scope.opt_mirrored_parallel_conf().has_mirrored_parallel();
+  bool is_local = scope.opt_local_parallel_conf().has_local_parallel();
   const auto& op = JUST(ConstructOp(op_conf));
   JUST(CheckOpInputSignature(*op, upstream_signature));
   JUST(op->FillOpParallelDesc(parallel_desc));
@@ -1514,8 +1513,8 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
     return *bn_in_op2blob_desc.at(ibn);
   };
   JUST(op->FillLogicalInBlobDesc(ConstBlobDesc4Ibn));
-  // infer is_mirrored
-  JUST(InferMirroredSignature(op.get(), upstream_signature, is_mirrored, parallel_desc));
+  // infer is_local
+  JUST(InferLocalSignature(op.get(), upstream_signature, is_local, parallel_desc));
   SbpSignature sbp_sig_conf;
   // iner sbp
   JUST(InferOpOutSbpParallel(op.get(), upstream_signature, ConstBlobDesc4Ibn, sbp_sig_conf,

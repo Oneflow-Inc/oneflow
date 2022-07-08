@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
-// Can only be called in mirrored
+// Can only be called in local
 /* static */ Maybe<void> EagerPToBOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->OutputShape("out", 0) = Shape(ctx->Attr<Shape>("shape").dim_vec());
   return Maybe<void>::Ok();
