@@ -20,15 +20,14 @@ limitations under the License.
 #include <memory>
 #include <vector>
 #include "oneflow/core/common/small_vector.h"
+#include "oneflow/core/common/op_args_reserved_size.h"
 
 namespace oneflow {
 namespace one {
 
 class Tensor;
 
-constexpr static int kTensorTupleReservedSize = 4;
-
-class TensorTuple final : public small_vector<std::shared_ptr<Tensor>, kTensorTupleReservedSize>,
+class TensorTuple final : public small_vector<std::shared_ptr<Tensor>, kOpArgsReservedSize>,
                           public std::enable_shared_from_this<TensorTuple> {
  public:
   // TensorTuple(const TensorTuple&) = delete;
