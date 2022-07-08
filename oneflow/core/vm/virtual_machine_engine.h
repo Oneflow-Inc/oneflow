@@ -63,12 +63,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   size_t total_erased_instruction_cnt() const { return total_erased_instruction_cnt_; }
   void InsertProbe(const std::function<bool(VirtualMachineEngine*)>& ProbeFunction);
   const ActiveStreamList& active_stream_list() const { return active_stream_list_; }
-  const bool IsActiveStream(const Stream& stream) const {
-    INTRUSIVE_FOR_EACH(active_stream, &active_stream_list_) {
-      if (stream == active_stream) { return true; }
-    }
-    return false;
-  }
   const ThreadCtxList& thread_ctx_list() const { return thread_ctx_list_; }
   const LivelyInstructionList& lively_instruction_list() const { return lively_instruction_list_; }
   const BarrierInstructionList& barrier_instruction_list() const {
