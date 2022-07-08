@@ -463,7 +463,9 @@ class Graph(object):
             v_level (int): choose verbose debug info level, default v_level is 0, max v_level is 3. v_level can be set to -1 to close the debug mode.
             ranks (int or list(int)): choose ranks to print the debug information. Default rank ``0``.
                 You can choose any valid rank. Ranks equals ``-1`` means debug on all ranks.
-            max_py_stack_depth(int): the maximum depth for the Python stack debug information. Default: ``2``
+            max_py_stack_depth(int): the maximum depth for the Python stack debug information. Default: ``2``.
+            only_user_py_stack(bool): only to print the operators' locations from users' code. Default: ``True``.
+            op_repr_with_py_stack(bool):  print operators' locations when printing nn.Graph's repr. Default: ``False``. 
         """
         assert isinstance(v_level, int)
         assert v_level >= -1, "The min verbose debug info level is -1."
