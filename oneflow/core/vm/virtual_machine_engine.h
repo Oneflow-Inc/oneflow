@@ -112,6 +112,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   DependenceAccess* AccessDependence(OperandAccessType access_type, Dependence* dependence,
                                      Instruction* instrution);
   void ConsumeDependences(Instruction* instruction);
+  void ShrinkStream(const Stream* stream);
   void DispatchInstruction(Instruction* instruction, const ScheduleCtx& schedule_ctx);
 
   bool EdgeDispatchable(const Instruction* src, const Instruction* dst) const;

@@ -308,48 +308,54 @@ std::string DebugDeviceReset(vm::Stream* stream) {
 
 }  // namespace
 
+void VirtualMachineEngine::ShrinkStream(const Stream* stream) {
+  auto* allocator = stream->device_ctx()->mut_allocator();
+  auto* shrinkable_cache = dynamic_cast<CachingAllocator*>(allocator);
+  if (shrinkable_cache != nullptr) { shrinkable_cache->Shrink(); }
+}
+
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
                                                const ScheduleCtx& schedule_ctx) {
-  auto* current_stream = instruction->mut_stream();
-  current_stream->mut_running_instruction_list()->PushBack(instruction);
-  if (current_stream->active_stream_hook().empty()) {
-    mut_active_stream_list()->PushBack(current_stream);
-  }
+  auto* stream = instruction->mut_stream();
+  stream->mut_running_instruction_list()->PushBack(instruction);
+  if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
   // Prepare
   {
     const auto& ret = TRY(instruction->Prepare());
     if (unlikely(!ret.IsOk())) {
       if (ret.error()->has_out_of_memory_error()) {
+        // for all stream
         INTRUSIVE_FOR_EACH_PTR(thread_ctx, mut_thread_ctx_list()) {
-          INTRUSIVE_FOR_EACH_PTR(stream, thread_ctx->mut_stream_list()) {
-            if (stream->device() == current_stream->device()
-                && stream->active_stream_hook().empty()) {
+          INTRUSIVE_FOR_EACH_PTR(current_stream, thread_ctx->mut_stream_list()) {
+            if (current_stream->device() == stream->device()) {
               // Waits previous instructions done before shrinking memory..
               StreamWaitPreviousInstructionsDone(current_stream, instruction);
               // Shrinks allocator to reduce fragmentation of memory.
-              {
-                auto* allocator = current_stream->device_ctx()->mut_allocator();
-                auto* shrinkable_cache = dynamic_cast<CachingAllocator*>(allocator);
-                if (shrinkable_cache != nullptr) { shrinkable_cache->Shrink(); }
+              ShrinkStream(stream);
+            } else {
+              auto* running_list = current_stream->mut_running_instruction_list();
+              if (running_list->size() > 0) {
+                // buzy loop to make sure running instructions all done.
+                while (running_list->Last() && !running_list->Last()->Done()) {}
               }
+              ShrinkStream(current_stream);
             }
           }
         }
 
         // Infers the instruction again.
-        CHECK_JUST_MSG(instruction->Prepare(), std::stringstream()
-                                                   << DebugDeviceReset(current_stream));
+        CHECK_JUST_MSG(instruction->Prepare(), std::stringstream() << DebugDeviceReset(stream));
       } else {
         CHECK_JUST(ret);
       }
     }
   }
   // Compute
-  if (OnSchedulerThread(*current_stream)) {
-    current_stream->stream_type().Run(instruction);
+  if (OnSchedulerThread(*stream)) {
+    stream->stream_type().Run(instruction);
   } else {
-    current_stream->mut_thread_ctx()->mut_worker_pending_instruction_list()->PushBack(instruction);
-    schedule_ctx.OnWorkerLoadPending(current_stream->mut_thread_ctx());
+    stream->mut_thread_ctx()->mut_worker_pending_instruction_list()->PushBack(instruction);
+    schedule_ctx.OnWorkerLoadPending(stream->mut_thread_ctx());
   }
 }
 
