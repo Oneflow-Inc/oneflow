@@ -261,9 +261,8 @@ class RandInt2Functor {
 
 class RandIntLikeFunctor {
  public:
-
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor> &input, const int64_t low, const int64_t high,
-                           const Optional<Symbol<DType>>& dtype,
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const int64_t low,
+                           const int64_t high, const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
@@ -274,8 +273,7 @@ class RandIntLikeFunctor {
 
 class RandIntLike2Functor {
  public:
-
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor> &input, const int64_t high,
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const int64_t high,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
@@ -342,29 +340,26 @@ class ConsistentRandInt2Functor {
 
 class ConsistentRandIntLikeFunctor {
  public:
-
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor> &input, const int64_t low, const int64_t high,
-                           const Symbol<ParallelDesc>& placement,
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const int64_t low,
+                           const int64_t high, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
-    const Shape shape = *input->shape();                  
-    return ConsistentRandInt(low, high, shape, placement, sbp, dtype, generator,
-                             requires_grad);
+    const Shape shape = *input->shape();
+    return ConsistentRandInt(low, high, shape, placement, sbp, dtype, generator, requires_grad);
   }
 };
 
 class ConsistentRandIntLike2Functor {
  public:
-
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor> &input, const int64_t high,
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const int64_t high,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
-    const Shape shape = *input->shape();                  
+    const Shape shape = *input->shape();
     return ConsistentRandInt(/*low*/ 0, high, shape, placement, sbp, dtype, generator,
                              requires_grad);
   }
@@ -441,7 +436,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<RandIntFunctor, RandInt2Functor>("RandInt");
   m.add_functor<ConsistentRandIntFunctor, ConsistentRandInt2Functor>("ConsistentRandInt");
   m.add_functor<RandIntLikeFunctor, RandIntLike2Functor>("RandIntLike");
-  m.add_functor<ConsistentRandIntLikeFunctor, ConsistentRandIntLike2Functor>("ConsistentRandIntLike");
+  m.add_functor<ConsistentRandIntLikeFunctor, ConsistentRandIntLike2Functor>(
+      "ConsistentRandIntLike");
 };
 
 }  // namespace functional
