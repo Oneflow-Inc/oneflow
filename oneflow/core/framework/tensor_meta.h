@@ -97,16 +97,16 @@ class LocalTensorMeta : public TensorMeta {
   int64_t storage_offset_;
 };
 
-class ConsistentTensorMeta : public TensorMeta {
+class GlobalTensorMeta : public TensorMeta {
  public:
-  ConsistentTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                       Symbol<NdSbp> nd_sbp, Symbol<ParallelDesc> parallel_desc)
+  GlobalTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype, Symbol<NdSbp> nd_sbp,
+                   Symbol<ParallelDesc> parallel_desc)
       : TensorMeta(shape, dtype), nd_sbp_(nd_sbp), parallel_desc_(parallel_desc) {}
-  ConsistentTensorMeta(const ConsistentTensorMeta&) = default;
-  ConsistentTensorMeta(ConsistentTensorMeta&&) = default;
-  virtual ~ConsistentTensorMeta() = default;
+  GlobalTensorMeta(const GlobalTensorMeta&) = default;
+  GlobalTensorMeta(GlobalTensorMeta&&) = default;
+  virtual ~GlobalTensorMeta() = default;
 
-  bool operator==(const ConsistentTensorMeta& other) const;
+  bool operator==(const GlobalTensorMeta& other) const;
 
   Symbol<NdSbp> nd_sbp() const { return nd_sbp_; }
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
@@ -128,9 +128,9 @@ class ConsistentTensorMeta : public TensorMeta {
 namespace std {
 
 template<>
-struct hash<oneflow::one::ConsistentTensorMeta> final {
-  size_t operator()(const oneflow::one::ConsistentTensorMeta& consistent_tensor_meta) const {
-    return consistent_tensor_meta.CalcHashValue();
+struct hash<oneflow::one::GlobalTensorMeta> final {
+  size_t operator()(const oneflow::one::GlobalTensorMeta& global_tensor_meta) const {
+    return global_tensor_meta.CalcHashValue();
   }
 };
 

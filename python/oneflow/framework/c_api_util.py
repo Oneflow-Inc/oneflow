@@ -110,11 +110,9 @@ def CheckAndCompleteUserOpConf(op_conf_proto):
     return text_format.Parse(new_op_conf, op_conf_util.OperatorConf())
 
 
-def CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf_proto):
+def CurJobBuildAndInferCtx_AddAndInferGlobalOp(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    add_and_infer = (
-        oneflow._oneflow_internal.CurJobBuildAndInferCtx_AddAndInferConsistentOp
-    )
+    add_and_infer = oneflow._oneflow_internal.CurJobBuildAndInferCtx_AddAndInferGlobalOp
     op_attribute_str = add_and_infer(serialized_op_conf)
     return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
 

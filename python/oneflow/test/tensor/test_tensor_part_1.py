@@ -195,7 +195,7 @@ class TestTensor(flow.unittest.TestCase):
         )
 
     @flow.unittest.skip_unless_1n2d()
-    def test_consistent_tensor_init_methods(test_case):
+    def test_global_tensor_init_methods(test_case):
         test_case._test_tensor_init_methods(
             lambda *args, **kwargs: flow.Tensor(
                 *args,
