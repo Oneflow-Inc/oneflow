@@ -222,10 +222,10 @@ def full_op(
     Args:
         size(int...): a list, tuple, or oneflow.Size of integers defining the shape of the output tensor.
         fill_value(Scalar): the value to fill the output tensor with.
-        dtype (flow.dtype, optional): the desired data type of returned tensor.
-        device (flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
-        placement (flow.placement, optional): the desired placement of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        dtype (oneflow.dtype, optional): the desired data type of returned tensor.
+        device (oneflow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        placement (oneflow.placement, optional): the desired placement of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (oneflow.sbp.sbp or tuple of oneflow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
     For example:
@@ -274,10 +274,10 @@ def full_like_op(
     Args:
         input(oneflow.Tensor)
         fill_value(Scalar): the value to fill the output tensor with.
-        dtype (flow.dtype, optional): the desired data type of returned tensor.
-        device (flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
-        placement (flow.placement, optional): the desired placement of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        dtype (oneflow.dtype, optional): the desired data type of returned tensor.
+        device (oneflow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        placement (oneflow.placement, optional): the desired placement of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (oneflow.sbp.sbp or tuple of oneflow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
     For example:
