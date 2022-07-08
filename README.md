@@ -10,8 +10,6 @@
 ## Latest News
 
 - Version 0.8.0 is out!
-  - Introducing global tensor
-  - Semi-auto parallelization has landed
   - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.8.0)
 
 ## Publication
