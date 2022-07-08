@@ -311,29 +311,16 @@ Maybe<void> RawLocalToGlobal(const CastToGlobalOpExpr& op_expr, const TensorTupl
                                  parallel_desc);
     Optional<int64_t> parallel_id{};
     const auto& device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
-<<<<<<< HEAD:oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.cpp
     const auto& global_tensor_impl = JUST(EagerGlobalTensorImpl::New(
-        SymbolOf(tensor_meta), device, parallel_id, input_mirrored_tensor->requires_grad(),
-        !input_mirrored_tensor->requires_grad()));
-    global_tensor = std::make_shared<GlobalTensor>(global_tensor_impl);
-    if (parallel_id.has_value()) {
-      const auto& pyhsical_shape = JUST(GetPhysicalShape(tensor_meta));
-      const auto& input_mirrored_tensor_shape = input_mirrored_tensor->shape();
-      CHECK_EQ_OR_RETURN(*pyhsical_shape, *input_mirrored_tensor_shape);
-      CHECK_OR_RETURN(dtype == input_mirrored_tensor->dtype()->data_type());
-      global_tensor_impl->reset_cur_rank_phy_tensor(input_mirrored_tensor);
-=======
-    const auto& consistent_tensor_impl = JUST(EagerConsistentTensorImpl::New(
         SymbolOf(tensor_meta), device, parallel_id, input_local_tensor->requires_grad(),
         !input_local_tensor->requires_grad()));
-    consistent_tensor = std::make_shared<ConsistentTensor>(consistent_tensor_impl);
+    global_tensor = std::make_shared<GlobalTensor>(global_tensor_impl);
     if (parallel_id.has_value()) {
       const auto& pyhsical_shape = JUST(GetPhysicalShape(tensor_meta));
       const auto& input_local_tensor_shape = input_local_tensor->shape();
       CHECK_EQ_OR_RETURN(*pyhsical_shape, *input_local_tensor_shape);      // NOLINT
       CHECK_OR_RETURN(dtype == input_local_tensor->dtype()->data_type());  // NOLINT
-      consistent_tensor_impl->reset_cur_rank_phy_tensor(input_local_tensor);
->>>>>>> master:oneflow/core/framework/op_interpreter/eager_local_op_interpreter.cpp
+      global_tensor_impl->reset_cur_rank_phy_tensor(input_local_tensor);
     }
   }
   (*outputs)[0] = global_tensor;
@@ -344,23 +331,13 @@ static constexpr auto* LocalToGlobal = DECORATE(&RawLocalToGlobal, NonRecursiveI
 
 }  // namespace
 
-<<<<<<< HEAD:oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.cpp
-Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToGlobalOpExpr& op_expr,
-                                                const TensorTuple& inputs, TensorTuple* outputs,
-                                                const OpExprInterpContext& ctx) const {
-  JUST(LocalToGlobal(op_expr, inputs, outputs, ctx));
-  const auto& global_tensor = JUST((*outputs)[0]->AsGlobalTensor());
-  JUST(WithConsistencyChecked(global_tensor, [&]() -> Maybe<void> {
-    if (IsGlobalTensorMetaCheckDisabled()) { return Maybe<void>::Ok(); }
-=======
-Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastToConsistentOpExpr& op_expr,
+Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastToGlobalOpExpr& op_expr,
                                              const TensorTuple& inputs, TensorTuple* outputs,
                                              const OpExprInterpContext& ctx) const {
-  JUST(LocalToConsistent(op_expr, inputs, outputs, ctx));
-  const auto& consistent_tensor = JUST(outputs->at(0)->AsConsistentTensor());
-  JUST(WithConsistencyChecked(consistent_tensor, [&]() -> Maybe<void> {
-    if (IsConsistentTensorMetaCheckDisabled()) { return Maybe<void>::Ok(); }
->>>>>>> master:oneflow/core/framework/op_interpreter/eager_local_op_interpreter.cpp
+  JUST(LocalToGlobal(op_expr, inputs, outputs, ctx));
+  const auto& global_tensor = JUST(outputs->at(0)->AsGlobalTensor());
+  JUST(WithConsistencyChecked(global_tensor, [&]() -> Maybe<void> {
+    if (IsGlobalTensorMetaCheckDisabled()) { return Maybe<void>::Ok(); }
     const auto& parallel_desc = JUST(ctx.parallel_desc);
     const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
     if (!parallel_id->has_value()) { return Maybe<void>::Ok(); }
@@ -370,30 +347,17 @@ Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastToConsistentOpExpr& op_ex
     const auto& reshaped_tensor = JUST(TryReshapeTensor(local_tensor, tensor_meta));
     const auto& synced_tensor =
         JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp));
-<<<<<<< HEAD:oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.cpp
     auto* global_tensor_impl = reinterpret_cast<EagerGlobalTensorImpl*>(global_tensor->mut_impl());
     CHECK_NOTNULL_OR_RETURN(global_tensor_impl);
-    global_tensor_impl->reset_cur_rank_phy_tensor(JUST(synced_tensor->AsMirroredTensor()));
-=======
-    auto* consistent_tensor_impl =
-        reinterpret_cast<EagerConsistentTensorImpl*>(consistent_tensor->mut_impl());
-    CHECK_NOTNULL_OR_RETURN(consistent_tensor_impl);
-    consistent_tensor_impl->reset_cur_rank_phy_tensor(JUST(synced_tensor->AsLocalTensor()));
->>>>>>> master:oneflow/core/framework/op_interpreter/eager_local_op_interpreter.cpp
+    global_tensor_impl->reset_cur_rank_phy_tensor(JUST(synced_tensor->AsLocalTensor()));
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
 }
 
-<<<<<<< HEAD:oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.cpp
-Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastFromGlobalOpExpr& op_expr,
-                                                const TensorTuple& inputs, TensorTuple* outputs,
-                                                const OpExprInterpContext& ctx) const {
-=======
-Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastFromConsistentOpExpr& op_expr,
+Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastFromGlobalOpExpr& op_expr,
                                              const TensorTuple& inputs, TensorTuple* outputs,
                                              const OpExprInterpContext& ctx) const {
->>>>>>> master:oneflow/core/framework/op_interpreter/eager_local_op_interpreter.cpp
   OF_UNIMPLEMENTED();
 }
 
