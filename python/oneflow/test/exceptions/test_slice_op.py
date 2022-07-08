@@ -43,7 +43,8 @@ class TestSlice(flow.unittest.TestCase):
             flow._C.slice_update(ref, value, start, stop, step)
         test_case.assertTrue(
             "The stop list elements must be greater than or equal to 0"
-            in str(context.exception))
+            in str(context.exception)
+        )
 
     def test_slice_update_step_list_err(test_case):
         with test_case.assertRaises(RuntimeError) as context:
@@ -55,7 +56,8 @@ class TestSlice(flow.unittest.TestCase):
             flow._C.slice_update(ref, value, start, stop, step)
         test_case.assertTrue(
             "The step list elements must be greater than 0, but got"
-            in str(context.exception))
+            in str(context.exception)
+        )
 
     def test_slice_update_start_and_stop_compare_value_err(test_case):
         with test_case.assertRaises(RuntimeError) as context:
@@ -67,7 +69,8 @@ class TestSlice(flow.unittest.TestCase):
             flow._C.slice_update(ref, value, start, stop, step)
         test_case.assertTrue(
             "The element in start list must be less than or equal to the element in stop list at index"
-            in str(context.exception))
+            in str(context.exception)
+        )
 
     def test_slice_update_turple_size_match_err(test_case):
         with test_case.assertRaises(RuntimeError) as context:
@@ -79,7 +82,8 @@ class TestSlice(flow.unittest.TestCase):
             flow._C.slice_update(ref, value, start, stop, step)
         test_case.assertTrue(
             "The size of slice tuple must be equal to the size of value tensor at dimension"
-            in str(context.exception))
+            in str(context.exception)
+        )
 
     def test_slice_update_type_err(test_case):
         with test_case.assertRaises(TypeError) as context:
@@ -90,8 +94,8 @@ class TestSlice(flow.unittest.TestCase):
             step = [1]
             flow._C.slice_update(ref, value, start, stop, step)
         test_case.assertTrue(
-            "Tensors ref and value must have same type"
-            in str(context.exception))
+            "Tensors ref and value must have same type" in str(context.exception)
+        )
 
     def test_slice_start_list_err(test_case):
         with test_case.assertRaises(RuntimeError) as context:
@@ -102,7 +106,8 @@ class TestSlice(flow.unittest.TestCase):
             flow._C.slice(ref, start, stop, step)
         test_case.assertTrue(
             "The start list elements must be greater than or equal to 0, but got "
-            in str(context.exception))
+            in str(context.exception)
+        )
 
     def test_slice_stop_list_err(test_case):
         with test_case.assertRaises(RuntimeError) as context:
@@ -113,7 +118,8 @@ class TestSlice(flow.unittest.TestCase):
             flow._C.slice(ref, start, stop, step)
         test_case.assertTrue(
             "The stop list elements must be greater than or equal to 0, but got "
-            in str(context.exception))
+            in str(context.exception)
+        )
 
     def test_slice_step_list_err(test_case):
         with test_case.assertRaises(RuntimeError) as context:
@@ -124,7 +130,8 @@ class TestSlice(flow.unittest.TestCase):
             flow._C.slice(ref, start, stop, step)
         test_case.assertTrue(
             "The step list elements must be greater than 0, but got "
-            in str(context.exception))
+            in str(context.exception)
+        )
 
     def test_slice_start_and_stop_compare_value_err(test_case):
         with test_case.assertRaises(RuntimeError) as context:
@@ -135,7 +142,8 @@ class TestSlice(flow.unittest.TestCase):
             flow._C.slice(ref, start, stop, step)
         test_case.assertTrue(
             "The element in start list must be less than or equal to the element in stop list at index "
-            in str(context.exception))
+            in str(context.exception)
+        )
 
 
 if __name__ == "__main__":
