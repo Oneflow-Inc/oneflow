@@ -1,6 +1,5 @@
 #include "oneflow/ir/oneflow-extension/include/PyAst/AstMlirGen.h"
 
-
 mlir::LogicalResult BuilderWithSymbolTable::declare(const std::string& var, mlir::Value value) {
   auto iter = symbolTable.find(var);
   if (iter != symbolTable.end()) {
@@ -74,12 +73,11 @@ void MLIRGenImpl::mlirGen(pyast::stmt* stmt) {
   // std::cout << "stmt" << stmt->get_kind() << std::endl;
   // dump();
   llvm::TypeSwitch<pyast::stmt*>(stmt)
-      .Case<pyast::Return>([&](auto* node) { mlirGen(dynamic_cast<pyast::Return*>(node)); })
-      .Case<pyast::Assign>([&](auto* node) { mlirGen(dynamic_cast<pyast::Assign*>(node)); })
-      .Case<pyast::If>([&](auto* node) { mlirGen(dynamic_cast<pyast::If*>(node)); })
-      // .Case<Raise_>([&](auto* node) { mlirGen(cast<Raise_*>(node)); })
-      // .Case<Assert_>([&](auto* node) { mlirGen(cast<Assert_*>(node)); })
-      // .Case<Expr_>([&](auto* node) { mlirGen(cast<Expr_*>(node)); })
+      .Case<pyast::Return, pyast::Assign, pyast::If>([&](auto* node) { mlirGen(node); })
+      // TODO:
+      // .Case<Raise_>
+      // .Case<Assert_>
+      // .Case<Expr_>
       .Default([&](auto* node) { theModule->emitError("StmtKind not support yet"); });
 }
 
@@ -88,15 +86,12 @@ mlir::Value MLIRGenImpl::mlirGen(pyast::expr* expr) {
   // dump();
   mlir::Value res;
   llvm::TypeSwitch<pyast::expr*>(expr)
-      .Case<pyast::BinOp>([&](auto* node) { res = mlirGen(dynamic_cast<pyast::BinOp*>(node)); })
-      //     .Case<Lambda>([&](auto* node) { mlirGen(cast<Lambda*>(node)); })
-      .Case<pyast::Compare>([&](auto* node) { res = mlirGen(dynamic_cast<pyast::Compare*>(node)); })
-      .Case<pyast::Call>([&](auto* node) { res = mlirGen(dynamic_cast<pyast::Call*>(node)); })
-      //     .Case<Num>([&](auto* node) { mlirGen(cast<Num*>(node)); })
-      .Case<pyast::Constant>(
-          [&](auto* node) { res = mlirGen(dynamic_cast<pyast::Constant*>(node)); })
-      //     .Case<Attribute>([&](auto* node) { mlirGen(cast<Attribute*>(node)); })
-      .Case<pyast::Name>([&](auto* node) { res = mlirGen(dynamic_cast<pyast::Name*>(node)); })
+      .Case<pyast::BinOp, pyast::Compare, pyast::Call, pyast::Constant, pyast::Name>(
+          [&](auto* node) { res = mlirGen(node); })
+      // TODO:
+      // .Case<Lambda>
+      // .Case<Num>
+      // .Case<Attribute>
       .Default([&](auto* node) { theModule->emitError("ExprKind not support yet"); });
   return res;
 }
