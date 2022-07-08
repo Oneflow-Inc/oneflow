@@ -26,7 +26,7 @@ from oneflow.test_utils.test_util import GenArgDict
 
 def _test_consistent_rand(test_case, shape, placement, sbp):
     x = flow.rand(*shape, placement=placement, sbp=sbp)
-    print(x.sbp, sbp)
+
     test_case.assertEqual(x.shape, flow.Size(shape))
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
