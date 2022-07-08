@@ -362,6 +362,7 @@ def pad_packed_sequence(
         device=sequence.data.device,
         requires_grad=sequence.data.requires_grad,
     )
+    padded_output = padded_output.clone()
 
     # This will be modified at every iteration, but we reserve memory for it now.
     tmp_view_size = output_size  # == [-1, -1, *sequence.data.size()[1:]]
@@ -390,7 +391,7 @@ def pad_packed_sequence(
         prev_batch_size = batch_size
 
     if batch_first:
-        permute_dims = (1, 0)
+        permute_dims = [1, 0]
         for i in range(2, padded_output.ndim):
             permute_dims.append(i)
         padded_output = padded_output.permute(permute_dims)

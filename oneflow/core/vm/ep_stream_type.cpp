@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/vm/ep_device_context.h"
 #include "oneflow/core/vm/bin_allocator.h"
 #include "oneflow/core/vm/ep_backend_allocator.h"
+#include "oneflow/core/vm/thread_safe_guard.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
@@ -38,7 +39,9 @@ void EpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream*
       Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
   auto ep_backend_allocator =
       std::make_unique<EpBackendAllocator>(ep_device, ep::AllocationOptions{});
-  device_ctx->reset(new EpDeviceCtx(stream->device(), std::move(ep_backend_allocator)));
+  auto bin_allo = std::make_unique<BinAllocator<ThreadSafeLock>>(ep::kMaxAlignmentRequirement,
+                                                                 std::move(ep_backend_allocator));
+  device_ctx->reset(new EpDeviceCtx(stream->device(), std::move(bin_allo)));
 }
 
 void EpStreamType::InitInstructionStatus(const Stream& stream,
@@ -59,13 +62,13 @@ bool EpStreamType::QueryInstructionStatusDone(const Stream& stream,
   return EpOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer())->done();
 }
 
-void EpStreamType::Compute(Instruction* instruction) const {
+void EpStreamType::Run(Instruction* instruction) const {
   OF_PROFILER_RANGE_GUARD("S:" + instruction->DebugName());
   auto* stream = instruction->mut_stream();
   auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());  // NOLINT
   auto* ep_device = ep_device_ctx->GetOrCreateEpDevice();
   ep_device->SetAsActiveDevice();
-  instruction->instruction_type().Compute(instruction);
+  instruction->Compute();
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer();
   EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(ep_device_ctx);
 }
