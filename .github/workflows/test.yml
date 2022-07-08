@@ -268,8 +268,8 @@ jobs:
           retry-failed-build: true
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
-            3.6
             3.7
+            3.8
       - uses: Oneflow-Inc/get-oneflow@support-iree-ci
         name: Build manylinux ${{ matrix.entry }}
         id: build-cuda
