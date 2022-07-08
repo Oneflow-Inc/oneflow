@@ -57,11 +57,112 @@ class CosGradGradFunctor {
   }
 };
 
+class ExpGradGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    auto res = sequence_function(functional::Exp)
+                   .then(std::bind(functional::Mul, dydx, std::placeholders::_1))
+                   .call(x);
+    return res;
+  }
+};
+
+class LogGradGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    auto res = sequence_function(functional::Square)
+                   .then(functional::Negative)
+                   .then(functional::Reciprocal)
+                   .then(std::bind(functional::Mul, dydx, std::placeholders::_1))
+                   .call(x);
+    return res;
+  }
+};
+
+class PowXGradXGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& dz,
+                           const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& y) const {  
+    auto res = JUST(functional::Mul(dz, 
+                      JUST(functional::Mul(JUST(functional::ScalarSub(y, Scalar(1), /*inplace=*/false)), 
+                      JUST(functional::Mul(y, 
+                      JUST(functional::Pow(x,
+                      JUST(functional::ScalarSub(y, Scalar(2), /*inplace=*/false))
+                      ))))))));
+    return res;
+  }
+};
+
+class PowXGradYGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& dz,
+                           const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& y) const {        
+ 
+    auto res = JUST(functional::Mul(dz, 
+                JUST(functional::Mul(JUST(functional::Pow(x, JUST(functional::ScalarSub(y, Scalar(1), /*inplace=*/false)))), 
+                JUST(functional::ScalarAdd(Scalar(1), 
+                JUST(functional::Mul(y, JUST(functional::Log(x)))),
+                /*Scalar alpha=*/1
+                ))))));
+    return res;
+  }
+};
+
+class PowYGradXGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& dz,
+                           const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& y) const {                 
+    auto zero = std::shared_ptr<Tensor>(0);
+    auto res = JUST(functional::Mul(dz, 
+            JUST(functional::Mul(JUST(functional::Pow(x, JUST(functional::ScalarSub(y, Scalar(1), /*inplace=*/false)))), 
+            JUST(functional::ScalarAdd(Scalar(1), 
+            JUST(functional::Mul(y, JUST(functional::Log(x)))),
+            /*Scalar alpha=*/1
+            ))))));
+    
+    if (x > zero) {
+      return res;
+    } else {
+      return zero;
+    }
+  }
+};
+
+class PowYGradYGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& dz,
+                           const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& y) const {                 
+    auto zero = std::shared_ptr<Tensor>(0);
+    auto res = JUST(functional::Mul(dz, 
+                JUST(functional::Mul(JUST(functional::Log(x)),
+                JUST(functional::Mul(JUST(functional::Log(x)),
+                JUST(functional::Pow(x, y))
+                ))))));
+    if (x > zero) {
+      return res;
+    } else {
+      return zero;
+    }
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SinGradGradFunctor>("SinGradGrad");
   m.add_functor<impl::CosGradGradFunctor>("CosGradGrad");
+  m.add_functor<impl::ExpGradGradFunctor>("ExpGradGrad");
+  m.add_functor<impl::LogGradGradFunctor>("LogGradGrad");
+  m.add_functor<impl::PowXGradXGradFunctor>("PowXGradXGrad");
+  m.add_functor<impl::PowXGradYGradFunctor>("PowXGradYGrad");
+  m.add_functor<impl::PowYGradXGradFunctor>("PowYGradXGrad");
+  m.add_functor<impl::PowYGradYGradFunctor>("PowYGradYGrad");
 }
 
 }  // namespace functional

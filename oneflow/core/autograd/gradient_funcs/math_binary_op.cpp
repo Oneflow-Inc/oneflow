@@ -63,6 +63,11 @@ class BinaryMathOp : public OpExprGradFunction<BinaryMathCaptureState> {
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_BINARY_MATHOP_CLASS, MATH_BINARY_ELEMENTWISE_FUNC_SEQ);
 
+OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_BINARY_MATHOP_CLASS,
+                     OF_PP_MAKE_TUPLE_SEQ("pow_x_grad", PowXGrad));
+OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_BINARY_MATHOP_CLASS,
+                     OF_PP_MAKE_TUPLE_SEQ("pow_y_grad", PowYGrad));
+
 #undef INSTANTIAT_AND_REGISTER_BINARY_MATHOP_CLASS
 }  // namespace one
 }  // namespace oneflow
