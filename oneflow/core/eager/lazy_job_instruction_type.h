@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/naive_stream_policy.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
@@ -75,12 +76,12 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
   Maybe<void> Prepare(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }
   void Compute(vm::Instruction* instruction) const override {
     const auto& cur_nn_graph = GetCurNNGraph(instruction);
+    auto* device_ctx = GetLazyJobDeviceCtx(instruction);
 
     static thread_local int64_t run_id = 0;
     {
       OF_PROFILER_RANGE_GUARD("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
-      instruction->mut_stream()->mut_stream_policy()->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(
-          cur_nn_graph);
+      device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(cur_nn_graph);
     }
     {
       OF_PROFILER_RANGE_GUARD("Send all buffers to BufferMgr");
@@ -92,10 +93,17 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
     }
     OF_UNUSED(run_id);  // disable compiler warning.
     OF_PROFILER_RANGE_GUARD("EnqueueNNGraph");
-    instruction->mut_stream()->mut_stream_policy()->EnqueueNNGraph(cur_nn_graph);
+    device_ctx->EnqueueNNGraph(cur_nn_graph);
   }
 
  private:
+  LazyJobDeviceCtx* GetLazyJobDeviceCtx(Instruction* instruction) const {
+    StreamPolicy* stream_policy = instruction->mut_stream()->mut_stream_policy();
+    NaiveStreamPolicy* naive_stream_policy = dynamic_cast<NaiveStreamPolicy*>(stream_policy);
+    auto* device_ctx = dynamic_cast<LazyJobDeviceCtx*>(naive_stream_policy->device_ctx().get());
+    CHECK_NOTNULL(device_ctx);
+    return device_ctx;
+  }
   std::shared_ptr<NNGraphIf> GetCurNNGraph(Instruction* instruction) const {
     const auto* ptr = instruction->phy_instr_operand().get();
     const auto* phy_instr_operand = dynamic_cast<const LaunchLazyJobPhyInstrOperand*>(ptr);
@@ -109,7 +117,8 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
     CHECK_NOTNULL(phy_instr_operand);
     const auto& nn_graph = phy_instr_operand->nn_graph();
     const auto& FinishCb = [this, instruction]() {
-      instruction->mut_stream()->mut_stream_policy()->DequeueNNGraph();
+      auto* device_ctx = GetLazyJobDeviceCtx(instruction);
+      device_ctx->DequeueNNGraph();
       auto* status_buffer = instruction->mut_status_buffer();
       NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer())->set_done();
     };

@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/naive_stream_policy.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/vm/ep_device_context.h"
@@ -68,7 +69,10 @@ bool PinnedEpStreamType::QueryInstructionStatusDone(
 void PinnedEpStreamType::Run(Instruction* instruction) const {
   OF_PROFILER_RANGE_GUARD("S:" + instruction->DebugName());
   auto* stream = instruction->mut_stream();
-  auto* ep_device = stream->mut_stream_policy()->GetOrCreateEpDevice();
+  NaiveStreamPolicy* naive_stream_policy =
+      dynamic_cast<NaiveStreamPolicy*>(instruction->mut_stream()->mut_stream_policy());
+  auto* ep_device_ctx = dynamic_cast<EpDeviceCtx*>(naive_stream_policy->device_ctx().get());
+  auto* ep_device = ep_device_ctx->GetOrCreateEpDevice();
   ep_device->SetAsActiveDevice();
   instruction->Compute();
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer();

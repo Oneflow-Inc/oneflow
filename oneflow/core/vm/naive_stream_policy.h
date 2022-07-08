@@ -75,38 +75,7 @@ class NaiveStreamPolicy final : public StreamPolicy {
     return stream_type_->SupportingTransportInstructions();
   }
 
-  // Ep device ctx methods
-  EpEventProvider* ep_event_provider() override {
-    auto* ep_device_ctx = dynamic_cast<EpDeviceCtx*>(device_ctx_.get());
-    CHECK_NOTNULL(ep_device_ctx);
-    return ep_device_ctx->ep_event_provider();
-  }
-
-  ep::Device* GetOrCreateEpDevice() const override {
-    auto* ep_device_ctx = dynamic_cast<EpDeviceCtx*>(device_ctx_.get());
-    CHECK_NOTNULL(ep_device_ctx);
-    return ep_device_ctx->GetOrCreateEpDevice();
-  }
-
-  // Lazy job device ctx methods
-  virtual void WaitUntilQueueEmptyIfFrontNNGraphNotEquals(
-      const std::shared_ptr<NNGraphIf>& nn_graph) {
-    auto* lazy_job_device_ctx = dynamic_cast<LazyJobDeviceCtx*>(device_ctx_.get());
-    CHECK_NOTNULL(lazy_job_device_ctx);
-    lazy_job_device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(nn_graph);
-  }
-
-  virtual void EnqueueNNGraph(const std::shared_ptr<NNGraphIf>& nn_graph) {
-    auto* lazy_job_device_ctx = dynamic_cast<LazyJobDeviceCtx*>(device_ctx_.get());
-    CHECK_NOTNULL(lazy_job_device_ctx);
-    lazy_job_device_ctx->EnqueueNNGraph(nn_graph);
-  }
-
-  virtual void DequeueNNGraph() {
-    auto* lazy_job_device_ctx = dynamic_cast<LazyJobDeviceCtx*>(device_ctx_.get());
-    CHECK_NOTNULL(lazy_job_device_ctx);
-    lazy_job_device_ctx->DequeueNNGraph();
-  }
+  const std::unique_ptr<DeviceCtx>& device_ctx() const { return device_ctx_; }
 
  private:
   const StreamType* stream_type_;

@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/vm/event_recorded_ep_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/naive_stream_policy.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/vm/ep_device_context.h"
@@ -46,7 +47,10 @@ void EventRecordedEpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device
 void EventRecordedEpStreamType::InitInstructionStatus(
     const Stream& stream, InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(EpOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
-  auto* ep_event_provider = const_cast<Stream&>(stream).mut_stream_policy()->ep_event_provider();
+  NaiveStreamPolicy* naive_stream_policy =
+      dynamic_cast<NaiveStreamPolicy*>(const_cast<Stream&>(stream).mut_stream_policy());
+  auto* ep_device_ctx = dynamic_cast<EpDeviceCtx*>(naive_stream_policy->device_ctx().get());
+  auto* ep_event_provider = ep_device_ctx->ep_event_provider();
   auto* data_ptr = status_buffer->mut_buffer();
   const auto& ep_event = CHECK_NOTNULL(ep_event_provider)->GetReusedEpEvent();
   EpOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, ep_event);
@@ -66,7 +70,10 @@ bool EventRecordedEpStreamType::QueryInstructionStatusDone(
 void EventRecordedEpStreamType::Run(Instruction* instruction) const {
   OF_PROFILER_RANGE_GUARD("S:" + instruction->DebugName());
   auto* stream = instruction->mut_stream();
-  auto* ep_device = stream->mut_stream_policy()->GetOrCreateEpDevice();
+  NaiveStreamPolicy* naive_stream_policy =
+      dynamic_cast<NaiveStreamPolicy*>(instruction->mut_stream()->mut_stream_policy());
+  auto* ep_device_ctx = dynamic_cast<EpDeviceCtx*>(naive_stream_policy->device_ctx().get());
+  auto* ep_device = ep_device_ctx->GetOrCreateEpDevice();
   ep_device->SetAsActiveDevice();
   instruction->Compute();
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer();
