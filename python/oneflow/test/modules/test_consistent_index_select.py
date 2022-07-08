@@ -15,41 +15,35 @@ limitations under the License.
 """
 
 import unittest
-from collections import OrderedDict
-
 import numpy as np
-from oneflow.test_utils.test_util import GenArgList
-
 import oneflow as flow
 import oneflow.unittest
-
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
-def _test_linear_with_random_data(test_case, placement, sbp):
-    row = random(1, 3).to(int) * 8
-    col = random(1, 3).to(int) * 8
-    m = torch.nn.Linear(in_features=col, out_features=8, bias=False)
-    m.train(random())
-    m.weight = torch.nn.Parameter(m.weight.to_global(placement=placement, sbp=sbp))
-    if m.bias is not None:
-        # bias is 1-d tensor
-        bias_sbp = random_sbp(placement, max_dim=1)
-        m.bias = torch.nn.Parameter(m.bias.to_global(placement=placement, sbp=bias_sbp))
-    x = random_tensor(ndim=2, dim0=row, dim1=col).to_global(
-        placement=placement, sbp=sbp
+@autotest(n=1, auto_backward=False, check_graph=False)
+def _test_index_select_impl(test_case, ndim, placement, sbp):
+    dims = [random(1, 3).to(int) * 8 for i in range(ndim)]
+    dim = random(0, ndim).to(int)
+    index = random_tensor(1, random(1, 5), low=0, high=dims[dim.value()], dtype=int)
+    index_sbp = (
+        flow.sbp.broadcast
+        if len(sbp) == 1
+        else (flow.sbp.broadcast, flow.sbp.broadcast)
     )
-    y = m(x)
+    index = index.to_global(placement=placement, sbp=index_sbp)
+    x = random_tensor(ndim, *dims)
+    x = x.to_global(placement=placement, sbp=sbp)
+    y = torch.index_select(x, dim, index)
     return y
 
 
-class TestLinearModule(flow.unittest.TestCase):
+class TestIndexSelectConsistent(flow.unittest.TestCase):
     @globaltest
-    def test_linear_with_random_data(test_case):
+    def test_index_select(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                _test_linear_with_random_data(test_case, placement, sbp)
+                _test_index_select_impl(test_case, 4, placement, sbp)
 
 
 if __name__ == "__main__":
