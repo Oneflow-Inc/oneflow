@@ -67,7 +67,6 @@ mlir::ModuleOp MLIRGenImpl::genModule(pyast::FunctionDef* func) {
   builder.setInsertionPointToStart(entry_block);
   for (auto& stmt : func->get_body()) { mlirGen(stmt.get()); }
 
-  function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(builder.getContext()));
   return theModule;
 }
 
