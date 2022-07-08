@@ -94,7 +94,7 @@ def clip_grad_norm_(
     if parameters[0].is_global:
         assert all(
             [p.is_global for p in parameters]
-        ), "All parameters must be consistent tensor."
+        ), "All parameters must be global tensor."
         sbp_broadcast = [flow.sbp.broadcast for _ in parameters[0].sbp]
         param0_placement = parameters[0].placement
         if norm_type == float("inf"):
