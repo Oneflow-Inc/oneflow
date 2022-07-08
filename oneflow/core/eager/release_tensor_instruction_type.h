@@ -58,10 +58,10 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
   }
 };
 
-class ReleasePodTensorInstructionType final : public ReleaseTensorInstructionType {
+class FastReleaseTensorInstructionType final : public ReleaseTensorInstructionType {
  public:
-  ReleasePodTensorInstructionType() = default;
-  ~ReleasePodTensorInstructionType() override = default;
+  FastReleaseTensorInstructionType() = default;
+  ~FastReleaseTensorInstructionType() override = default;
 
   std::string DebugName(const vm::Instruction& instruction) const override {
     return "ReleasePodTensor";
@@ -78,10 +78,10 @@ class ReleasePodTensorInstructionType final : public ReleaseTensorInstructionTyp
   void Compute(vm::Instruction* instruction) const override {}
 };
 
-class ReleaseNonPodTensorInstructionType final : public ReleaseTensorInstructionType {
+class SlowReleaseTensorInstructionType final : public ReleaseTensorInstructionType {
  public:
-  ReleaseNonPodTensorInstructionType() = default;
-  ~ReleaseNonPodTensorInstructionType() override = default;
+  SlowReleaseTensorInstructionType() = default;
+  ~SlowReleaseTensorInstructionType() override = default;
 
   std::string DebugName(const vm::Instruction& instruction) const override {
     return "ReleaseNonPodTensor";
@@ -131,9 +131,9 @@ struct GetReleaseInstructionType : public StreamRoleVisitor<GetReleaseInstructio
  private:
   static Maybe<const vm::InstructionType*> GetReleaseTensorInstructionType(DataType data_type) {
     if (IsPODDataType(data_type)) {
-      return SingletonPtr<vm::ReleasePodTensorInstructionType>();
+      return SingletonPtr<vm::FastReleaseTensorInstructionType>();
     } else {
-      return SingletonPtr<vm::ReleaseNonPodTensorInstructionType>();
+      return SingletonPtr<vm::SlowReleaseTensorInstructionType>();
     }
   }
 };
