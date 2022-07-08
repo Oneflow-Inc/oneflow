@@ -58,31 +58,6 @@ using llvm::SmallVector;
 using llvm::StringRef;
 using llvm::Twine;
 
-static mlir::OwningOpRef<mlir::ModuleOp> genModuleForTest(mlir::MLIRContext& context) {
-  using namespace pyast;
-  auto func = FunctionDef::FunctionDef_(
-      "get_lr",
-      arguments::arguments_({
-          arg::arg_("base_lr"),
-          arg::arg_("step"),
-      }),
-      {
-          If::If_(Compare::Compare_(Name::Name_("step"), {Compare::kLt}, {Constant::Constant_(5)}),
-                  {
-                      Assign::Assign_({Name::Name_("base_lr")},
-                                      (BinOp::BinOp_(Name::Name_("base_lr"), BinOp::kAdd,
-                                                     Constant::Constant_(1.0 / 3)))),
-                  },
-                  {}),
-          Return::Return_(Name::Name_("base_lr")),
-      });
-
-  MLIRGenImpl mlir_gen(context);
-  mlir::OwningOpRef<mlir::ModuleOp> module = mlir_gen.genModule(func.get());
-  module->dump();
-  return module;
-}
-
 static struct LLVMInitializer {
   LLVMInitializer() {
     llvm::InitializeNativeTarget();
@@ -107,7 +82,8 @@ static mlir::LogicalResult lowerToLLVMDialect(mlir::ModuleOp module) {
   return pm.run(module);
 }
 
-static mlir::OwningOpRef<mlir::ModuleOp> genModuleForBuild(mlir::MLIRContext& context) {
+// generate a simple mlir module for test
+static mlir::OwningOpRef<mlir::ModuleOp> genModuleForTest(mlir::MLIRContext& context) {
   std::string moduleStr = R"mlir(
   func.func @get_lr(%arg0 : f32, %arg1 : i32) -> f32 attributes { llvm.emit_c_interface } {
     return %arg0 : f32
@@ -118,6 +94,7 @@ static mlir::OwningOpRef<mlir::ModuleOp> genModuleForBuild(mlir::MLIRContext& co
   return module;
 }
 
+// generate a module op from a function def python ast
 static mlir::OwningOpRef<mlir::ModuleOp> genModule(mlir::MLIRContext& context,
                                                    pyast::FunctionDef& ast) {
   using namespace pyast;
@@ -127,6 +104,8 @@ static mlir::OwningOpRef<mlir::ModuleOp> genModule(mlir::MLIRContext& context,
   // module->dump();
   return module;
 }
+
+// generate store of lr jit registry from a function def python ast
 static LRJITRegistry_Store_ genFunc(pyast::FunctionDef& ast, bool is_dump) {
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
