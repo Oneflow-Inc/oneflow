@@ -37,8 +37,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurJobBuildAndInferCtx_Rebuild", &CurJobBuildAndInferCtx_Rebuild,
         py::call_guard<py::gil_scoped_release>());
   m.def("CurJobBuildAndInferCtx_HasJobConf", &CurJobBuildAndInferCtx_HasJobConf);
-  m.def("CurJobBuildAndInferCtx_AddAndInferMirroredOp",
-        &CurJobBuildAndInferCtx_AddAndInferMirroredOp, py::call_guard<py::gil_scoped_release>());
+  m.def("CurJobBuildAndInferCtx_AddAndInferLocalOp", &CurJobBuildAndInferCtx_AddAndInferLocalOp,
+        py::call_guard<py::gil_scoped_release>());
 
   m.def("CurJobBuildAndInferCtx_AddAndInferConsistentOp",
         &CurJobBuildAndInferCtx_AddAndInferConsistentOp);
@@ -60,11 +60,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurJobBuildAndInferCtx_AddLossLogicalBlobName",
         &CurJobBuildAndInferCtx_AddLossLogicalBlobName);
 
-  m.def("JobBuildAndInferCtx_IsMirroredBlob", &JobBuildAndInferCtx_IsMirroredBlob);
-  m.def("JobBuildAndInferCtx_MirroredBlobGetNumSubLbi",
-        &JobBuildAndInferCtx_MirroredBlobGetNumSubLbi);
-  m.def("JobBuildAndInferCtx_MirroredBlobGetSerializedSubLbi",
-        &JobBuildAndInferCtx_MirroredBlobGetSubLbi);
+  m.def("JobBuildAndInferCtx_IsLocalBlob", &JobBuildAndInferCtx_IsLocalBlob);
+  m.def("JobBuildAndInferCtx_LocalBlobGetNumSubLbi", &JobBuildAndInferCtx_LocalBlobGetNumSubLbi);
+  m.def("JobBuildAndInferCtx_LocalBlobGetSerializedSubLbi",
+        &JobBuildAndInferCtx_LocalBlobGetSubLbi);
   m.def("JobBuildAndInferCtx_CheckLbnValidAndExist", &JobBuildAndInferCtx_CheckLbnValidAndExist);
   m.def("JobBuildAndInferCtx_GetOpBlobLbn", &JobBuildAndInferCtx_GetOpBlobLbn);
 }
