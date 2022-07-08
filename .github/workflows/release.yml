@@ -93,7 +93,6 @@ jobs:
           clean-ccache: true
           nightly: ${{ github.event_name == 'schedule' }}
           python-versions: |
-            3.6
             3.7
             3.8
             3.9
@@ -117,7 +116,6 @@ jobs:
           clean-ccache: false
           nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/master'}}
           python-versions: |
-            3.6
             3.7
             3.8
             3.9
