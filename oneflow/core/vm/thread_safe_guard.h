@@ -13,26 +13,40 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_CPU_ALLOCATOR_H_
-#define ONEFLOW_CORE_VM_CPU_ALLOCATOR_H_
+#ifndef ONEFLOW_CORE_VM_THREAD_SAFE_ALLOCATOR_H_
+#define ONEFLOW_CORE_VM_THREAD_SAFE_ALLOCATOR_H_
 
 #include <cstdint>
-#include "oneflow/core/vm/allocator.h"
+#include <memory>
+#include <mutex>
+#include <thread>
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
+
 namespace vm {
-
-class CpuAllocator final : public Allocator {
+class ThreadSafeLock final {
  public:
-  explicit CpuAllocator() = default;
-  ~CpuAllocator() override = default;
+  ThreadSafeLock() = default;
+  ~ThreadSafeLock() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ThreadSafeLock);
 
-  Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
-  void Deallocate(char* mem_ptr, std::size_t size) override;
-  void DeviceReset() override {}
+  class RAIIGuard final {
+   public:
+    explicit RAIIGuard(ThreadSafeLock& lock) : guard_(lock.mutex4guard) {}
+    ~RAIIGuard() = default;
+    OF_DISALLOW_COPY_AND_MOVE(RAIIGuard);
+
+   private:
+    std::unique_lock<std::mutex> guard_;
+  };
+
+ private:
+  std::mutex mutex4guard;
 };
 
 }  // namespace vm
+
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_CPU_ALLOCATOR_H_
+#endif  // ONEFLOW_CORE_VM_THREAD_SAFE_ALLOCATOR_H_

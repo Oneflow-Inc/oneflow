@@ -36,7 +36,7 @@ namespace one {
 class FunctionNode;
 
 class ConsistentTensor;
-class MirroredTensor;
+class LocalTensor;
 
 class Tensor : public std::enable_shared_from_this<Tensor> {
  public:
@@ -66,8 +66,8 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual std::shared_ptr<Tensor> pin_memory() const = 0;
   virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const { OF_UNIMPLEMENTED(); }
 
-  // Getters valid only for EagerMirroredTensor
-  virtual Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() { OF_UNIMPLEMENTED(); }
+  // Getters valid only for EagerLocalTensor
+  virtual Maybe<EagerLocalTensorImpl*> mut_eager_local_tensor_impl() { OF_UNIMPLEMENTED(); }
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
   virtual Maybe<LocalDepObject*> compute_local_dep_object() const = 0;
   virtual Maybe<bool> has_eager_blob_object() const = 0;
@@ -79,7 +79,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<const Optional<Symbol<NdSbp>>&> consumer_nd_sbp_constraint() const {
     OF_UNIMPLEMENTED();
   }
-  virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
+  virtual Maybe<LocalTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
   virtual Maybe<void> set_consumer_nd_sbp_constraint(const Optional<Symbol<NdSbp>>& val) {
     OF_UNIMPLEMENTED();
   }
@@ -113,7 +113,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) {
     OF_UNIMPLEMENTED();
   };
-  virtual Maybe<MirroredTensor> AsMirroredTensor() = 0;
+  virtual Maybe<LocalTensor> AsLocalTensor() = 0;
   virtual Maybe<ConsistentTensor> AsConsistentTensor() = 0;
 
   Maybe<void> BorrowTensorName(const Tensor* other) const;
@@ -168,8 +168,8 @@ class StaticZerosTensor final : public Tensor {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
-  // Getters valid only for EagerMirroredTensor
-  Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override {
+  // Getters valid only for EagerLocalTensor
+  Maybe<EagerLocalTensorImpl*> mut_eager_local_tensor_impl() override {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
@@ -185,7 +185,7 @@ class StaticZerosTensor final : public Tensor {
   Maybe<const Optional<Symbol<NdSbp>>&> consumer_nd_sbp_constraint() const override {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
-  Maybe<MirroredTensor> cur_rank_phy_tensor() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<LocalTensor> cur_rank_phy_tensor() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<void> set_consumer_nd_sbp_constraint(const Optional<Symbol<NdSbp>>& val) override {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
@@ -260,7 +260,7 @@ class StaticZerosTensor final : public Tensor {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
-  Maybe<MirroredTensor> AsMirroredTensor() override;
+  Maybe<LocalTensor> AsLocalTensor() override;
   Maybe<ConsistentTensor> AsConsistentTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
  private:
@@ -333,8 +333,8 @@ class ProxyTensor : public TensorIf<DerivedT> {
     return tensor_->mut_grad_fn_node();
   }
 
-  virtual Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override {
-    return tensor_->mut_eager_mirrored_tensor_impl();
+  virtual Maybe<EagerLocalTensorImpl*> mut_eager_local_tensor_impl() override {
+    return tensor_->mut_eager_local_tensor_impl();
   }
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const override {
     return tensor_->eager_blob_object();
@@ -355,7 +355,7 @@ class ProxyTensor : public TensorIf<DerivedT> {
   virtual Maybe<TransportToken> transport_token() const override {
     return tensor_->transport_token();
   }
-  virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const override {
+  virtual Maybe<LocalTensor> cur_rank_phy_tensor() const override {
     return tensor_->cur_rank_phy_tensor();
   }
   virtual Maybe<void> set_consumer_nd_sbp_constraint(const Optional<Symbol<NdSbp>>& val) override {
@@ -402,9 +402,9 @@ class ProxyTensor : public TensorIf<DerivedT> {
     return Maybe<void>::Ok();
   }
 
-  virtual Maybe<MirroredTensor> AsMirroredTensor() override {
-    if (const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(tensor_)) {
-      return mirrored_tensor;
+  virtual Maybe<LocalTensor> AsLocalTensor() override {
+    if (const auto& local_tensor = std::dynamic_pointer_cast<LocalTensor>(tensor_)) {
+      return local_tensor;
     }
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
@@ -436,12 +436,12 @@ class Parameter final : public ProxyTensor<Parameter> {
   }
 };
 
-class MirroredTensor final : public TensorIf<MirroredTensor> {
+class LocalTensor final : public TensorIf<LocalTensor> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(MirroredTensor);
-  MirroredTensor() = default;
-  explicit MirroredTensor(const std::shared_ptr<MirroredTensorImpl>& impl) { impl_ = impl; }
-  ~MirroredTensor() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(LocalTensor);
+  LocalTensor() = default;
+  explicit LocalTensor(const std::shared_ptr<LocalTensorImpl>& impl) { impl_ = impl; }
+  ~LocalTensor() override = default;
 
   // Getters
   std::shared_ptr<const Shape> shape() const override { return impl_->shape(); }
@@ -475,7 +475,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   Maybe<Tensor> data() override { return this->detach(); }
   std::shared_ptr<Tensor> pin_memory() const override;
 
-  // Getters valid only for EagerMirroredTensor
+  // Getters valid only for EagerLocalTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
     return impl_->eager_blob_object();
   }
@@ -522,13 +522,13 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   Maybe<Tensor> detach() const override;
   Maybe<Tensor> clone() const override;
 
-  static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                          const std::shared_ptr<const Stride>& stride,
-                                          DataType dtype, const Symbol<Device>& device,
-                                          bool is_lazy, bool requires_grad, bool is_leaf);
-  MirroredTensorImpl* mut_impl() { return impl_.get(); }
-  Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override {
-    return impl_->mut_eager_mirrored_tensor_impl();
+  static Maybe<LocalTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
+                                       const std::shared_ptr<const Stride>& stride, DataType dtype,
+                                       const Symbol<Device>& device, bool is_lazy,
+                                       bool requires_grad, bool is_leaf);
+  LocalTensorImpl* mut_impl() { return impl_.get(); }
+  Maybe<EagerLocalTensorImpl*> mut_eager_local_tensor_impl() override {
+    return impl_->mut_eager_local_tensor_impl();
   }
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
@@ -537,13 +537,13 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
     return impl_->RegisterStorageDeleteHook(hook);
   }
 
-  Maybe<MirroredTensor> AsMirroredTensor() override {
-    return std::dynamic_pointer_cast<MirroredTensor>(shared_from_this());
+  Maybe<LocalTensor> AsLocalTensor() override {
+    return std::dynamic_pointer_cast<LocalTensor>(shared_from_this());
   }
   Maybe<ConsistentTensor> AsConsistentTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
  private:
-  std::shared_ptr<MirroredTensorImpl> impl_;
+  std::shared_ptr<LocalTensorImpl> impl_;
 };
 
 class ConsistentTensor final : public TensorIf<ConsistentTensor> {
@@ -571,16 +571,14 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<const Optional<Symbol<NdSbp>>&> consumer_nd_sbp_constraint() const override {
     return impl_->consumer_nd_sbp_constraint();
   }
-  Maybe<MirroredTensor> cur_rank_phy_tensor() const override {
-    return impl_->cur_rank_phy_tensor();
-  }
+  Maybe<LocalTensor> cur_rank_phy_tensor() const override { return impl_->cur_rank_phy_tensor(); }
   bool is_cuda() const override;
   std::shared_ptr<Tensor> contiguous() const override;
   Maybe<Tensor> data() override { return this->detach(); }
   Maybe<const Stride> stride() const override { return impl_->stride(); }
   std::shared_ptr<Tensor> pin_memory() const override;
 
-  // Getters valid only for EagerMirroredTensor
+  // Getters valid only for EagerLocalTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
     return impl_->eager_blob_object();
   }
@@ -648,7 +646,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
 
-  Maybe<MirroredTensor> AsMirroredTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<LocalTensor> AsLocalTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<ConsistentTensor> AsConsistentTensor() override {
     return std::dynamic_pointer_cast<ConsistentTensor>(shared_from_this());
   }

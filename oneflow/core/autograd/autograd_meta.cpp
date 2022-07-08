@@ -65,7 +65,7 @@ AutogradMeta::AutogradMeta(bool requires_grad, bool is_leaf)
 
 Maybe<void> AutogradMeta::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
   if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(grad)) {
-    acc_grad_ = JUST(static_zeros_tensor->AsMirroredTensor());
+    acc_grad_ = JUST(static_zeros_tensor->AsLocalTensor());
   } else {
     acc_grad_ = grad;
   }

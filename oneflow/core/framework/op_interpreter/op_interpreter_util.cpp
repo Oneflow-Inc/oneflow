@@ -31,10 +31,10 @@ namespace one {
 
 namespace {
 
-std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(const bool& is_mirrored) {
+std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(const bool& is_local) {
   std::shared_ptr<OpExprInterpreter> internal;
-  if (is_mirrored) {
-    internal = std::make_shared<EagerMirroredInterpreter>();
+  if (is_local) {
+    internal = std::make_shared<EagerLocalInterpreter>();
   } else {
     internal = std::make_shared<EagerConsistentInterpreter>();
   }
@@ -66,8 +66,8 @@ std::string ErrorString4Inputs(const TensorTuple& inputs, const OpExpr& op_expr)
 Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExprInterpContext& ctx,
                                           const OpExpr& op_expr) {
   static const auto& g_lazy_interpreter = BuildLazyInterpreter();
-  static const auto& g_eager_consistent_interpreter = BuildEagerInterpreter(/*is_mirrored=*/false);
-  static const auto& g_eager_mirrored_interpreter = BuildEagerInterpreter(/*is_mirrored=*/true);
+  static const auto& g_eager_consistent_interpreter = BuildEagerInterpreter(/*is_local=*/false);
+  static const auto& g_eager_local_interpreter = BuildEagerInterpreter(/*is_local=*/true);
   if (!LazyMode::is_enabled()) {
     if (inputs.empty()) {
       if (ctx.parallel_desc.has_value()) {
@@ -76,7 +76,7 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExp
         return g_eager_consistent_interpreter;
       } else {
         CHECK_OR_RETURN(!ctx.nd_sbp.has_value());
-        return g_eager_mirrored_interpreter;
+        return g_eager_local_interpreter;
       }
     } else {
       if (inputs.at(0)->is_consistent()) {
@@ -112,7 +112,7 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExp
             CHECK_OR_RETURN(tensor->is_local()) << ErrorString4Inputs(inputs, op_expr);
           }
         }
-        return g_eager_mirrored_interpreter;
+        return g_eager_local_interpreter;
       }
     }
     UNIMPLEMENTED_THEN_RETURN();
@@ -144,11 +144,11 @@ template<>
 }
 
 /* static */ Maybe<OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(
-    const OperatorConf& op_conf, const bool is_mirrored_strategy_enabled) {
+    const OperatorConf& op_conf, const bool is_local_strategy_enabled) {
   std::shared_ptr<OpAttribute> op_attribute = JUST([&]() -> Maybe<OpAttribute> {
     auto infer_ctx = JUST(GetCurInferCtx());
-    if (is_mirrored_strategy_enabled) {
-      return infer_ctx->AddAndInferMirroredOp(op_conf);
+    if (is_local_strategy_enabled) {
+      return infer_ctx->AddAndInferLocalOp(op_conf);
     } else {
       return infer_ctx->AddAndInferConsistentOp(op_conf);
     }
