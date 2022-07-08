@@ -76,10 +76,11 @@ def gen_nd_sbp():
             nd_sbp_list.append([sbp0, sbp1])
     return nd_sbp_list
 
+
 @flow.unittest.skip_unless_2n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestGeneralBasicCommunication(flow.unittest.TestCase):
-    def test_nccl_logical_send_recv(test_case):
+    def test_general_basic_communication(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_nd_sbp"] = gen_nd_sbp()
         arg_dict["dst_nd_sbp"] = gen_nd_sbp()

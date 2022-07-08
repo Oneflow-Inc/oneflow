@@ -181,8 +181,8 @@ void NcclSendRecvBoxingKernel::ForwardDataContent(KernelContext* ctx) const {
 
 void NcclSendRecvBoxingKernel::VirtualKernelInit(KernelContext* ctx) {
   const NcclSendRecvBoxingOpConf& conf = this->op_conf().nccl_send_recv_boxing_conf();
-  if (this->op_conf().has_stream_name_hint()) { 
-    stream_name_ = this->op_conf().stream_name_hint(); 
+  if (this->op_conf().has_stream_name_hint()) {
+    stream_name_ = this->op_conf().stream_name_hint();
   } else {
     stream_name_ = EagerNcclCommMgr::kDefaultStreamName;
   }

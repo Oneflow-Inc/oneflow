@@ -170,7 +170,7 @@ void EagerNcclCommMgr::CreateCommFromPlan(const Plan& plan) {
     }
     const auto& op_conf = op_attr->op_conf();
     ParallelConf parallel_conf;
-    if(op_conf.has_nccl_send_recv_boxing_conf()) {
+    if (op_conf.has_nccl_send_recv_boxing_conf()) {
       parallel_conf = op_conf.nccl_send_recv_boxing_conf().parallel_conf();
     } else {
       if (!op_conf.has_user_conf()) { continue; }

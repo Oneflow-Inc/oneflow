@@ -62,6 +62,7 @@ def _test_general_basic_communication_2d_to_1d(test_case, src_nd_sbp, dst_nd_sbp
     in_np = x.numpy()
     test_case.assertTrue(np.array_equal(out_np, in_np))
 
+
 def gen_nd_sbp_1d():
     sbp_list = [
         flow.sbp.partial_sum(),
@@ -71,6 +72,7 @@ def gen_nd_sbp_1d():
     ]
     return sbp_list
 
+
 def gen_nd_sbp_2d():
     nd_sbp_list = []
     for sbp0 in gen_nd_sbp_1d():
@@ -78,10 +80,11 @@ def gen_nd_sbp_2d():
             nd_sbp_list.append([sbp0, sbp1])
     return nd_sbp_list
 
+
 @flow.unittest.skip_unless_2n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestGeneralBasicCommunication(flow.unittest.TestCase):
-    def test_nccl_logical_send_recv(test_case):
+    def test_general_basic_communication(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_nd_sbp"] = gen_nd_sbp_2d()
         arg_dict["dst_nd_sbp"] = gen_nd_sbp_1d()

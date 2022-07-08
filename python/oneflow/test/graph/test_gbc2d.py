@@ -35,6 +35,22 @@ def _test_general_basic_communication_same_placement(test_case, src_nd_sbp, dst_
     if flow.sbp.partial_sum() in dst_nd_sbp:
         return
 
+    # skip src == dst
+    if src_nd_sbp == dst_nd_sbp:
+        return
+
+    # in this case, use intra group boxing
+    if src_nd_sbp[0] == dst_nd_sbp[0]:
+        return
+
+    # in this case, use inter group boxing
+    if (
+        src_nd_sbp[1] == dst_nd_sbp[1]
+        and src_nd_sbp[0] != src_nd_sbp[1]
+        and dst_nd_sbp[0] != dst_nd_sbp[1]
+    ):
+        return
+
     # input
     placement = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
     local_np = np.arange(12 * 12).reshape(12, 12)
@@ -75,10 +91,11 @@ def gen_nd_sbp():
             nd_sbp_list.append([sbp0, sbp1])
     return nd_sbp_list
 
+
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestGeneralBasicCommunication(flow.unittest.TestCase):
-    def test_nccl_logical_send_recv(test_case):
+    def test_general_basic_communication(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_nd_sbp"] = gen_nd_sbp()
         arg_dict["dst_nd_sbp"] = gen_nd_sbp()
