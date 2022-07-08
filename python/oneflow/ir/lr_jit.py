@@ -55,7 +55,7 @@ def lr_jit_register(lr_obj, is_dump=False):
 
 
 
-def _test_current_lr_jit(testcase):
+def _test_current_lr_jit(test_case):
     from oneflow.nn.optimizer.constant_lr import ConstantLR
     from oneflow.nn.optimizer.cosine_annealing_lr import CosineAnnealingLR
     from oneflow.nn.optimizer.cosine_decay_lr import CosineDecayLR
@@ -70,6 +70,7 @@ def _test_current_lr_jit(testcase):
 
     from oneflow.optim import SGD
     from oneflow.nn import Parameter
+    import numpy as np
     param = Parameter(oneflow.ones(3, 4))
     optimizer = SGD([param], lr=0.001)
 
@@ -90,7 +91,6 @@ def _test_current_lr_jit(testcase):
     ]
 
     for lr_obj in lr_obj_list:
-        print(lr_obj.__class__.__name__)
         id_ = lr_jit_register(lr_obj, False)
 
         ls = [[0.005, 5], [0.01, 10], [0.02, 21]]
@@ -99,9 +99,9 @@ def _test_current_lr_jit(testcase):
             step = elem[1]
             lr = lr_obj.get_lr(base_lr, step)
             lr_jit =  oneflow._oneflow_internal.ir.get_lr(id_, base_lr, step)
-
-            print("lr: ", lr)
-            print("lr_jit: ", lr_jit)
+            test_case.assertTrue(
+                np.isclose(lr, lr_jit)
+            )
 
 @oneflow.unittest.skip_unless_1n1d()
 class TestCurrentLRJIT(oneflow.unittest.TestCase):
