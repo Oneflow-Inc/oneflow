@@ -45,8 +45,7 @@ limitations under the License.
 
 template<class T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& v) {
-  std::string str = fmt::format("{}", v);
-  os << str;
+  os << fmt::format("{}", v);
   return os;
 }
 
@@ -256,4 +255,4 @@ std::string GetStringFromEnv(const std::string& env_var, const std::string& defa
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_UTIL_H_
+#endif // ONEFLOW_CORE_COMMON_UTIL_H_
