@@ -122,7 +122,7 @@ class TensorWithOtherCtorFunctor {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     bool is_pinned = false;
-    if (other->is_local()) { is_pinned = JUST(CHECK_JUST(other->AsMirroredTensor())->is_pinned()); }
+    if (other->is_local()) { is_pinned = JUST(CHECK_JUST(other->AsLocalTensor())->is_pinned()); }
     return MakeTensorFromOtherTensor(other, is_pinned);
   }
 };
@@ -145,7 +145,7 @@ class TensorWithDataCtorFunctor {
     if (PyTensor_Check(data)) {
       const auto& other = PyTensor_Unpack(data);
       const bool pin_memory =
-          other->is_local() ? JUST(JUST(other->AsMirroredTensor())->is_pinned()) : false;
+          other->is_local() ? JUST(JUST(other->AsLocalTensor())->is_pinned()) : false;
       return MakeTensorFromOtherTensor(other, dtype, device,
                                        /*requires_grad=*/false, /*pin_memory=*/pin_memory);
     }
@@ -266,7 +266,7 @@ class LocalTensorSharedNumpyDataFunctor {
       }
       stride_val /= element_size_in_bytes;
     }
-    auto tensor_meta = std::make_shared<MirroredTensorMeta>(shape, strides, data_type, device, 0);
+    auto tensor_meta = std::make_shared<LocalTensorMeta>(shape, strides, data_type, device, 0);
 
     // Build TensorBuffer
     const auto& Free = [array](char* dptr) {
@@ -286,9 +286,9 @@ class LocalTensorSharedNumpyDataFunctor {
     auto tensor_storage = std::make_shared<TensorStorage>(tensor_data);
 
     // Build Tensor
-    auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(tensor_meta, tensor_storage,
-                                                                 /*requires_grad=*/false,
-                                                                 /*ls_leaf=*/true);
+    auto tensor_impl = std::make_shared<EagerLocalTensorImpl>(tensor_meta, tensor_storage,
+                                                              /*requires_grad=*/false,
+                                                              /*ls_leaf=*/true);
 
     // Init blob
     JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject()));
@@ -296,7 +296,7 @@ class LocalTensorSharedNumpyDataFunctor {
     const auto& eager_blob_object = JUST(tensor_impl->eager_blob_object());
     JUST(eager_blob_object->init_producer_stream(stream));
     eager_blob_object->set_last_used_stream(stream);
-    std::shared_ptr<Tensor> out(new MirroredTensor(tensor_impl));
+    std::shared_ptr<Tensor> out(new LocalTensor(tensor_impl));
     return out;
   }
 };
