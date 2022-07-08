@@ -39,14 +39,15 @@ class EventRecorder {
       event_.reset();
     }
   }
-  static std::shared_ptr<EventRecorder> CreateCustomEventRecorder(std::string name);
+
+  static std::shared_ptr<EventRecorder> CreateCustomEventRecorder(const std::string& name);
 
   static Maybe<EventRecorder> CreateKernelEventRecorder(
-      std::string name,
+      const std::string& name,
 #if defined(WITH_CUDA)
       const std::function<int64_t()>& memory_size_getter,
 #endif
-      KernelEvent::Description description);
+      const KernelEvent::Description& description);
 
  private:
   std::shared_ptr<IEvent> event_;

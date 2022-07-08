@@ -45,7 +45,7 @@ class IEvent {
   OF_DISALLOW_COPY_AND_MOVE(IEvent);
 
   IEvent() = delete;
-  IEvent(std::string name, EventTimeUnit time_unit) : name_(std::move(name)), time_unit_(time_unit) {}
+  IEvent(const std::string& name, EventTimeUnit time_unit) : name_(name), time_unit_(time_unit) {}
 
   virtual nlohmann::json ToJson();
   virtual ~IEvent() = default;
@@ -118,13 +118,13 @@ class CustomEvent final : public IEvent {
 
   nlohmann::json ToJson() override;
 
-  static std::shared_ptr<CustomEvent> Create(std::string name,
+  static std::shared_ptr<CustomEvent> Create(const std::string& name,
                                              CustomEventType type = CustomEventType::kDefault);
 
  private:
   CustomEventType type_;
-  CustomEvent(std::string custom_name, CustomEventType type)
-      : IEvent(std::move(custom_name),
+  CustomEvent(const std::string& custom_name, CustomEventType type)
+      : IEvent(custom_name,
                type == CustomEventType::kDefault ? EventTimeUnit::kNS : EventTimeUnit::kUS),
         type_(type) {}
 };
@@ -135,8 +135,8 @@ class KernelEvent final : public IEvent {
 
   nlohmann::json ToJson() override;
 
-  static std::shared_ptr<KernelEvent> Create(
-      std::string name, Description description);
+  static std::shared_ptr<KernelEvent> Create(const std::string& name,
+                                             const Description& description);
 
 #if defined(WITH_CUDA)
   void SetMemorySize(int64_t memory_size) { memory_size_ = memory_size; }
@@ -155,10 +155,9 @@ class KernelEvent final : public IEvent {
 #endif  // WITH_CUDA
 
  private:
-  KernelEvent(std::string kernel_name,
-              std::map<std::string, std::pair<std::string, int64_t>> description)
-      : IEvent(std::move(kernel_name), EventTimeUnit::kNS),
-        description_(std::move(description)) {}
+  KernelEvent(const std::string& kernel_name,
+              const std::map<std::string, std::pair<std::string, int64_t>>& description)
+      : IEvent(kernel_name, EventTimeUnit::kNS), description_(description) {}
 
 #if defined(WITH_CUDA)
   int64_t memory_size_ = -1;

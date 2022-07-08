@@ -901,7 +901,7 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, DeviceCtx* device_c
           return CalMemorySize(compute_ctx->inputs()) + CalMemorySize(compute_ctx->outputs());
         },
 #endif
-        std::move(description)));
+        description));
     user_opkernel->Compute(compute_ctx, state, cache);
   } else {
     user_opkernel->Compute(compute_ctx, state, cache);

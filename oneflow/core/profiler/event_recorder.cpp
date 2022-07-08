@@ -26,30 +26,29 @@ Maybe<void> EventRecorder::RegisterEventToProfileManager(const std::shared_ptr<I
   return Maybe<void>::Ok();
 }
 
-std::shared_ptr<EventRecorder> EventRecorder::CreateCustomEventRecorder(std::string name) {
-  return std::make_shared<EventRecorder>(CustomEvent::Create(std::move(name)));
+std::shared_ptr<EventRecorder> EventRecorder::CreateCustomEventRecorder(const std::string& name) {
+  return std::make_shared<EventRecorder>(CustomEvent::Create(name));
 }
 
 Maybe<EventRecorder> EventRecorder::CreateKernelEventRecorder(
-    std::string name,
+    const std::string& name,
 #if defined(WITH_CUDA)
     const std::function<int64_t()>& memory_size_getter,
 #endif
-    KernelEvent::Description description) {
+    const KernelEvent::Description& description) {
   auto pmgr = Singleton<ProfileManager>::Get();
   if (pmgr) {
 #if defined(WITH_CUDA)
     if (pmgr->use_cpu_ || pmgr->use_cuda_) {
-      auto event = KernelEvent::Create(std::move(name), std::move(description));
+      auto event = KernelEvent::Create(name, description);
       if (pmgr->use_cuda_) {
         if (pmgr->record_bandwidth_) { event->SetMemorySize(memory_size_getter()); }
       }
       return std::make_shared<EventRecorder>(event);
     }
-#else  // WITH_CUDA
+#else   // WITH_CUDA
     if (pmgr->use_cpu_) {
-      return std::make_shared<EventRecorder>(
-          KernelEvent::Create(std::move(name), std::move(description));
+      return std::make_shared<EventRecorder>(KernelEvent::Create(name, description));
     }
 #endif  // WITH_CUDA
   }

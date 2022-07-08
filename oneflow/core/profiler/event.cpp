@@ -52,16 +52,14 @@ nlohmann::json CustomEvent::ToJson() {
   return j;
 }
 
-std::shared_ptr<CustomEvent> CustomEvent::Create(std::string name, CustomEventType type) {
-  return std::shared_ptr<CustomEvent>(new CustomEvent(std::move(name), type));
+std::shared_ptr<CustomEvent> CustomEvent::Create(const std::string& name, CustomEventType type) {
+  return std::shared_ptr<CustomEvent>(new CustomEvent(name, type));
 }
 
 nlohmann::json KernelEvent::ToJson() {
   auto j = IEvent::ToJson();
   j["type"] = EventType::kOneflowKernel;
-  for (const auto &desc : description_) {
-    j["description"][desc.first] = desc.second.first;
-  }
+  for (const auto& desc : description_) { j["description"][desc.first] = desc.second.first; }
 #if defined(WITH_CUDA)
   j["memory_size"] = memory_size_;
   if (!children_.empty()) { j["children"] = children_; }
@@ -69,9 +67,9 @@ nlohmann::json KernelEvent::ToJson() {
   return j;
 }
 
-std::shared_ptr<KernelEvent> KernelEvent::Create(
-    std::string name, Description description) {
-  return std::shared_ptr<KernelEvent>(new KernelEvent(std::move(name), std::move(description)));
+std::shared_ptr<KernelEvent> KernelEvent::Create(const std::string& name,
+                                                 const Description& description) {
+  return std::shared_ptr<KernelEvent>(new KernelEvent(name, description));
 }
 
 }  // namespace profiler
