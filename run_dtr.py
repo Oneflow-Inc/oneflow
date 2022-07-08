@@ -7,7 +7,6 @@ import json
 
 import numpy as np
 from numpy import random
-from torch.utils.tensorboard import SummaryWriter
 
 
 class NegativeArgAction(argparse.Action):
@@ -129,6 +128,7 @@ setup_seed(20)
 
 enable_tensorboard = args.exp_id is not None
 if enable_tensorboard:
+    from torch.utils.tensorboard import SummaryWriter
     writer = SummaryWriter("./tensorboard/" + args.exp_id)
 
 

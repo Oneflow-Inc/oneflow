@@ -38,7 +38,12 @@ namespace vm {
 
 inline Allocator* GetAllocator(int64_t device_id) {
   if (EnvBool<OF_DTR>()) {
-    if (EnvBool<OF_DTR_ALLO>()) { return Global<DtrCudaAllocator>::Get(); }
+    if (EnvBool<OF_DTR_ALLO>()) { 
+      if (!Global<DtrCudaAllocator>::Get()) {
+        Global<DtrCudaAllocator>::New(0);
+      }
+      return Global<DtrCudaAllocator>::Get();
+    }
     return new DtrNaiveCudaAllocator(device_id);
   }
   return new CudaBackendAllocator(device_id);
