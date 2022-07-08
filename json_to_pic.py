@@ -47,6 +47,15 @@ def get_mem_frag_rate_from_json_file(fn):
         return mem_frag_rate
 
 
+def get_dataset_time_from_json_file(fn):
+    with open(fn) as f:
+        j = json.load(f)
+        mem_frag_rate = j["dataset time"]
+        if mem_frag_rate is not None:
+            mem_frag_rate = float(mem_frag_rate)
+        return mem_frag_rate
+
+
 def get_threshold_from_json_file(fn):
     with open(fn) as f:
         j = json.load(f)
@@ -65,8 +74,8 @@ def draw_from_files_and_draw(get_y, pic_name):
     # draw_from_file(ax, rf"{model_name}-raw-gp-\d+.json", get_threshold_from_json_file, get_y, 'raw grouping')
     draw_from_file(ax, rf"{model_name}-no-gp-\d+.json", get_threshold_from_json_file, get_y, 'no grouping')
     draw_from_file(ax, rf"{model_name}-no-fbip-\d+.json", get_threshold_from_json_file, get_y, 'no fbip')
-    draw_from_file(ax, rf"{model_name}-raw-dtr-\d+.json", get_threshold_from_json_file, get_y, 'raw dtr')
     draw_from_file(ax, rf"{model_name}-me-style-\d+.json", get_threshold_from_json_file, get_y, 'me style')
+    draw_from_file(ax, rf"{model_name}-raw-dtr-\d+.json", get_threshold_from_json_file, get_y, 'raw dtr')
 
     ax.legend()
     plt.savefig(pic_name)
@@ -74,3 +83,4 @@ def draw_from_files_and_draw(get_y, pic_name):
 draw_from_files_and_draw(get_theo_time_from_json_file, f'{model_name}-theo-time.png')
 draw_from_files_and_draw(get_real_time_from_json_file, f'{model_name}-real-time.png')
 draw_from_files_and_draw(get_mem_frag_rate_from_json_file, f'{model_name}-mem-frag.png')
+draw_from_files_and_draw(get_dataset_time_from_json_file, f'{model_name}-dataset-time.png')

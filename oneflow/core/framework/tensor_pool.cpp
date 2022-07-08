@@ -46,6 +46,7 @@ TensorPool::~TensorPool() {
   std::cout << "Times of recomputation: " << num_recomputation_ << std::endl;
   std::cout << "Times of destruction: " << num_destruction_ << std::endl;
   std::cout << "duration_: " << duration_ << std::endl;
+  std::cout << "dataset time: " << dataset_time_ << std::endl;
   if (dtr::is_enabled_and_debug()) { CHECK_JUST(display()); }
   const char* prefix = std::getenv("ONEFLOW_DTR_SUMMARY_FILE_PREFIX");
   if (prefix != nullptr) {
@@ -55,7 +56,8 @@ TensorPool::~TensorPool() {
                  {"recomputation", num_recomputation_},
                  {"destruction", num_destruction_},
                  {"mem frag rate", dtr::append_memory_frag_info_and_get(0, 0)},
-                 {"theoretically time", duration_}};
+                 {"theoretically time", duration_},
+                 {"dataset time", dataset_time_}};
 
     json full_json;
     // std::fstream has strange default append semantic

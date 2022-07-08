@@ -531,7 +531,7 @@ Maybe<void> _RecursivelyCompute(
 
   // update timestamp
   Global<dtr::TensorPool>::Get()->time_flies(compute_time);
-  Global<dtr::TensorPool>::Get()->dataset_time_flies(JUST(GetDatasetComputeTime(operand.get())));
+  // Global<dtr::TensorPool>::Get()->dataset_time_flies(JUST(GetDatasetComputeTime(operand.get())));
   return Maybe<void>::Ok();
 }
 
