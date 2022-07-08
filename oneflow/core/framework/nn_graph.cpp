@@ -349,7 +349,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
           << "the tensor of " << var_name
           << " is not existed in job, so it's not created in nn.Graph and cannot be NULL.";
       if (tensor->is_consistent()) {
-        const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
+        const std::shared_ptr<one::LocalTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
         var_blob = JUST(local_var->eager_blob_object()).get();
       } else {
         var_blob = JUST(tensor->eager_blob_object()).get();
@@ -406,7 +406,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       // valid.
       session_ctx_->StoreFreeEagerTensorWithNameByGraphName(name_, tensor, var_name);
 
-      const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
+      const std::shared_ptr<one::LocalTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
       var_blob = JUST(local_var->eager_blob_object()).get();
     } else if (tensor->is_consistent()) {
       // Deal with tensors which need to change sbp.
@@ -435,7 +435,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
           JUST(tensor->set_data(new_tensor));
         }
       }
-      const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
+      const std::shared_ptr<one::LocalTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
       var_blob = JUST(local_var->eager_blob_object()).get();
     } else {
       var_blob = JUST(tensor->eager_blob_object()).get();
