@@ -362,6 +362,9 @@ def pad_packed_sequence(
         device=sequence.data.device,
         requires_grad=sequence.data.requires_grad,
     )
+    # `padded_output`` is leaf Tensor which needs to be cloned
+    # before the following in-place operation to avoid runtime check error
+    # when it requires grad
     if padded_output.requires_grad == True:
         padded_output = padded_output.clone()
 
