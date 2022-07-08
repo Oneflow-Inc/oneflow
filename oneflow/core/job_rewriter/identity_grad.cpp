@@ -53,16 +53,16 @@ void GenerateBwSbpParallel(SbpParallel* bw_sbp_parallel, const SbpParallel& fw_s
 
 namespace {
 
-void GenerateCastToMirroredBackwardOpConf(
+void GenerateCastToLocalBackwardOpConf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
-  CHECK(op.op_conf().has_cast_to_mirrored_conf());
-  const auto& fw_op_conf = op.op_conf().cast_to_mirrored_conf();
+  CHECK(op.op_conf().has_cast_to_local_conf());
+  const auto& fw_op_conf = op.op_conf().cast_to_local_conf();
   if (DiffLbi4BnInOp("in") != nullptr) {
     OperatorConf grad_op{};
     grad_op.set_name("System-AutoGrad-" + op.op_name());
     grad_op.set_scope_symbol_id(op.op_conf().scope_symbol_id());
-    CastFromMirroredOpConf* bw_op_conf = grad_op.mutable_cast_from_mirrored_conf();
+    CastFromLocalOpConf* bw_op_conf = grad_op.mutable_cast_from_local_conf();
     bw_op_conf->set_in(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     bw_op_conf->set_out("out");
     GenerateBwSbpParallel(bw_op_conf->mutable_sbp_parallel(), fw_op_conf.sbp_parallel());
@@ -72,22 +72,22 @@ void GenerateCastToMirroredBackwardOpConf(
   }
 }
 
-REGISTER_OP_GRAD(OperatorConf::kCastToMirroredConf, &GenerateCastToMirroredBackwardOpConf);
+REGISTER_OP_GRAD(OperatorConf::kCastToLocalConf, &GenerateCastToLocalBackwardOpConf);
 
 }  // namespace
 
 namespace {
 
-void GenerateCastFromMirroredBackwardOpConf(
+void GenerateCastFromLocalBackwardOpConf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
-  CHECK(op.op_conf().has_cast_from_mirrored_conf());
-  const auto& fw_op_conf = op.op_conf().cast_from_mirrored_conf();
+  CHECK(op.op_conf().has_cast_from_local_conf());
+  const auto& fw_op_conf = op.op_conf().cast_from_local_conf();
   if (DiffLbi4BnInOp("in") != nullptr) {
     OperatorConf grad_op{};
     grad_op.set_name("System-AutoGrad-" + op.op_name());
     grad_op.set_scope_symbol_id(op.op_conf().scope_symbol_id());
-    CastToMirroredOpConf* bw_op_conf = grad_op.mutable_cast_to_mirrored_conf();
+    CastToLocalOpConf* bw_op_conf = grad_op.mutable_cast_to_local_conf();
     bw_op_conf->set_in(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     bw_op_conf->set_out("out");
     GenerateBwSbpParallel(bw_op_conf->mutable_sbp_parallel(), fw_op_conf.sbp_parallel());
@@ -97,7 +97,7 @@ void GenerateCastFromMirroredBackwardOpConf(
   }
 }
 
-REGISTER_OP_GRAD(OperatorConf::kCastFromMirroredConf, &GenerateCastFromMirroredBackwardOpConf);
+REGISTER_OP_GRAD(OperatorConf::kCastFromLocalConf, &GenerateCastFromLocalBackwardOpConf);
 
 }  // namespace
 
