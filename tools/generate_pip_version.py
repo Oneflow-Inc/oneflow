@@ -42,7 +42,7 @@ if args.cuda:
 else:
     compute_platform = "cpu"
 assert compute_platform
-version += f"+{compute_platform}"
+# version += f"+{compute_platform}"
 
 try:
     git_hash = (
