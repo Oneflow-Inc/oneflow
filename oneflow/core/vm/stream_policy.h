@@ -48,10 +48,7 @@ class StreamPolicy {
   virtual ~StreamPolicy() = default;
 
   virtual ep::Stream* stream() = 0;
-  virtual vm::Allocator* mut_allocator() {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
+  virtual vm::Allocator* mut_allocator() = 0;
   virtual DeviceType device_type() const = 0;
 
   virtual void InitInstructionStatus(const Stream& stream,

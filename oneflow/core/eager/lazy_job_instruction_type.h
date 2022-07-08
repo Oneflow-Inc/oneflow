@@ -100,6 +100,7 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
   LazyJobDeviceCtx* GetLazyJobDeviceCtx(Instruction* instruction) const {
     StreamPolicy* stream_policy = instruction->mut_stream()->mut_stream_policy();
     NaiveStreamPolicy* naive_stream_policy = dynamic_cast<NaiveStreamPolicy*>(stream_policy);
+    CHECK_NOTNULL(naive_stream_policy);
     auto* device_ctx = dynamic_cast<LazyJobDeviceCtx*>(naive_stream_policy->device_ctx().get());
     CHECK_NOTNULL(device_ctx);
     return device_ctx;

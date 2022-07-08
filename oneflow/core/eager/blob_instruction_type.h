@@ -53,6 +53,7 @@ class EpRecordEventInstructionType final : public vm::InstructionType {
     instruction->stream_policy().InitInstructionStatus(*stream, status_buffer);
     NaiveStreamPolicy* naive_stream_policy =
         dynamic_cast<NaiveStreamPolicy*>(instruction->mut_stream()->mut_stream_policy());
+    CHECK_NOTNULL(naive_stream_policy);
     auto* ep_device_ctx = dynamic_cast<EpDeviceCtx*>(naive_stream_policy->device_ctx().get());
     auto* ep_event_provider = ep_device_ctx->ep_event_provider();
     const auto& ep_event = CHECK_NOTNULL(ep_event_provider)->GetReusedEpEvent();

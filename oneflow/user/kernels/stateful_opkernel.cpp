@@ -458,7 +458,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   }
 
   ep::Stream* stream() override {
-    CHECK(stream_);
+    CHECK_NOTNULL(stream_);
     return stream_;
   }
 
@@ -613,7 +613,7 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
   ~UserKernelInitAndCacheContext() override = default;
 
   ep::Stream* stream() override {
-    CHECK(stream_);
+    CHECK_NOTNULL(stream_);
     return stream_;
   }
 
