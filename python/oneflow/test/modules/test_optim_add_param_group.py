@@ -29,14 +29,25 @@ def _test_sgd_add_param_group(test_case):
     w2 = flow.ones(3, 3)
     w2.requires_grad = True
     o = flow.optim.SGD([w1])
-    # print(o.param_groups)
-    # {'state': {'step': 0, 0: {}}, 'param_groups': [{'_options': {'lr': 0.001, 'momentum': 0.0, 'dampening': 0.0, 'weight_decay': 0.0, 'nesterov': False, 'maximize': False}, '_enable_clip_grad': False, 'params': [0]}]}
+    test_case.assertTrue(o.param_groups[0]['lr'] == 0.001)
+    test_case.assertTrue(o.param_groups[0]['momentum'] == 0.0)
+    test_case.assertTrue(o.param_groups[0]['weight_decay'] == 0.0)
+    test_case.assertTrue(o.param_groups[0]['nesterov'] == False)
+    test_case.assertTrue(o.param_groups[0]['maximize'] == False)
     o.add_param_group({'params': w2})
-    # print(o.param_groups)
+    test_case.assertTrue(o.param_groups[1]['lr'] == 0.001)
+    test_case.assertTrue(o.param_groups[1]['momentum'] == 0.0)
+    test_case.assertTrue(o.param_groups[1]['weight_decay'] == 0.0)
+    test_case.assertTrue(o.param_groups[1]['nesterov'] == False)
+    test_case.assertTrue(o.param_groups[1]['maximize'] == False)
 
 
-@flow.unittest.skip_unless_1n4d()
-class TestReduce(flow.unittest.TestCase):
+class TestAddParamGroup(flow.unittest.TestCase):
     def test_sgd_add_param_group(test_case):
         _test_sgd_add_param_group(test_case)
+
+
+if __name__ == "__main__":
+    unittest.main()
+
 

@@ -153,9 +153,15 @@ class Optimizer(object):
         >>> w2 = oneflow.ones(3, 3)
         >>> w2.requires_grad = True
         >>> o = optim.SGD([w1])
-        >>> o.state_dict()
-        {'state': {'step': 0, 0: {}}, 'param_groups': [{'_options': {'lr': 0.001, 'momentum': 0.0, 'dampening': 0.0, 'weight_decay': 0.0, 'nesterov': False, 'maximize': False}, '_enable_clip_grad': False, 'params': [0]}]}
+        >>> o.param_groups[0]
+        {'lr': 0.001, 'momentum': 0.0, 'dampening': 0.0, 'weight_decay': 0.0, 'nesterov': False, 'maximize': False, 'params': [tensor([[1., 1., 1.],
+                [1., 1., 1.],
+                [1., 1., 1.]], dtype=oneflow.float32, requires_grad=True)]}
         >>> o.add_param_group({'params': w2})
+        >>> o.param_groups[1]
+        {'lr': 0.001, 'momentum': 0.0, 'dampening': 0.0, 'weight_decay': 0.0, 'nesterov': False, 'maximize': False, 'params': [tensor([[1., 1., 1.],
+                [1., 1., 1.],
+                [1., 1., 1.]], dtype=oneflow.float32, requires_grad=True)]}
 
         """
         assert isinstance(param_group, dict), "param group must be a dict"
