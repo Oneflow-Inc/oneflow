@@ -9,10 +9,8 @@
 
 ## Latest News
 
-- Version 0.7.0 is out!
-  - Introducing global tensor
-  - Semi-auto parallelization has landed
-  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.7.0)
+- Version 0.8.0 is out!
+  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.8.0)
 
 ## Publication
 
@@ -35,7 +33,7 @@
 ### System Requirements
 
 - Linux. As for now, there is no pre-built release for macOS, Windows.
-- Python 3.6, 3.7, 3.8, 3.9, 3.10
+- Python 3.7, 3.8, 3.9, 3.10
 - (**Highly recommended**) Upgrade pip
 
   ```
@@ -53,7 +51,7 @@
 - To install latest stable release of OneFlow with CUDA support:
 
   ```bash
-  python3 -m pip install -f https://release.oneflow.info oneflow==0.7.0+cu102
+  python3 -m pip install oneflow
   ```
 
 - To install nightly release of OneFlow with CUDA support:
@@ -66,7 +64,7 @@
 
   - Stable
     ```bash
-    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.7.0+[PLATFORM]
+    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.8.0+[PLATFORM]
     ```
   - Nightly
     ```
