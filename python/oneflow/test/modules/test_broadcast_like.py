@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from re import X
 import unittest
 from collections import OrderedDict
 
@@ -22,6 +23,7 @@ from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_broadcast_like(test_case, device):
@@ -105,6 +107,14 @@ class TestBroadCastLike(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(check_graph=True, check_grad_use_random_data=True)
+    def test_broadcast_backward_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=2, dim0=2, dim1=4).to(device)
+        y = random_tensor(ndim=1, dim0=1).to(device)
+        z = torch.max(y, x)
+        return z
 
 
 if __name__ == "__main__":
