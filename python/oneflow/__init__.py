@@ -229,7 +229,7 @@ __oneflow_global_unique_env = env_util.GetEnv()
 session_ctx.NewDefaultSession(__oneflow_global_unique_env)
 
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
-oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
+oneflow._oneflow_internal.InitDefaultGlobalTransportTokenScope()
 
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
 from oneflow.framework import python_callback
