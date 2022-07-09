@@ -205,7 +205,7 @@ Maybe<void> InstructionsBuilder::SoftSyncNNGraphBuffers(
     const vm::EagerBlobObjectListPtr& eager_blob_objects,
     const std::shared_ptr<NNGraphIf>& nn_graph) {
   const auto& stream = JUST(GetCriticalSectionStream());
-  JUST(SoftSyncStream(eager_blob_objects, stream));
+  JUST(SoftSyncStream(*eager_blob_objects, stream));
   return Maybe<void>::Ok();
 }
 
@@ -359,31 +359,33 @@ Maybe<Scope> InstructionsBuilder::BuildScopeByProtoStrSetter(
 }
 
 Maybe<void> InstructionsBuilder::Call(const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-                                      const vm::EagerBlobObjectListPtr& input_eager_blob_objects,
-                                      const vm::EagerBlobObjectListPtr& output_eager_blob_objects,
+                                      vm::EagerBlobObjectList&& input_eager_blob_objects,
+                                      vm::EagerBlobObjectList&& output_eager_blob_objects,
                                       const one::OpExprInterpContext& ctx, Symbol<Stream> stream) {
-  return Call(opkernel, input_eager_blob_objects, output_eager_blob_objects, nullptr, ctx, stream);
+  return Call(opkernel, std::move(input_eager_blob_objects), std::move(output_eager_blob_objects),
+              nullptr, ctx, stream);
 }
 
 Maybe<void> InstructionsBuilder::Call(
     const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-    const vm::EagerBlobObjectListPtr& input_eager_blob_objects,
-    const vm::EagerBlobObjectListPtr& output_eager_blob_objects,
+    vm::EagerBlobObjectList&& input_eager_blob_objects,
+    vm::EagerBlobObjectList&& output_eager_blob_objects,
     const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
     const one::OpExprInterpContext& ctx, Symbol<Stream> stream) {
   JUST(SoftSyncStream(output_eager_blob_objects, stream));
   JUST(SoftSyncStream(input_eager_blob_objects, stream));
-  auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
-  auto phy_instr_operand = JUST(vm::OpCallPhyInstrOperand::New(
-      vm_stream, opkernel, input_eager_blob_objects, output_eager_blob_objects,
-      consistent_tensor_infer_result, ctx, *one::CurrentDevVmDepObjectConsumeMode()));
-  auto instruction = intrusive::make_shared<vm::Instruction>(
-      vm_stream, SingletonPtr<vm::OpCallInstructionType>(), phy_instr_operand);
-  instruction_list_->EmplaceBack(std::move(instruction));
-  for (const auto& output : *output_eager_blob_objects) {
+  for (const auto& output : output_eager_blob_objects) {
     if (!output->producer_stream().has_value()) { JUST(output->init_producer_stream(stream)); }
     output->set_last_used_stream(stream);
   }
+  auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
+  auto phy_instr_operand = JUST(vm::OpCallPhyInstrOperand::New(
+      vm_stream, opkernel, std::move(input_eager_blob_objects),
+      std::move(output_eager_blob_objects), consistent_tensor_infer_result, ctx,
+      *one::CurrentDevVmDepObjectConsumeMode()));
+  auto instruction = intrusive::make_shared<vm::Instruction>(
+      vm_stream, SingletonPtr<vm::OpCallInstructionType>(), phy_instr_operand);
+  instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
 
@@ -438,10 +440,10 @@ Maybe<void> InstructionsBuilder::TouchTensors(const vm::EagerBlobObjectListPtr& 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::SoftSyncStream(
-    const vm::EagerBlobObjectListPtr& eager_blob_objects, Symbol<Stream> stream) {
+Maybe<void> InstructionsBuilder::SoftSyncStream(const vm::EagerBlobObjectList& eager_blob_objects,
+                                                Symbol<Stream> stream) {
   SmallSet<Symbol<Stream>> last_used_streams;
-  for (const auto& eager_blob_object : *eager_blob_objects) {
+  for (const auto& eager_blob_object : eager_blob_objects) {
     const auto& opt_last_used_stream = eager_blob_object->last_used_stream();
     if (unlikely(!opt_last_used_stream.has_value())) { continue; }
     const auto& last_used_stream = JUST(opt_last_used_stream);
@@ -449,8 +451,8 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
   }
   for (const auto& last_used_stream : last_used_streams) {
     std::vector<intrusive::shared_ptr<LocalDepObject>> dep_objects;
-    dep_objects.reserve(eager_blob_objects->size());
-    for (const auto& eager_blob_object : *eager_blob_objects) {
+    dep_objects.reserve(eager_blob_objects.size());
+    for (const auto& eager_blob_object : eager_blob_objects) {
       const auto& opt_last_used_stream = eager_blob_object->last_used_stream();
       if (unlikely(!opt_last_used_stream.has_value())) { continue; }
       if (JUST(opt_last_used_stream) == last_used_stream) {

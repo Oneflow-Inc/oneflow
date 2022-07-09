@@ -54,13 +54,13 @@ class ZeroCopyBaseContextHelper {
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
                                                   const std::string& arg_name,
                                                   const int32_t index) const {
-    RETURN_IF_FOUND(*call_ctx->inputs(), *call_ctx->outputs(), .get());
+    RETURN_IF_FOUND(call_ctx->inputs(), call_ctx->outputs(), .get());
     return nullptr;
   }
 
   user_op::Tensor* Tensor4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                           const int32_t index) const {
-    RETURN_IF_FOUND(*call_ctx->inputs(), *call_ctx->outputs(), .get());
+    RETURN_IF_FOUND(call_ctx->inputs(), call_ctx->outputs(), .get());
     if (arg_name == "tmp_buffer" && index == 0) { return call_ctx->mut_tmp_tensor(); }
     return nullptr;
   }
@@ -788,10 +788,10 @@ Maybe<void> StatefulOpKernel::ChooseOpKernel(eager::CallContext* call_ctx,
   DataType primary_dtype = kInvalidDataType;
   const auto& inputs = call_ctx->inputs();
   const auto& outputs = call_ctx->outputs();
-  if (likely(!inputs->empty())) {
-    primary_dtype = (*inputs)[0]->data_type();
-  } else if (likely(!outputs->empty())) {
-    primary_dtype = (*outputs)[0]->data_type();
+  if (likely(!inputs.empty())) {
+    primary_dtype = inputs[0]->data_type();
+  } else if (likely(!outputs.empty())) {
+    primary_dtype = outputs[0]->data_type();
   } else {
     // do nothing
   }

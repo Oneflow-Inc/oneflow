@@ -118,19 +118,19 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::function<std::string(const std::string&)>& StrSetter);
 
   Maybe<void> Call(const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-                   const vm::EagerBlobObjectListPtr& input_eager_blob_objects,
-                   const vm::EagerBlobObjectListPtr& output_eager_blob_objects,
+                   vm::EagerBlobObjectList&& input_eager_blob_objects,
+                   vm::EagerBlobObjectList&& output_eager_blob_objects,
                    const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
   Maybe<void> Call(
       const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-      const vm::EagerBlobObjectListPtr& input_eager_blob_objects,
-      const vm::EagerBlobObjectListPtr& output_eager_blob_objects,
+      vm::EagerBlobObjectList&& input_eager_blob_objects,
+      vm::EagerBlobObjectList&& output_eager_blob_objects,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
       const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
  private:
-  Maybe<void> SoftSyncStream(const vm::EagerBlobObjectListPtr& eager_blob_objects,
+  Maybe<void> SoftSyncStream(const vm::EagerBlobObjectList& eager_blob_objects,
                              Symbol<Stream> stream);
   Maybe<void> SoftSyncStream(
       std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,

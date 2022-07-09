@@ -71,13 +71,13 @@ class TmpTensor final : public user_op::Tensor {
 class CallContext {
  public:
   CallContext(
-      ComposedAttrMap&& composed_attrs, const vm::EagerBlobObjectListPtr& inputs,
-      const vm::EagerBlobObjectListPtr& outputs,
+      ComposedAttrMap&& composed_attrs, vm::EagerBlobObjectList&& inputs,
+      vm::EagerBlobObjectList&& outputs,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
       const one::OpExprInterpContext& op_interp_ctx, const std::shared_ptr<MemoryCase>& mem_case)
       : composed_attrs_(std::move(composed_attrs)),
-        inputs_(inputs),
-        outputs_(outputs),
+        inputs_(std::move(inputs)),
+        outputs_(std::move(outputs)),
         consistent_tensor_infer_result_(consistent_tensor_infer_result),
         op_interp_ctx_(op_interp_ctx),
         tmp_tensor_(mem_case) {}
@@ -85,8 +85,8 @@ class CallContext {
   ~CallContext() = default;
 
   const ComposedAttrMap& composed_attrs() const { return composed_attrs_; }
-  const vm::EagerBlobObjectListPtr& inputs() const { return inputs_; }
-  const vm::EagerBlobObjectListPtr& outputs() const { return outputs_; }
+  const vm::EagerBlobObjectList& inputs() const { return inputs_; }
+  const vm::EagerBlobObjectList& outputs() const { return outputs_; }
   const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result()
       const {
     return consistent_tensor_infer_result_;
@@ -96,8 +96,8 @@ class CallContext {
 
  private:
   const ComposedAttrMap composed_attrs_;
-  const vm::EagerBlobObjectListPtr inputs_;
-  const vm::EagerBlobObjectListPtr outputs_;
+  const vm::EagerBlobObjectList inputs_;
+  const vm::EagerBlobObjectList outputs_;
   const std::shared_ptr<const one::ConsistentTensorInferResult> consistent_tensor_infer_result_;
   const one::OpExprInterpContext op_interp_ctx_;
   TmpTensor tmp_tensor_;

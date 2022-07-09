@@ -152,8 +152,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
       << Error::UnimplementedError()
       << GetDynamicOpConsistentFailedDebugString(user_op_expr, *kernel);
-  std::shared_ptr<vm::EagerBlobObjectList> input_eager_blob_objects =
-      std::make_shared<vm::EagerBlobObjectList>(inputs.size());
+  vm::EagerBlobObjectList input_eager_blob_objects(inputs.size());
   // expand lifetime of boxing outputs to the end of this function
   TensorTuple boxing_outputs;
   for (int i = 0; i < inputs.size(); ++i) {
@@ -168,18 +167,19 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
       boxing_outputs.emplace_back(input);
     }
     const auto& local_tensor = JUST(input->cur_rank_phy_tensor());
-    input_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
+    input_eager_blob_objects.at(i) = JUST(local_tensor->eager_blob_object());
   }
   // Do nothing if the `parallel_desc` doesn't cover current ProcessCtx.
   if (!parallel_id.has_value()) { return Maybe<void>::Ok(); }
-  std::shared_ptr<vm::EagerBlobObjectList> output_eager_blob_objects =
-      std::make_shared<vm::EagerBlobObjectList>(outputs->size());
+  vm::EagerBlobObjectList output_eager_blob_objects(outputs->size());
   for (int i = 0; i < outputs->size(); ++i) {
     const auto& local_tensor = JUST(outputs->at(i)->cur_rank_phy_tensor());
-    output_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
+    output_eager_blob_objects.at(i) = JUST(local_tensor->eager_blob_object());
   }
+  auto* inputs_ptr = &input_eager_blob_objects;
+  auto* outputs_ptr = &output_eager_blob_objects;
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->Call(kernel, input_eager_blob_objects, output_eager_blob_objects, result, ctx,
+    return builder->Call(kernel, std::move(*inputs_ptr), std::move(*outputs_ptr), result, ctx,
                          result->stream());
   }));
   return Maybe<void>::Ok();

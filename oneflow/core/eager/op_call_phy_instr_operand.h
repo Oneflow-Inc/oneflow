@@ -49,8 +49,8 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
   }
 
   const one::StatefulOpKernel& opkernel() const { return *opkernel_; }
-  const vm::EagerBlobObjectListPtr& inputs() const { return call_ctx_.inputs(); }
-  const vm::EagerBlobObjectListPtr& outputs() const { return call_ctx_.outputs(); }
+  const vm::EagerBlobObjectList& inputs() const { return call_ctx_.inputs(); }
+  const vm::EagerBlobObjectList& outputs() const { return call_ctx_.outputs(); }
   const AttrMap& attrs() const { return call_ctx_.op_interp_ctx().attrs; }
   const one::OpExprInterpContext& op_interp_ctx() const { return call_ctx_.op_interp_ctx(); }
   const one::DevVmDepObjectConsumeMode& dev_vm_dep_object_consume_mode() const {
@@ -61,7 +61,7 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
 
   template<typename DoEachT>
   Maybe<void> ForEachOutputTensor(const DoEachT& DoEach) {
-    for (const auto& output : *outputs()) { JUST(DoEach(output.get())); }
+    for (const auto& output : outputs()) { JUST(DoEach(output.get())); }
     return Maybe<void>::Ok();
   }
 
@@ -86,14 +86,14 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
   eager::CallContext* mut_call_ctx() { return &call_ctx_; }
 
   void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
-    for (const auto& eager_blob_object : *call_ctx_.inputs()) { DoEach(eager_blob_object.get()); }
+    for (const auto& eager_blob_object : call_ctx_.inputs()) { DoEach(eager_blob_object.get()); }
   }
 
  private:
   friend struct OpCallInstructionUtil;
   OpCallPhyInstrOperand(
       vm::Stream* vm_stream, const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-      const vm::EagerBlobObjectListPtr& inputs, const vm::EagerBlobObjectListPtr& outputs,
+      vm::EagerBlobObjectList&& inputs, vm::EagerBlobObjectList&& outputs,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
       const one::OpExprInterpContext& op_interp_ctx,
       const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode);

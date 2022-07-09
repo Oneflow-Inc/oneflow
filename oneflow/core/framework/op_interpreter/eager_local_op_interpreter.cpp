@@ -90,8 +90,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   OF_PROFILER_RANGE_GUARD("NaiveInterpret");
   OF_PROFILER_RANGE_PUSH("init inputs");
   const auto& attrs = ctx.attrs;
-  std::shared_ptr<vm::EagerBlobObjectList> input_eager_blob_objects =
-      std::make_shared<vm::EagerBlobObjectList>(inputs.size());
+  vm::EagerBlobObjectList input_eager_blob_objects(inputs.size());
   for (int i = 0; i < inputs.size(); i++) {
     const auto& input_device = JUST(inputs.at(i)->device());
     if (i > 0) {
@@ -101,12 +100,11 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
           << default_device->ToString() << " (positional 0) and " << input_device->ToString()
           << " (positional " << i << ")!";
     }
-    input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
+    input_eager_blob_objects.at(i) = JUST(inputs.at(i)->eager_blob_object());
   }
   OF_PROFILER_RANGE_POP();
   OF_PROFILER_RANGE_PUSH("init outputs");
-  std::shared_ptr<vm::EagerBlobObjectList> output_eager_blob_objects =
-      std::make_shared<vm::EagerBlobObjectList>(outputs->size());
+  vm::EagerBlobObjectList output_eager_blob_objects(outputs->size());
   auto* output_tensor_metas = ThreadLocalDefaultOutputMutTensorMetas(outputs->size());
   for (int i = 0; i < outputs->size(); i++) {
     if (!outputs->at(i)) {
@@ -116,7 +114,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     } else {
       bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
       CHECK_OR_RETURN(has_eager_blob_object);
-      output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
+      output_eager_blob_objects.at(i) = JUST(outputs->at(i)->eager_blob_object());
     }
   }
   Symbol<Stream> stream;
@@ -153,9 +151,9 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
   OF_PROFILER_RANGE_POP();
   OF_PROFILER_RANGE_PUSH("init output eager_blob_objects");
-  for (int i = 0; i < output_eager_blob_objects->size(); i++) {
+  for (int i = 0; i < output_eager_blob_objects.size(); i++) {
     auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
-    if (!output_eager_blob_objects->at(i)) {
+    if (!output_eager_blob_objects.at(i)) {
       // NOTE: if op support stride(non-contiguous input), then output tensor's stride
       // should be inferred in InferLogicalTensorDesc.
       // otherwise, it will be set here(according to shape).
@@ -165,7 +163,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       }
       const auto& dep_object = NewLocalDepObject();
       JUST(tensor_impl->InitEagerBlobObject(dep_object));
-      output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
+      output_eager_blob_objects.at(i) = JUST(tensor_impl->eager_blob_object());
     } else {
       // output i is inplaced.
       // check thread_local TensorMeta and tensor_impl TensorMeta.
@@ -183,12 +181,14 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   kernel->set_need_check_mem_case(need_check_mem_case);
 
   for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
-    output_eager_blob_objects->at(index)->set_is_shape_synced(false);
+    output_eager_blob_objects.at(index)->set_is_shape_synced(false);
   }
   OF_PROFILER_RANGE_POP();
   OF_PROFILER_RANGE_PUSH("PhysicalRun");
+  auto* inputs_ptr = &input_eager_blob_objects;
+  auto* outputs_ptr = &output_eager_blob_objects;
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->Call(kernel, input_eager_blob_objects, output_eager_blob_objects, ctx, stream);
+    return builder->Call(kernel, std::move(*inputs_ptr), std::move(*outputs_ptr), ctx, stream);
   }));
   OF_PROFILER_RANGE_POP();
   return Maybe<void>::Ok();

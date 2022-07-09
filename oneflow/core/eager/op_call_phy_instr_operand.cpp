@@ -24,13 +24,14 @@ namespace vm {
 
 OpCallPhyInstrOperand::OpCallPhyInstrOperand(
     vm::Stream* vm_stream, const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-    const vm::EagerBlobObjectListPtr& inputs, const vm::EagerBlobObjectListPtr& outputs,
+    vm::EagerBlobObjectList&& inputs, vm::EagerBlobObjectList&& outputs,
     const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
     const one::OpExprInterpContext& op_interp_ctx,
     const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
     : vm_stream_(vm_stream),
-      call_ctx_(ComposedAttrMap(op_interp_ctx.attrs, opkernel->base_attrs()), inputs, outputs,
-                consistent_tensor_infer_result, op_interp_ctx, opkernel->mem_case()),
+      call_ctx_(ComposedAttrMap(op_interp_ctx.attrs, opkernel->base_attrs()), std::move(inputs),
+                std::move(outputs), consistent_tensor_infer_result, op_interp_ctx,
+                opkernel->mem_case()),
       opkernel_(opkernel),
       user_opkernel_(nullptr),
       infer_tmp_size_fn_(nullptr),
@@ -52,7 +53,7 @@ void OpCallPhyInstrOperand::ForEachConstDependence(
     const std::function<void(vm::Dependence* compute)>& DoEach) const {
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4const_ibns()) {
-    const auto& input = input_list->at(index);
+    const auto& input = input_list.at(index);
     DoEach(CHECK_JUST(input->compute_local_dep_object()));
   }
 }
@@ -80,12 +81,12 @@ void OpCallPhyInstrOperand::ForEachMutDependence(
 
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4mut_ibns()) {
-    const auto& input = input_list->at(index);
+    const auto& input = input_list.at(index);
     DoEach(CHECK_JUST(input->compute_local_dep_object()));
   }
   const auto& output_list = outputs();
   for (int64_t index : opkernel().output_tuple_indexes4mut_obns()) {
-    const auto& output = output_list->at(index);
+    const auto& output = output_list.at(index);
     DoEach(CHECK_JUST(output->compute_local_dep_object()));
   }
 }
@@ -94,7 +95,7 @@ void OpCallPhyInstrOperand::ForEachMut2Dependence(
     const std::function<void(vm::Dependence* compute)>& DoEach) const {
   const auto& output_list = outputs();
   for (int64_t index : opkernel().output_tuple_indexes4mut2_obns()) {
-    const auto& output = output_list->at(index);
+    const auto& output = output_list.at(index);
     DoEach(CHECK_JUST(output->compute_local_dep_object()));
   }
 }
