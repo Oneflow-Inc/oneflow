@@ -222,14 +222,10 @@ class EagerBlobObject final : public user_op::Tensor,
   std::unique_ptr<Blob> blob_;
 };
 
-}  // namespace vm
-
-namespace one {
-
 using EagerBlobObjectList = small_vector<std::shared_ptr<vm::EagerBlobObject>, kOpArgsReservedSize>;
 using EagerBlobObjectListPtr = std::shared_ptr<const EagerBlobObjectList>;
 
-}  // namespace one
+}  // namespace vm
 
 }  // namespace oneflow
 

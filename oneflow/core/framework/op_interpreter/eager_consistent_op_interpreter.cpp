@@ -152,8 +152,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
       << Error::UnimplementedError()
       << GetDynamicOpConsistentFailedDebugString(user_op_expr, *kernel);
-  std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
-      std::make_shared<EagerBlobObjectList>(inputs.size());
+  std::shared_ptr<vm::EagerBlobObjectList> input_eager_blob_objects =
+      std::make_shared<vm::EagerBlobObjectList>(inputs.size());
   // expand lifetime of boxing outputs to the end of this function
   TensorTuple boxing_outputs;
   for (int i = 0; i < inputs.size(); ++i) {
@@ -172,8 +172,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   }
   // Do nothing if the `parallel_desc` doesn't cover current ProcessCtx.
   if (!parallel_id.has_value()) { return Maybe<void>::Ok(); }
-  std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
-      std::make_shared<EagerBlobObjectList>(outputs->size());
+  std::shared_ptr<vm::EagerBlobObjectList> output_eager_blob_objects =
+      std::make_shared<vm::EagerBlobObjectList>(outputs->size());
   for (int i = 0; i < outputs->size(); ++i) {
     const auto& local_tensor = JUST(outputs->at(i)->cur_rank_phy_tensor());
     output_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());

@@ -130,9 +130,9 @@ Maybe<void> InstructionsBuilder::MakeCriticalSectionEnd(
 // CriticalSectionBegin.
 // critical_section_callback is a non-blocking opkernel which notifies instruction
 // CriticalSectionEnd done.
-Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr& inputs,
-                                               const one::EagerBlobObjectListPtr& outputs,
-                                               const one::EagerBlobObjectListPtr& parameters,
+Maybe<void> InstructionsBuilder::LaunchLazyJob(const vm::EagerBlobObjectListPtr& inputs,
+                                               const vm::EagerBlobObjectListPtr& outputs,
+                                               const vm::EagerBlobObjectListPtr& parameters,
                                                const std::shared_ptr<NNGraphIf>& nn_graph) {
   JUST(SoftSyncNNGraphBuffers(inputs, nn_graph));
   JUST(SoftSyncNNGraphBuffers(outputs, nn_graph));
@@ -202,7 +202,7 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const one::EagerBlobObjectListPtr
 }
 
 Maybe<void> InstructionsBuilder::SoftSyncNNGraphBuffers(
-    const one::EagerBlobObjectListPtr& eager_blob_objects,
+    const vm::EagerBlobObjectListPtr& eager_blob_objects,
     const std::shared_ptr<NNGraphIf>& nn_graph) {
   const auto& stream = JUST(GetCriticalSectionStream());
   JUST(SoftSyncStream(eager_blob_objects, stream));
@@ -359,16 +359,16 @@ Maybe<Scope> InstructionsBuilder::BuildScopeByProtoStrSetter(
 }
 
 Maybe<void> InstructionsBuilder::Call(const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-                                      const one::EagerBlobObjectListPtr& input_eager_blob_objects,
-                                      const one::EagerBlobObjectListPtr& output_eager_blob_objects,
+                                      const vm::EagerBlobObjectListPtr& input_eager_blob_objects,
+                                      const vm::EagerBlobObjectListPtr& output_eager_blob_objects,
                                       const one::OpExprInterpContext& ctx, Symbol<Stream> stream) {
   return Call(opkernel, input_eager_blob_objects, output_eager_blob_objects, nullptr, ctx, stream);
 }
 
 Maybe<void> InstructionsBuilder::Call(
     const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-    const one::EagerBlobObjectListPtr& input_eager_blob_objects,
-    const one::EagerBlobObjectListPtr& output_eager_blob_objects,
+    const vm::EagerBlobObjectListPtr& input_eager_blob_objects,
+    const vm::EagerBlobObjectListPtr& output_eager_blob_objects,
     const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
     const one::OpExprInterpContext& ctx, Symbol<Stream> stream) {
   JUST(SoftSyncStream(output_eager_blob_objects, stream));
@@ -426,8 +426,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::TouchTensors(
-    const one::EagerBlobObjectListPtr& eager_blob_object) {
+Maybe<void> InstructionsBuilder::TouchTensors(const vm::EagerBlobObjectListPtr& eager_blob_object) {
   const auto& phy_instr_operand =
       std::make_shared<vm::TouchTensorsPhyInstrOperand>(*eager_blob_object);
   Symbol<Device> device = JUST(Device::New("cpu"));
@@ -440,7 +439,7 @@ Maybe<void> InstructionsBuilder::TouchTensors(
 }
 
 Maybe<void> InstructionsBuilder::SoftSyncStream(
-    const one::EagerBlobObjectListPtr& eager_blob_objects, Symbol<Stream> stream) {
+    const vm::EagerBlobObjectListPtr& eager_blob_objects, Symbol<Stream> stream) {
   SmallSet<Symbol<Stream>> last_used_streams;
   for (const auto& eager_blob_object : *eager_blob_objects) {
     const auto& opt_last_used_stream = eager_blob_object->last_used_stream();

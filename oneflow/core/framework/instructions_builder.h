@@ -55,13 +55,13 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   vm::InstructionList* mut_instruction_list() { return instruction_list_; }
 
   // Build VM execution instructions with NNGraph's inputs/outputs/parameters for NNGraph execution.
-  Maybe<void> LaunchLazyJob(const one::EagerBlobObjectListPtr& inputs,
-                            const one::EagerBlobObjectListPtr& outputs,
-                            const one::EagerBlobObjectListPtr& parameters,
+  Maybe<void> LaunchLazyJob(const vm::EagerBlobObjectListPtr& inputs,
+                            const vm::EagerBlobObjectListPtr& outputs,
+                            const vm::EagerBlobObjectListPtr& parameters,
                             const std::shared_ptr<NNGraphIf>& nn_graph);
 
   // soft sync for inputs/outputs buffers of NNGraph
-  Maybe<void> SoftSyncNNGraphBuffers(const one::EagerBlobObjectListPtr& eager_blob_objects,
+  Maybe<void> SoftSyncNNGraphBuffers(const vm::EagerBlobObjectListPtr& eager_blob_objects,
                                      const std::shared_ptr<NNGraphIf>& nn_graph);
 
   Maybe<JobDesc> GetJobConfSymbol(const JobConfigProto& job_conf);
@@ -74,7 +74,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object);
 
-  Maybe<void> TouchTensors(const one::EagerBlobObjectListPtr& eager_blob_object);
+  Maybe<void> TouchTensors(const vm::EagerBlobObjectListPtr& eager_blob_object);
 
   template<typename T>
   Maybe<void> SyncAccessBlobByCallback(const T tensor, const std::shared_ptr<BlockingThenBusy>& btb,
@@ -118,19 +118,19 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::function<std::string(const std::string&)>& StrSetter);
 
   Maybe<void> Call(const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-                   const one::EagerBlobObjectListPtr& input_eager_blob_objects,
-                   const one::EagerBlobObjectListPtr& output_eager_blob_objects,
+                   const vm::EagerBlobObjectListPtr& input_eager_blob_objects,
+                   const vm::EagerBlobObjectListPtr& output_eager_blob_objects,
                    const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
   Maybe<void> Call(
       const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-      const one::EagerBlobObjectListPtr& input_eager_blob_objects,
-      const one::EagerBlobObjectListPtr& output_eager_blob_objects,
+      const vm::EagerBlobObjectListPtr& input_eager_blob_objects,
+      const vm::EagerBlobObjectListPtr& output_eager_blob_objects,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
       const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
  private:
-  Maybe<void> SoftSyncStream(const one::EagerBlobObjectListPtr& eager_blob_objects,
+  Maybe<void> SoftSyncStream(const vm::EagerBlobObjectListPtr& eager_blob_objects,
                              Symbol<Stream> stream);
   Maybe<void> SoftSyncStream(
       std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,

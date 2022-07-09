@@ -24,7 +24,7 @@ namespace vm {
 
 OpCallPhyInstrOperand::OpCallPhyInstrOperand(
     vm::Stream* vm_stream, const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-    const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
+    const vm::EagerBlobObjectListPtr& inputs, const vm::EagerBlobObjectListPtr& outputs,
     const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
     const one::OpExprInterpContext& op_interp_ctx,
     const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)

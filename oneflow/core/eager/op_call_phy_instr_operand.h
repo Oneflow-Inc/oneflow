@@ -49,8 +49,8 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
   }
 
   const one::StatefulOpKernel& opkernel() const { return *opkernel_; }
-  const one::EagerBlobObjectListPtr& inputs() const { return call_ctx_.inputs(); }
-  const one::EagerBlobObjectListPtr& outputs() const { return call_ctx_.outputs(); }
+  const vm::EagerBlobObjectListPtr& inputs() const { return call_ctx_.inputs(); }
+  const vm::EagerBlobObjectListPtr& outputs() const { return call_ctx_.outputs(); }
   const AttrMap& attrs() const { return call_ctx_.op_interp_ctx().attrs; }
   const one::OpExprInterpContext& op_interp_ctx() const { return call_ctx_.op_interp_ctx(); }
   const one::DevVmDepObjectConsumeMode& dev_vm_dep_object_consume_mode() const {
@@ -93,7 +93,7 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
   friend struct OpCallInstructionUtil;
   OpCallPhyInstrOperand(
       vm::Stream* vm_stream, const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-      const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
+      const vm::EagerBlobObjectListPtr& inputs, const vm::EagerBlobObjectListPtr& outputs,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
       const one::OpExprInterpContext& op_interp_ctx,
       const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode);

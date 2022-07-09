@@ -90,12 +90,12 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   OF_PROFILER_RANGE_GUARD("NaiveInterpret");
   OF_PROFILER_RANGE_PUSH("init inputs");
   const auto& attrs = ctx.attrs;
-  std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
-      std::make_shared<EagerBlobObjectList>(inputs.size());
+  std::shared_ptr<vm::EagerBlobObjectList> input_eager_blob_objects =
+      std::make_shared<vm::EagerBlobObjectList>(inputs.size());
   for (int i = 0; i < inputs.size(); i++) {
     const auto& input_device = JUST(inputs.at(i)->device());
     if (i > 0) {
-      CHECK_OR_RETURN(*default_device == *input_device)
+      CHECK_OR_RETURN(default_device == input_device)
           << Error::RuntimeError()
           << "Expected all tensors to be on the same device, but found at least two devices, "
           << default_device->ToString() << " (positional 0) and " << input_device->ToString()
@@ -105,8 +105,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
   OF_PROFILER_RANGE_POP();
   OF_PROFILER_RANGE_PUSH("init outputs");
-  std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
-      std::make_shared<EagerBlobObjectList>(outputs->size());
+  std::shared_ptr<vm::EagerBlobObjectList> output_eager_blob_objects =
+      std::make_shared<vm::EagerBlobObjectList>(outputs->size());
   auto* output_tensor_metas = ThreadLocalDefaultOutputMutTensorMetas(outputs->size());
   for (int i = 0; i < outputs->size(); i++) {
     if (!outputs->at(i)) {
