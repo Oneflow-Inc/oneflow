@@ -24,6 +24,8 @@ namespace profiler {
 
 class EventRecorder {
  public:
+  using DescriptionGetter = std::function<std::pair<std::string, int64_t>()>;
+
   OF_DISALLOW_COPY_AND_MOVE(EventRecorder);
 
   explicit EventRecorder(const std::shared_ptr<IEvent>& event) : event_(event) {
@@ -47,7 +49,7 @@ class EventRecorder {
 #if defined(WITH_CUDA)
       const std::function<int64_t()>& memory_size_getter,
 #endif
-      const KernelEvent::Description& description);
+      const DescriptionGetter& input_shapes_getter, const DescriptionGetter& attrs_getter);
 
  private:
   std::shared_ptr<IEvent> event_;

@@ -155,8 +155,7 @@ class KernelEvent final : public IEvent {
 #endif  // WITH_CUDA
 
  private:
-  KernelEvent(const std::string& kernel_name,
-              const std::map<std::string, std::pair<std::string, int64_t>>& description)
+  KernelEvent(const std::string& kernel_name, const Description& description)
       : IEvent(kernel_name, EventTimeUnit::kNS), description_(description) {}
 
 #if defined(WITH_CUDA)
@@ -164,7 +163,7 @@ class KernelEvent final : public IEvent {
   std::set<std::shared_ptr<IEvent>> children_;
 #endif  // WITH_CUDA
 
-  const std::map<std::string, std::pair<std::string, int64_t>> description_;
+  const Description description_;
 };
 
 }  // namespace profiler

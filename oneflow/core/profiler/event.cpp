@@ -24,9 +24,7 @@ using json = nlohmann::json;
 namespace oneflow {
 
 namespace profiler {
-nlohmann::json IEvent::ToJson() {
-  return json{{"name", name_}, {"time", GetDuration<double>()}, {"input_shapes", "-"}};
-}
+nlohmann::json IEvent::ToJson() { return json{{"name", name_}, {"time", GetDuration<double>()}}; }
 
 void IEvent::SetStartedAt(double t) { started_at_ = t; }
 
@@ -59,7 +57,9 @@ std::shared_ptr<CustomEvent> CustomEvent::Create(const std::string& name, Custom
 nlohmann::json KernelEvent::ToJson() {
   auto j = IEvent::ToJson();
   j["type"] = EventType::kOneflowKernel;
-  for (const auto& desc : description_) { j["description"][desc.first] = desc.second.first; }
+  for (const auto& desc : description_) {
+    j["description"][desc.first] = {desc.second.first, desc.second.second};
+  }
 #if defined(WITH_CUDA)
   j["memory_size"] = memory_size_;
   if (!children_.empty()) { j["children"] = children_; }
