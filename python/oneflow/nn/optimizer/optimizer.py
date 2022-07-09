@@ -382,7 +382,7 @@ class Optimizer(object):
             it skips the step altogether).
         """
         for param_group in self.param_groups:
-            for param in param_group['params']:
+            for param in param_group.parameters:
                 if param.grad is not None:
                     if set_to_none:
                         param.grad = None
