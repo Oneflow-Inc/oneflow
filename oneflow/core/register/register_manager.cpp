@@ -50,7 +50,7 @@ void RegstMgr::AddPlan(
   for (const ChunkProto& chunk : plan.block_chunk_list().chunk()) {
     if (chunk.machine_id() != this_machine_id) { continue; }
     if (chunk.mem_size() == 0) { continue; }
-    char* chunk_ptr = Global<ChunkMgr>::Get()->FindOrCreateChunk(chunk);
+    char* chunk_ptr = Singleton<ChunkMgr>::Get()->FindOrCreateChunk(chunk);
     CHECK(chunk_id2ptr.emplace(chunk.chunk_id(), chunk_ptr).second);
   }
 
@@ -117,7 +117,7 @@ void RegstMgr::AddPlan(
   for (auto& pair : zone_id2packed_chunk) {
     PackedChunkInfo* packed_chunk = &pair.second;
     char* ptr =
-        Global<MemoryAllocator>::Get()->Allocate(packed_chunk->mem_case, packed_chunk->size);
+        Singleton<MemoryAllocator>::Get()->Allocate(packed_chunk->mem_case, packed_chunk->size);
     // sort blocks as thrd id
     std::vector<const MemBlockProto*>* blocks = &(packed_chunk->blocks);
     std::sort(blocks->begin(), blocks->end(),
@@ -213,7 +213,7 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
     host_mem_case.mutable_host_mem();
     if (separated_header_mem_ptr == nullptr) {
       separated_header_mem_ptr =
-          Global<MemoryAllocator>::Get()->Allocate(host_mem_case, separated_header_mem_size);
+          Singleton<MemoryAllocator>::Get()->Allocate(host_mem_case, separated_header_mem_size);
     }
     cur_header_pointer = separated_header_mem_ptr;
     cur_body_pointer = main_mem_ptr;
@@ -239,7 +239,7 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
     } else {
       blob_ptr.reset(new Blob(regst->regst_desc()->mem_case(), blob_desc,
                               cur_header_pointer + header_offset, cur_body_pointer + body_offset));
-      InitNonPODTypeBlobIfNeed(Global<MemoryAllocator>::Get(), blob_ptr.get());
+      InitNonPODTypeBlobIfNeed(Singleton<MemoryAllocator>::Get(), blob_ptr.get());
     }
     regst->SetBlobByOrdinal(ordinal, std::move(blob_ptr));
     const int64_t regst_desc_id = rt_regst_desc->regst_desc_id();

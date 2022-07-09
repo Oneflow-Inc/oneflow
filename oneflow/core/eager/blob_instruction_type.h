@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/vm/stream.h"
-#include "oneflow/core/device/cuda_event.h"
 #include "oneflow/core/vm/ep_event.h"
 #include "oneflow/core/vm/ep_device_context.h"
 
@@ -36,6 +35,7 @@ class AccessBlobByCallbackInstructionType final : public vm::InstructionType {
   std::string DebugName(const vm::Instruction& instruction) const override {
     return "AccessBlobByCallback";
   }
+  Maybe<void> Prepare(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }
   void Compute(vm::Instruction* instruction) const override;
 };
 
@@ -56,6 +56,7 @@ class EpRecordEventInstructionType final : public vm::InstructionType {
     auto* data_ptr = status_buffer->mut_buffer();
     EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_ep_event(ep_event);
   }
+  Maybe<void> Prepare(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }
   std::string DebugName(const vm::Instruction&) const override { return "RecordEvent"; }
   void Compute(vm::Instruction* instruction) const override {}
 };
@@ -85,6 +86,9 @@ struct GetRecordEventInstructionType : public StreamRoleVisitor<GetRecordEventIn
   }
   static Maybe<const vm::InstructionType*> VisitLazyJobLauncher(DeviceType device_type) {
     UNIMPLEMENTED_THEN_RETURN();
+  }
+  static Maybe<const vm::InstructionType*> VisitPinnedCompute(DeviceType device_type) {
+    return VisitCompute(device_type);
   }
 };
 

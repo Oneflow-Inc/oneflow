@@ -52,7 +52,7 @@ Maybe<Tensor> TensorInfo::zeros() const {
     const auto& parallel_desc = JUST(parallel_desc_);
     const auto& nd_sbp = JUST(nd_sbp_);
     const auto& sbp_tuple = JUST(GetSbpTuple(nd_sbp));
-    return functional::ConsistentConstant(*shape_.get(), 0, dtype_, parallel_desc, sbp_tuple);
+    return functional::GlobalConstant(*shape_.get(), 0, dtype_, parallel_desc, sbp_tuple);
   }
 }
 
@@ -65,7 +65,7 @@ AutogradMeta::AutogradMeta(bool requires_grad, bool is_leaf)
 
 Maybe<void> AutogradMeta::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
   if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(grad)) {
-    acc_grad_ = JUST(static_zeros_tensor->AsMirroredTensor());
+    acc_grad_ = JUST(static_zeros_tensor->AsLocalTensor());
   } else {
     acc_grad_ = grad;
   }

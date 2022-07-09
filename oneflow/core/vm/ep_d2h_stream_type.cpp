@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/vm/ep_d2h_stream_type.h"
+#include <memory>
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
@@ -22,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/vm/ep_device_context.h"
 #include "oneflow/core/vm/bin_allocator.h"
 #include "oneflow/core/vm/ep_backend_host_allocator.h"
+#include "oneflow/core/vm/thread_safe_guard.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
@@ -33,10 +35,13 @@ namespace vm {
 void EpD2HStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const {
   DeviceType device_type = stream->device()->enum_type();
   size_t device_index = stream->device()->device_id();
-  auto ep_device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
+  auto ep_device =
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
   auto ep_backend_allocator =
       std::make_unique<EpBackendHostAllocator>(ep_device, ep::AllocationOptions{});
-  device_ctx->reset(new EpDeviceCtx(stream->device(), std::move(ep_backend_allocator)));
+  auto bin_allo = std::make_unique<BinAllocator<ThreadSafeLock>>(ep::kMaxAlignmentRequirement,
+                                                                 std::move(ep_backend_allocator));
+  device_ctx->reset(new EpDeviceCtx(stream->device(), std::move(bin_allo)));
 }
 
 void EpD2HStreamType::InitInstructionStatus(const Stream& stream,
@@ -60,16 +65,15 @@ bool EpD2HStreamType::QueryInstructionStatusDone(
   return EpOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer())->done();
 }
 
-void EpD2HStreamType::Compute(Instruction* instruction) const {
-  OF_PROFILER_RANGE_PUSH("S:" + instruction->DebugName());
+void EpD2HStreamType::Run(Instruction* instruction) const {
+  OF_PROFILER_RANGE_GUARD("S:" + instruction->DebugName());
   auto* stream = instruction->mut_stream();
   auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());  // NOLINT
   auto* ep_device = ep_device_ctx->GetOrCreateEpDevice();
   ep_device->SetAsActiveDevice();
-  instruction->instruction_type().Compute(instruction);
+  instruction->Compute();
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer();
   EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(ep_device_ctx);
-  OF_PROFILER_RANGE_POP();
 }
 
 }  // namespace vm

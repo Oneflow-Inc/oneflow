@@ -42,9 +42,11 @@ def _test_rnn_utils_pack_padded_sequence(test_case, device):
         padded_inputs[0 : lengths[i], i : i + 1, :] = i + 1
 
     inputs = flow.from_numpy(padded_inputs).to(device)
+    inputs.requires_grad = True
     flow_res = flow_rnn_utils.pack_padded_sequence(inputs, lengths)
 
     torch_inputs = torch.from_numpy(padded_inputs).to(device)
+    torch_inputs.requires_grad = True
     torch_res = torch_rnn_utils.pack_padded_sequence(torch_inputs, lengths)
 
     test_case.assertTrue(
@@ -70,6 +72,9 @@ def _test_rnn_utils_pack_padded_sequence(test_case, device):
         flow_res, batch_first=False
     )
 
+    torch_seq_unpacked.sum().backward()
+    flow_seq_unpacked.sum().backward()
+
     test_case.assertTrue(
         np.allclose(
             torch_seq_unpacked.cpu().detach().numpy(),
@@ -84,6 +89,9 @@ def _test_rnn_utils_pack_padded_sequence(test_case, device):
             flow_lens_unpacked.cpu().detach().numpy(),
             atol=1e-8,
         )
+    )
+    test_case.assertTrue(
+        np.allclose(inputs.grad.cpu().numpy(), torch_inputs.grad.cpu().numpy())
     )
 
 

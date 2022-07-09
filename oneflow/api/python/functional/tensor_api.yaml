@@ -17,7 +17,7 @@
       "Tensor (PyObject* data, *, DataType dtype=None, Device device=None,
       Bool requires_grad=False, Bool pin_memory=False) => TensorWithData",
       "Tensor (PyObject* data, *, DataType dtype=None, Placement placement,
-      SbpList sbp, Bool requires_grad=False) => ConsistentTensorWithData",
+      SbpList sbp, Bool requires_grad=False) => GlobalTensorWithData",
     ]
   bind_python: True
 
@@ -25,12 +25,12 @@
   signature:
     [
       "Tensor (*, Device device=None) => TensorEmptyCtor",
-      "Tensor (*, Placement placement, SbpList sbp) => ConsistentTensorEmptyCtor",
+      "Tensor (*, Placement placement, SbpList sbp) => GlobalTensorEmptyCtor",
       "Tensor (Tensor other) => TensorWithOtherCtor",
       "Tensor (PyObject* data, *, Device device=None) => TensorWithDataCtor",
-      "Tensor (PyObject* data, *, Placement placement, SbpList sbp) => ConsistentTensorWithDataCtor",
+      "Tensor (PyObject* data, *, Placement placement, SbpList sbp) => GlobalTensorWithDataCtor",
       "Tensor (Shape size, *, Device device=None) => TensorWithShapeCtor",
-      "Tensor (Shape size, *, Placement placement, SbpList sbp) => ConsistentTensorWithShapeCtor",
+      "Tensor (Shape size, *, Placement placement, SbpList sbp) => GlobalTensorWithShapeCtor",
     ]
   bind_python: True
 
