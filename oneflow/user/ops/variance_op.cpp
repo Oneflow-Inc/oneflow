@@ -84,7 +84,6 @@ REGISTER_USER_OP_GRAD("variance")
                                  .Attr("keepdim", keepdim)
                                  .Build();
         AddOp(reduce_sum_op);
-
         const auto& in_shape = op.TensorDesc4ArgNameAndIndex("input", 0).shape();
         size_t elem_cnt = 1;
         for (const auto& item : axis) { elem_cnt *= in_shape.At(item); }
@@ -105,7 +104,6 @@ REGISTER_USER_OP_GRAD("variance")
                           .Output("z")
                           .Build();
         AddOp(sub_op);
-
         bool unbiased = op.attr<bool>("unbiased");
         const size_t correction = unbiased ? 1 : 0;
         scalar_mul_builder = user_op::UserOpConfWrapperBuilder(op.op_name() + "_scalar_mul_out_1");
