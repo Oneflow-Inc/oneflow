@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from re import X
 import unittest
 from collections import OrderedDict
 
