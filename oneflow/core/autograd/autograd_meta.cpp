@@ -25,7 +25,7 @@ namespace oneflow {
 namespace one {
 
 TensorInfo::TensorInfo(const Tensor& tensor) : shape_(tensor.shape()), dtype_(tensor.dtype()) {
-  if (tensor.is_consistent()) {
+  if (tensor.is_global()) {
     parallel_desc_ = CHECK_JUST(tensor.parallel_desc());
     nd_sbp_ = CHECK_JUST(tensor.nd_sbp());
   } else {
