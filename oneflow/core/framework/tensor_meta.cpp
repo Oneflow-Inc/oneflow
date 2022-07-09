@@ -50,13 +50,13 @@ size_t LocalTensorMeta::CalcHashValue() const {
          ^ std::hash<Device>()(*device()) ^ std::hash<Stride>()(stride()) ^ storage_offset();
 }
 
-bool ConsistentTensorMeta::operator==(const ConsistentTensorMeta& other) const {
+bool GlobalTensorMeta::operator==(const GlobalTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
   return *this->shape_ptr() == *other.shape_ptr() && this->dtype() == other.dtype()
          && this->nd_sbp() == other.nd_sbp() && this->parallel_desc() == other.parallel_desc();
 }
 
-size_t ConsistentTensorMeta::CalcHashValue() const {
+size_t GlobalTensorMeta::CalcHashValue() const {
   return std::hash<Shape>()(*shape_ptr()) ^ std::hash<DataType>()(dtype())
          ^ std::hash<Symbol<NdSbp>>()(nd_sbp())
          ^ std::hash<Symbol<ParallelDesc>>()(parallel_desc());
