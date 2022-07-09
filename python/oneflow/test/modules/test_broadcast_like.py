@@ -92,6 +92,35 @@ def _test_broadcast_like_backward(test_case, device):
     np_grad = [[[9.0]], [[9.0]], [[9.0]]]
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-05, 1e-05))
 
+def _test_broadcast_input_output_shape_not_equal_version1(test_case, device):
+    input = flow.tensor(
+        np.ones(shape=(1), dtype=np.float32),
+        dtype=flow.float32,
+        device=flow.device(device),
+    )
+    like_tensor = flow.tensor(
+        np.ones(shape=(3, 3), dtype=np.float32),
+        dtype=flow.float32,
+        device=flow.device(device),
+    )
+    of_out = flow.broadcast_like(input, like_tensor)
+    np_out = np.ones(shape=(3, 3))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
+
+def _test_broadcast_input_output_shape_not_equal_version2(test_case, device):
+    input = flow.tensor(
+        np.ones(shape=(1), dtype=np.float32),
+        dtype=flow.float32,
+        device=flow.device(device),
+    )
+    like_tensor = flow.tensor(
+        np.ones(shape=(1, 3), dtype=np.float32),
+        dtype=flow.float32,
+        device=flow.device(device),
+    )
+    of_out = flow.broadcast_like(input, like_tensor, broadcast_axes=(1, ))
+    np_out = np.ones(shape=(3, 3))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
 
 @flow.unittest.skip_unless_1n1d()
 class TestBroadCastLike(flow.unittest.TestCase):
@@ -102,6 +131,8 @@ class TestBroadCastLike(flow.unittest.TestCase):
             _test_broadcast_like_3dim,
             _test_broadcast_like_4dim,
             _test_broadcast_like_backward,
+            _test_broadcast_input_output_shape_not_equal_version1,
+            _test_broadcast_input_output_shape_not_equal_version2
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

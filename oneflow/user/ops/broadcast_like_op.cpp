@@ -68,11 +68,15 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
 bool IsAxesLegal(const AxisVector& axis_vec, const Shape& like_shape, const Shape& in_shape) {
   Shape reduced_shape = CreateReducedShape(like_shape, axis_vec);
   if (like_shape.NumAxes() > in_shape.NumAxes()) {
-    AxisVector axis_need_remove(like_shape.NumAxes() - in_shape.NumAxes());
-    for (int i = in_shape.NumAxes(); i < like_shape.NumAxes(); i++) {
-      axis_need_remove.emplace_back(axis_vec.at(i - in_shape.NumAxes()));
+    if (axis_vec.size() > in_shape.NumAxes()) {
+      AxisVector axis_need_remove(like_shape.NumAxes() - in_shape.NumAxes());
+      for (int i = in_shape.NumAxes(); i < like_shape.NumAxes(); i++) {
+        axis_need_remove.emplace_back(axis_vec.at(i - in_shape.NumAxes()));
+      }
+      reduced_shape = reduced_shape.RemoveOnes(axis_need_remove);
+    } else {
+      reduced_shape = reduced_shape.RemoveOnes(axis_vec);
     }
-    reduced_shape = reduced_shape.RemoveOnes(axis_need_remove);
   }
   return reduced_shape.dim_vec() == in_shape.dim_vec();
 }
