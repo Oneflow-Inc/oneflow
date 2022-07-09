@@ -59,6 +59,7 @@ def _test_lenet(
     test_case,
     on_cuda: bool,
     record_shapes: bool,
+    record_attrs: bool,
     record_bandwidth_for_cuda: bool = False,
 ):
     x = flow.randn(2, 3, 32, 32)
@@ -72,6 +73,7 @@ def _test_lenet(
     with oneflow.profiler.profile(
         activities=activities,
         record_shapes=record_shapes,
+        record_attrs=record_attrs,
         record_bandwidth_for_cuda=record_bandwidth_for_cuda,
     ) as prof:
         with oneflow.profiler.record_function("lenet_forward_total_time") as f:
@@ -79,8 +81,8 @@ def _test_lenet(
                 eager_res = lenet(x)
         with oneflow.profiler.record_function("lenet_backward_total_time") as f:
             eager_res.sum().backward()
-    events = prof.key_averages(group_by_input_shape=True)
-
+    events = prof.key_averages(group_by_input_shape=True, group_by_attributes=True)
+    print(events)
     conv_event = get_event(
         events, "conv2d", "[(2,3,32,32), (6,3,5,5)]" if record_shapes else "-"
     )
@@ -122,26 +124,27 @@ def _test_lenet(
 
 class TestProfileLenet(flow.unittest.TestCase):
     def test_lenet_cpu(test_case):
-        _test_lenet(test_case, on_cuda=False, record_shapes=True)
-        _test_lenet(test_case, on_cuda=False, record_shapes=False)
+        for record_shapes in [True, False]:
+            for record_attrs in [True, False]:
+                _test_lenet(
+                    test_case,
+                    on_cuda=False,
+                    record_shapes=record_shapes,
+                    record_attrs=record_attrs,
+                )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_lenet_cuda(test_case):
-        _test_lenet(
-            test_case, on_cuda=True, record_shapes=True, record_bandwidth_for_cuda=False
-        )
-        _test_lenet(
-            test_case,
-            on_cuda=True,
-            record_shapes=False,
-            record_bandwidth_for_cuda=False,
-        )
-        _test_lenet(
-            test_case, on_cuda=True, record_shapes=True, record_bandwidth_for_cuda=True
-        )
-        _test_lenet(
-            test_case, on_cuda=True, record_shapes=False, record_bandwidth_for_cuda=True
-        )
+        for record_shapes in [True, False]:
+            for record_attrs in [True, False]:
+                for record_bandwidth_for_cuda in [True, False]:
+                    _test_lenet(
+                        test_case,
+                        on_cuda=True,
+                        record_shapes=record_shapes,
+                        record_attrs=record_attrs,
+                        record_bandwidth_for_cuda=record_bandwidth_for_cuda,
+                    )
 
 
 if __name__ == "__main__":
