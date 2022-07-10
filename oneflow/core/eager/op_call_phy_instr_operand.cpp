@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
 #include "oneflow/core/vm/stream.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace vm {
@@ -46,6 +47,7 @@ OpCallPhyInstrOperand::OpCallPhyInstrOperand(
 }
 
 Maybe<void> OpCallPhyInstrOperand::Init() {
+  OF_PROFILER_RANGE_GUARD("OpCallPhyInstrOperand::Init");
   return mut_opkernel()->ChooseOpKernel(&call_ctx_, &user_opkernel_, &need_temp_storage_);
 }
 

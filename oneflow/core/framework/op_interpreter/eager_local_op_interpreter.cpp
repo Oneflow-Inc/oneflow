@@ -118,7 +118,6 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
   }
   Symbol<Stream> stream;
-  bool need_check_mem_case = true;
 
   OF_PROFILER_RANGE_POP();
   OF_PROFILER_RANGE_PUSH("infer devices");
@@ -130,7 +129,6 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       *JUST(tensor_impl->mut_device()) = default_device;
     }
   } else {
-    need_check_mem_case = false;
     stream = JUST(user_op_expr.InferDeviceAndStream(attrs, inputs, outputs));
   }
 
@@ -178,7 +176,6 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   OF_PROFILER_RANGE_POP();
   OF_PROFILER_RANGE_PUSH("init opkernel");
   const auto& kernel = JUST(user_op_expr.MutKernel4Stream(stream));
-  kernel->set_need_check_mem_case(need_check_mem_case);
 
   for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
     output_eager_blob_objects.at(index)->set_is_shape_synced(false);

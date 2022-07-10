@@ -740,7 +740,6 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   opkernel->stream_ = stream;
   opkernel->input_arg_tuple_ = input_arg_tuple;
   opkernel->output_arg_tuple_ = output_arg_tuple;
-  opkernel->need_check_mem_case_ = true;
 
   const DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(op_conf->device_tag()));
   const user_op::UserOpConfWrapper* user_op_conf = opkernel->user_op_conf_.get();

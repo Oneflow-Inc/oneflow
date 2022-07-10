@@ -126,7 +126,6 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExp
 template<>
 /* static */ Maybe<TensorTuple> OpInterpUtil::Dispatch<TensorTuple>(
     const OpExpr& op_expr, const TensorTuple& inputs, const OpExprInterpContext& ctx) {
-  OF_PROFILER_RANGE_GUARD("Dispatch");
   auto outputs = std::make_shared<TensorTuple>(op_expr.output_size());
   JUST(Dispatch(op_expr, inputs, outputs.get(), ctx));
   return outputs;
@@ -136,7 +135,6 @@ template<>
 /* static */ Maybe<Tensor> OpInterpUtil::Dispatch<Tensor>(const OpExpr& op_expr,
                                                           const TensorTuple& inputs,
                                                           const OpExprInterpContext& ctx) {
-  OF_PROFILER_RANGE_GUARD("Dispatch");
   return JUST(Dispatch<TensorTuple>(op_expr, inputs, ctx))->at(0);
 }
 
