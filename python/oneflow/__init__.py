@@ -332,6 +332,7 @@ from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.constant import ones_op as ones
 from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.constant import full_op as full
+from oneflow.nn.modules.constant import full_like_op as full_like
 from oneflow.nn.modules.constant import new_ones_op as new_ones
 from oneflow.nn.modules.constant import new_zeros_op as new_zeros
 from oneflow.nn.modules.empty import empty_op as empty

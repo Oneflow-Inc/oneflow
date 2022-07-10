@@ -72,6 +72,7 @@ oneflow
             floor_,
             fmod,
             full, 
+            full_like, 
             gather, 
             gather_nd, 
             gelu, 
