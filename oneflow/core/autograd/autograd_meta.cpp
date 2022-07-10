@@ -25,9 +25,12 @@ namespace oneflow {
 namespace one {
 
 TensorInfo::TensorInfo(const Tensor& tensor) : shape_(tensor.shape()), dtype_(tensor.dtype()) {
-  if (TRY(tensor.device()).IsOk()) { device_ = CHECK_JUST(tensor.device()); }
-  if (TRY(tensor.parallel_desc()).IsOk()) { parallel_desc_ = CHECK_JUST(tensor.parallel_desc()); }
-  if (TRY(tensor.nd_sbp()).IsOk()) { nd_sbp_ = CHECK_JUST(tensor.nd_sbp()); }
+  if (tensor.is_global()) {
+    parallel_desc_ = CHECK_JUST(tensor.parallel_desc());
+    nd_sbp_ = CHECK_JUST(tensor.nd_sbp());
+  } else {
+    device_ = CHECK_JUST(tensor.device());
+  }
 }
 
 Maybe<const std::vector<Symbol<SbpParallel>>&> GetSbpTuple(Symbol<NdSbp> nd_sbp) {
