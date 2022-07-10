@@ -27,33 +27,28 @@ namespace vm {
 class ConsumeLocalDepObjectPhyInstrOperand : public PhyInstrOperand {
  public:
   ConsumeLocalDepObjectPhyInstrOperand(
-      std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
-      const std::string& modifier)
-      : compute_local_dep_objects_(std::move(compute_local_dep_objects)),
-        modifier_(modifier),
-        input_dependences_(),
-        output_dependences_() {
-    ForEachConstDependence(SetInserter(&input_dependences_));
-    ForEachMutDependence(SetInserter(&output_dependences_));
-    ForEachMut2Dependence(SetInserter(&output_dependences_));
-    stream_sequential_dependence_ = nullptr;
-  }
-
+      small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&&
+          compute_local_dep_objects,
+      const std::string& modifier);
   ~ConsumeLocalDepObjectPhyInstrOperand() = default;
 
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  void ForEachConstDependence(const std::function<void(Dependence* compute)>&) const;
+  template<typename DoEachT>
+  void ForEachConstDependence(const DoEachT& DoEach) const;
 
-  void ForEachMutDependence(const std::function<void(Dependence* compute)>&) const;
+  template<typename DoEachT>
+  void ForEachMutDependence(const DoEachT& DoEach) const;
 
-  void ForEachMut2Dependence(const std::function<void(Dependence* compute)>&) const;
+  template<typename DoEachT>
+  void ForEachMut2Dependence(const DoEachT& DoEach) const;
 
   void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {}
 
  private:
-  std::vector<intrusive::shared_ptr<LocalDepObject>> compute_local_dep_objects_;
+  small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>
+      compute_local_dep_objects_;
   const std::string modifier_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;

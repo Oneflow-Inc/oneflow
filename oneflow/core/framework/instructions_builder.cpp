@@ -439,33 +439,72 @@ Maybe<void> InstructionsBuilder::TouchTensors(const vm::EagerBlobObjectListPtr& 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::SoftSyncStream(const vm::EagerBlobObjectList& eager_blob_objects,
-                                                Symbol<Stream> stream) {
-  SmallSet<Symbol<Stream>> last_used_streams;
-  for (const auto& eager_blob_object : eager_blob_objects) {
-    const auto& opt_last_used_stream = eager_blob_object->last_used_stream();
-    if (unlikely(!opt_last_used_stream.has_value())) { continue; }
-    const auto& last_used_stream = JUST(opt_last_used_stream);
-    if (last_used_stream != stream) { SmallSetInsert(&last_used_streams, last_used_stream); }
-  }
-  for (const auto& last_used_stream : last_used_streams) {
-    std::vector<intrusive::shared_ptr<LocalDepObject>> dep_objects;
-    dep_objects.reserve(eager_blob_objects.size());
+namespace {
+
+template<typename DoEachT>
+Maybe<void> ForEachEagerBlobObjectsNeedingSoftSync(
+    const vm::EagerBlobObjectList& eager_blob_objects, Symbol<Stream> stream,
+    const DoEachT& DoEach) {
+  if (eager_blob_objects.size() <= kOpArgsReservedSize) {
     for (const auto& eager_blob_object : eager_blob_objects) {
       const auto& opt_last_used_stream = eager_blob_object->last_used_stream();
       if (unlikely(!opt_last_used_stream.has_value())) { continue; }
-      if (JUST(opt_last_used_stream) == last_used_stream) {
-        dep_objects.emplace_back(JUST(eager_blob_object->compute_local_dep_object()));
+      const auto& last_used_stream = JUST(opt_last_used_stream);
+      if (last_used_stream != stream) {
+        const auto& ForEachEagerBlobObject = [&](const auto& DoEachEagerBlobObject) -> Maybe<void> {
+          return DoEachEagerBlobObject(eager_blob_object);
+        };
+        JUST(DoEach(last_used_stream, ForEachEagerBlobObject));
       }
-      eager_blob_object->set_last_used_stream(stream);
     }
-    JUST(SoftSyncStream(std::move(dep_objects), "mut", last_used_stream));
+  } else {
+    SmallSet<Symbol<Stream>> last_used_streams;
+    for (const auto& eager_blob_object : eager_blob_objects) {
+      const auto& opt_last_used_stream = eager_blob_object->last_used_stream();
+      if (unlikely(!opt_last_used_stream.has_value())) { continue; }
+      const auto& last_used_stream = JUST(opt_last_used_stream);
+      if (last_used_stream != stream) { SmallSetInsert(&last_used_streams, last_used_stream); }
+    }
+    for (const auto& last_used_stream : last_used_streams) {
+      const auto& ForEachEagerBlobObject = [&](const auto& DoEachEagerBlobObject) -> Maybe<void> {
+        for (const auto& eager_blob_object : eager_blob_objects) {
+          const auto& opt_stream = eager_blob_object->last_used_stream();
+          if (unlikely(!opt_stream.has_value())) { continue; }
+          if (JUST(opt_stream) == last_used_stream) {
+            JUST(DoEachEagerBlobObject(eager_blob_object));
+          }
+        }
+        return Maybe<void>::Ok();
+      };
+      JUST(DoEach(last_used_stream, ForEachEagerBlobObject));
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
+Maybe<void> InstructionsBuilder::SoftSyncStream(const vm::EagerBlobObjectList& eager_blob_objects,
+                                                Symbol<Stream> stream) {
+  JUST(ForEachEagerBlobObjectsNeedingSoftSync(
+      eager_blob_objects, stream,
+      [&](Symbol<Stream> last_used_stream, const auto& ForEachEagerBlobObject) -> Maybe<void> {
+        small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize> dep_objects{};
+        JUST(ForEachEagerBlobObject([&](const auto& eager_blob_object) -> Maybe<void> {
+          dep_objects.emplace_back(JUST(eager_blob_object->compute_local_dep_object()));
+          return Maybe<void>::Ok();
+        }));
+        return SoftSyncStream(std::move(dep_objects), "mut", last_used_stream);
+      }));
+  for (const auto& eager_blob_object : eager_blob_objects) {
+    eager_blob_object->set_last_used_stream(stream);
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InstructionsBuilder::SoftSyncStream(
-    std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
+    small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&&
+        compute_local_dep_objects,
     const std::string& modifier, Symbol<Stream> last_used_stream) {
   DeviceType device_type = last_used_stream->device()->enum_type();
   if (!NeedSoftSync::Visit(last_used_stream->stream_role(), device_type)) {

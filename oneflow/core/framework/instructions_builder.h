@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/eager/op_call_phy_instr_operand.h"
 #include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
+#include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -133,9 +134,9 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
  private:
   Maybe<void> SoftSyncStream(const vm::EagerBlobObjectList& eager_blob_objects,
                              Symbol<Stream> stream);
-  Maybe<void> SoftSyncStream(
-      std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
-      const std::string& modifier, Symbol<Stream> stream);
+  Maybe<void> SoftSyncStream(small_vector<intrusive::shared_ptr<LocalDepObject>,
+                                          kOpArgsReservedSize>&& compute_local_dep_objects,
+                             const std::string& modifier, Symbol<Stream> stream);
 
  private:
   template<typename PhyInstrOperandT>

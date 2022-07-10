@@ -39,9 +39,9 @@ OpCallPhyInstrOperand::OpCallPhyInstrOperand(
       dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode),
       input_dependences_(),
       output_dependences_() {
-  ForEachConstDependence(SetInserter(&input_dependences_));
-  ForEachMutDependence(SetInserter(&output_dependences_));
-  ForEachMut2Dependence(SetInserter(&output_dependences_));
+  ForEachConstDependence([&](auto* dep) { input_dependences_.emplace_back(dep); });
+  ForEachMutDependence([&](auto* dep) { output_dependences_.emplace_back(dep); });
+  ForEachMut2Dependence([&](auto* dep) { output_dependences_.emplace_back(dep); });
   InitStreamSequentialDependence();
 }
 
@@ -49,8 +49,8 @@ Maybe<void> OpCallPhyInstrOperand::Init() {
   return mut_opkernel()->ChooseOpKernel(&call_ctx_, &user_opkernel_, &need_temp_storage_);
 }
 
-void OpCallPhyInstrOperand::ForEachConstDependence(
-    const std::function<void(vm::Dependence* compute)>& DoEach) const {
+template<typename DoEachT>
+void OpCallPhyInstrOperand::ForEachConstDependence(const DoEachT& DoEach) const {
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4const_ibns()) {
     const auto& input = input_list.at(index);
@@ -74,8 +74,8 @@ void OpCallPhyInstrOperand::InitStreamSequentialDependence() {
   }
 }
 
-void OpCallPhyInstrOperand::ForEachMutDependence(
-    const std::function<void(vm::Dependence* compute)>& DoEach) const {
+template<typename DoEachT>
+void OpCallPhyInstrOperand::ForEachMutDependence(const DoEachT& DoEach) const {
   const auto& opt_transport_dep_object = vm_stream_->transport_local_dep_object();
   if (opt_transport_dep_object.has_value()) { DoEach(CHECK_JUST(opt_transport_dep_object)->get()); }
 
@@ -91,8 +91,8 @@ void OpCallPhyInstrOperand::ForEachMutDependence(
   }
 }
 
-void OpCallPhyInstrOperand::ForEachMut2Dependence(
-    const std::function<void(vm::Dependence* compute)>& DoEach) const {
+template<typename DoEachT>
+void OpCallPhyInstrOperand::ForEachMut2Dependence(const DoEachT& DoEach) const {
   const auto& output_list = outputs();
   for (int64_t index : opkernel().output_tuple_indexes4mut2_obns()) {
     const auto& output = output_list.at(index);
