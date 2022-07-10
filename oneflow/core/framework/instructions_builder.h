@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/blocking_then_busy.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
+#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
 
@@ -149,7 +150,14 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 };
 
 // Make VM instructions with instruction builder and run instructions with physical/local view.
-Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build);
+template<typename CallbackT>
+Maybe<void> PhysicalRun(const CallbackT& Build) {
+  vm::InstructionList instruction_list;
+  InstructionsBuilder instructions_builder(&instruction_list);
+  JUST(Build(&instructions_builder));
+  JUST(vm::Run(instructions_builder.mut_instruction_list()));
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow
 

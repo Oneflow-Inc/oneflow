@@ -37,7 +37,6 @@ limitations under the License.
 #include "oneflow/core/eager/op_call_instruction_type.h"
 #include "oneflow/core/vm/barrier_instruction_type.h"
 #include "oneflow/core/vm/virtual_machine.h"
-#include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/eager/critical_section_instruction_type.h"
@@ -608,14 +607,6 @@ Maybe<void> InstructionsBuilder::Barrier(const std::function<void()>& Callback) 
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream)),
       SingletonPtr<vm::BarrierInstructionType>(), phy_instr_operand);
   instruction_list_->PushBack(instruction.Mutable());
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
-  vm::InstructionList instruction_list;
-  InstructionsBuilder instructions_builder(&instruction_list);
-  JUST(Build(&instructions_builder));
-  JUST(vm::Run(instructions_builder.mut_instruction_list()));
   return Maybe<void>::Ok();
 }
 

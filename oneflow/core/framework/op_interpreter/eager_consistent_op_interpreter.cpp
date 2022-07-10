@@ -176,11 +176,9 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     const auto& local_tensor = JUST(outputs->at(i)->cur_rank_phy_tensor());
     output_eager_blob_objects.at(i) = JUST(local_tensor->eager_blob_object());
   }
-  auto* inputs_ptr = &input_eager_blob_objects;
-  auto* outputs_ptr = &output_eager_blob_objects;
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->Call(kernel, std::move(*inputs_ptr), std::move(*outputs_ptr), result, ctx,
-                         result->stream());
+    return builder->Call(kernel, std::move(input_eager_blob_objects),
+                         std::move(output_eager_blob_objects), result, ctx, result->stream());
   }));
   return Maybe<void>::Ok();
 }

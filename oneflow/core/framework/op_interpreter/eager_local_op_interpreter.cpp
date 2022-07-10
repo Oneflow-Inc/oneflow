@@ -185,10 +185,9 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
   OF_PROFILER_RANGE_POP();
   OF_PROFILER_RANGE_PUSH("PhysicalRun");
-  auto* inputs_ptr = &input_eager_blob_objects;
-  auto* outputs_ptr = &output_eager_blob_objects;
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->Call(kernel, std::move(*inputs_ptr), std::move(*outputs_ptr), ctx, stream);
+    return builder->Call(kernel, std::move(input_eager_blob_objects),
+                         std::move(output_eager_blob_objects), ctx, stream);
   }));
   OF_PROFILER_RANGE_POP();
   return Maybe<void>::Ok();
