@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
@@ -177,15 +178,21 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   OF_PROFILER_RANGE_PUSH("init opkernel");
   const auto& kernel = JUST(user_op_expr.MutKernel4Stream(stream));
 
-  for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
-    output_eager_blob_objects.at(index)->set_is_shape_synced(false);
-  }
   OF_PROFILER_RANGE_POP();
   OF_PROFILER_RANGE_PUSH("PhysicalRun");
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->Call(kernel, std::move(input_eager_blob_objects),
                          std::move(output_eager_blob_objects), ctx, stream);
   }));
+  for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
+    const auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(index)));
+    auto btb = std::make_shared<BlockingThenBusy>(1);
+    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(
+          tensor_impl, btb, [](uint64_t) {}, "const");
+    }));
+    JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  }
   OF_PROFILER_RANGE_POP();
   return Maybe<void>::Ok();
 }

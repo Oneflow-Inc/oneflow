@@ -150,10 +150,6 @@ class EagerBlobObject final : public user_op::Tensor,
 
   std::shared_ptr<TensorStorage>& tensor_storage() { return tensor_storage_; }
 
-  bool is_shape_synced() const { return is_shape_synced_; }
-
-  void set_is_shape_synced(bool val) { is_shape_synced_ = val; }
-
   const Optional<Symbol<::oneflow::Stream>>& producer_stream() const {
     return tensor_storage_->producer_stream();
   }
@@ -213,7 +209,6 @@ class EagerBlobObject final : public user_op::Tensor,
   // are kept even after tensor_storage_.reset().
   char* mem_ptr_for_allocation_compuation_pipelining_;
   bool inited_mem_ptr_for_allocation_compuation_pipelining_;
-  std::atomic<bool> is_shape_synced_;
   bool pin_memory_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
 
