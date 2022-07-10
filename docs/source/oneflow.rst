@@ -124,6 +124,7 @@ oneflow
             repeat_interleave,
             reshape, 
             randint,
+            randint_like, 
             randperm,
             reciprocal,
             roc_auc_score,

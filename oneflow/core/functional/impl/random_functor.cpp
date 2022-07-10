@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <memory>
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
@@ -258,6 +259,30 @@ class RandInt2Functor {
   }
 };
 
+class RandIntLikeFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const int64_t low,
+                           const int64_t high, const Optional<Symbol<DType>>& dtype,
+                           const Optional<Symbol<Device>>& device,
+                           const Optional<one::Generator>& generator,
+                           const bool& requires_grad) const {
+    const Shape shape = *input->shape();
+    return RandInt(low, high, shape, dtype, device, generator, requires_grad);
+  }
+};
+
+class RandIntLike2Functor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const int64_t high,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<Symbol<Device>>& device,
+                           const Optional<one::Generator>& generator,
+                           const bool& requires_grad) const {
+    const Shape shape = *input->shape();
+    return RandInt(/*low*/ 0, high, shape, dtype, device, generator, requires_grad);
+  }
+};
+
 class GlobalRandIntFunctor {
  public:
   GlobalRandIntFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform_int").Output("out").Build()); }
@@ -306,6 +331,32 @@ class GlobalRandInt2Functor {
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
     JUST(CheckDeviceIdsIsValid(placement));
+    return GlobalRandInt(/*low*/ 0, high, shape, placement, sbp, dtype, generator, requires_grad);
+  }
+};
+
+class GlobalRandIntLikeFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const int64_t low,
+                           const int64_t high, const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<SbpParallel>>& sbp,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<one::Generator>& generator,
+                           const bool& requires_grad) const {
+    const Shape shape = *input->shape();
+    return GlobalRandInt(low, high, shape, placement, sbp, dtype, generator, requires_grad);
+  }
+};
+
+class GlobalRandIntLike2Functor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const int64_t high,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<SbpParallel>>& sbp,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<one::Generator>& generator,
+                           const bool& requires_grad) const {
+    const Shape shape = *input->shape();
     return GlobalRandInt(/*low*/ 0, high, shape, placement, sbp, dtype, generator, requires_grad);
   }
 };
@@ -380,6 +431,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<GlobalRandNFunctor>("GlobalRandN");
   m.add_functor<RandIntFunctor, RandInt2Functor>("RandInt");
   m.add_functor<GlobalRandIntFunctor, GlobalRandInt2Functor>("GlobalRandInt");
+  m.add_functor<RandIntLikeFunctor, RandIntLike2Functor>("RandIntLike");
+  m.add_functor<GlobalRandIntLikeFunctor, GlobalRandIntLike2Functor>("GlobalRandIntLike");
 };
 
 }  // namespace functional

@@ -356,6 +356,7 @@ from oneflow._C import normal
 from oneflow._C import rand
 from oneflow._C import randn
 from oneflow._C import randint
+from oneflow._C import randint_like
 from oneflow._C import randperm
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
