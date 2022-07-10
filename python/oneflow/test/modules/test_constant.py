@@ -136,6 +136,13 @@ class TestConstantModule(flow.unittest.TestCase):
         y = torch.full(shape, 2.0, requires_grad=True)
         return y
 
+    @autotest(n=10, auto_backward=True)
+    def test_full_like_with_random_data_float(test_case):
+        device = random_device()
+        x = random_tensor(low=1, high=6, requires_grad=False).to(device)
+        y = torch.full_like(x, 2.0, requires_grad=True)
+        return y
+
     def test_cast(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [

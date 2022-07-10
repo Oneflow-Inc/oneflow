@@ -1971,6 +1971,20 @@
     ]
   bind_python: True
 
+- name: "randint_like"
+  signature: [
+      "Tensor (Tensor x, Int64 low, Int64 high, *, DataType dtype=None,
+      Device device=None, Generator generator=None, Bool requires_grad=False)=> RandIntLike",
+      "Tensor (Tensor x, Int64 high, *, DataType dtype=None,
+      Device device=None, Generator generator=None, Bool requires_grad=False)=> RandIntLike",
+      "Tensor (Tensor x, Int64 low, Int64 high, *, Placement placement, SbpList sbp,
+      DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> GlobalRandIntLike",
+      "Tensor (Tensor x, Int64 high, *, Placement placement, SbpList sbp,
+      DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> GlobalRandIntLike",
+    ]
+  bind_python: True
+
+
 - name: "randperm"
   signature:
     [
