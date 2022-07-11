@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_NAIVE_INSTRUCTION_POLICY_H_
 #define ONEFLOW_CORE_VM_NAIVE_INSTRUCTION_POLICY_H_
 
+#include "oneflow/core/vm/instruction_policy.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/phy_instr_operand.h"
 
@@ -36,7 +37,7 @@ class NaiveInstructionPolicy final : public InstructionPolicy {
   const DependenceVector& output_dependences() const override {
     return phy_instr_operand_->output_dependences();
   }
-  MirroredObject* stream_sequential_dependence() const override {
+  Dependence* stream_sequential_dependence() const override {
     return phy_instr_operand_->stream_sequential_dependence();
   }
   void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
