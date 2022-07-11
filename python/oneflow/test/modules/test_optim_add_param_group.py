@@ -18,23 +18,24 @@ import unittest
 from oneflow.test_utils.test_util import GenArgList
 import oneflow as flow
 
+
 def _test_sgd_add_param_group(test_case):
     w1 = flow.ones(3, 3)
     w1.requires_grad = True
     w2 = flow.ones(3, 3)
     w2.requires_grad = True
     o = flow.optim.SGD([w1])
-    test_case.assertTrue(o.param_groups[0]['lr'] == 0.001)
-    test_case.assertTrue(o.param_groups[0]['momentum'] == 0.0)
-    test_case.assertTrue(o.param_groups[0]['weight_decay'] == 0.0)
-    test_case.assertTrue(o.param_groups[0]['nesterov'] == False)
-    test_case.assertTrue(o.param_groups[0]['maximize'] == False)
-    o.add_param_group({'params': w2})
-    test_case.assertTrue(o.param_groups[1]['lr'] == 0.001)
-    test_case.assertTrue(o.param_groups[1]['momentum'] == 0.0)
-    test_case.assertTrue(o.param_groups[1]['weight_decay'] == 0.0)
-    test_case.assertTrue(o.param_groups[1]['nesterov'] == False)
-    test_case.assertTrue(o.param_groups[1]['maximize'] == False)
+    test_case.assertTrue(o.param_groups[0]["lr"] == 0.001)
+    test_case.assertTrue(o.param_groups[0]["momentum"] == 0.0)
+    test_case.assertTrue(o.param_groups[0]["weight_decay"] == 0.0)
+    test_case.assertTrue(o.param_groups[0]["nesterov"] == False)
+    test_case.assertTrue(o.param_groups[0]["maximize"] == False)
+    o.add_param_group({"params": w2})
+    test_case.assertTrue(o.param_groups[1]["lr"] == 0.001)
+    test_case.assertTrue(o.param_groups[1]["momentum"] == 0.0)
+    test_case.assertTrue(o.param_groups[1]["weight_decay"] == 0.0)
+    test_case.assertTrue(o.param_groups[1]["nesterov"] == False)
+    test_case.assertTrue(o.param_groups[1]["maximize"] == False)
 
 
 class TestAddParamGroup(flow.unittest.TestCase):
@@ -44,5 +45,3 @@ class TestAddParamGroup(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-

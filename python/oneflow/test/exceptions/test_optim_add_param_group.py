@@ -27,13 +27,13 @@ class TestSgdAddParamGroup(flow.unittest.TestCase):
             w2 = flow.ones(3, 3)
             w2.requires_grad = True
             o = flow.optim.SGD([w1])
-            o.add_param_group({'params': w2})
-            o.add_param_group({'params': w2})
+            o.add_param_group({"params": w2})
+            o.add_param_group({"params": w2})
         print(str(exp.exception))
         test_case.assertTrue(
-            "some parameters appear in more than one parameter group" in str(exp.exception)
+            "some parameters appear in more than one parameter group"
+            in str(exp.exception)
         )
-
 
 
 if __name__ == "__main__":
