@@ -181,14 +181,14 @@ class TestGraphWithEagerTensorCaught(oneflow.unittest.TestCase):
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
-class ConsistentFreeEagerTensorGraphTestCase(oneflow.unittest.TestCase):
+class GlobalFreeEagerTensorGraphTestCase(oneflow.unittest.TestCase):
     def test_global_eager_tensor_to(test_case):
         rank = flow.env.get_rank()
         placement = flow.placement("cpu", ranks=[0, 1])
         t_l = flow.tensor([1.0, 2.0], dtype=flow.float32)
         t = t_l.to_global(placement=placement, sbp=flow.sbp.broadcast)
 
-        class ConsistentEagerTensorToModule(flow.nn.Module):
+        class GlobalEagerTensorToModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
 
@@ -198,9 +198,9 @@ class ConsistentFreeEagerTensorGraphTestCase(oneflow.unittest.TestCase):
                 t = t.to("cuda")
                 return t
 
-        e_m = ConsistentEagerTensorToModule()
+        e_m = GlobalEagerTensorToModule()
 
-        class ConsistentEagerTensorToGraph(flow.nn.Graph):
+        class GlobalEagerTensorToGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
                 self.e_m = e_m
@@ -208,7 +208,7 @@ class ConsistentFreeEagerTensorGraphTestCase(oneflow.unittest.TestCase):
             def build(self):
                 return self.e_m()
 
-        e_g = ConsistentEagerTensorToGraph()
+        e_g = GlobalEagerTensorToGraph()
         graph_out = e_g().to_local()
         print("g ", graph_out.numpy())
         test_case.assertTrue(
