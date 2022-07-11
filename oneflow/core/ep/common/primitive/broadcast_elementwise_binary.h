@@ -39,14 +39,17 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
   return true;
 }
 
-#define BINARY_MATH_OP_SEQ             \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAdd) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSub) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMul) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kDiv) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMax) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMin) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kPow)
+#define BINARY_MATH_OP_SEQ                  \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAdd)      \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSub)      \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMul)      \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kDiv)      \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMax)      \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMin)      \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kPow)      \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kFmod)     \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kFloorDiv) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kFloorMod)
 
 #define BINARY_COMPARISION_OP_SEQ              \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEqual)       \
