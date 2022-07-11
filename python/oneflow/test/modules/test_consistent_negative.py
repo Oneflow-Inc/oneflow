@@ -19,7 +19,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_negative(test_case, placement, sbp, ndim):
     shape = [8 for _ in range(ndim)]
     x = random_tensor(ndim, *shape).to_global(placement, sbp)

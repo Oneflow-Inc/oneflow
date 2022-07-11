@@ -23,7 +23,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_reshape_impl(test_case, pair, placement, sbp):
     shape, to_shape = pair
     x = random_tensor(len(shape), *shape)

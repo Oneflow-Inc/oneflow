@@ -25,7 +25,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False, rtol=0.5, atol=0.5)
+@autotest(n=1, check_graph=True, rtol=0.5, atol=0.5)
 def _test_sqrt_sum_with_cpu_random_data(test_case, placement, sbp):
     x = random_tensor(ndim=4, dim0=8, dim1=32, dim2=40, dim3=64).to_global(
         placement=placement, sbp=sbp
@@ -34,7 +34,7 @@ def _test_sqrt_sum_with_cpu_random_data(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, check_graph=False, rtol=0.5, atol=0.5)
+@autotest(n=1, check_graph=True, rtol=0.5, atol=0.5)
 def _test_scalar_random_data(test_case, placement, sbp):
     x = random_tensor(ndim=4, dim0=8, dim1=24, dim2=16, dim3=40).to_global(
         placement=placement, sbp=sbp

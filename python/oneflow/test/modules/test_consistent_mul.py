@@ -19,7 +19,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_broadcast_mul(test_case, placement, sbp):
     x = random_tensor(ndim=3, dim0=16, dim1=8, dim2=24).to_global(placement, sbp)
     y_sbp = random_sbp(placement, max_dim=2)
@@ -28,7 +28,7 @@ def _test_broadcast_mul(test_case, placement, sbp):
     return z
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_mul_with_scalar(test_case, ndim, placement, sbp):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list).to_global(placement, sbp)

@@ -22,7 +22,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_global_ZeroPad2d(test_case, placement, sbp, padding):
     x = random_tensor(ndim=4, dim0=8, dim1=16, dim2=8, dim3=8,).to_global(
         placement, sbp

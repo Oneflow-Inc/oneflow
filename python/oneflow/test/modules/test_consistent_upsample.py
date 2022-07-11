@@ -25,7 +25,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
+@autotest(n=1, auto_backward=True, check_graph=True)
 def _test_global_upsample2d_nearest(test_case, placement, sbp):
     x = random_tensor(ndim=3, dim0=8, dim1=16).to_global(placement, sbp)
     print(x)
@@ -34,7 +34,7 @@ def _test_global_upsample2d_nearest(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
+@autotest(n=1, auto_backward=True, check_graph=True)
 def _test_global_upsample2d_linear(test_case, placement, sbp):
     x = random_tensor(ndim=3, dim0=8, dim1=16).to_global(placement, sbp)
     m = torch.nn.Upsample(
@@ -44,7 +44,7 @@ def _test_global_upsample2d_linear(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
+@autotest(n=1, auto_backward=True, check_graph=True)
 def _test_global_upsample2d_bilinear(test_case, placement, sbp):
     x = random_tensor(ndim=4, dim0=8, dim1=16).to_global(placement, sbp)
     m = torch.nn.Upsample(
@@ -54,7 +54,7 @@ def _test_global_upsample2d_bilinear(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
+@autotest(n=1, auto_backward=True, check_graph=True)
 def _test_global_upsample2d_bicubic(test_case, placement, sbp):
     x = random_tensor(ndim=4, dim0=8, dim1=16).to_global(placement, sbp)
     m = torch.nn.Upsample(
@@ -64,7 +64,7 @@ def _test_global_upsample2d_bicubic(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
+@autotest(n=1, auto_backward=True, check_graph=True)
 def _test_global_upsample2d_trilinear(test_case, placement, sbp):
     x = random_tensor(ndim=5, dim0=8, dim1=16).to_global(placement, sbp)
     m = torch.nn.Upsample(

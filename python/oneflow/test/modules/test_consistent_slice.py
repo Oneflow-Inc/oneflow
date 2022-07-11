@@ -100,7 +100,7 @@ def _test_slice_with_bool(test_case, placement, sbp):
 
 
 @autotest(
-    n=2, auto_backward=False, check_graph=False,
+    n=2, auto_backward=False, check_graph=True,
 )
 def _test_slice_with_grad(test_case, placement):
     sbp = random_sbp(placement, max_dim=2).value()
