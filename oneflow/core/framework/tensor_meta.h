@@ -42,7 +42,11 @@ class TensorMeta : public user_op::TensorDesc {
   TensorMeta(const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const Stride>& stride,
              DataType dtype)
       : shape_(shape), stride_(stride), data_type_(dtype), is_dynamic_(false) {}
-  TensorMeta(const TensorMeta&) = default;
+  TensorMeta(const TensorMeta& other)
+      : shape_(std::make_shared<Shape>(*other.shape_)),
+        stride_(std::make_shared<Stride>(*other.stride_)),
+        data_type_(other.data_type_),
+        is_dynamic_(other.is_dynamic_) {}
   TensorMeta(TensorMeta&&) = default;
   virtual ~TensorMeta() = default;
 
@@ -77,6 +81,7 @@ class LocalTensorMeta : public TensorMeta {
  public:
   // uninitialized LocalTensorMeta.
   LocalTensorMeta();
+  LocalTensorMeta(const LocalTensorMeta&) = default;
   LocalTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype, Symbol<Device> device);
   LocalTensorMeta(const std::shared_ptr<const Shape>& shape,
                   const std::shared_ptr<const Stride>& stride, DataType dtype,
