@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/vm/instruction_fuse_type.h"
+#include "oneflow/core/vm/vm_object.h"
 
 namespace oneflow {
 namespace vm {
@@ -31,7 +32,7 @@ namespace vm {
 class MirroredObject;
 class EagerBlobObject;
 
-using DependenceVector = std::vector<MirroredObject*>;
+using DependenceVector = std::vector<Dependence*>;
 
 class PhyInstrOperand;
 
@@ -41,7 +42,7 @@ class InstructionPolicy {
 
   virtual const DependenceVector& input_dependences() const = 0;
   virtual const DependenceVector& output_dependences() const = 0;
-  virtual MirroredObject* stream_sequential_dependence() const = 0;
+  virtual Dependence* stream_sequential_dependence() const = 0;
   virtual void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const = 0;
 
   virtual bool IsBarrier() const { return false; }
