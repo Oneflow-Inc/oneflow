@@ -122,13 +122,66 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorMod, float16, float16> {
 };
 
 template<>
-struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kPowGrad, float16, float16> {
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarBasePowerGrad, float16, float16> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : scalar_operand(attr0.Value<float>()) {}
 
   OF_DEVICE_FUNC float16 operator()(float16 src0, float16 src1) const {
-    return static_cast<float16>(scalar_operand * (pow(static_cast<float>(src0), scalar_operand - static_cast<float>(1))) * static_cast<float>(src1));
+    return static_cast<float16>(
+        scalar_operand * (pow(static_cast<float>(src0), scalar_operand - static_cast<float>(1)))
+        * static_cast<float>(src1));
   }
-  float scalar_operand; 
+  float scalar_operand;
+};
+
+template<typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarExpPowerGrad, int, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
+  BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarExpPowerGrad, float, float> float_functor;
+
+  OF_DEVICE_FUNC Dst operator()(int src0, int src1) const {
+    return static_cast<Dst>(float_functor(static_cast<float>(src0), static_cast<float>(src1)));
+  }
+};
+
+template<typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarExpPowerGrad, int8_t, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
+  BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarExpPowerGrad, float, float> float_functor;
+
+  OF_DEVICE_FUNC Dst operator()(int8_t src0, int8_t src1) const {
+    return static_cast<Dst>(float_functor(static_cast<float>(src0), static_cast<float>(src1)));
+  }
+};
+
+template<typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarExpPowerGrad, uint8_t, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
+  BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarExpPowerGrad, float, float> float_functor;
+
+  OF_DEVICE_FUNC Dst operator()(uint8_t src0, uint8_t src1) const {
+    return static_cast<Dst>(float_functor(static_cast<float>(src0), static_cast<float>(src1)));
+  }
+};
+
+template<typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarExpPowerGrad, int64_t, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
+  BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarExpPowerGrad, float, float> float_functor;
+
+  OF_DEVICE_FUNC Dst operator()(int src0, int src1) const {
+    return static_cast<Dst>(float_functor(static_cast<float>(src0), static_cast<float>(src1)));
+  }
+};
+
+template<typename Dst>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarExpPowerGrad, float16, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : scalar_operand(attr0.Value<float>()) {}
+
+  OF_DEVICE_FUNC Dst operator()(float16 src0, float16 src1) const {
+    return static_cast<Dst>(std::pow(scalar_operand, static_cast<float>(src0))
+                            * std::log(scalar_operand) * static_cast<float>(src1));
+  }
+  float scalar_operand;
 };
 
 template<typename Src, typename Dst>
@@ -169,10 +222,14 @@ SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kPow, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFmod, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFloorDiv, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFloorMod, bool);
+SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kScalarBasePowerGrad, bool);
+SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kScalarExpPowerGrad, bool);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kPow, char);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFmod, char);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFloorDiv, char);
 SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kFloorMod, char);
+SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kScalarBasePowerGrad, char);
+SPECIALIZATION_CPU_BINARY_FUNCTOR(BinaryOp::kScalarExpPowerGrad, char);
 
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive

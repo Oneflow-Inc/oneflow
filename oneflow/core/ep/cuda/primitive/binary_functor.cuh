@@ -111,6 +111,46 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTanhBackwardWithDyX, Src, Dst
   }
 };
 
+template<typename Dst>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kScalarExpPowerGrad, int, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
+  BinaryFunctor<DeviceType::kCUDA, BinaryOp::kScalarExpPowerGrad, float, float> float_functor;
+
+  OF_DEVICE_FUNC Dst operator()(int src0, int src1) const {
+    return static_cast<Dst>(float_functor(static_cast<float>(src0), static_cast<float>(src1)));
+  }
+};
+
+template<typename Dst>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kScalarExpPowerGrad, int8_t, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
+  BinaryFunctor<DeviceType::kCUDA, BinaryOp::kScalarExpPowerGrad, float, float> float_functor;
+
+  OF_DEVICE_FUNC Dst operator()(int8_t src0, int8_t src1) const {
+    return static_cast<Dst>(float_functor(static_cast<float>(src0), static_cast<float>(src1)));
+  }
+};
+
+template<typename Dst>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kScalarExpPowerGrad, uint8_t, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
+  BinaryFunctor<DeviceType::kCUDA, BinaryOp::kScalarExpPowerGrad, float, float> float_functor;
+
+  OF_DEVICE_FUNC Dst operator()(uint8_t src0, uint8_t src1) const {
+    return static_cast<Dst>(float_functor(static_cast<float>(src0), static_cast<float>(src1)));
+  }
+};
+
+template<typename Dst>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kScalarExpPowerGrad, int64_t, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
+  BinaryFunctor<DeviceType::kCUDA, BinaryOp::kScalarExpPowerGrad, float, float> float_functor;
+
+  OF_DEVICE_FUNC Dst operator()(int src0, int src1) const {
+    return static_cast<Dst>(float_functor(static_cast<float>(src0), static_cast<float>(src1)));
+  }
+};
+
 /*********nv_bfloat16_kernel*******/
 
 #if CUDA_VERSION >= 11000
@@ -130,7 +170,8 @@ SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kPow);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kFmod);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kFloorDiv);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kFloorMod);
-SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kPowGrad);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kScalarBasePowerGrad);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kScalarExpPowerGrad);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kEluBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kCeluBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kGeluBackwardWithDyX);
@@ -165,7 +206,8 @@ SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kPow);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kFmod);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kFloorDiv);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kFloorMod);
-SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kPowGrad);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kScalarBasePowerGrad);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kScalarExpPowerGrad);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kEluBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kCeluBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kGeluBackwardWithDyX);
@@ -195,10 +237,14 @@ SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kPow, bool);
 SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kFmod, bool);
 SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kFloorDiv, bool);
 SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kFloorMod, bool);
+SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kScalarBasePowerGrad, bool);
+SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kScalarExpPowerGrad, bool);
 SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kPow, char);
 SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kFmod, char);
 SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kFloorDiv, char);
 SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kFloorMod, char);
+SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kScalarBasePowerGrad, char);
+SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kScalarExpPowerGrad, char);
 
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive
