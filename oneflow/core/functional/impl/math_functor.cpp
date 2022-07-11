@@ -1105,7 +1105,7 @@ class HannWindowFunctor {
         result = JUST(ScalarDiv(JUST(ScalarSub(1, JUST(Cos(div_result)), 1)), 2));
       }
     }
-    result->set_requires_grad(requires_grad);
+    JUST(result->set_requires_grad(requires_grad));
     return result;
   }
 };
@@ -1135,7 +1135,7 @@ class GlobalHannWindowFunctor {
         result = JUST(ScalarDiv(JUST(ScalarSub(1, JUST(Cos(div_result)), 1)), 2));
       }
     }
-    result->set_requires_grad(requires_grad);
+    JUST(result->set_requires_grad(requires_grad));
     return result;
   }
 };
