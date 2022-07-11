@@ -100,17 +100,16 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> RawTorchConsistentTensor(const std::shared_ptr<one::Tensor>& tensor) {
+Maybe<void> RawTorchGlobalTensor(const std::shared_ptr<one::Tensor>& tensor) {
   // Do nothing.
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* TorchConsistentTensor =
-    DECORATE(&RawTorchConsistentTensor, CheckConsistentTensorMeta);
+static constexpr auto* TorchGlobalTensor = DECORATE(&RawTorchGlobalTensor, CheckGlobalTensorMeta);
 
-Maybe<void> CheckConsistentTensorsMeta(const TensorTuple& tensor_tuple) {
+Maybe<void> CheckGlobalTensorsMeta(const TensorTuple& tensor_tuple) {
   for (const auto& tensor : tensor_tuple) {
-    if (tensor->is_consistent()) { JUST(TorchConsistentTensor(tensor)); }
+    if (tensor->is_global()) { JUST(TorchGlobalTensor(tensor)); }
   }
   return Maybe<void>::Ok();
 }
@@ -121,19 +120,19 @@ Maybe<void> AutogradEngine::RunBackwardAndSaveGrads4LeafTensorIf(const TensorTup
                                                                  const TensorTuple& out_grads,
                                                                  bool retain_graph,
                                                                  bool create_graph) {
-  JUST(CheckConsistentTensorsMeta(outputs));
-  JUST(CheckConsistentTensorsMeta(out_grads));
-  DisableCheckConsistentTensorMetaScope disable_meta_check;
+  JUST(CheckGlobalTensorsMeta(outputs));
+  JUST(CheckGlobalTensorsMeta(out_grads));
+  DisableCheckGlobalTensorMetaScope disable_meta_check;
   return RunBackwardAndSaveGrads4LeafTensor(outputs, out_grads, retain_graph, create_graph);
 }
 
 Maybe<TensorTuple> AutogradEngine::RunBackwardAndReturnInputsTensorGradIf(
     const TensorTuple& outputs, const TensorTuple& inputs, const TensorTuple& out_grads,
     bool retain_graph, bool create_graph) {
-  JUST(CheckConsistentTensorsMeta(outputs));
-  JUST(CheckConsistentTensorsMeta(inputs));
-  JUST(CheckConsistentTensorsMeta(out_grads));
-  DisableCheckConsistentTensorMetaScope disable_meta_check;
+  JUST(CheckGlobalTensorsMeta(outputs));
+  JUST(CheckGlobalTensorsMeta(inputs));
+  JUST(CheckGlobalTensorsMeta(out_grads));
+  DisableCheckGlobalTensorMetaScope disable_meta_check;
   return RunBackwardAndReturnInputsTensorGrad(outputs, inputs, out_grads, retain_graph,
                                               create_graph);
 }
@@ -154,13 +153,13 @@ Maybe<void> FunctionNode::AccGrad4LeafTensor(bool create_graph) {
 
       // control acc_grad to do boxing conditionally
       const auto& acc_grad = out->acc_grad();
-      if (GlobalGradSyncMode::is_enabled() && acc_grad->is_consistent()) {
+      if (GlobalGradSyncMode::is_enabled() && acc_grad->is_global()) {
         auto& tensor_info = output_tensor_infos_[i];
         const auto& placement = JUST(tensor_info.placement());
         const auto& nd_sbp = JUST(tensor_info.sbp());
         JUST(out->set_acc_grad(
-            JUST(functional::ToConsistent(acc_grad, placement, *JUST(GetSbpList(nd_sbp)),
-                                          GetNoneSbpList(), /* check_meta */ false))));
+            JUST(functional::ToGlobal(acc_grad, placement, *JUST(GetSbpList(nd_sbp)),
+                                      GetNoneSbpList(), /* check_meta */ false))));
       }
     }
   }

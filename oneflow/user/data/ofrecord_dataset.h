@@ -62,7 +62,7 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
     // or been deprecated.
     if (ctx->op_type_name() == "OFRecordReader") {
       auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
-      // NOTE(zwx): OFRecordDataset is not consistent since attr nd_sbp is empty,
+      // NOTE(zwx): OFRecordDataset is not global since attr nd_sbp is empty,
       // we assume that it works in DDP
       if (nd_sbp_str_vec.empty()) { is_local = true; }
     }

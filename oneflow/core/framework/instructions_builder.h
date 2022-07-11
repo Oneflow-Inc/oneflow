@@ -37,7 +37,7 @@ namespace one {
 class StatefulOpKernel;
 class TensorTuple;
 class LocalTensor;
-class ConsistentTensorInferResult;
+class GlobalTensorInferResult;
 }  // namespace one
 
 class NNGraphIf;
@@ -128,7 +128,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<one::StatefulOpKernel>& opkernel,
       vm::EagerBlobObjectList&& input_eager_blob_objects,
       vm::EagerBlobObjectList&& output_eager_blob_objects,
-      const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
+      const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
       const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
  private:

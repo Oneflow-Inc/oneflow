@@ -129,9 +129,9 @@ class LocalTensorImpl : public TensorImpl {
 
 class LocalTensor;
 
-class ConsistentTensorImpl : public TensorImpl {
+class GlobalTensorImpl : public TensorImpl {
  public:
-  virtual ~ConsistentTensorImpl() = default;
+  virtual ~GlobalTensorImpl() = default;
 
   // Getters
   std::shared_ptr<const Shape> shape() const override { return tensor_meta_->shape_ptr(); }
@@ -143,7 +143,7 @@ class ConsistentTensorImpl : public TensorImpl {
     return consumer_nd_sbp_constraint_;
   }
   virtual Maybe<LocalTensor> cur_rank_phy_tensor() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Symbol<ConsistentTensorMeta> tensor_meta() const { return tensor_meta_; }
+  Symbol<GlobalTensorMeta> tensor_meta() const { return tensor_meta_; }
 
   // Getters valid only for EagerLocalTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
@@ -157,7 +157,7 @@ class ConsistentTensorImpl : public TensorImpl {
     consumer_nd_sbp_constraint_ = val;
   }
 
-  ConsistentTensorMeta* mut_tensor_meta() {
+  GlobalTensorMeta* mut_tensor_meta() {
     PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
@@ -169,16 +169,16 @@ class ConsistentTensorImpl : public TensorImpl {
     return Maybe<void>::Ok();
   }
 
-  virtual Maybe<ConsistentTensorImpl> detach() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  virtual Maybe<GlobalTensorImpl> detach() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
  protected:
-  ConsistentTensorImpl(Symbol<ConsistentTensorMeta> tensor_meta, bool requires_grad, bool is_leaf)
+  GlobalTensorImpl(Symbol<GlobalTensorMeta> tensor_meta, bool requires_grad, bool is_leaf)
       : TensorImpl(requires_grad, is_leaf),
         tensor_meta_(tensor_meta),
         consumer_nd_sbp_constraint_(),
         transport_token_() {}
 
-  Symbol<ConsistentTensorMeta> tensor_meta_;
+  Symbol<GlobalTensorMeta> tensor_meta_;
   Optional<Symbol<NdSbp>> consumer_nd_sbp_constraint_;
   Optional<TransportToken> transport_token_;
 };
@@ -260,30 +260,30 @@ class EagerLocalTensorImpl final : public LocalTensorImpl {
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
 };
 
-class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
+class LazyGlobalTensorImpl final : public GlobalTensorImpl {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LazyConsistentTensorImpl);
-  LazyConsistentTensorImpl(Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad,
-                           bool is_leaf)
-      : ConsistentTensorImpl(consistent_tensor_meta, requires_grad, is_leaf) {}
-  ~LazyConsistentTensorImpl() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(LazyGlobalTensorImpl);
+  LazyGlobalTensorImpl(Symbol<GlobalTensorMeta> global_tensor_meta, bool requires_grad,
+                       bool is_leaf)
+      : GlobalTensorImpl(global_tensor_meta, requires_grad, is_leaf) {}
+  ~LazyGlobalTensorImpl() override = default;
 
   // Getters
   bool is_lazy() const override { return true; }
 
   bool is_contiguous() const override {
     // TODO:(zhaoluyang) default return true for now,
-    // but should return real status while stride/view mechanism is ready in lazy-consistent mode
+    // but should return real status while stride/view mechanism is ready in lazy-global mode
     return true;
   }
 
-  Maybe<ConsistentTensorImpl> detach() const override;
+  Maybe<GlobalTensorImpl> detach() const override;
 };
 
-class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
+class EagerGlobalTensorImpl final : public GlobalTensorImpl {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(EagerConsistentTensorImpl);
-  ~EagerConsistentTensorImpl() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(EagerGlobalTensorImpl);
+  ~EagerGlobalTensorImpl() override = default;
 
   // Getters
   std::shared_ptr<const Stride> stride() const override;
@@ -291,7 +291,7 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
 
   bool is_contiguous() const override {
     // TODO:(zhaoluyang) default return true for now,
-    // but should return real status while stride/view mechanism is ready in eager-consistent mode
+    // but should return real status while stride/view mechanism is ready in eager-global mode
     return true;
   }
 
@@ -300,19 +300,19 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
     cur_rank_phy_tensor_ = val;
   }
 
-  static Maybe<EagerConsistentTensorImpl> New(Symbol<ConsistentTensorMeta> consistent_tensor_meta,
-                                              bool requires_grad, bool is_leaf);
+  static Maybe<EagerGlobalTensorImpl> New(Symbol<GlobalTensorMeta> global_tensor_meta,
+                                          bool requires_grad, bool is_leaf);
 
-  static Maybe<EagerConsistentTensorImpl> New(Symbol<ConsistentTensorMeta> consistent_tensor_meta,
-                                              Symbol<Device> device,
-                                              const Optional<int64_t>& parallel_id,
-                                              bool requires_grad, bool is_leaf);
+  static Maybe<EagerGlobalTensorImpl> New(Symbol<GlobalTensorMeta> global_tensor_meta,
+                                          Symbol<Device> device,
+                                          const Optional<int64_t>& parallel_id, bool requires_grad,
+                                          bool is_leaf);
 
-  Maybe<ConsistentTensorImpl> detach() const override;
+  Maybe<GlobalTensorImpl> detach() const override;
 
  private:
-  EagerConsistentTensorImpl(Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad,
-                            bool is_leaf, const std::shared_ptr<LocalTensor>& cur_rank_phy_tensor);
+  EagerGlobalTensorImpl(Symbol<GlobalTensorMeta> global_tensor_meta, bool requires_grad,
+                        bool is_leaf, const std::shared_ptr<LocalTensor>& cur_rank_phy_tensor);
 
   std::shared_ptr<LocalTensor> cur_rank_phy_tensor_;
 };

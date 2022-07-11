@@ -26,12 +26,12 @@ namespace vm {
 OpCallPhyInstrOperand::OpCallPhyInstrOperand(
     vm::Stream* vm_stream, const std::shared_ptr<one::StatefulOpKernel>& opkernel,
     vm::EagerBlobObjectList&& inputs, vm::EagerBlobObjectList&& outputs,
-    const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
+    const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
     const one::OpExprInterpContext& op_interp_ctx,
     const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
     : vm_stream_(vm_stream),
       call_ctx_(ComposedAttrMap(op_interp_ctx.attrs, opkernel->base_attrs()), std::move(inputs),
-                std::move(outputs), consistent_tensor_infer_result, op_interp_ctx,
+                std::move(outputs), global_tensor_infer_result, op_interp_ctx,
                 opkernel->mem_case()),
       opkernel_(opkernel),
       user_opkernel_(nullptr),
