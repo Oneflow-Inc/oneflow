@@ -53,19 +53,20 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("flip").SetGenBackwardOpConfFn(
-    [](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("flip")
-                .Input("x", op.GetGradTensorWithOpOutput("y", 0))
-                .Output("y")
-                .Attr("dims", op.attr<std::vector<int32_t>>("dims"))
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("y", 0), "x", 0);
-        AddOp(grad_op);
-      }
+REGISTER_USER_OP_GRAD("flip").SetBackwardOpConfGenFn(
+    [](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
+      const std::string ref_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
+      const auto dims = ctx->FwOp().attr<std::vector<int32_t>>("dims");
+      ctx->DefineOp(ref_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
+        return builder.OpTypeName("flip")
+            .InputBind("x", ctx->FwOp().output_grad("y", 0))
+            .Attr("dims", dims)
+            .Output("y")
+            .Build();
+      });
+      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [&]() -> const std::string& {
+        return ctx->GetOp(ref_grad_op_name).output("y", 0);
+      });
       return Maybe<void>::Ok();
     });
 
