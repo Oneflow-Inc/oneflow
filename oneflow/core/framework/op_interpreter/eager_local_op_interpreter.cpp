@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/local_tensor_infer_cache.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/operator/operator.h"
@@ -39,15 +40,22 @@ limitations under the License.
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace one {
 
 namespace {
 
-Maybe<Symbol<Device>> GetDefaultDevice(const OpExprInterpContext& ctx) {
-  if (ctx.device.has_value()) { return JUST(ctx.device); }
-  return Device::New("cpu", 0);
+Maybe<Symbol<Device>> GetDefaultDevice(const TensorTuple& inputs, const OpExprInterpContext& ctx) {
+  if (inputs.empty()) {
+    if (ctx.device.has_value()) {
+      return JUST(ctx.device);
+    } else {
+      return Device::New("cpu", 0);
+    }
+  }
+  return JUST(inputs.at(0)->device());
 }
 
 Maybe<EagerLocalTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& tensor) {
@@ -84,70 +92,36 @@ std::vector<TensorMeta*>* ThreadLocalDefaultOutputMutTensorMetas(int64_t size) {
 }  // namespace
 
 Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
-                           const Symbol<Device>& default_device, TensorTuple* outputs,
-                           const OpExprInterpContext& ctx) {
-  const auto& attrs = ctx.attrs;
+                           TensorTuple* outputs, const OpExprInterpContext& ctx) {
+  CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
+  Symbol<Device> default_device = JUST(GetDefaultDevice(inputs, ctx));
+
+  std::shared_ptr<LocalTensorMetaInferArgs> infer_args =
+      JUST(LocalTensorMetaInferArgs::New(ctx.attrs, default_device, inputs));
+  std::shared_ptr<const LocalTensorInferResult> result =
+      JUST(user_op_expr.mut_local_tensor_infer_cache()->GetOrInfer(*infer_args));
+
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(inputs.size());
-  for (int i = 0; i < inputs.size(); i++) {
-    const auto& input_device = JUST(inputs.at(i)->device());
-    if (i > 0) {
-      CHECK_OR_RETURN(*default_device == *input_device)
-          << Error::RuntimeError()
-          << "Expected all tensors to be on the same device, but found at least two devices, "
-          << default_device->ToString() << " (positional 0) and " << input_device->ToString()
-          << " (positional " << i << ")!";
+  if (inputs.size() > 0) {
+    for (int i = 0; i < inputs.size(); i++) {
+      input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
     }
-    input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
   }
+
+  const auto& output_tensor_metas = result->output_tensor_metas();
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(outputs->size());
-  auto* output_tensor_metas = ThreadLocalDefaultOutputMutTensorMetas(outputs->size());
+
   for (int i = 0; i < outputs->size(); i++) {
     if (!outputs->at(i)) {
-      const auto& tensor_impl = std::make_shared<EagerLocalTensorImpl>();
-      (*outputs)[i] = std::make_shared<LocalTensor>(tensor_impl);
-      output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
-    } else {
-      bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
-      CHECK_OR_RETURN(has_eager_blob_object);
-      output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
-    }
-  }
-  Symbol<Stream> stream;
-  bool need_check_mem_case = true;
-
-  // Infer devices
-  if (!user_op_expr.has_device_and_stream_infer_fn()) {
-    stream = JUST(GetDefaultStreamByDevice(default_device));
-    for (int i = 0; i < outputs->size(); i++) {
-      auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
-      *JUST(tensor_impl->mut_device()) = default_device;
-    }
-  } else {
-    need_check_mem_case = false;
-    stream = JUST(user_op_expr.InferDeviceAndStream(attrs, inputs, outputs));
-  }
-
-  // Infer shapes and dtypes
-  const auto& device_tag = stream->device()->type();
-  JUST(user_op_expr.InferPhysicalTensorDesc(
-      attrs, device_tag,
-      [&](int32_t i) -> const TensorMeta* {
-        return CHECK_JUST(TensorImpl4Tensor(inputs[i]))->mut_tensor_meta();
-      },
-      [&](int32_t i) -> TensorMeta* {
-        // using thread_local TensorMeta pointer if inplace.
-        // using tensor_impl TensorMeta pointer if not inplace.
-        return output_tensor_metas->at(i);
-      }));
-
-  for (int i = 0; i < output_eager_blob_objects->size(); i++) {
-    auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
-    if (!output_eager_blob_objects->at(i)) {
       // NOTE: if op support stride(non-contiguous input), then output tensor's stride
       // should be inferred in InferLogicalTensorDesc.
       // otherwise, it will be set here(according to shape).
+      // Note: symbol.shared_from_symbol() cannot be used here because set_stride happens in the
+      // next step.
+      std::shared_ptr<EagerLocalTensorImpl> tensor_impl = std::make_shared<EagerLocalTensorImpl>(
+          std::make_shared<LocalTensorMeta>(*output_tensor_metas.at(i)), false, false);
       if (!JUST(user_op_expr.SupportNonContiguous())) {
         std::shared_ptr<Stride> stride(new Stride(*tensor_impl->shape()));
         tensor_impl->mut_tensor_meta()->set_stride(stride);
@@ -155,45 +129,41 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       const auto& dep_object = NewLocalDepObject();
       JUST(tensor_impl->InitEagerBlobObject(dep_object));
       output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
+      (*outputs)[i] = std::make_shared<LocalTensor>(tensor_impl);
     } else {
+      auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
       // output i is inplaced.
-      // check thread_local TensorMeta and tensor_impl TensorMeta.
-      CHECK_OR_RETURN(tensor_impl->tensor_meta()->shape() == output_tensor_metas->at(i)->shape());
-      // TODO:(thread_local TensorMeta set stride then check)
+      // check TensorMeta of infer result and TensorMeta of output i.
+      CHECK_OR_RETURN(tensor_impl->tensor_meta()->shape() == output_tensor_metas.at(i)->shape());
+      CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype() == output_tensor_metas.at(i)->dtype());
+      bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
+      CHECK_OR_RETURN(has_eager_blob_object);
+      output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
+      // TODO(zhaoluyang):(thread_local TensorMeta set stride then check)
       // CHECK_OR_RETURN(tensor_impl->tensor_meta()->stride() ==
       // output_tensor_metas->at(i)->stride());
-      CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype() == output_tensor_metas->at(i)->dtype());
     }
   }
 
-  const auto& kernel = JUST(user_op_expr.MutKernel4Stream(stream));
-  kernel->set_need_check_mem_case(need_check_mem_case);
+  const auto& kernel = JUST(user_op_expr.MutKernel4Stream(result->stream()));
+  kernel->set_need_check_mem_case(result->need_check_mem_case());
 
   for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
     output_eager_blob_objects->at(index)->set_is_shape_synced(false);
   }
 
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->Call(kernel, input_eager_blob_objects, output_eager_blob_objects, ctx, stream);
+    return builder->Call(kernel, input_eager_blob_objects, output_eager_blob_objects, ctx,
+                         result->stream());
   }));
-  return Maybe<void>::Ok();
-}
 
-static Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
-                                  TensorTuple* outputs, const OpExprInterpContext& ctx) {
-  CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
-  Symbol<Device> default_device;
-  if (inputs.empty()) {
-    default_device = JUST(GetDefaultDevice(ctx));
-  } else {
-    default_device = JUST(inputs.at(0)->device());
-  }
-  return NaiveInterpret(user_op_expr, inputs, default_device, outputs, ctx);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> EagerLocalInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
                                              TensorTuple* outputs,
                                              const OpExprInterpContext& ctx) const {
+  OF_PROFILER_RANGE_GUARD("NaiveInterpret");
   return NaiveInterpret(op_expr, inputs, outputs, ctx);
 }
 

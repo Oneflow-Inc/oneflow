@@ -128,6 +128,13 @@ class GlobalTensorMeta : public TensorMeta {
 namespace std {
 
 template<>
+struct hash<oneflow::one::LocalTensorMeta> final {
+  size_t operator()(const oneflow::one::LocalTensorMeta& local_tensor_meta) const {
+    return local_tensor_meta.CalcHashValue();
+  }
+};
+
+template<>
 struct hash<oneflow::one::GlobalTensorMeta> final {
   size_t operator()(const oneflow::one::GlobalTensorMeta& global_tensor_meta) const {
     return global_tensor_meta.CalcHashValue();
