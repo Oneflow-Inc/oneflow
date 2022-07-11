@@ -71,9 +71,9 @@ class EyeDeviceStrFunctor {
   }
 };
 
-class ConsistentEyeSbpListFunctor {
+class GlobalEyeSbpListFunctor {
  public:
-  ConsistentEyeSbpListFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
+  GlobalEyeSbpListFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Symbol<DType>& dtype, const bool& requires_grad,
                            const Symbol<ParallelDesc>& placement,
@@ -112,7 +112,7 @@ class ConsistentEyeSbpListFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ConsistentEyeSbpFunctor {
+class GlobalEyeSbpFunctor {
  public:
   Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Symbol<DType>& dtype, const bool& requires_grad,
@@ -128,8 +128,8 @@ class ConsistentEyeSbpFunctor {
 using namespace impl;
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<EyeDevcieFunctor, EyeDeviceStrFunctor, ConsistentEyeSbpListFunctor,
-                ConsistentEyeSbpFunctor>("Eye");
+  m.add_functor<EyeDevcieFunctor, EyeDeviceStrFunctor, GlobalEyeSbpListFunctor,
+                GlobalEyeSbpFunctor>("Eye");
 };
 
 }  // namespace functional
