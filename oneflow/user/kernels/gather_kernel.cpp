@@ -30,8 +30,7 @@ std::unique_ptr<ep::primitive::Gather> NewGatherPrimitive(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
   const DataType indice_type = ctx->TensorDesc4ArgNameAndIndex("indices", 0)->data_type();
   return ep::primitive::NewPrimitive<ep::primitive::GatherFactory>(
-      ctx->device_type(), std::make_tuple(data_type, indice_type),
-      ep::primitive::GatherKind::kGather);
+      ctx->device_type(), std::make_tuple(data_type, indice_type));
 }
 
 Shape GetFlatShape(ShapeView shape, int64_t axis) {
@@ -111,13 +110,14 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
       CHECK_EQ(in_shape.At(axis), gather_cache->upper() - gather_cache->lower());
       offset = gather_cache->lower();
     }
+    const size_t a = offset - 1;
     const auto flatted_shape = GetFlatShape(in_shape, axis);
 
     std::unique_ptr<ep::primitive::Gather> primitive = NewGatherPrimitive(ctx);
     CHECK(primitive);
     primitive->Launch(ctx->stream(), in->dptr<T>(), out->mut_dptr<T>(), indices->dptr<K>(),
-                      num_indices, flatted_shape.At(0), flatted_shape.At(1), flatted_shape.At(2),
-                      offset);
+                      num_indices, /*batch_size=*/1, flatted_shape.At(0), flatted_shape.At(1),
+                      flatted_shape.At(2));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

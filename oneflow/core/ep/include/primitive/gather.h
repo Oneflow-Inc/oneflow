@@ -21,10 +21,6 @@ limitations under the License.
 namespace oneflow {
 namespace ep {
 namespace primitive {
-namespace {
-enum class GatherKind { kGather, kBatchGather, Invalid };
-}  // namespace
-
 #define GATHER_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(bool, DataType::kBool)
 #define GATHER_INDEX_TYPE_SEQ INDEX_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32)
 class Gather : public Primitive {
@@ -33,16 +29,15 @@ class Gather : public Primitive {
   Gather() = default;
   ~Gather() = default;
   virtual void Launch(Stream* stream, const void* src, void* dst, const void* indice,
-                      const size_t num_indices, const size_t src_dim0, const size_t src_dim1,
-                      const size_t src_dim2, const size_t offset) = 0;
+                      const size_t num_indices, const size_t batch_size, const size_t outer_size,
+                      const size_t gather_size, const size_t inner_size) = 0;
 };
 class GatherFactory : public Factory<Gather> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GatherFactory);
   GatherFactory() = default;
   ~GatherFactory() = default;
-  virtual std::unique_ptr<Gather> New(std::tuple<DataType, DataType> type_tuple,
-                                      GatherKind gather_kind) = 0;
+  virtual std::unique_ptr<Gather> New(std::tuple<DataType, DataType> type_tuple) = 0;
 };
 
 }  // namespace primitive

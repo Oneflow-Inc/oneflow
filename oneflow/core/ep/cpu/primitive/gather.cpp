@@ -22,83 +22,84 @@ namespace ep {
 namespace primitive {
 namespace {
 template<typename T, typename K>
-void GatherCpuKernel(T* src, T* dst, K* indice, const size_t num_indices, const size_t src_dim0,
-                     const size_t src_dim1, const size_t src_dim2, const size_t offset) {
-  FOR_RANGE(int64_t, outer_idx, 0, src_dim0) {
+void GatherCpuKernel(const T* src, T* dst, const K* indice, const size_t num_indices,
+                     const size_t batch_size, const size_t outer_size, const size_t gather_size,
+                     const size_t inner_size) {
+  FOR_RANGE(int64_t, outer_idx, 0, outer_size) {
     FOR_RANGE(int64_t, i, 0, num_indices) {
       CHECK_GE(indice[i], 0);
-      const int64_t idx = indice[i] - offset;
-      T* to = dst + outer_idx * num_indices * src_dim2 + i * src_dim2;
-      if (idx >= 0 && idx < src_dim1) {
-        const T* from = src + outer_idx * src_dim1 * src_dim2 + idx * src_dim2;
-        std::copy(from, from + src_dim2, to);
+      const int64_t idx = indice[i];
+      T* to = dst + outer_idx * num_indices * inner_size + i * inner_size;
+      if (idx >= 0 && idx < gather_size) {
+        const T* from = src + outer_idx * gather_size * inner_size + idx * inner_size;
+        std::copy(from, from + inner_size, to);
       } else {
-        std::memset(reinterpret_cast<void*>(to), 0, src_dim2 * sizeof(T));
+        std::memset(reinterpret_cast<void*>(to), 0, inner_size * sizeof(T));
       }
     }
   }
 }
-template<typename T, typename K>
-void BatchGatherCpuKernel(T* src, T* dst, K* indice, const size_t num_indices,
-                          const size_t dst_dim0, const size_t dst_dim1, const size_t dst_dim2) {}
 
-template<typename T, typename K, GatherKind gather_kind>
+template<typename T, typename K>
+void BatchGatherCpuKernel(const T* src, T* dst, const K* indice, const size_t num_indices,
+                          const size_t batch_size, const size_t outer_size,
+                          const size_t gather_size, const size_t inner_size) {
+  const size_t indice_instance_size = num_indices / batch_size;
+  const size_t src_instance_size = outer_size * gather_size * inner_size;
+  const size_t dst_instance_size = outer_size * indice_instance_size * inner_size;
+
+  for (int64_t batch_idx = 0; batch_idx < batch_size; batch_idx++) {
+    const T* batch_src = src + batch_idx * src_instance_size;
+    T* batch_dst = dst + batch_idx * dst_instance_size;
+    const K* batch_indice = indice + batch_idx * indice_instance_size;
+
+    GatherCpuKernel(batch_src, batch_dst, batch_indice, indice_instance_size, batch_size,
+                    outer_size, gather_size, inner_size);
+  }
+}
+
+template<typename T, typename K>
 class GatherImpl : public Gather {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GatherImpl);
   GatherImpl() = default;
   ~GatherImpl() = default;
   void Launch(Stream* stream, const void* src, void* dst, const void* indice,
-              const size_t num_indices, const size_t src_dim0, const size_t src_dim1,
-              const size_t src_dim2, const size_t offset) override {
-    if (gather_kind == GatherKind::kGather) {
+              const size_t num_indices, const size_t batch_size, const size_t outer_size,
+              const size_t gather_size, const size_t inner_size) override {
+    if (batch_size == 1) {
       GatherCpuKernel(const_cast<T*>(static_cast<const T*>(src)), static_cast<T*>(dst),
-                      static_cast<const K*>(indice), num_indices, src_dim0, src_dim1, src_dim2,
-                      offset);
-    } else if (gather_kind == GatherKind::kBatchGather) {
+                      static_cast<const K*>(indice), num_indices, batch_size, outer_size,
+                      gather_size, inner_size);
+    } else {
+      BatchGatherCpuKernel(const_cast<T*>(static_cast<const T*>(src)), static_cast<T*>(dst),
+                           static_cast<const K*>(indice), num_indices, batch_size, outer_size,
+                           gather_size, inner_size);
     }
   }
 };
-template<typename T, typename K, GatherKind gather_kind>
+
+template<typename T, typename K>
 std::unique_ptr<Gather> NewGather() {
-  return std::unique_ptr<Gather>(new GatherImpl<T, K, gather_kind>());
+  return std::unique_ptr<Gather>(new GatherImpl<T, K>());
 }
+
 class GatherFactoryImpl : public GatherFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GatherFactoryImpl);
   GatherFactoryImpl() = default;
   ~GatherFactoryImpl() = default;
-  std::unique_ptr<Gather> New(std::tuple<DataType, DataType> type_tuple,
-                              GatherKind gather_kind) override {
+  std::unique_ptr<Gather> New(std::tuple<DataType, DataType> type_tuple) override {
 #define MAKE_NEW_GATHER_ENTRY(in_type_pair, indice_type_pair)                             \
   {std::make_tuple(OF_PP_PAIR_SECOND(in_type_pair), OF_PP_PAIR_SECOND(indice_type_pair)), \
-   NewGather<OF_PP_PAIR_FIRST(in_type_pair), OF_PP_PAIR_FIRST(indice_type_pair),          \
-             GatherKind::kGather>},
+   NewGather<OF_PP_PAIR_FIRST(in_type_pair), OF_PP_PAIR_FIRST(indice_type_pair)>},
 
     static const std::map<std::tuple<DataType, DataType>, std::function<std::unique_ptr<Gather>()>>
         new_gather_handle{OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
             MAKE_NEW_GATHER_ENTRY, GATHER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)};
 
 #undef MAKE_NEW_GATHER_ENTRY
-
-#define MAKE_NEW_BATCH_GATHER_ENTRY(out_type_pair, indice_type_pair)                       \
-  {std::make_tuple(OF_PP_PAIR_SECOND(out_type_pair), OF_PP_PAIR_SECOND(indice_type_pair)), \
-   NewGather<OF_PP_PAIR_FIRST(out_type_pair), OF_PP_PAIR_FIRST(indice_type_pair),          \
-             GatherKind::kBatchGather>},
-
-    static const std::map<std::tuple<DataType, DataType>, std::function<std::unique_ptr<Gather>()>>
-        new_batch_gather_handle{OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-            MAKE_NEW_BATCH_GATHER_ENTRY, GATHER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)};
-
-#undef MAKE_NEW_BATCH_GATHER_ENTRY
-
-    if (gather_kind == GatherKind::kGather) {
-      return NewPrimitiveFromHandlers(new_gather_handle, type_tuple);
-    } else if (gather_kind == GatherKind::kBatchGather) {
-      return NewPrimitiveFromHandlers(new_batch_gather_handle, type_tuple);
-    } else {
-      return nullptr;
-    }
+    return NewPrimitiveFromHandlers(new_gather_handle, type_tuple);
   }
 };
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, GatherFactory, GatherFactoryImpl);

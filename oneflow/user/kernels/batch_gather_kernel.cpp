@@ -16,10 +16,19 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/batch_gather_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/include/primitive/gather.h"
 
 namespace oneflow {
 
 namespace user_op {
+
+template<typename Context>
+std::unique_ptr<ep::primitive::Gather> NewBatchGatherPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
+  const DataType indice_type = ctx->TensorDesc4ArgNameAndIndex("indices", 0)->data_type();
+  return ep::primitive::NewPrimitive<ep::primitive::GatherFactory>(
+      ctx->device_type(), std::make_tuple(data_type, indice_type));
+}
 
 template<DeviceType device_type, typename T, typename K>
 class BatchGatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -33,11 +42,13 @@ class BatchGatherKernel final : public user_op::OpKernel, public user_op::CudaGr
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t axis = indices->shape().NumAxes() - 1;
-    const Shape flat_out_shape =
-        Shape({out->shape().Count(0, axis), out->shape().At(axis), out->shape().Count(axis + 1)});
-    BatchGatherKernelUtilImpl<device_type, T, K>::Forward(ctx->stream(), in->dptr<T>(),
-                                                          indices->dptr<K>(), flat_out_shape,
-                                                          in->shape().At(axis), out->mut_dptr<T>());
+
+    const Shape flatted_shape =
+        Shape({in->shape().Count(0, axis), in->shape().At(axis), in->shape().Count(axis + 1)});
+    const auto primitive = NewBatchGatherPrimitive(ctx);
+    primitive->Launch(ctx->stream(), in->dptr<T>(), out->mut_dptr<T>(), indices->dptr<K>(),
+                      indices->shape().elem_cnt(), /*batch_size=*/flatted_shape.At(0),
+                      /*outer_size*/ 1, flatted_shape.At(1), flatted_shape.At(2));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
