@@ -647,9 +647,9 @@
     "Tensor (Float mean, Float std, Int32 size, *, Tensor out=None, DataType dtype=None, Device device=None, 
     Generator generator=None, Bool requires_grad=False) => Normal2",
     "Tensor (Float mean, Float std, Shape size, *, Tensor out=None, Placement placement, SbpList sbp, DataType dtype=None,
-    Generator generator=None, Bool requires_grad=False) => ConsistentNormal",
+    Generator generator=None, Bool requires_grad=False) => GlobalNormal",
     "Tensor (Float mean, Float std, Int32 size, *, Tensor out=None, Placement placement, SbpList sbp, DataType dtype=None,
-    Generator generator=None, Bool requires_grad=False) => ConsistentNormal2",
+    Generator generator=None, Bool requires_grad=False) => GlobalNormal2",
     ]
   bind_python: True
 
@@ -709,8 +709,8 @@
 - name: "global_arange"
   signature: [
       "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=None,
-      Placement placement, SbpList sbp) => ConsistentArange",
-      "Tensor (Scalar end, *, DataType dtype=None, Placement placement, SbpList sbp) => ConsistentArange",
+      Placement placement, SbpList sbp) => GlobalArange",
+      "Tensor (Scalar end, *, DataType dtype=None, Placement placement, SbpList sbp) => GlobalArange",
     ]
   bind_python: True
 
@@ -748,7 +748,7 @@
 - name: "global_constant"
   signature:
     [
-      "Tensor (Shape shape, Scalar value, *, DataType dtype, Placement placement, SbpList sbp) => ConsistentConstant",
+      "Tensor (Shape shape, Scalar value, *, DataType dtype, Placement placement, SbpList sbp) => GlobalConstant",
     ]
   bind_python: True
 
@@ -759,7 +759,7 @@
 - name: "global_empty"
   signature:
     [
-      "Tensor (Shape shape, *, DataType dtype, Placement placement, SbpList sbp) => ConsistentEmpty",
+      "Tensor (Shape shape, *, DataType dtype, Placement placement, SbpList sbp) => GlobalEmpty",
     ]
   bind_python: True
 
@@ -1845,15 +1845,15 @@
   bind_python: False
 
 - name: "local_to_global"
-  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, Shape shape, DataType dtype) => LocalToConsistent"
+  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, Shape shape, DataType dtype) => LocalToGlobal"
   bind_python: False
 
 - name: "to_global"
-  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp, Bool check_meta) => ToConsistent"
+  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp, Bool check_meta) => ToGlobal"
   bind_python: True
 
 - name: "to_local"
-  signature: "Tensor (Tensor x) => ConsistentToLocal"
+  signature: "Tensor (Tensor x) => GlobalToLocal"
   bind_python: True
 
 - name: "stream_touch"
@@ -1897,19 +1897,19 @@
   bind_python: False
 
 - name: "global_all_reduce"
-  signature: "Tensor (Tensor x) => ConsistentAllReduce"
+  signature: "Tensor (Tensor x) => GlobalAllReduce"
   bind_python: False
 
 - name: "global_reduce_scatter"
-  signature: "Tensor (Tensor x, String op_type) => ConsistentReduceScatter"
+  signature: "Tensor (Tensor x, String op_type) => GlobalReduceScatter"
   bind_python: False
 
 - name: "global_all_gather"
-  signature: "Tensor (Tensor x) => ConsistentAllGather"
+  signature: "Tensor (Tensor x) => GlobalAllGather"
   bind_python: False
 
 - name: "global_s2s"
-  signature: "Tensor (Tensor x, SbpList out_sbp) => ConsistentS2S"
+  signature: "Tensor (Tensor x, SbpList out_sbp) => GlobalS2S"
   bind_python: False
 
 - name: "select_top_n"
@@ -1945,7 +1945,7 @@
       "Tensor (Shape size, *, DataType dtype=None, Device device=None,
       Generator generator=None, Bool requires_grad=False) => Rand",
       "Tensor (Shape size, *, Placement placement, SbpList sbp, DataType dtype=None,
-      Generator generator=None, Bool requires_grad=False) => ConsistentRand",
+      Generator generator=None, Bool requires_grad=False) => GlobalRand",
     ]
   bind_python: True
 
@@ -1954,7 +1954,7 @@
       "Tensor (Shape size, *, DataType dtype=None, Device device=None,
       Generator generator=None, Bool requires_grad=False) => RandN",
       "Tensor (Shape size, *, Placement placement, SbpList sbp, DataType dtype=None,
-      Generator generator=None, Bool requires_grad=False) => ConsistentRandN",
+      Generator generator=None, Bool requires_grad=False) => GlobalRandN",
     ]
   bind_python: True
 
@@ -1965,17 +1965,31 @@
       "Tensor (Int64 high, Shape size, *, DataType dtype=None,
       Device device=None, Generator generator=None, Bool requires_grad=False)=> RandInt",
       "Tensor (Int64 low, Int64 high, Shape size, *, Placement placement, SbpList sbp,
-      DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> ConsistentRandInt",
+      DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> GlobalRandInt",
       "Tensor (Int64 high, Shape size, *, Placement placement, SbpList sbp,
-      DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> ConsistentRandInt",
+      DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> GlobalRandInt",
     ]
   bind_python: True
+
+- name: "randint_like"
+  signature: [
+      "Tensor (Tensor x, Int64 low, Int64 high, *, DataType dtype=None,
+      Device device=None, Generator generator=None, Bool requires_grad=False)=> RandIntLike",
+      "Tensor (Tensor x, Int64 high, *, DataType dtype=None,
+      Device device=None, Generator generator=None, Bool requires_grad=False)=> RandIntLike",
+      "Tensor (Tensor x, Int64 low, Int64 high, *, Placement placement, SbpList sbp,
+      DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> GlobalRandIntLike",
+      "Tensor (Tensor x, Int64 high, *, Placement placement, SbpList sbp,
+      DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> GlobalRandIntLike",
+    ]
+  bind_python: True
+
 
 - name: "randperm"
   signature:
     [
       "Tensor (Int32 n, *, Generator generator=None, DataType dtype=kInt64, Device device=None, Bool requires_grad=False) => RandPerm",
-      "Tensor (Int32 n, *, Placement placement, SbpList sbp, Generator generator=None, DataType dtype=kInt64, Bool requires_grad=False) => ConsistentRandPerm",
+      "Tensor (Int32 n, *, Placement placement, SbpList sbp, Generator generator=None, DataType dtype=kInt64, Bool requires_grad=False) => GlobalRandPerm",
     ]
   bind_python: True
 
