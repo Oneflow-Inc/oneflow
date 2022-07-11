@@ -89,6 +89,36 @@ class TestCumOp(flow.unittest.TestCase):
             )
         )
 
+    def test_cumsum_graph_backward(test_case):
+        class CustomizedModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.layer = flow.nn.Linear(5, 5)
+
+            def forward(self, input):
+                layer_out = self.layer(input)
+                loss = flow.cumsum(layer_out, -1)
+                loss = loss.sum()
+                loss.backward()
+                return loss
+
+        class TestCumsum(flow.nn.Graph):
+            def __init__(self) -> None:
+                super().__init__()
+                self.my_module = CustomizedModule()
+                self.add_optimizer(
+                    flow.optim.SGD(self.my_module.parameters(), lr=0.1, momentum=0.0)
+                )
+
+            def build(self, ids):
+                loss = self.my_module(ids)
+                return loss
+
+        ids = np.random.randint(0, 10, (5, 5), dtype=np.int64)
+        ids_tensor = flow.tensor(ids, dtype=flow.float, requires_grad=False)
+        graph = TestCumsum()
+        loss = graph(ids_tensor)
+
 
 if __name__ == "__main__":
     unittest.main()

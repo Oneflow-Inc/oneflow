@@ -38,7 +38,7 @@ Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inp
   APPLY_IF(FeedVariableOp);
   APPLY_IF(FetchOutputOp);
   APPLY_IF(UserOp);
-  APPLY_IF(ConsistentToConsistentOp);
+  APPLY_IF(GlobalToGlobalOp);
   APPLY_IF(FunctionOp);
   APPLY_IF(ImageDecoderRandomCropResizeOp);
 #undef APPLY_IF
@@ -58,9 +58,9 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
   APPLY_IF(VariableOp);
   APPLY_IF(CastToLocalOp);
   APPLY_IF(CastFromLocalOp);
-  APPLY_IF(ConsistentToConsistentOp);
-  APPLY_IF(CastToConsistentOp);
-  APPLY_IF(CastFromConsistentOp);
+  APPLY_IF(GlobalToGlobalOp);
+  APPLY_IF(CastToGlobalOp);
+  APPLY_IF(CastFromGlobalOp);
   APPLY_IF(DistributeSplitOp);
   APPLY_IF(DistributeCloneOp);
   APPLY_IF(DistributeConcatOp);
