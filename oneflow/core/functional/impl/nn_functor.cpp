@@ -1507,7 +1507,7 @@ class SparseSoftmaxCrossEntropyFunctor {
           (*max_device_stage)[0], JUST((*max_device_stage)[0]->parallel_desc()), new_sbp_parallels,
           s0s1_sbp_parallels, /* check_meta */ false));
       max_global_stage_input1 = JUST(functional::ToGlobal(
-          (*max_device_stage)[2], JUST((*max_device_stage)[2]->parallel_desc()), new_sbp_parallels,
+          (*max_device_stage)[2], JUST((*max_device_stage)[0]->parallel_desc()), new_sbp_parallels,
           s0s1_sbp_parallels, /* check_meta */ false));
     }
     // op_reduce_max_global_stage_
