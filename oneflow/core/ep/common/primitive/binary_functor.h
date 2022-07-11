@@ -196,6 +196,16 @@ struct BinaryFunctor<device, BinaryOp::kFloorMod, uint64_t, uint64_t> {
 };
 
 template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kPowGrad, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : scalar_operand(attr0.Value<Src>()) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
+    return scalar_operand * (pow(src0, scalar_operand - static_cast<Src>(1))) * src1;
+  }
+  Src scalar_operand; 
+};
+
+template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kEluBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<double>()) {}
 

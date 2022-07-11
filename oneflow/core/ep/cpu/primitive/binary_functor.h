@@ -121,6 +121,16 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorMod, float16, float16> {
   }
 };
 
+template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kPowGrad, float16, float16> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : scalar_operand(attr0.Value<float>()) {}
+
+  OF_DEVICE_FUNC float16 operator()(float16 src0, float16 src1) const {
+    return static_cast<float16>(scalar_operand * (pow(static_cast<float>(src0), scalar_operand - static_cast<float>(1))) * static_cast<float>(src1));
+  }
+  float scalar_operand; 
+};
+
 template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kGeluBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
