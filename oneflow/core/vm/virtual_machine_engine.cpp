@@ -328,28 +328,19 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
         INTRUSIVE_FOR_EACH_PTR(thread_ctx, mut_thread_ctx_list()) {
           INTRUSIVE_FOR_EACH_PTR(current_stream, thread_ctx->mut_stream_list()) {
             if (current_stream != stream) {
-              if (current_stream->device() == stream->device()) {
-                // Waits previous instructions done before shrinking memory.
-                StreamWaitPreviousInstructionsDone(stream, instruction);
-                ShrinkStream(stream);
-              } else {
-                // buzy loop to make sure running instructions all done.
-                auto* running_list = current_stream->mut_running_instruction_list();
-                if (running_list->size() == 0) {
-                  ShrinkStream(current_stream);
-                } else {
-                  while (!running_list->Last()->Done()) {}
-                  ShrinkStream(current_stream);
-                }
-              }
-            } else {
               // Waits previous instructions done before shrinking memory.
-              StreamWaitPreviousInstructionsDone(current_stream, instruction);
+              StreamWaitPreviousInstructionsDone(stream, instruction);
+              ShrinkStream(stream);
+            } else if (current_stream->device() == stream->device()) {
+              // buzy loop to make sure running instructions all done.
+              auto* running_list = current_stream->mut_running_instruction_list();
+              while (!running_list->empty() && !running_list->Last()->Done()) {}
               ShrinkStream(current_stream);
+            } else {
+              // do nothing
             }
           }
         }
-
         // Infers the instruction again.
         CHECK_JUST_MSG(instruction->Prepare(), std::stringstream() << DebugDeviceReset(stream));
       } else {
