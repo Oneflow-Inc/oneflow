@@ -37,50 +37,50 @@ def _test_different_dtype(test_case, device, shape):
 
 @flow.unittest.skip_unless_1n1d()
 class TestConstantModule(flow.unittest.TestCase):
-    @autotest(n=10, auto_backward=False, check_graph=True)
-    def test_flow_zeros_list_with_random_data(test_case):
-        device = random_device()
-        y1 = torch.zeros(random().to(int)).to(device)
-        y2 = torch.zeros(random().to(int), random().to(int)).to(device)
-        y3 = torch.zeros(random().to(int), random().to(int), random().to(int)).to(
-            device
-        )
-        y4 = torch.zeros(
-            random().to(int), random().to(int), random().to(int), random().to(int)
-        ).to(device)
-        return y1, y2, y3, y4
+    # @autotest(n=10, auto_backward=False, check_graph=True)
+    # def test_flow_zeros_list_with_random_data(test_case):
+    #     device = random_device()
+    #     y1 = torch.zeros(random().to(int)).to(device)
+    #     y2 = torch.zeros(random().to(int), random().to(int)).to(device)
+    #     y3 = torch.zeros(random().to(int), random().to(int), random().to(int)).to(
+    #         device
+    #     )
+    #     y4 = torch.zeros(
+    #         random().to(int), random().to(int), random().to(int), random().to(int)
+    #     ).to(device)
+    #     return y1, y2, y3, y4
 
-    @autotest(n=10, auto_backward=False, check_graph=True)
-    def test_flow_ones_list_with_random_data(test_case):
-        device = random_device()
-        y1 = torch.ones(random().to(int)).to(device)
-        y2 = torch.ones(random().to(int), random().to(int)).to(device)
-        y3 = torch.ones(random().to(int), random().to(int), random().to(int)).to(device)
-        y4 = torch.ones(
-            random().to(int), random().to(int), random().to(int), random().to(int)
-        ).to(device)
-        return y1, y2, y3, y4
+    # @autotest(n=10, auto_backward=False, check_graph=True)
+    # def test_flow_ones_list_with_random_data(test_case):
+    #     device = random_device()
+    #     y1 = torch.ones(random().to(int)).to(device)
+    #     y2 = torch.ones(random().to(int), random().to(int)).to(device)
+    #     y3 = torch.ones(random().to(int), random().to(int), random().to(int)).to(device)
+    #     y4 = torch.ones(
+    #         random().to(int), random().to(int), random().to(int), random().to(int)
+    #     ).to(device)
+    #     return y1, y2, y3, y4
 
-    @autotest(auto_backward=False, check_graph=True)
-    def test_flow_zeros_like_list_with_random_data(test_case):
-        device = random_device()
-        x = random_tensor().to(device)
-        y = torch.zeros_like(x)
-        return y
+    # @autotest(auto_backward=False, check_graph=True)
+    # def test_flow_zeros_like_list_with_random_data(test_case):
+    #     device = random_device()
+    #     x = random_tensor().to(device)
+    #     y = torch.zeros_like(x)
+    #     return y
 
-    @autotest(auto_backward=False, check_graph=True)
-    def test_flow_zeros_like_list_with_0dim_data(test_case):
-        device = random_device()
-        x = random_tensor(ndim=0).to(device)
-        y = torch.zeros_like(x)
-        return y
+    # @autotest(auto_backward=False, check_graph=True)
+    # def test_flow_zeros_like_list_with_0dim_data(test_case):
+    #     device = random_device()
+    #     x = random_tensor(ndim=0).to(device)
+    #     y = torch.zeros_like(x)
+    #     return y
 
-    @autotest(auto_backward=False, check_graph=True)
-    def test_flow_ones_like_list_with_random_data(test_case):
-        device = random_device()
-        x = random_tensor().to(device)
-        y = torch.ones_like(x)
-        return y
+    # @autotest(auto_backward=False, check_graph=True)
+    # def test_flow_ones_like_list_with_random_data(test_case):
+    #     device = random_device()
+    #     x = random_tensor().to(device)
+    #     y = torch.ones_like(x)
+    #     return y
 
     @autotest(auto_backward=False, check_graph=True)
     def test_flow_ones_like_list_with_0dim_data(test_case):
@@ -89,69 +89,69 @@ class TestConstantModule(flow.unittest.TestCase):
         y = torch.ones_like(x)
         return y
 
-    @autotest(auto_backward=True, check_graph=True)
-    def test_flow_new_ones_list_with_random_data(test_case):
-        device = random_device()
-        x = random_tensor().to(device)
-        y = x.new_ones(
-            (random().to(int), random().to(int), random().to(int)),
-            device=device.value(),
-            requires_grad=constant(True),
-        )
-        return y
+    # @autotest(auto_backward=True, check_graph=True)
+    # def test_flow_new_ones_list_with_random_data(test_case):
+    #     device = random_device()
+    #     x = random_tensor().to(device)
+    #     y = x.new_ones(
+    #         (random().to(int), random().to(int), random().to(int)),
+    #         device=device.value(),
+    #         requires_grad=constant(True),
+    #     )
+    #     return y
 
-    @autotest(auto_backward=True, check_graph=True)
-    def test_flow_new_ones_list_with_0dim_data(test_case):
-        device = random_device()
-        x = random_tensor(ndim=0).to(device)
-        y = x.new_ones(
-            (random().to(int), random().to(int), random().to(int)),
-            device=device.value(),
-            requires_grad=constant(True),
-        )
-        return y
+    # @autotest(auto_backward=True, check_graph=True)
+    # def test_flow_new_ones_list_with_0dim_data(test_case):
+    #     device = random_device()
+    #     x = random_tensor(ndim=0).to(device)
+    #     y = x.new_ones(
+    #         (random().to(int), random().to(int), random().to(int)),
+    #         device=device.value(),
+    #         requires_grad=constant(True),
+    #     )
+    #     return y
 
-    @autotest(n=5)
-    def test_new_zeros(test_case):
-        device = random_device()
-        x = random_tensor().to(device)
-        y = x.new_zeros(
-            (random().to(int), random().to(int), random().to(int)),
-            device=device.value(),
-            requires_grad=constant(True),
-        )
-        return y
+    # @autotest(n=5)
+    # def test_new_zeros(test_case):
+    #     device = random_device()
+    #     x = random_tensor().to(device)
+    #     y = x.new_zeros(
+    #         (random().to(int), random().to(int), random().to(int)),
+    #         device=device.value(),
+    #         requires_grad=constant(True),
+    #     )
+    #     return y
 
-    @autotest(n=10, auto_backward=True)
-    def test_full_with_random_data_int(test_case):
-        device = random_device()
-        shape = random_tensor(low=1, high=6, requires_grad=False).pytorch.shape
-        y = torch.full(shape, 2.0, requires_grad=True)
-        return y
+    # @autotest(n=10, auto_backward=True)
+    # def test_full_with_random_data_int(test_case):
+    #     device = random_device()
+    #     shape = random_tensor(low=1, high=6, requires_grad=False).pytorch.shape
+    #     y = torch.full(shape, 2.0, requires_grad=True)
+    #     return y
 
-    @autotest(n=10, auto_backward=True)
-    def test_full_with_random_data_float(test_case):
-        device = random_device()
-        shape = random_tensor(low=1, high=6, requires_grad=False).pytorch.shape
-        y = torch.full(shape, 2.0, requires_grad=True)
-        return y
+    # @autotest(n=10, auto_backward=True)
+    # def test_full_with_random_data_float(test_case):
+    #     device = random_device()
+    #     shape = random_tensor(low=1, high=6, requires_grad=False).pytorch.shape
+    #     y = torch.full(shape, 2.0, requires_grad=True)
+    #     return y
 
-    @autotest(n=10, auto_backward=True)
-    def test_full_like_with_random_data_float(test_case):
-        device = random_device()
-        x = random_tensor(low=1, high=6, requires_grad=False).to(device)
-        y = torch.full_like(x, 2.0, requires_grad=True)
-        return y
+    # @autotest(n=10, auto_backward=True)
+    # def test_full_like_with_random_data_float(test_case):
+    #     device = random_device()
+    #     x = random_tensor(low=1, high=6, requires_grad=False).to(device)
+    #     y = torch.full_like(x, 2.0, requires_grad=True)
+    #     return y
 
-    def test_cast(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_different_dtype,
-        ]
-        arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5), (2, 0, 4)]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    # def test_cast(test_case):
+    #     arg_dict = OrderedDict()
+    #     arg_dict["test_fun"] = [
+    #         _test_different_dtype,
+    #     ]
+    #     arg_dict["device"] = ["cpu", "cuda"]
+    #     arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5), (2, 0, 4)]
+    #     for arg in GenArgList(arg_dict):
+    #         arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":

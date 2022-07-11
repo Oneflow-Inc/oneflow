@@ -30,6 +30,7 @@ class CopyKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const ShapeView& in_shape = in->shape_view();
+    // If output tensor is not 0-dim tensor, we need check input shape and output shape equality.
     if (out->shape_view().size() > 0) { CHECK_EQ(out->shape_view(), in_shape); }
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
