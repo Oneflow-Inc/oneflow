@@ -52,6 +52,7 @@ oneflow
             movedim,
             tensor_split,
             hsplit,
+            hann_window, 
             vsplit,
             as_strided,
             div, 
