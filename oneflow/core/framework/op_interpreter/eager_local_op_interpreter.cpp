@@ -63,32 +63,6 @@ Maybe<EagerLocalTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& te
   return tensor->mut_eager_local_tensor_impl();
 }
 
-class MutLocalTensorMeta : public TensorMeta {  // NOLINT
- public:
-  MutLocalTensorMeta()
-      : TensorMeta(std::make_shared<const Shape>(), std::make_shared<const Stride>(),
-                   kInvalidDataType) {}
-  MutLocalTensorMeta(const MutLocalTensorMeta&) = default;
-  MutLocalTensorMeta(MutLocalTensorMeta&&) = default;
-  ~MutLocalTensorMeta() override = default;
-};
-
-std::vector<TensorMeta*>* ThreadLocalDefaultOutputMutTensorMetas(int64_t size) {
-  static thread_local std::vector<MutLocalTensorMeta> struct_vec;
-  static thread_local std::vector<TensorMeta*> ptr_vec;
-  struct_vec.resize(size);
-  ptr_vec.resize(size);
-  if (size == 1) {
-    ptr_vec.at(0) = &struct_vec.at(0);  // unfold loop
-  } else if (size == 2) {
-    ptr_vec.at(0) = &struct_vec.at(0);  // unfold loop
-    ptr_vec.at(1) = &struct_vec.at(1);  // unfold loop
-  } else {
-    for (int i = 0; i < size; ++i) { ptr_vec.at(i) = &struct_vec.at(i); }
-  }
-  return &ptr_vec;
-}
-
 }  // namespace
 
 Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
