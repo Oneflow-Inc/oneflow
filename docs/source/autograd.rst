@@ -30,15 +30,7 @@ Locally disabling gradient computation
 Default gradient layouts
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-If ``create_graph=True``, ``backward()`` replaces ``.grad`` with a
-new tensor ``.grad + new grad``, which attempts (but does not guarantee)
-matching the preexisting ``.grad``'s strides.
-
-The default behavior (letting ``.grad``\ s be ``None`` before the first
-``backward()``, such that their layout is created according to 1 or 2,
-and retained over time according to 3 or 4) is recommended for best performance.
-Calls to ``model.zero_grad()`` or ``optimizer.zero_grad()`` will not affect ``.grad``
-layouts.
+``backward()`` replaces ``.grad`` with a new tensor ``.grad + new grad``.
 
 In-place operations on Tensors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
