@@ -362,7 +362,11 @@ def pad_packed_sequence(
         device=sequence.data.device,
         requires_grad=sequence.data.requires_grad,
     )
-    padded_output = padded_output.clone()
+    # `padded_output` is leaf tensor which needs to be transformed into non-leaf tensor
+    # when it requires grad by calling the `clone` method before the following
+    # in-place operation to avoid runtime check error .
+    if padded_output.requires_grad == True:
+        padded_output = padded_output.clone()
 
     # This will be modified at every iteration, but we reserve memory for it now.
     tmp_view_size = output_size  # == [-1, -1, *sequence.data.size()[1:]]

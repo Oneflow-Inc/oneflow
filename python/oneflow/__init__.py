@@ -229,7 +229,7 @@ __oneflow_global_unique_env = env_util.GetEnv()
 session_ctx.NewDefaultSession(__oneflow_global_unique_env)
 
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
-oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
+oneflow._oneflow_internal.InitDefaultGlobalTransportTokenScope()
 
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
 from oneflow.framework import python_callback
@@ -333,6 +333,7 @@ from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.constant import ones_op as ones
 from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.constant import full_op as full
+from oneflow.nn.modules.constant import full_like_op as full_like
 from oneflow.nn.modules.constant import new_ones_op as new_ones
 from oneflow.nn.modules.constant import new_zeros_op as new_zeros
 from oneflow.nn.modules.empty import empty_op as empty
@@ -357,6 +358,7 @@ from oneflow._C import normal
 from oneflow._C import rand
 from oneflow._C import randn
 from oneflow._C import randint
+from oneflow._C import randint_like
 from oneflow._C import randperm
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
@@ -408,7 +410,6 @@ from . import (
     amp,
 )
 import oneflow.utils.data
-import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing

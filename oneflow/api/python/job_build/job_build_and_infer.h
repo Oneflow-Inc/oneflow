@@ -78,12 +78,12 @@ inline Maybe<std::string> CurJobBuildAndInferCtx_AddAndInferLocalOp(
   return PbMessage2TxtString(*op_attribute);
 }
 
-inline Maybe<std::string> CurJobBuildAndInferCtx_AddAndInferConsistentOp(
+inline Maybe<std::string> CurJobBuildAndInferCtx_AddAndInferGlobalOp(
     const std::string& op_conf_str) {
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
   auto* ctx = JUST(GetCurInferCtx());
-  const auto& op_attribute = JUST(ctx->AddAndInferConsistentOp(op_conf));
+  const auto& op_attribute = JUST(ctx->AddAndInferGlobalOp(op_conf));
   return PbMessage2TxtString(*op_attribute);
 }
 
