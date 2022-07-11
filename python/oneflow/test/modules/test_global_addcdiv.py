@@ -19,6 +19,7 @@ import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
+
 @autotest(n=1, check_graph=False)
 def _test_addcdiv(test_case, ndim, placement, sbp):
     shape = [random(2, 4) * 8 for i in range(ndim)]
