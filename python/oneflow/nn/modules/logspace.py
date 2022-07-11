@@ -77,6 +77,7 @@ def logspace_op(
         tensor([4.], dtype=oneflow.float32)
 
     """
+    # TODO: Migrate to C++
     indice = flow.linspace(
         start=start,
         end=end,
