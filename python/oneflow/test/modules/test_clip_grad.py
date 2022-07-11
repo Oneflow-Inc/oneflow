@@ -117,7 +117,7 @@ def _test_graph_clip_grad_value_impl(test_case, shape, device, clip_value):
     )
 
 
-def _test_clip_grad_norm_consistent_impl(
+def _test_clip_grad_norm_global_impl(
     test_case, shape, sbp, placement, max_norm, norm_type
 ):
     of_input = flow.rand(
@@ -169,9 +169,9 @@ class TestClipGrad(flow.unittest.TestCase):
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestClipGradConsistent(flow.unittest.TestCase):
+class TestClipGradGlobal(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
-    def test_clip_grad_consistent(test_case):
+    def test_clip_grad_global(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(2, 4), (2, 4, 3), (2, 4, 5, 6)]
         arg_dict["sbp"] = [flow.sbp.broadcast, flow.sbp.split(0), flow.sbp.split(1)]
@@ -182,7 +182,7 @@ class TestClipGradConsistent(flow.unittest.TestCase):
         arg_dict["max_norm"] = [0, 0.5, 1.0]
         arg_dict["norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
         for arg in GenArgList(arg_dict):
-            _test_clip_grad_norm_consistent_impl(test_case, *arg)
+            _test_clip_grad_norm_global_impl(test_case, *arg)
 
 
 if __name__ == "__main__":

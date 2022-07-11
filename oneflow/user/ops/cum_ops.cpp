@@ -44,14 +44,30 @@ Maybe<void> CumsumOp::InferDataType(user_op::InferContext* ctx) {
 REGISTER_USER_OP_GRAD("cumsum").SetGenBackwardOpConfFn(
     [](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("cumsum_grad")
-                                                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                                                 .Output("dx")
-                                                 .Attr("dim", op.attr<int64_t>("dim"))
+        const int64_t dim = op.attr<int64_t>("dim");
+        const std::vector<int32_t> flip_dim(1, dim);
+        user_op::UserOpConfWrapperBuilder flip_builder(op.op_name() + "_grad_flip_out_0");
+        user_op::UserOpConfWrapper flip_op = flip_builder.Op("flip")
+                                                 .Input("x", op.GetGradTensorWithOpOutput("y", 0))
+                                                 .Output("y")
+                                                 .Attr("dims", flip_dim)
                                                  .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        AddOp(grad_op);
+        AddOp(flip_op);
+        user_op::UserOpConfWrapperBuilder cumsum_builder(op.op_name() + "_grad_cumsum_out");
+        user_op::UserOpConfWrapper cumsum_op = cumsum_builder.Op("cumsum")
+                                                   .Input("x", flip_op.output("y", 0))
+                                                   .Output("y")
+                                                   .Attr("dim", dim)
+                                                   .Build();
+        AddOp(cumsum_op);
+        flip_builder = user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_flip_out_1");
+        flip_op = flip_builder.Op("flip")
+                      .Input("x", cumsum_op.output("y", 0))
+                      .Output("y")
+                      .Attr("dims", flip_dim)
+                      .Build();
+        AddOp(flip_op);
+        op.BindGradTensorWithOpInput(flip_op.output("y", 0), "x", 0);
       }
       return Maybe<void>::Ok();
     });

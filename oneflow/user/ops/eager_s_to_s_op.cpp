@@ -47,11 +47,11 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerNaiveSToSOp::GetSbp(user_op::SbpContext* ctx) {
-  return Error::TypeError() << "eager_naive_s_to_s op doesn't support consistent tensor!";
+  return Error::TypeError() << "eager_naive_s_to_s op doesn't support global tensor!";
 }
 
 /* static */ Maybe<void> EagerNaiveSToSOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  return Error::TypeError() << "eager_naive_s_to_s op doesn't support consistent tensor!";
+  return Error::TypeError() << "eager_naive_s_to_s op doesn't support global tensor!";
 }
 
 /* static */ Maybe<void> EagerNaiveSToSOp::InferDataType(user_op::InferContext* ctx) {

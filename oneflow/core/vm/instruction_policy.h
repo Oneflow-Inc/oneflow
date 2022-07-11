@@ -29,11 +29,7 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class MirroredObject;
 class EagerBlobObject;
-
-using DependenceVector = std::vector<MirroredObject*>;
-
 class PhyInstrOperand;
 
 class InstructionPolicy {
@@ -42,7 +38,7 @@ class InstructionPolicy {
 
   virtual const DependenceVector& input_dependences() const = 0;
   virtual const DependenceVector& output_dependences() const = 0;
-  virtual MirroredObject* stream_sequential_dependence() const = 0;
+  virtual Dependence* stream_sequential_dependence() const = 0;
   virtual void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const = 0;
 
   virtual bool IsBarrier() const { return false; }

@@ -35,7 +35,7 @@ namespace one {
 
 class FunctionNode;
 
-class ConsistentTensor;
+class GlobalTensor;
 class LocalTensor;
 
 class Tensor : public std::enable_shared_from_this<Tensor> {
@@ -55,8 +55,8 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<Symbol<Device>> device() const = 0;
   virtual Maybe<Symbol<Device>*> mut_device() = 0;
   virtual bool is_cuda() const = 0;
-  virtual bool is_consistent() const = 0;
-  virtual bool is_local() const { return !is_consistent(); }
+  virtual bool is_global() const = 0;
+  virtual bool is_local() const { return !is_global(); }
   virtual bool is_lazy() const = 0;
   virtual bool is_eager() const { return !is_lazy(); }
   virtual bool is_contiguous() const = 0;
@@ -64,7 +64,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual const TensorMeta& tensor_meta() const = 0;
   virtual Maybe<Tensor> data() = 0;
   virtual std::shared_ptr<Tensor> pin_memory() const = 0;
-  virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const { OF_UNIMPLEMENTED(); }
+  virtual Maybe<Symbol<GlobalTensorMeta>> global_tensor_meta() const { OF_UNIMPLEMENTED(); }
 
   // Getters valid only for EagerLocalTensor
   virtual Maybe<EagerLocalTensorImpl*> mut_eager_local_tensor_impl() { OF_UNIMPLEMENTED(); }
@@ -75,7 +75,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<const Stride> stride() const { OF_UNIMPLEMENTED(); }
   virtual Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
 
-  // Getters/Setters valid only for EagerConsistentTensor
+  // Getters/Setters valid only for EagerGlobalTensor
   virtual Maybe<const Optional<Symbol<NdSbp>>&> consumer_nd_sbp_constraint() const {
     OF_UNIMPLEMENTED();
   }
@@ -114,7 +114,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
     OF_UNIMPLEMENTED();
   };
   virtual Maybe<LocalTensor> AsLocalTensor() = 0;
-  virtual Maybe<ConsistentTensor> AsConsistentTensor() = 0;
+  virtual Maybe<GlobalTensor> AsGlobalTensor() = 0;
 
   Maybe<void> BorrowTensorName(const Tensor* other) const;
 
@@ -149,8 +149,8 @@ class StaticZerosTensor final : public Tensor {
     PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
-  bool is_consistent() const override { return false; }
-  bool is_local() const override { return !is_consistent(); }
+  bool is_global() const override { return false; }
+  bool is_local() const override { return !is_global(); }
   bool is_lazy() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return false;
@@ -164,7 +164,7 @@ class StaticZerosTensor final : public Tensor {
   std::shared_ptr<Tensor> pin_memory() const override {
     return std::const_pointer_cast<Tensor>(shared_from_this());
   }
-  Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const override {
+  Maybe<Symbol<GlobalTensorMeta>> global_tensor_meta() const override {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
@@ -181,7 +181,7 @@ class StaticZerosTensor final : public Tensor {
   Maybe<const Stride> stride() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<int64_t> storage_offset() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
-  // Getters/Setters valid only for EagerConsistentTensor
+  // Getters/Setters valid only for EagerGlobalTensor
   Maybe<const Optional<Symbol<NdSbp>>&> consumer_nd_sbp_constraint() const override {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
@@ -261,7 +261,7 @@ class StaticZerosTensor final : public Tensor {
   }
 
   Maybe<LocalTensor> AsLocalTensor() override;
-  Maybe<ConsistentTensor> AsConsistentTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<GlobalTensor> AsGlobalTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
  private:
   StaticZerosTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
@@ -310,13 +310,13 @@ class ProxyTensor : public TensorIf<DerivedT> {
   virtual Maybe<Symbol<Device>> device() const override { return tensor_->device(); }
   virtual Maybe<Symbol<Device>*> mut_device() override { return tensor_->mut_device(); }
   virtual bool is_cuda() const override { return tensor_->is_cuda(); }
-  virtual bool is_consistent() const override { return tensor_->is_consistent(); }
+  virtual bool is_global() const override { return tensor_->is_global(); }
   virtual bool is_local() const override { return tensor_->is_local(); }
   virtual bool is_lazy() const override { return tensor_->is_lazy(); }
   virtual bool is_eager() const override { return tensor_->is_eager(); }
   virtual const TensorMeta& tensor_meta() const override { return tensor_->tensor_meta(); }
-  virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const override {
-    return tensor_->consistent_tensor_meta();
+  virtual Maybe<Symbol<GlobalTensorMeta>> global_tensor_meta() const override {
+    return tensor_->global_tensor_meta();
   }
   virtual Maybe<Tensor> data() override { return tensor_->detach(); }
   virtual std::shared_ptr<Tensor> pin_memory() const override { return tensor_->pin_memory(); }
@@ -409,9 +409,9 @@ class ProxyTensor : public TensorIf<DerivedT> {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
-  virtual Maybe<ConsistentTensor> AsConsistentTensor() override {
-    if (const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(tensor_)) {
-      return consistent_tensor;
+  virtual Maybe<GlobalTensor> AsGlobalTensor() override {
+    if (const auto& global_tensor = std::dynamic_pointer_cast<GlobalTensor>(tensor_)) {
+      return global_tensor;
     }
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
@@ -454,7 +454,7 @@ class LocalTensor final : public TensorIf<LocalTensor> {
     OF_RUNTIME_ERROR()
         << "Local tensor has no sbp property. "
            "sbp is the description in the oneflow distributed case, you can refer to "
-           "https://docs.oneflow.org/master/parallelism/03_consistent_tensor.html; "
+           "https://docs.oneflow.org/master/parallelism/03_global_tensor.html; "
            "For example, create a global tensor like this : 'x = oneflow.tensor((2,3, "
            "placement=oneflow.placement(\"cuda\", {0: 0}), sbp=oneflow.sbp.broadcast))', then "
            "'x.sbp' is 'oneflow.sbp.broadcast'";
@@ -467,7 +467,7 @@ class LocalTensor final : public TensorIf<LocalTensor> {
   Maybe<Symbol<Device>> device() const override { return impl_->device(); }
   Maybe<Symbol<Device>*> mut_device() override { return impl_->mut_device(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
-  bool is_consistent() const override { return false; }
+  bool is_global() const override { return false; }
   bool is_cuda() const override;
   std::shared_ptr<Tensor> contiguous() const override;
 
@@ -540,18 +540,18 @@ class LocalTensor final : public TensorIf<LocalTensor> {
   Maybe<LocalTensor> AsLocalTensor() override {
     return std::dynamic_pointer_cast<LocalTensor>(shared_from_this());
   }
-  Maybe<ConsistentTensor> AsConsistentTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<GlobalTensor> AsGlobalTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
  private:
   std::shared_ptr<LocalTensorImpl> impl_;
 };
 
-class ConsistentTensor final : public TensorIf<ConsistentTensor> {
+class GlobalTensor final : public TensorIf<GlobalTensor> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ConsistentTensor);
-  ConsistentTensor() = default;
-  explicit ConsistentTensor(const std::shared_ptr<ConsistentTensorImpl>& impl) { impl_ = impl; }
-  ~ConsistentTensor() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(GlobalTensor);
+  GlobalTensor() = default;
+  explicit GlobalTensor(const std::shared_ptr<GlobalTensorImpl>& impl) { impl_ = impl; }
+  ~GlobalTensor() override = default;
 
   // Getters
   std::shared_ptr<const Shape> shape() const override { return impl_->shape(); }
@@ -564,10 +564,10 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
                           "'.placement' for global tensors.";
   }
   Maybe<Symbol<Device>*> mut_device() override {
-    OF_RUNTIME_ERROR() << "ConsistentTensor has no mut_device property";
+    OF_RUNTIME_ERROR() << "GlobalTensor has no mut_device property";
   }
   bool is_lazy() const override { return impl_->is_lazy(); }
-  bool is_consistent() const override { return true; }
+  bool is_global() const override { return true; }
   Maybe<const Optional<Symbol<NdSbp>>&> consumer_nd_sbp_constraint() const override {
     return impl_->consumer_nd_sbp_constraint();
   }
@@ -632,14 +632,13 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<Tensor> detach() const override;
   Maybe<Tensor> clone() const override;
 
-  static Maybe<ConsistentTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                            DataType dtype, Symbol<NdSbp> nd_sbp,
-                                            Symbol<ParallelDesc> parallel_desc, bool is_lazy,
-                                            bool requires_grad, bool is_leaf);
+  static Maybe<GlobalTensor> MakeTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
+                                        Symbol<NdSbp> nd_sbp, Symbol<ParallelDesc> parallel_desc,
+                                        bool is_lazy, bool requires_grad, bool is_leaf);
 
-  ConsistentTensorImpl* mut_impl() { return impl_.get(); }
+  GlobalTensorImpl* mut_impl() { return impl_.get(); }
 
-  Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const override {
+  Maybe<Symbol<GlobalTensorMeta>> global_tensor_meta() const override {
     return impl_->tensor_meta();
   }
 
@@ -647,12 +646,12 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
 
   Maybe<LocalTensor> AsLocalTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<ConsistentTensor> AsConsistentTensor() override {
-    return std::dynamic_pointer_cast<ConsistentTensor>(shared_from_this());
+  Maybe<GlobalTensor> AsGlobalTensor() override {
+    return std::dynamic_pointer_cast<GlobalTensor>(shared_from_this());
   }
 
  private:
-  std::shared_ptr<ConsistentTensorImpl> impl_;
+  std::shared_ptr<GlobalTensorImpl> impl_;
 };
 
 }  // namespace one
