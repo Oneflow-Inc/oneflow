@@ -45,13 +45,6 @@ class InstructionPolicy {
   virtual InstructionFuseType fuse_type() const { return kDisableInstructionFuse; }
   virtual std::string DebugName(const Instruction&) const = 0;
 
-  static std::function<void(Dependence*)> SetInserter(DependenceVector* dependences) {
-    auto existed =
-        std::make_shared<std::set<Dependence*>>(dependences->begin(), dependences->end());
-    return [dependences, existed](Dependence* object) {
-      if (existed->insert(object).second) { dependences->push_back(object); }
-    };
-  }
   Maybe<void> PrepareIf(Instruction* instruction) {
     OF_PROFILER_RANGE_GUARD(std::string("Prepare:") + DebugName(*instruction));
     InitOrCheckInputBlobsMemPtrForAllocationCompuationPipelining(instruction);

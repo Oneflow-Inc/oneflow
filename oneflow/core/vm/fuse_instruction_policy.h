@@ -18,18 +18,20 @@ limitations under the License.
 
 #include <functional>
 #include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/instruction_policy_util.h"
 #include "oneflow/core/vm/instruction_type.h"
+#include "oneflow/core/vm/vm_object.h"
 
 namespace oneflow {
 namespace vm {
 
 class FuseInstructionPolicy final : public InstructionPolicy {
  public:
-  FuseInstructionPolicy(InstructionList&& instruction_list)
+  explicit FuseInstructionPolicy(InstructionList&& instruction_list)
       : instruction_list_(), input_dependences_(), output_dependences_() {
     instruction_list.MoveTo(&instruction_list_);
-    auto ReadOnlyDepsInserter = SetInserter(&input_dependences_);
-    auto WritableDepsInserter = SetInserter(&output_dependences_);
+    auto ReadOnlyDepsInserter = InstructionPolicyUtil::SetInserter(&input_dependences_);
+    auto WritableDepsInserter = InstructionPolicyUtil::SetInserter(&output_dependences_);
     auto* last_instruction = instruction_list_.Last();
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, &instruction_list_) {
       if (instruction == last_instruction) {
@@ -59,7 +61,7 @@ class FuseInstructionPolicy final : public InstructionPolicy {
 
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
-  MirroredObject* stream_sequential_dependence() const override {
+  Dependence* stream_sequential_dependence() const override {
     return stream_sequential_dependence_;
   }
 
@@ -67,7 +69,7 @@ class FuseInstructionPolicy final : public InstructionPolicy {
   void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {}
 
  protected:
-  MirroredObject* stream_sequential_dependence_;
+  Dependence* stream_sequential_dependence_;
 
  private:
   Maybe<void> Prepare(Instruction* instruction) override {
