@@ -66,10 +66,16 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
 }
 
 bool IsAxesLegal(const AxisVector& axis_vec, const Shape& like_shape, const Shape& in_shape) {
-  if (in_shape.size() == 1 && in_shape.at(0) == 1) { return true; }
   Shape reduced_shape = CreateReducedShape(like_shape, axis_vec);
   if (like_shape.NumAxes() > in_shape.NumAxes()) {
-    reduced_shape = reduced_shape.RemoveOnes(axis_vec);
+    int64_t in_index = in_shape.NumAxes() - 1;
+    int64_t reduced_index = reduced_shape.NumAxes() - 1;
+    while (in_index >= 0) {
+      if (reduced_shape.at(reduced_index) != in_shape.at(in_index)) { break; }
+      in_index--;
+      reduced_index--;
+    }
+    if (in_index == -1) { return true; }
   }
   return reduced_shape.dim_vec() == in_shape.dim_vec();
 }
