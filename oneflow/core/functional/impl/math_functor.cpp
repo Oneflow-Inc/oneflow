@@ -1090,6 +1090,7 @@ class HannWindowFunctor {
       return Error::RuntimeError()
              << "hann_window expects floating point dtypes, got: " << JUST(dtype)->name();
     }
+    // TODO: speedup
     auto result = JUST(Arange(1, 2, 1, dtype, device));
     if (window_length != 1) {
       if (periodic) {

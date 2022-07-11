@@ -14,9 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+from collections import OrderedDict
+
 import oneflow as flow
 import oneflow.unittest
-from collections import OrderedDict
 from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgDict
 
