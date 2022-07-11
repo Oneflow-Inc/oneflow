@@ -13,13 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_ONEFLOWDIALECT_H
-#define ONEFLOW_ONEFLOWDIALECT_H
+#ifndef ONEFLOW_IR_INCLUDE_SBP_SBPDIALECT_H_
+#define ONEFLOW_IR_INCLUDE_SBP_SBPDIALECT_H_
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "OneFlow/SBP/SBPDialect.h"
 
-#include "OneFlow/OneFlowOpsDialect.h.inc"
+#include "OneFlow/SBPDialect.h.inc"
 
-#endif  // ONEFLOW_ONEFLOWDIALECT_H
+#endif // ONEFLOW_IR_INCLUDE_SBP_SBPDIALECT_H_

@@ -25,6 +25,7 @@ limitations under the License.
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
+#include "OneFlow/SBP/SBPDialect.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/Passes.h"
@@ -55,6 +56,7 @@ int32_t main(int32_t argc, char** argv) {
 #endif  // WITH_MLIR_CUDA_CODEGEN
   mlir::registerOutlineJitFunctionPassPass();
   mlir::DialectRegistry registry;
+  registry.insert<mlir::sbp::SBPDialect>();
   registry.insert<mlir::oneflow::OneFlowDialect>();
   registry.insert<mlir::func::FuncDialect>();
   registry.insert<mlir::tosa::TosaDialect>();

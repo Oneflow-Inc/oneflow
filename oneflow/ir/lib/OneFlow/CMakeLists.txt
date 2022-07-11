@@ -17,6 +17,8 @@ endforeach()
 
 oneflow_add_mlir_dialect_library(
   MLIROneFlow
+  SBP/SBPDialect.cpp
+  SBP/SBPAttributes.cpp
   OneFlowDialect.cpp
   OneFlowTypes.cpp
   OneFlowAttributes.cpp

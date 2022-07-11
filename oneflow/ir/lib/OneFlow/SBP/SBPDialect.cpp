@@ -13,13 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_ONEFLOWDIALECT_H
-#define ONEFLOW_ONEFLOWDIALECT_H
-
-#include "mlir/IR/Dialect.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "OneFlow/SBP/SBPDialect.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Dialect.h"
+#include "mlir/IR/TypeRange.h"
 
-#include "OneFlow/OneFlowOpsDialect.h.inc"
+namespace mlir {
 
-#endif  // ONEFLOW_ONEFLOWDIALECT_H
+namespace sbp {
+
+void SBPDialect::initialize() {
+  registerAttributes();
+}
+
+}  // namespace sbp
+
+}  // namespace mlir
