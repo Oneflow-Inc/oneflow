@@ -30,7 +30,9 @@ Locally disabling gradient computation
 Default gradient layouts
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-``backward()`` replaces ``.grad`` with a new tensor ``.grad + new grad``.
+A ``param.grad`` is accumulated by replacing ``.grad`` with a 
+new tensor ``.grad + new grad`` during :func:`oneflow.autograd.backward()` or 
+:func:`oneflow.Tensor.backward()`.
 
 In-place operations on Tensors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
