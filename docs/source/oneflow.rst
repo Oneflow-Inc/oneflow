@@ -89,6 +89,7 @@ Indexing, Slicing, Joining, Mutating Ops
     unbind
     unsqueeze
     where
+    tensor_split
 
 .. _random-sampling:
 
@@ -247,6 +248,7 @@ Pointwise Ops
     sub 
     tan 
     tanh
+    floor_divide
 
 Reduction Ops
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -268,6 +270,8 @@ Reduction Ops
     std  
     sum  
     var
+    norm
+    all
 
 
 Comparison Ops
@@ -288,6 +292,12 @@ Comparison Ops
     ne 
     sort 
     topk
+    ge
+    greater
+    greater_equal
+    maximum
+    minimum
+    not_equal
 
 Other Ops
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -310,6 +320,8 @@ Other Ops
     searchsorted
     tensordot
     tril
+    repeat_interleave
+    triu
 
 BLAS and LAPACK Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -322,6 +334,8 @@ BLAS and LAPACK Operations
     bmm 
     dot 
     matmul
+    mm
+    mv
 
 
 

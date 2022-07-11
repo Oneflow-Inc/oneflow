@@ -1,5 +1,7 @@
 oneflow.nn.Graph
 ============================================================
+Base class for running neural networks in Static Graph Mode.
+
 Currently, there are two main ways to run models in deep learning frameworks, namely dynamic graphs and static graphs , which are also conventionally referred to as :ref:`dynamic graph` and :ref:`static graph` in OneFlow.
 
 Both approaches have their advantages and disadvantages, and OneFlow provides support for both approaches, with Eager mode being the default.
@@ -19,60 +21,53 @@ Eager Mode
 
 OneFlow runs in Eager mode by default.
 
-The following script, using the CIFAR10 dataset, trains the mobilenet_v2 model:
+OneFlow's nn.Graph is programmed in a style very similar to Eager Mode, so it is possible to make small changes and get large performance gains.
+
+The following script shows the process of building a neural network in eager mode using the interface under ``oneflow.nn`` :
+
+.. 再给个大概个提速的数据（比如 MNIST,从 Eager 改为 Graph 后，速度提升 xx%）
 
 .. code-block:: 
 
-        import oneflow as flow
-        import oneflow.nn as nn
-        import flowvision
-        import flowvision.transforms as transforms
+    import oneflow as flow
+    import oneflow.nn as nn
 
-        BATCH_SIZE=64
-        EPOCH_NUM = 1
+    class ModuleMyLinear(nn.Module):
+        def __init__(self, in_features, out_features):
+            super().__init__()
+            self.weight = nn.Parameter(flow.randn(in_features, out_features))
+            self.bias = nn.Parameter(flow.randn(out_features))
 
-        DEVICE = "cuda" if flow.cuda.is_available() else "cpu"
-        print("Using {} device".format(DEVICE))
+        def forward(self, input):
+            return flow.matmul(input, self.weight) + self.bias
 
-        training_data = flowvision.datasets.CIFAR10(
-        root="data",
-        train=True,
-        transform=transforms.ToTensor(),
-        download=True,
-        source_url="https://oneflow-public.oss-cn-beijing.aliyuncs.com/datasets/cifar/cifar-10-python.tar.gz",
-        )
-
-        train_dataloader = flow.utils.data.DataLoader(
-        training_data, BATCH_SIZE, shuffle=True
-        )
-
-        model = flowvision.models.mobilenet_v2().to(DEVICE)
-        model.classifer = nn.Sequential(nn.Dropout(0.2), nn.Linear(model.last_channel, 10))
-        model.train()
-
-        loss_fn = nn.CrossEntropyLoss().to(DEVICE)
-        optimizer = flow.optim.SGD(model.parameters(), lr=1e-3)
+    linear_model = ModuleMyLinear(4, 3)
 
 
-        for t in range(EPOCH_NUM):
-        print(f"Epoch {t+1}\n-------------------------------")
-        size = len(train_dataloader.dataset)
-        for batch, (x, y) in enumerate(train_dataloader):
-        x = x.to(DEVICE)
-        y = y.to(DEVICE)
+Eager and Graph are reusable, and the above script for eager mode can be changed to static graph mode by adding just a few lines of code, which consists of the following steps.
 
-        # Compute prediction error
-        pred = model(x)
-        loss = loss_fn(pred, y)
 
-        # Backpropagation
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+- Inheritance of ``nn.graph``
+- At the beginning of __init__. Call super().__init__() to let OneFlow do the necessary initialization of the Graph.
+- Reuse the ``nn.Module`` object in Eager mode in __init__ (self.model = model)
+- Describe the computation in the ``build``
 
-        current = batch * BATCH_SIZE
-        if batch % 5 == 0:
-        print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+.. code-block:: 
+
+    class GraphMyLinear(nn.Graph):
+        def __init__(self):
+            super().__init__()
+            self.model = linear_model
+
+        def build(self, input):
+            return self.model(input)
+
+    graph_mylinear = GraphMyLinear()
+    input = flow.randn(1, 4)
+    out = graph_mylinear(input)
+    print(out)
+
+    tensor([[-0.3298, -3.7907,  0.1661]], dtype=oneflow.float32)
 
 .. _static graph:
 
@@ -82,6 +77,8 @@ Static Graph Mode
 
 Constructing it
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
 .. currentmodule:: oneflow.nn.Graph
 
 .. autosummary::
@@ -91,6 +88,8 @@ Constructing it
     __init__
     build
     __call__
+    add_optimizer
+    set_grad_scaler
 
 
 
@@ -123,23 +122,26 @@ Block Config option
     set_stage
     activation_checkpointing
 
-Base class
--------------------
 .. currentmodule:: oneflow.nn.Graph
+
+Debug
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
 
-    add_optimizer
-    set_grad_scaler
-    state_dict
-    load_state_dict
     name
     debug
     __repr__
 
 
+Save & Load Model
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
 
-
+    state_dict
+    load_state_dict
