@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/auto_parallel/boxing_collector.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/global_for.h"
@@ -526,7 +527,9 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
       Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
       || ParseBooleanFromEnv("ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION", false);
   // Use a general basic communication if no P in the consumer
-  if ((enable_general_basic_communication && !NdSbpHasPartialParallel(consumer_sbp_parallel))) {
+  if ((enable_general_basic_communication && !NdSbpHasPartialParallel(consumer_sbp_parallel))
+      && producer_parallel_desc.device_type() == DeviceType::kCUDA
+      && consumer_parallel_desc.device_type() == DeviceType::kCUDA) {
     return Ratio4GeneralBasicCommunication(producer_sbp_parallel, consumer_sbp_parallel,
                                            logical_blob_desc, producer_parallel_desc,
                                            consumer_parallel_desc)
@@ -687,7 +690,9 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
       Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
       || ParseBooleanFromEnv("ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION", false);
   // Use a general basic communication if no P in the consumer
-  if ((enable_general_basic_communication && !NdSbpHasPartialParallel(consumer_sbp_parallel))) {
+  if ((enable_general_basic_communication && !NdSbpHasPartialParallel(consumer_sbp_parallel))
+      && producer_parallel_desc.device_type() == DeviceType::kCUDA
+      && consumer_parallel_desc.device_type() == DeviceType::kCUDA) {
     return Ratio4GeneralBasicCommunication(producer_sbp_parallel, consumer_sbp_parallel,
                                            logical_blob_desc, producer_parallel_desc,
                                            consumer_parallel_desc)

@@ -18,6 +18,7 @@ limitations under the License.
 #include <string>
 #include "oneflow/core/auto_parallel/boxing_collector.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/job/global_for.h"
@@ -563,7 +564,9 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
       Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
       || ParseBooleanFromEnv("ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION", false);
   // Use a general basic communication if no P in the consumer
-  if (enable_general_basic_communication && (!NdSbpHasPartialParallel(sbp_consumer))) {
+  if (enable_general_basic_communication && (!NdSbpHasPartialParallel(sbp_consumer))
+      && producer_parallel_desc.device_type() == DeviceType::kCUDA
+      && consumer_parallel_desc.device_type() == DeviceType::kCUDA) {
     if (NdSbpHasPartialParallel(sbp_producer) && NdSbpHasBroadcastParallel(sbp_consumer)) {
       // (?, P, ?)->(Si, Sj)->(?, B, ?), two-step transfer
       JUST(AskSbpCombination4GeneralBasicCommunication(
