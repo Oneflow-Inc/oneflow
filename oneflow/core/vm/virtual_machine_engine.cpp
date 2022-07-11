@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/caching_allocator.h"
+#include "oneflow/core/vm/fuse_instruction_policy.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/naive_instruction_policy.h"
 #include "oneflow/core/vm/barrier_phy_instr_operand.h"
