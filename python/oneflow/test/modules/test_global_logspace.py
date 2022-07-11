@@ -22,7 +22,7 @@ from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgDict
 
 
-def _test_consistent_logspace(test_case, placement, sbp):
+def _test_global_logspace(test_case, placement, sbp):
     x = flow.logspace(start=-10, end=10, steps=2, placement=placement, sbp=sbp)
 
     test_case.assertEqual(x.sbp, sbp)
@@ -30,7 +30,7 @@ def _test_consistent_logspace(test_case, placement, sbp):
 
 
 def _test_graph_logspace(test_case, start, end, steps, placement, sbp):
-    class ConsistentLogspaceGraph(flow.nn.Graph):
+    class GlobalLogspaceGraph(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
 
@@ -38,19 +38,19 @@ def _test_graph_logspace(test_case, start, end, steps, placement, sbp):
             x = flow.logspace(start, end, steps, placement=placement, sbp=sbp)
             return x
 
-    model = ConsistentLogspaceGraph()
+    model = GlobalLogspaceGraph()
     x = model()
 
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
 
 
-class TestLogspaceConsistent(flow.unittest.TestCase):
+class TestLogspaceGlobal(flow.unittest.TestCase):
     @globaltest
-    def test_logspace_consistent(test_case):
+    def test_logspace_global(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
-                _test_consistent_logspace(test_case, placement, sbp)
+                _test_global_logspace(test_case, placement, sbp)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n2d()
