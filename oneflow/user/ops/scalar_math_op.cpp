@@ -78,7 +78,8 @@ IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarReversePow, GetSbp4ScalarMath)
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ScalarPowGradOp::InferDataType(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0));
+  CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0))
+      << Error::TypeError() << "Tensors dy and x must have same type";
   *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
@@ -98,7 +99,8 @@ IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarReversePow, GetSbp4ScalarMath)
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ScalarReversePowGradOp::InferDataType(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0));
+  CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0))
+      << Error::TypeError() << "Tensors dy and x must have same type";
   *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
