@@ -23,7 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 def _test_flow_tensor_consistent_broadcast_matmul_with_random_data(
     test_case, placement, x_sbp, y_sbp
 ):
-    batch_dim = random(1, 6) * 2
+    batch_dim = random(1, 6) * 8
     k = random(1, 6) * 4
     x = random_tensor(ndim=3, dim0=batch_dim, dim2=k).to_global(
         placement=placement, sbp=x_sbp
@@ -37,7 +37,7 @@ def _test_flow_tensor_consistent_x_broadcast_y_matmul(
     test_case, placement, x_sbp, y_sbp
 ):
     batch_dim = random(1, 6) * 8
-    k = random(1, 6)
+    k = random(1, 6) * 4
     x = random_tensor(ndim=2, dim1=k).to_global(placement=placement, sbp=x_sbp)
     y = random_tensor(ndim=3, dim0=batch_dim, dim1=k).to_global(
         placement=placement, sbp=y_sbp
@@ -50,12 +50,12 @@ def _test_flow_tensor_consistent_x_broadcast_y_matmul(
 def _test_flow_tensor_consistent_broadcast_matmul_with_same_dims(
     test_case, placement, x_sbp, y_sbp
 ):
-    k = random(1, 6) * 4
-    batch_dim = random(1, 6) * 4
-    x = random_tensor(ndim=3, dim0=batch_dim, dim1=2, dim2=k).to_global(
+    k = random(1, 6) * 8
+    batch_dim = random(1, 6) * 8
+    x = random_tensor(ndim=3, dim0=batch_dim, dim1=4, dim2=k).to_global(
         placement=placement, sbp=x_sbp
     )
-    y = random_tensor(ndim=3, dim0=batch_dim, dim1=k, dim2=2).to_global(
+    y = random_tensor(ndim=3, dim0=batch_dim, dim1=k, dim2=4).to_global(
         placement=placement, sbp=y_sbp
     )
     return x.matmul(y)
