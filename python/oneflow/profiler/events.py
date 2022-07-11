@@ -170,9 +170,9 @@ class KernelEvent(EventBase):
     def key(self):
         def get_extra_keys():
             extra_keys = []
-            if self.input_shapes != "-" and self._enable_show_input_shapes:
+            if self.input_shapes != "" and self._enable_show_input_shapes:
                 extra_keys.append(self.description.get("input_shapes")[1])
-            if self.attributes != "-" and self._enable_show_attributes:
+            if self.attributes != "" and self._enable_show_attributes:
                 extra_keys.append(self.description.get("attrs")[1])
             return tuple(extra_keys)
 
@@ -198,20 +198,20 @@ class KernelEvent(EventBase):
     def input_shapes(self):
         if "input_shapes" in self.description:
             return self.description["input_shapes"][0]
-        return "-"
+        return ""
 
     @property
     def attributes(self):
         if "attrs" in self.description:
             return self.description["attrs"][0]
-        return "-"
+        return ""
 
     @property
     def bandwidth(self):
         if len(self.children) > 0 and self.has_cuda_time():
             if self.memory_size != -1:
                 return f"{self.memory_size / (1024.0 * 1024.0 * 1024.0) / (self.cuda_time / (1000 * 1000)):.3f}GB/s"
-        return "-"
+        return ""
 
     def to_dict(self):
         result = {
@@ -311,20 +311,20 @@ class Events(list):
     def table(self):
         has_input_shapes = any(
             [
-                x.input_shapes != "-" and x._enable_show_input_shapes
+                x.input_shapes != "" and x._enable_show_input_shapes
                 for x in self
                 if isinstance(x, KernelEvent)
             ]
         )
         has_attributes = any(
             [
-                x.attributes != "-" and x._enable_show_attributes
+                x.attributes != "" and x._enable_show_attributes
                 for x in self
                 if isinstance(x, KernelEvent)
             ]
         )
         has_bandwidth = any(
-            [x.bandwidth != "-" for x in self if isinstance(x, KernelEvent)]
+            [x.bandwidth != "" for x in self if isinstance(x, KernelEvent)]
         )
         t = Table(
             "Name",
@@ -333,6 +333,7 @@ class Events(list):
             "GPU time total",
             "GPU time",
             "Number of calls",
+            box=box.SIMPLE,
         )
         field_keys = [
             "name",
@@ -353,7 +354,7 @@ class Events(list):
             field_keys.append("bandwidth")
 
         def build_row(data: dict):
-            return tuple(str(data.get(key, "-")) for key in field_keys)
+            return tuple(str(data.get(key, "")) for key in field_keys)
 
         for item in self:
             if isinstance(item, CustomEvent):
