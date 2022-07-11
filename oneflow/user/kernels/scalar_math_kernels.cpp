@@ -26,7 +26,7 @@ std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> NewBroadcastElementwi
     Context* ctx, ep::primitive::BinaryOp op) {
   const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("in", 0);
   const user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-  const int64_t ndims = y->shape_view().NumAxes();
+  const int64_t ndims = y->shape().NumAxes();
   return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
       ctx->device_type(), op, x->data_type(), y->data_type(), ndims);
 }
@@ -59,9 +59,6 @@ class ScalarMathKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED();
     }
-    const void* in_ptr = in->dptr();
-    void* out_ptr = out->mut_dptr();
-
     int64_t elem_cnt = out->shape_view().elem_cnt();
     if (elem_cnt != 0) {
       std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> primitive =
@@ -95,9 +92,6 @@ class ScalarReverseMathKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED();
     }
-    const void* in_ptr = in->dptr();
-    void* out_ptr = out->mut_dptr();
-
     int64_t elem_cnt = out->shape_view().elem_cnt();
     if (elem_cnt != 0) {
       std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> primitive =
