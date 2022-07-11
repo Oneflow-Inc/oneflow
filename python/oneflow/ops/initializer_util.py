@@ -462,70 +462,6 @@ def truncated_normal_initializer(
 
     Returns:
         initializer_conf_util.InitializerConf: Initial configuration
-
-    For example: 
-
-    Example 1: 
-
-    .. code-block:: python 
-
-        import oneflow as flow
-        import oneflow.typing as tp
-
-
-        def watch_handler(y: tp.Numpy):
-            print("out", y)
-
-
-        @flow.global_function()
-        def truncated_normal_Job() -> None:
-            init = flow.truncated_normal_initializer(mean=1, stddev=1)
-            blob = flow.get_variable(
-                "blob-weight",
-                shape=(3, ),
-                initializer=init,
-                trainable=True
-            )
-            flow.watch(blob, watch_handler)
-
-
-        checkpoint = flow.train.CheckPoint()
-        checkpoint.init()
-        truncated_normal_Job()
-
-        # out [1.8303236  0.09787154 0.83049864]
-
-    Example 2: 
-
-    .. code-block:: python 
-
-        import oneflow as flow
-        import numpy as np
-        import oneflow.typing as tp
-
-
-        @flow.global_function()
-        def conv2d_truncated_normal_Job(x: tp.Numpy.Placeholder((1, 256, 32, 32))
-        ) -> tp.Numpy:
-            initializer = flow.truncated_normal_initializer(mean=0, stddev=1)
-
-            conv2d = flow.layers.conv2d(
-                x,
-                filters=128,
-                kernel_size=3,
-                strides=1,
-                padding='SAME',
-                kernel_initializer=initializer, 
-                name="Conv2d"
-            )
-            return conv2d
-
-
-        x = np.random.randn(1, 256, 32, 32).astype(np.float32)
-        out = conv2d_truncated_normal_Job(x)
-
-        # out.shape (1, 128, 32, 32)
-
     """
     initializer = initializer_conf_util.InitializerConf()
     setattr(initializer.truncated_normal_conf, "mean", float(mean))
@@ -534,100 +470,37 @@ def truncated_normal_initializer(
 
 
 def glorot_uniform_initializer(
+    gain: float = 1.0,
     data_format: str = "",
 ) -> initializer_conf_util.InitializerConf:
-    """Initializer that generates a Xavier uniform distribution. 
+    r"""Initializer that generates a Xavier uniform distribution. 
     
     It also can be called as `oneflow.glorot_uniform_initializer`.  
 
     The equation is: 
 
-    .. math:: 
+    .. math::
 
-        W\\sim U(-\\sqrt{\\frac{{6}}{{n_j+n_{j+1}}}},\\sqrt{\\frac{{6}}{{n_j+n_{j+1}}}})
+        W\sim U(0, gain*\sqrt{\frac{{6}}{{fan\_in+fan\_out}}})
 
     :math:`U` means uniform distribution 
 
-    :math:`n_j` means the amount of Nth layer parameters 
-
     Args:
+        gain (float, optional): an optional scaling factor. default: 1.0
         data_format (str, optional): The data format. Defaults to "".
 
     Returns:
         initializer_conf_util.InitializerConf: Initial configuration
 
-    For example: 
-
-    Example 1:
-
-    .. code-block:: python 
-
-        import oneflow as flow
-        import oneflow.typing as tp
-
-
-        def watch_handler(y: tp.Numpy):
-            print("out", y)
-
-
-        @flow.global_function()
-        def xavier_uniform_Job() -> None:
-            init = flow.xavier_uniform_initializer()
-            blob = flow.get_variable(
-                "blob-weight",
-                shape=(3, 3),
-                initializer=init,
-                trainable=True
-            )
-            flow.watch(blob, watch_handler)
-
-
-        checkpoint = flow.train.CheckPoint()
-        checkpoint.init()
-        xavier_uniform_Job()
-
-        # out [[-0.14424723 -0.9532095  -0.08723891]
-        #      [-0.8011227  -0.29729813 -0.26769108]
-        #      [ 0.9208976  -0.5971756  -0.15077025]]
-
-    Example 2: 
-
-    .. code-block:: python 
-
-        import oneflow as flow
-        import numpy as np
-        import oneflow.typing as tp
-
-
-        @flow.global_function()
-        def conv2d_xavier_uniform_Job(x: tp.Numpy.Placeholder((1, 256, 32, 32))
-        ) -> tp.Numpy:
-            initializer = flow.xavier_uniform_initializer()
-            conv2d = flow.layers.conv2d(
-                x,
-                filters=128,
-                kernel_size=3,
-                strides=1,
-                padding='SAME',
-                kernel_initializer=initializer, 
-                name="Conv2d"
-            )
-            return conv2d
-
-
-        x = np.random.randn(1, 256, 32, 32).astype(np.float32)
-        out = conv2d_xavier_uniform_Job(x)
-
-        # out.shape (1, 128, 32, 32)
-
     """
-    return variance_scaling_initializer(1.0, "fan_avg", "random_uniform", data_format)
+    return variance_scaling_initializer(gain, "fan_avg", "random_uniform", data_format)
 
 
 def glorot_normal_initializer(
+    gain: float = 1.0,
     data_format: str = "",
 ) -> initializer_conf_util.InitializerConf:
-    """Initializer that generates a Xavier normal distribution. 
+    r"""Initializer that generates a Xavier normal distribution. 
     
     It also can be called as `oneflow.glorot_normal_initializer`.  
 
@@ -635,84 +508,19 @@ def glorot_normal_initializer(
 
     .. math:: 
 
-        W\\sim N(0, \\sqrt{\\frac{{2}}{{n_j+n_{j+1}}}})
+        W\sim N(0, gain*\sqrt{\frac{{2}}{{fan\_in+fan\_out}}})
 
     :math:`N` means normal distribution 
 
-    :math:`n_j` means the amount of Nth layer parameters 
-
     Args:
+        gain (float, optional): an optional scaling factor. default: 1.0
         data_format (str, optional): The data format. Defaults to "".
 
     Returns:
         initializer_conf_util.InitializerConf: Initial configuration
 
-    For example: 
-
-    Example 1: 
-
-    .. code-block:: python 
-
-        import oneflow as flow
-        import oneflow.typing as tp
-
-
-        def watch_handler(y: tp.Numpy):
-            print("out", y)
-
-
-        @flow.global_function()
-        def xavier_normal_Job() -> None:
-            init = flow.xavier_normal_initializer()
-            blob = flow.get_variable(
-                "blob-weight",
-                shape=(3, 3),
-                initializer=init,
-                trainable=True
-            )
-            flow.watch(blob, watch_handler)
-
-
-        checkpoint = flow.train.CheckPoint()
-        checkpoint.init()
-        xavier_normal_Job()
-
-        # out [[ 0.5908121  -0.10804518 -0.6148571 ]
-        #      [ 1.4007381  -0.08172473  0.36579943]
-        #      [-0.6461796  -0.15923311  0.33653972]]
-
-    Example 2: 
-
-    .. code-block:: python 
-
-        import oneflow as flow
-        import numpy as np
-        import oneflow.typing as tp
-
-
-        @flow.global_function()
-        def conv2d_xavier_normal_Job(x: tp.Numpy.Placeholder((1, 256, 32, 32))
-        ) -> tp.Numpy:
-            initializer = flow.xavier_normal_initializer()
-            conv2d = flow.layers.conv2d(
-                x,
-                filters=128,
-                kernel_size=3,
-                strides=1,
-                padding='SAME',
-                kernel_initializer=initializer, 
-                name="Conv2d"
-            )
-            return conv2d
-
-
-        x = np.random.randn(1, 256, 32, 32).astype(np.float32)
-        out = conv2d_xavier_normal_Job(x)
-
-        # out.shape (1, 128, 32, 32)
-
     """
-    return variance_scaling_initializer(1.0, "fan_avg", "random_normal", data_format)
+    return variance_scaling_initializer(gain, "fan_avg", "random_normal", data_format)
 
 
 def variance_scaling_initializer(
@@ -745,70 +553,6 @@ def variance_scaling_initializer(
 
     Returns:
         initializer_conf_util.InitializerConf: Initial configuration
-
-    For example: 
-
-    Example 1: 
-
-    .. code-block:: python 
-
-        import oneflow as flow
-        import oneflow.typing as tp
-
-
-        def watch_handler(y: tp.Numpy):
-            print("out", y)
-
-
-        @flow.global_function()
-        def variance_scale_Job() -> None:
-            init = flow.variance_scaling_initializer(scale=2.0, mode="fan_avg")
-            blob = flow.get_variable(
-                "blob-weight",
-                shape=(3, 3),
-                initializer=init,
-                trainable=True
-            )
-            flow.watch(blob, watch_handler)
-
-
-        checkpoint = flow.train.CheckPoint()
-        checkpoint.init()
-        variance_scale_Job()
-
-        # out [[-0.13931477  0.12266728 -0.9434968 ]
-        #      [-0.49665168  0.10231158 -0.19194333]
-        #      [-0.7902896  -1.7034698  -0.38695997]]
-
-    Example 2: 
-
-    .. code-block:: python 
-
-        import oneflow as flow
-        import numpy as np
-        import oneflow.typing as tp
-
-
-        @flow.global_function()
-        def conv2d_variance_scaling_Job(x: tp.Numpy.Placeholder((1, 256, 32, 32))
-        ) -> tp.Numpy:
-            initializer = flow.variance_scaling_initializer(mode="fan_out")
-            conv2d = flow.layers.conv2d(
-                x,
-                filters=128,
-                kernel_size=3,
-                strides=1,
-                padding='SAME',
-                kernel_initializer=initializer, 
-                name="Conv2d"
-            )
-            return conv2d
-
-
-        x = np.random.randn(1, 256, 32, 32).astype(np.float32)
-        out = conv2d_variance_scaling_Job(x)
-
-        # out.shape (1, 128, 32, 32)
 
     """
     initializer = initializer_conf_util.InitializerConf()
@@ -1159,14 +903,19 @@ def TruncatedNormalInitializerImpl(
 
 
 def GenInitialFan(initializer_conf, var_blob_shape: Sequence[int]):
+    assert len(var_blob_shape) >= 2, "Fan in and fan out can out be computed for tensor with fewer 2 dimensions"
     variance_norm = initializer_conf.variance_norm
     data_format = initializer_conf.data_format
+
     fan_in = np.prod(var_blob_shape[1:]).astype(np.int32).item()
     fan_out = var_blob_shape[0]
-    if data_format == "channel_first":
+    if data_format in ["channel_first", "NCHW"]:
         fan_out *= np.prod(var_blob_shape[2:]).astype(np.int32).item()
-    else:
+    elif data_format in ["channel_last", "NHWC"]:
         fan_out *= np.prod(var_blob_shape[1:-1]).astype(np.int32).item()
+    else:
+        raise RuntimeError(f"Unknown data_format {data_format}")
+
     if variance_norm == initializer_conf_util.kAverage:
         fan = (fan_in + fan_out) / 2
     elif variance_norm == initializer_conf_util.kFanIn:
@@ -1184,17 +933,17 @@ def VarianceScalingInitializerImpl(
     random_seed: int,
     var_blob_shape: Sequence[int],
 ):
-    scale = initializer_conf.scale / GenInitialFan(initializer_conf, var_blob_shape)
+    std = initializer_conf.scale / math.sqrt(GenInitialFan(initializer_conf, var_blob_shape))
     distribution = initializer_conf.distribution
     rng = np.random.default_rng(random_seed)
     if distribution == initializer_conf_util.kTruncatedNormal:
-        stddev = math.sqrt(scale) / 0.8796256610342398
-        return lambda length: RngTruncatedNormal(0, stddev, length, rng)
+        raise NotImplementedError
+        #  stddev = math.sqrt(scale) / 0.8796256610342398
+        #  return lambda length: RngTruncatedNormal(0, stddev, length, rng)
     elif distribution == initializer_conf_util.kRandomNormal:
-        stddev = math.sqrt(scale)
-        return lambda length: rng.normal(0, stddev, size=length)
+        return lambda length: rng.normal(0, std, size=length)
     elif distribution == initializer_conf_util.kRandomUniform:
-        limit = math.sqrt(3.0 * scale)
+        limit = math.sqrt(3.0) * std
         return lambda length: rng.uniform(low=-limit, high=limit, size=length)
     else:
         raise NotImplemented()

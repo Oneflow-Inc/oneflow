@@ -272,14 +272,12 @@ def _kaiming_normal(
 
 
 def _xavier_normal(self, gain=1.0, *, data_format="NCHW"):
-    assert gain == 1.0, "Only gain == 1.0 is supported now"
-    initializer_conf = flow.xavier_normal_initializer(data_format=data_format)
+    initializer_conf = flow.xavier_normal_initializer(gain=gain, data_format=data_format)
     return _init_by_initializer_conf(self, initializer_conf)
 
 
 def _xavier_uniform(self, gain=1.0, *, data_format="NCHW"):
-    assert gain == 1.0, "Only gain == 1.0 is supported now"
-    initializer_conf = flow.xavier_uniform_initializer(data_format=data_format)
+    initializer_conf = flow.xavier_uniform_initializer(gain=gain, data_format=data_format)
     return _init_by_initializer_conf(self, initializer_conf)
 
 
