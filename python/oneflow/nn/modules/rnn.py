@@ -251,7 +251,7 @@ class RNNBase(nn.Module):
 
 
 class RNN(RNNBase):
-    """The interface is consistent with PyTorch.
+    r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.RNN.html.
 
     Applies a multi-layer Elman RNN with \tanhtanh or \text{ReLU}ReLU non-linearity to an input sequence.
@@ -295,13 +295,14 @@ class RNN(RNNBase):
           state for each element in the batch. Defaults to zeros if not provided.
 
         where:
+
         .. math::
             \begin{aligned}
                 N ={} & \text{batch size} \\
                 L ={} & \text{sequence length} \\
                 D ={} & 2 \text{ if bidirectional=True otherwise } 1 \\
-                H_{in} ={} & \text{input\_size} \\
-                H_{out} ={} & \text{hidden\_size}
+                H_{in} ={} & \text{input_size} \\
+                H_{out} ={} & \text{hidden_size}
             \end{aligned}
 
     Outputs: output, h_n
@@ -487,7 +488,7 @@ class RNN(RNNBase):
 
 
 class LSTM(RNNBase):
-    """The interface is consistent with PyTorch.
+    r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/1.10/_modules/torch/nn/modules/rnn.html#LSTM.
 
     Applies a multi-layer long short-term memory (LSTM) RNN to an input sequence.
@@ -787,7 +788,7 @@ class LSTM(RNNBase):
 
 
 class GRU(RNNBase):
-    """The interface is consistent with PyTorch.
+    r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/1.10/_modules/torch/nn/modules/rnn.html#GRU.
 
     Applies a multi-layer gated recurrent unit (GRU) RNN to an input sequence.
@@ -800,7 +801,7 @@ class GRU(RNNBase):
         \begin{array}{ll}
             r_t = \sigma(W_{ir} x_t + b_{ir} + W_{hr} h_{(t-1)} + b_{hr}) \\
             z_t = \sigma(W_{iz} x_t + b_{iz} + W_{hz} h_{(t-1)} + b_{hz}) \\
-            n_t = \tanh(W_{in} x_t + b_{in} + r_t * (W_{hn} h_{(t-1)}+ b_{hn})) \\
+            n_t = \\tanh(W_{in} x_t + b_{in} + r_t * (W_{hn} h_{(t-1)}+ b_{hn})) \\
             h_t = (1 - z_t) * n_t + z_t * h_{(t-1)}
         \end{array}
     
@@ -1047,7 +1048,7 @@ class RNNCellBase(nn.Module):
 
 
 class RNNCell(RNNCellBase):
-    """The interface is consistent with PyTorch.
+    r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.RNNCell.html.
     
     An Elman RNN cell with tanh or ReLU non-linearity.
@@ -1169,7 +1170,7 @@ class RNNCell(RNNCellBase):
 
 
 class LSTMCell(RNNCellBase):
-    """The interface is consistent with PyTorch.
+    r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.LSTMCell.html.
     
     A long short-term memory (LSTM) cell.
@@ -1286,7 +1287,7 @@ class LSTMCell(RNNCellBase):
 
 
 class GRUCell(RNNCellBase):
-    """The interface is consistent with PyTorch.
+    r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.GRUCell.html.
     
     A gated recurrent unit (GRU) cell
@@ -1340,6 +1341,8 @@ class GRUCell(RNNCellBase):
     For example:
 
     .. code-block:: python
+
+
         >>> import oneflow as flow
         >>> import oneflow.nn as nn
 
@@ -1348,7 +1351,9 @@ class GRUCell(RNNCellBase):
         >>> hx = flow.randn(3, 20)
         >>> hx = rnn(input[0], hx)
         >>> hx.size()
+
         oneflow.Size([3, 20])
+
     """
 
     def __init__(
