@@ -133,15 +133,13 @@ bool LocalTensorMetaInferArgs::operator==(const LocalTensorMetaInferArgs& other)
          && this->input_local_tensor_metas_ == other.input_local_tensor_metas_;
 }
 
-Maybe<LocalTensorMetaInferArgs> LocalTensorMetaInferArgs::New(const AttrMap& attrs,
-                                                              Symbol<Device> default_device,
-                                                              const TensorTuple& input_tensors) {
-  std::shared_ptr<LocalTensorMetaInferArgs> infer_args(new LocalTensorMetaInferArgs());
-  infer_args->attrs_ = attrs;
-  infer_args->default_device_ = default_device;
-  infer_args->input_local_tensor_metas_.resize(input_tensors.size());
-  JUST(infer_args->InitInputLocalTensorMetas(input_tensors));
-  return infer_args;
+Maybe<void> LocalTensorMetaInferArgs::Init(const AttrMap& attrs, Symbol<Device> default_device,
+                                           const TensorTuple& input_tensors) {
+  this->attrs_ = attrs;
+  this->default_device_ = default_device;
+  this->input_local_tensor_metas_.resize(input_tensors.size());
+  JUST(this->InitInputLocalTensorMetas(input_tensors));
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTuple& input_tensors) {
@@ -173,7 +171,6 @@ Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTupl
     }
   } else {
     stream = JUST(InferDeviceAndStream(user_op_expr, infer_args, &output_mut_metas));
-    result->set_need_check_mem_case(false);
   }
   result->set_stream(stream);
 

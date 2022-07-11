@@ -68,19 +68,19 @@ Maybe<EagerLocalTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& te
 
 Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                            TensorTuple* outputs, const OpExprInterpContext& ctx) {
+  OF_PROFILER_RANGE_GUARD("NaiveInterpret");
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
   Symbol<Device> default_device = JUST(GetDefaultDevice(inputs, ctx));
-  std::shared_ptr<LocalTensorMetaInferArgs> infer_args =
-      JUST(LocalTensorMetaInferArgs::New(ctx.attrs, default_device, inputs));
-
-  std::shared_ptr<const LocalTensorInferResult> result =
-      JUST(user_op_expr.mut_local_tensor_infer_cache()->GetOrInfer(*infer_args));
+  std::shared_ptr<const LocalTensorInferResult> result;
+  {
+    LocalTensorMetaInferArgs infer_args;
+    JUST(infer_args.Init(ctx.attrs, default_device, inputs));
+    result = JUST(user_op_expr.mut_local_tensor_infer_cache()->GetOrInfer(infer_args));
+  }
 
   vm::EagerBlobObjectList input_eager_blob_objects(inputs.size());
-  if (inputs.size() > 0) {
-    for (int i = 0; i < inputs.size(); i++) {
-      input_eager_blob_objects.at(i) = JUST(inputs.at(i)->eager_blob_object());
-    }
+  for (int i = 0; i < inputs.size(); i++) {
+    input_eager_blob_objects.at(i) = JUST(inputs.at(i)->eager_blob_object());
   }
 
   const auto& output_tensor_metas = result->output_tensor_metas();
@@ -142,7 +142,6 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 Maybe<void> EagerLocalInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
                                              TensorTuple* outputs,
                                              const OpExprInterpContext& ctx) const {
-  OF_PROFILER_RANGE_GUARD("NaiveInterpret");
   return NaiveInterpret(op_expr, inputs, outputs, ctx);
 }
 

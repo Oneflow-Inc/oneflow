@@ -34,6 +34,7 @@ class UserOpExpr;
 
 class LocalTensorMetaInferArgs final {
  public:
+  LocalTensorMetaInferArgs() = default;
   LocalTensorMetaInferArgs(const LocalTensorMetaInferArgs&) = default;
   LocalTensorMetaInferArgs(LocalTensorMetaInferArgs&&) = default;
   ~LocalTensorMetaInferArgs() = default;
@@ -49,11 +50,10 @@ class LocalTensorMetaInferArgs final {
 
   bool operator==(const LocalTensorMetaInferArgs& other) const;
 
-  static Maybe<LocalTensorMetaInferArgs> New(const AttrMap& attrs, Symbol<Device> default_device,
-                                             const TensorTuple& input_tensors);
+  Maybe<void> Init(const AttrMap& attrs, Symbol<Device> default_device,
+                   const TensorTuple& input_tensors);
 
  private:
-  LocalTensorMetaInferArgs() = default;
   Maybe<void> InitInputLocalTensorMetas(const TensorTuple& input_tensors);
 
   AttrMap attrs_;
@@ -80,8 +80,7 @@ namespace one {
 
 class LocalTensorInferResult final {
  public:
-  LocalTensorInferResult(size_t output_size)
-      : output_tensor_metas_(output_size), need_check_mem_case_(true) {}
+  LocalTensorInferResult(size_t output_size) : output_tensor_metas_(output_size) {}
   LocalTensorInferResult(const LocalTensorInferResult&) = delete;
   LocalTensorInferResult(LocalTensorInferResult&&) = delete;
   ~LocalTensorInferResult() = default;
@@ -94,15 +93,9 @@ class LocalTensorInferResult final {
   const Symbol<Stream>& stream() const { return stream_; }
   void set_stream(const Symbol<Stream>& stream) { stream_ = stream; }
 
-  bool need_check_mem_case() const { return need_check_mem_case_; }
-  void set_need_check_mem_case(bool need_check_mem_case) {
-    need_check_mem_case_ = need_check_mem_case;
-  }
-
  private:
   std::vector<Symbol<LocalTensorMeta>> output_tensor_metas_;
   Symbol<Stream> stream_;
-  bool need_check_mem_case_;
 };
 
 class LocalTensorInferCache final {
