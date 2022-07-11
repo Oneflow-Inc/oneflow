@@ -1086,6 +1086,10 @@ class HannWindowFunctor {
   Maybe<Tensor> operator()(const int64_t window_length, const bool& periodic,
                            const Optional<Symbol<Device>>& device,
                            const Optional<Symbol<DType>>& dtype, const bool& requires_grad) const {
+    if (dtype.has_value() && !IsFloatingDataType(JUST(dtype)->data_type())) {
+      return Error::RuntimeError()
+             << "hann_window expects floating point dtypes, got: " << JUST(dtype)->name();
+    }
     auto result = JUST(Arange(1, 2, 1, dtype, device));
     if (window_length != 1) {
       if (periodic) {
@@ -1104,6 +1108,7 @@ class HannWindowFunctor {
     return result;
   }
 };
+
 class GlobalHannWindowFunctor {
  public:
   Maybe<Tensor> operator()(const int64_t window_length, const bool& periodic,
@@ -1111,6 +1116,10 @@ class GlobalHannWindowFunctor {
                            const std::vector<Symbol<SbpParallel>>& sbp,
                            const Optional<Symbol<DType>>& dtype, const bool& requires_grad) const {
     JUST(CheckDeviceIdsIsValid(placement));
+    if (dtype.has_value() && !IsFloatingDataType(JUST(dtype)->data_type())) {
+      return Error::RuntimeError()
+             << "hann_window expects floating point dtypes, got: " << JUST(dtype)->name();
+    }
     auto result = JUST(GlobalArange(1, 2, 1, dtype, placement, sbp));
     if (window_length != 1) {
       if (periodic) {
