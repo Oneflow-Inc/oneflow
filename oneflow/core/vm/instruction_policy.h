@@ -29,11 +29,7 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class Dependence;
 class EagerBlobObject;
-
-using DependenceVector = std::vector<Dependence*>;
-
 class PhyInstrOperand;
 
 class InstructionPolicy {
