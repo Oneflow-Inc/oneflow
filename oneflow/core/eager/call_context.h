@@ -28,7 +28,7 @@ namespace oneflow {
 namespace one {
 
 class StatefulLocalOpKernel;
-class ConsistentTensorInferResult;
+class GlobalTensorInferResult;
 
 }  // namespace one
 
@@ -70,15 +70,15 @@ class TmpTensor final : public user_op::Tensor {
 
 class CallContext {
  public:
-  CallContext(
-      ComposedAttrMap&& composed_attrs, const one::EagerBlobObjectListPtr& inputs,
-      const one::EagerBlobObjectListPtr& outputs,
-      const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
-      const one::OpExprInterpContext& op_interp_ctx, const std::shared_ptr<MemoryCase>& mem_case)
+  CallContext(ComposedAttrMap&& composed_attrs, const one::EagerBlobObjectListPtr& inputs,
+              const one::EagerBlobObjectListPtr& outputs,
+              const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
+              const one::OpExprInterpContext& op_interp_ctx,
+              const std::shared_ptr<MemoryCase>& mem_case)
       : composed_attrs_(std::move(composed_attrs)),
         inputs_(inputs),
         outputs_(outputs),
-        consistent_tensor_infer_result_(consistent_tensor_infer_result),
+        global_tensor_infer_result_(global_tensor_infer_result),
         op_interp_ctx_(op_interp_ctx),
         tmp_tensor_(mem_case) {}
 
@@ -87,9 +87,8 @@ class CallContext {
   const ComposedAttrMap& composed_attrs() const { return composed_attrs_; }
   const one::EagerBlobObjectListPtr& inputs() const { return inputs_; }
   const one::EagerBlobObjectListPtr& outputs() const { return outputs_; }
-  const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result()
-      const {
-    return consistent_tensor_infer_result_;
+  const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result() const {
+    return global_tensor_infer_result_;
   }
   const one::OpExprInterpContext& op_interp_ctx() const { return op_interp_ctx_; }
   TmpTensor* mut_tmp_tensor() { return &tmp_tensor_; }
@@ -98,7 +97,7 @@ class CallContext {
   const ComposedAttrMap composed_attrs_;
   const one::EagerBlobObjectListPtr inputs_;
   const one::EagerBlobObjectListPtr outputs_;
-  const std::shared_ptr<const one::ConsistentTensorInferResult> consistent_tensor_infer_result_;
+  const std::shared_ptr<const one::GlobalTensorInferResult> global_tensor_infer_result_;
   const one::OpExprInterpContext op_interp_ctx_;
   TmpTensor tmp_tensor_;
 };
