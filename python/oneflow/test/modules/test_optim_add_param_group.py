@@ -14,13 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import tempfile
 import unittest
-from collections import OrderedDict
-
-import numpy as np
 from oneflow.test_utils.test_util import GenArgList
-
 import oneflow as flow
 
 def _test_sgd_add_param_group(test_case):
