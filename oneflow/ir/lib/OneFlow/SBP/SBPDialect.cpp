@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "OneFlow/SBP/SBPDialect.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "OneFlow/SBPDialect.cpp.inc"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/TypeRange.h"
 
