@@ -93,7 +93,7 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
                     attr_value = random.choice([True, False])
                     attrs_and_values_to_check.append((attrs, attr_value))
                 else:
-                    raise Exception("Unsupported type!")
+                    raise TypeError("Unsupported type!")
 
                 api(attr_value)
                 num_api_tested += 1
