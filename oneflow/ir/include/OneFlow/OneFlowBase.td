@@ -34,50 +34,6 @@ def DTArrayAttr : TypedArrayAttrBase<OneFlow_DataType, ""> {}
 
 def ShapeArrayAttr : TypedArrayAttrBase<ShapeAttr, ""> {}
 
-class OneFlow_Attr<string name, string attrMnemonic, list<Trait> traits = []>
-    : AttrDef<OneFlow_Dialect, name, traits> {
-  let mnemonic = attrMnemonic;
-}
-
-def OneFlow_SplitAttr : OneFlow_Attr<"Split", "s"> {
-  let summary = "Signature S";
-  let description = [{
-    signature split, representing a sharded tensor at the `axis`
-  }];
-  let parameters = (ins "int":$axis);
-  let assemblyFormat = "`<` $axis `>`";
-}
-
-def OneFlow_BroadcastAttr : OneFlow_Attr<"Broadcast", "b"> {
-  let summary = "Signature B";
-  let description = [{
-    signature broadcast, representing a tensor to be duplicated
-  }];
-}
-
-def OneFlow_PartialSumAttr : OneFlow_Attr<"PartialSum", "p"> {
-  let summary = "Signature P";
-  let description = [{
-    signature partial sum, representing a shareded tensor will be reduced lazily
-  }];
-}
-
-def OneFlow_ParallelSignatureAttr : OneFlow_Attr<"ParallelSignature", "parallel_signature"> {
-  let summary = "Parallel signature of OneFlow Op, aka. SBP";
-  let description = [{
-    To represent a signature, with a arrow in beween, pass two listes corepondent to the data input and data output tensors. For example:
-    ```
-    #oneflow.parallel_signature<[#oneflow.s<0>] -> [#oneflow.s<0>]>
-    ```
-    One level nested list is used to represent a 2D parallelism signature. For example:
-    ```
-    #oneflow.parallel_signature<[[#oneflow.s<0>, #oneflow.p]] -> [#oneflow.s<0>]>
-    ```
-  }];
-  let parameters = (ins "::mlir::ArrayAttr":$inputs, "::mlir::ArrayAttr":$outputs);
-  let assemblyFormat = "`<` $inputs `->` $outputs `>`";
-}
-
 def OneFlow_IsOpConfCompatible : NativeOpTrait<"IsOpConfCompatible">;
 def OneFlow_IsImportCompatible : NativeOpTrait<"IsImportCompatible">;
 def OneFlow_AlternativeOp : NativeOpTrait<"IsAlternative">;

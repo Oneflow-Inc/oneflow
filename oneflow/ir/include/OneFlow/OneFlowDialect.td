@@ -14,12 +14,8 @@ def OneFlow_Dialect : Dialect {
         "sbp::SBPDialect",
         "func::FuncDialect"
     ];
-    let extraClassDeclaration = [{
-        void registerAttributes();
-    }];
     let hasConstantMaterializer = 1;
     let useDefaultTypePrinterParser = 1;
-    let useDefaultAttributePrinterParser = 1;
 }
 
 #endif // ONEFLOW_DIALECT

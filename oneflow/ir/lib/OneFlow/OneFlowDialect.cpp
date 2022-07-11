@@ -26,7 +26,6 @@ namespace mlir {
 namespace oneflow {
 
 void OneFlowDialect::initialize() {
-  registerAttributes();
   addOperations<
 #define GET_OP_LIST
 #include "OneFlow/OneFlowOps.cpp.inc"
