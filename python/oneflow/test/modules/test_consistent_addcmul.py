@@ -20,7 +20,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_addcmul(test_case, ndim, placement, sbp):
     shape = [random(low=2, high=3) * 8 for i in range(ndim)]
 

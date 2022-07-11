@@ -21,7 +21,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=False)
+@autotest(n=1, auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=True)
 def do_test_erfc_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 3) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)
