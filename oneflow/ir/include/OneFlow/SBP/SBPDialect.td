@@ -31,9 +31,9 @@ def SBP_Dialect : Dialect {
     let extraClassDeclaration = [{
         void registerAttributes();
     }];
-    let hasConstantMaterializer = 1;
-    let useDefaultTypePrinterParser = 1;
-    let useDefaultAttributePrinterParser = 1;
+    // let hasConstantMaterializer = 1;
+    // let useDefaultTypePrinterParser = 1;
+    // let useDefaultAttributePrinterParser = 1;
 }
 
 #endif // ONEFLOW_IR_INCLUDE_SBP_SBPDIALECT_H_
