@@ -37,7 +37,7 @@ class Session {
   Maybe<void> PushLocalStrategyEnabled(bool is_local);
   Maybe<void> PopLocalStrategyEnabled();
   Maybe<bool> IsLocalStrategyEnabled() const;
-  Maybe<bool> IsConsistentStrategyEnabled() const;
+  Maybe<bool> IsGlobalStrategyEnabled() const;
 
  private:
   int64_t id_;

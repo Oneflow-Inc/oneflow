@@ -3201,7 +3201,7 @@ class TestEagerNaiveBoxingSToS(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n2d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestEagerConsistentCastWithSamePlacementAndSBP(flow.unittest.TestCase):
+class TestEagerGlobalCastWithSamePlacementAndSBP(flow.unittest.TestCase):
     def test_eager_global_cast_with_same_placement_and_sbp(test_case):
         x = np.ones((4, 8), dtype=np.int32)
         placement = flow.placement("cuda", ranks=[0, 1])
@@ -3218,7 +3218,7 @@ class TestEagerConsistentCastWithSamePlacementAndSBP(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestEagerConsistentCast1DTo2DSBP(flow.unittest.TestCase):
+class TestEagerGlobalCast1DTo2DSBP(flow.unittest.TestCase):
     def test_eager_global_cast_1d_to_2d_sbp(test_case):
         x = np.ones((4, 8), dtype=np.int32)
         placement1 = flow.placement("cuda", ranks=[0, 1, 2, 3])
@@ -3241,7 +3241,7 @@ class TestEagerConsistentCast1DTo2DSBP(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestEagerConsistentCast2DTo1DSBP(flow.unittest.TestCase):
+class TestEagerGlobalCast2DTo1DSBP(flow.unittest.TestCase):
     def test_eager_global_cast_2d_to_1d_sbp(test_case):
         x = np.ones((4, 8), dtype=np.int32)
         placement1 = flow.placement("cuda", ranks=[0, 1, 2, 3])
@@ -3309,7 +3309,7 @@ def _test_eager_global_cast_1d_uneven_split(test_case, device_type, shape):
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestEagerConsistentCastOneDUnevenSplit(flow.unittest.TestCase):
+class TestEagerGlobalCastOneDUnevenSplit(flow.unittest.TestCase):
     def test_eager_global_cast_1d_uneven_split(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "cuda"]
@@ -3342,7 +3342,7 @@ def _test_eager_global_n_dim_reduce(test_case, device_type, src_sbp, dst_sbp):
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestEagerConsistentCastNDimReduceBoxing(flow.unittest.TestCase):
+class TestEagerGlobalCastNDimReduceBoxing(flow.unittest.TestCase):
     def test_eager_global_n_dim_reduce(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["cpu", "cuda"]
@@ -3352,7 +3352,7 @@ class TestEagerConsistentCastNDimReduceBoxing(flow.unittest.TestCase):
             _test_eager_global_n_dim_reduce(test_case, *arg)
 
 
-def _test_eager_consistent_with_0_size_data(
+def _test_eager_global_with_0_size_data(
     test_case,
     shape,
     in_device_type,
@@ -3374,7 +3374,7 @@ def _test_eager_consistent_with_0_size_data(
 
 @flow.unittest.skip_unless_1n4d()
 class TestEagerNaiveBoxingSToS(flow.unittest.TestCase):
-    def test_eager_consistent_with_0_size_data(test_case):
+    def test_eager_global_with_0_size_data(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(8, 0, 4), (5, 0, 7)]
         arg_dict["in_device_type"] = ["cpu", "cuda"]
@@ -3394,7 +3394,7 @@ class TestEagerNaiveBoxingSToS(flow.unittest.TestCase):
             (flow.sbp.partial_sum,),
         ]
         for arg in GenArgList(arg_dict):
-            _test_eager_consistent_with_0_size_data(test_case, *arg)
+            _test_eager_global_with_0_size_data(test_case, *arg)
 
 
 def _test_eager_boxing_one_to_n_with_diff_dim(
