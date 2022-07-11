@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
@@ -57,6 +58,12 @@ std::unique_ptr<ep::primitive::Matmul> NewReduceMatmulNoTransAPrimitive(Context*
                             /*transpose_b=*/false);
 }
 
+template<typename Context>
+std::unique_ptr<ep::primitive::Fill> NewFillPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("output_tensor", 0)->data_type();
+  return ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->device_type(), data_type);
+}
+
 auto ReduceMatmulTransAPrimitiveExists() {
   return hob::make_custom("ReduceMatmulTransAPrimitiveExists",
                           [](const user_op::KernelRegContext& ctx) {
@@ -71,6 +78,12 @@ auto ReduceMatmulNoTransAPrimitiveExists() {
                           });
 }
 
+auto FillPrimitiveExists() {
+  return hob::make_custom("FillPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewFillPrimitive(&ctx).operator bool();
+  });
+}
+
 template<template<typename> class BinaryFunc, DeviceType device_type, typename T, typename K>
 class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
@@ -83,12 +96,20 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
+    const int32_t output_elem_cnt = output_tensor->shape_view().elem_cnt();
 
     if (input_tensor->shape_view().elem_cnt() == 0) {
       if (output_tensor->shape_view().elem_cnt() != 0) {
-        Memset<device_type>(
-            ctx->stream(), output_tensor->mut_dptr<K>(), 0,
-            output_tensor->shape_view().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()));
+        Scalar init_value = [&]() {
+          if (std::is_same<BinaryFunc<T>, BinaryFuncAny<T>>::value) { return Scalar(0); }
+          if (std::is_same<BinaryFunc<T>, BinaryFuncAll<T>>::value) { return Scalar(1); }
+          return Scalar(0);
+        }();
+        CHECK_GE(output_elem_cnt, 0);
+        if (output_elem_cnt == 0) { return; }
+        std::unique_ptr<ep::primitive::Fill> fill = NewFillPrimitive(ctx);
+        CHECK(fill);
+        fill->Launch(ctx->stream(), output_tensor->mut_dptr<K>(), init_value, output_elem_cnt);
       }
       return;
     }
@@ -119,7 +140,8 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
       .SetCreateFn<ReduceKernel<binary_func, device, dtype, bool>>()                             \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
                        && (user_op::HobDataType("input_tensor", 0) == GetDataType<dtype>::value) \
-                       && (user_op::HobDataType("output_tensor", 0) == DataType::kBool))         \
+                       && (user_op::HobDataType("output_tensor", 0) == DataType::kBool)          \
+                       && FillPrimitiveExists())                                                 \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
         const Shape& in_shape = ctx->InputShape("input_tensor", 0);                              \
         return in_shape.elem_cnt() * sizeof(dtype);                                              \

@@ -24,7 +24,7 @@ limitations under the License.
 
 namespace oneflow {
 
-// Can only be called in mirrored TODO: move this comment to ods
+// Can only be called in local TODO: move this comment to ods
 /* static */ Maybe<void> EagerBToSOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& shape = ctx->Attr<Shape>("shape");
   const std::string& out_parallel_conf_txt = ctx->Attr<std::string>("out_parallel_conf");
@@ -48,11 +48,11 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerBToSOp::GetSbp(user_op::SbpContext* ctx) {
-  return Error::TypeError() << "eager_b_to_s op doesn't support consistent tensor!";
+  return Error::TypeError() << "eager_b_to_s op doesn't support global tensor!";
 }
 
 /* static */ Maybe<void> EagerBToSOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  return Error::TypeError() << "eager_b_to_s op doesn't support consistent tensor!";
+  return Error::TypeError() << "eager_b_to_s op doesn't support global tensor!";
 }
 
 /* static */ Maybe<void> EagerBToSOp::InferDataType(user_op::InferContext* ctx) {
