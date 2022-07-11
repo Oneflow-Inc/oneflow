@@ -48,7 +48,7 @@ void BatchGatherCpuKernel(const T* src, T* dst, const K* indice, const size_t nu
   const size_t src_instance_size = outer_size * gather_size * inner_size;
   const size_t dst_instance_size = outer_size * indice_instance_size * inner_size;
 
-  for (int64_t batch_idx = 0; batch_idx < batch_size; batch_idx++) {
+  FOR_RANGE(int64_t, batch_idx, 0, batch_size) {
     const T* batch_src = src + batch_idx * src_instance_size;
     T* batch_dst = dst + batch_idx * dst_instance_size;
     const K* batch_indice = indice + batch_idx * indice_instance_size;
