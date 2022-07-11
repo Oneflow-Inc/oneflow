@@ -29,7 +29,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
-#include "oneflow/core/thread/thread_consistent_id.h"
+#include "oneflow/core/thread/thread_global_id.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/stream_on_independent_thread.h"
@@ -63,7 +63,7 @@ Maybe<void> ForEachThreadCtx(vm::VirtualMachineEngine* engine,
 
 void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
   *Initializer = [&]() {
-    CHECK_JUST(InitThisThreadUniqueConsistentId(kThreadConsistentIdScheduler, "scheduler"));
+    CHECK_JUST(InitThisThreadUniqueGlobalId(kThreadGlobalIdScheduler, "scheduler"));
     OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Scheduler");
   };
 }
@@ -416,8 +416,8 @@ Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device,
       CHECK_GT(device_type_value, 0);
       std::string device_tag = *CHECK_JUST(DeviceTag4DeviceType(device->enum_type()));
       if (!StreamOnIndependentThread::Visit(stream_role)) {
-        CHECK_JUST(InitThisThreadConsistentId(device_type_value + kThreadConsistentIdScheduler,
-                                              device_tag));
+        CHECK_JUST(
+            InitThisThreadGlobalId(device_type_value + kThreadGlobalIdScheduler, device_tag));
       }
       OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Worker_" + device_tag);
     };
