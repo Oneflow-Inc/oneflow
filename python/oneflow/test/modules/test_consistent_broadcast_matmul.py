@@ -23,13 +23,12 @@ from oneflow.test_utils.automated_test_util import *
 def _test_flow_tensor_consistent_broadcast_matmul_with_random_data(
     test_case, placement, x_sbp, y_sbp
 ):
+    batch_dim = random(1, 6) * 2
     k = random(1, 6) * 4
-    x = random_tensor(ndim=3, dim0=constant(2), dim1=constant(2), dim2=k).to_global(
+    x = random_tensor(ndim=3, dim0=batch_dim, dim2=k).to_global(
         placement=placement, sbp=x_sbp
     )
-    y = random_tensor(ndim=2, dim0=k, dim1=constant(2)).to_global(
-        placement=placement, sbp=y_sbp
-    )
+    y = random_tensor(ndim=2, dim0=k).to_global(placement=placement, sbp=y_sbp)
     return x.matmul(y)
 
 
@@ -37,11 +36,13 @@ def _test_flow_tensor_consistent_broadcast_matmul_with_random_data(
 def _test_flow_tensor_consistent_x_broadcast_y_matmul(
     test_case, placement, x_sbp, y_sbp
 ):
-    k = random(1, 6) * 4
-    x = random_tensor(ndim=2, dim0=1, dim1=k).to_global(placement=placement, sbp=x_sbp)
-    y = random_tensor(ndim=3, dim0=constant(2), dim1=k, dim2=constant(2)).to_global(
+    batch_dim = random(1, 6) * 8
+    k = random(1, 6)
+    x = random_tensor(ndim=2, dim1=k).to_global(placement=placement, sbp=x_sbp)
+    y = random_tensor(ndim=3, dim0=batch_dim, dim1=k).to_global(
         placement=placement, sbp=y_sbp
     )
+
     return x.matmul(y)
 
 
@@ -50,23 +51,40 @@ def _test_flow_tensor_consistent_broadcast_matmul_with_same_dims(
     test_case, placement, x_sbp, y_sbp
 ):
     k = random(1, 6) * 4
-    x = random_tensor(ndim=2, dim0=1, dim1=k).to_global(placement=placement, sbp=x_sbp)
-    y = random_tensor(ndim=2, dim0=k, dim1=1).to_global(placement=placement, sbp=y_sbp)
+    batch_dim = random(1, 6) * 4
+    x = random_tensor(ndim=3, dim0=batch_dim, dim1=2, dim2=k).to_global(
+        placement=placement, sbp=x_sbp
+    )
+    y = random_tensor(ndim=3, dim0=batch_dim, dim1=k, dim2=2).to_global(
+        placement=placement, sbp=y_sbp
+    )
     return x.matmul(y)
 
 
 class TestConsistentBroadcastMatmulModule(flow.unittest.TestCase):
     @globaltest
-    def test_consistent_broadcast_matmul(test_case):
+    def test_consistent_broadcast_matmul_with_random_data(test_case):
         for placement in all_placement():
-            for x_sbp in all_sbp(placement, max_dim=2):
-                for y_sbp in all_sbp(placement, max_dim=2):
+            for x_sbp in all_sbp(placement, max_dim=2, valid_split_axis=[0]):
+                for y_sbp in all_sbp(placement, max_dim=2, except_split=True):
                     _test_flow_tensor_consistent_broadcast_matmul_with_random_data(
                         test_case, placement, x_sbp, y_sbp
                     )
+
+    @globaltest
+    def test_consistent_x_broadcast_y_matmul(test_case):
+        for placement in all_placement():
+            for x_sbp in all_sbp(placement, max_dim=2, except_split=True):
+                for y_sbp in all_sbp(placement, max_dim=2, valid_split_axis=[0]):
                     _test_flow_tensor_consistent_x_broadcast_y_matmul(
                         test_case, placement, x_sbp, y_sbp
                     )
+
+    @globaltest
+    def test_consistent_broadcast_matmul_with_same_dims(test_case):
+        for placement in all_placement():
+            for x_sbp in all_sbp(placement, max_dim=2):
+                for y_sbp in all_sbp(placement, max_dim=2):
                     _test_flow_tensor_consistent_broadcast_matmul_with_same_dims(
                         test_case, placement, x_sbp, y_sbp
                     )
