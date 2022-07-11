@@ -336,7 +336,7 @@ Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastToGlobalOpExpr& op_expr,
                                              const OpExprInterpContext& ctx) const {
   bool sync_data = JUST(ctx.attrs.GetAttr<bool>("sync_data"));
   JUST(LocalToGlobal(op_expr, inputs, outputs, ctx));
-  const auto& global_tensor = JUST(outputs->at(0)->AsGlobalTensor());
+  const auto& global_tensor = JUST((*outputs)[0]->AsGlobalTensor());
   JUST(WithConsistencyChecked(global_tensor, [&]() -> Maybe<void> {
     if (IsGlobalTensorMetaCheckDisabled()) { return Maybe<void>::Ok(); }
     const auto& parallel_desc = JUST(ctx.parallel_desc);
