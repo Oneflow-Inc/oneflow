@@ -15,12 +15,8 @@ limitations under the License.
 """
 import os
 import unittest
-
-import numpy as np
-
+import oneflow.framework.session_context as session_ctx
 import oneflow as flow
-import oneflow.framework.graph_build_util as graph_build_util
-import oneflow.unittest
 import oneflow.framework.config_util as config_util
 import oneflow.framework.attr_util as attr_util
 import random
@@ -96,7 +92,7 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
                     attr_value = random.choice([True, False])
                     attrs_and_values_to_check.append((attrs, attr_value))
                 else:
-                    assert False, "unsupported type!"
+                    raise TypeError("Unsupported type!")
 
                 api(attr_value)
                 num_api_tested += 1
@@ -117,10 +113,17 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
 
             print("number of APIs tested: " + str(num_api_tested))
 
+        # save the resource config before running random resource api tests
+        session = session_ctx.GetDefaultSession()
+        prev_resource_config = session.resource
+
         for i in range(5):
             test_resource_config_update_apis_eagerly_automatically()
 
         print("optimization conf after session init: \n", g._optimization_conf_proto)
+
+        # restore the resource config
+        session.update_resource_eagerly(prev_resource_config)
 
 
 if __name__ == "__main__":
