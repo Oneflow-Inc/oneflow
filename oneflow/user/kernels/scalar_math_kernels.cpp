@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/scalar_math_kernels.h"
+#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 #include "oneflow/core/common/scalar.h"
 
