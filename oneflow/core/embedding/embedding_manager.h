@@ -76,6 +76,10 @@ class EmbeddingState {
   virtual const void* EmbeddingFusedUpdatePutUniqueEmbeddings(int64_t iter) = 0;
   virtual void OnEmbeddingFusedUpdatePutEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
 
+  virtual void AllocPrefetchTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr,
+                                      size_t size) = 0;
+  virtual void FreePrefetchTmpBuffer(user_op::KernelComputeContext* ctx, void* ptr) = 0;
+
   virtual void AllocTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr, size_t size) = 0;
   virtual void FreeTmpBuffer(user_op::KernelComputeContext* ctx, void* ptr) = 0;
 
