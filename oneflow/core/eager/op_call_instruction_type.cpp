@@ -99,7 +99,7 @@ struct OpCallInstructionUtil final {
   static inline Maybe<void> AllocateOutputBlobsMemory(OpCallPhyInstrOperand* operand,
                                                       DeviceCtx* device_ctx) {
     OF_PROFILER_RANGE_GUARD("AllocateOutputBlobsMemory");
-    for (const auto& blob_object : *operand->outputs()) {
+    for (const auto& blob_object : operand->outputs()) {
       JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
     }
     return Maybe<void>::Ok();

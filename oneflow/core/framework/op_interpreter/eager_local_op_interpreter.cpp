@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
@@ -69,23 +70,21 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
                            TensorTuple* outputs, const OpExprInterpContext& ctx) {
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
   Symbol<Device> default_device = JUST(GetDefaultDevice(inputs, ctx));
-
   std::shared_ptr<LocalTensorMetaInferArgs> infer_args =
       JUST(LocalTensorMetaInferArgs::New(ctx.attrs, default_device, inputs));
+
   std::shared_ptr<const LocalTensorInferResult> result =
       JUST(user_op_expr.mut_local_tensor_infer_cache()->GetOrInfer(*infer_args));
 
-  std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
-      std::make_shared<EagerBlobObjectList>(inputs.size());
+  vm::EagerBlobObjectList input_eager_blob_objects(inputs.size());
   if (inputs.size() > 0) {
     for (int i = 0; i < inputs.size(); i++) {
-      input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
+      input_eager_blob_objects.at(i) = JUST(inputs.at(i)->eager_blob_object());
     }
   }
 
   const auto& output_tensor_metas = result->output_tensor_metas();
-  std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
-      std::make_shared<EagerBlobObjectList>(outputs->size());
+  vm::EagerBlobObjectList output_eager_blob_objects(outputs->size());
 
   for (int i = 0; i < outputs->size(); i++) {
     if (!outputs->at(i)) {
@@ -102,7 +101,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       }
       const auto& dep_object = NewLocalDepObject();
       JUST(tensor_impl->InitEagerBlobObject(dep_object));
-      output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
+      output_eager_blob_objects.at(i) = JUST(tensor_impl->eager_blob_object());
       (*outputs)[i] = std::make_shared<LocalTensor>(tensor_impl);
     } else {
       auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
@@ -112,7 +111,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype() == output_tensor_metas.at(i)->dtype());
       bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
       CHECK_OR_RETURN(has_eager_blob_object);
-      output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
+      output_eager_blob_objects.at(i) = JUST(outputs->at(i)->eager_blob_object());
       // TODO(zhaoluyang):(thread_local TensorMeta set stride then check)
       // CHECK_OR_RETURN(tensor_impl->tensor_meta()->stride() ==
       // output_tensor_metas->at(i)->stride());
@@ -120,16 +119,22 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
 
   const auto& kernel = JUST(user_op_expr.MutKernel4Stream(result->stream()));
-  kernel->set_need_check_mem_case(result->need_check_mem_case());
 
-  for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
-    output_eager_blob_objects->at(index)->set_is_shape_synced(false);
-  }
-
+  OF_PROFILER_RANGE_PUSH("PhysicalRun");
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->Call(kernel, input_eager_blob_objects, output_eager_blob_objects, ctx,
-                         result->stream());
+    return builder->Call(kernel, std::move(input_eager_blob_objects),
+                         std::move(output_eager_blob_objects), ctx, result->stream());
   }));
+  for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
+    const auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(index)));
+    auto btb = std::make_shared<BlockingThenBusy>(1);
+    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(
+          tensor_impl, btb, [](uint64_t) {}, "const");
+    }));
+    JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  }
+  OF_PROFILER_RANGE_POP();
 
   return Maybe<void>::Ok();
 }

@@ -36,7 +36,6 @@ EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
       tensor_storage_(tensor_storage),
       mem_ptr_for_allocation_compuation_pipelining_(nullptr),
       inited_mem_ptr_for_allocation_compuation_pipelining_(false),
-      is_shape_synced_(true),
       compute_local_dep_object_(dep_object),
       blob_desc_(shape, stride, data_type) {
   CHECK(static_cast<bool>(shape));
