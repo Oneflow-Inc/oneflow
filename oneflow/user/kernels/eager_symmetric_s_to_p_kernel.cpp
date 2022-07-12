@@ -117,7 +117,7 @@ class EagerSymmetricSToPKernel final : public user_op::OpKernel {
     auto* kernel_cache = dynamic_cast<const EagerSymmetricSToPOpKernelCache*>(cache);
     CHECK(kernel_cache != nullptr);
     auto primitive = NewMemsetPrimitive(ctx);
-    CHECK(primitive);
+    CHECK(primitive);  // NOLINT
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const auto& out_shape_view = out->shape_view();
