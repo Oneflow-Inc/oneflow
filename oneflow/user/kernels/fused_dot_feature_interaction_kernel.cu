@@ -474,6 +474,7 @@ struct DotBwdParam {
 template<typename T, typename ComputeType, int32_t pack_size>
 __device__ __inline__ void AtomicAdd(Pack<T, pack_size>* address,
                                      Pack<ComputeType, pack_size> val) {
+#pragma unroll
   for (int i = 0; i < pack_size; ++i) {
     cuda::atomic::Add(reinterpret_cast<T*>(address) + i, static_cast<T>(val.elem[i]));
   }
