@@ -39,6 +39,21 @@ namespace oneflow {
     *ctx->OutputShape("out", 0) = Shape({batch_size, vector_size});
     return Maybe<void>::Ok();
   }
+  if (ctx->has_input("sparse_feature", 0)) {
+    CHECK_OR_RETURN(pooling == "none") << "only none pooling support sparse feature.";
+    CHECK_OR_RETURN(ctx->has_input("sparse_indices", 0))
+        << "if input sparse_feature exists, must have input sparse_indices.";
+    const Shape& sparse_feature_shape = ctx->InputShape("sparse_feature", 0);
+    const Shape& sparse_indices_shape = ctx->InputShape("sparse_indices", 0);
+    CHECK_EQ_OR_RETURN(sparse_indices_shape.NumAxes(), 2)
+        << "sparse_indices num_axes must be 2, but get " << sparse_indices_shape.NumAxes();
+    CHECK_EQ_OR_RETURN(sparse_indices_shape.At(0), batch_size)
+        << "get " << sparse_indices_shape.At(0) << " and " << batch_size;
+    CHECK_EQ_OR_RETURN(sparse_feature_shape.At(sparse_feature_shape.NumAxes() - 1), vector_size)
+        << "get " << sparse_feature_shape.At(sparse_feature_shape.NumAxes() - 1) << " and "
+        << vector_size;
+    features_concated_dim += sparse_indices_shape.At(1);
+  }
   const bool self_interaction = ctx->Attr<bool>("self_interaction");
   const int32_t output_padding = ctx->Attr<int32_t>("output_padding");
   const int64_t interaction_dim = self_interaction
@@ -61,7 +76,11 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FusedDotFeatureInteractionOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+  auto builder = ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0);
+  if (ctx->user_op_conf().has_input("num_valid_sparse_feature", 0)) {
+    builder.Broadcast(user_op::OpArg("num_valid_sparse_feature", 0));
+  }
+  builder.Build();
   return Maybe<void>::Ok();
 }
 
@@ -74,6 +93,10 @@ namespace oneflow {
   }
   if (ctx->has_input("output_concat", 0)) {
     CHECK_EQ_OR_RETURN(first_feature_dtype, ctx->InputDType("output_concat", 0));
+  }
+  if (ctx->has_input("sparse_feature", 0)) {
+    CHECK_EQ_OR_RETURN(first_feature_dtype, ctx->InputDType("sparse_feature", 0))
+        << "get " << first_feature_dtype << " and " << ctx->InputDType("sparse_feature", 0);
   }
   *ctx->OutputDType("out", 0) = first_feature_dtype;
   return Maybe<void>::Ok();
@@ -92,6 +115,9 @@ namespace oneflow {
     const int32_t output_concat_grad_dim = ctx->Attr<int32_t>("output_concat_grad_dim");
     *ctx->OutputShape("output_concat_grad", 0) = Shape({batch_size, output_concat_grad_dim});
   }
+  if (ctx->has_output("sparse_feature_grad", 0)) {
+    *ctx->OutputShape("sparse_feature_grad", 0) = ctx->InputShape("sparse_feature", 0);
+  }
   return Maybe<void>::Ok();
 }
 
@@ -101,7 +127,11 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FusedDotFeatureInteractionGradOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+  auto builder = ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0);
+  if (ctx->user_op_conf().has_input("num_valid_sparse_feature", 0)) {
+    builder.Broadcast(user_op::OpArg("num_valid_sparse_feature", 0));
+  }
+  builder.Build();
   return Maybe<void>::Ok();
 }
 
@@ -113,6 +143,9 @@ namespace oneflow {
   }
   if (ctx->has_output("output_concat_grad", 0)) {
     *ctx->OutputDType("output_concat_grad", 0) = dy_dtype;
+  }
+  if (ctx->has_output("sparse_feature_grad", 0)) {
+    *ctx->OutputDType("sparse_feature_grad", 0) = dy_dtype;
   }
   return Maybe<void>::Ok();
 }
@@ -133,6 +166,12 @@ REGISTER_USER_OP_GRAD("fused_dot_feature_interaction")
             .Attr<int32_t>("output_concat_grad_dim",
                            op.TensorDesc4ArgNameAndIndex("output_concat", 0).shape().At(1));
       }
+      if (op.user_op_conf().has_input("sparse_feature", 0)) {
+        builder.Input("num_valid_sparse_feature", op.input("num_valid_sparse_feature", 0))
+            .Input("sparse_feature", op.input("sparse_feature", 0))
+            .Input("sparse_indices", op.input("sparse_indices", 0))
+            .Output("sparse_feature_grad");
+      }
       builder.Output("features_grad", op.input_size("features"));
       auto grad_op = builder.Build();
       AddOp(grad_op);
@@ -145,6 +184,12 @@ REGISTER_USER_OP_GRAD("fused_dot_feature_interaction")
       if (op.user_op_conf().has_input("output_concat", 0)) {
         if (op.NeedGenGradTensor4OpInput("output_concat", 0)) {
           op.BindGradTensorWithOpInput(grad_op.output("output_concat_grad", 0), "output_concat", 0);
+        }
+      }
+      if (op.user_op_conf().has_input("sparse_feature", 0)) {
+        if (op.NeedGenGradTensor4OpInput("sparse_feature", 0)) {
+          op.BindGradTensorWithOpInput(grad_op.output("sparse_feature_grad", 0), "sparse_feature",
+                                       0);
         }
       }
       return Maybe<void>::Ok();
