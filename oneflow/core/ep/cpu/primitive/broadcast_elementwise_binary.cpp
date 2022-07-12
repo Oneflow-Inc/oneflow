@@ -260,16 +260,20 @@ void DispatchLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src0_di
     } else if (simplified_num_dims == 1 && simplified_src1_dims[0] == 1) {
       LaunchBinaryRhsScalar<binary_op, Src, Dst>(cpu_stream, *src1, simplified_src0_dims[0], src0,
                                                  dst, attr0, attr1);
-    } else if (simplified_num_dims == 2 && simplified_src0_dims[0] == 1) {
+    } else if (simplified_num_dims == 2 && simplified_src0_dims[0] == 1
+               && simplified_src0_dims[1] == simplified_src1_dims[1]) {
       LaunchRowWithMatrix<binary_op, Src, Dst>(cpu_stream, simplified_src0_dims, src0,
                                                simplified_src1_dims, src1, dst, attr0, attr1);
-    } else if (simplified_num_dims == 2 && simplified_src1_dims[0] == 1) {
+    } else if (simplified_num_dims == 2 && simplified_src1_dims[0] == 1
+               && simplified_src0_dims[1] == simplified_src1_dims[1]) {
       LaunchMatrixWithRow<binary_op, Src, Dst>(cpu_stream, simplified_src0_dims, src0,
                                                simplified_src1_dims, src1, dst, attr0, attr1);
-    } else if (simplified_num_dims == 2 && simplified_src0_dims[1] == 1) {
+    } else if (simplified_num_dims == 2 && simplified_src0_dims[1] == 1
+               && simplified_src0_dims[0] == simplified_src1_dims[0]) {
       LaunchColWithMatrix<binary_op, Src, Dst>(cpu_stream, simplified_src0_dims, src0,
                                                simplified_src1_dims, src1, dst, attr0, attr1);
-    } else if (simplified_num_dims == 2 && simplified_src1_dims[1] == 1) {
+    } else if (simplified_num_dims == 2 && simplified_src1_dims[1] == 1
+               && simplified_src0_dims[0] == simplified_src1_dims[0]) {
       LaunchMatrixWithCol<binary_op, Src, Dst>(cpu_stream, simplified_src0_dims, src0,
                                                simplified_src1_dims, src1, dst, attr0, attr1);
     } else {
