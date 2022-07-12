@@ -423,11 +423,11 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   const auto& phy_instr_operand =
       std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(eager_blob_object, vm_stream);
   StreamRole stream_role = producer_stream->stream_role();
-  DeviceType device_type = producer_stream->device()->enum_type();
+  DataType data_type = eager_blob_object->data_type();
   auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(producer_stream)),
       std::make_unique<vm::NaiveInstructionPolicy>(
-          JUST(GetReleaseInstructionType::Visit(stream_role, device_type)), phy_instr_operand));
+          JUST(GetReleaseInstructionType::Visit(stream_role, data_type)), phy_instr_operand));
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
