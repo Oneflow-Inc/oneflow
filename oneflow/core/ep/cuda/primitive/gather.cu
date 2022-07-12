@@ -192,9 +192,9 @@ void DispatchMovementSize(ep::Stream* stream, int64_t batch_dim_size, int64_t ou
 
 template<typename T, typename K>
 void GatherGpuKernel(Stream* stream, const void* src, void* dst, const void* indice,
-                     const size_t num_indices, const size_t batch_dim_size,
-                     const size_t outer_dim_size, const size_t gather_dim_size,
-                     const size_t inner_dim_size) {
+                     const int64_t num_indices, const int64_t batch_dim_size,
+                     const int64_t outer_dim_size, const int64_t gather_dim_size,
+                     const int64_t inner_dim_size) {
   DispatchMovementSize(stream, batch_dim_size, outer_dim_size, gather_dim_size,
                        inner_dim_size * sizeof(T), num_indices, 0, static_cast<const K*>(indice),
                        src, dst);
@@ -207,8 +207,8 @@ class GatherImpl : public Gather {
   GatherImpl() = default;
   ~GatherImpl() = default;
   void Launch(Stream* stream, const void* src, void* dst, const void* indice,
-              const size_t num_indices, const size_t batch_dim_size, const size_t outer_dim_size,
-              const size_t gather_dim_size, const size_t inner_dim_size) override {
+              const int64_t num_indices, const int64_t batch_dim_size, const int64_t outer_dim_size,
+              const int64_t gather_dim_size, const int64_t inner_dim_size) override {
     GatherGpuKernel<T, K>(stream, src, dst, indice, num_indices, batch_dim_size, outer_dim_size,
                           gather_dim_size, inner_dim_size);
   }

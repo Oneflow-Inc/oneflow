@@ -22,9 +22,9 @@ namespace ep {
 namespace primitive {
 namespace {
 template<typename T, typename K>
-void GatherCpuKernel(const T* src, T* dst, const K* indice, const size_t num_indices,
-                     const size_t outer_dim_size, const size_t gather_dim_size,
-                     const size_t inner_dim_size) {
+void GatherCpuKernel(const T* src, T* dst, const K* indice, const int64_t num_indices,
+                     const int64_t outer_dim_size, const int64_t gather_dim_size,
+                     const int64_t inner_dim_size) {
   FOR_RANGE(int64_t, outer_idx, 0, outer_dim_size) {
     FOR_RANGE(int64_t, i, 0, num_indices) {
       CHECK_GE(indice[i], 0);
@@ -41,9 +41,9 @@ void GatherCpuKernel(const T* src, T* dst, const K* indice, const size_t num_ind
 }
 
 template<typename T, typename K>
-void BatchGatherCpuKernel(const T* src, T* dst, const K* indice, const size_t num_indices,
-                          const size_t batch_dim_size, const size_t outer_dim_size,
-                          const size_t gather_dim_size, const size_t inner_dim_size) {
+void BatchGatherCpuKernel(const T* src, T* dst, const K* indice, const int64_t num_indices,
+                          const int64_t batch_dim_size, const int64_t outer_dim_size,
+                          const int64_t gather_dim_size, const int64_t inner_dim_size) {
   const size_t indice_instance_size = num_indices / batch_dim_size;
   const size_t src_instance_size = outer_dim_size * gather_dim_size * inner_dim_size;
   const size_t dst_instance_size = outer_dim_size * indice_instance_size * inner_dim_size;
@@ -65,8 +65,8 @@ class GatherImpl : public Gather {
   GatherImpl() = default;
   ~GatherImpl() = default;
   void Launch(Stream* stream, const void* src, void* dst, const void* indice,
-              const size_t num_indices, const size_t batch_dim_size, const size_t outer_dim_size,
-              const size_t gather_dim_size, const size_t inner_dim_size) override {
+              const int64_t num_indices, const int64_t batch_dim_size, const int64_t outer_dim_size,
+              const int64_t gather_dim_size, const int64_t inner_dim_size) override {
     if (batch_dim_size == 1) {
       GatherCpuKernel(const_cast<T*>(static_cast<const T*>(src)), static_cast<T*>(dst),
                       static_cast<const K*>(indice), num_indices, outer_dim_size, gather_dim_size,
