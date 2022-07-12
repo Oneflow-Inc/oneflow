@@ -16,7 +16,6 @@ limitations under the License.
 
 import unittest
 from collections import OrderedDict
-from importlib_metadata import requires
 
 import numpy as np
 import oneflow as flow
