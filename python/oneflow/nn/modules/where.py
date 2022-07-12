@@ -19,7 +19,7 @@ from oneflow.framework.tensor import register_tensor_op
 
 def where_op(condition, x=None, y=None):
     if x is None and y is None:
-        return flow.nonzero(condition, as_tuple=True)
+        return flow._C.nonzero(condition)
 
     return flow._C.where(condition, x, y)
 
