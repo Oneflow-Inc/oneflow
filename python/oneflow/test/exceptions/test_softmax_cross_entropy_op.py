@@ -26,7 +26,7 @@ class TestSoftmaxCrossEntropyError(flow.unittest.TestCase):
             label = flow.randn(1, 10)
             flow._C.softmax_cross_entropy(prediction, label)
         test_case.assertTrue(
-            "The dimension of prediction must greater than or equal to 2, but found"
+            "The dimension of prediction must be greater than or equal to 2, but found"
             in str(context.exception)
         )
 
@@ -56,7 +56,7 @@ class TestSoftmaxCrossEntropyError(flow.unittest.TestCase):
             prob = flow.randn(10)
             flow._C.softmax_cross_entropy_grad(dy, label, prob)
         test_case.assertTrue(
-            "The dimension of prob must greater than or equal to 2, but found "
+            "The dimension of prob must be greater than or equal to 2, but found "
             in str(context.exception)
         )
 

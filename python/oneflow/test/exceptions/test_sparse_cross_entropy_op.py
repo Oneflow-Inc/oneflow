@@ -27,7 +27,7 @@ class TestSparseCrossEntropyError(flow.unittest.TestCase):
             depth = 10
             flow._C.sparse_cross_entropy(prediction, label, depth)
         test_case.assertTrue(
-            "The dimension of prediction must greater than or equal to 2, but found"
+            "The dimension of prediction must be greater than or equal to 2, but found"
             in str(context.exception)
         )
 

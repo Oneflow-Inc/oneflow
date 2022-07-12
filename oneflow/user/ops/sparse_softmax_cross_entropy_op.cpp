@@ -29,7 +29,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
       << prediction_desc.is_dynamic() << " and " << label_desc.is_dynamic();
   CHECK_GE_OR_RETURN(prediction_desc.shape().NumAxes(), 2)
       << Error::RuntimeError()
-      << "The dimension of prediction must greater than or equal to 2, but found "
+      << "The dimension of prediction must be greater than or equal to 2, but found "
       << prediction_desc.shape().NumAxes();
   const int64_t num_out_axes = prediction_desc.shape().NumAxes() - 1;
   CHECK_EQ_OR_RETURN(label_desc.shape().NumAxes(), num_out_axes)
@@ -60,7 +60,7 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
       << prob_desc.is_dynamic() << " and " << label_desc.is_dynamic();
   CHECK_GE_OR_RETURN(prob_desc.shape().NumAxes(), 2)
       << Error::RuntimeError()
-      << "The dimension of prob must greater than or equal to 2, but found "
+      << "The dimension of prob must be greater than or equal to 2, but found "
       << prob_desc.shape().NumAxes();
   const int64_t num_out_axes = prob_desc.shape().NumAxes() - 1;
   CHECK_EQ_OR_RETURN(label_desc.shape().NumAxes(), num_out_axes)

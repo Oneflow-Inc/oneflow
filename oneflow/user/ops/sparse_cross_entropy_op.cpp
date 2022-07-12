@@ -28,7 +28,7 @@ Maybe<void> CheckPredictionLabelDesc(const user_op::TensorDesc* prediction_desc,
       << prediction_desc->is_dynamic() << " and " << label_desc->is_dynamic();
   CHECK_GE_OR_RETURN(prediction_desc->shape().NumAxes(), 2)
       << Error::RuntimeError()
-      << "The dimension of prediction must greater than or equal to 2, but found "
+      << "The dimension of prediction must be greater than or equal to 2, but found "
       << prediction_desc->shape().NumAxes();
   const int64_t num_out_axes = prediction_desc->shape().NumAxes() - 1;
   CHECK_EQ_OR_RETURN(label_desc->shape().NumAxes(), num_out_axes)
