@@ -373,8 +373,8 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
     size_t cublas_m = 0, cublas_n = 0, cublas_k = 0;
     int64_t cublas_lda = 0, cublas_ldb = 0, cublas_ldc = 0;
 
-    double alpha = 1.0;
-    auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
+    const double alpha = 1.0;
+    const auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
     const double beta = 0.0;
     const auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
 
@@ -411,8 +411,6 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
       if (idx == weight_size - 1) {
         matmul_out_ptr = ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr();
       } else {
-        double alpha = 1.0;
-        auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
         matmul_out_ptr = ctx->Tensor4ArgNameAndIndex("hidden", idx)->mut_dptr();
       }
       SetCublasAttr(matmul_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
