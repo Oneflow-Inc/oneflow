@@ -21,6 +21,8 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 
 #include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/SBP/SBPDialect.h"
+#include "OneFlow/SBP/SBPAttributes.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowTypes.h"
 #include "OneFlow/OneFlowSupport.h"
@@ -378,6 +380,26 @@ LogicalResult ParseNdSbpFromAttr(::llvm::ArrayRef<Attribute> nd_sbp_attr,
     }
   }
   return success();
+}
+
+Attribute ConvertNdSbpToAttr_(Builder& builder, const ::oneflow::NdSbp& nd_sbp) {
+  auto ctx = builder.getContext();
+  mlir::Attribute attr;
+  for (const auto& sbp : nd_sbp.sbp_parallel()) {
+    if (sbp.has_split_parallel()) {
+      attr = sbp::SplitAttr::get(ctx, sbp.split_parallel().axis());
+    } else if (sbp.has_broadcast_parallel()) {
+      attr = sbp::BroadcastAttr::get(ctx);
+    } else if (sbp.has_partial_sum_parallel()) {
+      attr = sbp::PartialSumAttr::get(ctx);
+    } else {
+      llvm::errs() << "unsupported sbp";
+    }
+  }
+
+  auto res =
+      sbp::ParallelSignatureAttr::get(ctx, {}, builder.getArrayAttr({attr}));
+  return res;
 }
 
 Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp) {

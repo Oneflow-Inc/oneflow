@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_IR_INCLUDE_SBP_SBPBASE_H_
 #define ONEFLOW_IR_INCLUDE_SBP_SBPBASE_H_
 
-include "SBP/SBPDialect.td"
+include "OneFlow/SBP/SBPDialect.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"

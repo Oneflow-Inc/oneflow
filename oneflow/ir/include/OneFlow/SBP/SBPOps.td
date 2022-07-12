@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_IR_INCLUDE_SBP_SBPOPS_H_
 #define ONEFLOW_IR_INCLUDE_SBP_SBPOPS_H_
 
-include "SBP/SBPDialect.td"
-include "SBP/SBPBase.td"
+include "OneFlow/SBP/SBPDialect.td"
+include "OneFlow/SBP/SBPBase.td"
 
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/FunctionInterfaces.td"
@@ -25,7 +25,6 @@ include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Pass/PassBase.td"
 
-include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
 
 #endif // ONEFLOW_IR_INCLUDE_SBP_SBPOPS_H_

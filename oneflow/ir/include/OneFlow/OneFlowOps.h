@@ -40,6 +40,17 @@ class FuncOp;
 
 }  // namespace mlir
 
+namespace mlir {
+
+namespace sbp {
+class SBP_SplitAttr;
+class SBP_BroadcastAttr;
+class SBP_PartialSumAttr;
+class ParallelSignatureAttr;
+}  // namespace sbp
+
+}  // namespace mlir
+
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlowOps.h.inc"
 #define GET_OP_CLASSES
