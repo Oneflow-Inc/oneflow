@@ -83,7 +83,7 @@ def _test_broadcast_like_different_dim(test_case, device):
         dtype=flow.float32,
         device=flow.device(device),
     )
-    of_out = flow.broadcast_like(input, like_tensor, broadcast_axes=(0, 2))
+    of_out = flow.broadcast_like(input, like_tensor)
     np_out = np.ones(shape=(2, 3, 4))
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
 
