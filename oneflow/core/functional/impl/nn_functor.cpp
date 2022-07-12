@@ -2493,7 +2493,7 @@ class NormalizeFunctor {
     return SequenceFunction<Maybe<Tensor>(const std::shared_ptr<Tensor>&, const float&,
                                           const int32_t&)>(
                [](const auto& x, const float& p, const int32_t& dim) -> Maybe<Tensor> {
-                 return functional::ScalarNorm(x, p, dim, true, NullOpt);
+                 return functional::ScalarNorm(x, p, dim, true, NullOpt, false);
                })
         .then([&](const auto& x) { return functional::Clamp(x, eps, NullOpt); })
         .then([&](const auto& x) { return functional::Div(input, x); })

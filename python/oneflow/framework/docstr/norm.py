@@ -187,9 +187,9 @@ add_docstr(
             `0`              -- not supported --           `sum(x != 0)`
             `1`              `max(sum(abs(x), dim=0))`     as below
             `-1`             `min(sum(abs(x), dim=0))`     as below
-            `2`              -- not supported yet --       as below
-            `-2`             -- not supported yet --       as below
-            other            -- not supported --           `sum(abs(x)^{ord})^{(1 / ord)}`
+            `2`              largest singular value        as below
+            `-2`             smallest singular value       as below
+            other            -- not supported yet --       `sum(abs(x)^{ord})^{(1 / ord)}`
             ==============  ============================  =================================
 
             where `inf` refers to `float('inf')`, NumPy's `inf` object, or any equivalent object.
