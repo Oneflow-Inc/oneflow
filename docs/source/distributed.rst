@@ -5,53 +5,17 @@ oneflow.distributed
     Please refer to `oneflow Distributed Overview <https://docs.oneflow.org/master/parallelism/01_introduction.html>`__
     for a brief introduction to all features related to distributed training.
 
-OneFlow introduces the concept of **Global View** to simplify distributed training. Simply , in OneFlow's global view, a cluster is abstracted as a "supercomputing device".
+oneflow provides two ways to accomplish `Distributed Training`:
 
-OneFlow's **Global View**  relies on several important concepts: ``Placement``, ``SBP`` and ``SBP Signature``.
+- One of them is to use the original concept of Oneflow to run data parallel training by configurating global tensor，introduces the concept of **Global View** to simplify distributed training. Simply , in OneFlow's global view, a cluster is abstracted as a "supercomputing device".
 
-Basics
---------------------------------------------------------------
-
-Placement
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The Tensor in the OneFlow global view has a placement attribute, which allows you to specify the physical device on which the Tensor is stored.
-
-.. autoclass:: oneflow.placement
-
-SBP
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-SBP is a concept invented by OneFlow that describes the mapping of data in the global view of a "supercomputing device" to data on real physical devices in a cluster, and is a combination of the initials split, broadcast, and partial.
-
-.. autoclass::  oneflow.sbp.sbp
-
-SBP Signature
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Besides, to facilitate the users who are transferring from PyTorch to OneFlow, OneFlow offers the interface consistent with PyTorch ``torch.nn.parallel.DistributedDataParallel``, ``oneflow.nn.parallel.DistributedDataParallel``.
 
 
-Create global tensor
---------------------------------------------------------------
-Global Tensor is a Tensor designed to facilitate distributed execution on multiple machines and devices, and is an interface for implementing Global View programming.
+Baisc
+-------------------------------
+When you start distributed training in oneflow,the following functions can be used.
 
-In each of the two consoles, import oneflow and create x
-
-::
-
-    >>>import oneflow as flow
-    >>> # Place a global tensor on cuda device of rank(process) 0 and 1
-    >>> placement = flow.placement(type="cuda", ranks=[0, 1])
-    >>> # Each rank's local data is a part data as a result of spliting global data on dim 0
-    >>> sbp = flow.sbp.split(dim=0)
-    >>> # Create a global tensor by randn
-    >>> x = flow.randn(4, 5, placement=placement, sbp=sbp)
-    >>> x.shape
-    oneflow.Size([4, 5])
-
-
-
-Post-Initialization
---------------------------------------------------------------
 .. currentmodule:: oneflow.env
 
 .. autosummary::
@@ -66,8 +30,76 @@ Post-Initialization
     rdma_is_initialized
 
 
-Communication collectives
+
+DistributedDataParallel
 --------------------------------------------------------------
+
+For more information about DistributedDataParallel, see :ref:`DistributedDataParallel`
+
+The following script shows the process of using ``oneflow.nn.parallel.DistributedDataParallel`` for training data parallel 
+
+.. code-block:: 
+
+    import oneflow as flow
+    from oneflow.nn.parallel import DistributedDataParallel as ddp
+
+    train_x = [
+        flow.tensor([[1, 2], [2, 3]], dtype=flow.float32),
+        flow.tensor([[4, 6], [3, 1]], dtype=flow.float32),
+    ]
+    train_y = [
+        flow.tensor([[8], [13]], dtype=flow.float32),
+        flow.tensor([[26], [9]], dtype=flow.float32),
+    ]
+
+
+    class Model(flow.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.lr = 0.01
+            self.iter_count = 500
+            self.w = flow.nn.Parameter(flow.tensor([[0], [0]], dtype=flow.float32))
+
+        def forward(self, x):
+            x = flow.matmul(x, self.w)
+            return x
+
+
+    m = Model().to("cuda")
+    m = ddp(m)
+    loss = flow.nn.MSELoss(reduction="sum")
+    optimizer = flow.optim.SGD(m.parameters(), m.lr)
+
+    for i in range(0, m.iter_count):
+        rank = flow.env.get_rank()
+        x = train_x[rank].to("cuda")
+        y = train_y[rank].to("cuda")
+
+        y_pred = m(x)
+        l = loss(y_pred, y)
+        if (i + 1) % 50 == 0:
+            print(f"{i+1}/{m.iter_count} loss:{l}")
+
+        optimizer.zero_grad()
+        l.backward()
+        optimizer.step()
+
+    print(f"\nw:{m.w}")
+
+There are only two differences between the data parallelism training code and the stand-alone single-card script:
+
+- Use `DistributedDataParallel` to wrap the module object (`m = ddp(m)`)
+- Use `get_rank` to get the current device number and distribute the data to the device.
+
+Then use `launcher` to run the script, leave everything else to OneFlow, which makes distributed training as simple as stand-alone single-card training:
+
+::
+
+    python3 -m oneflow.distributed.launch --nproc_per_node 2 ./ddp_train.py
+
+
+Communication collectives
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. currentmodule:: oneflow.comm
     
 .. autosummary::
@@ -85,6 +117,82 @@ Communication collectives
         recv
         scatter
         send
+
+
+Global Tensor
+--------------------------------------------------------------
+
+Create it
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Global Tensor is a Tensor designed to facilitate distributed execution on multiple machines and devices, and is an interface for implementing Global View programming.
+
+In each of the two consoles, import oneflow and create x
+
+::
+
+    >>>import oneflow as flow
+    >>> # Place a global tensor on cuda device of rank(process) 0 and 1
+    >>> placement = flow.placement(type="cuda", ranks=[0, 1])
+    >>> # Each rank's local data is a part data as a result of spliting global data on dim 0
+    >>> sbp = flow.sbp.split(dim=0)
+    >>> # Create a global tensor by randn
+    >>> x = flow.randn(4, 5, placement=placement, sbp=sbp)
+    >>> x.shape
+    oneflow.Size([4, 5])
+
+
+Get Local Tensor from Global Tensor
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Call `to_local()` to check the local tensor on a device.
+
+::
+
+    x.to_local()
+    tensor([[ 2.9186e-01, -3.9442e-01,  4.7072e-04, -3.2216e-01,  1.7788e-01],
+            [-4.5284e-01,  1.2361e-01, -3.5962e-01,  2.6651e-01,  1.2951e+00]],
+        device='cuda:0', dtype=oneflow.float32)
+
+Convert Local Tensor to Global Tensor
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Developers can create local tensor first, then convert it to global tensor with `Tensor.to_global`.
+Two local tensors with the shape of ``(2,5)`` are created separately on two devices. While after the to_global method, the global tensor with a shape of ``(4,5)`` is obtained.
+
+Code running on Node 0
+
+::
+
+    import oneflow as flow
+
+    x = flow.randn(2,5)
+    placement = flow.placement("cuda", [0,1])
+    sbp = flow.sbp.split(0)
+    x_global = x.to_global(placement=placement, sbp=sbp)
+    x_global.shape
+
+Code running on Node 1
+
+::
+
+    import oneflow as flow
+
+    x = flow.randn(2,5)
+    placement = flow.placement("cuda", [0,1])
+    sbp = flow.sbp.split(0)
+    x_global = x.to_global(placement=placement, sbp=sbp)
+    x_global.shape
+
+
+.. currentmodule:: oneflow.nn.modules.global_cast
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    local_to_global_op
+    global_to_global_op
+    to_global_op
+    to_local_op
 
 
 Launching distributed training

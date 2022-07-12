@@ -3,9 +3,9 @@ oneflow.one_embedding
 
 OneEmbedding is the large-scale Embedding solution that OneFlow provides to solve the problem of large-scale deep recommender systems. OneEmbedding has the following advantages compared to ordionary opeartors:
 
-With Flexible hierarchical storage, OneEmbedding can place the Embedding table on GPU memory, CPU memory or SSD, and allow high-speed devices to be used as caches for low-speed devices to achieve both speed and capacity.
+    - With Flexible hierarchical storage, OneEmbedding can place the Embedding table on GPU memory, CPU memory or SSD, and allow high-speed devices to be used as caches for low-speed devices to achieve both speed and capacity.
 
-OneEmbedding supports dynamic expansion.
+    - OneEmbedding supports dynamic expansion.
 
 Configure Embedding Table 
 ----------------------------------
@@ -96,10 +96,8 @@ After the above configuration is completed, you can use MultiTableEmbedding to g
     for a brief introduction to learn about Feature ID and Multi-Table Query.
 
 
-
-.. currentmodule:: oneflow.one_embedding
-
-.. autoclass:: MultiTableEmbedding
+MultiTableEmbedding
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. currentmodule:: oneflow.one_embedding.MultiTableEmbedding
 
@@ -111,7 +109,10 @@ After the above configuration is completed, you can use MultiTableEmbedding to g
     save_snapshot
     load_snapshot
 
-.. autoclass:: MultiTableMultiColumnEmbedding
+
+MultiTableMultiColumnEmbedding
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 .. currentmodule:: oneflow.one_embedding.MultiTableMultiColumnEmbedding
 
     .. autosummary::
@@ -154,7 +155,7 @@ OneEmbedding is only supported in Graph mode.
             loss = loss.sum()
             loss.backward()
             return loss
-            
+
 .. note ::
     
     Please refer to `Large-Scale Embedding Solution: OneEmbedding <https://docs.oneflow.org/en/master/cookies/one_embedding.html#distributed-training>`__
