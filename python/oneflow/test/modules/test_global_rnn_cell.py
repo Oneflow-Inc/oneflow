@@ -22,7 +22,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=)
+@autotest(n=1, check_graph=False)
 def _test_lstm_cell(test_case, placement, sbp):
     batch_size = random(2, 3) * 8
     time_steps = random(2, 3) * 8
