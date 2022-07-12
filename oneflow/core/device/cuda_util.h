@@ -152,10 +152,6 @@ class CublasMathModeGuard final {
   cublasMath_t new_mode_{};
 };
 
-int GetCudaSmVersion();
-
-int GetCudaPtxVersion();
-
 int GetCudaDeviceIndex();
 
 int GetCudaDeviceCount();

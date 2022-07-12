@@ -295,7 +295,6 @@ class RNN(RNNBase):
           state for each element in the batch. Defaults to zeros if not provided.
 
         where:
-
         .. math::
             \begin{aligned}
                 N ={} & \text{batch size} \\
@@ -817,8 +816,6 @@ class GRU(RNNBase):
     variable which is :math:`0` with probability :attr:`dropout`.
 
     Args:
-        input_size: The number of expected features in the input `x`
-        hidden_size: The number of features in the hidden state `h`
         num_layers: Number of recurrent layers. E.g., setting ``num_layers=2``
             would mean stacking two GRUs together to form a `stacked GRU`,
             with the second GRU taking in outputs of the first GRU and
@@ -840,7 +837,7 @@ class GRU(RNNBase):
           the input sequence. 
         * **h_0**: tensor of shape :math:`(D * \text{num\_layers}, N, H_{out})` containing the initial hidden
           state for each element in the batch. Defaults to zeros if not provided.
-
+        
         where:
 
         .. math::
@@ -1341,7 +1338,6 @@ class GRUCell(RNNCellBase):
     For example:
 
     .. code-block:: python
-
 
         >>> import oneflow as flow
         >>> import oneflow.nn as nn

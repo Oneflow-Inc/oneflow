@@ -25,12 +25,12 @@ namespace vm {
 OpCallPhyInstrOperand::OpCallPhyInstrOperand(
     vm::Stream* vm_stream, const std::shared_ptr<one::StatefulOpKernel>& opkernel,
     const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
-    const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
+    const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
     const one::OpExprInterpContext& op_interp_ctx,
     const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
     : vm_stream_(vm_stream),
       call_ctx_(ComposedAttrMap(op_interp_ctx.attrs, opkernel->base_attrs()), inputs, outputs,
-                consistent_tensor_infer_result, op_interp_ctx, opkernel->mem_case()),
+                global_tensor_infer_result, op_interp_ctx, opkernel->mem_case()),
       opkernel_(opkernel),
       user_opkernel_(nullptr),
       infer_tmp_size_fn_(nullptr),
@@ -38,9 +38,9 @@ OpCallPhyInstrOperand::OpCallPhyInstrOperand(
       dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode),
       input_dependences_(),
       output_dependences_() {
-  ForEachConstMirroredObject(SetInserter(&input_dependences_));
-  ForEachMutMirroredObject(SetInserter(&output_dependences_));
-  ForEachMut2MirroredObject(SetInserter(&output_dependences_));
+  ForEachConstDependence(SetInserter(&input_dependences_));
+  ForEachMutDependence(SetInserter(&output_dependences_));
+  ForEachMut2Dependence(SetInserter(&output_dependences_));
   InitStreamSequentialDependence();
 }
 
@@ -48,8 +48,8 @@ Maybe<void> OpCallPhyInstrOperand::Init() {
   return mut_opkernel()->ChooseOpKernel(&call_ctx_, &user_opkernel_, &need_temp_storage_);
 }
 
-void OpCallPhyInstrOperand::ForEachConstMirroredObject(
-    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
+void OpCallPhyInstrOperand::ForEachConstDependence(
+    const std::function<void(vm::Dependence* compute)>& DoEach) const {
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4const_ibns()) {
     const auto& input = input_list->at(index);
@@ -73,8 +73,8 @@ void OpCallPhyInstrOperand::InitStreamSequentialDependence() {
   }
 }
 
-void OpCallPhyInstrOperand::ForEachMutMirroredObject(
-    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
+void OpCallPhyInstrOperand::ForEachMutDependence(
+    const std::function<void(vm::Dependence* compute)>& DoEach) const {
   const auto& opt_transport_dep_object = vm_stream_->transport_local_dep_object();
   if (opt_transport_dep_object.has_value()) { DoEach(CHECK_JUST(opt_transport_dep_object)->get()); }
 
@@ -90,8 +90,8 @@ void OpCallPhyInstrOperand::ForEachMutMirroredObject(
   }
 }
 
-void OpCallPhyInstrOperand::ForEachMut2MirroredObject(
-    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
+void OpCallPhyInstrOperand::ForEachMut2Dependence(
+    const std::function<void(vm::Dependence* compute)>& DoEach) const {
   const auto& output_list = outputs();
   for (int64_t index : opkernel().output_tuple_indexes4mut2_obns()) {
     const auto& output = output_list->at(index);

@@ -208,7 +208,7 @@ SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_
 
 }  // namespace
 
-template<int NDIM, typename T>
+template<DeviceType device_type, typename T>
 void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
                 user_op::Tensor* dst, const SliceContext& slice_ctx,
                 const bool from_large_to_small) {
@@ -256,43 +256,21 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
   ConstructSliceParamsSmall(slice_ctx, positive_start_vec, positive_stop_vec, step_attr,
                             small->shape_view(), &small_slice_param);
   CHECK_EQ(large_slice_param.elem_cnt(), small_slice_param.elem_cnt());
-
-  const int64_t elem_cnt = large_slice_param.elem_cnt();
-  SliceIndexHelper<NDIM> entire_splitted_large_idx_cvtr(large_slice_param.dims);
-  SliceIndexHelper<NDIM> sliced_splitted_large_idx_cvtr(large_slice_param.size);
-  SliceIndexHelper<NDIM> entire_full_small_idx_cvtr(small_slice_param.dims);
-  SliceIndexHelper<NDIM> sliced_full_small_idx_cvtr(small_slice_param.size);
-  // Calculate the length of continuous part
-  int cnt = 1;
-  for (int i = NDIM - 1; i >= 0; i--) {
-    if (large_slice_param.step[i] == 1) { cnt *= large_slice_param.size[i]; }
-    if (!large_slice_param.IsFullSlice(i) || !small_slice_param.IsFullSlice(i)) { break; }
-  }
-  const auto* src_ptr = src->dptr<T>();
-  auto* dst_ptr = dst->mut_dptr<T>();
-  for (int i = 0; i < elem_cnt; i += cnt) {
-    const int64_t large_offset = SliceOffsetToEntireOffset<NDIM>(
-        i, large_slice_param, entire_splitted_large_idx_cvtr, sliced_splitted_large_idx_cvtr);
-    const int64_t small_offset = SliceOffsetToEntireOffset<NDIM>(
-        i, small_slice_param, entire_full_small_idx_cvtr, sliced_full_small_idx_cvtr);
-    const int64_t src_offset = from_large_to_small ? large_offset : small_offset;
-    const int64_t dst_offset = from_large_to_small ? small_offset : large_offset;
-    AutoMemcpy(ctx->stream(), dst_ptr + dst_offset, src_ptr + src_offset,
-               cnt * GetSizeOfDataType(src->data_type()), src->mem_case(), dst->mem_case());
+  if (from_large_to_small) {
+    if (small_slice_param.elem_cnt() == small->shape_view().elem_cnt()) {
+      SliceKernelUtil<device_type, T>::Forward(ctx->stream(), large_slice_param, src->dptr<T>(),
+                                               dst->mut_dptr<T>());
+    } else {
+      SliceKernelUtil<device_type, T>::Forward(ctx->stream(), large_slice_param, small_slice_param,
+                                               src->dptr<T>(), dst->mut_dptr<T>());
+    }
+  } else {
+    SliceKernelUtil<device_type, T>::Forward(ctx->stream(), small_slice_param, large_slice_param,
+                                             src->dptr<T>(), dst->mut_dptr<T>());
   }
 }
 
-#define MAKE_WRITE_SLICE_SWITCH_ENTRY(func_name, N, T) func_name<N, T>
-DEFINE_STATIC_SWITCH_FUNC(
-    void, WriteSlice, MAKE_WRITE_SLICE_SWITCH_ENTRY, MAKE_NDIM_CTRV_SEQ(DIM_SEQ),
-    MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ
-#if defined(WITH_CUDA)
-                                HALF_DATA_TYPE_SEQ
-#endif
-                            ));
-#undef MAKE_WRITE_SLICE_SWITCH_ENTRY
-
-template<typename T>
+template<DeviceType device_type, typename T>
 class SliceKernel final : public user_op::OpKernel {
  public:
   SliceKernel() = default;
@@ -346,13 +324,12 @@ class SliceKernel final : public user_op::OpKernel {
     AutoMemset(ctx->stream(), y_tensor->mut_dptr(), 0,
                y_tensor->shape_view().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()),
                y_tensor->mem_case());
-    SwitchWriteSlice(SwitchCase(y_tensor->shape_view().NumAxes(), y_tensor->data_type()), ctx,
-                     x_tensor, y_tensor, slice_ctx, true);
+    WriteSlice<device_type, T>(ctx, x_tensor, y_tensor, slice_ctx, /*from_large_to_small=*/true);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T>
+template<DeviceType device_type, typename T>
 class SliceUpdateKernel final : public user_op::OpKernel {
  public:
   SliceUpdateKernel() = default;
@@ -411,29 +388,11 @@ class SliceUpdateKernel final : public user_op::OpKernel {
     }
     const SliceContext& slice_ctx =
         dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
-    SwitchWriteSlice(SwitchCase(value_tensor->shape_view().NumAxes(), value_tensor->data_type()),
-                     ctx, value_tensor, y_tensor, slice_ctx, false);
+    WriteSlice<device_type, T>(ctx, value_tensor, y_tensor, slice_ctx,
+                               /*from_large_to_small=*/false);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
-
-#define REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(dtype)                               \
-  REGISTER_USER_KERNEL("slice_update")                                               \
-      .SetCreateFn<SliceUpdateKernel<dtype>>()                                       \
-      .SetIsMatchedHob(user_op::HobDataType("ref", 0) == GetDataType<dtype>::value); \
-  REGISTER_USER_KERNEL("slice").SetCreateFn<SliceKernel<dtype>>().SetIsMatchedHob(   \
-      user_op::HobDataType("x", 0) == GetDataType<dtype>::value);
-
-REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(float)
-REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(double)
-REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(int32_t)
-REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(int64_t)
-REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(int8_t)
-REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(uint8_t)
-REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(bool)
-#ifdef WITH_CUDA
-REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(float16)
-#endif
 
 template<DeviceType device_type, typename T>
 class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -455,25 +414,32 @@ class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGrap
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SLICE_GRAD_KERNEL(device, dtype)           \
-  REGISTER_USER_KERNEL("slice_grad")                        \
-      .SetCreateFn<SliceGradKernel<device, dtype>>()        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
-                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_SLICE_KERNEL(device, dtype)                                               \
+  REGISTER_USER_KERNEL("slice").SetCreateFn<SliceKernel<device, dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == device)                                                 \
+      && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));                     \
+  REGISTER_USER_KERNEL("slice_grad")                                                       \
+      .SetCreateFn<SliceGradKernel<device, dtype>>()                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));   \
+  REGISTER_USER_KERNEL("slice_update")                                                     \
+      .SetCreateFn<SliceUpdateKernel<device, dtype>>()                                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                \
+                       && (user_op::HobDataType("ref", 0) == GetDataType<dtype>::value));
 
-#define REGISTER_SLICE_GRAD_KERNEL_WITH_DEVICE(device) \
-  REGISTER_SLICE_GRAD_KERNEL(device, bool)             \
-  REGISTER_SLICE_GRAD_KERNEL(device, float)            \
-  REGISTER_SLICE_GRAD_KERNEL(device, double)           \
-  REGISTER_SLICE_GRAD_KERNEL(device, int32_t)          \
-  REGISTER_SLICE_GRAD_KERNEL(device, int64_t)          \
-  REGISTER_SLICE_GRAD_KERNEL(device, int8_t)           \
-  REGISTER_SLICE_GRAD_KERNEL(device, uint8_t)
+#define REGISTER_SLICE_KERNEL_WITH_DEVICE(device) \
+  REGISTER_SLICE_KERNEL(device, bool)             \
+  REGISTER_SLICE_KERNEL(device, float)            \
+  REGISTER_SLICE_KERNEL(device, double)           \
+  REGISTER_SLICE_KERNEL(device, int32_t)          \
+  REGISTER_SLICE_KERNEL(device, int64_t)          \
+  REGISTER_SLICE_KERNEL(device, int8_t)           \
+  REGISTER_SLICE_KERNEL(device, uint8_t)
 
-REGISTER_SLICE_GRAD_KERNEL_WITH_DEVICE(DeviceType::kCPU)
+REGISTER_SLICE_KERNEL_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_SLICE_GRAD_KERNEL_WITH_DEVICE(DeviceType::kCUDA)
-REGISTER_SLICE_GRAD_KERNEL(DeviceType::kCUDA, float16)
+REGISTER_SLICE_KERNEL_WITH_DEVICE(DeviceType::kCUDA)
+REGISTER_SLICE_KERNEL(DeviceType::kCUDA, float16)
 #endif
 
 }  // namespace oneflow
