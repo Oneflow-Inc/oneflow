@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/virtual_machine_engine.h"
+#include "oneflow/core/vm/caching_allocator.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/fuse_instruction_type.h"
 #include "oneflow/core/vm/fuse_phy_instr_operand.h"
 #include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/allocator.h"
-#include "oneflow/core/vm/shrinkable_cache.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/cpp_attribute.h"
@@ -41,9 +41,9 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
   INTRUSIVE_FOR_EACH(access, access_list) {
     CHECK_GT(access->ref_cnt(), 1);
     access_list->Erase(access.Mutable());
-    auto* mirrored_object = access->mut_mirrored_object();
+    auto* dependence = access->mut_dependence();
     if (unlikely(!access->rw_mutexed_object_access_hook().empty())) {
-      mirrored_object->mut_access_list()->Erase(access.Mutable());
+      dependence->mut_access_list()->Erase(access.Mutable());
     }
   }
   auto* out_edges = instruction->mut_out_edges();
@@ -71,7 +71,7 @@ void VirtualMachineEngine::HandleLocalPending() {
     if (unlikely(instruction_type.IsBarrier())) {
       mut_barrier_instruction_list()->PushBack(instruction);
     } else {
-      ConsumeMirroredObjects(instruction);
+      ConsumeDependences(instruction);
       if (likely(Dispatchable(instruction))) {
         mut_ready_instruction_list()->PushBack(instruction);
       }
@@ -191,13 +191,13 @@ void VirtualMachineEngine::ReleaseFinishedInstructions(const ScheduleCtx& schedu
   }
 }
 
-DependenceAccess* VirtualMachineEngine::AccessMirroredObject(OperandAccessType access_type,
-                                                             MirroredObject* mirrored_object,
-                                                             Instruction* instruction) {
-  auto access = access_pool_.make_shared(instruction, mirrored_object, access_type);
+DependenceAccess* VirtualMachineEngine::AccessDependence(OperandAccessType access_type,
+                                                         Dependence* dependence,
+                                                         Instruction* instruction) {
+  auto access = access_pool_.make_shared(instruction, dependence, access_type);
   auto* ptr = access.Mutable();
   instruction->mut_access_list()->PushBack(ptr);
-  mirrored_object->mut_access_list()->EmplaceBack(std::move(access));
+  dependence->mut_access_list()->EmplaceBack(std::move(access));
   return ptr;
 }
 
@@ -212,9 +212,9 @@ void VirtualMachineEngine::TryConnectInstruction(Instruction* src_instruction,
 
 void VirtualMachineEngine::ConnectInstructionsByWrite(DependenceAccess* dst_access) {
   CHECK(dst_access->is_mut_operand());
-  auto* mirrored_object = dst_access->mut_mirrored_object();
+  auto* dependence = dst_access->mut_dependence();
   auto* dst_instruction = dst_access->mut_instruction();
-  auto* access_list = mirrored_object->mut_access_list();
+  auto* access_list = dependence->mut_access_list();
   if (likely(access_list->Begin() == dst_access)) { return; }
   INTRUSIVE_FOR_EACH_PTR(src_access, access_list) {
     if (unlikely(src_access == dst_access)) { break; }
@@ -225,9 +225,9 @@ void VirtualMachineEngine::ConnectInstructionsByWrite(DependenceAccess* dst_acce
 
 void VirtualMachineEngine::ConnectInstructionsByRead(DependenceAccess* dst_access) {
   CHECK(dst_access->is_const_operand());
-  auto* mirrored_object = dst_access->mut_mirrored_object();
+  auto* dependence = dst_access->mut_dependence();
   auto* dst_instruction = dst_access->mut_instruction();
-  auto* first = mirrored_object->mut_access_list()->Begin();
+  auto* first = dependence->mut_access_list()->Begin();
   if (first->is_mut_operand()) {
     TryConnectInstruction(first->mut_instruction(), dst_instruction);
   } else if (first->is_const_operand()) {
@@ -237,21 +237,19 @@ void VirtualMachineEngine::ConnectInstructionsByRead(DependenceAccess* dst_acces
   }
 }
 
-void VirtualMachineEngine::ConsumeMirroredObjects(Instruction* instruction) {
+void VirtualMachineEngine::ConsumeDependences(Instruction* instruction) {
   const auto& phy_instr_operand = CHECK_NOTNULL(instruction->phy_instr_operand());
   auto* stream_sequential_dep = phy_instr_operand->stream_sequential_dependence();
   if (likely(stream_sequential_dep != nullptr)) {
     ConnectInstructionsByWrite(
-        AccessMirroredObject(kMutableOperandAccess, stream_sequential_dep, instruction));
+        AccessDependence(kMutableOperandAccess, stream_sequential_dep, instruction));
   }
   // Connect instructions by write before connecting by read.
-  for (auto* mirrored_object : phy_instr_operand->output_dependences()) {
-    ConnectInstructionsByWrite(
-        AccessMirroredObject(kMutableOperandAccess, mirrored_object, instruction));
+  for (auto* dependence : phy_instr_operand->output_dependences()) {
+    ConnectInstructionsByWrite(AccessDependence(kMutableOperandAccess, dependence, instruction));
   }
-  for (auto* mirrored_object : phy_instr_operand->input_dependences()) {
-    ConnectInstructionsByRead(
-        AccessMirroredObject(kConstOperandAccess, mirrored_object, instruction));
+  for (auto* dependence : phy_instr_operand->input_dependences()) {
+    ConnectInstructionsByRead(AccessDependence(kConstOperandAccess, dependence, instruction));
   }
 }
 
@@ -325,7 +323,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
         // Shrinks allocator to reduce fragmentation of memory.
         {
           auto* allocator = stream->device_ctx()->mut_allocator();
-          auto* shrinkable_cache = dynamic_cast<ShrinkableCache*>(allocator);
+          auto* shrinkable_cache = dynamic_cast<CachingAllocator*>(allocator);
           if (shrinkable_cache != nullptr) { shrinkable_cache->Shrink(); }
         }
         // Infers the instruction again.
