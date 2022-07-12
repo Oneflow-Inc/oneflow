@@ -344,12 +344,6 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
 
 // Returns true if old scheduler_pending_instruction_list is empty
 Maybe<bool> VirtualMachineEngine::Receive(InstructionList* compute_instruction_list) {
-  OF_PROFILER_RANGE_GUARD("vm:Receive");
-#ifdef OF_ENABLE_PROFILER
-  INTRUSIVE_UNSAFE_FOR_EACH_PTR(compute_instruction, compute_instruction_list) {
-    OF_PROFILER_RANGE_GUARD(compute_instruction->DebugName());
-  }
-#endif
   bool old_list_empty = mut_pending_instruction_list()->MoveFrom(compute_instruction_list);
   return old_list_empty;
 }
