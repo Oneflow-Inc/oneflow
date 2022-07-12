@@ -242,13 +242,17 @@ def _trunc_normal_(
 def _kaiming_uniform(
     self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
 ):
-    return flow.nn.init.kaiming_uniform_(self, a=a, mode=mode, nonlinearity=nonlinearity, data_format=data_format)
+    return flow.nn.init.kaiming_uniform_(
+        self, a=a, mode=mode, nonlinearity=nonlinearity, data_format=data_format
+    )
 
 
 def _kaiming_normal(
     self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
 ):
-    return flow.nn.init.kaiming_normal_(self, a=a, mode=mode, nonlinearity=nonlinearity, data_format=data_format)
+    return flow.nn.init.kaiming_normal_(
+        self, a=a, mode=mode, nonlinearity=nonlinearity, data_format=data_format
+    )
 
 
 def _xavier_normal(self, gain=1.0):

@@ -90,9 +90,9 @@ def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
         >>> w = flow.empty(3, 5)
         >>> nn.init.xavier_uniform_(w, gain=nn.init.calculate_gain('relu'))
     """
-    initializer_conf = initializer_register.xavier_initializer(tensor.shape, gain=gain,
-                                                               data_format=data_format,
-                                                               distribution="random_uniform")
+    initializer_conf = initializer_register.xavier_initializer(
+        tensor.shape, gain=gain, data_format=data_format, distribution="random_uniform"
+    )
     return _init_by_initializer_conf(tensor, initializer_conf)
 
 
@@ -120,9 +120,9 @@ def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
         >>> w = flow.empty(3, 5)
         >>> nn.init.xavier_normal_(w)
     """
-    initializer_conf = initializer_register.xavier_initializer(tensor.shape, gain=gain,
-                                                               data_format=data_format,
-                                                               distribution="random_normal")
+    initializer_conf = initializer_register.xavier_initializer(
+        tensor.shape, gain=gain, data_format=data_format, distribution="random_normal"
+    )
     return _init_by_initializer_conf(tensor, initializer_conf)
 
 
@@ -243,10 +243,7 @@ def kaiming_normal_(
 
 def trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0):
     initializer_conf = initializer_register.truncated_normal_initializer(
-        mean=mean,
-        std=std,
-        a=a,
-        b=b,
+        mean=mean, std=std, a=a, b=b,
     )
     return _init_by_initializer_conf(tensor, initializer_conf)
 
