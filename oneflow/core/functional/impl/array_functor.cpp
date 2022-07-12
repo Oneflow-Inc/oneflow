@@ -122,11 +122,9 @@ class ArgMinFunctor {
         .call(input);
   }
 };
-class ConsistentConstantFunctor {
+class GlobalConstantFunctor {
  public:
-  ConsistentConstantFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build());
-  }
+  GlobalConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
@@ -204,9 +202,9 @@ class EmptyFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ConsistentEmptyFunctor {
+class GlobalEmptyFunctor {
  public:
-  ConsistentEmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
+  GlobalEmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
@@ -1175,7 +1173,7 @@ class ViewFunctor {
     if (view::IsViewApplicable(x)) {
       Optional<Stride> infered_stride =
           ComputeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
-      CHECK_OR_RETURN(infered_stride.has_value())
+      CHECK_OR_RETURN_ERROR(infered_stride.has_value())
           << Error::RuntimeError()
           << "view size is not compatible with input tensor's size and stride (at least one "
              "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
@@ -1195,7 +1193,7 @@ class ToContiguousFunctor {
     op_ = CHECK_JUST(one::OpBuilder("to_contiguous").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
-    if (input->is_consistent() || input->is_lazy()) { return input; }
+    if (input->is_global() || input->is_lazy()) { return input; }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input});
   }
 
@@ -1217,10 +1215,10 @@ class InplaceToContiguousFunctor {
         << "Both ref and value must be local tensor.";
     std::shared_ptr<Stride> stride(new Stride(*input->shape()));
     // update stride
-    JUST(input->mut_eager_mirrored_tensor_impl())->mut_tensor_meta()->set_stride(stride);
+    JUST(input->mut_eager_local_tensor_impl())->mut_tensor_meta()->set_stride(stride);
     const auto& blob_object = JUST(input->eager_blob_object());
     // update eager_blob_object
-    JUST(JUST(input->mut_eager_mirrored_tensor_impl())
+    JUST(JUST(input->mut_eager_local_tensor_impl())
              ->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object())));
     // assign contiguous tensor data
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*assign_op_, {input, contiguous_tensor}));
@@ -2595,8 +2593,8 @@ Maybe<Tensor> LocalTensorTo(const std::shared_ptr<Tensor>& x, const std::string&
   return tensor;
 }
 
-Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::string& device_type,
-                                 const Symbol<DType>& dtype, const bool& copy) {
+Maybe<Tensor> GlobalTensorTo(const std::shared_ptr<Tensor>& x, const std::string& device_type,
+                             const Symbol<DType>& dtype, const bool& copy) {
   std::shared_ptr<Tensor> tensor;
   auto input_placement = JUST(x->parallel_desc());
   std::string input_device_tag = input_placement->device_tag();
@@ -2620,11 +2618,11 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
     auto nd_sbp = JUST(x->nd_sbp());
     std::vector<Symbol<SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
     for (int i = 0; i < sbp_tuple.size(); ++i) { sbp_tuple[i] = nd_sbp->sbp_parallel().Get(i); }
-    tensor = JUST(ConsistentToLocal(x));
+    tensor = JUST(GlobalToLocal(x));
     Symbol<Device> device = JUST(Device::New(device_type));
     tensor = JUST(LocalTensorTo(tensor, device->type(), device->device_id(), dtype, copy));
     JUST(tensor->set_requires_grad(x->requires_grad()));
-    return JUST(LocalToConsistent(tensor, placement, sbp_tuple, *(x->shape()), dtype));
+    return JUST(LocalToGlobal(tensor, placement, sbp_tuple, *(x->shape()), dtype));
   }
 }
 
@@ -2636,14 +2634,14 @@ class ToFunctor {
                            const Optional<std::string>& device_,
                            const Optional<Symbol<DType>>& dtype_, bool copy) const {
     Symbol<DType> dtype = dtype_.value_or(input->dtype());
-    if (input->is_consistent()) {
+    if (input->is_global()) {
       std::string device_type = device_.value_or(JUST(input->parallel_desc())->device_tag());
       CHECK_OR_RETURN(ep::DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(device_type)
                       != DeviceType::kInvalidDevice)
           << Error::RuntimeError()
           << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
-          << "for consistent tensor, but got " << device_.value_or("");
-      return JUST(ConsistentTensorTo(input, device_type, dtype, copy));
+          << "for global tensor, but got " << device_.value_or("");
+      return JUST(GlobalTensorTo(input, device_type, dtype, copy));
     } else {
       std::string device_name = "";
       int device_id = 0;
@@ -2665,13 +2663,13 @@ class To2Functor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<Symbol<Device>>& device_,
                            const Optional<Symbol<DType>>& dtype_, bool copy) const {
-    CHECK_OR_RETURN(!(input->is_consistent() && device_.has_value()))
+    CHECK_OR_RETURN(!(input->is_global() && device_.has_value()))
         << Error::RuntimeError()
         << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
-        << "for consistent tensor, but got " << device_.value_or(Symbol<Device>())->ToRepr();
-    if (input->is_consistent()) {
+        << "for global tensor, but got " << device_.value_or(Symbol<Device>())->ToRepr();
+    if (input->is_global()) {
       std::string device_type = JUST(input->parallel_desc())->device_tag();
-      return JUST(ConsistentTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
+      return JUST(GlobalTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
     } else {
       auto dtype = dtype_.value_or(input->dtype());
       auto device =
@@ -2686,8 +2684,8 @@ class To3Functor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<Symbol<DType>>& dtype_, bool copy) const {
     Symbol<DType> dtype = dtype_.value_or(input->dtype());
-    if (input->is_consistent()) {
-      return ConsistentTensorTo(input, JUST(input->parallel_desc())->device_tag(), dtype, copy);
+    if (input->is_global()) {
+      return GlobalTensorTo(input, JUST(input->parallel_desc())->device_tag(), dtype, copy);
     } else {
       auto device = JUST(input->device());
       return LocalTensorTo(input, device->type(), device->device_id(), dtype, copy);
@@ -2699,7 +2697,7 @@ class To4Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const std::shared_ptr<Tensor>& other, bool copy) const {
-    CHECK_OR_RETURN(!input->is_consistent() && !other->is_consistent())
+    CHECK_OR_RETURN(!input->is_global() && !other->is_global())
         << Error::RuntimeError()
         << "tensor.to(other) can only be called when tensor and other are local tensors";
     Symbol<DType> dtype = other->dtype();
@@ -3014,11 +3012,11 @@ class PinMemoryFunctor {
         CHECK_JUST(one::OpBuilder("slice_update").Input("ref").Input("value").Output("y").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
-    // TODO:(zhaoluyang) support consistent tensor.pin_memory()
+    // TODO:(zhaoluyang) support global tensor.pin_memory()
     CHECK_OR_RETURN(input->is_local() && !(LazyMode::is_enabled()))
         << Error::RuntimeError() << "Tensor.pin_memory() only support local tensor for now!";
     // if tensor already pinned, then just return
-    if (JUST(JUST(input->AsMirroredTensor())->is_pinned())) { return input; }
+    if (JUST(JUST(input->AsLocalTensor())->is_pinned())) { return input; }
     auto shape = input->shape();
     auto device = JUST(input->device());
     const bool requires_grad = input->requires_grad();
@@ -3113,9 +3111,9 @@ class FillTensorFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ArgMaxFunctor>("ArgMax");
   m.add_functor<impl::ArgMinFunctor>("ArgMin");
-  m.add_functor<impl::ConsistentConstantFunctor>("ConsistentConstant");
+  m.add_functor<impl::GlobalConstantFunctor>("GlobalConstant");
   m.add_functor<impl::ConstantFunctor>("Constant");
-  m.add_functor<impl::ConsistentEmptyFunctor>("ConsistentEmpty");
+  m.add_functor<impl::GlobalEmptyFunctor>("GlobalEmpty");
   m.add_functor<impl::EmptyFunctor>("Empty");
   m.add_functor<impl::ZerosLikeFunctor>("ZerosLike");
   m.add_functor<impl::OnesLikeFunctor>("OnesLike");

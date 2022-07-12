@@ -52,7 +52,8 @@ namespace oneflow {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
   Shape* dx_shape = ctx->OutputShape("dx", 0);
-  CHECK_OR_RETURN(dy_shape == x_shape);
+  CHECK_OR_RETURN(dy_shape == x_shape)
+      << Error::RuntimeError() << "Tensors dy and x must be the same shape";
   *dx_shape = dy_shape;
   return Maybe<void>::Ok();
 }
@@ -60,7 +61,8 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SeluGradOp::InferDataType(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("x", 0));
+  CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("x", 0))
+      << Error::TypeError() << "Tensors dy and x must have same type";
   *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }

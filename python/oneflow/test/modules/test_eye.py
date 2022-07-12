@@ -97,7 +97,7 @@ class TestEye(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n2d()
-class TestConsistentEye(flow.unittest.TestCase):
+class TestGlobalEye(flow.unittest.TestCase):
     def test_eye_with_1n2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_eye_with_1n2d]

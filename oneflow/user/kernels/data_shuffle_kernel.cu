@@ -525,7 +525,7 @@ template<typename T, typename IDX>
 void ShuffleEmbeddings(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parallel_id,
                        int64_t parallel_num, int64_t num_ids, int64_t embedding_size,
                        DataType data_type, IDX* host_num_unique_matrix,
-                       T* reverse_unique_cur_rank_embeddings, T* received_embeddings) {
+                       const T* reverse_unique_cur_rank_embeddings, T* received_embeddings) {
   std::vector<int64_t> send_offsets;
   std::vector<int64_t> send_elem_cnt;
   std::vector<int64_t> recv_offsets;
@@ -955,6 +955,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     const int64_t num_ids = inverse_unique_partition_indices->shape_view().elem_cnt();
     const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+    const bool skip_last_gather = ctx->Attr<bool>("skip_last_gather");
     bool enable_quantized_comm_env_var =
         ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false);
     bool enable_quantized_comm = enable_quantized_comm_env_var && (embedding_size < kMaxColSize);
@@ -995,25 +996,34 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
 
       // 2. send recv embedding, from (cur_rank_num_ids, embedding_size) to
       // (unique_partitioned_num_ids, embedding_size)
-      void* received_embeddings;  // T
-      embedding_state->AllocTmpBuffer(
-          ctx, &received_embeddings,
-          GetCudaAlignedSize(unique_partitioned_num_ids * embedding_size * sizeof(T)));
+      if (skip_last_gather) {
+        ShuffleEmbeddings(cuda_stream, comm, parallel_id, parallel_num, num_ids, embedding_size,
+                          data_type, host_num_unique_matrix,
+                          reinterpret_cast<T*>(reverse_unique_cur_rank_embeddings),
+                          embeddings->mut_dptr<T>());
+        embedding_state->FreeTmpBuffer(ctx, reverse_unique_cur_rank_embeddings);
+      } else {
+        void* received_embeddings;  // T
+        embedding_state->AllocTmpBuffer(
+            ctx, &received_embeddings,
+            GetCudaAlignedSize(unique_partitioned_num_ids * embedding_size * sizeof(T)));
 
-      ShuffleEmbeddings(cuda_stream, comm, parallel_id, parallel_num, num_ids, embedding_size,
-                        data_type, host_num_unique_matrix,
-                        reinterpret_cast<T*>(reverse_unique_cur_rank_embeddings),
-                        reinterpret_cast<T*>(received_embeddings));
-      embedding_state->FreeTmpBuffer(ctx, reverse_unique_cur_rank_embeddings);
+        ShuffleEmbeddings(cuda_stream, comm, parallel_id, parallel_num, num_ids, embedding_size,
+                          data_type, host_num_unique_matrix,
+                          reinterpret_cast<T*>(reverse_unique_cur_rank_embeddings),
+                          reinterpret_cast<T*>(received_embeddings));
+        embedding_state->FreeTmpBuffer(ctx, reverse_unique_cur_rank_embeddings);
 
-      // 3. reverse unique_partition, from (unique_partitioned_num_ids, embedding_size) to (num_ids,
-      // embedding_size)
-      GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
-          ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
-          num_ids, reinterpret_cast<T*>(received_embeddings),
-          Shape({1, unique_partitioned_num_ids, embedding_size}), embeddings->mut_dptr<T>(), 0);
-      embedding_state->FreeTmpBuffer(ctx, received_embeddings);
+        // 3. reverse unique_partition, from (unique_partitioned_num_ids, embedding_size) to
+        // (num_ids, embedding_size)
+        GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
+            ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
+            num_ids, reinterpret_cast<T*>(received_embeddings),
+            Shape({1, unique_partitioned_num_ids, embedding_size}), embeddings->mut_dptr<T>(), 0);
+        embedding_state->FreeTmpBuffer(ctx, received_embeddings);
+      }
     } else {
+      CHECK(!skip_last_gather) << "when enable_quantized_comm, should not use fuse kernel.";
       // 1. quantize cur_rank_embeddings, from (num_unique, embedding_size) T to (num_unique,
       // embedding_size) int8_t, and get (num_unique,) T factor
       void* quantize_cur_rank_embeddings;  // int8_t
@@ -1168,7 +1178,7 @@ template<typename T, typename IDX>
 void ShuffleEmbeddingsGrad(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parallel_id,
                            int64_t parallel_num, int64_t num_ids, int64_t embedding_size,
                            DataType data_type, IDX* host_num_unique_matrix,
-                           T* unique_partition_embedding_grad, T* received_embeddings_grad) {
+                           const T* unique_partition_embedding_grad, T* received_embeddings_grad) {
   std::vector<int64_t> send_offsets;
   std::vector<int64_t> send_elem_cnt;
   std::vector<int64_t> recv_offsets;
@@ -1389,11 +1399,11 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
       LOG(WARNING) << "Only envrionment variable ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM=1 and "
                       "embedding_size less equal than 1024 can use quantized communication. ";
     }
+    const bool skip_first_scatter = ctx->Attr<bool>("skip_first_scatter");
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     const std::vector<uint32_t>& num_unique_matrix_vec =
         embedding_state->GetIdNumUniqueMatrix(current_iter_);
     CHECK_EQ(sizeof(IDX), sizeof(uint32_t)) << "assume sizeof(IDX) equals to sizeof(uint32_t)";
-    ;
     std::memcpy(host_num_unique_matrix, num_unique_matrix_vec.data(),
                 parallel_num * parallel_num * sizeof(IDX));
     uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
@@ -1414,11 +1424,17 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
           ctx, &unique_partition_embedding_grad,
           GetCudaAlignedSize(unique_partitioned_num_ids * padded_embedding_size * sizeof(T)));
 
-      UniquePartitionEmbeddingGrad(
-          ctx->stream(), unique_partitioned_num_ids, num_ids, embedding_size, padded_embedding_size,
-          host_num_unique_matrix, embedding_grad->dptr<T>(),
-          reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
-          reinterpret_cast<T*>(unique_partition_embedding_grad));
+      const T* unique_embedding_grad_ptr;
+      if (skip_first_scatter) {
+        unique_embedding_grad_ptr = embedding_grad->dptr<T>();
+      } else {
+        UniquePartitionEmbeddingGrad(
+            ctx->stream(), unique_partitioned_num_ids, num_ids, embedding_size,
+            padded_embedding_size, host_num_unique_matrix, embedding_grad->dptr<T>(),
+            reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
+            reinterpret_cast<T*>(unique_partition_embedding_grad));
+        unique_embedding_grad_ptr = reinterpret_cast<T*>(unique_partition_embedding_grad);
+      }
       // 2. send recv grad, from (unique_partitioned_num_ids, padded_embedding_size) to
       // (cur_rank_num_ids, padded_embedding_size)
       void* received_embedding_grad;  // T
@@ -1428,7 +1444,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
 
       ShuffleEmbeddingsGrad(cuda_stream, comm, parallel_id, parallel_num, num_ids,
                             padded_embedding_size, data_type, host_num_unique_matrix,
-                            reinterpret_cast<T*>(unique_partition_embedding_grad),
+                            unique_embedding_grad_ptr,
                             reinterpret_cast<T*>(received_embedding_grad));
 
       // 3. sum to unique grad, from (cur_rank_num_ids, padded_embedding_size) to (num_unique,
@@ -1447,6 +1463,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
       embedding_state->FreeTmpBuffer(ctx, unique_partition_embedding_grad);
       embedding_state->FreeTmpBuffer(ctx, received_embedding_grad);
     } else {
+      CHECK(!skip_first_scatter) << "when enable_quantized_comm, should not use fuse kernel.";
       // 1. sum to unique grad, from (num_ids, embedding_size) to (unique_partitioned_num_ids,
       // padded_embedding_size)
       void* unique_partition_embedding_grad;  // T
