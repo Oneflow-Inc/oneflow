@@ -4,6 +4,9 @@
 
 Tensor Attributes
 =============================================================
+The documentation is referenced from:
+https://pytorch.org/docs/master/tensor_attributes.html
+
 Each local ``oneflow.Tensor`` has a :class:`oneflow.dtype`, :class:`oneflow.device`, and global ``oneflow.Tensor`` has a :class:`oneflow.dtype`, :class:`oneflow.placement`, :class:`oneflow.sbp`.
 
 .. contents:: oneflow
