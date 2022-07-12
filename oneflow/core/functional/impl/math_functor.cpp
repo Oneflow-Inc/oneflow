@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/error.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -1121,10 +1122,10 @@ class GlobalHannWindowFunctor {
       return Error::RuntimeError()
              << "hann_window expects floating point dtypes, got: " << JUST(dtype)->name();
     }
-    auto result = JUST(GlobalArange(1, 2, 1, dtype, placement, sbp));
+    auto result = JUST(GlobalArange(1, 1 + window_length, 1, dtype, placement, sbp));
     if (window_length != 1) {
       if (periodic) {
-        const auto indice = JUST(GlobalArange(window_length + 1, dtype, placement, sbp));
+        const auto indice = JUST(GlobalArange(window_length + 8, dtype, placement, sbp));
         const auto div_result = JUST(ScalarDiv(JUST(ScalarMul(2 * M_PI, indice)), window_length));
         result = JUST(Slice(JUST(ScalarDiv(JUST(ScalarSub(1, JUST(Cos(div_result)), 1)), 2)), {0},
                             {window_length}, {1}, /*enable_view_slice=*/false));
