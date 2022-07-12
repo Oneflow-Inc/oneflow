@@ -16,6 +16,7 @@ limitations under the License.
 
 import unittest
 from collections import OrderedDict
+from importlib_metadata import requires
 
 import numpy as np
 import oneflow as flow
@@ -67,6 +68,13 @@ class TestConstantModule(flow.unittest.TestCase):
         x = random_tensor().to(device)
         y = torch.zeros_like(x)
         return y
+    
+    @autotest(auto_backward=True, check_graph=True)
+    def test_flow_zeros_like_list_with_random_data_and_requires_grad(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        y = torch.zeros_like(x, requires_grad=True)
+        return y
 
     @autotest(auto_backward=False, check_graph=True)
     def test_flow_zeros_like_list_with_0dim_data(test_case):
@@ -80,6 +88,13 @@ class TestConstantModule(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         y = torch.ones_like(x)
+        return y
+    
+    @autotest(auto_backward=True, check_graph=True)
+    def test_flow_ones_like_list_with_random_data_and_requires_grad(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        y = torch.ones_like(x, requires_grad=True)
         return y
 
     @autotest(auto_backward=False, check_graph=True)
