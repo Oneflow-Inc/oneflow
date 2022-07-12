@@ -48,7 +48,8 @@ class TestSmoothL1LossError(flow.unittest.TestCase):
             beta = 1.0
             flow._C.smooth_l1_loss(input, target, beta, reduction)
         test_case.assertTrue(
-            "input and target are expected to have the same dtype" in str(context.exception)
+            "input and target are expected to have the same dtype"
+            in str(context.exception)
         )
 
 

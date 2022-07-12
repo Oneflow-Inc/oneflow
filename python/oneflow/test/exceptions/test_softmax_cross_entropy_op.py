@@ -67,7 +67,8 @@ class TestSoftmaxCrossEntropyError(flow.unittest.TestCase):
             prob = flow.randn(10, 10, 5)
             flow._C.softmax_cross_entropy_grad(dy, label, prob)
         test_case.assertTrue(
-            "The dimension of dy is expected to be less than that of prob by 1, but found" in str(context.exception)
+            "The dimension of dy is expected to be less than that of prob by 1, but found"
+            in str(context.exception)
         )
 
     def test_softmax_cross_entropy_grad_dy_i_shape_err(test_case):
@@ -105,7 +106,8 @@ class TestSoftmaxCrossEntropyError(flow.unittest.TestCase):
             flow._C.softmax_cross_entropy_grad(dy, label, prob)
             print(str(context.exception))
         test_case.assertTrue(
-            "dy and prob are expected to have the same dtype, but found" in str(context.exception)
+            "dy and prob are expected to have the same dtype, but found"
+            in str(context.exception)
         )
 
 
