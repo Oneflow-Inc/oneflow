@@ -20,6 +20,10 @@
 #   "Sbp", "SbpList"
 # }
 
+- name: "nonzero"
+  signature: "TensorTuple (Tensor x) => Nonzero"
+  bind_python: true
+
 - name: "add"
   signature:
     [

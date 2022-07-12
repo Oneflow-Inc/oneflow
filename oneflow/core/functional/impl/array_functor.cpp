@@ -3106,6 +3106,40 @@ class FillTensorFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class NonzeroFunctor {
+  public:
+    Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x) const {
+      auto indices = std::make_shared<TensorTuple>();
+      const auto& res = JUST(functional::ArgWhere(x, DType::Int64()));
+      if (res->size() != 2) {
+        return Error::RuntimeError() << "Argwhere should returns 2 tensors, but got " << res->size();
+      }
+      auto size_tensor = res->at(1);
+      if (!size_tensor->is_eager()) {
+        return Error::RuntimeError()
+              << "Advanced indexing by boolean(mask) tensor only valid in eager mode.";
+      }
+      if (size_tensor->is_global()) {
+        // TODO(): check size_tensor sbp is broadcast.
+        size_tensor = JUST(functional::GlobalToLocal(size_tensor));
+      }
+      int64_t size = 0;
+      const auto& callback = [&](uint64_t of_blob_ptr) {
+        auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+        of_blob->AutoMemCopyTo<int64_t>(&size, 1);
+      };
+      JUST(SyncAccessTensorWithTimeOut(size_tensor, callback, "const"));
+
+      for (int i = 0; i < x->ndim(); ++i) {
+        auto item = JUST(functional::Slice((*res)[0], {0, i}, {size, i + 1}, {1, 1},
+                                          /*enable_view_slice=*/false));
+        item = JUST(functional::Reshape(item, {size}));
+        indices->emplace_back(item);
+      }
+      return indices;
+    }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -3224,6 +3258,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TransposeAllDimFunctionFunctor>("TransposeAllDimFunction");
   m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
   m.add_functor<impl::PinMemoryFunctor>("PinMemory");
+  m.add_functor<impl::NonzeroFunctor>("Nonzero");
 };
 
 }  // namespace functional
