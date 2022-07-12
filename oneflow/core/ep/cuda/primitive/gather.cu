@@ -24,15 +24,20 @@ namespace primitive {
 namespace {
 template<typename T, typename K, typename IDX, int N>
 __global__ void GatherForwardGpu(const IDX batch_dim_size, const IDX out_instance_size,
+                                 const IDX indice_instance_size,
                                  NdIndexOffsetHelper<IDX, N> in_helper,
                                  NdIndexOffsetHelper<IDX, N> out_helper, const K* indices,
                                  const T* in, const IDX gather_dim_size, T* out, const IDX offset) {
   IDX index[N];
+  size_t index_axis = N - 2;
   CUDA_1D_KERNEL_LOOP_T(IDX, i, batch_dim_size * out_instance_size) {
     out_helper.OffsetToNdIndex(i, index);
-    index[2] = indices[index[2] + i % out_instance_size] - offset;
+    index[index_axis] =
+        indices[index[index_axis] + i / out_instance_size * indice_instance_size] - offset;
     T v{};
-    if (index[2] >= 0 && index[2] < gather_dim_size) { v = in[in_helper.NdIndexToOffset(index)]; }
+    if (index[index_axis] >= 0 && index[index_axis] < gather_dim_size) {
+      v = in[in_helper.NdIndexToOffset(index)];
+    }
     out[i] = v;
   }
 }
@@ -44,33 +49,97 @@ bool IsSafeUseIndex32(int64_t batch_dim_size, int64_t outer_dim_size, int64_t ga
   return std::max(out_elem_cnt, in_elem_cnt) < GetMaxVal<int32_t>() / 2;
 }
 
-template<typename T, typename K, int N>
-void DispatchIndexSize(ep::Stream* stream, int64_t batch_dim_size, int64_t outer_dim_size,
-                       int64_t gather_dim_size, int64_t inner_dim_size, int64_t num_indices,
-                       int64_t offset, const K* indices, const T* in, T* out) {
-  const int64_t out_instance_size = outer_dim_size * num_indices * inner_dim_size;
+template<typename T, typename K>
+void DispatchIndexSizeWith2DimNum(ep::Stream* stream, int64_t batch_dim_size,
+                                  int64_t outer_dim_size, int64_t gather_dim_size,
+                                  int64_t inner_dim_size, int64_t num_indices, int64_t offset,
+                                  const K* indices, const T* in, T* out) {
+  constexpr int N = 2;
+  const int64_t out_instance_size = num_indices * inner_dim_size;
+  const int64_t out_elem_cnt = out_instance_size;
+  if (IsSafeUseIndex32(batch_dim_size, outer_dim_size, gather_dim_size, inner_dim_size,
+                       num_indices)) {
+    NdIndexOffsetHelper<int32_t, N> in_helper(gather_dim_size, inner_dim_size);
+    NdIndexOffsetHelper<int32_t, N> out_helper(num_indices, inner_dim_size);
+    GatherForwardGpu<T, K, int32_t, N>
+        <<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0,
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            batch_dim_size, out_instance_size, num_indices, in_helper, out_helper, indices, in,
+            gather_dim_size, out, offset);
+  } else {
+    NdIndexOffsetHelper<int64_t, N> in_helper(gather_dim_size, inner_dim_size);
+    NdIndexOffsetHelper<int64_t, N> out_helper(num_indices, inner_dim_size);
+    GatherForwardGpu<T, K, int64_t, N>
+        <<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0,
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            batch_dim_size, out_instance_size, num_indices, in_helper, out_helper, indices, in,
+            gather_dim_size, out, offset);
+  }
+}
+
+template<typename T, typename K>
+void DispatchIndexSizeWith3DimNum(ep::Stream* stream, int64_t batch_dim_size,
+                                  int64_t outer_dim_size, int64_t gather_dim_size,
+                                  int64_t inner_dim_size, int64_t num_indices, int64_t offset,
+                                  const K* indices, const T* in, T* out) {
+  constexpr int N = 3;
+  const int64_t indice_instance_size = num_indices / batch_dim_size;
+  const int64_t out_instance_size = outer_dim_size * indice_instance_size * inner_dim_size;
+  const int64_t out_elem_cnt = batch_dim_size * out_instance_size;
+
+  const int64_t outest_dim_size = batch_dim_size * outer_dim_size;
+  if (IsSafeUseIndex32(batch_dim_size, outer_dim_size, gather_dim_size, inner_dim_size,
+                       num_indices)) {
+    NdIndexOffsetHelper<int32_t, N> in_helper(outest_dim_size, gather_dim_size, inner_dim_size);
+    NdIndexOffsetHelper<int32_t, N> out_helper(outest_dim_size, indice_instance_size,
+                                               inner_dim_size);
+    GatherForwardGpu<T, K, int32_t, N>
+        <<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0,
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            batch_dim_size, out_instance_size, indice_instance_size, in_helper, out_helper, indices,
+            in, gather_dim_size, out, offset);
+  } else {
+    NdIndexOffsetHelper<int64_t, N> in_helper(outest_dim_size, gather_dim_size, inner_dim_size);
+    NdIndexOffsetHelper<int64_t, N> out_helper(outest_dim_size, indice_instance_size,
+                                               inner_dim_size);
+    GatherForwardGpu<T, K, int64_t, N>
+        <<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0,
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            batch_dim_size, out_instance_size, indice_instance_size, in_helper, out_helper, indices,
+            in, gather_dim_size, out, offset);
+  }
+}
+
+template<typename T, typename K>
+void DispatchIndexSizeWith4DimNum(ep::Stream* stream, int64_t batch_dim_size,
+                                  int64_t outer_dim_size, int64_t gather_dim_size,
+                                  int64_t inner_dim_size, int64_t num_indices, int64_t offset,
+                                  const K* indices, const T* in, T* out) {
+  constexpr int N = 4;
+  const int64_t indice_instance_size = num_indices / batch_dim_size;
+  const int64_t out_instance_size = outer_dim_size * indice_instance_size * inner_dim_size;
   const int64_t out_elem_cnt = batch_dim_size * out_instance_size;
   if (IsSafeUseIndex32(batch_dim_size, outer_dim_size, gather_dim_size, inner_dim_size,
                        num_indices)) {
     NdIndexOffsetHelper<int32_t, N> in_helper(batch_dim_size, outer_dim_size, gather_dim_size,
                                               inner_dim_size);
-    NdIndexOffsetHelper<int32_t, N> out_helper(batch_dim_size, outer_dim_size, num_indices,
+    NdIndexOffsetHelper<int32_t, N> out_helper(batch_dim_size, outer_dim_size, indice_instance_size,
                                                inner_dim_size);
     GatherForwardGpu<T, K, int32_t, N>
         <<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0,
-           stream->As<ep::CudaStream>()->cuda_stream()>>>(batch_dim_size, out_instance_size,
-                                                          in_helper, out_helper, indices, in,
-                                                          gather_dim_size, out, offset);
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            batch_dim_size, out_instance_size, indice_instance_size, in_helper, out_helper, indices,
+            in, gather_dim_size, out, offset);
   } else {
     NdIndexOffsetHelper<int64_t, N> in_helper(batch_dim_size, outer_dim_size, gather_dim_size,
                                               inner_dim_size);
-    NdIndexOffsetHelper<int64_t, N> out_helper(batch_dim_size, outer_dim_size, num_indices,
+    NdIndexOffsetHelper<int64_t, N> out_helper(batch_dim_size, outer_dim_size, indice_instance_size,
                                                inner_dim_size);
     GatherForwardGpu<T, K, int64_t, N>
         <<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0,
-           stream->As<ep::CudaStream>()->cuda_stream()>>>(batch_dim_size, out_instance_size,
-                                                          in_helper, out_helper, indices, in,
-                                                          gather_dim_size, out, offset);
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            batch_dim_size, out_instance_size, indice_instance_size, in_helper, out_helper, indices,
+            in, gather_dim_size, out, offset);
   }
 }
 
@@ -80,9 +149,19 @@ bool TryDispatchMovementType(ep::Stream* stream, int64_t batch_dim_size, int64_t
                              int64_t offset, const K* indices, const void* in, void* out) {
   if (reinterpret_cast<uintptr_t>(in) % sizeof(T) == 0
       && reinterpret_cast<uintptr_t>(out) % sizeof(T) == 0 && inner_dim_size % sizeof(T) == 0) {
-    DispatchIndexSize<T, K, 4>(stream, batch_dim_size, outer_dim_size, gather_dim_size,
-                               inner_dim_size / sizeof(T), num_indices, offset, indices,
-                               static_cast<const T*>(in), static_cast<T*>(out));
+    if (batch_dim_size == 1 && outer_dim_size == 1) {
+      DispatchIndexSizeWith2DimNum<T, K>(stream, batch_dim_size, outer_dim_size, gather_dim_size,
+                                         inner_dim_size / sizeof(T), num_indices, offset, indices,
+                                         static_cast<const T*>(in), static_cast<T*>(out));
+    } else if (batch_dim_size == 1 || outer_dim_size == 1) {
+      DispatchIndexSizeWith3DimNum<T, K>(stream, batch_dim_size, outer_dim_size, gather_dim_size,
+                                         inner_dim_size / sizeof(T), num_indices, offset, indices,
+                                         static_cast<const T*>(in), static_cast<T*>(out));
+    } else {
+      DispatchIndexSizeWith4DimNum<T, K>(stream, batch_dim_size, outer_dim_size, gather_dim_size,
+                                         inner_dim_size / sizeof(T), num_indices, offset, indices,
+                                         static_cast<const T*>(in), static_cast<T*>(out));
+    }
     return true;
   } else {
     return false;
