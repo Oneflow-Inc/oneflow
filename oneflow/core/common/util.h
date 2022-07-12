@@ -34,6 +34,7 @@ limitations under the License.
 #include <thread>
 #include <utility>
 #include <cfenv>
+#include "fmt/ranges.h"
 
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/meta_util.hpp"
@@ -44,14 +45,7 @@ limitations under the License.
 
 template<class T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& v) {
-  os << "[";
-  for (size_t i = 0; i < v.size(); i++) {
-    os << v[i];
-    if (i != v.size() - 1) {
-      os << ", ";
-    }
-  }
-  os << "]";
+  os << fmt::format("{}", v);
   return os;
 }
 

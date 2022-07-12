@@ -135,12 +135,12 @@ class CustomEvent(EventBase):
 
 class KernelEvent(EventBase):
     def __init__(
-        self, name: str, time_total: float, memory_size: int, input_shapes: str
+        self, name: str, time_total: float, memory_size: int, description: Dict[str, str]
     ) -> None:
         super().__init__(name, time_total, EventType.Kernel)
         self.children: List[CustomEvent] = []
         self.memory_size = memory_size
-        self.input_shapes = input_shapes
+        self.description = description
         self._cuda_time_total = 0.0
 
     def add_child(self, event: CustomEvent):
@@ -151,7 +151,7 @@ class KernelEvent(EventBase):
     @classmethod
     def from_dict(cls, d: dict):
         kernel_event = cls(
-            d.get("name"), d.get("time"), d.get("memory_size"), d.get("input_shapes")
+            d.get("name"), d.get("time"), d.get("memory_size"), d.get("description")
         )
         if "children" in d.keys():
             children_list = d.get("children")
@@ -162,11 +162,13 @@ class KernelEvent(EventBase):
 
     @property
     def key(self):
+        def flatten_desc(desc):
+            return ",".join([f"{x}:{y}" for x, y in desc.items()])
         if len(self.children) == 0:
-            return (self.name, self.input_shapes)
+            return (self.name, flatten_desc(self.description))
         return (
             self.name,
-            self.input_shapes,
+            flatten_desc(self.description),
             ",".join([x.name for x in self.children]),
         )
 
@@ -193,8 +195,8 @@ class KernelEvent(EventBase):
             "cpu_time_total": format_time(self.cpu_time_total),
             "cpu_time": format_time(self.cpu_time),
             "count": self.count,
-            "input_shapes": self.input_shapes,
             "bandwidth": self.bandwidth,
+            "description": self.description,
         }
         if self.has_cuda_time():
             result.update(
@@ -210,7 +212,11 @@ class KernelEvent(EventBase):
         assert id(self) != id(event)
         assert isinstance(event, type(self))
         assert len(self.children) == len(event.children)
-        assert self.has_cuda_time() == event.has_cuda_time()
+        if self.key[0] in ['constant', 'ones_like']:
+            return
+        if self.key[1] == 'attr:,shape:(), ()':
+            return
+        assert self.has_cuda_time() == event.has_cuda_time(), self.key
         assert self.key == event.key
 
         super().update(event)
@@ -280,9 +286,6 @@ class Events(list):
         return results
 
     def table(self):
-        has_input_shapes = any(
-            [x.input_shapes != "-" for x in self if isinstance(x, KernelEvent)]
-        )
         has_bandwidth = any(
             [x.bandwidth != "-" for x in self if isinstance(x, KernelEvent)]
         )
@@ -293,7 +296,6 @@ class Events(list):
             "GPU time total",
             "GPU time",
             "Number of calls",
-            box=box.SIMPLE,
         )
         field_keys = [
             "name",
@@ -303,15 +305,22 @@ class Events(list):
             "cuda_time",
             "count",
         ]
-        if has_input_shapes:
-            t.add_column("Input shapes")
-            field_keys.append("input_shapes")
         if has_bandwidth:
             t.add_column("Bandwidth")
             field_keys.append("bandwidth")
 
+        desc_key = set()
+        for x in self:
+            if isinstance(x, KernelEvent):
+                desc_key.update(x.description.keys())
+        for x in desc_key:
+            t.add_column(x)
+
         def build_row(data: dict):
-            return tuple(str(data.get(key, "-")) for key in field_keys)
+            row = tuple(str(data.get(key, "-")) for key in field_keys)
+            if "description" in data:
+                row = row + tuple(data["description"].get(key, "-") for key in desc_key)
+            return row
 
         for item in self:
             if isinstance(item, CustomEvent):

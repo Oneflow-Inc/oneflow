@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <fmt/core.h>
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
@@ -122,17 +123,15 @@ AttrMap MakeAttrMapFromUserOpConf(const UserOpConf& user_op_conf) {
 }
 
 std::string ComposedAttrMap::ToString() const {
-  std::stringstream ss;
+  std::string result;
   for (const auto& attr : prior_) {
-    ss << attr.first << "=" << attr.second->ToString() << ", ";
+    result += fmt::format("{}={}, ", attr.first, attr.second->ToString());
   }
   for (const auto& attr : base_) {
-    if (prior_.find(attr.first) != prior_.end()) {
-      continue;
-    }
-    ss << attr.first << "=" << attr.second->ToString() << ", ";
+    if (prior_.find(attr.first) != prior_.end()) { continue; }
+    result += fmt::format("{}={}, ", attr.first, attr.second->ToString());
   }
-  return ss.str();
+  return result;
 }
 
 template<typename T>

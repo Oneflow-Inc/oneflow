@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_H_
 #define ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_H_
 
+#include "fmt/core.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/shape.h"
@@ -106,12 +107,7 @@ class TypedAttrValIf : public AttrVal {
  public:
   virtual const T& val() const = 0;
   size_t hash_value() const override { return std::hash<T>()(val()); }
-  std::string ToString() const override {
-    using ::operator<<;
-    std::stringstream ss;
-    ss << val();
-    return ss.str();
-  }
+  std::string ToString() const override { return fmt::format("{}", val()); }
 
   bool operator==(const AttrVal& other) const override {
     auto* that = dynamic_cast<const TypedAttrValIf<T>*>(&other);

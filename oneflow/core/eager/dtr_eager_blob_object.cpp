@@ -114,8 +114,13 @@ void DTREagerBlobObject::unpin() {
 
 Maybe<void> DTREagerBlobObject::evict(bool eager_evict) {
   if (dtr::is_enabled_and_debug()) {
-    static size_t c = 0;
-    LOG(INFO) << "evict (No." << c++ << "), id: " << id() << std::endl;
+    static size_t fn = 0;
+    static size_t en = 0;
+    if (eager_evict) {
+      LOG(INFO) << "eager evict (No." << en++ << "), id: " << id() << std::endl;
+    } else {
+      LOG(INFO) << "forced evict (No." << fn++ << "), id: " << id() << std::endl;
+    }
   }
   if (!is_evictable()) {
     std::cout << "evict failed, " << id() << std::endl;
@@ -211,9 +216,11 @@ Maybe<double> DTREagerBlobObject::parent_cost(bool is_bp_required) const {
       bool add_flag = (!dtr_blob_object->is_in_memory());
       if (is_bp_required) { add_flag = add_flag && dtr_blob_object->is_bp_required(); }
       if (add_flag) {
+        LOG(INFO) << "parent " << dtr_blob_object.get() << " op type: " << dtr_blob_object->compute_op_type_name();
         auto com_time = dtr_blob_object->compute_time();
         auto p_cost = JUST(dtr_blob_object->parent_cost(is_bp_required));
         cost = cost + com_time + p_cost;
+        LOG(INFO) << "parent " << dtr_blob_object.get() << " op type: " << dtr_blob_object->compute_op_type_name() << " end";
       }
     }
 
@@ -374,6 +381,8 @@ Maybe<double> DTREagerBlobObject::cost(const std::string& heuristic, size_t over
     return JUST(neighbor_cost()) / size_d;
   } else if (heuristic == "compute_time") {
     return JUST(neighbor_cost());
+  } else if (heuristic == "full_compute_time_and_last_access") {
+    return JUST(neighbor_cost()) / time_since_last_access;
   } else if (heuristic == "eq_compute_time_and_last_access") {
     return JUST(approx_neighbor_cost()) / time_since_last_access;
   } else if (heuristic == "eq_compute_time") {

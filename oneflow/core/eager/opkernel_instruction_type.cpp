@@ -106,7 +106,8 @@ struct LocalCallOpKernelUtil final {
     }
     if (dtr::is_enabled()) {
       JUST(CheckOutputInMemory(operand));
-      if (EnvBool<OF_DTR_LR>() && EnvBool<OF_DTR_ALLO>() && !IsInplace(GetDTRInputs(operand), GetDTROutputs(operand))) {
+      if (EnvBool<OF_DTR_LR>() && EnvBool<OF_DTR_ALLO>()
+          && !IsInplace(GetDTRInputs(operand), GetDTROutputs(operand))) {
         if (auto* thread_safe_allocator =
                 dynamic_cast<vm::ThreadSafeAllocator*>(device_ctx->mut_allocator())) {
           if (auto* dtr_allocator =
@@ -187,30 +188,39 @@ struct LocalCallOpKernelUtil final {
                                        operand->consistent_tensor_infer_result().get(), device_ctx);
     OF_PROFILER_RANGE_PUSH("Compute");
     {
-      #if defined(WITH_CUDA)
-    const auto CalMemorySize = [compute_ctx](const one::ArgVec& args) -> int64_t {
-      const auto Func = [compute_ctx](int64_t mem_size, const auto& pair) {
-        const auto tensor = compute_ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
-        return mem_size + tensor->shape().elem_cnt() * GetSizeOfDataType(tensor->data_type());
-      };
-      return std::accumulate(args.begin(), args.end(), static_cast<int64_t>(0), Func);
-    };
-#endif
-    auto er_guard = CHECK_JUST(profiler::EventRecorder::CreateKernelEventRecorder(
-        opkernel->op_type_name(),
 #if defined(WITH_CUDA)
-        [compute_ctx, CalMemorySize]() -> int64_t {
-          return CalMemorySize(compute_ctx->inputs()) + CalMemorySize(compute_ctx->outputs());
-        },
+      const auto CalMemorySize = [compute_ctx](const one::ArgVec& args) -> int64_t {
+        const auto Func = [compute_ctx](int64_t mem_size, const auto& pair) {
+          const auto tensor = compute_ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
+          return mem_size + tensor->shape().elem_cnt() * GetSizeOfDataType(tensor->data_type());
+        };
+        return std::accumulate(args.begin(), args.end(), static_cast<int64_t>(0), Func);
+      };
 #endif
-        [compute_ctx]() -> std::vector<Shape> {
-          std::vector<Shape> shapes;
-          for (const auto& pair : compute_ctx->inputs()) {
-            shapes.emplace_back(
-                compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape());
-          }
-          return shapes;
-        }));
+      profiler::KernelEvent::Description description;
+      {
+        std::stringstream ss;
+        std::size_t hash = 0;
+        for (size_t i = 0; i < operand->inputs()->size(); i++) {
+          const auto& shape = operand->inputs()->at(i)->shape();
+          ss << shape;
+          if (i != operand->inputs()->size() - 1) { ss << ", "; }
+          AddHash(&hash, shape);
+        }
+        description["shape"] = {ss.str(), hash};
+      }
+      {
+        const std::string attr_str = operand->composed_attrs().ToString();
+        description["attr"] = {attr_str, std::hash<std::string>{}(attr_str)};
+      }
+      auto er_guard = CHECK_JUST(profiler::EventRecorder::CreateKernelEventRecorder(
+          opkernel->op_type_name(),
+#if defined(WITH_CUDA)
+          [compute_ctx, CalMemorySize]() -> int64_t {
+            return CalMemorySize(compute_ctx->inputs()) + CalMemorySize(compute_ctx->outputs());
+          },
+#endif
+          description));
       operand->user_opkernel()->Compute(compute_ctx, state, cache);
     }
     OF_PROFILER_RANGE_POP();
@@ -392,33 +402,24 @@ Maybe<int> IncReferenceNumOfRecomputedTensor(
   return pinned_num;
 }
 
-static Maybe<double> GetEstimatedComputeTime(vm::LocalCallOpKernelPhyInstrOperand* operand) {
-  const auto& inputs = *operand->inputs();
-  const auto& outputs = *operand->outputs();
-  size_t estimated_compute_time = 0;
-  for (const auto& input : inputs) {
-    estimated_compute_time += input->tensor_storage()->blob_bytes();
-  }
-  for (const auto& output : outputs) {
-    estimated_compute_time += output->tensor_storage()->blob_bytes();
-  }
-  return estimated_compute_time;
-}
-
 static Maybe<double> GetDatasetComputeTime(vm::LocalCallOpKernelPhyInstrOperand* operand) {
-  if (
-      operand->opkernel().op_type_name() == "empty"
+  if (operand->outputs()->size() == 0 || (*operand->outputs())[0]->mem_case().has_host_mem()) {
+    LOG(INFO) << operand->opkernel().op_type_name();
+    return 0;
+  }
+  if (operand->opkernel().op_type_name() == "empty"
+      || operand->opkernel().op_type_name() == "identity"
       || operand->opkernel().op_type_name() == "constant"
       || operand->opkernel().op_type_name() == "copy"
       || operand->opkernel().op_type_name() == "zero_like"
+      || operand->opkernel().op_type_name() == "expand_dims"
       || operand->opkernel().op_type_name() == "flatten"
       || operand->opkernel().op_type_name() == "reduce_sum"
       || operand->opkernel().op_type_name() == "reshape"
       || operand->opkernel().op_type_name() == "reshape_like"
       || operand->opkernel().op_type_name() == "transpose"
       || operand->opkernel().op_type_name() == "nll"
-      || operand->opkernel().op_type_name() == "nll_grad"
-      ) {
+      || operand->opkernel().op_type_name() == "nll_grad") {
     return 0;
   }
   using json = nlohmann::json;
@@ -433,9 +434,7 @@ static Maybe<double> GetDatasetComputeTime(vm::LocalCallOpKernelPhyInstrOperand*
     std::stringstream ss;
     for (size_t i = 0; i < operand->inputs()->size(); i++) {
       ss << operand->inputs()->at(i)->shape();
-      if (i != operand->inputs()->size() - 1) {
-        ss << ", ";
-      }
+      if (i != operand->inputs()->size() - 1) { ss << ", "; }
     }
     return ss.str();
   }();
@@ -444,6 +443,20 @@ static Maybe<double> GetDatasetComputeTime(vm::LocalCallOpKernelPhyInstrOperand*
   CHECK_OR_RETURN(j.contains(key)) << "key " << key << " not found";
   CHECK_OR_RETURN(j[key].is_number_float()) << "key " << key << " is not float, but " << j[key];
   return j[key].get<double>();
+}
+
+static Maybe<double> GetEstimatedComputeTime(vm::LocalCallOpKernelPhyInstrOperand* operand) {
+  return GetDatasetComputeTime(operand);
+  const auto& inputs = *operand->inputs();
+  const auto& outputs = *operand->outputs();
+  size_t estimated_compute_time = 0;
+  for (const auto& input : inputs) {
+    estimated_compute_time += input->tensor_storage()->blob_bytes();
+  }
+  for (const auto& output : outputs) {
+    estimated_compute_time += output->tensor_storage()->blob_bytes();
+  }
+  return estimated_compute_time;
 }
 
 Maybe<void> _RecursivelyCompute(
@@ -516,7 +529,8 @@ Maybe<void> _RecursivelyCompute(
         && Global<dtr::TensorPool>::Get()->need_eager_eviction_ebos_.count(input.get()) > 0) {
       if (dtr::debug_level() >= 2) {
         LOG(INFO) << "going to evict " << input << " in recomputation, whose dptr is "
-                  << input->dptr() << ", id: " << input->id() << ", compute op: " << input->compute_op_type_name()
+                  << input->dptr() << ", id: " << input->id()
+                  << ", compute op: " << input->compute_op_type_name()
                   << ", size: " << input->ByteSizeOfBlobBody()
                   << ", is in memory: " << input->is_in_memory() << std::endl;
       }
@@ -527,7 +541,7 @@ Maybe<void> _RecursivelyCompute(
 
   // update timestamp
   Global<dtr::TensorPool>::Get()->time_flies(compute_time);
-  // Global<dtr::TensorPool>::Get()->dataset_time_flies(JUST(GetDatasetComputeTime(operand.get())));
+  Global<dtr::TensorPool>::Get()->dataset_time_flies(JUST(GetDatasetComputeTime(operand.get())));
   return Maybe<void>::Ok();
 }
 

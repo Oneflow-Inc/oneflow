@@ -123,7 +123,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
           output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
         } else {
           // output is existing
-          auto tensor = std::dynamic_pointer_cast<DTRMirroredTensor>((*outputs)[i]);
+          auto tensor =
+              std::dynamic_pointer_cast<DTRMirroredTensor>(JUST((*outputs)[i]->AsMirroredTensor()));
           auto old_eager_blob_object =
               std::dynamic_pointer_cast<vm::DTREagerBlobObject>(JUST(tensor->eager_blob_object()));
           auto new_eager_blob_object = old_eager_blob_object->Clone();
@@ -263,7 +264,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
 
     for (const auto& output : *outputs) {
-      auto dtr_output = std::dynamic_pointer_cast<DTRMirroredTensor>(output);
+      auto dtr_output = std::dynamic_pointer_cast<DTRMirroredTensor>(JUST(output->AsMirroredTensor()));
       JUST(dtr_output->set_holder(input_holders));
     }
   }

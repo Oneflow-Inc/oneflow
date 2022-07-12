@@ -74,9 +74,9 @@ int32_t DtrCudaAllocator::LowerBoundBinId4NormalPiece(size_t size) {
 int32_t DtrCudaAllocator::UpperBoundBinId4NormalPiece(size_t size) { return kBinNumSize; }
 
 void DtrCudaAllocator::Mark(DTREagerBlobObject* ebo, char* mem_ptr) {
-  if (dtr::debug_level() >= 2) { LOG(INFO) << "mark " << ebo << " " << (void*)mem_ptr; }
   Piece* piece = ptr2piece_.at(mem_ptr);
   piece->tensor = ebo;
+  if (dtr::debug_level() >= 1) { LOG(INFO) << "tensor " << ebo->id() << " is allocated at " << get_offset(mem_ptr) << ", left: " << piece->is_left; }
 }
 
 bool DtrCudaAllocator::InSmallMemoryArea(void* ptr) {
@@ -141,14 +141,14 @@ double get_cost(const vm::DTREagerBlobObject* ebo, int& coeff, size_t size) {
   double cost = CHECK_JUST(ebo->cost(size));
 
   if (!EnvBool<OF_DTR_O_ONE>()) {
-    CHECK(!isinf(cost));
+    // CHECK(!isinf(cost));
     CHECK(!isnan(cost));
     return cost;
   }
   // const double cost = CHECK_JUST(ebo->cost());
   if (coeff < 0) { coeff = ebo->pesudo_cnt(); }
   cost = cost * coeff;
-  CHECK(!isinf(cost));
+  // CHECK(!isinf(cost));
   CHECK(!isnan(cost));
   return cost;
 }

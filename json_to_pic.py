@@ -70,10 +70,13 @@ def draw_from_files_and_draw(get_y, pic_name):
     _, ax = plt.subplots()
 
     draw_from_file(ax, rf"{model_name}-ours-\d+.json", get_threshold_from_json_file, get_y, 'ours')
-    draw_from_file(ax, rf"{model_name}-ours-without-size-\d+.json", get_threshold_from_json_file, get_y, 'ours w/o size')
+    # draw_from_file(ax, rf"{model_name}-ours-with-size-\d+.json", get_threshold_from_json_file, get_y, 'ours w/ size')
     # draw_from_file(ax, rf"{model_name}-raw-gp-\d+.json", get_threshold_from_json_file, get_y, 'raw grouping')
-    draw_from_file(ax, rf"{model_name}-no-gp-\d+.json", get_threshold_from_json_file, get_y, 'no grouping')
-    draw_from_file(ax, rf"{model_name}-no-fbip-\d+.json", get_threshold_from_json_file, get_y, 'no fbip')
+    # draw_from_file(ax, rf"{model_name}-raw-gp-size-\d+.json", get_threshold_from_json_file, get_y, 'raw grouping w/ size')
+    # draw_from_file(ax, rf"{model_name}-no-gp-\d+.json", get_threshold_from_json_file, get_y, 'no grouping')
+    # draw_from_file(ax, rf"{model_name}-no-gp-size-\d+.json", get_threshold_from_json_file, get_y, 'no grouping w/ size')
+    # draw_from_file(ax, rf"{model_name}-no-fbip-\d+.json", get_threshold_from_json_file, get_y, 'no fbip')
+    # draw_from_file(ax, rf"{model_name}-no-fbip-size-\d+.json", get_threshold_from_json_file, get_y, 'no fbip w/ size')
     draw_from_file(ax, rf"{model_name}-me-style-\d+.json", get_threshold_from_json_file, get_y, 'me style')
     draw_from_file(ax, rf"{model_name}-raw-dtr-\d+.json", get_threshold_from_json_file, get_y, 'raw dtr')
 

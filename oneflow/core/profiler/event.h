@@ -47,7 +47,6 @@ class IEvent {
   IEvent() = delete;
   IEvent(const std::string& name, EventTimeUnit time_unit) : name_(name), time_unit_(time_unit) {}
 
-  virtual std::string Key() = 0;
   virtual nlohmann::json ToJson();
   virtual ~IEvent() = default;
 
@@ -116,7 +115,6 @@ const inline time_t IEvent::GetDuration<time_t>(EventTimeUnit time_unit) const {
 class CustomEvent final : public IEvent {
  public:
   friend class ProfileManager;
-  std::string Key() override;
 
   nlohmann::json ToJson() override;
 
@@ -133,12 +131,12 @@ class CustomEvent final : public IEvent {
 
 class KernelEvent final : public IEvent {
  public:
-  std::string Key() override;
+  using Description = std::map<std::string, std::pair<std::string, int64_t>>;
 
   nlohmann::json ToJson() override;
 
-  static std::shared_ptr<KernelEvent> Create(
-      const std::string& name, const std::function<std::vector<Shape>(void)>& shape_getter);
+  static std::shared_ptr<KernelEvent> Create(const std::string& name,
+                                             const Description& description);
 
   void RecordShape(const Shape& shape);
 
@@ -160,18 +158,15 @@ class KernelEvent final : public IEvent {
 
  private:
   KernelEvent(const std::string& kernel_name,
-              const std::function<std::vector<Shape>(void)>& shape_getter)
-      : IEvent(kernel_name, EventTimeUnit::kNS) {
-    if (shape_getter) { input_shapes_ = shape_getter(); }
-  }
+              const std::map<std::string, std::pair<std::string, int64_t>>& description)
+      : IEvent(kernel_name, EventTimeUnit::kNS), description_(description) {}
 
 #if defined(WITH_CUDA)
   int64_t memory_size_ = -1;
   std::set<std::shared_ptr<IEvent>> children_;
 #endif  // WITH_CUDA
 
-  std::vector<Shape> input_shapes_;
-  std::string GetFormatedInputShapes(size_t max_num_to_format = 4);
+  const std::map<std::string, std::pair<std::string, int64_t>> description_;
 };
 
 }  // namespace profiler

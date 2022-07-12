@@ -35,12 +35,13 @@ Maybe<EventRecorder> EventRecorder::CreateKernelEventRecorder(
 #if defined(WITH_CUDA)
     const std::function<int64_t()>& memory_size_getter,
 #endif
-    const ShapeGetterFuncType& shape_getter) {
+    const KernelEvent::Description& description) {
+
   auto pmgr = Global<ProfileManager>::Get();
   if (pmgr) {
 #if defined(WITH_CUDA)
     if (pmgr->use_cpu_ || pmgr->use_cuda_) {
-      auto event = KernelEvent::Create(name, pmgr->record_shapes_ ? shape_getter : nullptr);
+      auto event = KernelEvent::Create(name, description);
       if (pmgr->use_cuda_) {
         if (pmgr->record_bandwidth_) { event->SetMemorySize(memory_size_getter()); }
       }
@@ -48,8 +49,7 @@ Maybe<EventRecorder> EventRecorder::CreateKernelEventRecorder(
     }
 #else  // WITH_CUDA
     if (pmgr->use_cpu_) {
-      return std::make_shared<EventRecorder>(
-          KernelEvent::Create(name, pmgr->record_shapes_ ? shape_getter : nullptr));
+      return std::make_shared<EventRecorder>(KernelEvent::Create(name, description));
     }
 #endif  // WITH_CUDA
   }

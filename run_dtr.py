@@ -109,6 +109,7 @@ ALL_ITERS = args.iters
 
 if args.allocator:
     heuristic = "eq_compute_time_and_last_access"
+    # heuristic = "full_compute_time_and_last_access"
     if args.me_style:
         heuristic = "eq"
 else:
@@ -166,6 +167,14 @@ def densenet121_info():
     return model, criterion, get_fixed_input, get_fixed_label, get_imagenet_imagefolder
 
 
+def swin_transformer_info():
+    model = models.swin_base_patch4_window7_224()
+    criterion = nn.CrossEntropyLoss()
+    get_fixed_input = lambda bs: flow.ones(bs, 3, 224, 224)
+    get_fixed_label = lambda bs: flow.ones(bs, dtype=flow.int64)
+    return model, criterion, get_fixed_input, get_fixed_label, get_imagenet_imagefolder
+
+
 def unet_info():
     import unet
 
@@ -179,6 +188,41 @@ def unet_info():
 
     return model, criterion, get_fixed_input, get_fixed_label, get_imagefolder
 
+
+def update_dataset(prof):
+    DATASET_FILENAME = '/home/dev/op_time_dataset.json'
+    if os.path.exists(DATASET_FILENAME):
+        with open(DATASET_FILENAME, 'r') as f:
+            time_dict = json.load(f)
+    else:
+        time_dict = {}
+
+    events = prof.key_averages()
+    new_time_dict = {}
+    for e in events:
+        if isinstance(e, flow.profiler.events.KernelEvent):
+            new_time_dict[f"{e.name} {e.description['shape']} {e.description['attr']}"] = e.cuda_time
+
+    time_dict.update(new_time_dict)
+
+    with open('/home/dev/op_time_dataset.json', 'w') as f:
+        json.dump(time_dict, f)
+
+
+class Nothing:
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+
+PROFILE = False
+
+if PROFILE:
+    profile_guard = lambda: flow.profiler.profile(record_shapes=True)
+else:
+    profile_guard = Nothing
 
 model, criterion, get_fixed_input, get_fixed_label, get_imagefolder = eval(
     f"{args.model_name}_info()"
@@ -194,8 +238,8 @@ optimizer = flow.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.0)
 if args.no_dataloader:
     global data
     global label
-    data = get_fixed_input(args.bs)
-    label = get_fixed_label(args.bs)
+    data = get_fixed_input(args.bs).to('cuda')
+    label = get_fixed_label(args.bs).to('cuda')
 
     class FixedDataset(flow.utils.data.Dataset):
         def __len__(self):
@@ -211,16 +255,12 @@ else:
         imagefolder, batch_size=args.bs, shuffle=True, num_workers=0
     )
 
-total_time = 0
-
 if args.dtr:
     flow.nn.ContiguousGrad(model)
 zero_grad_set_to_none = args.old_immutable
 
-for iter, (train_data, train_label) in enumerate(train_data_loader):
-    if iter >= ALL_ITERS:
-        break
 
+def run_iter(train_data, train_label):
     train_data = train_data.to("cuda")
     train_label = train_label.to("cuda")
 
@@ -241,24 +281,41 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
     del loss
 
     flow.comm.barrier()
+    if args.allocator:
+        flow._oneflow_internal.dtr.set_left(True)
 
-    if iter >= WARMUP_ITERS:
-        this_time = time.time() - last_time
-        total_time += this_time
-        if iter % 1 == 0:
-            pass
-            # print(f'iter {iter} end, time: {this_time}')
+for iter, (train_data, train_label) in enumerate(train_data_loader):
+    if iter >= WARMUP_ITERS or iter >= ALL_ITERS:
+        break
 
+    run_iter(train_data, train_label)
+
+
+total_time = 0
+SKIP_FIRST_ITERS = 2
+
+with profile_guard() as prof:
     last_time = time.time()
-    if iter == 0:
-        pass
-        # print('iter 0 ok')
-    # print(f'iter {iter} end, all pieces:')
-    # flow._oneflow_internal.dtr.display_all_pieces()
-    flow._oneflow_internal.dtr.set_left(True)
 
-time_per_run = total_time / (ALL_ITERS - WARMUP_ITERS)
-print(f"{ALL_ITERS - WARMUP_ITERS} iters: avg {time_per_run}s")
+    for iter, (train_data, train_label) in enumerate(train_data_loader):
+        if iter >= ALL_ITERS - WARMUP_ITERS:
+            break
+
+        run_iter(train_data, train_label)
+
+        this_time = time.time() - last_time
+        # Skip iter 0 and 1, whose time is strangely shorter
+        if iter >= SKIP_FIRST_ITERS:
+            print(f"iter={iter}, time={this_time}")
+            total_time += this_time
+        last_time = time.time()
+
+if PROFILE:
+    print(prof.key_averages())
+    update_dataset(prof)
+
+time_per_run = total_time / (ALL_ITERS - WARMUP_ITERS - SKIP_FIRST_ITERS)
+print(f"{ALL_ITERS - WARMUP_ITERS - SKIP_FIRST_ITERS} iters: avg {time_per_run}s")
 
 if prefix is not None:
     fn = f"{prefix}.json"
