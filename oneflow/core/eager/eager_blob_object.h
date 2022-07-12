@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/op_args_reserved_size.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/memory/memory_allocator.h"
@@ -222,6 +223,14 @@ class EagerBlobObject final : public user_op::Tensor,
 };
 
 }  // namespace vm
+
+namespace one {
+
+using EagerBlobObjectList = small_vector<std::shared_ptr<vm::EagerBlobObject>, kOpArgsReservedSize>;
+using EagerBlobObjectListPtr = std::shared_ptr<const EagerBlobObjectList>;
+
+}  // namespace one
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_EAGER_BLOB_OBJECT_H_
