@@ -31,7 +31,10 @@ class TestModule(flow.unittest.TestCase):
         b = a.permute(1, 0)
         with test_case.assertRaises(RuntimeError) as ctx:
             print(b.view(9))
-        test_case.assertTrue("view size is not compatible with input tensor's size and stride (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead." in str(ctx.exception))
+        test_case.assertTrue(
+            "view size is not compatible with input tensor's size and stride (at least one dimension spans across two contiguous subspaces). Use .reshape(...) instead."
+            in str(ctx.exception)
+        )
 
 
 if __name__ == "__main__":
