@@ -308,6 +308,9 @@ std::string GetFormatedSerializedError(const std::shared_ptr<ErrorProto>& error_
   return Error::CheckFailedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
          << "Check failed: " << OF_PP_STRINGIZE(expr) << " "
 
+#define CHECK_OR_RETURN_ERROR(expr) \
+  if (!(expr)) return Error::CheckFailedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
+
 #define CHECK_EQ_OR_RETURN(lhs, rhs) \
   CHECK_OR_RETURN((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
 
