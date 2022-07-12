@@ -289,13 +289,6 @@ worker, where they are used to initialize, and fetch data. This means that
 dataset access together with its  internal IO, transforms
 (including :attr:`collate_fn`) runs in the worker process.
 
-.. :func:`oneflow.utils.data.get_worker_info()` returns various useful information
-.. in a worker process (including the worker id, dataset replica, initial seed,
-.. etc.), and returns ``None`` in main process. Users may use this function in
-.. dataset code and/or :attr:`worker_init_fn` to individually configure each
-.. dataset replica, and to determine whether the code is running in a worker
-.. process. For example, this can be particularly helpful in sharding the dataset.
-
 For map-style datasets, the main process generates the indices using
 :attr:`sampler` and sends them to the workers. So any shuffle randomization is
 done in the main process which guides loading by assigning indices to load.
@@ -419,29 +412,12 @@ Example::
 .. autoclass:: IterableDataset
 .. autoclass:: TensorDataset
 .. autoclass:: ConcatDataset
-.. .. autoclass:: ChainDataset
 .. autoclass:: Subset
-.. .. autofunction:: oneflow.utils.data.default_collate
-.. .. autofunction:: oneflow.utils.data.default_convert
-.. .. autofunction:: oneflow.utils.data.get_worker_info
 .. autofunction:: oneflow.utils.data.random_split
 .. autoclass:: oneflow.utils.data.Sampler
 .. autoclass:: oneflow.utils.data.SequentialSampler
 .. autoclass:: oneflow.utils.data.RandomSampler
 .. autoclass:: oneflow.utils.data.SubsetRandomSampler
-.. .. autoclass:: oneflow.utils.data.WeightedRandomSampler
 .. autoclass:: oneflow.utils.data.BatchSampler
 .. autoclass:: oneflow.utils.data.distributed.DistributedSampler
-
-
-.. This module is experimental and should be private, adding it here for now
-.. .. py:module:: oneflow.utils.data.communication
-
-.. These modules are documented as part of oneflow/data listing them here for
-.. now until we have a clearer fix
-.. .. py:module:: oneflow.utils.data.datapipes
-.. .. py:module:: oneflow.utils.data.datapipes.dataframe
-.. .. py:module:: oneflow.utils.data.datapipes.iter
-.. .. py:module:: oneflow.utils.data.datapipes.map
-.. .. py:module:: oneflow.utils.data.datapipes.utils
 
