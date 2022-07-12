@@ -27,18 +27,20 @@ class Gather : public Primitive {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Gather);
   Gather() = default;
-  ~Gather() = default;
-  virtual void Launch(Stream* stream, const void* src, void* dst, const void* indice,
-                      const int64_t num_indices, const int64_t batch_dim_size,
-                      const int64_t outer_dim_size, const int64_t gather_dim_size,
-                      const int64_t inner_dim_size) = 0;
+  ~Gather() override = default;
+  virtual void Launch(Stream* stream, int64_t batch_dim_size, int64_t outer_dim_size,
+                      int64_t gather_dim_size, int64_t inner_dim_size, const void* data,
+                      int64_t num_indices, const void* indice, void* output) = 0;
+  virtual void Launch(Stream* stream, int64_t batch_dim_size, int64_t outer_dim_size,
+                      int64_t gather_dim_size, int64_t inner_dim_size, const void* data,
+                      int64_t num_indices, const void* indice, int64_t offset, void* output) = 0;
 };
 class GatherFactory : public Factory<Gather> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GatherFactory);
   GatherFactory() = default;
-  ~GatherFactory() = default;
-  virtual std::unique_ptr<Gather> New(std::tuple<DataType, DataType> type_tuple) = 0;
+  ~GatherFactory() override = default;
+  virtual std::unique_ptr<Gather> New(DataType data_dtype, DataType indice_type) = 0;
 };
 
 }  // namespace primitive

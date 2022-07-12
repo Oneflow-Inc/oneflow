@@ -24,10 +24,10 @@ namespace user_op {
 
 template<typename Context>
 std::unique_ptr<ep::primitive::Gather> NewBatchGatherPrimitive(Context* ctx) {
-  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
-  const DataType indice_type = ctx->TensorDesc4ArgNameAndIndex("indices", 0)->data_type();
-  return ep::primitive::NewPrimitive<ep::primitive::GatherFactory>(
-      ctx->device_type(), std::make_tuple(data_type, indice_type));
+  DataType data_type = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
+  DataType indice_type = ctx->TensorDesc4ArgNameAndIndex("indices", 0)->data_type();
+  return ep::primitive::NewPrimitive<ep::primitive::GatherFactory>(ctx->device_type(), data_type,
+                                                                   indice_type);
 }
 
 template<DeviceType device_type, typename T, typename K>
@@ -46,9 +46,9 @@ class BatchGatherKernel final : public user_op::OpKernel, public user_op::CudaGr
     const Shape flatted_shape =
         Shape({in->shape().Count(0, axis), in->shape().At(axis), in->shape().Count(axis + 1)});
     const auto primitive = NewBatchGatherPrimitive(ctx);
-    primitive->Launch(ctx->stream(), in->dptr<T>(), out->mut_dptr<T>(), indices->dptr<K>(),
-                      indices->shape().elem_cnt(), /*batch_size=*/flatted_shape.At(0),
-                      /*outer_size*/ 1, flatted_shape.At(1), flatted_shape.At(2));
+    primitive->Launch(ctx->stream(), /*batch_size=*/flatted_shape.At(0), /*outer_size*/ 1,
+                      flatted_shape.At(1), flatted_shape.At(2), in->dptr<T>(),
+                      indices->shape().elem_cnt(), indices->dptr<K>(), out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

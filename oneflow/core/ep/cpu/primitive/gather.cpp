@@ -22,16 +22,16 @@ namespace ep {
 namespace primitive {
 namespace {
 template<typename T, typename K>
-void GatherCpuKernel(const T* src, T* dst, const K* indice, const int64_t num_indices,
-                     const int64_t outer_dim_size, const int64_t gather_dim_size,
-                     const int64_t inner_dim_size) {
+void GatherCpuKernel(int64_t outer_dim_size, int64_t gather_dim_size, int64_t inner_dim_size,
+                     const T* data, int64_t num_indices, const K* indice, int64_t offset,
+                     T* output) {
   FOR_RANGE(int64_t, outer_idx, 0, outer_dim_size) {
     FOR_RANGE(int64_t, i, 0, num_indices) {
       CHECK_GE(indice[i], 0);
-      const int64_t idx = indice[i];
-      T* to = dst + outer_idx * num_indices * inner_dim_size + i * inner_dim_size;
+      const int64_t idx = indice[i] - offset;
+      T* to = output + outer_idx * num_indices * inner_dim_size + i * inner_dim_size;
       if (idx >= 0 && idx < gather_dim_size) {
-        const T* from = src + outer_idx * gather_dim_size * inner_dim_size + idx * inner_dim_size;
+        const T* from = data + outer_idx * gather_dim_size * inner_dim_size + idx * inner_dim_size;
         std::copy(from, from + inner_dim_size, to);
       } else {
         std::memset(reinterpret_cast<void*>(to), 0, inner_dim_size * sizeof(T));
@@ -41,20 +41,20 @@ void GatherCpuKernel(const T* src, T* dst, const K* indice, const int64_t num_in
 }
 
 template<typename T, typename K>
-void BatchGatherCpuKernel(const T* src, T* dst, const K* indice, const int64_t num_indices,
-                          const int64_t batch_dim_size, const int64_t outer_dim_size,
-                          const int64_t gather_dim_size, const int64_t inner_dim_size) {
+void BatchGatherCpuKernel(int64_t batch_dim_size, int64_t outer_dim_size, int64_t gather_dim_size,
+                          int64_t inner_dim_size, const T* data, int64_t num_indices,
+                          const K* indice, int64_t offset, T* output) {
   const size_t indice_instance_size = num_indices / batch_dim_size;
   const size_t src_instance_size = outer_dim_size * gather_dim_size * inner_dim_size;
   const size_t dst_instance_size = outer_dim_size * indice_instance_size * inner_dim_size;
 
   FOR_RANGE(int64_t, batch_idx, 0, batch_dim_size) {
-    const T* batch_src = src + batch_idx * src_instance_size;
-    T* batch_dst = dst + batch_idx * dst_instance_size;
+    const T* batch_data = data + batch_idx * src_instance_size;
+    T* batch_output = output + batch_idx * dst_instance_size;
     const K* batch_indice = indice + batch_idx * indice_instance_size;
 
-    GatherCpuKernel(batch_src, batch_dst, batch_indice, indice_instance_size, outer_dim_size,
-                    gather_dim_size, inner_dim_size);
+    GatherCpuKernel(outer_dim_size, gather_dim_size, inner_dim_size, batch_data,
+                    indice_instance_size, batch_indice, offset, batch_output);
   }
 }
 
@@ -64,17 +64,30 @@ class GatherImpl : public Gather {
   OF_DISALLOW_COPY_AND_MOVE(GatherImpl);
   GatherImpl() = default;
   ~GatherImpl() = default;
-  void Launch(Stream* stream, const void* src, void* dst, const void* indice,
-              const int64_t num_indices, const int64_t batch_dim_size, const int64_t outer_dim_size,
-              const int64_t gather_dim_size, const int64_t inner_dim_size) override {
+  void Launch(Stream* stream, int64_t batch_dim_size, int64_t outer_dim_size,
+              int64_t gather_dim_size, int64_t inner_dim_size, const void* data,
+              int64_t num_indices, const void* indice, void* output) override {
     if (batch_dim_size == 1) {
-      GatherCpuKernel(const_cast<T*>(static_cast<const T*>(src)), static_cast<T*>(dst),
-                      static_cast<const K*>(indice), num_indices, outer_dim_size, gather_dim_size,
-                      inner_dim_size);
+      GatherCpuKernel(outer_dim_size, gather_dim_size, inner_dim_size,
+                      const_cast<T*>(static_cast<const T*>(data)), num_indices,
+                      static_cast<const K*>(indice), /*offset*/ 0, static_cast<T*>(output));
     } else {
-      BatchGatherCpuKernel(const_cast<T*>(static_cast<const T*>(src)), static_cast<T*>(dst),
-                           static_cast<const K*>(indice), num_indices, batch_dim_size,
-                           outer_dim_size, gather_dim_size, inner_dim_size);
+      BatchGatherCpuKernel(batch_dim_size, outer_dim_size, gather_dim_size, inner_dim_size,
+                           const_cast<T*>(static_cast<const T*>(data)), num_indices,
+                           static_cast<const K*>(indice), /*offset*/ 0, static_cast<T*>(output));
+    }
+  }
+  void Launch(Stream* stream, int64_t batch_dim_size, int64_t outer_dim_size,
+              int64_t gather_dim_size, int64_t inner_dim_size, const void* data,
+              int64_t num_indices, const void* indice, int64_t offset, void* output) override {
+    if (batch_dim_size == 1) {
+      GatherCpuKernel(outer_dim_size, gather_dim_size, inner_dim_size,
+                      const_cast<T*>(static_cast<const T*>(data)), num_indices,
+                      static_cast<const K*>(indice), offset, static_cast<T*>(output));
+    } else {
+      BatchGatherCpuKernel(batch_dim_size, outer_dim_size, gather_dim_size, inner_dim_size,
+                           const_cast<T*>(static_cast<const T*>(data)), num_indices,
+                           static_cast<const K*>(indice), offset, static_cast<T*>(output));
     }
   }
 };
@@ -88,8 +101,9 @@ class GatherFactoryImpl : public GatherFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GatherFactoryImpl);
   GatherFactoryImpl() = default;
-  ~GatherFactoryImpl() = default;
-  std::unique_ptr<Gather> New(std::tuple<DataType, DataType> type_tuple) override {
+  ~GatherFactoryImpl() override = default;
+  std::unique_ptr<Gather> New(DataType data_dtype, DataType indice_type) override {
+    std::tuple<DataType, DataType> type_tuple = std::make_tuple(data_dtype, indice_type);
 #define MAKE_NEW_GATHER_ENTRY(in_type_pair, indice_type_pair)                             \
   {std::make_tuple(OF_PP_PAIR_SECOND(in_type_pair), OF_PP_PAIR_SECOND(indice_type_pair)), \
    NewGather<OF_PP_PAIR_FIRST(in_type_pair), OF_PP_PAIR_FIRST(indice_type_pair)>},
