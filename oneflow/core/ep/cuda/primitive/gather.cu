@@ -89,10 +89,10 @@ bool TryDispatchMovementType(ep::Stream* stream, int64_t batch_size, int64_t out
 }
 
 template<typename K>
-void DispatchMovementSize(ep::Stream* stream, int64_t batch_size, int64_t outer_dim_size,
+void DispatchMovementSize(ep::Stream* stream, int64_t batch_dim_size, int64_t outer_dim_size,
                           int64_t gather_dim_size, int64_t inner_dim_size, int64_t num_indices,
                           int64_t offset, const K* indices, const void* in, void* out) {
-  using Func = bool (*)(ep::Stream * stream, int64_t batch_size, int64_t outer_dim_size,
+  using Func = bool (*)(ep::Stream * stream, int64_t batch_dim_size, int64_t outer_dim_size,
                         int64_t gather_dim_size, int64_t inner_dim_size, int64_t num_indices,
                         int64_t offset, const K* indices, const void* in, void* out);
   Func funcs[] = {
@@ -103,8 +103,8 @@ void DispatchMovementSize(ep::Stream* stream, int64_t batch_size, int64_t outer_
       TryDispatchMovementType<K, uint8_t>,     // 1B
   };
   for (size_t i = 0; i < sizeof(funcs) / sizeof(funcs[0]); ++i) {
-    if (funcs[i](stream, batch_size, outer_dim_size, gather_dim_size, inner_dim_size, num_indices,
-                 offset, indices, in, out)) {
+    if (funcs[i](stream, batch_dim_size, outer_dim_size, gather_dim_size, inner_dim_size,
+                 num_indices, offset, indices, in, out)) {
       break;
     }
   }
@@ -112,10 +112,12 @@ void DispatchMovementSize(ep::Stream* stream, int64_t batch_size, int64_t outer_
 
 template<typename T, typename K>
 void GatherGpuKernel(Stream* stream, const void* src, void* dst, const void* indice,
-                     const size_t num_indices, const size_t batch_size, const size_t outer_size,
-                     const size_t gather_size, const size_t inner_size) {
-  DispatchMovementSize(stream, batch_size, outer_size, gather_size, inner_size * sizeof(T),
-                       num_indices, 0, static_cast<const K*>(indice), src, dst);
+                     const size_t num_indices, const size_t batch_dim_size,
+                     const size_t outer_dim_size, const size_t gather_dim_size,
+                     const size_t inner_dim_size) {
+  DispatchMovementSize(stream, batch_dim_size, outer_dim_size, gather_dim_size,
+                       inner_dim_size * sizeof(T), num_indices, 0, static_cast<const K*>(indice),
+                       src, dst);
 }
 
 template<typename T, typename K>
@@ -125,10 +127,10 @@ class GatherImpl : public Gather {
   GatherImpl() = default;
   ~GatherImpl() = default;
   void Launch(Stream* stream, const void* src, void* dst, const void* indice,
-              const size_t num_indices, const size_t batch_size, const size_t outer_size,
-              const size_t gather_size, const size_t inner_size) override {
-    GatherGpuKernel<T, K>(stream, src, dst, indice, num_indices, batch_size, outer_size,
-                          gather_size, inner_size);
+              const size_t num_indices, const size_t batch_dim_size, const size_t outer_dim_size,
+              const size_t gather_dim_size, const size_t inner_dim_size) override {
+    GatherGpuKernel<T, K>(stream, src, dst, indice, num_indices, batch_dim_size, outer_dim_size,
+                          gather_dim_size, inner_dim_size);
   }
 };
 template<typename T, typename K>

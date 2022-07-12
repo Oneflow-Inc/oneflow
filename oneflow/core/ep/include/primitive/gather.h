@@ -29,8 +29,9 @@ class Gather : public Primitive {
   Gather() = default;
   ~Gather() = default;
   virtual void Launch(Stream* stream, const void* src, void* dst, const void* indice,
-                      const size_t num_indices, const size_t batch_size, const size_t outer_size,
-                      const size_t gather_size, const size_t inner_size) = 0;
+                      const size_t num_indices, const size_t batch_dim_size,
+                      const size_t outer_dim_size, const size_t gather_dim_size,
+                      const size_t inner_dim_size) = 0;
 };
 class GatherFactory : public Factory<Gather> {
  public:

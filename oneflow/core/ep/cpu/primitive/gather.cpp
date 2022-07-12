@@ -23,18 +23,18 @@ namespace primitive {
 namespace {
 template<typename T, typename K>
 void GatherCpuKernel(const T* src, T* dst, const K* indice, const size_t num_indices,
-                     const size_t batch_size, const size_t outer_size, const size_t gather_size,
-                     const size_t inner_size) {
-  FOR_RANGE(int64_t, outer_idx, 0, outer_size) {
+                     const size_t outer_dim_size, const size_t gather_dim_size,
+                     const size_t inner_dim_size) {
+  FOR_RANGE(int64_t, outer_idx, 0, outer_dim_size) {
     FOR_RANGE(int64_t, i, 0, num_indices) {
       CHECK_GE(indice[i], 0);
       const int64_t idx = indice[i];
-      T* to = dst + outer_idx * num_indices * inner_size + i * inner_size;
-      if (idx >= 0 && idx < gather_size) {
-        const T* from = src + outer_idx * gather_size * inner_size + idx * inner_size;
-        std::copy(from, from + inner_size, to);
+      T* to = dst + outer_idx * num_indices * inner_dim_size + i * inner_dim_size;
+      if (idx >= 0 && idx < gather_dim_size) {
+        const T* from = src + outer_idx * gather_dim_size * inner_dim_size + idx * inner_dim_size;
+        std::copy(from, from + inner_dim_size, to);
       } else {
-        std::memset(reinterpret_cast<void*>(to), 0, inner_size * sizeof(T));
+        std::memset(reinterpret_cast<void*>(to), 0, inner_dim_size * sizeof(T));
       }
     }
   }
@@ -42,19 +42,19 @@ void GatherCpuKernel(const T* src, T* dst, const K* indice, const size_t num_ind
 
 template<typename T, typename K>
 void BatchGatherCpuKernel(const T* src, T* dst, const K* indice, const size_t num_indices,
-                          const size_t batch_size, const size_t outer_size,
-                          const size_t gather_size, const size_t inner_size) {
-  const size_t indice_instance_size = num_indices / batch_size;
-  const size_t src_instance_size = outer_size * gather_size * inner_size;
-  const size_t dst_instance_size = outer_size * indice_instance_size * inner_size;
+                          const size_t batch_dim_size, const size_t outer_dim_size,
+                          const size_t gather_dim_size, const size_t inner_dim_size) {
+  const size_t indice_instance_size = num_indices / batch_dim_size;
+  const size_t src_instance_size = outer_dim_size * gather_dim_size * inner_dim_size;
+  const size_t dst_instance_size = outer_dim_size * indice_instance_size * inner_dim_size;
 
-  FOR_RANGE(int64_t, batch_idx, 0, batch_size) {
+  FOR_RANGE(int64_t, batch_idx, 0, batch_dim_size) {
     const T* batch_src = src + batch_idx * src_instance_size;
     T* batch_dst = dst + batch_idx * dst_instance_size;
     const K* batch_indice = indice + batch_idx * indice_instance_size;
 
-    GatherCpuKernel(batch_src, batch_dst, batch_indice, indice_instance_size, batch_size,
-                    outer_size, gather_size, inner_size);
+    GatherCpuKernel(batch_src, batch_dst, batch_indice, indice_instance_size, outer_dim_size,
+                    gather_dim_size, inner_dim_size);
   }
 }
 
@@ -65,16 +65,16 @@ class GatherImpl : public Gather {
   GatherImpl() = default;
   ~GatherImpl() = default;
   void Launch(Stream* stream, const void* src, void* dst, const void* indice,
-              const size_t num_indices, const size_t batch_size, const size_t outer_size,
-              const size_t gather_size, const size_t inner_size) override {
-    if (batch_size == 1) {
+              const size_t num_indices, const size_t batch_dim_size, const size_t outer_dim_size,
+              const size_t gather_dim_size, const size_t inner_dim_size) override {
+    if (batch_dim_size == 1) {
       GatherCpuKernel(const_cast<T*>(static_cast<const T*>(src)), static_cast<T*>(dst),
-                      static_cast<const K*>(indice), num_indices, batch_size, outer_size,
-                      gather_size, inner_size);
+                      static_cast<const K*>(indice), num_indices, outer_dim_size, gather_dim_size,
+                      inner_dim_size);
     } else {
       BatchGatherCpuKernel(const_cast<T*>(static_cast<const T*>(src)), static_cast<T*>(dst),
-                           static_cast<const K*>(indice), num_indices, batch_size, outer_size,
-                           gather_size, inner_size);
+                           static_cast<const K*>(indice), num_indices, batch_dim_size,
+                           outer_dim_size, gather_dim_size, inner_dim_size);
     }
   }
 };
