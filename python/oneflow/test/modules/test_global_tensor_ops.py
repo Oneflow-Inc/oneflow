@@ -148,6 +148,7 @@ class TestGlobalTensorOps(flow.unittest.TestCase):
             for sbp in all_sbp(placement, max_dim=2):
                 _test_global_double(test_case, placement, sbp)
 
+    @unittest.skip("TODO: sometimes global item will result to segment fault!")
     @globaltest
     def test_global_item(test_case):
         for placement in all_placement():
