@@ -29,7 +29,12 @@ from oneflow.utils.data.dataset import (
     random_split,
 )
 from oneflow.utils.data.dataset import IterableDataset as IterDataPipe
-from oneflow.utils.data.dataloader import DataLoader, _DatasetKind, KeyErrorMessage, ExceptionWrapper
+from oneflow.utils.data.dataloader import (
+    DataLoader,
+    _DatasetKind,
+    KeyErrorMessage,
+    ExceptionWrapper,
+)
 from oneflow.utils.data.decorator import (
     functional_datapipe,
     guaranteed_datapipes_determinism,

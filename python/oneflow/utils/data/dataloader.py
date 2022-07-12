@@ -35,6 +35,7 @@ class KeyErrorMessage(str):
     def __repr__(self):
         return self
 
+
 class ExceptionWrapper(object):
     r"""Wraps an exception plus traceback to communicate across threads"""
 

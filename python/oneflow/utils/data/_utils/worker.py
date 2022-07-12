@@ -33,7 +33,6 @@ from . import signal_handling, MP_STATUS_CHECK_INTERVAL, IS_WINDOWS, HAS_NUMPY
 from .. import KeyErrorMessage, ExceptionWrapper
 
 
-
 if IS_WINDOWS:
     import ctypes
     from ctypes.wintypes import DWORD, BOOL, HANDLE
