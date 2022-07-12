@@ -30,14 +30,8 @@ import signal
 
 import oneflow as flow
 from . import signal_handling, MP_STATUS_CHECK_INTERVAL, IS_WINDOWS, HAS_NUMPY
-from .. import ExceptionWrapper
+from .. import KeyErrorMessage, ExceptionWrapper
 
-
-class KeyErrorMessage(str):
-    r"""str subclass that returns itself in repr"""
-
-    def __repr__(self):
-        return self
 
 
 if IS_WINDOWS:

@@ -29,6 +29,12 @@ import oneflow as flow
 from oneflow.utils.data import _utils
 
 
+class KeyErrorMessage(str):
+    r"""str subclass that returns itself in repr"""
+
+    def __repr__(self):
+        return self
+
 class ExceptionWrapper(object):
     r"""Wraps an exception plus traceback to communicate across threads"""
 
