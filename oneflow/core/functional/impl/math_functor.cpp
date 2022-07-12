@@ -1450,7 +1450,7 @@ class NormFunctor {
         const double ord_double = (*JUST(ord)).As<double>();
         ord_sca = Scalar(ord_double);
         if (for_norm && (ord_double >= 2 || ord_double <= -2)) {
-          int32_t num_axes = x->shape()->NumAxes();
+          const int32_t num_axes = x->shape()->NumAxes();
           std::vector<int32_t> axes_vec(num_axes);
           std::iota(axes_vec.begin(), axes_vec.end(), 0);
           return ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord_sca, false)), axes_vec,
