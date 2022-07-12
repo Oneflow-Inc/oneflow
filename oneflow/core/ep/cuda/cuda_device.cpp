@@ -119,6 +119,10 @@ Maybe<void> CudaDevice::Alloc(const AllocationOptions& options, void** ptr, size
   CHECK(!options.HasPinnedDevice());
   cudaError_t err = cudaMalloc(ptr, size);
   if (err != cudaSuccess) {
+    if (err == cudaErrorMemoryAllocation) {
+      // NOTE:return out of memory error, so vm will try to shrink memory and rerun
+      return Error::OutOfMemoryError() << cudaGetErrorString(err);
+    }
     return Error::RuntimeError() << cudaGetErrorString(err);
   } else {
     return Maybe<void>::Ok();
