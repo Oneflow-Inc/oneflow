@@ -44,7 +44,7 @@ Maybe<void> CpuDevice::Alloc(const AllocationOptions& options, void** ptr, size_
     CHECK_OR_RETURN(device);
     return device->AllocPinned(options, ptr, size);
   } else {
-    *ptr = aligned_alloc(kMaxAlignmentRequirement, size);
+    *ptr = aligned_alloc(kMaxAlignmentRequirement, RoundUp(size, kMaxAlignmentRequirement));
     if (*ptr == nullptr) {
       return Error::RuntimeError() << "allocate failed";
     } else {
