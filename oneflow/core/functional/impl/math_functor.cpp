@@ -1426,7 +1426,7 @@ class NormFunctor {
   NormFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& ord,
                            const Optional<std::vector<int32_t>>& input_dim, const bool& keepdim,
-                           const Optional<Symbol<DType>>& dtype, const bool for_norm) const {
+                           const Optional<Symbol<DType>>& dtype, const bool& for_norm) const {
     std::shared_ptr<one::Tensor> res;
     if (dtype) {
       Symbol<DType> dtype_val = JUST(dtype);
