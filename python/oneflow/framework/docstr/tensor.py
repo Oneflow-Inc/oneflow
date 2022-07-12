@@ -1122,6 +1122,15 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.normal_,
     """
+    norm(p="fro", dim=None, keepdim=False, dtype=None) -> Tensor
+
+    See :func:`oneflow.norm`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.norm,
+    """
     normal_(mean=0, std=1, *, generator=None) -> Tensor
 
     Fills :attr:`self` tensor with elements samples from the normal distribution parameterized by :attr:`mean` and :attr:`std`.
