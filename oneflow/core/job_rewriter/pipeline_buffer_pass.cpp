@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/env_var/env_var.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/scope.h"
@@ -23,6 +24,9 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
+
+DEFINE_ENV_BOOL(ONEFLOW_PIPELINE_MIN_BUFFER, false);
+inline bool IsMinPipelineBufferSize() { return EnvBool<ONEFLOW_PIPELINE_MIN_BUFFER>(); }
 
 namespace {
 
@@ -268,7 +272,8 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
               << "). Make sure to change the tensor's placement before it enter the module "
                  "of a next pipeline stage.\n";
         }
-        const int64_t buffer_size = total_stage_num * 2; /* NOTE(chengcheng): max buffer size */
+        int64_t buffer_size = total_stage_num * 2; /* NOTE(chengcheng): max buffer size */
+        if (IsMinPipelineBufferSize()) { buffer_size = total_stage_num; }
         TryInsertOrUseBufferOpToDstNode(in_edge, buffer_size, &buffer_op_name2op_conf,
                                         &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
