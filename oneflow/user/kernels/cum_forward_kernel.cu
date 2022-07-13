@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <cub/cub.cuh>
-#include <mutex>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -255,7 +254,7 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_CUMOP_KERNEL, CUMOP_SEQ);
       .SetCreateFn<GpuCum##op_functor##Kernel<dtype>>()                                \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn(InferTmpBufferSize<dtype, ProdFunctor>);
+      .SetInferTmpSizeFn(InferTmpBufferSize<dtype, op_functor##Functor>);
 
 #define REGISTER_CUMOP_KERNEL_WITH_DTYPE(op_name, op_functor) \
   REGISTER_CUMOP_KERNEL(int32_t, op_name, op_functor)         \

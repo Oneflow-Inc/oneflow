@@ -71,19 +71,19 @@ class CpuCumKernel : public user_op::OpKernel {
   OF_PP_MAKE_TUPLE_SEQ("cumprod", Mul) \
   OF_PP_MAKE_TUPLE_SEQ("cumsum", Add)
 
-#define DEFINE_CUMOP_KERNEL(op_name, op_functor)                                         \
-  template<typename T>                                                                   \
-  class Cum##op_functor##Kernel final : public CpuCumKernel<T, BinaryFunc##op_functor> { \
-   public:                                                                               \
-    Cum##op_functor##Kernel() = default;                                                 \
-    ~Cum##op_functor##Kernel() = default;                                                \
+#define DEFINE_CUMOP_KERNEL(op_name, op_functor)                                            \
+  template<typename T>                                                                      \
+  class CpuCum##op_functor##Kernel final : public CpuCumKernel<T, BinaryFunc##op_functor> { \
+   public:                                                                                  \
+    CpuCum##op_functor##Kernel() = default;                                                 \
+    ~CpuCum##op_functor##Kernel() = default;                                                \
   };
 OF_PP_FOR_EACH_TUPLE(DEFINE_CUMOP_KERNEL, CUMOP_SEQ);
 #undef DEFINE_CUMOP_KERNEL
 
-#define REGISTER_CUMOP_KERNEL(dtype, op_name, op_functor)                                      \
-  REGISTER_USER_KERNEL(op_name).SetCreateFn<Cum##op_functor##Kernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kCPU)                                           \
+#define REGISTER_CUMOP_KERNEL(dtype, op_name, op_functor)                                         \
+  REGISTER_USER_KERNEL(op_name).SetCreateFn<CpuCum##op_functor##Kernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kCPU)                                              \
       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_CUMOP_KERNEL_WITH_DTYPE(op_name, op_functor) \
