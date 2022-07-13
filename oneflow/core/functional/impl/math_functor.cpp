@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/scalar.h"
@@ -31,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/tensor_processor.h"
+#include "oneflow/core/functional/impl/global_cast.h"
 
 #include <sstream>
 #include <bitset>
@@ -1086,6 +1088,7 @@ class HannWindowFunctor {
   Maybe<Tensor> operator()(const int64_t window_length, const bool& periodic,
                            const Optional<Symbol<Device>>& device,
                            const Optional<Symbol<DType>>& dtype, const bool& requires_grad) const {
+    autograd::AutoGradMode mode(false);
     if (dtype.has_value() && !IsFloatingDataType(JUST(dtype)->data_type())) {
       return Error::RuntimeError()
              << "hann_window expects floating point dtypes, got: " << JUST(dtype)->name();
@@ -1116,6 +1119,7 @@ class GlobalHannWindowFunctor {
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp,
                            const Optional<Symbol<DType>>& dtype, const bool& requires_grad) const {
+    autograd::AutoGradMode mode(false);
     JUST(CheckDeviceIdsIsValid(placement));
     if (dtype.has_value() && !IsFloatingDataType(JUST(dtype)->data_type())) {
       return Error::RuntimeError()
@@ -1135,6 +1139,7 @@ class GlobalHannWindowFunctor {
         result = JUST(ScalarDiv(JUST(ScalarSub(1, JUST(Cos(div_result)), 1)), 2));
       }
     }
+    result = JUST(GlobalToGlobal(result, placement, sbp, sbp));
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
