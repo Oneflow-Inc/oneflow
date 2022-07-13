@@ -127,6 +127,9 @@ struct GetReleaseInstructionType : public StreamRoleVisitor<GetReleaseInstructio
   static Maybe<const vm::InstructionType*> VisitPinnedCompute(DataType data_type) {
     return VisitCompute(data_type);
   }
+  static Maybe<const vm::InstructionType*> VisitTmpCompute(DataType data_type) {
+    return VisitCompute(data_type);
+  }
 
  private:
   static Maybe<const vm::InstructionType*> GetReleaseTensorInstructionType(DataType data_type) {
@@ -135,9 +138,6 @@ struct GetReleaseInstructionType : public StreamRoleVisitor<GetReleaseInstructio
     } else {
       return SingletonPtr<vm::SlowReleaseTensorInstructionType>();
     }
-  }
-  static Maybe<const vm::InstructionType*> VisitTmpCompute(DeviceType device_type) {
-    return VisitCompute(device_type);
   }
 };
 
