@@ -30,15 +30,6 @@ namespace broadcast_elementwise_binary {
 
 constexpr size_t kMaxNumDims = 8;
 
-inline void CheckInplace(size_t num_dims, const int64_t* src0_dims, const void* src0,
-                         const int64_t* src1_dims, const void* src1, const int64_t* dst_dims,
-                         const void* dst) {
-  for (int64_t i = 0; i < num_dims; ++i) {
-    if (src0 == dst) { CHECK_EQ(src0_dims[i], dst_dims[i]); }
-    if (src1 == dst) { CHECK_EQ(src1_dims[i], dst_dims[i]); }
-  }
-}
-
 inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t num_src1_dims,
                          const int64_t* src1_dims) {
   if (num_src0_dims != num_src1_dims) { return false; }
