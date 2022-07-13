@@ -302,7 +302,7 @@ void StreamWaitPreviousInstructionsDone(vm::Stream* stream, vm::Instruction* ins
 }
 
 std::string DebugDeviceReset(vm::Stream* stream) {
-  stream->device_ctx()->mut_allocator()->DeviceReset();
+  stream->mut_stream_policy()->mut_allocator()->DeviceReset();
   return "reset device";
 }
 
@@ -322,7 +322,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
         StreamWaitPreviousInstructionsDone(stream, instruction);
         // Shrinks allocator to reduce fragmentation of memory.
         {
-          auto* allocator = stream->device_ctx()->mut_allocator();
+          auto* allocator = stream->mut_stream_policy()->mut_allocator();
           auto* shrinkable_cache = dynamic_cast<CachingAllocator*>(allocator);
           if (shrinkable_cache != nullptr) { shrinkable_cache->Shrink(); }
         }
@@ -335,7 +335,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
   }
   // Compute
   if (OnSchedulerThread(*stream)) {
-    stream->stream_type().Run(instruction);
+    stream->stream_policy().Run(instruction);
   } else {
     stream->mut_thread_ctx()->mut_worker_pending_instruction_list()->PushBack(instruction);
     schedule_ctx.OnWorkerLoadPending(stream->mut_thread_ctx());
@@ -422,8 +422,8 @@ void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_
   const auto& instruction_type = sequnential_instruction->instruction_type();
   CHECK(instruction_type.IsBarrier());
   CHECK(OnSchedulerThread(sequnential_instruction->stream()));
-  const StreamType& stream_type = sequnential_instruction->stream().stream_type();
-  stream_type.Run(sequnential_instruction);
+  const StreamPolicy& stream_policy = sequnential_instruction->stream().stream_policy();
+  stream_policy.Run(sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
   LivelyInstructionListErase(sequnential_instruction);
 }

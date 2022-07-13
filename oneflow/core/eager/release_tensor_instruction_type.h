@@ -38,7 +38,7 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
   void InitInstructionStatus(Instruction* instruction) const override {
     auto* status_buffer = instruction->mut_status_buffer();
     auto* stream = instruction->mut_stream();
-    instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
+    instruction->stream_policy().InitInstructionStatus(*stream, status_buffer);
     auto* data_ptr = status_buffer->mut_buffer();
     EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_ep_event(nullptr);
   }

@@ -419,10 +419,6 @@ class UserKernelComputeContextHelper final {
                                           int32_t index) const {
     return base_ctx_helper_.Tensor4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  ep::Stream* stream(DeviceCtx* device_ctx) const {
-    CHECK(device_ctx);
-    return device_ctx->stream();
-  }
 
   DeviceType device_type() const { return base_ctx_helper_.device_type(); }
   const ParallelContext& parallel_ctx(eager::CallContext* call_ctx) const {
@@ -446,8 +442,8 @@ class UserKernelComputeContextHelper final {
 class UserKernelComputeContext final : public user_op::KernelComputeContext {
  public:
   UserKernelComputeContext(const UserKernelComputeContextHelper* helper,
-                           eager::CallContext* call_ctx, DeviceCtx* device_ctx)
-      : helper_(helper), call_ctx_(call_ctx), device_ctx_(device_ctx) {}
+                           eager::CallContext* call_ctx, ep::Stream* stream)
+      : helper_(helper), call_ctx_(call_ctx), stream_(stream) {}
 
   ~UserKernelComputeContext() = default;
 
@@ -460,7 +456,10 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
     return helper_->Tensor4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
 
-  ep::Stream* stream() override { return helper_->stream(device_ctx_); }
+  ep::Stream* stream() override {
+    CHECK_NOTNULL(stream_);
+    return stream_;
+  }
 
   DeviceType device_type() const override { return helper_->device_type(); }
 
@@ -481,7 +480,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
 
   const UserKernelComputeContextHelper* helper_;
   eager::CallContext* call_ctx_;
-  DeviceCtx* device_ctx_;
+  ep::Stream* stream_;
 };
 
 class UserKernelRegContextHelper final {
@@ -557,11 +556,6 @@ class UserKernelInitAndCacheContextHelper final {
 
   ~UserKernelInitAndCacheContextHelper() = default;
 
-  ep::Stream* stream(DeviceCtx* device_ctx) const {
-    CHECK(device_ctx);
-    return device_ctx->stream();
-  }
-
   DeviceType device_type() const { return base_ctx_helper_.device_type(); }
   const ParallelContext& parallel_ctx(eager::CallContext* call_ctx) const {
     return base_ctx_helper_.parallel_ctx(call_ctx);
@@ -612,12 +606,15 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
                                             public user_op::KernelCacheContext {
  public:
   UserKernelInitAndCacheContext(const UserKernelInitAndCacheContextHelper* helper,
-                                eager::CallContext* call_ctx, DeviceCtx* device_ctx)
-      : helper_(helper), call_ctx_(call_ctx), device_ctx_(device_ctx) {}
+                                eager::CallContext* call_ctx, ep::Stream* stream)
+      : helper_(helper), call_ctx_(call_ctx), stream_(stream) {}
 
   ~UserKernelInitAndCacheContext() override = default;
 
-  ep::Stream* stream() override { return helper_->stream(device_ctx_); }
+  ep::Stream* stream() override {
+    CHECK_NOTNULL(stream_);
+    return stream_;
+  }
 
   DeviceType device_type() const override { return helper_->device_type(); }
   const ParallelContext& parallel_ctx() const override { return helper_->parallel_ctx(call_ctx_); }
@@ -654,7 +651,7 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
 
   const UserKernelInitAndCacheContextHelper* helper_;
   eager::CallContext* call_ctx_;
-  DeviceCtx* device_ctx_;
+  ep::Stream* stream_;
 };
 
 namespace {
@@ -821,12 +818,12 @@ Maybe<void> StatefulOpKernel::ChooseOpKernel(eager::CallContext* call_ctx,
 }
 
 void StatefulOpKernel::TryInitOpKernelStateAndCache(eager::CallContext* call_ctx,
-                                                    DeviceCtx* device_ctx,
+                                                    ep::Stream* stream,
                                                     const user_op::OpKernel* op_kernel,
                                                     user_op::OpKernelState** state,
                                                     user_op::OpKernelCache** cache) {
   UserKernelInitAndCacheContext init_and_cache_ctx(init_and_cache_ctx_helper_.get(), call_ctx,
-                                                   device_ctx);
+                                                   stream);
   if (state != nullptr) {
     auto it = op_kernel_state_map_.find(op_kernel);
     if (it != op_kernel_state_map_.end()) {
@@ -857,11 +854,11 @@ user_op::TensorDescInferFn StatefulOpKernel::TensorDescInferFn() const {
 
 user_op::DataTypeInferFn StatefulOpKernel::DataTypeInferFn() const { return data_type_infer_fn_; }
 
-void StatefulOpKernel::Compute(eager::CallContext* call_ctx, DeviceCtx* device_ctx,
+void StatefulOpKernel::Compute(eager::CallContext* call_ctx, ep::Stream* stream,
                                const user_op::OpKernel* user_opkernel,
                                user_op::OpKernelState* state,
                                const user_op::OpKernelCache* cache) const {
-  UserKernelComputeContext compute_context(compute_ctx_helper_.get(), call_ctx, device_ctx);
+  UserKernelComputeContext compute_context(compute_ctx_helper_.get(), call_ctx, stream);
   auto* compute_ctx = &compute_context;
   OF_PROFILER_RANGE_GUARD("Compute");
   if (Singleton<profiler::ProfileManager>::Get()) {
