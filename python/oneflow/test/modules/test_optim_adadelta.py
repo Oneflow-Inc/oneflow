@@ -80,7 +80,7 @@ def compare_with_numpy_adadelta(
         square_avgs = np.zeros_like(x)
         acc_deltas = np.zeros_like(x)
 
-        def train_one_iter(iter, grad):
+        def train_one_iter(grad):
             grad = grad if not maximize else -grad
             grad = grad + weight_decay * x
             new_square_avgs = square_avgs * rho + (1.0 - rho) * grad * grad
@@ -91,14 +91,14 @@ def compare_with_numpy_adadelta(
             return (param, new_square_avgs, new_acc_deltas)
 
         for i in range(1, train_iters + 1):
-            (x, square_avgs, acc_deltas) = train_one_iter(i, random_grad_seq[i - 1])
+            (x, square_avgs, acc_deltas) = train_one_iter(random_grad_seq[i - 1])
         return x
 
     oneflow_res = train_by_oneflow().numpy()
     numpy_res = train_by_numpy()
 
     test_case.assertTrue(
-        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3)
+        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-4, atol=1e-4)
     )
 
 
@@ -166,7 +166,7 @@ def compare_with_numpy_adadelta_clip_grad(
         square_avgs = np.zeros_like(x)
         acc_deltas = np.zeros_like(x)
 
-        def train_one_iter(iter, grad):
+        def train_one_iter(grad):
             total_norm, grad = clip_grad_norm_np(
                 grad, clip_grad_max_norm, clip_grad_norm_type
             )
@@ -180,7 +180,7 @@ def compare_with_numpy_adadelta_clip_grad(
             return (param, new_square_avgs, new_acc_deltas)
 
         for i in range(1, train_iters + 1):
-            (x, square_avgs, acc_deltas) = train_one_iter(i, random_grad_seq[i - 1])
+            (x, square_avgs, acc_deltas) = train_one_iter(random_grad_seq[i - 1])
 
         return x
 
@@ -188,27 +188,27 @@ def compare_with_numpy_adadelta_clip_grad(
     numpy_res = train_by_numpy()
 
     test_case.assertTrue(
-        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3)
+        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-4, atol=1e-4)
     )
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestAdadelta(flow.unittest.TestCase):
-    # def test_adadelta(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device"] = ["cpu", "cuda"]
-    #     arg_dict["x_shape"] = [(10,)]
-    #     arg_dict["learning_rate"] = [1e-3]
-    #     arg_dict["train_iters"] = [10]
-    #     arg_dict["rho"] = [0.9, 0.6]
-    #     arg_dict["eps"] = [1e-6, 1e-4]
-    #     arg_dict["maximize"] = [True, False]
-    #     arg_dict["weight_decay"] = [0.0, 0.1]
-    #     arg_dict["reload_state_step"] = [5]  # save and load optim state
-    #     arg_dict["save_load_by_pickle"] = [False, True]
+    def test_adadelta(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["x_shape"] = [(10,)]
+        arg_dict["learning_rate"] = [1, 1e-3]
+        arg_dict["train_iters"] = [10]
+        arg_dict["rho"] = [0.9, 0.6]
+        arg_dict["eps"] = [1e-6, 1e-4]
+        arg_dict["maximize"] = [False]
+        arg_dict["weight_decay"] = [0.0, 0.1]
+        arg_dict["reload_state_step"] = [5]  # save and load optim state
+        arg_dict["save_load_by_pickle"] = [False, True]
 
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_numpy_adadelta(test_case, *arg)
+        for arg in GenArgList(arg_dict):
+            compare_with_numpy_adadelta(test_case, *arg)
 
     def test_adadelta_clip_grad(test_case):
         arg_dict = OrderedDict()
@@ -220,7 +220,7 @@ class TestAdadelta(flow.unittest.TestCase):
         arg_dict["train_iters"] = [10]
         arg_dict["rho"] = [0.9, 0.6]
         arg_dict["eps"] = [1e-6, 1e-4]
-        arg_dict["maximize"] = [True, False]
+        arg_dict["maximize"] = [False]
         arg_dict["weight_decay"] = [0.0, 0.1]
         arg_dict["clip_grad_max_norm"] = [0, 0.5, 1.0]
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]

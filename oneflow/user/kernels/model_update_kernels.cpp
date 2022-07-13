@@ -1086,7 +1086,6 @@ class AdadeltaUpdateKernel final : public user_op::OpKernel, public user_op::Cud
     const float weight_decay = ctx->Attr<float>("weight_decay");
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
     const float* learning_rate_ptr = nullptr;
-
     if (ctx->has_input("learning_rate", 0)) {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
       learning_rate_ptr = learning_rate->dptr<float>();

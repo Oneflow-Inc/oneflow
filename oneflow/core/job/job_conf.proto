@@ -73,6 +73,7 @@ message FtrlModelUpdateConf {
 message AdadeltaModelUpdateConf {
   required float rho = 1 [default = 0.9];
   required float epsilon = 2 [default = 1e-6];
+  required bool maximize = 3 [default = false];
 }
 
 message ClipByGlobalNormConf {

@@ -39,7 +39,9 @@ class Adadelta(Optimizer):
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
         assert 1.0 >= rho >= 0.0, f"Invalid rho value: {rho}"
-
+        assert (
+            not maximize
+        ), f"In Graph Mode, weight decay has been added to Variable, it cause different result with Eager Mode when maximize = True"
         options = dict()
         options["lr"] = lr
         options["rho"] = rho
