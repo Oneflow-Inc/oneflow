@@ -70,9 +70,9 @@ Maybe<Tensor> BuildTensor(const OpAttribute& op_attribute, const std::string& bn
     CHECK_OR_RETURN(nd_sbp_it != nd_sbp_sign_map.end())
         << "nd_sbp of " << bn_in_op << " not found in op " << op_attribute.op_conf().name();
     NdSbp nd_sbp(nd_sbp_it->second);
-    const auto& tensor = JUST(ConsistentTensor::MakeTensor(
-        shape, dtype, SymbolOf(nd_sbp), SymbolOf(*parallel_desc), is_lazy,
-        /*requires_grad=*/false, /*is_leaf=*/true));
+    const auto& tensor = JUST(GlobalTensor::MakeTensor(shape, dtype, SymbolOf(nd_sbp),
+                                                       SymbolOf(*parallel_desc), is_lazy,
+                                                       /*requires_grad=*/false, /*is_leaf=*/true));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   }
 }
@@ -112,12 +112,12 @@ Maybe<void> CheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
 }
 
 Maybe<const std::string&> GetDeviceTagOfTensor(const std::shared_ptr<Tensor>& tensor) {
-  if (tensor->is_consistent()) { return JUST(tensor->parallel_desc())->device_tag(); }
+  if (tensor->is_global()) { return JUST(tensor->parallel_desc())->device_tag(); }
   return JUST(tensor->device())->type();
 }
 
 bool GetIsDynamicOfTensor(const std::shared_ptr<Tensor>& tensor) {
-  if (tensor->is_consistent()) {
+  if (tensor->is_global()) {
     return false;
   } else {
     return true;
@@ -128,8 +128,8 @@ Maybe<void> GenNdSbpByTensor(NdSbp* nd_sbp, const std::shared_ptr<Tensor>& tenso
   nd_sbp->clear_sbp_parallel();
   if (tensor->is_local()) {
     // NOTE(chengcheng):
-    //   OneFlow Lazy is always consistent. LocalTensor is a special case of ConsistentTensor which
-    //   placement is only this rank, and SbpParallel is Broadcast.
+    //   OneFlow Lazy is always global. LocalTensor is a special case of GlobalTensor
+    //   which placement is only this rank, and SbpParallel is Broadcast.
     nd_sbp->add_sbp_parallel()->mutable_broadcast_parallel();
   } else {
     *nd_sbp = *JUST(tensor->nd_sbp());
@@ -205,8 +205,8 @@ Maybe<Tensor> GradAccTryInsertUnpackAfterInput(
         << " the input tensor of nn.Graph will be unpacked by 0th dim into multiple micro-batches "
         << " and exec them in order.\n";
 
-    user_op::UserOpConfWrapperBuilder unpack_builder("System-GradientAccumulation-InputUnpack-"
-                                                     + input_conf.name() + "-" + NewUniqueId());
+    user_op::UserOpConfWrapperBuilder unpack_builder("Sys-GradAcc-InputUnpack-" + input_conf.name()
+                                                     + "-" + NewUniqueId());
     const std::string input_tensor_lbn = GenLogicalBlobName(input_conf.name(), "out");
     const auto unpack_op = unpack_builder.OpTypeName("unpack")
                                .Input("in", input_tensor_lbn)
@@ -216,7 +216,7 @@ Maybe<Tensor> GradAccTryInsertUnpackAfterInput(
                                .DeviceTag(input_conf.device_tag())
                                .Build();
 
-    OpAttribute unpack_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(unpack_op.op_conf()));
+    OpAttribute unpack_op_attr = *JUST(infer_ctx->AddAndInferGlobalOp(unpack_op.op_conf()));
     VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op: \n"
             << unpack_op.op_conf().DebugString() << std::endl;
     VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
@@ -249,8 +249,8 @@ Maybe<Tensor> GradAccTryInsertRepeatAfterVar(
         << " the var tensor of nn.Graph will be repeated exec for multiple micro-batches. \n";
 
     const std::string var_tensor_lbn = GenLogicalBlobName(var_conf.name(), "out");
-    user_op::UserOpConfWrapperBuilder repeat_builder("System-GradientAccumulation-VariableRepeat-"
-                                                     + var_conf.name() + "-" + NewUniqueId());
+    user_op::UserOpConfWrapperBuilder repeat_builder("Sys-GradAcc-VarRepeat-" + var_conf.name()
+                                                     + "-" + NewUniqueId());
     const auto repeat_op = repeat_builder.OpTypeName("repeat")
                                .Input("in", var_tensor_lbn)
                                .Output("out")
@@ -259,7 +259,7 @@ Maybe<Tensor> GradAccTryInsertRepeatAfterVar(
                                .DeviceTag(var_conf.device_tag())
                                .Build();
 
-    OpAttribute repeat_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(repeat_op.op_conf()));
+    OpAttribute repeat_op_attr = *JUST(infer_ctx->AddAndInferGlobalOp(repeat_op.op_conf()));
     VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op: \n"
             << repeat_op.op_conf().DebugString() << std::endl;
     VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
@@ -293,8 +293,7 @@ Maybe<Tensor> GradAccTryInsertPackBeforeOutput(const std::shared_ptr<Scope>& sco
         << " the output tensor of nn.Graph will be packed to a big tensor by 0th dim, after exec \n"
         << " for multiple micro-batches. \n";
 
-    user_op::UserOpConfWrapperBuilder pack_builder("System-GradientAccumulation-OutputPack-"
-                                                   + output_op_name);
+    user_op::UserOpConfWrapperBuilder pack_builder("Sys-GradAcc-OutputPack-" + output_op_name);
     const auto output_pack_op = pack_builder.OpTypeName("pack")
                                     .Input("in", output_in_lbn)
                                     .Output("out")
@@ -306,7 +305,7 @@ Maybe<Tensor> GradAccTryInsertPackBeforeOutput(const std::shared_ptr<Scope>& sco
     int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(output_pack_op.op_conf()));
     auto blob_parallel_desc = JUST(GetSymbol<ParallelDesc>(parallel_desc_sym_id));
 
-    OpAttribute pack_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(output_pack_op.op_conf()));
+    OpAttribute pack_op_attr = *JUST(infer_ctx->AddAndInferGlobalOp(output_pack_op.op_conf()));
     VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op: \n"
             << output_pack_op.op_conf().DebugString() << std::endl;
     VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
@@ -339,21 +338,20 @@ Maybe<void> GradAccTryInsertRepeatTickBeforeSource(
 
     // Insert Tick
     OperatorConf tick_conf{};
-    tick_conf.set_name("System-GradientAccumulation-RepeatTick-DeviceTick-"
-                       + source_op_conf->name());
+    tick_conf.set_name("Sys-GradAcc-RepeatTick-DeviceTick-" + source_op_conf->name());
     tick_conf.set_device_tag(source_op_conf->device_tag());
     tick_conf.mutable_device_tick_conf()->set_out("out");
     tick_conf.set_scope_symbol_id(source_op_conf->scope_symbol_id());
     auto tick_lbn = GenLogicalBlobName(tick_conf.name(), tick_conf.device_tick_conf().out());
-    OpAttribute tick_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(tick_conf));
+    OpAttribute tick_op_attr = *JUST(infer_ctx->AddAndInferGlobalOp(tick_conf));
     VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op: \n"
             << tick_conf.DebugString() << std::endl;
     VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
             << " infer and and op attr : \n"
             << tick_op_attr.DebugString() << std::endl;
 
-    user_op::UserOpConfWrapperBuilder repeat_builder(
-        "System-GradientAccumulation-RepeatTick-Repeat-" + source_op_conf->name());
+    user_op::UserOpConfWrapperBuilder repeat_builder("Sys-GradAcc-RepeatTick-Repeat-"
+                                                     + source_op_conf->name());
     const auto repeat_op = repeat_builder.OpTypeName("repeat")
                                .Input("in", tick_lbn)
                                .Output("out")
@@ -362,7 +360,7 @@ Maybe<void> GradAccTryInsertRepeatTickBeforeSource(
                                .DeviceTag(source_op_conf->device_tag())
                                .Build();
 
-    OpAttribute repeat_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(repeat_op.op_conf()));
+    OpAttribute repeat_op_attr = *JUST(infer_ctx->AddAndInferGlobalOp(repeat_op.op_conf()));
     VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op: \n"
             << repeat_op.op_conf().DebugString() << std::endl;
     VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
@@ -389,8 +387,8 @@ Maybe<std::string> GradAccTryInsertRepeatAfterFreeVar(const OperatorConf& var_co
         << " Once call nn.Graph in OneFlow, it indicates a mini-batch. When grad acc steps > 1, \n"
         << " the free var tensor of nn.Graph will be repeated exec for multiple micro-batches. \n";
 
-    user_op::UserOpConfWrapperBuilder repeat_builder("System-GradientAccumulation-VariableRepeat-"
-                                                     + var_conf.name() + "-" + NewUniqueId());
+    user_op::UserOpConfWrapperBuilder repeat_builder("Sys-GradAcc-VarRepeat-" + var_conf.name()
+                                                     + "-" + NewUniqueId());
     const auto repeat_op = repeat_builder.OpTypeName("repeat")
                                .Input("in", var_tensor_lbn)
                                .Output("out")
@@ -399,7 +397,7 @@ Maybe<std::string> GradAccTryInsertRepeatAfterFreeVar(const OperatorConf& var_co
                                .DeviceTag(var_conf.device_tag())
                                .Build();
 
-    OpAttribute repeat_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(repeat_op.op_conf()));
+    OpAttribute repeat_op_attr = *JUST(infer_ctx->AddAndInferGlobalOp(repeat_op.op_conf()));
     VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op: \n"
             << repeat_op.op_conf().DebugString() << std::endl;
     VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
@@ -446,7 +444,7 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
 
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " try to add op: \n"
           << op_conf.DebugString() << std::endl;
-  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
+  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferGlobalOp(op_conf));
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
           << op_conf.name() << " for FreeEagerTensor.\n";
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
@@ -491,7 +489,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
 
   input_tensor->shape()->ToProto(blob_conf->mutable_shape());
   blob_conf->set_data_type(input_tensor->dtype()->data_type());
-  // NOTE(chengcheng): is_dynamic true has conflict in consistent lazy job even if world size 1.
+  // NOTE(chengcheng): is_dynamic true has conflict in global lazy job even if world size 1.
   //     this flag will be removed in the future.
   // blob_conf->set_is_dynamic(GetIsDynamicOfTensor(input_tensor));
   blob_conf->set_is_dynamic(false);
@@ -500,7 +498,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   auto infer_ctx = JUST(GetCurInferCtx());
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
           << " try to add op: \n: " << op_conf.DebugString() << std::endl;
-  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
+  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferGlobalOp(op_conf));
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
           << op_conf.name() << std::endl;
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
@@ -558,7 +556,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   auto infer_ctx = JUST(GetCurInferCtx());
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
           << " try to add op: \n: " << op_conf.DebugString() << std::endl;
-  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
+  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferGlobalOp(op_conf));
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
           << op_conf.name() << std::endl;
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
@@ -624,7 +622,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   InterfaceBlobConf* blob_conf = output_conf->mutable_blob_conf();
   output_tensor->shape()->ToProto(blob_conf->mutable_shape());
   blob_conf->set_data_type(output_tensor->dtype()->data_type());
-  // NOTE(chengcheng): is_dynamic true has conflict in consistent lazy job even if world size 1.
+  // NOTE(chengcheng): is_dynamic true has conflict in global lazy job even if world size 1.
   //     this flag will be removed in the future.
   // blob_conf->set_is_dynamic(GetIsDynamicOfTensor(output_tensor));
   blob_conf->set_is_dynamic(false);
@@ -633,7 +631,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   auto infer_ctx = JUST(GetCurInferCtx());
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " try to add op: \n"
           << op_conf.DebugString() << std::endl;
-  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
+  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferGlobalOp(op_conf));
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
           << op_conf.name() << std::endl;
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
@@ -687,7 +685,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ImageDecoderRandomCropResizeOpExpr&
   op_conf->set_name(new_op_name);
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " try to add op: \n"
           << op_conf->DebugString() << std::endl;
-  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
+  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferGlobalOp(*op_conf));
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
           << op_conf->name() << std::endl;
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
@@ -717,7 +715,7 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
   bool is_local;
   std::shared_ptr<const ParallelDesc> parallel_desc;
   if (ctx.parallel_desc.has_value()) {
-    // NOTE(chengcheng): consistent
+    // NOTE(chengcheng): global
     CHECK_OR_RETURN(!ctx.device.has_value());
     const auto& parallel_desc_sym = JUST(ctx.parallel_desc);
     parallel_desc = parallel_desc_sym.shared_from_symbol();
@@ -765,7 +763,7 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
 
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " try to add op: \n"
           << op_conf->DebugString() << std::endl;
-  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
+  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferGlobalOp(*op_conf));
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
           << op_conf->name() << std::endl;
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
@@ -817,10 +815,10 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
     parallel_conf.set_device_tag(device_type);
     ParallelDesc parallel_desc(parallel_conf);
     (*outputs)[0] =
-        JUST(ConsistentTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),
-                                          JUST(input_tensor->nd_sbp()), SymbolOf(parallel_desc),
-                                          /* is_lazy= */ true,
-                                          /*requires_grad=*/false, /*is_leaf=*/true));
+        JUST(GlobalTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),
+                                      JUST(input_tensor->nd_sbp()), SymbolOf(parallel_desc),
+                                      /* is_lazy= */ true,
+                                      /*requires_grad=*/false, /*is_leaf=*/true));
   }
   // NOTE(chengcheng): output tensor lbn is SAME with input tensor.
   TensorNameScope::Global()->Record(outputs->at(0), input_lbn);
@@ -937,7 +935,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   }
   VLOG(2) << "Lazy nn.Graph name " << graph_name << " try to add op: \n"
           << op_conf->DebugString() << std::endl;
-  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));
+  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferGlobalOp(*op_conf));
   VLOG(2) << "Lazy nn.Graph name " << graph_name << " add op : \n" << op_conf->name() << std::endl;
   VLOG(3) << "Lazy nn.Graph name " << graph_name << " infer and and op attr : \n"
           << op_attr.DebugString() << std::endl;
@@ -968,13 +966,13 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const Tens
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_expr,
+Maybe<void> LazyInterpreter::ApplyImpl(const GlobalToGlobalOpExpr& op_expr,
                                        const TensorTuple& inputs, TensorTuple* outputs,
                                        const OpExprInterpContext& ctx) const {
   CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   const auto& input_tensor = inputs[0];
-  CHECK_OR_RETURN(input_tensor->is_consistent());
+  CHECK_OR_RETURN(input_tensor->is_global());  // NOLINT
 
   CHECK_OR_RETURN(ctx.parallel_desc.has_value());
   const auto& parallel_desc_sym = JUST(ctx.parallel_desc);
@@ -994,10 +992,10 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
     // NOTE(zwx): The input tensor's parallel_desc is not equal to that of op's,
     // create a proxy input with the parallel_desc that is the same as op's
     input_proxy =
-        JUST(ConsistentTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),
-                                          JUST(input_tensor->nd_sbp()), parallel_desc_sym,
-                                          /* is_lazy= */ true,
-                                          /*requires_grad=*/false, /*is_leaf=*/true));
+        JUST(GlobalTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),
+                                      JUST(input_tensor->nd_sbp()), parallel_desc_sym,
+                                      /* is_lazy= */ true,
+                                      /*requires_grad=*/false, /*is_leaf=*/true));
     TensorNameScope::Global()->Record(input_proxy, input_lbn);
   }
 

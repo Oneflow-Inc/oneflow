@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace one {
@@ -36,7 +37,7 @@ std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(const bool& is_local)
   if (is_local) {
     internal = std::make_shared<EagerLocalInterpreter>();
   } else {
-    internal = std::make_shared<EagerConsistentInterpreter>();
+    internal = std::make_shared<EagerGlobalInterpreter>();
   }
   return std::make_shared<AutogradInterpreter>(internal);
 }
@@ -56,7 +57,7 @@ std::string ErrorString4Inputs(const TensorTuple& inputs, const OpExpr& op_expr)
     if (tensor->is_local()) {
       error_str << "local";
     } else {
-      error_str << "consistent";
+      error_str << "global";
     }
     if (++idx != inputs.size()) { error_str << ", "; }
   }
@@ -66,36 +67,36 @@ std::string ErrorString4Inputs(const TensorTuple& inputs, const OpExpr& op_expr)
 Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExprInterpContext& ctx,
                                           const OpExpr& op_expr) {
   static const auto& g_lazy_interpreter = BuildLazyInterpreter();
-  static const auto& g_eager_consistent_interpreter = BuildEagerInterpreter(/*is_local=*/false);
+  static const auto& g_eager_global_interpreter = BuildEagerInterpreter(/*is_local=*/false);
   static const auto& g_eager_local_interpreter = BuildEagerInterpreter(/*is_local=*/true);
   if (!LazyMode::is_enabled()) {
     if (inputs.empty()) {
       if (ctx.parallel_desc.has_value()) {
         JUST(ctx.nd_sbp);
         CHECK_OR_RETURN(!ctx.device.has_value());
-        return g_eager_consistent_interpreter;
+        return g_eager_global_interpreter;
       } else {
         CHECK_OR_RETURN(!ctx.nd_sbp.has_value());
         return g_eager_local_interpreter;
       }
     } else {
-      if (inputs.at(0)->is_consistent()) {
+      if (inputs[0]->is_global()) {
         if (inputs.size() == 1) {
           // do nothing
         } else if (inputs.size() == 2) {
-          CHECK_OR_RETURN(inputs.at(1)->is_consistent())
+          CHECK_OR_RETURN(inputs[1]->is_global())      // NOLINT
               << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
         } else if (inputs.size() == 3) {
-          CHECK_OR_RETURN(inputs.at(1)->is_consistent())
+          CHECK_OR_RETURN(inputs[1]->is_global())
               << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
-          CHECK_OR_RETURN(inputs.at(2)->is_consistent())
+          CHECK_OR_RETURN(inputs[2]->is_global())
               << ErrorString4Inputs(inputs, op_expr);  // unroll loop for efficiency
         } else {
           for (const auto& tensor : inputs) {
-            CHECK_OR_RETURN(tensor->is_consistent()) << ErrorString4Inputs(inputs, op_expr);
+            CHECK_OR_RETURN(tensor->is_global()) << ErrorString4Inputs(inputs, op_expr);
           }
         }
-        return g_eager_consistent_interpreter;
+        return g_eager_global_interpreter;
       } else {
         if (inputs.size() == 1) {
           // do nothing
@@ -125,6 +126,7 @@ Maybe<AutogradInterpreter> GetInterpreter(const TensorTuple& inputs, const OpExp
 template<>
 /* static */ Maybe<TensorTuple> OpInterpUtil::Dispatch<TensorTuple>(
     const OpExpr& op_expr, const TensorTuple& inputs, const OpExprInterpContext& ctx) {
+  OF_PROFILER_RANGE_GUARD("Dispatch");
   auto outputs = std::make_shared<TensorTuple>(op_expr.output_size());
   JUST(Dispatch(op_expr, inputs, outputs.get(), ctx));
   return outputs;
@@ -134,12 +136,14 @@ template<>
 /* static */ Maybe<Tensor> OpInterpUtil::Dispatch<Tensor>(const OpExpr& op_expr,
                                                           const TensorTuple& inputs,
                                                           const OpExprInterpContext& ctx) {
+  OF_PROFILER_RANGE_GUARD("Dispatch");
   return JUST(Dispatch<TensorTuple>(op_expr, inputs, ctx))->at(0);
 }
 
 /* static */ Maybe<void> OpInterpUtil::Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
                                                 TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) {
+  OF_PROFILER_RANGE_GUARD("Dispatch");
   return JUST(GetInterpreter(inputs, ctx, op_expr))->Apply(op_expr, inputs, outputs, ctx);
 }
 
@@ -150,7 +154,7 @@ template<>
     if (is_local_strategy_enabled) {
       return infer_ctx->AddAndInferLocalOp(op_conf);
     } else {
-      return infer_ctx->AddAndInferConsistentOp(op_conf);
+      return infer_ctx->AddAndInferGlobalOp(op_conf);
     }
   }());
   return op_attribute;
