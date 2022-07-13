@@ -56,7 +56,7 @@ Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp);
 Attribute ConvertNdSbpToAttr_(Builder& builder, const ::oneflow::NdSbp& nd_sbp);
 Attribute ConvertNdSbpToAttr_(Builder& builder,
                               const ::google::protobuf::RepeatedPtrField<std::string>& nd_sbp,
-                              bool is_2d);
+                              int nd_size);
 
 class Importer {
  public:

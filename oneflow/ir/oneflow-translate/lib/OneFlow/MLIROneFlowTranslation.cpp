@@ -314,8 +314,8 @@ LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_c
   // attr nd_sbp
   auto conf = this->job_wrapper_.ParallelConf4OpName(op_conf.name());
 
-  auto is_2d = conf.hierarchy().dim().size() == 2;
-  auto nd_sbp = ConvertNdSbpToAttr_(GetBuilder(), op_conf.variable_conf().nd_sbp(), is_2d);
+  auto nd_size = conf.hierarchy().dim().size();
+  auto nd_sbp = ConvertNdSbpToAttr_(GetBuilder(), op_conf.variable_conf().nd_sbp(), nd_size);
   attr_vec.emplace_back(
       GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getNdSbpAttrName(), nd_sbp));
   // add attrs

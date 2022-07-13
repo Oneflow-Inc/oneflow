@@ -51,13 +51,13 @@ def SBP_PartialSumAttr : SBP_Attr<"PartialSum", "p"> {
   }];
 }
 
-def SBP_2DAttr : SBP_Attr<"_2D", "2d"> {
-  let summary = "2D sbp";
+def SBP_NDAttr : SBP_Attr<"ND", "dim"> {
+  let summary = "ND sbp";
   let description = [{
-    2d sbp container
+    nd sbp container
   }];
-  let parameters = (ins "::mlir::Attribute":$axis0, "::mlir::Attribute":$axis1);
-  let assemblyFormat = "`(` $axis0 `,` $axis1 `)`";
+  let parameters = (ins "::mlir::ArrayAttr":$nd_sbp);
+  let assemblyFormat = "$nd_sbp";
 }
 
 def SBP_ParallelSignatureAttr : SBP_Attr<"ParallelSignature", "parallel_signature"> {
