@@ -18,6 +18,9 @@ https://pytorch.org/docs/1.10/cuda.html.
     set_device
     synchronize
 
+.. note::
+   The :attr:`current_device` returns local rank as device index. It is different from the 'torch.current_device()' in PyTorch.
+
 Random Number Generator
 -------------------------
 .. autosummary::
