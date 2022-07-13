@@ -111,7 +111,7 @@ class GraphConfig(object):
         Args:
             mode (bool): if set to true, optimizer states of Data Parallel will be sharded across devices.
             stage (int): optimization stage, range from 1 to 3. 
-            shard_min_size (int): min size of a shard of an optimizer state.
+            shard_min_size (int): min size (element count) of a shard of an optimizer state.
             shard_restore_level (int): level to restore sharded parameter to whole parameter for consumer operators, level 0 is no restore, level 1 is soft restore, level 2 is hard restore. Note that this paremeter is at pre-alpha stage.
         """
         if not mode:

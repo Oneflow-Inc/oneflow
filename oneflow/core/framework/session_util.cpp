@@ -66,7 +66,7 @@ Maybe<void> Session::PopLocalStrategyEnabled() {
 Maybe<bool> Session::IsLocalStrategyEnabled() const {
   return is_local_strategy_enabled_stack_->size() > 0 && is_local_strategy_enabled_stack_->back();
 }
-Maybe<bool> Session::IsConsistentStrategyEnabled() const {
+Maybe<bool> Session::IsGlobalStrategyEnabled() const {
   return is_local_strategy_enabled_stack_->size() > 0 && !is_local_strategy_enabled_stack_->back();
 }
 
