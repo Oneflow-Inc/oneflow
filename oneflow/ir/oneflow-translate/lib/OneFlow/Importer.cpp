@@ -59,6 +59,7 @@ limitations under the License.
 #include "llvm/Support/raw_ostream.h"
 
 #include <google/protobuf/text_format.h>
+#include <vector>
 
 namespace mlir {
 
@@ -404,8 +405,9 @@ Attribute ConvertNdSbpToAttr_(Builder& builder, const ::oneflow::NdSbp& nd_sbp) 
 Attribute ConvertNdSbpToAttr_(Builder& builder,
                               const ::google::protobuf::RepeatedPtrField<std::string>& nd_sbp) {
   auto ctx = builder.getContext();
-  mlir::Attribute attr;
+  std::vector<mlir::Attribute> outputs_vec;
   for (const auto& sbp : nd_sbp) {
+    mlir::Attribute attr;
     if (sbp.at(0) == 'S') {
       auto start_pos = sbp.find('(');
       auto end_pos = sbp.find(')');
@@ -423,9 +425,12 @@ Attribute ConvertNdSbpToAttr_(Builder& builder,
     } else {
       llvm::errs() << "unsupported sbp";
     }
+    outputs_vec.push_back(attr);
   }
 
-  auto res = sbp::ParallelSignatureAttr::get(ctx, {}, builder.getArrayAttr({attr}));
+  auto inputs = builder.getArrayAttr({});
+  auto outputs = builder.getArrayAttr(outputs_vec);
+  auto res = sbp::ParallelSignatureAttr::get(ctx, inputs, outputs);
   return res;
 }
 
@@ -983,10 +988,6 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
   }
 
   if (op->hasAttr("trainable")) { var_op_conf->set_trainable(op.trainable()); }
-
-  for (const auto& sbp : op.nd_sbp()) {
-    var_op_conf->add_nd_sbp(sbp.cast<StringAttr>().getValue().str());
-  }
 
   // all operands are ctrl_inputs
   for (const auto& operand : op->getOperands()) {
