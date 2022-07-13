@@ -2,7 +2,7 @@ oneflow.nn.functional
 ===========================================
 
 The documentation is referenced from: 
-https://pytorch.org/docs/master/nn.functional.html.
+https://pytorch.org/docs/1.10/nn.functional.html.
 
 .. contents:: oneflow.nn.functional
     :depth: 2
