@@ -13,11 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_FRAMEWORK_TENSOR_META_H_
-#define ONEFLOW_FRAMEWORK_TENSOR_META_H_
+#ifndef ONEFLOW_COMMON_TENSOR_META_H_
+#define ONEFLOW_COMMON_TENSOR_META_H_
 
 #include <memory>
-#include "oneflow/core/framework/tensor_desc.h"
+#include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
@@ -102,6 +102,32 @@ class LocalTensorMeta : public TensorMeta {
   int64_t storage_offset_;
 };
 
+class MutLocalTensorMeta : public TensorMeta {
+ public:
+  // uninitialized MutLocalTensorMeta.
+  MutLocalTensorMeta();
+  MutLocalTensorMeta(const MutLocalTensorMeta&) = default;
+  MutLocalTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
+                     Symbol<Device> device);
+  MutLocalTensorMeta(const std::shared_ptr<const Shape>& shape,
+                     const std::shared_ptr<const Stride>& stride, DataType dtype,
+                     Symbol<Device> device, int64_t storage_offset);
+  virtual ~MutLocalTensorMeta() = default;
+
+  const Symbol<Device>& device() const { return device_; }
+  int64_t storage_offset() const { return storage_offset_; }
+
+  Symbol<Device>* mut_device() { return &device_; }
+  void set_storage_offset(int64_t offset) { storage_offset_ = offset; }
+
+  bool operator==(const MutLocalTensorMeta& other) const;
+  size_t CalcHashValue() const;
+
+ private:
+  Symbol<Device> device_;
+  int64_t storage_offset_;
+};
+
 class GlobalTensorMeta : public TensorMeta {
  public:
   GlobalTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype, Symbol<NdSbp> nd_sbp,
@@ -148,4 +174,4 @@ struct hash<oneflow::one::GlobalTensorMeta> final {
 
 }  // namespace std
 
-#endif  // ONEFLOW_FRAMEWORK_TENSOR_META_H_
+#endif  // ONEFLOW_COMMON_TENSOR_META_H_

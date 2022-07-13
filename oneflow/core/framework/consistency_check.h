@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/framework/tensor_meta.h"
+#include "oneflow/core/common/tensor_meta.h"
 
 namespace oneflow {
 

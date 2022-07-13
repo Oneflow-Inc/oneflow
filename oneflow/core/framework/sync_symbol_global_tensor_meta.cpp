@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/sync_symbol_parallel_desc.h"
 #include "oneflow/core/framework/sync_symbol_nd_sbp.h"
 #include "oneflow/core/framework/rank_group_rpc_util.h"
-#include "oneflow/core/framework/tensor_meta.h"
+#include "oneflow/core/common/tensor_meta.h"
 #include "oneflow/core/framework/synced_symbol_map.h"
 #include "oneflow/core/common/flat_shape.h"
 

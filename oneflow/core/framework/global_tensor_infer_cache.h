@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
-#include "oneflow/core/framework/tensor_meta.h"
+#include "oneflow/core/common/tensor_meta.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/nd_sbp_infer_hint.h"
 

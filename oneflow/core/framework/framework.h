@@ -26,7 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/infer_nd_sbp_fn_context.h"
 #include "oneflow/core/framework/user_op_hob.h"
 
-#include "oneflow/core/framework/tensor_desc.h"
+#include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/user_op_def.h"
 #include "oneflow/core/framework/multi_thread.h"

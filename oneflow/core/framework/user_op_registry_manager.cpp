@@ -17,7 +17,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/infer_util.h"
-#include "oneflow/core/framework/tensor_desc.h"
+#include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/kernel/kernel.pb.h"
 #include "oneflow/core/operator/operator.h"
 

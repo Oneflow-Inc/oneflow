@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/framework/tensor_desc.h"
+#include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/sbp_parallel.h"
