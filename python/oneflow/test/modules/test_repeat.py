@@ -43,6 +43,13 @@ class TestRepeat(flow.unittest.TestCase):
         sizes = (random(1, 5).to(int), random(1, 5).to(int), random(1, 5).to(int))
         y = x.repeat(sizes)
         return y
+    
+    @autotest(n=5, auto_backward=False)
+    def test_complicated_repeat_case(test_case):
+        x = torch.ones(224, 224).cuda()
+        y = torch.triu(x, diagonal=1).repeat(32, 1, 1)
+        z = y.byte()
+        return z
 
 
 if __name__ == "__main__":
