@@ -274,7 +274,7 @@ def _orthogonal(self, gain=1.0):
 
 
 def _normal(self, mean=0, std=1):
-    return flow.nn.init.normal_(self, a=mean, b=std)
+    return flow.nn.init.normal_(self, mean=mean, std=std)
 
 
 def _fill(self, value):
