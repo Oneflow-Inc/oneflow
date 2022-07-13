@@ -51,7 +51,7 @@ def SBP_PartialSumAttr : SBP_Attr<"PartialSum", "p"> {
   }];
 }
 
-def SBP_2DAttr : SBP_Attr<"_2D", "_2d"> {
+def SBP_2DAttr : SBP_Attr<"_2D", "2d"> {
   let summary = "2D sbp";
   let description = [{
     2d sbp container
