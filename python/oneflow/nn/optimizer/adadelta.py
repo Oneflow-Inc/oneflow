@@ -23,7 +23,73 @@ from oneflow.nn.parameter import Parameter
 
 
 class Adadelta(Optimizer):
-    r"""
+    r"""Implements Adadelta Optimizer. 
+
+        The formula is: 
+
+        .. math::
+
+            & v_{t} = v_{t-1} * rho + g_{t}^2 * (1 - rho)
+
+            & delta = \frac{\sqrt{u_{t-1} + \epsilon}}{\sqrt{v_{t} + \epsilon}} * g_{t}
+            
+            & u_{t} = u_{t-1} * rho + delta^2*(1 - rho)
+
+            & x_{t} = x_{t-1} - lr * delta
+
+        Args:
+            params (Union[Iterator[Parameter], List[Dict]]): iterable of parameters to optimize or dicts defining
+            parameter groups
+            lr (float, optional): The learning rate. Defaults to 0.001.
+            rho (float, optional): The decay factor of learning rate. Defaults to 0.0.
+            eps (float, optional): A small constant terms added to the denominator to improve numerical stability. Defaults to 1e-10.
+            weight_decay (float, optional): The weight decay. Defaults to 0.
+            maximize (bool, optional): maximize the params based on the objective, instead of minimizing. Defaults False.
+        
+        For example: 
+
+        Example 1: 
+
+        .. code-block:: python
+
+            # Assume net is a custom model. 
+            adadelta = flow.optim.Adadelta(net.parameters(), lr=1e-3)
+
+            for epoch in range(epochs):
+                # Read data, Compute the loss and so on. 
+                # ...
+                loss.backward()
+                adadelta.step()
+                adadelta.zero_grad()
+
+        Example 2: 
+
+        .. code-block:: python 
+
+            # Assume net is a custom model. 
+            adadelta = flow.optim.Adadelta(
+                [
+                    {
+                        "params": net.parameters(),
+                        "lr": learning_rate,
+                        "clip_grad_max_norm": 0.5,
+                        "clip_grad_norm_type": 2.0,
+                    }
+                ],
+            )
+
+            for epoch in range(epochs):
+                # Read data, Compute the loss and so on. 
+                # ...
+                loss.backward()
+                adadelta.clip_grad()
+                adadelta.step()
+                adadelta.zero_grad()
+
+        If you want to use clip_grad, you can refer this example. 
+
+        For more details of `clip_grad_max_norm` and `clip_grad_norm_type`, you can refer to :func:`oneflow.nn.utils.clip_grad_norm_`. 
+        
     """
 
     def __init__(

@@ -10,7 +10,8 @@ Optimizers
         Optimizer,
         RMSprop,
         SGD,
-        LAMB,
+        LAMB, 
+        Adadelta, 
         lr_scheduler
 
 .. automodule:: oneflow.optim.lr_scheduler
