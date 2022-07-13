@@ -96,7 +96,8 @@ template<typename T, typename K>
 std::unique_ptr<Gather> NewGather() {
   return std::unique_ptr<Gather>(new GatherImpl<T, K>());
 }
-
+#define GATHER_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(bool, DataType::kBool)
+#define GATHER_INDEX_TYPE_SEQ INDEX_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32)
 class GatherFactoryImpl : public GatherFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GatherFactoryImpl);
@@ -116,6 +117,8 @@ class GatherFactoryImpl : public GatherFactory {
     return NewPrimitiveFromHandlers(new_gather_handle, type_tuple);
   }
 };
+#undef GATHER_INDEX_TYPE_SEQ
+#undef GATHER_DATA_TYPE_SEQ
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, GatherFactory, GatherFactoryImpl);
 }  // namespace
 }  // namespace primitive
