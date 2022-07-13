@@ -19,6 +19,11 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.isnan,
     """
+    isnan(input) -> Tensor 
+    
+    This function is equivalent to PyTorch’s isnan function. 
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.isnan.html?highlight=isnan#torch.isnan
+
     Returns a new tensor with boolean elements representing if each element of input is NaN or not.
 
     Args:
@@ -39,6 +44,11 @@ add_docstr(
 add_docstr(
     oneflow.isinf,
     """
+    isinf(input) -> Tensor 
+
+    This function is equivalent to PyTorch’s isinf function. 
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.isinf.html?highlight=isinf#torch.isinf
+
     Tests if each element of input is infinite (positive or negative infinity) or not.
 
     Args:
@@ -59,6 +69,11 @@ add_docstr(
 add_docstr(
     oneflow.isfinite,
     """
+    isfinite(input) -> Tensor 
+
+    This function is equivalent to PyTorch’s isfinite function. 
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.isfinite.html?highlight=isfinite#torch.isfinite
+
     Returns a new tensor with boolean elements representing if each element is finite or not.
 
     Args:
