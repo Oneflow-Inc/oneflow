@@ -13,23 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/thread_ctx.h"
-#include "oneflow/core/common/util.h"
+#ifndef ONEFLOW_CORE_COMMON_OP_ARGS_RESERVED_SIZE_H_
+#define ONEFLOW_CORE_COMMON_OP_ARGS_RESERVED_SIZE_H_
 
 namespace oneflow {
-namespace vm {
 
-size_t ThreadCtx::TryReceiveAndRun() {
-  intrusive::List<INTRUSIVE_FIELD(Instruction, worker_pending_instruction_hook_)> tmp_list;
-  mut_worker_pending_instruction_list()->MoveTo(&tmp_list);
-  size_t size = tmp_list.size();
-  INTRUSIVE_FOR_EACH(instruction, &tmp_list) {
-    tmp_list.Erase(instruction.Mutable());
-    const StreamPolicy& stream_policy = instruction->stream().stream_policy();
-    stream_policy.Run(instruction.Mutable());
-  }
-  return size;
+constexpr static int kOpArgsReservedSize = 4;
+
 }
 
-}  // namespace vm
-}  // namespace oneflow
+#endif  // ONEFLOW_CORE_COMMON_OP_ARGS_RESERVED_SIZE_H_
