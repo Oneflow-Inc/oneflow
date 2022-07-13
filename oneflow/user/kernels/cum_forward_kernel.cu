@@ -31,15 +31,11 @@ inline T CeilDiv(T n, T m) {
 
 template<typename T>
 struct SumFunctor {
-  CUB_RUNTIME_FUNCTION __device__ __forceinline__ T operator()(const T a, const T b) const {
-    return a + b;
-  }
+  __device__ __forceinline__ T operator()(const T a, const T b) const { return a + b; }
 };
 template<typename T>
 struct ProdFunctor {
-  CUB_RUNTIME_FUNCTION __device__ __forceinline__ T operator()(const T a, const T b) const {
-    return a * b;
-  }
+  __device__ __forceinline__ T operator()(const T a, const T b) const { return a * b; }
 };
 
 template<typename T, template<typename> class BinaryFunc>
