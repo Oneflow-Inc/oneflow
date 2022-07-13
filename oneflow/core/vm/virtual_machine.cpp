@@ -179,9 +179,8 @@ Maybe<void> VirtualMachine::ShrinkAllMem() {
     if (engine->mut_active_stream_list()->size()) { return false; }
     INTRUSIVE_FOR_EACH_PTR(thread_ctx, engine->mut_thread_ctx_list()) {
       INTRUSIVE_FOR_EACH_PTR(stream, thread_ctx->mut_stream_list()) {
-        const auto& device_ctx = stream->device_ctx();
-        if (device_ctx.get() && device_ctx->mut_allocator()) {
-          auto* allocator = device_ctx->mut_allocator();
+        vm::Allocator* allocator = stream->mut_stream_policy()->mut_allocator();
+        if (allocator) {
           auto* cache = dynamic_cast<vm::CachingAllocator*>(allocator);
           if (cache != nullptr) { cache->Shrink(); }
         }
