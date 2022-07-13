@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/naive_stream_policy.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/vm/ep_device_context.h"
@@ -32,16 +33,17 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void EpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const {
-  DeviceType device_type = stream->device()->enum_type();
-  size_t device_index = stream->device()->device_id();
+void EpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
+                                 Symbol<Device> device) const {
+  DeviceType device_type = device->enum_type();
+  size_t device_index = device->device_id();
   auto ep_device =
       Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
   auto ep_backend_allocator =
       std::make_unique<EpBackendAllocator>(ep_device, ep::AllocationOptions{});
   auto bin_allo = std::make_unique<BinAllocator<ThreadSafeLock>>(ep::kMaxAlignmentRequirement,
                                                                  std::move(ep_backend_allocator));
-  device_ctx->reset(new EpDeviceCtx(stream->device(), std::move(bin_allo)));
+  device_ctx->reset(new EpDeviceCtx(device, std::move(bin_allo)));
 }
 
 void EpStreamType::InitInstructionStatus(const Stream& stream,
@@ -65,12 +67,16 @@ bool EpStreamType::QueryInstructionStatusDone(const Stream& stream,
 void EpStreamType::Run(Instruction* instruction) const {
   OF_PROFILER_RANGE_GUARD("S:" + instruction->DebugName());
   auto* stream = instruction->mut_stream();
-  auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());  // NOLINT
+  NaiveStreamPolicy* naive_stream_policy =
+      dynamic_cast<NaiveStreamPolicy*>(instruction->mut_stream()->mut_stream_policy());
+  CHECK_NOTNULL(naive_stream_policy);
+  auto* ep_device_ctx = dynamic_cast<EpDeviceCtx*>(naive_stream_policy->device_ctx().get());
   auto* ep_device = ep_device_ctx->GetOrCreateEpDevice();
   ep_device->SetAsActiveDevice();
   instruction->Compute();
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer();
-  EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(ep_device_ctx);
+  EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(
+      stream->mut_stream_policy()->stream());
 }
 
 }  // namespace vm
