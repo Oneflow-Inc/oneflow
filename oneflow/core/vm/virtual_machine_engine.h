@@ -93,6 +93,9 @@ class VirtualMachineEngine final : public intrusive::Base {
   using ReadyInstructionList =
       intrusive::List<INTRUSIVE_FIELD(Instruction, dispatched_instruction_hook_)>;
 
+  template<void (*DoEachStream)(vm::Stream*)>
+  void ForEachStreamWithinDevice(Symbol<Device> device);
+
   ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
 
   void ReleaseFinishedInstructions(const ScheduleCtx& schedule_ctx);
@@ -112,7 +115,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   DependenceAccess* AccessDependence(OperandAccessType access_type, Dependence* dependence,
                                      Instruction* instrution);
   void ConsumeDependences(Instruction* instruction);
-  void ShrinkStream(const Stream* stream);
   void DispatchInstruction(Instruction* instruction, const ScheduleCtx& schedule_ctx);
 
   bool EdgeDispatchable(const Instruction* src, const Instruction* dst) const;

@@ -297,12 +297,27 @@ std::string DebugDeviceReset(vm::Stream* stream) {
   return "reset device";
 }
 
-}  // namespace
+void BusyWaitAllInstructionsDone(Stream* stream) {
+  INTRUSIVE_FOR_EACH_PTR(instruction, stream->mut_running_instruction_list()) {
+    while (!instruction->Done()) {}
+  }
+}
 
-void VirtualMachineEngine::ShrinkStream(const Stream* stream) {
+void ShrinkMemory(Stream* stream) {
   auto* allocator = stream->device_ctx()->mut_allocator();
   auto* shrinkable_cache = dynamic_cast<CachingAllocator*>(allocator);
   CHECK_NOTNULL(shrinkable_cache)->Shrink();
+}
+
+}  // namespace
+
+template<void (*DoEachStream)(vm::Stream*)>
+void VirtualMachineEngine::ForEachStreamWithinDevice(Symbol<Device> device) {
+  INTRUSIVE_FOR_EACH_PTR(thread_ctx, mut_thread_ctx_list()) {
+    INTRUSIVE_FOR_EACH_PTR(current_stream, thread_ctx->mut_stream_list()) {
+      if (current_stream->device() == device) { DoEachStream(current_stream); }
+    }
+  }
 }
 
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
@@ -313,28 +328,10 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
     const auto& ret = TRY(instruction->Prepare());
     if (unlikely(!ret.IsOk())) {
       if (ret.error()->has_out_of_memory_error()) {
-        INTRUSIVE_FOR_EACH_PTR(thread_ctx, mut_thread_ctx_list()) {
-          INTRUSIVE_FOR_EACH_PTR(current_stream, thread_ctx->mut_stream_list()) {
-            if (current_stream->device() == stream->device()) {
-              // buzy loop to make sure running instructions all done.
-              INTRUSIVE_FOR_EACH_PTR(current_instruction,
-                                     current_stream->mut_running_instruction_list()) {
-                while (!current_instruction->Done()) {}
-              }
-            } else {
-              // do nothing
-            }
-          }
-        }
-        INTRUSIVE_FOR_EACH_PTR(thread_ctx, mut_thread_ctx_list()) {
-          INTRUSIVE_FOR_EACH_PTR(current_stream, thread_ctx->mut_stream_list()) {
-            if (current_stream->device() == stream->device()) {
-              ShrinkStream(current_stream);
-            } else {
-              // do nothing
-            }
-          }
-        }
+        // Buzy loop to make sure running instructions all done.
+        ForEachStreamWithinDevice<&BusyWaitAllInstructionsDone>(stream->device());
+        // Shrink memory.
+        ForEachStreamWithinDevice<&ShrinkMemory>(stream->device());
         // Infers the instruction again.
         CHECK_JUST_MSG(instruction->Prepare(), std::stringstream() << DebugDeviceReset(stream));
       } else {
