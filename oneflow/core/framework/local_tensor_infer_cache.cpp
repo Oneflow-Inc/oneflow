@@ -19,12 +19,19 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/infer_util.h"
 
 namespace oneflow {
 namespace one {
 
 namespace {
+
+// NOTE: use env variable 'ONEFLOW_EAGER_ENABLE_LOCAL_INFER_CACHE' indicate whether the
+// use infer cache in naive local op interpret.
+bool ParseEnableEagerLocalInferCache() {
+  return ParseBooleanFromEnv("ONEFLOW_EAGER_ENABLE_LOCAL_INFER_CACHE", true);
+}
 
 Maybe<void> CheckIsDeviceSupportedByOp(const Device& device, const std::string& op_type_name) {
   if (IsCpuOnly(op_type_name)) { CHECK_EQ_OR_RETURN(device.type(), "cpu"); }
@@ -51,7 +58,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
  public:
   UserOpExprDeviceAndStreamInferContext(const UserOpExpr* user_op_expr,
                                         const LocalTensorMetaInferArgs* infer_args,
-                                        std::vector<LocalTensorMeta>* output_tensor_metas)
+                                        std::vector<MutLocalTensorMeta>* output_tensor_metas)
       : user_op_expr_(user_op_expr),
         composed_attrs_(infer_args->attrs(), user_op_expr->base_attrs()),
         in_tensor_devices_(user_op_expr_->input_size()),
@@ -62,7 +69,6 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
     }
     for (int i = 0; i < user_op_expr_->output_size(); ++i) {
       out_tensor_devices_.at(i) = output_tensor_metas->at(i).mut_device();
-      ;
     }
   }
 
@@ -99,13 +105,13 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
   }
   const UserOpExpr* user_op_expr_;
   const ComposedAttrMap composed_attrs_;
-  std::vector<Symbol<Device>> in_tensor_devices_;
-  std::vector<Symbol<Device>*> out_tensor_devices_;
+  small_vector<Symbol<Device>, kOpArgsReservedSize> in_tensor_devices_;
+  small_vector<Symbol<Device>*, kOpArgsReservedSize> out_tensor_devices_;
 };
 
 Maybe<Symbol<Stream>> InferDeviceAndStream(const UserOpExpr& user_op_expr,
                                            const LocalTensorMetaInferArgs& infer_args,
-                                           std::vector<LocalTensorMeta>* output_tensor_metas) {
+                                           std::vector<MutLocalTensorMeta>* output_tensor_metas) {
   if (!user_op_expr.device_and_stream_infer_fn()) {
     Symbol<Device> device = infer_args.input_local_tensor_metas().at(0)->device();
     return GetDefaultStreamByDevice(device);
@@ -144,10 +150,7 @@ Maybe<void> LocalTensorMetaInferArgs::Init(const AttrMap& attrs, Symbol<Device> 
 
 Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTuple& input_tensors) {
   for (int i = 0; i < input_tensors.size(); ++i) {
-    LocalTensorMeta* local_tensor_meta =
-        dynamic_cast<LocalTensorMeta*>(input_tensors.at(i)->mut_tensor_meta());
-    CHECK_NOTNULL_OR_RETURN(local_tensor_meta);
-    input_local_tensor_metas_.at(i) = SymbolOf(*local_tensor_meta);
+    input_local_tensor_metas_.at(i) = JUST(input_tensors.at(i)->local_tensor_meta());
   }
   return Maybe<void>::Ok();
 }
@@ -160,7 +163,7 @@ Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTupl
 
   auto result = std::make_unique<LocalTensorInferResult>(user_op_expr.output_size());
 
-  std::vector<LocalTensorMeta> output_mut_metas(user_op_expr.output_size());
+  std::vector<MutLocalTensorMeta> output_mut_metas(user_op_expr.output_size());
   // Infer devices
   Symbol<Stream> stream;
   if (!user_op_expr.has_device_and_stream_infer_fn()) {
@@ -185,21 +188,34 @@ Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTupl
 
   auto* output_metas = result->mut_output_tensor_metas();
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
-    output_metas->at(i) = SymbolOf(output_mut_metas.at(i));
+    if (!JUST(user_op_expr.SupportNonContiguous())) {
+      std::shared_ptr<Stride> stride(new Stride(output_mut_metas.at(i).shape()));
+      output_mut_metas.at(i).set_stride(stride);
+    }
+    output_metas->at(i) = SymbolOf(
+        LocalTensorMeta(output_mut_metas.at(i).shape_ptr(), output_mut_metas.at(i).stride_ptr(),
+                        output_mut_metas.at(i).data_type(), output_mut_metas.at(i).device(),
+                        output_mut_metas.at(i).storage_offset()));
   }
   return std::shared_ptr<const LocalTensorInferResult>(std::move(result));
 }
 
 Maybe<const LocalTensorInferResult> LocalTensorInferCache::GetOrInfer(
     const LocalTensorMetaInferArgs& infer_args) {
-  auto iter = cache_.find(infer_args);
-  if (iter == cache_.end()) {
+  static bool enable_eager_local_infer_cache = ParseEnableEagerLocalInferCache();
+  if (enable_eager_local_infer_cache) {
+    auto iter = cache_.find(infer_args);
+    if (iter == cache_.end()) {
+      const auto& user_op_expr = user_op_expr_.lock();
+      CHECK_OR_RETURN(static_cast<bool>(user_op_expr));
+      const auto& output_tensor_metas = JUST(Infer(*user_op_expr, infer_args));
+      iter = cache_.emplace(infer_args, output_tensor_metas).first;
+    }
+    return iter->second;
+  } else {
     const auto& user_op_expr = user_op_expr_.lock();
-    CHECK_OR_RETURN(static_cast<bool>(user_op_expr));
-    const auto& output_tensor_metas = JUST(Infer(*user_op_expr, infer_args));
-    iter = cache_.emplace(infer_args, output_tensor_metas).first;
+    return JUST(Infer(*user_op_expr, infer_args));
   }
-  return iter->second;
 }
 
 }  // namespace one
