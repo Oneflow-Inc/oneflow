@@ -128,7 +128,7 @@ A tensor can be created with :attr:`requires_grad=True` so that
 
 .. note::
     To change an existing tensor's :class:`oneflow.device` and/or :class:`oneflow.dtype`, consider using
-    :meth:`~oneflow.Tensor.to` method on the tensor.
+    :meth:`~oneflow.Tensor.to` method of Tensor object.
 
 .. warning::
    Current implementation of :class:`oneflow.Tensor` introduces memory overhead,
