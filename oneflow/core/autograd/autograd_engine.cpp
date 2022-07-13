@@ -198,6 +198,12 @@ Maybe<bool> FunctionNode::Apply(bool create_graph) {
              "`https://github.com/Oneflow-Inc/oneflow/issues` and we will fix it as soon as "
              "possible";
       JUST(input_meta_data_.at(i)->current_grad()->PushPartialTensor(input_grads.at(i)));
+    } else {
+      CHECK_OR_RETURN(!input_meta_data_.at(i))
+          << name() << "'s input[" << i
+          << "] need calculate grad but got nullptr. Please submit an issue in "
+             "`https://github.com/Oneflow-Inc/oneflow/issues` and we will fix it as soon as "
+             "possible;";
     }
   }
   return true;
