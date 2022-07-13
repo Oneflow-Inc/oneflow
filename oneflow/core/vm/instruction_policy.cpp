@@ -23,12 +23,12 @@ namespace vm {
 
 void InstructionPolicy::InitInstructionStatus(Instruction* instruction) {
   instruction->stream_policy().InitInstructionStatus(instruction->stream(),
-                                                   instruction->mut_status_buffer());
+                                                     instruction->mut_status_buffer());
 }
 
 void InstructionPolicy::DeleteInstructionStatus(Instruction* instruction) {
   instruction->stream_policy().DeleteInstructionStatus(instruction->stream(),
-                                                     instruction->mut_status_buffer());
+                                                       instruction->mut_status_buffer());
 }
 
 namespace {
