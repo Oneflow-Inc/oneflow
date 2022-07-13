@@ -327,7 +327,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
         // for all stream
         INTRUSIVE_FOR_EACH_PTR(thread_ctx, mut_thread_ctx_list()) {
           INTRUSIVE_FOR_EACH_PTR(current_stream, thread_ctx->mut_stream_list()) {
-            if (current_stream != stream) {
+            if (current_stream == stream) {
               // Waits previous instructions done before shrinking memory.
               StreamWaitPreviousInstructionsDone(stream, instruction);
               ShrinkStream(stream);
@@ -336,7 +336,8 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
               INTRUSIVE_FOR_EACH_PTR(current_instruction,
                                      current_stream->mut_running_instruction_list()) {
                 while (!current_instruction->Done()) {
-                  LOG(WARNING) << current_instruction->DebugName();
+                  LOG(WARNING) << "current_instruction: " << current_instruction->DebugName();
+                  LOG(WARNING) << "instruction: " << instruction->DebugName();
                   std::this_thread::sleep_for(std::chrono::seconds(1));
                 }
               }
