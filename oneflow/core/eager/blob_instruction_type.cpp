@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/eager/blob_instruction_type.h"
-#include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/register/register_manager.h"

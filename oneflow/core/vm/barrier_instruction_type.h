@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/rpc/include/base.h"
-#include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
