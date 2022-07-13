@@ -219,28 +219,17 @@ class TestLossBaseFunctorError(flow.unittest.TestCase):
 class TestMatmulError(flow.unittest.TestCase):
     def test_matmul_dimension_error1(test_case):
         with test_case.assertRaises(Exception) as ctx:
-            x = flow.ones((4,), dtype=flow.float32)
+            x = flow.ones((), dtype=flow.float32)
             w = flow.ones((4, 4), dtype=flow.float32)
             out = flow._C.matmul(x, w, False, False, 1.0)
-        test_case.assertTrue("Tensor a's dim should >= 2" in str(ctx.exception))
+        test_case.assertTrue("Tensor a's dim should >= 1" in str(ctx.exception))
 
     def test_matmul_dimension_error2(test_case):
         with test_case.assertRaises(Exception) as ctx:
             x = flow.ones((4, 4), dtype=flow.float32)
-            w = flow.ones((4,), dtype=flow.float32)
+            w = flow.ones((), dtype=flow.float32)
             out = flow._C.matmul(x, w, False, False, 1.0)
-        test_case.assertTrue("Tensor b's dim should >= 2" in str(ctx.exception))
-
-    def test_matmul_dimension_error3(test_case):
-        with test_case.assertRaises(Exception) as ctx:
-            x = flow.ones((4, 1, 2, 1), dtype=flow.float32)
-            w = flow.ones((4, 4, 4), dtype=flow.float32)
-            out = flow._C.matmul(x, w, False, False, 1.0)
-
-        test_case.assertTrue(
-            "Not support number of dimensions of a being less than number of dimensions of b!"
-            in str(ctx.exception)
-        )
+        test_case.assertTrue("Tensor b's dim should >= 1" in str(ctx.exception))
 
 
 class TestPixelShuffleError(flow.unittest.TestCase):

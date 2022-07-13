@@ -52,10 +52,12 @@ void Instruction::DeleteStatusAndClearEdges() {
 }
 
 bool Instruction::Done() const {
-  return stream_type().QueryInstructionStatusDone(stream(), status_buffer());
+  return stream_policy().QueryInstructionStatusDone(stream(), status_buffer());
 }
 
-const StreamType& Instruction::stream_type() const { return stream().stream_type(); }
+StreamPolicy* Instruction::mut_stream_policy() { return mut_stream()->mut_stream_policy(); }
+
+const StreamPolicy& Instruction::stream_policy() const { return stream().stream_policy(); }
 
 }  // namespace vm
 }  // namespace oneflow
