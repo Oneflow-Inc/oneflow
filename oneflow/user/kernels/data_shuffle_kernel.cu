@@ -1005,8 +1005,8 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
         allocator->Free(reverse_unique_cur_rank_embeddings);
       } else {
         void* received_embeddings;  // T
-        allocator->Allocate(&received_embeddings,
-            GetCudaAlignedSize(unique_partitioned_num_ids * embedding_size * sizeof(T)));
+        allocator->Allocate(&received_embeddings, GetCudaAlignedSize(unique_partitioned_num_ids
+                                                                     * embedding_size * sizeof(T)));
 
         ShuffleEmbeddings(cuda_stream, comm, parallel_id, parallel_num, num_ids, embedding_size,
                           data_type, host_num_unique_matrix,
