@@ -118,7 +118,7 @@ Maybe<void> CheckGlobalTensorsMeta(const TensorTuple& tensor_tuple) {
 
 Maybe<void> TouchInTmpComputeStream(const TensorTuple& inputs) {
   for (auto input : inputs) {
-    if (input->is_consistent()) { input = JUST(input->cur_rank_phy_tensor()); }
+    if (input->is_global()) { input = JUST(input->cur_rank_phy_tensor()); }
     if (input) {
       Symbol<Device> device = JUST(input->device());
       auto stream = JUST(Stream::New(device, StreamRole::kTmpCompute));
@@ -150,7 +150,7 @@ Maybe<void> AutogradEngine::RunBackwardAndSaveGrads4LeafTensorIf(const TensorTup
                                                                  bool create_graph) {
   JUST(CheckGlobalTensorsMeta(outputs));
   JUST(CheckGlobalTensorsMeta(out_grads));
-  DisableCheckConsistentTensorMetaScope disable_meta_check;
+  DisableCheckGlobalTensorMetaScope disable_meta_check;
   // Put outputs into kTmpCompute stream for reducing blocking time of outputs[i].numpy() in main
   // thread.
   auto copied_outputs = JUST(TryCopyForSmallTensor(outputs));

@@ -71,6 +71,10 @@ struct CreateStreamPolicy final : public StreamRoleVisitor<CreateStreamPolicy> {
     const auto* stream_type = SingletonPtr<vm::PinnedEpStreamType>();
     return Create(stream_type, device);
   }
+  static Maybe<vm::StreamPolicy> VisitTmpCompute(Symbol<Device> device) {
+    const auto* stream_type = SingletonPtr<vm::EventRecordedEpStreamType>();
+    return Create(stream_type, device);
+  }
 
  private:
   static Maybe<vm::StreamPolicy> Create(const vm::StreamType* stream_type, Symbol<Device> device) {
@@ -78,9 +82,6 @@ struct CreateStreamPolicy final : public StreamRoleVisitor<CreateStreamPolicy> {
     stream_type->InitDeviceCtx(&device_ctx, device);
     return std::shared_ptr<vm::StreamPolicy>(
         new vm::NaiveStreamPolicy(stream_type, std::move(device_ctx)));
-  }
-  static Maybe<const vm::StreamType*> VisitTmpCompute(DeviceType device_type) {
-    return SingletonPtr<vm::EventRecordedEpStreamType>();
   }
 };
 
