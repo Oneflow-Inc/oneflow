@@ -22,12 +22,12 @@ namespace oneflow {
 namespace vm {
 
 void InstructionPolicy::InitInstructionStatus(Instruction* instruction) {
-  instruction->stream_type().InitInstructionStatus(instruction->stream(),
+  instruction->stream_policy().InitInstructionStatus(instruction->stream(),
                                                    instruction->mut_status_buffer());
 }
 
 void InstructionPolicy::DeleteInstructionStatus(Instruction* instruction) {
-  instruction->stream_type().DeleteInstructionStatus(instruction->stream(),
+  instruction->stream_policy().DeleteInstructionStatus(instruction->stream(),
                                                      instruction->mut_status_buffer());
 }
 
