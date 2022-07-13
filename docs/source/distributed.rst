@@ -2,19 +2,19 @@ oneflow.distributed
 =========================================================
 
 .. note ::
-    Please refer to `oneflow Distributed Overview <https://docs.oneflow.org/master/parallelism/01_introduction.html>`__
+    Please refer to `OneFlow Distributed Overview <https://docs.oneflow.org/master/parallelism/01_introduction.html>`__
     for a brief introduction to all features related to distributed training.
 
-oneflow provides two ways to accomplish `Distributed Training`:
+OneFlow provides two ways to accomplish `Distributed Training`:
 
-- One of them is to use the original concept of Oneflow to run data parallel training by configurating global tensor，introduces the concept of **Global View** to simplify distributed training. Simply , in OneFlow's global view, a cluster is abstracted as a "supercomputing device".
+- One of them is to use the original concept of OneFlow to run data parallel training by configurating global tensor，introduces the concept of **Global View** to simplify distributed training. Simply , in OneFlow's global view, a cluster is abstracted as a "supercomputing device".
 
-- Besides, to facilitate the users who are transferring from PyTorch to OneFlow, OneFlow offers the interface consistent with PyTorch ``torch.nn.parallel.DistributedDataParallel``, ``oneflow.nn.parallel.DistributedDataParallel``.
+- Besides, to facilitate the users who are transferring from PyTorch to OneFlow, OneFlow provide the interface consistent with PyTorch ``torch.nn.parallel.DistributedDataParallel``, ``oneflow.nn.parallel.DistributedDataParallel``.
 
 
 Baisc
 -------------------------------
-When you start distributed training in oneflow,the following functions can be used.
+When you start distributed training in OneFlow,the following functions can be used.
 
 .. currentmodule:: oneflow.env
 
@@ -182,17 +182,6 @@ Code running on Node 1
     x_global = x.to_global(placement=placement, sbp=sbp)
     x_global.shape
 
-
-.. currentmodule:: oneflow.nn.modules.global_cast
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-
-    local_to_global_op
-    global_to_global_op
-    to_global_op
-    to_local_op
 
 
 Launching distributed training

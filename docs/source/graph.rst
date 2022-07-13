@@ -44,10 +44,10 @@ The following script shows the process of building a neural network in eager mod
     linear_model = ModuleMyLinear(4, 3)
 
 
-Eager and Graph are reusable, and the above script for eager mode can be changed to static graph mode by adding just a few lines of code, which consists of the following steps.
+Eager and Graph are reusable, and the above script for eager mode can be changed to static Graph mode by adding just a few lines of code, which consists of the following steps.
 
 
-- Inheritance of ``nn.graph``
+- Inheritance of ``nn.Graph``
 - At the beginning of __init__. Call super().__init__() to let OneFlow do the necessary initialization of the Graph.
 - Reuse the ``nn.Module`` object in Eager mode in __init__ (self.model = model)
 - Describe the computation in the ``build``
@@ -90,6 +90,17 @@ Constructing it
     __call__
     add_optimizer
     set_grad_scaler
+
+Execute Graph
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. currentmodule:: oneflow.nn.Graph
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    __call__
 
 
 

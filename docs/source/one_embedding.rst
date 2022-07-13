@@ -1,11 +1,26 @@
 oneflow.one_embedding
 ===================================
 
+Embedding is an important component of recommender system, and it has also spread to many fields outside recommender systems. Each framework provides basic operators for Embedding, for example, ``flow.nn.Embedding`` in OneFlow:
+
+::
+
+    import numpy as np
+    import oneflow as flow
+    indices = flow.tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int)
+    embedding = flow.nn.Embedding(10, 3)
+    y = embedding(indices)
+
+
 OneEmbedding is the large-scale Embedding solution that OneFlow provides to solve the problem of large-scale deep recommender systems. OneEmbedding has the following advantages compared to ordionary opeartors:
 
     - With Flexible hierarchical storage, OneEmbedding can place the Embedding table on GPU memory, CPU memory or SSD, and allow high-speed devices to be used as caches for low-speed devices to achieve both speed and capacity.
 
     - OneEmbedding supports dynamic expansion.
+
+.. note ::
+    Please refer to `Large-Scale Embedding Solution: OneEmbedding <https://docs.oneflow.org/en/master/cookies/one_embedding.html>`__
+    for a brief introduction to all features related to OneEmbedding.
 
 Configure Embedding Table 
 ----------------------------------
@@ -30,7 +45,13 @@ OneEmbedding supports simultaneous creation of multiple Embedding table. The fol
         ),
     ]
 
+When configuring the Embedding table, you need to specify the initialization method. The above Embedding tables are initialized in the ``uniform`` method. The result of configuring the Embedding table is stored in the ``tables`` variable
+
 .. autofunction:: oneflow.one_embedding.make_table_options
+.. autofunction:: oneflow.one_embedding.make_table
+
+initialization method
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. currentmodule:: oneflow.one_embedding
 
@@ -54,7 +75,10 @@ Then run the following codes to configure the storage attribute of the Embedding
     capacity=40000000,
     size_factor=1,              
     physical_block_size=512
-)
+    )
+
+Storage Method
+^^^^^^^^^^^^^^^^^^^^
 
 .. currentmodule:: oneflow.one_embedding
 
@@ -99,6 +123,8 @@ After the above configuration is completed, you can use MultiTableEmbedding to g
 MultiTableEmbedding
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+.. autofunction:: oneflow.one_embedding.MultiTableEmbedding
+
 .. currentmodule:: oneflow.one_embedding.MultiTableEmbedding
 
 .. autosummary::
@@ -109,19 +135,27 @@ MultiTableEmbedding
     save_snapshot
     load_snapshot
 
-
 MultiTableMultiColumnEmbedding
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autofunction:: oneflow.one_embedding.MultiTableMultiColumnEmbedding
 
 .. currentmodule:: oneflow.one_embedding.MultiTableMultiColumnEmbedding
 
-    .. autosummary::
+.. autosummary::
     :toctree: generated
     :nosignatures:
     
     forward
     save_snapshot
     load_snapshot
+
+.. .. currentmodule:: oneflow.one_embedding
+
+.. .. autoclass:: MultiTableMultiColumnEmbedding
+..     :members: forward,
+..               save_snapshot,
+..               load_snapshot,
 
 Construct Graph for Training
 --------------------------------------------------------------------
@@ -158,12 +192,21 @@ OneEmbedding is only supported in Graph mode.
 
 .. note ::
     
-    Please refer to `Large-Scale Embedding Solution: OneEmbedding <https://docs.oneflow.org/en/master/cookies/one_embedding.html#distributed-training>`__
-    for a brief introduction to learn about Distributed Training
+    Please refer to `Distributed Training: OneEmbedding <https://docs.oneflow.org/en/master/parallelism/01_introduction.html>`__
+    for a brief introduction to learn about Graph For Training
 
 
-.. autofunction:: oneflow.one_embedding.make_table
+Persistent Read & Write
+-----------------------------------------------
+.. currentmodule:: oneflow.one_embedding
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    
+    make_persistent_table_reader
+    make_persistent_table_writer
+
 .. automodule:: oneflow.one_embedding
     :members: Ftrl
-.. autofunction:: oneflow.one_embedding.make_persistent_table_reader
-.. autofunction:: oneflow.one_embedding.make_persistent_table_writer
+
