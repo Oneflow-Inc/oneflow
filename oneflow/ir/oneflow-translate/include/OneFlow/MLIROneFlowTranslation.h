@@ -55,7 +55,8 @@ LogicalResult ParseNdSbpFromAttr(ArrayAttr nd_sbp_attr, ::oneflow::NdSbp* nd_sbp
 Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp);
 Attribute ConvertNdSbpToAttr_(Builder& builder, const ::oneflow::NdSbp& nd_sbp);
 Attribute ConvertNdSbpToAttr_(Builder& builder,
-                              const ::google::protobuf::RepeatedPtrField<std::string>& nd_sbp);
+                              const ::google::protobuf::RepeatedPtrField<std::string>& nd_sbp,
+                              bool is_2d);
 
 class Importer {
  public:

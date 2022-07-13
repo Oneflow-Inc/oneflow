@@ -403,7 +403,8 @@ Attribute ConvertNdSbpToAttr_(Builder& builder, const ::oneflow::NdSbp& nd_sbp) 
 }
 
 Attribute ConvertNdSbpToAttr_(Builder& builder,
-                              const ::google::protobuf::RepeatedPtrField<std::string>& nd_sbp) {
+                              const ::google::protobuf::RepeatedPtrField<std::string>& nd_sbp,
+                              bool is_2d) {
   auto ctx = builder.getContext();
   std::vector<mlir::Attribute> outputs_vec;
   for (const auto& sbp : nd_sbp) {
@@ -429,7 +430,17 @@ Attribute ConvertNdSbpToAttr_(Builder& builder,
   }
 
   auto inputs = builder.getArrayAttr({});
-  auto outputs = builder.getArrayAttr(outputs_vec);
+  ArrayAttr outputs;
+  if (is_2d) {
+    std::vector<mlir::Attribute> outputs_vec_2d;
+    for (int index = 0; index < outputs_vec.size() / 2; ++index) {
+      outputs_vec_2d.emplace_back(
+          sbp::_2DAttr::get(ctx, outputs_vec[index], outputs_vec[index + 1]));
+    }
+    outputs = builder.getArrayAttr(outputs_vec_2d);
+  } else {
+    outputs = builder.getArrayAttr(outputs_vec);
+  }
   auto res = sbp::ParallelSignatureAttr::get(ctx, inputs, outputs);
   return res;
 }
