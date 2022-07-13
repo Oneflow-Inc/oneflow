@@ -113,13 +113,6 @@ Casting Examples::
     >>> float_tensor *= bool_tensor
     >>> int_tensor *= uint_tensor
 
-    # disallowed (RuntimeError: result type can't be cast to the desired output type):
-    >>> float_tensor *= double_tensor
-    >>> int_tensor *= long_tensor
-    >>> int_tensor *= float_tensor
-    >>> uint_tensor *= int_tensor
-    >>> bool_tensor *= int_tensor
-    >>> bool_tensor *= uint_tensor
 
 .. _device-doc:
 
