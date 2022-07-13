@@ -72,7 +72,8 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
         && user_op_conf.op_type_name() != "lars_update"
         && user_op_conf.op_type_name() != "adagrad_update"
         && user_op_conf.op_type_name() != "lamb_update"
-        && user_op_conf.op_type_name() != "ftrl_update") {
+        && user_op_conf.op_type_name() != "ftrl_update"
+        && user_op_conf.op_type_name() != "adadelta_update") {
       return;
     }
     if (user_op_conf.attr<double>("scale") != 1.0 || user_op_conf.attr<float>("l1") != 0.0f
@@ -230,6 +231,12 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
           .Attr<float>("lambda1", user_op_conf.attr<float>("lambda1"))
           .Attr<float>("lambda2", user_op_conf.attr<float>("lambda2"))
           .Attr<float>("beta", user_op_conf.attr<float>("beta"));
+    } else if (user_op_conf.op_type_name() == "adadelta_update") {
+      fused_op_builder.Input("square_avgs", user_op_conf.input("square_avgs", 0))
+          .Input("acc_deltas", user_op_conf.input("acc_deltas", 0))
+          .Attr<float>("rho", user_op_conf.attr<float>("rho"))
+          .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"))
+          .Attr<bool>("maximize", user_op_conf.attr<bool>("maximize"));
     } else {
       UNIMPLEMENTED();
     }
