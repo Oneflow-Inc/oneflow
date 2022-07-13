@@ -34,7 +34,7 @@ void StreamWaitInstructionType::InitInstructionStatus(Instruction* instruction) 
   auto* operand = dynamic_cast<StreamWaitPhyInstrOperand*>(phy_instr_operand);
   auto* stream = operand->mut_from_vm_stream();
   instruction->stream_type().InitInstructionStatus(*stream, instruction->mut_status_buffer());
-  auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());
+  auto* ep_device_ctx = dynamic_cast<EpDeviceCtx*>(stream->device_ctx().get());
   auto* ep_event_provider = ep_device_ctx->ep_event_provider();
   const auto& ep_event = CHECK_NOTNULL(ep_event_provider)->GetReusedEpEvent();
   operand->mut_ep_event() = ep_event;
