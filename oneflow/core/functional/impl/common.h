@@ -19,7 +19,6 @@ limitations under the License.
 #include <cstdint>
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/common/stride.h"
-#include "oneflow/core/job/sbp_parallel.pb.h"
 
 namespace oneflow {
 namespace one {
