@@ -25,6 +25,7 @@ from oneflow.nn.parameter import Parameter
 class Adadelta(Optimizer):
     r"""
     """
+
     def __init__(
         self,
         params: Union[Iterator[Parameter], List[Dict]],
@@ -81,7 +82,6 @@ class Adadelta(Optimizer):
                     "rho": param_group["rho"],
                     "epsilon": param_group["eps"],
                     "maximize": param_group["maximize"],
-                    "train_step_val": self._state["step"] + 1,
                 }
                 for param in param_group.parameters:
                     if param.grad is None:
@@ -89,7 +89,9 @@ class Adadelta(Optimizer):
                     square_avgs_tensor = self._state[param]["square_avgs"]
                     acc_deltas_tensor = self._state[param]["acc_deltas"]
                     flow._C.dispatch_adadelta_update(
-                        self._op, (param, param.grad, square_avgs_tensor, acc_deltas_tensor), **kwargs
+                        self._op,
+                        (param, param.grad, square_avgs_tensor, acc_deltas_tensor),
+                        **kwargs,
                     )
 
             self._state["step"] = self._state["step"] + 1

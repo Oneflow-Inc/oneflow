@@ -330,7 +330,6 @@ Maybe<void> InferAdadeltaUpdateDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-
 Maybe<void> SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                        const std::string& arg_name, int32_t arg_index) {
   user_op::InputArgModifier* arg_modifier = GetInputArgModifierFn(arg_name, arg_index);
@@ -425,7 +424,7 @@ Maybe<void> FtrlInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArg
 }
 
 Maybe<void> AdadeltaInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                                 const user_op::UserOpConfWrapper& conf) {
+                                     const user_op::UserOpConfWrapper& conf) {
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "square_avgs", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "acc_deltas", 0));

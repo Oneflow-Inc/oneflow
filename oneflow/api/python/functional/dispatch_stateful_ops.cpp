@@ -531,8 +531,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                 });
   m.add_functor("DispatchAdadeltaUpdate",
                 [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
-                   float learning_rate, double scale, float l1, float l2, float rho,
-                   float epsilon, bool maximize, float weight_decay) -> Maybe<void> {
+                   float learning_rate, double scale, float l1, float l2, float rho, float epsilon,
+                   bool maximize, float weight_decay) -> Maybe<void> {
                   MutableAttrMap attrs;
                   JUST(attrs.SetAttr("learning_rate_val", learning_rate));
                   JUST(attrs.SetAttr("scale", scale));

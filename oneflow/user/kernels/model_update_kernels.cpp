@@ -1106,17 +1106,17 @@ class AdadeltaUpdateKernel final : public user_op::OpKernel, public user_op::Cud
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     AdadeltaUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, 
-        rho, epsilon, maximize, weight_decay, learning_rate_val, learning_rate_ptr, scale_by_ptr,
-        skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), square_avgs->mut_dptr<T>(),
+        ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, rho, epsilon,
+        maximize, weight_decay, learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
+        model_diff->dptr<G>(), model->mut_dptr<T>(), square_avgs->mut_dptr<T>(),
         acc_deltas->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_ADADELTA_UPDATE_KERNEL(device, dtype, gtype)                                 \
-  REGISTER_USER_KERNEL("adadelta_update")                                                     \
-      .SetCreateFn<AdadeltaUpdateKernel<device, dtype, gtype>>()                              \
+#define REGISTER_ADADELTA_UPDATE_KERNEL(device, dtype, gtype)                             \
+  REGISTER_USER_KERNEL("adadelta_update")                                                 \
+      .SetCreateFn<AdadeltaUpdateKernel<device, dtype, gtype>>()                          \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
                        && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
@@ -1128,7 +1128,6 @@ REGISTER_ADADELTA_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_ADADELTA_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_ADADELTA_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
-
 
 }  // namespace
 
