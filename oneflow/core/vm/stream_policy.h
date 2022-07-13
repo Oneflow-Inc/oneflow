@@ -13,34 +13,43 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_STREAM_TYPE_H_
-#define ONEFLOW_CORE_VM_STREAM_TYPE_H_
+#ifndef ONEFLOW_CORE_VM_STREAM_POLICY_H_
+#define ONEFLOW_CORE_VM_STREAM_POLICY_H_
 
 #include <string>
 #include <typeindex>
 #include <glog/logging.h>
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/framework/nn_graph_if.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
 
+class EpEventProvider;
+
+namespace ep {
+
 class Device;
+class Stream;
+
+}  // namespace ep
 
 namespace vm {
 
+class Allocator;
 class Stream;
 class InstructionStatusBuffer;
 class Instruction;
-class InstructionType;
 
-class StreamType {
+class StreamPolicy {
  public:
-  virtual ~StreamType() = default;
+  virtual ~StreamPolicy() = default;
 
-  virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
-                             Symbol<Device> device) const = 0;
+  virtual ep::Stream* stream() = 0;
+  virtual vm::Allocator* mut_allocator() = 0;
+  virtual DeviceType device_type() const = 0;
 
   virtual void InitInstructionStatus(const Stream& stream,
                                      InstructionStatusBuffer* status_buffer) const = 0;
@@ -54,16 +63,10 @@ class StreamType {
   virtual bool SupportingTransportInstructions() const = 0;
 
  protected:
-  StreamType() = default;
+  StreamPolicy() = default;
 };
-
-template<typename T>
-const StreamType* StaticGlobalStreamType() {
-  static const StreamType* stream_type = new T();
-  return stream_type;
-}
 
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_STREAM_TYPE_H_
+#endif  // ONEFLOW_CORE_VM_STREAM_POLICY_H_
