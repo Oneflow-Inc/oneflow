@@ -173,6 +173,7 @@ class TestTensor(flow.unittest.TestCase):
         flow.nn.init.xavier_normal_(z, flow.nn.init.calculate_gain("leaky_relu", 0.2))
         flow.nn.init.xavier_uniform_(z, flow.nn.init.calculate_gain("leaky_relu", 0.2))
         flow.nn.init.trunc_normal_(z, mean=0.0, std=1.0, a=-2.0, b=2.0)
+        flow.nn.init.normal_(z, mean=0.0, std=1.0)
         flow.nn.init.orthogonal_(z)
         x = tensor_creator(*shape).to(dtype=flow.int32)
         np_ones = np.ones(x.shape, dtype=np.int32)
