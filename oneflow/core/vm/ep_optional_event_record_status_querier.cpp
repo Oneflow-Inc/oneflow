@@ -19,11 +19,11 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void EpOptionalEventRecordStatusQuerier::SetLaunched(EpDeviceCtx* device_ctx) {
+void EpOptionalEventRecordStatusQuerier::SetLaunched(ep::Stream* stream) {
   CHECK(!launched_);
   if (ep_event_) {
     ep_event_->mut_device()->SetAsActiveDevice();
-    device_ctx->stream()->RecordEvent(ep_event_->mut_event());
+    stream->RecordEvent(ep_event_->mut_event());
   }
   launched_ = true;
 }

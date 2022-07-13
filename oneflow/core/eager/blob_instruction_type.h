@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/naive_stream_policy.h"
 #include "oneflow/core/vm/ep_event.h"
 #include "oneflow/core/vm/ep_device_context.h"
 
@@ -49,8 +50,11 @@ class EpRecordEventInstructionType final : public vm::InstructionType {
   void InitInstructionStatus(Instruction* instruction) const override {
     auto* status_buffer = instruction->mut_status_buffer();
     auto* stream = instruction->mut_stream();
-    instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
-    auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());
+    instruction->stream_policy().InitInstructionStatus(*stream, status_buffer);
+    NaiveStreamPolicy* naive_stream_policy =
+        dynamic_cast<NaiveStreamPolicy*>(instruction->mut_stream()->mut_stream_policy());
+    CHECK_NOTNULL(naive_stream_policy);
+    auto* ep_device_ctx = dynamic_cast<EpDeviceCtx*>(naive_stream_policy->device_ctx().get());
     auto* ep_event_provider = ep_device_ctx->ep_event_provider();
     const auto& ep_event = CHECK_NOTNULL(ep_event_provider)->GetReusedEpEvent();
     auto* data_ptr = status_buffer->mut_buffer();

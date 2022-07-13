@@ -791,7 +791,7 @@ class TestTensor(flow.unittest.TestCase):
         return y
 
     @flow.unittest.skip_unless_1n4d()
-    def test_construct_consistent_tensor_by_numpy(test_case):
+    def test_construct_global_tensor_by_numpy(test_case):
         x = np.ones((4, 4), dtype=np.int32)
         placement = flow.placement("cuda", [0, 1, 2, 3])
         y = flow.tensor(
