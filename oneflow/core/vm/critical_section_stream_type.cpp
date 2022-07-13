@@ -25,7 +25,7 @@ namespace oneflow {
 namespace vm {
 
 void CriticalSectionStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
-                                              Stream* stream) const {
+                                              Symbol<Device> device) const {
   device_ctx->reset();
 }
 
