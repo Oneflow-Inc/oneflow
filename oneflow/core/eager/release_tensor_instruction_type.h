@@ -64,7 +64,7 @@ class FastReleaseTensorInstructionType final : public ReleaseTensorInstructionTy
   ~FastReleaseTensorInstructionType() override = default;
 
   std::string DebugName(const vm::Instruction& instruction) const override {
-    return "ReleasePodTensor";
+    return "FastReleaseTensor";
   }
 
   Maybe<void> Prepare(vm::Instruction* instruction) const override {
@@ -84,7 +84,7 @@ class SlowReleaseTensorInstructionType final : public ReleaseTensorInstructionTy
   ~SlowReleaseTensorInstructionType() override = default;
 
   std::string DebugName(const vm::Instruction& instruction) const override {
-    return "ReleaseNonPodTensor";
+    return "SlowReleaseTensor";
   }
 
   Maybe<void> Prepare(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }

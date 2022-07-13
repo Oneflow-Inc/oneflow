@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/virtual_machine_engine.h"
+#include <glog/logging.h>
 #include "oneflow/core/vm/caching_allocator.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/fuse_instruction_type.h"
@@ -291,16 +292,6 @@ void VirtualMachineEngine::DispatchAndPrescheduleInstructions(const ScheduleCtx&
 
 namespace {
 
-void StreamWaitPreviousInstructionsDone(vm::Stream* stream, vm::Instruction* instruction) {
-  auto* running_list = stream->mut_running_instruction_list();
-  CHECK_GE(running_list->size(), 1);
-  CHECK_EQ(running_list->Last(), instruction);
-  if (running_list->size() == 1) { return; }
-  auto* prev = running_list->Prev(instruction);
-  // busy wait the previous instruction done.
-  while (!prev->Done()) {}
-}
-
 std::string DebugDeviceReset(vm::Stream* stream) {
   stream->device_ctx()->mut_allocator()->DeviceReset();
   return "reset device";
@@ -311,39 +302,33 @@ std::string DebugDeviceReset(vm::Stream* stream) {
 void VirtualMachineEngine::ShrinkStream(const Stream* stream) {
   auto* allocator = stream->device_ctx()->mut_allocator();
   auto* shrinkable_cache = dynamic_cast<CachingAllocator*>(allocator);
-  if (shrinkable_cache != nullptr) { shrinkable_cache->Shrink(); }
+  CHECK_NOTNULL(shrinkable_cache)->Shrink();
 }
 
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
                                                const ScheduleCtx& schedule_ctx) {
   auto* stream = instruction->mut_stream();
-  stream->mut_running_instruction_list()->PushBack(instruction);
-  if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
   // Prepare
   {
     const auto& ret = TRY(instruction->Prepare());
     if (unlikely(!ret.IsOk())) {
       if (ret.error()->has_out_of_memory_error()) {
-        // for all stream
         INTRUSIVE_FOR_EACH_PTR(thread_ctx, mut_thread_ctx_list()) {
           INTRUSIVE_FOR_EACH_PTR(current_stream, thread_ctx->mut_stream_list()) {
-            if (current_stream == stream) {
-              // Waits previous instructions done before shrinking memory.
-              StreamWaitPreviousInstructionsDone(stream, instruction);
-              ShrinkStream(stream);
-            } else if (current_stream->device() == stream->device()) {
+            if (current_stream->device() == stream->device()) {
               // buzy loop to make sure running instructions all done.
               INTRUSIVE_FOR_EACH_PTR(current_instruction,
                                      current_stream->mut_running_instruction_list()) {
-                while (!current_instruction->Done()) {
-                  LOG(WARNING) << "current_instruction: " << current_instruction->DebugName();
-                  LOG(WARNING) << "instruction: " << instruction->DebugName();
-                  std::this_thread::sleep_for(std::chrono::seconds(1));
-                }
+                while (!current_instruction->Done()) {}
               }
-              // buzy loop to make sure running instructions all done.
-              // auto* running_list = current_stream->mut_running_instruction_list();
-              // while (!running_list->empty() && !running_list->Last()->Done()) {}
+            } else {
+              // do nothing
+            }
+          }
+        }
+        INTRUSIVE_FOR_EACH_PTR(thread_ctx, mut_thread_ctx_list()) {
+          INTRUSIVE_FOR_EACH_PTR(current_stream, thread_ctx->mut_stream_list()) {
+            if (current_stream->device() == stream->device()) {
               ShrinkStream(current_stream);
             } else {
               // do nothing
@@ -357,6 +342,8 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
       }
     }
   }
+  stream->mut_running_instruction_list()->PushBack(instruction);
+  if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
   // Compute
   if (OnSchedulerThread(*stream)) {
     stream->stream_type().Run(instruction);
@@ -374,6 +361,7 @@ Maybe<bool> VirtualMachineEngine::Receive(InstructionList* compute_instruction_l
     OF_PROFILER_RANGE_GUARD(compute_instruction->DebugName());
   }
 #endif
+
   bool old_list_empty = mut_pending_instruction_list()->MoveFrom(compute_instruction_list);
   return old_list_empty;
 }
