@@ -8900,7 +8900,6 @@ def OneFlow_IsNanOp : OneFlow_BaseOp<"isnan", [NoSideEffect, NoGrad, DeclareOpIn
   let output = (outs
     OneFlow_Tensor:$out
   );
-  let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -8914,7 +8913,6 @@ def OneFlow_IsInfOp : OneFlow_BaseOp<"isinf", [NoSideEffect, NoGrad, DeclareOpIn
   let output = (outs
     OneFlow_Tensor:$out
   );
-  let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -8928,7 +8926,6 @@ def OneFlow_IsFiniteOp : OneFlow_BaseOp<"isfinite", [NoSideEffect, NoGrad, Decla
   let output = (outs
     OneFlow_Tensor:$out
   );
-  let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
