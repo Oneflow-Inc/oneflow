@@ -76,13 +76,14 @@ Promotion Examples::
     >>> long_zerodim = oneflow.tensor(1, dtype=oneflow.long)
     >>> int_zerodim = oneflow.tensor(1, dtype=oneflow.int)
 
-    >>> oneflow.add(5, 5).dtype
+    >>> a,b=oneflow.tensor(5),oneflow.tensor(5)
+    >>> oneflow.add(a, b).dtype
     oneflow.int64
     # 5 is an int64, but does not have higher category than int_tensor so is not considered.
     >>> (int_tensor + 5).dtype
     oneflow.int32
     >>> (int_tensor + long_zerodim).dtype
-    oneflow.int32
+    oneflow.int64
     >>> (long_tensor + int_tensor).dtype
     oneflow.int64
     >>> (bool_tensor + long_tensor).dtype
@@ -110,16 +111,15 @@ Casting Examples::
     >>> float_tensor *= int_tensor
     >>> float_tensor *= uint_tensor
     >>> float_tensor *= bool_tensor
-    >>> float_tensor *= double_tensor
-    >>> int_tensor *= long_tensor
     >>> int_tensor *= uint_tensor
-    >>> uint_tensor *= int_tensor
 
     # disallowed (RuntimeError: result type can't be cast to the desired output type):
+    >>> float_tensor *= double_tensor
+    >>> int_tensor *= long_tensor
     >>> int_tensor *= float_tensor
+    >>> uint_tensor *= int_tensor
     >>> bool_tensor *= int_tensor
     >>> bool_tensor *= uint_tensor
-    >>> float_tensor *= complex_float_tensor
 
 .. _device-doc:
 
