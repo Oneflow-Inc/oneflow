@@ -283,8 +283,8 @@ def truncated_normal_initializer(
     setattr(norm_conf, "mean", float(mean))
     setattr(norm_conf, "std", float(std))
     # set max/min
-    setattr(norm_conf, "min", float(a))
-    setattr(norm_conf, "max", float(b))
+    setattr(trunc_normal_conf, "min", float(a))
+    setattr(trunc_normal_conf, "max", float(b))
     return initializer
 
 
@@ -349,8 +349,10 @@ def TruncNormalInitializerImpl(
     norm_conf = getattr(initializer_conf, "norm_conf")
     mean = getattr(norm_conf, "mean")
     std = getattr(norm_conf, "std")
-    return lambda length: rng.normal(loc=mean, scale=std, size=length).clip(
-        amin=min, a_max=max
+    min = getattr(initializer_conf, "min")
+    max = getattr(initializer_conf, "max")
+    return lambda length: np.clip(rng.normal(loc=mean, scale=std, size=length),
+        a_min=min, a_max=max
     )
 
 
