@@ -1,5 +1,9 @@
 oneflow.optim
 ===================================
+
+The documentation is referenced from: 
+https://pytorch.org/docs/1.10/optim.html
+
 oneflow.optim is a package implementing various optimization algorithms. Most commonly used methods are already supported, and the interface is general enough, so that more sophisticated ones can be also easily integrated in the future.
 
 How to use an optimizer
@@ -156,9 +160,8 @@ Example::
             optimizer.step()
         scheduler.step()
 
-Most learning rate schedulers can be called back-to-back (also referred to as
-chaining schedulers). The result is that each scheduler is applied one after the
-other on the learning rate obtained by the one preceding it.
+Most learning rate schedulers can be chained (also referred to as
+chaining schedulers).
 
 Example::
 
@@ -187,12 +190,9 @@ algorithms.
     >>>     scheduler.step()
 
 .. warning::
-  Prior to Oneflow 1.1.0, the learning rate scheduler was expected to be called before
-  the optimizer's update; 1.1.0 changed this behavior in a BC-breaking way.  If you use
-  the learning rate scheduler (calling ``scheduler.step()``) before the optimizer's update
-  (calling ``optimizer.step()``), this will skip the first value of the learning rate schedule.
-  If you are unable to reproduce results after upgrading to Oneflow 1.1.0, please check
-  if you are calling ``scheduler.step()`` at the wrong time.
+  If you use the learning rate scheduler (calling ``scheduler.step()``) before the optimizer's update
+  (calling ``optimizer.step()``), this will skip the first value of the learning rate schedule. Please 
+  check if you are calling ``scheduler.step()`` at the wrong time.
 
 .. autosummary::
     :toctree: generated

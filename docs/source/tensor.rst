@@ -1,6 +1,9 @@
 oneflow.Tensor
 ===================================
 
+The documentation is referenced from: 
+https://pytorch.org/docs/1.10/tensors.html
+
 A :class:`oneflow.Tensor` is a multi-dimensional matrix containing elements of
 a single data type.
 
@@ -9,7 +12,7 @@ a single data type.
 Data types
 ----------
 
-OneFlow defines 8 tensor types with CPU and GPU variants which are as follows:
+OneFlow defines 8 Tensor types with CPU and GPU variants which are as follows:
 
 ======================================= =============================================== =============================== ==================================
 Data type                               dtype                                           CPU tensor                      GPU tensor
@@ -32,12 +35,14 @@ A tensor can be constructed from a Python :class:`list` or sequence using the
 
 ::
 
+    >>> import oneflow
+    >>> import numpy as np
     >>> oneflow.tensor([[1., -1.], [1., -1.]])
-    tensor([[ 1.0000, -1.0000],
-            [ 1.0000, -1.0000]])
+    tensor([[ 1., -1.],
+            [ 1., -1.]], dtype=oneflow.float32)
     >>> oneflow.tensor(np.array([[1, 2, 3], [4, 5, 6]]))
-    tensor([[ 1,  2,  3],
-            [ 4,  5,  6]])
+    tensor([[ 1, 2, 3],
+            [ 4, 5, 6]], dtype=oneflow.int64)
 
 .. warning::
 
@@ -53,21 +58,23 @@ constructor or tensor creation op:
 
 ::
 
+    >>> import oneflow
     >>> oneflow.zeros([2, 4], dtype=oneflow.int32)
-    tensor([[ 0,  0,  0,  0],
-            [ 0,  0,  0,  0]], dtype=oneflow.int32)
+    tensor([[ 0, 0, 0, 0],
+            [ 0, 0, 0, 0]], dtype=oneflow.int32)
     >>> cuda0 = oneflow.device('cuda:0')
     >>> oneflow.ones([2, 4], dtype=oneflow.float64, device=cuda0)
-    tensor([[ 1.0000,  1.0000,  1.0000,  1.0000],
-            [ 1.0000,  1.0000,  1.0000,  1.0000]], dtype=oneflow.float64, device='cuda:0')
+    tensor([[ 1., 1., 1., 1.],
+            [ 1., 1., 1., 1.]], device='cuda:0', dtype=oneflow.float64)
 
-For more information about building Tensors, see :ref:`tensor-creation-ops`
+For more information about building tensors, see :ref:`tensor-creation-ops`
 
 The contents of a tensor can be accessed and modified using Python's indexing
 and slicing notation:
 
 ::
 
+    >>> import oneflow
     >>> x = oneflow.tensor([[1, 2, 3], [4, 5, 6]])
     >>> print(x[1][2])
     tensor(6, dtype=oneflow.int64)
@@ -81,6 +88,7 @@ single value:
 
 ::
 
+    >>> import oneflow
     >>> x = oneflow.tensor([[1]])
     >>> x
     tensor([[1]], dtype=oneflow.int64)
@@ -99,6 +107,7 @@ A tensor can be created with :attr:`requires_grad=True` so that
 
 ::
 
+    >>> import oneflow
     >>> x = oneflow.tensor([[1., -1.], [1., 1.]], requires_grad=True)
     >>> out = x.pow(2).sum()
     >>> out.backward()
