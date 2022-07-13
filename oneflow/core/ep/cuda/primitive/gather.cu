@@ -121,21 +121,29 @@ void DispatchNumDims(ep::Stream* stream, int64_t batch_dim_size, int64_t outer_d
 }
 
 template<typename K, typename T>
+void DispatchIndexSize(ep::Stream* stream, int64_t batch_dim_size, int64_t outer_dim_size,
+                       int64_t gather_dim_size, int64_t inner_dim_size, int64_t num_indices,
+                       int64_t offset, const K* indices, const void* data, void* output) {
+  if (IsSafeUseIndex32(batch_dim_size, outer_dim_size, gather_dim_size, inner_dim_size,
+                       num_indices)) {
+    DispatchNumDims<T, K, int32_t>(stream, batch_dim_size, outer_dim_size, gather_dim_size,
+                                   inner_dim_size / sizeof(T), num_indices, offset, indices,
+                                   static_cast<const T*>(data), static_cast<T*>(output));
+  } else {
+    DispatchNumDims<T, K, int64_t>(stream, batch_dim_size, outer_dim_size, gather_dim_size,
+                                   inner_dim_size / sizeof(T), num_indices, offset, indices,
+                                   static_cast<const T*>(data), static_cast<T*>(output));
+  }
+}
+
+template<typename K, typename T>
 bool TryDispatchMovementType(ep::Stream* stream, int64_t batch_dim_size, int64_t outer_dim_size,
                              int64_t gather_dim_size, int64_t inner_dim_size, int64_t num_indices,
                              int64_t offset, const K* indices, const void* data, void* output) {
   if (reinterpret_cast<uintptr_t>(data) % sizeof(T) == 0
       && reinterpret_cast<uintptr_t>(output) % sizeof(T) == 0 && inner_dim_size % sizeof(T) == 0) {
-    if (IsSafeUseIndex32(batch_dim_size, outer_dim_size, gather_dim_size, inner_dim_size,
-                         num_indices)) {
-      DispatchNumDims<T, K, int32_t>(stream, batch_dim_size, outer_dim_size, gather_dim_size,
-                                     inner_dim_size / sizeof(T), num_indices, offset, indices,
-                                     static_cast<const T*>(data), static_cast<T*>(output));
-    } else {
-      DispatchNumDims<T, K, int64_t>(stream, batch_dim_size, outer_dim_size, gather_dim_size,
-                                     inner_dim_size / sizeof(T), num_indices, offset, indices,
-                                     static_cast<const T*>(data), static_cast<T*>(output));
-    }
+    DispatchIndexSize<K, T>(stream, batch_dim_size, outer_dim_size, gather_dim_size, inner_dim_size,
+                            num_indices, offset, indices, data, output);
     return true;
   } else {
     return false;
