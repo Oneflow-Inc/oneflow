@@ -82,8 +82,8 @@ __global__ void CumForwardGpu(const T* in_ptr, T* out_ptr, int64_t cs_up_space, 
 }
 
 template<typename T, template<typename> class BinaryFunc>
-void ScanOuterDim(ep::Stream* ep_stream, const ShapeView& in_shape, const int64_t dim,
-                  const T* in_ptr, T* out_ptr) {
+void ScanOuterDim(ep::Stream* ep_stream, const ShapeView& in_shape, int64_t dim, const T* in_ptr,
+                  T* out_ptr) {
   // data partition: up_space|space|down_space
   auto up_space = in_shape.elem_cnt() / in_shape.Count(dim);
   auto space = in_shape.At(dim);
@@ -187,8 +187,8 @@ void ScanInnerMostDim(const T* in_ptr, T* out_ptr, const int64_t num_rows, const
 }
 
 template<typename T, template<typename> class BinaryFunc>
-void CubInclusiveScan(user_op::Tensor* temp_buffer, const T* in_ptr, T* out_ptr,
-                      const int64_t elem_cnt, const ep::CudaStream* cuda_stream) {
+void CubInclusiveScan(user_op::Tensor* temp_buffer, const T* in_ptr, T* out_ptr, int64_t elem_cnt,
+                      const ep::CudaStream* cuda_stream) {
   auto* temp_storage = temp_buffer->mut_dptr<T>();
   size_t temp_storage_bytes = temp_buffer->shape_view().elem_cnt();
   OF_CUDA_CHECK(cub::DeviceScan::InclusiveScan(temp_storage, temp_storage_bytes, in_ptr, out_ptr,
@@ -235,26 +235,16 @@ class GpuCumKernel : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define CUMOP_SEQ                       \
-  OF_PP_MAKE_TUPLE_SEQ("cumprod", Prod) \
-  OF_PP_MAKE_TUPLE_SEQ("cumsum", Sum)
-
-#define DEFINE_CUMOP_KERNEL(op_name, op_functor)                                         \
-  template<typename T>                                                                   \
-  class GpuCum##op_functor##Kernel final : public GpuCumKernel<T, op_functor##Functor> { \
-   public:                                                                               \
-    GpuCum##op_functor##Kernel() = default;                                              \
-    ~GpuCum##op_functor##Kernel() = default;                                             \
-  };
-OF_PP_FOR_EACH_TUPLE(DEFINE_CUMOP_KERNEL, CUMOP_SEQ);
-#undef DEFINE_CUMOP_KERNEL
+#define CUMOP_SEQ                              \
+  OF_PP_MAKE_TUPLE_SEQ("cumprod", ProdFunctor) \
+  OF_PP_MAKE_TUPLE_SEQ("cumsum", SumFunctor)
 
 #define REGISTER_CUMOP_KERNEL(dtype, op_name, op_functor)                              \
   REGISTER_USER_KERNEL(op_name)                                                        \
-      .SetCreateFn<GpuCum##op_functor##Kernel<dtype>>()                                \
+      .SetCreateFn<GpuCumKernel<dtype, op_functor>>()                                  \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn(InferTmpBufferSize<dtype, op_functor##Functor>);
+      .SetInferTmpSizeFn(InferTmpBufferSize<dtype, op_functor>);
 
 #define REGISTER_CUMOP_KERNEL_WITH_DTYPE(op_name, op_functor) \
   REGISTER_CUMOP_KERNEL(int32_t, op_name, op_functor)         \
