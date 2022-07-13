@@ -221,16 +221,7 @@ def _split(self, split_size_or_sections=None, dim=0):
 
 
 def _uniform(self, a=0, b=1):
-    if isinstance(a, Tensor):
-        assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
-        a = a.numpy().item()
-    if isinstance(b, Tensor):
-        assert b.ndim == 0 and b.nelement() == 1, "b must be a number or scalar tensor!"
-        b = b.numpy().item()
-    initializer_conf = flow.random_uniform_initializer(
-        minval=a, maxval=b, dtype=self.dtype
-    )
-    return _init_by_initializer_conf(self, initializer_conf)
+    return flow.nn.init.uniform_(self, a, b)
 
 
 def _trunc_normal_(
