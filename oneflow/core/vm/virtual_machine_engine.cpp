@@ -333,8 +333,16 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
               ShrinkStream(stream);
             } else if (current_stream->device() == stream->device()) {
               // buzy loop to make sure running instructions all done.
-              auto* running_list = current_stream->mut_running_instruction_list();
-              while (!running_list->empty() && !running_list->Last()->Done()) {}
+              INTRUSIVE_FOR_EACH_PTR(current_instruction,
+                                     current_stream->mut_running_instruction_list()) {
+                while (!current_instruction->Done()) {
+                  LOG(WARNING) << current_instruction->DebugName();
+                  std::this_thread::sleep_for(std::chrono::seconds(1));
+                }
+              }
+              // buzy loop to make sure running instructions all done.
+              // auto* running_list = current_stream->mut_running_instruction_list();
+              // while (!running_list->empty() && !running_list->Last()->Done()) {}
               ShrinkStream(current_stream);
             } else {
               // do nothing
