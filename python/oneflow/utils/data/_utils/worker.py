@@ -30,7 +30,7 @@ import signal
 
 import oneflow as flow
 from . import signal_handling, MP_STATUS_CHECK_INTERVAL, IS_WINDOWS, HAS_NUMPY
-from .. import KeyErrorMessage, ExceptionWrapper
+from oneflow.utils.data import ExceptionWrapper
 
 
 if IS_WINDOWS:
