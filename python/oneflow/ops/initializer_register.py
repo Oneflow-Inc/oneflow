@@ -351,8 +351,8 @@ def TruncNormalInitializerImpl(
     std = getattr(norm_conf, "std")
     min = getattr(initializer_conf, "min")
     max = getattr(initializer_conf, "max")
-    return lambda length: np.clip(rng.normal(loc=mean, scale=std, size=length),
-        a_min=min, a_max=max
+    return lambda length: np.clip(
+        rng.normal(loc=mean, scale=std, size=length), a_min=min, a_max=max
     )
 
 
