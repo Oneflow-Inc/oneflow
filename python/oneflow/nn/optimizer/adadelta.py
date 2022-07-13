@@ -38,8 +38,7 @@ class Adadelta(Optimizer):
             & x_{t} = x_{t-1} - lr * delta
 
         Args:
-            params (Union[Iterator[Parameter], List[Dict]]): iterable of parameters to optimize or dicts defining
-            parameter groups
+            params (Union[Iterator[Parameter], List[Dict]]): iterable of parameters to optimize or dicts defining parameter groups
             lr (float, optional): The learning rate. Defaults to 0.001.
             rho (float, optional): The decay factor of learning rate. Defaults to 0.0.
             eps (float, optional): A small constant terms added to the denominator to improve numerical stability. Defaults to 1e-10.
