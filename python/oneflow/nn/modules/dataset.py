@@ -30,7 +30,7 @@ from oneflow.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _tri
 import oneflow.framework.id_util as id_util
 
 
-def mirrored_gen_random_seed(seed=None):
+def local_gen_random_seed(seed=None):
     if seed is None:
         seed = -1
         has_seed = False
@@ -88,7 +88,7 @@ class OFRecordReader(Module):
 
         self.sbp = sbp
 
-        (self.seed, self.has_seed) = mirrored_gen_random_seed(random_seed)
+        (self.seed, self.has_seed) = local_gen_random_seed(random_seed)
         self._op = flow.stateful_op("OFRecordReader").Output("out").Build()
 
     def forward(self):
@@ -204,7 +204,7 @@ class CoinFlip(Module):
 
         self.sbp = sbp
 
-        (self.seed, self.has_seed) = mirrored_gen_random_seed(random_seed)
+        (self.seed, self.has_seed) = local_gen_random_seed(random_seed)
 
         self._op = flow.stateful_op("coin_flip").Output("out").Build()
 
@@ -376,7 +376,7 @@ class OFRecordImageDecoderRandomCrop(Module):
         self.num_attempts = num_attempts
         self.random_area = random_area
         self.random_aspect_ratio = random_aspect_ratio
-        (self.seed, self.has_seed) = mirrored_gen_random_seed(random_seed)
+        (self.seed, self.has_seed) = local_gen_random_seed(random_seed)
         self._op = (
             flow.stateful_op("ofrecord_image_decoder_random_crop")
             .Input("in")

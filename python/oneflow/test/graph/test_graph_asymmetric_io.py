@@ -23,13 +23,13 @@ import oneflow.unittest
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
-class TestConsistentAsymmetricGraph(oneflow.unittest.TestCase):
+class TestGlobalAsymmetricGraph(oneflow.unittest.TestCase):
     def test_global_asymmetric_graph_gpu(test_case):
         Broadcast = [flow.sbp.broadcast]
         Placement_rank_0 = flow.placement("cuda", ranks=[0])
         Placement_rank_1 = flow.placement("cuda", ranks=[1])
 
-        class MyConsistentAsymmetricModule(flow.nn.Module):
+        class MyGlobalAsymmetricModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
                 self.linear1 = flow.nn.Linear(3, 8, False)
@@ -74,7 +74,7 @@ class TestConsistentAsymmetricGraph(oneflow.unittest.TestCase):
         local_out = my_local_module(local_x, local_y)
         # print("eager_local_out: ", local_out)
 
-        my_module = MyConsistentAsymmetricModule()
+        my_module = MyGlobalAsymmetricModule()
         x = local_x.to_global(placement=Placement_rank_0, sbp=Broadcast)
         y = local_y.to_global(placement=Placement_rank_0, sbp=Broadcast)
 

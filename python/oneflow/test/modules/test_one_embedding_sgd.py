@@ -140,15 +140,24 @@ def compare_with_numpy_sgd(
         def train_one_iter(num_valid, grad, model, state):
             grad[0:num_valid] = grad[0:num_valid] * (scale / down_scale_by)
             next_state = (
-                momentum * state[0:num_valid] if momentum > 0 else 0
-            ) - learning_rate * grad[0:num_valid]
+                (momentum * state[0:num_valid] + grad[0:num_valid])
+                if momentum > 0
+                else 0
+            )
             if momentum > 0:
                 state[0:num_valid] = next_state
-            model[0:num_valid] = (
-                model[0:num_valid]
-                + next_state
-                - learning_rate * weight_decay * model[0:num_valid]
-            )
+                model[0:num_valid] = (
+                    model[0:num_valid]
+                    - learning_rate * next_state
+                    - learning_rate * weight_decay * model[0:num_valid]
+                )
+            else:
+                state[0:num_valid] = 0
+                model[0:num_valid] = (
+                    model[0:num_valid]
+                    - learning_rate * grad[0:num_valid]
+                    - learning_rate * weight_decay * model[0:num_valid]
+                )
             return (model, state)
 
         for i in range(train_iters):

@@ -329,16 +329,16 @@ namespace {
 // 3) (S1, S1) is not decomposable.
 // although `nd_sbp (S0, S0) on shape (4, 4)` is not decomposable, they could be transformed into a
 // decomposable form: `n_sbp (S0, S1) on shape (2, 2, 4)`.
-Maybe<std::pair<Symbol<one::ConsistentTensorMeta>, Symbol<NdSbp>>> CalcDecomposableEquivalent(
-    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<NdSbp> dst_nd_sbp) {
+Maybe<std::pair<Symbol<one::GlobalTensorMeta>, Symbol<NdSbp>>> CalcDecomposableEquivalent(
+    Symbol<one::GlobalTensorMeta> tensor_meta, Symbol<NdSbp> dst_nd_sbp) {
   std::shared_ptr<const Shape> shape = tensor_meta->shape_ptr();
   Symbol<NdSbp> src_nd_sbp = tensor_meta->nd_sbp();
   const auto& hierarchy = tensor_meta->parallel_desc()->hierarchy();
   std::tie(shape, src_nd_sbp, dst_nd_sbp) = *JUST(
       CalcDecomposableEquivalentShapeAndNdSbpPair(*shape, *hierarchy, src_nd_sbp, dst_nd_sbp));
 
-  one::ConsistentTensorMeta decomposible_tensor_meta(shape, tensor_meta->dtype(), src_nd_sbp,
-                                                     tensor_meta->parallel_desc());
+  one::GlobalTensorMeta decomposible_tensor_meta(shape, tensor_meta->dtype(), src_nd_sbp,
+                                                 tensor_meta->parallel_desc());
   return std::make_pair(SymbolOf(decomposible_tensor_meta), dst_nd_sbp);
 }
 
@@ -508,7 +508,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& shape, Symbol<NdSbp> nd_sbp,
   return GetPhysicalShape(shape, *nd_sbp, *parallel_desc, JUST(*parallel_id));
 }
 
-Maybe<Shape> GetSubLogicalShape(Symbol<one::ConsistentTensorMeta> tensor_meta,
+Maybe<Shape> GetSubLogicalShape(Symbol<one::GlobalTensorMeta> tensor_meta,
                                 Symbol<ParallelDesc> sub_parallel_desc, Symbol<NdSbp> sub_nd_sbp) {
   CHECK_EQ_OR_RETURN(sub_nd_sbp->sbp_parallel_size(), 1);  // NOLINT(maybe-need-error-msg)
   const auto& logical_shape = tensor_meta->shape();
@@ -523,18 +523,17 @@ Maybe<Shape> GetSubLogicalShape(Symbol<one::ConsistentTensorMeta> tensor_meta,
   return sub_logical_shape;
 }
 
-Maybe<Symbol<one::ConsistentTensorMeta>> CalcSubConsistentTensorMeta(
-    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<ParallelDesc> sub_parallel_desc,
+Maybe<Symbol<one::GlobalTensorMeta>> CalcSubGlobalTensorMeta(
+    Symbol<one::GlobalTensorMeta> tensor_meta, Symbol<ParallelDesc> sub_parallel_desc,
     Symbol<NdSbp> sub_nd_sbp) {
   CHECK_EQ_OR_RETURN(sub_nd_sbp->sbp_parallel_size(), 1);  // NOLINT(maybe-need-error-msg)
   const auto& logical_shape = JUST(GetSubLogicalShape(tensor_meta, sub_parallel_desc, sub_nd_sbp));
-  one::ConsistentTensorMeta sub_consistent_tensor_meta(logical_shape, tensor_meta->dtype(),
-                                                       sub_nd_sbp, sub_parallel_desc);
-  return SymbolOf(sub_consistent_tensor_meta);
+  one::GlobalTensorMeta sub_global_tensor_meta(logical_shape, tensor_meta->dtype(), sub_nd_sbp,
+                                               sub_parallel_desc);
+  return SymbolOf(sub_global_tensor_meta);
 }
 
-static constexpr auto* GetSubConsistentTensorMeta =
-    DECORATE(&CalcSubConsistentTensorMeta, ThreadLocal);
+static constexpr auto* GetSubGlobalTensorMeta = DECORATE(&CalcSubGlobalTensorMeta, ThreadLocal);
 
 Maybe<Symbol<NdSbp>> ReplaceNdSbpComponent(Symbol<NdSbp> nd_sbp, int64_t axis,
                                            Symbol<NdSbp> component) {
@@ -546,15 +545,15 @@ Maybe<Symbol<NdSbp>> ReplaceNdSbpComponent(Symbol<NdSbp> nd_sbp, int64_t axis,
   return SymbolOf(new_nd_sbp);
 }
 
-Maybe<Symbol<one::ConsistentTensorMeta>> ReplaceNdSbp(Symbol<one::ConsistentTensorMeta> tensor_meta,
-                                                      Symbol<NdSbp> nd_sbp) {
-  one::ConsistentTensorMeta new_tensor_meta(tensor_meta->shape_ptr(), tensor_meta->dtype(), nd_sbp,
-                                            tensor_meta->parallel_desc());
+Maybe<Symbol<one::GlobalTensorMeta>> ReplaceNdSbp(Symbol<one::GlobalTensorMeta> tensor_meta,
+                                                  Symbol<NdSbp> nd_sbp) {
+  one::GlobalTensorMeta new_tensor_meta(tensor_meta->shape_ptr(), tensor_meta->dtype(), nd_sbp,
+                                        tensor_meta->parallel_desc());
   return SymbolOf(new_tensor_meta);
 }
 
 Maybe<std::vector<NaiveBoxingTransformation>> DecomposeIntoNaiveTransformations(
-    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<NdSbp> dst_nd_sbp) {
+    Symbol<one::GlobalTensorMeta> tensor_meta, Symbol<NdSbp> dst_nd_sbp) {
   std::tie(tensor_meta, dst_nd_sbp) = *JUST(GetDecomposableEquivalent(tensor_meta, dst_nd_sbp));
   const auto& parallel_desc = tensor_meta->parallel_desc();
   const auto& src_nd_sbp = tensor_meta->nd_sbp();
@@ -583,13 +582,13 @@ Maybe<std::vector<NaiveBoxingTransformation>> DecomposeIntoNaiveTransformations(
         JUST(GetSelectedSubParallelDesc(parallel_desc, SymbolOf(axis2selected)));
     const auto& sub_src_nd_sbp = JUST(MakeNdSbp(src_sbp));
     const auto& sub_dst_nd_sbp = JUST(MakeNdSbp(dst_sbp));
-    const auto& sub_consistent_tensor_meta =
-        JUST(GetSubConsistentTensorMeta(tensor_meta, sub_parallel_desc, sub_src_nd_sbp));
+    const auto& sub_global_tensor_meta =
+        JUST(GetSubGlobalTensorMeta(tensor_meta, sub_parallel_desc, sub_src_nd_sbp));
     const auto& new_src_nd_sbp =
         JUST(ReplaceNdSbpComponent(tensor_meta->nd_sbp(), axis, sub_dst_nd_sbp));
     tensor_meta = JUST(ReplaceNdSbp(tensor_meta, new_src_nd_sbp));
     transformations->emplace_back(NaiveBoxingTransformation{
-        .consistent_tensor_meta = sub_consistent_tensor_meta,
+        .global_tensor_meta = sub_global_tensor_meta,
         .dst_nd_sbp = sub_dst_nd_sbp,
     });
   }

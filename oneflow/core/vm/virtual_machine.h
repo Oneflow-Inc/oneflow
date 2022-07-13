@@ -37,7 +37,7 @@ class VirtualMachine final {
 
   static std::function<Maybe<bool>()> GetPredicatorNoMoreInstructionsFinished();
 
-  intrusive::shared_ptr<vm::MirroredObject> FindOrCreateTransportLocalDepObject();
+  intrusive::shared_ptr<vm::Dependence> FindOrCreateTransportLocalDepObject();
 
   std::string GetBlockingDebugString();
 
@@ -55,8 +55,8 @@ class VirtualMachine final {
 
   void ScheduleLoop(const std::function<void()>& Initializer);
 
-  intrusive::shared_ptr<vm::MirroredObject> FindOrCreateScheduleLocalDepObject(
-      Symbol<Device> device, StreamRole stream_role);
+  intrusive::shared_ptr<vm::Dependence> FindOrCreateScheduleLocalDepObject(Symbol<Device> device,
+                                                                           StreamRole stream_role);
   bool NoMoreErasedInstructions(size_t* last_total_erased_instruction_cnt) const;
 
   const vm::VirtualMachineEngine& engine() const { return *engine_; }
@@ -89,9 +89,9 @@ class VirtualMachine final {
   HashMap<DeviceType, vm::ThreadCtx*> devcie_type2non_independent_thread_ctx_;
   HashMap<std::pair<DeviceType, StreamRole>, vm::ThreadCtx*>
       devcie_type_stream_role_2independent_thread_ctx_;
-  HashMap<std::pair<Symbol<Device>, StreamRole>, intrusive::shared_ptr<vm::MirroredObject>>
+  HashMap<std::pair<Symbol<Device>, StreamRole>, intrusive::shared_ptr<vm::Dependence>>
       device_stream_role2local_dep_object_;
-  intrusive::shared_ptr<vm::MirroredObject> transport_local_dep_object_;
+  intrusive::shared_ptr<vm::Dependence> transport_local_dep_object_;
   SteadyVector<vm::Stream*> unique_stream_id2vm_stream_;
 
   std::thread schedule_thread_;
