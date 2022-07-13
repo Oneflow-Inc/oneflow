@@ -397,8 +397,35 @@ Attribute ConvertNdSbpToAttr_(Builder& builder, const ::oneflow::NdSbp& nd_sbp) 
     }
   }
 
-  auto res =
-      sbp::ParallelSignatureAttr::get(ctx, {}, builder.getArrayAttr({attr}));
+  auto res = sbp::ParallelSignatureAttr::get(ctx, {}, builder.getArrayAttr({attr}));
+  return res;
+}
+
+Attribute ConvertNdSbpToAttr_(Builder& builder,
+                              const ::google::protobuf::RepeatedPtrField<std::string>& nd_sbp) {
+  auto ctx = builder.getContext();
+  mlir::Attribute attr;
+  for (const auto& sbp : nd_sbp) {
+    if (sbp.at(0) == 'S') {
+      auto start_pos = sbp.find('(');
+      auto end_pos = sbp.find(')');
+      if (start_pos == std::string::npos || end_pos == std::string::npos) {
+        llvm::errs() << "fail to parse sbp: S";
+      }
+      start_pos++;
+      auto sub_sbp = sbp.substr(start_pos, end_pos - start_pos);
+      auto axis = std::stoi(sub_sbp);
+      attr = sbp::SplitAttr::get(ctx, axis);
+    } else if (sbp.at(0) == 'B') {
+      attr = sbp::BroadcastAttr::get(ctx);
+    } else if (sbp.at(0) == 'P') {
+      attr = sbp::PartialSumAttr::get(ctx);
+    } else {
+      llvm::errs() << "unsupported sbp";
+    }
+  }
+
+  auto res = sbp::ParallelSignatureAttr::get(ctx, {}, builder.getArrayAttr({attr}));
   return res;
 }
 

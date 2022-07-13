@@ -318,6 +318,10 @@ LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_c
   attr_vec.emplace_back(
       GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getNdSbpAttrName(), nd_sbp_attr));
   // add attrs
+  auto sbp_psa_attr = ConvertNdSbpToAttr_(GetBuilder(),op_conf.variable_conf().nd_sbp());
+  attr_vec.emplace_back(
+      GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getSbpPsaAttrName(), sbp_psa_attr));
+  // add attrs
   state.addAttributes(attr_vec);
   // operands
   std::vector<::mlir::Value> operand_vec;

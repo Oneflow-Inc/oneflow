@@ -7,8 +7,8 @@ os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 class ModuleToRun(flow.nn.Module):
     def __init__(self):
         super().__init__()
-        P0 = flow.placement("cuda", ranks=[[0], [1]])
-        a0_sbp = (flow.sbp.broadcast, flow.sbp.broadcast)
+        P0 = flow.placement("cuda", ranks=[0])
+        a0_sbp = (flow.sbp.broadcast)
         b0_sbp = flow.sbp.broadcast
         self.A0 = flow.randn(4, 5, placement=P0, sbp=a0_sbp)
         self.B0 = flow.randn(5, 8, placement=P0, sbp=b0_sbp)
