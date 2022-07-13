@@ -42,13 +42,11 @@ def _test_math_op_grad_grad_impl(test_case, op_name):
         )
     )
 
-    dgrad = torch.autograd.grad(
-        x_grad, init_grad, torch.ones_like(x_grad), create_graph=True
-    )[0]
+    init_grad_grad = torch.tensor(np_arr).requires_grad_()
+    dgrad = torch.autograd.grad(x_grad, init_grad, init_grad_grad, create_graph=True)[0]
     test_case.assertTrue(
         np.allclose(
-            x_grad_grad.pytorch.detach().cpu().numpy(),
-            x_grad_grad.oneflow.detach().numpy(),
+            dgrad.pytorch.detach().cpu().numpy(), dgrad.oneflow.detach().numpy(),
         )
     )
 
