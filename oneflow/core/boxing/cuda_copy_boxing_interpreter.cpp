@@ -72,8 +72,8 @@ Maybe<one::Tensor> CopyBoxingFunction(const std::shared_ptr<one::Tensor>& tensor
         tensor->dtype(), JUST(Device::New(device_type)), /*pin_memory=*/false));
   }
   const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
-  return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(), *sbp_list,
-                                                 *tensor->shape(), tensor->dtype()));
+  return JUST(one::functional::LocalToGlobal(local_tensor, out->placement(), *sbp_list,
+                                             *tensor->shape(), tensor->dtype()));
 }
 
 COMMAND(RegisterBoxingFunction("copy-h2d", &CheckCopyH2D, &CopyBoxingFunction));

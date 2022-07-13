@@ -25,9 +25,10 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class MirroredObject;
+class Dependence;
+class EagerBlobObject;
 
-using DependenceVector = std::vector<MirroredObject*>;
+using DependenceVector = std::vector<Dependence*>;
 
 // physical instruction operand
 class PhyInstrOperand {
@@ -36,22 +37,22 @@ class PhyInstrOperand {
 
   virtual const DependenceVector& input_dependences() const = 0;
   virtual const DependenceVector& output_dependences() const = 0;
-  virtual MirroredObject* stream_sequential_dependence() const {
-    return stream_sequential_dependence_;
-  }
+  virtual Dependence* stream_sequential_dependence() const { return stream_sequential_dependence_; }
 
-  static std::function<void(MirroredObject*)> SetInserter(DependenceVector* dependences) {
+  static std::function<void(Dependence*)> SetInserter(DependenceVector* dependences) {
     auto existed =
-        std::make_shared<std::set<MirroredObject*>>(dependences->begin(), dependences->end());
-    return [dependences, existed](MirroredObject* object) {
+        std::make_shared<std::set<Dependence*>>(dependences->begin(), dependences->end());
+    return [dependences, existed](Dependence* object) {
       if (existed->insert(object).second) { dependences->push_back(object); }
     };
   }
 
+  virtual void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const = 0;
+
  protected:
   PhyInstrOperand() : stream_sequential_dependence_(nullptr) {}
 
-  MirroredObject* stream_sequential_dependence_;
+  Dependence* stream_sequential_dependence_;
 };
 
 }  // namespace vm

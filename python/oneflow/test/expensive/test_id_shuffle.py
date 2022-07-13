@@ -14,13 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
+
+# dynamic memory allocation can't be tested in unittest
+os.environ["ONEFLOW_ONE_EMBEDDING_USE_DYNAMIC_MEMORY_ALLOCATION"] = "0"
 import unittest
 from collections import OrderedDict
 from oneflow.test_utils.test_util import GenArgDict
 import numpy as np
 import oneflow as flow
-
-from oneflow.test_utils.automated_test_util import *
 
 
 def _test_id_shuffle(test_case, has_table_id, num_tables):
@@ -49,7 +51,7 @@ def _test_id_shuffle(test_case, has_table_id, num_tables):
                 cur_rank_unique_ids,
                 cur_rank_unique_table_ids,
                 cur_rank_inverse_indices,
-            ) = flow._C.one_embedding_id_shuffle(ids, table_ids, num_tables)
+            ) = flow._C.one_embedding_id_shuffle(ids, table_ids, num_tables, "test")
             return (
                 flow.cast(num_unique_matrix, flow.int32),
                 flow.cast(inverse_unique_partition_indices, flow.int32),
@@ -156,13 +158,14 @@ def _test_embedding_shuffle(test_case, dtype, enable_quantize):
                 cur_rank_unique_ids,
                 _,
                 cur_rank_inverse_indices,
-            ) = flow._C.one_embedding_id_shuffle(ids, table_ids, num_tables)
+            ) = flow._C.one_embedding_id_shuffle(ids, table_ids, num_tables, "test")
             unique_embeddings = flow._C.gather(data, cur_rank_unique_ids, axis=0)
             embeddings = flow._C.one_embedding_embedding_shuffle(
                 unique_embeddings,
                 num_unique_matrix,
                 cur_rank_inverse_indices,
                 inverse_unique_partition_indices,
+                "test",
             )
             return embeddings
 
@@ -219,7 +222,7 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize, fp16, embedding
                 cur_rank_unique_ids,
                 _,
                 cur_rank_inverse_indices,
-            ) = flow._C.one_embedding_id_shuffle(ids, table_ids, num_tables)
+            ) = flow._C.one_embedding_id_shuffle(ids, table_ids, num_tables, "test")
             if fp16:
                 embedding_grad = flow.cast(embedding_grad, flow.float16)
             cur_rank_unique_embedding_grad = flow._C.one_embedding_embedding_gradient_shuffle(
@@ -227,6 +230,7 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize, fp16, embedding
                 num_unique_matrix,
                 cur_rank_inverse_indices,
                 inverse_unique_partition_indices,
+                "test",
             )
             if fp16:
                 cur_rank_unique_embedding_grad = flow.cast(

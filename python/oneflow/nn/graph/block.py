@@ -20,7 +20,7 @@ import weakref
 
 import oneflow._C
 import oneflow._oneflow_internal
-import oneflow.framework.graph_build_util as graph_build_util
+from oneflow.framework import graph_build_util
 from oneflow.env import get_rank
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.nn.module import Module
@@ -75,6 +75,7 @@ class Block(object):
         self._origin = None
         self._scope = None
         self._prev_scope = None
+        assert belonged_graph is None or isinstance(belonged_graph, weakref.ProxyTypes)
         self._belonged_graph = belonged_graph
         self.config = BlockConfig()
 
@@ -120,6 +121,8 @@ class ModuleBlock(Block):
         self._debug_min_s_level = 2
         self._debug_max_v_level = 0
         self._debug_max_py_stack_depth = 2
+        self._debug_only_user_py_stack = True
+        self._debug_op_repr_with_py_stack = False
         self._type = BlockType.MODULE
         self._is_executing_forward = False
         self._modules = OrderedDict()
@@ -160,9 +163,13 @@ class ModuleBlock(Block):
         *,
         ranks: Optional[Union[int, List[int]]] = None,
         max_py_stack_depth: int = 2,
+        only_user_py_stack=True,
+        op_repr_with_py_stack=False,
     ) -> None:
         assert isinstance(v_level, int)
         assert isinstance(max_py_stack_depth, int)
+        assert isinstance(only_user_py_stack, bool)
+        assert isinstance(op_repr_with_py_stack, bool)
 
         if ranks is None:
             rank_list = [0]
@@ -179,14 +186,21 @@ class ModuleBlock(Block):
             if self._debug:
                 self._debug_min_s_level = 0
                 self._debug_max_v_level = max(0, v_level)
-                self._debug_max_py_stack_depth = max_py_stack_depth
+
+            self._debug_max_py_stack_depth = max_py_stack_depth
+            self._debug_only_user_py_stack = only_user_py_stack
+            self._debug_op_repr_with_py_stack = op_repr_with_py_stack
 
             if self._type == BlockType.MODULE:
 
                 def _set_child(d):
                     for (_, n) in d.items():
                         n.debug(
-                            v_level, ranks=ranks, max_py_stack_depth=max_py_stack_depth
+                            v_level,
+                            ranks=ranks,
+                            max_py_stack_depth=max_py_stack_depth,
+                            only_user_py_stack=only_user_py_stack,
+                            op_repr_with_py_stack=op_repr_with_py_stack,
                         )
 
                 _set_child(self._modules)
@@ -229,6 +243,7 @@ class ModuleBlock(Block):
             self._debug_max_v_level,
             self._debug,
             self._debug_max_py_stack_depth,
+            self._debug_only_user_py_stack,
         ):
             result = self.__block_forward(*args, **kwargs)
 
@@ -263,10 +278,6 @@ class ModuleBlock(Block):
         args, kwargs = self.__pre_forward_map(*args, **kwargs)
         with self.scope_context():
             result = self._origin.__class__.forward(self, *args, **kwargs)
-            # Always pack outputs to remain type of outputs
-            outputs = (result,)
-        result = self.__post_forward_map(*outputs)
-        result = seq_to_func_return(result, True)
         self._is_executing_forward = False
         return result
 
@@ -275,13 +286,23 @@ class ModuleBlock(Block):
         # Identity op outside activation checkpointing scope will be the endpoint of an activation checkpointing segment.
         # Identity op as the first op of a pipeline stage will make backward op depends on the identity op within the stage,
         # otherwise the backward op may depends the op in former stage which will make graph creates unnessary buffers.
+        if self.config._stage_placement is not None:
+
+            def insert_to_global(t):
+                assert isinstance(t, Tensor)
+                return self.__get_or_create_global(t, self.config._stage_placement)
+
+            args, kwargs = self.__map_io(
+                "input", insert_to_global, "insert_to_global", *args, **kwargs
+            )
+
         if self.config.activation_checkpointing or (
             self.config.stage_id is not None and self.config.stage_id >= 0
         ):
 
             def insert_identity(t):
                 assert isinstance(t, Tensor)
-                return oneflow._C.identity(t)
+                return self.__get_or_create_identity(t)
 
             args, kwargs = self.__map_io(
                 "input", insert_identity, "insert_identity", *args, **kwargs
@@ -289,20 +310,40 @@ class ModuleBlock(Block):
 
         return args, kwargs
 
-    def __post_forward_map(self, *args):
-        # Insert identity op when doing activation checkpointing or pipeline execution.
-        if self.config.activation_checkpointing or (
-            self.config.stage_id is not None and self.config.stage_id >= 0
-        ):
+    def __get_or_create_global(self, input_tensor: Tensor = None, placement=None):
+        assert input_tensor is not None
+        assert placement is not None
+        key = str(id(input_tensor)) + str(placement)
 
-            def insert_identity(t):
-                assert isinstance(t, Tensor)
-                return oneflow._C.identity(t)
-
-            args, _ = self.__map_io(
-                "output", insert_identity, "insert_identity", *args,
+        # input_tensor + placement -> unique_global_tensor
+        if key not in self._belonged_graph._unique_global_op_dict:
+            # store input tensor to avoid tensor id recycle
+            self._belonged_graph._unique_global_op_dict[key] = (
+                input_tensor.to_global(placement=placement),
+                input_tensor,
             )
-        return args
+
+        return self._belonged_graph._unique_global_op_dict[key][0]
+
+    def __get_or_create_identity(self, input_tensor: Tensor = None):
+        assert input_tensor is not None
+        key = input_tensor
+
+        # input_tensor(with placement) -> unique_identity_tensor
+        # When placement is different, the input tensor(output tensor of __get_or_create_global) is different, so the
+        # key can use only input tensor.
+        if key not in self._belonged_graph._unique_identity_op_dict:
+            # Reuse current module name for indentity op
+            ident_name_scope = graph_build_util.make_new_name_scope(
+                self.prev_scope, self.name_prefix + self.name
+            )
+            with graph_build_util.BlockScopeContext(self.prev_scope, ident_name_scope):
+                # store input tensor to avoid tensor id recycle
+                self._belonged_graph._unique_identity_op_dict[
+                    key
+                ] = oneflow._C.identity(input_tensor)
+
+        return self._belonged_graph._unique_identity_op_dict[key]
 
     def add_module(self, name: str, module: Optional[Module]) -> None:
         self.__setattr__(
@@ -563,11 +604,15 @@ class ModuleBlock(Block):
         )
 
         if self._belonged_graph.is_compiled:
-            module_conf = self._belonged_graph._graph_proto.module_name2module_conf[
-                self.name_prefix + self.name
-            ]
-
-            return operators_repr(module_conf.ops)
+            if self._belonged_graph._compiled_graph_proto is not None:
+                module_conf = self._belonged_graph._compiled_graph_proto.module_name2module_conf[
+                    self.name_prefix + self.name
+                ]
+                return operators_repr(
+                    module_conf.ops,
+                    self._belonged_graph._compiled_graph_proto,
+                    self._debug_op_repr_with_py_stack,
+                )
 
         return []
 

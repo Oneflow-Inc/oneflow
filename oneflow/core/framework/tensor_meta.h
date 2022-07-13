@@ -73,16 +73,15 @@ class TensorMeta : public user_op::TensorDesc {
   bool is_dynamic_;
 };
 
-class MirroredTensorMeta : public TensorMeta {
+class LocalTensorMeta : public TensorMeta {
  public:
-  // uninitialized MirroredTensorMeta.
-  MirroredTensorMeta();
-  MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                     Symbol<Device> device);
-  MirroredTensorMeta(const std::shared_ptr<const Shape>& shape,
-                     const std::shared_ptr<const Stride>& stride, DataType dtype,
-                     Symbol<Device> device, int64_t storage_offset);
-  virtual ~MirroredTensorMeta() = default;
+  // uninitialized LocalTensorMeta.
+  LocalTensorMeta();
+  LocalTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype, Symbol<Device> device);
+  LocalTensorMeta(const std::shared_ptr<const Shape>& shape,
+                  const std::shared_ptr<const Stride>& stride, DataType dtype,
+                  Symbol<Device> device, int64_t storage_offset);
+  virtual ~LocalTensorMeta() = default;
 
   const Symbol<Device>& device() const { return device_; }
   int64_t storage_offset() const { return storage_offset_; }
@@ -90,7 +89,7 @@ class MirroredTensorMeta : public TensorMeta {
   Symbol<Device>* mut_device() { return &device_; }
   void set_storage_offset(int64_t offset) { storage_offset_ = offset; }
 
-  bool operator==(const MirroredTensorMeta& other) const;
+  bool operator==(const LocalTensorMeta& other) const;
   size_t CalcHashValue() const;
 
  private:
@@ -98,16 +97,16 @@ class MirroredTensorMeta : public TensorMeta {
   int64_t storage_offset_;
 };
 
-class ConsistentTensorMeta : public TensorMeta {
+class GlobalTensorMeta : public TensorMeta {
  public:
-  ConsistentTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                       Symbol<NdSbp> nd_sbp, Symbol<ParallelDesc> parallel_desc)
+  GlobalTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype, Symbol<NdSbp> nd_sbp,
+                   Symbol<ParallelDesc> parallel_desc)
       : TensorMeta(shape, dtype), nd_sbp_(nd_sbp), parallel_desc_(parallel_desc) {}
-  ConsistentTensorMeta(const ConsistentTensorMeta&) = default;
-  ConsistentTensorMeta(ConsistentTensorMeta&&) = default;
-  virtual ~ConsistentTensorMeta() = default;
+  GlobalTensorMeta(const GlobalTensorMeta&) = default;
+  GlobalTensorMeta(GlobalTensorMeta&&) = default;
+  virtual ~GlobalTensorMeta() = default;
 
-  bool operator==(const ConsistentTensorMeta& other) const;
+  bool operator==(const GlobalTensorMeta& other) const;
 
   Symbol<NdSbp> nd_sbp() const { return nd_sbp_; }
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
@@ -129,9 +128,9 @@ class ConsistentTensorMeta : public TensorMeta {
 namespace std {
 
 template<>
-struct hash<oneflow::one::ConsistentTensorMeta> final {
-  size_t operator()(const oneflow::one::ConsistentTensorMeta& consistent_tensor_meta) const {
-    return consistent_tensor_meta.CalcHashValue();
+struct hash<oneflow::one::GlobalTensorMeta> final {
+  size_t operator()(const oneflow::one::GlobalTensorMeta& global_tensor_meta) const {
+    return global_tensor_meta.CalcHashValue();
   }
 };
 

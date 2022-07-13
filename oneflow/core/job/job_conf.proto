@@ -16,6 +16,9 @@ message NaiveModelUpdateConf {
 
 message MomentumModelUpdateConf {
   optional float beta = 1 [default = 0.9];
+  optional float dampening = 2 [default = 0.0];
+  optional bool nesterov = 3 [default = false];
+  optional bool maximize = 4 [default = false];
 }
 
 message RMSPropModelUpdateConf {
@@ -240,6 +243,8 @@ message JobConfigProto {
   optional bool cudnn_conv_enable_pseudo_half = 600 [default = true];
   optional bool enable_auto_mixed_precision = 602 [default = false];
   optional bool enable_quantization_aware_training = 603 [default = false];
+
+  optional bool enable_straighten_algorithm_in_task_graph = 700 [default = false];
   
   optional int64 concurrency_width = 1000 [default = 128];
 

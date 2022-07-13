@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/framework/user_op_conf.h"
@@ -29,9 +30,9 @@ Maybe<void> GenerateBackwardOpConf(
   const UserOpConf& user_conf = fw_op.op_conf().user_conf();
   const user_op::OpGradRegistryResult* val =
       user_op::UserOpRegistryMgr::Get().GetOpGradRegistryResult(user_conf.op_type_name());
-  if (val == nullptr) {
-    return Error::GradientFunctionNotFoundError() << PbMessage2TxtString(fw_op.op_conf());
-  }
+  CHECK_NOTNULL_OR_RETURN(val) << Error::GradientFunctionNotFoundError()
+                               << " op cannot find backward op in autograd, forward op: "
+                               << PbMessage2TxtString(fw_op.op_conf());
 
   user_op::UserOpWrapper fw_user_op(fw_op.op_conf(), LogicalBlobDesc4BnInOp, DiffLbi4BnInOp);
   if (nullptr != val->bw_gen_fn) {

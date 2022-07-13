@@ -191,7 +191,7 @@ template<typename T, template<typename> class BinaryFunc>
 void CubInclusiveScan(user_op::Tensor* temp_buffer, const T* in_ptr, T* out_ptr,
                       const int64_t elem_cnt, const ep::CudaStream* cuda_stream) {
   auto* temp_storage = temp_buffer->mut_dptr<T>();
-  size_t temp_storage_bytes = temp_buffer->shape().elem_cnt();
+  size_t temp_storage_bytes = temp_buffer->shape_view().elem_cnt();
   OF_CUDA_CHECK(cub::DeviceScan::InclusiveScan(temp_storage, temp_storage_bytes, in_ptr, out_ptr,
                                                BinaryFunc<T>(), elem_cnt,
                                                cuda_stream->cuda_stream()));
@@ -210,7 +210,7 @@ class GpuCumKernel : public user_op::OpKernel {
     // Judge whether tensor has 0 size dimension first
     const auto* in = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* out = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const ShapeView& in_shape = in->shape();
+    const ShapeView& in_shape = in->shape_view();
     const int64_t dim = ctx->Attr<int64_t>("dim");
     const int64_t dim_size = in_shape.At(dim);
 
@@ -236,44 +236,37 @@ class GpuCumKernel : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T>
-class GpuCumSumKernel final : public GpuCumKernel<T, SumFunctor> {
- public:
-  GpuCumSumKernel() = default;
-  ~GpuCumSumKernel() = default;
-};
+#define CUMOP_SEQ                       \
+  OF_PP_MAKE_TUPLE_SEQ("cumprod", Prod) \
+  OF_PP_MAKE_TUPLE_SEQ("cumsum", Sum)
 
-#define REGISTER_CUDA_CUMSUM_KERNEL(dtype)                                             \
-  REGISTER_USER_KERNEL("cumsum")                                                       \
-      .SetCreateFn<GpuCumSumKernel<dtype>>()                                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
-                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn(InferTmpBufferSize<dtype, SumFunctor>);
+#define DEFINE_CUMOP_KERNEL(op_name, op_functor)                                         \
+  template<typename T>                                                                   \
+  class GpuCum##op_functor##Kernel final : public GpuCumKernel<T, op_functor##Functor> { \
+   public:                                                                               \
+    GpuCum##op_functor##Kernel() = default;                                              \
+    ~GpuCum##op_functor##Kernel() = default;                                             \
+  };
+OF_PP_FOR_EACH_TUPLE(DEFINE_CUMOP_KERNEL, CUMOP_SEQ);
+#undef DEFINE_CUMOP_KERNEL
 
-REGISTER_CUDA_CUMSUM_KERNEL(int32_t)
-REGISTER_CUDA_CUMSUM_KERNEL(int64_t)
-REGISTER_CUDA_CUMSUM_KERNEL(float)
-REGISTER_CUDA_CUMSUM_KERNEL(double)
-#undef REGISTER_CUDA_CUMSUM_KERNEL
-
-template<typename T>
-class GpuCumProdKernel final : public GpuCumKernel<T, ProdFunctor> {
- public:
-  GpuCumProdKernel() = default;
-  ~GpuCumProdKernel() = default;
-};
-
-#define REGISTER_CUDA_CUMPROD_KERNEL(dtype)                                            \
-  REGISTER_USER_KERNEL("cumprod")                                                      \
-      .SetCreateFn<GpuCumProdKernel<dtype>>()                                          \
+#define REGISTER_CUMOP_KERNEL(dtype, op_name, op_functor)                              \
+  REGISTER_USER_KERNEL(op_name)                                                        \
+      .SetCreateFn<GpuCum##op_functor##Kernel<dtype>>()                                \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferTmpBufferSize<dtype, ProdFunctor>);
 
-REGISTER_CUDA_CUMPROD_KERNEL(int32_t)
-REGISTER_CUDA_CUMPROD_KERNEL(int64_t)
-REGISTER_CUDA_CUMPROD_KERNEL(float)
-REGISTER_CUDA_CUMPROD_KERNEL(double)
-#undef REGISTER_CUDA_CUMPROD_KERNEL
+#define REGISTER_CUMOP_KERNEL_WITH_DTYPE(op_name, op_functor) \
+  REGISTER_CUMOP_KERNEL(int32_t, op_name, op_functor)         \
+  REGISTER_CUMOP_KERNEL(int64_t, op_name, op_functor)         \
+  REGISTER_CUMOP_KERNEL(float, op_name, op_functor)           \
+  REGISTER_CUMOP_KERNEL(double, op_name, op_functor)
+
+OF_PP_FOR_EACH_TUPLE(REGISTER_CUMOP_KERNEL_WITH_DTYPE, CUMOP_SEQ);
+
+#undef REGISTER_CUMOP_KERNEL
+#undef REGISTER_CUMOP_KERNEL_WITH_DTYPE
+
 #endif
 }  // namespace oneflow

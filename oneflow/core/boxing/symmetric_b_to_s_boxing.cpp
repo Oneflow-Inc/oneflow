@@ -88,13 +88,13 @@ Maybe<one::Tensor> SymmetricB2S(const std::shared_ptr<one::Tensor>& tensor, Symb
       start.emplace_back(range.begin());
       stop.emplace_back(range.end());
     }
-    local_tensor =
-        JUST(one::functional::Slice(local_tensor, start, stop, step, /*enable_view_slice=*/false));
+    local_tensor = JUST(one::functional::Slice(local_tensor, start, stop, step,
+                                               /*enable_view_slice=*/false));
   }
 
-  return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(),
-                                                 *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
-                                                 tensor->dtype()));
+  return JUST(one::functional::LocalToGlobal(local_tensor, out->placement(),
+                                             *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
+                                             tensor->dtype()));
 }
 
 COMMAND(RegisterBoxingFunction("symmetric-b-to-s", CheckSymmetricB2S, &SymmetricB2S));
