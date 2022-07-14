@@ -68,7 +68,9 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
 bool IsAxesLegal(const AxisVector& axis_vec, const Shape& like_shape, const Shape& in_shape) {
   Shape reduced_shape = CreateReducedShape(like_shape, axis_vec);
   if (like_shape.NumAxes() > in_shape.NumAxes()) {
-    reduced_shape = reduced_shape.RemoveOnes(axis_vec);
+    return std::equal(in_shape.begin(), in_shape.end(),
+                      reduced_shape.begin() + reduced_shape.NumAxes() - in_shape.NumAxes(),
+                      reduced_shape.end());
   }
   return reduced_shape.dim_vec() == in_shape.dim_vec();
 }
