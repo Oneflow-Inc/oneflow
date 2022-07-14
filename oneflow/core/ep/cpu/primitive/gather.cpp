@@ -44,13 +44,13 @@ template<typename T, typename K>
 void BatchGatherCpuKernel(int64_t batch_dim_size, int64_t outer_dim_size, int64_t gather_dim_size,
                           int64_t inner_dim_size, const T* data, int64_t num_indices,
                           const K* indice, int64_t offset, T* output) {
-  const size_t indice_instance_size = num_indices / batch_dim_size;
-  const size_t src_instance_size = outer_dim_size * gather_dim_size * inner_dim_size;
-  const size_t dst_instance_size = outer_dim_size * indice_instance_size * inner_dim_size;
+  const int64_t indice_instance_size = num_indices / batch_dim_size;
+  const int64_t data_instance_size = outer_dim_size * gather_dim_size * inner_dim_size;
+  const int64_t output_instance_size = outer_dim_size * indice_instance_size * inner_dim_size;
 
   FOR_RANGE(int64_t, batch_idx, 0, batch_dim_size) {
-    const T* batch_data = data + batch_idx * src_instance_size;
-    T* batch_output = output + batch_idx * dst_instance_size;
+    const T* batch_data = data + batch_idx * data_instance_size;
+    T* batch_output = output + batch_idx * output_instance_size;
     const K* batch_indice = indice + batch_idx * indice_instance_size;
 
     GatherCpuKernel(outer_dim_size, gather_dim_size, inner_dim_size, batch_data,
