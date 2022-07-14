@@ -36,8 +36,8 @@ class NegativeGradGrad : public OpExprGradFunction<UnaryGradGradState> {
 
   Maybe<void> Capture(UnaryGradGradState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
     ctx->grad_requires_grad = inputs.at(1)->requires_grad();
     return Maybe<void>::Ok();
@@ -73,8 +73,8 @@ class LeakyReluGradGrad : public OpExprGradFunction<LeakyReluGradGradCaptureStat
 
   Maybe<void> Capture(LeakyReluGradGradCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
     ctx->grad_requires_grad = inputs.at(1)->requires_grad();
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
