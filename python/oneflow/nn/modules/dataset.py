@@ -195,6 +195,7 @@ class CoinFlip(Module):
             global tensor. Default: if None, the returned tensor is local one using the argument `device`.
 
     """
+
     def __init__(
         self,
         batch_size: int = 1,
@@ -295,6 +296,7 @@ class CropMirrorNormalize(Module):
         output_dtype (oneflow.dtype, optional): Output data type. Default: ``oneflow.float``
 
     """
+
     def __init__(
         self,
         color_space: str = "BGR",
