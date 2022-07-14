@@ -47,8 +47,6 @@ def _test_graph_hann_window(test_case, placement, sbp):
 
 
 class TestHannWindowGlobal(flow.unittest.TestCase):
-    # TODO(zhongshsh): slice makes sbp change
-    # pass
     # TODO(wyg): It will be infer all broadcast sbp when 1n1d,
     #            slice_update will get error when doing inplace operator.
     #            Remove this judgement after refactor sbp infer method in Operator class.
