@@ -63,7 +63,7 @@ class GatherImpl : public Gather {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GatherImpl);
   GatherImpl() = default;
-  ~GatherImpl() = default;
+  ~GatherImpl() override = default;
   void Launch(Stream* stream, int64_t batch_dim_size, int64_t outer_dim_size,
               int64_t gather_dim_size, int64_t inner_dim_size, const void* data,
               int64_t num_indices, const void* indice, void* output) override {
