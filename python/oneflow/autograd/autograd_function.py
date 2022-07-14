@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 from oneflow._oneflow_internal import TensorTuple
-from oneflow._oneflow_internal.autograd import AutogradFunctionBase
+from oneflow._oneflow_internal.autograd import AutogradFunctionBase, FunctionAutoGradCaptureState
 
 
 class Function(AutogradFunctionBase):
