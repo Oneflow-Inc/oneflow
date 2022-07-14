@@ -9,7 +9,7 @@ OneFlow provides two ways to accomplish `Distributed Training`:
 
 - The first way is that users are recommended to use OneFlow's global Tensor for distributed training. Global Tensor regards the computing cluster as a supercomputing device, allowing users to write distributed training code just like in a single-machine environment.
 
-- OneFlow also provides a DDP（DistributedDataParallel） module aligned with PyTorch. DDP has been well-known and widely used in data parallelism by the majority of PyTorch users. Also see `PyTorch DDP introduction` <https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html#torch.nn.parallel.DistributedDataParallel>_.
+- OneFlow also provides a DDP（DistributedDataParallel） module aligned with PyTorch. DDP has been well-known and widely used in data parallelism by the majority of PyTorch users. Also see `PyTorch DDP introduction <https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html#torch.nn.parallel.DistributedDataParallel>`_.
 
 
 
@@ -36,7 +36,7 @@ Global Tensor
 
 Build/Construct Global Tensor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-A global Tensor can be created with a placement and a sbp. The placement describes the physical devices of the global tensor will be allocated, and the sbp describes its distribution along these devices.
+A global Tensor can be created with a ``placement`` and a ``sbp``. The ``placement`` describes the physical devices of the global tensor will be allocated, and the ``sbp`` describes its distribution along these devices.
 
 ::
 
@@ -54,7 +54,7 @@ A global Tensor can be created with a placement and a sbp. The placement describ
 Convert Local Tensor to Global Tensor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-With ``Tensor.to_global`` interface, you can create a `Global Tensor` based on a `Local Tensor`, and regard this tensor as the local tensor of the `Global Tensor`` on the present device.
+With ``Tensor.to_global`` interface, you can create a `Global Tensor` based on a `Local Tensor`, and regard this tensor as the local tensor of the `Global Tensor` on the present device.
 
 Two local tensors with the shape of ``(2,5)`` are created separately on two devices. While after the to_global method, the global tensor with a shape of ``(4,5)`` is obtained.
 
