@@ -25,7 +25,6 @@ OneFlow's nn.Graph is programmed in a style very similar to Eager Mode, so it is
 
 The following script shows the process of building a neural network in eager mode using the interface under ``oneflow.nn`` :
 
-.. 再给个大概个提速的数据（比如 MNIST,从 Eager 改为 Graph 后，速度提升 xx%）
 
 .. code-block:: 
 
@@ -87,7 +86,6 @@ Constructing it
 
     __init__
     build
-    __call__
     add_optimizer
     set_grad_scaler
 
@@ -135,6 +133,14 @@ Block Config option
 
 .. currentmodule:: oneflow.nn.Graph
 
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    state_dict
+    load_state_dict
+
+
 Debug
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -147,12 +153,4 @@ Debug
     __repr__
 
 
-Save & Load Model
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-
-    state_dict
-    load_state_dict

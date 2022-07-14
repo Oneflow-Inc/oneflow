@@ -12,7 +12,7 @@ Embedding is an important component of recommender system, and it has also sprea
     y = embedding(indices)
 
 
-OneEmbedding is the large-scale Embedding solution that OneFlow provides to solve the problem of large-scale deep recommender systems. OneEmbedding has the following advantages compared to ordionary opeartors:
+OneEmbedding is the large-scale Embedding solution that OneFlow provides to solve the problem of large-scale deep recommender systems. OneEmbedding has the following advantages compared to ordinary opeartors:
 
     - With Flexible hierarchical storage, OneEmbedding can place the Embedding table on GPU memory, CPU memory or SSD, and allow high-speed devices to be used as caches for low-speed devices to achieve both speed and capacity.
 
@@ -25,7 +25,7 @@ OneEmbedding is the large-scale Embedding solution that OneFlow provides to solv
 Configure Embedding Table 
 ----------------------------------
 
-OneEmbedding supports simultaneous creation of multiple Embedding table. The following codes configured three Embedding table.
+OneEmbedding supports simultaneous creation of multiple Embedding table. The following codes configured three Embedding tables.
 
 .. code-block:: 
 
