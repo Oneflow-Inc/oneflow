@@ -18,13 +18,12 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 
-
 class TestHannWindow(flow.unittest.TestCase):
     @autotest(n=5, auto_backward=False)
     def test_hann_window(test_case):
         device = random_device()
         window_length = random(1, 8).to(int).value()
-        periodic = random_bool()
+        periodic = random_bool().value()
         output = torch.hann_window(window_length, periodic, device=device)
         return output
 
