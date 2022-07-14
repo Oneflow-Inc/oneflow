@@ -27,7 +27,7 @@ namespace oneflow {
       << Error::RuntimeError()
       << "flip: Dimension size out of range (expected to be less than or equal to " << input_dims
       << " but got " << dims.size() << ")";
-  for (auto x : dims) { maybe_wrap_dim(x, input_dims); }
+  for (auto x : dims) { JUST(maybe_wrap_dim(x, input_dims)); }
   user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
   *y_desc->mut_shape() = x_desc.shape();
   return Maybe<void>::Ok();
