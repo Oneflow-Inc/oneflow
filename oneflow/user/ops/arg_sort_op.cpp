@@ -40,7 +40,10 @@ namespace oneflow {
 /* static */ Maybe<void> ArgSortOp::CheckAttr(const user_op::UserOpDefWrapper& def,
                                               const user_op::UserOpConfWrapper& conf) {
   const std::string& direction = conf.attr<std::string>("direction");
-  CHECK_OR_RETURN(direction == "ASCENDING" || direction == "DESCENDING");
+  CHECK_OR_RETURN(direction == "ASCENDING" || direction == "DESCENDING")
+      << Error::RuntimeError()
+      << "expected the input direction parameter value is \"ASCENDING\" or \"DESCENDING\", "
+      << "but found the value is " << direction;
   return Maybe<void>::Ok();
 }
 

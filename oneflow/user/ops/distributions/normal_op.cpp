@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 
 namespace oneflow {
 
@@ -27,7 +28,16 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> NormalOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
+  const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
+  const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  const Shape& logical_shape = ctx->Attr<Shape>("shape");
+  const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+  const auto tensor_slice_view =
+      GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id);
+  const Shape& physical_shape = tensor_slice_view.shape();
+
+  *ctx->OutputShape("out", 0) = physical_shape;
+  return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> NormalOp::GetSbp(user_op::SbpContext* ctx) {

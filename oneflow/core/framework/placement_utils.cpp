@@ -23,9 +23,8 @@ namespace oneflow {
 
 Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,
                                                       const std::string& device_type) {
-  std::shared_ptr<cfg::ParallelConf> parallel_conf =
-      std::make_shared<cfg::ParallelConf>(*parallel_desc->cfg_parallel_conf());
-  parallel_conf->set_device_tag(device_type);
+  ParallelConf parallel_conf = parallel_desc->parallel_conf();
+  parallel_conf.set_device_tag(device_type);
   std::shared_ptr<ParallelDesc> out_parallel_desc;
   JUST(PhysicalRun(
       [&out_parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
@@ -35,8 +34,8 @@ Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> paral
   return SymbolOf(*out_parallel_desc);
 }
 
-Maybe<void> TouchConsistentTensor(const std::shared_ptr<one::Tensor>& tensor) {
-  CHECK_OR_RETURN(tensor->is_consistent());
+Maybe<void> TouchGlobalTensor(const std::shared_ptr<one::Tensor>& tensor) {
+  CHECK_OR_RETURN(tensor->is_global());  // NOLINT
   return Maybe<void>::Ok();
 }
 

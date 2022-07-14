@@ -23,7 +23,6 @@ limitations under the License.
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job.pb.h"
-#include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/record/record.pb.h"
 
@@ -39,6 +38,10 @@ inline Maybe<std::string> JobBuildAndInferCtx_GetCurrentJobName() {
   return mgr->GetCurrentJobName();
 }
 
+inline Maybe<int64_t> JobBuildAndInferCtx_GetCurrentJobId() {
+  return JUST(GetCurInferCtx())->job_id();
+}
+
 inline Maybe<void> JobBuildAndInferCtx_Close() {
   auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
   JUST(mgr->CloseCurrentJobBuildAndInferCtx());
@@ -47,15 +50,15 @@ inline Maybe<void> JobBuildAndInferCtx_Close() {
 
 inline Maybe<void> CurJobBuildAndInferCtx_CheckJob() { return JUST(GetCurInferCtx())->CheckJob(); }
 
-inline Maybe<void> CurJobBuildAndInferCtx_SetJobConf(const cfg::JobConfigProto& cfg_job_conf) {
+inline Maybe<void> CurJobBuildAndInferCtx_SetJobConf(const std::string& job_conf_str) {
   JobConfigProto job_conf;
-  cfg_job_conf.ToProto(&job_conf);
+  CHECK_OR_RETURN(TxtString2PbMessage(job_conf_str, &job_conf)) << "job conf parse failed";
   return JUST(GetCurInferCtx())->SetJobConf(job_conf);
 }
 
-inline Maybe<void> CurJobBuildAndInferCtx_SetTrainConf(const cfg::TrainConf& cfg_train_conf) {
+inline Maybe<void> CurJobBuildAndInferCtx_SetTrainConf(const std::string& train_conf_str) {
   TrainConf train_conf;
-  cfg_train_conf.ToProto(&train_conf);
+  CHECK_OR_RETURN(TxtString2PbMessage(train_conf_str, &train_conf)) << "train conf parse failed";
   return JUST(GetCurInferCtx())->SetTrainConf(train_conf);
 }
 
@@ -66,21 +69,21 @@ inline Maybe<bool> CurJobBuildAndInferCtx_HasJobConf() {
   return JUST(GetCurInferCtx())->HasJobConf();
 }
 
-inline Maybe<std::string> CurJobBuildAndInferCtx_AddAndInferMirroredOp(
+inline Maybe<std::string> CurJobBuildAndInferCtx_AddAndInferLocalOp(
     const std::string& op_conf_str) {
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
   auto* ctx = JUST(GetCurInferCtx());
-  const auto& op_attribute = JUST(ctx->AddAndInferMirroredOp(op_conf));
+  const auto& op_attribute = JUST(ctx->AddAndInferLocalOp(op_conf));
   return PbMessage2TxtString(*op_attribute);
 }
 
-inline Maybe<std::string> CurJobBuildAndInferCtx_AddAndInferConsistentOp(
+inline Maybe<std::string> CurJobBuildAndInferCtx_AddAndInferGlobalOp(
     const std::string& op_conf_str) {
   OperatorConf op_conf;
   CHECK_OR_RETURN(TxtString2PbMessage(op_conf_str, &op_conf)) << "operator conf parse failed";
   auto* ctx = JUST(GetCurInferCtx());
-  const auto& op_attribute = JUST(ctx->AddAndInferConsistentOp(op_conf));
+  const auto& op_attribute = JUST(ctx->AddAndInferGlobalOp(op_conf));
   return PbMessage2TxtString(*op_attribute);
 }
 
@@ -136,23 +139,23 @@ inline Maybe<void> CurJobBuildAndInferCtx_AddLossLogicalBlobName(const std::stri
   return JUST(GetCurInferCtx())->AddLossLogicalBlobName(lbn);
 }
 
-inline Maybe<bool> JobBuildAndInferCtx_IsMirroredBlob(const std::string& job_name,
-                                                      const std::string& lbn) {
+inline Maybe<bool> JobBuildAndInferCtx_IsLocalBlob(const std::string& job_name,
+                                                   const std::string& lbn) {
   auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return ctx->IsMirroredBlob(lbn);
+  return ctx->IsLocalBlob(lbn);
 }
 
-inline Maybe<int> JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(const std::string& job_name,
-                                                               const std::string& lbn) {
+inline Maybe<int> JobBuildAndInferCtx_LocalBlobGetNumSubLbi(const std::string& job_name,
+                                                            const std::string& lbn) {
   auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return ctx->MirroredBlobGetNumSubLbi(lbn);
+  return ctx->LocalBlobGetNumSubLbi(lbn);
 }
 
-inline Maybe<std::string> JobBuildAndInferCtx_MirroredBlobGetSubLbi(const std::string& job_name,
-                                                                    const std::string& lbn,
-                                                                    int index) {
+inline Maybe<std::string> JobBuildAndInferCtx_LocalBlobGetSubLbi(const std::string& job_name,
+                                                                 const std::string& lbn,
+                                                                 int index) {
   auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return PbMessage2TxtString(*JUST(ctx->MirroredBlobGetSubLbi(lbn, index)));
+  return PbMessage2TxtString(*JUST(ctx->LocalBlobGetSubLbi(lbn, index)));
 }
 
 inline Maybe<void> JobBuildAndInferCtx_CheckLbnValidAndExist(const std::string& job_name,

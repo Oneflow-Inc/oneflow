@@ -17,11 +17,13 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/job/runtime_job_descs.h"
+#include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/device/cuda_util.h"
@@ -36,13 +38,13 @@ namespace {
 void SendCmdMsg(const std::vector<const TaskProto*>& tasks, ActorCmd cmd) {
   for (const TaskProto* task : tasks) {
     ActorMsg msg = ActorMsg::BuildCommandMsg(task->task_id(), cmd);
-    Global<ActorMsgBus>::Get()->SendMsg(msg);
+    Singleton<ActorMsgBus>::Get()->SendMsg(msg);
   }
 }
 
 void HandoutTasks(const std::vector<const TaskProto*>& tasks) {
   for (const TaskProto* task : tasks) {
-    Global<ThreadMgr>::Get()->GetThrd(task->thrd_id())->AddTask(*task);
+    Singleton<ThreadMgr>::Get()->GetThrd(task->thrd_id())->AddTask(*task);
   }
   SendCmdMsg(tasks, ActorCmd::kConstructActor);
 }
@@ -57,14 +59,20 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 
 }  // namespace
 
-Runtime::Runtime(const Plan& plan, const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
+Runtime::Runtime(
+    const Plan& plan,
+    const HashMap<std::string, vm::EagerBlobObject*>& variable_op_name2eager_blob_object) {
+  DumpThreadIdsFromPlan(plan);
   {
-    // NOTE(chengcheng): All runtime Global objects AddPlan
-    Global<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob);
-    Global<ThreadMgr>::Get()->AddPlan(plan);
-    Global<RuntimeJobDescs>::Get()->AddPlan(plan);
+    // NOTE(chengcheng): All runtime global(singleton) objects AddPlan
+    Singleton<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob_object);
+    Singleton<ThreadMgr>::Get()->AddThreads(thread_ids_);
+    Singleton<RuntimeJobDescs>::Get()->AddPlan(plan);
     collective_boxing_scheduler_plan_token_ =
-        Global<boxing::collective::Scheduler>::Get()->AddPlan(plan);
+        Singleton<boxing::collective::Scheduler>::Get()->AddPlan(plan);
+#ifdef WITH_CUDA
+    Singleton<EagerNcclCommMgr>::Get()->CreateCommFromPlan(plan);
+#endif  // WITH_CUDA
   }
   std::vector<const TaskProto*> source_tasks;
   source_tasks.reserve(plan.task().size());
@@ -87,7 +95,7 @@ Runtime::Runtime(const Plan& plan, const HashMap<std::string, Blob*>& variable_o
     it->second++;
     this_machine_task_num++;
   }
-  RuntimeCtx* runtime_ctx = Global<RuntimeCtx>::Get();
+  RuntimeCtx* runtime_ctx = Singleton<RuntimeCtx>::Get();
   runtime_ctx->NewCounter("constructing_actor_cnt", this_machine_task_num);
   HandoutTasks(source_tasks);
   HandoutTasks(other_tasks);
@@ -103,10 +111,31 @@ Runtime::Runtime(const Plan& plan, const HashMap<std::string, Blob*>& variable_o
 
 Runtime::~Runtime() {
   for (auto pair : job_id2actor_size_) {
-    Global<RuntimeCtx>::Get()->WaitUntilCntEqualZero(GetRunningActorCountKeyByJobId(pair.first));
+    Singleton<RuntimeCtx>::Get()->WaitUntilCntEqualZero(GetRunningActorCountKeyByJobId(pair.first));
   }
   OF_SESSION_BARRIER();
-  Global<boxing::collective::Scheduler>::Get()->DeletePlan(collective_boxing_scheduler_plan_token_);
+  Singleton<ThreadMgr>::Get()->DeleteThreads(independent_thread_ids_);
+  Singleton<boxing::collective::Scheduler>::Get()->DeletePlan(
+      collective_boxing_scheduler_plan_token_);
+}
+
+void Runtime::DumpThreadIdsFromPlan(const Plan& plan) {
+  const int64_t this_rank = GlobalProcessCtx::Rank();
+  for (const TaskProto& task : plan.task()) {
+    TaskId task_id = DecodeTaskIdFromInt64(task.task_id());
+    StreamId stream_id = task_id.stream_id();
+    if (stream_id.rank() != this_rank) { continue; }
+    int64_t thrd_id = EncodeStreamIdToInt64(stream_id);
+    thread_ids_.insert(thrd_id);
+    // NOTE(chengcheng): there is not a interface to query whether a task type is indenpendent,
+    //  so use hard code.
+    if (task.task_type() == TaskType::kWaitAndSendIds
+        || task.task_type() == TaskType::kCriticalSectionWaitTick) {
+      CHECK(independent_thread_ids_.insert(thrd_id).second)
+          << " RuntimeError! Thread : " << thrd_id
+          << " not independent with task proto: " << task.DebugString();
+    }
+  }
 }
 
 }  // namespace oneflow

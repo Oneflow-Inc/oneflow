@@ -36,7 +36,7 @@ Tensor::Tensor(const Shape& shape, const Device& device, const DType& dtype) {
   of::LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
   tensor_ = functional::Empty(*shape.shape_,
                               of::DType::Get(static_cast<of::DataType>(dtype)).GetOrThrow(),
-                              *device.device_)
+                              *device.device_, /*pin_memory=*/false)
                 .GetPtrOrThrow();
 }
 Tensor::Tensor(const std::shared_ptr<oneflow::one::Tensor>& tensor) : tensor_(tensor) {}
@@ -68,8 +68,7 @@ Device Tensor::device() const {
 DType Tensor::dtype() const { return static_cast<DType>(tensor_->dtype()->data_type()); }
 
 void Tensor::zeros_() {
-  std::shared_ptr<of::one::MirroredTensor> local_tensor =
-      tensor_->AsMirroredTensor().GetPtrOrThrow();
+  std::shared_ptr<of::one::LocalTensor> local_tensor = tensor_->AsLocalTensor().GetPtrOrThrow();
   of::PhysicalRun([&](of::InstructionsBuilder* builder) -> of::Maybe<void> {
     JUST(builder->AccessBlobByCallback(
         local_tensor,
@@ -85,8 +84,8 @@ void Tensor::zeros_() {
 Tensor Tensor::from_buffer(const void* buffer, const Shape& shape, const Device& device,
                            const DType& dtype) {
   Tensor tensor(shape, device, dtype);
-  std::shared_ptr<of::one::MirroredTensor> local_tensor =
-      tensor.tensor_->AsMirroredTensor().GetPtrOrThrow();
+  std::shared_ptr<of::one::LocalTensor> local_tensor =
+      tensor.tensor_->AsLocalTensor().GetPtrOrThrow();
   of::PhysicalRun([&](of::InstructionsBuilder* builder) -> of::Maybe<void> {
     return builder->AccessBlobByCallback(
         local_tensor,
@@ -101,8 +100,7 @@ Tensor Tensor::from_buffer(const void* buffer, const Shape& shape, const Device&
 
 template<typename T>
 void Tensor::copy_to(T* buffer) const {
-  std::shared_ptr<of::one::MirroredTensor> local_tensor =
-      tensor_->AsMirroredTensor().GetPtrOrThrow();
+  std::shared_ptr<of::one::LocalTensor> local_tensor = tensor_->AsLocalTensor().GetPtrOrThrow();
   const auto shape = this->shape();
 
   const auto& Callback = [buffer, shape](uint64_t ofblob_ptr) {

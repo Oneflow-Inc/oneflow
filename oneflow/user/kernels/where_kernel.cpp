@@ -32,28 +32,28 @@ class WhereKernel final : public user_op::OpKernel {
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    if (!(x->shape() == y->shape() && y->shape() == cond->shape())) {
-      size_t num_axes = out->shape().NumAxes();
-      int64_t elem_cnt = out->shape().elem_cnt();
+    if (!(x->shape_view() == y->shape_view() && y->shape_view() == cond->shape_view())) {
+      size_t num_axes = out->shape_view().NumAxes();
+      int64_t elem_cnt = out->shape_view().elem_cnt();
       const size_t x_bytes = GetCudaAlignedSize(elem_cnt * sizeof(T));
       const size_t y_bytes = GetCudaAlignedSize(elem_cnt * sizeof(T));
       T* y_tmp_buf = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + x_bytes);
       CondT* cond_tmp_buf =
           reinterpret_cast<CondT*>(tmp_buffer->mut_dptr<char>() + x_bytes + y_bytes);
       NdarrayUtil<device_type, T>::BroadcastTo(
-          ctx->stream(), XpuVarNdarray<T>(out->shape(), tmp_buffer->mut_dptr<T>()),
-          XpuVarNdarray<const T>(x->shape(), x->dptr<T>(), num_axes));
+          ctx->stream(), XpuVarNdarray<T>(out->shape_view(), tmp_buffer->mut_dptr<T>()),
+          XpuVarNdarray<const T>(x->shape_view(), x->dptr<T>(), num_axes));
       NdarrayUtil<device_type, T>::BroadcastTo(
-          ctx->stream(), XpuVarNdarray<T>(out->shape(), y_tmp_buf),
-          XpuVarNdarray<const T>(y->shape(), y->dptr<T>(), num_axes));
+          ctx->stream(), XpuVarNdarray<T>(out->shape_view(), y_tmp_buf),
+          XpuVarNdarray<const T>(y->shape_view(), y->dptr<T>(), num_axes));
       NdarrayUtil<device_type, CondT>::BroadcastTo(
-          ctx->stream(), XpuVarNdarray<CondT>(out->shape(), cond_tmp_buf),
-          XpuVarNdarray<const CondT>(cond->shape(), cond->dptr<CondT>(), num_axes));
-      WhereKernelUtil<device_type, T, CondT>::Where(ctx->stream(), out->shape().elem_cnt(),
+          ctx->stream(), XpuVarNdarray<CondT>(out->shape_view(), cond_tmp_buf),
+          XpuVarNdarray<const CondT>(cond->shape_view(), cond->dptr<CondT>(), num_axes));
+      WhereKernelUtil<device_type, T, CondT>::Where(ctx->stream(), out->shape_view().elem_cnt(),
                                                     cond_tmp_buf, tmp_buffer->mut_dptr<T>(),
                                                     y_tmp_buf, out->mut_dptr<T>());
     } else {
-      WhereKernelUtil<device_type, T, CondT>::Where(ctx->stream(), out->shape().elem_cnt(),
+      WhereKernelUtil<device_type, T, CondT>::Where(ctx->stream(), out->shape_view().elem_cnt(),
                                                     cond->dptr<CondT>(), x->dptr<T>(), y->dptr<T>(),
                                                     out->mut_dptr<T>());
     }
@@ -83,24 +83,24 @@ class WhereScalarXKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED() << "The scalar in Where should be bool, float or int.";
     }
-    if (!(y->shape() == cond->shape())) {
-      size_t num_axes = out->shape().NumAxes();
-      int64_t elem_cnt = out->shape().elem_cnt();
+    if (!(y->shape_view() == cond->shape_view())) {
+      size_t num_axes = out->shape_view().NumAxes();
+      int64_t elem_cnt = out->shape_view().elem_cnt();
       const size_t y_bytes = GetCudaAlignedSize(elem_cnt * sizeof(T));
       CondT* cond_tmp_buf = reinterpret_cast<CondT*>(tmp_buffer->mut_dptr<char>() + y_bytes);
       NdarrayUtil<device_type, T>::BroadcastTo(
-          ctx->stream(), XpuVarNdarray<T>(out->shape(), tmp_buffer->mut_dptr<T>()),
-          XpuVarNdarray<const T>(y->shape(), y->dptr<T>(), num_axes));
+          ctx->stream(), XpuVarNdarray<T>(out->shape_view(), tmp_buffer->mut_dptr<T>()),
+          XpuVarNdarray<const T>(y->shape_view(), y->dptr<T>(), num_axes));
       NdarrayUtil<device_type, CondT>::BroadcastTo(
-          ctx->stream(), XpuVarNdarray<CondT>(out->shape(), cond_tmp_buf),
-          XpuVarNdarray<const CondT>(cond->shape(), cond->dptr<CondT>(), num_axes));
+          ctx->stream(), XpuVarNdarray<CondT>(out->shape_view(), cond_tmp_buf),
+          XpuVarNdarray<const CondT>(cond->shape_view(), cond->dptr<CondT>(), num_axes));
       WhereKernelUtil<device_type, T, CondT>::WhereXScalar(
-          ctx->stream(), out->shape().elem_cnt(), cond_tmp_buf, scalar_operand,
+          ctx->stream(), out->shape_view().elem_cnt(), cond_tmp_buf, scalar_operand,
           tmp_buffer->mut_dptr<T>(), out->mut_dptr<T>());
     } else {
-      WhereKernelUtil<device_type, T, CondT>::WhereXScalar(ctx->stream(), out->shape().elem_cnt(),
-                                                           cond->dptr<CondT>(), scalar_operand,
-                                                           y->dptr<T>(), out->mut_dptr<T>());
+      WhereKernelUtil<device_type, T, CondT>::WhereXScalar(
+          ctx->stream(), out->shape_view().elem_cnt(), cond->dptr<CondT>(), scalar_operand,
+          y->dptr<T>(), out->mut_dptr<T>());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -128,24 +128,24 @@ class WhereScalarYKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED() << "The scalar in Where should be bool, float or int";
     }
-    if (!(x->shape() == cond->shape())) {
-      size_t num_axes = out->shape().NumAxes();
-      int64_t elem_cnt = out->shape().elem_cnt();
+    if (!(x->shape_view() == cond->shape_view())) {
+      size_t num_axes = out->shape_view().NumAxes();
+      int64_t elem_cnt = out->shape_view().elem_cnt();
       const size_t x_bytes = GetCudaAlignedSize(elem_cnt * sizeof(T));
       CondT* cond_tmp_buf = reinterpret_cast<CondT*>(tmp_buffer->mut_dptr<char>() + x_bytes);
       NdarrayUtil<device_type, T>::BroadcastTo(
-          ctx->stream(), XpuVarNdarray<T>(out->shape(), tmp_buffer->mut_dptr<T>()),
-          XpuVarNdarray<const T>(x->shape(), x->dptr<T>(), num_axes));
+          ctx->stream(), XpuVarNdarray<T>(out->shape_view(), tmp_buffer->mut_dptr<T>()),
+          XpuVarNdarray<const T>(x->shape_view(), x->dptr<T>(), num_axes));
       NdarrayUtil<device_type, CondT>::BroadcastTo(
-          ctx->stream(), XpuVarNdarray<CondT>(out->shape(), cond_tmp_buf),
-          XpuVarNdarray<const CondT>(cond->shape(), cond->dptr<CondT>(), num_axes));
-      WhereKernelUtil<device_type, T, CondT>::WhereYScalar(ctx->stream(), out->shape().elem_cnt(),
-                                                           cond_tmp_buf, tmp_buffer->mut_dptr<T>(),
-                                                           scalar_operand, out->mut_dptr<T>());
+          ctx->stream(), XpuVarNdarray<CondT>(out->shape_view(), cond_tmp_buf),
+          XpuVarNdarray<const CondT>(cond->shape_view(), cond->dptr<CondT>(), num_axes));
+      WhereKernelUtil<device_type, T, CondT>::WhereYScalar(
+          ctx->stream(), out->shape_view().elem_cnt(), cond_tmp_buf, tmp_buffer->mut_dptr<T>(),
+          scalar_operand, out->mut_dptr<T>());
     } else {
-      WhereKernelUtil<device_type, T, CondT>::WhereYScalar(ctx->stream(), out->shape().elem_cnt(),
-                                                           cond->dptr<CondT>(), x->dptr<T>(),
-                                                           scalar_operand, out->mut_dptr<T>());
+      WhereKernelUtil<device_type, T, CondT>::WhereYScalar(
+          ctx->stream(), out->shape_view().elem_cnt(), cond->dptr<CondT>(), x->dptr<T>(),
+          scalar_operand, out->mut_dptr<T>());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -161,7 +161,7 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* cond = ctx->Tensor4ArgNameAndIndex("condition", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    if (out->shape().elem_cnt() == 0) { return; }
+    if (out->shape_view().elem_cnt() == 0) { return; }
     T x_scalar_operand = static_cast<T>(0);
     T y_scalar_operand = static_cast<T>(0);
     if (ctx->Attr<bool>("has_x_int_operand") && ctx->Attr<bool>("has_y_int_operand")) {
@@ -176,9 +176,9 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED() << "The scalar in Where should be bool, float or int";
     }
-    WhereKernelUtil<device_type, T, CondT>::WhereXYScalar(ctx->stream(), out->shape().elem_cnt(),
-                                                          cond->dptr<CondT>(), x_scalar_operand,
-                                                          y_scalar_operand, out->mut_dptr<T>());
+    WhereKernelUtil<device_type, T, CondT>::WhereXYScalar(
+        ctx->stream(), out->shape_view().elem_cnt(), cond->dptr<CondT>(), x_scalar_operand,
+        y_scalar_operand, out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

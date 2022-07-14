@@ -44,7 +44,7 @@ Maybe<void> CpuDevice::Alloc(const AllocationOptions& options, void** ptr, size_
     CHECK_OR_RETURN(device);
     return device->AllocPinned(options, ptr, size);
   } else {
-    *ptr = aligned_alloc(kMaxAlignmentRequirement, size);
+    *ptr = aligned_alloc(kMaxAlignmentRequirement, RoundUp(size, kMaxAlignmentRequirement));
     if (*ptr == nullptr) {
       return Error::RuntimeError() << "allocate failed";
     } else {
@@ -66,10 +66,16 @@ void CpuDevice::Free(const AllocationOptions& options, void* ptr) {
 }
 
 Maybe<void> CpuDevice::AllocPinned(const AllocationOptions& options, void** ptr, size_t size) {
-  UNIMPLEMENTED_THEN_RETURN();
+  AllocationOptions new_options = options;
+  new_options.ClearPinnedDevice();
+  return Alloc(new_options, ptr, size);
 }
 
-void CpuDevice::FreePinned(const AllocationOptions& options, void* ptr) { UNIMPLEMENTED(); }
+void CpuDevice::FreePinned(const AllocationOptions& options, void* ptr) {
+  AllocationOptions new_options = options;
+  new_options.ClearPinnedDevice();
+  return Free(new_options, ptr);
+}
 
 }  // namespace ep
 

@@ -28,7 +28,7 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
   }
   if (need_grad) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    builder = builder.Op("stack_backward");
+    builder = builder.Op("stack_grad");
     FOR_RANGE(int32_t, i, 0, in_size) { builder = builder.Input("like", op.input("in", i)); }
     user_op::UserOpConfWrapper grad_op = builder.Input("in", op.GetGradTensorWithOpOutput("out", 0))
                                              .Output("out", in_size)
@@ -107,8 +107,16 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
   const int64_t axis = ctx->Attr<int64_t>("axis");
   const user_op::TensorDesc& first_in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   FOR_RANGE(int64_t, i, 0, first_in_desc.shape().NumAxes()) {
-    if (i >= axis) { continue; }
-    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    /*
+    Stack can be view as expand_dims + concat.
+    For stack([(2, 4, 6), (2, 4, 6), axis=1]), it equals to [2, 4, 6]->[2, 1, 4, 6]. concat([2, 1,
+    4, 6], [2, 1, 4, 6], concat_dim=1) Concat split all the axis except the concat_dim.
+    */
+    if (i >= axis) {
+      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i + 1).Build();
+    } else {
+      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    }
   }
   ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
   return Maybe<void>::Ok();
@@ -136,30 +144,16 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
 
 /*static*/ Maybe<void> StackGradOp::GetSbp(user_op::SbpContext* ctx) {
   const auto axis = ctx->Attr<int64_t>("axis");
-  const int64_t in_num_axes =
-      ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
   const int64_t like_num_axes =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
   FOR_RANGE(int64_t, i, 0, like_num_axes) {
-    if (i == axis) { continue; }
-    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    if (i == axis || i < 1) { continue; }
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i - 1).Build();
   }
   std::vector<user_op::OpArg> like_arg_vec;
   const size_t like_arg_size = ctx->outputs().size();
   like_arg_vec.reserve(like_arg_size);
   FOR_RANGE(int32_t, i, 0, like_arg_size) { like_arg_vec.emplace_back("like", i); }
-  FOR_RANGE(int64_t, i, like_num_axes, in_num_axes) {
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("in", 0), i)
-        .Broadcast(like_arg_vec)
-        .Split(ctx->outputs(), i)
-        .Build();
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("in", 0), i)
-        .PartialSum(like_arg_vec)
-        .Split(ctx->outputs(), i)
-        .Build();
-  }
   ctx->NewBuilder()
       .PartialSum(user_op::OpArg("in", 0))
       .PartialSum(like_arg_vec)
@@ -260,6 +254,6 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("Stack").SetGenBackwardOpConfFn(GenGradOp);
+REGISTER_USER_OP_GRAD("stack").SetGenBackwardOpConfFn(GenGradOp);
 
 }  // namespace oneflow

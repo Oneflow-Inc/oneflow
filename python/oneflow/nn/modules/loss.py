@@ -33,7 +33,7 @@ class _WeightedLoss(_Loss):
         self, weight: Optional[Tensor] = None, reduction: str = "mean"
     ) -> None:
         super(_WeightedLoss, self).__init__(reduction=reduction)
-        self.weight = weight
+        self.register_buffer("weight", weight)
 
 
 class L1Loss(_Loss):
@@ -337,7 +337,7 @@ class NLLLoss(_WeightedLoss):
 class KLDivLoss(_Loss):
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.KLDivLoss.html?highlight=kldivloss#torch.nn.KLDivLoss
+    https://pytorch.org/docs/1.10/generated/torch.nn.KLDivLoss.html.
 
     The Kullback-Leibler divergence loss measure
 
@@ -432,7 +432,7 @@ class KLDivLoss(_Loss):
 class MSELoss(_Loss):
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.MSELoss.html?highlight=mseloss#torch.nn.MSELoss
+    https://pytorch.org/docs/1.10/generated/torch.nn.MSELoss.html.
 
     Creates a criterion that measures the mean squared error (squared L2 norm) between
     each element in the input :math:`x` and target :math:`y`.
@@ -575,7 +575,7 @@ class CTCLoss(_Loss):
     """The Connectionist Temporal Classification loss.
     The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.CTCLoss.html#torch.nn.CTCLoss
+    https://pytorch.org/docs/1.10/generated/torch.nn.CTCLoss.html.
 
     Calculates loss between a continuous (unsegmented) time series and a target sequence. CTCLoss sums over the
     probability of possible alignments of input to target, producing a loss value which is differentiable
@@ -779,7 +779,7 @@ class SmoothL1Loss(_Loss):
     element-wise error falls below beta and an L1 term otherwise.
     The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.SmoothL1Loss.html
+    https://pytorch.org/docs/1.10/generated/torch.nn.SmoothL1Loss.html.
 
     It is less sensitive to outliers than :class:`torch.nn.MSELoss` and in some cases
     prevents exploding gradients (e.g. see the paper `Fast R-CNN <https://openaccess.thecvf.com/content_iccv_2015/papers/Girshick_Fast_R-CNN_ICCV_2015_paper.pdf>`__ by Ross Girshick)..
@@ -881,10 +881,19 @@ class SmoothL1Loss(_Loss):
 
 
 class CombinedMarginLoss(Module):
-    """The operation implements "margin_softmax" in InsightFace:
+    r"""The operation implements "margin_softmax" in InsightFace:
     https://github.com/deepinsight/insightface/blob/master/recognition/arcface_mxnet/train.py
     The implementation of margin_softmax in InsightFace is composed of multiple operators.
     We fuse them for speed up.
+
+    Applies the function:
+
+    .. math::
+
+        {\rm CombinedMarginLoss}(x_i, label) =
+        \left\{\begin{matrix} \cos(m_1\cdot\arccos x_i+m_2) - m_3 & {\rm if} \ i == label \\
+        x_i & {\rm otherwise} \end{matrix}\right.
+
 
     Args:
         x (oneflow.Tensor): A Tensor
@@ -892,6 +901,16 @@ class CombinedMarginLoss(Module):
         m1 (float): loss m1 parameter
         m2 (float): loss m2 parameter
         m3 (float): loss m3 parameter
+
+    .. note::
+
+        Here are some special cases:
+
+        - when :math:`m_1=1, m_2\neq 0, m_3=0`, CombineMarginLoss has the same parameter as `ArcFace <https://arxiv.org/abs/1801.07698>`__ .
+
+        - when :math:`m_1=1, m_2=0, m_3\neq 0`, CombineMarginLoss has the same parameter as `CosFace (a.k.a AM-Softmax) <https://arxiv.org/abs/1801.09414>`__ .
+
+        - when :math:`m_1\gt 1, m_2=m_3=0`, CombineMarginLoss has the same parameter as `A-Softmax <https://arxiv.org/abs/1704.08063>`__.
 
     Returns:
         oneflow.Tensor: A Tensor

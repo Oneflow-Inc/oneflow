@@ -43,7 +43,7 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
@@ -63,7 +63,7 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
       beta = inputs.at(2);
       ctx->track_running_stats = false;
     } else {
-      CHECK_EQ_OR_RETURN(inputs.size(), 5);
+      CHECK_EQ_OR_RETURN(inputs.size(), 5);  // NOLINT(maybe-need-error-msg)
       gamma = inputs.at(3);
       beta = inputs.at(4);
       ctx->track_running_stats = true;
@@ -107,7 +107,9 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
     }
     const auto& results = JUST(functional::NormalizationGrad(y_grad, x, mean, inv_variance, gamma,
                                                              ctx->epsilon, ctx->axis));
-    CHECK_EQ_OR_RETURN(results->size(), 3);
+    CHECK_EQ_OR_RETURN(results->size(), 3)
+        << Error::RuntimeError() << "The number of results is expected to be 3, but got "
+        << results->size();
 
     if (ctx->track_running_stats) {
       // The normalization op has 5 inputs which are x, moving_mean, moving_variance, gamma and
@@ -136,27 +138,29 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
       return Maybe<void>::Ok();
     }
 
-    DimVector dim_vec;
+    Shape shape;
     for (int i = 0; i < x->shape()->NumAxes(); ++i) {
       if (i != ctx->axis) {
-        dim_vec.emplace_back(1);
+        shape.emplace_back(1);
       } else {
-        dim_vec.emplace_back(x->shape()->At(ctx->axis));
+        shape.emplace_back(x->shape()->At(ctx->axis));
       }
     }
-    Shape shape(dim_vec);
     const auto& reshaped_gamma = JUST(functional::Reshape(gamma, shape));
     const auto& reshaped_inv_variance = JUST(functional::Reshape(inv_variance, shape));
 
     std::shared_ptr<Tensor> y_grad_fp32 = y_grad;
     bool is_fp16 = y_grad->dtype()->data_type() == DataType::kFloat16;
-    if (is_fp16) { y_grad_fp32 = JUST(functional::Cast(y_grad, DType::Float())); }
+    if (is_fp16) {
+      y_grad_fp32 = JUST(functional::Cast(y_grad, DType::Float(), /*pin_memory=*/false));
+    }
     const auto& dy_mul_gamma = JUST(functional::Mul(reshaped_gamma, y_grad_fp32));
     const auto& dy_mul_inv_var = JUST(functional::Mul(dy_mul_gamma, reshaped_inv_variance));
     if (is_fp16) {
-      in_grads->at(0) = JUST(functional::Cast(dy_mul_inv_var, DType::Float16()));
+      (*in_grads)[0] =
+          JUST(functional::Cast(dy_mul_inv_var, DType::Float16(), /*pin_memory=*/false));
     } else {
-      in_grads->at(0) = dy_mul_inv_var;
+      (*in_grads)[0] = dy_mul_inv_var;
     }
     return Maybe<void>::Ok();
   }

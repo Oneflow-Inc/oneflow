@@ -25,11 +25,29 @@ namespace primitive {
 
 #define UNARY_MATH_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu)
 
-#define UNARY_FLOATING_MATH_OP_SEQ     \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kGelu) \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kTanh)
+#define UNARY_FLOATING_MATH_OP_SEQ            \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kElu)         \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kCelu)        \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kGelu)        \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kHardSwish)   \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kHardSigmoid) \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kHardShrink)  \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kHardTanh)    \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLeakyRelu)   \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kMish)        \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSelu)        \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSilu)        \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSoftShrink)  \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSoftSign)    \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kSoftPlus)    \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kTanh)        \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kThreshold)
 
 #define UNARY_LOGICAL_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogicalNot)
+
+#define UNARY_UTILS_OP_SEQ              \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kIsInf) \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kIsNan)
 
 }  // namespace primitive
 }  // namespace ep

@@ -17,6 +17,7 @@ limitations under the License.
 #include <memory>
 
 #include "oneflow/api/python/utils/tensor_utils.h"
+#include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/tensor_api.yaml.h"
 #include "oneflow/core/common/optional.h"
@@ -43,14 +44,14 @@ namespace impl {
 class TensorWithDataFunctor {
  public:
   Maybe<Tensor> operator()(PyObject* data, const Optional<Symbol<DType>>& dtype,
-                           const Optional<Symbol<Device>>& device,
-                           const bool& requires_grad) const {
+                           const Optional<Symbol<Device>>& device, const bool requires_grad,
+                           const bool pin_memory) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     //  even if in nn.Graph build (module forward function), if you create a flow.Tensor,
     //  its a eager tensor by Run functional::Empty() in LazyMode::Grad(false)
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
-    if (PyTensorCheck(data)) {
+    if (PyTensor_Check(data)) {
       // Throw warnings like pytorch.
       auto ret = PyErr_WarnEx(
           PyExc_UserWarning,
@@ -60,26 +61,26 @@ class TensorWithDataFunctor {
           1);
       if (ret != 0) { return Error::RuntimeError(); }
 
-      const auto& other = JUST(PyUnpackTensor(data));
-      return MakeTensorFromOtherTensor(other, dtype, device, requires_grad);
+      const auto& other = PyTensor_Unpack(data);
+      return MakeTensorFromOtherTensor(other, dtype, device, requires_grad, pin_memory);
     } else {
       // Make tensor from python sequence or numpy array.
-      return MakeLocalTensorFromData(data, dtype, device, requires_grad);
+      return MakeLocalTensorFromData(data, dtype, device, requires_grad, pin_memory);
     }
   }
 };
 
-class ConsistentTensorWithDataFunctor {
+class GlobalTensorWithDataFunctor {
  public:
   Maybe<Tensor> operator()(PyObject* data, const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                           const bool& requires_grad) const {
+                           const bool requires_grad) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     JUST(CheckDeviceIdsIsValid(placement));
 
-    if (PyTensorCheck(data)) {
+    if (PyTensor_Check(data)) {
       // Throw warnings like pytorch.
       auto ret = PyErr_WarnEx(
           PyExc_UserWarning,
@@ -89,11 +90,11 @@ class ConsistentTensorWithDataFunctor {
           1);
       if (ret != 0) { return Error::RuntimeError(); }
 
-      const auto& other = JUST(PyUnpackTensor(data));
+      const auto& other = PyTensor_Unpack(data);
       return MakeTensorFromOtherTensor(other, dtype, placement, sbp_tuple, requires_grad);
     }
-    // Make consistent tensor from python sequence or numpy array.
-    return MakeConsistentTensorFromData(data, dtype, placement, sbp_tuple, requires_grad);
+    // Make global tensor from python sequence or numpy array.
+    return MakeGlobalTensorFromData(data, dtype, placement, sbp_tuple, requires_grad);
   }
 };
 
@@ -105,13 +106,13 @@ class TensorEmptyCtorFunctor {
   }
 };
 
-class ConsistentTensorEmptyCtorFunctor {
+class GlobalTensorEmptyCtorFunctor {
  public:
   Maybe<Tensor> operator()(const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     Shape shape(DimVector{0});
     JUST(CheckDeviceIdsIsValid(placement));
-    return ConsistentTensorWithShapeCtor(shape, placement, sbp_tuple);
+    return GlobalTensorWithShapeCtor(shape, placement, sbp_tuple);
   }
 };
 
@@ -120,7 +121,9 @@ class TensorWithOtherCtorFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& other) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
-    return MakeTensorFromOtherTensor(other);
+    bool is_pinned = false;
+    if (other->is_local()) { is_pinned = JUST(CHECK_JUST(other->AsLocalTensor())->is_pinned()); }
+    return MakeTensorFromOtherTensor(other, is_pinned);
   }
 };
 
@@ -133,22 +136,26 @@ class TensorWithDataCtorFunctor {
       Shape shape(DimVector{size});
       return TensorWithShapeCtor(shape, device);
     }
+    if (TensorSize_Check(data)) { return TensorWithShapeCtor(TensorSize_AsShape(data), device); }
 
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
     const auto& dtype = DType::Float();
-    if (PyTensorCheck(data)) {
-      const auto& other = JUST(PyUnpackTensor(data));
+    if (PyTensor_Check(data)) {
+      const auto& other = PyTensor_Unpack(data);
+      const bool pin_memory =
+          other->is_local() ? JUST(JUST(other->AsLocalTensor())->is_pinned()) : false;
       return MakeTensorFromOtherTensor(other, dtype, device,
-                                       /*requires_grad=*/false);
+                                       /*requires_grad=*/false, /*pin_memory=*/pin_memory);
     }
     // Make tensor from python sequence or numpy array.
-    return MakeLocalTensorFromData(data, dtype, device, /*requires_grad=*/false);
+    return MakeLocalTensorFromData(data, dtype, device, /*requires_grad=*/false,
+                                   /*pin_memory=*/false);
   }
 };
 
-class ConsistentTensorWithDataCtorFunctor {
+class GlobalTensorWithDataCtorFunctor {
  public:
   Maybe<Tensor> operator()(PyObject* data, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
@@ -157,20 +164,23 @@ class ConsistentTensorWithDataCtorFunctor {
     if (PyLong_Check(data)) {
       int64_t size = PyLong_AsLongLong(data);
       Shape shape(DimVector{size});
-      return ConsistentTensorWithShapeCtor(shape, placement, sbp_tuple);
+      return GlobalTensorWithShapeCtor(shape, placement, sbp_tuple);
+    }
+    if (TensorSize_Check(data)) {
+      return GlobalTensorWithShapeCtor(TensorSize_AsShape(data), placement, sbp_tuple);
     }
 
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
     const auto& dtype = DType::Float();
-    if (PyTensorCheck(data)) {
-      const auto& other = JUST(PyUnpackTensor(data));
+    if (PyTensor_Check(data)) {
+      const auto& other = PyTensor_Unpack(data);
       return MakeTensorFromOtherTensor(other, dtype, placement, sbp_tuple,
                                        /*requires_grad=*/false);
     }
-    // Make consistent tensor from python sequence or numpy array.
-    return MakeConsistentTensorFromData(data, dtype, placement, sbp_tuple, /*requires_grad=*/false);
+    // Make global tensor from python sequence or numpy array.
+    return MakeGlobalTensorFromData(data, dtype, placement, sbp_tuple, /*requires_grad=*/false);
   }
 };
 
@@ -185,18 +195,18 @@ class TensorWithShapeCtorFunctor {
     } else {
       device_ = JUST(Device::New("cpu"));
     }
-    return functional::Empty(shape, DType::Float(), device_);
+    return functional::Empty(shape, DType::Float(), device_, /*pin_memory=*/false);
   }
 };
 
-class ConsistentTensorWithShapeCtorFunctor {
+class GlobalTensorWithShapeCtorFunctor {
  public:
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     JUST(CheckDeviceIdsIsValid(placement));
-    return functional::ConsistentEmpty(shape, DType::Float(), placement, sbp_tuple);
+    return functional::GlobalEmpty(shape, DType::Float(), placement, sbp_tuple);
   }
 };
 
@@ -207,6 +217,7 @@ class AssignLocalTensorFunctor {
   }
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ref,
                          const std::shared_ptr<one::Tensor>& value) const {
+    // JUST(CheckInplaceValid(ref)); // align check to torch
     CHECK_OR_RETURN(ref->is_local() && value->is_local())
         << "Both ref and value must be local tensor.";
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}));
@@ -229,7 +240,12 @@ class LocalTensorSharedNumpyDataFunctor {
     if (!PyArray_IS_C_CONTIGUOUS(array)) {
       OF_LOG_ONCE(LOG(WARNING) << "OneFlow don't support non-contiguous array now, "
                                   "and we will copy the array to a contiguous one.");
+      // PyArray_GETCONTIGUOUS will return a reference if array is already contiguous,
+      // otherwise return a (contiguous) copy of the array.
+      // Note: Increment the reference count for array occurs whether the array is continuous or not
       array = PyArray_GETCONTIGUOUS(array);
+    } else {
+      Py_INCREF(obj);
     }
 
     // Build TensorMeta
@@ -240,27 +256,25 @@ class LocalTensorSharedNumpyDataFunctor {
     Symbol<Device> device = JUST(Device::New("cpu"));
     const npy_intp* stride_ptr = PyArray_STRIDES(array);
     // stride
-    auto strides_vec = DimVector(stride_ptr, stride_ptr + dim);
+    auto strides = std::make_shared<Stride>(stride_ptr, stride_ptr + dim);
     auto element_size_in_bytes = PyArray_ITEMSIZE(array);
     // NumPy strides use bytes. OneFlow strides use element counts.
-    for (auto& stride : strides_vec) {
-      if (stride % element_size_in_bytes != 0) {
+    for (auto& stride_val : *strides) {
+      if (stride_val % element_size_in_bytes != 0) {
         return Error::RuntimeError() << "given numpy array strides not a multiple of the element "
                                         "byte size. Copy the numpy array to reallocate the memory.";
       }
-      stride /= element_size_in_bytes;
+      stride_val /= element_size_in_bytes;
     }
-    const auto strides = std::make_shared<Stride>(strides_vec);
-    auto tensor_meta = std::make_shared<MirroredTensorMeta>(shape, data_type, device, strides, 0);
+    auto tensor_meta = std::make_shared<LocalTensorMeta>(shape, strides, data_type, device, 0);
 
     // Build TensorBuffer
-    const auto& Free = [obj](char* dptr) {
-      CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
-        Py_DECREF(obj);
+    const auto& Free = [array](char* dptr) {
+      CHECK_JUST(Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+        Py_DECREF(array);
         return Maybe<void>::Ok();
       }));
     };
-    Py_INCREF(obj);  // make TensorBuffer hold ndarray
     void* data_ptr = PyArray_DATA(array);
     auto array_size_in_bytes = PyArray_NBYTES(array);
     auto tensor_data = std::make_shared<vm::TensorStorage>();
@@ -272,17 +286,17 @@ class LocalTensorSharedNumpyDataFunctor {
     auto tensor_storage = std::make_shared<TensorStorage>(tensor_data);
 
     // Build Tensor
-    auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(tensor_meta, tensor_storage,
-                                                                 /*requires_grad=*/false,
-                                                                 /*ls_leaf=*/true);
+    auto tensor_impl = std::make_shared<EagerLocalTensorImpl>(tensor_meta, tensor_storage,
+                                                              /*requires_grad=*/false,
+                                                              /*ls_leaf=*/true);
 
     // Init blob
     JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject()));
-    const auto& stream = GetDefaultStreamByDevice(device);
-    JUST(tensor_impl->eager_blob_object())->set_last_used_stream(stream);
-    JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
-    JUST(tensor_impl->eager_blob_object())->mut_blob()->reset_dptr(static_cast<char*>(data_ptr));
-    std::shared_ptr<Tensor> out(new MirroredTensor(tensor_impl));
+    const auto& stream = JUST(GetDefaultStreamByDevice(device));
+    const auto& eager_blob_object = JUST(tensor_impl->eager_blob_object());
+    JUST(eager_blob_object->init_producer_stream(stream));
+    eager_blob_object->set_last_used_stream(stream);
+    std::shared_ptr<Tensor> out(new LocalTensor(tensor_impl));
     return out;
   }
 };
@@ -291,15 +305,15 @@ class LocalTensorSharedNumpyDataFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorWithDataFunctor>("TensorWithData");
-  m.add_functor<impl::ConsistentTensorWithDataFunctor>("ConsistentTensorWithData");
+  m.add_functor<impl::GlobalTensorWithDataFunctor>("GlobalTensorWithData");
   m.add_functor<impl::TensorEmptyCtorFunctor>("TensorEmptyCtor");
-  m.add_functor<impl::ConsistentTensorEmptyCtorFunctor>("ConsistentTensorEmptyCtor");
+  m.add_functor<impl::GlobalTensorEmptyCtorFunctor>("GlobalTensorEmptyCtor");
   m.add_functor<impl::TensorWithOtherCtorFunctor>("TensorWithOtherCtor");
   m.add_functor<impl::TensorWithDataCtorFunctor>("TensorWithDataCtor");
-  m.add_functor<impl::ConsistentTensorWithDataCtorFunctor>("ConsistentTensorWithDataCtor");
+  m.add_functor<impl::GlobalTensorWithDataCtorFunctor>("GlobalTensorWithDataCtor");
   m.add_functor<impl::TensorWithShapeCtorFunctor>("TensorWithShapeCtor");
-  m.add_functor<impl::ConsistentTensorWithShapeCtorFunctor>("ConsistentTensorWithShapeCtor");
-  m.add_functor<impl::AssignLocalTensorFunctor>("AssignLocalTensorFunctor");
+  m.add_functor<impl::GlobalTensorWithShapeCtorFunctor>("GlobalTensorWithShapeCtor");
+  m.add_functor<impl::AssignLocalTensorFunctor>("AssignLocalTensor");
   m.add_functor<impl::LocalTensorSharedNumpyDataFunctor>("LocalTensorSharedNumpyData");
 }
 
