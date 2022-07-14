@@ -185,7 +185,7 @@ template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsFinite, bool, nv_bfloat16> {
   UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC bool operator()(nv_bfloat16 src) const { return isnan(__bfloat162float(src)); }
+  OF_DEVICE_FUNC bool operator()(nv_bfloat16 src) const { return isfinite(__bfloat162float(src)); }
 };
 
 #endif
