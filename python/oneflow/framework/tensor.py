@@ -81,11 +81,9 @@ def _cuda(self, device: Union[int, str, flow.device] = None):
 
 
 def _norm(self, p=None, dim=None, keepdim=False, dtype=None):
-    if type(p) == str:
+    if type(p) == str or dim != None:
         return flow._C.norm(self, p, dim, keepdim, dtype=dtype)
-    return flow._C.norm(
-        self, p, dim, keepdim, dtype=dtype, for_norm=True
-    )
+    return flow._C.norm(self, p, dim, keepdim, dtype=dtype, for_norm=True)
 
 
 def is_nonzero(input):
