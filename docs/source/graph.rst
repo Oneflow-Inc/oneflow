@@ -127,9 +127,11 @@ Block Config option
     :toctree: generated
     :nosignatures:
 
-    stage_id
     set_stage
     activation_checkpointing
+
+Save & Load Model
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. currentmodule:: oneflow.nn.Graph
 
