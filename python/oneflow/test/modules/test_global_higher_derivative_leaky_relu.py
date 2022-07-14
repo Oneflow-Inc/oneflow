@@ -55,7 +55,7 @@ def _global_leaky_relu_grad_grad_impl(test_case, placement, sbp):
     )
 
 
-class TestGlobalMathOpHigherDerivative(flow.unittest.TestCase):
+class TestGlobalLeakyReluHigherDerivative(flow.unittest.TestCase):
     @globaltest
     def test_global_leaky_relu_grad_grad(test_case):
         for placement in all_placement():
