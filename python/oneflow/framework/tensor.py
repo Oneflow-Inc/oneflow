@@ -212,7 +212,7 @@ def _mm(self, mat2):
 
 
 def _mv(self, vec):
-    return flow._C.mv(self, vec)
+    return flow._C.matrix_vector_product(self, vec)
 
 
 def _argsort(self, dim=None, descending=None):
