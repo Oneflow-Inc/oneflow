@@ -15,7 +15,7 @@ OneFlow provides two ways to accomplish `Distributed Training`:
 
 Baisc
 -------------------------------
-When you start distributed training in OneFlow,the following functions can be used.
+When you start distributed training in OneFlow, the following functions can be used.
 
 .. currentmodule:: oneflow.env
 
@@ -85,7 +85,7 @@ Code running on Node 1
 
 Get Local Tensor from Global Tensor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-With ``Tensor.to_local`` interface, you can return the `local tenso`r of the `Global Tensor` on the present device.
+With ``Tensor.to_local`` interface, you can return the local tensor of the `Global Tensor` on the present device.
 
 ::
 
