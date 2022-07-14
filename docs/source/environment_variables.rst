@@ -110,7 +110,7 @@ The default value is empty, but will receive any string.
 
 Only used when debugging because the performance would be affected, it could detect which op in the network appears nan or inf. 
 
-It will create ``CpuCheckNumericsKernelObserver`` under ``cpu`` , and ``CudaCheckNumericsKernelObserver`` `#6052 <https://github.com/Oneflow-Inc/oneflow/pull/6052>`_ under ``cuda``.
+It will create ``CpuCheckNumericsKernelObserver`` under ``cpu`` , and ``CudaCheckNumericsKernelObserver`` under ``cuda`` `#6052 <https://github.com/Oneflow-Inc/oneflow/pull/6052>`_ .
 
 Values accepted
 ^^^^^^^^^^^^^^^
@@ -214,12 +214,12 @@ Represents the size of each read from disk. `#5162 <https://github.com/Oneflow-I
 
 Values accepted
 ^^^^^^^^^^^^^^^
-The default value is empty. If an invalid string or negative number is entered, the default value would be ``32 * 1024; // 32KB``.
+The default value is empty. If an invalid string or negative number is entered, the default value would be ``32 * 1024``; 32KB.
 
 `ONEFLOW_DECODER_ENABLE_NVJPEG_HARDWARE_ACCELERATION <https://github.com/Oneflow-Inc/oneflow/blob/v0.5.0rc1/oneflow/core/kernel/image_decoder_random_crop_resize_kernel.cpp#L252>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-``NVJPEG_VER_MAJOR`` need to be bigger than 11. It can accelerate nvjpeg hardware, warm up jpeg decoder and hw_jpeg decoder, `#5851 <https://github.com/Oneflow-Inc/oneflow/pull/5851>`_. 
+``NVJPEG_VER_MAJOR`` need to be bigger than ``11``. It can accelerate nvjpeg hardware, warm up jpeg decoder and hw_jpeg decoder, `#5851 <https://github.com/Oneflow-Inc/oneflow/pull/5851>`_. 
 
 Hardware JPEG decoder and NVIDIA nvJPEG library on NVIDIA A100 GPUs
 
@@ -516,7 +516,7 @@ Read the size of the module when communicating.
 
 Values accepted
 ^^^^^^^^^^^^^^^
-The default value is ``8388608``(8M)
+The default value is ``8388608`` (8M)
 
 ONEFLOW_TENSOR_BUFFER_ALIGNED_SIZE
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
