@@ -986,11 +986,6 @@
     "Tensor (Tensor input, Tensor mat2) => MatMulNoBroadCast"
   bind_python: True
 
-- name: "mv"
-  signature:
-    "Tensor (Tensor input, Tensor vec) => Mv"
-  bind_python: True
-
 - name: "fused_mlp"
   signature:
     "Tensor (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation) => FusedMLP"
@@ -1030,6 +1025,36 @@
     "Tensor (Tensor a, Tensor b, Bool transpose_a=False, Bool transpose_b=False,
     Double alpha=1.0) => BatchMatMul"
   bind_python: True
+
+- name: "matrix_vector_product"
+  signature: 
+    "Tensor (Tensor input, Tensor vec) => MatrixVectorProduct"
+  bind_python: True
+
+- name: "matrix_vector_product_grad_a"
+  signature: 
+    "Tensor (Tensor dy, Tensor b) => MatrixVectorProductGradA"
+  bind_python: False
+
+- name: "matrix_vector_product_grad_b"
+  signature: 
+    "Tensor (Tensor dy, Tensor a) => MatrixVectorProductGradB"
+  bind_python: False
+
+- name: "vector_matrix_product"
+  signature: 
+    "Tensor (Tensor vec, Tensor input) => VectorMatrixProduct"
+  bind_python: False
+
+- name: "vector_matrix_product_grad_a"
+  signature: 
+    "Tensor (Tensor dy, Tensor b) => VectorMatrixProductGradA"
+  bind_python: False
+
+- name: "vector_matrix_product_grad_b"
+  signature: 
+    "Tensor (Tensor dy, Tensor a) => VectorMatrixProductGradB"
+  bind_python: False
 
 - name: "tensordot"
   signature: [
