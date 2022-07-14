@@ -258,8 +258,10 @@ class CropMirrorNormalize(Module):
     Performs fused cropping, normalization, format conversion
     (NHWC to NCHW) if desired, and type casting.
 
-    Normalization takes the input images and produces the output by using the following formula::
-    output = scale * (input - mean) / std + shift
+    Normalization takes the input images and produces the output by using the following formula:
+    
+    .. math::
+        output = (input - mean) / std
 
     .. note::
         If no cropping arguments are specified, only mirroring and normalization will occur.
@@ -270,7 +272,7 @@ class CropMirrorNormalize(Module):
         color_space (str, optional): The color space of the input image. Default: "BGR"
         output_layout (str, optional): Tensor data layout for the output. Default: "NCHW"
         crop_h (int, optional): Cropping the window height (in pixels). Default: 0
-        crop_w (int, optional): Cropping window width (in pixels). Default: 0,
+        crop_w (int, optional): Cropping window width (in pixels). Default: 0
         crop_pos_y (float, optional): Normalized (0.0 - 1.0) vertical position of the start of the cropping window (typically, the upper left corner). Default: 0.5
         crop_pos_x (float, optional): Normalized (0.0 - 1.0) horizontal position of the cropping window (upper left corner). Default: 0.5
         mean (float or list of float, optional): Mean pixel values for image normalization. Default: [0.0],
