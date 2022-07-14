@@ -47,8 +47,8 @@ class EyeDevcieFunctor {
                            const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("rows", JUST(rows.As<int64_t>())));
-    JUST(attrs.SetAttr<int64_t>("cols", JUST(cols.value_or(rows).As<int64_t>())));
+    JUST(attrs.SetAttr<int64_t>("rows", rows.As<int64_t>()));
+    JUST(attrs.SetAttr<int64_t>("cols", cols.value_or(rows).As<int64_t>()));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     OpExprInterpContext ctx(attrs);
     ctx.device = device;
@@ -71,9 +71,9 @@ class EyeDeviceStrFunctor {
   }
 };
 
-class ConsistentEyeSbpListFunctor {
+class GlobalEyeSbpListFunctor {
  public:
-  ConsistentEyeSbpListFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
+  GlobalEyeSbpListFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Symbol<DType>& dtype, const bool& requires_grad,
                            const Symbol<ParallelDesc>& placement,
@@ -89,8 +89,8 @@ class ConsistentEyeSbpListFunctor {
           << "sbp of eye should be broadcast only";
     }
 
-    JUST(attrs.SetAttr<int64_t>("rows", JUST(rows.As<int64_t>())));
-    JUST(attrs.SetAttr<int64_t>("cols", JUST(cols.value_or(rows).As<int64_t>())));
+    JUST(attrs.SetAttr<int64_t>("rows", rows.As<int64_t>()));
+    JUST(attrs.SetAttr<int64_t>("cols", cols.value_or(rows).As<int64_t>()));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
@@ -112,7 +112,7 @@ class ConsistentEyeSbpListFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ConsistentEyeSbpFunctor {
+class GlobalEyeSbpFunctor {
  public:
   Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Symbol<DType>& dtype, const bool& requires_grad,
@@ -128,8 +128,8 @@ class ConsistentEyeSbpFunctor {
 using namespace impl;
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<EyeDevcieFunctor, EyeDeviceStrFunctor, ConsistentEyeSbpListFunctor,
-                ConsistentEyeSbpFunctor>("Eye");
+  m.add_functor<EyeDevcieFunctor, EyeDeviceStrFunctor, GlobalEyeSbpListFunctor,
+                GlobalEyeSbpFunctor>("Eye");
 };
 
 }  // namespace functional

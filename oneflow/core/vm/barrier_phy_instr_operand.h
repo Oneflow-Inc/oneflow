@@ -28,11 +28,9 @@ class BarrierPhyInstrOperand : public PhyInstrOperand {
   BarrierPhyInstrOperand(const std::function<void()>& callback) : callback_(callback) {
     stream_sequential_dependence_ = nullptr;
   }
-  ~BarrierPhyInstrOperand() {
-    // Make sure barrier callbacks run after all objects of previous instructions are destructed in
-    // Callback thread.
-    callback_();
-  }
+  ~BarrierPhyInstrOperand() {}
+
+  void callback() const { return callback_(); }
 
   const DependenceVector& input_dependences() const override {
     static DependenceVector dependences{};
@@ -42,6 +40,8 @@ class BarrierPhyInstrOperand : public PhyInstrOperand {
     static DependenceVector dependences{};
     return dependences;
   }
+
+  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {}
 
  private:
   std::function<void()> callback_;

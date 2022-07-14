@@ -19,11 +19,11 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
-#include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace one {
@@ -39,7 +39,7 @@ Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inp
   APPLY_IF(FeedVariableOp);
   APPLY_IF(FetchOutputOp);
   APPLY_IF(UserOp);
-  APPLY_IF(ConsistentToConsistentOp);
+  APPLY_IF(GlobalToGlobalOp);
   APPLY_IF(FunctionOp);
   APPLY_IF(ImageDecoderRandomCropResizeOp);
 #undef APPLY_IF
@@ -57,11 +57,11 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
 
   APPLY_IF(UserOp);
   APPLY_IF(VariableOp);
-  APPLY_IF(CastToMirroredOp);
-  APPLY_IF(CastFromMirroredOp);
-  APPLY_IF(ConsistentToConsistentOp);
-  APPLY_IF(CastToConsistentOp);
-  APPLY_IF(CastFromConsistentOp);
+  APPLY_IF(CastToLocalOp);
+  APPLY_IF(CastFromLocalOp);
+  APPLY_IF(GlobalToGlobalOp);
+  APPLY_IF(CastToGlobalOp);
+  APPLY_IF(CastFromGlobalOp);
   APPLY_IF(DistributeSplitOp);
   APPLY_IF(DistributeCloneOp);
   APPLY_IF(DistributeConcatOp);
@@ -91,10 +91,11 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
         std::any_of(inputs.begin(), inputs.end(),
                     [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
   }
+
 // NOTE: if this op not support stride, then need to tensor->contiguous()
 #define HANDLE_NON_CONTIGUOUS_INPUT(tensor_tuple_ptr)                                       \
   TensorTuple tmp_inputs;                                                                   \
-  if (!JUST(op_expr.SupportNonContiguous())) {                                              \
+  if (!LazyMode::is_enabled() && !JUST(op_expr.SupportNonContiguous())) {                   \
     tmp_inputs.resize(inputs.size());                                                       \
     for (size_t i = 0; i < inputs.size(); i++) { tmp_inputs[i] = inputs[i]->contiguous(); } \
     tensor_tuple_ptr = &tmp_inputs;                                                         \
@@ -105,11 +106,14 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
 
   {
     autograd::AutoGradMode mode(false);
+    const bool inplace = ctx.inplace.value_or(false);
+    if (inplace) { *outputs = *inputs_ptr; }
     JUST(internal_->Apply(op_expr, *inputs_ptr, outputs, ctx));
   }
   // Lazy mode will construct backward compute graph in passes, so disable autograd if lazy mode.
   std::shared_ptr<OpExprGradClosure> grad_closure(nullptr);
   if (requires_grad && !LazyMode::is_enabled()) {
+    OF_PROFILER_RANGE_PUSH("autograd.GetOrCreateOpGradClosure");
     grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
     auto backward_fn = std::make_shared<BackwardFunction>();
     backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
@@ -119,8 +123,11 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
       return Maybe<void>::Ok();
     };
     backward_fn->status = [=]() { return grad_closure->state()->SavedTensors().size() > 0; };
+    OF_PROFILER_RANGE_POP();
+    OF_PROFILER_RANGE_PUSH("autograd.AddNode");
     JUST(GetThreadLocalAutogradEngine()->AddNode(op_expr.op_type_name() + "_backward", backward_fn,
                                                  *inputs_ptr, outputs));
+    OF_PROFILER_RANGE_POP();
   }
   // Update outputs autograd meta
   // Note: if requires_grad is True, we will create a new autograd meta for each output
@@ -153,7 +160,9 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
           requires_grad && IsSupportRequireGradDataType(output->dtype()->data_type())));
     }
   }
+
   if (requires_grad && !LazyMode::is_enabled()) {
+    OF_PROFILER_RANGE_GUARD("autograd.Capture");
     // Capture inputs and outputs after `AddBackwardFuncPtr` because of that grad function
     // node has been attached to them.
     JUST(grad_closure->Capture(*inputs_ptr, *outputs, ctx));

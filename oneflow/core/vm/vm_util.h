@@ -19,13 +19,14 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/vm_sync.h"
 
 namespace oneflow {
 namespace vm {
 
-class InstructionMsg;
+class Instruction;
 
-Maybe<void> Run(vm::InstructionMsgList* instr_msg_list);
+Maybe<void> Run(vm::InstructionList* instruction_list);
 Maybe<void> ClusterSync();
 Maybe<void> CurrentRankSync();
 

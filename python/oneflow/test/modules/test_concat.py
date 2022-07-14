@@ -134,7 +134,7 @@ class TestModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_cat_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
@@ -160,7 +160,7 @@ class TestModule(flow.unittest.TestCase):
             input_list.append(y)
         return torch.cat(tuple(input_list), random(0, 2).to(int))
 
-    @autotest(n=10, auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_concat_with_input_0_size_data(test_case):
         device = random_device()
         x = random_tensor(4, 2, 3, 2, 4).to(device)
@@ -168,7 +168,7 @@ class TestModule(flow.unittest.TestCase):
         z = torch.cat((x, y), dim=2)
         return z
 
-    @autotest(n=10, auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_concat_with_output_0_size_data(test_case):
         device = random_device()
         x = random_tensor(4, 2, 0, 2, 4).to(device)
@@ -177,13 +177,13 @@ class TestModule(flow.unittest.TestCase):
         z = torch.cat((x, y), dim=dim)
         return z
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_cat_bool_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=2, dim0=random(), dim1=random()).to(device, torch.bool)
         return torch.cat((x, x, x), random(0, 2).to(int))
 
-    @autotest(n=10, check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_cat_only_one_tensor(test_case):
         device = random_device()
         x = random_tensor(4, 2, 3, random(0, 3)).to(device)

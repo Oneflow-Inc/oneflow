@@ -46,6 +46,17 @@ Error&& Error::AddStackFrame(const std::string& file, const int64_t& line,
   return std::move(*this);
 }
 
+void Error::Merge(const Error& other) {
+  std::string error_summary{error_proto_->error_summary()};
+  std::string msg{error_proto_->msg()};
+  error_proto_->MergeFrom(*other.error_proto_);
+  // MergeFrom will overwrite singular field, so restore it.
+  if (!error_summary.empty()) {
+    error_proto_->set_error_summary(error_summary + " " + error_proto_->error_summary());
+  }
+  if (!msg.empty()) { error_proto_->set_msg(msg + " " + error_proto_->msg()); }
+}
+
 Error::operator std::string() const { return error_proto_->DebugString(); }
 
 Error Error::Ok() { return std::make_shared<ErrorProto>(); }
@@ -219,6 +230,12 @@ Error Error::RuntimeError() {
   return error;
 }
 
+Error Error::OutOfMemoryError() {
+  auto error = std::make_shared<ErrorProto>();
+  error->mutable_out_of_memory_error();
+  return error;
+}
+
 Error Error::BoxingNotSupportedError() {
   auto error = std::make_shared<ErrorProto>();
   error->mutable_boxing_not_supported_error();
@@ -310,13 +327,18 @@ std::string GetErrorString(const std::shared_ptr<ErrorProto>& error) {
   if (IsInDebugMode()) {
     return GetStackedErrorString(error);
   } else {
-    return error->msg();
+    if (error->msg().empty() && error->stack_frame().size() > 0) {
+      return error->stack_frame(0).error_msg();
+    } else {
+      return error->msg();
+    }
   }
 }
 
 void ThrowError(const std::shared_ptr<ErrorProto>& error) {
   *MutThreadLocalError() = error;
   if (error->has_runtime_error()) { throw RuntimeException(GetErrorString(error)); }
+  if (error->has_type_error()) { throw TypeException(GetErrorString(error)); }
   if (error->has_index_error()) { throw IndexException(GetErrorString(error)); }
   if (error->has_unimplemented_error()) { throw NotImplementedException(GetErrorString(error)); }
   throw Exception(GetStackedErrorString(error));

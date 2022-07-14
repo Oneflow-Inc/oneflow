@@ -44,7 +44,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const Scalar& l2) -> Maybe<Tensor> {
                   MutableAttrMap attrs;
-                  JUST(attrs.SetAttr<double>("l2", JUST(l2.As<double>())));
+                  JUST(attrs.SetAttr<double>("l2", l2.As<double>()));
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
                 });
   m.add_functor(
@@ -104,7 +104,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       [](const std::shared_ptr<OpExpr>& op, int64_t batch_size, Scalar probability, int64_t seed,
          bool has_seed, const Optional<Symbol<Device>>& device) -> Maybe<Tensor> {
         MutableAttrMap attrs;
-        JUST(attrs.SetAttr("probability", JUST(probability.As<float>())));
+        JUST(attrs.SetAttr("probability", probability.As<float>()));
         JUST(attrs.SetAttr("batch_size", batch_size));
         JUST(attrs.SetAttr("seed", seed));
         JUST(attrs.SetAttr("has_seed", has_seed));
@@ -115,7 +115,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                    int64_t seed, bool has_seed, const Symbol<ParallelDesc>& placement,
                    const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
                   MutableAttrMap attrs;
-                  JUST(attrs.SetAttr("probability", JUST(probability.As<float>())));
+                  JUST(attrs.SetAttr("probability", probability.As<float>()));
                   JUST(attrs.SetAttr("batch_size", batch_size));
                   JUST(attrs.SetAttr("seed", seed));
                   JUST(attrs.SetAttr("has_seed", has_seed));
@@ -464,13 +464,17 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor(
       "DispatchMomentumUpdate",
       [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs, float learning_rate,
-         double scale, float l1, float l2, float beta, float weight_decay) -> Maybe<void> {
+         double scale, float l1, float l2, float beta, float dampening, bool nesterov,
+         bool maximize, float weight_decay) -> Maybe<void> {
         MutableAttrMap attrs;
         JUST(attrs.SetAttr("learning_rate_val", learning_rate));
         JUST(attrs.SetAttr("scale", scale));
         JUST(attrs.SetAttr("l1", l1));
         JUST(attrs.SetAttr("l2", l2));
         JUST(attrs.SetAttr("beta", beta));
+        JUST(attrs.SetAttr("dampening", dampening));
+        JUST(attrs.SetAttr("nesterov", nesterov));
+        JUST(attrs.SetAttr("maximize", maximize));
         JUST(attrs.SetAttr("weight_decay", weight_decay));
         JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
         return Maybe<void>::Ok();

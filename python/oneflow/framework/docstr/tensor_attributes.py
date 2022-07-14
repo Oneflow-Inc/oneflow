@@ -97,9 +97,9 @@ oneflow.sbp.sbp.__doc__ = r"""
 
     ``oneflow.sbp`` includes three types:
 
-        - oneflow.sbp.split(axis)
+        - oneflow.sbp.split(dim)
 
-          Indicates that the global tensor is evenly divided according to the dimension `axis` and distributed on each rank.
+          Indicates that the global tensor is evenly divided according to the dimension `dim` and distributed on each rank.
 
         - oneflow.sbp.broadcast()
 
@@ -120,7 +120,7 @@ oneflow.sbp.sbp.__doc__ = r"""
 
         >>> s = flow.sbp.split(0)
         >>> s
-        oneflow.sbp.split(axis=0)
+        oneflow.sbp.split(dim=0)
         >>> b = flow.sbp.broadcast()
         >>> b
         oneflow.sbp.broadcast
