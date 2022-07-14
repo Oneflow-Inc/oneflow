@@ -679,8 +679,8 @@ class Softplus(Module):
 
 
 class Hardswish(Module):
-    """Applies the hardswish function, element-wise, as described in the paper:
-    `Searching for MobileNetV3`_.
+    """Applies the hardswish function, element-wise, as described in the paper `Searching for MobileNetV3
+    <https://arxiv.org/abs/1905.02244>`__.
 
     .. math::
         \\text{Hardswish}(x) = \\begin{cases}
@@ -709,9 +709,7 @@ class Hardswish(Module):
         >>> out = hardswish(input)
         >>> out
         tensor([-0.2083,  0.0000,  0.2917], dtype=oneflow.float32)
-
-    .. _`Searching for MobileNetV3`:
-        https://arxiv.org/abs/1905.02244
+        
     """
 
     def __init__(self, inplace: bool = False):

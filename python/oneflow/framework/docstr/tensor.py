@@ -1014,6 +1014,20 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.neg,
+    """
+    See :func:`oneflow.neg`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.norm,
+    """
+    See :func:`oneflow.norm`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.fill_,
     """
     Tensor.fill_(value) → Tensor
@@ -1218,6 +1232,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.asinh,
+    """
+    See :func:`oneflow.asinh`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.arcsin,
     """
     See :func:`oneflow.arcsin`
@@ -1241,6 +1262,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.sin_,
+    """
+    See :func:`oneflow.sin_`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.cos,
     """
     See :func:`oneflow.cos`
@@ -1258,6 +1286,13 @@ add_docstr(
     oneflow.Tensor.log,
     """
     See :func:`oneflow.log`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.log2,
+    """
+    See :func:`oneflow.log2`
     """,
 )
 
@@ -1554,6 +1589,19 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.Tensor.cumprod,
+    """
+    See :func:`oneflow.cumprod`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.cumsum,
+    """
+    See :func:`oneflow.cumsum`
+    """,
+)
 
 add_docstr(
     oneflow.Tensor.repeat,
@@ -1722,6 +1770,27 @@ add_docstr(
     input.min(dim, index) -> Tensor
 
     See :func:`oneflow.min`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.maximum,
+    """
+    See :func:`oneflow.maximum`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.median,
+    """
+    See :func:`oneflow.median`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.minimum,
+    """
+    See :func:`oneflow.minimum`
     """,
 )
 
