@@ -133,7 +133,7 @@ class EagerBlobObject final : public user_op::Tensor,
                "possible. Almost all methods of `Blob` are also in `EagerBlobObject`.")]] Blob*
   blob();
 
-  Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx);
+  Maybe<void> TryAllocateBlobBodyMemory(vm::Allocator* allocator);
   Maybe<void> DeallocateBlobDataPtr() {
     tensor_storage_->Release();
     tensor_storage_.reset(new TensorStorage);
