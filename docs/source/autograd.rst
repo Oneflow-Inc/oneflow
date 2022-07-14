@@ -27,12 +27,13 @@ Locally disabling gradient computation
     set_grad_enabled
     inference_mode
 
-Default gradient layouts
-^^^^^^^^^^^^^^^^^^^^^^^^
+.. TODO(wyg): uncomment this after aligning accumulate grad
+.. Default gradient layouts
+.. ^^^^^^^^^^^^^^^^^^^^^^^^
 
-A ``param.grad`` is accumulated by replacing ``.grad`` with a 
-new tensor ``.grad + new grad`` during :func:`oneflow.autograd.backward()` or 
-:func:`oneflow.Tensor.backward()`.
+.. A ``param.grad`` is accumulated by replacing ``.grad`` with a 
+.. new tensor ``.grad + new grad`` during :func:`oneflow.autograd.backward()` or 
+.. :func:`oneflow.Tensor.backward()`.
 
 In-place operations on Tensors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
