@@ -33,7 +33,9 @@ namespace oneflow {
 /*static*/ Maybe<void> SigmoidCrossEntropyOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
-  CHECK_EQ_OR_RETURN(label_desc.shape(), prediction_desc.shape());
+  CHECK_EQ_OR_RETURN(label_desc.shape(), prediction_desc.shape())
+      << Error::RuntimeError() << "The size of label " << label_desc.shape()
+      << " must match the size of prediction " << prediction_desc.shape();
   user_op::TensorDesc* loss_desc = ctx->OutputTensorDesc("loss", 0);
   *loss_desc->mut_shape() = prediction_desc.shape();
   *loss_desc->mut_is_dynamic() = prediction_desc.is_dynamic();
@@ -71,8 +73,12 @@ namespace oneflow {
   const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
   const user_op::TensorDesc& loss_diff_desc = ctx->InputTensorDesc("loss_diff", 0);
-  CHECK_EQ_OR_RETURN(label_desc.shape(), prediction_desc.shape());
-  CHECK_EQ_OR_RETURN(loss_diff_desc.shape(), prediction_desc.shape());
+  CHECK_EQ_OR_RETURN(label_desc.shape(), prediction_desc.shape())
+      << Error::RuntimeError() << "The size of label " << label_desc.shape()
+      << " must match the size of prediction " << prediction_desc.shape();
+  CHECK_EQ_OR_RETURN(loss_diff_desc.shape(), prediction_desc.shape())
+      << Error::RuntimeError() << "The size of loss_diff " << loss_diff_desc.shape()
+      << " must match the size of prediction " << prediction_desc.shape();
   user_op::TensorDesc* prediction_diff = ctx->OutputTensorDesc("prediction_diff", 0);
   *prediction_diff->mut_shape() = prediction_desc.shape();
   *prediction_diff->mut_is_dynamic() = prediction_desc.is_dynamic();
