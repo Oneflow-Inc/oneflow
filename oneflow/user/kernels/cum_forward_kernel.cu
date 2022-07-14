@@ -202,13 +202,13 @@ class GpuCumKernel : public user_op::OpKernel {
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    // Judge whether tensor has 0 size dimension first
     const auto* in = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* out = ctx->Tensor4ArgNameAndIndex("y", 0);
     const ShapeView& in_shape = in->shape_view();
     const int64_t dim = ctx->Attr<int64_t>("dim");
     const int64_t dim_size = in_shape.At(dim);
 
+    // Judge whether tensor has 0 size dimension first.
     auto elem_cnt = in_shape.elem_cnt();
     if (!elem_cnt) { return; }
 
