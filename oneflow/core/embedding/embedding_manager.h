@@ -42,13 +42,22 @@ inline bool UseDynamicMemoryAllocation() {
 
 #ifdef WITH_CUDA
 
+class TmpBufferAllocator {
+ public:
+  TmpBufferAllocator() = default;
+  virtual ~TmpBufferAllocator() = default;
+
+  virtual void Allocate(void** ptr, size_t size) = 0;
+  virtual void Free(void* ptr) = 0;
+};
+
 class EmbeddingState {
  public:
   EmbeddingState() = default;
   virtual ~EmbeddingState() = default;
 
-  virtual void OnEmbeddingPrefetchStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
-  virtual void OnEmbeddingPrefetchEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
+  virtual std::unique_ptr<TmpBufferAllocator> NewTmpBufferAllocator(
+      user_op::KernelComputeContext* ctx) = 0;
 
   virtual void OnEmbeddingLookupStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
   virtual void* LookupUniqueValues(int64_t iter) = 0;
@@ -58,10 +67,6 @@ class EmbeddingState {
   virtual void OnEmbeddingShuffleStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
   virtual const void* EmbeddingShuffleCurRankEmbeddings(int64_t iter) = 0;
   virtual void OnEmbeddingShuffleEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
-
-  virtual void OnEmbeddingGradientShuffleStart(user_op::KernelComputeContext* ctx,
-                                               int64_t iter) = 0;
-  virtual void OnEmbeddingGradientShuffleEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
 
   virtual void OnEmbeddingUpdateStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
   virtual const void* EmbeddingUpdateUniqueEmbeddings(int64_t iter) = 0;
@@ -75,13 +80,6 @@ class EmbeddingState {
   virtual void OnEmbeddingFusedUpdatePutStart(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
   virtual const void* EmbeddingFusedUpdatePutUniqueEmbeddings(int64_t iter) = 0;
   virtual void OnEmbeddingFusedUpdatePutEnd(user_op::KernelComputeContext* ctx, int64_t iter) = 0;
-
-  virtual void AllocPrefetchTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr,
-                                      size_t size) = 0;
-  virtual void FreePrefetchTmpBuffer(user_op::KernelComputeContext* ctx, void* ptr) = 0;
-
-  virtual void AllocTmpBuffer(user_op::KernelComputeContext* ctx, void** ptr, size_t size) = 0;
-  virtual void FreeTmpBuffer(user_op::KernelComputeContext* ctx, void* ptr) = 0;
 
   virtual void SetIdFinalNumUnique(uint32_t final_num_unique, int64_t iter) = 0;
   virtual void SetIdNumUniqueMatrix(const std::vector<uint32_t>& num_unique_matrix,
