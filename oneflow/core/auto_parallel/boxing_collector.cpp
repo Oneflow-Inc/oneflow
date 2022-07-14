@@ -82,6 +82,50 @@ int32_t TotalNumSplit(const NdSbp& nd_sbp, const ParallelDesc& parallel_desc) {
   return total_num_split;
 }
 
+// Dealing with 1D sbp to 1D sbp
+// Specifically, S -> P.
+Maybe<void> AskSbpCombinationFor1DSbp(const NdSbp& sbp_producer, const NdSbp& sbp_consumer,
+                                      const ParallelDesc& producer_parallel_desc,
+                                      const ParallelDesc& consumer_parallel_desc,
+                                      std::vector<NdSbp>& middle_sbps, int32_t* diag_node_pos) {
+  if (sbp_consumer.sbp_parallel(0).has_partial_sum_parallel()) {
+    // Support [4]: P <--> [2, 2]: (P, P)
+    // Support {0, 1, 2, 3}: P <--> {2, 0, 6, 7}: (P, P)
+    if (producer_parallel_desc.parallel_num() == consumer_parallel_desc.parallel_num()
+        && sbp_producer.sbp_parallel(0).has_partial_sum_parallel()) {
+      return Maybe<void>::Ok();
+    }
+
+    if (!sbp_producer.sbp_parallel(0).has_broadcast_parallel()) {
+      // S -> B -> P (Large cost!)
+      // TODO: Please implement S -> P directly.
+      // We do not support [3]: P <--> [2, 2]: (P, P) as well.
+
+      int32_t hierarchy_size = 0;
+      if (producer_parallel_desc.hierarchy()->elem_cnt()
+          < consumer_parallel_desc.hierarchy()->elem_cnt()) {
+        // The diagonal node uses the parallel description from producer
+        // (S, S) -> (B, B) -> P/(P, P) or S -> B -> P/(P, P)
+        *diag_node_pos = 1;
+        hierarchy_size = producer_parallel_desc.hierarchy()->NumAxes();
+      } else {
+        // The diagonal node uses the parallel description from consumer
+        // S/(S, S) -> B -> P or S/(S, S) -> (B, B) -> (P, P)
+        *diag_node_pos = 0;
+        hierarchy_size = consumer_parallel_desc.hierarchy()->NumAxes();
+      }
+
+      NdSbp broadcast_nd;
+      for (int32_t i = 0; i < hierarchy_size; i++) {
+        broadcast_nd.add_sbp_parallel();
+        broadcast_nd.mutable_sbp_parallel(i)->mutable_broadcast_parallel();
+      }
+      middle_sbps.emplace_back(broadcast_nd);
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 // A constructor with init, designed for uncustomized boxing collector
@@ -513,58 +557,25 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
   if (ParseBooleanFromEnv("ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK", false)) {
     return Maybe<void>::Ok();
   }
+  if (producer_parallel_desc == consumer_parallel_desc && sbp_producer == sbp_consumer) {
+    return Maybe<void>::Ok();
+  }
 
   // Dealing with 1D sbp to 1D sbp
-  // Specifically, S -> P.
   if (Is1dSbp(sbp_producer) && Is1dSbp(sbp_consumer)) {
-    if (sbp_consumer.sbp_parallel(0).has_partial_sum_parallel()) {
-      // Support [4]: P <--> [2, 2]: (P, P)
-      // Support {0, 1, 2, 3}: P <--> {2, 0, 6, 7}: (P, P)
-      if (producer_parallel_desc.parallel_num() == consumer_parallel_desc.parallel_num()
-          && sbp_producer.sbp_parallel(0).has_partial_sum_parallel()) {
-        return Maybe<void>::Ok();
-      }
-
-      if (!sbp_producer.sbp_parallel(0).has_broadcast_parallel()) {
-        // S -> B -> P (Large cost!)
-        // TODO: Please implement S -> P directly.
-        // We do not support [3]: P <--> [2, 2]: (P, P) as well.
-
-        int32_t hierarchy_size = 0;
-        if (producer_parallel_desc.hierarchy()->elem_cnt()
-            < consumer_parallel_desc.hierarchy()->elem_cnt()) {
-          // The diagonal node uses the parallel description from producer
-          // (S, S) -> (B, B) -> P/(P, P) or S -> B -> P/(P, P)
-          *diag_node_pos = 1;
-          hierarchy_size = producer_parallel_desc.hierarchy()->NumAxes();
-        } else {
-          // The diagonal node uses the parallel description from consumer
-          // S/(S, S) -> B -> P or S/(S, S) -> (B, B) -> (P, P)
-          *diag_node_pos = 0;
-          hierarchy_size = consumer_parallel_desc.hierarchy()->NumAxes();
-        }
-
-        NdSbp broadcast_nd;
-        for (int32_t i = 0; i < hierarchy_size; i++) {
-          broadcast_nd.add_sbp_parallel();
-          broadcast_nd.mutable_sbp_parallel(i)->mutable_broadcast_parallel();
-        }
-        middle_sbps.emplace_back(broadcast_nd);
-      }
-    }
-    // No middle nodes for another 1d-sbp combinations
+    JUST(AskSbpCombinationFor1DSbp(sbp_producer, sbp_consumer, producer_parallel_desc,
+                                   consumer_parallel_desc, middle_sbps, diag_node_pos));
+    // No middle nodes for the other 1d-sbp combinations
     return Maybe<void>::Ok();
   }
 
 #ifdef WITH_CUDA
-  if (producer_parallel_desc == consumer_parallel_desc && sbp_producer == sbp_consumer) {
-    return Maybe<void>::Ok();
-  }
   static const bool enable_general_basic_communication =
-      Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
-      || ParseBooleanFromEnv("ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION", false);
+      ParseBooleanFromEnv("ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION", false);
   // Use a general basic communication if no P in the consumer
-  if (enable_general_basic_communication && (!NdSbpHasPartialParallel(sbp_consumer))
+  if ((Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
+       || enable_general_basic_communication)
+      && (!NdSbpHasPartialParallel(sbp_consumer))
       && producer_parallel_desc.device_type() == DeviceType::kCUDA
       && consumer_parallel_desc.device_type() == DeviceType::kCUDA) {
     if (NdSbpHasPartialParallel(sbp_producer) && NdSbpHasBroadcastParallel(sbp_consumer)) {
