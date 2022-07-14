@@ -1,5 +1,9 @@
 oneflow.optim
 ===================================
+
+The documentation is referenced from: 
+https://pytorch.org/docs/1.10/optim.html
+
 oneflow.optim is a package implementing various optimization algorithms. Most commonly used methods are already supported, and the interface is general enough, so that more sophisticated ones can be also easily integrated in the future.
 
 How to use an optimizer
@@ -25,8 +29,12 @@ you can specify optimizer-specific options such as the learning rate, weight dec
     
 Example::
 
+    import oneflow
+    import oneflow.nn as nn
+    import oneflow.optim as optim
+
+    model = nn.Linear(16, 3)
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
-    optimizer = optim.Adam([var1, var2], lr=0.0001)
 
 Per-parameter options
 ^^^^^^^^^^^^^^^^^^^^^
@@ -48,10 +56,32 @@ as optimization options for this group.
 
 For example, this is very useful when one wants to specify per-layer learning rates::
 
-    optim.SGD([
-                    {'params': model.base.parameters()},
-                    {'params': model.classifier.parameters(), 'lr': 1e-3}
-                ], lr=1e-2, momentum=0.9)
+    import oneflow.nn as nn
+    import oneflow.optim as optim
+
+
+    class Model(nn.Module):
+        def __init__(self):
+            super(Model, self).__init__()
+            self.base = nn.Linear(64, 32)
+            self.classifier = nn.Linear(32, 10)
+
+        def forward(self, x):
+            out = self.base(x)
+            out = self.classifier(out)
+            return out
+
+
+    model = Model()
+    optim.SGD(
+        [
+            {"params": model.base.parameters()},
+            {"params": model.classifier.parameters(), "lr": 1e-3},
+        ],
+        lr=1e-2,
+        momentum=0.9,
+    )
+
 
 This means that ``model.base``'s parameters will use the default learning rate of ``1e-2``,
 ``model.classifier``'s parameters will use a learning rate of ``1e-3``, and a momentum of
@@ -72,31 +102,49 @@ called once the gradients are computed using e.g.
 
 Example::
 
-    for input, target in dataset:
-        optimizer.zero_grad()
-        output = model(input)
-        loss = loss_fn(output, target)
-        loss.backward()
-        optimizer.step()
+    import oneflow
+    import oneflow.nn as nn
+    import oneflow.nn.functional as F
+    import oneflow.optim as optim
+    from oneflow.utils.data import Dataset, DataLoader
 
-``optimizer.step(closure)``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Some optimization algorithms such as Conjugate Gradient and LBFGS need to
-reevaluate the function multiple times, so you have to pass in a closure that
-allows them to recompute your model. The closure should clear the gradients,
-compute the loss, and return it.
+    class CustomDataset(Dataset):
+        def __init__(self, num):
+            self.inputs = oneflow.randn(num, 1)
+            self.targets = oneflow.sin(self.inputs)
 
-Example::
+        def __len__(self):
+            return self.inputs.shape[0]
 
-    for input, target in dataset:
-        def closure():
+        def __getitem__(self, index):
+            return self.inputs[index], self.targets[index]
+
+
+    class Model(nn.Module):
+        def __init__(self, input_size):
+            super(Model, self).__init__()
+            self.linear1 = nn.Linear(input_size, 64)
+            self.linear2 = nn.Linear(64, input_size)
+
+        def forward(self, x):
+            out = self.linear1(x)
+            return self.linear2(F.relu(out))
+
+
+    dataset = CustomDataset(10000)
+    dataloader = DataLoader(dataset, batch_size=10)
+    model = Model(1)
+    loss_fn = nn.MSELoss()
+    optimizer = optim.SGD(model.parameters(), lr=1e-3)
+
+    for epoch in range(100):
+        for input, target in dataloader:
             optimizer.zero_grad()
             output = model(input)
             loss = loss_fn(output, target)
             loss.backward()
-            return loss
-        optimizer.step(closure)
+            optimizer.step()
 
 .. _optimizer-algorithms:
 
@@ -143,12 +191,45 @@ should write your code this way:
 
 Example::
 
-    model = [Parameter(oneflow.randn(2, 2, requires_grad=True))]
-    optimizer = SGD(model, 0.1)
-    scheduler = ExponentialLR(optimizer, gamma=0.9)
+    import oneflow
+    import oneflow.nn as nn
+    import oneflow.nn.functional as F
+    import oneflow.optim as optim
+    from oneflow.utils.data import Dataset, DataLoader
+
+
+    class CustomDataset(Dataset):
+        def __init__(self, num):
+            self.inputs = oneflow.randn(num, 1)
+            self.targets = oneflow.sin(self.inputs)
+
+        def __len__(self):
+            return self.inputs.shape[0]
+
+        def __getitem__(self, index):
+            return self.inputs[index], self.targets[index]
+
+
+    class Model(nn.Module):
+        def __init__(self, input_size):
+            super(Model, self).__init__()
+            self.linear1 = nn.Linear(input_size, 64)
+            self.linear2 = nn.Linear(64, input_size)
+
+        def forward(self, x):
+            out = self.linear1(x)
+            return self.linear2(F.relu(out))
+
+
+    dataset = CustomDataset(10000)
+    dataloader = DataLoader(dataset, batch_size=10)
+    model = Model(1)
+    loss_fn = nn.MSELoss()
+    optimizer = optim.SGD(model.parameters(), lr=1e-3)
+    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
 
     for epoch in range(20):
-        for input, target in dataset:
+        for input, target in dataloader:
             optimizer.zero_grad()
             output = model(input)
             loss = loss_fn(output, target)
@@ -156,19 +237,51 @@ Example::
             optimizer.step()
         scheduler.step()
 
-Most learning rate schedulers can be called back-to-back (also referred to as
-chaining schedulers). The result is that each scheduler is applied one after the
-other on the learning rate obtained by the one preceding it.
+Most learning rate schedulers can be chained (also referred to as
+chaining schedulers).
 
 Example::
 
-    model = [Parameter(oneflow.randn(2, 2, requires_grad=True))]
-    optimizer = SGD(model, 0.1)
-    scheduler1 = ExponentialLR(optimizer, gamma=0.9)
-    scheduler2 = MultiStepLR(optimizer, milestones=[30,80], gamma=0.1)
+    import oneflow
+    import oneflow.nn as nn
+    import oneflow.nn.functional as F
+    import oneflow.optim as optim
+    from oneflow.utils.data import Dataset, DataLoader
+
+
+    class CustomDataset(Dataset):
+        def __init__(self, num):
+            self.inputs = oneflow.randn(num, 1)
+            self.targets = oneflow.sin(self.inputs)
+
+        def __len__(self):
+            return self.inputs.shape[0]
+
+        def __getitem__(self, index):
+            return self.inputs[index], self.targets[index]
+
+
+    class Model(nn.Module):
+        def __init__(self, input_size):
+            super(Model, self).__init__()
+            self.linear1 = nn.Linear(input_size, 64)
+            self.linear2 = nn.Linear(64, input_size)
+
+        def forward(self, x):
+            out = self.linear1(x)
+            return self.linear2(F.relu(out))
+
+
+    dataset = CustomDataset(10000)
+    dataloader = DataLoader(dataset, batch_size=10)
+    model = Model(1)
+    loss_fn = nn.MSELoss()
+    optimizer = optim.SGD(model.parameters(), lr=1e-3)
+    scheduler1 = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+    scheduler2 = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[5, 10], gamma=0.1)
 
     for epoch in range(20):
-        for input, target in dataset:
+        for input, target in dataloader:
             optimizer.zero_grad()
             output = model(input)
             loss = loss_fn(output, target)
@@ -187,12 +300,9 @@ algorithms.
     >>>     scheduler.step()
 
 .. warning::
-  Prior to Oneflow 1.1.0, the learning rate scheduler was expected to be called before
-  the optimizer's update; 1.1.0 changed this behavior in a BC-breaking way.  If you use
-  the learning rate scheduler (calling ``scheduler.step()``) before the optimizer's update
-  (calling ``optimizer.step()``), this will skip the first value of the learning rate schedule.
-  If you are unable to reproduce results after upgrading to Oneflow 1.1.0, please check
-  if you are calling ``scheduler.step()`` at the wrong time.
+  If you use the learning rate scheduler (calling ``scheduler.step()``) before the optimizer's update
+  (calling ``optimizer.step()``), this will skip the first value of the learning rate schedule. Please 
+  check if you are calling ``scheduler.step()`` at the wrong time.
 
 .. autosummary::
     :toctree: generated
