@@ -85,7 +85,7 @@ Code running on Node 1
 
 Get Local Tensor from Global Tensor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-With ``Tensor.to_local`` interface, you can return the `local tenso`r of the `Global Tensor` on the present device.
+With ``Tensor.to_local`` interface, you can return the local tensor of the `Global Tensor` on the present device.
 
 ::
 
