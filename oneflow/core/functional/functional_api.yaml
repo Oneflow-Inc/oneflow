@@ -640,6 +640,10 @@
   signature: "Tensor (Tensor x, Tensor dy, Float alpha) => LeakyReluGrad"
   bind_python: False
 
+- name: "leaky_relu_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx, Float alpha) => LeakyReluGradGrad"
+  bind_python: False
+
 - name: "normal"
   signature: [
     "Tensor (Float mean, Float std, Shape size, *, Tensor out=None, DataType dtype=None, Device device=None, 
@@ -1202,6 +1206,10 @@
 
 - name: "negative_grad"
   signature: "Tensor (Tensor x, Tensor dy) => NegativeGrad"
+  bind_python: False
+
+- name: "negative_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) => NegativeGradGrad"
   bind_python: False
 
 - name: "layer_norm_affine"

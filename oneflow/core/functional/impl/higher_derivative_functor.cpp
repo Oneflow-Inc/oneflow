@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
@@ -57,11 +58,29 @@ class CosGradGradFunctor {
   }
 };
 
+class NegativeGradGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    return JUST(functional::ZerosLike(x));
+  }
+};
+
+class LeakyReluGradGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& dydx,
+                           const float& alpha) const {
+    return JUST(functional::ZerosLike(x));
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SinGradGradFunctor>("SinGradGrad");
   m.add_functor<impl::CosGradGradFunctor>("CosGradGrad");
+  m.add_functor<impl::NegativeGradGradFunctor>("NegativeGradGrad");
+  m.add_functor<impl::LeakyReluGradGradFunctor>("LeakyReluGradGrad");
 }
 
 }  // namespace functional
