@@ -35,9 +35,17 @@ namespace oneflow {
 /*static*/ Maybe<void> SoftmaxCrossEntropyOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
-  CHECK_EQ_OR_RETURN(prediction_desc.is_dynamic(), label_desc.is_dynamic());
-  CHECK_GE_OR_RETURN(prediction_desc.shape().NumAxes(), 2);
-  CHECK_EQ_OR_RETURN(label_desc.shape(), prediction_desc.shape());
+  CHECK_EQ_OR_RETURN(prediction_desc.is_dynamic(), label_desc.is_dynamic())
+      << Error::RuntimeError()
+      << "prediction and label are expected to have the same dynamic property, but found "
+      << prediction_desc.is_dynamic() << " and " << label_desc.is_dynamic();
+  CHECK_GE_OR_RETURN(prediction_desc.shape().NumAxes(), 2)
+      << Error::RuntimeError()
+      << "The dimension of prediction must be greater than or equal to 2, but found "
+      << prediction_desc.shape().NumAxes();
+  CHECK_EQ_OR_RETURN(label_desc.shape(), prediction_desc.shape())
+      << Error::RuntimeError() << "The size of label " << label_desc.shape()
+      << " must match the size of prediction " << prediction_desc.shape();
   const int64_t num_out_axes = prediction_desc.shape().NumAxes() - 1;
   DimVector out_dim_vector;
   FOR_RANGE(int64_t, i, 0, num_out_axes) {
@@ -56,7 +64,11 @@ namespace oneflow {
 /*static*/ Maybe<void> SoftmaxCrossEntropyOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
-  CHECK_EQ_OR_RETURN(label_desc.data_type(), prediction_desc.data_type());
+  CHECK_EQ_OR_RETURN(label_desc.data_type(), prediction_desc.data_type())
+      << Error::TypeError()
+      << "label and prediction are expected to have the same dtype, but found "
+      << DataType_Name(label_desc.data_type()) << " and "
+      << DataType_Name(prediction_desc.data_type());
   *ctx->OutputDType("prob", 0) = ctx->InputDType("prediction", 0);
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
   *out_desc->mut_data_type() = prediction_desc.data_type();
@@ -86,13 +98,26 @@ namespace oneflow {
   const user_op::TensorDesc& prob_desc = ctx->InputTensorDesc("prob", 0);
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-  CHECK_EQ_OR_RETURN(prob_desc.is_dynamic(), label_desc.is_dynamic());
-  CHECK_GE_OR_RETURN(prob_desc.shape().NumAxes(), 2);
-  CHECK_EQ_OR_RETURN(dy_desc.shape().NumAxes(), prob_desc.shape().NumAxes() - 1);
+  CHECK_EQ_OR_RETURN(prob_desc.is_dynamic(), label_desc.is_dynamic())
+      << Error::RuntimeError()
+      << "prob and label are expected to have the same dynamic property, but found "
+      << prob_desc.is_dynamic() << " and " << label_desc.is_dynamic();
+  CHECK_GE_OR_RETURN(prob_desc.shape().NumAxes(), 2)
+      << Error::RuntimeError()
+      << "The dimension of prob must be greater than or equal to 2, but found "
+      << prob_desc.shape().NumAxes();
+  CHECK_EQ_OR_RETURN(dy_desc.shape().NumAxes(), prob_desc.shape().NumAxes() - 1)
+      << Error::RuntimeError()
+      << "The dimension of dy is expected to be less than that of prob by 1, but found "
+      << dy_desc.shape().NumAxes() << " and " << prob_desc.shape().NumAxes() - 1;
   FOR_RANGE(int64_t, i, 0, dy_desc.shape().NumAxes()) {
-    CHECK_EQ_OR_RETURN(dy_desc.shape().At(i), label_desc.shape().At(i));
+    CHECK_EQ_OR_RETURN(dy_desc.shape().At(i), label_desc.shape().At(i))
+        << Error::RuntimeError() << "The size of dy (" << dy_desc.shape().At(i)
+        << ") must match the size of label (" << label_desc.shape().At(i) << ") at dimension " << i;
   }
-  CHECK_EQ_OR_RETURN(label_desc.shape(), prob_desc.shape());
+  CHECK_EQ_OR_RETURN(label_desc.shape(), prob_desc.shape())
+      << Error::RuntimeError() << "The size of label " << label_desc.shape()
+      << " must match the size of prob " << prob_desc.shape();
   *ctx->OutputShape("prediction_diff", 0) = ctx->InputShape("prob", 0);
   *ctx->OutputIsDynamic("prediction_diff", 0) = ctx->InputIsDynamic("prob", 0);
   return Maybe<void>::Ok();
@@ -105,8 +130,12 @@ namespace oneflow {
   const user_op::TensorDesc& prob_desc = ctx->InputTensorDesc("prob", 0);
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-  CHECK_EQ_OR_RETURN(label_desc.data_type(), prob_desc.data_type());
-  CHECK_EQ_OR_RETURN(dy_desc.data_type(), prob_desc.data_type());
+  CHECK_EQ_OR_RETURN(label_desc.data_type(), prob_desc.data_type())
+      << Error::TypeError() << "label and prob are expected to have the same dtype, but found "
+      << DataType_Name(label_desc.data_type()) << " and " << DataType_Name(prob_desc.data_type());
+  CHECK_EQ_OR_RETURN(dy_desc.data_type(), prob_desc.data_type())
+      << Error::TypeError() << "dy and prob are expected to have the same dtype, but found "
+      << DataType_Name(dy_desc.data_type()) << " and " << DataType_Name(prob_desc.data_type());
   *ctx->OutputDType("prediction_diff", 0) = ctx->InputDType("prob", 0);
   return Maybe<void>::Ok();
 }
