@@ -61,8 +61,8 @@ void Dispatch2DimNum(ep::Stream* stream, int64_t gather_dim_size, int64_t inner_
   NdIndexOffsetHelper<IDX, N> out_helper(num_indices, inner_dim_size);
   GatherForwardGpu<T, K, IDX, N><<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0,
                                    stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      /*batch_dim_size*/ 1, /*out_instance_size*/ 1, num_indices, in_helper, out_helper, indices,
-      data, gather_dim_size, output, offset);
+      /*batch_dim_size*/ 1, out_instance_size, num_indices, in_helper, out_helper, indices, data,
+      gather_dim_size, output, offset);
 }
 
 template<typename T, typename K, typename IDX>
