@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/common/wrap_dim_utils.h"
 
 namespace oneflow {
 
@@ -23,13 +24,10 @@ namespace oneflow {
   const int input_dims = x_desc.shape().NumAxes();
   const std::vector<int32_t> dims = ctx->Attr<std::vector<int32_t>>("dims");
   CHECK_OR_RETURN(dims.size() <= input_dims)
-      << Error::RuntimeError() << "flip: Dimension out of range (expected to be in range of ["
-      << -input_dims << ", " << input_dims - 1 << "], but got " << dims.size() << ")";
-  for (auto x : dims) {
-    CHECK_OR_RETURN(x < input_dims)
-        << Error::RuntimeError() << "flip: dim must be less than input dimension " << input_dims
-        << ", but got " << x;
-  }
+      << Error::RuntimeError()
+      << "flip: Dimension size out of range (expected to be less than or equal to " << input_dims
+      << " but got " << dims.size() << ")";
+  for (auto x : dims) { maybe_wrap_dim(x, input_dims); }
   user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
   *y_desc->mut_shape() = x_desc.shape();
   return Maybe<void>::Ok();

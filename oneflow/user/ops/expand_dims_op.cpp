@@ -15,17 +15,14 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/common/wrap_dim_utils.h"
 
 namespace oneflow {
 
 namespace {
 
 Maybe<int32_t> TransformNegativeAxisToPositive(int32_t axis, const int32_t num_axes) {
-  axis = axis < 0 ? axis + num_axes + 1 : axis;
-  CHECK_OR_RETURN(axis >= 0 && axis <= num_axes)
-      << Error::IndexError() << "expand_dims: Dimension out of range (expected to be in range of ["
-      << -(num_axes + 1) << ", " << num_axes << "], but got: " << axis << ")";
-  return axis;
+  return JUST(maybe_wrap_dim(axis, num_axes + 1));
 }
 
 }  // namespace
