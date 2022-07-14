@@ -56,7 +56,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("negative_grad", NegativeGradGrad);
 struct LeakyReluGradGradCaptureState : public AutoGradCaptureState {
   bool x_requires_grad = false;
   bool grad_requires_grad = false;
-  float alpha;
+  float alpha = 0.01;
 };
 
 class LeakyReluGradGrad : public OpExprGradFunction<LeakyReluGradGradCaptureState> {
