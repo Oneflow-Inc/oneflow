@@ -181,12 +181,18 @@ class CoinFlip(Module):
     sample is generated.
 
     Args:
-        batch_size (int, optional): Maximum batch size of the pipeline. Negative values for this parameter are invalid - the default value may only be used with serialized pipeline (the value stored in serialized pipeline is used instead). In most cases, the actual batch size of the pipeline will be equal to the maximum one. Default: 1
+        batch_size (int, optional): Maximum batch size of the pipeline. Negative values for this parameter 
+            are invalid - the default value may only be used with serialized pipeline (the value stored in 
+            serialized pipeline is used instead). In most cases, the actual batch size of the pipeline will be 
+            equal to the maximum one. Default: 1
         random_seed (int, optional): Random seed. Default: None
         probability (float, optional): Probability of value 1. Default: 0.5
-        device (oneflow.device, optional): Desired device of returned tensor. Default: if None, uses the current device for the default tensor type.
-        placement (oneflow.placement, optional):  Desired placement of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
-        sbp (oneflow.sbp.sbp or tuple of oneflow.sbp.sbp, optional): Desired sbp descriptor of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        device (oneflow.device, optional): Desired device of returned tensor. Default: if None, uses the 
+            current device for the default tensor type.
+        placement (oneflow.placement, optional):  Desired placement of returned global tensor. 
+            Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (oneflow.sbp.sbp or tuple of oneflow.sbp.sbp, optional): Desired sbp descriptor of returned 
+            global tensor. Default: if None, the returned tensor is local one using the argument `device`.
 
     """
     def __init__(
@@ -279,10 +285,13 @@ class CropMirrorNormalize(Module):
         output_layout (str, optional): Tensor data layout for the output. Default: "NCHW"
         crop_h (int, optional): Cropping the window height (in pixels). Default: 0
         crop_w (int, optional): Cropping window width (in pixels). Default: 0
-        crop_pos_y (float, optional): Normalized (0.0 - 1.0) vertical position of the start of the cropping window (typically, the upper left corner). Default: 0.5
-        crop_pos_x (float, optional): Normalized (0.0 - 1.0) horizontal position of the cropping window (upper left corner). Default: 0.5
+        crop_pos_y (float, optional): Normalized (0.0 - 1.0) vertical position of the start of the cropping 
+            window (typically, the upper left corner). Default: 0.5
+        crop_pos_x (float, optional): Normalized (0.0 - 1.0) horizontal position of the cropping window 
+            (upper left corner). Default: 0.5
         mean (float or list of float, optional): Mean pixel values for image normalization. Default: [0.0],
-        std (float or list of float, optional): Standard deviation values for image normalization. Default: [1.0]
+        std (float or list of float, optional): Standard deviation values for image normalization. 
+            Default: [1.0]
         output_dtype (oneflow.dtype, optional): Output data type. Default: ``oneflow.float``
 
     """
