@@ -15,7 +15,7 @@ OneFlow provides two ways to accomplish `Distributed Training`:
 
 Baisc
 -------------------------------
-When you start distributed training in OneFlow,the following functions can be used.
+When you start distributed training in OneFlow, the following functions can be used.
 
 .. currentmodule:: oneflow.env
 
