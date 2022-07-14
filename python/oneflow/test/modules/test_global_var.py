@@ -22,7 +22,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_flow_global_var_all_dim_with_random_data(test_case, placement, sbp):
     x = random_tensor(
         ndim=2, dim0=random(1, 3).to(int) * 8, dim1=random(1, 3).to(int) * 8,
@@ -31,7 +31,7 @@ def _test_flow_global_var_all_dim_with_random_data(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_flow_global_var_one_dim_with_random_data(test_case, placement, sbp):
     x = random_tensor(
         ndim=2, dim0=random(1, 3).to(int) * 8, dim1=random(1, 3).to(int) * 8,
