@@ -29,33 +29,31 @@ class ControlStreamPolicy final : public StreamPolicy {
   ControlStreamPolicy() = default;
   ~ControlStreamPolicy() = default;
 
-   ep::Stream* stream() override ;
-   vm::Allocator* mut_allocator() override;
-   DeviceType device_type() const override;
+  ep::Stream* stream() override;
+  vm::Allocator* mut_allocator() override;
+  DeviceType device_type() const override;
   void InitInstructionStatus(const Stream& stream,
                              InstructionStatusBuffer* status_buffer) const override {
     static_assert(sizeof(NaiveInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
-  NaiveInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer());
+    NaiveInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer());
   }
   void DeleteInstructionStatus(const Stream& stream,
                                InstructionStatusBuffer* status_buffer) const override {
     auto* ptr = NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer());
-  ptr->~NaiveInstrStatusQuerier();
+    ptr->~NaiveInstrStatusQuerier();
   }
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override {
-      return NaiveInstrStatusQuerier::Cast(status_buffer.buffer())->done();
-
+    return NaiveInstrStatusQuerier::Cast(status_buffer.buffer())->done();
   }
-  void Run(Instruction* instruction) const override { 
+  void Run(Instruction* instruction) const override {
     instruction->Compute();
     auto* status_buffer = instruction->mut_status_buffer();
     NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer())->set_done();
-   }
+  }
 
   bool OnSchedulerThread(StreamRole) const override { return true; }
   bool SupportingTransportInstructions() const override { return false; }
-
 };
 
 }  // namespace vm
