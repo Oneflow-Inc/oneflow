@@ -54,4 +54,3 @@ class ExceptionWrapper(object):
             # have message field
             raise self.exc_type(message=msg)
         raise self.exc_type(msg)
-
