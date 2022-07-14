@@ -36,8 +36,8 @@ void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) 
   const auto* ptr =
       dynamic_cast<const vm::AccessBlobArgCbPhyInstrOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
-  DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
-  OfBlob ofblob(device_ctx->stream(), ptr->eager_blob_object()->blob());
+  StreamPolicy* stream_policy = instruction->mut_stream_policy();
+  OfBlob ofblob(stream_policy->stream(), ptr->eager_blob_object()->blob());
   ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));
 }
 
