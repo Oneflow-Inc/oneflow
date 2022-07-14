@@ -275,7 +275,7 @@ class CropMirrorNormalize(Module):
         crop_pos_x (float, optional): Normalized (0.0 - 1.0) horizontal position of the cropping window (upper left corner). Default: 0.5
         mean (float or list of float, optional): Mean pixel values for image normalization. Default: [0.0],
         std (float or list of float, optional): Standard deviation values for image normalization. Default: [1.0]
-        output_dtype (oneflow.dtype, optional): Output data type. Default: ``oneflow.Float``
+        output_dtype (oneflow.dtype, optional): Output data type. Default: ``oneflow.float``
 
     """
     def __init__(
