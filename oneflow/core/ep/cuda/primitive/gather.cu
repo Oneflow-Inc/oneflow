@@ -219,7 +219,7 @@ class GatherFactoryImpl : public GatherFactory {
 
     static const std::map<std::tuple<DataType, DataType>, std::function<std::unique_ptr<Gather>()>>
         new_gather_handle{OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-            MAKE_NEW_GATHER_ENTRY, GATHER_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)};
+            MAKE_NEW_GATHER_ENTRY, GATHER_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)};
 
 #undef MAKE_NEW_GATHER_ENTRY
     return NewPrimitiveFromHandlers(new_gather_handle, type_tuple);
