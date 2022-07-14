@@ -1,5 +1,9 @@
 oneflow
 ===================================
+
+The documentation is referenced from: 
+https://pytorch.org/docs/1.10/torch.html
+
 The oneflow package contains data structures for multi-dimensional tensors and defines mathematical operations over these tensors. Additionally, it provides many utilities for efficient serializing of Tensors and arbitrary types, and other useful utilities.
 
 It has a CUDA counterpart, that enables you to run your tensor computations on an NVIDIA GPU with compute capability >= 3.0
@@ -50,6 +54,7 @@ Creation Ops
     eye
     empty
     full
+    full_like
 
 .. _indexing-slicing-joining:
 
@@ -151,27 +156,22 @@ work if you send work to another thread using the ``threading`` module, etc.
 
 Examples::
 
+  >>> import oneflow
   >>> x = oneflow.zeros(1, requires_grad=True)
   >>> with oneflow.no_grad():
   ...     y = x * 2
   >>> y.requires_grad
   False
 
-  >>> is_train = False
-  >>> with oneflow.set_grad_enabled(is_train):
+  >>> with oneflow.set_grad_enabled(False):
   ...     y = x * 2
   >>> y.requires_grad
   False
-
-  >>> oneflow.set_grad_enabled(True)  # this can also be used as a function
-  >>> y = x * 2
+  
+  >>> with oneflow.set_grad_enabled(True):
+  ...     y = x * 2
   >>> y.requires_grad
   True
-
-  >>> oneflow.set_grad_enabled(False)
-  >>> y = x * 2
-  >>> y.requires_grad
-  False
 
 .. autosummary::
     :toctree: generated
