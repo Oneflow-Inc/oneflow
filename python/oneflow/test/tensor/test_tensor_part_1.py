@@ -755,6 +755,24 @@ class TestTensor(flow.unittest.TestCase):
         x = random_tensor(ndim=ndim).to(device)
         y = x.argmax(dim=random(0, ndim).to(int), keepdim=random().to(bool))
         return y
+    
+    @autotest(auto_backward=False, check_graph=False)
+    def test_max_bool_input_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(
+            device, dtype=torch.bool
+        )
+        return x.max(dim)
+
+    @autotest(auto_backward=False, check_graph=False)
+    def test_min_bool_input_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(
+            device, dtype=torch.bool
+        )
+        return x.min(dim)
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5)
