@@ -19,21 +19,21 @@ limitations under the License.
 namespace oneflow {
 
 Blob::Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr) {
-  Init(mem_case, blob_desc, header_ptr, header_ptr + blob_desc->AlignedByteSizeOfBlobHeader(), 0);
+  Init(mem_case, blob_desc, header_ptr, header_ptr + blob_desc->AlignedByteSizeOfBlobHeader(), 0,
+       true);
 }
 
-Blob::Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr,
-           char* body_ptr) {
-  Init(mem_case, blob_desc, header_ptr, body_ptr, 0);
+Blob::Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
+  Init(mem_case, blob_desc, header_ptr, body_ptr, 0, true);
 }
 
 Blob::Blob(const MemoryCase& mem_case,  // NOLINT，Blob::Blob(...) { // NOLINT
-           const BlobDesc* blob_desc, char* header_ptr, char* body_ptr, const int64_t offset) {
-  Init(mem_case, blob_desc, header_ptr, body_ptr, offset);
+           const BlobDesc* blob_desc, char* header_ptr, char* body_ptr, const int64_t offset, bool overwrite_static_shape) {
+  Init(mem_case, blob_desc, header_ptr, body_ptr, offset, overwrite_static_shape);
 }
 
 void Blob::Init(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr,
-                char* body_ptr, const int64_t offset) {
+                char* body_ptr, const int64_t offset, bool overwrite_static_shape) {
   mem_case_ = mem_case;
   blob_desc_ = blob_desc;
   storage_offset_ = offset;
@@ -45,7 +45,9 @@ void Blob::Init(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* hea
   if (blob_desc->is_dynamic()) {
     mut_shape_view_.reset(new MutShapeView(shape_ptr, static_shape().NumAxes()));
   }
-  MutShapeView(shape_ptr, static_shape().NumAxes()).set_shape(static_shape());
+  if (overwrite_static_shape) {
+    MutShapeView(shape_ptr, static_shape().NumAxes()).set_shape(static_shape());
+  }
 }
 
 void Blob::CopyHeaderFrom(const Blob* rhs) {

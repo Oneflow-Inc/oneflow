@@ -51,7 +51,7 @@ class Blob final {
   Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr);
   Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr);
   Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr,
-       const int64_t offset);
+       const int64_t offset, bool overwrite_static_shape);
   virtual ~Blob() = default;
 
   DataType data_type() const { return blob_desc_->data_type(); }
@@ -122,7 +122,7 @@ class Blob final {
 
  private:
   void Init(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr,
-            const int64_t offset);
+            const int64_t offset, bool overwrite_static_shape);
 
   const BlobAccessChecker* blob_access_checker_;
   MemoryCase mem_case_;
