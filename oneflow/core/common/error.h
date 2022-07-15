@@ -24,15 +24,15 @@ namespace oneflow {
 
 class Error final {
  public:
-  Error(const std::shared_ptr<ErrorProto>& error_proto) : error_proto_(error_proto) {}
+  Error(const std::shared_ptr<StackedError>& stacked_error) : stacked_error_(stacked_error) {}
   Error(const Error&) = default;
   ~Error() = default;
 
-  std::shared_ptr<ErrorProto> error_proto() const { return error_proto_; }
-  const ErrorProto* operator->() const { return error_proto_.get(); }
-  ErrorProto* operator->() { return error_proto_.get(); }
+  std::shared_ptr<StackedError> stacked_error() const { return stacked_error_; }
+  const StackedError* operator->() const { return stacked_error_.get(); }
+  StackedError* operator->() { return stacked_error_.get(); }
   operator std::string() const;
-  void Assign(const Error& other) { error_proto_ = other.error_proto_; }
+  void Assign(const Error& other) { stacked_error_ = other.stacked_error_; }
   void Merge(const Error& other);
 
   // r-value reference is used to supporting expressions like `Error().AddStackFrame("foo.cpp",
@@ -43,7 +43,7 @@ class Error final {
   static Error ProtoParseFailedError();
   static Error JobSetEmptyError();
   static Error DeviceTagNotFoundError();
-  static Error InvalidValueError(const std::string& error_summary);
+  static Error InvalidValueError();
   static Error IndexError();
   static Error TypeError();
   static Error TimeoutError();
@@ -72,11 +72,9 @@ class Error final {
   static Error BoxingNotSupportedError();
   static Error MemoryZoneOutOfMemoryError(int64_t machine_id, int64_t mem_zone_id, uint64_t calc,
                                           uint64_t available, const std::string& device_type);
-  static Error OpKernelNotFoundError(const std::string& error_summary,
-                                     const std::vector<std::string>& error_msgs);
-  static Error MultipleOpKernelsMatchedError(const std::string& error_summary,
-                                             const std::vector<std::string>& error_msgs);
-  static Error LossBlobNotFoundError(const std::string& error_summary);
+  static Error OpKernelNotFoundError(const std::vector<std::string>& error_msgs);
+  static Error MultipleOpKernelsMatchedError(const std::vector<std::string>& error_msgs);
+  static Error LossBlobNotFoundError();
 
   static Error RwMutexedObjectNotFoundError();
 
@@ -91,11 +89,11 @@ class Error final {
   static Error InputDeviceNotMatchError();
 
  private:
-  std::shared_ptr<ErrorProto> error_proto_;
+  std::shared_ptr<StackedError> stacked_error_;
 };
 
-void ThrowError(const std::shared_ptr<ErrorProto>& error);
-const std::shared_ptr<ErrorProto>& ThreadLocalError();
+void ThrowError(const std::shared_ptr<StackedError>& error);
+const std::shared_ptr<StackedError>& ThreadLocalError();
 
 template<typename T>
 Error& operator<<(Error& error, const T& x) {
@@ -105,7 +103,7 @@ Error& operator<<(Error& error, const T& x) {
     error->set_msg(error->msg() + ss.str());
   } else {
     auto* stack_frame_top = error->mutable_stack_frame(error->stack_frame_size() - 1);
-    stack_frame_top->set_error_msg(stack_frame_top->error_msg() + ss.str());
+    stack_frame_top->set_code_text(stack_frame_top->code_text() + ss.str());
   }
   return error;
 }

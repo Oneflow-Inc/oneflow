@@ -30,22 +30,22 @@ class Maybe;
 template<typename T>
 class Optional;
 
-Maybe<std::string> FormatErrorStr(const std::shared_ptr<ErrorProto>&);
+Maybe<std::string> FormatErrorStr(const std::shared_ptr<StackedError>&);
 namespace {
-std::string GetFormatedSerializedError(const std::shared_ptr<ErrorProto>&);
+std::string GetFormatedSerializedError(const std::shared_ptr<StackedError>&);
 }
 
 namespace private_details {
 
-inline std::shared_ptr<ErrorProto>&& JustErrorAddStackFrame(std::shared_ptr<ErrorProto>&& err,
-                                                            const std::string& file, int64_t line,
-                                                            const std::string& func,
-                                                            const std::string& message) {
+inline std::shared_ptr<StackedError>&& JustErrorAddStackFrame(std::shared_ptr<StackedError>&& err,
+                                                              const std::string& file, int64_t line,
+                                                              const std::string& func,
+                                                              const std::string& message) {
   auto* stack_frame = err->add_stack_frame();
   stack_frame->set_file(file);
   stack_frame->set_line(line);
   stack_frame->set_function(func);
-  stack_frame->set_error_msg(message);
+  stack_frame->set_code_text(message);
 
   return std::move(err);
 }
@@ -67,13 +67,13 @@ bool JustIsOk(const Optional<T>& val) {
 }
 
 template<typename T>
-std::shared_ptr<ErrorProto> JustGetError(const Maybe<T>& val) {
+std::shared_ptr<StackedError> JustGetError(const Maybe<T>& val) {
   return val.error();
 }
 
 template<typename T>
-std::shared_ptr<ErrorProto> JustGetError(const Optional<T>&) {
-  return Error::ValueNotFoundError().error_proto();
+std::shared_ptr<StackedError> JustGetError(const Optional<T>&) {
+  return Error::ValueNotFoundError().stacked_error();
 }
 
 template<typename T>
@@ -136,7 +136,7 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
               ::oneflow::Error(::oneflow::private_details::JustGetError(_just_value_to_check_)) \
                   .AddStackFrame(__FILE__, __LINE__, _just_closure_func_name_),                 \
               OF_PP_STRINGIZE(value), ": ", __VA_ARGS__)                                        \
-              .error_proto());                                                                  \
+              .stacked_error());                                                                \
     }                                                                                           \
     return std::forward<decltype(_just_value_to_check_)>(_just_value_to_check_);                \
   })(__FUNCTION__)                                                                              \

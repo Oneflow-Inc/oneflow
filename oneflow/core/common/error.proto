@@ -123,7 +123,7 @@ message ErrorStackFrame {
   required string file = 1;
   required int64 line = 2;
   required string function = 3;
-  required string error_msg = 4;
+  required string code_text = 4;
 }
 
 message SymbolIdUninitializedError {}
@@ -137,8 +137,7 @@ message TimeoutError {}
 
 message ValueNotFoundError {}
 
-message ErrorProto {
-  optional string error_summary = 1 [default = ""];
+message StackedError {
   optional string msg = 2 [default = ""];
   repeated ErrorStackFrame stack_frame = 3;
   oneof error_type {
