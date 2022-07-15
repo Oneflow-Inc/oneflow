@@ -50,73 +50,49 @@ bool IsSafeUseIndex32(int64_t batch_dim_size, int64_t outer_dim_size, int64_t ga
   return std::max(out_elem_cnt, in_elem_cnt) < GetMaxVal<int32_t>() / 2;
 }
 
-template<typename T, typename K, typename IDX>
-void Dispatch2DimNum(ep::Stream* stream, int64_t gather_dim_size, int64_t inner_dim_size,
-                     int64_t num_indices, int64_t offset, const K* indices, const T* data,
-                     T* output) {
-  constexpr int N = 2;
-  const int64_t out_instance_size = num_indices * inner_dim_size;
-  const int64_t out_elem_cnt = out_instance_size;
-  NdIndexOffsetHelper<IDX, N> in_helper(gather_dim_size, inner_dim_size);
-  NdIndexOffsetHelper<IDX, N> out_helper(num_indices, inner_dim_size);
+template<typename T, typename K, typename IDX, int N>
+void DispatchDimNumImpl(ep::Stream* stream, const int64_t* in_dims, const int64_t* out_dims,
+                        int64_t offset, const K* indices, const T* data, T* output) {
+  // in_dims: 0 batch_dim_size, 1 outer_dim_size, 2 gather_dim_size, 3 inner_dim_size
+  // out_dims: 0 batch_dim_size, 1 outer_dim_size, 2 indice_instance_size, 3 inner_dim_size
+  constexpr int helper_max_dim = 4;
+  int64_t in_helper_dims[N];
+  int64_t out_helper_dims[N];
+  for (int i = 4 - N, index = 0; i < helper_max_dim; i++, index++) {
+    in_helper_dims[index] = in_dims[i];
+    out_helper_dims[index] = out_dims[i];
+  }
+  // N == 3 represent batch_dim_size == 1 || outer_dim_size == 1(
+  // still use 3d helper
+  if (N == 3) {
+    in_helper_dims[0] *= in_dims[0];
+    out_helper_dims[0] *= out_dims[0];
+  }
+
+  const int64_t out_instance_size = out_dims[1] * out_dims[2] * out_dims[3];
+  const int64_t out_elem_cnt = out_dims[0] * out_instance_size;
+
+  NdIndexOffsetHelper<IDX, N> in_helper(in_helper_dims);
+  NdIndexOffsetHelper<IDX, N> out_helper(out_helper_dims);
   GatherForwardGpu<T, K, IDX, N><<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0,
                                    stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      /*batch_dim_size*/ 1, out_instance_size, num_indices, in_helper, out_helper, indices, data,
-      gather_dim_size, output, offset);
-}
-
-template<typename T, typename K, typename IDX>
-void Dispatch3DimNum(ep::Stream* stream, int64_t batch_dim_size, int64_t outer_dim_size,
-                     int64_t gather_dim_size, int64_t inner_dim_size, int64_t num_indices,
-                     int64_t offset, const K* indices, const T* data, T* output) {
-  constexpr int N = 3;
-  const int64_t indice_instance_size = num_indices / batch_dim_size;
-  const int64_t out_instance_size = outer_dim_size * indice_instance_size * inner_dim_size;
-  const int64_t out_elem_cnt = batch_dim_size * out_instance_size;
-
-  const int64_t outest_dim_size = batch_dim_size * outer_dim_size;
-
-  NdIndexOffsetHelper<IDX, N> in_helper(outest_dim_size, gather_dim_size, inner_dim_size);
-  NdIndexOffsetHelper<IDX, N> out_helper(outest_dim_size, indice_instance_size, inner_dim_size);
-  GatherForwardGpu<T, K, IDX, N><<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                   stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      batch_dim_size, out_instance_size, indice_instance_size, in_helper, out_helper, indices, data,
-      gather_dim_size, output, offset);
-}
-
-template<typename T, typename K, typename IDX>
-void Dispatch4DimNum(ep::Stream* stream, int64_t batch_dim_size, int64_t outer_dim_size,
-                     int64_t gather_dim_size, int64_t inner_dim_size, int64_t num_indices,
-                     int64_t offset, const K* indices, const T* data, T* output) {
-  constexpr int N = 4;
-  const int64_t indice_instance_size = num_indices / batch_dim_size;
-  const int64_t out_instance_size = outer_dim_size * indice_instance_size * inner_dim_size;
-  const int64_t out_elem_cnt = batch_dim_size * out_instance_size;
-  NdIndexOffsetHelper<IDX, N> in_helper(batch_dim_size, outer_dim_size, gather_dim_size,
-                                        inner_dim_size);
-  NdIndexOffsetHelper<IDX, N> out_helper(batch_dim_size, outer_dim_size, indice_instance_size,
-                                         inner_dim_size);
-  GatherForwardGpu<T, K, IDX, N><<<BlocksNum4ThreadsNum(out_elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                   stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      batch_dim_size, out_instance_size, indice_instance_size, in_helper, out_helper, indices, data,
-      gather_dim_size, output, offset);
+      out_dims[0], out_instance_size, out_dims[2], in_helper, out_helper, indices, data, in_dims[2],
+      output, offset);
 }
 
 template<typename T, typename K, typename IDX>
 void DispatchNumDims(ep::Stream* stream, int64_t batch_dim_size, int64_t outer_dim_size,
                      int64_t gather_dim_size, int64_t inner_dim_size, int64_t num_indices,
-                     int64_t offset, const K* indices, const void* data, void* output) {
+                     int64_t offset, const K* indices, const T* data, T* output) {
+  int64_t in_dims[4] = {batch_dim_size, outer_dim_size, gather_dim_size, inner_dim_size};
+  int64_t out_dims[4] = {batch_dim_size, outer_dim_size, num_indices / batch_dim_size,
+                         inner_dim_size};
   if (batch_dim_size == 1 && outer_dim_size == 1) {
-    Dispatch2DimNum<T, K, IDX>(stream, gather_dim_size, inner_dim_size, num_indices, offset,
-                               indices, static_cast<const T*>(data), static_cast<T*>(output));
+    DispatchDimNumImpl<T, K, IDX, 2>(stream, in_dims, out_dims, offset, indices, data, output);
   } else if (batch_dim_size == 1 || outer_dim_size == 1) {
-    Dispatch3DimNum<T, K, IDX>(stream, batch_dim_size, outer_dim_size, gather_dim_size,
-                               inner_dim_size, num_indices, offset, indices,
-                               static_cast<const T*>(data), static_cast<T*>(output));
+    DispatchDimNumImpl<T, K, IDX, 3>(stream, in_dims, out_dims, offset, indices, data, output);
   } else {
-    Dispatch4DimNum<T, K, IDX>(stream, batch_dim_size, outer_dim_size, gather_dim_size,
-                               inner_dim_size, num_indices, offset, indices,
-                               static_cast<const T*>(data), static_cast<T*>(output));
+    DispatchDimNumImpl<T, K, IDX, 4>(stream, in_dims, out_dims, offset, indices, data, output);
   }
 }
 
