@@ -118,6 +118,8 @@ class VirtualMachineEngine final : public intrusive::Base {
   template<void (VirtualMachineEngine::*OOMHandler)(vm::Stream*, const ScheduleCtx&)>
   void DispatchInstruction(Instruction* instruction, const ScheduleCtx& schedule_ctx);
 
+  bool EdgeDispatchable(const Instruction* src, const Instruction* dst) const;
+  bool Dispatchable(Instruction* instruction) const;
   void BusyWaitInstructionsDoneThenShrink(vm::Stream* stream, const ScheduleCtx& schedule_ctx);
   void AbortOnOOM(vm::Stream* stream, const ScheduleCtx& schedule_ctx);
 

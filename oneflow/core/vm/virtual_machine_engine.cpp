@@ -37,23 +37,7 @@ namespace oneflow {
 
 namespace vm {
 
-namespace {
-
-bool EdgeDispatchable(const Instruction* src, const Instruction* dst) {
-  return (&src->stream() == &dst->stream()) /* same stream*/
-         && !src->dispatched_instruction_hook().empty() /* dispatched */;
-}
-
-bool Dispatchable(Instruction* instruction) {
-  if (unlikely(!instruction->dispatched_instruction_hook().empty())) { return false; }
-  INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_in_edges()) {
-    const auto* src_instruction = &edge->src_instruction();
-    if (unlikely(!EdgeDispatchable(src_instruction, instruction))) { return false; }
-  }
-  return true;
-}
-
-}  // namespace
+namespace {}  // namespace
 
 void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
   OF_PROFILER_RANGE_GUARD("R:" + instruction->DebugName());
@@ -271,6 +255,20 @@ void VirtualMachineEngine::ConsumeDependences(Instruction* instruction) {
   for (auto* dependence : phy_instr_operand->input_dependences()) {
     ConnectInstructionsByRead(AccessDependence(kConstOperandAccess, dependence, instruction));
   }
+}
+
+bool VirtualMachineEngine::EdgeDispatchable(const Instruction* src, const Instruction* dst) const {
+  return (&src->stream() == &dst->stream()) /* same stream*/
+         && !src->dispatched_instruction_hook().empty() /* dispatched */;
+}
+
+bool VirtualMachineEngine::Dispatchable(Instruction* instruction) const {
+  if (unlikely(!instruction->dispatched_instruction_hook().empty())) { return false; }
+  INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_in_edges()) {
+    const auto* src_instruction = &edge->src_instruction();
+    if (unlikely(!EdgeDispatchable(src_instruction, instruction))) { return false; }
+  }
+  return true;
 }
 
 // Dispatch ready instructions and put prescheduled instructions onto ready_instruction_list_.
