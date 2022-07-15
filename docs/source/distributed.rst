@@ -82,6 +82,38 @@ Code running on Node 1
     x_global = x.to_global(placement=placement, sbp=sbp)
     x_global.shape
 
+Redistribute Global Tensor
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+With ``Tensor.to_global`` interface, data of `Global Tensor` can be redistributed the in clusters,either by choosing to distribute to another set of nodes or by changing its distribution on that set of nodes (i.e. changing the SBP)
+
+The data can be distributed to another set of nodes and the way of distribution in current set of nodes can also be changed (i.e.change SBP). 
+
+Redistribution of data usually occurs with cross-process data communication, and the ``Tensor.to_global`` interface finely shields the complex underlying communication logic.
+
+::
+
+    >>> import oneflow as flow
+    >>> x = flow.tensor([1.0, 2.0], placement=flow.placement("cuda", ranks=[0, 1]), sbp=flow.sbp.split(0))
+    >>> y = x.to_global(placement=flow.placement("cuda", ranks=[2, 3]), sbp=flow.sbp.broadcast)
+
+Each operator of OneFlow defines a set of combinations of input and output SBPs that it can support, and `Global Tensor`` supports automatic redistribution to meet the requirements of executing a particular computational interface on its SBP. For example, the following code:
+
+::
+
+    >>> import oneflow as flow
+    >>> x = flow.randn(4, 4, 
+            placement=flow.placement("cuda", ranks=[0, 1]), 
+            sbp=flow.sbp.split(0))
+    >>> y = flow.randn(4, 4, 
+            placement=flow.placement("cuda", ranks=[0, 1]), 
+            sbp=flow.sbp.split(1))
+    >>> z = x + y
+
+When ``x + y`` is executed, since x is cut by dimension ``0`` and y is cut by dimension ``1``, their components at each node cannot be added directly, so it automatically converts the SBP of x to ``flow.sbp.split(1)`` or y to ``flow.sbp.split(0)``, and the SBP of z is calculated as ``flow.sbp. split(1)`` or ``flow.sbp.split(0)``.
+
+.. note ::
+    - Global Tensor does not currently support mixing with the DDP interface.
+    - Global Tensor requires all devices to execute simultaneously, and the code that has branches would lead to process deadlock because of divergent execution paths. We will continue to improve the user experience here.
 
 Get Local Tensor from Global Tensor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

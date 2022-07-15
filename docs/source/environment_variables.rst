@@ -54,24 +54,6 @@ Values accepted
 ^^^^^^^^^^^^^^^
 Define and set to ``false``, and would be ``true` only when the value is ``1``, ``true``, ``yes``, ``on`` and ``y``.
 
-`ONEFLOW_STREAM_REUSE_CUDA_EVENT <https://github.com/Oneflow-Inc/oneflow/blob/v0.5.0rc1/oneflow/core/device/cuda_stream_handle.cpp#L43>`_ 
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-`#5837 <https://github.com/Oneflow-Inc/oneflow/pull/5837>`_ 
-
-Values accepted
-^^^^^^^^^^^^^^^
-Define and set to ``false``, and would be ``true`` only when the value is ``1``, ``true``, ``yes``, ``on`` and ``y``.
-
-`ONEFLOW_COMM_NET_IB_ENABLE <https://github.com/Oneflow-Inc/oneflow/blob/v0.5.0rc1/oneflow/core/job/env_global_objects_scope.cpp#L120>`_
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-To represent whether to enable ``ibv::IsAvailable()``, which means ``oneflow.config.use_rdma(True)`` is no longer used when ``RDMA`` is set by environment variable.
-
-Values accepted
-^^^^^^^^^^^^^^^
-Define and set to ``false``, and would be ``true`` only when the value is ``1``, ``true``, ``yes``, ``on`` and ``y``.
-
 `ONEFLOW_LIBIBVERBS_PATH <https://github.com/Oneflow-Inc/oneflow/blob/v0.5.0rc1/oneflow/core/platform/lib/ibv_wrapper.cpp#L24>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -189,24 +171,6 @@ Values accepted
 ^^^^^^^^^^^^^^^
 Define and set to ``false``, and would be ``true`` only when the value is ``1``, ``true``, ``yes``, ``on`` and ``y``.
 
-`ONEFLOW_DATA_FILE_SYSTEM_TYPE <https://github.com/Oneflow-Inc/oneflow/blob/v0.5.0rc1/oneflow/core/persistence/file_system.cpp#L172>`_
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-The disk type used by the dataset, supports hdfs(`CreateHadoopFS <https://github.com/Oneflow-Inc/oneflow/blob/v0.5.0rc1/oneflow/core/persistence/file_system.cpp#L161>`_) and `CreateLocalFS <https://github.com/Oneflow-Inc/oneflow/blob/v0.5.0rc1/oneflow/core/persistence/file_system.cpp#L153>`_. If use hdfs, you need to set ``ONEFLOW_DATA_FILE_SYSTE_HDFS_NAMENODE`` to initialize the hdfs node. `#5162 <https://github.com/Oneflow-Inc/oneflow/pull/5162>`_
-
-Values accepted
-^^^^^^^^^^^^^^^
-The default value is empty, representing ``local``, and another optional value is ``hdfs``.
-
-`ONEFLOW_SNAPSHOT_FILE_SYSTEM_TYPE <https://github.com/Oneflow-Inc/oneflow/blob/v0.5.0rc1/oneflow/core/persistence/file_system.cpp#L182>`_
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-The disk type useed when saving and loading models. It is the same as above, if using hdfs, ``ONEFLOW_SNAPSHOT_FILE_SYSTEM_HDFS_NAMENODE`` need to be used together. `5162 <https://github.com/Oneflow-Inc/oneflow/pull/5162>`_
-
-Values accepted
-^^^^^^^^^^^^^^^
-The default value is empty, representing ``local``, and another optional value is ``hdfs``.
-
 `ONEFLOW_PERSISTENT_IN_STREAM_BUFFER_SIZE_BYTES <https://github.com/Oneflow-Inc/oneflow/blob/v0.5.0rc1/oneflow/core/persistence/persistent_in_stream.cpp#L30>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -245,15 +209,6 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
 
-ONEFLOW_SERVING_DEBUG
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-For printing information of OneFlow Serving Debug
-
-Values accepted
-^^^^^^^^^^^^^^^
-The default value is ``false``
-
 ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -269,15 +224,6 @@ ONEFLOW_ONE_EMBEDDING_DISABLE_NUMA_AWARE_ALLOCATION
 Whether to disable NUMA_AWARE memory allocation when the OneEmbedding module allocates video memory. 
 
 NUMA_AWARE memory allocation means that when allocating pinned host memory, the cpu close to the gpu will be considered (for example, if it is gpu 0 1, memory will be allocated on cpu0)
-
-Values accepted
-^^^^^^^^^^^^^^^
-The default value is ``false``
-
-ONEFLOW_STREAM_CUDA_EVENT_FLAG_BLOCKING_SYNC
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-whether to synchronize when creating a CUDA Event.
 
 Values accepted
 ^^^^^^^^^^^^^^^
@@ -300,35 +246,6 @@ Whether to disable the fused_mlp operator implemented by cublasLt in FusedMLPFun
 Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
-
-ONEFLOW_COMM_NET_IB_ENABLE
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-Whether to enable ``ibv::IsAvailable()``. RDMA is set via environment variables, ``oneflow.config.use_rdma(True)`` is no longer used
-
-Values accepted
-^^^^^^^^^^^^^^^
-The default value is ``false``
-
-ONEFLOW_DEBUG_KERNEL_SYNC_CHECK
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-Only used when debugging because the performance would be affected. 
-
-It will create ``SyncCheckKernelObserver`` and will be synced after each kernel. It could be used to debug cuda errors.
-
-Values accepted
-^^^^^^^^^^^^^^^
-The default value is ``false``
-
-ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-Only use blob_access_checker after enabling, because blob_access_checker is for correctness assurance, and closing it in some cases can increase the kernel overhead.
-
-Values accepted
-^^^^^^^^^^^^^^^
-The default value is ``true``
 
 ONEFLOW_ONE_EMBEDDING_EMBEDDING_SHUFFLE
 _INDEPENTENT_STREAM
@@ -366,74 +283,6 @@ When the value appears NaN or Inf, save the data Dump.
 Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
-
-ONEFLOW_DECODER_ENABLE_NVJPEG_HARDWARE_ACCELERATION
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-``NVJPEG_VER_MAJOR`` should be bigger than 11. It can accelerate nvjpeg hardware, warm up jpeg decoder and hw_jpeg decoder, `#5851 <https://github.com/Oneflow-Inc/oneflow/pull/5851>`_. 
-
-Hardware JPEG decoder and NVIDIA nvJPEG library on NVIDIA A100 GPUs
-
-Values accepted
-^^^^^^^^^^^^^^^
-The default value is ``true``
-
-ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-Whether to enable ``CUDA_GRAP`` optimization
-
-Values accepted
-^^^^^^^^^^^^^^^
-The default value is ``false``
-
-ONEFLOW_PROFILER_KERNEL_PROFILE_CUDA_MEMORY_BANDWIDTH
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-Used when generate profiler files by nsys. profiler is only valid for lazy temporarily. 
-
-It can estimate the memory bandwidth reached by kernel by counting the execution time of the GPU kernel and the size of the input and output memory, and help find potential kernels that can be optimized. `Details <https://github.com/Oneflow-Inc/oneflow/blob/v0.5.0rc1/oneflow/core/profiler/kernel.cpp#L53>`_
-
-Values accepted
-^^^^^^^^^^^^^^^
-Define and set to ``false``. When using, the compiled package needs to enable ``BUILD_PROFILER``.
-
-
-ONEFLOW_PROFILER_KERNEL_PROFILE_KERNEL_FORWARD_RANGE
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-Collect `op name <https://github.com/Oneflow-Inc/oneflow/blob/v0.5.0rc1/oneflow/core/profiler/kernel.cpp#L60>`_ when generate profiler files, generate the corresponding nvtx information, which is convenient for locating the model part of the test run
-
-Values accepted
-^^^^^^^^^^^^^^^
-The default value is ``false``
-
-ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-When debugging, by adding synchronization to detect which kernel running result has nan/inf
-
-Values accepted
-^^^^^^^^^^^^^^^
-The default value is ``false``
-
-ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-Enable local message queue, ``oneflow.config.thread_enable_local_message_queue(True)`` is no longer used.
-
-Values accepted
-^^^^^^^^^^^^^^^
-The default value is ``true``
-
-ONEFLOW_ACTOR_ENABLE_LIGHT_ACTOR
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-Whether to enable ``LIGHT_ACTOR``. Details in `#5868 <https://github.com/Oneflow-Inc/oneflow/pull/5868>`_
-
-Values accepted
-^^^^^^^^^^^^^^^
-The default value is ``true``
 
 ONEFLOW_MLIR_ENABLE_IR_PRINTING
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -488,35 +337,6 @@ Whether to quantify the shuffle application communication in the case of OneEmbe
 Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
-
-ONEFLOW_COMM_NET_IB_GID_INDEX
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-For the query of `ibv_query_gid <https://www.ibm.com/docs/en/aix/7.2?topic=management-ibv-query-gid>`_, and 0 represents success. It often used with ``ONEFLOW_COMM_NET_IB_HCA``. 
-
-GID means the Global ID, QP under RoCE network must be built by this value, instead of just using the LID as in the IB network. `#5626 <https://github.com/Oneflow-Inc/oneflow/pull/5626>`_
-
-Values accepted
-^^^^^^^^^^^^^^^
-The default value is ``0``, representing the port index value
-
-ONEFLOW_COMM_NET_IB_QUEUE_DEPTH
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-Queue length of jobs in IB network
-
-Values accepted
-^^^^^^^^^^^^^^^
-The default value is ``1024``
-
-ONEFLOW_COMM_NET_IB_MEM_BLOCK_SIZE
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-Read the size of the module when communicating.
-
-Values accepted
-^^^^^^^^^^^^^^^
-The default value is ``8388608`` (8M)
 
 ONEFLOW_TENSOR_BUFFER_ALIGNED_SIZE
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -632,16 +452,6 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``1.65e8``
 
-ONEFLOW_COMM_NET_IB_HCA
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-When there are multiple IB NIC(which can be checked by ``ibstatus``) on the server, the system uses the first IB NIC for comm_net communication by default. 
-
-When this environment variable is set, the system will check all IB NIC and find the NIC with the corresponding name.
-
-Values accepted
-^^^^^^^^^^^^^^^
-The default value is empty, such as ``mlx5_0:1``、 ``mlx5_1:1``. When the port is 0, the default value is ``1``, representing the first port.
 
 ONEFLOW_DEBUG_PASS
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
