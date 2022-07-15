@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/vm/caching_allocator.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/fuse_instruction_type.h"
+#include "oneflow/core/vm/release_tensor_instruction_type.h"
 #include "oneflow/core/vm/fuse_phy_instr_operand.h"
 #include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/allocator.h"
@@ -35,6 +36,24 @@ limitations under the License.
 namespace oneflow {
 
 namespace vm {
+
+namespace {
+
+bool EdgeDispatchable(const Instruction* src, const Instruction* dst) {
+  return (&src->stream() == &dst->stream()) /* same stream*/
+         && !src->dispatched_instruction_hook().empty() /* dispatched */;
+}
+
+bool Dispatchable(Instruction* instruction) {
+  if (unlikely(!instruction->dispatched_instruction_hook().empty())) { return false; }
+  INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_in_edges()) {
+    const auto* src_instruction = &edge->src_instruction();
+    if (unlikely(!EdgeDispatchable(src_instruction, instruction))) { return false; }
+  }
+  return true;
+}
+
+}  // namespace
 
 void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
   OF_PROFILER_RANGE_GUARD("R:" + instruction->DebugName());
@@ -254,20 +273,6 @@ void VirtualMachineEngine::ConsumeDependences(Instruction* instruction) {
   }
 }
 
-bool VirtualMachineEngine::EdgeDispatchable(const Instruction* src, const Instruction* dst) const {
-  return (&src->stream() == &dst->stream()) /* same stream*/
-         && !src->dispatched_instruction_hook().empty() /* dispatched */;
-}
-
-bool VirtualMachineEngine::Dispatchable(Instruction* instruction) const {
-  if (unlikely(!instruction->dispatched_instruction_hook().empty())) { return false; }
-  INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_in_edges()) {
-    const auto* src_instruction = &edge->src_instruction();
-    if (unlikely(!EdgeDispatchable(src_instruction, instruction))) { return false; }
-  }
-  return true;
-}
-
 // Dispatch ready instructions and put prescheduled instructions onto ready_instruction_list_.
 void VirtualMachineEngine::DispatchAndPrescheduleInstructions(const ScheduleCtx& schedule_ctx) {
   OF_PROFILER_RANGE_GUARD("DispatchAndPrescheduleInstructions");
@@ -298,9 +303,31 @@ std::string DebugDeviceReset(vm::Stream* stream) {
   return "reset device";
 }
 
+void CollectReadyDownstreamReleaseTensors(Stream* stream,
+                                          ReadyInstructionList* ready_instruction_list) {
+  const auto& IsDispatchableReleaseTensorInstructionOnSameDevice = [&](auto* instruction) {
+    if (!Dispatchable(instruction)) { return false; }
+    if (instruction->stream().device() != stream->device()) { return false; }
+    const auto* instruction_type = &instruction->instruction_type();
+    return dynamic_cast<const ReleaseTensorInstructionType*>(instruction_type) != nullptr;
+  };
+  INTRUSIVE_FOR_EACH_PTR(instruction, stream->mut_running_instruction_list()) {
+    while (!instruction->Done()) {}  // busy wait done.
+    auto* out_edges = instruction->mut_out_edges();
+    INTRUSIVE_FOR_EACH_PTR(out_edge, out_edges) {
+      Instruction* out_instruction = out_edge->mut_dst_instruction();
+      if (IsDispatchableReleaseTensorInstructionOnSameDevice(out_instruction)) {
+        out_edges->Erase(out_edge);
+        out_instruction->mut_in_edges()->Erase(out_edge);
+        ready_instruction_list->PushBack(out_instruction);
+      }
+    }
+  }
+}
+
 void BusyWaitAllInstructionsDone(Stream* stream) {
   INTRUSIVE_FOR_EACH_PTR(instruction, stream->mut_running_instruction_list()) {
-    while (!instruction->Done()) {}
+    while (!instruction->Done()) {}  // busy wait done.
   }
 }
 
@@ -312,8 +339,9 @@ void ShrinkMemory(Stream* stream) {
 
 }  // namespace
 
-template<void (*DoEachStream)(vm::Stream*)>
-void VirtualMachineEngine::ForEachStreamWithinDevice(Symbol<Device> device) {
+template<typename DoEachStreamT>
+void VirtualMachineEngine::ForEachStreamOnDevice(Symbol<Device> device,
+                                                 const DoEachStreamT& DoEachStream) {
   INTRUSIVE_FOR_EACH_PTR(thread_ctx, mut_thread_ctx_list()) {
     INTRUSIVE_FOR_EACH_PTR(current_stream, thread_ctx->mut_stream_list()) {
       if (current_stream->device() == device) { DoEachStream(current_stream); }
@@ -323,10 +351,25 @@ void VirtualMachineEngine::ForEachStreamWithinDevice(Symbol<Device> device) {
 
 void VirtualMachineEngine::BusyWaitInstructionsDoneThenShrink(vm::Stream* stream,
                                                               const ScheduleCtx& schedule_ctx) {
+  {
+    // Dispatch ReleaseTensor instructions as mush as possiable.
+    ReadyInstructionList ready_release_tensor_instruction_list;
+    ForEachStreamOnDevice(stream->device(), [&](vm::Stream* current_stream) {
+      CollectReadyDownstreamReleaseTensors(current_stream, &ready_release_tensor_instruction_list);
+    });
+    INTRUSIVE_FOR_EACH(instruction, &ready_release_tensor_instruction_list) {
+      ready_release_tensor_instruction_list.Erase(instruction.Mutable());
+      DispatchInstruction<&VirtualMachineEngine::AbortOnOOM>(instruction.Mutable(), schedule_ctx);
+    }
+  }
   // Buzy loop to make sure running instructions all done.
-  ForEachStreamWithinDevice<&BusyWaitAllInstructionsDone>(stream->device());
+  ForEachStreamOnDevice(stream->device(), &BusyWaitAllInstructionsDone);
   // Shrink memory.
-  ForEachStreamWithinDevice<&ShrinkMemory>(stream->device());
+  ForEachStreamOnDevice(stream->device(), &ShrinkMemory);
+}
+
+void VirtualMachineEngine::AbortOnOOM(vm::Stream* stream, const ScheduleCtx& schedule_ctx) {
+  LOG(FATAL) << "Out of Memory.";
 }
 
 template<void (VirtualMachineEngine::*OOMHandler)(vm::Stream*, const ScheduleCtx&)>
