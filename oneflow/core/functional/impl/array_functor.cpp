@@ -2591,7 +2591,7 @@ Maybe<Tensor> LocalTensorTo(const std::shared_ptr<Tensor>& x, const std::string&
     tensor = JUST(Cast(tensor->contiguous(), dtype, /*pin_memory=*/false));
   }
   if (copy && tensor == x) {
-    tensor = JUST(Copy(tensor->contiguous(), device_name, device_id, /*pin_memory=*/false));
+    tensor = JUST(Copy(tensor, device_name, device_id, /*pin_memory=*/false));
   }
   return tensor;
 }
