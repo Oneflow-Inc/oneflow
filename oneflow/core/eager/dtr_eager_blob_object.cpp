@@ -1,5 +1,4 @@
 #include "oneflow/core/eager/dtr_eager_blob_object.h"
-
 #include "oneflow/core/eager/dtr_util.h"
 #include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/framework/tensor_pool.h"
@@ -216,11 +215,13 @@ Maybe<double> DTREagerBlobObject::parent_cost(bool is_bp_required) const {
       bool add_flag = (!dtr_blob_object->is_in_memory());
       if (is_bp_required) { add_flag = add_flag && dtr_blob_object->is_bp_required(); }
       if (add_flag) {
-        LOG(INFO) << "parent " << dtr_blob_object.get() << " op type: " << dtr_blob_object->compute_op_type_name();
+        LOG(INFO) << "parent " << dtr_blob_object.get()
+                  << " op type: " << dtr_blob_object->compute_op_type_name();
         auto com_time = dtr_blob_object->compute_time();
         auto p_cost = JUST(dtr_blob_object->parent_cost(is_bp_required));
         cost = cost + com_time + p_cost;
-        LOG(INFO) << "parent " << dtr_blob_object.get() << " op type: " << dtr_blob_object->compute_op_type_name() << " end";
+        LOG(INFO) << "parent " << dtr_blob_object.get()
+                  << " op type: " << dtr_blob_object->compute_op_type_name() << " end";
       }
     }
 
@@ -343,7 +344,7 @@ Maybe<double> DTREagerBlobObject::cost(const std::string& heuristic, size_t over
   const double time_since_last_access =
       heuristic == "size" ? 1 : Global<dtr::TensorPool>::Get()->duration() - last_access_time_;
 
-  const double size_d = [&](){
+  const double size_d = [&]() {
     if (override_size == 0) {
       return blob_body_bytes_double();
     } else {
@@ -391,6 +392,18 @@ Maybe<double> DTREagerBlobObject::cost(const std::string& heuristic, size_t over
     return compute_time_ / time_since_last_access;
   } else if (heuristic == "local_compute_time") {
     return compute_time_;
+  } else if (heuristic == "me_approx_mul_beta") {
+    return (JUST(approx_neighbor_cost()) * std::pow(0.5, recompute_times()))
+           / (size_d * time_since_last_access);
+  } else if (heuristic == "me_approx_div_beta") {
+    return JUST(approx_neighbor_cost())
+           / (size_d * time_since_last_access * std::pow(0.5, recompute_times()));
+  } else if (heuristic == "me_mul_beta") {
+    return (JUST(neighbor_cost()) * std::pow(0.5, recompute_times()))
+           / (size_d * time_since_last_access);
+  } else if (heuristic == "me_div_beta") {
+    return JUST(neighbor_cost())
+           / (size_d * time_since_last_access * std::pow(0.5, recompute_times()));
   } else {
     return Error::InvalidValueError("");
   }

@@ -128,12 +128,14 @@ class DTREagerBlobObject final : public EagerBlobObject {
     return cnt;
   }
 
-  int id() const {
-    return id_;
-  }
+  int id() const { return id_; }
+
+  void add_recompute_times() { num_recomputation_++; }
+  int recompute_times() const { return num_recomputation_; }
 
  private:
   int id_;
+  int num_recomputation_ = 0;
   bool could_evict_;
   bool is_bp_required_;
   double compute_time_;
