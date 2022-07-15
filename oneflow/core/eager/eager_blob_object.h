@@ -193,6 +193,8 @@ class EagerBlobObject final : public user_op::Tensor,
     }
   }
 
+  void TryInitNonPODTypeEagerBlobObjectIfNeed();
+
  private:
   void InitMemPtrForAllocationComputationPipelining() {
     auto* ptr = tensor_storage_->blob_dptr();
@@ -213,6 +215,7 @@ class EagerBlobObject final : public user_op::Tensor,
   // are kept even after tensor_storage_.reset().
   char* mem_ptr_for_allocation_compuation_pipelining_;
   bool inited_mem_ptr_for_allocation_compuation_pipelining_;
+  bool is_non_pod_object_placement_newed_;
   std::atomic<bool> is_shape_synced_;
   bool pin_memory_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
