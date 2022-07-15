@@ -215,7 +215,9 @@ def tensor_setstate(self, pickle_dict):
                 flow.tensor(
                     pickle_dict["data"],
                     dtype=pickle_dict["dtype"],
-                    placement=pickle_dict["placement"] if map_location is None else map_location,
+                    placement=pickle_dict["placement"]
+                    if map_location is None
+                    else map_location,
                     sbp=pickle_dict["sbp"],
                 )
             )
@@ -224,7 +226,9 @@ def tensor_setstate(self, pickle_dict):
                 flow.tensor(
                     pickle_dict["data"],
                     dtype=pickle_dict["dtype"],
-                    device=pickle_dict["device"] if map_location is None else map_location,
+                    device=pickle_dict["device"]
+                    if map_location is None
+                    else map_location,
                 )
             )
 
@@ -289,7 +293,11 @@ def tensor_pickling_context(path: Path, global_src_dst_rank: Optional[int], mp):
         map_location = None
 
 
-def load(path: str, global_src_rank: Optional[int] = None, map_location: Union[str, flow.device, flow.placement]=None) -> Any:
+def load(
+    path: str,
+    global_src_rank: Optional[int] = None,
+    map_location: Union[str, flow.device, flow.placement] = None,
+) -> Any:
     r"""Loads an object saved with oneflow.save() from a directory.
 
     Args:
@@ -330,7 +338,9 @@ def load(path: str, global_src_rank: Optional[int] = None, map_location: Union[s
 
     if isinstance(map_location, str):
         map_location: flow.device = flow.device(map_location)
-    assert isinstance(map_location, (flow.device, flow.placement)), "'map_location' only supports str, device or placement."
+    assert isinstance(
+        map_location, (flow.device, flow.placement)
+    ), "'map_location' only supports str, device or placement."
     with tensor_pickling_context(path, global_src_rank, map_location):
         res = pickle.loads(pickle_bytes)
     assert res["protocol_version"] == PROTOCOL_VERSION
