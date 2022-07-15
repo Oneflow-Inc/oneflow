@@ -301,26 +301,35 @@ class MatMulFunctor {
     const auto& a_shape = a->shape();
     const auto& b_shape = b->shape();
 
-    // TODO(): Support 1-d tensor by dot.
-    CHECK_GE_OR_RETURN(a_shape->NumAxes(), 2)
-        << Error::RuntimeError() << "Tensor a's dim should >= 2";
-    CHECK_GE_OR_RETURN(b_shape->NumAxes(), 2)
-        << Error::RuntimeError() << "Tensor b's dim should >= 2";
+    CHECK_GE_OR_RETURN(a_shape->NumAxes(), 1)
+        << Error::RuntimeError() << "Tensor a's dim should >= 1";
+    CHECK_GE_OR_RETURN(b_shape->NumAxes(), 1)
+        << Error::RuntimeError() << "Tensor b's dim should >= 1";
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
     JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
     JUST(attrs.SetAttr<double>("alpha", alpha));
-    if (a_shape->NumAxes() != b_shape->NumAxes()) {
-      CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 2)
-          << Error::RuntimeError()
-          << "Not support number of dimensions of a being less than number of dimensions of b!";
-      return OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a, b}, attrs);
+    const int64_t a_num_axes = a_shape->NumAxes();
+    const int64_t b_num_axes = b_shape->NumAxes();
+    if (a_num_axes == 1 && b_num_axes == 2) { return VectorMatrixProduct(a, b); }
+    if (a_num_axes == 2 && b_num_axes == 1) { return MatrixVectorProduct(a, b); }
+    if (a_num_axes == 2 && b_num_axes == 2) {
+      return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
     }
-    if (a_shape->NumAxes() > 2) {
-      return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
+    if (a_num_axes == b_num_axes) {
+      bool if_batch_matmul = true;
+      for (int i = 0; i < a_num_axes - 2; ++i) {
+        if (a_shape->At(i) != b_shape->At(i)) {
+          if_batch_matmul = false;
+          break;
+        }
+      }
+      if (if_batch_matmul) {
+        return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
+      }
     }
-    return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a, b}, attrs);
   }
 
  private:
@@ -359,6 +368,30 @@ class BatchMatMulFunctor {
 
  private:
   std::shared_ptr<OpExpr> batch_matmul_op_;
+};
+
+class VectorMatrixProductFunctor {
+ public:
+  VectorMatrixProductFunctor() {
+    vector_matrix_product_op_ = CHECK_JUST(
+        one::OpBuilder("vector_matrix_product").Input("a").Input("b").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& vec,
+                           const std::shared_ptr<one::Tensor>& input) const {
+    const auto& vec_shape = vec->shape();
+    const auto& input_shape = input->shape();
+    CHECK_OR_RETURN(input_shape->NumAxes() == 2 && vec_shape->NumAxes() == 1)
+        << Error::RuntimeError() << "vector @ matrix expected, got "
+        << "1, " << input_shape->NumAxes() << ", " << vec_shape->NumAxes();
+    CHECK_EQ_OR_RETURN(vec_shape->at(0), input_shape->at(0))
+        << Error::RuntimeError() << "size mismatch, got " << 1 << ", "
+        << std::to_string(vec_shape->at(0)) << " x " << std::to_string(input_shape->at(0)) << ", "
+        << std::to_string(input_shape->at(1));
+    return OpInterpUtil::Dispatch<Tensor>(*vector_matrix_product_op_, {vec, input});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> vector_matrix_product_op_;
 };
 
 class TensorDotIntDimsFunctor {
@@ -2560,6 +2593,7 @@ class FusedScaleTrilSoftmaxMaskScaleFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const float p,
                                 const int64_t diagonal, const float tril_scale_value,
+                                const float tril_fill_value,
                                 const Optional<one::Generator>& generator) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap random_mask_like_attrs;
@@ -2577,6 +2611,7 @@ class FusedScaleTrilSoftmaxMaskScaleFunctor {
     JUST(fused_attrs.SetAttr<int64_t>("diagonal", diagonal));
     JUST(fused_attrs.SetAttr<float>("tril_scale_value", tril_scale_value));
     JUST(fused_attrs.SetAttr<float>("mask_scale_value", mask_scale_value));
+    JUST(fused_attrs.SetAttr<float>("tril_fill_value", tril_fill_value));
 
     return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_, {x, mask}, fused_attrs);
   }
@@ -3506,8 +3541,13 @@ class MultiTensorAdamUpdateFunctor {
   std::vector<std::shared_ptr<OpExpr>> op_;
 };
 
-class MvFunctor {
+class MatrixVectorProductFunctor {
  public:
+  MatrixVectorProductFunctor() {
+    matrix_vector_product_op_ = CHECK_JUST(
+        one::OpBuilder("matrix_vector_product").Input("a").Input("b").Output("out").Build());
+  }
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& vec) const {
     const auto& input_shape = input->shape();
@@ -3519,14 +3559,11 @@ class MvFunctor {
         << Error::RuntimeError() << "size mismatch, got " << std::to_string(input_shape->at(0))
         << ", " << std::to_string(input_shape->at(0)) << "x" << std::to_string(input_shape->at(1))
         << ", " << std::to_string(vec_shape->at(0));
-    // TODO(zhongshsh): speedup
-    const std::shared_ptr<Tensor> reshape_vec =
-        JUST(Reshape(vec, Shape(DimVector{vec_shape->at(0), 1})));
-    std::shared_ptr<Tensor> out = JUST(MatMul(input, reshape_vec, false, false, 1.0));
-    std::shared_ptr<Tensor> reshape_out = JUST(Squeeze(
-        JUST(Reshape(out, Shape(DimVector{1, input_shape->at(0)}))), std::vector<int32_t>({0})));
-    return reshape_out;
+    return OpInterpUtil::Dispatch<Tensor>(*matrix_vector_product_op_, {input, vec});
   }
+
+ private:
+  std::shared_ptr<OpExpr> matrix_vector_product_op_;
 };
 
 }  // namespace impl
@@ -3543,8 +3580,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::EmbeddingFunctor>("Embedding");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::MatMulNoBroadCastFunctor>("MatMulNoBroadCast");
-  m.add_functor<impl::MvFunctor>("Mv");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
+  m.add_functor<impl::MatrixVectorProductFunctor>("MatrixVectorProduct");
+  m.add_functor<impl::VectorMatrixProductFunctor>("VectorMatrixProduct");
   m.add_functor<impl::TensorDotFunctor>("TensorDot");
   m.add_functor<impl::TensorDotIntDimsFunctor>("TensorDotIntDims");
   m.add_functor<impl::FusedMLPFunctor>("FusedMLP");
