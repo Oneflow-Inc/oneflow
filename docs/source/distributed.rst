@@ -54,7 +54,7 @@ A global Tensor can be created with a ``placement`` and a ``sbp``. The ``placeme
 Convert Local Tensor to Global Tensor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-With ``Tensor.to_global`` interface, you can create a `Global Tensor` based on a `Local Tensor`, and regard this tensor as the local tensor of the `Global Tensor` on the present device.
+With ``Tensor.to_global`` interface, `Local Tensor` can create a `Global Tensor`` and use that `Local Tensor`` as its local component at the current node.
 
 Two local tensors with the shape of ``(2,5)`` are created separately on two devices. While after the to_global method, the global tensor with a shape of ``(4,5)`` is obtained.
 
@@ -115,7 +115,7 @@ When ``x + y`` is executed, since x is cut by dimension ``0`` and y is cut by di
 
 Get Local Tensor from Global Tensor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-With ``Tensor.to_local`` interface, you can return the local tensor of the `Global Tensor` on the present device.
+With ``Tensor.to_local`` interface, the `Global Tensor`` can return its local component at the current node.
 
 ::
 
