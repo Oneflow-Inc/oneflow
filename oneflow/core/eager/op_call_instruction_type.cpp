@@ -60,6 +60,11 @@ struct OpCallInstructionUtil final {
   static inline void Compute(vm::Instruction* instruction) {
     auto* operand = GetCallPhyInstrOperand(*instruction);
     ep::Stream* stream = instruction->mut_stream()->mut_stream_policy()->stream();
+    if (!operand->is_all_outputs_pod()) {
+      for (const auto& blob_object : *operand->outputs()) {
+        blob_object->TryInitNonPODTypeEagerBlobObjectIfNeed();
+      }
+    }
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
     if (operand->user_opkernel()->has_state_or_cache()) {
