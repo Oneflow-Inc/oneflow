@@ -37,7 +37,17 @@ class KeyValueStore {
 
   virtual void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
                    uint32_t* n_missing, uint32_t* missing_indices) = 0;
+  virtual void Get(ep::Stream* stream, uint32_t num_keys, const void* keys, void* values,
+                   uint8_t* mask) {
+    UNIMPLEMENTED();
+  }
   virtual void Put(ep::Stream* stream, uint32_t num_keys, const void* keys, const void* values) = 0;
+  virtual void FusedHalfUpdatePut(ep::Stream* stream, uint32_t n_keys, const void* keys,
+                                  const void* values, const void* update, const float* lr,
+                                  float scale) {
+    UNIMPLEMENTED();
+  }
+  virtual bool IsFusionSupported() { return false; }
   virtual bool SnapshotExists(const std::string& name) = 0;
   virtual void LoadSnapshot(const std::string& name) = 0;
   virtual void LoadSnapshot(const std::string& name,

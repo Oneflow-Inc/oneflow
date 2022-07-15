@@ -30,11 +30,11 @@ class InTopkKernel final : public user_op::OpKernel {
     const user_op::Tensor* predictions = ctx->Tensor4ArgNameAndIndex("predictions", 0);
     const int32_t k = ctx->Attr<int32_t>("k");
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(targets->shape().At(0), predictions->shape().At(0));
-    CHECK_EQ(targets->shape().NumAxes(), 1);
-    CHECK_EQ(predictions->shape().NumAxes(), 2);
-    const int32_t instance_num = predictions->shape().At(0);
-    const int32_t classes_num = predictions->shape().At(1);
+    CHECK_EQ(targets->shape_view().At(0), predictions->shape_view().At(0));
+    CHECK_EQ(targets->shape_view().NumAxes(), 1);
+    CHECK_EQ(predictions->shape_view().NumAxes(), 2);
+    const int32_t instance_num = predictions->shape_view().At(0);
+    const int32_t classes_num = predictions->shape_view().At(1);
     InTopkKernelUtil<device_type, T>::InTopk(ctx->stream(), instance_num, classes_num,
                                              targets->dptr<T>(), predictions->dptr<float>(), k,
                                              out->mut_dptr<bool>());

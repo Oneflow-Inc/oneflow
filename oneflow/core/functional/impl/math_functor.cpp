@@ -1019,9 +1019,9 @@ class Arange2Functor {
   }
 };
 
-class ConsistentArangeFunctor {
+class GlobalArangeFunctor {
  public:
-  ConsistentArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
+  GlobalArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
@@ -1071,13 +1071,13 @@ class ConsistentArangeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ConsistentArange2Functor {
+class GlobalArange2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& limit, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    return ConsistentArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
+    return GlobalArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
   }
 };
 
@@ -1089,13 +1089,8 @@ class CastFunctor {
     if (x->dtype() == dtype) { return x; }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    if (x->is_local()) {
-      bool cast_pin_memory = JUST(x->device())->type() == "cuda" ? false : pin_memory;
-      return OpInterpUtil::Dispatch<Tensor>(
-          *op_, {x}, OpExprInterpContext(attrs, JUST(x->device()), /*pin_memory=*/cast_pin_memory));
-    } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-    }
+    JUST(attrs.SetAttr<bool>("pin_memory", pin_memory));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -2137,7 +2132,7 @@ class TensorSplitVecFunctor {
       output[i] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/false));
       start[pos_dim] = end_idx;
     }
-    stop[pos_dim] = input->shape()->At(ndim - 1);
+    stop[pos_dim] = input->shape()->At(pos_dim);
     output[num_indices] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/false));
 
     return output;
@@ -2949,7 +2944,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<Transpose2dimFunctor>("Swapaxes");
   m.add_functor<Transpose2dimFunctor>("Swapdims");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
-  m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
+  m.add_functor<GlobalArangeFunctor, GlobalArange2Functor>("GlobalArange");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampInplaceFunctor>("ClampInplace");
