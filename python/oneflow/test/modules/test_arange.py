@@ -45,12 +45,17 @@ def _test_arange_more_params(test_case, device):
 
 
 def _test_arange_backward(test_case, device):
-    np_out = np.arange(13)
     x = flow.arange(13, dtype=flow.float32, device=device)
     x.requires_grad = True
     y = x.sum()
     y.backward()
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones(13), 1e-05, 1e-05))
+
+
+def _test_arange_input_tensor_type(test_case, device):
+    x = flow.tensor([[1, 2], [3, 4]], dtype=flow.int64).to(device)
+    y = flow.arange(start=flow.min(x), end=flow.max(x), device=device)
+    test_case.assertTrue(np.allclose(y.numpy(), np.arange(1, 4)))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -62,6 +67,7 @@ class TestArange(flow.unittest.TestCase):
             _test_arange_step_prarm,
             _test_arange_more_params,
             _test_arange_backward,
+            _test_arange_input_tensor_type,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

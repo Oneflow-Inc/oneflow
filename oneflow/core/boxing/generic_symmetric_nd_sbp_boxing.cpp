@@ -95,9 +95,9 @@ Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input, Symb
                                  Symbol<NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
                                  Symbol<ParallelDesc> out_parallel_desc) {
   const auto& boxing_interpreter =
-      JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
+      JUST(Singleton<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
           in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *input->shape()));
-  Global<const EagerBoxingLogger>::Get()->Log(
+  Singleton<const EagerBoxingLogger>::Get()->Log(
       *JUST(boxing_interpreter->boxing_interpreter_status()),
       /* prefix */ "\t\tInternal boxing of generic-symmetric-nd-sbp-to-nd-sbp, ");
   return JUST(boxing_interpreter->Interpret(input, in_nd_sbp, out_nd_sbp, in_parallel_desc,
@@ -163,7 +163,7 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
           << Error::RuntimeError() << "Invalid input tensor, size of local tensor ("
           << local_tensor->shape()->ToString() << ") does not match global tensor ("
           << logical_shape->ToString() << ")!";
-      std::shared_ptr<one::Tensor> sub_global_tensor = JUST(one::functional::LocalToConsistent(
+      std::shared_ptr<one::Tensor> sub_global_tensor = JUST(one::functional::LocalToGlobal(
           local_tensor, sub_parallel_desc, *JUST(GetSbpList(one_dim_nd_sbp)), sub_logical_shape,
           local_tensor->dtype()));
 
@@ -175,9 +175,9 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
 
       const auto& new_nd_sbp = JUST(SetSbpAtAxis(*nd_sbp, *broadcast_sbp, i));
 
-      output = JUST(one::functional::LocalToConsistent(local_tensor, in_parallel_desc,
-                                                       *JUST(GetSbpList(new_nd_sbp)),
-                                                       *logical_shape, local_tensor->dtype()));
+      output = JUST(one::functional::LocalToGlobal(local_tensor, in_parallel_desc,
+                                                   *JUST(GetSbpList(new_nd_sbp)), *logical_shape,
+                                                   local_tensor->dtype()));
     }
 
     CHECK_OR_RETURN(IsAllBroadcastNdSbpAfterDim(JUST(output->nd_sbp()), first_diff_sbp_dim))
@@ -202,7 +202,7 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
 
       std::shared_ptr<one::Tensor> local_tensor = JUST(output->cur_rank_phy_tensor());
 
-      std::shared_ptr<one::Tensor> sub_global_tensor = JUST(one::functional::LocalToConsistent(
+      std::shared_ptr<one::Tensor> sub_global_tensor = JUST(one::functional::LocalToGlobal(
           local_tensor, sub_parallel_desc, *JUST(GetSbpList(JUST(SbpToNdSbp(broadcast_sbp)))),
           *sub_logical_shape, local_tensor->dtype()));
 
@@ -223,18 +223,18 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
 
       const auto& new_nd_sbp = JUST(SetSbpAtAxis(*nd_sbp, sbp_parallel, i));
 
-      output = JUST(one::functional::LocalToConsistent(local_tensor, in_parallel_desc,
-                                                       *JUST(GetSbpList(new_nd_sbp)),
-                                                       *logical_shape, local_tensor->dtype()));
+      output = JUST(one::functional::LocalToGlobal(local_tensor, in_parallel_desc,
+                                                   *JUST(GetSbpList(new_nd_sbp)), *logical_shape,
+                                                   local_tensor->dtype()));
       // physical_shape of this axis is logical shape of next axis
       sub_logical_shape = physical_shape;
     }
   } else {
-    one::ConsistentTensorMeta tensor_meta(input->shape(), input->dtype()->data_type(), out_nd_sbp,
-                                          out_parallel_desc);
-    const auto& tensor_impl = JUST(
-        one::EagerConsistentTensorImpl::New(SymbolOf(tensor_meta), input->requires_grad(), false));
-    output = std::make_shared<one::ConsistentTensor>(tensor_impl);
+    one::GlobalTensorMeta tensor_meta(input->shape(), input->dtype()->data_type(), out_nd_sbp,
+                                      out_parallel_desc);
+    const auto& tensor_impl =
+        JUST(one::EagerGlobalTensorImpl::New(SymbolOf(tensor_meta), input->requires_grad(), false));
+    output = std::make_shared<one::GlobalTensor>(tensor_impl);
   }
 
   return output;

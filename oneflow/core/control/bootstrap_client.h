@@ -27,7 +27,7 @@ class BootstrapClient : public RpcClient {
   virtual ~BootstrapClient() override = default;
 
  protected:
-  friend class Global<BootstrapClient>;
+  friend class Singleton<BootstrapClient>;
   BootstrapClient() = default;
 };
 

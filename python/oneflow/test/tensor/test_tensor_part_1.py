@@ -195,7 +195,7 @@ class TestTensor(flow.unittest.TestCase):
         )
 
     @flow.unittest.skip_unless_1n2d()
-    def test_consistent_tensor_init_methods(test_case):
+    def test_global_tensor_init_methods(test_case):
         test_case._test_tensor_init_methods(
             lambda *args, **kwargs: flow.Tensor(
                 *args,
@@ -442,7 +442,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(z.numpy(), 5 * np.ones(z.shape)))
 
     @flow.unittest.skip_unless_1n1d()
-    def test_mirrored_tensor_and_op(test_case):
+    def test_local_tensor_and_op(test_case):
         x1 = flow.Tensor([[1.0, 2.0]])
         test_case.assertEqual(x1.dtype, flow.float32)
         test_case.assertEqual(x1.shape, flow.Size((1, 2)))
@@ -812,6 +812,16 @@ class TestTensor(flow.unittest.TestCase):
         x2 = random_tensor(ndim=1, dim0=1).to(device)
         y = x1.atan2(x2)
         return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5)
+    def test_dot(test_case):
+        device = random_device()
+        k = random(10, 100)
+        x = random_tensor(ndim=1, dim0=k).to(device)
+        y = random_tensor(ndim=1, dim0=k).to(device)
+        z = x.dot(y)
+        return z
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5)

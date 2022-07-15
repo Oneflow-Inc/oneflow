@@ -105,7 +105,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerNcclReduceOp::GetSbp(user_op::SbpContext* ctx) {
-  UNIMPLEMENTED_THEN_RETURN() << "consistent tensor are not supported";
+  UNIMPLEMENTED_THEN_RETURN() << "global tensor are not supported";
 }
 
 /* static */ Maybe<void> EagerNcclReduceOp::InferDataType(user_op::InferContext* ctx) {
