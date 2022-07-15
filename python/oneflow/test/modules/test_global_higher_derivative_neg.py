@@ -22,11 +22,7 @@ from oneflow.test_utils.automated_test_util import *
 
 
 def _global_neg_grad_grad_impl(test_case, placement, sbp):
-    x = (
-        flow.randn(np.random.randint(1, 10), np.random.randint(1, 10))
-        .to_global(placement=placement, sbp=sbp)
-        .requires_grad_(True)
-    )
+    x = flow.randn(8, 8).to_global(placement=placement, sbp=sbp).requires_grad_(True)
     y = x.neg()
     np_arr = np.random.rand(*x.shape)
     init_grad = flow.tensor(np_arr).to_global(placement, sbp).requires_grad_()
