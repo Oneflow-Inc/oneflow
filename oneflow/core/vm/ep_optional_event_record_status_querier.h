@@ -34,7 +34,7 @@ class EpOptionalEventRecordStatusQuerier {
 
   bool done() const { return launched_ && (ep_event_ == nullptr || ep_event_->Query()); }
 
-  void SetLaunched(EpDeviceCtx* device_ctx);
+  void SetLaunched(ep::Stream* stream);
 
   void reset_ep_event(const std::shared_ptr<EpEvent>& ep_event) { ep_event_ = ep_event; }
 
