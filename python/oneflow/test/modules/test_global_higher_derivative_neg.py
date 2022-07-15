@@ -23,10 +23,14 @@ from oneflow.test_utils.automated_test_util import *
 
 def _global_neg_grad_grad_impl(test_case, placement, sbp):
     x = flow.randn(8, 8).to_global(placement=placement, sbp=sbp).requires_grad_(True)
-    y = x.neg()
-    np_arr = np.random.rand(*x.shape)
-    init_grad = flow.tensor(np_arr).to_global(placement, sbp).requires_grad_()
+    init_grad = (
+        flow.randn(8, 8).to_global(placement=placement, sbp=sbp).requires_grad_(True)
+    )
+    init_grad_grad = (
+        flow.randn(8, 8).to_global(placement=placement, sbp=sbp).requires_grad_(True)
+    )
 
+    y = x.neg()
     x_grad = flow.autograd.grad(y, x, init_grad, create_graph=True)[0]
     test_case.assertTrue(np.allclose(-init_grad, x_grad.detach().numpy()))
 
@@ -35,7 +39,6 @@ def _global_neg_grad_grad_impl(test_case, placement, sbp):
         np.allclose(np.full(x.shape, 0.0), x_grad_grad.detach().numpy(),)
     )
 
-    init_grad_grad = flow.tensor(np_arr).to_global(placement, sbp).requires_grad_()
     dgrad = flow.autograd.grad(x_grad, init_grad, init_grad_grad, create_graph=True)[0]
     test_case.assertTrue(np.allclose(-init_grad_grad, dgrad.detach().numpy(),))
 
