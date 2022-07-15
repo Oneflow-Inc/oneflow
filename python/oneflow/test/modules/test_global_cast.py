@@ -1304,7 +1304,7 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
     local_graph_model = GraphModel(model)
     global_graph_model = None
 
-    def _all_global(test_case, input, placement, sbp):
+    def __all_global(test_case, input, placement, sbp):
         if type(input) == Tensor:
             test_case.assertTrue(input.is_global)
             # check placement
@@ -1323,7 +1323,7 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
                     # check sbp
                     test_case.assertTupleEqual(sbp, node.sbp)
 
-    def _all_local(test_case, input):
+    def __all_local(test_case, input):
         if type(input) == Tensor:
             test_case.assertFalse(input.is_global)
         elif isinstance(input, (dict, tuple, list)):
@@ -1332,7 +1332,7 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
                 if isinstance(node, Tensor):
                     test_case.assertFalse(node.is_global)
 
-    def test_any_input(test_case):
+    def _test_any_input(test_case):
         tensor = flow.zeros((3, 4))
         tensor_list = [flow.tensor([1, 2, 3]), flow.randn((2, 3, 4))]
         tensor_tuple = (flow.zeros((2, 2)), flow.ones((2, 3)), flow.randn((3, 5)))
@@ -1343,14 +1343,14 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
         global_inputs = []
         for i in inputs:
             ret = flow.to_global(i, placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp)
-            test_case._all_global(ret, placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp)
+            test_case.__all_global(ret, placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp)
             global_inputs.append(ret)
         
         for i in global_inputs:
             ret = flow.to_local(i)
-            test_case._all_local(ret)
+            test_case.__all_local(ret)
 
-    def test_tensor_to_global(test_case):
+    def _test_tensor_to_global(test_case):
         local_tensor = flow.ones((3, 4))
 
         # local tensor -> global tensor
@@ -1369,59 +1369,53 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
         with test_case.assertRaises(TypeError):
             global_tensor = flow.to_global(local_tensor, placement=TestToGlobalLocal.placement, sbp=(TestToGlobalLocal.sbp, 0))
 
-    def test_tensor_to_local(test_case):
+    def _test_tensor_to_local(test_case):
         # global tensor -> local tensor
         global_tensor = flow.ones((3, 4), placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp)
         local_tensor = flow.to_local(global_tensor)
         test_case.assertFalse(local_tensor.is_global)
 
-    def _test_state_dict_to_global(test_case, local_state_dict):
+    def __test_state_dict_to_global(test_case, local_state_dict):
         # local state dict -> global state dict
         global_state_dict = flow.to_global(local_state_dict,
                                            placement=TestToGlobalLocal.placement,
                                            sbp=TestToGlobalLocal.sbp)
-        test_case._all_global(global_state_dict, placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp)
+        test_case.__all_global(global_state_dict, placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp)
 
         # global state dict -> global state dict
         global_state_dict = flow.to_global(global_state_dict,
                                            placement=TestToGlobalLocal.placement,
                                            sbp=TestToGlobalLocal.sbp)
-        test_case._all_global(global_state_dict, placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp)
+        test_case.__all_global(global_state_dict, placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp)
 
-    def _test_state_dict_to_local(test_case, global_state_dict):
+    def __test_state_dict_to_local(test_case, global_state_dict):
         # global state dict -> local state dict
         local_state_dict = flow.to_local(global_state_dict)
-        test_case._all_local(local_state_dict)
+        test_case.__all_local(local_state_dict)
         
         # local input, display warning
         local_state_dict = flow.to_local(local_state_dict)
 
-    def test_eagar_state_dict(test_case):
-        test_case._test_state_dict_to_global(TestToGlobalLocal.model.state_dict())
+    def _test_eagar_state_dict(test_case):
+        test_case.__test_state_dict_to_global(TestToGlobalLocal.model.state_dict())
         global_model = TestToGlobalLocal.model.to_global(placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp)
-        test_case._test_state_dict_to_local(global_model.state_dict())
+        test_case.__test_state_dict_to_local(global_model.state_dict())
 
-    def test_graph_state_dict(test_case):
-        test_case._test_state_dict_to_global(TestToGlobalLocal.local_graph_model.state_dict())
-        test_case._test_state_dict_to_local(TestToGlobalLocal.global_graph_model.state_dict())
+    def _test_graph_state_dict(test_case):
+        test_case.__test_state_dict_to_global(TestToGlobalLocal.local_graph_model.state_dict())
+        test_case.__test_state_dict_to_local(TestToGlobalLocal.global_graph_model.state_dict())
+
+    def test(test_case):
+        sbp_types = [(flow.sbp.broadcast,), (flow.sbp.split(0),), (flow.sbp.partial_sum,)]
+        for sbp in sbp_types:
+            TestToGlobalLocal.sbp = sbp
+            TestToGlobalLocal.global_graph_model = GraphModel(TestToGlobalLocal.model.to_global(placement=TestToGlobalLocal.placement, sbp=sbp))
+            test_case._test_any_input()
+            test_case._test_tensor_to_global()
+            test_case._test_tensor_to_local()
+            test_case._test_eagar_state_dict()
+            test_case._test_graph_state_dict()
 
 
 if __name__ == "__main__":
     unittest.main()
-
-    # test on three types of sbp
-    sbp_types = [(flow.sbp.broadcast,), (flow.sbp.split(0),), (flow.sbp.partial_sum,)]
-    for sbp in sbp_types:
-        TestToGlobalLocal.sbp = sbp
-        TestToGlobalLocal.global_graph_model = GraphModel(TestToGlobalLocal.model.to_global(placement=TestToGlobalLocal.placement, sbp=sbp))
-
-        suite = unittest.TestSuite()
-        suite.addTests([
-            TestToGlobalLocal('test_any_input'),
-            TestToGlobalLocal('test_tensor_to_global'),
-            TestToGlobalLocal('test_tensor_to_local'),
-            TestToGlobalLocal('test_eagar_state_dict'),
-            TestToGlobalLocal('test_graph_state_dict')
-        ])
-        runner = unittest.TextTestRunner()
-        runner.run(suite)
