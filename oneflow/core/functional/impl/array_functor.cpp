@@ -2586,9 +2586,12 @@ Maybe<Tensor> LocalTensorTo(const std::shared_ptr<Tensor>& x, const std::string&
   if (!JUST(device_equal(device_name, device_id, JUST(x->device())))) {
     tensor = JUST(Copy(tensor, device_name, device_id, /*pin_memory=*/false));
   }
-  if (dtype != x->dtype()) { tensor = JUST(Cast(tensor, dtype, /*pin_memory=*/false)); }
+  if (dtype != x->dtype()) {
+    // TODO: remove tensor->contiguous() when cast support non-contiguous input
+    tensor = JUST(Cast(tensor->contiguous(), dtype, /*pin_memory=*/false));
+  }
   if (copy && tensor == x) {
-    tensor = JUST(Copy(tensor, device_name, device_id, /*pin_memory=*/false));
+    tensor = JUST(Copy(tensor->contiguous(), device_name, device_id, /*pin_memory=*/false));
   }
   return tensor;
 }
