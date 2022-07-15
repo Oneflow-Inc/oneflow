@@ -154,7 +154,7 @@ class TestTensorOps(flow.unittest.TestCase):
         x = random_tensor(ndim=0).to(device)
         y = x.long()
         return y
-    
+
     @autotest(n=5, auto_backward=False)
     def test_long_with_non_contiguous_input(test_case):
         device = random_device()
