@@ -52,3 +52,5 @@ Functional operations for neural networks
 .. autofunction:: cross_entropy
 .. autofunction:: relu6
 .. autofunction:: upsample
+.. autofunction:: fold
+.. autofunction:: unfold
