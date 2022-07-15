@@ -62,7 +62,7 @@ void DispatchDimNumImpl(ep::Stream* stream, const int64_t* in_dims, const int64_
     in_helper_dims[index] = in_dims[i];
     out_helper_dims[index] = out_dims[i];
   }
-  // N == 3 represent batch_dim_size == 1 || outer_dim_size == 1(
+  // N == 3 represent batch_dim_size == 1 || outer_dim_size == 1,
   // still use 3d helper
   if (N == 3) {
     in_helper_dims[0] *= in_dims[0];

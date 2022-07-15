@@ -27,7 +27,7 @@ void GatherCpuKernel(int64_t outer_dim_size, int64_t gather_dim_size, int64_t in
                      T* output) {
   FOR_RANGE(int64_t, outer_idx, 0, outer_dim_size) {
     FOR_RANGE(int64_t, i, 0, num_indices) {
-      CHECK_GE(indice[i], 0);
+      CHECK_GE(indice[i], static_cast<K>(0));
       const int64_t idx = indice[i] - offset;
       T* to = output + outer_idx * num_indices * inner_dim_size + i * inner_dim_size;
       if (idx >= 0 && idx < gather_dim_size) {
