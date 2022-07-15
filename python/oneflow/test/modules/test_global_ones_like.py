@@ -35,8 +35,8 @@ def _test_ones_like_float(test_case, placement, sbp, shape, device):
     test_case.assertTrue(y.shape == x.shape)
     test_case.assertTrue(y.placement == placement)
     y_numpy = np.ones(x.numpy().shape)
-    print('y_numpy: ', y_numpy)
-    print('y.numpy()', y.numpy())
+    print("y_numpy: ", y_numpy)
+    print("y.numpy()", y.numpy())
 
     test_case.assertTrue(np.array_equal(y.numpy(), y_numpy))
 
