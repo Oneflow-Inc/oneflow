@@ -68,7 +68,7 @@ The default value is empty, but will load ``libibverbs.so.1``, ``libibverbs.so``
 `ONEFLOW_DEBUG_MODE <https://github.com/Oneflow-Inc/oneflow/blob/v0.5.0rc1/oneflow/core/job/resource_desc.cpp#L63>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-Enable ``debug`` mode, and ``oneflow.config.enable_debug_mode(True)``, ``ONEFLOW_DEBUG`` can also do. 
+Enable ``debug`` mode, ``ONEFLOW_DEBUG`` can do. 
 
 If ``debug`` mode is on, it will output different ``prototxt`` and ``dot``. The automatically inserted boxing information will be printed to the log file under eager global mode.
 
