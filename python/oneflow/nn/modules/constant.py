@@ -148,6 +148,10 @@ def ones_like_op(
     sbp: flow._oneflow_internal.sbp.sbp = None,
     requires_grad: bool = False,
 ):
+    if placement is None and input.is_global and input.placement is not None:
+        placement = input.placement
+    if sbp is None and input.is_global and input.sbp is not None:
+        sbp = input.sbp
     return Ones(input.size(), dtype, device, placement, sbp, requires_grad)()
 
 
@@ -211,6 +215,10 @@ def zeros_like_op(
     sbp: flow._oneflow_internal.sbp.sbp = None,
     requires_grad: bool = False,
 ):
+    if placement is None and input.is_global and input.placement is not None:
+        placement = input.placement
+    if sbp is None and input.is_global and input.sbp is not None:
+        sbp = input.sbp
     return Zeros(input.size(), dtype, device, placement, sbp, requires_grad)()
 
 
