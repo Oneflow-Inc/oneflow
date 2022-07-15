@@ -84,7 +84,7 @@ Code running on Node 1
 
 Redistribute Global Tensor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-With ``Tensor.to_global`` interface, data of `Global Tensor` can be redistributed the in clusters,either by choosing to distribute to another set of nodes or by changing its distribution on that set of nodes (i.e. changing the SBP)
+Redistributing a global tensor means moving its data to another device group (or placement), or changing its data distribution (or SBP) across the group, or both at the same time. The redistributed tensor is still a global tensor.
 
 ::
 
