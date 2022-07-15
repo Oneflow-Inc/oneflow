@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job_rewriter/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/framework/config_def.h"
-#include "oneflow/core/job_rewriter/xrt_compilation.h"
 #include "oneflow/core/job_rewriter/boxing_with_middle_nodes.h"
 
 namespace oneflow {
@@ -108,7 +107,9 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
   JobPassCtx job_pass_ctx(GlobalJobDesc());
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
   // NOTE(chengcheng): disable this pass for reduce boxing memory life cycle to memory cost.
-  if (!Global<ResourceDesc, ForSession>::Get()->resource().disable_group_boxing_by_dst_parallel()) {
+  if (!Singleton<ResourceDesc, ForSession>::Get()
+           ->resource()
+           .disable_group_boxing_by_dst_parallel()) {
     JUST(WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel));
   }
   JUST(WithOpGraphAndMutJobBuilder(job, &BoxingWithMiddleNodes));
@@ -120,16 +121,8 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
   JUST(WithOpGraphAndMutJob(job, &MultiClientAutoInterfaceCriticalSectionTick));
   JUST(JobPass4Name("SystemOpFillJobNamePass")(job, &job_pass_ctx));
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
-  if (XrtCompilationEnabled(GlobalJobDesc())) {
-#ifdef OF_WITH_XRT
-    JUST(WithOpGraphAndMutJob(job, &RebuildXrtCompiledJob));
-#else
-    LOG(WARNING) << "It will not use XLA or TensorRT since WITH_XLA or "
-                    "WITH_TENSORRT was not enabled when compiling the project.";
-#endif  // OF_WITH_XRT
-  }
 #ifdef WITH_CUDA
-  if (Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+  if (Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
     // NOTE(chengcheng): this pass need as last pass for insert correct op with nccl boxing.
     JUST(JobPass4Name("InsertNcclLogicalOpPass")(job, &job_pass_ctx));
     // NOTE(chengcheng): Becasue insert new logical nccl op, MUST dump time shape, sbp again.

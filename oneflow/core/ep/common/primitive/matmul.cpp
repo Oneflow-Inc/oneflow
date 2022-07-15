@@ -61,6 +61,11 @@ REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, MatmulFactory, MatmulFactoryImpl<De
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, MatmulFactory, MatmulFactoryImpl<DeviceType::kCUDA>);
 #endif  // WITH_CUDA
 
+#ifdef WITH_ROCM
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, MatmulFactory, MatmulFactoryImpl<DeviceType::kCUDA>);
+#endif  // WITH_ROCM
+
+
 }  // namespace
 
 }  // namespace primitive

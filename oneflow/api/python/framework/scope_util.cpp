@@ -23,6 +23,13 @@ namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetCurrentScope", &GetCurrentScope);
+  m.def("MakeInitialScope",
+        [](const std::string& job_conf_str, Symbol<ParallelDesc> placement,
+           bool is_mirrored) -> Maybe<Scope> {
+          JobConfigProto job_conf;
+          CHECK_OR_RETURN(TxtString2PbMessage(job_conf_str, &job_conf)) << "job conf parse failed";
+          return MakeInitialScope(job_conf, placement, is_mirrored);
+        });
   m.def("InitGlobalScopeStack", &InitThreadLocalScopeStack);
 
   m.def("GlobalScopeStackPush", &ThreadLocalScopeStackPush);

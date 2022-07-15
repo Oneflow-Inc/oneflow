@@ -24,6 +24,9 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/common/stride.h"
+#include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 
 namespace oneflow {
 namespace one {
@@ -72,7 +75,8 @@ Maybe<TensorTuple> ExpandMaskIndex(const std::shared_ptr<Tensor>& index) {
   JUST(SyncAccessTensorWithTimeOut(size_tensor, callback, "const"));
 
   for (int i = 0; i < index->ndim(); ++i) {
-    auto item = JUST(functional::Slice(res->at(0), {0, i}, {size, i + 1}, {1, 1}));
+    auto item = JUST(functional::Slice((*res)[0], {0, i}, {size, i + 1}, {1, 1},
+                                       /*enable_view_slice=*/false));
     item = JUST(functional::Reshape(item, {size}));
     indices->emplace_back(item);
   }
@@ -102,8 +106,9 @@ Maybe<TensorTuple> ExpandIndices(const TensorTuple& indices) {
           int size = shape->At(dim);
           int expanded_size = expanded_shape->At(expanded_dim);
           CHECK_OR_RETURN(size == expanded_size || size == 1 || expanded_size == 1)
-              << "The size of tensor a (" << size << ") must match the size of tensor b ("
-              << expanded_size << ") at non-singleton dimension " << i;
+              << Error::RuntimeError() << "The size of tensor a (" << size
+              << ") must match the size of tensor b (" << expanded_size
+              << ") at non-singleton dimension " << i;
           sizes[j] = size == 1 ? expanded_size : size;
         }
       }
@@ -175,6 +180,7 @@ Maybe<Tensor> AdjustSubspace(const std::shared_ptr<Tensor>& input, const TensorT
   if (index_subspace_pos <= 0) { return input; }
   int ndim = input->ndim();
   CHECK_LE_OR_RETURN(index_subspace_pos + index_ndim, ndim)
+      << Error::IndexError()
       << "Failed to adjust subspace since the index is out of bounds for tensor dimension " << ndim;
   std::vector<int> permute;
   permute.reserve(ndim);
@@ -199,7 +205,7 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
   int64_t ndims = shape.NumAxes();
   int64_t specified_ndims = CountSpecifiedDims(index);
   CHECK_LE_OR_RETURN(specified_ndims, ndims)
-      << "Too many indices for tensor of dimension " << ndims;
+      << Error::IndexError() << "Too many indices for tensor of dimension " << ndims;
   bool has_false_index = JUST(HasFalseIndex(index));
   bool has_expand_boolean_dim = false;
   int dim = 0;
@@ -231,10 +237,12 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       dim += unspecified_ndims;
       continue;
     }
-    CHECK_LT_OR_RETURN(dim, ndims) << "Invalid index for tensor of dimension " << ndims;
+    CHECK_LT_OR_RETURN(dim, ndims)
+        << Error::IndexError() << "Invalid index for tensor of dimension " << ndims;
     if (index_item.IsSlice()) {
       const auto& slice = index_item.slice();
-      CHECK_GT_OR_RETURN(slice.step(), 0) << "Step must be greater than zero.";
+      CHECK_GT_OR_RETURN(slice.step(), 0)
+          << Error::RuntimeError() << "Step must be greater than zero.";
       int64_t step = std::min(slice.step(), shape.At(dim));
       int64_t end = std::min(slice.end(), shape.At(dim));
       int64_t start = std::min(slice.start(), shape.At(dim));
@@ -296,8 +304,8 @@ Maybe<std::vector<detail::Slice>> RemoveExpandDimSlice(
   std::vector<int> mask(expand_slices.size(), 0);
   for (const auto& dim : expand_dims) {
     if (dim >= expand_slices.size()) {
-      return Error::RuntimeError()
-             << "Dimension " << dim << " is out of bounds for size " << expand_slices.size();
+      return Error::IndexError() << "Dimension " << dim << " is out of bounds for size "
+                                 << expand_slices.size();
     }
     mask[dim] = 1;
   }
@@ -310,7 +318,7 @@ Maybe<std::vector<detail::Slice>> RemoveExpandDimSlice(
 Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
                                     const TensorTuple& indices) {
   CHECK_GE_OR_RETURN(input->ndim(), indices.size())
-      << "Too many indices for tensor of dimension " << input->ndim();
+      << Error::IndexError() << "Too many indices for tensor of dimension " << input->ndim();
   const auto& expanded_indices = JUST(ExpandIndices(indices));
   bool is_continuous_subspace = JUST(IsContinuousSubspace(indices));
 
@@ -323,7 +331,8 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   int index_ndim = valid_indices.at(0)->ndim();
   auto packed_indices = JUST(Stack(valid_indices, 0));
   int packed_ndim = packed_indices->ndim();
-  CHECK_GT_OR_RETURN(packed_ndim, 0) << "Index array dimension should be greater than 0.";
+  CHECK_GT_OR_RETURN(packed_ndim, 0)
+      << Error::RuntimeError() << "Index array dimension should be greater than 0.";
   std::vector<int> permute(packed_ndim);
   permute[packed_ndim - 1] = 0;
   std::iota(permute.begin(), permute.end() - 1, 1);
@@ -340,17 +349,49 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   } else {
     Symbol<Device> device = JUST(transposed_input->device());
     if (JUST(packed_indices->device()) != device) {
-      packed_indices = JUST(Copy(packed_indices, device->type(), device->device_id()));
+      packed_indices =
+          JUST(Copy(packed_indices, device->type(), device->device_id(), /*pin_memory=*/false));
     }
   }
   auto result = JUST(GatherNd(transposed_input, packed_indices));
 
   int required_ndim = input->ndim() - valid_indices.size() + index_ndim;
   CHECK_EQ_OR_RETURN(result->ndim(), required_ndim)
-      << "The indexing result dimension is " << result->ndim() << ", but shoule be "
-      << required_ndim;
+      << Error::RuntimeError() << "The indexing result dimension is " << result->ndim()
+      << ", but shoule be " << required_ndim;
   if (is_continuous_subspace) { result = JUST(AdjustSubspace(result, indices, index_ndim)); }
   return result;
+}
+
+Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
+                                  const TensorIndex& tensor_index) {
+  const int32_t index = tensor_index[0].integer();
+  const int32_t ndim = input->ndim();
+  CHECK_OR_RETURN(ndim > 0) << Error::RuntimeError()
+                            << "select() cannot be applied to a 0-dim tensor.";
+  const int32_t pos_dim = 0;
+  auto size = input->dim(pos_dim);
+  CHECK_OR_RETURN(index >= -size && index < size)
+      << Error::IndexError() << "Index out of range (expected to be in range of [" << -size << ","
+      << size - 1 << "], but got " << index << ")";
+  int32_t pos_index = index >= 0 ? index : index + size;
+  std::vector<int32_t> sizes(input->shape()->dim_vec().begin() + 1,
+                             input->shape()->dim_vec().end());
+  const auto& stride = *JUST(input->stride());
+  const int32_t storage_offset = JUST(input->storage_offset()) + pos_index * stride[pos_dim];
+  std::vector<int32_t> strides(stride.begin() + 1, stride.end());
+
+  if (view::IsViewApplicable(input)) {
+    return view::AsStrided(input, sizes, strides, storage_offset);
+  } else {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("size", sizes));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("stride", strides));
+    JUST(attrs.SetAttr<int32_t>("storage_offset", storage_offset));
+    std::shared_ptr<OpExpr> op_ =
+        JUST(one::OpBuilder("as_strided").Input("input").Output("output").Build());
+    return one::OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+  }
 }
 
 Maybe<void> UnifyLocalTensorAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
@@ -364,7 +405,8 @@ Maybe<void> UnifyLocalTensorAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
       const auto tensor_index_device = JUST(tensor_index->device());
       if ((tensor_index_device->type() != x_device->type())
           || (tensor_index_device->device_id() != x_device->device_id())) {
-        tensor_indices[i] = JUST(Copy(tensor_index, x_device->type(), x_device->device_id()));
+        tensor_indices[i] =
+            JUST(Copy(tensor_index, x_device->type(), x_device->device_id(), /*pin_memory=*/false));
       }
     }
   }

@@ -37,7 +37,7 @@ limitations under the License.
 
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/meta_util.hpp"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/cpp_attribute.h"
 
 #define CHECK_ISNULL(e) CHECK((e) == nullptr)
@@ -215,7 +215,7 @@ void Erase(T& container, const std::function<bool(const typename T::value_type&)
 
 #if defined(__GNUC__)
 #define ALWAYS_INLINE __attribute__((always_inline))
-#elif defined(__CUDACC__)
+#elif defined(__CUDACC__) || defined(__HIPCC__)
 #define ALWAYS_INLINE __forceinline__
 #else
 #define ALWAYS_INLINE inline

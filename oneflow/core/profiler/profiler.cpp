@@ -15,7 +15,9 @@ limitations under the License.
 */
 
 #include "oneflow/core/profiler/profiler.h"
-#include "oneflow/core/profiler/collection.h"
+#include "oneflow/core/profiler/profile_manager.h"
+#include "oneflow/core/profiler/kineto_shim.h"
+#include "oneflow/core/profiler/event_recorder.h"
 #include "oneflow/core/vm/vm_util.h"
 #ifdef OF_ENABLE_PROFILER
 #include <nvtx3/nvToolsExt.h>
@@ -90,34 +92,35 @@ void ProfilerStop() {
 #endif  // OF_ENABLE_PROFILER
 }
 
-void EnableProfiler() {
+void EnableProfiler(bool use_cpu, bool use_cuda, bool record_shapes, bool record_bandwidth) {
   CHECK_JUST(vm::ClusterSync());
-  if (Global<ProfileMgr>::Get() == nullptr) { Global<ProfileMgr>::New(); }
+  if (Singleton<ProfileManager>::Get() == nullptr) {
+    Singleton<ProfileManager>::New(use_cpu, use_cuda, record_shapes, record_bandwidth);
+  }
 }
 
 // DisableProfilerAndReturnResult will return a json of profile results.
-std::string DisableProfilerAndReturnResult() {
-  CHECK_JUST(vm::ClusterSync());
-
-  auto pmgr = Global<ProfileMgr>::Get();
-  CHECK_NOTNULL_OR_RETURN(pmgr) << "ProfileMgr has not been initialized.";
+Maybe<std::string> DisableProfilerAndReturnResult() {
+  JUST(vm::ClusterSync());
+#if defined(WITH_CUDA)
+  OF_CUDA_CHECK(cudaDeviceSynchronize());
+#endif  // WITH_CUDA
+  auto* pmgr = JUST(SingletonMaybe<ProfileManager>());
   std::string results = pmgr->DumpResultsJson();
-  Global<ProfileMgr>::Delete();
+  Singleton<ProfileManager>::Delete();
   return results;
 }
 
 Maybe<std::string> StartRecord(const std::string& name) {
-  auto pmgr = Global<ProfileMgr>::Get();
-  CHECK_NOTNULL_OR_RETURN(pmgr) << "ProfileMgr has not been initialized.";
-  CHECK_JUST(vm::ClusterSync());
+  auto* pmgr = JUST(SingletonMaybe<ProfileManager>());
+  JUST(vm::ClusterSync());
   return pmgr->RegisterEventRecorder(profiler::EventRecorder::CreateCustomEventRecorder(name),
                                      name);
 }
 
 Maybe<void> EndRecord(const std::string& event_recorder_key) {
-  auto pmgr = Global<ProfileMgr>::Get();
-  CHECK_NOTNULL_OR_RETURN(pmgr) << "ProfileMgr has not been initialized.";
-  CHECK_JUST(vm::ClusterSync());
+  auto* pmgr = JUST(SingletonMaybe<ProfileManager>());
+  JUST(vm::ClusterSync());
   pmgr->UnregisterEventRecorder(event_recorder_key);
   return Maybe<void>::Ok();
 }

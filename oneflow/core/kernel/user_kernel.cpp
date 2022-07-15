@@ -51,10 +51,12 @@ namespace {
 void FillTensorDescWithBlob(const Blob* blob, user_op::NaiveTensorDesc* tensor_desc) {
   BlobDescProto proto;
   blob->blob_desc().shape().ToProto(proto.mutable_shape());
+  blob->blob_desc().stride().ToProto(proto.mutable_stride());
   proto.set_data_type(blob->blob_desc().data_type());
   proto.set_is_dynamic(blob->blob_desc().is_dynamic());
   *tensor_desc = proto;
   tensor_desc->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
+  tensor_desc->mut_stride()->CheckNumAxesIdenticalAndAssign(blob->stride());
 }
 
 }  // namespace
@@ -75,8 +77,8 @@ class UserKernelBaseContext {
     };
     InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().input(), &inputs_);
     InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().output(), &outputs_);
-    device_tag_ = kernel_conf.op_attribute().op_conf().device_tag();
-    device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
+    device_type_ =
+        CHECK_JUST(DeviceType4DeviceTag(kernel_conf.op_attribute().op_conf().device_tag()));
     parallel_ctx_ = kernel_conf.parallel_ctx();
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
       arg2bn_and_tensor_desc_.emplace(
@@ -87,7 +89,6 @@ class UserKernelBaseContext {
   ~UserKernelBaseContext() = default;
 
   DeviceType device_type() const { return device_type_; }
-  const std::string& device_tag() const { return device_tag_; }
   const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const {
@@ -106,7 +107,6 @@ class UserKernelBaseContext {
   ArgVec inputs_;
   ArgVec outputs_;
   DeviceType device_type_;
-  std::string device_tag_;
   ParallelContext parallel_ctx_;
 };
 
@@ -269,6 +269,15 @@ class UserKernelOpInferContext : public user_op::InferContext {
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
+  const Stride& InputStride(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<UserKernelOpInferContext*>(this)->Stride4ArgNameAndIndex(arg_name, index);
+  }
+  Stride* OutputStride(const std::string& arg_name, int32_t index) override {
+    return Stride4ArgNameAndIndex(arg_name, index);
+  }
+  Stride* Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_stride();
+  }
   const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
     return *const_cast<UserKernelOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
   }
@@ -316,6 +325,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
       CHECK_NOTNULL(blob);
       if (*arg_tensor_desc_ptr) {
         (*arg_tensor_desc_ptr)->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
+        (*arg_tensor_desc_ptr)->mut_stride()->CheckNumAxesIdenticalAndAssign(blob->stride());
       } else {
         arg_tensor_desc_ptr->reset(new user_op::NaiveTensorDesc());
         FillTensorDescWithBlob(blob, arg_tensor_desc_ptr->get());
@@ -345,7 +355,6 @@ class UserKernelOpInferContext : public user_op::InferContext {
   }
   const std::string& op_name() const override { return user_op_conf().op_name(); }
   const std::string& op_type_name() const override { return user_op_conf().op_type_name(); }
-  const std::string& device_tag() const override { return user_op_conf().op_conf().device_tag(); }
   const std::string& op_loc() const override { return user_op_conf_.op_conf().loc(); }
 
  private:
@@ -415,14 +424,14 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
     user_op::Tensor* arg_tensor = Tensor4ArgNameAndIndex(arg_name, arg_index);
     CHECK(arg_tensor != nullptr) << "Tensor of arg (" << arg_name << "," << arg_index
                                  << ") is not found";
-    return arg_tensor->shape();
+    return arg_tensor->shape_view();
   }
   MutShapeView MutShapeView4ArgNameAndIndex(const std::string& arg_name,
                                             int32_t arg_index) override {
     user_op::Tensor* arg_tensor = Tensor4ArgNameAndIndex(arg_name, arg_index);
     CHECK(arg_tensor != nullptr) << "Tensor of arg (" << arg_name << "," << arg_index
                                  << ") is not found";
-    return arg_tensor->mut_shape();
+    return arg_tensor->mut_shape_view();
   }
 
   user_op::InferContext* MutOpInferContext() override { return &op_infer_ctx_; }
@@ -569,7 +578,6 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
   ~UserKernelRegContext() = default;
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
-  const std::string& device_tag() const override { return base_ctx_.device_tag(); }
   const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
@@ -637,8 +645,13 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
         cuda_stream->LaunchGraph(cuda_graph_exec_.get());
         return;
       }
-      current_scope_capturing = true;
-      cuda_stream->BeginGraphCapture();
+      const auto* cuda_graph_support =
+          CHECK_NOTNULL(dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get()));
+      if (cuda_graph_support->IsReadyForCapture(ctx_.get(), opkernel_state,
+                                                opkernel_cache_.get())) {
+        current_scope_capturing = true;
+        cuda_stream->BeginGraphCapture();
+      }
     }
   }
 #endif  // WITH_CUDA_GRAPHS
@@ -660,6 +673,13 @@ bool UserKernel::IsCudaGraphSupported() const {
 #else
   return false;
 #endif  // WITH_CUDA_GRAPHS
+}
+
+bool UserKernel::IsReadyForCudaGraphCapture(KernelContext* ctx) const {
+  const auto* cuda_graph_support = dynamic_cast<const user_op::CudaGraphSupport*>(kernel_.get());
+  if (cuda_graph_support == nullptr) { return false; }
+  return cuda_graph_support->IsReadyForCapture(ctx_.get(), opkernel_state_.get(),
+                                               opkernel_cache_.get());
 }
 
 void UserKernel::VirtualKernelInit(KernelContext* ctx) {

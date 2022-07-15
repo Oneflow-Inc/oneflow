@@ -32,6 +32,7 @@ add_docstr(
         placement (oneflow.placement, optional): the desired placement of returned tensor.
         sbp (oneflow.sbp or tuple of oneflow.sbp, optional): the desired sbp of returned tensor.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False
+        pin_memory(bool, optional): If set, returned tensor would be allocated in the pinned memory. Works only for CPU tensors. Default: False.
 
     Note:
         The Keyword Argument device is mutually exclusive with placement and sbp.
@@ -318,13 +319,13 @@ add_docstr(
 
         >>> # results on rank 0
         oneflow.Size([4])
-        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32) 
+        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(dim=0),), dtype=oneflow.float32) 
  
     .. code-block:: python
 
         >>> # results on rank 1
         oneflow.Size([4])
-        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32)
+        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(dim=0),), dtype=oneflow.float32)
     """,
 )
 
@@ -364,13 +365,13 @@ add_docstr(
 
         >>> # results on rank 0
         oneflow.Size([2])
-        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32)
+        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(dim=0),), dtype=oneflow.float32)
 
     .. code-block:: python
 
         >>> # results on rank 1
         oneflow.Size([2])
-        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32)
+        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(dim=0),), dtype=oneflow.float32)
     """,
 )
 
@@ -423,13 +424,13 @@ add_docstr(
 
         >>> # results on rank 0
         oneflow.Size([4])
-        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32) 
+        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(dim=0),), dtype=oneflow.float32) 
  
     .. code-block:: python
 
         >>> # results on rank 1
         oneflow.Size([4])
-        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32)
+        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(dim=0),), dtype=oneflow.float32)
 
     For global tensor:
 
@@ -446,13 +447,13 @@ add_docstr(
 
         >>> # results on rank 0
         oneflow.Size([2])
-        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32)
+        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(dim=0),), dtype=oneflow.float32)
 
     .. code-block:: python
 
         >>> # results on rank 1
         oneflow.Size([2])
-        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32)
+        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(dim=0),), dtype=oneflow.float32)
     """,
 )
 
@@ -578,7 +579,7 @@ add_docstr(
         >>> import numpy as np
         >>> import oneflow as flow
 
-        >>> x = flow.arange(1., 8)
+        >>> x = flow.arange(1, 8)
         >>> x
         tensor([1, 2, 3, 4, 5, 6, 7], dtype=oneflow.int64)
         >>> x.unfold(0, 2, 1)
@@ -599,6 +600,20 @@ add_docstr(
     oneflow.Tensor.matmul,
     """
     See :func:`oneflow.matmul`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.mv,
+    """
+    See :func:`oneflow.mv`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.mm,
+    """
+    See :func:`oneflow.mm`
     """,
 )
 
@@ -1001,7 +1016,7 @@ add_docstr(
     """
     Tensor.fill_(value) → Tensor
 
-    Fills self tensor with the specified value.
+    Fills `self` tensor with the specified value.
     """,
 )
 
@@ -1280,6 +1295,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.dot,
+    """
+    See :func:`oneflow.dot`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.selu,
     """
     See :func:`oneflow.selu`
@@ -1539,6 +1561,15 @@ add_docstr(
     Tensor.repeat(*size) -> Tensor
 
     See :func:`oneflow.repeat`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.repeat_interleave,
+    """
+    Tensor.repeat_interleave(repeats, dim=None, *, output_size=None) -> Tensor
+
+    See :func:`oneflow.repeat_interleave`
     """,
 )
 
@@ -2061,5 +2092,42 @@ add_docstr(
     Tensor.pin_memory() -> Tensor
 
     Copies the tensor to pinned memory, if it’s not already pinned.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.is_pinned,
+    r"""
+    Tensor.is_pinned() -> bool
+
+    Returns true if this tensor resides in pinned memory.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.type,
+    r"""Returns the type if dtype is not provided, else casts this object to the specified type.
+        If this is already of the correct type, no copy is performed and the original object is returned.
+
+    Args:
+        dtype (oneflow.dtype or oneflow.tensortype or string, optional): The desired type.
+        non_blocking (bool): (**Not Implemented yet**) If True, and the source is in pinned memory
+            and destination is on the GPU or vice versa, the copy is performed asynchronously with respect to the host.
+            Otherwise, the argument has no effect.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> a = flow.tensor([1, 2], dtype=flow.float32)
+        >>> a.type()
+        'oneflow.FloatTensor'
+        >>> a.type(flow.int8)  # dtype input
+        tensor([1, 2], dtype=oneflow.int8)
+        >>> a.type(flow.cuda.DoubleTensor)  # tensortype input
+        tensor([1., 2.], device='cuda:0', dtype=oneflow.float64)
+        >>> a.type("oneflow.HalfTensor")  # string input
+        tensor([1., 2.], dtype=oneflow.float16)
     """,
 )

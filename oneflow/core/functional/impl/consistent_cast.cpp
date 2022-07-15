@@ -242,7 +242,7 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
     if (nd_sbp->sbp_parallel(i).has_split_parallel()) {
       int64_t concat_axis = nd_sbp->sbp_parallel(i).split_parallel().axis();
       int64_t group_size = parallel_hierarchy->Count(0, i);
-      int64_t stride = parallel_stride.At(i);
+      int64_t stride = parallel_stride.at(i);
       for (int group_id = 0; group_id < group_size; ++group_id) {
         int64_t parallel_num_in_group = parallel_hierarchy->At(i);
         for (int64_t stride_id = 0; stride_id < stride; ++stride_id) {
@@ -421,14 +421,16 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   if (JUST(input->device())->type() != parallel_desc->device_tag()) {
     VLOG(2) << "The device_type of the input tensor is different from placement, now copy it to "
             << parallel_desc->device_tag();
-    input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
+    input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank(),
+                                  /*pin_memory=*/false));
   }
   // copy to default device of the current rank if input's device type is right but not on default
   // device
   if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
     VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
             << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
-    input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
+    input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank(),
+                                  /*pin_memory=*/false));
   }
   const auto& device = JUST(input->device());
   CHECK_EQ_OR_RETURN(device->type(), parallel_desc->device_tag())
@@ -468,19 +470,21 @@ class LocalToConsistentFunctor {
     CHECK_OR_RETURN(x->is_local())
         << Error::RuntimeError()
         << "Expected local tensor for local_to_global but got global tensor!";
-    std::shared_ptr<one::Tensor> input = x;
+    std::shared_ptr<one::Tensor> input = x->contiguous();
     // copy to right device first if input's device type is wrong
     if (JUST(input->device())->type() != parallel_desc->device_tag()) {
       VLOG(2) << "The device_type of the input tensor is different from placement, now copy it to "
               << parallel_desc->device_tag();
-      input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
+      input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank(),
+                                    /*pin_memory=*/false));
     }
     // copy to default device of the current rank if input's device type is right but not on default
     // device
     if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
       VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
               << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
-      input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
+      input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank(),
+                                    /*pin_memory=*/false));
     }
     Symbol<NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
     MutableAttrMap attrs;

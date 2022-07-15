@@ -165,7 +165,9 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
                                   "(`None`) and integer or boolean arrays are valid indices";
   }
   // In advanced indexing condition, index can be array object, need to handle it specially.
-  if (PyArray_Check(object)) { return TensorWithData(object, NullOpt, device, false); }
+  if (PyArray_Check(object)) {
+    return TensorWithData(object, NullOpt, device, false, /*pin_memory=*/false);
+  }
 
   const auto& sizes = InferArraySizes(object);
   const auto& tensor =
@@ -179,7 +181,7 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
         JUST(tensor->AsMirroredTensor()),
         [handle](uint64_t ofblob_ptr) {
           auto* of_blob = reinterpret_cast<OfBlob*>(ofblob_ptr);
-          CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+          CHECK_JUST(Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
             ParseArrayToBlob(handle.get(), of_blob->mut_blob());
             return Maybe<void>::Ok();
           }));

@@ -27,6 +27,12 @@ limitations under the License.
 #define MATH_FUNC_F(name, x) name##f(x)
 #define MATH_FUNC_D(name, x) name(x)
 
+#elif defined(__HIPCC__)
+
+#include <hip/hip_fp16.h>
+#define MATH_FUNC_F(name, x) name##f(x)
+#define MATH_FUNC_D(name, x) name(x)
+
 #else
 
 #include <cmath>
@@ -72,6 +78,8 @@ struct RsqrtFunctor<float> {
   static OF_DEVICE_FUNC float Forward(const float x) {
 #if defined(__CUDACC__)
     return rsqrtf(x);
+#elif defined(__HIP_DEVICE_COMPILE__)
+    return rsqrtf(x);
 #else
     return 1.0f / std::sqrt(x);
 #endif
@@ -86,6 +94,8 @@ template<>
 struct RsqrtFunctor<double> {
   static OF_DEVICE_FUNC double Forward(const double x) {
 #if defined(__CUDACC__)
+    return rsqrt(x);
+#elif defined(__HIP_DEVICE_COMPILE__)
     return rsqrt(x);
 #else
     return 1.0 / std::sqrt(x);
@@ -649,7 +659,7 @@ struct TanFunctor<double> {
   }
 };
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
 // half version
 
 #define OF_HALF_FUNC __device__ __forceinline__

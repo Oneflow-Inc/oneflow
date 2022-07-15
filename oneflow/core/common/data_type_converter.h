@@ -19,6 +19,9 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include <cuda_runtime.h>
 #endif
+#ifdef WITH_ROCM
+#include <hip/hip_runtime.h>
+#endif
 #include <cstdint>
 #include <limits>
 #include <type_traits>
@@ -187,7 +190,7 @@ OF_DEVICE_FUNC const T Clamp(U value) {
 }
 
 namespace {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 
 inline __device__ int cuda_round_helper(float f, int) { return __float2int_rn(f); }
 
@@ -292,7 +295,7 @@ struct ConverterBase<float16, In, true, false> {
 template<typename Out, typename In>
 struct ConverterBase<Out, In, false, true> {
   OF_DEVICE_FUNC static const Out Convert(In value) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     return Clamp<Out>(cuda_round_helper(value, Out()));
 #else
     return Clamp<Out>(std::round(value));
@@ -300,7 +303,7 @@ struct ConverterBase<Out, In, false, true> {
   }
 
   OF_DEVICE_FUNC static const Out ConvertSat(In value) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     return Clamp<Out>(cuda_round_helper(value, Out()));
 #else
     return Clamp<Out>(std::round(value));
@@ -308,7 +311,7 @@ struct ConverterBase<Out, In, false, true> {
   }
 
   OF_DEVICE_FUNC static const Out ConvertNorm(In value) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     return Clamp<Out>(cuda_round_helper(value * GetMaxVal<Out>(), Out()));
 #else
     return std::round(value * GetMaxVal<Out>());
@@ -316,7 +319,7 @@ struct ConverterBase<Out, In, false, true> {
   }
 
   OF_DEVICE_FUNC static const Out ConvertSatNorm(In value) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     return std::is_signed<Out>::value
                ? Clamp<Out>(cuda_round_helper(value * GetMaxVal<Out>(), Out()))
                : cuda_round_helper(GetMaxVal<Out>() * __saturatef(value), Out());
@@ -347,7 +350,7 @@ struct ConvertIntInt<Out, In, false, true> {
   }
   OF_DEVICE_FUNC static const Out ConvertSat(In value) { return Clamp<Out>(value); }
   OF_DEVICE_FUNC static const Out ConvertSatNorm(In value) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     return cuda_round_helper(__saturatef(value * (1.0f / GetMaxVal<In>())) * GetMaxVal<Out>());
 #else
     return value < 0 ? 0 : ConvertNorm(value);

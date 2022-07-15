@@ -24,7 +24,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/autograd/autograd_mode.h"
-#include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/global_param_grad_sync_mode.h"
@@ -79,7 +78,6 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
   auto current_grad = JUST(autograd_meta->current_grad()->GetAccTensor({}));
   if (!current_grad) { return Maybe<void>::Ok(); }
   if (autograd_meta->acc_grad()) {
-    DevVmDepObjectConsumeModeGuard guard(DevVmDepObjectConsumeMode::NONE);
     // Should not inplace accumulate grad. For example,
     // >>> z = x + y
     // >>> p = x / z
@@ -187,7 +185,7 @@ Maybe<bool> FunctionNode::Apply(bool create_graph) {
       output_grads.at(i) = JUST(output_tensor_infos_.at(i).zeros());
     } else {
       const auto& hooks = JUST(oneflow::VectorAt(output_meta_data_, i))->hooks();
-      *JUST(oneflow::VectorAt(&output_grads, i)) =
+      JUST(oneflow::VectorAt(output_grads, i)) =
           JUST(JUST(oneflow::VectorAt(output_meta_data_, i))->current_grad()->GetAccTensor(hooks));
     }
   }
@@ -276,7 +274,7 @@ Maybe<void> GraphTask::ComputeDependencies() {
 // according to input tensors
 Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs) {
   struct NodeFrame {
-    NodeFrame(FunctionNode* node) : node_(node), next_function_idx_(0) {}
+    explicit NodeFrame(FunctionNode* node) : node_(node), next_function_idx_(0) {}
     FunctionNode* node_;
     size_t next_function_idx_;
 

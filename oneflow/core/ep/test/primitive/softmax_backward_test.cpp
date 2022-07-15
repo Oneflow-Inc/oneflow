@@ -115,10 +115,10 @@ void TestSoftmaxBackward(DeviceManagerRegistry* registry, const std::set<DeviceT
                                                       true);
   TestSoftmaxBackward<DataType::kFloat, float, float>(registry, device_types, num_rows, num_cols,
                                                       false);
-  TestSoftmaxBackward<DataType::kDouble, double, double>(registry, device_types, num_rows, num_cols,
-                                                         true);
-  TestSoftmaxBackward<DataType::kDouble, double, double>(registry, device_types, num_rows, num_cols,
-                                                         false);
+  // TestSoftmaxBackward<DataType::kDouble, double, double>(registry, device_types, num_rows, num_cols,
+  //                                                        true);
+  // TestSoftmaxBackward<DataType::kDouble, double, double>(registry, device_types, num_rows, num_cols,
+  //                                                        false);
   TestSoftmaxBackward<DataType::kFloat16, Eigen::half, float>(registry, device_types, num_rows,
                                                               num_cols, true);
   TestSoftmaxBackward<DataType::kFloat16, Eigen::half, float>(registry, device_types, num_rows,

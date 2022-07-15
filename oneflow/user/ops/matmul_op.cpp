@@ -222,9 +222,53 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
   if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
     out_and_add_to_output_args.emplace_back("_add_to_output", 0);
   }
-  FOR_RANGE(int64_t, i, 0, a_tensor.shape().NumAxes() - 2) {
+  int32_t num_axes = a_tensor.shape().NumAxes();
+  FOR_RANGE(int64_t, i, 0, num_axes - 2) {
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(out_and_add_to_output_args, i).Build();
   }
+  int32_t m_axis = -1;
+  int32_t k_a_axis = -1;
+  int32_t k_b_axis = -1;
+  int32_t n_axis = -1;
+  if (ctx->Attr<bool>("transpose_a")) {
+    m_axis = num_axes - 1;
+    k_a_axis = num_axes - 2;
+  } else {
+    m_axis = num_axes - 2;
+    k_a_axis = num_axes - 1;
+  }
+  if (ctx->Attr<bool>("transpose_b")) {
+    k_b_axis = num_axes - 1;
+    n_axis = num_axes - 2;
+  } else {
+    k_b_axis = num_axes - 2;
+    n_axis = num_axes - 1;
+  }
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("a", 0), m_axis)
+      .Broadcast(user_op::OpArg("b", 0))
+      .Split(out_and_add_to_output_args, num_axes - 2)
+      .Build();
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("a", 0))
+      .Split(user_op::OpArg("b", 0), n_axis)
+      .Split(out_and_add_to_output_args, num_axes - 1)
+      .Build();
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("a", 0), k_a_axis)
+      .Split(user_op::OpArg("b", 0), k_b_axis)
+      .PartialSum(out_and_add_to_output_args)
+      .Build();
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("a", 0))
+      .Broadcast(user_op::OpArg("b", 0))
+      .PartialSum(out_and_add_to_output_args)
+      .Build();
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("a", 0))
+      .PartialSum(user_op::OpArg("b", 0))
+      .PartialSum(out_and_add_to_output_args)
+      .Build();
   return Maybe<void>::Ok();
 }
 

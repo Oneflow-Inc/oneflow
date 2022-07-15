@@ -67,7 +67,7 @@ bool SubTskGphBuilderUtil::BlobHasDynamicShape(const BlobDesc& blob_desc) {
   return blob_desc.is_dynamic();
 }
 
-bool SubTskGphBuilderUtil::IsErrorBoxingNotSupported(const cfg::ErrorProto& error) {
+bool SubTskGphBuilderUtil::IsErrorBoxingNotSupported(const ErrorProto& error) {
   return error.has_boxing_not_supported_error();
 }
 

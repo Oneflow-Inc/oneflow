@@ -15,13 +15,11 @@ option(BUILD_PYTHON "" ON)
 option(BUILD_CPP_API "Option to build OneFlow C++ API (beta)" OFF)
 option(BUILD_RDMA "" OFF)
 option(BUILD_CUDA "" ON)
+option(BUILD_ROCM "" OFF)
 option(BUILD_TESTING "" OFF)
 option(BUILD_GIT_VERSION "" ON)
 option(BUILD_PROFILER "" OFF)
 option(BUILD_FOR_CI "" OFF)
-option(WITH_XLA "Option to build with XLA" OFF)
-option(WITH_TENSORRT "Option to build with TensorRT" OFF)
-option(WITH_OPENVINO "Option to build with OpenVINO" OFF)
 option(WITH_COCOAPI "Option to build with COCO API" ON)
 option(WITH_ZLIB "" ON)
 option(WITH_ONEDNN "" ON)
@@ -34,6 +32,16 @@ option(MAYBE_NEED_ERROR_MSG_CHECK "" OFF)
 # Reference:
 # https://medium.com/@alasher/colored-c-compiler-output-with-ninja-clang-gcc-10bfe7f2b949
 option(OF_FORCE_COLORED_DIAGNOSTICS "Always produce ANSI-colored diagnostics (GNU/Clang only)." ON)
+
+if (BUILD_CUDA AND BUILD_ROCM)
+  message(FATAL_ERROR "Compile with cuda and rocm enabled simultaneously are not supported right now.")
+endif()
+
+if (BUILD_ROCM)
+  # Search for rocm in common locations
+  list(APPEND CMAKE_PREFIX_PATH /opt/rocm/hip /opt/rocm /opt/rocm/llvm)
+endif()
+
 
 set(ONEFLOW_CURRENT_VERSION 0.7.0.dev CACHE STRING "")
 if(BUILD_FOR_CI)
@@ -135,15 +143,6 @@ if(WITH_MLIR)
   if(WITH_MLIR_CUDA_CODEGEN)
     add_definitions(-DWITH_MLIR_CUDA_CODEGEN)
   endif()
-endif()
-if(WITH_XLA)
-  add_definitions(-DWITH_XLA)
-endif()
-if(WITH_TENSORRT)
-  add_definitions(-DWITH_TENSORRT)
-endif()
-if(WITH_OPENVINO)
-  add_definitions(-DWITH_OPENVINO)
 endif()
 if(WITH_COCOAPI)
   add_definitions(-DWITH_COCOAPI)
@@ -266,6 +265,16 @@ set(ROBIN_HOOD_HASHING_URL
 use_mirror(VARIABLE ROBIN_HOOD_HASHING_URL URL ${ROBIN_HOOD_HASHING_URL})
 set(ROBIN_HOOD_HASHING_MD5 a78bd30a7582f25984f8592652836467)
 
+set(FMT_URL https://github.com/fmtlib/fmt/archive/48b7e3dafb27ece02cd6addc8bd1041c79d59c2c.zip)
+use_mirror(VARIABLE FMT_URL URL ${FMT_URL})
+set(FMT_MD5 45925a979ed7195e0c88a70be691de09)
+
+set(KINETO_URL
+    https://github.com/pytorch/kineto/archive/ff8dba20499a660650632952be76450bd70a52a6.zip)
+use_mirror(VARIABLE KINETO_URL URL ${KINETO_URL})
+set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
+
+include(cuda)
 add_subdirectory(external)
 include(third_party)
 

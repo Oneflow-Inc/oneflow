@@ -23,6 +23,8 @@ namespace primitive {
 
 template<typename Dst, typename Src>
 struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kGelu, Dst, Src> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     return static_cast<Src>(0.5) * src * (static_cast<Src>(1.0) + std::erf(inv_sqrt2 * src));
   }
@@ -31,7 +33,37 @@ struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kGelu, Dst, Src> {
 
 template<typename Dst, typename Src>
 struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kTanh, Dst, Src> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
   OF_DEVICE_FUNC Dst operator()(Src src) const { return std::tanh(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kIsInf, bool, float> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(float src) const { return std::isinf(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kIsInf, bool, double> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(double src) const { return std::isinf(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kIsNan, bool, float> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(float src) const { return std::isnan(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kIsNan, bool, double> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(double src) const { return std::isnan(src); }
 };
 
 }  // namespace primitive

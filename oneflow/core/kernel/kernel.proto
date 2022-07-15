@@ -19,10 +19,6 @@ message UserKernelConf {
   map<string, BlobDescProto> bn_in_op2blob_desc = 1;
 }
 
-message XrtLaunchKernelConf {
-  required ParallelContext parallel_ctx = 1;
-}
-
 message SyncDynamicResizeKernelConf {
   required DataType size_data_type = 1;
 }
@@ -47,7 +43,6 @@ message KernelConf {
   oneof kernel_type {
     UserKernelConf user_conf = 100;
     DecodeRandomKernelConf decode_random_conf = 103;
-    XrtLaunchKernelConf xrt_launch_conf = 353;
     SyncDynamicResizeKernelConf sync_dynamic_resize_conf = 360;
 
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;

@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
@@ -32,23 +31,13 @@ namespace oneflow {
 namespace vm {
 
 void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) const {
-  return ComputeInstrMsg(instruction->instr_msg());
-}
-
-void AccessBlobByCallbackInstructionType::ComputeInFuseMode(vm::InstructionMsg* instr_msg) const {
-  return ComputeInstrMsg(*instr_msg);
-}
-
-void AccessBlobByCallbackInstructionType::ComputeInstrMsg(
-    const vm::InstructionMsg& instr_msg) const {
-  const auto& phy_instr_operand = instr_msg.phy_instr_operand();
+  const auto& phy_instr_operand = instruction->phy_instr_operand();
   CHECK(static_cast<bool>(phy_instr_operand));
   const auto* ptr =
       dynamic_cast<const vm::AccessBlobArgCbPhyInstrOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
-  DeviceCtx* device_ctx = instr_msg.phy_instr_stream()->device_ctx().get();
-  auto* blob = ptr->eager_blob_object()->blob();
-  OfBlob ofblob(device_ctx->stream(), blob);
+  DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+  OfBlob ofblob(device_ctx->stream(), ptr->eager_blob_object()->blob());
   ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));
 }
 

@@ -29,7 +29,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestReLUModule(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_relu_module_with_random_data(test_case):
         m = torch.nn.ReLU()
         m.train(random())
@@ -39,7 +39,7 @@ class TestReLUModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_relu_module_with_0dim_data(test_case):
         m = torch.nn.ReLU()
         m.train(random())
@@ -49,7 +49,7 @@ class TestReLUModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False)
     def test_relu_module_with_0_size_data(test_case):
         m = torch.nn.ReLU()
         m.train(random())
@@ -59,10 +59,15 @@ class TestReLUModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @profile(torch.nn.functional.relu)
+    def profile_relu(test_case):
+        torch.nn.functional.relu(torch.ones(1, 128, 28, 28))
+        torch.nn.functional.relu(torch.ones(16, 128, 28, 28))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestReLU6Module(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_relu6_module_with_random_data(test_case):
         m = torch.nn.ReLU6()
         m.train(random())
@@ -72,7 +77,7 @@ class TestReLU6Module(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_relu6_module_with_0dim_data(test_case):
         m = torch.nn.ReLU6()
         m.train(random())
@@ -82,7 +87,7 @@ class TestReLU6Module(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False)
     def test_relu6_module_with_0_size_data(test_case):
         m = torch.nn.ReLU6()
         m.train(random())
@@ -92,10 +97,15 @@ class TestReLU6Module(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @profile(torch.nn.functional.relu6)
+    def profile_relu6(test_case):
+        torch.nn.functional.relu6(torch.ones(1, 128, 28, 28))
+        torch.nn.functional.relu6(torch.ones(16, 128, 28, 28))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestTanh(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_tanh_module_with_random_data(test_case):
         m = torch.nn.Tanh()
         m.train(random())
@@ -105,7 +115,7 @@ class TestTanh(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_tanh_module_with_0dim_data(test_case):
         m = torch.nn.Tanh()
         m.train(random())
@@ -115,7 +125,7 @@ class TestTanh(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False)
     def test_tanh_module_with_0_size_data(test_case):
         m = torch.nn.Tanh()
         m.train(random())
@@ -125,31 +135,36 @@ class TestTanh(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_flow_tanh_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
         y = torch.tanh(x)
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_flow_tanh_with_0dim_data(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
         y = torch.tanh(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False)
     def test_flow_tanh_with_0_size_data(test_case):
         device = random_device()
         x = random_tensor(4, 2, 3, 0, 3).to(device)
         y = torch.tanh(x)
         return y
 
+    @profile(torch.tanh)
+    def profile_tanh(test_case):
+        torch.tanh(torch.ones(1, 128, 28, 28))
+        torch.tanh(torch.ones(16, 128, 28, 28))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestELUModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_elu_module_with_random_data(test_case):
         m = torch.nn.ELU(alpha=random() | nothing())
         m.train(random())
@@ -159,7 +174,7 @@ class TestELUModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_elu_module_with_0dim_data(test_case):
         m = torch.nn.ELU(alpha=random() | nothing())
         m.train(random())
@@ -169,7 +184,7 @@ class TestELUModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False)
     def test_elu_module_with_0_size_data(test_case):
         m = torch.nn.ELU(alpha=random() | nothing())
         m.train(random())
@@ -182,7 +197,7 @@ class TestELUModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestCELUModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_celu_module_with_random_data(test_case):
         m = torch.nn.CELU(alpha=random() | nothing())
         m.train(random())
@@ -192,7 +207,7 @@ class TestCELUModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_celu_module_with_0dim_data(test_case):
         m = torch.nn.CELU(alpha=random() | nothing())
         m.train(random())
@@ -202,7 +217,7 @@ class TestCELUModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False)
     def test_celu_module_with_0_size_data(test_case):
         m = torch.nn.CELU(alpha=random() | nothing())
         m.train(random())
@@ -225,7 +240,7 @@ class TestCELUModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestGelu(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_gelu_module_with_random_data(test_case):
         m = torch.nn.GELU()
         m.train(random())
@@ -235,7 +250,7 @@ class TestGelu(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_gelu_module_with_0dim_data(test_case):
         m = torch.nn.GELU()
         m.train(random())
@@ -248,7 +263,7 @@ class TestGelu(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSigmoidModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_sigmoid_module_with_random_data(test_case):
         m = torch.nn.Sigmoid()
         m.train(random())
@@ -258,7 +273,7 @@ class TestSigmoidModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_sigmoid_module_with_0dim_data(test_case):
         m = torch.nn.Sigmoid()
         m.train(random())
@@ -268,33 +283,38 @@ class TestSigmoidModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_sigmoid_flow_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
         y = torch.sigmoid(x)
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_sigmoid_flow_with_0dim_data(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
         y = torch.sigmoid(x)
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_sigmoid_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
         y = x.sigmoid()
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_sigmoid_tensor_with_0dim_data(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
         y = x.sigmoid()
         return y
+
+    @profile(torch.sigmoid)
+    def profile_sigmoid(test_case):
+        torch.sigmoid(torch.ones(1, 128, 28, 28))
+        torch.sigmoid(torch.ones(16, 128, 28, 28))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -337,7 +357,7 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             test_hardsigmoid_inplace_impl(test_case, *arg)
 
-    @autotest()
+    @autotest(n=5)
     def test_hardsigmoid_module_with_random_data(test_case):
         m = torch.nn.Hardsigmoid()
         m.train(random())
@@ -347,7 +367,7 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_hardsigmoid_module_with_0dim_data(test_case):
         m = torch.nn.Hardsigmoid()
         m.train(random())
@@ -357,14 +377,14 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_functional_hardsigmoid_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
         y = torch.nn.functional.hardsigmoid(x, random_bool())
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_functional_hardsigmoid_with_0dim_data(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
@@ -391,11 +411,11 @@ def do_test_softmax(batch_size: int, log_softmax: bool = False):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSoftmax(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_softmax_module_with_random_data(test_case):
         return do_test_softmax(batch_size=-1, log_softmax=False)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_softmax_module_with_batch_size_equal_1024(test_case):
         return do_test_softmax(batch_size=1024, log_softmax=False)
 
@@ -407,14 +427,19 @@ class TestSoftmax(flow.unittest.TestCase):
     def test_softmax_module_with_batch_size_equal_10240(test_case):
         return do_test_softmax(batch_size=10240, log_softmax=False)
 
+    @profile(torch.nn.functional.softmax)
+    def profile_softmax(test_case):
+        torch.nn.functional.softmax(torch.ones(1, 128, 28, 28))
+        torch.nn.functional.softmax(torch.ones(16, 128, 28, 28))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestLogSoftmaxModule(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_logsoftmax_module_with_random_data(test_case):
         return do_test_softmax(batch_size=-1, log_softmax=True)
 
-    @autotest()
+    @autotest(n=5)
     def test_softmax_module_with_batch_size_equal_1024(test_case):
         return do_test_softmax(batch_size=1024, log_softmax=True)
 
@@ -429,7 +454,7 @@ class TestLogSoftmaxModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestLogSigmoidModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_logsigmoid_module_with_random_data(test_case):
         m = torch.nn.LogSigmoid()
         m.train(random())
@@ -439,7 +464,7 @@ class TestLogSigmoidModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_logsigmoid_module_with_0dim_data(test_case):
         m = torch.nn.LogSigmoid()
         m.train(random())
@@ -512,7 +537,7 @@ class TestSoftplusModule(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
     @unittest.skip("pytorch softplus backward has bug")
-    @autotest()
+    @autotest(n=5)
     def test_softplus_module_with_random_data(test_case):
         m = torch.nn.Softplus(beta=random() | nothing(), threshold=random() | nothing())
         m.train(random())
@@ -525,7 +550,7 @@ class TestSoftplusModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestHardswishModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_hardswish_module_with_random_data(test_case):
         m = torch.nn.Hardswish()
         m.train(random())
@@ -535,7 +560,7 @@ class TestHardswishModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_hardswish_module_with_0dim_data(test_case):
         m = torch.nn.Hardswish()
         m.train(random())
@@ -548,7 +573,7 @@ class TestHardswishModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestHardtanhModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_hardtanh_module_with_random_data(test_case):
         m = torch.nn.Hardtanh(
             min_val=random().to(float) | nothing(),
@@ -561,7 +586,7 @@ class TestHardtanhModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_hardtanh_module_with_0dim_data(test_case):
         m = torch.nn.Hardtanh(
             min_val=random().to(float) | nothing(),
@@ -577,7 +602,7 @@ class TestHardtanhModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestLeakyReLUModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_leakyrelu_module_with_random_data(test_case):
         m = torch.nn.LeakyReLU(negative_slope=random() | nothing())
         m.train(random())
@@ -599,19 +624,7 @@ class TestLeakyReLUModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_leakyrelu_module_with_half_random_data(test_case):
-        m = torch.nn.LeakyReLU(negative_slope=random() | nothing())
-        m.train(random())
-        device = random_device()
-        m.to(device)
-        x = random_tensor().to(device)
-        x = x.to(torch.float16)
-        y = m(x)
-        return y
-
-    @autotest()
+    @autotest(n=5)
     def test_leakyrelu_module_with_0dim_data(test_case):
         m = torch.nn.LeakyReLU(negative_slope=random() | nothing())
         m.train(random())
@@ -706,14 +719,14 @@ class TestSoftsignModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestReluFunction(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_flow_relu_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=2, dim1=3).to(device)
         y = torch.relu(x)
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_flow_relu_with_0dim_data(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
@@ -723,14 +736,14 @@ class TestReluFunction(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestRelu6Function(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_flow_nn_functional_relu6_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=2, dim1=3).to(device)
         y = torch.nn.functional.relu6(x)
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_flow_nn_functional_relu6_with_0dim_data(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
@@ -740,14 +753,14 @@ class TestRelu6Function(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestLogSigmoidFunction(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_flow_nn_functional_logsigmoid_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=2, dim1=3).to(device)
         y = torch.nn.functional.logsigmoid(x)
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_flow_nn_functional_logsigmoid_with_0dim_data(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
@@ -777,7 +790,7 @@ class TestHardshrinkModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False)
     def test_hardshrink_module_with_0_size_data(test_case):
         m = torch.nn.Hardshrink(lambd=random() | nothing())
         m.train(random())
@@ -810,7 +823,7 @@ class TestSoftshrinkModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False)
     def test_softshrink_module_with_0_size_data(test_case):
         m = torch.nn.Softshrink(alpha=random() | nothing())
         m.train(random())
@@ -847,7 +860,7 @@ class TestThresholdModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False)
     def test_threshold_module_with_0_size_data(test_case):
         m = torch.nn.Threshold(
             threshold=random() | nothing(), value=random() | nothing()

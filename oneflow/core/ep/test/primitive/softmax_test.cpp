@@ -101,8 +101,8 @@ void TestSoftmax(DeviceManagerRegistry* registry, const std::set<DeviceType>& de
                  int num_rows, int num_cols) {
   TestSoftmax<DataType::kFloat, float>(registry, device_types, num_rows, num_cols, true);
   TestSoftmax<DataType::kFloat, float>(registry, device_types, num_rows, num_cols, false);
-  TestSoftmax<DataType::kDouble, double>(registry, device_types, num_rows, num_cols, true);
-  TestSoftmax<DataType::kDouble, double>(registry, device_types, num_rows, num_cols, false);
+  // TestSoftmax<DataType::kDouble, double>(registry, device_types, num_rows, num_cols, true);
+  // TestSoftmax<DataType::kDouble, double>(registry, device_types, num_rows, num_cols, false);
   TestSoftmax<DataType::kFloat16, Eigen::half>(registry, device_types, num_rows, num_cols, true);
   TestSoftmax<DataType::kFloat16, Eigen::half>(registry, device_types, num_rows, num_cols, false);
 }
