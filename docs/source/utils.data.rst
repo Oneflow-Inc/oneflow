@@ -2,7 +2,7 @@ oneflow.utils.data
 ===================================
 
 .. The documentation is referenced from: 
-.. https://pytorch.org/docs/1.10/data.html
+   https://pytorch.org/docs/1.10/data.html
 
 .. automodule:: oneflow.utils.data
 

@@ -2,7 +2,7 @@ oneflow.nn.init
 ===============
 
 .. The documentation is referenced from: 
-.. https://pytorch.org/docs/1.10/nn.init.html
+   https://pytorch.org/docs/1.10/nn.init.html
 
 .. currentmodule:: oneflow.nn.init
 .. autofunction:: calculate_gain

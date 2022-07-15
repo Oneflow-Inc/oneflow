@@ -2,7 +2,7 @@ oneflow.Tensor
 ===================================
 
 .. The documentation is referenced from: 
-.. https://pytorch.org/docs/1.10/tensors.html
+   https://pytorch.org/docs/1.10/tensors.html
 
 A :class:`oneflow.Tensor` is a multi-dimensional matrix containing elements of
 a single data type.

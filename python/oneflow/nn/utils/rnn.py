@@ -45,7 +45,7 @@ def invert_permutation(permutation: Optional[Tensor]) -> Optional[Tensor]:
 
 class PackedSequence(object):
     """The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.utils.rnn.PackedSequence.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.utils.rnn.PackedSequence.html.
     
     Holds the data and list of :attr:`batch_sizes` of a packed sequence.
 
@@ -209,7 +209,7 @@ def pack_padded_sequence(
     enforce_sorted: bool = True,
 ) -> PackedSequence:
     """The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.utils.rnn.pack_padded_sequence.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.utils.rnn.pack_padded_sequence.html.
     
     Packs a Tensor containing padded sequences of variable length.
 
@@ -264,7 +264,7 @@ def pad_packed_sequence(
     total_length: Optional[int] = None,
 ) -> Tuple[Tensor, Tensor]:
     """The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.utils.rnn.pad_packed_sequence.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.utils.rnn.pad_packed_sequence.html.
     
     Pads a packed batch of variable length sequences.
 
@@ -416,7 +416,7 @@ def pad_sequence(
     padding_value: float = 0.0,
 ) -> Tensor:
     """The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.utils.rnn.pad_sequence.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.utils.rnn.pad_sequence.html.
     
     Pad a list of variable length Tensors with ``padding_value``
 

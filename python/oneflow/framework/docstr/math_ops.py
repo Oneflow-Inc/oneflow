@@ -1562,7 +1562,7 @@ add_docstr(
     Performs the element-wise multiplication of tensor1 by tensor2, multiply the result
     by the scalar value and add it to input.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.addcmul.html
+    https://pytorch.org/docs/1.10/generated/torch.addcmul.html
     
     .. math::
         \text{out}_i = \text{input}_i + value \times\  \text{tensor1}_i \times\ \text{tensor2}_i
