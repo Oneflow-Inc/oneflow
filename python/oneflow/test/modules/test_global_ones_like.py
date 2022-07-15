@@ -53,7 +53,7 @@ def _test_ones_like_int(test_case, placement, sbp, shape, device):
 
 
 class TestModule(flow.unittest.TestCase):
-    @unittest.skip("TODO: global zeros_like test will fail!")
+    @unittest.skip("TODO: global ones_like test will fail!")
     @globaltest
     def test_ones_like(test_case):
         arg_dict = OrderedDict()
