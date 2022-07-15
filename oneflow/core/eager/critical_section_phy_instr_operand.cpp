@@ -70,8 +70,7 @@ void InputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_bl
   {
     size_t header_size = of_blob->mut_blob()->blob_desc().ByteSizeOfBlobHeader();
     CHECK_EQ(header_size, eager_blob_object->shape().NumAxes() * sizeof(int64_t));
-    std::memcpy(of_blob->mut_blob()->mut_header_ptr(), eager_blob_object->mut_header_ptr(),
-                header_size);
+    CHECK_EQ(of_blob->blob().static_shape(), eager_blob_object->shape());
   }
   const auto& end_event_record = op_name2end_event_record_->at(op_name);
   if (eager_blob_object->dptr() == nullptr) {
@@ -93,7 +92,7 @@ void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_b
   CHECK(interfaces_valid().at(i));
   OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   auto& eager_blob_object = eager_blob_objects_->at(i);
-  of_blob->blob().shape_view().ToShape(eager_blob_object->mut_shape());
+  CHECK_EQ(of_blob->blob().static_shape(), eager_blob_object->shape());
   const auto& end_event_record = op_name2end_event_record_->at(op_name);
   if (eager_blob_object->dptr() == nullptr) {
     end_event_record->Init(std::make_shared<NaiveEventRecord>());
