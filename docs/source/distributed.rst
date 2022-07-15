@@ -34,7 +34,7 @@ When you start distributed training in OneFlow, the following functions can be u
 Global Tensor
 --------------------------------------------------------------
 
-Build/Construct Global Tensor
+Construct Global Tensor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 A global Tensor can be created with a ``placement`` and a ``sbp``. The ``placement`` describes the physical devices of the global tensor will be allocated, and the ``sbp`` describes its distribution along these devices.
 
@@ -85,8 +85,6 @@ Code running on Node 1
 Redistribute Global Tensor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 With ``Tensor.to_global`` interface, data of `Global Tensor` can be redistributed the in clusters,either by choosing to distribute to another set of nodes or by changing its distribution on that set of nodes (i.e. changing the SBP)
-
-The data can be distributed to another set of nodes and the way of distribution in current set of nodes can also be changed (i.e.change SBP). 
 
 Redistribution of data usually occurs with cross-process data communication, and the ``Tensor.to_global`` interface finely shields the complex underlying communication logic.
 
