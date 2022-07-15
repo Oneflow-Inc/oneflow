@@ -71,7 +71,7 @@ def _test_linear_graph_save_load_global(test_case, device):
             else:
                 local_state_dict = None
 
-            global_state_dict = flow.to_global(local_state_dict, placement=P, sbp=B, src_rank=0)
+            global_state_dict = flow.to_global(local_state_dict, placement=P, sbp=B)
             linear_t_g.load_state_dict(global_state_dict)
 
             # Check state in module has been loaded.

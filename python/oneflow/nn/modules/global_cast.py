@@ -95,7 +95,7 @@ def _to_global_tensor(input_tensor, placement=None, sbp=None, **kwargs):
         return local_to_global_op(input=input_tensor, placement=placement, sbp=sbp, **kwargs)
 
 
-def to_global_op(input, placement=None, sbp=None, src_rank=-1, **kwargs):
+def to_global_op(input, placement=None, sbp=None, **kwargs):
     r"""Converts the input tensor or input tensor(s) in list/tuple/dict to global tensor(s).
     
     Note:
@@ -105,7 +105,6 @@ def to_global_op(input, placement=None, sbp=None, src_rank=-1, **kwargs):
         input (flow.Tensor/None/list/tuple/dict): the input that needs to be converted.
         placement (flow.placement, optional):  the desired placement of the input. Default: None
         sbp (flow.sbp.sbp or list/tuple of flow.sbp.sbp, optional): the desired sbp of the input. Default: None
-        src_rank (int, optional): the source rank, needed to be assigned when inputs of ranks are different
     
     Returns:
         The converted input.
@@ -142,12 +141,15 @@ def to_global_op(input, placement=None, sbp=None, src_rank=-1, **kwargs):
         True
         True
     """
-    if src_rank > -1:
-        if flow.env.get_rank() == src_rank:
-            obj_input = pickle.dumps(input)
-            input = pickle.loads(flow._oneflow_internal.cpu_broadcast(obj_input, src_rank))
-        else:
-            input = pickle.loads(flow._oneflow_internal.cpu_broadcast(None, src_rank))
+    if placement:
+        src_ranks = placement.ranks
+        cur_rank = flow.env.get_rank()
+        for r in src_ranks:
+            if r == cur_rank:
+                obj_input = pickle.dumps(input)
+                input = pickle.loads(flow._oneflow_internal.cpu_broadcast(obj_input, r))
+            else:
+                input = pickle.loads(flow._oneflow_internal.cpu_broadcast(None, r))
 
     if isinstance(input, Tensor) or input is None:
         return _to_global_tensor(input, placement, sbp, **kwargs)
