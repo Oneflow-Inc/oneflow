@@ -654,49 +654,6 @@ Maybe<void> MakeGetterLossOpNode4OpName(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MakePredicatorNeedBackwardOp(const OpGraph& op_graph,
-                                         std::function<bool(OpNode*)>* NeedBackwardOp) {
-  auto var_op_nodes_and_descendants = std::make_shared<HashSet<OpNode*>>();
-  GetVariableOpNodesAndDescendants(op_graph, var_op_nodes_and_descendants.get());
-  auto loss_op_nodes_and_ascendants = std::make_shared<HashSet<OpNode*>>();
-  JUST(GetLossOpNodesAndAscendants(op_graph, loss_op_nodes_and_ascendants.get()));
-  *NeedBackwardOp = [var_op_nodes_and_descendants, loss_op_nodes_and_ascendants](OpNode* op_node) {
-    if (var_op_nodes_and_descendants->find(op_node) == var_op_nodes_and_descendants->end()) {
-      return false;
-    }
-    if (loss_op_nodes_and_ascendants->find(op_node) == loss_op_nodes_and_ascendants->end()) {
-      return false;
-    }
-    for (const auto& ibn : op_node->op().input_bns()) {
-      if (op_node->op().InputBlobModifier4Ibn(ibn).requires_grad()) { return true; }
-    }
-    for (const auto& obn : op_node->op().output_bns()) {
-      if (op_node->op().OutputBlobModifier4Obn(obn).requires_grad()) { return true; }
-    }
-    return false;
-  };
-  return Maybe<void>::Ok();
-}
-
-void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes) {
-  std::list<OpNode*> starts;
-  op_graph.ForEachNode([&](OpNode* op_node) {
-    const auto& op_conf = op_node->op().op_conf();
-    if (op_conf.has_variable_conf()) { starts.emplace_back(op_node); }
-    if (op_conf.has_user_conf()
-        && op_conf.user_conf().op_type_name() == "embedding_lookup_placeholder") {
-      starts.push_back(op_node);
-    }
-  });
-  auto ForEachNextNode = [&](OpNode* op_node, const std::function<void(OpNode*)>& Handler) {
-    for (OpEdge* edge : op_node->out_edges()) {
-      if (AnyLbiWithDiffLbi(edge)) { Handler(edge->dst_node()); }
-    }
-  };
-  op_graph.BfsForEachNode(starts, ForEachNextNode,
-                          [&](OpNode* op_node) { op_nodes->emplace(op_node); });
-}
-
 Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
                                             HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
   std::function<OpNode*(const std::string&)> LossOpNode4OpName;
@@ -757,6 +714,9 @@ Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder*
 void ScaleInitialDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                                  HashMap<LogicalBlobId, LogicalBlobId>* loss_lbi2initial_diff_lbi) {
   const TrainConf& train_conf = ctx->job_desc().job_conf().train_conf();
+  if (!train_conf.has_dynamic_loss_scale_policy() && !train_conf.has_loss_scale_factor()) {
+    return;
+  }
   for (auto& it : *loss_lbi2initial_diff_lbi) {
     const auto& loss_lbi = it.first;
     const auto& initial_diff_lbi = it.second;
@@ -771,7 +731,8 @@ void ScaleInitialDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBu
       loss_scale_val_lbn = dynamic_loss_scale_state.loss_scale_val_lbn();
     } else if (train_conf.has_loss_scale_factor()) {
       OperatorConf constant_like_op{};
-      constant_like_op.set_name(loss_lbi.op_name() + "_" + loss_lbi.blob_name() + "_loss_scale");
+      constant_like_op.set_name(loss_lbi.op_name() + "_" + loss_lbi.blob_name()
+                                + "_constant_like_loss_scale");
       constant_like_op.set_scope_symbol_id(scope_symbol_id);
       ConstantLikeOpConf* constant_like_conf = constant_like_op.mutable_constant_like_conf();
       constant_like_conf->set_like(GenLogicalBlobName(initial_diff_lbi));
@@ -810,7 +771,7 @@ void ScaleInitialDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBu
     }
     auto scalar_mul_op =
         user_op::UserOpConfWrapperBuilder(initial_diff_lbi.op_name() + "_"
-                                          + initial_diff_lbi.blob_name() + "_grad_scale")
+                                          + initial_diff_lbi.blob_name() + "_scale_initial_diff")
             .Op("scalar_mul_by_tensor")
             .Input("x", GenLogicalBlobName(initial_diff_lbi))
             .Input("scalar", loss_scale_val_lbn)
@@ -834,10 +795,10 @@ void ScaleInitialDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBu
         }
       }
     });
-    job_builder->MutOpTransactionCommit();
     // update initial diff lbi
     it.second = scaled_initial_diff_lbi;
   }
+  job_builder->MutOpTransactionCommit();
 }
 
 void ScaleModelDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
