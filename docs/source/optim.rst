@@ -1,8 +1,8 @@
 oneflow.optim
 ===================================
 
-The documentation is referenced from: 
-https://pytorch.org/docs/1.10/optim.html
+.. The documentation is referenced from: 
+.. https://pytorch.org/docs/1.10/optim.html
 
 oneflow.optim is a package implementing various optimization algorithms. Most commonly used methods are already supported, and the interface is general enough, so that more sophisticated ones can be also easily integrated in the future.
 
