@@ -2120,7 +2120,7 @@
   bind_python: False
 
 - name: "fused_scale_tril_softmax_mask_scale"
-  signature: "TensorTuple (Tensor a, *, Float p=0.5, Int64 diagonal, Float tril_scale_value, Generator generator=None) => FusedScaleTrilSoftmaxMaskScale"
+  signature: "TensorTuple (Tensor a, *, Float p=0.5, Int64 diagonal, Float tril_scale_value, Float tril_fill_value=0.0, Generator generator=None) => FusedScaleTrilSoftmaxMaskScale"
   bind_python: True
 
 - name: "fused_scale_tril_softmax_mask_scale_grad"
