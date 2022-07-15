@@ -86,15 +86,13 @@ Redistribute Global Tensor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 With ``Tensor.to_global`` interface, data of `Global Tensor` can be redistributed the in clusters,either by choosing to distribute to another set of nodes or by changing its distribution on that set of nodes (i.e. changing the SBP)
 
-Redistribution of data usually occurs with cross-process data communication, and the ``Tensor.to_global`` interface finely shields the complex underlying communication logic.
-
 ::
 
     >>> import oneflow as flow
     >>> x = flow.tensor([1.0, 2.0], placement=flow.placement("cuda", ranks=[0, 1]), sbp=flow.sbp.split(0))
     >>> y = x.to_global(placement=flow.placement("cuda", ranks=[2, 3]), sbp=flow.sbp.broadcast)
 
-Each operator of OneFlow defines a set of combinations of input and output SBPs that it can support, and `Global Tensor`` supports automatic redistribution to meet the requirements of executing a particular computational interface on its SBP. For example, the following code:
+According to the operator's semantics, OneFlow defines a sequence of valid input and output SBP combinations for each built-in operator. So OneFlow could automatically redistribute the `global tensor` to satisfy the operator's SBP requirements for its input Tensor. For example, the following code:
 
 ::
 
@@ -107,11 +105,11 @@ Each operator of OneFlow defines a set of combinations of input and output SBPs 
             sbp=flow.sbp.split(1))
     >>> z = x + y
 
-When ``x + y`` is executed, since x is cut by dimension ``0`` and y is cut by dimension ``1``, their components at each node cannot be added directly, so it automatically converts the SBP of x to ``flow.sbp.split(1)`` or y to ``flow.sbp.split(0)``, and the SBP of z is calculated as ``flow.sbp. split(1)`` or ``flow.sbp.split(0)``.
+When ``x + y`` is executed, since x is split along dimension ``0`` and y is split along dimension ``1``, their local components at each node can not be added directly, then OneFlow will automatically redistribute one of x and y to make them have the same SBP, and complete the add operation successfully.
 
 .. note ::
-    - Global Tensor does not currently support mixing with the DDP interface.
-    - Global Tensor requires all devices to execute simultaneously, and the code that has branches would lead to process deadlock because of divergent execution paths. We will continue to improve the user experience here.
+    - Global Tensor can not be used in combination with DDP currently.
+    - Global Tensor requires all devices to execute at the same pace, otherwise, it may cause multi-process deadlock.
 
 Get Local Tensor from Global Tensor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
