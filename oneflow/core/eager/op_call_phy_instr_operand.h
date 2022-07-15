@@ -57,6 +57,8 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
     return dev_vm_dep_object_consume_mode_;
   }
 
+  bool is_all_outputs_pod() const { return is_all_outputs_pod_; }
+
   one::StatefulOpKernel* mut_opkernel() { return opkernel_.get(); }
 
   template<typename DoEachT>
@@ -109,6 +111,7 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
   const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
+  bool is_all_outputs_pod_;
 };
 
 }  // namespace vm
