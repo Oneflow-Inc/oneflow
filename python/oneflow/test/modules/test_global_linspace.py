@@ -71,7 +71,7 @@ class TestLinspaceGlobal(flow.unittest.TestCase):
         for args in GenArgDict(arg_dict):
             start = args["start"]
             end = args["end"]
-            steps = args["shape"]
+            steps = args["steps"]
             placement = args["placement"]
             for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
                 _test_graph_linspace(test_case, start, end, steps, placement, sbp)
