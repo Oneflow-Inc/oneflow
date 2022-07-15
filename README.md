@@ -1,6 +1,6 @@
 # OneFlow
 
-OneFlow is an **easy to use** and **easy to scale** deep learning framework that **accelerates innovation of the next-generation AI**.
+OneFlow is an **easy to use** and **easy to scale** deep learning framework that **accelerates the innovation of next-generation AI**.
 - It's easy to write a model with PyTorch-like API and accelerate it with the Graph Compiler in OneFlow.
 - It's easy to scale a model to n-dimensional-parallel or distributed exectuion with the Global View API in OneFlow.
 
