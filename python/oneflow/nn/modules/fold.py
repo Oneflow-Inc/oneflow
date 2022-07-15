@@ -76,9 +76,6 @@ class Fold(Module):
         self.stride = stride
 
     def forward(self, input):
-        # print(
-        #     self.kernel_size, self.dilation, self.padding, self.stride,
-        # )
         return flow._C.fold(
             input,
             self.output_size,
@@ -152,10 +149,10 @@ class Unfold(Module):
 
         """
         super(Unfold, self).__init__()
-        self.kernel_size = _pair(kernel_size)
-        self.dilation = _pair(dilation)
-        self.padding = _pair(padding)
-        self.stride = _pair(stride)
+        self.kernel_size = kernel_size
+        self.dilation = dilation
+        self.padding = padding
+        self.stride = stride
 
     def forward(self, input):
         return flow._C.unfold(
