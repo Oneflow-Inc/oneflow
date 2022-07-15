@@ -201,6 +201,8 @@ jobs:
           entries: |
             cu102
             cpu
+            cpu-asan-ubsan
+            cpu-tsan
             llvm13
 
   build-oneflow:
@@ -269,6 +271,27 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.7
+            3.8
+      - uses: Oneflow-Inc/get-oneflow@support-iree-ci
+        name: Build manylinux ${{ matrix.entry }}
+        id: build-cpu-sanitizers
+        if: ${{ (matrix.entry == 'cpu-asan-ubsan' || matrix.entry == 'cpu-tsan') && !matrix.cache-hit }}
+        with:
+          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/${{ matrix.entry }}.cmake
+          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build.sh
+          run-lit: true
+          oneflow-src: ${{ env.ONEFLOW_SRC }}
+          oneflow-build-env: manylinux
+          wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
+          clear-wheelhouse-dir: true
+          self-hosted: ${{ contains(matrix.runs-on, 'self-hosted') }}
+          cuda-version: none
+          manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
+          docker-run-use-system-http-proxy: false
+          docker-run-use-lld: true
+          retry-failed-build: true
+          clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
+          python-versions: |
             3.8
       - uses: Oneflow-Inc/get-oneflow@support-iree-ci
         name: Build manylinux ${{ matrix.entry }}
@@ -714,6 +737,26 @@ jobs:
           entry: ${{ matrix.compute-platform }}
           ssh-tank-host: ${{ env.SSH_TANK_HOST }}
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
+      - name: Download ASAN and UBSAN wheel and packed liboneflow
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && matrix.device == 'cpu' }}
+        uses: Oneflow-Inc/get-oneflow/digest/download@support-iree-ci
+        id: asan-ubsan-download-digest
+        timeout-minutes: 10
+        with:
+          digest: ${{ steps.save-cache.outputs.build-digest }}
+          entry: cpu-asan-ubsan
+          ssh-tank-host: ${{ env.SSH_TANK_HOST }}
+          ssh-tank-path: ${{ env.SSH_TANK_PATH }}
+      - name: Download TSAN wheel and packed liboneflow
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && matrix.device == 'cpu' }}
+        uses: Oneflow-Inc/get-oneflow/digest/download@support-iree-ci
+        id: tsan-download-digest
+        timeout-minutes: 10
+        with:
+          digest: ${{ steps.save-cache.outputs.build-digest }}
+          entry: cpu-tsan
+          ssh-tank-host: ${{ env.SSH_TANK_HOST }}
+          ssh-tank-path: ${{ env.SSH_TANK_PATH }}
       - name: Enable TF container
         if: ${{ fromJSON(matrix.is-single-client) }}
         run: |
@@ -766,6 +809,11 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && !fromJson(matrix.is-xla) }}
         run: |
           unzip ${{ env.ONEFLOW_CPACK_PATH }}/liboneflow-ci-linux.zip
+      - name: Unzip packed sanitized liboneflow
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && !fromJson(matrix.is-xla) && matrix.device == 'cpu' }}
+        run: |
+          unzip ${{ steps.asan-ubsan-download-digest.outputs.entry-dir }}/liboneflow-ci-linux.zip -d asan-ubsan
+          unzip ${{ steps.tsan-download-digest.outputs.entry-dir }}/liboneflow-ci-linux.zip -d tsan
       - name: Start container
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         working-directory: ${{ env.ONEFLOW_SRC }}
@@ -826,6 +874,12 @@ jobs:
         timeout-minutes: 10
         run: |
           docker exec -e ONEFLOW_SERVING_DEBUG=1 ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} ./liboneflow-ci-linux/bin/oneflow_cpp_api_testexe
+      - name: Exe test (C++ API with sanitizers)
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
+        timeout-minutes: 10
+        run: |
+          docker exec -e ASAN_OPTIONS=strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1 -e LSAN_OPTIONS=suppressions=.lsan-suppressions ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} ./asan-ubsan/liboneflow-ci-linux/bin/oneflow_cpp_api_testexe --gtest_filter=Api.graph_\*
+          docker exec -e TSAN_OPTIONS="history_size=7 suppressions=.tsan-suppressions" ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} ./tsan/liboneflow-ci-linux/bin/oneflow_cpp_api_testexe
       - name: Test container
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |

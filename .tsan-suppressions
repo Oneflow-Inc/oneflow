@@ -1,0 +1,9 @@
+# These four group of functions are designed to be thread unsafe,
+# it's user's responsibility to use them correctly.
+race:ThreadUnsafe
+race:thread_unsafe
+race:flying_instruction_cnt
+race:total_erased_instruction_cnt
+race:ToShape
+# glog
+race:google::
