@@ -59,14 +59,12 @@ Maybe<void> ReduceSum::Capture(ReduceSumCaptureState* ctx, const TensorTuple& in
 Maybe<void> ReduceSum::Apply(const ReduceSumCaptureState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
   const auto& input = ctx->SavedTensors().at(0);
+  auto dy = out_grads.at(0);
   in_grads->resize(1);
-  if (!ctx->keepdims && input->ndim() > 0 && out_grads.at(0)->ndim() > 0) {
-    const auto& dy = JUST(functional::Unsqueeze(out_grads.at(0), -1));
-    in_grads->at(0) = JUST(functional::BroadcastLike(dy, input, ctx->axis));
-  } else {
-    in_grads->at(0) = JUST(functional::BroadcastLike(out_grads.at(0), input, ctx->axis));
+  if (!ctx->keepdims && input->ndim() > 0 && ctx->axis.size() > 0) {
+    for (auto& reduced_dim : ctx->axis) { dy = JUST(functional::Unsqueeze(dy, reduced_dim)); }
   }
-
+  in_grads->at(0) = JUST(functional::BroadcastLike(dy, input, ctx->axis));
   return Maybe<void>::Ok();
 }
 
