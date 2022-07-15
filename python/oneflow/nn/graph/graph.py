@@ -892,7 +892,8 @@ class Graph(object):
             # Save forward graph job proto
             self._forward_job_proto = c_api_util.GetCurrentJob()
 
-            self._mark_variable_gradients()
+            if self.training:
+                self._mark_variable_gradients()
 
             self.__print(
                 0,
