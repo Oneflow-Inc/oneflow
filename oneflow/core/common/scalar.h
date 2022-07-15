@@ -20,6 +20,8 @@ limitations under the License.
 #include <type_traits>
 
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
@@ -77,6 +79,16 @@ class Scalar {
   bool IsFloatingPoint() const { return active_tag_ == HAS_D; }
   bool IsSigned() const { return active_tag_ == HAS_S || active_tag_ == HAS_D; }
   bool IsUnsigned() const { return active_tag_ == HAS_U; }
+  Maybe<DataType> getScalarDataType() {
+    DataType res_dtype = [&]() {
+      if (active_tag_ == HAS_B) { return DataType::kBool; }
+      if (active_tag_ == HAS_S) { return DataType::kInt64; }
+      if (active_tag_ == HAS_U) { return DataType::kUInt64; }
+      if (active_tag_ == HAS_D) { return DataType::kDouble; }
+      return DataType::kInvalidDataType;
+    }();
+    return res_dtype;
+  }
 
   Scalar operator+(const Scalar& other);
   Scalar operator-(const Scalar& other);
