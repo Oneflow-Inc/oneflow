@@ -1129,6 +1129,15 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.norm,
+    """
+    norm(p="fro", dim=None, keepdim=False, dtype=None) -> Tensor
+
+    See :func:`oneflow.norm`.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.numpy,
     """
     Tensor.numpy() → numpy.ndarray
