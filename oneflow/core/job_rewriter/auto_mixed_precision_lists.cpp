@@ -20,17 +20,28 @@ namespace oneflow {
 const AMPList& AutoMixedPrecisionLists::WhiteList() {
   static AMPList white_list = {"matmul",
                                "batch_matmul",
-                               "conv2d",
-                               "amp_white_identity",
                                "broadcast_matmul",
+                               "conv2d",
+                               "conv3d",
+                               "conv_data_grad",
+                               "conv_filter_grad",
+                               "amp_white_identity",
                                "fused_self_attention_query_mul_key_and_value",
+                               "fused_self_attention_query_mul_key_and_value_grad",
                                "prelu",
+                               "prelu_grad",
                                "tf_prelu",
+                               "tf_prelu_grad",
                                "cublas_fused_mlp",
                                "fused_matmul_bias_add_relu_dropout",
+                               "fused_relu_dropout_grad",
+                               "cublas_bias_add_relu_matmul_grad",
                                "fused_dot_feature_interaction",
+                               "fused_dot_feature_interaction_grad",
                                "embedding_lookup_placeholder",
-                               "binary_cross_entropy_with_logits_reduce_mean"};
+                               "embedding_update_placeholder",
+                               "binary_cross_entropy_with_logits_reduce_mean",
+                               "binary_cross_entropy_with_logits_reduce_mean_grad"};
   return white_list;
 }
 
@@ -71,7 +82,9 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "fused_scale_mask_softmax",
                               "fused_bias_add_gelu",
                               "fused_bias_add_mask_scale",
-                              "acc"};
+                              "acc",
+                              "conv_bias_grad",
+                              };
   return gray_list;
 }
 
