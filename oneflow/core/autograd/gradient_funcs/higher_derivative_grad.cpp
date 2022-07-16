@@ -55,12 +55,7 @@ class SinGradGrad : public OpExprGradFunction<UnaryGradGradState> {
                    .then(std::bind(functional::Mul, out_grads[0], std::placeholders::_1))
                    .call(x, grad));
     }
-    if (ctx->grad_requires_grad) {
-      (*in_grads)[1] =
-          JUST(functional::sequence_function(functional::Cos)
-                   .then(std::bind(functional::Mul, out_grads[0], std::placeholders::_1))
-                   .call(x));
-    }
+    if (ctx->grad_requires_grad) { (*in_grads)[1] = JUST(functional::SinGrad(x, out_grads[0])); }
     return Maybe<void>::Ok();
   }
 };
@@ -94,13 +89,7 @@ class CosGradGrad : public OpExprGradFunction<UnaryGradGradState> {
                    .then(std::bind(functional::Mul, out_grads[0], std::placeholders::_1))
                    .call(x, grad));
     }
-    if (ctx->grad_requires_grad) {
-      (*in_grads)[1] =
-          JUST(functional::sequence_function(functional::Sin)
-                   .then(functional::Negative)
-                   .then(std::bind(functional::Mul, out_grads[0], std::placeholders::_1))
-                   .call(x));
-    }
+    if (ctx->grad_requires_grad) { (*in_grads)[1] = JUST(functional::CosGrad(x, out_grads[0])); }
     return Maybe<void>::Ok();
   }
 };
