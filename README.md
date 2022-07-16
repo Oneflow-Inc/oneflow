@@ -1,8 +1,11 @@
 # OneFlow
 
 OneFlow is an **easy to use** and **easy to scale** deep learning framework that **accelerates the innovation of next-generation AI**.
-- It's easy to write a model with PyTorch-like API and accelerate it with the Graph Compiler in OneFlow.
-- It's easy to scale a model to n-dimensional-parallel or distributed exectuion with the Global View API in OneFlow.
+- It's easy to use.
+  - Build a model with **PyTorch-like API**.
+  - Accelerate/Deploy a model with the **Static Graph Compiler**.
+- It's easy to scale.
+  - Scale a model to n-dimensional-parallel/distributed exectuion with the **Global View API**.
 
 [![Simple CI](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml/badge.svg)](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml)
 [![Nightly Docker Image](https://github.com/Oneflow-Inc/docker-images/actions/workflows/oneflow-nightly.yml/badge.svg)](https://github.com/Oneflow-Inc/docker-images/actions/workflows/oneflow-nightly.yml)
