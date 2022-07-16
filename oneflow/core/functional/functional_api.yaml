@@ -1129,6 +1129,7 @@
     String data_format="channels_first") => Maxpool2D'
   bind_python: True
 
+
 - name: "max_pool3d"
   signature:
     'TensorTuple (Tensor input, Int32List[3] kernel_size, Int32List[3] stride=None,

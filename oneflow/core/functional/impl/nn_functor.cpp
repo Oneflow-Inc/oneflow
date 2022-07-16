@@ -547,6 +547,7 @@ class Maxpool2DFunctor : public PoolingNDFunctor {
   }
 };
 
+
 class Maxpool3DFunctor : public PoolingNDFunctor {
  public:
   Maxpool3DFunctor() {

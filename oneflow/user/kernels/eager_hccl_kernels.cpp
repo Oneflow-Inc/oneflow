@@ -36,7 +36,6 @@ class EagerHcclOpKernelCache final : public user_op::OpKernelCache {
 
  private:
   void Init(user_op::KernelCacheContext* ctx) {
-    std::cout<<"EagerHcclOpKernelCache Init"<<std::endl;
     const std::string& parallel_conf_txt = ctx->Attr<std::string>("parallel_conf");
     ParallelConf parallel_conf;
     std::set<std::pair<int64_t, int64_t>> device_set;
@@ -58,7 +57,6 @@ void InitEagerHcclOpKernelCache(user_op::KernelCacheContext* ctx,
                                 std::shared_ptr<user_op::OpKernelCache>* cache_ptr) {
   // NOTE(jianhao): the cache only depends on parallel_conf, and the kernel is singleton
   // once parallel_conf is determined, so only init the cache at the first time.
-  std::cout<<"InitEagerHcclOpKernelCache"<<std::endl;
   if (*cache_ptr == nullptr) { *cache_ptr = std::make_shared<EagerHcclOpKernelCache>(ctx); }
 }
 
@@ -78,7 +76,7 @@ class EagerHcclBroadcastKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    std::cout<<"BroadcastKernel start"<<std::endl;
+
     auto* kernel_cache = dynamic_cast<const EagerHcclOpKernelCache*>(cache);
     CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -99,7 +97,6 @@ class EagerHcclBroadcastKernel final : public user_op::OpKernel {
     OF_HCCL_CHECK(HcclBroadcast(out->mut_dptr(), out->shape().elem_cnt(),
                                 GetHcclDataType(out->data_type()), hccl_root, kernel_cache->comm(),
                                 ctx->stream()->As<ep::NpuStream>()->npu_stream()));
-    std::cout<<"BroadcastKernel over"<<std::endl;
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -122,7 +119,7 @@ class EagerHcclAllReduceKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    std::cout<<"EagerHcclAllReduceKernel start"<<std::endl;
+
     auto* kernel_cache = dynamic_cast<const EagerHcclOpKernelCache*>(cache);
     CHECK(kernel_cache != nullptr);
     user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -134,7 +131,7 @@ class EagerHcclAllReduceKernel final : public user_op::OpKernel {
     OF_HCCL_CHECK(HcclAllReduce(in->mut_dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                 GetHcclDataType(in->data_type()), reduce_type, kernel_cache->comm(),
                                 ctx->stream()->As<ep::NpuStream>()->npu_stream()));
-    std::cout<<"EagerHcclAllReduceKernel over"<<std::endl;
+
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -46,7 +46,7 @@ class AddNNpuKernel : public OpKernel {
       CHECK_EQ(in_i->data_type(), data_type);
       npu_command.Input(in_i, "channels_nd");
     }
-    npu_command.OpName("AddV2")
+    npu_command.OpName("Add")
                //.Attr("N", (int64_t)in_num)
                .Output(out, "channels_nd")
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())

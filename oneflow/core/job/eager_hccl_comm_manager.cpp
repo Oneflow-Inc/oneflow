@@ -58,6 +58,7 @@ void CreateHcclComm(HcclComm* comm, const int dev, const std::string& key,
   auto it = std::find(device_vec.cbegin(), device_vec.cend(), this_device);
   CHECK(it != device_vec.end());
   int rank = std::distance(device_vec.cbegin(), it);
+
   if (rank == 0) {
     OF_HCCL_CHECK(HcclGetRootInfo(&hccl_unique_id));
     Global<CtrlClient>::Get()->PushKV(key,
@@ -70,7 +71,9 @@ void CreateHcclComm(HcclComm* comm, const int dev, const std::string& key,
   VLOG(2) << " EagerHcclCommMgr::hcclCommInitRank device_vec.size() = " << device_vec.size()
           << ", hccl_unique_id = " << HcclUniqueId2String(hccl_unique_id) << ", rank = " << rank
           << ", key = {" << key << "}\n";
+
   OF_HCCL_CHECK(HcclCommInitRootInfo(device_vec.size(),&hccl_unique_id,rank,comm));
+
 }
 
 }  // namespace

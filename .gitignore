@@ -10,6 +10,7 @@
 log/
 /debug
 /relwithdebinfo
+/host_relwithdebinfo
 /kernel_meta_*
 *plan
 core.*
