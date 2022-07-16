@@ -80,7 +80,7 @@ Maybe<void> RawCheckSymmetricAcyclicNdSbpBoxing(Symbol<PlacedNdSbp> in, Symbol<P
 // NOLINTEND(maybe-need-error-msg)
 
 static constexpr auto* CheckSymmetricAcyclicNdSbpBoxing =
-    DECORATE(&RawCheckSymmetricAcyclicNdSbpBoxing, ThreadLocalCopiable);
+    DECORATE(&RawCheckSymmetricAcyclicNdSbpBoxing, ThreadLocalCachedCopiable);
 
 }  // namespace
 
