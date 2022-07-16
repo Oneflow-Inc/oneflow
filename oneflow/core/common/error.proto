@@ -119,13 +119,6 @@ message InputDeviceNotMatchError {
   repeated string info = 1;
 }
 
-message ErrorStackFrame {
-  required string file = 1;
-  required int64 line = 2;
-  required string function = 3;
-  required string code_text = 4;
-}
-
 message SymbolIdUninitializedError {}
 
 message InvalidValueError {}
@@ -137,9 +130,9 @@ message TimeoutError {}
 
 message ValueNotFoundError {}
 
-message StackedError {
-  optional string msg = 2 [default = ""];
-  repeated ErrorStackFrame stack_frame = 3;
+message ErrorProto {
+  optional string msg = 1 [default = ""];
+  optional string frame_msg = 2 [default = ""];
   oneof error_type {
     ConfigAssertFailedError config_assert_failed_error = 12;
     ConfigResourceUnavailableError config_resource_unavailable_error = 13;

@@ -35,7 +35,7 @@ Maybe<void> CheckAndClearRegistryFlag() {
 void CatchRegistryError(const std::function<Maybe<void>()>& handler) {
   const auto& maybe_error = TRY(handler());
   if (!maybe_error.IsOk()) {
-    if (!*MutRegistryError()) { *MutRegistryError() = maybe_error.error(); }
+    if (!*MutRegistryError()) { *MutRegistryError() = maybe_error.stacked_error(); }
   }
 }
 

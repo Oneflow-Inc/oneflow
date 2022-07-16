@@ -18,9 +18,89 @@ limitations under the License.
 
 #include <sstream>
 #include <vector>
+#include <functional>
 #include "oneflow/core/common/error.pb.h"
+#include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/small_vector.h"
 
 namespace oneflow {
+
+class ErrorStackFrame final {
+ public:
+  ErrorStackFrame(const ErrorStackFrame&) = default;
+  ErrorStackFrame(const std::string& file, int64_t line, const std::string& function)
+      : file_(file), line_(line), function_(function), code_text_() {}
+  ErrorStackFrame(const std::string& file, int64_t line, const std::string& function,
+                  const std::string& code_text)
+      : file_(file), line_(line), function_(function), code_text_(code_text) {}
+
+  bool operator==(const ErrorStackFrame& other) const {
+    return this->file_ == other.file_ && this->line_ == other.line_
+           && this->function_ == other.function_ && this->code_text_ == other.code_text_;
+  }
+
+  const std::string& file() const { return file_; }
+  int64_t line() const { return line_; }
+  const std::string& function() const { return function_; }
+  const std::string& code_text() const { return code_text_; }
+
+  std::string DebugString() const {
+    return file_ + ":" + std::to_string(line_) + " " + function_ + "\n\t" + code_text_ + "\n";
+  }
+
+ private:
+  std::string file_;
+  int64_t line_;
+  std::string function_;
+  std::string code_text_;
+};
+
+}  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<::oneflow::ErrorStackFrame> final {
+  size_t operator()(const ::oneflow::ErrorStackFrame& frame) const {
+    const auto& string_hash = std::hash<std::string>();
+    return string_hash(frame.file()) ^ std::hash<int64_t>()(frame.line())
+           ^ string_hash(frame.function()) ^ string_hash(frame.code_text());
+  }
+};
+
+}  // namespace std
+
+namespace oneflow {
+
+class StackedError final {
+ public:
+  StackedError();
+  StackedError(const StackedError&) = default;
+
+  constexpr static int kStackReservedSize = 16;
+  using FrameVector = small_vector<Symbol<ErrorStackFrame>, kStackReservedSize>;
+
+  const ErrorProto* operator->() const { return error_proto().get(); }
+  ErrorProto* operator->() { return mut_error_proto(); }
+
+  // Getters
+  const FrameVector& stack_frame() const { return stack_frame_; }
+  const std::shared_ptr<const ErrorProto>& error_proto() const { return error_proto_; }
+  std::string DebugString() const {
+    std::string str;
+    for (const auto& frame : stack_frame()) { str += frame->DebugString() + "\n"; }
+    str += error_proto()->DebugString();
+    return str;
+  }
+
+  // Setters
+  void add_stack_frame(Symbol<ErrorStackFrame> error_frame) { stack_frame_.push_back(error_frame); }
+  ErrorProto* mut_error_proto() { return const_cast<ErrorProto*>(error_proto_.get()); }
+
+ private:
+  FrameVector stack_frame_;
+  std::shared_ptr<const ErrorProto> error_proto_;
+};
 
 class Error final {
  public:
@@ -29,15 +109,13 @@ class Error final {
   ~Error() = default;
 
   std::shared_ptr<StackedError> stacked_error() const { return stacked_error_; }
-  const StackedError* operator->() const { return stacked_error_.get(); }
-  StackedError* operator->() { return stacked_error_.get(); }
+  const ErrorProto* operator->() const { return stacked_error_->error_proto().get(); }
+  ErrorProto* operator->() { return stacked_error_->mut_error_proto(); }
   operator std::string() const;
   void Assign(const Error& other) { stacked_error_ = other.stacked_error_; }
   void Merge(const Error& other);
 
-  // r-value reference is used to supporting expressions like `Error().AddStackFrame("foo.cpp",
-  // ,"line", "Bar") << "invalid value"` because operator<<() need r-value reference
-  Error&& AddStackFrame(const std::string& file, const int64_t& line, const std::string& function);
+  Error&& AddStackFrame(Symbol<ErrorStackFrame> error_stack_frame);
 
   static Error Ok();
   static Error ProtoParseFailedError();
@@ -99,12 +177,7 @@ template<typename T>
 Error& operator<<(Error& error, const T& x) {
   std::ostringstream ss;
   ss << x;
-  if (error->stack_frame().empty()) {
-    error->set_msg(error->msg() + ss.str());
-  } else {
-    auto* stack_frame_top = error->mutable_stack_frame(error->stack_frame_size() - 1);
-    stack_frame_top->set_code_text(stack_frame_top->code_text() + ss.str());
-  }
+  error->set_msg(error->msg() + ss.str());
   return error;
 }
 
