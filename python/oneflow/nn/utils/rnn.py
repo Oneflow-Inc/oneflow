@@ -278,8 +278,6 @@ def pad_packed_sequence(
         :attr:`total_length` is useful to implement the
         ``pack sequence -> recurrent network -> unpack sequence`` pattern in a
         :class:`~oneflow.nn.Module` wrapped in :class:`~oneflow.nn.DataParallel`.
-        See :ref:`this FAQ section <pack-rnn-unpack-with-data-parallelism>` for
-        details.
 
     Args:
         sequence (PackedSequence): batch to pad

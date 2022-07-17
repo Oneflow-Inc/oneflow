@@ -296,6 +296,7 @@ class RNN(RNNBase):
           state for each element in the batch. Defaults to zeros if not provided.
 
         where:
+
         .. math::
             \begin{aligned}
                 N ={} & \text{batch size} \\
