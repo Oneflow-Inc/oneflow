@@ -45,7 +45,7 @@ Maybe<void> DynamicLossScaleSchedulePass::Apply(Job* job, JobPassCtx* ctx) const
   {
     const auto& opt_scope_symbol_id =
         JUST(MakeInitialScope(job->job_conf(), SymbolOf(ParallelDesc(parallel_conf)),
-                              /* is_mirrored */ false))
+                              /* is_local */ false))
             ->symbol_id();
     CHECK_OR_RETURN(opt_scope_symbol_id.has_value())
         << Error::RuntimeError() << "symbol_id not initialized";

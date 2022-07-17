@@ -153,7 +153,7 @@ from oneflow._C import sqrt
 from oneflow._C import square
 from oneflow._C import matmul
 from oneflow._C import mm
-from oneflow._C import mv
+from oneflow._C import matrix_vector_product as mv
 from oneflow._C import bernoulli
 from oneflow._C import round
 from oneflow._C import softplus
@@ -229,7 +229,7 @@ __oneflow_global_unique_env = env_util.GetEnv()
 session_ctx.NewDefaultSession(__oneflow_global_unique_env)
 
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
-oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
+oneflow._oneflow_internal.InitDefaultGlobalTransportTokenScope()
 
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
 from oneflow.framework import python_callback
@@ -332,6 +332,7 @@ from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.constant import ones_op as ones
 from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.constant import full_op as full
+from oneflow.nn.modules.constant import full_like_op as full_like
 from oneflow.nn.modules.constant import new_ones_op as new_ones
 from oneflow.nn.modules.constant import new_zeros_op as new_zeros
 from oneflow.nn.modules.empty import empty_op as empty
@@ -356,6 +357,7 @@ from oneflow._C import normal
 from oneflow._C import rand
 from oneflow._C import randn
 from oneflow._C import randint
+from oneflow._C import randint_like
 from oneflow._C import randperm
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
@@ -367,6 +369,7 @@ from oneflow.nn.modules.tensor_buffer import (
     tensor_buffer_to_tensor_op as tensor_buffer_to_tensor,
 )
 from oneflow.nn.modules.tensordot import tensordot
+from oneflow.nn.modules.norm import norm
 from oneflow.nn.modules.as_tensor import as_tensor
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
 from oneflow.nn.modules.global_cast import local_to_global_op as local_to_global
@@ -406,7 +409,6 @@ from . import (
     amp,
 )
 import oneflow.utils.data
-import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
