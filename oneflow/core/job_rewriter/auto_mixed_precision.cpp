@@ -89,18 +89,21 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
   HashMap<std::string, std::vector<OpEdge*>> edges_group_by_lbn;
   {
     for (OpEdge* edge : white_set_edges) {
-      CHECK_EQ(1, edge->lbis().size());
-      std::string lbn = GenLogicalBlobName(edge->lbis().front());
-      edges_group_by_lbn[lbn].emplace_back(edge);
+      // CHECK_EQ(1, edge->lbis().size());
+      for (const auto& lbi : edge->lbis()) {
+        std::string lbn = GenLogicalBlobName(lbi);
+        edges_group_by_lbn[lbn].emplace_back(edge);
+      }
     }
   }
 
   HashMap<std::string, OperatorConf> dst_op_name2dst_op_confs;
   for (auto& pair : edges_group_by_lbn) {
     const std::string& lbn = pair.first;
+    LogicalBlobId cur_lbi = GenLogicalBlobId(lbn);
     OpNode* src_node = pair.second.front()->src_node();
 
-    const BlobDesc& blob_desc = src_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(lbn));
+    const BlobDesc& blob_desc = src_node->LogicalBlobDesc4Lbi(cur_lbi);
     if (blob_desc.data_type() != DataType::kFloat) { continue; }
 
     std::string cast_suffix = f2h ? "-cast_f2h" : "-cast_h2f";
@@ -117,8 +120,6 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
     for (OpEdge* edge : pair.second) {
       CHECK(src_node == edge->src_node());
       OpNode* dst_node = edge->dst_node();
-      LogicalBlobId cur_lbi = edge->lbis().front();
-      CHECK_EQ(lbn, GenLogicalBlobName(cur_lbi));
       CHECK_EQ(1, edge->lbi2ibns().at(cur_lbi).size());
       const std::string& dst_ibn = edge->lbi2ibns().at(cur_lbi).front();
 
