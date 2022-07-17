@@ -86,9 +86,9 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
     // NOTE(chengcheng):
     //   only reused mem in cuda device.
     //   special cpu memory like OFRecord pb and TensorBuffer CANNOT reused by another plan.
-    if (mem_block->mem_case().has_host_mem()) { continue; }
+    if (memory::IsHostMem(mem_block->mem_case())) { continue; }
     int64_t mem_zone_uid =
-        MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
+        memory::GetUniqueMemCaseId(mem_block->machine_id(), mem_block->mem_case());
     auto it = mzuid2mem_blocks.find(mem_zone_uid);
     if (it == mzuid2mem_blocks.end()) {
       it = mzuid2mem_blocks.emplace(mem_zone_uid, HashSet<MemBlockProto*>()).first;
@@ -268,8 +268,7 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
       mem_block.set_mem_block_id(separated_mem_block_id);
       mem_block.add_job_id(job_id);
       mem_block.set_machine_id(machine_id);
-      *(mem_block.mutable_mem_case()) =
-          MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(regst_desc->mem_case());
+      *(mem_block.mutable_mem_case()) = memory::GetPinnedHostMemoryCase(regst_desc->mem_case());
       mem_block.set_enable_reuse_mem(false);
       mem_block.set_mem_size(regst_separated_size);
       mem_block.set_thrd_id_hint(thrd_id);
@@ -346,8 +345,7 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
         const MemBlockProto& header_mem_block = mem_block_id2mem_block.at(header_block_id);
         CHECK_EQ(header_mem_block.mem_size(), separated_header_mem_size);
         CHECK_EQ(task.machine_id(), header_mem_block.machine_id());
-        CHECK(header_mem_block.mem_case()
-              == MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(regst.mem_case()));
+        CHECK(header_mem_block.mem_case() == memory::GetPinnedHostMemoryCase(regst.mem_case()));
         CHECK(header_mem_block.enable_reuse_mem() == false);
         const auto& header_block_job_ids = mem_block_id2job_ids[header_block_id];
         CHECK(header_block_job_ids.find(task.job_id()) != header_block_job_ids.end());
@@ -910,9 +908,7 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
     int64_t rank_id = chunk.machine_id();
     auto& info = rank_device_memory_infos[rank_id];
     info.rank_id = rank_id;
-    if (chunk.mem_case().has_device_cuda_mem()) {
-      info.device_id = chunk.mem_case().device_cuda_mem().device_id();
-    }
+    if (!memory::IsHostMem(chunk.mem_case())) { info.device_id = chunk.mem_case().device_id(); }
     info.total_mem_size += chunk.mem_size();
     info.chunk_info.chunk_id = chunk.chunk_id();
     info.chunk_info.chunk_mem_size = chunk.mem_size();
@@ -925,7 +921,7 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
     info.mem_block_id = mem_block_id;
     info.mem_block_mem_size = mem_block.mem_size();
     auto& rank_memory_info = rank_device_memory_infos.at(mem_block.machine_id());
-    if (mem_block.mem_case().has_device_cuda_mem()) {
+    if (!memory::IsHostMem(mem_block.mem_case())) {
       if (mem_block.has_chunk_id()) {
         rank_memory_info.chunk_info.mem_block_ids.push_back(mem_block_id);
       } else {
@@ -1084,8 +1080,20 @@ void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
         << " regst_id2proto cannot find: " << regst_id;
     const RegstDescProto& regst = regst_id2proto.at(regst_id);
     ret += " regst_num: " + std::to_string(regst.register_num());
-    std::string mem = ", cpu ";
-    if (regst.mem_case().has_device_cuda_mem()) { mem = ", cuda "; }
+    std::string mem;
+    switch (regst.mem_case().device_type()) {
+      case DeviceType::kCPU: {
+        mem = ", cpu ";
+        break;
+      }
+      case DeviceType::kCUDA: {
+        mem = ", cuda ";
+        break;
+      }
+      default: {
+        UNIMPLEMENTED() << "Unsupported device_type " << regst.mem_case().device_type();
+      }
+    }
     ret += mem;
     if (regst.regst_desc_type().has_data_regst_desc()) {
       const DataRegstDesc& data = regst.regst_desc_type().data_regst_desc();
