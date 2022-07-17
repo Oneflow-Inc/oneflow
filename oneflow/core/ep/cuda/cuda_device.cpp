@@ -118,11 +118,10 @@ Maybe<void> CudaDevice::Alloc(const AllocationOptions& options, void** ptr, size
   CudaCurrentDeviceGuard guard(device_index_);
   CHECK(!options.HasPinnedDevice());
   cudaError_t err = cudaMalloc(ptr, size);
-  if (err != cudaSuccess) {
-    return Error::RuntimeError() << cudaGetErrorString(err);
-  } else {
-    return Maybe<void>::Ok();
-  }
+  if (err != cudaSuccess) { return Error::RuntimeError() << cudaGetErrorString(err); }
+  err = cudaMemset(*ptr, 0, size);
+  if (err != cudaSuccess) { return Error::RuntimeError() << cudaGetErrorString(err); }
+  return Maybe<void>::Ok();
 }
 
 void CudaDevice::Free(const AllocationOptions& attr, void* ptr) {
