@@ -129,7 +129,7 @@ With ``Tensor.to_local`` interface, the `Global Tensor` can return its local com
 DistributedDataParallel
 --------------------------------------------------------------
 
-For more information about DistributedDataParallel, see :ref:`nn.parallel.DistributedDataParallel`
+For more information about DistributedDataParallel, see ``nn.parallel.DistributedDataParallel``
 
 The following script shows the process of using ``oneflow.nn.parallel.DistributedDataParallel`` for training data parallel: 
 

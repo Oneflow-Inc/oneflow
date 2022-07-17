@@ -150,8 +150,7 @@ Locally disabling gradient computation
 -------------------------------------------
 The context managers :func:`oneflow.no_grad`, :func:`oneflow.enable_grad`, and
 :func:`oneflow.set_grad_enabled` are helpful for locally disabling and enabling
-gradient computation. See :ref:`locally-disable-grad` for more details on
-their usage.  These context managers are thread local, so they won't
+gradient computation. These context managers are thread local, so they won't
 work if you send work to another thread using the ``threading`` module, etc.
 
 Examples::

@@ -52,9 +52,7 @@ A tensor can be constructed from a Python :class:`list` or sequence using the
     :meth:`~oneflow.Tensor.detach` to avoid a copy.
     If you have a numpy array and want to avoid a copy, use
     :func:`oneflow.as_tensor`.
-A tensor of specific data type can be constructed by passing a
-:class:`oneflow.dtype` and/or a :class:`oneflow.device` to a
-constructor or tensor creation op:
+A tensor of specific data type can be constructed by passing a :class:`oneflow.dtype` and/or a :class:`oneflow.device` to a constructor or tensor creation op:
 
 ::
 
@@ -263,7 +261,6 @@ Tensor class reference
     Tensor.item
     Tensor.le
     Tensor.log
-    Tensor.log1
     Tensor.log2
     Tensor.logical_and
     Tensor.logical_or
