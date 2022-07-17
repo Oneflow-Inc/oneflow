@@ -222,7 +222,7 @@ Vision Layers
     nn.UpsamplingNearest2d
 
 
-.. _DistributedDataParallel:
+.. _nn.parallel.DistributedDataParallel:
 DataParallel Layers (multi-GPU, distributed)
 --------------------------------------------
 

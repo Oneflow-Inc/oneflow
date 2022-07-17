@@ -9,7 +9,7 @@ OneFlow provides two ways to accomplish `Distributed Training`:
 
 - The first way is that users are recommended to use OneFlow's global Tensor for distributed training. Global Tensor regards the computing cluster as a supercomputing device, allowing users to write distributed training code just like in a single-machine environment.
 
-- OneFlow also provides a DDP（DistributedDataParallel） module aligned with PyTorch. DDP has been well-known and widely used in data parallelism by the majority of PyTorch users. Also see `PyTorch DDP introduction <https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html#torch.nn.parallel.DistributedDataParallel>`_.
+- OneFlow also provides a DDP（DistributedDataParallel） module aligned with PyTorch. DDP has been well-known and widely used in data parallelism by the majority of PyTorch users. Also see `PyTorch DDP introduction <https://pytorch.org/docs/1.10/generated/torch.nn.parallel.DistributedDataParallel.html#torch.nn.parallel.DistributedDataParallel>`_.
 
 
 
@@ -31,12 +31,12 @@ When you start distributed training in OneFlow, the following functions can be u
     rdma_is_initialized
 
 
-Global Tensor
+`Global Tensor`
 --------------------------------------------------------------
 
-Construct Global Tensor
+Construct `Global Tensor`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-A global Tensor can be created with a ``placement`` and a ``sbp``. The ``placement`` describes the physical devices of the global tensor will be allocated, and the ``sbp`` describes its distribution among these devices.
+A `Global Tensor` can be created with a ``placement`` and a ``sbp``. The ``placement`` describes the physical devices of the global tensor will be allocated, and the ``sbp`` describes its distribution among these devices.
 
 ::
 
@@ -51,12 +51,12 @@ A global Tensor can be created with a ``placement`` and a ``sbp``. The ``placeme
     oneflow.Size([4, 5])
 
 
-Convert Local Tensor to Global Tensor
+Convert `Local Tensor` to `Global Tensor`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-With ``Tensor.to_global`` interface, `Local Tensor` can create a `Global Tensor`` and use that `Local Tensor`` as its local component at the current node.
+With ``Tensor.to_global`` interface, `Local Tensor` can create a `Global Tensor` and use that `Local Tensor` as its local component at the current node.
 
-Two local tensors with the shape of ``(2,5)`` are created separately on two devices. While after the to_global method, the global tensor with a shape of ``(4,5)`` is obtained.
+Two `local tensors` with the shape of ``(2,5)`` are created separately on two devices. While after the ``to_global`` method, the `global tensor` with a shape of ``(4,5)`` is obtained.
 
 Code running on Node 0
 
@@ -82,9 +82,9 @@ Code running on Node 1
     x_global = x.to_global(placement=placement, sbp=sbp)
     x_global.shape
 
-Redistribute Global Tensor
+Redistribute `Global Tensor`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Redistributing a global tensor means moving its data to another device group (or placement), or changing its data distribution (or SBP) across the group, or both at the same time. The redistributed tensor is still a global tensor.
+Redistributing a `Global Tensor` means moving its data to another device group (or placement), or changing its data distribution (or SBP) across the group, or both at the same time. The redistributed tensor is still a `Global Tensor`.
 
 ::
 
@@ -92,7 +92,7 @@ Redistributing a global tensor means moving its data to another device group (or
     >>> x = flow.tensor([1.0, 2.0], placement=flow.placement("cuda", ranks=[0, 1]), sbp=flow.sbp.split(0))
     >>> y = x.to_global(placement=flow.placement("cuda", ranks=[2, 3]), sbp=flow.sbp.broadcast)
 
-According to the operator's semantics, OneFlow defines a sequence of valid input and output SBP combinations for each built-in operator. So OneFlow could automatically redistribute the `global tensor` to satisfy the operator's SBP requirements for its input Tensor. For example, the following code:
+According to the operator's semantics, OneFlow defines a sequence of valid input and output SBP combinations for each built-in operator. So OneFlow could automatically redistribute the `Global Tensor` to satisfy the operator's SBP requirements for its input Tensor. For example, the following code:
 
 ::
 
@@ -113,7 +113,7 @@ When ``x + y`` is executed, since x is split along dimension ``0`` and y is spli
 
 Get Local Tensor from Global Tensor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-With ``Tensor.to_local`` interface, the `Global Tensor`` can return its local component at the current node.
+With ``Tensor.to_local`` interface, the `Global Tensor` can return its local component at the current node.
 
 ::
 
@@ -129,9 +129,9 @@ With ``Tensor.to_local`` interface, the `Global Tensor`` can return its local co
 DistributedDataParallel
 --------------------------------------------------------------
 
-For more information about DistributedDataParallel, see :ref:`DistributedDataParallel`
+For more information about DistributedDataParallel, see :ref:`nn.parallel.DistributedDataParallel`
 
-The following script shows the process of using ``oneflow.nn.parallel.DistributedDataParallel`` for training data parallel 
+The following script shows the process of using ``oneflow.nn.parallel.DistributedDataParallel`` for training data parallel: 
 
 .. code-block:: 
 
