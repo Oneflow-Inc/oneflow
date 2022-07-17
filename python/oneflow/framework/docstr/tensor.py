@@ -1624,9 +1624,9 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.t,
     """
-    Tensor.t() → Tensor
-
     See :func:`oneflow.t`
+
+    Tensor.t() → Tensor
     """,
 )
 
