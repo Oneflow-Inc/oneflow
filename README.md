@@ -1,6 +1,9 @@
 # OneFlow
 
-**OneFlow is a performance-centered and open-source deep learning framework.**
+OneFlow is an **easy to program, scale, and deploy** deep learning framework that **accelerates the innovation of next-generation AI**. In OneFlow, it's easy to:
+- program a model with **PyTorch-like API**
+- scale a model to n-dimensional-parallel/distributed exectuion with the **Global View API**
+- accelerate/deploy a model with the **Static Graph Compiler**.
 
 [![Simple CI](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml/badge.svg)](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml)
 [![Nightly Docker Image](https://github.com/Oneflow-Inc/docker-images/actions/workflows/oneflow-nightly.yml/badge.svg)](https://github.com/Oneflow-Inc/docker-images/actions/workflows/oneflow-nightly.yml)
@@ -9,10 +12,8 @@
 
 ## Latest News
 
-- Version 0.7.0 is out!
-  - Introducing global tensor
-  - Semi-auto parallelization has landed
-  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.7.0)
+- Version 0.8.0 is out!
+  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.8.0)
 
 ## Publication
 
@@ -35,7 +36,7 @@
 ### System Requirements
 
 - Linux. As for now, there is no pre-built release for macOS, Windows.
-- Python 3.6, 3.7, 3.8, 3.9, 3.10
+- Python 3.7, 3.8, 3.9, 3.10
 - (**Highly recommended**) Upgrade pip
 
   ```
@@ -53,7 +54,7 @@
 - To install latest stable release of OneFlow with CUDA support:
 
   ```bash
-  python3 -m pip install -f https://release.oneflow.info oneflow==0.7.0+cu102
+  python3 -m pip install oneflow
   ```
 
 - To install nightly release of OneFlow with CUDA support:
@@ -66,7 +67,7 @@
 
   - Stable
     ```bash
-    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.7.0+[PLATFORM]
+    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.8.0+[PLATFORM]
     ```
   - Nightly
     ```

@@ -31,33 +31,19 @@ namespace vm {
 class ReleaseTensorInstructionType : public vm::InstructionType {
  public:
   ReleaseTensorInstructionType() = default;
-  ~ReleaseTensorInstructionType() override = default;
+  virtual ~ReleaseTensorInstructionType() = default;
 
   InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPosition; }
 
-  std::string DebugName(const vm::Instruction& instruction) const override {
-    return "ReleaseTensor";
-  }
-  Maybe<void> Prepare(vm::Instruction* instruction) const override {
-    const auto& eager_blob_object = GetEagerBlobObject(*instruction);
-    DataType data_type = eager_blob_object->data_type();
-    if (IsPODDataType(data_type)) { Release(eager_blob_object); }
-    return Maybe<void>::Ok();
-  }
-  void Compute(vm::Instruction* instruction) const override {
-    const auto& eager_blob_object = GetEagerBlobObject(*instruction);
-    DataType data_type = eager_blob_object->data_type();
-    if (!IsPODDataType(data_type)) { Release(eager_blob_object); }
-  }
   void InitInstructionStatus(Instruction* instruction) const override {
     auto* status_buffer = instruction->mut_status_buffer();
     auto* stream = instruction->mut_stream();
-    instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
+    instruction->stream_policy().InitInstructionStatus(*stream, status_buffer);
     auto* data_ptr = status_buffer->mut_buffer();
     EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_ep_event(nullptr);
   }
 
- private:
+ protected:
   const std::shared_ptr<vm::EagerBlobObject>& GetEagerBlobObject(
       const vm::Instruction& instruction) const {
     const auto& phy_instr_operand = instruction.phy_instr_operand();
@@ -72,35 +58,83 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
   }
 };
 
+class FastReleaseTensorInstructionType final : public ReleaseTensorInstructionType {
+ public:
+  FastReleaseTensorInstructionType() = default;
+  ~FastReleaseTensorInstructionType() override = default;
+
+  std::string DebugName(const vm::Instruction& instruction) const override {
+    return "ReleasePodTensor";
+  }
+
+  Maybe<void> Prepare(vm::Instruction* instruction) const override {
+    const auto& eager_blob_object = GetEagerBlobObject(*instruction);
+    DataType data_type = eager_blob_object->data_type();
+    CHECK(IsPODDataType(data_type));
+    Release(eager_blob_object);
+    return Maybe<void>::Ok();
+  }
+
+  void Compute(vm::Instruction* instruction) const override {}
+};
+
+class SlowReleaseTensorInstructionType final : public ReleaseTensorInstructionType {
+ public:
+  SlowReleaseTensorInstructionType() = default;
+  ~SlowReleaseTensorInstructionType() override = default;
+
+  std::string DebugName(const vm::Instruction& instruction) const override {
+    return "ReleaseNonPodTensor";
+  }
+
+  Maybe<void> Prepare(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }
+
+  void Compute(vm::Instruction* instruction) const override {
+    const auto& eager_blob_object = GetEagerBlobObject(*instruction);
+    DataType data_type = eager_blob_object->data_type();
+    CHECK(!IsPODDataType(data_type));
+    Release(eager_blob_object);
+  }
+};
+
 }  // namespace vm
 
 struct GetReleaseInstructionType : public StreamRoleVisitor<GetReleaseInstructionType> {
-  static Maybe<const vm::InstructionType*> VisitCompute(DeviceType device_type) {
-    return SingletonPtr<vm::ReleaseTensorInstructionType>();
+  static Maybe<const vm::InstructionType*> VisitCompute(DataType data_type) {
+    return GetReleaseTensorInstructionType(data_type);
   }
-  static Maybe<const vm::InstructionType*> VisitHost2Device(DeviceType device_type) {
-    return SingletonPtr<vm::ReleaseTensorInstructionType>();
+  static Maybe<const vm::InstructionType*> VisitHost2Device(DataType data_type) {
+    return GetReleaseTensorInstructionType(data_type);
   }
-  static Maybe<const vm::InstructionType*> VisitDevice2Host(DeviceType device_type) {
-    return SingletonPtr<vm::ReleaseTensorInstructionType>();
+  static Maybe<const vm::InstructionType*> VisitDevice2Host(DataType data_type) {
+    return GetReleaseTensorInstructionType(data_type);
   }
-  static Maybe<const vm::InstructionType*> VisitSyncedLaunchedCommNet(DeviceType device_type) {
-    return SingletonPtr<vm::ReleaseTensorInstructionType>();
+  static Maybe<const vm::InstructionType*> VisitSyncedLaunchedCommNet(DataType data_type) {
+    return GetReleaseTensorInstructionType(data_type);
   }
-  static Maybe<const vm::InstructionType*> VisitAsyncedLaunchedCommNet(DeviceType device_type) {
-    return SingletonPtr<vm::ReleaseTensorInstructionType>();
+  static Maybe<const vm::InstructionType*> VisitAsyncedLaunchedCommNet(DataType data_type) {
+    return GetReleaseTensorInstructionType(data_type);
   }
-  static Maybe<const vm::InstructionType*> VisitBarrier(DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> VisitBarrier(DataType data_type) {
     UNIMPLEMENTED_THEN_RETURN();
   }
-  static Maybe<const vm::InstructionType*> VisitCriticalSection(DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> VisitCriticalSection(DataType data_type) {
     UNIMPLEMENTED_THEN_RETURN();
   }
-  static Maybe<const vm::InstructionType*> VisitLazyJobLauncher(DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> VisitLazyJobLauncher(DataType data_type) {
     UNIMPLEMENTED_THEN_RETURN();
   }
-  static Maybe<const vm::InstructionType*> VisitPinnedCompute(DeviceType device_type) {
-    return VisitCompute(device_type);
+  static Maybe<const vm::InstructionType*> VisitPinnedCompute(DataType data_type) {
+    return VisitCompute(data_type);
+  }
+
+ private:
+  static Maybe<const vm::InstructionType*> GetReleaseTensorInstructionType(DataType data_type) {
+    if (IsPODDataType(data_type)) {
+      return SingletonPtr<vm::FastReleaseTensorInstructionType>();
+    } else {
+      return SingletonPtr<vm::SlowReleaseTensorInstructionType>();
+    }
   }
 };
 

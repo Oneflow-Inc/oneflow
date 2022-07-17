@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/naive_stream_policy.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
@@ -97,12 +98,13 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
 
  private:
   LazyJobDeviceCtx* GetLazyJobDeviceCtx(Instruction* instruction) const {
-    auto* stream = instruction->mut_stream();
-    auto* device_ctx = dynamic_cast<LazyJobDeviceCtx*>(stream->device_ctx().get());
+    StreamPolicy* stream_policy = instruction->mut_stream()->mut_stream_policy();
+    NaiveStreamPolicy* naive_stream_policy = dynamic_cast<NaiveStreamPolicy*>(stream_policy);
+    CHECK_NOTNULL(naive_stream_policy);
+    auto* device_ctx = dynamic_cast<LazyJobDeviceCtx*>(naive_stream_policy->device_ctx().get());
     CHECK_NOTNULL(device_ctx);
     return device_ctx;
   }
-
   std::shared_ptr<NNGraphIf> GetCurNNGraph(Instruction* instruction) const {
     const auto* ptr = instruction->phy_instr_operand().get();
     const auto* phy_instr_operand = dynamic_cast<const LaunchLazyJobPhyInstrOperand*>(ptr);
