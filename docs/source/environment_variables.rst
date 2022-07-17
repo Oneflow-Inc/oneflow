@@ -3,7 +3,7 @@ Environment Variables
 
 OneFlow has an extensive set of environment variables to tune for specific usage.
 
-`ONEFLOW_COMM_NET_IB_HCA <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/comm_network/ibverbs/ibverbs_comm_network.cpp#L47>`_ 
+`ONEFLOW_COMM_NET_IB_HCA <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/comm_network/ibverbs/ibverbs_comm_network.cpp#L47>`_ 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 When there are multiple IB NIC(which can be checked by ``ibstatus`` on the server, the system uses the first IB NIC for comm_net communication by default. 
@@ -14,7 +14,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is empty, such as ``mlx5_0:1``、 ``mlx5_1:1``. When the port is 0, the default value is 1, representing the first port.
 
-`ONEFLOW_COMM_NET_IB_GID_INDEX <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/comm_network/ibverbs/ibverbs_comm_network.cpp#L142>`_ 
+`ONEFLOW_COMM_NET_IB_GID_INDEX <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/comm_network/ibverbs/ibverbs_comm_network.cpp#L142>`_ 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 For the query of `ibv_query_gid <https://www.ibm.com/docs/en/aix/7.2?topic=management-ibv-query-gid>`_, and 0 represents success. It often used with ``ONEFLOW_COMM_NET_IB_HCA``. GID means the Global ID, QP under RoCE network must be built by this value, instead of just using the LID as in the IB network. `#5626 <https://github.com/Oneflow-Inc/oneflow/pull/5626>`_ 
@@ -23,7 +23,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is 0, representing the port index value
 
-`ONEFLOW_COMM_NET_IB_QUEUE_DEPTH <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/comm_network/ibverbs/ibverbs_qp.cpp#L44>`_
+`ONEFLOW_COMM_NET_IB_QUEUE_DEPTH <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/comm_network/ibverbs/ibverbs_qp.cpp#L44>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Queue length of jobs in IB network. 
@@ -34,7 +34,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``1024``, receiving ``int64_t``. The system would compare with ``max_qp_wr`` (Maximum number of outstanding WR on any work queue), and take the smaller one.
 
-`ONEFLOW_COMM_NET_IB_MEM_BLOCK_SIZE <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/comm_network/ibverbs/ibverbs_qp.cpp#L68>`_ 
+`ONEFLOW_COMM_NET_IB_MEM_BLOCK_SIZE <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/comm_network/ibverbs/ibverbs_qp.cpp#L68>`_ 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 The size of the module read when communicating. 
@@ -45,7 +45,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``8388608`` (8M)
 
-`ONEFLOW_STREAM_CUDA_EVENT_FLAG_BLOCKING_SYNC <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/ep/cuda/cuda_device.cpp#L59>`_
+`ONEFLOW_STREAM_CUDA_EVENT_FLAG_BLOCKING_SYNC <https://github.com/Oneflow-Inc/oneflow/blob/f11a522c7959d6c95ef8660a2586d6203e8c0982/oneflow/core/ep/cuda/cuda_device.cpp#L59>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Represents stream, and marks Blocking synchronization in cuda. `Detailed information <https://www.cnblogs.com/1024incn/p/5891051.html>`_, `#5612 <https://github.com/Oneflow-Inc/oneflow/pull/5612>`_, `#5837 <https://github.com/Oneflow-Inc/oneflow/pull/5837>`_
@@ -54,7 +54,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 Define and set to ``false``, and would be ``true` only when the value is ``1``, ``true``, ``yes``, ``on`` and ``y``.
 
-`ONEFLOW_LIBIBVERBS_PATH <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/platform/lib/ibv_wrapper.cpp#L24>`_
+`ONEFLOW_LIBIBVERBS_PATH <https://github.com/Oneflow-Inc/oneflow/blob/26846e595ad1db1f7f94e886c5edb15ac732d00e/oneflow/core/platform/lib/ibv_wrapper.cpp#L24>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 To load the DynamicLibrary by dlopen at runtime, to find symbols of ibverbs functions by dlopen without linking during compile for better compatibility. `#4852 <https://github.com/Oneflow-Inc/oneflow/pull/4852>`_. 
@@ -76,7 +76,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is empty, but will receive any string.
 
-`ONEFLOW_DRY_RUN <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/job/resource_desc.cpp#L65>`_
+`ONEFLOW_DRY_RUN <https://github.com/Oneflow-Inc/oneflow/blob/1cf9101c4e83e0f19a8cc67937b8ea4a8387b66f/oneflow/core/job/resource_desc.cpp#L65>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Only for test running, it can generate log files like ``dot``. 
@@ -87,7 +87,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is empty, but will receive any string.
 
-`ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/lazy/stream_context/cuda/cuda_stream_context.cpp#L66>`_
+`ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS <https://github.com/Oneflow-Inc/oneflow/blob/55b822e4d3c88757d11077d7546981309125c73f/oneflow/core/lazy/stream_context/cuda/cuda_stream_context.cpp#L66>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Only used when debugging because the performance would be affected, it could detect which op in the network appears nan or inf. 
@@ -98,7 +98,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 Define and set to ``false``, and would be ``true`` only when the value is ``1``, ``true``, ``yes``, ``on`` and ``y``.
 
-`ONEFLOW_DEBUG_KERNEL_SYNC_CHECK <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/job/env_global_objects_scope.cpp#L193>`_
+`ONEFLOW_DEBUG_KERNEL_SYNC_CHECK <https://github.com/Oneflow-Inc/oneflow/blob/327a19fb66fc49e819d1defdb1f4365db5877d35/oneflow/core/job/env_global_objects_scope.cpp#L193>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Only used when debugging because the performance would be affected. 
@@ -111,7 +111,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 Define and set to ``false``, and would be ``true`` only when the value is ``1``, ``true``, ``yes``, ``on`` and ``y``.
 
-`ONEFLOW_PROFILER_KERNEL_PROFILE_CUDA_MEMORY_BANDWIDTH <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/profiler/kernel.cpp#L32>`_
+`ONEFLOW_PROFILER_KERNEL_PROFILE_CUDA_MEMORY_BANDWIDTH <https://github.com/Oneflow-Inc/oneflow/blob/02e29f9648f63a4d936cd818061e90064d027005/oneflow/core/profiler/kernel.cpp#L34>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Used when generate profiler files by nsys. 
@@ -124,7 +124,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 Define and set to ``false``. When using, the compiled package needs to enable ``BUILD_PROFILER``.
 
-`ONEFLOW_PROFILER_KERNEL_PROFILE_KERNEL_FORWARD_RANGE <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/profiler/kernel.cpp#L35>`_
+`ONEFLOW_PROFILER_KERNEL_PROFILE_KERNEL_FORWARD_RANGE <https://github.com/Oneflow-Inc/oneflow/blob/ONEFLOW_PROFILER_KERNEL_PROFILE_KERNEL_FORWARD_RANGE/oneflow/core/profiler/kernel.cpp#L36>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 The same as above. collect `op name <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/profiler/kernel.cpp#L62>`_
@@ -133,7 +133,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 Define and set to ``false``. When using, the compiled package needs to enable ``BUILD_PROFILER``.
 
-`ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/job/env_global_objects_scope.cpp#L199>`_
+`ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER <https://github.com/Oneflow-Inc/oneflow/blob/327a19fb66fc49e819d1defdb1f4365db5877d35/oneflow/core/job/env_global_objects_scope.cpp#L199>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Only use blob_access_checker after enabling, because blob_access_checker is for correctness assurance, and closing it in some cases can increase the kernel overhead. `#5728 <https://github.com/Oneflow-Inc/oneflow/pull/5728>`_
@@ -142,7 +142,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 Define and set to ``false``, and would be ``true`` only when the value is ``1``, ``true``, ``yes``, ``on`` and ``y``.
 
-`ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH <https://github.com/Oneflow-Inc/oneflow/blame/master/oneflow/core/kernel/user_kernel.cpp#L671>`_
+`ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH <https://github.com/Oneflow-Inc/oneflow/blame/dd580f21ffb6e4d23a899c7e0ac6d2bc502f3f1a/oneflow/core/kernel/user_kernel.cpp#L692>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Takes effect under ``WITH_CUDA_GRAPHS`` and the default value is ``false``. It uses more memory, so when there's just enough memory, it won't run. 
@@ -153,7 +153,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 Define and set to ``false``, and would be ``true`` only when the value is ``1``, ``true``, ``yes``, ``on`` and ``y``.
 
-`ONEFLOW_ACTOR_ENABLE_LIGHT_ACTOR <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/thread/thread.cpp#L30>`_
+`ONEFLOW_ACTOR_ENABLE_LIGHT_ACTOR <https://github.com/Oneflow-Inc/oneflow/blob/55b822e4d3c88757d11077d7546981309125c73f/oneflow/core/thread/thread.cpp#L30>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 LightActor is a new type of Actor that only handles NormalForward and similar tasks where all regst_num is 1 or tasks with only one kernel. `#5868 <https://github.com/Oneflow-Inc/oneflow/pull/5868>`_. ``export ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH=1`` (Would use more memories), ``export ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE=1``, ``export ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER=1``, ``export ONEFLOW_ACTOR_ENABLE_LIGHT_ACTOR=1``, ``export ONEFLOW_STREAM_REUSE_CUDA_EVENT=1`` can be used together.
@@ -162,7 +162,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 Define and set to ``false``, and would be ``true`` only when the value is ``1``, ``true``, ``yes``, ``on`` and ``y``.
 
-`ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/thread/thread.cpp#L29>`_
+`ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE <https://github.com/Oneflow-Inc/oneflow/blob/55b822e4d3c88757d11077d7546981309125c73f/oneflow/core/thread/thread.cpp#L29>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 `#5720 <https://github.com/Oneflow-Inc/oneflow/pull/5720>`_. It is used to enable local message queue, ``oneflow.config.thread_enable_local_message_queue(True)`` is no longer used.
@@ -171,7 +171,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 Define and set to ``false``, and would be ``true`` only when the value is ``1``, ``true``, ``yes``, ``on`` and ``y``.
 
-`ONEFLOW_PERSISTENT_IN_STREAM_BUFFER_SIZE_BYTES <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/persistence/persistent_in_stream.cpp#L30>`_
+`ONEFLOW_PERSISTENT_IN_STREAM_BUFFER_SIZE_BYTES <https://github.com/Oneflow-Inc/oneflow/blob/31c8b6668c0f86b5efe61edbcc3c7d7fa682eb15/oneflow/core/persistence/persistent_in_stream.cpp#L30>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Represents the size of each read from disk. `#5162 <https://github.com/Oneflow-Inc/oneflow/pull/5162>`_
@@ -180,7 +180,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is empty. If an invalid string or negative number is entered, the default value would be ``32 * 1024``; 32KB.
 
-`ONEFLOW_DECODER_ENABLE_NVJPEG_HARDWARE_ACCELERATION <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/kernel/image_decoder_random_crop_resize_kernel.cpp#L290>`_
+`ONEFLOW_DECODER_ENABLE_NVJPEG_HARDWARE_ACCELERATION <https://github.com/Oneflow-Inc/oneflow/blob/b48fac409b23079829ba3db7543538f1fc22856e/oneflow/core/kernel/image_decoder_random_crop_resize_kernel.cpp#L290>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ``NVJPEG_VER_MAJOR`` need to be bigger than ``11``. It can accelerate nvjpeg hardware, warm up jpeg decoder and hw_jpeg decoder, `#5851 <https://github.com/Oneflow-Inc/oneflow/pull/5851>`_. 
@@ -209,7 +209,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
 
-`ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/auto_parallel/boxing_collector.cpp#L82>`_
+`ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/auto_parallel/boxing_collector.cpp#L82>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Whether to disable Middle Node. When it is false, all inter-SBP communication is supported
@@ -229,7 +229,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
 
-`ONEFLOW_EP_CUDA_ENABLE_TF32_EXECUTION <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/ep/cuda/cuda_stream.cpp#L96>`_
+`ONEFLOW_EP_CUDA_ENABLE_TF32_EXECUTION <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/ep/cuda/cuda_stream.cpp#L96>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Whether to allow CUDA to use TF32 numeric types for computation
@@ -238,7 +238,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``true``
 
-`ONEFLOW_FUNCTOR_DISABLE_FUSED_MLP <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/functional/impl/nn_functor.cpp#L587>`_
+`ONEFLOW_FUNCTOR_DISABLE_FUSED_MLP <https://github.com/Oneflow-Inc/oneflow/blob/9e38f03bffdb5b0faae92e3f14ef31f61799da24/oneflow/core/functional/impl/nn_functor.cpp#L587>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Whether to disable the fused_mlp operator implemented by cublasLt in FusedMLPFunctor, if disabled, it will degenerate into a multiple matrix multiplication operation.
@@ -248,7 +248,7 @@ Values accepted
 The default value is ``false``
 
 `ONEFLOW_ONE_EMBEDDING_EMBEDDING_SHUFFLE
-_INDEPENTENT_STREAM <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/job_rewriter/replace_embedding_ops_pass.cpp#L195>`_
+_INDEPENTENT_STREAM <https://github.com/Oneflow-Inc/oneflow/blob/91eab120ec0f5de473413ce664a49d5e87e1bba3/oneflow/core/job_rewriter/replace_embedding_ops_pass.cpp#L195>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Whether to put the EmbeddingShuffle of the OneEmbedding module on a separate stream for overlapping execution.
@@ -257,7 +257,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
 
-`ONEFLOW_ONE_EMBEDDING_GRADIENT_SHUFFLE_USE_FP16 <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/job_rewriter/replace_embedding_ops_pass.cpp#L212>`_
+`ONEFLOW_ONE_EMBEDDING_GRADIENT_SHUFFLE_USE_FP16 <https://github.com/Oneflow-Inc/oneflow/blob/91eab120ec0f5de473413ce664a49d5e87e1bba3/oneflow/core/job_rewriter/replace_embedding_ops_pass.cpp#L212>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Whether to allow the EmbeddingGradientShuffle operator of the OneEmbedding module to use the FP16 data type in the AMP case.
@@ -266,7 +266,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``true``
 
-`ONEFLOW_ONE_EMBEDDING_NOT_FUSE_CAST_TO_UPDATE <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/job_rewriter/replace_embedding_ops_pass.cpp#L271>`_
+`ONEFLOW_ONE_EMBEDDING_NOT_FUSE_CAST_TO_UPDATE <https://github.com/Oneflow-Inc/oneflow/blob/91eab120ec0f5de473413ce664a49d5e87e1bba3/oneflow/core/job_rewriter/replace_embedding_ops_pass.cpp#L271>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Whether to disable the fusion of cast type conversion and parameter update of OneEmbedding parameters into one operator in the case of AMP
@@ -275,7 +275,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
 
-`ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS_DUMP <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/kernel/cpu_numerics_kernel_observer.cpp#L65>`_
+`ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS_DUMP <https://github.com/Oneflow-Inc/oneflow/blob/8e378f4b61742defb87c26b7e1127b9af1a10717/oneflow/core/kernel/cpu_numerics_kernel_observer.cpp#L65>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 When the value appears NaN or Inf, save the data Dump.
@@ -284,7 +284,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
 
-`ONEFLOW_MLIR_ENABLE_IR_PRINTING <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/ir/lib/OneFlow/Passes.cpp#L768>`_
+`ONEFLOW_MLIR_ENABLE_IR_PRINTING <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/ir/lib/OneFlow/Passes.cpp#L768>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Control whether to print ir when running each pass when debugging
@@ -293,7 +293,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
 
-`ONEFLOW_MLIR_STDOUT <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/ir/oneflow-extension/extension.cpp#L147>`_
+`ONEFLOW_MLIR_STDOUT <https://github.com/Oneflow-Inc/oneflow/blob/64e6e4dc368613af539e68b79b72e4b17f8724e6/oneflow/ir/oneflow-extension/extension.cpp#L151>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Control whether MLIR outputs log information in the console
@@ -302,7 +302,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
 
-`ONEFLOW_MLIR_DUMP_IR <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/ir/oneflow-extension/extension.cpp#L152>`_
+`ONEFLOW_MLIR_DUMP_IR <https://github.com/Oneflow-Inc/oneflow/blob/64e6e4dc368613af539e68b79b72e4b17f8724e6/oneflow/ir/oneflow-extension/extension.cpp#L152>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Control whether to dump ir files
@@ -311,7 +311,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
 
-`ONEFLOW_MLIR_ENABLE_ROUND_TRIP <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/ir/oneflow-extension/ir_pass.cpp#L157>`_
+`ONEFLOW_MLIR_ENABLE_ROUND_TRIP <https://github.com/Oneflow-Inc/oneflow/blob/6aa2416152ccf3fe60c60a16d0152d716794dcae/oneflow/ir/oneflow-extension/ir_pass.cpp#L157>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Control whether Oneflow Job goes into MLIR
@@ -320,7 +320,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
 
-`ONEFLOW_KERNEL_REDUCE_SUM_USE_MATMUL <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/user/kernels/reduce_kernel.cpp#L355>`_
+`ONEFLOW_KERNEL_REDUCE_SUM_USE_MATMUL <https://github.com/Oneflow-Inc/oneflow/blob/28690a298ca4d2eb36650267e7d2eab4453da4e0/oneflow/user/kernels/reduce_kernel.cpp#L355>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 whether to use matrix multiplication for reduce_sum
@@ -329,7 +329,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
 
-`ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/job_rewriter/fuse_embedding_interaction_pass.cpp#L35>`_
+`ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM <https://github.com/Oneflow-Inc/oneflow/blob/dd580f21ffb6e4d23a899c7e0ac6d2bc502f3f1a/oneflow/core/job_rewriter/fuse_embedding_interaction_pass.cpp#L35>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Whether to quantify the shuffle application communication in the case of OneEmbedding multi-card
@@ -338,7 +338,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
 
-`ONEFLOW_TENSOR_BUFFER_ALIGNED_SIZE <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/common/tensor_buffer.cpp#L29>`_
+`ONEFLOW_TENSOR_BUFFER_ALIGNED_SIZE <https://github.com/Oneflow-Inc/oneflow/blob/db88948f9c3ba3329590d8d832ad029ffc1976df/oneflow/core/common/tensor_buffer.cpp#L29>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Align size when allocating TensorBuffer memory
@@ -347,7 +347,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``1024``
 
-`ONEFLOW_TENSOR_BUFFER_POOL_THREAD_LOCAL_CACHE_SIZE <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/common/tensor_buffer.cpp#L206>`_
+`ONEFLOW_TENSOR_BUFFER_POOL_THREAD_LOCAL_CACHE_SIZE <https://github.com/Oneflow-Inc/oneflow/blob/db88948f9c3ba3329590d8d832ad029ffc1976df/oneflow/core/common/tensor_buffer.cpp#L206>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Control the size of ``thread_local_cache`` in TensorBufferPool
@@ -356,7 +356,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``64``
 
-`ONEFLOW_GRPC_MAX_MESSAGE_BYTE_SIZE <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/control/ctrl_service.cpp#L45>`_
+`ONEFLOW_GRPC_MAX_MESSAGE_BYTE_SIZE <https://github.com/Oneflow-Inc/oneflow/blob/9e7c05cd05247005501e7b0ad924e784700edafa/oneflow/core/control/ctrl_service.cpp#L45>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Set the maximum size of the gRPC transport message
@@ -365,7 +365,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``-1``
 
-`ONEFLOW_ONE_EMBEDDING_PERSISTENT_TABLE_CAPACITY_HINT <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/embedding/persistent_table.cpp#L410>`_
+`ONEFLOW_ONE_EMBEDDING_PERSISTENT_TABLE_CAPACITY_HINT <https://github.com/Oneflow-Inc/oneflow/blob/dd580f21ffb6e4d23a899c7e0ac6d2bc502f3f1a/oneflow/core/embedding/persistent_table.cpp#L410>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Control the initial capacity of the PersistentTable of OneEmbedding to avoid frequent expansion
@@ -374,7 +374,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 OneEmbedding will calculate according to the actual situation, and users can also choose to configure a larger capacity.
 
-`ONEFLOW_ONE_EMBEDDING_PERSISTENT_TABLE_NUM_WORKERS <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/embedding/persistent_table.cpp#L435>`_
+`ONEFLOW_ONE_EMBEDDING_PERSISTENT_TABLE_NUM_WORKERS <https://github.com/Oneflow-Inc/oneflow/blob/dd580f21ffb6e4d23a899c7e0ac6d2bc502f3f1a/oneflow/core/embedding/persistent_table.cpp#L435>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 The number of threads used for reading and writing the PersistentTable of OneEmbedding
@@ -383,7 +383,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``4``
 
-`ONEFLOW_EP_CUDA_CONST_BUFFER_ELEMENT_COUNT <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/ep/cuda/cuda_device.cpp#L62>`_
+`ONEFLOW_EP_CUDA_CONST_BUFFER_ELEMENT_COUNT <https://github.com/Oneflow-Inc/oneflow/blob/f11a522c7959d6c95ef8660a2586d6203e8c0982/oneflow/core/ep/cuda/cuda_device.cpp#L62>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Specify the size of the all 0s and all 1s buffers on the CUDA device. 
@@ -394,7 +394,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``1024x1024``
 
-`OMP_NUM_THREADS <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/job/env_global_objects_scope.cpp#L96>`_
+`OMP_NUM_THREADS <https://github.com/Oneflow-Inc/oneflow/blob/327a19fb66fc49e819d1defdb1f4365db5877d35/oneflow/core/job/env_global_objects_scope.cpp#L96>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Set the number of threads used by OMP
@@ -403,7 +403,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value will be generated by specific `computational logic <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/job/env_global_objects_scope.cpp#L106-L108>`_.
 
-`SBP_INFER_RULE_TAG <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/operator/operator.cpp#L719>`_
+`SBP_INFER_RULE_TAG <https://github.com/Oneflow-Inc/oneflow/blob/b136ce4245b5298ac8bea68c78895d6b37fee45c/oneflow/core/operator/operator.cpp#L715>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Specify SBP derivation rules
@@ -416,7 +416,7 @@ When the default value is ``2``, select the SBP that matches the most.
 
 When the default value is ``3``, select the SBP with the smallest cost.
 
-`ONEFLOW_TENSOR_BUFFER_GROWTH_FACTOR <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/common/tensor_buffer.cpp#L35>`_
+`ONEFLOW_TENSOR_BUFFER_GROWTH_FACTOR <https://github.com/Oneflow-Inc/oneflow/blob/db88948f9c3ba3329590d8d832ad029ffc1976df/oneflow/core/common/tensor_buffer.cpp#L35>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Control the growth factor of TensorBuffer
@@ -425,7 +425,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``1.0``
 
-`ONEFLOW_TENSOR_BUFFER_SHRINK_FACTOR <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/common/tensor_buffer.cpp#L41>`_
+`ONEFLOW_TENSOR_BUFFER_SHRINK_FACTOR <https://github.com/Oneflow-Inc/oneflow/blob/db88948f9c3ba3329590d8d832ad029ffc1976df/oneflow/core/common/tensor_buffer.cpp#L41>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Controls the shrink factor of TensorBuffer
@@ -434,7 +434,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``0.7``
 
-`ONEFLOW_TENSOR_BUFFER_POOL_SIZE_FACTOR <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/common/tensor_buffer.cpp#L200>`_
+`ONEFLOW_TENSOR_BUFFER_POOL_SIZE_FACTOR <https://github.com/Oneflow-Inc/oneflow/blob/db88948f9c3ba3329590d8d832ad029ffc1976df/oneflow/core/common/tensor_buffer.cpp#L200>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Controls the size factor of TensorBuffer
@@ -443,7 +443,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``2.0``
 
-`AUTO_PARALLEL_TRANSFER_COST <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/framework/sbp_infer_util.cpp#L544>`_
+`AUTO_PARALLEL_TRANSFER_COST <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/framework/sbp_infer_util.cpp#L544>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Control the size of the automatic parallel transfer cost
@@ -453,7 +453,7 @@ Values accepted
 The default value is ``1.65e8``
 
 
-`ONEFLOW_DEBUG_PASS <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/job/job_build_and_infer_ctx.cpp#L983>`_
+`ONEFLOW_DEBUG_PASS <https://github.com/Oneflow-Inc/oneflow/blob/dd580f21ffb6e4d23a899c7e0ac6d2bc502f3f1a/oneflow/core/job/job_build_and_infer_ctx.cpp#L983>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Pass names and print job before and after a specific pass, such as ``export ONEFLOW_DEBUG_PASS="FuseAddToOutputPass``. 
@@ -464,7 +464,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``empty``
 
-`ONEFLOW_PROFILER_HOST_THREAD_NAME_PREFIX <https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/profiler/profiler.cpp#L41>`_
+`ONEFLOW_PROFILER_HOST_THREAD_NAME_PREFIX <https://github.com/Oneflow-Inc/oneflow/blob/dd580f21ffb6e4d23a899c7e0ac6d2bc502f3f1a/oneflow/core/profiler/profiler.cpp#L41>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Add a prefix to the name of the named host thread in the profiling context to facilitate sorting in the visualization tool (nsight)
