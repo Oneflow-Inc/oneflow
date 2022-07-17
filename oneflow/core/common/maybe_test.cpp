@@ -44,11 +44,10 @@ TEST(Maybe, JUST_MSG) {
   auto data = CHECK_JUST(i(1));
   ASSERT_EQ(data, 233);
 
-  auto err = i(10.123).stacked_error();
+  auto err = i(10.123).error_frame();
   ASSERT_EQ(err->error_proto()->msg(), R"(input value 53)");
-  ASSERT_GE(err->stack_frame().size(), 2);
-  ASSERT_EQ(err->stack_frame().at(0)->code_text(), "f(y)");
-  ASSERT_EQ(err->stack_frame().at(1)->code_text(), "h(y)");
+  ASSERT_EQ(err->code_location()->code_text(), "h(y)");
+  ASSERT_EQ(err->prev()->code_location()->code_text(), "f(y)");
 
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto)
   ASSERT_EXIT(CHECK_JUST(i(10.234)), testing::KilledBySignal(SIGABRT), R"(input value 53)");

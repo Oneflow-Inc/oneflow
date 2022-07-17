@@ -44,10 +44,10 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
  public:
   Maybe(const T& data) : data_or_error_(std::make_shared<T>(data)) {}
   Maybe(T&& data) : data_or_error_(std::make_shared<T>(std::move(data))) {}
-  Maybe(const Error& error) : data_or_error_(error.stacked_error()) {}
+  Maybe(const Error& error) : data_or_error_(error.error_frame()) {}
   Maybe(const std::shared_ptr<T>& data) : data_or_error_(data) {}
   Maybe(std::shared_ptr<T>&& data) : data_or_error_(std::move(data)) {}
-  Maybe(const std::shared_ptr<StackedError>& error) : data_or_error_(error) {}
+  Maybe(const std::shared_ptr<ErrorFrame>& error) : data_or_error_(error) {}
   Maybe(const Maybe&) = default;
   Maybe(Maybe&& other) : data_or_error_(std::move(other.data_or_error_)) {}
   ~Maybe() = default;
@@ -56,69 +56,68 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   std::shared_ptr<T> Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
     return data_or_error_.template Get<T>();
   }
-  std::shared_ptr<StackedError> stacked_error() const {
-    return data_or_error_.template Get<StackedError>();
+  std::shared_ptr<ErrorFrame> error_frame() const {
+    return data_or_error_.template Get<ErrorFrame>();
   }
-  std::shared_ptr<const ErrorProto> error() const { return stacked_error()->error_proto(); }
+  std::shared_ptr<const ErrorProto> error() const { return error_frame()->error_proto(); }
 
   std::string GetSerializedError() const {
     CHECK(!IsOk());
-    return GetFormatedSerializedError(this->stacked_error());
+    return GetFormatedSerializedError(this->error_frame());
   }
 
   template<typename Type = T>
-  Type GetDataAndSerializedStackedError(std::string* error_str,
-                                        const Type& default_for_error) const {
+  Type GetDataAndSerializedErrorFrame(std::string* error_str, const Type& default_for_error) const {
     static_assert(std::is_same<T, Type>::value, "error type for argument 1");
     if (IsOk()) {
-      *error_str = StackedError().DebugString();
+      *error_str = ErrorFrame().DebugString();
       return *Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
     } else {
-      *error_str = this->stacked_error()->DebugString();
+      *error_str = this->error_frame()->DebugString();
       return default_for_error;
     }
   }
 
   template<typename Type = T>
-  std::pair<Type, std::shared_ptr<StackedError>> GetDataAndStackedError(
+  std::pair<Type, std::shared_ptr<ErrorFrame>> GetDataAndErrorFrame(
       const Type& default_for_error) const {
     if (IsOk()) {
       return std::make_pair(*Data_YouAreNotAllowedToCallThisFuncOutsideThisFile(),
-                            std::shared_ptr<StackedError>());
+                            std::shared_ptr<ErrorFrame>());
     } else {
-      return std::make_pair(default_for_error, stacked_error());
+      return std::make_pair(default_for_error, error_frame());
     }
   }
 
-  std::pair<std::shared_ptr<T>, std::shared_ptr<StackedError>> GetDataPtrAndStackedError() const {
+  std::pair<std::shared_ptr<T>, std::shared_ptr<ErrorFrame>> GetDataPtrAndErrorFrame() const {
     if (IsOk()) {
       return std::make_pair(Data_YouAreNotAllowedToCallThisFuncOutsideThisFile(),
-                            std::shared_ptr<StackedError>());
+                            std::shared_ptr<ErrorFrame>());
     } else {
-      return std::make_pair(std::shared_ptr<T>(), stacked_error());
+      return std::make_pair(std::shared_ptr<T>(), error_frame());
     }
   }
 
   template<typename Type = T>
   Type GetOrThrow() const {
-    if (!IsOk()) { ThrowError(stacked_error()); }
+    if (!IsOk()) { ThrowError(error_frame()); }
     return *Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
   }
 
   std::shared_ptr<T> GetPtrOrThrow() const {
-    if (!IsOk()) { ThrowError(stacked_error()); }
+    if (!IsOk()) { ThrowError(error_frame()); }
     return Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
   }
 
  private:
-  EitherPtr<T, StackedError> data_or_error_;
+  EitherPtr<T, ErrorFrame> data_or_error_;
 };
 
 template<typename T>
 class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> final {
  public:
-  Maybe(const Error& error) : error_or_scalar_(error.stacked_error()) { CheckError(); }
-  Maybe(const std::shared_ptr<StackedError>& error) : error_or_scalar_(error) { CheckError(); }
+  Maybe(const Error& error) : error_or_scalar_(error.error_frame()) { CheckError(); }
+  Maybe(const std::shared_ptr<ErrorFrame>& error) : error_or_scalar_(error) { CheckError(); }
   Maybe(const Maybe&) = default;
   Maybe(Maybe&&) = default;
   ~Maybe() = default;
@@ -127,32 +126,32 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
 
   bool IsOk() const { return error_or_scalar_.IsScalar(); }
   void Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {}
-  std::shared_ptr<StackedError> stacked_error() const { return error_or_scalar_.shared_ptr(); }
-  std::shared_ptr<const ErrorProto> error() const { return stacked_error()->error_proto(); }
+  std::shared_ptr<ErrorFrame> error_frame() const { return error_or_scalar_.shared_ptr(); }
+  std::shared_ptr<const ErrorProto> error() const { return error_frame()->error_proto(); }
 
   std::string GetSerializedError() const {
     CHECK(!IsOk());
-    return GetFormatedSerializedError(this->stacked_error());
+    return GetFormatedSerializedError(this->error_frame());
   }
 
-  void GetDataAndSerializedStackedError(std::string* error_str) const {
+  void GetDataAndSerializedErrorFrame(std::string* error_str) const {
     if (IsOk()) {
-      *error_str = StackedError().DebugString();
+      *error_str = ErrorFrame().DebugString();
     } else {
-      *error_str = this->stacked_error()->DebugString();
+      *error_str = this->error_frame()->DebugString();
     }
   }
 
-  std::shared_ptr<StackedError> GetDataAndStackedError() const {
+  std::shared_ptr<ErrorFrame> GetDataAndErrorFrame() const {
     if (IsOk()) {
-      return std::shared_ptr<StackedError>();
+      return std::shared_ptr<ErrorFrame>();
     } else {
-      return stacked_error();
+      return error_frame();
     }
   }
 
   void GetOrThrow() const {
-    if (!IsOk()) { ThrowError(stacked_error()); }
+    if (!IsOk()) { ThrowError(error_frame()); }
     return Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
   }
 
@@ -162,12 +161,12 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
     CHECK_NE(this->error()->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET);
   }
 
-  SharedOrScalar<StackedError, void*> error_or_scalar_;
+  SharedOrScalar<ErrorFrame, void*> error_or_scalar_;
 };
 
-inline const std::shared_ptr<StackedError>& UninitializedValueError() {
+inline const std::shared_ptr<ErrorFrame>& UninitializedValueError() {
   static thread_local const auto& error =
-      (Error::InvalidValueError() << "uninitialized value").stacked_error();
+      (Error::InvalidValueError() << "uninitialized value").error_frame();
   return error;
 }
 
@@ -175,8 +174,8 @@ template<typename T>
 class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> final {
  public:
   Maybe(T data) : error_or_scalar_(data) {}
-  Maybe(const Error& error) : error_or_scalar_(error.stacked_error()) { CheckError(); }
-  Maybe(const std::shared_ptr<StackedError>& error) : error_or_scalar_(error) { CheckError(); }
+  Maybe(const Error& error) : error_or_scalar_(error.error_frame()) { CheckError(); }
+  Maybe(const std::shared_ptr<ErrorFrame>& error) : error_or_scalar_(error) { CheckError(); }
   Maybe() : error_or_scalar_(UninitializedValueError()) {}
   Maybe(const Maybe&) = default;
   Maybe(Maybe&&) = default;
@@ -188,36 +187,35 @@ class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> final {
   T Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
     return error_or_scalar_.scalar_value();
   }
-  std::shared_ptr<StackedError> stacked_error() const { return error_or_scalar_.shared_ptr(); }
-  std::shared_ptr<const ErrorProto> error() const { return stacked_error()->error_proto(); }
+  std::shared_ptr<ErrorFrame> error_frame() const { return error_or_scalar_.shared_ptr(); }
+  std::shared_ptr<const ErrorProto> error() const { return error_frame()->error_proto(); }
 
   std::string GetSerializedError() const {
     CHECK(!IsOk());
-    return GetFormatedSerializedError(this->stacked_error());
+    return GetFormatedSerializedError(this->error_frame());
   }
 
-  T GetDataAndSerializedStackedError(std::string* error_str, const T& default_for_error) const {
+  T GetDataAndSerializedErrorFrame(std::string* error_str, const T& default_for_error) const {
     if (IsOk()) {
-      *error_str = StackedError().DebugString();
+      *error_str = ErrorFrame().DebugString();
       return Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
     } else {
-      *error_str = this->stacked_error()->DebugString();
+      *error_str = this->error_frame()->DebugString();
       return default_for_error;
     }
   }
 
-  std::pair<T, std::shared_ptr<StackedError>> GetDataAndStackedError(
-      const T& default_for_error) const {
+  std::pair<T, std::shared_ptr<ErrorFrame>> GetDataAndErrorFrame(const T& default_for_error) const {
     if (IsOk()) {
       return std::make_pair(Data_YouAreNotAllowedToCallThisFuncOutsideThisFile(),
-                            std::shared_ptr<StackedError>());
+                            std::shared_ptr<ErrorFrame>());
     } else {
-      return std::make_pair(default_for_error, stacked_error());
+      return std::make_pair(default_for_error, error_frame());
     }
   }
 
   T GetOrThrow() const {
-    if (!IsOk()) { ThrowError(stacked_error()); }
+    if (!IsOk()) { ThrowError(error_frame()); }
     return Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
   }
 
@@ -226,7 +224,7 @@ class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> final {
     CHECK_NE(this->error()->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET);
   }
 
-  SharedOrScalar<StackedError, T> error_or_scalar_;
+  SharedOrScalar<ErrorFrame, T> error_or_scalar_;
 };
 
 template<typename T>
@@ -239,7 +237,7 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
  public:
   Maybe(T data) : maybe_ptr_(&data) {}
   Maybe(const Error& error) : maybe_ptr_(error) {}
-  Maybe(const std::shared_ptr<StackedError>& error) : maybe_ptr_(error) {}
+  Maybe(const std::shared_ptr<ErrorFrame>& error) : maybe_ptr_(error) {}
   Maybe(const Maybe&) = default;
   Maybe(Maybe&&) = default;
   ~Maybe() = default;
@@ -248,20 +246,20 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   T Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
     return *maybe_ptr_.Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
   }
-  std::shared_ptr<StackedError> stacked_error() const { return maybe_ptr_.stacked_error(); }
-  std::shared_ptr<const ErrorProto> error() const { return stacked_error()->error_proto(); }
+  std::shared_ptr<ErrorFrame> error_frame() const { return maybe_ptr_.error_frame(); }
+  std::shared_ptr<const ErrorProto> error() const { return error_frame()->error_proto(); }
 
   std::string GetSerializedError() const {
     CHECK(!IsOk());
     return maybe_ptr_.GetSerializedError();
   }
 
-  T GetDataAndSerializedStackedError(std::string* error_str) const {
-    return *maybe_ptr_.GetDataAndSerializedStackedError(error_str, static_cast<PtrT>(nullptr));
+  T GetDataAndSerializedErrorFrame(std::string* error_str) const {
+    return *maybe_ptr_.GetDataAndSerializedErrorFrame(error_str, static_cast<PtrT>(nullptr));
   }
 
   T GetOrThrow() const {
-    if (!IsOk()) { ThrowError(stacked_error()); }
+    if (!IsOk()) { ThrowError(error_frame()); }
     return Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
   }
 
@@ -270,10 +268,10 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
 };
 
 namespace {
-std::string GetFormatedSerializedError(const std::shared_ptr<StackedError>& stacked_error) {
+std::string GetFormatedSerializedError(const std::shared_ptr<ErrorFrame>& error_frame) {
   // return error msg got from formatted function or debugstring.
-  const auto& maybe_error = TRY(FormatErrorStr(stacked_error));
-  const auto& error_str = maybe_error.GetDataAndStackedError(stacked_error->DebugString());
+  const auto& maybe_error = TRY(FormatErrorStr(error_frame));
+  const auto& error_str = maybe_error.GetDataAndErrorFrame(error_frame->DebugString());
   return error_str.first;
 }
 }  // namespace
@@ -287,26 +285,26 @@ std::string GetFormatedSerializedError(const std::shared_ptr<StackedError>& stac
 #define OF_RETURN_IF_ERROR(...)                                                               \
   for (auto&& maybe_##__LINE__ = __JustStackCheckWrapper__(__VA_ARGS__);                      \
        !maybe_##__LINE__.IsOk();)                                                             \
-  return Error(maybe_##__LINE__.stacked_error()).AddStackFrame([](const char* function) {     \
-    thread_local static auto frame = SymbolOf(ErrorStackFrame(__FILE__, __LINE__, function)); \
-    return frame;                                                                             \
+  return Error(maybe_##__LINE__.error_frame()).AddStackFrame([](const char* function) {       \
+    thread_local static auto location = SymbolOf(CodeLocation(__FILE__, __LINE__, function)); \
+    return location;                                                                          \
   }(__FUNCTION__))
 
 #define OF_TODO()                                                                             \
   return Error::TodoError().AddStackFrame([](const char* function) {                          \
-    thread_local static auto frame = SymbolOf(ErrorStackFrame(__FILE__, __LINE__, function)); \
-    return frame;                                                                             \
+    thread_local static auto location = SymbolOf(CodeLocation(__FILE__, __LINE__, function)); \
+    return location;                                                                          \
   }(__FUNCTION__))
 #define OF_UNIMPLEMENTED()                                                                    \
   return Error::UnimplementedError().AddStackFrame([](const char* function) {                 \
-    thread_local static auto frame = SymbolOf(ErrorStackFrame(__FILE__, __LINE__, function)); \
-    return frame;                                                                             \
+    thread_local static auto location = SymbolOf(CodeLocation(__FILE__, __LINE__, function)); \
+    return location;                                                                          \
   }(__FUNCTION__))
 
 #define OF_RUNTIME_ERROR()                                                                    \
   return Error::RuntimeError().AddStackFrame([](const char* function) {                       \
-    thread_local static auto frame = SymbolOf(ErrorStackFrame(__FILE__, __LINE__, function)); \
-    return frame;                                                                             \
+    thread_local static auto location = SymbolOf(CodeLocation(__FILE__, __LINE__, function)); \
+    return location;                                                                          \
   }(__FUNCTION__))                                                                            \
          << "RuntimeError "                                                                   \
             ": "
@@ -323,24 +321,24 @@ std::string GetFormatedSerializedError(const std::shared_ptr<StackedError>& stac
 
 #define OF_COMPLIE_OPTION_ERROR()                                                             \
   return Error::CompileOptionWrongError().AddStackFrame([](const char* function) {            \
-    thread_local static auto frame = SymbolOf(ErrorStackFrame(__FILE__, __LINE__, function)); \
-    return frame;                                                                             \
+    thread_local static auto location = SymbolOf(CodeLocation(__FILE__, __LINE__, function)); \
+    return location;                                                                          \
   }(__FUNCTION__))                                                                            \
          << "Compile option wrong: "
 
 #define CHECK_OR_RETURN(expr)                                                                 \
   if (!(expr))                                                                                \
   return Error::CheckFailedError().AddStackFrame([](const char* function) {                   \
-    thread_local static auto frame = SymbolOf(ErrorStackFrame(__FILE__, __LINE__, function)); \
-    return frame;                                                                             \
+    thread_local static auto location = SymbolOf(CodeLocation(__FILE__, __LINE__, function)); \
+    return location;                                                                          \
   }(__FUNCTION__))                                                                            \
          << "Check failed: " << OF_PP_STRINGIZE(expr) << " "
 
 #define CHECK_OR_RETURN_ERROR(expr)                                                           \
   if (!(expr))                                                                                \
   return Error::CheckFailedError().AddStackFrame([](const char* function) {                   \
-    thread_local static auto frame = SymbolOf(ErrorStackFrame(__FILE__, __LINE__, function)); \
-    return frame;                                                                             \
+    thread_local static auto location = SymbolOf(CodeLocation(__FILE__, __LINE__, function)); \
+    return location;                                                                          \
   }(__FUNCTION__))
 
 #define CHECK_EQ_OR_RETURN(lhs, rhs) \
