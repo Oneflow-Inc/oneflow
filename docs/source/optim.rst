@@ -39,9 +39,9 @@ Example::
 Per-parameter options
 ^^^^^^^^^^^^^^^^^^^^^
 
-:class:`Optimizer` s also support specifying per-parameter options. To do this, instead
-of passing an iterable of :class:`~oneflow.autograd.Variable` s, pass in an iterable of
-:class:`dict` s. Each of them will define a separate parameter group, and should contain
+:class:`Optimizer` also support specifying per-parameter options. To do this, instead
+of passing an iterable of :class:`~oneflow.autograd.Variable`, pass in an iterable of
+:class:`dict`. Each of them will define a separate parameter group, and should contain
 a ``params`` key, containing a list of parameters belonging to it. Other keys
 should match the keyword arguments accepted by the optimizers, and will be used
 as optimization options for this group.

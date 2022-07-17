@@ -1,8 +1,6 @@
 oneflow.cuda
 ===================================
 
-.. automodule:: oneflow.cuda
-
 .. currentmodule:: oneflow.cuda
 
 .. autosummary::
