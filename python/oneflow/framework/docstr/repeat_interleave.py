@@ -27,7 +27,7 @@ add_docstr(
 
         This is different from :meth:`oneflow.Tensor.repeat` but similar to ``numpy.repeat``.
 
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.repeat_interleave.html
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.repeat_interleave.html
 
     Args:
         input (oneflow.Tensor): the input Tensor.

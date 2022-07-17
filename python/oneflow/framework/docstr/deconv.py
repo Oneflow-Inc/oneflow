@@ -23,7 +23,7 @@ add_docstr(
 
     Applies a 1D transposed convolution operator over an input signal composed of several input planes, sometimes also called “deconvolution”.
     
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.conv_transpose1d.html
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.conv_transpose1d.html
 
     See :class:`~oneflow.nn.ConvTranspose1d` for details and output shape.
 
@@ -59,7 +59,7 @@ add_docstr(
 
     Applies a 2D transposed convolution operator over an input image composed of several input planes, sometimes also called “deconvolution”.
 
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.conv_transpose3d.html
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.conv_transpose3d.html
 
     See :class:`~oneflow.nn.ConvTranspose2d` for details and output shape.
 
@@ -95,7 +95,7 @@ add_docstr(
 
     Applies a 3D transposed convolution operator over an input image composed of several input planes, sometimes also called “deconvolution”.
 
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.conv_transpose3d.html
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.conv_transpose3d.html
 
     See :class:`~oneflow.nn.ConvTranspose3d` for details and output shape.
 

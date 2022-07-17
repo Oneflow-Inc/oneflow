@@ -1058,7 +1058,7 @@ class RNNCell(RNNCellBase):
     If :attr:`nonlinearity` is `'relu'`, then ReLU is used in place of tanh.
 
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.RNNCell.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.RNNCell.html.
 
     Args:
         input_size: The number of expected features in the input `x`
@@ -1188,7 +1188,7 @@ class LSTMCell(RNNCellBase):
     where :math:`\sigma` is the sigmoid function, and :math:`*` is the Hadamard product.
 
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.LSTMCell.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.LSTMCell.html.
 
     Args:
         input_size: The number of expected features in the input `x`
@@ -1304,7 +1304,7 @@ class GRUCell(RNNCellBase):
     where :math:`\sigma` is the sigmoid function, and :math:`*` is the Hadamard product.
 
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.GRUCell.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.GRUCell.html.
 
     Args:
         input_size: The number of expected features in the input `x`

@@ -98,7 +98,7 @@ def orthogonal_(tensor, gain=1.0):
     trailing dimensions are flattened.
 
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/nn.init.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
 
     Args:
         tensor: an n-dimensional `torch.Tensor`, where :math:`n \geq 2`

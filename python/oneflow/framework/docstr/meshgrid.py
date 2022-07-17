@@ -25,7 +25,7 @@ add_docstr(
     
     The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/1.10/_modules/torch/functional.html#meshgrid.
+    https://pytorch.org/docs/1.10/generated/torch.meshgrid.html#torch.meshgrid
 
     Args:
         tensors (list of Tensor): list of scalars or 1 dimensional tensors. Scalars will be

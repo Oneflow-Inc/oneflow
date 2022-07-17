@@ -79,7 +79,7 @@ def set_device(device: Union[flow.device, str, int]) -> None:
     r"""Sets the current device.
     
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.cuda.set_device.html.
+    https://pytorch.org/docs/1.10/generated/torch.cuda.set_device.html.
 
     Usage of this function is discouraged in favor of :attr:`device`. In most
     cases it's better to use ``CUDA_VISIBLE_DEVICES`` environmental variable.
