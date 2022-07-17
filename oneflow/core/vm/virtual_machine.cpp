@@ -366,8 +366,9 @@ Maybe<vm::Stream*> VirtualMachine::GetVmStream(Symbol<Stream> stream) {
         Symbol<Stream> cur_stream = JUST(stream_mgr->GetStreamSymbol(i));
         CHECK_EQ_OR_RETURN(cur_stream->unique_stream_id(), i)
             << "invalid Stream::unique_stream_id()";
-        *unique_stream_id2vm_stream_.MutableOrAdd(cur_stream->unique_stream_id()) =
-            JUST(CreateStream(cur_stream->device(), cur_stream->stream_role()));
+        unique_stream_id2vm_stream_.SetOrAdd(
+            cur_stream->unique_stream_id(),
+            JUST(CreateStream(cur_stream->device(), cur_stream->stream_role())));
       }
     }
   }
