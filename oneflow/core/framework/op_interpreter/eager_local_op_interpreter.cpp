@@ -309,7 +309,8 @@ Maybe<void> RawLocalToGlobal(const CastToGlobalOpExpr& op_expr, const TensorTupl
     CHECK_OR_RETURN(!inputs[0]->is_global());  // NOLINT
     const auto& input_tensor = JUST(inputs.at(0)->detach());
     input_local_tensor = JUST(input_tensor->AsLocalTensor());
-    CHECK_OR_RETURN(input_local_tensor) << Error::InvalidValueError("Tensor Cast Error");  // NOLINT
+    CHECK_OR_RETURN(input_local_tensor)
+        << Error::InvalidValueError() << "Tensor Cast Error";  // NOLINT
     bool requires_grad = autograd::GradMode::is_enabled() && inputs.at(0)->requires_grad();
     JUST(input_local_tensor->set_requires_grad(requires_grad));
     input_local_tensor->set_is_leaf(!requires_grad);
