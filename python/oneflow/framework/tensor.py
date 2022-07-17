@@ -81,7 +81,9 @@ def _cuda(self, device: Union[int, str, flow.device] = None):
 
 
 def _norm(self, p=None, dim=None, keepdim=False, dtype=None):
-    return flow._C.norm(self, p, dim, keepdim, dtype=dtype)
+    if type(p) == str or dim != None:
+        return flow._C.norm(self, p, dim, keepdim, dtype=dtype)
+    return flow._C.norm(self, p, dim, keepdim, dtype=dtype, for_norm=True)
 
 
 def is_nonzero(input):
@@ -210,7 +212,7 @@ def _mm(self, mat2):
 
 
 def _mv(self, vec):
-    return flow._C.mv(self, vec)
+    return flow._C.matrix_vector_product(self, vec)
 
 
 def _argsort(self, dim=None, descending=None):
