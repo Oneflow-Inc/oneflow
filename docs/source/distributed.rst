@@ -36,7 +36,7 @@ Global Tensor
 
 Construct Global Tensor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-A global Tensor can be created with a ``placement`` and a ``sbp``. The ``placement`` describes the physical devices of the global tensor will be allocated, and the ``sbp`` describes its distribution along these devices.
+A global Tensor can be created with a ``placement`` and a ``sbp``. The ``placement`` describes the physical devices of the global tensor will be allocated, and the ``sbp`` describes its distribution among these devices.
 
 ::
 
