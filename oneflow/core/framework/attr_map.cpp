@@ -125,7 +125,7 @@ template<typename T>
 Maybe<const T&> ComposedAttrMap::GetAttr(const std::string& attr_name) const {
   const auto& attr = Attr4Name(attr_name);
   CHECK_NOTNULL_OR_RETURN(attr.get())
-      << Error::InvalidValueError(std::string("no attribute found. attribute name: ") + attr_name);
+      << Error::InvalidValueError() << "no attribute found. attribute name: " << attr_name;
   return dynamic_cast<const user_op::TypedAttrVal<T>*>(attr.get())->val();
 }
 
