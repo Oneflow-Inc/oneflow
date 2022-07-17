@@ -228,7 +228,7 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
 
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " try to add op: \n"
           << op_conf.DebugString() << std::endl;
-  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(op_conf));
+  OpAttribute op_attr = *JUST(infer_ctx->AddAndInferGlobalOp(op_conf));
   VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op : \n"
           << op_conf.name() << " for FreeEagerTensor.\n";
   VLOG(3) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
