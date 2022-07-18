@@ -13,8 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/phy_instr_operand.h"
+#include "oneflow/core/vm/instruction_policy.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/common/util.h"
@@ -22,12 +21,12 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void InstructionType::InitInstructionStatus(Instruction* instruction) const {
+void InstructionPolicy::InitInstructionStatus(Instruction* instruction) {
   instruction->stream_policy().InitInstructionStatus(instruction->stream(),
                                                      instruction->mut_status_buffer());
 }
 
-void InstructionType::DeleteInstructionStatus(Instruction* instruction) const {
+void InstructionPolicy::DeleteInstructionStatus(Instruction* instruction) {
   instruction->stream_policy().DeleteInstructionStatus(instruction->stream(),
                                                        instruction->mut_status_buffer());
 }
@@ -40,10 +39,9 @@ void InitOrCheckMemPtrForAllocationCompuationPipelining(EagerBlobObject* eager_b
 
 }  // namespace
 
-void InstructionType::InitOrCheckInputBlobsMemPtrForAllocationCompuationPipelining(
-    Instruction* instruction) const {
-  const auto& operand = *instruction->phy_instr_operand();
-  operand.ForEachInputEagerBlobObjects(&InitOrCheckMemPtrForAllocationCompuationPipelining);
+void InstructionPolicy::InitOrCheckInputBlobsMemPtrForAllocationCompuationPipelining(
+    Instruction* instruction) {
+  ForEachInputEagerBlobObjects(&InitOrCheckMemPtrForAllocationCompuationPipelining);
 }
 
 }  // namespace vm
