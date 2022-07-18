@@ -79,9 +79,7 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "fused_scale_mask_softmax",
                               "fused_bias_add_gelu",
                               "fused_bias_add_mask_scale",
-                              "acc",
-                              "conv_bias_grad",
-                              };
+                              "acc"};
   return gray_list;
 }
 
