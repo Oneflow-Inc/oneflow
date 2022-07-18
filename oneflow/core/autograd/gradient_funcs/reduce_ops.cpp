@@ -64,7 +64,7 @@ Maybe<void> ReduceSum::Apply(const ReduceSumCaptureState* ctx, const TensorTuple
   if (!ctx->keepdims && input->ndim() > 0 && ctx->axis.size() > 0) {
     dy = JUST(functional::UnsqueezeMultiple(dy, ctx->axis, input->ndim()));
   }
-  in_grads->at(0) = JUST(functional::BroadcastLike(dy, input, std::vector<int>()));
+  in_grads->at(0) = JUST(functional::BroadcastLike(dy, input, {}));
   return Maybe<void>::Ok();
 }
 
@@ -123,7 +123,6 @@ Maybe<void> ReduceProdOp::Apply(const ReduceProdOpInterpState* ctx, const Tensor
           .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input, ctx->axis))
           .then(std::bind(functional::Div, std::placeholders::_1, input))
           .call());
-
   return Maybe<void>::Ok();
 }
 
@@ -168,12 +167,14 @@ Maybe<void> ReduceMaxOrMin::Apply(const ReduceMaxOrMinCaptureState* ctx,
   const auto& input = ctx->SavedTensors().at(0);
   auto output = ctx->SavedTensors().at(1);
   const auto& dy = out_grads.at(0);
-  if (!ctx->keepdims && input->ndim() > 0 && ctx->axis.size() > 0) {
-    output = JUST(functional::UnsqueezeMultiple(output, ctx->axis, input->ndim()));
-  }
+
   const auto cast_like =
-      JUST(functional::SequenceFunction<Maybe<Tensor>()>(
-               [&]() { return functional::BroadcastLike(output, input, ctx->axis); })
+      JUST(functional::SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
+             if (!ctx->keepdims && input->ndim() > 0 && ctx->axis.size() > 0) {
+               output = JUST(functional::UnsqueezeMultiple(output, ctx->axis, input->ndim()));
+             }
+             return functional::BroadcastLike(output, input, {});
+           })
                .then(std::bind(functional::BroadcastEqual, input, std::placeholders::_1))
                .then(std::bind(functional::CastLike, std::placeholders::_1, input))
                .call());
@@ -185,12 +186,11 @@ Maybe<void> ReduceMaxOrMin::Apply(const ReduceMaxOrMinCaptureState* ctx,
                .then_if(!ctx->keepdims && input->ndim() > 0 && ctx->axis.size() > 0,
                         (std::bind(functional::UnsqueezeMultiple, std::placeholders::_1, ctx->axis,
                                    input->ndim())))
-               .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input, ctx->axis))
+               .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input,
+                               std::vector<int32_t>()))
                .call());
-
   in_grads->resize(1);
   in_grads->at(0) = JUST(functional::Mul(bcast_like_div, cast_like));
-
   return Maybe<void>::Ok();
 }
 
