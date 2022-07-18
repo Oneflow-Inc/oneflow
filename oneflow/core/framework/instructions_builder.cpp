@@ -462,7 +462,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
       }
       eager_blob_object->set_last_used_stream(stream);
     }
-    JUST(RecordEvent(std::move(dep_objects), last_used_stream));
+    JUST(SoftSyncStreamBetween(std::move(dep_objects), last_used_stream, stream));
   }
   return Maybe<void>::Ok();
 }
