@@ -178,13 +178,13 @@ Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTupl
         [&](int32_t i) -> TensorMeta* { return &output_mut_metas.at(i); }));
   }
 
-  auto* output_metas = result->mut_output_tensor_metas();
+  auto* mut_output_tensor_metas = result->mut_output_tensor_metas();
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
     if (!JUST(user_op_expr.SupportNonContiguous())) {
       std::shared_ptr<Stride> stride(new Stride(output_mut_metas.at(i).shape()));
       output_mut_metas.at(i).set_stride(stride);
     }
-    output_metas->at(i) = SymbolOf(output_mut_metas.at(i));
+    mut_output_tensor_metas->at(i) = SymbolOf(output_mut_metas.at(i));
   }
   return std::shared_ptr<const LocalTensorInferResult>(std::move(result));
 }
