@@ -23,12 +23,23 @@ namespace {
 Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
-  CHECK_EQ_OR_RETURN(prediction_desc.is_dynamic(), label_desc.is_dynamic());
-  CHECK_GE_OR_RETURN(prediction_desc.shape().NumAxes(), 2);
+  CHECK_EQ_OR_RETURN(prediction_desc.is_dynamic(), label_desc.is_dynamic())
+      << Error::RuntimeError()
+      << "prediction and label are expected to have the same dynamic property, but found "
+      << prediction_desc.is_dynamic() << " and " << label_desc.is_dynamic();
+  CHECK_GE_OR_RETURN(prediction_desc.shape().NumAxes(), 2)
+      << Error::RuntimeError()
+      << "The dimension of prediction must be greater than or equal to 2, but found "
+      << prediction_desc.shape().NumAxes();
   const int64_t num_out_axes = prediction_desc.shape().NumAxes() - 1;
-  CHECK_EQ_OR_RETURN(label_desc.shape().NumAxes(), num_out_axes);
+  CHECK_EQ_OR_RETURN(label_desc.shape().NumAxes(), num_out_axes)
+      << Error::RuntimeError()
+      << "The dimension of label is expected to be less than that of prediction by 1, but found "
+      << label_desc.shape().NumAxes() << " and " << num_out_axes;
   FOR_RANGE(int64_t, i, 0, num_out_axes) {
-    CHECK_EQ_OR_RETURN(prediction_desc.shape().At(i), label_desc.shape().At(i));
+    CHECK_EQ_OR_RETURN(prediction_desc.shape().At(i), label_desc.shape().At(i))
+        << Error::RuntimeError() << "The size of prediction (" << prediction_desc.shape().At(i)
+        << ") must match the size of label (" << label_desc.shape().At(i) << ") at dimension " << i;
   }
   *ctx->OutputIsDynamic("prob", 0) = prediction_desc.is_dynamic();
   // 'prob' is just for compute prediction's grad, prob's grad will be ignored
@@ -43,14 +54,27 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& prob_desc = ctx->InputTensorDesc("prob", 0);
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-  CHECK_EQ_OR_RETURN(prob_desc.is_dynamic(), label_desc.is_dynamic());
-  CHECK_GE_OR_RETURN(prob_desc.shape().NumAxes(), 2);
+  CHECK_EQ_OR_RETURN(prob_desc.is_dynamic(), label_desc.is_dynamic())
+      << Error::RuntimeError()
+      << "prob and label are expected to have the same dynamic property, but found "
+      << prob_desc.is_dynamic() << " and " << label_desc.is_dynamic();
+  CHECK_GE_OR_RETURN(prob_desc.shape().NumAxes(), 2)
+      << Error::RuntimeError()
+      << "The dimension of prob must be greater than or equal to 2, but found "
+      << prob_desc.shape().NumAxes();
   const int64_t num_out_axes = prob_desc.shape().NumAxes() - 1;
-  CHECK_EQ_OR_RETURN(label_desc.shape().NumAxes(), num_out_axes);
+  CHECK_EQ_OR_RETURN(label_desc.shape().NumAxes(), num_out_axes)
+      << Error::RuntimeError()
+      << "The dimension of label is expected to be less than that of prediction by 1, but found "
+      << label_desc.shape().NumAxes() << " and " << num_out_axes;
   FOR_RANGE(int64_t, i, 0, num_out_axes) {
-    CHECK_EQ_OR_RETURN(prob_desc.shape().At(i), label_desc.shape().At(i));
+    CHECK_EQ_OR_RETURN(prob_desc.shape().At(i), label_desc.shape().At(i))
+        << Error::RuntimeError() << "The size of prob (" << prob_desc.shape().At(i)
+        << ") must match the size of label (" << label_desc.shape().At(i) << ") at dimension " << i;
   }
-  CHECK_EQ_OR_RETURN(dy_desc.shape(), label_desc.shape());
+  CHECK_EQ_OR_RETURN(dy_desc.shape(), label_desc.shape())
+      << Error::RuntimeError() << "The size of dy " << dy_desc.shape()
+      << " must match the size of label " << label_desc.shape();
   *ctx->OutputShape("prediction_diff", 0) = prob_desc.shape();
   *ctx->OutputIsDynamic("prediction_diff", 0) = prob_desc.is_dynamic();
   return Maybe<void>::Ok();
@@ -58,7 +82,9 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
-  CHECK_OR_RETURN(IsIndexDataType(label_desc.data_type()));
+  CHECK_OR_RETURN(IsIndexDataType(label_desc.data_type()))
+      << Error::TypeError() << "The dtype of label must be integer, but found "
+      << DataType_Name(label_desc.data_type());
   *ctx->OutputDType("prob", 0) = ctx->InputDType("prediction", 0);
   *ctx->OutputDType("out", 0) = ctx->InputDType("prediction", 0);
   return Maybe<void>::Ok();
@@ -68,9 +94,12 @@ Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
   const user_op::TensorDesc& prob_desc = ctx->InputTensorDesc("prob", 0);
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
   CHECK_OR_RETURN(IsIndexDataType(label_desc.data_type()))
-      << label_desc.data_type() << " is not index data type, op name: " << ctx->op_name();
+      << Error::TypeError() << "The dtype of label must be integer, but found "
+      << DataType_Name(label_desc.data_type());
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-  CHECK_EQ_OR_RETURN(dy_desc.data_type(), prob_desc.data_type());
+  CHECK_EQ_OR_RETURN(dy_desc.data_type(), prob_desc.data_type())
+      << Error::TypeError() << "dy and prob are expected to have the same dtype, but found "
+      << DataType_Name(dy_desc.data_type()) << " and " << DataType_Name(prob_desc.data_type());
   *ctx->OutputDType("prediction_diff", 0) = prob_desc.data_type();
   return Maybe<void>::Ok();
 }
@@ -170,7 +199,7 @@ Maybe<void> GenBackwardOpConf4SparseSoftmaxCrossEntropy(const std::string& op_ty
   /*static*/ Maybe<void> op_name##Op::ModifyInputArg(                                           \
       const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {    \
     user_op::InputArgModifier* label_modifier = GetInputArgModifierFn("label", 0);              \
-    CHECK_OR_RETURN(label_modifier != nullptr);                                                 \
+    CHECK_OR_RETURN(label_modifier != nullptr); /* NOLINT(maybe-need-error-msg) */              \
     label_modifier->set_requires_grad(false);                                                   \
     return Maybe<void>::Ok();                                                                   \
   }
