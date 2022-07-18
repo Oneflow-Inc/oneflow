@@ -84,7 +84,7 @@ template<>
 struct maybe_caster<Maybe<void>> {
   template<typename T>
   static handle cast(T&& src, return_value_policy policy, handle parent) {
-    if (!src.IsOk()) { oneflow::ThrowError(src.stacked_error()); }
+    if (!src.IsOk()) { oneflow::ThrowError(src.error_frame()); }
     return none().inc_ref();
   }
 
