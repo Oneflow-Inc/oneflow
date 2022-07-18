@@ -441,6 +441,18 @@ Maybe<void> InstructionsBuilder::TouchTensors(const vm::EagerBlobObjectListPtr& 
 
 namespace {
 
+template<typename T>
+using SmallSet = small_vector<T, kOpArgsReservedSize>;
+
+template<typename T>
+std::pair<typename SmallSet<T>::iterator, bool> SmallSetInsert(SmallSet<T>* vec, const T& elem) {
+  for (auto iter = vec->begin(); iter != vec->end(); ++iter) {
+    if (*iter == elem) { return std::make_pair(iter, false); }
+  }
+  vec->push_back(elem);
+  return std::make_pair(vec->end() - 1, true);
+}
+
 template<typename DoEachT>
 Maybe<void> ForEachEagerBlobObjectsNeedingSoftSync(
     const vm::EagerBlobObjectList& eager_blob_objects, Symbol<Stream> stream,
@@ -451,10 +463,10 @@ Maybe<void> ForEachEagerBlobObjectsNeedingSoftSync(
       if (unlikely(!opt_last_used_stream.has_value())) { continue; }
       const auto& last_used_stream = JUST(opt_last_used_stream);
       if (last_used_stream != stream) {
-        const auto& ForEachEagerBlobObject = [&](const auto& DoEachEagerBlobObject) -> Maybe<void> {
-          return DoEachEagerBlobObject(eager_blob_object);
-        };
-        JUST(DoEach(last_used_stream, ForEachEagerBlobObject));
+        small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize> dep_objects{
+            intrusive::shared_ptr<LocalDepObject>(
+                JUST(eager_blob_object->compute_local_dep_object()))};
+        JUST(DoEach(last_used_stream, std::move(dep_objects)));
       }
     }
   } else {
@@ -466,17 +478,15 @@ Maybe<void> ForEachEagerBlobObjectsNeedingSoftSync(
       if (last_used_stream != stream) { SmallSetInsert(&last_used_streams, last_used_stream); }
     }
     for (const auto& last_used_stream : last_used_streams) {
-      const auto& ForEachEagerBlobObject = [&](const auto& DoEachEagerBlobObject) -> Maybe<void> {
-        for (const auto& eager_blob_object : eager_blob_objects) {
-          const auto& opt_stream = eager_blob_object->last_used_stream();
-          if (unlikely(!opt_stream.has_value())) { continue; }
-          if (JUST(opt_stream) == last_used_stream) {
-            JUST(DoEachEagerBlobObject(eager_blob_object));
-          }
+      small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize> dep_objects{};
+      for (const auto& eager_blob_object : eager_blob_objects) {
+        const auto& opt_stream = eager_blob_object->last_used_stream();
+        if (unlikely(!opt_stream.has_value())) { continue; }
+        if (JUST(opt_stream) == last_used_stream) {
+          dep_objects.emplace_back(JUST(eager_blob_object->compute_local_dep_object()));
         }
-        return Maybe<void>::Ok();
-      };
-      JUST(DoEach(last_used_stream, ForEachEagerBlobObject));
+      }
+      JUST(DoEach(last_used_stream, std::move(dep_objects)));
     }
   }
   return Maybe<void>::Ok();
@@ -488,12 +498,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(const vm::EagerBlobObjectList& e
                                                 Symbol<Stream> stream) {
   JUST(ForEachEagerBlobObjectsNeedingSoftSync(
       eager_blob_objects, stream,
-      [&](Symbol<Stream> last_used_stream, const auto& ForEachEagerBlobObject) -> Maybe<void> {
-        small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize> dep_objects{};
-        JUST(ForEachEagerBlobObject([&](const auto& eager_blob_object) -> Maybe<void> {
-          dep_objects.emplace_back(JUST(eager_blob_object->compute_local_dep_object()));
-          return Maybe<void>::Ok();
-        }));
+      [&](Symbol<Stream> last_used_stream, auto&& dep_objects) -> Maybe<void> {
         return SoftSyncStream(std::move(dep_objects), "mut", last_used_stream);
       }));
   for (const auto& eager_blob_object : eager_blob_objects) {
