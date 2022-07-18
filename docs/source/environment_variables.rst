@@ -65,7 +65,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is empty, but will load ``libibverbs.so.1``, ``libibverbs.so``.
 
-`ONEFLOW_DEBUG_MODE <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/job/resource_desc.cpp#L63>`_
+`ONEFLOW_DEBUG_MODE <https://github.com/Oneflow-Inc/oneflow/blob/d07b77c5aadb3f05e477c8c7b879158f3ddf0101/oneflow/core/common/env_var/debug_mode.h#L23>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Enable ``debug`` mode, ``ONEFLOW_DEBUG`` can do. 
@@ -218,7 +218,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
 
-ONEFLOW_ONE_EMBEDDING_DISABLE_NUMA_AWARE_ALLOCATION
+`ONEFLOW_ONE_EMBEDDING_DISABLE_NUMA_AWARE_ALLOCATION <https://github.com/Oneflow-Inc/oneflow/blob/51b9a1e0b48c28e2b45380b8889ba379cc052ff7/oneflow/core/embedding/full_cache.cu#L409>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Whether to disable NUMA_AWARE memory allocation when the OneEmbedding module allocates video memory. 
