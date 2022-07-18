@@ -249,6 +249,8 @@ void NcclSendRecvBoxingKernel::VirtualKernelInit(KernelContext* ctx) {
 
 REGISTER_KERNEL(OperatorConf::kNcclSendRecvBoxingConf, NcclSendRecvBoxingKernel);
 
+REGISTER_SYSTEM_OP_KERNEL_UNIFIED_NCCL_COMM_INIT(OperatorConf::kNcclSendRecvBoxingConf);
+
 }  // namespace oneflow
 
 #endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700

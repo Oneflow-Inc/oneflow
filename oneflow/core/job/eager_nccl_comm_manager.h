@@ -89,6 +89,11 @@ class UserKernelUnifiedNcclCommInitRegistry final {
   static auto OF_PP_CAT(g_nccl_comm_reg_, __COUNTER__) =          \
       ::oneflow::UserKernelUnifiedNcclCommInitRegistry::Trigger(op_type_name)
 
+#define REGISTER_SYSTEM_OP_KERNEL_UNIFIED_NCCL_COMM_INIT(op_type_case)    \
+  static auto OF_PP_CAT(g_nccl_comm_reg_, __COUNTER__) =                  \
+      ::oneflow::UserKernelUnifiedNcclCommInitRegistry::Trigger("sys_op_" \
+                                                                + std::to_string(op_type_case))
+
 #endif  // WITH_CUDA
 
 #endif  // ONEFLOW_CORE_JOB_EAGER_NCCL_COMM_MANAGER_H_

@@ -75,6 +75,7 @@ void NcclSendRecvBoxingTaskNode::BuildExecGphAndRegst() {
   nccl_send_recv_boxing_conf->set_has_output(has_output_);
   std::shared_ptr<Operator> sole_op = CHECK_JUST(ConstructOp(op_conf));
   node->mut_op() = sole_op;
+  sole_op->FillOpParallelDesc(parallel_conf_);
   if (has_input_) { node->BindBnWithRegst(sole_op->SoleIbn(), GetSoleConsumedRegst("in")); }
   if (has_output_) {
     std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
