@@ -1,8 +1,7 @@
 oneflow.cuda
 ===================================
 
-The documentation is referenced from: 
-https://pytorch.org/docs/1.10/cuda.html.
+.. The documentation is referenced from: https://pytorch.org/docs/1.10/cuda.html.
 
 .. automodule:: oneflow.cuda
 
