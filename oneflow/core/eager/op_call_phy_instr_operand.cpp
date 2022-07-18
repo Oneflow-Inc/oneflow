@@ -39,11 +39,15 @@ OpCallPhyInstrOperand::OpCallPhyInstrOperand(
       need_temp_storage_(false),
       dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode),
       input_dependences_(),
-      output_dependences_() {
+      output_dependences_(),
+      is_all_outputs_pod_(false) {
   ForEachConstDependence([&](auto* dep) { input_dependences_.emplace_back(dep); });
   ForEachMutDependence([&](auto* dep) { output_dependences_.emplace_back(dep); });
   ForEachMut2Dependence([&](auto* dep) { output_dependences_.emplace_back(dep); });
   InitStreamSequentialDependence();
+  for (const auto& blob_object : outputs) {
+    is_all_outputs_pod_ = is_all_outputs_pod_ && IsPODDataType(blob_object->data_type());
+  }
 }
 
 Maybe<void> OpCallPhyInstrOperand::Init() {
