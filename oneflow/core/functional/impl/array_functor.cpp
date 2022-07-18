@@ -2622,7 +2622,8 @@ Maybe<Tensor> GlobalTensorTo(const std::shared_ptr<Tensor>& x, const std::string
     Symbol<Device> device = JUST(Device::New(device_type));
     tensor = JUST(LocalTensorTo(tensor, device->type(), device->device_id(), dtype, copy));
     JUST(tensor->set_requires_grad(x->requires_grad()));
-    return JUST(LocalToGlobal(tensor, placement, sbp_tuple, *(x->shape()), dtype));
+    return JUST(LocalToGlobal(tensor, placement, sbp_tuple, *(x->shape()), dtype,
+                              /* sync_data */ true));
   }
 }
 
