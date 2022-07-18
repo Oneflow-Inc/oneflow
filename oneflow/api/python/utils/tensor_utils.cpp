@@ -247,8 +247,9 @@ Maybe<Tensor> MakeGlobalTensorFromData(PyObject* data, const Optional<Symbol<DTy
   size_t sbp_dims = sbp_tuple.size();
   Symbol<NdSbp> broadcast_nd_sbp = JUST(CachedGetAllBroadcastNdSbp(sbp_dims));
 
-  std::shared_ptr<Tensor> broadcast_tensor = JUST(functional::LocalToGlobal(
-      local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)), shape, local_tensor->dtype()));
+  std::shared_ptr<Tensor> broadcast_tensor =
+      JUST(functional::LocalToGlobal(local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)),
+                                     shape, local_tensor->dtype(), /* sync_data */ true));
 
   std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
   auto global_tensor = JUST(functional::ToGlobal(broadcast_tensor, placement, sbp_tuple,
