@@ -1354,7 +1354,6 @@ class GRUCell(RNNCellBase):
         >>> hx = flow.randn(3, 20)
         >>> hx = rnn(input[0], hx)
         >>> hx.size()
-
         oneflow.Size([3, 20])
 
     """

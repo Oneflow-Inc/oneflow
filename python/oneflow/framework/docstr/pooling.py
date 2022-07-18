@@ -117,6 +117,7 @@ add_docstr(
     Examples::
 
         >>> # pool of square window of size=3, stride=2
+        >>> import oneflow
         >>> input = oneflow.tensor([[[1, 2, 3, 4, 5, 6, 7]]], dtype=oneflow.float32)
         >>> oneflow.nn.functional.avg_pool1d(input, kernel_size=3, stride=2)
         tensor([[[2., 4., 6.]]], dtype=oneflow.float32)
