@@ -71,7 +71,8 @@ Maybe<one::Tensor> UnflattenHierarchy(const std::shared_ptr<one::Tensor>& tensor
   const auto& local_tensor = JUST(tensor->cur_rank_phy_tensor());
   const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
   return JUST(one::functional::LocalToGlobal(local_tensor, out->placement(), *sbp_list,
-                                             *tensor->shape(), tensor->dtype()));
+                                             *tensor->shape(), tensor->dtype(),
+                                             /* sync_data */ false));
 }
 
 COMMAND(RegisterBoxingFunction("unflatten-hierarchy", CheckUnflattenHierarchy,
