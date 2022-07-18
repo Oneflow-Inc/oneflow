@@ -122,7 +122,6 @@ add_docstr(
         tensor([[[2., 4., 6.]]], dtype=oneflow.float32)
 
     """,
- 
 )
 
 add_docstr(
@@ -145,7 +144,6 @@ add_docstr(
         count_include_pad: when True, will include the zero-padding in the averaging calculation. Default: ``True``
         divisor_override: if specified, it will be used as divisor, otherwise size of the pooling region will be used. Default: 0
     """,
- 
 )
 
 add_docstr(
@@ -168,5 +166,4 @@ add_docstr(
         count_include_pad: when True, will include the zero-padding in the averaging calculation
         divisor_override: if specified, it will be used as divisor, otherwise size of the pooling region will be used. Default: 0
     """,
- 
 )
