@@ -33,7 +33,6 @@ def _test_unfold_with_random_data(test_case, placement, sbp):
         stride=random(1, 2).to(_size_2_t),
     )
     m.train(random())
-    m = m.to_global(placement, sbp)
 
     x = random_tensor(ndim, *dims).to_global(placement, sbp)
     y = m(x)

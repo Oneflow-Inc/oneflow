@@ -33,7 +33,6 @@ def _test_fold_impl(test_case, placement, sbp):
         stride=constant(2),
     )
     m.train(random())
-    m = m.to_global(placement, sbp)
 
     x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
     y = m(x)

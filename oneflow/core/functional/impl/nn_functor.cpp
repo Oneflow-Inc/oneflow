@@ -47,18 +47,6 @@ namespace one {
 namespace functional {
 
 namespace impl {
-namespace {
-Maybe<std::vector<int32_t>> CheckPair(const std::vector<int32_t>& vec) {
-  const int32_t size = vec.size();
-  if (size > 2) {
-    return Error::RuntimeError() << "Parameters must be int or 2-tuple for 3D input";
-  }
-  if (size == 2) { return vec; }
-  std::vector<int32_t> new_vec(2);
-  for (int i = 0; i < 2; i++) { new_vec[i] = vec[0]; }
-  return new_vec;
-}
-}  // namespace
 
 class BiasAddFunctor {
  public:
@@ -2352,10 +2340,10 @@ class UnfoldFunctor {
         << Error::RuntimeError() << "Input Tensor dim should == 4";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", *JUST(CheckPair(kernel_size))));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", *JUST(CheckPair(dilation_rate))));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("padding", *JUST(CheckPair(padding))));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", *JUST(CheckPair(strides))));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
 
     return OpInterpUtil::Dispatch<Tensor>(*unfold_op_, {x}, attrs);
   }
@@ -2381,10 +2369,10 @@ class FoldFunctor {
 
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     JUST(attrs.SetAttr<std::vector<int32_t>>("output_size", output_size));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", *JUST(CheckPair(kernel_size))));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", *JUST(CheckPair(dilation_rate))));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("padding", *JUST(CheckPair(padding))));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", *JUST(CheckPair(strides))));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
 
     return OpInterpUtil::Dispatch<Tensor>(*fold_op_, {x}, attrs);
   }
