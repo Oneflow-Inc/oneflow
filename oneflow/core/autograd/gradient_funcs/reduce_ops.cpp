@@ -62,7 +62,7 @@ Maybe<void> ReduceSum::Apply(const ReduceSumCaptureState* ctx, const TensorTuple
   auto dy = out_grads.at(0);
   in_grads->resize(1);
   if (!ctx->keepdims && input->ndim() > 0 && ctx->axis.size() > 0) {
-    for (auto& reduced_dim : ctx->axis) { dy = JUST(functional::Unsqueeze(dy, reduced_dim)); }
+    dy = JUST(functional::UnsqueezeMultiple(dy, ctx->axis, input->ndim()));
   }
   in_grads->at(0) = JUST(functional::BroadcastLike(dy, input, ctx->axis));
   return Maybe<void>::Ok();
@@ -115,6 +115,8 @@ Maybe<void> ReduceProdOp::Apply(const ReduceProdOpInterpState* ctx, const Tensor
   in_grads->resize(1);
   in_grads->at(0) = JUST(
       functional::SequenceFunction<Maybe<Tensor>()>([&]() { return functional::Mul(dy, output); })
+          .then(std::bind(functional::UnsqueezeMultiple, std::placeholders::_1, ctx->axis,
+                          input->ndim()))
           .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input, ctx->axis))
           .then(std::bind(functional::Div, std::placeholders::_1, input))
           .call());
@@ -162,10 +164,14 @@ Maybe<void> ReduceMaxOrMin::Apply(const ReduceMaxOrMinCaptureState* ctx,
   const auto& input = ctx->SavedTensors().at(0);
   const auto& output = ctx->SavedTensors().at(1);
   const auto& dy = out_grads.at(0);
-
+  // std::vector<int> expanaxic;
+  // for (int32_t i = 0; i < input->ndim() - output->ndim(); i++) {
+  //   expanaxic.emplace_back(output->ndim() + i);
+  // }
   const auto cast_like =
       JUST(functional::SequenceFunction<Maybe<Tensor>()>(
-               [&]() { return functional::BroadcastLike(output, input, ctx->axis); })
+               [&]() { return functional::UnsqueezeMultiple(output, ctx->axis, input->ndim()); })
+               .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input, ctx->axis))
                .then(std::bind(functional::BroadcastEqual, input, std::placeholders::_1))
                .then(std::bind(functional::CastLike, std::placeholders::_1, input))
                .call());
@@ -174,6 +180,8 @@ Maybe<void> ReduceMaxOrMin::Apply(const ReduceMaxOrMinCaptureState* ctx,
       JUST(functional::SequenceFunction<Maybe<Tensor>()>(
                [&]() { return functional::ReduceSum(cast_like, ctx->axis, ctx->keepdims); })
                .then(std::bind(functional::Div, dy, std::placeholders::_1))
+               .then(std::bind(functional::UnsqueezeMultiple, std::placeholders::_1, ctx->axis,
+                               input->ndim()))
                .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input, ctx->axis))
                .call());
 

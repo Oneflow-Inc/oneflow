@@ -83,7 +83,11 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   Shape* out_shape = ctx->OutputShape("y", 0);
   Stride* out_stride = ctx->OutputStride("y", 0);
   const AxisVector axis_vec = {broadcast_axes.begin(), broadcast_axes.end()};
-  CHECK_OR_RETURN(IsAxesLegal(axis_vec, like_shape, in_shape));
+  // for (auto c : axis_vec) { std::cout << c << " "; }
+  // std::cout<<std::endl;
+  CHECK_OR_RETURN(IsAxesLegal(axis_vec, like_shape, in_shape))
+      << Error::RuntimeError() << "like_shape: " << like_shape.ToString()
+      << " in_shape:" << in_shape.ToString();
   *out_shape = like_shape;
   *out_stride = Stride(like_shape);
   return Maybe<void>::Ok();

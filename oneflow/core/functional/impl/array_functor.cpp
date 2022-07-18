@@ -670,9 +670,7 @@ class ExpandDimsFunctor {
     if (dim < 0) { expand_dim = dim + ndim + 1; }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
-
     if (view::IsViewApplicable(input)) { return view::Unsqueeze(input, expand_dim); }
-
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
@@ -680,6 +678,58 @@ class ExpandDimsFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class UnsqueezeMultipleFunctor {
+ public:
+  UnsqueezeMultipleFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& dim,
+                           const int32_t& n_dims) const {
+    if (dim.size() == 0 || x->ndim() == n_dims) {
+      return x;
+    } else if (dim.size() == 1) {
+      return functional::Unsqueeze(x, dim.at(0));
+    } else {
+      std::vector<int32_t> unsqueeze_dims = dim;
+      std::shared_ptr<Tensor> tensor = x;
+      std::vector<bool> seen(dim_bitset_size, false);
+      for (auto& dim_i : unsqueeze_dims) {
+        CHECK_EQ_OR_RETURN(seen[dim_i], false) << Error::RuntimeError() << "Dim " << dim_i
+                                               << "appears multiple times in the list of dims";
+        dim_i = JUST(maybe_wrap_dim(dim_i, n_dims));
+        seen[dim_i] = true;
+      }
+      std::sort(unsqueeze_dims.begin(), unsqueeze_dims.end());
+
+      if (view::IsViewApplicable(tensor)) {
+        std::vector<int64_t> target_dims;
+        int32_t unsqueeze_index = 0;
+        int32_t tensor_index = 0;
+        for (int32_t i = 0; i < n_dims; i++) {
+          if (i == unsqueeze_dims.at(unsqueeze_index)) {
+            target_dims.emplace_back(1);
+            unsqueeze_index++;
+          } else {
+            target_dims.emplace_back(tensor->shape()->at(tensor_index));
+            tensor_index++;
+          }
+        }
+        Shape infered_shape(DimVector(target_dims.begin(), target_dims.end()));
+        Optional<Stride> infered_stride =
+            ComputeStride(*(tensor->shape()), *JUST(tensor->stride()), infered_shape);
+        tensor = JUST(view::Reshape(tensor, infered_shape, *JUST(infered_stride)));
+      } else {
+        for (auto dim = unsqueeze_dims.begin();
+             dim != unsqueeze_dims.end() && tensor->ndim() < n_dims; dim++) {
+          tensor = JUST(functional::Unsqueeze(tensor, *dim));
+        }
+      }
+      return tensor;
+    }
+  }
+
+ private:
+  const size_t dim_bitset_size = 64;
+  std::shared_ptr<OpExpr> op_;
+};
 class SqueezeFunctor {
  public:
   SqueezeFunctor() {
@@ -706,7 +756,6 @@ class SqueezeFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("axes", squeeze_dims));
 
     if (view::IsViewApplicable(x)) { return view::Squeeze(x, squeeze_dims); }
-
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -3224,6 +3273,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TransposeAllDimFunctionFunctor>("TransposeAllDimFunction");
   m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
   m.add_functor<impl::PinMemoryFunctor>("PinMemory");
+  m.add_functor<impl::UnsqueezeMultipleFunctor>("UnsqueezeMultiple");
 };
 
 }  // namespace functional
