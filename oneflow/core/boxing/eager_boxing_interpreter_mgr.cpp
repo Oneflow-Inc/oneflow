@@ -38,6 +38,13 @@ Maybe<BoxingExprIf> OptionalCudaCopy(const std::shared_ptr<BoxingExprIf>& core_b
                                          core_boxing_expr, JUST(OptionalBoxing("copy-d2h"))))));
 }
 
+Maybe<BoxingExprIf> OptionalCpuCopy(const std::shared_ptr<BoxingExprIf>& core_boxing_expr) {
+  return JUST(BoxingExpr(JUST(ReplaceInDeviceType(DeviceType::kCPU)),
+                         JUST(OptionalBoxing("copy-d2h")),
+                         JUST(BoxingExpr(JUST(ReplaceOutDeviceType(DeviceType::kCPU)),
+                                         core_boxing_expr, JUST(OptionalBoxing("copy-h2d"))))));
+}
+
 Maybe<BoxingExprIf> SymmetricOneDimSxToBBoxingExpr() {
   return JUST(BoxingExpr(JUST(InPlacementAndSplit(0)), JUST(OptionalBoxing("ccl-s-to-s")),
                          JUST(BoxingExpr("ccl-s-to-b"))));
@@ -152,7 +159,7 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
                      | JUST(SymmetricNDimToOneDimBoxingExpr())
                      | JUST(GenericBoxingExpr());
   // clang-format on
-  return core | JUST(OptionalCudaCopy(core));
+  return core | JUST(OptionalCudaCopy(core)) | JUST(OptionalCpuCopy(core));
 }
 
 }  // namespace
