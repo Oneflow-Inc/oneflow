@@ -38,8 +38,6 @@ namespace oneflow {
 
 namespace vm {
 
-namespace {}  // namespace
-
 void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
   OF_PROFILER_RANGE_GUARD("R:" + instruction->DebugName());
   auto* access_list = instruction->mut_access_list();
