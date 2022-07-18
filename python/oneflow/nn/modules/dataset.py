@@ -166,6 +166,36 @@ class OFRecordRawDecoder(Module):
 
 
 class CoinFlip(Module):
+    r"""
+    CoinFlip(batch_size=1, random_seed=None, probability=0.5, device=None, placement=None, sbp=None)
+
+    The documentation is referenced from:
+    https://docs.nvidia.com/deeplearning/dali/user-guide/docs/supported_ops_legacy.html#nvidia.dali.ops.CoinFlip.
+
+    Generates random boolean values following a bernoulli distribution.
+
+    The probability of generating a value 1 (true) is determined by the ``probability`` argument.
+
+    The shape of the generated data can be either specified explicitly with a ``shape`` argument,
+    or chosen to match the shape of the input, if provided. If none are present, a single value per
+    sample is generated.
+
+    Args:
+        batch_size (int, optional): Maximum batch size of the pipeline. Negative values for this parameter 
+            are invalid - the default value may only be used with serialized pipeline (the value stored in 
+            serialized pipeline is used instead). In most cases, the actual batch size of the pipeline will be 
+            equal to the maximum one. Default: 1
+        random_seed (int, optional): Random seed. Default: None
+        probability (float, optional): Probability of value 1. Default: 0.5
+        device (oneflow.device, optional): Desired device of returned tensor. Default: if None, uses the 
+            current device for the default tensor type.
+        placement (oneflow.placement, optional):  Desired placement of returned global tensor. 
+            Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (oneflow.sbp.sbp or tuple of oneflow.sbp.sbp, optional): Desired sbp descriptor of returned 
+            global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+
+    """
+
     def __init__(
         self,
         batch_size: int = 1,
@@ -232,6 +262,41 @@ class CoinFlip(Module):
 
 
 class CropMirrorNormalize(Module):
+    r"""
+    CropMirrorNormalize(color_space="BGR", output_layout="NCHW", crop_h=0, crop_w=0, crop_pos_y=0.5, crop_pos_x=0.5, mean= [0.0], std= [1.0], output_dtype=oneflow.float)
+    
+    The documentation is referenced from:
+    https://docs.nvidia.com/deeplearning/dali/user-guide/docs/supported_ops_legacy.html#nvidia.dali.ops.CropMirrorNormalize.
+
+    Performs fused cropping, normalization, format conversion
+    (NHWC to NCHW) if desired, and type casting.
+
+    Normalization takes the input images and produces the output by using the following formula:
+    
+    .. math::
+        output = (input - mean) / std
+
+    .. note::
+        If no cropping arguments are specified, only mirroring and normalization will occur.
+
+    This operator allows sequence inputs and supports volumetric data.
+
+    Args:
+        color_space (str, optional): The color space of the input image. Default: "BGR"
+        output_layout (str, optional): Tensor data layout for the output. Default: "NCHW"
+        crop_h (int, optional): Cropping the window height (in pixels). Default: 0
+        crop_w (int, optional): Cropping window width (in pixels). Default: 0
+        crop_pos_y (float, optional): Normalized (0.0 - 1.0) vertical position of the start of the cropping 
+            window (typically, the upper left corner). Default: 0.5
+        crop_pos_x (float, optional): Normalized (0.0 - 1.0) horizontal position of the cropping window 
+            (upper left corner). Default: 0.5
+        mean (float or list of float, optional): Mean pixel values for image normalization. Default: [0.0],
+        std (float or list of float, optional): Standard deviation values for image normalization. 
+            Default: [1.0]
+        output_dtype (oneflow.dtype, optional): Output data type. Default: ``oneflow.float``
+
+    """
+
     def __init__(
         self,
         color_space: str = "BGR",
