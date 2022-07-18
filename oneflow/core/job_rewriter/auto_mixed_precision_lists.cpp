@@ -34,12 +34,9 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "tf_prelu_grad",
                                "cublas_fused_mlp",
                                "fused_matmul_bias_add_relu_dropout",
-                               "fused_relu_dropout_grad",
-                               "cublas_bias_add_relu_matmul_grad",
                                "fused_dot_feature_interaction",
                                "fused_dot_feature_interaction_grad",
                                "embedding_lookup_placeholder",
-                               "embedding_update_placeholder",
                                "binary_cross_entropy_with_logits_reduce_mean",
                                "binary_cross_entropy_with_logits_reduce_mean_grad"};
   return white_list;
