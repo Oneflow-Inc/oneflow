@@ -36,7 +36,7 @@ class FuseInstructionType : public vm::InstructionType {
     auto* ptr = dynamic_cast<vm::FusePhyInstrOperand*>(phy_instr_operand.get());
     auto* instruction_list = CHECK_NOTNULL(ptr)->mut_instruction_list();
     auto* last_instruction = CHECK_NOTNULL(instruction_list->Last());
-    last_instruction->instruction_type().InitInstructionStatusIf(instruction);
+    last_instruction->mut_instruction_policy()->InitInstructionStatusIf(instruction);
   }
 
   Maybe<void> Prepare(vm::Instruction* instruction) const override {
@@ -44,9 +44,7 @@ class FuseInstructionType : public vm::InstructionType {
     auto* ptr = dynamic_cast<vm::FusePhyInstrOperand*>(phy_instr_operand.get());
     CHECK_NOTNULL_OR_RETURN(ptr);
     auto* instruction_list = ptr->mut_instruction_list();
-    INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, instruction_list) {
-      JUST(instruction->instruction_type().PrepareIf(instruction));
-    }
+    INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, instruction_list) { JUST(instruction->Prepare()); }
     return Maybe<void>::Ok();
   }
   void Compute(vm::Instruction* instruction) const override {
