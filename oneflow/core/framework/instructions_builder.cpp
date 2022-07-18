@@ -441,6 +441,18 @@ Maybe<void> InstructionsBuilder::TouchTensors(const vm::EagerBlobObjectListPtr& 
 
 namespace {
 
+template<typename T>
+using SmallSet = small_vector<T, kOpArgsReservedSize>;
+
+template<typename T>
+std::pair<typename SmallSet<T>::iterator, bool> SmallSetInsert(SmallSet<T>* vec, const T& elem) {
+  for (auto iter = vec->begin(); iter != vec->end(); ++iter) {
+    if (*iter == elem) { return std::make_pair(iter, false); }
+  }
+  vec->push_back(elem);
+  return std::make_pair(vec->end() - 1, true);
+}
+
 template<typename DoEachT>
 Maybe<void> ForEachEagerBlobObjectsNeedingSoftSync(
     const vm::EagerBlobObjectList& eager_blob_objects, Symbol<Stream> stream,
