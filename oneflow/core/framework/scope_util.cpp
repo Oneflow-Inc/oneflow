@@ -96,4 +96,10 @@ Maybe<void> ThreadLocalScopeStackPop() {
   return Maybe<void>::Ok();
 }
 
+ThreadLocalScopeGuard::ThreadLocalScopeGuard(const std::shared_ptr<Scope>& scope) {
+  ThreadLocalScopeStackPush(scope);
+}
+
+ThreadLocalScopeGuard::~ThreadLocalScopeGuard() { ThreadLocalScopeStackPop(); }
+
 }  // namespace oneflow

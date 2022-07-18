@@ -34,6 +34,12 @@ Maybe<void> ThreadLocalScopeStackPush(const std::shared_ptr<Scope>& scope);
 
 Maybe<void> ThreadLocalScopeStackPop();
 
+class ThreadLocalScopeGuard {
+ public:
+  explicit ThreadLocalScopeGuard(const std::shared_ptr<Scope>& scope);
+  ~ThreadLocalScopeGuard();
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_SCOPE_UTIL_H_
