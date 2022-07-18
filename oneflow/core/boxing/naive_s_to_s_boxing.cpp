@@ -72,7 +72,8 @@ Maybe<one::Tensor> NaiveSToS(const std::shared_ptr<one::Tensor>& tensor, Symbol<
   }
 
   return JUST(one::functional::LocalToGlobal(local_tensor, out->placement(), *out_sbp_list,
-                                             *tensor->shape(), tensor->dtype()));
+                                             *tensor->shape(), tensor->dtype(),
+                                             /* sync_data */ false));
 }
 
 static constexpr auto* NaiveSToSWithAutoConvert =
