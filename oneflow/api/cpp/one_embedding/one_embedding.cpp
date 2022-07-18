@@ -19,11 +19,26 @@ limitations under the License.
 namespace oneflow_api {
 namespace one_embedding {
 
-void LoadSnapshot(const std::string& embedding_name, const std::string& snapshot_name) {
+OneEmbeddingHandler::OneEmbeddingHandler(const std::string& key_value_store_option_string) {
+  oneflow::embedding::KeyValueStoreOptions key_value_store_options(key_value_store_option_string);
+  embedding_name_ = key_value_store_options.Name();
+  CreateKeyValueStore(key_value_store_options);
+}
+
+void OneEmbeddingHandler::CreateKeyValueStore(
+    const oneflow::embedding::KeyValueStoreOptions& key_value_store_options) {
 #ifdef WITH_CUDA
-  oneflow::Singleton<oneflow::embedding::EmbeddingManager>::Get()->LoadSnapshot(
-      embedding_name, /*local_rank_id=*/0,
-      /*rank_id=*/0, snapshot_name);
+  Singleton<oneflow::embedding::EmbeddingManager>::Get()->CreateKeyValueStore(
+      key_value_store_options, 0, 0, 1);
+#else
+  UNIMPLEMENTED() << "Only Support with CUDA";
+#endif
+}
+
+void OneEmbeddingHandler::LoadSnapshot(const std::string& snapshot_name) {
+#ifdef WITH_CUDA
+  Singleton<oneflow::embedding::EmbeddingManager>::Get()->LoadSnapshot(embedding_name_, 0, 0,
+                                                                       snapshot_name);
 #else
   UNIMPLEMENTED() << "Only Support with CUDA";
 #endif

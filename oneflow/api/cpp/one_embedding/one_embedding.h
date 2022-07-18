@@ -21,9 +21,14 @@ limitations under the License.
 namespace oneflow_api {
 namespace one_embedding {
 
-void LoadSnapshot(const std::string& embedding_name, const std::string& snapshot_name);
+class OneEmbeddingHandler final {
+ public:
+  OneEmbeddingHandler(const std::string& key_value_store_option_string);
+  void LoadSnapshot(const std::string& snapshot_name);
+  void CreateKeyValueStore(const embedding::KeyValueStoreOptions& key_value_store_options);
+};
 
-}
+}  // namespace one_embedding
 
 }  // namespace oneflow_api
 
