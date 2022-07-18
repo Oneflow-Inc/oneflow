@@ -409,24 +409,24 @@ Attribute ConvertNdSbpToAttr_(Builder& builder,
   auto ctx = builder.getContext();
   std::vector<mlir::Attribute> outputs_vec;
   for (const auto& sbp : nd_sbp) {
-    mlir::Attribute attr;
-    if (sbp.at(0) == 'S') {
-      auto start_pos = sbp.find('(');
-      auto end_pos = sbp.find(')');
-      if (start_pos == std::string::npos || end_pos == std::string::npos) {
-        llvm::errs() << "fail to parse sbp: S";
-      }
-      start_pos++;
-      auto sub_sbp = sbp.substr(start_pos, end_pos - start_pos);
-      auto axis = std::stoi(sub_sbp);
-      attr = sbp::SplitAttr::get(ctx, axis);
-    } else if (sbp.at(0) == 'B') {
-      attr = sbp::BroadcastAttr::get(ctx);
-    } else if (sbp.at(0) == 'P') {
-      attr = sbp::PartialSumAttr::get(ctx);
-    } else {
-      llvm::errs() << "unsupported sbp";
-    }
+    mlir::Attribute attr = sbp::SBPAttr::get(ctx, builder.getStringAttr(sbp));
+    // if (sbp.at(0) == 'S') {
+    //   auto start_pos = sbp.find('(');
+    //   auto end_pos = sbp.find(')');
+    //   if (start_pos == std::string::npos || end_pos == std::string::npos) {
+    //     llvm::errs() << "fail to parse sbp: S";
+    //   }
+    //   start_pos++;
+    //   auto sub_sbp = sbp.substr(start_pos, end_pos - start_pos);
+    //   auto axis = std::stoi(sub_sbp);
+    //   attr = sbp::SplitAttr::get(ctx, axis);
+    // } else if (sbp.at(0) == 'B') {
+    //   attr = sbp::BroadcastAttr::get(ctx);
+    // } else if (sbp.at(0) == 'P') {
+    //   attr = sbp::PartialSumAttr::get(ctx);
+    // } else {
+    //   llvm::errs() << "unsupported sbp";
+    // }
     outputs_vec.push_back(attr);
   }
 
