@@ -309,7 +309,8 @@ Maybe<void> RawLocalToGlobal(const CastToGlobalOpExpr& op_expr, const TensorTupl
     CHECK_OR_RETURN(!inputs[0]->is_global());  // NOLINT
     const auto& input_tensor = JUST(inputs.at(0)->detach());
     input_local_tensor = JUST(input_tensor->AsLocalTensor());
-    CHECK_OR_RETURN(input_local_tensor) << Error::InvalidValueError("Tensor Cast Error");  // NOLINT
+    CHECK_OR_RETURN(input_local_tensor)
+        << Error::InvalidValueError() << "Tensor Cast Error";  // NOLINT
     bool requires_grad = autograd::GradMode::is_enabled() && inputs.at(0)->requires_grad();
     JUST(input_local_tensor->set_requires_grad(requires_grad));
     input_local_tensor->set_is_leaf(!requires_grad);
@@ -349,6 +350,7 @@ static constexpr auto* LocalToGlobal = DECORATE(&RawLocalToGlobal, NonRecursiveI
 Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastToGlobalOpExpr& op_expr,
                                              const TensorTuple& inputs, TensorTuple* outputs,
                                              const OpExprInterpContext& ctx) const {
+  bool sync_data = JUST(ctx.attrs.GetAttr<bool>("sync_data"));
   JUST(LocalToGlobal(op_expr, inputs, outputs, ctx));
   const auto& global_tensor = JUST((*outputs)[0]->AsGlobalTensor());
   JUST(WithConsistencyChecked(global_tensor, [&]() -> Maybe<void> {
@@ -360,8 +362,10 @@ Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastToGlobalOpExpr& op_expr,
     const auto& tensor_meta = JUST(global_tensor->global_tensor_meta());
     const auto& local_tensor = JUST(global_tensor->cur_rank_phy_tensor());
     const auto& reshaped_tensor = JUST(TryReshapeTensor(local_tensor, tensor_meta));
-    const auto& synced_tensor =
-        JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp));
+    std::shared_ptr<Tensor> synced_tensor = reshaped_tensor;
+    if (sync_data) {
+      synced_tensor = JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp));
+    }
     auto* global_tensor_impl = reinterpret_cast<EagerGlobalTensorImpl*>(global_tensor->mut_impl());
     CHECK_NOTNULL_OR_RETURN(global_tensor_impl);
     global_tensor_impl->reset_cur_rank_phy_tensor(JUST(synced_tensor->AsLocalTensor()));
