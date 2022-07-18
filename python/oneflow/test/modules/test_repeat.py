@@ -46,7 +46,7 @@ class TestRepeat(flow.unittest.TestCase):
 
     @autotest(n=5, auto_backward=False)
     def test_complicated_repeat_case(test_case):
-        x = torch.ones(224, 224).cuda()
+        x = torch.ones(224, 224)
         y = torch.triu(x, diagonal=1).repeat(32, 1, 1)
         z = y.byte()
         return z
