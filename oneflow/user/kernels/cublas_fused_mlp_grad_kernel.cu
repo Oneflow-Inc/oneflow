@@ -274,8 +274,6 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
             nullptr, cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
             cuda_stream->cuda_stream()));
       }
-      alpha = 1.0;
-      sp_alpha_one = GetCublasScalarParameter(alpha, cublas_compute_dtype);
 
       // step1: Get last layer's dbias.
       if (idx == weight_num - 1) {
