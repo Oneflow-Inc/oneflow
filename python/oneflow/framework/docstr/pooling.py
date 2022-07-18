@@ -132,7 +132,7 @@ add_docstr(
 
     Applies 2D average-pooling operation in :math:`kH \\times kW` regions by step size :math:`sH \\times sW` steps. The number of output features is equal to the number of input planes.
 
-    .. The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.avg_pool2d.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.avg_pool2d.html.
 
     See :class:`~oneflow.nn.AvgPool2d` for details and output shape.
 
