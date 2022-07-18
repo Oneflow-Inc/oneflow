@@ -26,7 +26,8 @@ add_docstr(
     Combines an array of sliding local blocks into a large containing tensor.
 
     .. warning::
-        Currently, only unbatched (3D) or batched (4D) image-like output tensors are supported.
+        Currently, only 3-D input tensors (batched image-like tensors) are supported, and only unbatched (3D) 
+        or batched (4D) image-like output tensors are supported.
 
     See :class:`oneflow.nn.Fold` for details.
     """,
