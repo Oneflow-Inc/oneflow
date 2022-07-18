@@ -1992,9 +1992,6 @@ class TensorGetItemFunctor {
       JUST(UnifyLocalTensorAndIndicesOnDevice(x, tensor_indices));
       result = JUST(ApplyAdvancedIndexing(result, tensor_indices));
     }
-
-    // TODO(): Returns a view of tensor `x`.
-    if (result == x) { result = JUST(Identity(x)); }
     return result;
   }
 };
@@ -2016,18 +2013,9 @@ class TensorSetItemFunctor {
     int64_t ndims = x->shape()->NumAxes();
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims)
         << Error::RuntimeError() << "Failed to prepare slice indices.";
-    // Not support combined indexing now
-    if (!tensor_indices.empty()) {
-      CHECK_OR_RETURN(tensor_indices.size() == ndims
-                      && std::all_of(tensor_indices.begin(), tensor_indices.end(),
-                                     [](const std::shared_ptr<Tensor>& index) { return index; }))
-          << Error::RuntimeError()
-          << "Combining indexing is not support for tensor setitem currently";
-    }
 
     Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
     if (target_shape.Count(0) == 0) { return Maybe<void>::Ok(); }
-
     const auto& value_shape = value->shape();
     bool matched = [&]() {
       for (int i = 0; i < value_shape->NumAxes() - target_shape.NumAxes(); ++i) {
@@ -2044,7 +2032,23 @@ class TensorSetItemFunctor {
     for (auto& tensor : tensor_indices) {
       if (tensor->ndim() == 0) { tensor = JUST(functional::Reshape(tensor, Shape({1}))); }
     }
-    if (tensor_indices.size() == ndims) {  // advance indexing
+
+    DimVector slice_dims(ndims);
+    std::vector<int64_t> start(ndims), end(ndims), step(ndims);
+    for (int i = 0; i < ndims; ++i) {
+      const auto& slice = slice_indices.at(i);
+      start[i] = slice.start();
+      end[i] = slice.end();
+      step[i] = slice.step();
+      slice_dims[i] = (end[i] - start[i] + step[i] - 1) / step[i];
+    }
+    if (tensor_indices.empty()) {
+      Shape slice_shape(slice_dims);
+      if (slice_shape != *(value_tensor->shape())) {
+        value_tensor = JUST(Reshape(value_tensor, slice_shape));
+      }
+      JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
+    } else {
       if (ndims == 0 && index[0].IsEllipsis()) {
         // for scalar input tensor setitem, only support ellipsis indexing type
         Shape tmp_shape{1};
@@ -2054,39 +2058,27 @@ class TensorSetItemFunctor {
         std::vector<int64_t> stops(1, 1);
         std::vector<int64_t> steps(1, 1);
         JUST(SliceUpdate(input_tensor, value_tensor, starts, stops, steps, /*inplace=*/true));
-      } else {
-        // advance indexing
-        std::shared_ptr<Tensor> indices = JUST(functional::Stack(tensor_indices, 0));
-        if (indices->shape()->elem_cnt() == 0) { return Maybe<void>::Ok(); }
-        indices = JUST(functional::Transpose(indices, {1, 0}));
-        value_tensor = JUST(functional::Expand(value_tensor, {indices->shape()->At(0)}));
-        JUST(functional::TensorScatterNdUpdate(x, indices, value_tensor, /*inplace=*/true));
+        return Maybe<void>::Ok();
       }
-    } else {                              // slice update
-      if (target_shape.NumAxes() != 0 &&  // NOLINT
-          /*need_expand=*/value_shape->Count(0) != target_shape.Count(0)) {
-        // Remove the beginning redundant 1-dimensions.
-        if (value_shape->NumAxes() > target_shape.NumAxes()) {
-          int64_t start_axis = value_shape->NumAxes() - target_shape.NumAxes();
-          const auto& shape = JUST(value_shape->Slice(start_axis, value_shape->NumAxes()));
-          value_tensor = JUST(Reshape(value, *shape));
+      bool is_identity = [&]() {
+        if (target_shape.NumAxes() == 0) { return false; }
+        for (int i = 0; i < ndims; ++i) {
+          if (start[i] != 0 || end[i] != x->shape()->At(i) || step[i] != 1) { return false; }
         }
-        value_tensor = JUST(Expand(value_tensor, target_shape));
+        return true;
+      }();
+      std::shared_ptr<one::Tensor> result;
+      if (is_identity) {
+        result = x;
+      } else {
+        result = JUST(Slice(x, start, end, step, /*enable_view_slice=*/true));
       }
-      std::vector<int64_t> start(ndims), end(ndims), step(ndims);
-      DimVector slice_dims(ndims);
-      for (int i = 0; i < ndims; ++i) {
-        const auto& slice = slice_indices.at(i);
-        start[i] = slice.start();
-        end[i] = slice.end();
-        step[i] = slice.step();
-        slice_dims[i] = (end[i] - start[i] + step[i] - 1) / step[i];
+      if (target_shape != *(result->shape())) {
+        result = JUST(functional::View(result, target_shape));
       }
-      Shape slice_shape(slice_dims);
-      if (slice_shape != *(value_tensor->shape())) {
-        value_tensor = JUST(Reshape(value_tensor, slice_shape));
-      }
-      JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
+
+      JUST(UnifyLocalTensorAndIndicesOnDevice(x, tensor_indices));
+      JUST(ApplyAdvancedIndexingUpdate(result, tensor_indices, value));
     }
     return Maybe<void>::Ok();
   }

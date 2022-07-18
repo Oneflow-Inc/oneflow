@@ -126,6 +126,10 @@ Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
 Maybe<void> UnifyLocalTensorAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
                                                TensorTuple& tensor_indices);
 
+Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
+                                        const TensorTuple& indices,
+                                        const std::shared_ptr<Tensor>& value);
+
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
