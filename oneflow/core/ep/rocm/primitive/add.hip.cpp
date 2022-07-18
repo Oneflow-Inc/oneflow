@@ -1,4 +1,3 @@
-#include "hip/hip_runtime.h"
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 

@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_EP_ROCM_CUDA_DEVICE_MANAGER_H_
 
 #include "oneflow/core/ep/include/device_manager.h"
+#include "oneflow/core/ep/rocm/cuda_device.h"
 
 #ifdef WITH_ROCM
 
