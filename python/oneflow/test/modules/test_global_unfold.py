@@ -22,9 +22,9 @@ from oneflow.test_utils.automated_test_util import *
 from oneflow.nn.common_types import _size_2_t
 
 
-@autotest(n=3, check_graph=False)
+@autotest(n=1, check_graph=False)
 def _test_unfold_with_random_data(test_case, placement, sbp):
-    ndim = 3
+    ndim = 4
     dims = [random(1, 4).to(int).value() * 8 for i in range(ndim)]
     m = torch.nn.Unfold(
         kernel_size=random(1, 3).to(_size_2_t),
@@ -33,7 +33,7 @@ def _test_unfold_with_random_data(test_case, placement, sbp):
         stride=random(1, 2).to(_size_2_t),
     )
     m.train(random())
-    m.to_global(placement, sbp)
+    m = m.to_global(placement, sbp)
 
     x = random_tensor(ndim, *dims).to_global(placement, sbp)
     y = m(x)
