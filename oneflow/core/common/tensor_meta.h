@@ -70,6 +70,15 @@ class TensorMeta : public user_op::TensorDesc {
   bool* mut_is_dynamic() override { return &is_dynamic_; }
   void set_is_dynamic(bool val) override { is_dynamic_ = val; }
 
+ protected:
+  TensorMeta& operator=(const TensorMeta& other) {
+    this->shape_ = std::make_shared<const Shape>(*other.shape_);
+    this->stride_ = std::make_shared<const Stride>(*other.stride_);
+    this->data_type_ = other.data_type_;
+    this->is_dynamic_ = other.is_dynamic_;
+    return *this;
+  }
+
  private:
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const Stride> stride_;
@@ -97,6 +106,13 @@ class LocalTensorMeta : public TensorMeta {
   bool operator==(const LocalTensorMeta& other) const;
   size_t CalcHashValue() const;
 
+  LocalTensorMeta& operator=(const LocalTensorMeta& other) {
+    TensorMeta::operator=(other);
+    this->device_ = other.device_;
+    this->storage_offset_ = other.storage_offset_;
+    return *this;
+  }
+
  private:
   Symbol<Device> device_;
   int64_t storage_offset_;
@@ -122,6 +138,13 @@ class MutLocalTensorMeta : public TensorMeta {
 
   bool operator==(const MutLocalTensorMeta& other) const;
   size_t CalcHashValue() const;
+
+  MutLocalTensorMeta& operator=(const MutLocalTensorMeta& other) {
+    TensorMeta::operator=(other);
+    this->device_ = other.device_;
+    this->storage_offset_ = other.storage_offset_;
+    return *this;
+  }
 
  private:
   Symbol<Device> device_;
