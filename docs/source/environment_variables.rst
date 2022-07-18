@@ -385,7 +385,7 @@ The default value is ``4``
 `ONEFLOW_EP_CUDA_CONST_BUFFER_ELEMENT_COUNT <https://github.com/Oneflow-Inc/oneflow/blob/v0.8.0/oneflow/core/ep/cuda/cuda_device.cpp#L62>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-Specify the size of the all 0s and all 1s buffers on the CUDA device. 
+Specify the size of the all zero and all one buffers on the CUDA device. 
 
 This buffer can be used with matrix multiplication to implement operations such as reduce_sum
 
