@@ -39,6 +39,7 @@ limitations under the License.
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace one {
@@ -86,6 +87,8 @@ std::vector<TensorMeta*>* ThreadLocalDefaultOutputMutTensorMetas(int64_t size) {
 Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                            const Symbol<Device>& default_device, TensorTuple* outputs,
                            const OpExprInterpContext& ctx) {
+  OF_PROFILER_RANGE_GUARD("NaiveInterpret");
+  OF_PROFILER_RANGE_PUSH("init inputs");
   const auto& attrs = ctx.attrs;
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(inputs.size());
@@ -100,6 +103,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
     input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
   }
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("init outputs");
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(outputs->size());
   auto* output_tensor_metas = ThreadLocalDefaultOutputMutTensorMetas(outputs->size());
@@ -117,6 +122,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   Symbol<Stream> stream;
   bool need_check_mem_case = true;
 
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("infer devices");
   // Infer devices
   if (!user_op_expr.has_device_and_stream_infer_fn()) {
     stream = JUST(GetDefaultStreamByDevice(default_device));
@@ -129,6 +136,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     stream = JUST(user_op_expr.InferDeviceAndStream(attrs, inputs, outputs));
   }
 
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("infer shapes and dtypes");
   // Infer shapes and dtypes
   const auto& device_tag = stream->device()->type();
   JUST(user_op_expr.InferPhysicalTensorDesc(
@@ -142,6 +151,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
         return output_tensor_metas->at(i);
       }));
 
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("init output eager_blob_objects");
   for (int i = 0; i < output_eager_blob_objects->size(); i++) {
     auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
     if (!output_eager_blob_objects->at(i)) {
@@ -166,16 +177,20 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
   }
 
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("init opkernel");
   const auto& kernel = JUST(user_op_expr.MutKernel4Stream(stream));
   kernel->set_need_check_mem_case(need_check_mem_case);
 
   for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
     output_eager_blob_objects->at(index)->set_is_shape_synced(false);
   }
-
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("PhysicalRun");
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->Call(kernel, input_eager_blob_objects, output_eager_blob_objects, ctx, stream);
   }));
+  OF_PROFILER_RANGE_POP();
   return Maybe<void>::Ok();
 }
 
@@ -294,7 +309,8 @@ Maybe<void> RawLocalToGlobal(const CastToGlobalOpExpr& op_expr, const TensorTupl
     CHECK_OR_RETURN(!inputs[0]->is_global());  // NOLINT
     const auto& input_tensor = JUST(inputs.at(0)->detach());
     input_local_tensor = JUST(input_tensor->AsLocalTensor());
-    CHECK_OR_RETURN(input_local_tensor) << Error::InvalidValueError("Tensor Cast Error");  // NOLINT
+    CHECK_OR_RETURN(input_local_tensor)
+        << Error::InvalidValueError() << "Tensor Cast Error";  // NOLINT
     bool requires_grad = autograd::GradMode::is_enabled() && inputs.at(0)->requires_grad();
     JUST(input_local_tensor->set_requires_grad(requires_grad));
     input_local_tensor->set_is_leaf(!requires_grad);
@@ -334,6 +350,7 @@ static constexpr auto* LocalToGlobal = DECORATE(&RawLocalToGlobal, NonRecursiveI
 Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastToGlobalOpExpr& op_expr,
                                              const TensorTuple& inputs, TensorTuple* outputs,
                                              const OpExprInterpContext& ctx) const {
+  bool sync_data = JUST(ctx.attrs.GetAttr<bool>("sync_data"));
   JUST(LocalToGlobal(op_expr, inputs, outputs, ctx));
   const auto& global_tensor = JUST((*outputs)[0]->AsGlobalTensor());
   JUST(WithConsistencyChecked(global_tensor, [&]() -> Maybe<void> {
@@ -345,8 +362,10 @@ Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastToGlobalOpExpr& op_expr,
     const auto& tensor_meta = JUST(global_tensor->global_tensor_meta());
     const auto& local_tensor = JUST(global_tensor->cur_rank_phy_tensor());
     const auto& reshaped_tensor = JUST(TryReshapeTensor(local_tensor, tensor_meta));
-    const auto& synced_tensor =
-        JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp));
+    std::shared_ptr<Tensor> synced_tensor = reshaped_tensor;
+    if (sync_data) {
+      synced_tensor = JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp));
+    }
     auto* global_tensor_impl = reinterpret_cast<EagerGlobalTensorImpl*>(global_tensor->mut_impl());
     CHECK_NOTNULL_OR_RETURN(global_tensor_impl);
     global_tensor_impl->reset_cur_rank_phy_tensor(JUST(synced_tensor->AsLocalTensor()));

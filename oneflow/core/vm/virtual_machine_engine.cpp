@@ -302,7 +302,7 @@ void StreamWaitPreviousInstructionsDone(vm::Stream* stream, vm::Instruction* ins
 }
 
 std::string DebugDeviceReset(vm::Stream* stream) {
-  stream->device_ctx()->mut_allocator()->DeviceReset();
+  stream->mut_stream_policy()->mut_allocator()->DeviceReset();
   return "reset device";
 }
 
@@ -322,7 +322,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
         StreamWaitPreviousInstructionsDone(stream, instruction);
         // Shrinks allocator to reduce fragmentation of memory.
         {
-          auto* allocator = stream->device_ctx()->mut_allocator();
+          auto* allocator = stream->mut_stream_policy()->mut_allocator();
           auto* shrinkable_cache = dynamic_cast<CachingAllocator*>(allocator);
           if (shrinkable_cache != nullptr) { shrinkable_cache->Shrink(); }
         }
@@ -335,7 +335,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
   }
   // Compute
   if (OnSchedulerThread(*stream)) {
-    stream->stream_type().Run(instruction);
+    stream->stream_policy().Run(instruction);
   } else {
     stream->mut_thread_ctx()->mut_worker_pending_instruction_list()->PushBack(instruction);
     schedule_ctx.OnWorkerLoadPending(stream->mut_thread_ctx());
@@ -344,12 +344,6 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
 
 // Returns true if old scheduler_pending_instruction_list is empty
 Maybe<bool> VirtualMachineEngine::Receive(InstructionList* compute_instruction_list) {
-  OF_PROFILER_RANGE_GUARD("vm:Receive");
-#ifdef OF_ENABLE_PROFILER
-  INTRUSIVE_UNSAFE_FOR_EACH_PTR(compute_instruction, compute_instruction_list) {
-    OF_PROFILER_RANGE_GUARD(compute_instruction->DebugName());
-  }
-#endif
   bool old_list_empty = mut_pending_instruction_list()->MoveFrom(compute_instruction_list);
   return old_list_empty;
 }
@@ -428,8 +422,8 @@ void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_
   const auto& instruction_policy = sequnential_instruction->instruction_policy();
   CHECK(instruction_policy.IsBarrier());
   CHECK(OnSchedulerThread(sequnential_instruction->stream()));
-  const StreamType& stream_type = sequnential_instruction->stream().stream_type();
-  stream_type.Run(sequnential_instruction);
+  const StreamPolicy& stream_policy = sequnential_instruction->stream().stream_policy();
+  stream_policy.Run(sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
   LivelyInstructionListErase(sequnential_instruction);
 }

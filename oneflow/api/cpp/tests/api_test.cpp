@@ -30,13 +30,8 @@ limitations under the License.
 
 namespace oneflow_api {
 
-namespace {
-
-std::mt19937 rng(std::random_device{}());
-
-}
-
 Shape RandomShape() {
+  thread_local static std::mt19937 rng(std::random_device{}());
   std::uniform_int_distribution<> dist_ndim(1, 4), dist_dims(16, 64);
   std::vector<std::int64_t> dims(dist_ndim(rng), 0);
   for (auto& x : dims) { x = dist_dims(rng); }
@@ -45,6 +40,7 @@ Shape RandomShape() {
 
 template<typename T>
 std::vector<T> RandomData(size_t size) {
+  thread_local static std::mt19937 rng(std::random_device{}());
   std::uniform_int_distribution<> dist(-100, 100);
   std::vector<T> data(size);
   for (auto& x : data) { x = static_cast<T>(dist(rng)); }

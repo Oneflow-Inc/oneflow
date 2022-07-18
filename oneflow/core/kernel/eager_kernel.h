@@ -30,7 +30,7 @@ class EagerKernel final : public Kernel {
   void Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   std::shared_ptr<user_op::OpKernelState> EagerForward(
-      const std::shared_ptr<user_op::OpKernelState>& old_opkernel_state, DeviceCtx* device_ctx,
+      const std::shared_ptr<user_op::OpKernelState>& old_opkernel_state, ep::Stream* stream,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
  private:

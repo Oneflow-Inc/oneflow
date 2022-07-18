@@ -21,7 +21,6 @@ limitations under the License.
 #include <memory>
 #include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/vm/instruction_fuse_type.h"
 #include "oneflow/core/vm/vm_object.h"

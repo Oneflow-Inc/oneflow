@@ -1173,7 +1173,7 @@ class ViewFunctor {
     if (view::IsViewApplicable(x)) {
       Optional<Stride> infered_stride =
           ComputeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
-      CHECK_OR_RETURN(infered_stride.has_value())
+      CHECK_OR_RETURN_ERROR(infered_stride.has_value())
           << Error::RuntimeError()
           << "view size is not compatible with input tensor's size and stride (at least one "
              "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
@@ -2622,7 +2622,8 @@ Maybe<Tensor> GlobalTensorTo(const std::shared_ptr<Tensor>& x, const std::string
     Symbol<Device> device = JUST(Device::New(device_type));
     tensor = JUST(LocalTensorTo(tensor, device->type(), device->device_id(), dtype, copy));
     JUST(tensor->set_requires_grad(x->requires_grad()));
-    return JUST(LocalToGlobal(tensor, placement, sbp_tuple, *(x->shape()), dtype));
+    return JUST(LocalToGlobal(tensor, placement, sbp_tuple, *(x->shape()), dtype,
+                              /* sync_data */ true));
   }
 }
 
@@ -2846,7 +2847,7 @@ class RepeatFunctor {
     std::shared_ptr<one::Tensor> reshaped_tensor = JUST(Reshape(input, input_reshape));
     std::shared_ptr<one::Tensor> expanded_tensor = JUST(Expand(reshaped_tensor, expand_shape));
     std::shared_ptr<one::Tensor> result = JUST(Reshape(expanded_tensor, output_reshape));
-    return result;
+    return result->contiguous();
   }
 };
 

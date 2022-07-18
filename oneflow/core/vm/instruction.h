@@ -22,14 +22,17 @@ limitations under the License.
 #include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/intrusive/object_pool.h"
 #include "oneflow/core/vm/vm_object.h"
-#include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_policy.h"
+#include "oneflow/core/vm/stream_policy.h"
+#include "oneflow/core/vm/phy_instr_operand.h"
 
 namespace oneflow {
 
 class Stream;
 
 namespace vm {
+
+class InstructionType;
 
 static const int kInstructionStatusBufferBytes = 64;
 
@@ -142,7 +145,8 @@ class Instruction final : public intrusive::Base {
   void InitStatus();
   void DeleteStatusAndClearEdges();
   bool Done() const;
-  const StreamType& stream_type() const;
+  StreamPolicy* mut_stream_policy();
+  const StreamPolicy& stream_policy() const;
 
   intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }
 

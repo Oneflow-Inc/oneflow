@@ -23,13 +23,13 @@ namespace oneflow {
 namespace vm {
 
 void InstructionType::InitInstructionStatus(Instruction* instruction) const {
-  instruction->stream_type().InitInstructionStatus(instruction->stream(),
-                                                   instruction->mut_status_buffer());
+  instruction->stream_policy().InitInstructionStatus(instruction->stream(),
+                                                     instruction->mut_status_buffer());
 }
 
 void InstructionType::DeleteInstructionStatus(Instruction* instruction) const {
-  instruction->stream_type().DeleteInstructionStatus(instruction->stream(),
-                                                     instruction->mut_status_buffer());
+  instruction->stream_policy().DeleteInstructionStatus(instruction->stream(),
+                                                       instruction->mut_status_buffer());
 }
 
 namespace {
