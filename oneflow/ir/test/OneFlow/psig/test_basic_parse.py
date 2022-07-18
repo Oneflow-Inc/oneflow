@@ -12,7 +12,7 @@ def _test_1nd_basic_parse(test_case):
             super().__init__()
             P0 = flow.placement("cuda", ranks=[0])
             a0_sbp = (flow.sbp.broadcast)
-            b0_sbp = flow.sbp.broadcast
+            b0_sbp = (flow.sbp.split(0))
             self.A0 = flow.randn(4, 5, placement=P0, sbp=a0_sbp)
             self.B0 = flow.randn(5, 8, placement=P0, sbp=b0_sbp)
 
@@ -33,7 +33,7 @@ def _test_1nd_basic_parse(test_case):
 
     serialized_job = str(text_format.MessageToString(graph_to_run._forward_job_proto))
     # TODO: tmp file parse
-    # flow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str("/home/yuhao"))
+    flow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str("/home/yuhao"))
 
 @flow.unittest.skip_unless_1n1d()
 class TestBasicParse(flow.unittest.TestCase):

@@ -59,6 +59,7 @@ limitations under the License.
 #include "llvm/Support/raw_ostream.h"
 
 #include <google/protobuf/text_format.h>
+#include <iostream>
 #include <vector>
 
 namespace mlir {
@@ -434,8 +435,7 @@ Attribute ConvertNdSbpToAttr_(Builder& builder,
 
   std::vector<mlir::Attribute> outputs_vec_nd;
   for (auto iter = outputs_vec.begin(); iter < outputs_vec.end(); iter += nd_size) {
-    outputs_vec_nd.emplace_back(
-        sbp::NDAttr::get(ctx, builder.getArrayAttr(std::vector<Attribute>(iter, iter + nd_size))));
+    outputs_vec_nd.emplace_back(builder.getArrayAttr(std::vector<Attribute>(iter, iter + nd_size)));
   }
   outputs = builder.getArrayAttr(outputs_vec_nd);
   auto res = sbp::ParallelSignatureAttr::get(ctx, inputs, outputs);

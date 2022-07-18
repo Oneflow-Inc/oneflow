@@ -51,15 +51,6 @@ def SBP_PartialSumAttr : SBP_Attr<"PartialSum", "p"> {
   }];
 }
 
-def SBP_NDAttr : SBP_Attr<"ND", "sbp"> {
-  let summary = "ND sbp";
-  let description = [{
-    nd sbp container
-  }];
-  let parameters = (ins "::mlir::ArrayAttr":$nd_sbp);
-  let assemblyFormat = "$nd_sbp";
-}
-
 def SBP_ParallelSignatureAttr : SBP_Attr<"ParallelSignature", "parallel_signature"> {
   let summary = "Parallel signature of SBP Op, aka. SBP";
   let description = [{
