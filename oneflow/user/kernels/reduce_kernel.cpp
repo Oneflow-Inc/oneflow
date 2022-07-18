@@ -153,6 +153,7 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
   REGISTER_REDUCE_XPU_KERNEL("reduce_max", BinaryFuncMax, device, dtype)
 
 #define REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(device) \
+  REGISTER_REDUCE_ARITHMETIC_KERNELS(device, bool)           \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, float)          \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, double)         \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int8_t)         \
