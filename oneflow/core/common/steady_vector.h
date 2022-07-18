@@ -34,7 +34,7 @@ class SteadyVector {
   using size_type = size_t;
 
   // thread safe.
-  size_t size() const { return size_; }
+  size_t size() const { return size_.load(std::memory_order_acquire); }
 
   // thread safe.
   const T& at(size_t index) const {
@@ -51,12 +51,10 @@ class SteadyVector {
     return granularity2data_[gran].get()[index - start];
   }
 
-  void push_back(const T& elem) { *MutableOrAdd(size_) = elem; }
-
-  // `index` shoule be <= size()
-  T* MutableOrAdd(size_t index) {
+  // `index` should be <= size()
+  void SetOrAdd(size_t index, T value) {
     std::unique_lock<std::mutex> lock(mutex_);
-    size_t size = size_;
+    size_t size = size_.load(std::memory_order_relaxed);
     CHECK_LE(index, size) << "index out of range";
     if (index == size) {
       int granularity = GetGranularity(size);
@@ -64,10 +62,14 @@ class SteadyVector {
         CHECK_LT(granularity, N);
         granularity2data_[granularity].reset(new T[1 << granularity]);
       }
-      ++size_;
+      *Mutable(index) = std::move(value);
+      size_.fetch_add(1, std::memory_order_release);
+    } else {
+      *Mutable(index) = std::move(value);
     }
-    return Mutable(index);
   }
+
+  void push_back(const T& elem) { SetOrAdd(size_, elem); }
 
  private:
   T* Mutable(size_t index) {
