@@ -23,26 +23,33 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestRepeat(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=10)
     def test_flow_tensor_repeat_with_random_data(test_case):
         x = random_tensor(ndim=2, dim0=1, dim1=2)
         sizes = (random(1, 5).to(int), random(1, 5).to(int), random(1, 5).to(int))
         y = x.repeat(sizes)
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=10, auto_backward=False)
     def test_flow_tensor_repeat_bool_with_random_data(test_case):
         x = random_tensor(ndim=2, dim0=1, dim1=2).to(torch.bool)
         sizes = (random(1, 5).to(int), random(1, 5).to(int), random(1, 5).to(int))
         y = x.repeat(sizes)
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=10)
     def test_flow_tensor_repeat_with_0dim_data(test_case):
         x = random_tensor(ndim=0)
         sizes = (random(1, 5).to(int), random(1, 5).to(int), random(1, 5).to(int))
         y = x.repeat(sizes)
         return y
+
+    @autotest(n=5, auto_backward=False)
+    def test_complicated_repeat_case(test_case):
+        x = torch.ones(224, 224)
+        y = torch.triu(x, diagonal=1).repeat(32, 1, 1)
+        z = y.byte()
+        return z
 
 
 if __name__ == "__main__":
