@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/register/tensor_slice_copier.h"
 #include "oneflow/core/ep/include/primitive/memset.h"
 #include "oneflow/core/ep/include/primitive/add.h"
+#include "oneflow/core/operator/nccl_send_recv_boxing_op_util.h"
 
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
@@ -87,7 +88,9 @@ NcclLogicalSendRecvState::NcclLogicalSendRecvState(user_op::KernelInitContext* c
 
   std::vector<TensorSliceView> src_send_intersections;
   std::vector<TensorSliceView> dst_recv_intersections;
-  GetRankSendRecvIntersection(parallel_id, parallel_desc_->hierarchy(), src_nd_sbp, dst_nd_sbp,
+  GetRankSendRecvIntersection(parallel_id, /*merge_parallel_desc=*/*parallel_desc_,
+                              /*in_parallel_desc=*/*parallel_desc_,
+                              /*out_parallel_desc=*/*parallel_desc_, src_nd_sbp, dst_nd_sbp,
                               logical_shape, &src_send_intersections, &dst_recv_intersections);
 
   CHECK_EQ(src_send_intersections.size(), parallel_num);
@@ -264,7 +267,10 @@ size_t InferTmpBufferSize(user_op::InferContext* ctx) {
 
   std::vector<TensorSliceView> src_send_intersections;
   std::vector<TensorSliceView> dst_recv_intersections;
-  GetRankSendRecvIntersection(parallel_id, ctx->parallel_desc().hierarchy(), src_nd_sbp, dst_nd_sbp,
+  const auto& parallel_desc = ctx->parallel_desc();
+  GetRankSendRecvIntersection(parallel_id, /*merge_parallel_desc=*/parallel_desc,
+                              /*in_parallel_desc=*/parallel_desc,
+                              /*out_parallel_desc=*/parallel_desc, src_nd_sbp, dst_nd_sbp,
                               logical_shape, &src_send_intersections, &dst_recv_intersections);
   int64_t buf_count = 0;
   CHECK_EQ(src_send_intersections.size(), parallel_num);
