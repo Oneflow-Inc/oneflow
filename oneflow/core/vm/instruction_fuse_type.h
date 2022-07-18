@@ -13,22 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_GLOBAL_TENSOR_META_H_
-#define ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_GLOBAL_TENSOR_META_H_
-
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/symbol.h"
-#include "oneflow/core/framework/transport_util.h"
-#include "oneflow/core/framework/transport_token.h"
+#ifndef ONEFLOW_CORE_VM_INSTRUCTION_FUSE_TYPE_H_
+#define ONEFLOW_CORE_VM_INSTRUCTION_FUSE_TYPE_H_
 
 namespace oneflow {
+namespace vm {
 
-namespace one {
-class GlobalTensorMeta;
+enum InstructionFuseType {
+  kInvalidInstructionFuseType = 0,
+  kDisableInstructionFuse,
+  kEnableInstructionFuseAtAnyPosition,
+  kEnableInstructionFuseAsTailOnly,
+};
+
 }
-
-Maybe<void> SyncSymbolGlobalTensorMeta(uint64_t symbol_id, Symbol<one::GlobalTensorMeta>);
-
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_GLOBAL_TENSOR_META_H_
+#endif  // ONEFLOW_CORE_VM_INSTRUCTION_FUSE_TYPE_H_
