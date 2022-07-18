@@ -150,13 +150,6 @@ MultiTableMultiColumnEmbedding
     save_snapshot
     load_snapshot
 
-.. .. currentmodule:: oneflow.one_embedding
-
-.. .. autoclass:: MultiTableMultiColumnEmbedding
-..     :members: forward,
-..               save_snapshot,
-..               load_snapshot,
-
 Construct Graph for Training
 --------------------------------------------------------------------
 OneEmbedding is only supported in Graph mode.
