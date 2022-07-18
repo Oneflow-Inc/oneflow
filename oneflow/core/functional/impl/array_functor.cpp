@@ -690,44 +690,32 @@ class UnsqueezeMultipleFunctor {
     } else {
       std::vector<int32_t> unsqueeze_dims = dim;
       std::shared_ptr<Tensor> tensor = x;
-      std::vector<bool> seen(dim_bitset_size, false);
-      for (auto& dim_i : unsqueeze_dims) {
-        CHECK_EQ_OR_RETURN(seen[dim_i], false) << Error::RuntimeError() << "Dim " << dim_i
-                                               << "appears multiple times in the list of dims";
-        dim_i = JUST(maybe_wrap_dim(dim_i, n_dims));
-        seen[dim_i] = true;
-      }
-      std::sort(unsqueeze_dims.begin(), unsqueeze_dims.end());
 
       if (view::IsViewApplicable(tensor)) {
-        std::vector<int64_t> target_dims;
-        int32_t unsqueeze_index = 0;
+        auto dims_to_unsqueeze = *JUST(dim_list_to_bitset(unsqueeze_dims, n_dims));
+        for (int32_t dim = 0; dim < n_dims; dim++) {
+          if (dims_to_unsqueeze[dim]) { tensor = JUST(view::Unsqueeze(tensor, dim)); }
+        }
+      } else {
+        for (auto& dim : unsqueeze_dims) { dim = JUST(maybe_wrap_dim(dim, n_dims)); }
+        std::sort(unsqueeze_dims.begin(), unsqueeze_dims.end());
+        std::vector<int64_t> target_dims(n_dims, 0);
         int32_t tensor_index = 0;
+        for (int32_t i = 0; i < unsqueeze_dims.size(); i++) { target_dims[unsqueeze_dims[i]] = 1; }
         for (int32_t i = 0; i < n_dims; i++) {
-          if (i == unsqueeze_dims.at(unsqueeze_index)) {
-            target_dims.emplace_back(1);
-            unsqueeze_index++;
-          } else {
-            target_dims.emplace_back(tensor->shape()->at(tensor_index));
+          if (target_dims[i] == 0 && tensor_index < tensor->ndim()) {
+            target_dims[i] = tensor->shape()->at(tensor_index);
             tensor_index++;
           }
         }
         Shape infered_shape(DimVector(target_dims.begin(), target_dims.end()));
-        Optional<Stride> infered_stride =
-            ComputeStride(*(tensor->shape()), *JUST(tensor->stride()), infered_shape);
-        tensor = JUST(view::Reshape(tensor, infered_shape, *JUST(infered_stride)));
-      } else {
-        for (auto dim = unsqueeze_dims.begin();
-             dim != unsqueeze_dims.end() && tensor->ndim() < n_dims; dim++) {
-          tensor = JUST(functional::Unsqueeze(tensor, *dim));
-        }
+        tensor = JUST(functional::Reshape(tensor, infered_shape));
       }
       return tensor;
     }
   }
 
  private:
-  const size_t dim_bitset_size = 64;
   std::shared_ptr<OpExpr> op_;
 };
 class SqueezeFunctor {
