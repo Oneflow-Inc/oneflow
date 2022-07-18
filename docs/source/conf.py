@@ -115,7 +115,7 @@ html_static_path = ["_static"]
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None),
+    "python": ("https://docs.python.org/3", None),
 }
 
 # -- Options for HTMLHelp output ---------------------------------------------

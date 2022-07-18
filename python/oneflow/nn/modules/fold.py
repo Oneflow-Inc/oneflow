@@ -60,6 +60,7 @@ class Fold(Module):
         oneflow.Size([1, 1, 4, 4])
 
     """
+
     def __init__(
         self,
         output_size: _size_2_t,
@@ -141,6 +142,7 @@ class Unfold(Module):
         oneflow.Size([1, 9, 16])
 
     """
+
     def __init__(
         self,
         kernel_size: _size_2_t,
