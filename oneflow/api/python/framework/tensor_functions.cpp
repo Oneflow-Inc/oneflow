@@ -647,8 +647,9 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
     return NULL;
   };
 
-  CHECK_OR_THROW(placement_obj != Py_None && sbp_obj != Py_None) << Error::InvalidValueError(
-      "Converting a local tensor to global tensor must have placement and sbp parameters.");
+  CHECK_OR_THROW(placement_obj != Py_None && sbp_obj != Py_None)
+      << Error::InvalidValueError()
+      << "Converting a local tensor to global tensor must have placement and sbp parameters.";
   CHECK_OR_THROW(functional::PyParallelDescCheck(placement_obj))
       << Error::TypeError() << "Invalid parameter placement with type "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(placement_obj)));

@@ -21,11 +21,15 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-def _test_math_op_grad_grad_impl(test_case, op_name):
-    x = random_tensor(ndim=2).requires_grad_(True)
-    y = eval(f"x.{op_name}()")
-    np_arr = np.random.rand(*x.oneflow.shape)
-    init_grad = torch.tensor(np_arr).requires_grad_()
+def _global_leaky_relu_grad_grad_impl(test_case, placement, sbp):
+    x = (
+        random_tensor(2, dim0=8, dim1=8)
+        .to_global(placement=placement, sbp=sbp)
+        .requires_grad_(True)
+    )
+    alpha = np.random.rand()
+    y = torch.nn.functional.leaky_relu(x, alpha)
+    init_grad = random_tensor(2, 8, 8).to_global(placement, sbp).requires_grad_()
 
     x_grad = torch.autograd.grad(y, x, init_grad, create_graph=True)[0]
     test_case.assertTrue(
@@ -42,7 +46,7 @@ def _test_math_op_grad_grad_impl(test_case, op_name):
         )
     )
 
-    init_grad_grad = torch.tensor(np_arr).requires_grad_()
+    init_grad_grad = random_tensor(2, 8, 8).to_global(placement, sbp).requires_grad_()
     dgrad = torch.autograd.grad(x_grad, init_grad, init_grad_grad, create_graph=True)[0]
     test_case.assertTrue(
         np.allclose(
@@ -51,12 +55,12 @@ def _test_math_op_grad_grad_impl(test_case, op_name):
     )
 
 
-class TestMathOpHigherDerivative(flow.unittest.TestCase):
-    def test_sin_grad_grad(test_case):
-        _test_math_op_grad_grad_impl(test_case, "sin")
-
-    def test_cos_grad_grad(test_case):
-        _test_math_op_grad_grad_impl(test_case, "cos")
+class TestGlobalLeakyReluHigherDerivative(flow.unittest.TestCase):
+    @globaltest
+    def test_global_leaky_relu_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _global_leaky_relu_grad_grad_impl(test_case, placement, sbp)
 
 
 if __name__ == "__main__":

@@ -1673,25 +1673,22 @@ add_docstr(
 add_docstr(
     oneflow.hsplit,
     r"""
-    Splits input, a tensor with one or more dimensions, into multiple tensors horizontally according to indices_or_sections.
-    Each split is a view of input.
-    If input is one dimensional this is equivalent to calling oneflow.tensor_split(input, indices_or_sections, dim=0) 
-    (the split dimension is zero), and if input has two or more dimensions it’s equivalent to calling 
-    oneflow.tensor_split(input, indices_or_sections, dim=1) (the split dimension is 1), except that if indices_or_sections
-    is an integer it must evenly divide the split dimension or a runtime error will be thrown.
+    hsplit(input, indices_or_sections) -> List of Tensors
+
     The documentation is referenced from:
     https://pytorch.org/docs/1.10/generated/torch.hsplit.html.
 
+    Splits `input`, a tensor with one or more dimensions, into multiple tensors horizontally according to `indices_or_sections`.
+    Each split is a view of `input`.
+
+    If `input` is one dimensional this is equivalent to calling oneflow.tensor_split(input, indices_or_sections, dim=0) 
+    (the split dimension is zero), and if `input` has two or more dimensions it’s equivalent to calling 
+    oneflow.tensor_split(input, indices_or_sections, dim=1) (the split dimension is 1), except that if `indices_or_sections`
+    is an integer it must evenly divide the split dimension or a runtime error will be thrown.
+
     Args:
         input (Tensor): the input tensor.
-        indices_or_sections (int or a list): If indices_or_sections is an integer n , input is split into n sections 
-            along dimension dim.If input is divisible by n along dimension dim, each section will be of equal size, 
-            input.size (dim) / n. If input is not divisible by n, the sizes of the first int(input.size(dim) % n).
-            sections will have size int(input.size(dim) / n) + 1, and the rest will have size int(input.size(dim) / n).
-            If indices_or_sections is a list or tuple of ints, then input is split along dimension dim at each of the indices in 
-            the list, tuple or tensor. For instance, indices_or_sections=[2, 3] and dim=0 would result in the tensors 
-            input[:2], input[2:3], and input[3:].If indices_or_sections is a tensor, it must be a zero-dimensional or
-            one-dimensional long tensor on the CPU.
+        indices_or_sections (int or a list): See argument in :func:`oneflow.tensor_split()`.
 
     Returns:
         oneflow.TensorTuple: the output TensorTuple.

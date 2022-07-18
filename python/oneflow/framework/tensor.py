@@ -15,7 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 import oneflow.framework.tensor_str as tensor_str
-import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
 
 import numpy as np
@@ -81,7 +80,9 @@ def _cuda(self, device: Union[int, str, flow.device] = None):
 
 
 def _norm(self, p=None, dim=None, keepdim=False, dtype=None):
-    return flow._C.norm(self, p, dim, keepdim, dtype=dtype)
+    if type(p) == str or dim != None:
+        return flow._C.norm(self, p, dim, keepdim, dtype=dtype)
+    return flow._C.norm(self, p, dim, keepdim, dtype=dtype, for_norm=True)
 
 
 def is_nonzero(input):
@@ -222,65 +223,37 @@ def _split(self, split_size_or_sections=None, dim=0):
 
 
 def _uniform(self, a=0, b=1):
-    if isinstance(a, Tensor):
-        assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
-        a = a.numpy().item()
-    if isinstance(b, Tensor):
-        assert b.ndim == 0 and b.nelement() == 1, "b must be a number or scalar tensor!"
-        b = b.numpy().item()
-    initializer_conf = flow.random_uniform_initializer(
-        minval=a, maxval=b, dtype=self.dtype
-    )
-    return _init_by_initializer_conf(self, initializer_conf)
+    return flow.nn.init.uniform_(self, a, b)
 
 
 def _trunc_normal_(
     self, mean=0.0, std=1.0, a=-2.0, b=2.0,
 ):
-    initializer_conf = flow.truncated_normal_initializer(mean=mean, stddev=std)
-    res = _init_by_initializer_conf(self, initializer_conf)
-    res = flow.clamp(res, min=a, max=b)
-    return res
+    return flow.nn.init.trunc_normal_(self, mean=mean, std=std, a=a, b=b)
 
 
 def _kaiming_uniform(
     self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
 ):
-    initializer_conf = flow.kaiming_initializer(
-        shape=self.shape,
-        distribution="random_uniform",
-        mode=mode,
-        nonlinearity=nonlinearity,
-        negative_slope=a,
-        data_format=data_format,
+    return flow.nn.init.kaiming_uniform_(
+        self, a=a, mode=mode, nonlinearity=nonlinearity, data_format=data_format
     )
-    return _init_by_initializer_conf(self, initializer_conf)
 
 
 def _kaiming_normal(
     self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
 ):
-    initializer_conf = flow.kaiming_initializer(
-        shape=self.shape,
-        distribution="random_normal",
-        mode=mode,
-        nonlinearity=nonlinearity,
-        negative_slope=a,
-        data_format=data_format,
+    return flow.nn.init.kaiming_normal_(
+        self, a=a, mode=mode, nonlinearity=nonlinearity, data_format=data_format
     )
-    return _init_by_initializer_conf(self, initializer_conf)
 
 
-def _xavier_normal(self, gain=1.0, *, data_format="NCHW"):
-    assert gain == 1.0, "Only gain == 1.0 is supported now"
-    initializer_conf = flow.xavier_normal_initializer(data_format=data_format)
-    return _init_by_initializer_conf(self, initializer_conf)
+def _xavier_normal(self, gain=1.0):
+    return flow.nn.init.xavier_normal_(self, gain=gain, data_format=data_format)
 
 
-def _xavier_uniform(self, gain=1.0, *, data_format="NCHW"):
-    assert gain == 1.0, "Only gain == 1.0 is supported now"
-    initializer_conf = flow.xavier_uniform_initializer(data_format=data_format)
-    return _init_by_initializer_conf(self, initializer_conf)
+def _xavier_uniform(self, gain=1.0):
+    return flow.nn.init.xavier_uniform_(self, gain=gain, data_format=data_format)
 
 
 def _orthogonal(self, gain=1.0):
@@ -303,24 +276,7 @@ def _orthogonal(self, gain=1.0):
 
 
 def _normal(self, mean=0, std=1):
-    if self.is_global:
-        src_tensor = flow.normal(mean, std, self.shape)
-        src_tensor = src_tensor.to_global(
-            placement=self.placement,
-            sbp=tuple(flow.sbp.broadcast for _ in range(len(self.sbp))),
-        )
-        self.copy_(src_tensor)
-        return self
-    else:
-        return flow.normal(
-            mean,
-            std,
-            self.size(),
-            out=self,
-            dtype=self.dtype,
-            device=self.device,
-            requires_grad=self.requires_grad,
-        )
+    return flow.nn.init.normal_(self, mean=mean, std=std)
 
 
 def _fill(self, value):
@@ -335,29 +291,6 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
     )
     assert np_arr.shape == tuple(eager_local_tensor.shape)
     copy_from_numpy(np_arr)
-
-
-def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
-    if random_seed is None:
-        random_seed = flow.default_generator.initial_seed()
-    shape = tuple(tensor.shape)
-    initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
-
-    np_arr = initializer_util.generate_values_by_initializer(
-        initializer, shape, tensor.dtype
-    )
-    if tensor.is_global:
-        src_tensor = flow.tensor(np_arr)
-        src_tensor = src_tensor.to_global(
-            placement=tensor.placement,
-            sbp=tuple(flow.sbp.broadcast for _ in range(len(tensor.sbp))),
-        )
-        tensor.copy_(src_tensor)
-    else:
-        _copy_from_numpy_to_eager_local_tensor(
-            tensor, np_arr,
-        )
-    return tensor
 
 
 def _copy(self, other: Union[Tensor, np.ndarray]):
