@@ -446,7 +446,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
   }
   // Initialize or check mem_ptr_for_allocation_computation_pipelining by TouchTensors instruction.
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    auto eager_blob_objects = std::make_shared<one::EagerBlobObjectList>();
+    auto eager_blob_objects = std::make_shared<vm::EagerBlobObjectList>();
     for (const auto& pair : variable_op_name2eager_blob_object_) {
       eager_blob_objects->push_back(pair.second->shared_from_this());
     }
@@ -508,7 +508,7 @@ void NNGraph::CloseRuntimeBuffers() {
 
 namespace {
 
-Maybe<void> MakeEagerBlobObjectList(one::EagerBlobObjectList* blob_list,
+Maybe<void> MakeEagerBlobObjectList(vm::EagerBlobObjectList* blob_list,
                                     const one::TensorTuple& tensor_list) {
   blob_list->reserve(tensor_list.size());
   for (const auto& tensor : tensor_list) {
@@ -549,18 +549,18 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
     CHECK_OR_RETURN(nn_graph->outputs_tensor_meta_str().at(i)
                     == *JUST(GetTensorMetaString(outputs.at(i))));
   }
-  one::EagerBlobObjectList input_blobs;
-  one::EagerBlobObjectList output_blobs;
-  one::EagerBlobObjectList var_blobs;
+  vm::EagerBlobObjectList input_blobs;
+  vm::EagerBlobObjectList output_blobs;
+  vm::EagerBlobObjectList var_blobs;
   JUST(MakeEagerBlobObjectList(&input_blobs, inputs));
   JUST(MakeEagerBlobObjectList(&output_blobs, outputs));
   JUST(MakeEagerBlobObjectList(&var_blobs, parameters));
   const auto& input_blob_list_ptr =
-      std::make_shared<const one::EagerBlobObjectList>(std::move(input_blobs));
+      std::make_shared<const vm::EagerBlobObjectList>(std::move(input_blobs));
   const auto& output_blob_list_ptr =
-      std::make_shared<const one::EagerBlobObjectList>(std::move(output_blobs));
+      std::make_shared<const vm::EagerBlobObjectList>(std::move(output_blobs));
   const auto& var_blob_list_ptr =
-      std::make_shared<const one::EagerBlobObjectList>(std::move(var_blobs));
+      std::make_shared<const vm::EagerBlobObjectList>(std::move(var_blobs));
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LaunchLazyJob(input_blob_list_ptr, output_blob_list_ptr, var_blob_list_ptr,
                                   nn_graph);
@@ -570,7 +570,7 @@ Maybe<void> RunLazyNNGraph(const one::TensorTuple& inputs, const one::TensorTupl
 
 Maybe<void> SoftSyncNNGraphBuffers(const one::TensorTuple& buffers,
                                    const std::shared_ptr<NNGraph>& nn_graph) {
-  const auto& eager_blob_objects = std::make_shared<one::EagerBlobObjectList>();
+  const auto& eager_blob_objects = std::make_shared<vm::EagerBlobObjectList>();
   JUST(MakeEagerBlobObjectList(eager_blob_objects.get(), buffers));
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->SoftSyncNNGraphBuffers(eager_blob_objects, nn_graph);
