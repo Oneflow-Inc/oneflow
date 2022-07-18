@@ -29,7 +29,8 @@ class ControlStreamType final : public StreamType {
   ControlStreamType() = default;
   ~ControlStreamType() = default;
 
-  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override {}
+  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Symbol<Device> device) const override {
+  }
 
   void InitInstructionStatus(const Stream& stream,
                              InstructionStatusBuffer* status_buffer) const override;

@@ -153,7 +153,7 @@ from oneflow._C import sqrt
 from oneflow._C import square
 from oneflow._C import matmul
 from oneflow._C import mm
-from oneflow._C import mv
+from oneflow._C import matrix_vector_product as mv
 from oneflow._C import bernoulli
 from oneflow._C import round
 from oneflow._C import softplus
@@ -379,24 +379,6 @@ from oneflow.nn.modules.global_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
 from oneflow.ops.stateful_ops import StatefulOp as stateful_op
-from oneflow.ops.initializer_util import constant_initializer
-from oneflow.ops.initializer_util import glorot_normal_initializer
-from oneflow.ops.initializer_util import (
-    glorot_normal_initializer as xavier_normal_initializer,
-)
-from oneflow.ops.initializer_util import glorot_uniform_initializer
-from oneflow.ops.initializer_util import (
-    glorot_uniform_initializer as xavier_uniform_initializer,
-)
-from oneflow.ops.initializer_util import (
-    kaiming_initializer,
-    ones_initializer,
-    random_normal_initializer,
-    random_uniform_initializer,
-    truncated_normal_initializer,
-    variance_scaling_initializer,
-    zeros_initializer,
-)
 
 from . import (
     autograd,

@@ -1173,7 +1173,7 @@ class ViewFunctor {
     if (view::IsViewApplicable(x)) {
       Optional<Stride> infered_stride =
           ComputeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
-      CHECK_OR_RETURN(infered_stride.has_value())
+      CHECK_OR_RETURN_ERROR(infered_stride.has_value())
           << Error::RuntimeError()
           << "view size is not compatible with input tensor's size and stride (at least one "
              "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
