@@ -35,18 +35,15 @@ namespace oneflow {
   if (x_shape.NumAxes() != 4) {
     throw Error::RuntimeError() << "The dimension of x tensor must be equal to 4, "
                                 << "but got " << x_shape.NumAxes();
-    return;
   }
   // rois: (R, 5)
   if (rois_shape.NumAxes() != 2) {
     throw Error::RuntimeError() << "The dimension of rois tensor must be equal to 2, "
                                 << "but got " << rois_shape.NumAxes();
-    return;
   }
   if (rois_shape.At(1) != 5) {
     throw Error::RuntimeError() << "The size of rois tensor must be equal to 5 at dimension 1, "
                                 << "but got " << rois_shape.At(1);
-    return;
   }
   // y: (R, C, pool_h, pool_w)
   *ctx->OutputShape("y", 0) = Shape({rois_shape.At(0), x_shape.At(1), pooled_h, pooled_w});
