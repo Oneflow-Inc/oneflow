@@ -82,7 +82,7 @@ Maybe<void> GetLossOpNodes(const OpGraph& op_graph, std::list<OpNode*>* loss_op_
       loss_op_nodes->emplace_back(op_node);
     }
   });
-  if (loss_op_nodes->empty()) { return Error::LossBlobNotFoundError("Loss blob not found."); }
+  if (loss_op_nodes->empty()) { return Error::LossBlobNotFoundError() << "Loss blob not found."; }
   return Maybe<void>::Ok();
 }
 
