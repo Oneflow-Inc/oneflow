@@ -210,7 +210,10 @@ class Embedding(Module):
             "%Y-%m-%d-%H-%M-%S-%f"
         )
         self.handler.SaveSnapshot(snapshot_timestamp_str)
-        destination[prefix + "OneEmbedding"] = snapshot_timestamp_str
+        destination[prefix + "OneEmbeddingSnapshot"] = snapshot_timestamp_str
+        destination[
+            prefix + "OneEmbeddingKeyValueOptions"
+        ] = self.key_value_store_options
 
     def _load_from_state_dict(
         self,
@@ -222,7 +225,7 @@ class Embedding(Module):
         unexpected_keys,
         error_msgs,
     ):
-        key = prefix + "OneEmbedding"
+        key = prefix + "OneEmbeddingSnapshot"
         if key in state_dict:
             saved_snapshot_name = state_dict[key]
             try:
