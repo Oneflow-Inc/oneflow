@@ -34,6 +34,9 @@ EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
       stride_(stride),
       storage_offset_(0),
       tensor_storage_(tensor_storage),
+      mem_ptr_for_allocation_compuation_pipelining_(nullptr),
+      inited_mem_ptr_for_allocation_compuation_pipelining_(false),
+      is_non_pod_object_placement_newed_(false),
       is_shape_synced_(true),
       compute_local_dep_object_(dep_object),
       blob_desc_(shape, stride, data_type) {
@@ -51,31 +54,35 @@ Blob* EagerBlobObject::blob() {
 
 void EagerBlobObject::set_storage_offset(const int64_t offset) { storage_offset_ = offset; }
 
-Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
-  vm::Allocator* allocator = device_ctx->mut_allocator();
+void EagerBlobObject::TryInitNonPODTypeEagerBlobObjectIfNeed() {
+  if (!IsPODDataType(data_type())) {
+    if (!is_non_pod_object_placement_newed_) {
+      InitNonPODTypeEagerBlobObjectIfNeed(tensor_storage_->non_pod_allocator(), this);
+      is_non_pod_object_placement_newed_ = true;
+    }
+  }
+}
+
+Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator) {
   size_t required_body_bytes = AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
     CHECK_ISNULL_OR_RETURN(tensor_storage_->blob_dptr());
-    return Maybe<void>::Ok();
-  }
-  if (tensor_storage_->blob_dptr() != nullptr) {
+  } else if (tensor_storage_->blob_dptr() != nullptr) {
     CHECK_GE_OR_RETURN(tensor_storage_->blob_bytes(), ByteSizeOfBlobBody())
         << "This blob has been allocated memory, but less than needed space.";
-    return Maybe<void>::Ok();
-  }
-  {
+  } else {
+    char* dptr = nullptr;
+    JUST(allocator->Allocate(&dptr, required_body_bytes));
     // reset tensor_storage_;
     const auto& Free = [allocator, required_body_bytes](char* dptr) {
       if (IsShuttingDown()) { return; }
       allocator->Deallocate(dptr, required_body_bytes);
     };
-    char* dptr = nullptr;
-    allocator->Allocate(&dptr, required_body_bytes);
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
                                    required_body_bytes);
-
-    InitNonPODTypeEagerBlobObjectIfNeed(tensor_storage_->non_pod_allocator(), this);
+    InitMemPtrForAllocationComputationPipelining();
   }
+  InitOrCheckMemPtrForAllocationComputationPipelining();
   return Maybe<void>::Ok();
 }
 

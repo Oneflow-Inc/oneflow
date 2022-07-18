@@ -77,8 +77,8 @@ class UserKernelBaseContext {
     };
     InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().input(), &inputs_);
     InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().output(), &outputs_);
-    device_tag_ = kernel_conf.op_attribute().op_conf().device_tag();
-    device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
+    device_type_ =
+        CHECK_JUST(DeviceType4DeviceTag(kernel_conf.op_attribute().op_conf().device_tag()));
     parallel_ctx_ = kernel_conf.parallel_ctx();
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
       arg2bn_and_tensor_desc_.emplace(
@@ -89,7 +89,6 @@ class UserKernelBaseContext {
   ~UserKernelBaseContext() = default;
 
   DeviceType device_type() const { return device_type_; }
-  const std::string& device_tag() const { return device_tag_; }
   const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const {
@@ -108,7 +107,6 @@ class UserKernelBaseContext {
   ArgVec inputs_;
   ArgVec outputs_;
   DeviceType device_type_;
-  std::string device_tag_;
   ParallelContext parallel_ctx_;
 };
 
@@ -357,7 +355,6 @@ class UserKernelOpInferContext : public user_op::InferContext {
   }
   const std::string& op_name() const override { return user_op_conf().op_name(); }
   const std::string& op_type_name() const override { return user_op_conf().op_type_name(); }
-  const std::string& device_tag() const override { return user_op_conf().op_conf().device_tag(); }
   const std::string& op_loc() const override { return user_op_conf_.op_conf().loc(); }
 
  private:
@@ -581,7 +578,6 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
   ~UserKernelRegContext() = default;
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
-  const std::string& device_tag() const override { return base_ctx_.device_tag(); }
   const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
@@ -778,11 +774,11 @@ void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) co
 }
 
 std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
-    const std::shared_ptr<user_op::OpKernelState>& old_opkernel_state, DeviceCtx* device_ctx,
+    const std::shared_ptr<user_op::OpKernelState>& old_opkernel_state, ep::Stream* stream,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   std::shared_ptr<user_op::OpKernelState> new_opkernel_state;
-  CHECK_NOTNULL(device_ctx);
-  UserKernelInitAndCacheContext init_and_cache_ctx(device_ctx->stream(), kernel_conf());
+  CHECK_NOTNULL(stream);
+  UserKernelInitAndCacheContext init_and_cache_ctx(stream, kernel_conf());
   if (old_opkernel_state) {
     new_opkernel_state = old_opkernel_state;
   } else {
@@ -797,7 +793,7 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   }
 
   // TODO(lixinqi): refactor to a lightweight KernelComputeContext
-  UserKernelComputeContext compute_ctx(device_ctx->stream(), kernel_conf());
+  UserKernelComputeContext compute_ctx(stream, kernel_conf());
   compute_ctx.UpdateTensorWithCorrBlob(BnInOp2Blob);
   kernel_->Compute(&compute_ctx, new_opkernel_state.get(), cache_.get());
   return new_opkernel_state;

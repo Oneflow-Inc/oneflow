@@ -208,7 +208,7 @@ SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_
 
 }  // namespace
 
-template<int NDIM, typename T>
+template<DeviceType device_type, typename T>
 void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
                 user_op::Tensor* dst, const SliceContext& slice_ctx,
                 const bool from_large_to_small) {
@@ -256,43 +256,80 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
   ConstructSliceParamsSmall(slice_ctx, positive_start_vec, positive_stop_vec, step_attr,
                             small->shape_view(), &small_slice_param);
   CHECK_EQ(large_slice_param.elem_cnt(), small_slice_param.elem_cnt());
-
-  const int64_t elem_cnt = large_slice_param.elem_cnt();
-  SliceIndexHelper<NDIM> entire_splitted_large_idx_cvtr(large_slice_param.dims);
-  SliceIndexHelper<NDIM> sliced_splitted_large_idx_cvtr(large_slice_param.size);
-  SliceIndexHelper<NDIM> entire_full_small_idx_cvtr(small_slice_param.dims);
-  SliceIndexHelper<NDIM> sliced_full_small_idx_cvtr(small_slice_param.size);
-  // Calculate the length of continuous part
-  int cnt = 1;
-  for (int i = NDIM - 1; i >= 0; i--) {
-    if (large_slice_param.step[i] == 1) { cnt *= large_slice_param.size[i]; }
-    if (!large_slice_param.IsFullSlice(i) || !small_slice_param.IsFullSlice(i)) { break; }
-  }
-  const auto* src_ptr = src->dptr<T>();
-  auto* dst_ptr = dst->mut_dptr<T>();
-  for (int i = 0; i < elem_cnt; i += cnt) {
-    const int64_t large_offset = SliceOffsetToEntireOffset<NDIM>(
-        i, large_slice_param, entire_splitted_large_idx_cvtr, sliced_splitted_large_idx_cvtr);
-    const int64_t small_offset = SliceOffsetToEntireOffset<NDIM>(
-        i, small_slice_param, entire_full_small_idx_cvtr, sliced_full_small_idx_cvtr);
-    const int64_t src_offset = from_large_to_small ? large_offset : small_offset;
-    const int64_t dst_offset = from_large_to_small ? small_offset : large_offset;
-    AutoMemcpy(ctx->stream(), dst_ptr + dst_offset, src_ptr + src_offset,
-               cnt * GetSizeOfDataType(src->data_type()), src->mem_case(), dst->mem_case());
+  if (from_large_to_small) {
+    if (small_slice_param.elem_cnt() == small->shape_view().elem_cnt()) {
+      SliceKernelUtil<device_type, T>::Forward(ctx->stream(), large_slice_param, src->dptr<T>(),
+                                               dst->mut_dptr<T>());
+    } else {
+      SliceKernelUtil<device_type, T>::Forward(ctx->stream(), large_slice_param, small_slice_param,
+                                               src->dptr<T>(), dst->mut_dptr<T>());
+    }
+  } else {
+    SliceKernelUtil<device_type, T>::Forward(ctx->stream(), small_slice_param, large_slice_param,
+                                             src->dptr<T>(), dst->mut_dptr<T>());
   }
 }
 
-#define MAKE_WRITE_SLICE_SWITCH_ENTRY(func_name, N, T) func_name<N, T>
-DEFINE_STATIC_SWITCH_FUNC(
-    void, WriteSlice, MAKE_WRITE_SLICE_SWITCH_ENTRY, MAKE_NDIM_CTRV_SEQ(DIM_SEQ),
-    MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ
-#if defined(WITH_CUDA)
-                                HALF_DATA_TYPE_SEQ
-#endif
-                            ));
-#undef MAKE_WRITE_SLICE_SWITCH_ENTRY
+template<DeviceType device_type, typename T>
+class SliceKernel final : public user_op::OpKernel {
+ public:
+  SliceKernel() = default;
+  ~SliceKernel() = default;
 
-template<typename T>
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    SliceContext slice_ctx;
+    if (ctx->parallel_ctx().parallel_num() == 1) {
+      // split_axis == SPLIT_AXIS_FOR_NON_SPLIT means the sbp attribute is not 'split'
+      CHECK_JUST(slice_ctx.PushSplitInfo(SPLIT_AXIS_FOR_NON_SPLIT, 0, 0, 0));
+    } else {
+      const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
+      NdSbp in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("x", 0);
+      {
+        const NdSbp& y_nd_sbp = ctx->NdSbp4ArgNameAndIndex("y", 0);
+        // If x and y both split in the same axis(must be full slice),
+        // we can consider the physical tensor is broadcast in this axis.
+        FOR_RANGE(int32_t, i, 0, parallel_hierarchy.NumAxes()) {
+          const SbpParallel& x_sbp = in_nd_sbp.sbp_parallel(i);
+          const SbpParallel& y_sbp = y_nd_sbp.sbp_parallel(i);
+          if (x_sbp.has_split_parallel() && y_sbp.has_split_parallel()) {
+            CHECK_EQ(x_sbp.split_parallel().axis(), y_sbp.split_parallel().axis());
+            in_nd_sbp.mutable_sbp_parallel(i)->clear_split_parallel();
+            in_nd_sbp.mutable_sbp_parallel(i)->mutable_broadcast_parallel();
+          }
+        }
+      }
+      const Shape& logical_shape = ctx->LogicalTensorDesc4ArgNameAndIndex("x", 0)->shape();
+      const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+      const TensorSliceView& slice_view =
+          GetTensorSliceView4ParallelId(parallel_hierarchy, in_nd_sbp, logical_shape, parallel_id);
+      for (int i = 0; i < logical_shape.NumAxes(); ++i) {
+        const Range& range = slice_view.At(i);
+        if (range.begin() != 0 || range.end() != logical_shape.At(i)) {
+          CHECK_JUST(slice_ctx.PushSplitInfo(i, range.begin(), range.end(), logical_shape.At(i)));
+        }
+      }
+    }
+    return std::make_shared<OpKernelCacheWrapper<SliceContext>>(slice_ctx);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
+    if (y_tensor->shape_view().elem_cnt() == 0) { return; }
+    const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const SliceContext& slice_ctx =
+        dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
+    AutoMemset(ctx->stream(), y_tensor->mut_dptr(), 0,
+               y_tensor->shape_view().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()),
+               y_tensor->mem_case());
+    WriteSlice<device_type, T>(ctx, x_tensor, y_tensor, slice_ctx, /*from_large_to_small=*/true);
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+template<DeviceType device_type, typename T>
 class SliceUpdateKernel final : public user_op::OpKernel {
  public:
   SliceUpdateKernel() = default;
@@ -308,7 +345,7 @@ class SliceUpdateKernel final : public user_op::OpKernel {
       const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
       NdSbp ref_nd_sbp = ctx->NdSbp4ArgNameAndIndex("ref", 0);
       {
-        const NdSbp value_nd_sbp = ctx->NdSbp4ArgNameAndIndex("value", 0);
+        const NdSbp& value_nd_sbp = ctx->NdSbp4ArgNameAndIndex("value", 0);
         // If ref and value both split in the same axis(full slice),
         // we can consider the physical tensor is broadcast in this axis.
         for (int i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
@@ -351,27 +388,11 @@ class SliceUpdateKernel final : public user_op::OpKernel {
     }
     const SliceContext& slice_ctx =
         dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
-    SwitchWriteSlice(SwitchCase(value_tensor->shape_view().NumAxes(), value_tensor->data_type()),
-                     ctx, value_tensor, y_tensor, slice_ctx, false);
+    WriteSlice<device_type, T>(ctx, value_tensor, y_tensor, slice_ctx,
+                               /*from_large_to_small=*/false);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
-
-#define REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(dtype) \
-  REGISTER_USER_KERNEL("slice_update")                 \
-      .SetCreateFn<SliceUpdateKernel<dtype>>()         \
-      .SetIsMatchedHob(user_op::HobDataType("ref", 0) == GetDataType<dtype>::value);
-
-REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(float)
-REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(double)
-REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(int32_t)
-REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(int64_t)
-REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(int8_t)
-REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(uint8_t)
-REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(bool)
-#ifdef WITH_CUDA
-REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(float16)
-#endif
 
 template<DeviceType device_type, typename T>
 class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -393,45 +414,32 @@ class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGrap
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<DeviceType device_type, typename T>
-class SliceKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
- public:
-  SliceKernel() = default;
-  ~SliceKernel() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    SliceParams params = ConstructSliceParams(ctx, x_tensor, y_tensor);
-    SliceKernelUtil<device_type, T>::Forward(ctx->stream(), params, x_tensor->dptr<T>(),
-                                             y_tensor->mut_dptr<T>());
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-#define REGISTER_SLICE_GRAD_KERNEL(device, dtype)                                          \
+#define REGISTER_SLICE_KERNEL(device, dtype)                                               \
   REGISTER_USER_KERNEL("slice").SetCreateFn<SliceKernel<device, dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == device)                                                 \
-      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));                     \
+      && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));                     \
   REGISTER_USER_KERNEL("slice_grad")                                                       \
       .SetCreateFn<SliceGradKernel<device, dtype>>()                                       \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                \
-                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));   \
+  REGISTER_USER_KERNEL("slice_update")                                                     \
+      .SetCreateFn<SliceUpdateKernel<device, dtype>>()                                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                \
+                       && (user_op::HobDataType("ref", 0) == GetDataType<dtype>::value));
 
-#define REGISTER_SLICE_GRAD_KERNEL_WITH_DEVICE(device) \
-  REGISTER_SLICE_GRAD_KERNEL(device, bool)             \
-  REGISTER_SLICE_GRAD_KERNEL(device, float)            \
-  REGISTER_SLICE_GRAD_KERNEL(device, double)           \
-  REGISTER_SLICE_GRAD_KERNEL(device, int32_t)          \
-  REGISTER_SLICE_GRAD_KERNEL(device, int64_t)          \
-  REGISTER_SLICE_GRAD_KERNEL(device, int8_t)           \
-  REGISTER_SLICE_GRAD_KERNEL(device, uint8_t)
+#define REGISTER_SLICE_KERNEL_WITH_DEVICE(device) \
+  REGISTER_SLICE_KERNEL(device, bool)             \
+  REGISTER_SLICE_KERNEL(device, float)            \
+  REGISTER_SLICE_KERNEL(device, double)           \
+  REGISTER_SLICE_KERNEL(device, int32_t)          \
+  REGISTER_SLICE_KERNEL(device, int64_t)          \
+  REGISTER_SLICE_KERNEL(device, int8_t)           \
+  REGISTER_SLICE_KERNEL(device, uint8_t)
 
-REGISTER_SLICE_GRAD_KERNEL_WITH_DEVICE(DeviceType::kCPU)
+REGISTER_SLICE_KERNEL_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_SLICE_GRAD_KERNEL_WITH_DEVICE(DeviceType::kCUDA)
-REGISTER_SLICE_GRAD_KERNEL(DeviceType::kCUDA, float16)
+REGISTER_SLICE_KERNEL_WITH_DEVICE(DeviceType::kCUDA)
+REGISTER_SLICE_KERNEL(DeviceType::kCUDA, float16)
 #endif
 
 }  // namespace oneflow

@@ -34,8 +34,8 @@ namespace oneflow {
 namespace one {
 class StatefulOpKernel;
 class TensorTuple;
-class MirroredTensor;
-class ConsistentTensorInferResult;
+class LocalTensor;
+class GlobalTensorInferResult;
 }  // namespace one
 
 class NNGraphIf;
@@ -74,6 +74,8 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object);
 
+  Maybe<void> TouchTensors(const one::EagerBlobObjectListPtr& eager_blob_object);
+
   template<typename T>
   Maybe<void> SyncAccessBlobByCallback(const T tensor, const std::shared_ptr<BlockingThenBusy>& btb,
                                        const std::function<void(uint64_t)>& Callback,
@@ -89,10 +91,10 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<Scope> BuildInitialScope(int64_t session_id, const JobConfigProto& job_conf,
                                  const std::string& device_tag,
                                  const std::vector<std::string>& machine_device_ids,
-                                 const std::shared_ptr<Shape>& hierarchy, bool is_mirrored);
+                                 const std::shared_ptr<Shape>& hierarchy, bool is_local);
 
   Maybe<Scope> BuildInitialScopeWithPlacement(int64_t session_id, const JobConfigProto& job_conf,
-                                              Symbol<ParallelDesc> placement, bool is_mirrored);
+                                              Symbol<ParallelDesc> placement, bool is_local);
 
   Maybe<Scope> BuildScopeWithNewParallelDesc(const std::shared_ptr<Scope>& scope,
                                              const std::string& device_tag,
@@ -102,7 +104,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<Scope> BuildScopeWithNewParallelConf(const std::shared_ptr<Scope>& scope,
                                              const ParallelConf& parallel_conf);
 
-  Maybe<Scope> BuildScopeWithNewIsMirrored(const std::shared_ptr<Scope>& scope, bool is_mirrored);
+  Maybe<Scope> BuildScopeWithNewIsLocal(const std::shared_ptr<Scope>& scope, bool is_local);
 
   Maybe<Scope> BuildScopeWithNewScopeName(const std::shared_ptr<Scope>& scope,
                                           const std::string& scope_name);
@@ -124,7 +126,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<one::StatefulOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& input_eager_blob_objects,
       const one::EagerBlobObjectListPtr& output_eager_blob_objects,
-      const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
+      const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
       const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
  private:

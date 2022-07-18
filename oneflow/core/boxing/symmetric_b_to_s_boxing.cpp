@@ -45,6 +45,8 @@ Maybe<void> RawCheckSymmetricB2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out
   CHECK_OR_RETURN(IsSplitSbp(SymbolOf(out->nd_sbp()->sbp_parallel(0))));
 
   CHECK_OR_RETURN(in->placement() == out->placement());
+  CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kCPU
+                  || in->placement()->device_type() == DeviceType::kCUDA);
   return Maybe<void>::Ok();
 }
 // NOLINTEND(maybe-need-error-msg)
@@ -92,9 +94,9 @@ Maybe<one::Tensor> SymmetricB2S(const std::shared_ptr<one::Tensor>& tensor, Symb
                                                /*enable_view_slice=*/false));
   }
 
-  return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(),
-                                                 *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
-                                                 tensor->dtype()));
+  return JUST(one::functional::LocalToGlobal(local_tensor, out->placement(),
+                                             *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
+                                             tensor->dtype(), /* sync_data */ false));
 }
 
 COMMAND(RegisterBoxingFunction("symmetric-b-to-s", CheckSymmetricB2S, &SymmetricB2S));

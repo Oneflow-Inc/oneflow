@@ -44,9 +44,18 @@ namespace oneflow {
   const auto& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
   const size_t idx_offset = IdxOffset(data_format);
   const int32_t num_spatial_dims = x_desc.shape().NumAxes() - 2;
-  CHECK_EQ_OR_RETURN(num_spatial_dims, kernel_size.size());
-  CHECK_EQ_OR_RETURN(num_spatial_dims, strides.size());
-  CHECK_EQ_OR_RETURN(num_spatial_dims, dilation_rate.size());
+  CHECK_EQ_OR_RETURN(num_spatial_dims, kernel_size.size())
+      << Error::RuntimeError()
+      << "The dimension of x tensor must be equal to the size of kernel_size array plus 2, "
+      << "but got " << num_spatial_dims << " and " << kernel_size.size();
+  CHECK_EQ_OR_RETURN(num_spatial_dims, strides.size())
+      << Error::RuntimeError()
+      << "The dimension of x tensor must be equal to the size of strides array plus 2, "
+      << "but got " << num_spatial_dims << " and " << strides.size();
+  CHECK_EQ_OR_RETURN(num_spatial_dims, dilation_rate.size())
+      << Error::RuntimeError()
+      << "The dimension of x tensor must be equal to the size of dilation_rate array plus 2, "
+      << "but got " << num_spatial_dims << " and " << dilation_rate.size();
   DimVector y_dim_vec(x_desc.shape().dim_vec());
   for (int32_t i = 0; i < num_spatial_dims; ++i) {
     int32_t padding_small = 0;

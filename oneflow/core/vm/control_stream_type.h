@@ -29,7 +29,8 @@ class ControlStreamType final : public StreamType {
   ControlStreamType() = default;
   ~ControlStreamType() = default;
 
-  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override {}
+  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Symbol<Device> device) const override {
+  }
 
   void InitInstructionStatus(const Stream& stream,
                              InstructionStatusBuffer* status_buffer) const override;
@@ -37,11 +38,10 @@ class ControlStreamType final : public StreamType {
                                InstructionStatusBuffer* status_buffer) const override;
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
-  void Compute(Instruction* instruction) const override;
+  void Run(Instruction* instruction) const override;
 
-  bool OnSchedulerThread() const override { return true; }
+  bool OnSchedulerThread(StreamRole) const override { return true; }
   bool SupportingTransportInstructions() const override { return false; }
-  bool IsControlStreamType() const override { return true; }
 };
 
 }  // namespace vm

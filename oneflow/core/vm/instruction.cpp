@@ -41,6 +41,9 @@ void Instruction::__Init__(Stream* stream, const InstructionType* instruction_ty
 
 void Instruction::InitStatus() { instruction_type().InitInstructionStatusIf(this); }
 
+Maybe<void> Instruction::Prepare() { return instruction_type().PrepareIf(this); }
+void Instruction::Compute() { return instruction_type().ComputeIf(this); }
+
 void Instruction::DeleteStatusAndClearEdges() {
   OF_PROFILER_RANGE_GUARD("Instruction::DeleteStatusAndClearEdges");
   instruction_type().DeleteInstructionStatusIf(this);
@@ -49,10 +52,12 @@ void Instruction::DeleteStatusAndClearEdges() {
 }
 
 bool Instruction::Done() const {
-  return stream_type().QueryInstructionStatusDone(stream(), status_buffer());
+  return stream_policy().QueryInstructionStatusDone(stream(), status_buffer());
 }
 
-const StreamType& Instruction::stream_type() const { return stream().stream_type(); }
+StreamPolicy* Instruction::mut_stream_policy() { return mut_stream()->mut_stream_policy(); }
+
+const StreamPolicy& Instruction::stream_policy() const { return stream().stream_policy(); }
 
 }  // namespace vm
 }  // namespace oneflow
