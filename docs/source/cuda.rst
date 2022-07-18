@@ -1,6 +1,8 @@
 oneflow.cuda
 ===================================
 
+.. The documentation is referenced from: https://pytorch.org/docs/1.10/cuda.html.
+
 .. currentmodule:: oneflow.cuda
 
 .. autosummary::
@@ -12,6 +14,10 @@ oneflow.cuda
     current_device
     set_device
     synchronize
+
+.. note::
+   The :attr:`current_device` returns local rank as device index. It is different from the 'torch.current_device()' in PyTorch.
+
 
 Random Number Generator
 -------------------------
