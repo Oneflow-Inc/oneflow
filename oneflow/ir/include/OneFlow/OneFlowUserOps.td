@@ -2544,10 +2544,14 @@ def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_
   let has_data_type_infer_fn = 1;
 }
 
+
 def OneFlow_FusedDotFeatureInteractionOp : OneFlow_BaseOp<"fused_dot_feature_interaction", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<OneFlow_Tensor>:$features,
-    Optional<OneFlow_Tensor>:$output_concat
+    Optional<OneFlow_Tensor>:$output_concat,
+    Optional<OneFlow_Tensor>:$num_valid_sparse_feature,
+    Optional<OneFlow_Tensor>:$sparse_feature,
+    Optional<OneFlow_Tensor>:$sparse_indices
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -2564,14 +2568,18 @@ def OneFlow_FusedDotFeatureInteractionOp : OneFlow_BaseOp<"fused_dot_feature_int
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedDotFeatureInteractionGradOp : OneFlow_BaseOp<"fused_dot_feature_interaction_grad", [NoSideEffect, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedDotFeatureInteractionGradOp : OneFlow_BaseOp<"fused_dot_feature_interaction_grad", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
-    Variadic<OneFlow_Tensor>:$features
+    Variadic<OneFlow_Tensor>:$features,
+    Optional<OneFlow_Tensor>:$num_valid_sparse_feature,
+    Optional<OneFlow_Tensor>:$sparse_feature,
+    Optional<OneFlow_Tensor>:$sparse_indices
   );
   let output = (outs
     Variadic<OneFlow_Tensor>:$features_grad,
-    Optional<OneFlow_Tensor>:$output_concat_grad
+    Optional<OneFlow_Tensor>:$output_concat_grad,
+    Optional<OneFlow_Tensor>:$sparse_feature_grad
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$self_interaction,
@@ -4418,8 +4426,8 @@ def OneFlow_ErfInvOp : OneFlow_BaseOp<"erfinv", [NoSideEffect, DeclareOpInterfac
 #endif // GET_ONEFLOW_MATH_OP_DEFINITIONS
 
 // Group: MATMUL
-// batch_matmul, broadcast_matmul, broadcast_matmul_grad_b, distributed_partial_fc_sample, distributed_partial_fc_sample_disable_boxing, erfc, erfc_grad, matmul, cublas_fused_mlp, cublas_bias_add_relu_matmul_grad, cublas_matmul_bias_add_grad, fused_matmul_bias_add_relu_dropout, fused_relu_dropout_grad
-// Total: 13
+// batch_matmul, broadcast_matmul, broadcast_matmul_grad_b, distributed_partial_fc_sample, distributed_partial_fc_sample_disable_boxing, erfc, erfc_grad, matmul, cublas_fused_mlp, cublas_bias_add_relu_matmul_grad, cublas_matmul_bias_add_grad, fused_matmul_bias_add_relu_dropout, fused_relu_dropout_grad, matrix_vector_product, matrix_vector_product_grad_a, matrix_vector_product_grad_b, vector_matrix_product, vector_matrix_product_grad_a, vector_matrix_product_grad_b
+// Total: 19
 
 #ifdef GET_ONEFLOW_MATMUL_OP_DEFINITIONS
 
@@ -4563,6 +4571,91 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [NoSideEffect, DeclareOpInterfac
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
+
+def OneFlow_MatrixVectorProductOp : OneFlow_BaseOp<"matrix_vector_product", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$a,
+    OneFlow_Tensor:$b
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_MatrixVectorProductGradAOp : OneFlow_BaseOp<"matrix_vector_product_grad_a", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$b
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_MatrixVectorProductGradBOp : OneFlow_BaseOp<"matrix_vector_product_grad_b", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$a
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_VectorMatrixProductOp : OneFlow_BaseOp<"vector_matrix_product", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$a,
+    OneFlow_Tensor:$b
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_VectorMatrixProductGradAOp : OneFlow_BaseOp<"vector_matrix_product_grad_a", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$b
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_VectorMatrixProductGradBOp : OneFlow_BaseOp<"vector_matrix_product_grad_b", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$a
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 
 def OneFlow_CublasFusedMLPOp : OneFlow_BaseOp<"cublas_fused_mlp", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -9526,6 +9619,7 @@ def OneFlow_EmbeddingShuffleOp : OneFlow_BaseOp<"embedding_shuffle", [NoSideEffe
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
+    DefaultValuedAttr<BoolAttr, "false">:$skip_last_gather,
     StrAttr:$embedding_name
   );
   let same_output_regst_num = 1;
@@ -9548,6 +9642,7 @@ def OneFlow_EmbeddingGradientShuffleOp : OneFlow_BaseOp<"embedding_gradient_shuf
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     DefaultValuedAttr<BoolAttr, "false">:$only_zero_valid_grad,
+    DefaultValuedAttr<BoolAttr, "false">:$skip_first_scatter,
     StrAttr:$embedding_name
   );
   let same_output_regst_num = 1;

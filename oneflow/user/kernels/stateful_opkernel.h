@@ -84,14 +84,14 @@ class StatefulOpKernel final {
   friend struct vm::OpCallInstructionUtil;
   StatefulOpKernel() = default;
 
-  void Compute(eager::CallContext* call_ctx, DeviceCtx* device_ctx,
+  void Compute(eager::CallContext* call_ctx, ep::Stream* stream,
                const user_op::OpKernel* user_opkernel, user_op::OpKernelState* state,
                const user_op::OpKernelCache* cache) const;
 
   user_op::TensorDescInferFn TensorDescInferFn() const;
   user_op::DataTypeInferFn DataTypeInferFn() const;
 
-  void TryInitOpKernelStateAndCache(eager::CallContext* call_ctx, DeviceCtx* device_ctx,
+  void TryInitOpKernelStateAndCache(eager::CallContext* call_ctx, ep::Stream* stream,
                                     const user_op::OpKernel* op_kernel,
                                     user_op::OpKernelState** state, user_op::OpKernelCache** cache);
 

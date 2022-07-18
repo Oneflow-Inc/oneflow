@@ -133,7 +133,7 @@ class EagerBlobObject final : public user_op::Tensor,
                "possible. Almost all methods of `Blob` are also in `EagerBlobObject`.")]] Blob*
   blob();
 
-  Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx);
+  Maybe<void> TryAllocateBlobBodyMemory(vm::Allocator* allocator);
   Maybe<void> DeallocateBlobDataPtr() {
     tensor_storage_->Release();
     tensor_storage_.reset(new TensorStorage);
@@ -189,6 +189,8 @@ class EagerBlobObject final : public user_op::Tensor,
     }
   }
 
+  void TryInitNonPODTypeEagerBlobObjectIfNeed();
+
  private:
   void InitMemPtrForAllocationComputationPipelining() {
     auto* ptr = tensor_storage_->blob_dptr();
@@ -209,6 +211,7 @@ class EagerBlobObject final : public user_op::Tensor,
   // are kept even after tensor_storage_.reset().
   char* mem_ptr_for_allocation_compuation_pipelining_;
   bool inited_mem_ptr_for_allocation_compuation_pipelining_;
+  bool is_non_pod_object_placement_newed_;
   bool pin_memory_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
 
