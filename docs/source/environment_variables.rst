@@ -87,7 +87,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is empty, but will receive any string.
 
-`ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/lazy/stream_context/cuda/cuda_stream_context.cpp#L66>`_
+`ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS <https://github.com/Oneflow-Inc/oneflow/blob/55b822e4d3c88757d11077d7546981309125c73f/oneflow/core/lazy/stream_context/cuda/cuda_stream_context.cpp#L66>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Only used when debugging because the performance would be affected, it could detect which op in the network appears nan or inf. 
@@ -98,7 +98,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 Define and set to ``false``, and would be ``true`` only when the value is ``1``, ``true``, ``yes``, ``on`` and ``y``.
 
-`ONEFLOW_DEBUG_KERNEL_SYNC_CHECK <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/job/env_global_objects_scope.cpp#L193>`_
+`ONEFLOW_DEBUG_KERNEL_SYNC_CHECK <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/job/env_global_objects_scope.cpp#L204>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Only used when debugging because the performance would be affected. 
@@ -133,7 +133,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 Define and set to ``false``. When using, the compiled package needs to enable ``BUILD_PROFILER``.
 
-`ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/job/env_global_objects_scope.cpp#L199>`_
+`ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/job/env_global_objects_scope.cpp#L210>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Only use blob_access_checker after enabling, because blob_access_checker is for correctness assurance, and closing it in some cases can increase the kernel overhead. `#5728 <https://github.com/Oneflow-Inc/oneflow/pull/5728>`_
@@ -142,7 +142,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 Define and set to ``false``, and would be ``true`` only when the value is ``1``, ``true``, ``yes``, ``on`` and ``y``.
 
-`ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH <https://github.com/Oneflow-Inc/oneflow/blame/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/kernel/user_kernel.cpp#L692>`_
+`ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/kernel/user_kernel.cpp#L696>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Takes effect under ``WITH_CUDA_GRAPHS`` and the default value is ``false``. It uses more memory, so when there's just enough memory, it won't run. 
@@ -153,7 +153,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 Define and set to ``false``, and would be ``true`` only when the value is ``1``, ``true``, ``yes``, ``on`` and ``y``.
 
-`ONEFLOW_ACTOR_ENABLE_LIGHT_ACTOR <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/thread/thread.cpp#L30>`_
+`ONEFLOW_ACTOR_ENABLE_LIGHT_ACTOR <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/thread/thread.cpp#L29>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 LightActor is a new type of Actor that only handles NormalForward and similar tasks where all regst_num is 1 or tasks with only one kernel. `#5868 <https://github.com/Oneflow-Inc/oneflow/pull/5868>`_. ``export ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH=1`` (Would use more memories), ``export ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE=1``, ``export ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER=1``, ``export ONEFLOW_ACTOR_ENABLE_LIGHT_ACTOR=1``, ``export ONEFLOW_STREAM_REUSE_CUDA_EVENT=1`` can be used together.
@@ -162,7 +162,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 Define and set to ``false``, and would be ``true`` only when the value is ``1``, ``true``, ``yes``, ``on`` and ``y``.
 
-`ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/thread/thread.cpp#L29>`_
+`ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/thread/thread.cpp#L28>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 `#5720 <https://github.com/Oneflow-Inc/oneflow/pull/5720>`_. It is used to enable local message queue, ``oneflow.config.thread_enable_local_message_queue(True)`` is no longer used.
@@ -191,7 +191,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 Define and set to ``true``, and would be ``true`` only when the value is ``1``, ``true``, ``yes``, ``on`` and ``y``.
 
-ONEFLOW_SERVING_DEBUG
+`ONEFLOW_SERVING_DEBUG <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/api/cpp/framework/graph.cpp#L213>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 For printing information of OneFlow Serving Debug
@@ -238,7 +238,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``true``
 
-`ONEFLOW_FUNCTOR_DISABLE_FUSED_MLP <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/functional/impl/nn_functor.cpp#L587>`_
+`ONEFLOW_FUNCTOR_DISABLE_FUSED_MLP <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/functional/impl/nn_functor.cpp#L554>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Whether to disable the fused_mlp operator implemented by cublasLt in FusedMLPFunctor, if disabled, it will degenerate into a multiple matrix multiplication operation.
@@ -247,8 +247,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
 
-`ONEFLOW_ONE_EMBEDDING_EMBEDDING_SHUFFLE
-_INDEPENTENT_STREAM <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/job_rewriter/replace_embedding_ops_pass.cpp#L195>`_
+`ONEFLOW_ONE_EMBEDDING_EMBEDDING_SHUFFLE_INDEPENTENT_STREAM <https://github.com/Oneflow-Inc/oneflow/blob/91eab120ec0f5de473413ce664a49d5e87e1bba3/oneflow/core/job_rewriter/replace_embedding_ops_pass.cpp#L195>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Whether to put the EmbeddingShuffle of the OneEmbedding module on a separate stream for overlapping execution.
@@ -257,7 +256,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
 
-`ONEFLOW_ONE_EMBEDDING_GRADIENT_SHUFFLE_USE_FP16 <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/job_rewriter/replace_embedding_ops_pass.cpp#L212>`_
+`ONEFLOW_ONE_EMBEDDING_GRADIENT_SHUFFLE_USE_FP16 <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/job_rewriter/replace_embedding_ops_pass.cpp#L209>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Whether to allow the EmbeddingGradientShuffle operator of the OneEmbedding module to use the FP16 data type in the AMP case.
@@ -266,7 +265,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``true``
 
-`ONEFLOW_ONE_EMBEDDING_NOT_FUSE_CAST_TO_UPDATE <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/job_rewriter/replace_embedding_ops_pass.cpp#L271>`_
+`ONEFLOW_ONE_EMBEDDING_NOT_FUSE_CAST_TO_UPDATE <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/job_rewriter/replace_embedding_ops_pass.cpp#L260>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Whether to disable the fusion of cast type conversion and parameter update of OneEmbedding parameters into one operator in the case of AMP
@@ -320,7 +319,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
 
-`ONEFLOW_KERNEL_REDUCE_SUM_USE_MATMUL <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/user/kernels/reduce_kernel.cpp#L355>`_
+`ONEFLOW_KERNEL_REDUCE_SUM_USE_MATMUL <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/user/kernels/reduce_kernel.cpp#L287>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 whether to use matrix multiplication for reduce_sum
@@ -329,7 +328,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``false``
 
-`ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/job_rewriter/fuse_embedding_interaction_pass.cpp#L35>`_
+`ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM <https://github.com/Oneflow-Inc/oneflow/blob/dd580f21ffb6e4d23a899c7e0ac6d2bc502f3f1a/oneflow/core/job_rewriter/fuse_embedding_interaction_pass.cpp#L35>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Whether to quantify the shuffle application communication in the case of OneEmbedding multi-card
@@ -394,7 +393,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``1024x1024``
 
-`OMP_NUM_THREADS <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/job/env_global_objects_scope.cpp#L96>`_
+`OMP_NUM_THREADS <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/job/env_global_objects_scope.cpp#L107>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Set the number of threads used by OMP
@@ -403,7 +402,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value will be generated by specific `computational logic <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/job/env_global_objects_scope.cpp#L106-L108>`_.
 
-`SBP_INFER_RULE_TAG <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/operator/operator.cpp#L715>`_
+`SBP_INFER_RULE_TAG <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/operator/operator.cpp#L718>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Specify SBP derivation rules
@@ -453,7 +452,7 @@ Values accepted
 The default value is ``1.65e8``
 
 
-`ONEFLOW_DEBUG_PASS <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/job/job_build_and_infer_ctx.cpp#L983>`_
+`ONEFLOW_DEBUG_PASS <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/job/job_build_and_infer_ctx.cpp#L990>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Pass names and print job before and after a specific pass, such as ``export ONEFLOW_DEBUG_PASS="FuseAddToOutputPass``. 
@@ -464,7 +463,7 @@ Values accepted
 ^^^^^^^^^^^^^^^
 The default value is ``empty``
 
-`ONEFLOW_PROFILER_HOST_THREAD_NAME_PREFIX <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/profiler/profiler.cpp#L41>`_
+`ONEFLOW_PROFILER_HOST_THREAD_NAME_PREFIX <https://github.com/Oneflow-Inc/oneflow/blob/b17a9cd6b930b5817c63623fb682bd708377a93b/oneflow/core/profiler/profiler.cpp#L37>`_
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Add a prefix to the name of the named host thread in the profiling context to facilitate sorting in the visualization tool (nsight)
