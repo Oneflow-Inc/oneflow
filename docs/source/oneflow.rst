@@ -1,8 +1,8 @@
 oneflow
 ===================================
 
-The documentation is referenced from: 
-https://pytorch.org/docs/1.10/torch.html
+.. The documentation is referenced from: 
+   https://pytorch.org/docs/1.10/torch.html
 
 The oneflow package contains data structures for multi-dimensional tensors and defines mathematical operations over these tensors. Additionally, it provides many utilities for efficient serializing of Tensors and arbitrary types, and other useful utilities.
 
@@ -150,8 +150,7 @@ Locally disabling gradient computation
 -------------------------------------------
 The context managers :func:`oneflow.no_grad`, :func:`oneflow.enable_grad`, and
 :func:`oneflow.set_grad_enabled` are helpful for locally disabling and enabling
-gradient computation. See :ref:`locally-disable-grad` for more details on
-their usage.  These context managers are thread local, so they won't
+gradient computation. These context managers are thread local, so they won't
 work if you send work to another thread using the ``threading`` module, etc.
 
 Examples::

@@ -7,14 +7,15 @@ oneflow.distributed
 
 OneFlow provides two ways to accomplish `Distributed Training`:
 
-- One of them is to use the original concept of OneFlow to run data parallel training by configurating global tensor，introduces the concept of **Global View** to simplify distributed training. Simply , in OneFlow's global view, a cluster is abstracted as a "supercomputing device".
+- The first way is that users are recommended to use OneFlow's global Tensor for distributed training. Global Tensor regards the computing cluster as a supercomputing device, allowing users to write distributed training code just like in a single-machine environment.
 
-- Besides, to facilitate the users who are transferring from PyTorch to OneFlow, OneFlow provide the interface consistent with PyTorch ``torch.nn.parallel.DistributedDataParallel``, ``oneflow.nn.parallel.DistributedDataParallel``.
+- OneFlow also provides a DDP（DistributedDataParallel） module aligned with PyTorch. DDP has been well-known and widely used in data parallelism by the majority of PyTorch users. Also see `PyTorch DDP introduction <https://pytorch.org/docs/1.10/generated/torch.nn.parallel.DistributedDataParallel.html#torch.nn.parallel.DistributedDataParallel>`_.
+
 
 
 Baisc
 -------------------------------
-When you start distributed training in OneFlow,the following functions can be used.
+When you start distributed training in OneFlow, the following functions can be used.
 
 .. currentmodule:: oneflow.env
 
@@ -30,13 +31,107 @@ When you start distributed training in OneFlow,the following functions can be us
     rdma_is_initialized
 
 
+`Global Tensor`
+--------------------------------------------------------------
+
+Construct `Global Tensor`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+A `Global Tensor` can be created with a ``placement`` and a ``sbp``. The ``placement`` describes the physical devices of the global tensor will be allocated, and the ``sbp`` describes its distribution among these devices.
+
+::
+
+    >>>import oneflow as flow
+    >>> # Place a global tensor on cuda device of rank(process) 0 and 1
+    >>> placement = flow.placement(type="cuda", ranks=[0, 1])
+    >>> # Each rank's local data is a part data as a result of spliting global data on dim 0
+    >>> sbp = flow.sbp.split(dim=0)
+    >>> # Create a global tensor by randn
+    >>> x = flow.randn(4, 5, placement=placement, sbp=sbp)
+    >>> x.shape
+    oneflow.Size([4, 5])
+
+
+Convert `Local Tensor` to `Global Tensor`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+With ``Tensor.to_global`` interface, `Local Tensor` can create a `Global Tensor` and use that `Local Tensor` as its local component at the current node.
+
+Two `local tensors` with the shape of ``(2,5)`` are created separately on two devices. While after the ``to_global`` method, the `global tensor` with a shape of ``(4,5)`` is obtained.
+
+Code running on Node 0
+
+::
+
+    import oneflow as flow
+
+    x = flow.randn(2,5)
+    placement = flow.placement("cuda", [0,1])
+    sbp = flow.sbp.split(0)
+    x_global = x.to_global(placement=placement, sbp=sbp)
+    x_global.shape
+
+Code running on Node 1
+
+::
+
+    import oneflow as flow
+
+    x = flow.randn(2,5)
+    placement = flow.placement("cuda", [0,1])
+    sbp = flow.sbp.split(0)
+    x_global = x.to_global(placement=placement, sbp=sbp)
+    x_global.shape
+
+Redistribute `Global Tensor`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Redistributing a `Global Tensor` means moving its data to another device group (or placement), or changing its data distribution (or SBP) across the group, or both at the same time. The redistributed tensor is still a `Global Tensor`.
+
+::
+
+    >>> import oneflow as flow
+    >>> x = flow.tensor([1.0, 2.0], placement=flow.placement("cuda", ranks=[0, 1]), sbp=flow.sbp.split(0))
+    >>> y = x.to_global(placement=flow.placement("cuda", ranks=[2, 3]), sbp=flow.sbp.broadcast)
+
+According to the operator's semantics, OneFlow defines a sequence of valid input and output SBP combinations for each built-in operator. So OneFlow could automatically redistribute the `Global Tensor` to satisfy the operator's SBP requirements for its input Tensor. For example, the following code:
+
+::
+
+    >>> import oneflow as flow
+    >>> x = flow.randn(4, 4, 
+            placement=flow.placement("cuda", ranks=[0, 1]), 
+            sbp=flow.sbp.split(0))
+    >>> y = flow.randn(4, 4, 
+            placement=flow.placement("cuda", ranks=[0, 1]), 
+            sbp=flow.sbp.split(1))
+    >>> z = x + y
+
+When ``x + y`` is executed, since x is split along dimension ``0`` and y is split along dimension ``1``, their local components at each node can not be added directly, then OneFlow will automatically redistribute one of x and y to make them have the same SBP, and complete the add operation successfully.
+
+.. note ::
+    - Global Tensor can not be used in combination with DDP currently.
+    - Global Tensor requires all devices to execute at the same pace, otherwise, it may cause multi-process deadlock.
+
+Get Local Tensor from Global Tensor
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+With ``Tensor.to_local`` interface, the `Global Tensor` can return its local component at the current node.
+
+::
+
+    y = x.to_local()
+    y.is_local
+    True
+    y
+    tensor([[ 2.9186e-01, -3.9442e-01,  4.7072e-04, -3.2216e-01,  1.7788e-01],
+                [-4.5284e-01,  1.2361e-01, -3.5962e-01,  2.6651e-01,  1.2951e+00]],
+            device='cuda:0', dtype=oneflow.float32)
+
 
 DistributedDataParallel
 --------------------------------------------------------------
 
-For more information about DistributedDataParallel, see :ref:`DistributedDataParallel`
+For more information about DistributedDataParallel, see ``nn.parallel.DistributedDataParallel``
 
-The following script shows the process of using ``oneflow.nn.parallel.DistributedDataParallel`` for training data parallel 
+The following script shows the process of using ``oneflow.nn.parallel.DistributedDataParallel`` for training data parallel: 
 
 .. code-block:: 
 
@@ -117,72 +212,6 @@ Communication collectives
         recv
         scatter
         send
-
-
-Global Tensor
---------------------------------------------------------------
-
-Create it
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Global Tensor is a Tensor designed to facilitate distributed execution on multiple machines and devices, and is an interface for implementing Global View programming.
-
-In each of the two consoles, import oneflow and create x
-
-::
-
-    >>>import oneflow as flow
-    >>> # Place a global tensor on cuda device of rank(process) 0 and 1
-    >>> placement = flow.placement(type="cuda", ranks=[0, 1])
-    >>> # Each rank's local data is a part data as a result of spliting global data on dim 0
-    >>> sbp = flow.sbp.split(dim=0)
-    >>> # Create a global tensor by randn
-    >>> x = flow.randn(4, 5, placement=placement, sbp=sbp)
-    >>> x.shape
-    oneflow.Size([4, 5])
-
-
-Get Local Tensor from Global Tensor
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Call `to_local()` to check the local tensor on a device.
-
-::
-
-    x.to_local()
-    tensor([[ 2.9186e-01, -3.9442e-01,  4.7072e-04, -3.2216e-01,  1.7788e-01],
-            [-4.5284e-01,  1.2361e-01, -3.5962e-01,  2.6651e-01,  1.2951e+00]],
-        device='cuda:0', dtype=oneflow.float32)
-
-Convert Local Tensor to Global Tensor
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Developers can create local tensor first, then convert it to global tensor with `Tensor.to_global`.
-Two local tensors with the shape of ``(2,5)`` are created separately on two devices. While after the to_global method, the global tensor with a shape of ``(4,5)`` is obtained.
-
-Code running on Node 0
-
-::
-
-    import oneflow as flow
-
-    x = flow.randn(2,5)
-    placement = flow.placement("cuda", [0,1])
-    sbp = flow.sbp.split(0)
-    x_global = x.to_global(placement=placement, sbp=sbp)
-    x_global.shape
-
-Code running on Node 1
-
-::
-
-    import oneflow as flow
-
-    x = flow.randn(2,5)
-    placement = flow.placement("cuda", [0,1])
-    sbp = flow.sbp.split(0)
-    x_global = x.to_global(placement=placement, sbp=sbp)
-    x_global.shape
-
-
 
 Launching distributed training
 --------------------------------------------------------------

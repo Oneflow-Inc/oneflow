@@ -1279,14 +1279,14 @@ add_docstr(
     r"""
     mv(input, vec) -> Tensor
 
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.mv.html.
-
     Performs a matrix-vector product of the matrix :attr:`input` and the vector :attr:`vec`.
 
     If :attr:`input` is a :math:`(n \times m)` tensor, :attr:`vec` is a
     1-D tensor of size `m`, :attr:`out` will be a 1-D tensor of size `n`.
     
     .. note:: This function does not broadcast.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.mv.html.
 
     Args:
         input (oneflow.Tensor): matrix to be matrix multiplied
@@ -1311,8 +1311,6 @@ add_docstr(
     oneflow.mm,
     r"""
     mm(input, mat2) -> Tensor
-
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.mm.html.
     
     Performs a matrix multiplication of the matrices :attr:`input` and :attr:`mat2`.
 
@@ -1321,6 +1319,8 @@ add_docstr(
 
     .. note:: This function does not broadcast.
             For broadcasting matrix products, see :func:`oneflow.matmul`.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.mm.html.
 
     Args:
         input (oneflow.Tensor): the first matrix to be matrix multiplied
@@ -1562,7 +1562,7 @@ add_docstr(
     Performs the element-wise multiplication of tensor1 by tensor2, multiply the result
     by the scalar value and add it to input.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.addcmul.html
+    https://pytorch.org/docs/1.10/generated/torch.addcmul.html
     
     .. math::
         \text{out}_i = \text{input}_i + value \times\  \text{tensor1}_i \times\ \text{tensor2}_i

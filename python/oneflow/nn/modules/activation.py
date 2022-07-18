@@ -679,8 +679,8 @@ class Softplus(Module):
 
 
 class Hardswish(Module):
-    """Applies the hardswish function, element-wise, as described in the paper:
-    `Searching for MobileNetV3`_.
+    """Applies the hardswish function, element-wise, as described in the paper `Searching for MobileNetV3
+    <https://arxiv.org/abs/1905.02244>`__.
 
     .. math::
         \\text{Hardswish}(x) = \\begin{cases}
@@ -709,9 +709,7 @@ class Hardswish(Module):
         >>> out = hardswish(input)
         >>> out
         tensor([-0.2083,  0.0000,  0.2917], dtype=oneflow.float32)
-
-    .. _`Searching for MobileNetV3`:
-        https://arxiv.org/abs/1905.02244
+        
     """
 
     def __init__(self, inplace: bool = False):
@@ -988,9 +986,6 @@ class SELU(Module):
 
 class Softshrink(Module):
     r"""
-    The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Softshrink.html.
-
     The Softshrink activation.
 
     The formula is:
@@ -1003,6 +998,9 @@ class Softshrink(Module):
         x + \lambd, & \text{ if } x < -\lambda \\
         0, & \text{ otherwise }
         \end{cases}
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Softshrink.html.
 
     Args:
         lambd: the :math:`\lambda` value for the Softshrink formulation. Default: 0.5

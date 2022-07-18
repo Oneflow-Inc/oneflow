@@ -1,8 +1,8 @@
 oneflow.linalg
 ===================================
 
-The documentation is referenced from: 
-https://pytorch.org/docs/1.10/linalg.html
+.. The documentation is referenced from: 
+   https://pytorch.org/docs/1.10/linalg.html
 
 Common linear algebra operations.
 
@@ -17,4 +17,5 @@ Matrix Properties
     norm 
     vector_norm
     matrix_norm
+    diagonal
 
