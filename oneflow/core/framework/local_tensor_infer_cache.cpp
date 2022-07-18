@@ -19,19 +19,13 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/env_var/eager.h"
 #include "oneflow/core/framework/infer_util.h"
 
 namespace oneflow {
 namespace one {
 
 namespace {
-
-// NOTE: use env variable 'ONEFLOW_EAGER_ENABLE_LOCAL_INFER_CACHE' indicate whether the
-// use infer cache in naive local op interpret.
-bool ParseEnableEagerLocalInferCache() {
-  return ParseBooleanFromEnv("ONEFLOW_EAGER_ENABLE_LOCAL_INFER_CACHE", true);
-}
 
 Maybe<void> CheckIsDeviceSupportedByOp(const Device& device, const std::string& op_type_name) {
   if (IsCpuOnly(op_type_name)) { CHECK_EQ_OR_RETURN(device.type(), "cpu"); }
@@ -202,7 +196,8 @@ Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTupl
 
 Maybe<const LocalTensorInferResult> LocalTensorInferCache::GetOrInfer(
     const LocalTensorMetaInferArgs& infer_args) {
-  static bool enable_eager_local_infer_cache = ParseEnableEagerLocalInferCache();
+  static bool enable_eager_local_infer_cache =
+      ThreadLocalEnvBool<ONEFLOW_EAGER_ENABLE_LOCAL_INFER_CACHE>();
   if (enable_eager_local_infer_cache) {
     auto iter = cache_.find(infer_args);
     if (iter == cache_.end()) {
