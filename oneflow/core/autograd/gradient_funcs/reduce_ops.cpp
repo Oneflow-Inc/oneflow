@@ -64,7 +64,7 @@ Maybe<void> ReduceSum::Apply(const ReduceSumCaptureState* ctx, const TensorTuple
   if (!ctx->keepdims && input->ndim() > 0 && ctx->axis.size() > 0) {
     dy = JUST(functional::UnsqueezeMultiple(dy, ctx->axis, input->ndim()));
   }
-  in_grads->at(0) = JUST(functional::BroadcastLike(dy, input, ctx->axis));
+  in_grads->at(0) = JUST(functional::BroadcastLike(dy, input, std::vector<int>()));
   return Maybe<void>::Ok();
 }
 
@@ -73,6 +73,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("reduce_sum", ReduceSum);
 struct ReduceProdOpInterpState : public AutoGradCaptureState {
   std::vector<int32_t> axis;
   bool requires_grad;
+  bool keepdims;
 };
 
 class ReduceProdOp : public OpExprGradFunction<ReduceProdOpInterpState> {
@@ -98,6 +99,7 @@ Maybe<void> ReduceProdOp::Capture(ReduceProdOpInterpState* ctx, const TensorTupl
                                   const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->axis = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("axis"));
+  ctx->keepdims = JUST(composed_attrs.GetAttr<bool>("keepdims"));
   ctx->requires_grad = inputs.at(0)->requires_grad();
   ctx->SaveTensorForBackward(inputs.at(0));
   ctx->SaveTensorForBackward(outputs.at(0));
@@ -115,11 +117,13 @@ Maybe<void> ReduceProdOp::Apply(const ReduceProdOpInterpState* ctx, const Tensor
   in_grads->resize(1);
   in_grads->at(0) = JUST(
       functional::SequenceFunction<Maybe<Tensor>()>([&]() { return functional::Mul(dy, output); })
-          .then(std::bind(functional::UnsqueezeMultiple, std::placeholders::_1, ctx->axis,
-                          input->ndim()))
+          .then_if(!ctx->keepdims && input->ndim() > 0 && ctx->axis.size() > 0,
+                   (std::bind(functional::UnsqueezeMultiple, std::placeholders::_1, ctx->axis,
+                              input->ndim())))
           .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input, ctx->axis))
           .then(std::bind(functional::Div, std::placeholders::_1, input))
           .call());
+
   return Maybe<void>::Ok();
 }
 
@@ -162,16 +166,14 @@ Maybe<void> ReduceMaxOrMin::Capture(ReduceMaxOrMinCaptureState* ctx, const Tenso
 Maybe<void> ReduceMaxOrMin::Apply(const ReduceMaxOrMinCaptureState* ctx,
                                   const TensorTuple& out_grads, TensorTuple* in_grads) const {
   const auto& input = ctx->SavedTensors().at(0);
-  const auto& output = ctx->SavedTensors().at(1);
+  auto output = ctx->SavedTensors().at(1);
   const auto& dy = out_grads.at(0);
-  // std::vector<int> expanaxic;
-  // for (int32_t i = 0; i < input->ndim() - output->ndim(); i++) {
-  //   expanaxic.emplace_back(output->ndim() + i);
-  // }
+  if (!ctx->keepdims && input->ndim() > 0 && ctx->axis.size() > 0) {
+    output = JUST(functional::UnsqueezeMultiple(output, ctx->axis, input->ndim()));
+  }
   const auto cast_like =
       JUST(functional::SequenceFunction<Maybe<Tensor>()>(
-               [&]() { return functional::UnsqueezeMultiple(output, ctx->axis, input->ndim()); })
-               .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input, ctx->axis))
+               [&]() { return functional::BroadcastLike(output, input, ctx->axis); })
                .then(std::bind(functional::BroadcastEqual, input, std::placeholders::_1))
                .then(std::bind(functional::CastLike, std::placeholders::_1, input))
                .call());
@@ -180,8 +182,9 @@ Maybe<void> ReduceMaxOrMin::Apply(const ReduceMaxOrMinCaptureState* ctx,
       JUST(functional::SequenceFunction<Maybe<Tensor>()>(
                [&]() { return functional::ReduceSum(cast_like, ctx->axis, ctx->keepdims); })
                .then(std::bind(functional::Div, dy, std::placeholders::_1))
-               .then(std::bind(functional::UnsqueezeMultiple, std::placeholders::_1, ctx->axis,
-                               input->ndim()))
+               .then_if(!ctx->keepdims && input->ndim() > 0 && ctx->axis.size() > 0,
+                        (std::bind(functional::UnsqueezeMultiple, std::placeholders::_1, ctx->axis,
+                                   input->ndim())))
                .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input, ctx->axis))
                .call());
 
