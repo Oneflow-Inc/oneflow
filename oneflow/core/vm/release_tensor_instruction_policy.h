@@ -122,31 +122,31 @@ class SlowReleaseTensorInstructionPolicy final : public ReleaseTensorInstruction
   }
 };
 
-struct MakeReleaseInstructionPolicy : public StreamRoleVisitor<MakeReleaseInstructionPolicy> {
+struct MakeReleaseTensorInstructionPolicy : public StreamRoleVisitor<MakeReleaseInstructionPolicy> {
   static Maybe<vm::InstructionPolicy*> VisitCompute(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    return MakeReleaseTensorInstructionPolicy(data_type, eager_blob_object, stream);
+    return Make(data_type, eager_blob_object, stream);
   }
   static Maybe<vm::InstructionPolicy*> VisitHost2Device(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    return MakeReleaseTensorInstructionPolicy(data_type, eager_blob_object, stream);
+    return Make(data_type, eager_blob_object, stream);
   }
   static Maybe<vm::InstructionPolicy*> VisitDevice2Host(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    return MakeReleaseTensorInstructionPolicy(data_type, eager_blob_object, stream);
+    return Make(data_type, eager_blob_object, stream);
   }
   static Maybe<vm::InstructionPolicy*> VisitSyncedLaunchedCommNet(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    return MakeReleaseTensorInstructionPolicy(data_type, eager_blob_object, stream);
+    return Make(data_type, eager_blob_object, stream);
   }
   static Maybe<vm::InstructionPolicy*> VisitAsyncedLaunchedCommNet(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    return MakeReleaseTensorInstructionPolicy(data_type, eager_blob_object, stream);
+    return Make(data_type, eager_blob_object, stream);
   }
   static Maybe<vm::InstructionPolicy*> VisitBarrier(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
@@ -170,7 +170,7 @@ struct MakeReleaseInstructionPolicy : public StreamRoleVisitor<MakeReleaseInstru
   }
 
  private:
-  static Maybe<vm::InstructionPolicy*> MakeReleaseTensorInstructionPolicy(
+  static Maybe<vm::InstructionPolicy*> Make(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     if (IsPODDataType(data_type)) {
