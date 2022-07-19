@@ -120,7 +120,8 @@ Maybe<void> ReduceProdOp::Apply(const ReduceProdOpInterpState* ctx, const Tensor
           .then_if(!ctx->keepdims && input->ndim() > 0 && ctx->axis.size() > 0,
                    (std::bind(functional::UnsqueezeMultiple, std::placeholders::_1, ctx->axis,
                               input->ndim())))
-          .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input, ctx->axis))
+          .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input,
+                          std::vector<int32_t>()))
           .then(std::bind(functional::Div, std::placeholders::_1, input))
           .call());
   return Maybe<void>::Ok();

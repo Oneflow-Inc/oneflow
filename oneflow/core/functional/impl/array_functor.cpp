@@ -670,7 +670,9 @@ class ExpandDimsFunctor {
     if (dim < 0) { expand_dim = dim + ndim + 1; }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
+
     if (view::IsViewApplicable(input)) { return view::Unsqueeze(input, expand_dim); }
+
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
@@ -690,21 +692,23 @@ class UnsqueezeMultipleFunctor {
     } else {
       std::vector<int32_t> unsqueeze_dims = dim;
       std::shared_ptr<Tensor> tensor = x;
+      const auto& dims_to_unsqueeze = JUST(dim_list_to_bitset(unsqueeze_dims, n_dims));
 
+      // Unsqueeze is called several times to extend the dimension when the View mechanism is
+      // enabled.Otherwise, calculate the target shape and call reshape.
       if (view::IsViewApplicable(tensor)) {
-        auto dims_to_unsqueeze = *JUST(dim_list_to_bitset(unsqueeze_dims, n_dims));
         for (int32_t dim = 0; dim < n_dims; dim++) {
-          if (dims_to_unsqueeze[dim]) { tensor = JUST(view::Unsqueeze(tensor, dim)); }
+          if ((*dims_to_unsqueeze)[dim]) { tensor = JUST(view::Unsqueeze(tensor, dim)); }
         }
       } else {
-        for (auto& dim : unsqueeze_dims) { dim = JUST(maybe_wrap_dim(dim, n_dims)); }
-        std::sort(unsqueeze_dims.begin(), unsqueeze_dims.end());
         std::vector<int64_t> target_dims(n_dims, 0);
         int32_t tensor_index = 0;
-        for (int32_t i = 0; i < unsqueeze_dims.size(); i++) { target_dims[unsqueeze_dims[i]] = 1; }
-        for (int32_t i = 0; i < n_dims; i++) {
-          if (target_dims[i] == 0 && tensor_index < tensor->ndim()) {
-            target_dims[i] = tensor->shape()->at(tensor_index);
+        for (int32_t dim = 0; dim < n_dims; dim++) {
+          if ((*dims_to_unsqueeze)[dim]) {
+            target_dims[dim] = 1;
+          } else {
+            CHECK_LT_OR_RETURN(tensor_index, tensor->ndim());  // NOLINT(maybe-need-error-msg)
+            target_dims[dim] = tensor->shape()->at(tensor_index);
             tensor_index++;
           }
         }
@@ -744,6 +748,7 @@ class SqueezeFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("axes", squeeze_dims));
 
     if (view::IsViewApplicable(x)) { return view::Squeeze(x, squeeze_dims); }
+
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
