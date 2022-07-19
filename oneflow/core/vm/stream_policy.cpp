@@ -22,7 +22,7 @@ namespace vm {
 
 bool StreamPolicy::OnSchedulerThread(StreamRole stream_role) const {
   if (StreamOnIndependentThread::Visit(stream_role)) { return false; }
-  return ThreadLocalEnvBool<ONEFLOW_VM_WORKLOAD_ON_SCHEDULER_THREAD>();
+  return !ThreadLocalEnvBool<ONEFLOW_VM_COMPUTE_ON_WORKER_THREAD>();
 }
 
 }  // namespace vm
