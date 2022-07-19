@@ -287,7 +287,7 @@ class Optimizer(object):
 
     def state_dict(self):
         r"""
-        Returns the state of the optimizer as a :class:`dict`.
+        Returns the state of the optimizer as a :py:class:`dict`.
 
         It contains two entries:
 
@@ -363,7 +363,7 @@ class Optimizer(object):
                 )
 
     def zero_grad(self, set_to_none: bool = False):
-        """Sets the gradients of all optimized torch.Tensor s to zero.
+        """Sets the gradients of all optimized :class:`oneflow.Tensor` s to zero.
 
         Args:
             set_to_none (bool): instead of setting to zero, set the grads to None.

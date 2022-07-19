@@ -82,7 +82,6 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object =
       JUST(view_tensor->eager_blob_object());
   view_eager_blob_object->set_storage_offset(JUST(view_tensor->storage_offset()));
-  view_eager_blob_object->set_is_shape_synced(true);
   return std::static_pointer_cast<Tensor>(view_tensor);
 }
 
@@ -549,7 +548,7 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offse
 }  // namespace view
 
 Maybe<void> Touch(std::shared_ptr<Tensor> input, Symbol<Stream> stream) {
-  auto eager_blob_objects = std::make_shared<one::EagerBlobObjectList>();
+  auto eager_blob_objects = std::make_shared<vm::EagerBlobObjectList>();
   if (input->is_global()) { input = JUST(input->cur_rank_phy_tensor()); }
   if (input) { eager_blob_objects->push_back(JUST(input->eager_blob_object())); }
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
