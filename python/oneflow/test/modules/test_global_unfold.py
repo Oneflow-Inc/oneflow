@@ -22,7 +22,7 @@ from oneflow.test_utils.automated_test_util import *
 from oneflow.nn.common_types import _size_2_t
 
 
-@autotest(n=3, auto_backward=True, check_graph=False)
+@autotest(n=3, auto_backward=True, check_graph=True)
 def _test_unfold_with_random_data(test_case, placement, sbp):
     m = torch.nn.Unfold(
         kernel_size=random(1, 3).to(_size_2_t),

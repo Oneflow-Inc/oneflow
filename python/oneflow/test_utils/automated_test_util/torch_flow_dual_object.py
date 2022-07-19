@@ -293,12 +293,17 @@ def get_fake_program_more_detail(oneflow, mode, func, args=None, kwargs=None):
 
 
 # NOTE(lixiang): When the graph global test is executed, the func is used to get the device type.
-#   There is no oneflow_kwargs["device"] case for graph global test.
-def get_global_test_device(oneflow_args):
-    if isinstance(oneflow_args[0], flow.Tensor):
+def get_global_test_device(oneflow_args, oneflow_kwargs=None):
+    if not oneflow_args:
+        return oneflow_kwargs["placement"].type
+    elif isinstance(oneflow_args[0], flow.Tensor):
         return oneflow_args[0].placement.type
-    else:
+    elif isinstance(oneflow_args[0], flow.placement):
+        return oneflow_args[0].type
+    elif isinstance(oneflow_args[0], tuple):
         return oneflow_args[0][0].placement.type
+    else:
+        return oneflow_args[1].placement.type
 
 
 # NOTE(lixiang): When oneflow is of type nn.Module, build the following Graph for testing.
@@ -388,11 +393,16 @@ def get_functional_graph_res(
                     test_g_res = oneflow_res
             else:
                 pass
+        # nn.Graph donot deal with Module type. EX: m.to_global(placement, sbp).
+        elif oneflow.__name__ == "to_global":
+            test_g_res = oneflow_res
         elif oneflow.__name__ == "Parameter":
             # nn.Graph donot deal with Parameter creation.
             test_g_res = oneflow_res
         # When doing the global op test, get_global_test_device() will be executed, and temporarily skipping the graph autotest on cpu device.
-        elif is_global() and (get_global_test_device(oneflow_args) == "cpu"):
+        elif is_global() and (
+            get_global_test_device(oneflow_args, oneflow_kwargs) == "cpu"
+        ):
             test_g_res = oneflow_res
         else:
             test_g = TestGraphOfFunctional()
@@ -496,7 +506,9 @@ def oneflow_eager_run_with_graph_check(
                 graph_train_oneflow, oneflow, verbose, oneflow_args, *args
             )
             # When doing the global op test, get_global_test_device() will be executed, and temporarily skipping the graph autotest on cpu device.
-            if is_global() and (get_global_test_device(oneflow_args) == "cpu"):
+            if is_global() and (
+                get_global_test_device(oneflow_args, oneflow_kwargs) == "cpu"
+            ):
                 test_g_res = oneflow_res
             else:
                 # When testing module methods, kwargs are not considered.
