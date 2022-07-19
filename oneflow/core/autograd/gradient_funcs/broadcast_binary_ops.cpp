@@ -274,9 +274,7 @@ class BroadcastMinMax : public BroadcastBinaryGrad {
           broad_x_ = JUST(functional::ReshapeLike(x, JUST(VectorAt(out_grads, 0))));
         } else {
           const AxisVector& broadcast_axis_vec = left_extended_x_shape.Axes4BroadcastTo(out_shape);
-          const std::vector<int32_t> x_axis =
-              std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()};
-          broad_x_ = JUST(functional::BroadcastLike(x, JUST(VectorAt(out_grads, 0)), x_axis));
+          broad_x_ = JUST(functional::BroadcastLike(x, JUST(VectorAt(out_grads, 0)), {}));
         }
       }
       if (ctx->broadcast_y) {
@@ -287,9 +285,7 @@ class BroadcastMinMax : public BroadcastBinaryGrad {
           broad_y_ = JUST(functional::ReshapeLike(y, JUST(VectorAt(out_grads, 0))));
         } else {
           const AxisVector& broadcast_axis_vec = left_extended_y_shape.Axes4BroadcastTo(out_shape);
-          const std::vector<int32_t> y_axis =
-              std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()};
-          broad_y_ = JUST(functional::BroadcastLike(y, JUST(VectorAt(out_grads, 0)), y_axis));
+          broad_y_ = JUST(functional::BroadcastLike(y, JUST(VectorAt(out_grads, 0)), {}));
         }
       }
       const auto& broad_grads =

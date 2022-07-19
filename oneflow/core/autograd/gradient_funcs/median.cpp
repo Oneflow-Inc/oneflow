@@ -50,7 +50,7 @@ class Median : public OpExprGradFunction<MedianCaptureState> {
       std::iota(axis.begin(), axis.end(), 0);
       const auto cast_like =
           JUST(functional::SequenceFunction<Maybe<Tensor>()>(
-                   [&]() { return functional::BroadcastLike(output, input, axis); })
+                   [&]() { return functional::BroadcastLike(output, input, {}); })
                    .then(std::bind(functional::BroadcastEqual, input, std::placeholders::_1))
                    .then(std::bind(functional::CastLike, std::placeholders::_1, input))
                    .call());
@@ -59,7 +59,8 @@ class Median : public OpExprGradFunction<MedianCaptureState> {
           JUST(functional::SequenceFunction<Maybe<Tensor>()>(
                    [&]() { return functional::ReduceSum(cast_like, axis, false); })
                    .then(std::bind(functional::Div, dy, std::placeholders::_1))
-                   .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input, axis))
+                   .then(std::bind(functional::BroadcastLike, std::placeholders::_1, input,
+                                   std::vector<int32_t>()))
                    .call());
 
       in_grads->resize(1);
