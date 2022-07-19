@@ -296,7 +296,7 @@ def tensor_pickling_context(path: Path, global_src_dst_rank: Optional[int], mp):
 def load(
     path: str,
     global_src_rank: Optional[int] = None,
-    map_location: Union[str, flow.device, flow.placement] = None,
+    map_location: Optional[Union[str, flow.device, flow.placement]] = None,
 ) -> Any:
     r"""Loads an object saved with oneflow.save() from a directory.
 
@@ -336,11 +336,12 @@ def load(
     else:
         pickle_bytes = pickle_path.read_bytes()
 
-    if isinstance(map_location, str):
-        map_location: flow.device = flow.device(map_location)
-    assert isinstance(
-        map_location, (flow.device, flow.placement)
-    ), "'map_location' only supports str, device or placement."
+    if map_location is not None:
+        if isinstance(map_location, str):
+            map_location: flow.device = flow.device(map_location)
+        assert isinstance(
+            map_location, (flow.device, flow.placement)
+        ), "'map_location' only supports str, device or placement."
     with tensor_pickling_context(path, global_src_rank, map_location):
         res = pickle.loads(pickle_bytes)
     assert res["protocol_version"] == PROTOCOL_VERSION
