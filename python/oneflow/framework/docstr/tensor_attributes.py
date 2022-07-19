@@ -17,11 +17,11 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 oneflow.device.__doc__ = r"""
-    The documentation is referenced from:
-    https://pytorch.org/docs/1.10/tensor_attributes.html#torch.torch.device.
-
     A :class:`oneflow.device` is an object representing the device on which a :class:`oneflow.Tensor` is or will be allocated.
 
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/tensor_attributes.html#torch.torch.device.
+    
     The :class:`oneflow.device` contains a device type ('cpu' or 'cuda') and optional device ordinal for the device type. If the 
     device ordinal is not present, this object will always represent the current device for the device type.
 

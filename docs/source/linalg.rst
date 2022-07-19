@@ -1,8 +1,21 @@
 oneflow.linalg
 ===================================
-OneFlow linear algebra operations.
-----------------------------------
+
+.. The documentation is referenced from: 
+   https://pytorch.org/docs/1.10/linalg.html
+
+Common linear algebra operations.
+
+Matrix Properties
+-----------------
+
 .. currentmodule:: oneflow.linalg
-.. autofunction:: oneflow.linalg.matrix_norm
-.. autofunction:: oneflow.linalg.norm       
-.. autofunction:: oneflow.linalg.vector_norm
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    norm 
+    vector_norm
+    matrix_norm
+    diagonal
+
