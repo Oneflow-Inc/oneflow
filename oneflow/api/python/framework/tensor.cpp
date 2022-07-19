@@ -280,6 +280,10 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
+static bool PyTensorMetaClass_CheckExact(PyObject* obj) {
+  return obj == (PyObject*)PyTensorObject_Type;
+}
+
 static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   const auto& tensor = PyTensor_Unpack(self);
@@ -298,6 +302,10 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
     tensor_type =
         PyTensorType_FromDTypeAndDeviceType(tensor->dtype(), ASSERT(tensor->device())->enum_type());
     return PyUnicode_FromString(((PyTensorType*)tensor_type)->name);
+  }
+  if (PyTensorMetaClass_CheckExact(tensor_type)) {
+    Optional<std::string> device = "cpu";
+    return PyTensor_New(ASSERT_PTR(functional::To(tensor, device, DType::Float(), /*copy=*/false)));
   }
   if (PyUnicode_Check(tensor_type)) {
     tensor_type = PyTensorType_FromString(PyUnicode_AsUTF8(tensor_type));
