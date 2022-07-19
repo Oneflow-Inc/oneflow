@@ -397,7 +397,11 @@ add_docstr(
     """
     selu(x: Tensor) -> Tensor
 
-    Applies element-wise function :math:`\text{SELU}(x) = scale * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))`, with :math:`\alpha=1.6732632423543772848170429916717` and  :math:`scale=1.0507009873554804934193349852946`.
+    Applies element-wise function
+
+    .. math::
+
+        \text{SELU}(x) = scale * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))`, with :math:`\alpha=1.6732632423543772848170429916717` and  :math:`scale=1.0507009873554804934193349852946`.
 
     See :class:`~oneflow.nn.SELU` for more details.
 

@@ -48,12 +48,16 @@ namespace one {
 
 namespace {
 
+Maybe<Symbol<Device>> RawGetDefaultCpuDevice() { return Device::New("cpu", 0); }
+
+constexpr auto* GetDefaultCpuDevice = DECORATE(&RawGetDefaultCpuDevice, ThreadLocal);
+
 Maybe<Symbol<Device>> GetDefaultDevice(const TensorTuple& inputs, const OpExprInterpContext& ctx) {
   if (inputs.empty()) {
     if (ctx.device.has_value()) {
       return JUST(ctx.device);
     } else {
-      return Device::New("cpu", 0);
+      return GetDefaultCpuDevice();
     }
   }
   return JUST(inputs.at(0)->device());
@@ -69,14 +73,14 @@ Maybe<EagerLocalTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& te
 Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                            TensorTuple* outputs, const OpExprInterpContext& ctx) {
   OF_PROFILER_RANGE_GUARD("NaiveInterpret");
-  CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
+  CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());  // NOLINT
   Symbol<Device> default_device = JUST(GetDefaultDevice(inputs, ctx));
-  std::shared_ptr<const LocalTensorInferResult> result;
-  {
-    LocalTensorMetaInferArgs infer_args;
-    JUST(infer_args.Init(ctx.attrs, default_device, inputs));
-    result = JUST(user_op_expr.mut_local_tensor_infer_cache()->GetOrInfer(infer_args));
-  }
+  const std::shared_ptr<const LocalTensorInferResult> result =
+      JUST([&]() -> Maybe<const LocalTensorInferResult> {
+        LocalTensorMetaInferArgs infer_args;
+        JUST(infer_args.Init(ctx.attrs, default_device, inputs));
+        return JUST(user_op_expr.mut_local_tensor_infer_cache()->GetOrInfer(infer_args));
+      }());
 
   vm::EagerBlobObjectList input_eager_blob_objects(inputs.size());
   for (int i = 0; i < inputs.size(); i++) {
@@ -114,10 +118,12 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       const auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
       // output i is inplaced.
       // check TensorMeta of infer result and TensorMeta of output i.
-      CHECK_OR_RETURN(tensor_impl->tensor_meta()->shape() == output_tensor_metas.at(i)->shape());
-      CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype() == output_tensor_metas.at(i)->dtype());
+      CHECK_OR_RETURN(tensor_impl->tensor_meta()->shape()      // NOLINT
+                      == output_tensor_metas.at(i)->shape());  // NOLINT
+      CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype()      // NOLINT
+                      == output_tensor_metas.at(i)->dtype());  // NOLINT
       bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
-      CHECK_OR_RETURN(has_eager_blob_object);
+      CHECK_OR_RETURN(has_eager_blob_object);  // NOLINT
       output_eager_blob_objects.at(i) = JUST(outputs->at(i)->eager_blob_object());
       // TODO(zhaoluyang):(thread_local TensorMeta set stride then check)
       // CHECK_OR_RETURN(tensor_impl->tensor_meta()->stride() ==

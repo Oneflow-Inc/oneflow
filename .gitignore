@@ -2,6 +2,7 @@
 /build-*
 /docs/build/
 /docs/build-cn/
+/docs/source/generated
 /cmake-build-*
 /dist
 /third_party/

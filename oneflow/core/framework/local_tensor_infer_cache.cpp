@@ -28,13 +28,12 @@ namespace one {
 namespace {
 
 Maybe<void> CheckIsDeviceSupportedByOp(const Device& device, const std::string& op_type_name) {
-  if (IsCpuOnly(op_type_name)) { CHECK_EQ_OR_RETURN(device.type(), "cpu"); }
+  if (IsCpuOnly(op_type_name)) { CHECK_EQ_OR_RETURN(device.type(), "cpu"); }  // NOLINT
   return Maybe<void>::Ok();
 }
 
 Maybe<void> CheckInputDeviceIdentical(const LocalTensorMetaInferArgs& infer_args,
                                       Symbol<Device> default_device) {
-  if (infer_args.input_local_tensor_metas().empty()) { return Maybe<void>::Ok(); }
   for (int i = 0; i < infer_args.input_local_tensor_metas().size(); ++i) {
     CHECK_OR_RETURN(default_device
                     == JUST(VectorAt(infer_args.input_local_tensor_metas(), i))->device())
@@ -50,9 +49,9 @@ Maybe<void> CheckInputDeviceIdentical(const LocalTensorMetaInferArgs& infer_args
 
 class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStreamInferContext {
  public:
-  UserOpExprDeviceAndStreamInferContext(
-      const UserOpExpr* user_op_expr, const LocalTensorMetaInferArgs& infer_args,
-      small_vector<MutLocalTensorMeta, kOpArgsReservedSize>* output_tensor_metas)
+  UserOpExprDeviceAndStreamInferContext(const UserOpExpr* user_op_expr,
+                                        const LocalTensorMetaInferArgs& infer_args,
+                                        OpArgsVector<MutLocalTensorMeta>* output_tensor_metas)
       : user_op_expr_(user_op_expr),
         composed_attrs_(infer_args.attrs(), user_op_expr->base_attrs()),
         infer_args_(infer_args),
@@ -92,13 +91,13 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
   const UserOpExpr* user_op_expr_;
   const ComposedAttrMap composed_attrs_;
   const LocalTensorMetaInferArgs& infer_args_;
-  small_vector<MutLocalTensorMeta, kOpArgsReservedSize>* output_tensor_metas_;
+  OpArgsVector<MutLocalTensorMeta>* output_tensor_metas_;
 };
 
-Maybe<Symbol<Stream>> InferDeviceAndStream(
-    const UserOpExpr& user_op_expr, const Symbol<Device>& default_device,
-    const LocalTensorMetaInferArgs& infer_args,
-    small_vector<MutLocalTensorMeta, kOpArgsReservedSize>* output_tensor_metas) {
+Maybe<Symbol<Stream>> InferDeviceAndStream(const UserOpExpr& user_op_expr,
+                                           const Symbol<Device>& default_device,
+                                           const LocalTensorMetaInferArgs& infer_args,
+                                           OpArgsVector<MutLocalTensorMeta>* output_tensor_metas) {
   Symbol<Stream> stream;
   if (!user_op_expr.has_device_and_stream_infer_fn()) {
     stream = JUST(GetDefaultStreamByDevice(default_device));
@@ -124,9 +123,9 @@ Maybe<Symbol<Stream>> InferDeviceAndStream(
 size_t LocalTensorMetaInferArgs::hash_value() const {
   size_t hash_value = std::hash<AttrMap>()(attrs_);
   HashCombine(&hash_value, std::hash<Symbol<Device>>()(default_device_));
-  const auto& tensor_meta_hash_functor = std::hash<LocalTensorMeta>();
+  const auto& tensor_meta_hash_functor = std::hash<Symbol<LocalTensorMeta>>();
   for (const auto& tensor_meta : input_local_tensor_metas_) {
-    HashCombine(&hash_value, tensor_meta_hash_functor(*tensor_meta));
+    HashCombine(&hash_value, tensor_meta_hash_functor(tensor_meta));
   }
   return hash_value;
 }
@@ -160,8 +159,7 @@ Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTupl
 
   auto result = std::make_unique<LocalTensorInferResult>(user_op_expr.output_size());
 
-  small_vector<MutLocalTensorMeta, kOpArgsReservedSize> output_mut_metas(
-      user_op_expr.output_size());
+  OpArgsVector<MutLocalTensorMeta> output_mut_metas(user_op_expr.output_size());
   // Infer devices
   Symbol<Stream> stream =
       JUST(InferDeviceAndStream(user_op_expr, default_device, infer_args, &output_mut_metas));
@@ -196,7 +194,7 @@ Maybe<const LocalTensorInferResult> LocalTensorInferCache::GetOrInfer(
     auto iter = cache_.find(infer_args);
     if (iter == cache_.end()) {
       const auto& user_op_expr = user_op_expr_.lock();
-      CHECK_OR_RETURN(static_cast<bool>(user_op_expr));
+      CHECK_OR_RETURN(static_cast<bool>(user_op_expr));  // NOLINT
       const auto& output_tensor_metas = JUST(Infer(*user_op_expr, infer_args));
       iter = cache_.emplace(infer_args, output_tensor_metas).first;
     }
