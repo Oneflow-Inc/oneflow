@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 
 namespace oneflow {
@@ -166,6 +167,186 @@ class LeakyReluGradGrad : public OpExprGradFunction<LeakyReluGradGradCaptureStat
   AttrMap base_attrs_;
 };
 REGISTER_OP_EXPR_GRAD_FUNCTION("leaky_relu_grad", LeakyReluGradGrad);
+
+struct ConvDataGradGradCaptureState : public AutoGradCaptureState {
+  bool w_requires_grad = false;
+  bool grad_requires_grad = false;
+
+  size_t w_index;
+  size_t grad_index;
+  // size_t x_like_index;
+
+  std::string data_format;
+  std::vector<int32_t> padding_before;
+  std::vector<int32_t> kernel_size;
+  std::vector<int32_t> strides;
+  std::vector<int32_t> dilation_rate;
+  int32_t groups;
+};
+
+class ConvDataGradGrad : public OpExprGradFunction<ConvDataGradGradCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override;
+  Maybe<void> Capture(ConvDataGradGradCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override;
+  Maybe<void> Apply(const ConvDataGradGradCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override;
+
+ private:
+  AttrMap base_attrs_;
+};
+
+Maybe<void> ConvDataGradGrad::Init(const OpExpr& op) {
+  const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
+  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ConvDataGradGrad::Capture(ConvDataGradGradCaptureState* ctx, const TensorTuple& inputs,
+                                      const TensorTuple& outputs, const AttrMap& attrs) const {
+  // input: dy, w, x_like, [add to output]
+  // output: dx
+  CHECK_EQ_OR_RETURN(inputs.size(), 3);
+  CHECK_EQ_OR_RETURN(outputs.size(), 1);
+
+  ctx->w_requires_grad = inputs.at(1)->requires_grad();
+  ctx->grad_requires_grad = inputs.at(0)->requires_grad();
+
+  if (!(ctx->w_requires_grad || ctx->grad_requires_grad)) { return Maybe<void>::Ok(); }
+
+  // if (ctx->w_requires_grad) {
+  //   ctx->weight_index = ctx->SaveTensorForBackward(inputs.at(1));  // weight
+  // }
+
+  ctx->w_index = ctx->SaveTensorForBackward(inputs.at(1));     // input
+  ctx->grad_index = ctx->SaveTensorForBackward(inputs.at(0));  // input grad
+  // ctx->x_like_index = ctx->SaveTensorForBackward(inputs.at(2));  // x_like
+
+  ComposedAttrMap composed_attrs(attrs, base_attrs_);
+  ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
+  ctx->padding_before = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding_before"));
+  ctx->kernel_size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("kernel_size"));
+  ctx->strides = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("strides"));
+  ctx->dilation_rate = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dilation_rate"));
+  ctx->groups = JUST(composed_attrs.GetAttr<int32_t>("groups"));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ConvDataGradGrad::Apply(const ConvDataGradGradCaptureState* ctx,
+                                    const TensorTuple& out_grads, TensorTuple* in_grads) const {
+  in_grads->resize(2);
+  size_t num_spatial_dims = ctx->kernel_size.size();
+
+  // w_grad_grad = out_grads_x * grad
+  if (ctx->w_requires_grad) {
+    const auto& grad = ctx->SavedTensors().at(ctx->grad_index);
+    in_grads->at(0) = JUST(functional::ConvFilterGrad(
+        grad, out_grads.at(0), num_spatial_dims, ctx->kernel_size, ctx->strides,
+        ctx->padding_before, ctx->dilation_rate, ctx->groups, ctx->data_format));
+  }
+
+  // // dgrad = w * out_grads_x
+  // if (ctx->grad_requires_grad) {
+  //   const auto& weight = ctx->SavedTensors().at(ctx->w_index);
+  //   const auto& grad = ctx->SavedTensors().at(ctx->grad_index);
+  //   in_grads->at(1) = JUST(functional::ConvDataGrad(
+  //       out_grads.at(0), weight, JUST(grad->detach()), num_spatial_dims, /*maybe
+  //       changed*/ctx->kernel_size, ctx->strides, /*maybe changed*/ctx->padding_before, /*maybe
+  //       changed*/ ctx->dilation_rate, ctx->groups, ctx->data_format));
+  // }
+
+  return Maybe<void>::Ok();
+}
+
+struct ConvFilterGradGradCaptureState : public AutoGradCaptureState {
+  bool x_requires_grad = false;
+  bool grad_requires_grad = false;
+
+  size_t x_index;
+  size_t grad_index;
+
+  std::string data_format;
+  std::vector<int32_t> padding_before;
+  std::vector<int32_t> kernel_size;
+  std::vector<int32_t> strides;
+  std::vector<int32_t> dilation_rate;
+  int32_t groups;
+};
+class ConvFilterGradGrad : public OpExprGradFunction<ConvFilterGradGradCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override;
+  Maybe<void> Capture(ConvFilterGradGradCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override;
+  Maybe<void> Apply(const ConvFilterGradGradCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override;
+
+ private:
+  AttrMap base_attrs_;
+};
+
+Maybe<void> ConvFilterGradGrad::Init(const OpExpr& op) {
+  const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
+  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ConvFilterGradGrad::Capture(ConvFilterGradGradCaptureState* ctx,
+                                        const TensorTuple& inputs, const TensorTuple& outputs,
+                                        const AttrMap& attrs) const {
+  // input: dy, x
+  // output: dw
+  CHECK_EQ_OR_RETURN(inputs.size(), 2);
+  CHECK_EQ_OR_RETURN(outputs.size(), 1);
+
+  ctx->x_requires_grad = inputs.at(1)->requires_grad();
+  ctx->grad_requires_grad = inputs.at(0)->requires_grad();
+
+  if (!(ctx->x_requires_grad || ctx->grad_requires_grad)) { return Maybe<void>::Ok(); }
+
+  ctx->x_index = ctx->SaveTensorForBackward(inputs.at(1));     // input
+  ctx->grad_index = ctx->SaveTensorForBackward(inputs.at(0));  // input grad
+
+  ComposedAttrMap composed_attrs(attrs, base_attrs_);
+  ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
+  ctx->padding_before = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding_before"));
+  ctx->kernel_size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("kernel_size"));
+  ctx->strides = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("strides"));
+  ctx->dilation_rate = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dilation_rate"));
+  ctx->groups = JUST(composed_attrs.GetAttr<int32_t>("groups"));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ConvFilterGradGrad::Apply(const ConvFilterGradGradCaptureState* ctx,
+                                      const TensorTuple& out_grads, TensorTuple* in_grads) const {
+  in_grads->resize(2);
+  size_t num_spatial_dims = ctx->kernel_size.size();
+
+  // x_grad_grad = grad * out_grads_w
+  if (ctx->x_requires_grad) {
+    const auto& grad = ctx->SavedTensors().at(ctx->grad_index);
+    const auto& input = ctx->SavedTensors().at(ctx->x_index);
+    in_grads->at(0) = JUST(functional::ConvDataGrad(
+        grad, out_grads.at(0), /**/ JUST(input->detach()), num_spatial_dims, ctx->kernel_size,
+        ctx->strides, ctx->padding_before, ctx->dilation_rate, ctx->groups, ctx->data_format));
+  }
+
+  // // dgrad = out_grads_w * x
+  // if (ctx->grad_requires_grad) {
+  //   const auto& input = ctx->SavedTensors().at(ctx->x_index);
+  //   in_grads->at(1) = JUST(functional::ConvFilterGrad(
+  //       out_grads.at(0), input, num_spatial_dims, /*maybe changed*/ctx->kernel_size,
+  //       ctx->strides,
+  //       /*maybe changed*/ ctx->padding_before, /*maybe changed*/ ctx->dilation_rate, ctx->groups,
+  //       ctx->data_format));
+  // }
+
+  return Maybe<void>::Ok();
+}
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("conv_data_grad", ConvDataGradGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("conv_filter_grad", ConvFilterGradGrad);
 
 }  // namespace one
 }  // namespace oneflow
