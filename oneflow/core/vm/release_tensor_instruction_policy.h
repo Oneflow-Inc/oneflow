@@ -36,17 +36,17 @@ namespace vm {
 
 class EagerBlobObject;
 
-class FastReleaseTensorInstructionPolicy final : public InstructionPolicy {
+class ReleaseTensorInstructionPolicy : public InstructionPolicy {
  public:
-  FastReleaseTensorInstructionPolicy(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-                                     const Optional<vm::Stream*>& stream)
+  ReleaseTensorInstructionPolicy(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+                                 const Optional<vm::Stream*>& stream)
       : eager_blob_object_(eager_blob_object), output_dependences_() {
     output_dependences_.push_back(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
     if (stream.has_value()) {
       stream_sequential_dependence_ = CHECK_JUST(stream)->schedule_local_dep_object().get();
     }
   }
-  ~FastReleaseTensorInstructionPolicy() override = default;
+  ~ReleaseTensorInstructionPolicy() override = default;
 
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object() const {
     return eager_blob_object_;
@@ -71,7 +71,7 @@ class FastReleaseTensorInstructionPolicy final : public InstructionPolicy {
   void Release(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) const {
     CHECK_JUST(eager_blob_object->DeallocateBlobDataPtr());
   }
-  Dependence* stream_sequential_dependence_;
+  Dependence* stream_sequential_dependence_{};
 
  private:
   void InitInstructionStatus(Instruction* instruction) override {
@@ -81,54 +81,38 @@ class FastReleaseTensorInstructionPolicy final : public InstructionPolicy {
     auto* data_ptr = status_buffer->mut_buffer();
     EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_ep_event(nullptr);
   }
+  std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
+  DependenceVector output_dependences_;
+};
 
+class FastReleaseTensorInstructionPolicy final : public ReleaseTensorInstructionPolicy {
+ public:
+  using ReleaseTensorInstructionPolicy::ReleaseTensorInstructionPolicy;
+
+ protected:
+  void Release(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) const {
+    CHECK_JUST(eager_blob_object->DeallocateBlobDataPtr());
+  }
+  Dependence* stream_sequential_dependence_;
+
+ private:
   std::string DebugName(const vm::Instruction& instruction) const override {
     return "FastReleaseTensor";
   }
 
   Maybe<void> Prepare(vm::Instruction* instruction) override {
-    DataType data_type = eager_blob_object_->data_type();
+    DataType data_type = eager_blob_object()->data_type();
     CHECK_OR_RETURN(IsPODDataType(data_type));
-    Release(eager_blob_object_);
+    Release(eager_blob_object());
     return Maybe<void>::Ok();
   }
 
   void Compute(vm::Instruction* instruction) override {}
-
-  std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
-  DependenceVector output_dependences_;
 };
 
-class SlowReleaseTensorInstructionPolicy final : public InstructionPolicy {
+class SlowReleaseTensorInstructionPolicy final : public ReleaseTensorInstructionPolicy {
  public:
-  SlowReleaseTensorInstructionPolicy(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-                                     const Optional<vm::Stream*>& stream)
-      : eager_blob_object_(eager_blob_object), output_dependences_() {
-    output_dependences_.push_back(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
-    if (stream.has_value()) {
-      stream_sequential_dependence_ = CHECK_JUST(stream)->schedule_local_dep_object().get();
-    }
-  }
-  ~SlowReleaseTensorInstructionPolicy() override = default;
-
-  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object() const {
-    return eager_blob_object_;
-  }
-
-  const DependenceVector& input_dependences() const override {
-    static thread_local DependenceVector empty{};
-    return empty;
-  }
-
-  const DependenceVector& output_dependences() const override { return output_dependences_; }
-
-  Dependence* stream_sequential_dependence() const override {
-    return stream_sequential_dependence_;
-  }
-
-  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
-    DoEach(eager_blob_object_.get());
-  }
+  using ReleaseTensorInstructionPolicy::ReleaseTensorInstructionPolicy;
 
  protected:
   void Release(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) const {
@@ -137,14 +121,6 @@ class SlowReleaseTensorInstructionPolicy final : public InstructionPolicy {
   Dependence* stream_sequential_dependence_;
 
  private:
-  void InitInstructionStatus(Instruction* instruction) override {
-    auto* status_buffer = instruction->mut_status_buffer();
-    auto* stream = instruction->mut_stream();
-    instruction->stream_policy().InitInstructionStatus(*stream, status_buffer);
-    auto* data_ptr = status_buffer->mut_buffer();
-    EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_ep_event(nullptr);
-  }
-
   std::string DebugName(const vm::Instruction& instruction) const override {
     return "SlowReleaseTensor";
   }
@@ -156,9 +132,6 @@ class SlowReleaseTensorInstructionPolicy final : public InstructionPolicy {
     CHECK(!IsPODDataType(data_type));
     Release(eager_blob_object());
   }
-
-  std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
-  DependenceVector output_dependences_;
 };
 
 struct IsFastReleaseInstructionPolicy : public StreamRoleVisitor<IsFastReleaseInstructionPolicy> {
