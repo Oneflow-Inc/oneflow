@@ -20,6 +20,7 @@ limitations under the License.
 #include <memory>
 #include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/common/throw.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/eager/local_dep_object.h"
@@ -122,63 +123,65 @@ class SlowReleaseTensorInstructionPolicy final : public ReleaseTensorInstruction
   }
 };
 
-struct MakeReleaseTensorInstructionPolicy : public StreamRoleVisitor<MakeReleaseInstructionPolicy> {
-  static Maybe<vm::InstructionPolicy*> VisitCompute(
+struct MakeReleaseTensorInstructionPolicy
+    : public StreamRoleVisitor<MakeReleaseTensorInstructionPolicy> {
+  static std::unique_ptr<vm::InstructionPolicy> VisitCompute(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     return Make(data_type, eager_blob_object, stream);
   }
-  static Maybe<vm::InstructionPolicy*> VisitHost2Device(
+  static std::unique_ptr<vm::InstructionPolicy> VisitHost2Device(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     return Make(data_type, eager_blob_object, stream);
   }
-  static Maybe<vm::InstructionPolicy*> VisitDevice2Host(
+  static std::unique_ptr<vm::InstructionPolicy> VisitDevice2Host(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     return Make(data_type, eager_blob_object, stream);
   }
-  static Maybe<vm::InstructionPolicy*> VisitSyncedLaunchedCommNet(
+  static std::unique_ptr<vm::InstructionPolicy> VisitSyncedLaunchedCommNet(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     return Make(data_type, eager_blob_object, stream);
   }
-  static Maybe<vm::InstructionPolicy*> VisitAsyncedLaunchedCommNet(
+  static std::unique_ptr<vm::InstructionPolicy> VisitAsyncedLaunchedCommNet(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     return Make(data_type, eager_blob_object, stream);
   }
-  static Maybe<vm::InstructionPolicy*> VisitBarrier(
+  static std::unique_ptr<vm::InstructionPolicy> VisitBarrier(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    UNIMPLEMENTED_THEN_RETURN();
+    UNIMPLEMENTED();
+    // UNIMPLEMENTED_THEN_RETURN();
   }
-  static Maybe<vm::InstructionPolicy*> VisitCriticalSection(
+  static std::unique_ptr<vm::InstructionPolicy> VisitCriticalSection(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    UNIMPLEMENTED_THEN_RETURN();
+    UNIMPLEMENTED();
+    // UNIMPLEMENTED_THEN_RETURN();
   }
-  static Maybe<vm::InstructionPolicy*> VisitLazyJobLauncher(
+  static std::unique_ptr<vm::InstructionPolicy> VisitLazyJobLauncher(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    UNIMPLEMENTED_THEN_RETURN();
+    UNIMPLEMENTED();
+    // UNIMPLEMENTED_THEN_RETURN();
   }
-  static Maybe<vm::InstructionPolicy*> VisitPinnedCompute(
+  static std::unique_ptr<vm::InstructionPolicy> VisitPinnedCompute(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     return VisitCompute(data_type, eager_blob_object, stream);
   }
 
  private:
-  static Maybe<vm::InstructionPolicy*> Make(
+  static std::unique_ptr<vm::InstructionPolicy> Make(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     if (IsPODDataType(data_type)) {
-      return std::make_unique<vm::FastReleaseTensorInstructionPolicy>(eager_blob_object, stream)
-          .get();
+      return std::make_unique<vm::FastReleaseTensorInstructionPolicy>(eager_blob_object, stream);
     } else {
-      return std::make_unique<vm::SlowReleaseTensorInstructionPolicy>(eager_blob_object, stream)
-          .get();
+      return std::make_unique<vm::SlowReleaseTensorInstructionPolicy>(eager_blob_object, stream);
     }
   }
 };
