@@ -99,7 +99,7 @@ class SbpEdge final {
   // Get the minimum element in Cost
   double GetMinCost();
   // Get the maximum element in Cost
-  double GetMaxCost();
+  double GetMaxCost() const;
 
   // Detect and spread overlaps for this edge and start_node_ if it is a proxy of lbi.
   void DetectSpreadOverlap(double overlap_ratio);
@@ -115,9 +115,9 @@ class SbpEdge final {
   // find the cut ratio
   // (#c>cut_cost in Cost)/(#c in Cost)
   // But we would lift the cut ratio to 1 to filter out some improper couples
-  double FindCutRatio(int32_t threshold);
+  double FindCutRatio(int32_t threshold) const;
   // Get the cut ratio
-  double GetCutRatio();
+  double GetCutRatio() const;
 
  private:
   friend class SbpNode<SbpSignature>;
@@ -355,7 +355,7 @@ double SbpEdge<SbpSignature>::GetMinCost() {
 
 // Get the maximum element in Cost
 template<class SbpSignature>
-double SbpEdge<SbpSignature>::GetMaxCost() {
+double SbpEdge<SbpSignature>::GetMaxCost() const {
   // used the stored value if pre-computed.
   // if (max_cost >= 0) return max_cost;
   // Check the size of Cost
@@ -461,7 +461,7 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
 
 // Set the cut ratio
 template<class SbpSignature>
-double SbpEdge<SbpSignature>::GetCutRatio() {
+double SbpEdge<SbpSignature>::GetCutRatio() const {
   int32_t num = 0;
   for (int32_t i = 0; i < cost_.size(); i++) {
     for (int32_t j = 0; j < cost_[i].size(); j++) {
@@ -474,7 +474,7 @@ double SbpEdge<SbpSignature>::GetCutRatio() {
 // find the cut ratio
 // (#c>cut_cost in Cost)/(#c in Cost)
 template<class SbpSignature>
-double SbpEdge<SbpSignature>::FindCutRatio(int32_t threshold) {
+double SbpEdge<SbpSignature>::FindCutRatio(int32_t threshold) const {
   double cut_ratio = GetCutRatio();
   // lift the cut ratio to 1 to filter out some improper couples to avoid unlimited merging
   double n = cost_.size();
