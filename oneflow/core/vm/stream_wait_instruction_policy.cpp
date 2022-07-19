@@ -33,7 +33,7 @@ StreamWaitInstructionPolicy::StreamWaitInstructionPolicy(
       input_dependences_(),
       output_dependences_(),
       from_vm_stream_(from_vm_stream) {
-  for (const auto& dep : dependences) { output_dependences_.push_back(dep.get()); }
+  for (const auto& dep : dependences_) { output_dependences_.push_back(dep.get()); }
 }
 
 bool StreamWaitInstructionPolicy::Prescheduleable(const Stream* src, const Stream* dst) const {
