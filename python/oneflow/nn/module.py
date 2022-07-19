@@ -640,6 +640,40 @@ class Module(object):
                         p.grad.requires_grad_(False)
                     p.grad.zero_()
 
+    def _register_state_dict_hook(self, hook):
+        r"""These hooks will be called with arguments: `self`, `state_dict`,
+        `prefix`, `local_metadata`, after the `state_dict` of `self` is set.
+        Note that only parameters and buffers of `self` or its children are
+        guaranteed to exist in `state_dict`. The hooks may modify `state_dict`
+        inplace or return a new one.
+        """
+        # handle = hooks.RemovableHandle(self._state_dict_hooks)
+        # self._state_dict_hooks[handle.id] = hook
+        # return handle
+        pass
+
+    def _register_load_state_dict_pre_hook(self, hook, with_module=False):
+        r"""These hooks will be called with arguments: `state_dict`, `prefix`,
+        `local_metadata`, `strict`, `missing_keys`, `unexpected_keys`,
+        `error_msgs`, before loading `state_dict` into `self`. These arguments
+        are exactly the same as those of `_load_from_state_dict`.
+
+        If ``with_module`` is ``True``, then the first argument to the hook is
+        an instance of the module.
+
+        Arguments:
+            hook (Callable): Callable hook that will be invoked before
+                loading the state dict.
+            with_module (bool, optional): Whether or not to pass the module
+                instance to the hook as the first parameter.
+        """
+        # handle = hooks.RemovableHandle(self._load_state_dict_pre_hooks)
+        # if with_module:
+        #     hook = functools.partial(hook, self)
+        # self._load_state_dict_pre_hooks[handle.id] = hook
+        # return handle
+        pass
+
     def _save_to_state_dict(self, destination, prefix, keep_vars):
         for (name, param) in self._parameters.items():
             if param is not None:
