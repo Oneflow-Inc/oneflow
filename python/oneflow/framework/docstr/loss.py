@@ -123,3 +123,15 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow._C.smooth_l1_loss,
+    """
+    smooth_l1_loss(input, target, size_average=None, reduce=None, reduction='mean', beta=1.0) -> Tensor
+
+    Function that uses a squared term if the absolute
+    element-wise error falls below beta and an L1 term otherwise.
+
+    See :class:`~oneflow.nn.SmoothL1Loss` for details.
+    """,
+)
