@@ -47,6 +47,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/api/common/ofblob.h"
 #include "oneflow/core/framework/tensor_util.h"
+#include "oneflow/core/vm/virtual_machine.h"
 
 namespace oneflow {
 namespace one {
@@ -414,6 +415,53 @@ class ArgWhereFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class NonZeroFunctor {
+ public:
+  NonZeroFunctor() {}
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, bool as_tuple) const {
+    std::shared_ptr<one::Tensor> input = JUST(x->AsLocalTensor());
+    if (as_tuple && input->ndim() == 0) { input = JUST(functional::Unsqueeze(input, 0)); }
+    const auto& output_tuple =
+        JUST(functional::ArgWhere(input, JUST(DType::Get(DataType::kInt64))));
+    const std::shared_ptr<one::Tensor>& size = output_tuple->at(1);
+    CHECK_OR_RETURN(size->shape()->elem_cnt() == 1);
+    CHECK_OR_RETURN(size->dtype() == JUST(DType::Get(DataType::kInt64)));
+    Optional<Symbol<Device>> cpu_device = JUST(Device::New("cpu"));
+    const auto& cpu_size = JUST(functional::To(size, cpu_device, NullOpt, false));
+    const int64_t* size_ptr = nullptr;
+    const auto& Callback = [&](uint64_t ofblob_ptr) {
+      size_ptr = reinterpret_cast<const OfBlob*>(ofblob_ptr)->blob().dptr<int64_t>();
+    };
+    auto btb = std::make_shared<BlockingThenBusy>(1);
+    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(JUST(cpu_size->AsLocalTensor()), btb, Callback,
+                                               "const");
+    }));
+    JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+    std::vector<int64_t> start(2, 0);
+    std::vector<int64_t> stop(2, 0);
+    std::vector<int64_t> step(2, 1);
+    stop[0] = *size_ptr;
+    stop[1] = input->shape()->NumAxes();
+    const auto& output = JUST(
+        functional::Slice(output_tuple->at(0), start, stop, step, /*enable_view_slice=*/false));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>();
+    if (as_tuple) {
+      stop[1] = *size_ptr;
+      const auto& transposed_output = JUST(functional::Transpose2dim(output, 1, 0));
+      for (int64_t i = 0; i < input->shape()->NumAxes(); ++i) {
+        start[0] = i;
+        stop[0] = i + 1;
+        outputs->emplace_back(JUST(
+            functional::Slice(transposed_output, start, stop, step, /*enable_view_slice=*/false)));
+      }
+    } else {
+      outputs->emplace_back(output);
+    }
+    return outputs;
+  }
 };
 
 class BroadcastLikeFunctor {
@@ -3126,6 +3174,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::WhereScalarYFunctor>("WhereScalarY");
   m.add_functor<impl::WhereScalarXYFunctor>("WhereScalarXY");
   m.add_functor<impl::ArgWhereFunctor>("ArgWhere");
+  m.add_functor<impl::NonZeroFunctor>("NonZero");
   m.add_functor<impl::BroadcastLikeFunctor>("BroadcastLike");
   m.add_functor<impl::ConcatFunctor>("Concat");
   m.add_functor<impl::StackFunctor>("Stack");

@@ -23,15 +23,10 @@ from oneflow.nn.module import Module
 
 
 def nonzero_op(input, as_tuple=False):
-    if as_tuple and not input.ndim:
-        input = input.unsqueeze(0)
-    (res, size) = flow._C.argwhere(input, dtype=flow.int64)
-    slice_tup_list = [[0, int(size.numpy()), 1]]
-    res = flow.slice(res, slice_tup_list=slice_tup_list)
     if as_tuple:
-        return tuple([flow._C.transpose(res, [1, 0])[x] for x in range(res.shape[1])])
+        return flow._C.nonzero(input, as_tuple)
     else:
-        return res
+        return flow._C.nonzero(input, as_tuple)[0]
 
 
 if __name__ == "__main__":
