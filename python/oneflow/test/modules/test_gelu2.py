@@ -19,6 +19,7 @@ from collections import OrderedDict
 
 import math
 import numpy as np
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -44,28 +45,35 @@ class NewGELUActivation(torch.nn.Module):
             )
         )
 
+def _test_gelu2(test_case, device):
+    torch_gelu = NewGELUActivation()
+    x = np.random.randn(2, 4, 3)
+    torch_x = torch.tensor(x, requires_grad=True, device=torch.device(device))
+    oneflow_x = flow.tensor(x, requires_grad=True, device=flow.device(device))
+    torch_y = torch_gelu(torch_x)
+    oneflow_y = flow._C.gelu2(oneflow_x)
+    test_case.assertTrue(
+        np.allclose(torch_y.detach().cpu().numpy(), oneflow_y.numpy())
+    )
+    torch_y_sum = torch_y.sum()
+    torch_y_sum.backward()
+    oneflow_y_sum = oneflow_y.sum()
+    oneflow_y_sum.backward()
+    test_case.assertTrue(
+        np.allclose(torch_x.grad.cpu().numpy(), oneflow_x.grad.numpy())
+    )
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
-    def test_gelu2_cuda(test_case):
-        torch_gelu = NewGELUActivation()
-        for _ in range(5):
-            x = np.random.randn(2, 4, 3)
-            torch_x = torch.tensor(x, requires_grad=True, device="cuda")
-            oneflow_x = flow.tensor(x, requires_grad=True, device="cuda")
-            torch_y = torch_gelu(torch_x)
-            oneflow_y = flow._C.gelu2(oneflow_x)
-            test_case.assertTrue(
-                np.allclose(torch_y.detach().cpu().numpy(), oneflow_y.numpy())
-            )
-            torch_y_sum = torch_y.sum()
-            torch_y_sum.backward()
-            oneflow_y_sum = oneflow_y.sum()
-            oneflow_y_sum.backward()
-            test_case.assertTrue(
-                np.allclose(torch_x.grad.cpu().numpy(), oneflow_x.grad.numpy())
-            )
-
+    def test_gelu2(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_gelu2
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 if __name__ == "__main__":
     unittest.main()
