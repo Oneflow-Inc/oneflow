@@ -14,10 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <atomic>
+#include <memory>
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/device/event_record.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
+#include "oneflow/core/intrusive/shared_ptr.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/id_util.h"
@@ -31,7 +33,7 @@ limitations under the License.
 #include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/consume_local_dep_object_phy_instr_operand.h"
-#include "oneflow/core/vm/release_tensor_instruction_type.h"
+#include "oneflow/core/vm/release_tensor_instruction_policy.h"
 #include "oneflow/core/vm/touch_tensors_instruction_type.h"
 #include "oneflow/core/eager/blob_instruction_type.h"
 #include "oneflow/core/eager/op_call_instruction_type.h"
@@ -422,15 +424,21 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   auto vm_stream = stream.map([](Symbol<Stream> stream) -> vm::Stream* {
     return CHECK_JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
   });
-  const auto& phy_instr_operand =
-      std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(eager_blob_object, vm_stream);
   StreamRole stream_role = producer_stream->stream_role();
   DataType data_type = eager_blob_object->data_type();
-  auto instruction = intrusive::make_shared<vm::Instruction>(
-      JUST(Singleton<VirtualMachine>::Get()->GetVmStream(producer_stream)),
-      std::make_unique<vm::NaiveInstructionPolicy>(
-          JUST(GetReleaseInstructionType::Visit(stream_role, data_type)), phy_instr_operand));
+  intrusive::shared_ptr<vm::Instruction> instruction = nullptr;
+  if (JUST(vm::IsFastReleaseInstructionPolicy::Visit(stream_role, data_type, eager_blob_object,
+                                                     vm_stream))) {
+    instruction = intrusive::make_shared<vm::Instruction>(
+        JUST(Singleton<VirtualMachine>::Get()->GetVmStream(producer_stream)),
+        std::make_unique<vm::FastReleaseTensorInstructionPolicy>(eager_blob_object, vm_stream));
+  } else {
+    instruction = intrusive::make_shared<vm::Instruction>(
+        JUST(Singleton<VirtualMachine>::Get()->GetVmStream(producer_stream)),
+        std::make_unique<vm::SlowReleaseTensorInstructionPolicy>(eager_blob_object, vm_stream));
+  }
   instruction_list_->EmplaceBack(std::move(instruction));
+
   return Maybe<void>::Ok();
 }
 

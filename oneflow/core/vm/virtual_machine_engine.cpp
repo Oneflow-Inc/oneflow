@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/naive_instruction_policy.h"
 #include "oneflow/core/vm/fuse_instruction_type.h"
-#include "oneflow/core/vm/release_tensor_instruction_type.h"
+#include "oneflow/core/vm/release_tensor_instruction_policy.h"
 #include "oneflow/core/vm/fuse_phy_instr_operand.h"
 #include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/allocator.h"
@@ -309,8 +309,9 @@ void CollectReadyDownstreamReleaseTensors(Stream* stream,
       if (!edge->src_instruction().Done()) { return false; }
     }
     if (instruction->stream().device() != stream->device()) { return false; }
-    const auto* instruction_type = &instruction->instruction_type();
-    return dynamic_cast<const ReleaseTensorInstructionType*>(instruction_type) != nullptr;
+    const auto* instruction_policy = &instruction->instruction_policy();
+    return dynamic_cast<const FastReleaseTensorInstructionPolicy*>(instruction_policy) != nullptr
+           || dynamic_cast<const SlowReleaseTensorInstructionPolicy*>(instruction_policy);
   };
   INTRUSIVE_FOR_EACH_PTR(instruction, stream->mut_running_instruction_list()) {
     while (!instruction->Done()) {}  // busy wait done.
