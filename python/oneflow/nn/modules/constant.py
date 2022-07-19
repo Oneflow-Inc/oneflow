@@ -301,13 +301,13 @@ def full_like_op(
 ):
     """
     full_like(input, fill_value, \*, dtype=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
-
-    The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.full_like.html.
-
+    
     Returns a tensor with the same size as :attr:`input` filled with :attr:`fill_value`.
     ``oneflow.full_like(input, fill_value)`` is equivalent to
     ``oneflow.full(input.size(), fill_value, dtype=input.dtype, device=input.device)``.
+
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.full_like.html.
 
     Args:
         input(oneflow.Tensor)

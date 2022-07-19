@@ -83,11 +83,11 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.device,
-    r"""
+    r"""    
+    Is the :class:`oneflow.device` where this Tensor is, which is invalid for global tensor.
+
     The documentation is referenced from:
     https://pytorch.org/docs/1.10/generated/torch.Tensor.device.html.
-    
-    Is the :class:`oneflow.device` where this Tensor is, which is invalid for global tensor.
     """,
 )
 
@@ -554,9 +554,6 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.unfold,
     """
-    The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.Tensor.unfold.html.
-
     Returns a view of the original tensor which contains all slices of `size` size from `self`
     tensor in the dimension `dimension`.
 
@@ -566,6 +563,9 @@ add_docstr(
     returned tensor will be (sizedim - size) / step + 1.
 
     An additional dimension of size `size` is appended in the returned tensor.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.Tensor.unfold.html.
 
     Args:
         dimension (int): dimension in which unfolding happens
@@ -718,10 +718,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.backward,
     """
-    The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.Tensor.backward.html.
-
-    Computes the gradient of current tensor w.r.t. graph leaves.
+    Computes the gradient of current tensor `w.r.t.` graph leaves.
 
     The graph is differentiated using the chain rule. If the tensor is non-scalar (i.e. its data has more than one element) and requires gradient, the function additionally requires specifying gradient. It should be a tensor of matching type and location, that contains the gradient of the differentiated function w.r.t. self.
 
@@ -731,6 +728,9 @@ add_docstr(
         If you run any forward ops, create gradient, and/or call backward in a user-specified CUDA stream context, see Stream semantics of backward passes.
     Note:
         When inputs are provided and a given input is not a leaf, the current implementation will call its grad_fn (though it is not strictly needed to get this gradients). It is an implementation detail on which the user should not rely. See https://github.com/pytorch/pytorch/pull/60521#issuecomment-867061780 for more details.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.Tensor.backward.html.
 
     Args:
         gradient (Tensor or None): Gradient w.r.t. the tensor. If it is a tensor, it will be automatically converted to a Tensor that does not require grad unless create_graph is True. None values can be specified for scalar Tensors or ones that don’t require grad. If a None value would be acceptable then this argument is optional.
@@ -758,8 +758,6 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.is_leaf,
     r"""
-    Compatible with PyTorch.
-
     All Tensors that have ``requires_grad`` which is ``False`` will be leaf Tensors by convention.
 
     For Tensor that have ``requires_grad`` which is ``True``, they will be leaf Tensors if they
@@ -767,6 +765,8 @@ add_docstr(
 
     Only leaf Tensors will have their ``grad`` populated during a call to ``backward()``. To get
     ``grad`` populated for non-leaf Tensors, you can use ``retain_grad()``.
+
+    Compatible with PyTorch.
 
     For example:
 
@@ -791,15 +791,17 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.requires_grad,
     r"""
-    Compatible with PyTorch.
-
     Is ``True`` if gradient need to be computed for this Tensor, ``False`` otherwise.
+
+    Compatible with PyTorch.
     """,
 )
 
 add_docstr(
     oneflow.Tensor.requires_grad_,
     r"""oneflow.Tensor.requires_grad_(requires_grad=True) -> Tensor
+    Sets this tensor’s requires_grad attribute in-place. Returns this tensor.
+
     Compatible with PyTorch.
 
     Args:
@@ -855,10 +857,10 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.retain_grad,
     r"""
-    Compatible with PyTorch.
-
     Enables this Tensor to have their ``grad`` populated during ``backward()``. This is a no-op
     for leaf tensors.
+
+    Compatible with PyTorch.
     """,
 )
 
@@ -1012,6 +1014,20 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.neg,
+    """
+    See :func:`oneflow.neg`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.norm,
+    """
+    See :func:`oneflow.norm`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.fill_,
     """
     Tensor.fill_(value) → Tensor
@@ -1129,15 +1145,6 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.Tensor.norm,
-    """
-    norm(p="fro", dim=None, keepdim=False, dtype=None) -> Tensor
-
-    See :func:`oneflow.norm`.
-    """,
-)
-
-add_docstr(
     oneflow.Tensor.numpy,
     """
     Tensor.numpy() → numpy.ndarray
@@ -1225,6 +1232,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.asinh,
+    """
+    See :func:`oneflow.asinh`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.arcsin,
     """
     See :func:`oneflow.arcsin`
@@ -1248,6 +1262,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.sin_,
+    """
+    See :func:`oneflow.sin_`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.cos,
     """
     See :func:`oneflow.cos`
@@ -1265,6 +1286,13 @@ add_docstr(
     oneflow.Tensor.log,
     """
     See :func:`oneflow.log`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.log2,
+    """
+    See :func:`oneflow.log2`
     """,
 )
 
@@ -1348,9 +1376,9 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.size,
     """
-    The interface is consistent with PyTorch.
-
     Returns the size of the self tensor. If dim is not specified, the returned value is a oneflow.Size, a subclass of tuple. If dim is specified, returns an int holding the size of that dimension.
+
+    The interface is consistent with PyTorch.
 
     Args:
         idx (int, optional): The dimension for which to retrieve the size.
@@ -1424,13 +1452,11 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.copy_,
     """
-    The interface is consistent with PyTorch.
-
-    Tensor.copy_(src, non_blocking=False) → Tensor
-
     Copies the elements from src into self tensor and returns self.
 
     The src tensor must be broadcastable with the self tensor. It may be of a different data type or reside on a different device.
+
+    The interface is consistent with PyTorch.
 
     Args:
 
@@ -1563,6 +1589,19 @@ add_docstr(
     """,
 )
 
+add_docstr(
+    oneflow.Tensor.cumprod,
+    """
+    See :func:`oneflow.cumprod`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.cumsum,
+    """
+    See :func:`oneflow.cumsum`
+    """,
+)
 
 add_docstr(
     oneflow.Tensor.repeat,
@@ -1585,9 +1624,9 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.t,
     """
-    Tensor.t() → Tensor
-
     See :func:`oneflow.t`
+
+    Tensor.t() → Tensor
     """,
 )
 
@@ -1735,6 +1774,27 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.maximum,
+    """
+    See :func:`oneflow.maximum`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.median,
+    """
+    See :func:`oneflow.median`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.minimum,
+    """
+    See :func:`oneflow.minimum`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.sum,
     """
     input.sum(dim=None, keepdim=False) -> Tensor
@@ -1805,9 +1865,6 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.view,
     """
-    The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.Tensor.view.html.
-
     Returns a new tensor with the same data as the :attr:`self` tensor but of a
     different :attr:`shape`.
 
@@ -1827,6 +1884,9 @@ add_docstr(
     :meth:`view` can be performed, it is advisable to use :meth:`reshape`, which
     returns a view if the shapes are compatible, and copies (equivalent to calling
     :meth:`contiguous`) otherwise.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.Tensor.view.html.
 
     Args:
         input: A Tensor.
