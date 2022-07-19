@@ -35,23 +35,23 @@ class FusePhyInstrOperand : public PhyInstrOperand {
     auto* last_instruction = instruction_list_.Last();
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, &instruction_list_) {
       if (instruction == last_instruction) {
-        CHECK(instruction->instruction_type().fuse_type() == kEnableInstructionFuseAsTailOnly
-              || instruction->instruction_type().fuse_type()
+        CHECK(instruction->instruction_policy().fuse_type() == kEnableInstructionFuseAsTailOnly
+              || instruction->instruction_policy().fuse_type()
                      == kEnableInstructionFuseAtAnyPosition);
       } else {
-        CHECK(instruction->instruction_type().fuse_type() == kEnableInstructionFuseAtAnyPosition);
+        CHECK(instruction->instruction_policy().fuse_type() == kEnableInstructionFuseAtAnyPosition);
       }
       if (unlikely(stream_sequential_dependence_ == nullptr)) {
         stream_sequential_dependence_ =
-            instruction->phy_instr_operand()->stream_sequential_dependence();
+            instruction->instruction_policy().stream_sequential_dependence();
       } else {
         CHECK_EQ(stream_sequential_dependence_,
-                 instruction->phy_instr_operand()->stream_sequential_dependence());
+                 instruction->instruction_policy().stream_sequential_dependence());
       }
-      for (auto* dep : instruction->phy_instr_operand()->input_dependences()) {
+      for (auto* dep : instruction->instruction_policy().input_dependences()) {
         ReadOnlyDepsInserter(dep);
       }
-      for (auto* dep : instruction->phy_instr_operand()->output_dependences()) {
+      for (auto* dep : instruction->instruction_policy().output_dependences()) {
         WritableDepsInserter(dep);
       }
     }
