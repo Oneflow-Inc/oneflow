@@ -34,7 +34,6 @@ Maybe<void> CheckIsDeviceSupportedByOp(const Device& device, const std::string& 
 
 Maybe<void> CheckInputDeviceIdentical(const LocalTensorMetaInferArgs& infer_args,
                                       Symbol<Device> default_device) {
-  if (infer_args.input_local_tensor_metas().empty()) { return Maybe<void>::Ok(); }
   for (int i = 0; i < infer_args.input_local_tensor_metas().size(); ++i) {
     CHECK_OR_RETURN(default_device
                     == JUST(VectorAt(infer_args.input_local_tensor_metas(), i))->device())
@@ -50,9 +49,9 @@ Maybe<void> CheckInputDeviceIdentical(const LocalTensorMetaInferArgs& infer_args
 
 class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStreamInferContext {
  public:
-  UserOpExprDeviceAndStreamInferContext(
-      const UserOpExpr* user_op_expr, const LocalTensorMetaInferArgs& infer_args,
-      small_vector<LocalTensorMeta, kOpArgsReservedSize>* output_tensor_metas)
+  UserOpExprDeviceAndStreamInferContext(const UserOpExpr* user_op_expr,
+                                        const LocalTensorMetaInferArgs& infer_args,
+                                        OpArgsVector<LocalTensorMeta>* output_tensor_metas)
       : user_op_expr_(user_op_expr),
         composed_attrs_(infer_args.attrs(), user_op_expr->base_attrs()),
         infer_args_(infer_args),
@@ -92,13 +91,13 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
   const UserOpExpr* user_op_expr_;
   const ComposedAttrMap composed_attrs_;
   const LocalTensorMetaInferArgs& infer_args_;
-  small_vector<LocalTensorMeta, kOpArgsReservedSize>* output_tensor_metas_;
+  OpArgsVector<LocalTensorMeta>* output_tensor_metas_;
 };
 
-Maybe<Symbol<Stream>> InferDeviceAndStream(
-    const UserOpExpr& user_op_expr, const Symbol<Device>& default_device,
-    const LocalTensorMetaInferArgs& infer_args,
-    small_vector<LocalTensorMeta, kOpArgsReservedSize>* output_tensor_metas) {
+Maybe<Symbol<Stream>> InferDeviceAndStream(const UserOpExpr& user_op_expr,
+                                           const Symbol<Device>& default_device,
+                                           const LocalTensorMetaInferArgs& infer_args,
+                                           OpArgsVector<LocalTensorMeta>* output_tensor_metas) {
   Symbol<Stream> stream;
   if (!user_op_expr.has_device_and_stream_infer_fn()) {
     stream = JUST(GetDefaultStreamByDevice(default_device));
@@ -163,7 +162,7 @@ Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTupl
 
   auto result = std::make_unique<LocalTensorInferResult>(user_op_expr.output_size());
 
-  small_vector<LocalTensorMeta, kOpArgsReservedSize> output_mut_metas(user_op_expr.output_size());
+  OpArgsVector<LocalTensorMeta> output_mut_metas(user_op_expr.output_size());
   // Infer devices
   Symbol<Stream> stream =
       JUST(InferDeviceAndStream(user_op_expr, default_device, infer_args, &output_mut_metas));

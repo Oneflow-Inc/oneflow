@@ -31,6 +31,9 @@ class Device;
 
 namespace one {
 
+template<typename T>
+using OpArgsVector = small_vector<T, kOpArgsReservedSize>;
+
 class TensorTuple;
 class UserOpExpr;
 
@@ -41,8 +44,7 @@ class LocalTensorMetaInferArgs final {
   LocalTensorMetaInferArgs(LocalTensorMetaInferArgs&&) = default;
   ~LocalTensorMetaInferArgs() = default;
 
-  const small_vector<Symbol<LocalTensorMeta>, kOpArgsReservedSize>& input_local_tensor_metas()
-      const {
+  const OpArgsVector<Symbol<LocalTensorMeta>>& input_local_tensor_metas() const {
     return input_local_tensor_metas_;
   }
   const AttrMap& attrs() const { return attrs_; }
@@ -61,7 +63,7 @@ class LocalTensorMetaInferArgs final {
 
   AttrMap attrs_;
   Symbol<Device> default_device_;
-  small_vector<Symbol<LocalTensorMeta>, kOpArgsReservedSize> input_local_tensor_metas_;
+  OpArgsVector<Symbol<LocalTensorMeta>> input_local_tensor_metas_;
 };
 
 }  // namespace one
@@ -88,18 +90,16 @@ class LocalTensorInferResult final {
   LocalTensorInferResult(LocalTensorInferResult&&) = delete;
   ~LocalTensorInferResult() = default;
 
-  const small_vector<Symbol<LocalTensorMeta>, kOpArgsReservedSize>& output_tensor_metas() const {
+  const OpArgsVector<Symbol<LocalTensorMeta>>& output_tensor_metas() const {
     return output_tensor_metas_;
   }
-  small_vector<Symbol<LocalTensorMeta>, kOpArgsReservedSize>* mut_output_tensor_metas() {
-    return &output_tensor_metas_;
-  }
+  OpArgsVector<Symbol<LocalTensorMeta>>* mut_output_tensor_metas() { return &output_tensor_metas_; }
 
   const Symbol<Stream>& stream() const { return stream_; }
   void set_stream(const Symbol<Stream>& stream) { stream_ = stream; }
 
  private:
-  small_vector<Symbol<LocalTensorMeta>, kOpArgsReservedSize> output_tensor_metas_;
+  OpArgsVector<Symbol<LocalTensorMeta>> output_tensor_metas_;
   Symbol<Stream> stream_;
 };
 
