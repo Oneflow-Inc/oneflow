@@ -13,7 +13,33 @@ LogicalResult parseSBP(AsmParser& parser, FailureOr<ArrayAttr>& args) {
   if (failed(parser.parseLSquare())) { return failure(); }
   if (succeeded(parser.parseOptionalRSquare())) { return success(); }
   llvm::SmallVector<Attribute> res;
-  if (parser.parseCommaSeparatedList([&]() { return parser.parseAttribute(res.emplace_back()); })
+  llvm::SmallVector<Attribute> nd_list;
+
+  auto parserListElem = [&](llvm::SmallVector<Attribute>& list) {
+    if (failed(parser.parseAttribute(list.emplace_back()))) { return failure(); }
+    if (list.back().dyn_cast<sbp::SplitAttr>() || list.back().dyn_cast<sbp::BroadcastAttr>()
+        || list.back().dyn_cast<sbp::PartialSumAttr>()) {
+      return success();
+    }
+    return failure();
+  };
+
+  auto parserList = [&]() {
+    nd_list.clear();
+    if (parser.parseCommaSeparatedList([&]() { return parserListElem(nd_list); })
+        || parser.parseRSquare()) {
+      return failure();
+    }
+    res.emplace_back(parser.getBuilder().getArrayAttr(nd_list));
+    return success();
+  };
+
+  if (parser.parseCommaSeparatedList([&]() {
+        if (succeeded(parser.parseLSquare())) {
+          return parserList();
+        }
+        return parserListElem(res);
+      })
       || parser.parseRSquare()) {
     return failure();
   }
