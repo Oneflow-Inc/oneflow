@@ -52,7 +52,7 @@ def _test_gelu_approximate(test_case, device):
     torch_x = torch.tensor(x, requires_grad=True, device=torch.device(device))
     oneflow_x = flow.tensor(x, requires_grad=True, device=flow.device(device))
     torch_y = torch_gelu(torch_x)
-    oneflow_y = flow._C.gelu_with_approximate(oneflow_x, 'tanh')
+    oneflow_y = flow._C.gelu_with_approximate(oneflow_x, "tanh")
     test_case.assertTrue(np.allclose(torch_y.detach().cpu().numpy(), oneflow_y.numpy()))
     torch_y_sum = torch_y.sum()
     torch_y_sum.backward()
