@@ -51,41 +51,6 @@ def SBP_PartialSumAttr : SBP_Attr<"PartialSum", "p"> {
   }];
 }
 
-def AttrParamSBP : AttrParameter<"Attribute", "an attribute param sbp"> {
-  let parser = [{ [&]() -> FailureOr<Attribute> {
-    std::string sbp;
-    Attribute attr;
-    auto ctx = $_parser.getContext();
-    if ($_parser.parseOptionalString(&sbp)) return failure();
-    if (sbp.at(0) == 'S') {
-      auto start_pos = sbp.find('(');
-      auto end_pos = sbp.find(')');
-      if (start_pos == std::string::npos || end_pos == std::string::npos) {
-        return failure();
-      }
-      start_pos++;
-      auto sub_sbp = sbp.substr(start_pos, end_pos - start_pos);
-      auto axis = std::stoi(sub_sbp);
-      attr = sbp::SplitAttr::get(ctx, axis);
-    } else if (sbp.at(0) == 'B') {
-      attr = sbp::BroadcastAttr::get(ctx);
-    } else if (sbp.at(0) == 'P') {
-      attr = sbp::PartialSumAttr::get(ctx);
-    } else {
-      return failure();
-    }
-    return attr;
-    }() }];
-}
-
-def SBP_SBPAttr : SBP_Attr<"SBP", "sbp"> {
-  let summary = "sbp";
-  let description = [{
-  }];
-  let parameters = (ins AttrParamSBP:$sbp);
-  let assemblyFormat = "`<` $sbp `>`";
-}
-
 def SBP_ParallelSignatureAttr : SBP_Attr<"ParallelSignature", "parallel_signature"> {
   let summary = "Parallel signature of SBP Op, aka. SBP";
   let description = [{
@@ -98,8 +63,8 @@ def SBP_ParallelSignatureAttr : SBP_Attr<"ParallelSignature", "parallel_signatur
     #sbp.parallel_signature<[[#sbp.s<0>, #sbp.p]] -> [#sbp.s<0>]>
     ```
   }];
-  let parameters = (ins "::mlir::ArrayAttr":$inputs, "::mlir::ArrayAttr":$outputs);
-  let assemblyFormat = "`<` $inputs `->` $outputs `>`";
+  let parameters = (ins "ArrayAttr":$inputs, "ArrayAttr":$outputs);
+  let assemblyFormat = "`<` $inputs `->` custom<SBP>($outputs) `>`";
 }
 
 #endif // ONEFLOW_IR_INCLUDE_SBP_SBPBASE_H_
