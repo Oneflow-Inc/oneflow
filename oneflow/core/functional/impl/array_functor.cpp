@@ -695,7 +695,7 @@ class UnsqueezeMultipleFunctor {
       const auto& dims_to_unsqueeze = JUST(dim_list_to_bitset(unsqueeze_dims, n_dims));
 
       // Unsqueeze is called several times to extend the dimension when the View mechanism is
-      // enabled.Otherwise, calculate the target shape and call reshape.
+      // enabled. Otherwise, calculate the target shape and call reshape.
       if (view::IsViewApplicable(tensor)) {
         for (int32_t dim = 0; dim < n_dims; dim++) {
           if ((*dims_to_unsqueeze)[dim]) { tensor = JUST(view::Unsqueeze(tensor, dim)); }
