@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
+#include "oneflow/core/vm/naive_instruction_policy.h"
 #include "oneflow/core/vm/barrier_instruction_type.h"
 #include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -103,16 +104,18 @@ void MakeBarrierInstructions(vm::InstructionList* list,
     const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>([]() {});
     auto stream = CHECK_JUST(GetBarrierStream());
     auto instruction = intrusive::make_shared<vm::Instruction>(
-        CHECK_JUST(vm->GetVmStream(stream)), SingletonPtr<vm::GlobalSyncInstructionType>(),
-        phy_instr_operand);
+        CHECK_JUST(vm->GetVmStream(stream)),
+        std::make_unique<vm::NaiveInstructionPolicy>(SingletonPtr<vm::GlobalSyncInstructionType>(),
+                                                     phy_instr_operand));
     list->EmplaceBack(std::move(instruction));
   }
   {
     const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>(BarrierCallback);
     auto stream = CHECK_JUST(GetBarrierStream());
     auto instruction = intrusive::make_shared<vm::Instruction>(
-        CHECK_JUST(vm->GetVmStream(stream)), SingletonPtr<vm::BarrierInstructionType>(),
-        phy_instr_operand);
+        CHECK_JUST(vm->GetVmStream(stream)),
+        std::make_unique<vm::NaiveInstructionPolicy>(SingletonPtr<vm::BarrierInstructionType>(),
+                                                     phy_instr_operand));
     list->EmplaceBack(std::move(instruction));
   }
 }

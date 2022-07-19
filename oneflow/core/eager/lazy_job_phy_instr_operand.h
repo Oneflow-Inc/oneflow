@@ -34,7 +34,7 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
   ~LaunchLazyJobPhyInstrOperand() override = default;
 
   LaunchLazyJobPhyInstrOperand(const std::shared_ptr<NNGraphIf>& nn_graph,
-                               const one::EagerBlobObjectListPtr& param_blob_objects)
+                               const vm::EagerBlobObjectListPtr& param_blob_objects)
       : nn_graph_(nn_graph),
         param_blob_objects_(param_blob_objects),
         input_dependences_(),
@@ -62,7 +62,7 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
 
  private:
   std::shared_ptr<NNGraphIf> nn_graph_;
-  one::EagerBlobObjectListPtr param_blob_objects_;
+  vm::EagerBlobObjectListPtr param_blob_objects_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
 };

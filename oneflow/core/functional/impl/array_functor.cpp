@@ -2847,7 +2847,7 @@ class RepeatFunctor {
     std::shared_ptr<one::Tensor> reshaped_tensor = JUST(Reshape(input, input_reshape));
     std::shared_ptr<one::Tensor> expanded_tensor = JUST(Expand(reshaped_tensor, expand_shape));
     std::shared_ptr<one::Tensor> result = JUST(Reshape(expanded_tensor, output_reshape));
-    return result;
+    return result->contiguous();
   }
 };
 

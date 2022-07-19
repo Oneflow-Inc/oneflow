@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/stream_wait_instruction_type.h"
+#include "oneflow/core/vm/stream_wait_instruction_policy.h"
 #include "oneflow/core/vm/ep_event.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/stream.h"
@@ -26,38 +26,43 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-bool StreamWaitInstructionType::Prescheduleable(const Stream* src, const Stream* dst) const {
+StreamWaitInstructionPolicy::StreamWaitInstructionPolicy(
+    small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
+    vm::Stream* from_vm_stream)
+    : dependences_(std::move(dependences)),
+      input_dependences_(),
+      output_dependences_(),
+      from_vm_stream_(from_vm_stream) {
+  for (const auto& dep : dependences) { output_dependences_.push_back(dep.get()); }
+}
+
+bool StreamWaitInstructionPolicy::Prescheduleable(const Stream* src, const Stream* dst) const {
   return &src->thread_ctx() == &dst->thread_ctx();
 }
 
-void StreamWaitInstructionType::InitInstructionStatus(Instruction* instruction) const {
-  auto* phy_instr_operand = instruction->phy_instr_operand().get();
-  auto* operand = dynamic_cast<StreamWaitPhyInstrOperand*>(phy_instr_operand);
-  auto* stream = operand->mut_from_vm_stream();
+void StreamWaitInstructionPolicy::InitInstructionStatus(Instruction* instruction) {
+  auto* stream = mut_from_vm_stream();
   NaiveStreamPolicy* naive_stream_policy =
       CHECK_NOTNULL(dynamic_cast<NaiveStreamPolicy*>(instruction->mut_stream_policy()));
   naive_stream_policy->InitInstructionStatus(*stream, instruction->mut_status_buffer());
   auto* ep_device_ctx = dynamic_cast<EpDeviceCtx*>(naive_stream_policy->device_ctx().get());
   auto* ep_event_provider = ep_device_ctx->ep_event_provider();
   const auto& ep_event = CHECK_NOTNULL(ep_event_provider)->GetReusedEpEvent();
-  operand->mut_ep_event() = ep_event;
+  mut_ep_event() = ep_event;
 }
 
-void StreamWaitInstructionType::DeleteInstructionStatus(Instruction* instruction) const {
-  auto* phy_instr_operand = instruction->phy_instr_operand().get();
-  auto* operand = dynamic_cast<StreamWaitPhyInstrOperand*>(phy_instr_operand);
-  auto* stream = operand->mut_from_vm_stream();
+void StreamWaitInstructionPolicy::DeleteInstructionStatus(Instruction* instruction) {
+  auto* stream = mut_from_vm_stream();
   instruction->stream_policy().DeleteInstructionStatus(*stream, instruction->mut_status_buffer());
-  operand->mut_ep_event().reset();
+  mut_ep_event().reset();
 }
 
-void StreamWaitInstructionType::Compute(vm::Instruction* instruction) const {
-  auto* operand = dynamic_cast<StreamWaitPhyInstrOperand*>(instruction->phy_instr_operand().get());
-  const auto& ep_event = operand->mut_ep_event();
+void StreamWaitInstructionPolicy::Compute(vm::Instruction* instruction) {
+  const auto& ep_event = mut_ep_event();
   {
     // Record event.
     auto* from_naive_stream_policy =
-        dynamic_cast<NaiveStreamPolicy*>(operand->mut_from_vm_stream()->mut_stream_policy());
+        dynamic_cast<NaiveStreamPolicy*>(mut_from_vm_stream()->mut_stream_policy());
     CHECK_NOTNULL(from_naive_stream_policy);
     auto* from_device_ctx = from_naive_stream_policy->device_ctx().get();
     auto* from_ep_device_ctx = CHECK_NOTNULL(dynamic_cast<vm::EpDeviceCtx*>(from_device_ctx));
