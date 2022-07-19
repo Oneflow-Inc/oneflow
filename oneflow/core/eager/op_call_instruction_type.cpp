@@ -61,7 +61,7 @@ struct OpCallInstructionUtil final {
     auto* operand = GetCallPhyInstrOperand(*instruction);
     ep::Stream* stream = instruction->mut_stream()->mut_stream_policy()->stream();
     if (!operand->is_all_outputs_pod()) {
-      for (const auto& blob_object : *operand->outputs()) {
+      for (const auto& blob_object : operand->outputs()) {
         blob_object->TryInitNonPODTypeEagerBlobObjectIfNeed();
       }
     }
@@ -104,7 +104,7 @@ struct OpCallInstructionUtil final {
   static inline Maybe<void> AllocateOutputBlobsMemory(OpCallPhyInstrOperand* operand,
                                                       vm::Allocator* allocator) {
     OF_PROFILER_RANGE_GUARD("AllocateOutputBlobsMemory");
-    for (const auto& blob_object : *operand->outputs()) {
+    for (const auto& blob_object : operand->outputs()) {
       JUST(blob_object->TryAllocateBlobBodyMemory(allocator));
     }
     return Maybe<void>::Ok();
