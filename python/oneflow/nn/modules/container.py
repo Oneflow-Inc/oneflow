@@ -167,12 +167,12 @@ class ModuleDict(get_dict(Module)):
 class ParameterList(get_para_list(Module)):
     """Holds parameters in a list.
 
-    The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.ParameterList.html?#torch.nn.ParameterList.
-
     :class:`~oneflow.nn.ParameterList` can be indexed like a regular Python
     list, but parameters it contains are properly registered, and will be
     visible by all :class:`~oneflow.nn.Module` methods.
+
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.ParameterList.html?#torch.nn.ParameterList.
 
     Args:
         parameters (iterable, optional): an iterable of :class:`~oneflow.nn.Parameter` to add
@@ -213,9 +213,7 @@ class ParameterList(get_para_list(Module)):
 
 
 class ParameterDict(get_para_dict(Module)):
-    """The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.ParameterDict.html?#torch.nn.ParameterDict.
-    
+    """
     Holds parameters in a dictionary.
 
     ParameterDict can be indexed like a regular Python dictionary, but parameters it
@@ -233,6 +231,9 @@ class ParameterDict(get_para_dict(Module)):
     types (e.g., Python's plain ``dict``) does not preserve the order of the
     merged mapping.
     
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.ParameterDict.html?#torch.nn.ParameterDict.
+
     Args:
         parameters (iterable, optional): a mapping (dictionary) of
             (string : :class:`~oneflow.nn.Parameter`) or an iterable of key-value pairs
