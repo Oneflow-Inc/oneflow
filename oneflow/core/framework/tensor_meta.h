@@ -106,12 +106,7 @@ class LocalTensorMeta : public TensorMeta {
   bool operator==(const LocalTensorMeta& other) const;
   size_t CalcHashValue() const;
 
-  LocalTensorMeta& operator=(const LocalTensorMeta& other) {
-    TensorMeta::operator=(other);
-    this->device_ = other.device_;
-    this->storage_offset_ = other.storage_offset_;
-    return *this;
-  }
+  LocalTensorMeta& operator=(const LocalTensorMeta& other) = default;
 
  private:
   Symbol<Device> device_;
