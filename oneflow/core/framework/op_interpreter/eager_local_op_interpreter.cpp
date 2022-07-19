@@ -75,12 +75,12 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   OF_PROFILER_RANGE_GUARD("NaiveInterpret");
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());  // NOLINT
   Symbol<Device> default_device = JUST(GetDefaultDevice(inputs, ctx));
-  std::shared_ptr<const LocalTensorInferResult> result;
-  {
-    LocalTensorMetaInferArgs infer_args;
-    JUST(infer_args.Init(ctx.attrs, default_device, inputs));
-    result = JUST(user_op_expr.mut_local_tensor_infer_cache()->GetOrInfer(infer_args));
-  }
+  const std::shared_ptr<const LocalTensorInferResult> result =
+      JUST([&]() -> Maybe<const LocalTensorInferResult> {
+        LocalTensorMetaInferArgs infer_args;
+        JUST(infer_args.Init(ctx.attrs, default_device, inputs));
+        return JUST(user_op_expr.mut_local_tensor_infer_cache()->GetOrInfer(infer_args));
+      }());
 
   vm::EagerBlobObjectList input_eager_blob_objects(inputs.size());
   for (int i = 0; i < inputs.size(); i++) {
