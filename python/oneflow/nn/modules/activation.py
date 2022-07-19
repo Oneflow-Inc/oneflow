@@ -370,10 +370,8 @@ class GELU(Module):
         self.approximate = approximate
 
     def forward(self, input):
-        if self.approximate == "none":
-            return flow._C.gelu(input)
-        elif self.approximate == "tanh":
-            return flow._C.gelu2(input)
+        if self.approximate == "none" or self.approximate == "tanh":
+            return flow._C.gelu_with_approximate(input, self.approximate)
         else:
             raise NotImplementedError
 

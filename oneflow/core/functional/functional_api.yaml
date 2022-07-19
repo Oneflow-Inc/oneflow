@@ -584,8 +584,8 @@
   signature: "Tensor (Tensor dy, Tensor x) => GeluGrad"
   bind_python: False
 
-- name: "gelu2"
-  signature: "Tensor (Tensor x) => Gelu2"
+- name: "gelu_with_approximate"
+  signature: "Tensor (Tensor x, String approximate=\"none\") => GeluWithApproximate"
   bind_python: True
 
 - name: "glu"
