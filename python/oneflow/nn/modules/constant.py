@@ -152,6 +152,10 @@ def ones_like_op(
         placement = input.placement
     if sbp is None and input.is_global and input.sbp is not None:
         sbp = input.sbp
+    if dtype is None:
+        dtype = input.dtype
+    if placement is None and device is None:
+        device = input.device
     return Ones(input.size(), dtype, device, placement, sbp, requires_grad)()
 
 
@@ -219,6 +223,10 @@ def zeros_like_op(
         placement = input.placement
     if sbp is None and input.is_global and input.sbp is not None:
         sbp = input.sbp
+    if dtype is None:
+        dtype = input.dtype
+    if placement is None and device is None:
+        device = input.device
     return Zeros(input.size(), dtype, device, placement, sbp, requires_grad)()
 
 
