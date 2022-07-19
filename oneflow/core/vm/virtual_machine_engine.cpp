@@ -310,8 +310,7 @@ void CollectReadyDownstreamReleaseTensors(Stream* stream,
     }
     if (instruction->stream().device() != stream->device()) { return false; }
     const auto* instruction_policy = &instruction->instruction_policy();
-    return dynamic_cast<const FastReleaseTensorInstructionPolicy*>(instruction_policy) != nullptr
-           || dynamic_cast<const SlowReleaseTensorInstructionPolicy*>(instruction_policy);
+    return dynamic_cast<const ReleaseTensorInstructionPolicy*>(instruction_policy) != nullptr;
   };
   INTRUSIVE_FOR_EACH_PTR(instruction, stream->mut_running_instruction_list()) {
     while (!instruction->Done()) {}  // busy wait done.

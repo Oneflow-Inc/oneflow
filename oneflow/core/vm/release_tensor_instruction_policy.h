@@ -71,7 +71,7 @@ class ReleaseTensorInstructionPolicy : public InstructionPolicy {
   void Release(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) const {
     CHECK_JUST(eager_blob_object->DeallocateBlobDataPtr());
   }
-  Dependence* stream_sequential_dependence_{};
+  Dependence* stream_sequential_dependence_;
 
  private:
   void InitInstructionStatus(Instruction* instruction) override {
@@ -88,12 +88,6 @@ class ReleaseTensorInstructionPolicy : public InstructionPolicy {
 class FastReleaseTensorInstructionPolicy final : public ReleaseTensorInstructionPolicy {
  public:
   using ReleaseTensorInstructionPolicy::ReleaseTensorInstructionPolicy;
-
- protected:
-  void Release(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) const {
-    CHECK_JUST(eager_blob_object->DeallocateBlobDataPtr());
-  }
-  Dependence* stream_sequential_dependence_;
 
  private:
   std::string DebugName(const vm::Instruction& instruction) const override {
@@ -114,12 +108,6 @@ class SlowReleaseTensorInstructionPolicy final : public ReleaseTensorInstruction
  public:
   using ReleaseTensorInstructionPolicy::ReleaseTensorInstructionPolicy;
 
- protected:
-  void Release(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) const {
-    CHECK_JUST(eager_blob_object->DeallocateBlobDataPtr());
-  }
-  Dependence* stream_sequential_dependence_;
-
  private:
   std::string DebugName(const vm::Instruction& instruction) const override {
     return "SlowReleaseTensor";
@@ -134,33 +122,63 @@ class SlowReleaseTensorInstructionPolicy final : public ReleaseTensorInstruction
   }
 };
 
-struct IsFastReleaseInstructionPolicy : public StreamRoleVisitor<IsFastReleaseInstructionPolicy> {
-  static Maybe<bool> VisitCompute(DataType data_type) {
-    return IsFastReleaseTensorInstructionPolicy(data_type);
+struct MakeReleaseInstructionPolicy : public StreamRoleVisitor<MakeReleaseInstructionPolicy> {
+  static Maybe<vm::InstructionPolicy*> VisitCompute(
+      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const Optional<vm::Stream*>& stream) {
+    return MakeReleaseTensorInstructionPolicy(data_type, eager_blob_object, stream);
   }
-  static Maybe<bool> VisitHost2Device(DataType data_type) {
-    return IsFastReleaseTensorInstructionPolicy(data_type);
+  static Maybe<vm::InstructionPolicy*> VisitHost2Device(
+      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const Optional<vm::Stream*>& stream) {
+    return MakeReleaseTensorInstructionPolicy(data_type, eager_blob_object, stream);
   }
-  static Maybe<bool> VisitDevice2Host(DataType data_type) {
-    return IsFastReleaseTensorInstructionPolicy(data_type);
+  static Maybe<vm::InstructionPolicy*> VisitDevice2Host(
+      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const Optional<vm::Stream*>& stream) {
+    return MakeReleaseTensorInstructionPolicy(data_type, eager_blob_object, stream);
   }
-  static Maybe<bool> VisitSyncedLaunchedCommNet(DataType data_type) {
-    return IsFastReleaseTensorInstructionPolicy(data_type);
+  static Maybe<vm::InstructionPolicy*> VisitSyncedLaunchedCommNet(
+      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const Optional<vm::Stream*>& stream) {
+    return MakeReleaseTensorInstructionPolicy(data_type, eager_blob_object, stream);
   }
-  static Maybe<bool> VisitAsyncedLaunchedCommNet(DataType data_type) {
-    return IsFastReleaseTensorInstructionPolicy(data_type);
+  static Maybe<vm::InstructionPolicy*> VisitAsyncedLaunchedCommNet(
+      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const Optional<vm::Stream*>& stream) {
+    return MakeReleaseTensorInstructionPolicy(data_type, eager_blob_object, stream);
   }
-  static Maybe<bool> VisitBarrier(DataType data_type) { UNIMPLEMENTED_THEN_RETURN(); }
-  static Maybe<bool> VisitCriticalSection(DataType data_type) { UNIMPLEMENTED_THEN_RETURN(); }
-  static Maybe<bool> VisitLazyJobLauncher(DataType data_type) { UNIMPLEMENTED_THEN_RETURN(); }
-  static Maybe<bool> VisitPinnedCompute(DataType data_type) { return VisitCompute(data_type); }
+  static Maybe<vm::InstructionPolicy*> VisitBarrier(
+      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const Optional<vm::Stream*>& stream) {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
+  static Maybe<vm::InstructionPolicy*> VisitCriticalSection(
+      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const Optional<vm::Stream*>& stream) {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
+  static Maybe<vm::InstructionPolicy*> VisitLazyJobLauncher(
+      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const Optional<vm::Stream*>& stream) {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
+  static Maybe<vm::InstructionPolicy*> VisitPinnedCompute(
+      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const Optional<vm::Stream*>& stream) {
+    return VisitCompute(data_type, eager_blob_object, stream);
+  }
 
  private:
-  static Maybe<bool> IsFastReleaseTensorInstructionPolicy(DataType data_type) {
+  static Maybe<vm::InstructionPolicy*> MakeReleaseTensorInstructionPolicy(
+      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const Optional<vm::Stream*>& stream) {
     if (IsPODDataType(data_type)) {
-      return true;
+      return std::make_unique<vm::FastReleaseTensorInstructionPolicy>(eager_blob_object, stream)
+          .get();
     } else {
-      return false;
+      return std::make_unique<vm::SlowReleaseTensorInstructionPolicy>(eager_blob_object, stream)
+          .get();
     }
   }
 };

@@ -424,16 +424,10 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   });
   StreamRole stream_role = producer_stream->stream_role();
   DataType data_type = eager_blob_object->data_type();
-  intrusive::shared_ptr<vm::Instruction> instruction = nullptr;
-  if (JUST(vm::IsFastReleaseInstructionPolicy::Visit(stream_role, data_type))) {
-    instruction = intrusive::make_shared<vm::Instruction>(
-        JUST(Singleton<VirtualMachine>::Get()->GetVmStream(producer_stream)),
-        std::make_unique<vm::FastReleaseTensorInstructionPolicy>(eager_blob_object, vm_stream));
-  } else {
-    instruction = intrusive::make_shared<vm::Instruction>(
-        JUST(Singleton<VirtualMachine>::Get()->GetVmStream(producer_stream)),
-        std::make_unique<vm::SlowReleaseTensorInstructionPolicy>(eager_blob_object, vm_stream));
-  }
+  auto instruction = intrusive::make_shared<vm::Instruction>(
+      JUST(Singleton<VirtualMachine>::Get()->GetVmStream(producer_stream)),
+      JUST(vm::MakeReleaseInstructionPolicy::Visit(stream_role, data_type, eager_blob_object,
+                                                   vm_stream)));
   instruction_list_->EmplaceBack(std::move(instruction));
 
   return Maybe<void>::Ok();
