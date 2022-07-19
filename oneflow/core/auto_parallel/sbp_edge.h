@@ -68,8 +68,8 @@ class SbpEdge final {
   // Update copy cost for type 2 and 3
   void SummarizeCost();
   // Duplicate Cost. Designed for merging two nodes.
-  void DuplicateCost(bool ifStart, bool ifFirst,
-                     const std::vector<std::pair<int32_t, int32_t>>& mergedSigId2ChildrenSigId);
+  void DuplicateCost(bool merged_node_is_start_node, bool duplicating_first_node,
+                     const std::vector<std::pair<int32_t, int32_t>>& merged_sig_id2children_sig_id);
   // Determine Final SbpSignature for attachment of this edge
   void FinalizeSbp();
   // Use Greedy Strategy to pick the sbp signature with minimum cost for this
@@ -78,23 +78,23 @@ class SbpEdge final {
   double GreedyStrategy();
 
   // a set of ids of logical blobs carried/transferred on this sbp edge
-  std::unordered_set<oneflow::LogicalBlobId> CarryLbis;
+  std::unordered_set<oneflow::LogicalBlobId> carry_lbis;
 
   // load a logical blob
-  void LoadLbi(oneflow::LogicalBlobId lbi) { CarryLbis.insert(lbi); }
+  void LoadLbi(oneflow::LogicalBlobId lbi) { carry_lbis.insert(lbi); }
 
-  // check existancy of a logical blob
+  // check the existence of a logical blob
   bool SearchLbi(oneflow::LogicalBlobId lbi) const {
-    return CarryLbis.find(lbi) != CarryLbis.end();
+    return carry_lbis.find(lbi) != carry_lbis.end();
   }
 
   // unload a logical blob
   void UnloadLbi(oneflow::LogicalBlobId lbi) {
-    if (CarryLbis.erase(lbi) == 0) { std::cout << "Unload an empty lbi!" << std::endl; }
+    if (carry_lbis.erase(lbi) == 0) { std::cout << "Unload an empty lbi!" << std::endl; }
   }
 
   // Not carrying any blob
-  bool EmptyLbi() const { return CarryLbis.empty(); }
+  bool EmptyLbi() const { return carry_lbis.empty(); }
 
   // Get the minimum element in Cost
   double GetMinCost();
@@ -102,7 +102,7 @@ class SbpEdge final {
   double GetMaxCost();
 
   // Detect and spread overlaps for this edge and start_node_ if it is a proxy of lbi.
-  void DetectSpreadOverlap(double overlap_ratio_);
+  void DetectSpreadOverlap(double overlap_ratio);
 
   // Adjust cost with overlaps
   void AdjustOverlapCost();
@@ -110,7 +110,7 @@ class SbpEdge final {
   // Assemble copy cost
   // compute_cost = true: It is computing cost
   // compute_cost = false: It is deciding whether this edge needs the wait time.
-  void InitializeCopyCost(const std::string& ibn, bool compute_cost, bool use_sbp_collector_);
+  void InitializeCopyCost(const std::string& ibn, bool compute_cost, bool use_sbp_collector);
 
   // find the cut ratio
   // (#c>cut_cost in Cost)/(#c in Cost)
@@ -146,7 +146,7 @@ class SbpEdge final {
   // Time waiting for other gpus. pthread_cond_wait
   double wait_time_ = -1.0;
 
-  // Mininum and maximum cost would not be changed by eliminations, which will generate new edges.
+  // Minimum and maximum cost would not be changed by eliminations, which will generate new edges.
   // Also would not be changed by node merging, which will only perform cost copy for the expanding
   // dimensions.
   // Minimum cost in the 2D array Cost.
@@ -177,10 +177,10 @@ void SbpEdge<SbpSignature>::ComputeCost(
     const std::function<double(SbpNode<SbpSignature>*, SbpSignature*, SbpNode<SbpSignature>*,
                                SbpSignature*)>& SbpInferHint4Ibn) {
   cost_.resize(start_node_->Cost.size());
-  int32_t EndNodeSbpSize = end_node_->cost_.size();
+  int32_t end_node_sbp_size = end_node_->cost_.size();
   for (int32_t sbp_start = 0; sbp_start < cost_.size(); sbp_start++) {
-    cost_[sbp_start].resize(EndNodeSbpSize);
-    for (int32_t sbp_end = 0; sbp_end < EndNodeSbpSize; sbp_end++) {
+    cost_[sbp_start].resize(end_node_sbp_size);
+    for (int32_t sbp_end = 0; sbp_end < end_node_sbp_size; sbp_end++) {
       cost_[sbp_start][sbp_end] =
           SbpInferHint4Ibn(start_node_, start_node_->SbpSignatureList[sbp_start], end_node_,
                            end_node_->SbpSignatureList[sbp_end]);
@@ -193,34 +193,34 @@ void SbpEdge<SbpSignature>::SummarizeCost() {
   if (mid_node_) {
     cost_.resize(start_node_->Cost.size());
     mid_node_sbp_sig_.resize(start_node_->Cost.size());
-    int32_t EndNodeSbpSize = end_node_->Cost.size();
-    int32_t MidNodeSbpSize = mid_node_->Cost.size();
+    int32_t end_node_sbp_size = end_node_->Cost.size();
+    int32_t mid_node_sbp_size = mid_node_->Cost.size();
     for (int32_t sbp_start = 0; sbp_start < cost_.size(); sbp_start++) {
-      cost_[sbp_start].resize(EndNodeSbpSize);
-      mid_node_sbp_sig_[sbp_start].resize(EndNodeSbpSize);
-      for (int32_t sbp_end = 0; sbp_end < EndNodeSbpSize; sbp_end++) {
-        for (int32_t sbp_mid = 0; sbp_mid < MidNodeSbpSize; sbp_mid++) {
+      cost_[sbp_start].resize(end_node_sbp_size);
+      mid_node_sbp_sig_[sbp_start].resize(end_node_sbp_size);
+      for (int32_t sbp_end = 0; sbp_end < end_node_sbp_size; sbp_end++) {
+        for (int32_t sbp_mid = 0; sbp_mid < mid_node_sbp_size; sbp_mid++) {
           // Add middle node cost
-          double temp = mid_node_->Cost[sbp_mid];
+          double temp_cost = mid_node_->Cost[sbp_mid];
           // Add first edge cost
           if (edge_list_[0]->start_node_ == start_node_) {
-            temp += edge_list_[0]->cost_[sbp_start][sbp_mid];
+            temp_cost += edge_list_[0]->cost_[sbp_start][sbp_mid];
           } else {
-            temp += edge_list_[0]->cost_[sbp_mid][sbp_start];
+            temp_cost += edge_list_[0]->cost_[sbp_mid][sbp_start];
           }
           // Add second edge cost
           if (edge_list_[1]->end_node_ == end_node_) {
-            temp += edge_list_[1]->cost_[sbp_mid][sbp_end];
+            temp_cost += edge_list_[1]->cost_[sbp_mid][sbp_end];
           } else {
-            temp += edge_list_[1]->cost_[sbp_end][sbp_mid];
+            temp_cost += edge_list_[1]->cost_[sbp_end][sbp_mid];
           }
 
           // Compare and look for the minimum cost
           if (sbp_mid == 0) {
-            cost_[sbp_start][sbp_end] = temp;
+            cost_[sbp_start][sbp_end] = temp_cost;
             mid_node_sbp_sig_[sbp_start][sbp_end] = sbp_mid;
-          } else if (temp < cost_[sbp_start][sbp_end]) {
-            cost_[sbp_start][sbp_end] = temp;
+          } else if (temp_cost < cost_[sbp_start][sbp_end]) {
+            cost_[sbp_start][sbp_end] = temp_cost;
             mid_node_sbp_sig_[sbp_start][sbp_end] = sbp_mid;
           }
         }
@@ -228,10 +228,10 @@ void SbpEdge<SbpSignature>::SummarizeCost() {
     }
   } else {
     cost_.resize(start_node_->Cost.size());
-    int32_t EndNodeSbpSize = end_node_->Cost.size();
+    int32_t end_node_sbp_size = end_node_->Cost.size();
     for (int32_t sbp_start = 0; sbp_start < cost_.size(); sbp_start++) {
-      cost_[sbp_start].resize(EndNodeSbpSize);
-      for (int32_t sbp_end = 0; sbp_end < EndNodeSbpSize; sbp_end++) {
+      cost_[sbp_start].resize(end_node_sbp_size);
+      for (int32_t sbp_end = 0; sbp_end < end_node_sbp_size; sbp_end++) {
         cost_[sbp_start][sbp_end] = 0;
         for (int32_t edge_num = 0; edge_num < edge_list_.size(); edge_num++) {
           if (edge_list_[edge_num]->start_node_ == start_node_) {
@@ -247,48 +247,42 @@ void SbpEdge<SbpSignature>::SummarizeCost() {
 
 template<class SbpSignature>
 void SbpEdge<SbpSignature>::DuplicateCost(
-    bool ifStart, bool ifFirst,
-    const std::vector<std::pair<int32_t, int32_t>>& mergedSigId2ChildrenSigId) {
-  const int32_t num_sig = mergedSigId2ChildrenSigId.size();
+    bool merged_node_is_start_node, bool duplicating_first_node,
+    const std::vector<std::pair<int32_t, int32_t>>& merged_sig_id2children_sig_id) {
+  const int32_t num_sig = merged_sig_id2children_sig_id.size();
   std::vector<std::vector<double>> temp_cost;
-  std::vector<std::vector<int32_t>> tmpMidNodeSbpSig;
-  if (ifStart) {
+  std::vector<std::vector<int32_t>> temp_mid_node_sbp_sig;
+  if (merged_node_is_start_node) {
     temp_cost.resize(num_sig);
-    if (mid_node_) { tmpMidNodeSbpSig.resize(num_sig); }
+    if (mid_node_) { temp_mid_node_sbp_sig.resize(num_sig); }
     for (int32_t i = 0; i < num_sig; i++) {
-      const int32_t sig_idx =
-          ifFirst ? mergedSigId2ChildrenSigId[i].first : mergedSigId2ChildrenSigId[i].second;
+      const int32_t sig_idx = duplicating_first_node ? merged_sig_id2children_sig_id[i].first
+                                                     : merged_sig_id2children_sig_id[i].second;
       temp_cost[i] = cost_[sig_idx];
-      if (mid_node_) { tmpMidNodeSbpSig[i] = mid_node_sbp_sig_[sig_idx]; }
+      if (mid_node_) { temp_mid_node_sbp_sig[i] = mid_node_sbp_sig_[sig_idx]; }
     }
   } else {
     const int32_t num_start_sig = cost_.size();
     temp_cost.resize(num_start_sig);
-    if (mid_node_) { tmpMidNodeSbpSig.resize(num_start_sig); }
+    if (mid_node_) { temp_mid_node_sbp_sig.resize(num_start_sig); }
     for (int32_t i = 0; i < num_start_sig; i++) {
       temp_cost[i].resize(num_sig);
-      if (mid_node_) { tmpMidNodeSbpSig[i].resize(num_sig); }
+      if (mid_node_) { temp_mid_node_sbp_sig[i].resize(num_sig); }
       for (int32_t j = 0; j < num_sig; j++) {
-        const int32_t sig_idx =
-            ifFirst ? mergedSigId2ChildrenSigId[j].first : mergedSigId2ChildrenSigId[j].second;
+        const int32_t sig_idx = duplicating_first_node ? merged_sig_id2children_sig_id[j].first
+                                                       : merged_sig_id2children_sig_id[j].second;
         temp_cost[i][j] = cost_[i][sig_idx];
-        if (mid_node_) { tmpMidNodeSbpSig[i][j] = mid_node_sbp_sig_[i][sig_idx]; }
+        if (mid_node_) { temp_mid_node_sbp_sig[i][j] = mid_node_sbp_sig_[i][sig_idx]; }
       }
     }
   }
 
   cost_ = temp_cost;
-  if (mid_node_) { mid_node_sbp_sig_ = tmpMidNodeSbpSig; }
+  if (mid_node_) { mid_node_sbp_sig_ = temp_mid_node_sbp_sig; }
 }
 
 template<class SbpSignature>
 void SbpEdge<SbpSignature>::FinalizeSbp() {
-#ifdef DEBUG_ALGORITHM_
-  // printf("Finalize Sbp edge: from %d to %d, EdgeListNum: %d\n",
-  // start_node_->id,
-  //       end_node_->id, edge_list_.size());
-#endif  // DEBUG_ALGORITHM_
-
   // Finalize Sbp for mid_node_
   if (mid_node_) {
     mid_node_->FinalSbpSignatureId =
@@ -301,46 +295,46 @@ void SbpEdge<SbpSignature>::FinalizeSbp() {
 template<class SbpSignature>
 double SbpEdge<SbpSignature>::GreedyStrategy() {
   // Sbp combination of the minimum cost
-  int32_t MinSbpStart = start_node_->FinalSbpSignatureId,
-          MinSbpEnd = end_node_->FinalSbpSignatureId;
+  int32_t min_sbp_start = start_node_->FinalSbpSignatureId,
+          min_sbp_end = end_node_->FinalSbpSignatureId;
   // An unordered_map to evaluate cost between two edge nodes and other nodes.
-  std::unordered_map<int32_t, int32_t> EdgeNodeListIds = {{start_node_->NodeListId, 0},
-                                                          {end_node_->NodeListId, 1}};
-  // pre-compute and store the Current Cost for end_node_.
-  std::vector<double> EndNodeCurrCost(end_node_->Cost.size());
+  std::unordered_map<int32_t, int32_t> node_list_id2nbh_id = {{start_node_->NodeListId, 0},
+                                                              {end_node_->NodeListId, 1}};
+  // pre-compute and store the current cost between end_node_ and outside.
+  std::vector<double> end_node_out_cost(end_node_->Cost.size());
   for (int32_t sbp_end = 0; sbp_end < cost_[0].size(); sbp_end++) {
     end_node_->FinalSbpSignatureId = sbp_end;
-    EndNodeCurrCost[sbp_end] = end_node_->EvalOutNbhCost(EdgeNodeListIds);
+    end_node_out_cost[sbp_end] = end_node_->EvalOutNbhCost(node_list_id2nbh_id);
   }
-  // pre-copmpute and store the Current Cost for start_node_.
-  std::vector<double> StartNodeCurrCost(start_node_->Cost.size());
+  // pre-compute and store the current cost between start_node_ and outside.
+  std::vector<double> start_node_out_cost(start_node_->Cost.size());
   for (int32_t sbp_start = 0; sbp_start < cost_.size(); sbp_start++) {
     start_node_->FinalSbpSignatureId = sbp_start;
-    StartNodeCurrCost[sbp_start] = start_node_->EvalOutNbhCost(EdgeNodeListIds);
+    start_node_out_cost[sbp_start] = start_node_->EvalOutNbhCost(node_list_id2nbh_id);
   }
   // Current Cost, Minimum Cost, Cost with original sbp
-  double CurrCost, MinCost, OrgCost;
-  MinCost =
-      StartNodeCurrCost[MinSbpStart] + EndNodeCurrCost[MinSbpEnd] + cost_[MinSbpStart][MinSbpEnd];
-  OrgCost = MinCost;
+  double curr_cost = 0.0;
+  double min_cost = start_node_out_cost[min_sbp_start] + end_node_out_cost[min_sbp_end]
+                    + cost_[min_sbp_start][min_sbp_end];
+  double original_cost = min_cost;
 
   for (int32_t sbp_start = 0; sbp_start < cost_.size(); sbp_start++) {
     for (int32_t sbp_end = 0; sbp_end < cost_[0].size(); sbp_end++) {
       // compute Current Cost for Neighborhood of edge
       end_node_->FinalSbpSignatureId = sbp_end;
-      CurrCost =
-          StartNodeCurrCost[sbp_start] + EndNodeCurrCost[sbp_end] + cost_[sbp_start][sbp_end];
+      curr_cost =
+          start_node_out_cost[sbp_start] + end_node_out_cost[sbp_end] + cost_[sbp_start][sbp_end];
       // Find the minimum current cost
-      if (CurrCost < MinCost) {
-        MinCost = CurrCost;
-        MinSbpStart = sbp_start;
-        MinSbpEnd = sbp_end;
+      if (curr_cost < min_cost) {
+        min_cost = curr_cost;
+        min_sbp_start = sbp_start;
+        min_sbp_end = sbp_end;
       }
     }
   }
-  start_node_->FinalSbpSignatureId = MinSbpStart;
-  end_node_->FinalSbpSignatureId = MinSbpEnd;
-  return MinCost - OrgCost;
+  start_node_->FinalSbpSignatureId = min_sbp_start;
+  end_node_->FinalSbpSignatureId = min_sbp_end;
+  return min_cost - original_cost;
 }
 
 // Get the minimum element in Cost
@@ -413,7 +407,7 @@ void SbpEdge<SbpSignature>::AdjustOverlapCost() {
 // Assemble copy cost
 template<class SbpSignature>
 void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool compute_cost,
-                                               bool use_sbp_collector_) {
+                                               bool use_sbp_collector) {
   // In this part, we assemble the cost from nodes to nodes.
   if (start_node_->op_node && end_node_->op_node) {
     oneflow::OpNode* consumer = end_node_->op_node;
@@ -422,7 +416,7 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
     const oneflow::LogicalBlobId& lbi = consumer->op().BnInOp2Lbi(ibn);
 
     // Check whether lbi is transferred by this edge
-    if (use_sbp_collector_ && compute_cost && !SearchLbi(lbi)) { return; }
+    if (use_sbp_collector && compute_cost && !SearchLbi(lbi)) { return; }
 
     oneflow::OpNode* producer = start_node_->op_node;
     const std::string& producer_lbn = *CHECK_JUST(producer->op().obn4lbi(lbi));

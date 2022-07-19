@@ -307,34 +307,34 @@ int32_t SbpGraph<SbpSignature>::NodeElimination(SbpNode<SbpSignature>* this_node
 template<class SbpSignature>
 int32_t SbpGraph<SbpSignature>::NodeAndEdgeEliminations() {
   // Total elimination number
-  int32_t TtlElmNum = 0;
-  int32_t elimiational_num = 1;
+  int32_t total_elimination_num = 0;
+  int32_t elimination_num = 1;
   // repeat these kinds of elimination until stuck
-  while (elimiational_num > 0) {
-    elimiational_num = 0;
+  while (elimination_num > 0) {
+    elimination_num = 0;
     for (int32_t i = NodeList.size() - 1; i >= 0; i--) {
-      elimiational_num += NodeElimination(NodeList[i]);
+      elimination_num += NodeElimination(NodeList[i]);
     }
 
     for (int32_t i = NodeList.size() - 1; i >= 0; i--) {
-      elimiational_num += EdgeElimination(NodeList[i]);
+      elimination_num += EdgeElimination(NodeList[i]);
     }
 
     for (int32_t i = NodeList.size() - 1; i >= 0; i--) {
-      elimiational_num += ChildElimination(NodeList[i]);
+      elimination_num += ChildElimination(NodeList[i]);
     }
 
-    if (elimiational_num == 0 && NodeList.size() > 2) {
-      elimiational_num += PickAndMerge();
+    if (elimination_num == 0 && NodeList.size() > 2) {
+      elimination_num += PickAndMerge();
       for (int32_t i = NodeList.size() - 1; i >= 0; i--) {
-        elimiational_num += EdgeElimination(NodeList[i]);
+        elimination_num += EdgeElimination(NodeList[i]);
       }
     }
 
-    TtlElmNum += elimiational_num;
+    total_elimination_num += elimination_num;
   }
 
-  return TtlElmNum;
+  return total_elimination_num;
 }
 
 template<class SbpSignature>
@@ -355,7 +355,7 @@ int32_t SbpGraph<SbpSignature>::EdgeElimination(SbpNode<SbpSignature>* this_node
     // start_node->EdgesOut from index stopsign to the end.
     // start_node->EdgesOut[Stopsign] not included and need special treatment
     // after this process.
-    int32_t elimiational_num = 0;
+    int32_t elimination_num = 0;
     for (int32_t j = start_node->EdgesOut.size() - 1; j > stopsign; j--) {
       if (end_node == start_node->EdgesOut[j]->end_node_) {
         if (!e) {
@@ -367,22 +367,22 @@ int32_t SbpGraph<SbpSignature>::EdgeElimination(SbpNode<SbpSignature>* this_node
         }
         // edge elimination
         e->edge_list_.emplace_back(start_node->EdgesOut[j]);
-        elimiational_num++;
+        elimination_num++;
         RemoveFrom<SbpEdge<SbpSignature>*>(start_node->EdgesOut, j);
       }
     }
-    return elimiational_num;
+    return elimination_num;
   };
 
-  int32_t elimiational_num = 0;
+  int32_t elimination_num = 0;
 
   for (int32_t i = 0; i < this_node->EdgesOut.size(); i++) {
     SbpEdge<SbpSignature>* e = nullptr;
     // Find and delete Parallel Edges from EdgesOut
-    elimiational_num += LookForParallelEdge(e, this_node, this_node->EdgesOut[i]->end_node_,
-                                            /*if_reverse=*/false, i);
-    elimiational_num += LookForParallelEdge(e, this_node->EdgesOut[i]->end_node_, this_node,
-                                            /*if_reverse=*/true, /*stopsign=*/-1);
+    elimination_num += LookForParallelEdge(e, this_node, this_node->EdgesOut[i]->end_node_,
+                                           /*if_reverse=*/false, i);
+    elimination_num += LookForParallelEdge(e, this_node->EdgesOut[i]->end_node_, this_node,
+                                           /*if_reverse=*/true, /*stopsign=*/-1);
     if (e) {
       // Delete Parallel Edges from EdgesIn
       RemoveFromEdgesIn(this_node, e->end_node_);
@@ -394,7 +394,7 @@ int32_t SbpGraph<SbpSignature>::EdgeElimination(SbpNode<SbpSignature>* this_node
       e->end_node_->EdgesIn.emplace_back(e);
     }
   }
-  return elimiational_num;
+  return elimination_num;
 }
 
 template<class SbpSignature>
