@@ -326,7 +326,7 @@ class CELU(Module):
 
 class GELU(Module):
     """
-    GELU(x) -> Tensor
+    GELU(approximate='none') -> Tensor
 
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.GELU.html.
 
@@ -337,7 +337,7 @@ class GELU(Module):
     where :math:`\Phi(x)` is the Cumulative Distribution Function for Gaussian Distribution.
 
     When the approximate argument is 'tanh', Gelu is estimated with:
-    
+
     .. math:: \\text{GELU}(x) = 0.5 * x * (1 + \\text{Tanh}(\sqrt(2 / \pi) * (x + 0.044715 * x^3)))
 
     Args:
