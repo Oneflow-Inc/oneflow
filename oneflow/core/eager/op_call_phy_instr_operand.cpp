@@ -18,19 +18,21 @@ limitations under the License.
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
 #include "oneflow/core/vm/stream.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace vm {
 
 OpCallPhyInstrOperand::OpCallPhyInstrOperand(
     vm::Stream* vm_stream, const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-    const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
+    vm::EagerBlobObjectList&& inputs, vm::EagerBlobObjectList&& outputs,
     const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
     const one::OpExprInterpContext& op_interp_ctx,
     const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
     : vm_stream_(vm_stream),
-      call_ctx_(ComposedAttrMap(op_interp_ctx.attrs, opkernel->base_attrs()), inputs, outputs,
-                global_tensor_infer_result, op_interp_ctx, opkernel->mem_case()),
+      call_ctx_(ComposedAttrMap(op_interp_ctx.attrs, opkernel->base_attrs()), std::move(inputs),
+                std::move(outputs), global_tensor_infer_result, op_interp_ctx,
+                opkernel->mem_case()),
       opkernel_(opkernel),
       user_opkernel_(nullptr),
       infer_tmp_size_fn_(nullptr),
@@ -39,24 +41,25 @@ OpCallPhyInstrOperand::OpCallPhyInstrOperand(
       input_dependences_(),
       output_dependences_(),
       is_all_outputs_pod_(false) {
-  ForEachConstDependence(SetInserter(&input_dependences_));
-  ForEachMutDependence(SetInserter(&output_dependences_));
-  ForEachMut2Dependence(SetInserter(&output_dependences_));
+  ForEachConstDependence([&](auto* dep) { input_dependences_.emplace_back(dep); });
+  ForEachMutDependence([&](auto* dep) { output_dependences_.emplace_back(dep); });
+  ForEachMut2Dependence([&](auto* dep) { output_dependences_.emplace_back(dep); });
   InitStreamSequentialDependence();
-  for (const auto& blob_object : *outputs) {
+  for (const auto& blob_object : outputs) {
     is_all_outputs_pod_ = is_all_outputs_pod_ && IsPODDataType(blob_object->data_type());
   }
 }
 
 Maybe<void> OpCallPhyInstrOperand::Init() {
+  OF_PROFILER_RANGE_GUARD("OpCallPhyInstrOperand::Init");
   return mut_opkernel()->ChooseOpKernel(&call_ctx_, &user_opkernel_, &need_temp_storage_);
 }
 
-void OpCallPhyInstrOperand::ForEachConstDependence(
-    const std::function<void(vm::Dependence* compute)>& DoEach) const {
+template<typename DoEachT>
+void OpCallPhyInstrOperand::ForEachConstDependence(const DoEachT& DoEach) const {
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4const_ibns()) {
-    const auto& input = input_list->at(index);
+    const auto& input = input_list.at(index);
     DoEach(CHECK_JUST(input->compute_local_dep_object()));
   }
 }
@@ -77,28 +80,28 @@ void OpCallPhyInstrOperand::InitStreamSequentialDependence() {
   }
 }
 
-void OpCallPhyInstrOperand::ForEachMutDependence(
-    const std::function<void(vm::Dependence* compute)>& DoEach) const {
+template<typename DoEachT>
+void OpCallPhyInstrOperand::ForEachMutDependence(const DoEachT& DoEach) const {
   const auto& opt_transport_dep_object = vm_stream_->transport_local_dep_object();
   if (opt_transport_dep_object.has_value()) { DoEach(CHECK_JUST(opt_transport_dep_object)->get()); }
 
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4mut_ibns()) {
-    const auto& input = input_list->at(index);
+    const auto& input = input_list.at(index);
     DoEach(CHECK_JUST(input->compute_local_dep_object()));
   }
   const auto& output_list = outputs();
   for (int64_t index : opkernel().output_tuple_indexes4mut_obns()) {
-    const auto& output = output_list->at(index);
+    const auto& output = output_list.at(index);
     DoEach(CHECK_JUST(output->compute_local_dep_object()));
   }
 }
 
-void OpCallPhyInstrOperand::ForEachMut2Dependence(
-    const std::function<void(vm::Dependence* compute)>& DoEach) const {
+template<typename DoEachT>
+void OpCallPhyInstrOperand::ForEachMut2Dependence(const DoEachT& DoEach) const {
   const auto& output_list = outputs();
   for (int64_t index : opkernel().output_tuple_indexes4mut2_obns()) {
-    const auto& output = output_list->at(index);
+    const auto& output = output_list.at(index);
     DoEach(CHECK_JUST(output->compute_local_dep_object()));
   }
 }
