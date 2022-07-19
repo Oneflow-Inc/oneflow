@@ -304,7 +304,8 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
     return PyUnicode_FromString(((PyTensorType*)tensor_type)->name);
   }
   if (PyTensorMetaClass_CheckExact(tensor_type)) {
-    return PyTensor_New(ASSERT_PTR(functional::To(tensor, DType::Float(), /*copy=*/false)));
+    Optional<std::string> device = "cpu";
+    return PyTensor_New(ASSERT_PTR(functional::To(tensor, device, DType::Float(), /*copy=*/false)));
   }
   if (PyUnicode_Check(tensor_type)) {
     tensor_type = PyTensorType_FromString(PyUnicode_AsUTF8(tensor_type));
