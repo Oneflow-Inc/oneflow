@@ -21,14 +21,13 @@ limitations under the License.
 #include <vector>
 #include <memory>
 #include "oneflow/core/intrusive/intrusive.h"
+#include "oneflow/core/eager/local_dep_object.h"
 
 namespace oneflow {
 namespace vm {
 
 class Dependence;
 class EagerBlobObject;
-
-using DependenceVector = std::vector<Dependence*>;
 
 // physical instruction operand
 class PhyInstrOperand {

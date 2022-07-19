@@ -21,9 +21,6 @@ add_docstr(
     """
     input.index_select(dim, index) -> Tensor
 
-    The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.index_select.html.
-
     Select values along an axis specified by `dim`.
 
     :attr:`index` must be an Int32 Tensor with 1-D.
@@ -31,6 +28,9 @@ add_docstr(
     value of :attr:`index` must be in the range of the dim-th of input.
     Note that ``input`` and ``index`` do not broadcast against each other.  
     
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.index_select.html.
+
     Args:
         input (Tensor): the source tensor
         dim (int): the axis along which to index
