@@ -6,9 +6,9 @@ Currently, there are two main ways to run models in deep learning frameworks, na
 
 Both approaches have their advantages and disadvantages, and OneFlow provides support for both approaches, with Eager mode being the default.
 
-Generally speaking, dynamic graphs are easier to use and static graphs have more performance advantages. :class:`oneflow.nn.Graph` module is provided by OneFlow to allow users to build static graphs and train models with Eager-like programming conventions
+Generally speaking, dynamic graphs are easier to use and static graphs have more performance advantages. :class:`oneflow.nn.Graph` module is provided by OneFlow to allow users to build static graphs and train models with Eager-like programming conventions.
 
-.. contents:: Graph
+.. contents:: oneflow.nn.Graph
     :depth: 2
     :local:
     :class: this-will-duplicate-information-and-it-is-still-useful-here
@@ -46,10 +46,11 @@ The following script shows the process of building a neural network in eager mod
 Eager and Graph are reusable, and the above script for eager mode can be changed to static Graph mode by adding just a few lines of code, which consists of the following steps.
 
 
-- Inheritance of ``nn.Graph``
+- Define your customized graph as a subclass of ``nn.Graph``
 - At the beginning of __init__. Call super().__init__() to let OneFlow do the necessary initialization of the Graph.
 - Reuse the ``nn.Module`` object in Eager mode in __init__ (self.model = model)
 - Describe the computation in the ``build``
+- Instantiate your graph then call it.
 
 .. code-block:: 
 
