@@ -69,7 +69,7 @@ Maybe<EagerLocalTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& te
 Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                            TensorTuple* outputs, const OpExprInterpContext& ctx) {
   OF_PROFILER_RANGE_GUARD("NaiveInterpret");
-  CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
+  CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());  // NOLINT
   Symbol<Device> default_device = JUST(GetDefaultDevice(inputs, ctx));
   std::shared_ptr<const LocalTensorInferResult> result;
   {
@@ -107,10 +107,10 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
       // output i is inplaced.
       // check TensorMeta of infer result and TensorMeta of output i.
-      CHECK_OR_RETURN(tensor_impl->tensor_meta()->shape() == output_tensor_metas.at(i)->shape());
-      CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype() == output_tensor_metas.at(i)->dtype());
+      CHECK_OR_RETURN(tensor_impl->tensor_meta()->shape() == output_tensor_metas.at(i)->shape());  // NOLINT
+      CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype() == output_tensor_metas.at(i)->dtype());  // NOLINT
       bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
-      CHECK_OR_RETURN(has_eager_blob_object);
+      CHECK_OR_RETURN(has_eager_blob_object);  // NOLINT
       output_eager_blob_objects.at(i) = JUST(outputs->at(i)->eager_blob_object());
       // TODO(zhaoluyang):(thread_local TensorMeta set stride then check)
       // CHECK_OR_RETURN(tensor_impl->tensor_meta()->stride() ==

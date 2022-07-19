@@ -28,7 +28,7 @@ namespace one {
 namespace {
 
 Maybe<void> CheckIsDeviceSupportedByOp(const Device& device, const std::string& op_type_name) {
-  if (IsCpuOnly(op_type_name)) { CHECK_EQ_OR_RETURN(device.type(), "cpu"); }
+  if (IsCpuOnly(op_type_name)) { CHECK_EQ_OR_RETURN(device.type(), "cpu"); }  // NOLINT
   return Maybe<void>::Ok();
 }
 
@@ -149,7 +149,7 @@ Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTupl
   for (int i = 0; i < input_tensors.size(); ++i) {
     LocalTensorMeta* local_tensor_meta =
         dynamic_cast<LocalTensorMeta*>(input_tensors.at(i)->mut_tensor_meta());
-    CHECK_NOTNULL_OR_RETURN(local_tensor_meta);
+    CHECK_NOTNULL_OR_RETURN(local_tensor_meta);  // NOLINT
     input_local_tensor_metas_.at(i) = SymbolOf(*local_tensor_meta);
   }
   return Maybe<void>::Ok();
@@ -195,7 +195,7 @@ Maybe<const LocalTensorInferResult> LocalTensorInferCache::GetOrInfer(
     auto iter = cache_.find(infer_args);
     if (iter == cache_.end()) {
       const auto& user_op_expr = user_op_expr_.lock();
-      CHECK_OR_RETURN(static_cast<bool>(user_op_expr));
+      CHECK_OR_RETURN(static_cast<bool>(user_op_expr));  // NOLINT
       const auto& output_tensor_metas = JUST(Infer(*user_op_expr, infer_args));
       iter = cache_.emplace(infer_args, output_tensor_metas).first;
     }
