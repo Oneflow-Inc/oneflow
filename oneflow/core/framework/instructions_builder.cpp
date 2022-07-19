@@ -14,12 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <atomic>
-#include <memory>
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/device/event_record.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
-#include "oneflow/core/intrusive/shared_ptr.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/id_util.h"
