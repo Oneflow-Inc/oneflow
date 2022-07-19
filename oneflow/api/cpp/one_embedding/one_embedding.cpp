@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/api/cpp/one_embedding/one_embedding.h"
+#include "oneflow/core/embedding/embedding_manager.h"
 
 namespace oneflow_api {
 namespace one_embedding {

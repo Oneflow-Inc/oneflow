@@ -17,9 +17,20 @@ limitations under the License.
 #define ONEFLOW_API_CPP_ONE_EMBEDDING_ONE_EMBEDDING_H_
 
 #include "../framework.h"
-#include "oneflow/core/embedding/embedding_manager.h"
+// #include "oneflow/core/embedding/embedding_manager.h"
+
+namespace oneflow {
+
+namespace embedding {
+
+class KeyValueStoreOptions;
+
+}  // namespace embedding
+
+}  // namespace oneflow
 
 namespace oneflow_api {
+
 namespace one_embedding {
 
 class OneEmbeddingHandler final {
