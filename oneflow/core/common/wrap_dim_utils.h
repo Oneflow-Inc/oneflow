@@ -39,6 +39,7 @@ static inline Maybe<int64_t> maybe_wrap_dim(int64_t dim, int64_t dim_post_expr,
   return dim;
 }
 
+// align with pytorch: `aten/src/ATen/WrapDimUtilsMulti.h`
 constexpr size_t dim_bitset_size = 64;
 
 static inline Maybe<std::bitset<dim_bitset_size>> dim_list_to_bitset(
