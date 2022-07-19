@@ -13,22 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_CONSTANT_H_
-#define ONEFLOW_CORE_COMMON_CONSTANT_H_
+#ifndef ONEFLOW_CORE_COMMON_ENV_VAR_EAGER_H_
+#define ONEFLOW_CORE_COMMON_ENV_VAR_EAGER_H_
 
-#include <string>
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
 
-static const int64_t kInvalidSessionId = -1;
-static const std::string kNoPassTag = "";
-static const std::string kMainOp = "main_op";
-static const int64_t kMaxSplitAxis = 6;
-constexpr size_t kMaxNumDims = 8;
-static const std::string kAsymmetricCodeErrorMsg =
-    "Maybe executing different code in different ranks, please check if the code is branched and "
-    "operates on the global tensor.";
+// NOTE: use env variable 'ONEFLOW_EAGER_ENABLE_LOCAL_INFER_CACHE' indicate whether the
+// use infer cache in naive local op interpret.
+DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_EAGER_ENABLE_LOCAL_INFER_CACHE, true);
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_COMMON_CONSTANT_H_
+#endif  // ONEFLOW_CORE_COMMON_ENV_VAR_EAGER_H_
