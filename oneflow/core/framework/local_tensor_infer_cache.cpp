@@ -124,9 +124,9 @@ Maybe<Symbol<Stream>> InferDeviceAndStream(
 size_t LocalTensorMetaInferArgs::hash_value() const {
   size_t hash_value = std::hash<AttrMap>()(attrs_);
   HashCombine(&hash_value, std::hash<Symbol<Device>>()(default_device_));
-  const auto& tensor_meta_hash_functor = std::hash<LocalTensorMeta>();
+  const auto& tensor_meta_hash_functor = std::hash<Symbol<LocalTensorMeta>>();
   for (const auto& tensor_meta : input_local_tensor_metas_) {
-    HashCombine(&hash_value, tensor_meta_hash_functor(*tensor_meta));
+    HashCombine(&hash_value, tensor_meta_hash_functor(tensor_meta));
   }
   return hash_value;
 }

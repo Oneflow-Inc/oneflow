@@ -48,12 +48,16 @@ namespace one {
 
 namespace {
 
+Maybe<Symbol<Device>> RawGetDefaultCpuDevice() { return Device::New("cpu", 0); }
+
+constexpr auto* GetDefaultCpuDevice = DECORATE(&RawGetDefaultCpuDevice, ThreadLocal);
+
 Maybe<Symbol<Device>> GetDefaultDevice(const TensorTuple& inputs, const OpExprInterpContext& ctx) {
   if (inputs.empty()) {
     if (ctx.device.has_value()) {
       return JUST(ctx.device);
     } else {
-      return Device::New("cpu", 0);
+      return GetDefaultCpuDevice();
     }
   }
   return JUST(inputs.at(0)->device());
