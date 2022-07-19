@@ -672,39 +672,58 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
 }
 
 // Decide the priority to infer sbp
-double ComputeSbpInferPriority(const NdSbp& producer_sbp_parallel,
-                               const NdSbp& consumer_sbp_parallel,
+double ComputeSbpInferPriority(const NdSbp& producer_nd_sbp, const NdSbp& consumer_nd_sbp,
                                const ParallelDesc& producer_parallel_desc,
                                const ParallelDesc& consumer_parallel_desc, bool requires_same_sbp) {
+  if (producer_nd_sbp == consumer_nd_sbp && producer_parallel_desc == consumer_parallel_desc) {
+    // Highest priority: this blob have the same placement and sbp on both the producer and
+    // consumer
+    return 0.0;
+  }
+  // Dim reduction for producer
   ParallelDesc reduced_in_parallel_desc = producer_parallel_desc;
-  ParallelDesc reduced_out_parallel_desc = consumer_parallel_desc;
   NdSbp reduced_in_nd_sbp;
+  NdSbpDimReduce(producer_parallel_desc, producer_nd_sbp, &reduced_in_parallel_desc,
+                 &reduced_in_nd_sbp);
+
+  // Dim reduction for consumer
+  ParallelDesc reduced_out_parallel_desc = consumer_parallel_desc;
   NdSbp reduced_out_nd_sbp;
-  InOutParallelDimReduce(producer_parallel_desc, consumer_parallel_desc, producer_sbp_parallel,
-                         consumer_sbp_parallel, &reduced_in_parallel_desc,
-                         &reduced_out_parallel_desc, &reduced_in_nd_sbp, &reduced_out_nd_sbp);
+  NdSbpDimReduce(consumer_parallel_desc, consumer_nd_sbp, &reduced_out_parallel_desc,
+                 &reduced_out_nd_sbp);
 
   if (requires_same_sbp) {
     // This blob does not support boxing
     if (reduced_in_nd_sbp == reduced_out_nd_sbp
         && reduced_in_parallel_desc == reduced_out_parallel_desc) {
-      // Highest priority: this blob have the same placement and sbp on both the producer and
-      // consumer
-      return 0.0;
+      // Normal priority: No transfer occurs but we have different sbp
+      // For example: [1]:S0 -> [1]:B
+      // [1, 2]:(P, S0) -> [1, 2]:(S0, S0)
+      return 1.0;
     } else {
       // Penality: this blob have different placements and sbps but it does not support boxing
       return 2.0;
     }
   } else {
     // This blob supports boxing
-    if (reduced_in_nd_sbp == reduced_out_nd_sbp) {
-      // Highest priority: this blob have the same sbp on both the producer and consumer
-      // Not just [0-3] -> [4-7], but also cpu:[0] -> cuda:[0-3]
-      return 0.0;
+    if (producer_nd_sbp.sbp_parallel_size() == consumer_nd_sbp.sbp_parallel_size()) {
+      if (producer_nd_sbp == consumer_nd_sbp) {
+        // Highest priority: this blob have the same sbp on both the producer and consumer
+        // Not just [0-3] -> [4-7], but also cpu:[0] -> cuda:[0-3]
+        return 0.0;
+      }
     } else {
-      // Normal priority: transfer occurs
-      return 1.0;
+      if (reduced_in_nd_sbp == reduced_out_nd_sbp) {
+        // Highest priority: this blob have the same sbp on both the producer and consumer
+        // [2, 2]: (S0, S0) -> [2]: S0
+        // (learning rate) [1]: B -> [2, 2]: (B, B)
+        return 0.0;
+      }
     }
+    // Normal priority: transfer might occurs
+    // Or might not: [1, 2]: (P, S0) -> [1, 2]: (B, S0)
+    // No transfer but not highest priority
+    return 1.0;
   }
 }
 
