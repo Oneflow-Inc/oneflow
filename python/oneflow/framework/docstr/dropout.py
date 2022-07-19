@@ -21,12 +21,12 @@ add_docstr(
     """
     dropout(x: Tensor, p: float = 0.5, training: bool = True, generator :Generator = None, *, addend: Tensor) -> Tensor 
     
-    The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.nn.functional.dropout.html.
-
     During training, randomly zeroes some of the elements of the input
     tensor with probability :attr:`p` using samples from a Bernoulli
     distribution.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.functional.dropout.html.
 
     Args:      
         x(Tensor): A Tensor which will be applyed dropout. 

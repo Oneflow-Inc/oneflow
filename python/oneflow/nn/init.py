@@ -68,9 +68,6 @@ def normal_(tensor, mean=0.0, std=1.0):
 
 def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
     r"""
-    The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
-
     Fills the input `Tensor` with values according to the method
     described in `Understanding the difficulty of training deep feedforward
     neural networks` - Glorot, X. & Bengio, Y. (2010), using a uniform
@@ -79,6 +76,9 @@ def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
 
     .. math::
         a = \text{gain} \times \sqrt{\frac{6}{\text{fan_in} + \text{fan_out}}}
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
 
     Also known as Glorot initialization.
 
@@ -98,9 +98,6 @@ def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
 
 def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
     r"""
-    The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
-
     Fills the input `Tensor` with values according to the method
     described in `Understanding the difficulty of training deep feedforward
     neural networks` - Glorot, X. & Bengio, Y. (2010), using a normal
@@ -109,6 +106,9 @@ def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
 
     .. math::
         \text{std} = \text{gain} \times \sqrt{\frac{2}{\text{fan_in} + \text{fan_out}}}
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
 
     Also known as Glorot initialization.
 
@@ -128,14 +128,14 @@ def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
 
 def orthogonal_(tensor, gain=1.0):
     r"""
-    The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/nn.init.html.
-
     Fills the input `Tensor` with a (semi) orthogonal matrix, as
     described in `Exact solutions to the nonlinear dynamics of learning in deep
     linear neural networks` - Saxe, A. et al. (2013). The input tensor must have
     at least 2 dimensions, and for tensors with more than 2 dimensions the
     trailing dimensions are flattened.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
 
     Args:
         tensor: an n-dimensional `torch.Tensor`, where :math:`n \geq 2`
@@ -153,9 +153,6 @@ def kaiming_uniform_(
     tensor, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
 ):
     r"""
-    The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
-
     Fills the input `Tensor` with values according to the method
     described in `Delving deep into rectifiers: Surpassing human-level
     performance on ImageNet classification` - He, K. et al. (2015), using a
@@ -164,6 +161,9 @@ def kaiming_uniform_(
 
     .. math::
         \text{bound} = \text{gain} \times \sqrt{\frac{3}{\text{fan_mode}}}
+    
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
 
     Also known as He initialization.
 
@@ -198,10 +198,7 @@ def kaiming_uniform_(
 def kaiming_normal_(
     tensor, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
 ):
-    r"""
-    The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
-    
+    r"""    
     Fills the input `Tensor` with values according to the method
     described in `Delving deep into rectifiers: Surpassing human-level
     performance on ImageNet classification` - He, K. et al. (2015), using a
@@ -210,6 +207,9 @@ def kaiming_normal_(
 
     .. math::
         \text{std} = \frac{\text{gain}}{\sqrt{\text{fan_mode}}}
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
 
     Also known as He initialization.
 
