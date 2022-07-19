@@ -60,8 +60,11 @@ limitations under the License.
 
 #include <google/protobuf/text_format.h>
 #include <iostream>
+#include <string>
 #include <vector>
 
+#include "oneflow/core/framework/sbp_context.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 namespace mlir {
 
 namespace oneflow {
@@ -356,6 +359,19 @@ llvm::Optional<Type> Importer::GetTypeFromOneFlowDataType(::oneflow::DataType dt
   }
 }
 
+LogicalResult ParseSbpStrFromAttr(Attribute sbp_attr, std::string* sbp) {
+  if (auto sbp_s_attr = sbp_attr.dyn_cast<sbp::SplitAttr>()) {
+    *sbp = "S(" + std::to_string(sbp_s_attr.getAxis()) + ")";
+  } else if (auto sbp_b_attr = sbp_attr.dyn_cast<sbp::BroadcastAttr>()) {
+    *sbp = "B";
+  } else if (auto sbp_p_attr = sbp_attr.dyn_cast<sbp::PartialSumAttr>()) {
+    *sbp = "P";
+  } else {
+    return failure();
+  }
+  return success();
+}
+
 LogicalResult ParseNdSbpFromAttr(::llvm::ArrayRef<Attribute> nd_sbp_attr,
                                  ::oneflow::NdSbp* nd_sbp) {
   for (const auto& sbp_attr : nd_sbp_attr) {
@@ -408,25 +424,19 @@ Attribute ConvertNdSbpToAttr_(Builder& builder,
                               int nd_size) {
   auto ctx = builder.getContext();
   std::vector<mlir::Attribute> outputs_vec;
-  for (const auto& sbp : nd_sbp) {
-    mlir::Attribute attr = sbp::SBPAttr::get(ctx, builder.getStringAttr(sbp));
-    // if (sbp.at(0) == 'S') {
-    //   auto start_pos = sbp.find('(');
-    //   auto end_pos = sbp.find(')');
-    //   if (start_pos == std::string::npos || end_pos == std::string::npos) {
-    //     llvm::errs() << "fail to parse sbp: S";
-    //   }
-    //   start_pos++;
-    //   auto sub_sbp = sbp.substr(start_pos, end_pos - start_pos);
-    //   auto axis = std::stoi(sub_sbp);
-    //   attr = sbp::SplitAttr::get(ctx, axis);
-    // } else if (sbp.at(0) == 'B') {
-    //   attr = sbp::BroadcastAttr::get(ctx);
-    // } else if (sbp.at(0) == 'P') {
-    //   attr = sbp::PartialSumAttr::get(ctx);
-    // } else {
-    //   llvm::errs() << "unsupported sbp";
-    // }
+  for (const auto& sbp_data : nd_sbp) {
+    ::oneflow::SbpParallel sbp;
+    ParseSbpParallelFromString(sbp_data, &sbp);
+    Attribute attr;
+    if (sbp.has_split_parallel()) {
+      attr = sbp::SplitAttr::get(ctx, sbp.split_parallel().axis());
+    } else if (sbp.has_broadcast_parallel()) {
+      attr = sbp::BroadcastAttr::get(ctx);
+    } else if (sbp.has_partial_sum_parallel()) {
+      attr = sbp::PartialSumAttr::get(ctx);
+    } else {
+      llvm::errs() << "unsupported sbp";
+    }
     outputs_vec.push_back(attr);
   }
 
@@ -996,6 +1006,22 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
   }
 
   if (op->hasAttr("trainable")) { var_op_conf->set_trainable(op.trainable()); }
+
+  if (op->hasAttr(OpTrait::TensorSource<void>::getNdSbpAttrName())) {
+    for (auto output : op.nd_sbp()->getOutputs()) {
+      if (auto nd_outputs = output.dyn_cast<ArrayAttr>()) {
+        for (auto nd_output : nd_outputs) {
+          std::string sbp;
+          if (failed(ParseSbpStrFromAttr(nd_output, &sbp))) return failure();
+          var_op_conf->add_nd_sbp(sbp);
+        }
+      } else {
+        std::string sbp;
+        if (failed(ParseSbpStrFromAttr(output, &sbp))) return failure();
+        var_op_conf->add_nd_sbp(sbp);
+      }
+    }
+  }
 
   // all operands are ctrl_inputs
   for (const auto& operand : op->getOperands()) {
