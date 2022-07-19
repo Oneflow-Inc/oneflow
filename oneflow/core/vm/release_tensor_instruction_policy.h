@@ -154,19 +154,16 @@ struct MakeReleaseTensorInstructionPolicy
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     UNIMPLEMENTED();
-    // UNIMPLEMENTED_THEN_RETURN();
   }
   static std::unique_ptr<vm::InstructionPolicy> VisitCriticalSection(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     UNIMPLEMENTED();
-    // UNIMPLEMENTED_THEN_RETURN();
   }
   static std::unique_ptr<vm::InstructionPolicy> VisitLazyJobLauncher(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     UNIMPLEMENTED();
-    // UNIMPLEMENTED_THEN_RETURN();
   }
   static std::unique_ptr<vm::InstructionPolicy> VisitPinnedCompute(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
