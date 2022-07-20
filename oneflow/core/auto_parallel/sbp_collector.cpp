@@ -131,13 +131,13 @@ void SbpCollector::InitializeCopyCostFromNode2Proxy(SbpNode<NdSbpSignature>* sbp
                                                     const LogicalBlobId& lbi) {
   // the only edge from producer  to proxy of producer
   SbpEdge<NdSbpSignature>* sbp_edge = sbp_proxy->EdgesIn[0];
-  SbpNode<NdSbpSignature>* sbp_node_producer = sbp_edge->StartNode;
-  sbp_edge->Cost.resize(sbp_node_producer->SbpSignatureList.size());
+  SbpNode<NdSbpSignature>* sbp_node_producer = sbp_edge->start_node_;
+  sbp_edge->cost_.resize(sbp_node_producer->SbpSignatureList.size());
   int32_t consumer_sbp_size = sbp_proxy->ParallelCandidates.size();
   // look through sbp signature in producer
   for (int32_t sbp_id_producer = 0; sbp_id_producer < sbp_node_producer->SbpSignatureList.size();
        sbp_id_producer++) {
-    sbp_edge->Cost[sbp_id_producer].resize(consumer_sbp_size, 0);
+    sbp_edge->cost_[sbp_id_producer].resize(consumer_sbp_size, 0);
   }
 
   // Assemble copy cost from producer to proxy of producer
@@ -173,7 +173,7 @@ void SbpCollector::InitializeCopyCostFromNode2Proxy(SbpNode<NdSbpSignature>* sbp
 
         // compute copy cost for a specific logical blob
         // Use the parallel description of producer as those for consumer for now.
-        sbp_edge->Cost[sbp_id_producer][sbp_id_consumer] +=
+        sbp_edge->cost_[sbp_id_producer][sbp_id_consumer] +=
             CHECK_JUST(ComputeCopyCostWithMiddleNodes(sbp_producer, sbp_consumer, logical_blob_desc,
                                                       producer_parallel_desc,
                                                       producer_parallel_desc, /*is_same=*/false));
@@ -201,15 +201,15 @@ void SbpCollector::InitializeCopyCostFromProxy2Consumer(
     // Connect sbp proxy and consumer
     sbp_proxy->PointTo(sbp_node_consumer);
     // the sbp edge connecting proxy and consumer
-    SbpEdge<NdSbpSignature>* sbp_edge = FindEdgeBetweenNodes(sbp_proxy, sbp_node_consumer);
-    sbp_edge->Cost.resize(sbp_proxy->ParallelCandidates.size());
+    SbpEdge<NdSbpSignature>* sbp_edge = sbp_node_consumer->FindEdgeWithNode(sbp_proxy);
+    sbp_edge->cost_.resize(sbp_proxy->ParallelCandidates.size());
     int32_t consumer_sbp_size = sbp_node_consumer->SbpSignatureList.size();
 
     // look through sbp parallel set in proxy
     for (int32_t sbp_id_producer = 0; sbp_id_producer < sbp_proxy->ParallelCandidates.size();
          sbp_id_producer++) {
       // initialization for copy cost
-      sbp_edge->Cost[sbp_id_producer].resize(consumer_sbp_size, 0);
+      sbp_edge->cost_[sbp_id_producer].resize(consumer_sbp_size, 0);
       // get sbp parallel set for a logical blob in proxy
       BinarySet& parallel_candidate = sbp_proxy->ParallelCandidates[sbp_id_producer];
 
@@ -221,7 +221,7 @@ void SbpCollector::InitializeCopyCostFromProxy2Consumer(
         const NdSbp& sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
 
         if ((!parallel_candidate.CheckExistency(SbpParallelUniverse[sbp_consumer]))) {
-          sbp_edge->Cost[sbp_id_producer][sbp_id_consumer] = GetMaxVal<float>();
+          sbp_edge->cost_[sbp_id_producer][sbp_id_consumer] = GetMaxVal<float>();
         }
       }
     }
@@ -351,15 +351,14 @@ void SbpCollector::ProxySbpCandidate(
       // consumer in cost model
       SbpNode<NdSbpSignature>* sbp_node_consumer = op_name2sbp_node[consumer_bn_group.first.first];
       // the sbp edge connecting producer and consumer
-      SbpEdge<NdSbpSignature>* edge_found =
-          FindEdgeBetweenNodes(sbp_node_producer, sbp_node_consumer);
+      SbpEdge<NdSbpSignature>* edge_found = sbp_node_consumer->FindEdgeWithNode(sbp_node_producer);
       // unload logical blob from sbp edges
       edge_found->UnloadLbi(lbi);
       // Do not clip this edge. Save it for wait time.
       // clip this edge if it no longer carries any blob
       // We don't clip edges before since we have transfer cost
       // Now we clip edges, which makes the topology simplier
-      if (edge_found->EmptyLbi() && edge_found->WaitTime <= 0.0 && edge_found->WaitTime > -0.5
+      if (edge_found->EmptyLbi() && edge_found->wait_time_ <= 0.0 && edge_found->wait_time_ > -0.5
           && sbp_graph.transfer_cost <= 0.0) {
         sbp_graph.ClipEdge(edge_found);
       }
