@@ -85,7 +85,6 @@ class BuilderWithSymbolTable {
   void dump();
 };
 
-
 class MLIRGenImpl : public BuilderWithSymbolTable {
  public:
   explicit MLIRGenImpl(mlir::MLIRContext& context) : BuilderWithSymbolTable(context) {}
@@ -107,4 +106,4 @@ class MLIRGenImpl : public BuilderWithSymbolTable {
   void mlirGen(pyast::stmt* stmt);
 };
 
-#endif // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_PYAST_AST_MLIR_GEN_H_
+#endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_PYAST_AST_MLIR_GEN_H_

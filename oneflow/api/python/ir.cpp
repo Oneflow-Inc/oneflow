@@ -44,10 +44,10 @@ ONEFLOW_API_PYBIND11_MODULE("ir", m) {
   // TODO: this may be move to a common place for create global singleton.
   m.def("create_global_lr_jit", []() { Singleton<LRJITRegistry>::New(); });
 
-  m.def("compile_and_register_lr_jit",
-        [](const std::string& function_id, std::shared_ptr<pyast::FunctionDef>& func, bool is_dump) {
-          Singleton<LRJITRegistry>::Get()->Register(function_id, *func.get(), is_dump);
-        });
+  m.def("compile_and_register_lr_jit", [](const std::string& function_id,
+                                          std::shared_ptr<pyast::FunctionDef>& func, bool is_dump) {
+    Singleton<LRJITRegistry>::Get()->Register(function_id, *func.get(), is_dump);
+  });
 
   // look up and execute the registered function for python api
   m.def("get_lr", [](const std::string& function_id, float base_lr, float step) {

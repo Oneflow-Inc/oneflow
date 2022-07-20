@@ -33,4 +33,4 @@ class IRRoundTrip final : public JobPass {
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_ROUNDTRIP_H_
+#endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_ROUNDTRIP_H_
