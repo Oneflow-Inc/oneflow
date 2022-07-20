@@ -777,7 +777,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
         const auto& ibn = input_bns().at(ibn_id);
         const NdSbp& nd_sbp = JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp();
         err << " " << ibn << ": " << NdSbpToString(nd_sbp);
-        if (!requires_same_sbp[ibn_id]) { err << " [ transfer disabled ]"; }
+        if (requires_same_sbp[ibn_id]) { err << " [ transfer disabled ]"; }
         err << ";";
       }
 
@@ -1322,7 +1322,7 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
         } else {
           ParallelConf parallel_conf = pair.second->parallel_conf();
           const auto MakeParallelDescSymbol = [&parallel_conf]() -> Maybe<int64_t> {
-            int64_t symbol_id;
+            int64_t symbol_id = 0;
             const auto BuildInstruction =
                 [&symbol_id, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
               symbol_id = JUST(JUST(builder->GetParallelDescSymbol(parallel_conf))->symbol_id());
