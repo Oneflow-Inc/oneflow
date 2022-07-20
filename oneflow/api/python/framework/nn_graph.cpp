@@ -88,8 +88,7 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
   m.def("AddTensorAsGraphLoss", &AddTensorAsGraphLoss);
   m.def("ConvertJobToTosaIR", [](const std::string& serialized_job) -> Maybe<std::string> {
     Job job;
-    CHECK_OR_RETURN(TxtString2PbMessage(serialized_job, &job))
-        << "serialized job conversion failed.";
+    CHECK_OR_RETURN(job.ParseFromString(serialized_job)) << "serialized job conversion failed.";
     return ConvertJobToTosaIR(&job);
   });
   m.def("SaveJobToIR",
@@ -101,8 +100,7 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
         });
   m.def("ConvertJobToIR", [](const std::string& serialized_job) -> Maybe<std::string> {
     Job job;
-    CHECK_OR_RETURN(TxtString2PbMessage(serialized_job, &job))
-        << "serialized job conversion failed.";
+    CHECK_OR_RETURN(job.ParseFromString(serialized_job)) << "serialized job conversion failed.";
     return ConvertJobToIR(&job);
   });
   m.def("LoadSerializedJobFromIR", [](const std::string& path) -> Maybe<py::bytes> {
