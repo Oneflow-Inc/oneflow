@@ -345,7 +345,7 @@ def save(
 
         path.mkdir(exist_ok=True)
 
-        serialized_job = graph._forward_job_proto.SerializeToString
+        serialized_job = graph._forward_job_proto.SerializeToString()
         oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path))
 
         for x in graph._state():

@@ -91,13 +91,12 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
     CHECK_OR_RETURN(job.ParseFromString(serialized_job)) << "serialized job conversion failed.";
     return ConvertJobToTosaIR(&job);
   });
-  m.def("SaveJobToIR",
-        [](const std::string& serialized_job, const std::string& path) -> Maybe<void> {
-          Job job;
-          CHECK_OR_RETURN(TxtString2PbMessage(serialized_job, &job))
-              << "serialized job conversion failed.";
-          return SaveJobToIR(&job, path);
-        });
+  m.def(
+      "SaveJobToIR", [](const std::string& serialized_job, const std::string& path) -> Maybe<void> {
+        Job job;
+        CHECK_OR_RETURN(job.ParseFromString(serialized_job)) << "serialized job conversion failed.";
+        return SaveJobToIR(&job, path);
+      });
   m.def("ConvertJobToIR", [](const std::string& serialized_job) -> Maybe<std::string> {
     Job job;
     CHECK_OR_RETURN(job.ParseFromString(serialized_job)) << "serialized job conversion failed.";
