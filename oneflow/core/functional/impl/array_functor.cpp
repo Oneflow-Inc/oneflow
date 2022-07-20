@@ -2833,6 +2833,7 @@ class RepeatFunctor {
           }
         } else {
           input_reshape_vec.insert(input_reshape_vec.begin(), input_shape_val);
+          // For 0-size tensor, align with PyTorch.
           if (repeat_shape_val == 0) {
             expand_shape_vec.insert(expand_shape_vec.begin(), 0);
             output_reshape_vec.insert(output_reshape_vec.begin(), 0);
