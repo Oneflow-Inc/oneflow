@@ -132,8 +132,7 @@ Maybe<bool> EagerLocalTensorImpl::is_pinned() const {
 Maybe<void> EagerLocalTensorImpl::set_eager_blob_object(
     std::shared_ptr<vm::EagerBlobObject> eager_blob_object) {
   eager_blob_object_ = eager_blob_object;
-  CHECK_OR_RETURN(eager_blob_object_->shape_ptr().get() == tensor_meta()->shape_ptr().get())
-      << kOfBugIssueUploadPrompt;
+  CHECK_OR_RETURN(eager_blob_object_->shape() == tensor_meta()->shape()) << kOfBugIssueUploadPrompt;
   CHECK_OR_RETURN(eager_blob_object_->data_type() == tensor_meta()->dtype())
       << kOfBugIssueUploadPrompt;
   JUST(UpdateTensorStorage());
