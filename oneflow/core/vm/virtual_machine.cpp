@@ -14,21 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <typeinfo>
+#include "oneflow/core/vm/caching_allocator.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
+#include "oneflow/core/vm/naive_instruction_policy.h"
 #include "oneflow/core/vm/barrier_instruction_type.h"
 #include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/allocator.h"
-#include "oneflow/core/vm/shrinkable_cache.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
-#include "oneflow/core/thread/thread_consistent_id.h"
+#include "oneflow/core/thread/thread_global_id.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/stream_on_independent_thread.h"
@@ -62,7 +63,7 @@ Maybe<void> ForEachThreadCtx(vm::VirtualMachineEngine* engine,
 
 void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
   *Initializer = [&]() {
-    CHECK_JUST(InitThisThreadUniqueConsistentId(kThreadConsistentIdScheduler, "scheduler"));
+    CHECK_JUST(InitThisThreadUniqueGlobalId(kThreadGlobalIdScheduler, "scheduler"));
     OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Scheduler");
   };
 }
@@ -98,21 +99,23 @@ Maybe<Symbol<Stream>> GetBarrierStream() {
 
 void MakeBarrierInstructions(vm::InstructionList* list,
                              const std::function<void()>& BarrierCallback) {
-  auto* vm = Global<VirtualMachine>::Get();
+  auto* vm = Singleton<VirtualMachine>::Get();
   {
     const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>([]() {});
     auto stream = CHECK_JUST(GetBarrierStream());
     auto instruction = intrusive::make_shared<vm::Instruction>(
-        CHECK_JUST(vm->GetVmStream(stream)), SingletonPtr<vm::GlobalSyncInstructionType>(),
-        phy_instr_operand);
+        CHECK_JUST(vm->GetVmStream(stream)),
+        std::make_unique<vm::NaiveInstructionPolicy>(SingletonPtr<vm::GlobalSyncInstructionType>(),
+                                                     phy_instr_operand));
     list->EmplaceBack(std::move(instruction));
   }
   {
     const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>(BarrierCallback);
     auto stream = CHECK_JUST(GetBarrierStream());
     auto instruction = intrusive::make_shared<vm::Instruction>(
-        CHECK_JUST(vm->GetVmStream(stream)), SingletonPtr<vm::BarrierInstructionType>(),
-        phy_instr_operand);
+        CHECK_JUST(vm->GetVmStream(stream)),
+        std::make_unique<vm::NaiveInstructionPolicy>(SingletonPtr<vm::BarrierInstructionType>(),
+                                                     phy_instr_operand));
     list->EmplaceBack(std::move(instruction));
   }
 }
@@ -156,7 +159,7 @@ void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& s
 
 Maybe<void> VirtualMachine::BlockingRunProbeFunc(
     const std::function<bool(vm::VirtualMachineEngine*)>& prob_func) {
-  JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
+  JUST(Singleton<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
     auto bc = std::make_shared<BlockingCounter>(1);
     engine_->InsertProbe([bc, prob_func](vm::VirtualMachineEngine* engine) {
       if (!prob_func(engine)) { return false; }
@@ -179,10 +182,9 @@ Maybe<void> VirtualMachine::ShrinkAllMem() {
     if (engine->mut_active_stream_list()->size()) { return false; }
     INTRUSIVE_FOR_EACH_PTR(thread_ctx, engine->mut_thread_ctx_list()) {
       INTRUSIVE_FOR_EACH_PTR(stream, thread_ctx->mut_stream_list()) {
-        const auto& device_ctx = stream->device_ctx();
-        if (device_ctx.get() && device_ctx->mut_allocator()) {
-          auto* allocator = device_ctx->mut_allocator();
-          auto* cache = dynamic_cast<vm::ShrinkableCache*>(allocator);
+        vm::Allocator* allocator = stream->mut_stream_policy()->mut_allocator();
+        if (allocator) {
+          auto* cache = dynamic_cast<vm::CachingAllocator*>(allocator);
           if (cache != nullptr) { cache->Shrink(); }
         }
       }
@@ -200,10 +202,10 @@ VirtualMachine::~VirtualMachine() {
 
 std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreInstructionsFinished() {
   auto last_total_erased = std::make_shared<size_t>(0);
-  auto* vm = Global<VirtualMachine>::Get();
+  auto* vm = Singleton<VirtualMachine>::Get();
   if (vm != nullptr) { *last_total_erased = vm->engine_->total_erased_instruction_cnt(); }
   return [last_total_erased]() -> Maybe<bool> {
-    auto* vm = Global<VirtualMachine>::Get();
+    auto* vm = Singleton<VirtualMachine>::Get();
     CHECK_NOTNULL_OR_RETURN(vm) << "virtual machine not initialized.";
     CHECK_OR_RETURN(!vm->NoMoreErasedInstructions(last_total_erased.get()))
         << "blocking instructions\n"
@@ -230,14 +232,15 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
       const auto& device = instruction->stream().device();
       CHECK_OR_RETURN(device->enum_type() == DeviceType::kCPU)
           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
-      instruction->instruction_type().Compute(instruction);
+      JUST(instruction->Prepare());
+      instruction->Compute();
     }
   } else if (unlikely(disable_vm_threads_)) {
     JUST(RunInCurrentThread(instruction_list));
   } else {
     const int64_t kHighWaterMark = GetInstructionHighWaterMark();
     if (engine_->flying_instruction_cnt() > kHighWaterMark) {
-      JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
+      JUST(Singleton<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
         auto bc = std::make_shared<BlockingCounter>(1);
         engine_->InsertProbe([bc](vm::VirtualMachineEngine* engine) {
           const int64_t kLowWaterMark = GetInstructionLowWaterMark();
@@ -334,19 +337,19 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
   scheduler_stopped_ = true;
 }
 
-intrusive::shared_ptr<vm::MirroredObject> VirtualMachine::FindOrCreateScheduleLocalDepObject(
+intrusive::shared_ptr<vm::Dependence> VirtualMachine::FindOrCreateScheduleLocalDepObject(
     Symbol<Device> device, StreamRole stream_role) {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
   auto key = std::make_pair(device, stream_role);
-  intrusive::shared_ptr<vm::MirroredObject>* ptr = &device_stream_role2local_dep_object_[key];
-  if (!*ptr) { *ptr = intrusive::make_shared<vm::MirroredObject>(); }
+  intrusive::shared_ptr<vm::Dependence>* ptr = &device_stream_role2local_dep_object_[key];
+  if (!*ptr) { *ptr = intrusive::make_shared<vm::Dependence>(); }
   return *ptr;
 }
 
-intrusive::shared_ptr<vm::MirroredObject> VirtualMachine::FindOrCreateTransportLocalDepObject() {
+intrusive::shared_ptr<vm::Dependence> VirtualMachine::FindOrCreateTransportLocalDepObject() {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
   if (!transport_local_dep_object_) {
-    transport_local_dep_object_ = intrusive::make_shared<vm::MirroredObject>();
+    transport_local_dep_object_ = intrusive::make_shared<vm::Dependence>();
   }
   return transport_local_dep_object_;
 }
@@ -361,13 +364,14 @@ Maybe<vm::Stream*> VirtualMachine::GetVmStream(Symbol<Stream> stream) {
   if (stream->unique_stream_id() >= unique_stream_id2vm_stream_.size()) {
     std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
     if (stream->unique_stream_id() >= unique_stream_id2vm_stream_.size()) {
-      auto* stream_mgr = JUST(GlobalMaybe<StreamMgr>());
+      auto* stream_mgr = JUST(SingletonMaybe<StreamMgr>());
       for (int i = unique_stream_id2vm_stream_.size(); i <= stream->unique_stream_id(); ++i) {
         Symbol<Stream> cur_stream = JUST(stream_mgr->GetStreamSymbol(i));
         CHECK_EQ_OR_RETURN(cur_stream->unique_stream_id(), i)
             << "invalid Stream::unique_stream_id()";
-        *unique_stream_id2vm_stream_.MutableOrAdd(cur_stream->unique_stream_id()) =
-            JUST(CreateStream(cur_stream->device(), cur_stream->stream_role()));
+        unique_stream_id2vm_stream_.SetOrAdd(
+            cur_stream->unique_stream_id(),
+            JUST(CreateStream(cur_stream->device(), cur_stream->stream_role())));
       }
     }
   }
@@ -412,8 +416,8 @@ Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device,
       CHECK_GT(device_type_value, 0);
       std::string device_tag = *CHECK_JUST(DeviceTag4DeviceType(device->enum_type()));
       if (!StreamOnIndependentThread::Visit(stream_role)) {
-        CHECK_JUST(InitThisThreadConsistentId(device_type_value + kThreadConsistentIdScheduler,
-                                              device_tag));
+        CHECK_JUST(
+            InitThisThreadGlobalId(device_type_value + kThreadGlobalIdScheduler, device_tag));
       }
       OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Worker_" + device_tag);
     };
@@ -432,9 +436,9 @@ Maybe<vm::Stream*> VirtualMachine::CreateStream(vm::ThreadCtx* thread_ctx, Symbo
   // stream_ptr may be used after timout.
   auto stream_ptr = std::make_shared<vm::Stream*>(nullptr);
   auto bc = std::make_shared<BlockingCounter>(1);
-  intrusive::shared_ptr<vm::MirroredObject> schedule_local_dep_object =
+  intrusive::shared_ptr<vm::Dependence> schedule_local_dep_object =
       FindOrCreateScheduleLocalDepObject(device, stream_role);
-  Optional<intrusive::shared_ptr<vm::MirroredObject>> transport_local_dep_object;
+  Optional<intrusive::shared_ptr<vm::Dependence>> transport_local_dep_object;
   if (IsCommNetStream::Visit(stream_role)) {
     transport_local_dep_object = FindOrCreateTransportLocalDepObject();
   }

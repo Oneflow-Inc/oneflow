@@ -51,7 +51,7 @@ namespace oneflow {
 /* static */ Maybe<void> OnerecDecoderOp::ModifyOutputArg(
     const GetOutputArgModifier& GetOutputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   // NOTE(yaochi): refer to tensor_buffer_to_list_of_tensors
-  // In order to support consistent tensor, set set_header_infered_before_compute to false
+  // In order to support global tensor, set set_header_infered_before_compute to false
   // only when is_dynamic == true
   if (conf.attr<bool>("is_dynamic")) {
     FOR_RANGE(int64_t, i, 0, conf.output_size("out")) {

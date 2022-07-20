@@ -21,7 +21,7 @@ add_docstr(
     r"""
     cosine_similarity(x1, x2, dim=1, eps=1e-8) -> Tensor
 
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.cosine_similarity.html#torch.nn.functional.cosine_similarity
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.cosine_similarity.html
 
     Returns cosine similarity between ``x1`` and ``x2``, computed along dim. ``x1`` and ``x2`` must be broadcastable
     to a common shape. ``dim`` refers to the dimension in this common shape. Dimension ``dim`` of the output is

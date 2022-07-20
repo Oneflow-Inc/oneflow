@@ -82,7 +82,10 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error);
 
 #define OF_NCCL_CHECK_OR_RETURN(condition)                                                         \
   for (ncclResult_t _of_nccl_check_status = (condition); _of_nccl_check_status != ncclSuccess;)    \
-  return Error::CheckFailedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)                 \
+  return Error::CheckFailedError().AddStackFrame([](const char* function) {                        \
+    thread_local static auto frame = SymbolOf(ErrorStackFrame(__FILE__, __LINE__, function));      \
+    return frame;                                                                                  \
+  }(__FUNCTION__))                                                                                 \
          << "Check failed: " #condition " : " << ncclGetErrorString(_of_nccl_check_status) << " (" \
          << _of_nccl_check_status << ") "
 
@@ -152,13 +155,11 @@ class CublasMathModeGuard final {
   cublasMath_t new_mode_{};
 };
 
-int GetCudaSmVersion();
-
-int GetCudaPtxVersion();
-
 int GetCudaDeviceIndex();
 
 int GetCudaDeviceCount();
+
+Maybe<double> GetCUDAMemoryUsed();
 
 void SetCudaDeviceIndex(int device_id);
 

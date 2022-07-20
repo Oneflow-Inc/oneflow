@@ -30,7 +30,7 @@ class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
@@ -40,7 +40,7 @@ class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossCaptureState> {
     ctx->requires_grad = inputs.at(0)->requires_grad();  // prediction
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);  // NOLINT(maybe-need-error-msg)
 
     ctx->SaveTensorForBackward(inputs.at(0));  // prediction
     ctx->SaveTensorForBackward(inputs.at(1));  // label
@@ -54,7 +54,7 @@ class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossCaptureState> {
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(2);
 
     const auto& prediction = ctx->SavedTensors().at(0);

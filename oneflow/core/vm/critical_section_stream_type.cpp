@@ -25,7 +25,7 @@ namespace oneflow {
 namespace vm {
 
 void CriticalSectionStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
-                                              Stream* stream) const {
+                                              Symbol<Device> device) const {
   device_ctx->reset();
 }
 
@@ -46,9 +46,7 @@ bool CriticalSectionStreamType::QueryInstructionStatusDone(
   return CriticalSectionStatusQuerier::Cast(status_buffer.buffer())->QueryDone();
 }
 
-void CriticalSectionStreamType::Compute(Instruction* instruction) const {
-  instruction->instruction_type().Compute(instruction);
-}
+void CriticalSectionStreamType::Run(Instruction* instruction) const { instruction->Compute(); }
 
 }  // namespace vm
 }  // namespace oneflow

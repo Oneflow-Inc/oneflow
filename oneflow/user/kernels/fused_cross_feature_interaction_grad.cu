@@ -235,7 +235,7 @@ template<typename T>
 class FusedCrossFeatureInteractionGradKernel final : public OpKernel, public CudaGraphSupport {
  public:
   FusedCrossFeatureInteractionGradKernel() = default;
-  ~FusedCrossFeatureInteractionGradKernel() = default;
+  ~FusedCrossFeatureInteractionGradKernel() override = default;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:

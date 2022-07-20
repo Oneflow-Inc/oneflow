@@ -22,7 +22,7 @@ namespace oneflow {
 
 template<typename SymbolT>
 Maybe<SymbolT> GetSymbol(int64_t symbol_id) {
-  const auto& symbol_storage = *Global<symbol::Storage<SymbolT>>::Get();
+  const auto& symbol_storage = *Singleton<symbol::Storage<SymbolT>>::Get();
   const auto& ptr = JUST(symbol_storage.MaybeGetPtr(symbol_id));
   JUST(ptr->symbol_id());
   return ptr;

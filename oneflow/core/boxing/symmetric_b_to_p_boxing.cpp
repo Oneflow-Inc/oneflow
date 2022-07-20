@@ -63,9 +63,9 @@ Maybe<one::Tensor> SymmetricBToP(const std::shared_ptr<one::Tensor>& tensor, Sym
   } else {
     local_tensor = JUST(one::functional::ZerosLike(local_tensor));
   }
-  return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(),
-                                                 *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
-                                                 tensor->dtype()));
+  return JUST(one::functional::LocalToGlobal(local_tensor, out->placement(),
+                                             *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
+                                             tensor->dtype(), /* sync_data */ false));
 }
 
 COMMAND(RegisterBoxingFunction("symmetric-b-to-p", CheckSymmetricBToP, &SymmetricBToP));

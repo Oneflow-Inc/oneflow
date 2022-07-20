@@ -283,6 +283,7 @@ DIRECT_PASS_FUNC(PyTensorObject_pow, functional::pow)
 DIRECT_PASS_FUNC(PyTensorObject_chunk, functional::chunk)
 DIRECT_PASS_FUNC(PyTensorObject_narrow, functional::narrow)
 DIRECT_PASS_FUNC(PyTensorObject_masked_fill, functional::masked_fill)
+DIRECT_PASS_FUNC(PyTensorObject_dot, functional::dot)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -646,8 +647,9 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
     return NULL;
   };
 
-  CHECK_OR_THROW(placement_obj != Py_None && sbp_obj != Py_None) << Error::InvalidValueError(
-      "Converting a local tensor to global tensor must have placement and sbp parameters.");
+  CHECK_OR_THROW(placement_obj != Py_None && sbp_obj != Py_None)
+      << Error::InvalidValueError()
+      << "Converting a local tensor to global tensor must have placement and sbp parameters.";
   CHECK_OR_THROW(functional::PyParallelDescCheck(placement_obj))
       << Error::TypeError() << "Invalid parameter placement with type "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(placement_obj)));
@@ -661,7 +663,7 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
         << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(sbp_obj)));
     sbp = functional::PyUnpackSbpParallelSequence(sbp_obj);
   }
-  return PyTensor_New(ASSERT_PTR(functional::ToConsistent(
+  return PyTensor_New(ASSERT_PTR(functional::ToGlobal(
       tensor, functional::PyUnpackParallelDesc(placement_obj), sbp, {}, check_meta)));
   END_HANDLE_ERRORS
 }
@@ -669,8 +671,7 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
 static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   auto tensor = PyTensor_Unpack(self);
-  CHECK_OR_THROW(tensor->is_consistent())
-      << Error::RuntimeError() << "input must be a global tensor";
+  CHECK_OR_THROW(tensor->is_global()) << Error::RuntimeError() << "input must be a global tensor";
   PyObject* placement_obj = Py_None;
   PyObject* sbp_obj = Py_None;
   PyObject* grad_sbp_obj = Py_None;
@@ -720,7 +721,7 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
     grad_sbp = functional::PyUnpackSbpParallelSequence(grad_sbp_obj);
   }
   return PyTensor_New(
-      ASSERT_PTR(functional::ToConsistent(tensor, placement, sbp, grad_sbp, check_meta)));
+      ASSERT_PTR(functional::ToGlobal(tensor, placement, sbp, grad_sbp, check_meta)));
   END_HANDLE_ERRORS
 }
 
@@ -728,7 +729,7 @@ static PyObject* PyTensorObject_to_global(PyObject* self, PyObject* args, PyObje
   HANDLE_ERRORS
   const auto& tensor = PyTensor_Unpack(self);
   PyObject* result = NULL;
-  if (tensor->is_consistent())
+  if (tensor->is_global())
     result = PyTensorObject_global_to_global(self, args, kwargs);
   else {
     result = PyTensorObject_local_to_global(self, args, kwargs);
@@ -742,9 +743,9 @@ static PyObject* PyTensorObject_to_global(PyObject* self, PyObject* args, PyObje
 static PyObject* PyTensorObject_to_local(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   auto tensor = PyTensor_Unpack(self);
-  CHECK_OR_THROW(tensor->is_consistent())
+  CHECK_OR_THROW(tensor->is_global())
       << Error::RuntimeError() << "Expected global tensor for to_local but got local tensor!";
-  return PyTensor_New(ASSERT_PTR(functional::ConsistentToLocal(tensor)));
+  return PyTensor_New(ASSERT_PTR(functional::GlobalToLocal(tensor)));
   END_HANDLE_ERRORS
 }
 
@@ -759,7 +760,7 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
       << Error::TypeError() << "tensor_setitem(): argument 'value' must be tensor or scalar, not "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(value)));
 
-  if (tensor->is_consistent()) {
+  if (tensor->is_global()) {
     Symbol<ParallelDesc> placement = ASSERT(tensor->parallel_desc());
     auto ndsbp = ASSERT(tensor->nd_sbp());
     std::vector<Symbol<SbpParallel>> sbp(ndsbp->sbp_parallel_size(),
@@ -767,13 +768,13 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
     if (functional::PyScalarCheck(value)) {
       Scalar value_scalar = functional::PyUnpackScalar(value);
       value_tensor = ASSERT_PTR(
-          functional::ConsistentConstant({1}, value_scalar, tensor->dtype(), placement, sbp));
+          functional::GlobalConstant({1}, value_scalar, tensor->dtype(), placement, sbp));
     } else {
       value_tensor = PyTensor_Unpack(value);
-      CHECK_OR_THROW(value_tensor->is_consistent())
+      CHECK_OR_THROW(value_tensor->is_global())
           << Error::RuntimeError()
           << "tensor_setitem(): value must be a global tensor when self is global";
-      value_tensor = ASSERT_PTR(functional::ToConsistent(value_tensor, placement, sbp, {}, true));
+      value_tensor = ASSERT_PTR(functional::ToGlobal(value_tensor, placement, sbp, {}, true));
     }
   } else {
     if (functional::PyScalarCheck(value)) {
@@ -880,6 +881,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"chunk", (PyCFunction)PyTensorObject_chunk, METH_VARARGS | METH_KEYWORDS, NULL},
     {"narrow", (PyCFunction)PyTensorObject_narrow, METH_VARARGS | METH_KEYWORDS, NULL},
     {"masked_fill", (PyCFunction)PyTensorObject_masked_fill, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"dot", (PyCFunction)PyTensorObject_dot, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},

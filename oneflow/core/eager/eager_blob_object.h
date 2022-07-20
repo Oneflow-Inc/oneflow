@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/op_args_reserved_size.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/memory/memory_allocator.h"
@@ -84,7 +85,9 @@ class TensorStorage {
   std::vector<std::function<void()>> storage_delete_hooks_;
 };
 
-class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc {
+class EagerBlobObject final : public user_op::Tensor,
+                              public user_op::TensorDesc,
+                              public std::enable_shared_from_this<EagerBlobObject> {
  public:
   EagerBlobObject(const EagerBlobObject&) = delete;
   EagerBlobObject(EagerBlobObject&&) = delete;
@@ -116,7 +119,11 @@ class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc
   MutShapeView mut_shape_view() override { return *shape_; }
   const MemoryCase& mem_case() const override { return *mem_case_; }
   const void* raw_dptr() const override {
-    return tensor_storage_->blob_dptr() + storage_offset_ * GetSizeOfDataType(data_type_);
+    CHECK(inited_mem_ptr_for_allocation_compuation_pipelining_)
+        << "mem_ptr_for_allocation_compuation_pipelining_ not initialized. Please check if there "
+           "are any EagerBlobObjects created outside vm";
+    return mem_ptr_for_allocation_compuation_pipelining_
+           + storage_offset_ * GetSizeOfDataType(data_type_);
   }
   void* mut_raw_dptr() override { return const_cast<void*>(raw_dptr()); }
 
@@ -126,7 +133,7 @@ class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc
                "possible. Almost all methods of `Blob` are also in `EagerBlobObject`.")]] Blob*
   blob();
 
-  Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx);
+  Maybe<void> TryAllocateBlobBodyMemory(vm::Allocator* allocator);
   Maybe<void> DeallocateBlobDataPtr() {
     tensor_storage_->Release();
     tensor_storage_.reset(new TensorStorage);
@@ -143,10 +150,6 @@ class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc
 
   std::shared_ptr<TensorStorage>& tensor_storage() { return tensor_storage_; }
 
-  bool is_shape_synced() const { return is_shape_synced_; }
-
-  void set_is_shape_synced(bool val) { is_shape_synced_ = val; }
-
   const Optional<Symbol<::oneflow::Stream>>& producer_stream() const {
     return tensor_storage_->producer_stream();
   }
@@ -160,10 +163,6 @@ class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc
   void set_last_used_stream(Symbol<::oneflow::Stream> last_used_stream) {
     tensor_storage_->set_last_used_stream(last_used_stream);
   }
-
-  void set_pin_memory(const bool pin_memory) { pin_memory_ = pin_memory; }
-
-  bool pin_memory() const { return pin_memory_; }
 
   std::shared_ptr<const Shape> shape_ptr() const { return shape_; }
   std::shared_ptr<const Stride> stride_ptr() const { return stride_; }
@@ -180,7 +179,27 @@ class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc
   const char* header_ptr() const { return reinterpret_cast<const char*>(shape_->dim_vec().data()); }
   char* mut_header_ptr() { return reinterpret_cast<char*>(shape_->dim_vec().data()); }
 
+  void InitOrCheckMemPtrForAllocationComputationPipelining() {
+    auto* ptr = tensor_storage_->blob_dptr();
+    if (inited_mem_ptr_for_allocation_compuation_pipelining_) {
+      CHECK_EQ(mem_ptr_for_allocation_compuation_pipelining_, ptr);
+    } else {
+      mem_ptr_for_allocation_compuation_pipelining_ = ptr;
+      inited_mem_ptr_for_allocation_compuation_pipelining_ = true;
+    }
+  }
+
+  void TryInitNonPODTypeEagerBlobObjectIfNeed();
+
  private:
+  void InitMemPtrForAllocationComputationPipelining() {
+    auto* ptr = tensor_storage_->blob_dptr();
+    CHECK(!inited_mem_ptr_for_allocation_compuation_pipelining_)
+        << "mem_ptr_for_allocation_compuation_pipelining_ has been initialized.";
+    mem_ptr_for_allocation_compuation_pipelining_ = ptr;
+    inited_mem_ptr_for_allocation_compuation_pipelining_ = true;
+  }
+
   bool is_dynamic_;
   std::shared_ptr<MemoryCase> mem_case_;
   DataType data_type_;
@@ -188,7 +207,11 @@ class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc
   std::shared_ptr<Stride> stride_;
   int64_t storage_offset_;
   std::shared_ptr<TensorStorage> tensor_storage_;
-  std::atomic<bool> is_shape_synced_;
+  // For allocation-computation pipeline, the value of mem_ptr_for_allocation_compuation_pipelining_
+  // are kept even after tensor_storage_.reset().
+  char* mem_ptr_for_allocation_compuation_pipelining_;
+  bool inited_mem_ptr_for_allocation_compuation_pipelining_;
+  bool is_non_pod_object_placement_newed_;
   bool pin_memory_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
 
@@ -197,7 +220,11 @@ class EagerBlobObject final : public user_op::Tensor, public user_op::TensorDesc
   std::unique_ptr<Blob> blob_;
 };
 
+using EagerBlobObjectList = small_vector<std::shared_ptr<vm::EagerBlobObject>, kOpArgsReservedSize>;
+using EagerBlobObjectListPtr = std::shared_ptr<const EagerBlobObjectList>;
+
 }  // namespace vm
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_EAGER_BLOB_OBJECT_H_
