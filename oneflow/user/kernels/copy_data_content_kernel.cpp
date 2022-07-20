@@ -33,7 +33,8 @@ class CopyDataContentKernel final : public user_op::OpKernel, public user_op::Cu
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t elem_cnt = in->shape_view().elem_cnt();
     // For 0-size tensor, we don't need to copy data, but we must
-    // fill output tensor with Scalar(0) because during the backward propogation, this kernel will also be used.
+    // fill output tensor with Scalar(0) because during the backward propogation, this kernel will
+    // also be used.
     if (elem_cnt == 0) {
       const int64_t out_elem_cnt = out->shape_view().elem_cnt();
       CHECK_GE(out_elem_cnt, 0);
