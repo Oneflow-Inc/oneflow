@@ -280,10 +280,6 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
-static bool PyTensorMetaClass_CheckExact(PyObject* obj) {
-  return obj == (PyObject*)PyTensorObject_Type;
-}
-
 static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   const auto& tensor = PyTensor_Unpack(self);
