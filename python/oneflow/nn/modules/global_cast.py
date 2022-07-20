@@ -140,15 +140,58 @@ def to_global_op(input, placement=None, sbp=None, **kwargs):
         True
         True
     """
-    if placement:
-        src_ranks = placement.ranks
-        cur_rank = flow.env.get_rank()
-        for r in src_ranks:
-            if r == cur_rank:
-                obj_input = pickle.dumps(input)
-                input = pickle.loads(flow._oneflow_internal.cpu_broadcast(obj_input, r))
+    is_input_not_tensor = False
+    is_input_global = False
+    if input is not None:
+        if isinstance(input, Tensor):
+            is_input_global = input.is_global
+        elif isinstance(input, (dict, tuple, list)):
+            is_first_tensor_in_input = True
+            input_tree_for_is_global = ArgsTree(input)
+            for arg in input_tree_for_is_global.iter_nodes():
+                if isinstance(arg, Tensor):
+                    if is_first_tensor_in_input:
+                        is_input_global = arg.is_global
+                        is_first_tensor_in_input = False
+                    else:
+                        assert arg.is_global == is_input_global, "Tensor(s) in the input must be all local or all global."
+        else:   # If the input is not None/Tensor/dict/tuple/list, i.e. int, float, str, etc. 
+            is_input_not_tensor = True
+
+    if (not is_input_not_tensor) and (placement is not None) and (not is_input_global):
+        # Determine whether the ranks of placement are same as all ranks
+        is_placement_on_all_ranks = False
+        all_ranks = flow.env.all_device_placement("cpu").ranks
+        if all_ranks.shape == placement.ranks.shape and (all_ranks == placement.ranks).all():
+            is_placement_on_all_ranks = True
+
+        if not is_placement_on_all_ranks:
+            src_rank = placement.ranks.flat[0]
+            cur_rank = flow.env.get_rank()
+
+            if cur_rank == src_rank:
+                # Replace tensor(s) in the input with None, in order to reduce communiation cost
+                if isinstance(input, Tensor) or input is None:
+                    mapped_input_none = None
+                else:
+                    input_tree_none = ArgsTree(input)
+
+                    def leaf_fn_to_none(node):
+                        if isinstance(node, Tensor):
+                            return None
+                        else:
+                            warnings.warn("Non-Tensor type: {} encountered, it will remain the same.".format(type(node)))
+                            return node
+
+                    mapped_input_none = input_tree_none.map_leaf(leaf_fn_to_none)
+
+                obj_input = pickle.dumps(mapped_input_none)
+                flow._oneflow_internal.cpu_broadcast(obj_input, src_rank)
             else:
-                input = pickle.loads(flow._oneflow_internal.cpu_broadcast(None, r))
+                if cur_rank in placement.ranks:
+                    flow._oneflow_internal.cpu_broadcast(None, src_rank)
+                else:   # The input of other ranks will be always overwritten no matter what is passed in
+                    input = pickle.loads(flow._oneflow_internal.cpu_broadcast(None, src_rank))
 
     if isinstance(input, Tensor) or input is None:
         return _to_global_tensor(input, placement, sbp, **kwargs)
@@ -156,7 +199,7 @@ def to_global_op(input, placement=None, sbp=None, **kwargs):
         input_tree = ArgsTree(input)
 
         def leaf_fn(node):
-            if isinstance(node, Tensor):
+            if isinstance(node, Tensor) or node is None:
                 return _to_global_tensor(node, placement, sbp, **kwargs)
             else:
                 warnings.warn("Non-Tensor type: {} encountered, it will remain the same.".format(type(node)))

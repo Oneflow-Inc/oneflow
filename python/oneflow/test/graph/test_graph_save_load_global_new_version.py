@@ -26,6 +26,7 @@ def _test_linear_graph_save_load_global(test_case, device):
     P = flow.placement(device, ranks=[0, 1])
     B = flow.sbp.broadcast
     S = flow.sbp.split(0)
+    model_file_placement = flow.placement("cpu", ranks=[0]) # This placement indicates the rank(s) on which saved the model
 
     def train_with_graph(call_cnt=0, state_dict_dir=None, last_state_dict=None):
         linear = flow.nn.Linear(3, 8)
@@ -71,22 +72,22 @@ def _test_linear_graph_save_load_global(test_case, device):
             else:
                 local_state_dict = None
 
-            global_state_dict = flow.to_global(local_state_dict, placement=P, sbp=B)
+            global_state_dict = flow.to_global(local_state_dict, placement=model_file_placement, sbp=B)
             linear_t_g.load_state_dict(global_state_dict)
-
-            # Check state in module has been loaded.
-            test_case.assertTrue(
-                np.array_equal(
-                    global_state_dict["linear"]["weight"].to_local().numpy(),
-                    linear.weight.to_local().numpy(),
+            if flow.env.get_rank() == 0:    # Ignore None on rank 1
+                # Check state in module has been loaded.
+                test_case.assertTrue(
+                    np.array_equal(
+                        global_state_dict["linear"]["weight"].to_local().numpy(),
+                        linear.weight.to_local().numpy(),
+                    )
                 )
-            )
-            test_case.assertTrue(
-                np.array_equal(
-                    global_state_dict["linear"]["bias"].to_local().numpy(),
-                    linear.bias.to_local().numpy(),
+                test_case.assertTrue(
+                    np.array_equal(
+                        global_state_dict["linear"]["bias"].to_local().numpy(),
+                        linear.bias.to_local().numpy(),
+                    )
                 )
-            )
         # Get state dict before compile is allowed.
         init_state_dict = linear_t_g.state_dict()
 
@@ -139,8 +140,11 @@ def _test_linear_graph_save_load_global(test_case, device):
         iter1_state_dict = linear_t_g.state_dict()
 
         if call_cnt == 0:
+            # Transfer the state dict to model_file_placement at first
+            model_file_state_dict = flow.to_global(iter1_state_dict, placement=model_file_placement, sbp=B)
             if flow.env.get_rank() == 0:
-                iter1_local_dict = flow.to_local(iter1_state_dict)
+                # And get the local component and save
+                iter1_local_dict = flow.to_local(model_file_state_dict)
                 flow.save(iter1_local_dict, state_dict_dir)
 
             of_graph_out = linear_t_g(x)
