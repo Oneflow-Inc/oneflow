@@ -46,6 +46,7 @@ def _test_nd_basic_parse(test_case):
         def __init__(self):
             super().__init__()
             self.net = net
+
         def build(self):
             return self.net()
 
