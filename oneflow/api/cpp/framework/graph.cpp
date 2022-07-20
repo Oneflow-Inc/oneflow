@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <fmt/core.h>
+#include "nlohmann/json.hpp"
 #include "oneflow/api/common/ofblob.h"
 #include "oneflow/api/common/variable_tensor_mgr.h"
 #include "oneflow/api/cpp/env_impl.h"
@@ -23,6 +25,7 @@ limitations under the License.
 #include "oneflow/api/cpp/framework/ivalue.h"
 #include "oneflow/api/cpp/framework/shape.h"
 #include "oneflow/api/cpp/framework/tensor.h"
+#include "oneflow/api/cpp/embedding/embedding.h"
 #include "oneflow/api/common/job_build_and_infer_ctx.h"
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
 #include "oneflow/core/common/data_type.pb.h"
@@ -32,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/embedding/posix_file.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
@@ -202,6 +206,35 @@ IValue Graph::Forward(const IValue& inputs) {
 void Graph::set_batch_size(int batch_size) { graph_->set_batch_size(batch_size); }
 
 Graph Graph::Load(const std::string& model_path, const Device& device) {
+  Graph graph(model_path, device);
+  return graph;
+}
+
+Graph Graph::LoadOneEmbedding(const std::string& model_path, const Device& device,
+                              const std::string& persistent_table_path) {
+  const std::string kv_options_path =
+      model_path + "/embedding_layer.one_embedding.OneEmbeddingKeyValueOptions/KeyValueOptions";
+  const std::string snapshot_path =
+      model_path + "/embedding_layer.one_embedding.OneEmbeddingSnapshot/Snapshot";
+  CHECK((oneflow::embedding::PosixFile::FileExists(kv_options_path)
+         && oneflow::embedding::PosixFile::FileExists(snapshot_path)))
+      << "Not a valid one-embedding model.";
+  std::ifstream f(kv_options_path);
+  auto kv_options_json = nlohmann::json::parse(f);
+  if (persistent_table_path != "") {
+    kv_options_json["kv_store"]["persistent_table"]["path"] = persistent_table_path;
+  }
+  std::string embedding_name = embedding::CreateKeyValueStore(kv_options_json.dump());
+  const std::string snapshot = [&]() {
+    std::ifstream variable_file(snapshot_path);
+    CHECK(variable_file.is_open());
+    std::string snapshot;
+    variable_file >> snapshot;
+    return snapshot;
+  }();
+  fmt::print("{}244\n", embedding_name);
+  fmt::print("{}233\n", snapshot);
+  embedding::LoadSnapshot(snapshot, embedding_name);
   Graph graph(model_path, device);
   return graph;
 }
