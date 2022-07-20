@@ -493,29 +493,30 @@ class IdShuffleKernel final : public user_op::OpKernel {
   OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32) \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
 
-#define REGISTER_CUDA_ID_SHUFFLE_KERNEL(k_dtype_pair, table_id_dtype_pair, idx_dtype_pair)        \
-  REGISTER_USER_KERNEL("id_shuffle")                                                              \
-      .SetCreateFn<                                                                               \
-          IdShuffleKernel<OF_PP_PAIR_FIRST(k_dtype_pair), OF_PP_PAIR_FIRST(table_id_dtype_pair),  \
-                          OF_PP_PAIR_FIRST(idx_dtype_pair)>>()                                    \
-      .SetIsMatchedHob(                                                                           \
-          (user_op::HobDeviceType() == DeviceType::kCUDA)                                         \
-          && (user_op::HobDataType("ids", 0) == OF_PP_PAIR_SECOND(k_dtype_pair))                  \
-          && (user_op::HobDataType("cur_rank_unique_table_ids", 0)                                \
-              == OF_PP_PAIR_SECOND(table_id_dtype_pair))                                          \
-          && (user_op::HobDataType("num_unique_matrix", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
-        const user_op::TensorDesc& ids = ctx->InputTensorDesc("ids", 0);                          \
-        const bool has_table_ids = ctx->has_input("table_ids", 0);                                \
-        const int32_t num_tables = ctx->Attr<int32_t>("num_tables");                              \
-        const bool need_gen_table_ids = (!has_table_ids && num_tables > 1);                       \
-        const bool need_process_table_ids = (has_table_ids || num_tables > 1);                    \
-        IdShuffleTmpBufferManager<OF_PP_PAIR_FIRST(k_dtype_pair),                                 \
-                                  OF_PP_PAIR_FIRST(table_id_dtype_pair),                          \
-                                  OF_PP_PAIR_FIRST(idx_dtype_pair)>                               \
-            buffer_manager(nullptr, ids.shape().elem_cnt(), ctx->parallel_desc().parallel_num(),  \
-                           need_gen_table_ids, need_process_table_ids);                           \
-        return buffer_manager.TotalBufferSize();                                                  \
+#define REGISTER_CUDA_ID_SHUFFLE_KERNEL(k_dtype_pair, table_id_dtype_pair, idx_dtype_pair)       \
+  REGISTER_USER_KERNEL("id_shuffle")                                                             \
+      .SetCreateFn<                                                                              \
+          IdShuffleKernel<OF_PP_PAIR_FIRST(k_dtype_pair), OF_PP_PAIR_FIRST(table_id_dtype_pair), \
+                          OF_PP_PAIR_FIRST(idx_dtype_pair)>>()                                   \
+      .SetIsMatchedHob(                                                                          \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                        \
+          && (user_op::HobDataType("ids", 0) == OF_PP_PAIR_SECOND(k_dtype_pair))                 \
+          && (user_op::HobDataType("cur_rank_unique_table_ids", 0)                               \
+              == OF_PP_PAIR_SECOND(table_id_dtype_pair))                                         \
+          && (user_op::HobDataType("num_unique_matrix", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair)) \
+          && (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ID_SHUFFLE_USE_P2P", false)))          \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
+        const user_op::TensorDesc& ids = ctx->InputTensorDesc("ids", 0);                         \
+        const bool has_table_ids = ctx->has_input("table_ids", 0);                               \
+        const int32_t num_tables = ctx->Attr<int32_t>("num_tables");                             \
+        const bool need_gen_table_ids = (!has_table_ids && num_tables > 1);                      \
+        const bool need_process_table_ids = (has_table_ids || num_tables > 1);                   \
+        IdShuffleTmpBufferManager<OF_PP_PAIR_FIRST(k_dtype_pair),                                \
+                                  OF_PP_PAIR_FIRST(table_id_dtype_pair),                         \
+                                  OF_PP_PAIR_FIRST(idx_dtype_pair)>                              \
+            buffer_manager(nullptr, ids.shape().elem_cnt(), ctx->parallel_desc().parallel_num(), \
+                           need_gen_table_ids, need_process_table_ids);                          \
+        return buffer_manager.TotalBufferSize();                                                 \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ID_SHUFFLE_KERNEL, ID_DATA_TYPE_SEQ,
@@ -1123,6 +1124,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       .SetIsMatchedHob(                                                                           \
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                         \
           && (user_op::HobDataType("cur_rank_embeddings", 0) == OF_PP_PAIR_SECOND(t_dtype_pair))  \
+          && (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EMBEDDING_SHUFFLE_USE_P2P", false))     \
           && (user_op::HobDataType("num_unique_matrix", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
         const user_op::TensorDesc& inverse_unique_partition_indices =                             \
@@ -1553,6 +1555,8 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
       .SetIsMatchedHob(                                                                           \
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                         \
           && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(t_dtype_pair))       \
+          && (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EMBEDDING_GRADIENT_SHUFFLE_USE_P2P",    \
+                                   false))                                                        \
           && (user_op::HobDataType("num_unique_matrix", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
         const user_op::TensorDesc& cur_rank_unique_embedding_grad =                               \

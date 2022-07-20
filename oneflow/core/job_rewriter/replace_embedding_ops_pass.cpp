@@ -178,6 +178,7 @@ void BuildEmbeddingShuffle(JobBuilder* job_builder, const std::string& embedding
                            const std::string& num_unique_matrix_lbn,
                            const std::string& embedding_lbn, std::vector<OperatorConf>* add_ops,
                            std::string* new_embeddings_lbn) {
+  const bool is_train_job = job_builder->job().job_conf().has_train_conf();
   user_op::UserOpConfWrapperBuilder embedding_shuffle_op_builder(embedding_op.op_name()
                                                                  + "_embedding_shuffle");
   user_op::UserOpConfWrapper embedding_shuffle_op =
@@ -188,6 +189,7 @@ void BuildEmbeddingShuffle(JobBuilder* job_builder, const std::string& embedding
           .Input("num_unique_matrix", num_unique_matrix_lbn)
           .Attr<std::string>("embedding_name", embedding_name)
           .Attr<int64_t>("embedding_size", embedding_size)
+          .Attr<bool>("is_train", is_train_job)
           .Output("embeddings")
           .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
           .Build();
