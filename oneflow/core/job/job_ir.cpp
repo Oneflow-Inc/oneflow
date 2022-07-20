@@ -27,6 +27,10 @@ Maybe<void> SaveJobToIR(Job* job, const std::string& path) {
   UNIMPLEMENTED_THEN_RETURN() << "SaveJobToIR is only supported WITH_MLIR";
 }
 
+Maybe<std::string> ConvertJobToIR(Job* job) {
+  UNIMPLEMENTED_THEN_RETURN() << "ConvertJobToIR is only supported WITH_MLIR";
+}
+
 Maybe<void> LoadJobFromIR(Job* job, const std::string& path) {
   UNIMPLEMENTED_THEN_RETURN() << "LoadJobFromIR is only supported WITH_MLIR";
 }

@@ -156,6 +156,7 @@ void registerFromOneFlowJobTranslation();
 
 std::string ConvertJobToTosaIR(RoundTripOneFlowJobWrapperInterface& job_wrapper);
 void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path);
+std::string ConvertJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper);
 void LoadJobFromIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path);
 
 }  // namespace oneflow

@@ -190,6 +190,12 @@ Maybe<void> SaveJobToIR(Job* job, const std::string& path) {
   return Maybe<void>::Ok();
 }
 
+Maybe<std::string> ConvertJobToIR(Job* job) {
+  if (IsInDebugMode()) { TeePersistentLogStream::Create("saved_job")->Write(*job); }
+  RoundTripOneFlowJobWrapper<kBeforeAD> job_wrapper(job);
+  return ::mlir::oneflow::ConvertJobToIR(job_wrapper);
+}
+
 Maybe<void> LoadJobFromIR(Job* job, const std::string& path) {
   job->Clear();
   RoundTripOneFlowJobWrapper<kBeforeAD> job_wrapper(job);

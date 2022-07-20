@@ -99,6 +99,13 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
               << "serialized job conversion failed.";
           return SaveJobToIR(&job, path);
         });
+  m.def("ConvertJobToIR",
+        [](const std::string& serialized_job) -> Maybe<std::string> {
+          Job job;
+          CHECK_OR_RETURN(TxtString2PbMessage(serialized_job, &job))
+              << "serialized job conversion failed.";
+          return ConvertJobToIR(&job);
+        });
   m.def("LoadSerializedJobFromIR", [](const std::string& path) -> Maybe<py::bytes> {
     Job job;
     JUST(LoadJobFromIR(&job, path));
