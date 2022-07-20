@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#include <fmt/core.h>
 #include "nlohmann/json.hpp"
 #include "oneflow/api/common/ofblob.h"
 #include "oneflow/api/common/variable_tensor_mgr.h"
@@ -219,21 +217,19 @@ Graph Graph::LoadOneEmbedding(const std::string& model_path, const Device& devic
   CHECK((oneflow::embedding::PosixFile::FileExists(kv_options_path)
          && oneflow::embedding::PosixFile::FileExists(snapshot_path)))
       << "Not a valid one-embedding model.";
-  std::ifstream f(kv_options_path);
-  auto kv_options_json = nlohmann::json::parse(f);
+  std::ifstream kv_options_file(kv_options_path);
+  auto kv_options_json = nlohmann::json::parse(kv_options_file);
   if (persistent_table_path != "") {
     kv_options_json["kv_store"]["persistent_table"]["path"] = persistent_table_path;
   }
   std::string embedding_name = embedding::CreateKeyValueStore(kv_options_json.dump());
   const std::string snapshot = [&]() {
-    std::ifstream variable_file(snapshot_path);
-    CHECK(variable_file.is_open());
+    std::ifstream snapshot_file(snapshot_path);
+    CHECK(snapshot_file.is_open());
     std::string snapshot;
-    variable_file >> snapshot;
+    snapshot_file >> snapshot;
     return snapshot;
   }();
-  fmt::print("{}244\n", embedding_name);
-  fmt::print("{}233\n", snapshot);
   embedding::LoadSnapshot(snapshot, embedding_name);
   Graph graph(model_path, device);
   return graph;
