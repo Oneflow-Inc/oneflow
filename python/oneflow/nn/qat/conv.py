@@ -59,7 +59,7 @@ def init_fake_quants(
 
 
 class QatConv1d(nn.Conv1d):
-    r"""A Conv1d module attached with MinMaxObserver, MovingAverageMinMaxObserver and FakeQuantize modules for weight and input,
+    r"""A Conv1d module attached with `nn.MinMaxObserver`, `nn.MovingAverageMinMaxObserver` and `nn.FakeQuantization` modules for weight and input,
     used for quantization aware training.
 
     The parameters of QatConv1d are the same as :class:`~oneflow.nn.Conv1d` with some extra parameters for fake quantization.
@@ -116,7 +116,7 @@ class QatConv1d(nn.Conv1d):
 
 
 class QatConv2d(nn.Conv2d):
-    r"""A Conv2d module attached with MinMaxObserver, MovingAverageMinMaxObserver and FakeQuantize modules for weight and input,
+    r"""A Conv2d module attached with `nn.MinMaxObserver`, `nn.MovingAverageMinMaxObserver` and `nn.FakeQuantization` modules for weight and input,
     used for quantization aware training.
 
     The parameters of QatConv2d are the same as :class:`~oneflow.nn.Conv2d` with some extra parameters for fake quantization.
@@ -173,7 +173,7 @@ class QatConv2d(nn.Conv2d):
 
 
 class QatConv3d(nn.Conv3d):
-    r"""A Conv3d module attached with MinMaxObserver, MovingAverageMinMaxObserver and FakeQuantize modules for weight and input,
+    r"""A Conv3d module attached with `nn.MinMaxObserver`, `nn.MovingAverageMinMaxObserver` and `nn.FakeQuantization` modules for weight and input,
     used for quantization aware training.
 
     The parameters of QatConv3d are the same as :class:`~oneflow.nn.Conv3d` with some extra parameters for fake quantization.

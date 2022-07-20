@@ -241,6 +241,9 @@ Quantization Aware Training
     nn.MinMaxObserver
     nn.MovingAverageMinMaxObserver
     nn.FakeQuantization
+    nn.QatConv1d
+    nn.QatConv2d
+    nn.QatConv3d
 
 Utilities
 ---------
