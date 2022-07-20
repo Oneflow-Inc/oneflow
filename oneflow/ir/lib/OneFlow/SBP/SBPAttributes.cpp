@@ -1,3 +1,4 @@
+#include <iostream>
 #include "OneFlow/SBP/SBPDialect.h"
 #include "OneFlow/SBP/SBPAttributes.h"
 #include "llvm/ADT/SmallVector.h"
@@ -10,7 +11,11 @@ using namespace mlir;
 
 LogicalResult parseSBP(AsmParser& parser, FailureOr<ArrayAttr>& args) {
   if (failed(parser.parseLSquare())) { return failure(); }
-  if (succeeded(parser.parseOptionalRSquare())) { return success(); }
+  if (succeeded(parser.parseOptionalRSquare())) {
+    std::cout << "hello";
+    args = parser.getBuilder().getArrayAttr({});
+    return success();
+  }
   llvm::SmallVector<Attribute> res;
   llvm::SmallVector<Attribute> nd_list;
 
@@ -48,7 +53,7 @@ LogicalResult parseSBP(AsmParser& parser, FailureOr<ArrayAttr>& args) {
   args = parser.getBuilder().getArrayAttr(res);
   return success();
 }
-void printSBP(AsmPrinter& printer, ArrayAttr args) { printer << " " << args; }
+void printSBP(AsmPrinter& printer, ArrayAttr args) { printer  << args; }
 
 #define GET_ATTRDEF_CLASSES
 #include "OneFlow/SBPAttributes.cpp.inc"

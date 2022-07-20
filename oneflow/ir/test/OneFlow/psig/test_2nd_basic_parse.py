@@ -1,12 +1,13 @@
-import oneflow as flow
-import unittest
-import oneflow.unittest
-
-import os
-from google.protobuf import text_format
 # RUN: python3 -m oneflow.distributed.launch --nproc_per_node 2 %s | FileCheck %s
 # CHECK: [#sbp.b, #sbp.s<0>]
 # CHECK: [#sbp.b, #sbp.s<0>]
+
+import oneflow as flow
+import unittest
+import oneflow.unittest
+import os
+from google.protobuf import text_format
+
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 
 
