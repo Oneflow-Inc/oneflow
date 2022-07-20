@@ -20,6 +20,7 @@ LogicalResult parseSBP(AsmParser& parser, FailureOr<ArrayAttr>& args) {
         || list.back().dyn_cast<sbp::PartialSumAttr>()) {
       return success();
     }
+    llvm::errs() << "parse failed with bad attribute in sbp";
     return failure();
   };
 
@@ -34,7 +35,8 @@ LogicalResult parseSBP(AsmParser& parser, FailureOr<ArrayAttr>& args) {
   };
 
   if (parser.parseCommaSeparatedList([&]() {
-        if (succeeded(parser.parseLSquare())) {
+        // if (succeeded(parser.parseLSquare())) {
+        if (succeeded(parser.parseOptionalLSquare())) {
           return parserList();
         }
         return parserListElem(res);

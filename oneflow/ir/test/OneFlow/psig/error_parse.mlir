@@ -1,0 +1,11 @@
+// RUN: oneflow-opt %s \
+// RUN: -split-input-file \
+// RUN: -verify-diagnostics -o - | FileCheck %s
+
+// CHECK-NOT: test_err
+module {
+  oneflow.job @test_err(){
+    %output_0 = "oneflow.variable"() {data_type = 2 : i32, device_name = ["@0:0", "@1:1"], device_tag = "cuda", hierarchy = [2, 1], nd_sbp = #sbp.parallel_signature<[] -> [[[]], "S(0)", #sbp.p]>, op_name = "net-FreeEagerTensor-2", output_lbns = ["net-FreeEagerTensor-2/out"], scope_symbol_id = 14 : i64, shape = [5 : si64, 8 : si64], trainable = false} : () -> tensor<5x8xf32>
+    oneflow.return
+  }
+}
