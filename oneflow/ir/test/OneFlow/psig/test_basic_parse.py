@@ -5,6 +5,10 @@ import oneflow.unittest
 import os
 from google.protobuf import text_format
 
+# RUN: python3 %s | FileCheck %s
+# CHECK: sbp.b
+# CHECK: sbp.s<0>
+
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 def _test_1nd_basic_parse(test_case):
     class ModuleToRun(flow.nn.Module):
@@ -32,8 +36,14 @@ def _test_1nd_basic_parse(test_case):
     lazy_output = graph_to_run()
 
     serialized_job = str(text_format.MessageToString(graph_to_run._forward_job_proto))
-    # TODO: tmp file parse
-    flow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str("/home/yuhao"))
+
+    from tempfile import TemporaryDirectory
+    with TemporaryDirectory() as dirname:
+        flow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(dirname))
+        f_name = os.path.join(dirname, 'model.mlir')
+        f = open(f_name)
+        print(f.read())
+        f.close()
 
 @flow.unittest.skip_unless_1n1d()
 class TestBasicParse(flow.unittest.TestCase):
