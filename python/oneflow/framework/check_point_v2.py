@@ -284,11 +284,11 @@ def load(path: str, global_src_rank: Optional[int] = None,) -> Any:
 
     Args:
         path (str): The directory containing the object
-        global_src_rank (int, optional): The source rank for 
-            loading global tensors. When specified, only the 
+        global_src_rank (int, optional): The source rank for
+            loading global tensors. When specified, only the
             process whose rank == global_src_rank will really
             read the files in `path`, and tensors in the loaded
-            object will be consistent with placement = 
+            object will be consistent with placement =
             `flow.placement('cuda', [global_src_rank])`
 
     Returns:
@@ -330,9 +330,9 @@ def save(
     Args:
         obj: The object to be saved
         path (str): The directory in which the object is saved
-        global_dst_rank (int, optional): The destination rank for 
+        global_dst_rank (int, optional): The destination rank for
             saving global tensors. When specified, whole tensors
-            will be saved by the process whose rank == 
+            will be saved by the process whose rank ==
             global_src_rank, while other processes will not do any
             disk I/O.
     """
@@ -345,7 +345,7 @@ def save(
 
         path.mkdir(exist_ok=True)
 
-        serialized_job = str(text_format.MessageToString(graph._forward_job_proto))
+        serialized_job = graph._forward_job_proto.SerializeToString
         oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path))
 
         for x in graph._state():

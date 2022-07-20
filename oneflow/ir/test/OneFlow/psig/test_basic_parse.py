@@ -51,7 +51,7 @@ def _test_1nd_basic_parse(test_case):
     graph_to_run = GraphToRun()
     lazy_output = graph_to_run()
 
-    serialized_job = str(text_format.MessageToString(graph_to_run._forward_job_proto))
+    serialized_job = graph_to_run._forward_job_proto.SerializeToString()
     mlir = flow._oneflow_internal.nn.graph.ConvertJobToIR(serialized_job)
     print(mlir)
 
