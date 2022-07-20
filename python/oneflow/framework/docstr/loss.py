@@ -19,15 +19,15 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow._C.triplet_margin_loss,
     r"""    
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.triplet_margin_loss.html.
-
     Creates a criterion that measures the triplet loss given an input
     tensors :math:`x1`, :math:`x2`, :math:`x3` and a margin with a value greater than :math:`0`.
     This is used for measuring a relative similarity between samples. A triplet
     is composed by `a`, `p` and `n` (i.e., `anchor`, `positive examples` and `negative
     examples` respectively). The shapes of all input tensors should be
     :math:`(N, D)`.
-
+    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.triplet_margin_loss.html.
+    
     The distance swap is described in detail in the paper `Learning shallow
     convolutional feature descriptors with triplet losses <http://www.bmva.org/bmvc/2016/papers/paper119/index.html>`__ by
     V. Balntas, E. Riba et al.
@@ -81,9 +81,10 @@ add_docstr(
 add_docstr(
     oneflow._C.cross_entropy,
     r"""
+    See :class:`~oneflow.nn.CrossEntropyLoss` for details.
+
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.cross_entropy.html.
 
-    See :class:`~oneflow.nn.CrossEntropyLoss` for details.
 
     Args:
         input (Tensor) : :math:`(N, C)` where `C = number of classes` or :math:`(N, C, H, W)`

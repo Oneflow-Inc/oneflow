@@ -42,15 +42,13 @@ Maybe<void> CpuDevice::Alloc(const AllocationOptions& options, void** ptr, size_
         this->device_manager()->registry()->GetDevice(options.GetPinnedDeviceType(),    // NOLINT
                                                       options.GetPinnedDeviceIndex());  // NOLINT
     CHECK_OR_RETURN(device);
-    return device->AllocPinned(options, ptr, size);
+    JUST(device->AllocPinned(options, ptr, size));
   } else {
     *ptr = aligned_alloc(kMaxAlignmentRequirement, RoundUp(size, kMaxAlignmentRequirement));
-    if (*ptr == nullptr) {
-      return Error::RuntimeError() << "allocate failed";
-    } else {
-      return Maybe<void>::Ok();
-    }
+    if (*ptr == nullptr) { return Error::RuntimeError() << "allocate failed"; }
   }
+  memset(*ptr, 0, size);
+  return Maybe<void>::Ok();
 }
 
 void CpuDevice::Free(const AllocationOptions& options, void* ptr) {
