@@ -35,7 +35,7 @@ add_docstr(
     The input :attr:`window_length` is a positive integer controlling the
     returned window size. :attr:`periodic` flag determines whether the returned
     window trims off the last duplicate value from the symmetric window. Therefore, if :attr:`periodic` is true, the :math:`N` in
-    above formula is in fact :math:`\text{window\_length} + 1`. Also, we always have
+    above formula is in fact :math:`\text{window_length} + 1`. Also, we always have
     ``oneflow.hann_window(L, periodic=True)`` equal to
     ``oneflow.hann_window(L + 1, periodic=False)[:-1])``.
 
