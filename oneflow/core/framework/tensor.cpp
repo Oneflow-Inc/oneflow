@@ -134,7 +134,8 @@ Maybe<Tensor> GlobalTensor::clone() const {
       JUST(functional::Copy(local_tensor, device_type, device_id, /*pin_memory=*/false));
   DisableCheckGlobalTensorMetaScope disable_meta_check{};
   return functional::LocalToGlobal(cloned_local_tensor, JUST(parallel_desc()),
-                                   *JUST(GetSbpList(JUST(nd_sbp()))), *shape(), dtype());
+                                   *JUST(GetSbpList(JUST(nd_sbp()))), *shape(), dtype(),
+                                   /* sync_data */ true);
 }
 
 Maybe<GlobalTensor> GlobalTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
