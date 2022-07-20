@@ -40,7 +40,6 @@ def _test_sgd_add_param_group(test_case):
     o.step()
 
 
-
 class TestAddParamGroup(flow.unittest.TestCase):
     def test_sgd_add_param_group(test_case):
         _test_sgd_add_param_group(test_case)
