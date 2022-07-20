@@ -202,10 +202,10 @@ auto* CachedGetAllBroadcastNdSbp = DECORATE(&GetAllBroadcastNdSbp, ThreadLocal);
 
 }  // namespace
 
-Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
-                                           Symbol<ParallelDesc> placement,
-                                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                                           const bool requires_grad) {
+Maybe<Tensor> MakeGlobalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
+                                       Symbol<ParallelDesc> placement,
+                                       const std::vector<Symbol<SbpParallel>>& sbp_tuple,
+                                       const bool requires_grad) {
   PyObject* array = NULL;
   if (PyArray_Check(data)) {
     // Only NPY_CORDER is supported, and returns a new C-style contiguous array.
@@ -247,14 +247,15 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
   size_t sbp_dims = sbp_tuple.size();
   Symbol<NdSbp> broadcast_nd_sbp = JUST(CachedGetAllBroadcastNdSbp(sbp_dims));
 
-  std::shared_ptr<Tensor> broadcast_tensor = JUST(functional::LocalToConsistent(
-      local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)), shape, local_tensor->dtype()));
+  std::shared_ptr<Tensor> broadcast_tensor =
+      JUST(functional::LocalToGlobal(local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)),
+                                     shape, local_tensor->dtype(), /* sync_data */ true));
 
   std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-  auto consistent_tensor = JUST(functional::ToConsistent(broadcast_tensor, placement, sbp_tuple,
-                                                         grad_sbp_tuple, /* check_meta */ false));
-  JUST(consistent_tensor->set_requires_grad(requires_grad));
-  return consistent_tensor;
+  auto global_tensor = JUST(functional::ToGlobal(broadcast_tensor, placement, sbp_tuple,
+                                                 grad_sbp_tuple, /* check_meta */ false));
+  JUST(global_tensor->set_requires_grad(requires_grad));
+  return global_tensor;
 }
 
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
@@ -266,9 +267,9 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
     const Symbol<NdSbp>& nd_sbp = JUST(other->nd_sbp());
     const std::vector<Symbol<SbpParallel>>& sbp_tuple = *JUST(GetSbpList(nd_sbp));
     std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-    // TODO:(zhaoluyang) consistent case support pin_memory
-    return functional::ToConsistent(other, JUST(other->parallel_desc()), sbp_tuple, grad_sbp_tuple,
-                                    /* check_meta */ false);
+    // TODO:(zhaoluyang) global case support pin_memory
+    return functional::ToGlobal(other, JUST(other->parallel_desc()), sbp_tuple, grad_sbp_tuple,
+                                /* check_meta */ false);
   }
 }
 
@@ -284,7 +285,7 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
     tensor = JUST(functional::Copy(other, device_->type(), device_->device_id(),
                                    pin_memory && !dtype.has_value()));
   } else {
-    tensor = JUST(functional::ConsistentToLocal(other));
+    tensor = JUST(functional::GlobalToLocal(other));
     if (!device) { device_ = JUST(Device::New("cpu")); }
     tensor = JUST(functional::Copy(tensor, device_->type(), device_->device_id(),
                                    pin_memory && !dtype.has_value()));
@@ -303,9 +304,9 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                                         const bool requires_grad) {
   std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-  bool check_meta = other->is_consistent() ? false : true;
+  bool check_meta = other->is_global() ? false : true;
   std::shared_ptr<Tensor> tensor =
-      JUST(functional::ToConsistent(other, placement, sbp_tuple, grad_sbp_tuple, check_meta));
+      JUST(functional::ToGlobal(other, placement, sbp_tuple, grad_sbp_tuple, check_meta));
   if (dtype) {
     const Symbol<DType>& dtype_ = JUST(dtype);
     if (tensor->dtype() != dtype_) {

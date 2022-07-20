@@ -139,16 +139,6 @@ Maybe<void> EagerLocalTensorImpl::set_eager_blob_object(
 
 std::shared_ptr<const Shape> EagerLocalTensorImpl::shape() const {
   if (!eager_blob_object_) { return tensor_meta()->shape_ptr(); }
-  if (!eager_blob_object_->is_shape_synced()) {
-    auto btb = std::make_shared<BlockingThenBusy>(1);
-    CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(
-          this, btb, [](uint64_t) {}, "const");
-    }));
-    TRY(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()))
-        .GetOrThrow();
-    eager_blob_object_->set_is_shape_synced(true);
-  }
   return eager_blob_object_->shape_ptr();
 }
 
@@ -171,25 +161,25 @@ Maybe<void> EagerLocalTensorImpl::RegisterStorageDeleteHook(const std::function<
   return Maybe<void>::Ok();
 }
 
-Maybe<ConsistentTensorImpl> LazyConsistentTensorImpl::detach() const {
-  auto detached_impl = std::make_shared<LazyConsistentTensorImpl>(tensor_meta_, false, true);
-  return std::shared_ptr<ConsistentTensorImpl>(detached_impl);
+Maybe<GlobalTensorImpl> LazyGlobalTensorImpl::detach() const {
+  auto detached_impl = std::make_shared<LazyGlobalTensorImpl>(tensor_meta_, false, true);
+  return std::shared_ptr<GlobalTensorImpl>(detached_impl);
 }
 
-EagerConsistentTensorImpl::EagerConsistentTensorImpl(
-    Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad, bool is_leaf,
+EagerGlobalTensorImpl::EagerGlobalTensorImpl(
+    Symbol<GlobalTensorMeta> global_tensor_meta, bool requires_grad, bool is_leaf,
     const std::shared_ptr<LocalTensor>& cur_rank_phy_tensor)
-    : ConsistentTensorImpl(consistent_tensor_meta, cur_rank_phy_tensor->requires_grad(),
-                           cur_rank_phy_tensor->is_leaf()),
+    : GlobalTensorImpl(global_tensor_meta, cur_rank_phy_tensor->requires_grad(),
+                       cur_rank_phy_tensor->is_leaf()),
       cur_rank_phy_tensor_(cur_rank_phy_tensor) {}
 
-/* static */ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::New(
-    Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad, bool is_leaf) {
-  const auto& parallel_desc = consistent_tensor_meta->parallel_desc();
+/* static */ Maybe<EagerGlobalTensorImpl> EagerGlobalTensorImpl::New(
+    Symbol<GlobalTensorMeta> global_tensor_meta, bool requires_grad, bool is_leaf) {
+  const auto& parallel_desc = global_tensor_meta->parallel_desc();
   Optional<int64_t> parallel_id;
   const auto& device = JUST(parallel_desc->GetTensorDevice4CurrentProcessCtx(&parallel_id));
-  return EagerConsistentTensorImpl::New(consistent_tensor_meta, device, parallel_id, requires_grad,
-                                        is_leaf);
+  return EagerGlobalTensorImpl::New(global_tensor_meta, device, parallel_id, requires_grad,
+                                    is_leaf);
 }
 
 namespace {
@@ -206,13 +196,13 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
 
 }  // namespace
 
-/* static */ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::New(
-    Symbol<ConsistentTensorMeta> consistent_tensor_meta, Symbol<Device> device,
+/* static */ Maybe<EagerGlobalTensorImpl> EagerGlobalTensorImpl::New(
+    Symbol<GlobalTensorMeta> global_tensor_meta, Symbol<Device> device,
     const Optional<int64_t>& parallel_id, bool requires_grad, bool is_leaf) {
-  const auto& shape = consistent_tensor_meta->shape_ptr();
-  const auto& dtype = consistent_tensor_meta->dtype();
-  const auto& nd_sbp = consistent_tensor_meta->nd_sbp();
-  const auto& parallel_desc = consistent_tensor_meta->parallel_desc();
+  const auto& shape = global_tensor_meta->shape_ptr();
+  const auto& dtype = global_tensor_meta->dtype();
+  const auto& nd_sbp = global_tensor_meta->nd_sbp();
+  const auto& parallel_desc = global_tensor_meta->parallel_desc();
   const auto& cur_rank_phy_shape =
       JUST(GetPhysicalShape(*shape, *nd_sbp, *parallel_desc, parallel_id));
   std::shared_ptr<LocalTensor> cur_rank_phy_tensor;
@@ -236,20 +226,20 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
     cur_rank_phy_tensor->set_is_leaf(is_leaf);
   }
   auto* tensor_impl =
-      new EagerConsistentTensorImpl(consistent_tensor_meta, cur_rank_phy_tensor->requires_grad(),
-                                    cur_rank_phy_tensor->is_leaf(), cur_rank_phy_tensor);
-  return std::shared_ptr<EagerConsistentTensorImpl>(tensor_impl);
+      new EagerGlobalTensorImpl(global_tensor_meta, cur_rank_phy_tensor->requires_grad(),
+                                cur_rank_phy_tensor->is_leaf(), cur_rank_phy_tensor);
+  return std::shared_ptr<EagerGlobalTensorImpl>(tensor_impl);
 }
 
-Maybe<ConsistentTensorImpl> EagerConsistentTensorImpl::detach() const {
-  auto detached_impl = JUST(EagerConsistentTensorImpl::New(tensor_meta_, false, true));
+Maybe<GlobalTensorImpl> EagerGlobalTensorImpl::detach() const {
+  auto detached_impl = JUST(EagerGlobalTensorImpl::New(tensor_meta_, false, true));
   detached_impl->cur_rank_phy_tensor_ = cur_rank_phy_tensor_;
   detached_impl->consumer_nd_sbp_constraint_ = consumer_nd_sbp_constraint_;
   detached_impl->transport_token_ = transport_token_;
-  return std::shared_ptr<ConsistentTensorImpl>(detached_impl);
+  return std::shared_ptr<GlobalTensorImpl>(detached_impl);
 }
 
-std::shared_ptr<const Stride> EagerConsistentTensorImpl::stride() const {
+std::shared_ptr<const Stride> EagerGlobalTensorImpl::stride() const {
   if (!cur_rank_phy_tensor_) { return tensor_meta()->stride_ptr(); }
   const auto& stride_ptr = cur_rank_phy_tensor_->tensor_meta().stride_ptr();
   return stride_ptr;

@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/eager/op_call_phy_instr_operand.h"
 #include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
+#include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -28,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/blocking_then_busy.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
+#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
 
@@ -35,7 +37,7 @@ namespace one {
 class StatefulOpKernel;
 class TensorTuple;
 class LocalTensor;
-class ConsistentTensorInferResult;
+class GlobalTensorInferResult;
 }  // namespace one
 
 class NNGraphIf;
@@ -55,13 +57,13 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   vm::InstructionList* mut_instruction_list() { return instruction_list_; }
 
   // Build VM execution instructions with NNGraph's inputs/outputs/parameters for NNGraph execution.
-  Maybe<void> LaunchLazyJob(const one::EagerBlobObjectListPtr& inputs,
-                            const one::EagerBlobObjectListPtr& outputs,
-                            const one::EagerBlobObjectListPtr& parameters,
+  Maybe<void> LaunchLazyJob(const vm::EagerBlobObjectListPtr& inputs,
+                            const vm::EagerBlobObjectListPtr& outputs,
+                            const vm::EagerBlobObjectListPtr& parameters,
                             const std::shared_ptr<NNGraphIf>& nn_graph);
 
   // soft sync for inputs/outputs buffers of NNGraph
-  Maybe<void> SoftSyncNNGraphBuffers(const one::EagerBlobObjectListPtr& eager_blob_objects,
+  Maybe<void> SoftSyncNNGraphBuffers(const vm::EagerBlobObjectListPtr& eager_blob_objects,
                                      const std::shared_ptr<NNGraphIf>& nn_graph);
 
   Maybe<JobDesc> GetJobConfSymbol(const JobConfigProto& job_conf);
@@ -74,7 +76,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object);
 
-  Maybe<void> TouchTensors(const one::EagerBlobObjectListPtr& eager_blob_object);
+  Maybe<void> TouchTensors(const vm::EagerBlobObjectListPtr& eager_blob_object);
 
   template<typename T>
   Maybe<void> SyncAccessBlobByCallback(const T tensor, const std::shared_ptr<BlockingThenBusy>& btb,
@@ -118,23 +120,23 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::function<std::string(const std::string&)>& StrSetter);
 
   Maybe<void> Call(const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-                   const one::EagerBlobObjectListPtr& input_eager_blob_objects,
-                   const one::EagerBlobObjectListPtr& output_eager_blob_objects,
+                   vm::EagerBlobObjectList&& input_eager_blob_objects,
+                   vm::EagerBlobObjectList&& output_eager_blob_objects,
                    const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
   Maybe<void> Call(
       const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-      const one::EagerBlobObjectListPtr& input_eager_blob_objects,
-      const one::EagerBlobObjectListPtr& output_eager_blob_objects,
-      const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
+      vm::EagerBlobObjectList&& input_eager_blob_objects,
+      vm::EagerBlobObjectList&& output_eager_blob_objects,
+      const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
       const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
  private:
-  Maybe<void> SoftSyncStream(const one::EagerBlobObjectListPtr& eager_blob_objects,
+  Maybe<void> SoftSyncStream(const vm::EagerBlobObjectList& eager_blob_objects,
                              Symbol<Stream> stream);
-  Maybe<void> SoftSyncStream(
-      std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
-      const std::string& modifier, Symbol<Stream> stream);
+  Maybe<void> SoftSyncStream(small_vector<intrusive::shared_ptr<LocalDepObject>,
+                                          kOpArgsReservedSize>&& compute_local_dep_objects,
+                             const std::string& modifier, Symbol<Stream> stream);
 
  private:
   template<typename PhyInstrOperandT>
@@ -149,7 +151,14 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 };
 
 // Make VM instructions with instruction builder and run instructions with physical/local view.
-Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build);
+template<typename CallbackT>
+Maybe<void> PhysicalRun(const CallbackT& Build) {
+  vm::InstructionList instruction_list;
+  InstructionsBuilder instructions_builder(&instruction_list);
+  JUST(Build(&instructions_builder));
+  JUST(vm::Run(instructions_builder.mut_instruction_list()));
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow
 

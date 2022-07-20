@@ -22,7 +22,8 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/dispatch_frame.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
-#include "oneflow/core/framework/consistent_tensor_infer_cache.h"
+#include "oneflow/core/framework/local_tensor_infer_cache.h"
+#include "oneflow/core/framework/global_tensor_infer_cache.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
 
@@ -62,18 +63,18 @@ const std::string& BuiltinOpExprImpl<UserOpConf>::op_type_name() const {
   return op_proto_.op_type_name();
 }
 
-const std::string& ConsistentToConsistentOpExpr::op_type_name() const {
-  static const std::string kOpTypeName = "consistent_to_consistent";
+const std::string& GlobalToGlobalOpExpr::op_type_name() const {
+  static const std::string kOpTypeName = "global_to_global";
   return kOpTypeName;
 }
 
-const std::string& CastToConsistentOpExpr::op_type_name() const {
-  static const std::string kOpTypeName = "cast_to_consistent";
+const std::string& CastToGlobalOpExpr::op_type_name() const {
+  static const std::string kOpTypeName = "cast_to_global";
   return kOpTypeName;
 }
 
-const std::string& CastFromConsistentOpExpr::op_type_name() const {
-  static const std::string kOpTypeName = "cast_from_consistent";
+const std::string& CastFromGlobalOpExpr::op_type_name() const {
+  static const std::string kOpTypeName = "cast_from_global";
   return kOpTypeName;
 }
 
@@ -371,7 +372,7 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
   const ParallelDesc& parallel_desc() const override { return *parallel_desc_; }
   const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& name,
                                                  int32_t index) const override {
-    auto* tensor_meta = dynamic_cast<ConsistentTensorMeta*>(
+    auto* tensor_meta = dynamic_cast<GlobalTensorMeta*>(
         const_cast<UserOpExprLogicalInferContext*>(this)->TensorDesc4ArgNameAndIndex(name, index));
     CHECK_NOTNULL(tensor_meta);
     Symbol<NdSbp> nd_sbp = tensor_meta->nd_sbp();
@@ -379,7 +380,7 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
     return nd_sbp->sbp_parallel(0);
   }
   const NdSbp& NdSbp4ArgNameAndIndex(const std::string& name, int32_t index) const override {
-    auto* tensor_meta = dynamic_cast<ConsistentTensorMeta*>(
+    auto* tensor_meta = dynamic_cast<GlobalTensorMeta*>(
         const_cast<UserOpExprLogicalInferContext*>(this)->TensorDesc4ArgNameAndIndex(name, index));
     CHECK_NOTNULL(tensor_meta);
     return *tensor_meta->nd_sbp();
@@ -457,7 +458,8 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   if (registry->device_and_stream_infer_fn) {
     device_and_stream_infer_fn_ = registry->device_and_stream_infer_fn;
   }
-  consistent_tensor_infer_cache_.reset(new ConsistentTensorInferCache(self));
+  local_tensor_infer_cache_.reset(new LocalTensorInferCache(self));
+  global_tensor_infer_cache_.reset(new GlobalTensorInferCache(self));
   return Maybe<void>::Ok();
 }
 
@@ -503,31 +505,28 @@ Maybe<Symbol<Stream>> UserOpExpr::InferDeviceAndStream(const AttrMap& attrs,
   return TRY(device_and_stream_infer_fn_(&device_infer_ctx));
 }
 
-ConsistentToConsistentOpExpr::ConsistentToConsistentOpExpr(
-    const Optional<Symbol<NdSbp>>& grad_nd_sbp)
+GlobalToGlobalOpExpr::GlobalToGlobalOpExpr(const Optional<Symbol<NdSbp>>& grad_nd_sbp)
     : grad_nd_sbp_(grad_nd_sbp) {}
 
-/* static */ Maybe<ConsistentToConsistentOpExpr> ConsistentToConsistentOpExpr::New(
+/* static */ Maybe<GlobalToGlobalOpExpr> GlobalToGlobalOpExpr::New(
     const Optional<Symbol<NdSbp>>& grad_nd_sbp) {
-  auto* ptr = new ConsistentToConsistentOpExpr(grad_nd_sbp);
-  return std::shared_ptr<ConsistentToConsistentOpExpr>(ptr);
+  auto* ptr = new GlobalToGlobalOpExpr(grad_nd_sbp);
+  return std::shared_ptr<GlobalToGlobalOpExpr>(ptr);
 }
 
-CastConsistentOpExpr::CastConsistentOpExpr(const std::string& op_name) : op_name_(op_name) {}
+CastGlobalOpExpr::CastGlobalOpExpr(const std::string& op_name) : op_name_(op_name) {}
 
-CastToConsistentOpExpr::CastToConsistentOpExpr(const std::string& op_name)
-    : CastConsistentOpExpr(op_name) {}
+CastToGlobalOpExpr::CastToGlobalOpExpr(const std::string& op_name) : CastGlobalOpExpr(op_name) {}
 
-/* static */ Maybe<CastToConsistentOpExpr> CastToConsistentOpExpr::New(const std::string& op_name) {
-  return std::shared_ptr<CastToConsistentOpExpr>(new CastToConsistentOpExpr(op_name));
+/* static */ Maybe<CastToGlobalOpExpr> CastToGlobalOpExpr::New(const std::string& op_name) {
+  return std::shared_ptr<CastToGlobalOpExpr>(new CastToGlobalOpExpr(op_name));
 }
 
-CastFromConsistentOpExpr::CastFromConsistentOpExpr(const std::string& op_name)
-    : CastConsistentOpExpr(op_name) {}
+CastFromGlobalOpExpr::CastFromGlobalOpExpr(const std::string& op_name)
+    : CastGlobalOpExpr(op_name) {}
 
-/* static */ Maybe<CastFromConsistentOpExpr> CastFromConsistentOpExpr::New(
-    const std::string& op_name) {
-  return std::shared_ptr<CastFromConsistentOpExpr>(new CastFromConsistentOpExpr(op_name));
+/* static */ Maybe<CastFromGlobalOpExpr> CastFromGlobalOpExpr::New(const std::string& op_name) {
+  return std::shared_ptr<CastFromGlobalOpExpr>(new CastFromGlobalOpExpr(op_name));
 }
 
 template<>
@@ -646,27 +645,27 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastFromLocalOpConf>::GetOrCreateOpGr
   UNIMPLEMENTED_THEN_RETURN();
 }
 
-Maybe<OpExprGradClosure> ConsistentToConsistentOpExpr::GetOrCreateOpGradClosure() const {
+Maybe<OpExprGradClosure> GlobalToGlobalOpExpr::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("consistent_to_consistent"));
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("global_to_global"));
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
     JUST(op_grad_func_->Init(*this));
   }
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
 }
 
-Maybe<OpExprGradClosure> CastToConsistentOpExpr::GetOrCreateOpGradClosure() const {
+Maybe<OpExprGradClosure> CastToGlobalOpExpr::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_to_consistent"));
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_to_global"));
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
     JUST(op_grad_func_->Init(*this));
   }
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
 }
 
-Maybe<OpExprGradClosure> CastFromConsistentOpExpr::GetOrCreateOpGradClosure() const {
+Maybe<OpExprGradClosure> CastFromGlobalOpExpr::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_from_consistent"));
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_from_global"));
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
     JUST(op_grad_func_->Init(*this));
   }

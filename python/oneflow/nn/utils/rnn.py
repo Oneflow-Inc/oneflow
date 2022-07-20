@@ -45,7 +45,7 @@ def invert_permutation(permutation: Optional[Tensor]) -> Optional[Tensor]:
 
 class PackedSequence(object):
     """The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.utils.rnn.PackedSequence.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.utils.rnn.PackedSequence.html.
     
     Holds the data and list of :attr:`batch_sizes` of a packed sequence.
 
@@ -209,7 +209,7 @@ def pack_padded_sequence(
     enforce_sorted: bool = True,
 ) -> PackedSequence:
     """The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.utils.rnn.pack_padded_sequence.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.utils.rnn.pack_padded_sequence.html.
     
     Packs a Tensor containing padded sequences of variable length.
 
@@ -264,7 +264,7 @@ def pad_packed_sequence(
     total_length: Optional[int] = None,
 ) -> Tuple[Tensor, Tensor]:
     """The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.utils.rnn.pad_packed_sequence.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.utils.rnn.pad_packed_sequence.html.
     
     Pads a packed batch of variable length sequences.
 
@@ -278,8 +278,6 @@ def pad_packed_sequence(
         :attr:`total_length` is useful to implement the
         ``pack sequence -> recurrent network -> unpack sequence`` pattern in a
         :class:`~oneflow.nn.Module` wrapped in :class:`~oneflow.nn.DataParallel`.
-        See :ref:`this FAQ section <pack-rnn-unpack-with-data-parallelism>` for
-        details.
 
     Args:
         sequence (PackedSequence): batch to pad
@@ -362,7 +360,11 @@ def pad_packed_sequence(
         device=sequence.data.device,
         requires_grad=sequence.data.requires_grad,
     )
-    padded_output = padded_output.clone()
+    # `padded_output` is leaf tensor which needs to be transformed into non-leaf tensor
+    # when it requires grad by calling the `clone` method before the following
+    # in-place operation to avoid runtime check error .
+    if padded_output.requires_grad == True:
+        padded_output = padded_output.clone()
 
     # This will be modified at every iteration, but we reserve memory for it now.
     tmp_view_size = output_size  # == [-1, -1, *sequence.data.size()[1:]]
@@ -412,7 +414,7 @@ def pad_sequence(
     padding_value: float = 0.0,
 ) -> Tensor:
     """The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.utils.rnn.pad_sequence.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.utils.rnn.pad_sequence.html.
     
     Pad a list of variable length Tensors with ``padding_value``
 

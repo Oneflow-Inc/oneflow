@@ -31,16 +31,13 @@ void Stream::__Init__(
   set_thread_ctx(thread_ctx);
   device_ = device;
   stream_role_ = stream_role;
-  stream_type_ = CHECK_JUST(GetStreamType::Visit(stream_role, device->enum_type()));
-  stream_type_->InitDeviceCtx(mut_device_ctx(), this);
+  stream_policy_ = CHECK_JUST(CreateStreamPolicy::Visit(stream_role, device));
   schedule_local_dep_object_ = schedule_local_dep_object;
   transport_local_dep_object_ = transport_local_dep_object;
-  on_scheduler_thread_ = stream_type_->OnSchedulerThread(stream_role);
+  on_scheduler_thread_ = stream_policy_->OnSchedulerThread(stream_role);
 }
 
 int64_t Stream::device_id() const { return device_->device_id(); }
-
-const StreamType& Stream::stream_type() const { return *stream_type_; }
 
 }  // namespace vm
 }  // namespace oneflow

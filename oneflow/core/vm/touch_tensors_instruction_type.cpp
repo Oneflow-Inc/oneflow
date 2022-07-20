@@ -20,7 +20,7 @@ namespace oneflow {
 namespace vm {
 
 TouchTensorsPhyInstrOperand::TouchTensorsPhyInstrOperand(
-    const std::vector<std::shared_ptr<EagerBlobObject>>& eager_blob_objects)
+    const vm::EagerBlobObjectList& eager_blob_objects)
     : eager_blob_objects_(eager_blob_objects) {
   const auto& Insert = SetInserter(&input_dependences_);
   for (const auto& eager_blob_object : eager_blob_objects_) {

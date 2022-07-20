@@ -49,52 +49,56 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
   }
 
   const one::StatefulOpKernel& opkernel() const { return *opkernel_; }
-  const one::EagerBlobObjectListPtr& inputs() const { return call_ctx_.inputs(); }
-  const one::EagerBlobObjectListPtr& outputs() const { return call_ctx_.outputs(); }
+  const vm::EagerBlobObjectList& inputs() const { return call_ctx_.inputs(); }
+  const vm::EagerBlobObjectList& outputs() const { return call_ctx_.outputs(); }
   const AttrMap& attrs() const { return call_ctx_.op_interp_ctx().attrs; }
   const one::OpExprInterpContext& op_interp_ctx() const { return call_ctx_.op_interp_ctx(); }
   const one::DevVmDepObjectConsumeMode& dev_vm_dep_object_consume_mode() const {
     return dev_vm_dep_object_consume_mode_;
   }
 
+  bool is_all_outputs_pod() const { return is_all_outputs_pod_; }
+
   one::StatefulOpKernel* mut_opkernel() { return opkernel_.get(); }
 
   template<typename DoEachT>
   Maybe<void> ForEachOutputTensor(const DoEachT& DoEach) {
-    for (const auto& output : *outputs()) { JUST(DoEach(output.get())); }
+    for (const auto& output : outputs()) { JUST(DoEach(output.get())); }
     return Maybe<void>::Ok();
   }
 
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  void ForEachConstDependence(const std::function<void(vm::Dependence* compute)>&) const;
+  template<typename DoEachT>
+  void ForEachConstDependence(const DoEachT& DoEach) const;
 
-  void ForEachMutDependence(const std::function<void(vm::Dependence* compute)>&) const;
+  template<typename DoEachT>
+  void ForEachMutDependence(const DoEachT& DoEach) const;
 
-  void ForEachMut2Dependence(const std::function<void(vm::Dependence* compute)>&) const;
+  template<typename DoEachT>
+  void ForEachMut2Dependence(const DoEachT& DoEach) const;
 
   bool need_temp_storage() const { return need_temp_storage_; }
   const user_op::OpKernel* user_opkernel() const { return user_opkernel_; }
   const user_op::InferTmpSizeFn& infer_tmp_size_fn() const { return *infer_tmp_size_fn_; }
 
-  const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result()
-      const {
-    return call_ctx_.consistent_tensor_infer_result();
+  const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result() const {
+    return call_ctx_.global_tensor_infer_result();
   }
 
   eager::CallContext* mut_call_ctx() { return &call_ctx_; }
 
   void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
-    for (const auto& eager_blob_object : *call_ctx_.inputs()) { DoEach(eager_blob_object.get()); }
+    for (const auto& eager_blob_object : call_ctx_.inputs()) { DoEach(eager_blob_object.get()); }
   }
 
  private:
   friend struct OpCallInstructionUtil;
   OpCallPhyInstrOperand(
       vm::Stream* vm_stream, const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-      const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
-      const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
+      vm::EagerBlobObjectList&& inputs, vm::EagerBlobObjectList&& outputs,
+      const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
       const one::OpExprInterpContext& op_interp_ctx,
       const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode);
 
@@ -110,6 +114,7 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
   const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
+  bool is_all_outputs_pod_;
 };
 
 }  // namespace vm

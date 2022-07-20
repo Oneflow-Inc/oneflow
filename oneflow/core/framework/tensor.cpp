@@ -115,67 +115,64 @@ Maybe<void> LocalTensor::set_data(const std::shared_ptr<Tensor>& other) {
   return Maybe<void>::Ok();
 }
 
-std::shared_ptr<Tensor> ConsistentTensor::contiguous() const {
+std::shared_ptr<Tensor> GlobalTensor::contiguous() const {
   std::shared_ptr<Tensor> tensor = std::const_pointer_cast<Tensor>(shared_from_this());
   if (tensor->is_contiguous()) { return tensor; }
   return CHECK_JUST(functional::ToContiguous(tensor));
 }
 
-std::shared_ptr<Tensor> ConsistentTensor::pin_memory() const {
+std::shared_ptr<Tensor> GlobalTensor::pin_memory() const {
   std::shared_ptr<Tensor> tensor = std::const_pointer_cast<Tensor>(shared_from_this());
   return CHECK_JUST(functional::PinMemory(tensor));
 }
 
-Maybe<Tensor> ConsistentTensor::clone() const {
+Maybe<Tensor> GlobalTensor::clone() const {
   const auto& local_tensor = JUST(cur_rank_phy_tensor());
   const auto& device_type = JUST(local_tensor->device())->type();
   int64_t device_id = JUST(local_tensor->device())->device_id();
   const auto& cloned_local_tensor =
       JUST(functional::Copy(local_tensor, device_type, device_id, /*pin_memory=*/false));
-  DisableCheckConsistentTensorMetaScope disable_meta_check{};
-  return functional::LocalToConsistent(cloned_local_tensor, JUST(parallel_desc()),
-                                       *JUST(GetSbpList(JUST(nd_sbp()))), *shape(), dtype());
+  DisableCheckGlobalTensorMetaScope disable_meta_check{};
+  return functional::LocalToGlobal(cloned_local_tensor, JUST(parallel_desc()),
+                                   *JUST(GetSbpList(JUST(nd_sbp()))), *shape(), dtype(),
+                                   /* sync_data */ true);
 }
 
-Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                                     DataType dtype, Symbol<NdSbp> nd_sbp,
-                                                     Symbol<ParallelDesc> parallel_desc,
-                                                     bool is_lazy, bool requires_grad,
-                                                     bool is_leaf) {
-  std::shared_ptr<ConsistentTensorImpl> impl;
-  Symbol<ConsistentTensorMeta> consistent_tensor_meta(
-      ConsistentTensorMeta(shape, dtype, nd_sbp, parallel_desc));
+Maybe<GlobalTensor> GlobalTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
+                                             DataType dtype, Symbol<NdSbp> nd_sbp,
+                                             Symbol<ParallelDesc> parallel_desc, bool is_lazy,
+                                             bool requires_grad, bool is_leaf) {
+  std::shared_ptr<GlobalTensorImpl> impl;
+  Symbol<GlobalTensorMeta> global_tensor_meta(
+      GlobalTensorMeta(shape, dtype, nd_sbp, parallel_desc));
   if (is_lazy) {
-    impl =
-        std::make_shared<LazyConsistentTensorImpl>(consistent_tensor_meta, requires_grad, is_leaf);
+    impl = std::make_shared<LazyGlobalTensorImpl>(global_tensor_meta, requires_grad, is_leaf);
   } else {
-    impl = JUST(EagerConsistentTensorImpl::New(consistent_tensor_meta, requires_grad, is_leaf));
+    impl = JUST(EagerGlobalTensorImpl::New(global_tensor_meta, requires_grad, is_leaf));
   }
-  return std::make_shared<ConsistentTensor>(impl);
+  return std::make_shared<GlobalTensor>(impl);
 }
 
-bool ConsistentTensor::is_cuda() const {
+bool GlobalTensor::is_cuda() const {
   return CHECK_JUST(parallel_desc())->device_type() == DeviceType::kCUDA;
 }
 
-Maybe<Tensor> ConsistentTensor::detach() const {
-  std::shared_ptr<Tensor> tensor = std::make_shared<ConsistentTensor>(JUST(impl_->detach()));
+Maybe<Tensor> GlobalTensor::detach() const {
+  std::shared_ptr<Tensor> tensor = std::make_shared<GlobalTensor>(JUST(impl_->detach()));
   if (this->is_lazy()) { JUST(tensor->BorrowTensorName(this)); }
   return tensor;
 }
 
-Maybe<void> ConsistentTensor::set_data(const std::shared_ptr<Tensor>& other) {
+Maybe<void> GlobalTensor::set_data(const std::shared_ptr<Tensor>& other) {
   CHECK_OR_RETURN(this->is_leaf())
       << "Only leaf tensor's data can be set, because non-leaf tensor's data has been captured in "
          "the backward graph in autograd.";
-  const auto& consistent_tensor =
-      std::dynamic_pointer_cast<ConsistentTensor>(JUST(other->detach()));
-  CHECK_NOTNULL_OR_RETURN(consistent_tensor);
-  JUST(WithConsistencyChecked(consistent_tensor,
-                              [&]() -> Maybe<void> { return Maybe<void>::Ok(); }));
+  const auto& global_tensor = std::dynamic_pointer_cast<GlobalTensor>(JUST(other->detach()));
+  CHECK_NOTNULL_OR_RETURN(global_tensor);  // NOLINT
+  JUST(WithConsistencyChecked(global_tensor, [&]() -> Maybe<void> { return Maybe<void>::Ok(); }));
 
   bool old_requires_grad = requires_grad();
-  impl_ = consistent_tensor->impl_;
+  impl_ = global_tensor->impl_;
   JUST(set_requires_grad(old_requires_grad));
   grad_fn_node_ = nullptr;
   if (other->is_lazy()) { JUST(this->BorrowTensorName(other.get())); }

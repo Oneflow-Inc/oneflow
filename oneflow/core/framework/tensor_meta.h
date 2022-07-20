@@ -42,7 +42,11 @@ class TensorMeta : public user_op::TensorDesc {
   TensorMeta(const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const Stride>& stride,
              DataType dtype)
       : shape_(shape), stride_(stride), data_type_(dtype), is_dynamic_(false) {}
-  TensorMeta(const TensorMeta&) = default;
+  TensorMeta(const TensorMeta& other)
+      : shape_(std::make_shared<Shape>(*other.shape_)),
+        stride_(std::make_shared<Stride>(*other.stride_)),
+        data_type_(other.data_type_),
+        is_dynamic_(other.is_dynamic_) {}
   TensorMeta(TensorMeta&&) = default;
   virtual ~TensorMeta() = default;
 
@@ -66,6 +70,15 @@ class TensorMeta : public user_op::TensorDesc {
   bool* mut_is_dynamic() override { return &is_dynamic_; }
   void set_is_dynamic(bool val) override { is_dynamic_ = val; }
 
+ protected:
+  TensorMeta& operator=(const TensorMeta& other) {
+    this->shape_ = std::make_shared<const Shape>(*other.shape_);
+    this->stride_ = std::make_shared<const Stride>(*other.stride_);
+    this->data_type_ = other.data_type_;
+    this->is_dynamic_ = other.is_dynamic_;
+    return *this;
+  }
+
  private:
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const Stride> stride_;
@@ -77,6 +90,7 @@ class LocalTensorMeta : public TensorMeta {
  public:
   // uninitialized LocalTensorMeta.
   LocalTensorMeta();
+  LocalTensorMeta(const LocalTensorMeta&) = default;
   LocalTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype, Symbol<Device> device);
   LocalTensorMeta(const std::shared_ptr<const Shape>& shape,
                   const std::shared_ptr<const Stride>& stride, DataType dtype,
@@ -92,21 +106,23 @@ class LocalTensorMeta : public TensorMeta {
   bool operator==(const LocalTensorMeta& other) const;
   size_t CalcHashValue() const;
 
+  LocalTensorMeta& operator=(const LocalTensorMeta& other) = default;
+
  private:
   Symbol<Device> device_;
   int64_t storage_offset_;
 };
 
-class ConsistentTensorMeta : public TensorMeta {
+class GlobalTensorMeta : public TensorMeta {
  public:
-  ConsistentTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                       Symbol<NdSbp> nd_sbp, Symbol<ParallelDesc> parallel_desc)
+  GlobalTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype, Symbol<NdSbp> nd_sbp,
+                   Symbol<ParallelDesc> parallel_desc)
       : TensorMeta(shape, dtype), nd_sbp_(nd_sbp), parallel_desc_(parallel_desc) {}
-  ConsistentTensorMeta(const ConsistentTensorMeta&) = default;
-  ConsistentTensorMeta(ConsistentTensorMeta&&) = default;
-  virtual ~ConsistentTensorMeta() = default;
+  GlobalTensorMeta(const GlobalTensorMeta&) = default;
+  GlobalTensorMeta(GlobalTensorMeta&&) = default;
+  virtual ~GlobalTensorMeta() = default;
 
-  bool operator==(const ConsistentTensorMeta& other) const;
+  bool operator==(const GlobalTensorMeta& other) const;
 
   Symbol<NdSbp> nd_sbp() const { return nd_sbp_; }
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
@@ -128,9 +144,16 @@ class ConsistentTensorMeta : public TensorMeta {
 namespace std {
 
 template<>
-struct hash<oneflow::one::ConsistentTensorMeta> final {
-  size_t operator()(const oneflow::one::ConsistentTensorMeta& consistent_tensor_meta) const {
-    return consistent_tensor_meta.CalcHashValue();
+struct hash<oneflow::one::LocalTensorMeta> final {
+  size_t operator()(const oneflow::one::LocalTensorMeta& local_tensor_meta) const {
+    return local_tensor_meta.CalcHashValue();
+  }
+};
+
+template<>
+struct hash<oneflow::one::GlobalTensorMeta> final {
+  size_t operator()(const oneflow::one::GlobalTensorMeta& global_tensor_meta) const {
+    return global_tensor_meta.CalcHashValue();
   }
 };
 

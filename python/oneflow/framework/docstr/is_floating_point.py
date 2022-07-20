@@ -18,7 +18,7 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.is_floating_point,
-    r"""Returns True if the data type of input is a floating point data type i.e., one of flow.float64, flow.float32, flow.float16.
+    r"""Returns True if the data type of input is a floating point data type i.e., one of `oneflow.float64` , `oneflow.float32` , `oneflow.float16`.
 
     Args:
         input  (Tensor): the input tensor.

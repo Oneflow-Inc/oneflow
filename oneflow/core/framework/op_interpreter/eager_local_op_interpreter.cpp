@@ -26,28 +26,41 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/local_tensor_infer_cache.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
-#include "oneflow/core/framework/tensor_consistent_id.h"
+#include "oneflow/core/framework/tensor_global_id.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace one {
 
 namespace {
 
-Maybe<Symbol<Device>> GetDefaultDevice(const OpExprInterpContext& ctx) {
-  if (ctx.device.has_value()) { return JUST(ctx.device); }
-  return Device::New("cpu", 0);
+Maybe<Symbol<Device>> RawGetDefaultCpuDevice() { return Device::New("cpu", 0); }
+
+constexpr auto* GetDefaultCpuDevice = DECORATE(&RawGetDefaultCpuDevice, ThreadLocal);
+
+Maybe<Symbol<Device>> GetDefaultDevice(const TensorTuple& inputs, const OpExprInterpContext& ctx) {
+  if (inputs.empty()) {
+    if (ctx.device.has_value()) {
+      return JUST(ctx.device);
+    } else {
+      return GetDefaultCpuDevice();
+    }
+  }
+  return JUST(inputs.at(0)->device());
 }
 
 Maybe<EagerLocalTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& tensor) {
@@ -55,140 +68,79 @@ Maybe<EagerLocalTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& te
   return tensor->mut_eager_local_tensor_impl();
 }
 
-class MutLocalTensorMeta : public TensorMeta {  // NOLINT
- public:
-  MutLocalTensorMeta()
-      : TensorMeta(std::make_shared<const Shape>(), std::make_shared<const Stride>(),
-                   kInvalidDataType) {}
-  MutLocalTensorMeta(const MutLocalTensorMeta&) = default;
-  MutLocalTensorMeta(MutLocalTensorMeta&&) = default;
-  ~MutLocalTensorMeta() override = default;
-};
-
-std::vector<TensorMeta*>* ThreadLocalDefaultOutputMutTensorMetas(int64_t size) {
-  static thread_local std::vector<MutLocalTensorMeta> struct_vec;
-  static thread_local std::vector<TensorMeta*> ptr_vec;
-  struct_vec.resize(size);
-  ptr_vec.resize(size);
-  if (size == 1) {
-    ptr_vec.at(0) = &struct_vec.at(0);  // unfold loop
-  } else if (size == 2) {
-    ptr_vec.at(0) = &struct_vec.at(0);  // unfold loop
-    ptr_vec.at(1) = &struct_vec.at(1);  // unfold loop
-  } else {
-    for (int i = 0; i < size; ++i) { ptr_vec.at(i) = &struct_vec.at(i); }
-  }
-  return &ptr_vec;
-}
-
 }  // namespace
 
 Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
-                           const Symbol<Device>& default_device, TensorTuple* outputs,
-                           const OpExprInterpContext& ctx) {
-  const auto& attrs = ctx.attrs;
-  std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
-      std::make_shared<EagerBlobObjectList>(inputs.size());
+                           TensorTuple* outputs, const OpExprInterpContext& ctx) {
+  OF_PROFILER_RANGE_GUARD("NaiveInterpret");
+  CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());  // NOLINT
+  Symbol<Device> default_device = JUST(GetDefaultDevice(inputs, ctx));
+  const std::shared_ptr<const LocalTensorInferResult> result =
+      JUST([&]() -> Maybe<const LocalTensorInferResult> {
+        LocalTensorMetaInferArgs infer_args;
+        JUST(infer_args.Init(ctx.attrs, default_device, inputs));
+        return JUST(user_op_expr.mut_local_tensor_infer_cache()->GetOrInfer(infer_args));
+      }());
+
+  vm::EagerBlobObjectList input_eager_blob_objects(inputs.size());
   for (int i = 0; i < inputs.size(); i++) {
-    const auto& input_device = JUST(inputs.at(i)->device());
-    if (i > 0) {
-      CHECK_OR_RETURN(*default_device == *input_device)
-          << Error::RuntimeError()
-          << "Expected all tensors to be on the same device, but found at least two devices, "
-          << default_device->ToString() << " (positional 0) and " << input_device->ToString()
-          << " (positional " << i << ")!";
-    }
-    input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
+    input_eager_blob_objects.at(i) = JUST(inputs.at(i)->eager_blob_object());
   }
-  std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
-      std::make_shared<EagerBlobObjectList>(outputs->size());
-  auto* output_tensor_metas = ThreadLocalDefaultOutputMutTensorMetas(outputs->size());
+
+  const auto& output_tensor_metas = result->output_tensor_metas();
+  vm::EagerBlobObjectList output_eager_blob_objects(outputs->size());
+
   for (int i = 0; i < outputs->size(); i++) {
     if (!outputs->at(i)) {
-      const auto& tensor_impl = std::make_shared<EagerLocalTensorImpl>();
-      (*outputs)[i] = std::make_shared<LocalTensor>(tensor_impl);
-      output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
-    } else {
-      bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
-      CHECK_OR_RETURN(has_eager_blob_object);
-      output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
-    }
-  }
-  Symbol<Stream> stream;
-  bool need_check_mem_case = true;
-
-  // Infer devices
-  if (!user_op_expr.has_device_and_stream_infer_fn()) {
-    stream = JUST(GetDefaultStreamByDevice(default_device));
-    for (int i = 0; i < outputs->size(); i++) {
-      auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
-      *JUST(tensor_impl->mut_device()) = default_device;
-    }
-  } else {
-    need_check_mem_case = false;
-    stream = JUST(user_op_expr.InferDeviceAndStream(attrs, inputs, outputs));
-  }
-
-  // Infer shapes and dtypes
-  const auto& device_tag = stream->device()->type();
-  JUST(user_op_expr.InferPhysicalTensorDesc(
-      attrs, device_tag,
-      [&](int32_t i) -> const TensorMeta* {
-        return CHECK_JUST(TensorImpl4Tensor(inputs[i]))->mut_tensor_meta();
-      },
-      [&](int32_t i) -> TensorMeta* {
-        // using thread_local TensorMeta pointer if inplace.
-        // using tensor_impl TensorMeta pointer if not inplace.
-        return output_tensor_metas->at(i);
-      }));
-
-  for (int i = 0; i < output_eager_blob_objects->size(); i++) {
-    auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
-    if (!output_eager_blob_objects->at(i)) {
       // NOTE: if op support stride(non-contiguous input), then output tensor's stride
       // should be inferred in InferLogicalTensorDesc.
       // otherwise, it will be set here(according to shape).
+      // Note: symbol.shared_from_symbol() cannot be used here because set_stride happens in the
+      // next step.
+      std::shared_ptr<EagerLocalTensorImpl> tensor_impl = std::make_shared<EagerLocalTensorImpl>(
+          std::make_shared<LocalTensorMeta>(*output_tensor_metas.at(i)), false, false);
       if (!JUST(user_op_expr.SupportNonContiguous())) {
         std::shared_ptr<Stride> stride(new Stride(*tensor_impl->shape()));
         tensor_impl->mut_tensor_meta()->set_stride(stride);
       }
       const auto& dep_object = NewLocalDepObject();
       JUST(tensor_impl->InitEagerBlobObject(dep_object));
-      output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
+      output_eager_blob_objects.at(i) = JUST(tensor_impl->eager_blob_object());
+      (*outputs)[i] = std::make_shared<LocalTensor>(tensor_impl);
     } else {
+      auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
       // output i is inplaced.
-      // check thread_local TensorMeta and tensor_impl TensorMeta.
-      CHECK_OR_RETURN(tensor_impl->tensor_meta()->shape() == output_tensor_metas->at(i)->shape());
-      // TODO:(thread_local TensorMeta set stride then check)
+      // check TensorMeta of infer result and TensorMeta of output i.
+      CHECK_OR_RETURN(tensor_impl->tensor_meta()->shape()      // NOLINT
+                      == output_tensor_metas.at(i)->shape());  // NOLINT
+      CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype()      // NOLINT
+                      == output_tensor_metas.at(i)->dtype());  // NOLINT
+      bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
+      CHECK_OR_RETURN(has_eager_blob_object);  // NOLINT
+      output_eager_blob_objects.at(i) = JUST(outputs->at(i)->eager_blob_object());
+      // TODO(zhaoluyang):(thread_local TensorMeta set stride then check)
       // CHECK_OR_RETURN(tensor_impl->tensor_meta()->stride() ==
       // output_tensor_metas->at(i)->stride());
-      CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype() == output_tensor_metas->at(i)->dtype());
     }
   }
 
-  const auto& kernel = JUST(user_op_expr.MutKernel4Stream(stream));
-  kernel->set_need_check_mem_case(need_check_mem_case);
-
-  for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
-    output_eager_blob_objects->at(index)->set_is_shape_synced(false);
-  }
+  const auto& kernel = JUST(user_op_expr.MutKernel4Stream(result->stream()));
 
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->Call(kernel, input_eager_blob_objects, output_eager_blob_objects, ctx, stream);
+    return builder->Call(kernel, std::move(input_eager_blob_objects),
+                         std::move(output_eager_blob_objects), ctx, result->stream());
   }));
-  return Maybe<void>::Ok();
-}
-
-static Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
-                                  TensorTuple* outputs, const OpExprInterpContext& ctx) {
-  CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
-  Symbol<Device> default_device;
-  if (inputs.empty()) {
-    default_device = JUST(GetDefaultDevice(ctx));
-  } else {
-    default_device = JUST(inputs.at(0)->device());
+  for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
+    const auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(index)));
+    auto btb = std::make_shared<BlockingThenBusy>(1);
+    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(
+          tensor_impl, btb, [](uint64_t) {}, "const");
+    }));
+    JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
   }
-  return NaiveInterpret(user_op_expr, inputs, default_device, outputs, ctx);
+
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> EagerLocalInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTuple& inputs,
@@ -256,20 +208,20 @@ Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
   return Broadcast(tensor, root, broadcast_parallel_desc, false);
 }
 
-Maybe<Shape> CalcPhysicalShape(Symbol<ConsistentTensorMeta> consistent_tensor_meta) {
+Maybe<Shape> CalcPhysicalShape(Symbol<GlobalTensorMeta> global_tensor_meta) {
   const auto& opt_parallel_id =
-      JUST(GetParallelId4CurrentProcessCtx(consistent_tensor_meta->parallel_desc()));
+      JUST(GetParallelId4CurrentProcessCtx(global_tensor_meta->parallel_desc()));
   int64_t parallel_id = JUST(*opt_parallel_id);
-  return GetPhysicalShape(consistent_tensor_meta->shape(), *consistent_tensor_meta->nd_sbp(),
-                          *consistent_tensor_meta->parallel_desc(), parallel_id);
+  return GetPhysicalShape(global_tensor_meta->shape(), *global_tensor_meta->nd_sbp(),
+                          *global_tensor_meta->parallel_desc(), parallel_id);
 }
 
 static constexpr auto* GetPhysicalShape = DECORATE(&CalcPhysicalShape, ThreadLocal);
 
 Maybe<Tensor> TryReshapeTensor(const std::shared_ptr<Tensor>& tensor,
-                               Symbol<ConsistentTensorMeta> consistent_tensor_meta) {
+                               Symbol<GlobalTensorMeta> global_tensor_meta) {
   CHECK_OR_RETURN(tensor->is_local());
-  const auto& physical_shape = JUST(GetPhysicalShape(consistent_tensor_meta));
+  const auto& physical_shape = JUST(GetPhysicalShape(global_tensor_meta));
   if (*physical_shape == *tensor->shape()) { return tensor; }
   CHECK_EQ_OR_RETURN(physical_shape->elem_cnt(), tensor->shape()->elem_cnt());
   // TODO(lixinqi) inplace reshape.
@@ -278,7 +230,7 @@ Maybe<Tensor> TryReshapeTensor(const std::shared_ptr<Tensor>& tensor,
 
 }  // namespace
 
-Maybe<void> EagerLocalInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_expr,
+Maybe<void> EagerLocalInterpreter::ApplyImpl(const GlobalToGlobalOpExpr& op_expr,
                                              const TensorTuple& inputs, TensorTuple* outputs,
                                              const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();
@@ -286,20 +238,21 @@ Maybe<void> EagerLocalInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr&
 
 namespace {
 
-Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const TensorTuple& inputs,
-                                 TensorTuple* outputs, const OpExprInterpContext& ctx) {
+Maybe<void> RawLocalToGlobal(const CastToGlobalOpExpr& op_expr, const TensorTuple& inputs,
+                             TensorTuple* outputs, const OpExprInterpContext& ctx) {
   std::shared_ptr<LocalTensor> input_local_tensor;
   {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_OR_RETURN(!inputs.at(0)->is_consistent());
+    CHECK_OR_RETURN(!inputs[0]->is_global());  // NOLINT
     const auto& input_tensor = JUST(inputs.at(0)->detach());
     input_local_tensor = JUST(input_tensor->AsLocalTensor());
-    CHECK_OR_RETURN(input_local_tensor) << Error::InvalidValueError("Tensor Cast Error");  // NOLINT
+    CHECK_OR_RETURN(input_local_tensor)
+        << Error::InvalidValueError() << "Tensor Cast Error";  // NOLINT
     bool requires_grad = autograd::GradMode::is_enabled() && inputs.at(0)->requires_grad();
     JUST(input_local_tensor->set_requires_grad(requires_grad));
     input_local_tensor->set_is_leaf(!requires_grad);
   }
-  std::shared_ptr<ConsistentTensor> consistent_tensor;
+  std::shared_ptr<GlobalTensor> global_tensor;
   {
     CHECK_OR_RETURN(ctx.parallel_desc.has_value());
     CHECK_OR_RETURN(ctx.nd_sbp.has_value());
@@ -307,57 +260,58 @@ Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const Te
     const auto& parallel_desc = JUST(ctx.parallel_desc);
     const auto& logical_shape = JUST(ctx.attrs.GetAttr<Shape>("shape"));
     DataType dtype = JUST(ctx.attrs.GetAttr<DataType>("dtype"));
-    ConsistentTensorMeta tensor_meta(std::make_shared<const Shape>(logical_shape), dtype, nd_sbp,
-                                     parallel_desc);
+    GlobalTensorMeta tensor_meta(std::make_shared<const Shape>(logical_shape), dtype, nd_sbp,
+                                 parallel_desc);
     Optional<int64_t> parallel_id{};
     const auto& device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
-    const auto& consistent_tensor_impl = JUST(EagerConsistentTensorImpl::New(
+    const auto& global_tensor_impl = JUST(EagerGlobalTensorImpl::New(
         SymbolOf(tensor_meta), device, parallel_id, input_local_tensor->requires_grad(),
         !input_local_tensor->requires_grad()));
-    consistent_tensor = std::make_shared<ConsistentTensor>(consistent_tensor_impl);
+    global_tensor = std::make_shared<GlobalTensor>(global_tensor_impl);
     if (parallel_id.has_value()) {
       const auto& pyhsical_shape = JUST(GetPhysicalShape(tensor_meta));
       const auto& input_local_tensor_shape = input_local_tensor->shape();
       CHECK_EQ_OR_RETURN(*pyhsical_shape, *input_local_tensor_shape);      // NOLINT
       CHECK_OR_RETURN(dtype == input_local_tensor->dtype()->data_type());  // NOLINT
-      consistent_tensor_impl->reset_cur_rank_phy_tensor(input_local_tensor);
+      global_tensor_impl->reset_cur_rank_phy_tensor(input_local_tensor);
     }
   }
-  outputs->at(0) = consistent_tensor;
+  (*outputs)[0] = global_tensor;
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* LocalToConsistent =
-    DECORATE(&RawLocalToConsistent, NonRecursiveInitConsistentId);
+static constexpr auto* LocalToGlobal = DECORATE(&RawLocalToGlobal, NonRecursiveInitGlobalId);
 
 }  // namespace
 
-Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastToConsistentOpExpr& op_expr,
+Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastToGlobalOpExpr& op_expr,
                                              const TensorTuple& inputs, TensorTuple* outputs,
                                              const OpExprInterpContext& ctx) const {
-  JUST(LocalToConsistent(op_expr, inputs, outputs, ctx));
-  const auto& consistent_tensor = JUST(outputs->at(0)->AsConsistentTensor());
-  JUST(WithConsistencyChecked(consistent_tensor, [&]() -> Maybe<void> {
-    if (IsConsistentTensorMetaCheckDisabled()) { return Maybe<void>::Ok(); }
+  bool sync_data = JUST(ctx.attrs.GetAttr<bool>("sync_data"));
+  JUST(LocalToGlobal(op_expr, inputs, outputs, ctx));
+  const auto& global_tensor = JUST((*outputs)[0]->AsGlobalTensor());
+  JUST(WithConsistencyChecked(global_tensor, [&]() -> Maybe<void> {
+    if (IsGlobalTensorMetaCheckDisabled()) { return Maybe<void>::Ok(); }
     const auto& parallel_desc = JUST(ctx.parallel_desc);
     const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
     if (!parallel_id->has_value()) { return Maybe<void>::Ok(); }
     const auto& nd_sbp = JUST(ctx.nd_sbp);
-    const auto& tensor_meta = JUST(consistent_tensor->consistent_tensor_meta());
-    const auto& local_tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
+    const auto& tensor_meta = JUST(global_tensor->global_tensor_meta());
+    const auto& local_tensor = JUST(global_tensor->cur_rank_phy_tensor());
     const auto& reshaped_tensor = JUST(TryReshapeTensor(local_tensor, tensor_meta));
-    const auto& synced_tensor =
-        JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp));
-    auto* consistent_tensor_impl =
-        reinterpret_cast<EagerConsistentTensorImpl*>(consistent_tensor->mut_impl());
-    CHECK_NOTNULL_OR_RETURN(consistent_tensor_impl);
-    consistent_tensor_impl->reset_cur_rank_phy_tensor(JUST(synced_tensor->AsLocalTensor()));
+    std::shared_ptr<Tensor> synced_tensor = reshaped_tensor;
+    if (sync_data) {
+      synced_tensor = JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp));
+    }
+    auto* global_tensor_impl = reinterpret_cast<EagerGlobalTensorImpl*>(global_tensor->mut_impl());
+    CHECK_NOTNULL_OR_RETURN(global_tensor_impl);
+    global_tensor_impl->reset_cur_rank_phy_tensor(JUST(synced_tensor->AsLocalTensor()));
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastFromConsistentOpExpr& op_expr,
+Maybe<void> EagerLocalInterpreter::ApplyImpl(const CastFromGlobalOpExpr& op_expr,
                                              const TensorTuple& inputs, TensorTuple* outputs,
                                              const OpExprInterpContext& ctx) const {
   OF_UNIMPLEMENTED();

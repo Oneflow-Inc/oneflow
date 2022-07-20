@@ -584,6 +584,10 @@
   signature: "Tensor (Tensor dy, Tensor x) => GeluGrad"
   bind_python: False
 
+- name: "gelu_with_approximate"
+  signature: "Tensor (Tensor x, String approximate=\"none\") => GeluWithApproximate"
+  bind_python: True
+
 - name: "glu"
   signature: "Tensor (Tensor input, Int64 dim=-1) => Glu"
   bind_python: True
@@ -647,9 +651,9 @@
     "Tensor (Float mean, Float std, Int32 size, *, Tensor out=None, DataType dtype=None, Device device=None, 
     Generator generator=None, Bool requires_grad=False) => Normal2",
     "Tensor (Float mean, Float std, Shape size, *, Tensor out=None, Placement placement, SbpList sbp, DataType dtype=None,
-    Generator generator=None, Bool requires_grad=False) => ConsistentNormal",
+    Generator generator=None, Bool requires_grad=False) => GlobalNormal",
     "Tensor (Float mean, Float std, Int32 size, *, Tensor out=None, Placement placement, SbpList sbp, DataType dtype=None,
-    Generator generator=None, Bool requires_grad=False) => ConsistentNormal2",
+    Generator generator=None, Bool requires_grad=False) => GlobalNormal2",
     ]
   bind_python: True
 
@@ -709,8 +713,8 @@
 - name: "global_arange"
   signature: [
       "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=None,
-      Placement placement, SbpList sbp) => ConsistentArange",
-      "Tensor (Scalar end, *, DataType dtype=None, Placement placement, SbpList sbp) => ConsistentArange",
+      Placement placement, SbpList sbp) => GlobalArange",
+      "Tensor (Scalar end, *, DataType dtype=None, Placement placement, SbpList sbp) => GlobalArange",
     ]
   bind_python: True
 
@@ -748,7 +752,7 @@
 - name: "global_constant"
   signature:
     [
-      "Tensor (Shape shape, Scalar value, *, DataType dtype, Placement placement, SbpList sbp) => ConsistentConstant",
+      "Tensor (Shape shape, Scalar value, *, DataType dtype, Placement placement, SbpList sbp) => GlobalConstant",
     ]
   bind_python: True
 
@@ -759,17 +763,17 @@
 - name: "global_empty"
   signature:
     [
-      "Tensor (Shape shape, *, DataType dtype, Placement placement, SbpList sbp) => ConsistentEmpty",
+      "Tensor (Shape shape, *, DataType dtype, Placement placement, SbpList sbp) => GlobalEmpty",
     ]
   bind_python: True
 
 - name: "zeros_like"
   signature: "Tensor (Tensor x) => ZerosLike"
-  bind_python: True
+  bind_python: False
 
 - name: "ones_like"
   signature: "Tensor (Tensor x) => OnesLike"
-  bind_python: True
+  bind_python: False
 
 - name: "bernoulli"
   signature:
@@ -977,11 +981,6 @@
     "Tensor (Tensor input, Tensor mat2) => MatMulNoBroadCast"
   bind_python: True
 
-- name: "mv"
-  signature:
-    "Tensor (Tensor input, Tensor vec) => Mv"
-  bind_python: True
-
 - name: "fused_mlp"
   signature:
     "Tensor (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation) => FusedMLP"
@@ -1021,6 +1020,36 @@
     "Tensor (Tensor a, Tensor b, Bool transpose_a=False, Bool transpose_b=False,
     Double alpha=1.0) => BatchMatMul"
   bind_python: True
+
+- name: "matrix_vector_product"
+  signature: 
+    "Tensor (Tensor input, Tensor vec) => MatrixVectorProduct"
+  bind_python: True
+
+- name: "matrix_vector_product_grad_a"
+  signature: 
+    "Tensor (Tensor dy, Tensor b) => MatrixVectorProductGradA"
+  bind_python: False
+
+- name: "matrix_vector_product_grad_b"
+  signature: 
+    "Tensor (Tensor dy, Tensor a) => MatrixVectorProductGradB"
+  bind_python: False
+
+- name: "vector_matrix_product"
+  signature: 
+    "Tensor (Tensor vec, Tensor input) => VectorMatrixProduct"
+  bind_python: False
+
+- name: "vector_matrix_product_grad_a"
+  signature: 
+    "Tensor (Tensor dy, Tensor b) => VectorMatrixProductGradA"
+  bind_python: False
+
+- name: "vector_matrix_product_grad_b"
+  signature: 
+    "Tensor (Tensor dy, Tensor a) => VectorMatrixProductGradB"
+  bind_python: False
 
 - name: "tensordot"
   signature: [
@@ -1693,7 +1722,7 @@
 - name: "norm"
   signature: 
     [
-      "Tensor (Tensor input, Scalar ord=None, Int32List dim=None, Bool keepdim=False, *, DataType dtype=None) => Norm",
+      "Tensor (Tensor input, Scalar ord=None, Int32List dim=None, Bool keepdim=False, *, DataType dtype=None, Bool for_norm=False) => Norm",
       "Tensor (Tensor input, String ord, Int32List dim=None, Bool keepdim=False, *, DataType dtype=None) => Norm",
       "Tensor (Tensor input, Scalar ord=None, Scalar dim, Bool keepdim=False, *, DataType dtype=None) => ScalarNorm",
       "Tensor (Tensor input, String ord, Scalar dim, Bool keepdim=False, *, DataType dtype=None) => ScalarNorm",
@@ -1845,15 +1874,15 @@
   bind_python: False
 
 - name: "local_to_global"
-  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, Shape shape, DataType dtype) => LocalToConsistent"
+  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, Shape shape, DataType dtype, Bool sync_data) => LocalToGlobal"
   bind_python: False
 
 - name: "to_global"
-  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp, Bool check_meta) => ToConsistent"
+  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp, Bool check_meta) => ToGlobal"
   bind_python: True
 
 - name: "to_local"
-  signature: "Tensor (Tensor x) => ConsistentToLocal"
+  signature: "Tensor (Tensor x) => GlobalToLocal"
   bind_python: True
 
 - name: "stream_touch"
@@ -1897,19 +1926,19 @@
   bind_python: False
 
 - name: "global_all_reduce"
-  signature: "Tensor (Tensor x) => ConsistentAllReduce"
+  signature: "Tensor (Tensor x) => GlobalAllReduce"
   bind_python: False
 
 - name: "global_reduce_scatter"
-  signature: "Tensor (Tensor x, String op_type) => ConsistentReduceScatter"
+  signature: "Tensor (Tensor x, String op_type) => GlobalReduceScatter"
   bind_python: False
 
 - name: "global_all_gather"
-  signature: "Tensor (Tensor x) => ConsistentAllGather"
+  signature: "Tensor (Tensor x) => GlobalAllGather"
   bind_python: False
 
 - name: "global_s2s"
-  signature: "Tensor (Tensor x, SbpList out_sbp) => ConsistentS2S"
+  signature: "Tensor (Tensor x, SbpList out_sbp) => GlobalS2S"
   bind_python: False
 
 - name: "select_top_n"
@@ -1945,7 +1974,7 @@
       "Tensor (Shape size, *, DataType dtype=None, Device device=None,
       Generator generator=None, Bool requires_grad=False) => Rand",
       "Tensor (Shape size, *, Placement placement, SbpList sbp, DataType dtype=None,
-      Generator generator=None, Bool requires_grad=False) => ConsistentRand",
+      Generator generator=None, Bool requires_grad=False) => GlobalRand",
     ]
   bind_python: True
 
@@ -1954,7 +1983,7 @@
       "Tensor (Shape size, *, DataType dtype=None, Device device=None,
       Generator generator=None, Bool requires_grad=False) => RandN",
       "Tensor (Shape size, *, Placement placement, SbpList sbp, DataType dtype=None,
-      Generator generator=None, Bool requires_grad=False) => ConsistentRandN",
+      Generator generator=None, Bool requires_grad=False) => GlobalRandN",
     ]
   bind_python: True
 
@@ -1965,17 +1994,31 @@
       "Tensor (Int64 high, Shape size, *, DataType dtype=None,
       Device device=None, Generator generator=None, Bool requires_grad=False)=> RandInt",
       "Tensor (Int64 low, Int64 high, Shape size, *, Placement placement, SbpList sbp,
-      DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> ConsistentRandInt",
+      DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> GlobalRandInt",
       "Tensor (Int64 high, Shape size, *, Placement placement, SbpList sbp,
-      DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> ConsistentRandInt",
+      DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> GlobalRandInt",
     ]
   bind_python: True
+
+- name: "randint_like"
+  signature: [
+      "Tensor (Tensor x, Int64 low, Int64 high, *, DataType dtype=None,
+      Device device=None, Generator generator=None, Bool requires_grad=False)=> RandIntLike",
+      "Tensor (Tensor x, Int64 high, *, DataType dtype=None,
+      Device device=None, Generator generator=None, Bool requires_grad=False)=> RandIntLike",
+      "Tensor (Tensor x, Int64 low, Int64 high, *, Placement placement, SbpList sbp,
+      DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> GlobalRandIntLike",
+      "Tensor (Tensor x, Int64 high, *, Placement placement, SbpList sbp,
+      DataType dtype=None, Generator generator=None, Bool requires_grad=False)=> GlobalRandIntLike",
+    ]
+  bind_python: True
+
 
 - name: "randperm"
   signature:
     [
       "Tensor (Int32 n, *, Generator generator=None, DataType dtype=kInt64, Device device=None, Bool requires_grad=False) => RandPerm",
-      "Tensor (Int32 n, *, Placement placement, SbpList sbp, Generator generator=None, DataType dtype=kInt64, Bool requires_grad=False) => ConsistentRandPerm",
+      "Tensor (Int32 n, *, Placement placement, SbpList sbp, Generator generator=None, DataType dtype=kInt64, Bool requires_grad=False) => GlobalRandPerm",
     ]
   bind_python: True
 
@@ -2081,7 +2124,7 @@
   bind_python: False
 
 - name: "fused_scale_tril_softmax_mask_scale"
-  signature: "TensorTuple (Tensor a, *, Float p=0.5, Int64 diagonal, Float tril_scale_value, Generator generator=None) => FusedScaleTrilSoftmaxMaskScale"
+  signature: "TensorTuple (Tensor a, *, Float p=0.5, Int64 diagonal, Float tril_scale_value, Float tril_fill_value=0.0, Generator generator=None) => FusedScaleTrilSoftmaxMaskScale"
   bind_python: True
 
 - name: "fused_scale_tril_softmax_mask_scale_grad"

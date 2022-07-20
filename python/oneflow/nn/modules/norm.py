@@ -18,9 +18,9 @@ import oneflow as flow
 
 def norm(input, p="fro", dim=None, keepdim=False, dtype=None):
     """
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.norm.html.
-
     Returns the matrix norm or vector norm of a given tensor.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.norm.html.
 
     .. warning::
 
@@ -105,4 +105,8 @@ def norm(input, p="fro", dim=None, keepdim=False, dtype=None):
         >>> flow.norm(d[0, :, :]), flow.norm(d[1, :, :])
         (tensor(3.7417, dtype=oneflow.float32), tensor(11.2250, dtype=oneflow.float32))
     """
-    return flow._C.norm(input=input, ord=p, dim=dim, keepdim=keepdim, dtype=dtype)
+    if type(p) == str or dim != None:
+        return flow._C.norm(input=input, ord=p, dim=dim, keepdim=keepdim, dtype=dtype)
+    return flow._C.norm(
+        input=input, ord=p, dim=dim, keepdim=keepdim, dtype=dtype, for_norm=True
+    )

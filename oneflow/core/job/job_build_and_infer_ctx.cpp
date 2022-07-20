@@ -33,7 +33,7 @@ limitations under the License.
 namespace oneflow {
 
 static const std::string kAutoLocalBlobNamePrefix =
-    "System-Local-Blob-Auto-Converted-From-Consistent-Blob";
+    "System-Local-Blob-Auto-Converted-From-Global-Blob";
 
 namespace {
 
@@ -507,7 +507,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferLocalOp(const OperatorConf& o
   JUST(CheckAllInputsWithSameParallelNum(*op, parallel_num));
   auto GetSubOpName = [&](int index) { return GetLocalOpName(op_conf.name(), index); };
   OperatorConf sub_op_conf(op_conf);
-  int64_t sub_op_list_size = SizeOfSubConsistentOpList(parallel_num);
+  int64_t sub_op_list_size = SizeOfSubGlobalOpList(parallel_num);
   auto last_op_attribute = std::make_shared<OpAttribute>();
   FOR_RANGE(int32_t, i, 0, sub_op_list_size) {
     ResetOpConfName(&sub_op_conf, GetSubOpName(i));
@@ -542,15 +542,14 @@ Maybe<const LogicalBlobId*> JobBuildAndInferCtx::GetSubLbi(int64_t scope_symbol_
                                                            int32_t index) {
   auto lbi_vec_iter = local_lbi2sub_lbis_.find(lbi);
   if (lbi_vec_iter == local_lbi2sub_lbis_.end()) {
-    const auto& new_lbi =
-        JUST(FindOrCreateLocalLbiFromCompatibleConsistentBlob(scope_symbol_id, lbi));
+    const auto& new_lbi = JUST(FindOrCreateLocalLbiFromCompatibleGlobalBlob(scope_symbol_id, lbi));
     lbi_vec_iter = local_lbi2sub_lbis_.find(*new_lbi);
     CHECK(lbi_vec_iter != local_lbi2sub_lbis_.end());
   }
   return &lbi_vec_iter->second.at(index);
 }
 
-Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferConsistentOp(const OperatorConf& op_conf) {
+Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferGlobalOp(const OperatorConf& op_conf) {
   CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
   const auto& scope = Singleton<symbol::Storage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
   const auto& parallel_desc = *JUST(scope.GetParallelDesc(op_conf));
@@ -644,10 +643,10 @@ Maybe<void> JobBuildAndInferCtx::SetTrainConf(const TrainConf& train_conf) {
 
 Maybe<void> JobBuildAndInferCtx::AddLossLogicalBlobName(const std::string& lbn) {
   if (IsLocalBlob(lbn)) { return AddLossLocalBlobName(lbn); }
-  return AddLossConsistentBlobName(lbn);
+  return AddLossGlobalBlobName(lbn);
 }
 
-Maybe<void> JobBuildAndInferCtx::AddLossConsistentBlobName(const std::string& lbn) {
+Maybe<void> JobBuildAndInferCtx::AddLossGlobalBlobName(const std::string& lbn) {
   JUST(CheckLbnValidAndExist(lbn));
   CHECK_OR_RETURN(job_->job_conf().has_train_conf())
       << Error::UnknownJobBuildAndInferError()
@@ -872,17 +871,17 @@ ParallelConf EagerJobBuildAndInferCtx::GetLocalOpParallelConf(const ParallelDesc
   return parallel_desc.parallel_conf();
 }
 
-Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatibleConsistentBlob(
+Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatibleGlobalBlob(
     int64_t scope_symbol_id, const LogicalBlobId& lbi) {
   const std::string& lbn = GenLogicalBlobName(lbi);
-  const auto& sbn_it = mut_consistent_lbi2local_lbi()->find(lbi);
-  if (sbn_it != mut_consistent_lbi2local_lbi()->end()) { return sbn_it->second; }
+  const auto& sbn_it = mut_global_lbi2local_lbi()->find(lbi);
+  if (sbn_it != mut_global_lbi2local_lbi()->end()) { return sbn_it->second; }
   const SbpParallel& sbp = *JUST(SbpParallel4Lbi(lbi));
   const ParallelDesc& parallel_desc = *JUST(ParallelDesc4Lbi(lbi));
   LogicalBlobId local_lbi;
   local_lbi.set_op_name(kAutoLocalBlobNamePrefix + NewUniqueId());
   local_lbi.set_blob_name("out");
-  (*mut_consistent_lbi2local_lbi())[lbi] = local_lbi;
+  (*mut_global_lbi2local_lbi())[lbi] = local_lbi;
   auto* lbi_vec = &(*mut_local_lbi2sub_lbis())[local_lbi];
   lbi_vec->reserve(parallel_desc.parallel_num());
   auto PushBackSubLbi = [&](const std::string& op_name, const std::string& blob_name) {
@@ -906,7 +905,7 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatible
     }
   } else if (sbp.has_split_parallel()) {
     CHECK_EQ_OR_RETURN(sbp.split_parallel().axis(), 0)
-        << "only `S(0)' consistent blob is compatible to local blob";
+        << "only `S(0)' global blob is compatible to local blob";
     op_conf.set_name(kAutoLocalBlobNamePrefix + "-DistributeSplit-" + NewUniqueId());
     auto* distribute_split = op_conf.mutable_distribute_split_conf();
     distribute_split->set_in(lbn);
@@ -918,7 +917,7 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatible
       PushBackSubLbi(op_conf.name(), blob_name);
     }
   } else {
-    OF_UNIMPLEMENTED() << "`P' consistant blob is not compatible to local blob";
+    OF_UNIMPLEMENTED() << "`P' global blob is not compatible to local blob";
   }
   {
     const auto& producer_op_conf = JUST(Op4OpName(lbi.op_name()))->op_conf();
@@ -930,14 +929,14 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatible
   return local_lbi;
 }
 
-Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatibleConsistentBlob(
+Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatibleGlobalBlob(
     int64_t scope_symbol_id, const LogicalBlobId& lbi) {
   const std::string& lbn = GenLogicalBlobName(lbi);
-  const auto& sbn_it = mut_consistent_lbi2local_lbi()->find(lbi);
-  if (sbn_it != mut_consistent_lbi2local_lbi()->end()) { return sbn_it->second; }
+  const auto& sbn_it = mut_global_lbi2local_lbi()->find(lbi);
+  if (sbn_it != mut_global_lbi2local_lbi()->end()) { return sbn_it->second; }
   const SbpParallel& sbp = *JUST(SbpParallel4Lbi(lbi));
   CHECK_OR_RETURN(!sbp.has_partial_sum_parallel())
-      << "`P' consistant blob is not compatible to local blob";
+      << "`P' global blob is not compatible to local blob";
   const ParallelDesc& parallel_desc = *JUST(ParallelDesc4Lbi(lbi));
   OperatorConf op_conf;
   {
@@ -956,10 +955,10 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatibl
   LogicalBlobId local_lbi;
   local_lbi.set_op_name(op_conf.name());
   local_lbi.set_blob_name("out");
-  (*mut_consistent_lbi2local_lbi())[lbi] = local_lbi;
+  (*mut_global_lbi2local_lbi())[lbi] = local_lbi;
   (*mut_local_lbi2sub_lbis())[local_lbi].emplace_back(local_lbi);
   const auto& parallel_conf = parallel_desc.parallel_conf();
-  const auto& op_attribute = JUST(AddAndInferConsistentOp(op_conf));
+  const auto& op_attribute = JUST(AddAndInferGlobalOp(op_conf));
   (*JUST(SingletonMaybe<std::shared_ptr<ForeignCallback>>()))
       ->EagerLocalCast(*op_attribute, parallel_conf);
   return local_lbi;
@@ -1042,6 +1041,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
 #endif  // WITH_MLIR
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
     JUST(DoPass("ReplaceEmbeddingOps"));
+    JUST(DoPass("FuseEmbeddingShuffleInteractionPass"));
     JUST(DoPass("AddSspVariableProxy"));
     JUST(DoPass("CheckpointingPass"));
     JUST(DoPass("CudnnFusedNormalizationAddReluPass"));
@@ -1306,7 +1306,7 @@ Maybe<void> JobBuildAndInferCtx::Rebuild() {
   op_name2op_.clear();
   parallel_desc2placement_group_.clear();
   parallel_desc2blob_placement_group_.clear();
-  consistent_lbi2local_lbi_.clear();
+  global_lbi2local_lbi_.clear();
   local_lbi2sub_lbis_.clear();
   local_lbi2parallel_desc_.clear();
   local_lbi2sbp_parallel_.clear();
@@ -1345,7 +1345,7 @@ Maybe<void> JobBuildAndInferCtx::Rebuild() {
     if (is_local) {
       CHECK_JUST(AddAndInferLocalOp(op_conf));
     } else {
-      CHECK_JUST(AddAndInferConsistentOp(op_conf));
+      CHECK_JUST(AddAndInferGlobalOp(op_conf));
     }
   });
   // updata job_helper

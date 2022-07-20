@@ -24,13 +24,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace one {
-
-using EagerBlobObjectListPtr =
-    std::shared_ptr<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>;
-
-}
-
 namespace vm {
 
 class Stream;
@@ -46,7 +39,7 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
 
   explicit CriticalSectionBeginPhyInstrOperand(
       const std::shared_ptr<NNGraphIf>& nn_graph,
-      const one::EagerBlobObjectListPtr& eager_blob_objects,
+      const vm::EagerBlobObjectListPtr& eager_blob_objects,
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>&
           op_name2end_event_record,
       vm::Stream* vm_stream)
@@ -56,7 +49,7 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
         vm_stream_(vm_stream) {}
 
   const std::shared_ptr<NNGraphIf>& nn_graph() const { return nn_graph_; }
-  const one::EagerBlobObjectListPtr& eager_blob_objects() const { return eager_blob_objects_; }
+  const vm::EagerBlobObjectListPtr& eager_blob_objects() const { return eager_blob_objects_; }
 
   void ForEachDependence(const std::function<void(vm::Dependence* compute)>&) const;
 
@@ -81,7 +74,7 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
 
  protected:
   std::shared_ptr<NNGraphIf> nn_graph_;
-  one::EagerBlobObjectListPtr eager_blob_objects_;
+  vm::EagerBlobObjectListPtr eager_blob_objects_;
   std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>
       op_name2end_event_record_;
   HashMap<std::string, size_t> op_name2interface_index_;
@@ -92,7 +85,7 @@ class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeg
  public:
   InputCriticalSectionBeginPhyInstrOperand(
       const std::shared_ptr<NNGraphIf>& nn_graph,
-      const one::EagerBlobObjectListPtr& eager_blob_objects,
+      const vm::EagerBlobObjectListPtr& eager_blob_objects,
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>&
           op_name2end_event_record,
       vm::Stream* vm_stream)
@@ -149,7 +142,7 @@ class OutputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBe
  public:
   OutputCriticalSectionBeginPhyInstrOperand(
       const std::shared_ptr<NNGraphIf>& nn_graph,
-      const one::EagerBlobObjectListPtr& eager_blob_objects,
+      const vm::EagerBlobObjectListPtr& eager_blob_objects,
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>&
           op_name2end_event_record,
       vm::Stream* vm_stream)

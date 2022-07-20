@@ -18,17 +18,16 @@ limitations under the License.
 
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/phy_instr_operand.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 
 namespace oneflow {
 namespace vm {
 
-class EagerBlobObject;
 class Instruction;
 
 class TouchTensorsPhyInstrOperand final : public PhyInstrOperand {
  public:
-  TouchTensorsPhyInstrOperand(
-      const std::vector<std::shared_ptr<EagerBlobObject>>& eager_blob_objects);
+  TouchTensorsPhyInstrOperand(const vm::EagerBlobObjectList& eager_blob_objects);
 
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override {
@@ -41,7 +40,7 @@ class TouchTensorsPhyInstrOperand final : public PhyInstrOperand {
   }
 
  private:
-  std::vector<std::shared_ptr<EagerBlobObject>> eager_blob_objects_;
+  vm::EagerBlobObjectList eager_blob_objects_;
   DependenceVector input_dependences_;
 };
 
