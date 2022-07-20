@@ -15,12 +15,16 @@ LogicalResult parseSBP(AsmParser& parser, FailureOr<ArrayAttr>& args) {
   llvm::SmallVector<Attribute> nd_list;
 
   auto parserListElem = [&](llvm::SmallVector<Attribute>& list) {
-    if (failed(parser.parseAttribute(list.emplace_back()))) { return failure(); }
+    auto loc = parser.getCurrentLocation();
+    if (failed(parser.parseAttribute(list.emplace_back()))) {
+      parser.emitError(loc, "failed to parse an attribute here");
+      return failure();
+    }
     if (list.back().dyn_cast<sbp::SplitAttr>() || list.back().dyn_cast<sbp::BroadcastAttr>()
         || list.back().dyn_cast<sbp::PartialSumAttr>()) {
       return success();
     }
-    llvm::errs() << "parse failed with bad attribute in sbp";
+    parser.emitError(loc, "failed to parse a sbp attribute here");
     return failure();
   };
 
@@ -36,9 +40,7 @@ LogicalResult parseSBP(AsmParser& parser, FailureOr<ArrayAttr>& args) {
 
   if (parser.parseCommaSeparatedList([&]() {
         // if (succeeded(parser.parseLSquare())) {
-        if (succeeded(parser.parseOptionalLSquare())) {
-          return parserList();
-        }
+        if (succeeded(parser.parseOptionalLSquare())) { return parserList(); }
         return parserListElem(res);
       })
       || parser.parseRSquare()) {
