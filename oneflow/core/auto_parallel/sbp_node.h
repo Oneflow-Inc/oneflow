@@ -126,9 +126,6 @@ class SbpNode {
 
   // Initialize SbpSignature from Signature Objects
   void InitializeSbp();
-  // Compute Computation Cost
-  void ComputeCost(
-      const std::function<double(SbpNode<SbpSignature>*, SbpSignature*)>& SbpComputationCost);
   // Decide to use this SbpSignature
   SbpSignature* FinalSbpSignature() const {
     if (sbp_sig_list_.empty()) { return nullptr; }
@@ -320,15 +317,6 @@ void SbpNode<SbpSignature>::InitializeSbp() {
     sbp_sig_list_.emplace_back(&(sbp_sig_obj_list_[i]));
   }
   cost_.resize(sbp_sig_list_.size());
-};
-
-template<class SbpSignature>
-void SbpNode<SbpSignature>::ComputeCost(
-    const std::function<double(SbpNode<SbpSignature>*, SbpSignature*)>& SbpComputationCost) {
-  cost_.resize(sbp_sig_list_.size());
-  for (int32_t sbp = 0; sbp < sbp_sig_list_.size(); sbp++) {
-    cost_[sbp] = SbpComputationCost(this, sbp_sig_list_[sbp]);
-  }
 };
 
 // Let one node point to another

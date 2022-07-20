@@ -59,12 +59,6 @@ class SbpGraph {
   // Use our algorithm to decide SbpSignature for each op-node
   void DecideSbpSignature();
 
-  // Compute Cost before elimination
-  void ComputeInitialCost(
-      const std::function<double(SbpNode<SbpSignature>*, SbpSignature*, SbpNode<SbpSignature>*,
-                                 SbpSignature*)>& SbpInferHint4Ibn,
-      const std::function<double(SbpNode<SbpSignature>*, SbpSignature*)>& SbpComputationCost);
-
   // Randomly assign a SbpSignature strategy
   void RandomSbpSignature(bool use_sbp_collector_);
   // assign 0 to a SbpSignature strategy to avoid randomness
@@ -187,21 +181,6 @@ void SbpGraph<SbpSignature>::RemoveFromNodeList(SbpNode<SbpSignature>* this_node
 
 template<class SbpSignature>
 SbpGraph<SbpSignature>::SbpGraph() {}
-
-template<class SbpSignature>
-void SbpGraph<SbpSignature>::ComputeInitialCost(
-    const std::function<double(SbpNode<SbpSignature>*, SbpSignature*, SbpNode<SbpSignature>*,
-                               SbpSignature*)>& SbpInferHint4Ibn,
-    const std::function<double(SbpNode<SbpSignature>*, SbpSignature*)>& SbpComputationCost) {
-  for (const auto& this_node : NodeList) {
-    this_node->ComputeCost(SbpComputationCost);
-    this_node->OriginCost = this_node->cost_;
-    for (const auto& edge_out : this_node->edges_out_) {
-      edge_out->ComputeCost(SbpInferHint4Ibn);
-      this_node->OriginCostOut.emplace_back(edge_out->cost_);
-    }
-  }
-};
 
 template<class SbpSignature>
 void SbpGraph<SbpSignature>::AssembleSbpSignature(

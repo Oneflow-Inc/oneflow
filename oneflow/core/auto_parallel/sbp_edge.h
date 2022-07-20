@@ -60,11 +60,6 @@ class SbpEdge final {
     for (auto& this_edge : edge_list_) { delete this_edge; }
   }
 
-  // Compute copy cost for type 1
-  void ComputeCost(
-      const std::function<double(SbpNode<SbpSignature>*, SbpSignature*, SbpNode<SbpSignature>*,
-                                 SbpSignature*)>& SbpInferHint4Ibn);
-
   // Update copy cost for type 2 and 3
   void SummarizeCost();
   // Duplicate Cost. Designed for merging two nodes.
@@ -167,22 +162,6 @@ SbpEdge<SbpSignature>::SbpEdge(SbpNode<SbpSignature>* start_node, SbpNode<SbpSig
     : start_node_(start_node), mid_node_(mid_node), end_node_(end_node) {
   edge_list_.emplace_back(first_edge);
   edge_list_.emplace_back(second_edge);
-};
-
-template<class SbpSignature>
-void SbpEdge<SbpSignature>::ComputeCost(
-    const std::function<double(SbpNode<SbpSignature>*, SbpSignature*, SbpNode<SbpSignature>*,
-                               SbpSignature*)>& SbpInferHint4Ibn) {
-  cost_.resize(start_node_->cost_.size());
-  int32_t end_node_sbp_size = end_node_->cost_.size();
-  for (int32_t sbp_start = 0; sbp_start < cost_.size(); sbp_start++) {
-    cost_[sbp_start].resize(end_node_sbp_size);
-    for (int32_t sbp_end = 0; sbp_end < end_node_sbp_size; sbp_end++) {
-      cost_[sbp_start][sbp_end] =
-          SbpInferHint4Ibn(start_node_, start_node_->sbp_sig_list_[sbp_start], end_node_,
-                           end_node_->sbp_sig_list_[sbp_end]);
-    }
-  }
 };
 
 template<class SbpSignature>
