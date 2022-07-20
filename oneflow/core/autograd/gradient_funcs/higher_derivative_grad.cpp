@@ -174,7 +174,6 @@ struct ConvDataGradGradCaptureState : public AutoGradCaptureState {
 
   size_t w_index;
   size_t grad_index;
-  // size_t x_like_index;
 
   std::string data_format;
   std::vector<int32_t> padding_before;
@@ -215,13 +214,8 @@ Maybe<void> ConvDataGradGrad::Capture(ConvDataGradGradCaptureState* ctx, const T
 
   if (!(ctx->w_requires_grad || ctx->grad_requires_grad)) { return Maybe<void>::Ok(); }
 
-  // if (ctx->w_requires_grad) {
-  //   ctx->weight_index = ctx->SaveTensorForBackward(inputs.at(1));  // weight
-  // }
-
-  ctx->w_index = ctx->SaveTensorForBackward(inputs.at(1));     // input
-  ctx->grad_index = ctx->SaveTensorForBackward(inputs.at(0));  // input grad
-  // ctx->x_like_index = ctx->SaveTensorForBackward(inputs.at(2));  // x_like
+  ctx->w_index = ctx->SaveTensorForBackward(inputs.at(1));     // w
+  ctx->grad_index = ctx->SaveTensorForBackward(inputs.at(0));  // grad
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
@@ -235,26 +229,32 @@ Maybe<void> ConvDataGradGrad::Capture(ConvDataGradGradCaptureState* ctx, const T
 
 Maybe<void> ConvDataGradGrad::Apply(const ConvDataGradGradCaptureState* ctx,
                                     const TensorTuple& out_grads, TensorTuple* in_grads) const {
-  in_grads->resize(2);
+  in_grads->resize(3);
   size_t num_spatial_dims = ctx->kernel_size.size();
 
-  // w_grad_grad = out_grads_x * grad
+  // x_grad       = grad * w            (y.shape * w.shape -> x.shape)  call ConvDataGrad
+  // x_grad_grad  = grad * out_grads_w  (y.shape * w.shape -> x.shape)  call ConvDataGrad
+  // grad_grad_x  = out_grads_x * w     (x.shape * w.shape -> y.shape)  call ConvDataGrad
+  // w_grad       = x * grad            (x.shape * y.shape -> w.shape)  call ConvFilterGrad
+  // w_grad_grad  = out_grads_x * grad  (x.shape * y.shape -> w.shape)  call ConvFilterGrad
+  // grad_grad_w  = x * out_grads_w     (x.shape * w.shape -> y.shape)  call ConvFilterGrad
+
+  // w_grad_grad
   if (ctx->w_requires_grad) {
     const auto& grad = ctx->SavedTensors().at(ctx->grad_index);
-    in_grads->at(0) = JUST(functional::ConvFilterGrad(
+    in_grads->at(1) = JUST(functional::ConvFilterGrad(
         grad, out_grads.at(0), num_spatial_dims, ctx->kernel_size, ctx->strides,
         ctx->padding_before, ctx->dilation_rate, ctx->groups, ctx->data_format));
   }
 
-  // // dgrad = w * out_grads_x
-  // if (ctx->grad_requires_grad) {
-  //   const auto& weight = ctx->SavedTensors().at(ctx->w_index);
-  //   const auto& grad = ctx->SavedTensors().at(ctx->grad_index);
-  //   in_grads->at(1) = JUST(functional::ConvDataGrad(
-  //       out_grads.at(0), weight, JUST(grad->detach()), num_spatial_dims, /*maybe
-  //       changed*/ctx->kernel_size, ctx->strides, /*maybe changed*/ctx->padding_before, /*maybe
-  //       changed*/ ctx->dilation_rate, ctx->groups, ctx->data_format));
-  // }
+  // grad_grad_x
+  if (ctx->grad_requires_grad) {
+    const auto& w = ctx->SavedTensors().at(ctx->w_index);
+    const auto& grad = ctx->SavedTensors().at(ctx->grad_index);
+    in_grads->at(0) = JUST(functional::ConvDataGrad(
+        out_grads.at(0), w, JUST(grad->detach()), num_spatial_dims, ctx->kernel_size, ctx->strides,
+        ctx->padding_before, /**/ ctx->dilation_rate, ctx->groups, ctx->data_format));
+  }
 
   return Maybe<void>::Ok();
 }
@@ -305,8 +305,8 @@ Maybe<void> ConvFilterGradGrad::Capture(ConvFilterGradGradCaptureState* ctx,
 
   if (!(ctx->x_requires_grad || ctx->grad_requires_grad)) { return Maybe<void>::Ok(); }
 
-  ctx->x_index = ctx->SaveTensorForBackward(inputs.at(1));     // input
-  ctx->grad_index = ctx->SaveTensorForBackward(inputs.at(0));  // input grad
+  ctx->x_index = ctx->SaveTensorForBackward(inputs.at(1));     // x
+  ctx->grad_index = ctx->SaveTensorForBackward(inputs.at(0));  // grad
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
@@ -323,24 +323,31 @@ Maybe<void> ConvFilterGradGrad::Apply(const ConvFilterGradGradCaptureState* ctx,
   in_grads->resize(2);
   size_t num_spatial_dims = ctx->kernel_size.size();
 
-  // x_grad_grad = grad * out_grads_w
+  // x_grad       = grad * w            (y.shape * w.shape -> x.shape)  call ConvDataGrad
+  // x_grad_grad  = grad * out_grads_w  (y.shape * w.shape -> x.shape)  call ConvDataGrad
+  // grad_grad_x  = out_grads_x * w     (x.shape * w.shape -> y.shape)  call ConvDataGrad
+  // w_grad       = x * grad            (x.shape * y.shape -> w.shape)  call ConvFilterGrad
+  // w_grad_grad  = out_grads_x * grad  (x.shape * y.shape -> w.shape)  call ConvFilterGrad
+  // grad_grad_w  = x * out_grads_w     (x.shape * w.shape -> y.shape)  call ConvFilterGrad
+
+  // x_grad_grad
   if (ctx->x_requires_grad) {
     const auto& grad = ctx->SavedTensors().at(ctx->grad_index);
-    const auto& input = ctx->SavedTensors().at(ctx->x_index);
-    in_grads->at(0) = JUST(functional::ConvDataGrad(
-        grad, out_grads.at(0), /**/ JUST(input->detach()), num_spatial_dims, ctx->kernel_size,
+    const auto& x = ctx->SavedTensors().at(ctx->x_index);
+    in_grads->at(1) = JUST(functional::ConvDataGrad(
+        grad, out_grads.at(0), /**/ JUST(x->detach()), num_spatial_dims, ctx->kernel_size,
         ctx->strides, ctx->padding_before, ctx->dilation_rate, ctx->groups, ctx->data_format));
   }
 
-  // // dgrad = out_grads_w * x
-  // if (ctx->grad_requires_grad) {
-  //   const auto& input = ctx->SavedTensors().at(ctx->x_index);
-  //   in_grads->at(1) = JUST(functional::ConvFilterGrad(
-  //       out_grads.at(0), input, num_spatial_dims, /*maybe changed*/ctx->kernel_size,
-  //       ctx->strides,
-  //       /*maybe changed*/ ctx->padding_before, /*maybe changed*/ ctx->dilation_rate, ctx->groups,
-  //       ctx->data_format));
-  // }
+  // grad_grad_w
+  if (ctx->grad_requires_grad) {
+    const auto& x = ctx->SavedTensors().at(ctx->x_index);
+    const auto& grad = ctx->SavedTensors().at(ctx->grad_index);
+
+    in_grads->at(0) = JUST(functional::ConvFilterGrad(
+        out_grads.at(0), x, num_spatial_dims, ctx->kernel_size, ctx->strides,
+        /**/ ctx->padding_before, /**/ ctx->dilation_rate, ctx->groups, ctx->data_format));
+  }
 
   return Maybe<void>::Ok();
 }
