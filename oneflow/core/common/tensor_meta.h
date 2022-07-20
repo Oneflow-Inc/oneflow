@@ -134,12 +134,7 @@ class MutLocalTensorMeta : public TensorMeta {
   bool operator==(const MutLocalTensorMeta& other) const;
   size_t CalcHashValue() const;
 
-  MutLocalTensorMeta& operator=(const MutLocalTensorMeta& other) {
-    TensorMeta::operator=(other);
-    this->device_ = other.device_;
-    this->storage_offset_ = other.storage_offset_;
-    return *this;
-  }
+  MutLocalTensorMeta& operator=(const MutLocalTensorMeta& other) = default;
 
  private:
   Symbol<Device> device_;
