@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/memcpy.h"
+#include "oneflow/core/ep/include/primitive/fill.h"
 
 namespace oneflow {
 
@@ -31,6 +32,19 @@ class CopyDataContentKernel final : public user_op::OpKernel, public user_op::Cu
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t elem_cnt = in->shape_view().elem_cnt();
+    // For 0-size tensor, we don't need copy data, but we must
+    // fill output tensor with Scalar(0) because the kernel is used in autograd too.
+    if (elem_cnt == 0) {
+      const int64_t elem_cnt = out->shape_view().elem_cnt();
+      CHECK_GE(elem_cnt, 0);
+      if (elem_cnt == 0) { return; }
+      std::unique_ptr<ep::primitive::Fill> fill =
+          ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->device_type(),
+                                                                  out->data_type());
+      CHECK(fill);
+      fill->Launch(ctx->stream(), out->mut_dptr(), Scalar(0), elem_cnt);
+      return;
+    }
     CHECK_EQ(out->shape_view().elem_cnt(), elem_cnt);
     CHECK_EQ(in->data_type(), out->data_type());
     if (elem_cnt > 0) {

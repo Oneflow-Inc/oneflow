@@ -2833,8 +2833,13 @@ class RepeatFunctor {
           }
         } else {
           input_reshape_vec.insert(input_reshape_vec.begin(), input_shape_val);
-          expand_shape_vec.insert(expand_shape_vec.begin(), input_shape_val);
-          output_reshape_vec.insert(output_reshape_vec.begin(), input_shape_val);
+          if (repeat_shape_val == 0) {
+            expand_shape_vec.insert(expand_shape_vec.begin(), 0);
+            output_reshape_vec.insert(output_reshape_vec.begin(), 0);
+          } else {
+            expand_shape_vec.insert(expand_shape_vec.begin(), input_shape_val);
+            output_reshape_vec.insert(output_reshape_vec.begin(), input_shape_val);
+          }
         }
       } else {
         expand_shape_vec.insert(expand_shape_vec.begin(), repeat_shape.At(i));
