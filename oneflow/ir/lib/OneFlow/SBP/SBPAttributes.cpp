@@ -7,7 +7,6 @@
 #include "mlir/Support/LogicalResult.h"
 
 using namespace mlir;
-// [[#sbp.b]]
 
 LogicalResult parseSBP(AsmParser& parser, FailureOr<ArrayAttr>& args) {
   if (failed(parser.parseLSquare())) { return failure(); }
