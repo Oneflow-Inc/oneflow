@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
 #include "oneflow/core/auto_parallel/sbp_node.h"
 #include "oneflow/core/auto_parallel/sbp_util.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -66,7 +67,7 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
   LOG(INFO) << "Initial cost: " << ori_cost;
   int elimination_num = sbp_graph_.NodeAndEdgeEliminations();
   LOG(INFO) << "Elimination number: " << elimination_num;
-  if (ori_cost > cut_cost) {
+  if (ori_cost > GetValidMaxCopyCost()) {
     JUST(sbp_graph_.Find1Strategy4Greedy());
     ori_cost = sbp_graph_.ComputeCost();
     LOG(INFO) << "Greedy cost: " << ori_cost;
@@ -78,7 +79,7 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
   LOG(INFO) << "Final cost: " << final_cost;
   if (ori_cost + 1.0 < final_cost) { LOG(WARNING) << "ori_cost less than final_cost!!!"; }
   // TODO: Restart searching with another original random strategy
-  CHECK_LT_OR_RETURN(final_cost, cut_cost)
+  CHECK_LT_OR_RETURN(final_cost, GetValidMaxCopyCost())
       << "Failed! Auto parallel can't find a strategy with reasonable cost!";
   return Maybe<void>::Ok();
 }
@@ -227,7 +228,7 @@ Maybe<void> SbpConstructor::InitComputationCost(const OpGraph& op_graph) {
     for (int32_t sbp_id = 0; sbp_id < sbp_node->sbp_sig_list_.size(); sbp_id++) {
       double comp_cost = JUST(op_node->op().GetComputeComplexity(
           sbp_node->sbp_sig_list_[sbp_id], logical_blob_desc4bn, parallel_desc));
-      if (comp_cost > cut_cost) {
+      if (comp_cost > GetValidMaxCopyCost()) {
         sbp_node->cost_.at(sbp_id) = comp_cost;
       } else {
         sbp_node->cost_.at(sbp_id) = cost_ratio_ * comp_cost;

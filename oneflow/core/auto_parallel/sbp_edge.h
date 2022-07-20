@@ -105,7 +105,7 @@ class SbpEdge final {
   void InitializeCopyCost(const std::string& ibn, bool compute_cost, bool use_sbp_collector);
 
   // find the cut ratio
-  // (#c>cut_cost in Cost)/(#c in Cost)
+  // (#c>GetValidMaxCopyCost() in Cost)/(#c in Cost)
   // But we would lift the cut ratio to 1 to filter out some improper couples
   double FindCutRatio(int32_t threshold) const;
   // Get the cut ratio
@@ -340,7 +340,7 @@ double SbpEdge<SbpSignature>::GetMaxCost() const {
   double max_cost = -1.0;
   for (int32_t i = 0; i < cost_.size(); i++) {
     for (int32_t j = 0; j < cost_[i].size(); j++) {
-      if (cost_[i][j] < cut_cost && cost_[i][j] > max_cost) { max_cost = cost_[i][j]; }
+      if (cost_[i][j] < GetValidMaxCopyCost() && cost_[i][j] > max_cost) { max_cost = cost_[i][j]; }
     }
   }
   return max_cost;
@@ -353,7 +353,7 @@ void SbpEdge<SbpSignature>::AdjustOverlapCost() {
   if (overlap_ratio_ < 0.0) { overlap_ratio_ = 0.0; }
   for (int32_t i = 0; i < cost_.size(); i++) {
     for (int32_t j = 0; j < cost_[i].size(); j++) {
-      if (cost_[i][j] > 0.0 && cost_[i][j] < cut_cost) {
+      if (cost_[i][j] > 0.0 && cost_[i][j] < GetValidMaxCopyCost()) {
         cost_[i][j] = overlap_ratio_ * cost_[i][j];
       }
     }
@@ -421,14 +421,14 @@ double SbpEdge<SbpSignature>::GetCutRatio() const {
   int32_t num = 0;
   for (int32_t i = 0; i < cost_.size(); i++) {
     for (int32_t j = 0; j < cost_[i].size(); j++) {
-      if (cost_[i][j] < cut_cost) { num++; }
+      if (cost_[i][j] < GetValidMaxCopyCost()) { num++; }
     }
   }
   return double(num) / double(cost_.size() * cost_[0].size());
 }
 
 // find the cut ratio
-// (#c>cut_cost in Cost)/(#c in Cost)
+// (#c>GetValidMaxCopyCost() in Cost)/(#c in Cost)
 template<class SbpSignature>
 double SbpEdge<SbpSignature>::FindCutRatio(int32_t threshold) const {
   double cut_ratio = GetCutRatio();

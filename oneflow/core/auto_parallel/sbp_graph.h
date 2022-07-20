@@ -592,7 +592,7 @@ bool SbpGraph<SbpSignature>::DfsFindReasonableCost(
     sbp_node->final_sbp_sig_id_ = sbp_id;
     // If the cost for this node is reasonable, then go to the next one
     if (sbp_node->cost_[sbp_id] + sbp_node->EvalInNbhCost(NodeListId2nbh_id, nbh_id2order)
-        < cut_cost) {
+        < GetValidMaxCopyCost()) {
       if (DfsFindReasonableCost(nbh_id2NodeListId, NodeListId2nbh_id, nbh_id2order, nbh_id + 1)) {
         // If we found one strategy, then exist the Dfs.
         return true;
