@@ -150,10 +150,6 @@ class EagerBlobObject final : public user_op::Tensor,
 
   std::shared_ptr<TensorStorage>& tensor_storage() { return tensor_storage_; }
 
-  bool is_shape_synced() const { return is_shape_synced_; }
-
-  void set_is_shape_synced(bool val) { is_shape_synced_ = val; }
-
   const Optional<Symbol<::oneflow::Stream>>& producer_stream() const {
     return tensor_storage_->producer_stream();
   }
@@ -216,7 +212,6 @@ class EagerBlobObject final : public user_op::Tensor,
   char* mem_ptr_for_allocation_compuation_pipelining_;
   bool inited_mem_ptr_for_allocation_compuation_pipelining_;
   bool is_non_pod_object_placement_newed_;
-  std::atomic<bool> is_shape_synced_;
   bool pin_memory_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
 
@@ -225,14 +220,10 @@ class EagerBlobObject final : public user_op::Tensor,
   std::unique_ptr<Blob> blob_;
 };
 
-}  // namespace vm
-
-namespace one {
-
 using EagerBlobObjectList = small_vector<std::shared_ptr<vm::EagerBlobObject>, kOpArgsReservedSize>;
 using EagerBlobObjectListPtr = std::shared_ptr<const EagerBlobObjectList>;
 
-}  // namespace one
+}  // namespace vm
 
 }  // namespace oneflow
 
