@@ -584,6 +584,10 @@
   signature: "Tensor (Tensor dy, Tensor x) => GeluGrad"
   bind_python: False
 
+- name: "gelu_with_approximate"
+  signature: "Tensor (Tensor x, String approximate=\"none\") => GeluWithApproximate"
+  bind_python: True
+
 - name: "glu"
   signature: "Tensor (Tensor input, Int64 dim=-1) => Glu"
   bind_python: True
@@ -765,11 +769,11 @@
 
 - name: "zeros_like"
   signature: "Tensor (Tensor x) => ZerosLike"
-  bind_python: True
+  bind_python: False
 
 - name: "ones_like"
   signature: "Tensor (Tensor x) => OnesLike"
-  bind_python: True
+  bind_python: False
 
 - name: "bernoulli"
   signature:

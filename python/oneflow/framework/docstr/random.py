@@ -181,12 +181,12 @@ add_docstr(
     """
     randint(low=0, high, size, *, dtype=None, generator=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
 
-    The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.randint.html.
-
     Returns a tensor filled with random integers generated uniformly between low (inclusive) and high (exclusive).
 
     The shape of the tensor is defined by the variable argument ``size``.
+
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.randint.html.
 
     Args:
         low (int, optional):  Lowest integer to be drawn from the distribution. Default: 0.

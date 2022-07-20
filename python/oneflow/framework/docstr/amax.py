@@ -22,7 +22,9 @@ add_docstr(
     """
     oneflow.amax(input, dim=None, keepdim=False) -> Tensor
 
-    This function is equivalent to PyTorch’s amax function. It returns the maximum along a dimension.
+    Returns the maximum along a dimension.
+
+    This function is equivalent to PyTorch’s amax function. 
 
     Args:
         input (oneflow.Tensor): the input Tensor.
