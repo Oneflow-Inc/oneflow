@@ -857,7 +857,6 @@ class LayerNormParamGradFunctor {
                                 const int64_t& begin_params_axis, const double& epsilon) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("begin_params_axis", begin_params_axis));
-    JUST(attrs.SetAttr<double>("epsilon", epsilon));
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, x, mean, inv_variance}, attrs);
   }
 
