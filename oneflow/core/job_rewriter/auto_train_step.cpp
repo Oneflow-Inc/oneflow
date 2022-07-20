@@ -63,8 +63,6 @@ Maybe<void> AutoTrainStep::Apply(Job* job, JobPassCtx* ctx) const {
   if (ParseBooleanFromEnv("ONEFLOW_GRAPH_PLACE_TRAINING_STATE_ON_ALL_RANKS", false)) {
     parallel_conf = GenParallelConfOfCpuOnAllRanks();
 
-
-
   } else {
     parallel_conf = GenParallelConfOfCpuZeroOnMaster();
   }
