@@ -658,7 +658,6 @@ SmallVector<mlir::Value, 4> getSequenceAddOperands(const mlir::Value& operand,
 template<>
 LogicalResult FusedSequenceAddPattern<AddNOp>::matchAndRewrite(AddNOp op,
                                                                PatternRewriter& rewriter) const {
-  std::cout << "apply FusedSequenceAddPattern" << std::endl;
   SmallVector<mlir::Value, 4> opOperands = op.in();
   for (mlir::Value operand : opOperands) {
     if (!operand.getDefiningOp<AddNOp>() && !operand.getDefiningOp<Add2Op>()) { continue; }
@@ -678,7 +677,6 @@ LogicalResult FusedSequenceAddPattern<AddNOp>::matchAndRewrite(AddNOp op,
 template<>
 LogicalResult FusedSequenceAddPattern<Add2Op>::matchAndRewrite(Add2Op op,
                                                                PatternRewriter& rewriter) const {
-  std::cout << "apply FusedSequenceAddPattern" << std::endl;
   SmallVector<mlir::Value, 4> opOperands = {op.in0(), op.in1()};
   for (mlir::Value operand : opOperands) {
     if (!operand.getDefiningOp<AddNOp>() && !operand.getDefiningOp<Add2Op>()) { continue; }
