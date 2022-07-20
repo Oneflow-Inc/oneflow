@@ -283,6 +283,9 @@ class EmbeddingGraidientShuffleP2PKernel final : public user_op::OpKernel,
     CHECK(ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ADD_ID_SHUFFLE_COPY_OUT",
                               true));  // when no identity, every time the cur_rank_inverse_indices
                                        // will change becauseof regster num=2.
+    CHECK(!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false))
+        << "p2p kernel not support quantize.";
+
     auto* kernel_state = dynamic_cast<DataShuffleKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);

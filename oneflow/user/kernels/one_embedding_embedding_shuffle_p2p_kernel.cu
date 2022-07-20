@@ -275,6 +275,8 @@ class EmbeddingShuffleP2PKernel final : public user_op::OpKernel, public user_op
     CHECK(ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ADD_ID_SHUFFLE_COPY_OUT",
                               true));  // when no identity, every time the cur_rank_inverse_indices
                                        // will change becauseof regster num=2.
+    CHECK(!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false))
+        << "p2p kernel not support quantize.";
     auto* kernel_state = dynamic_cast<DataShuffleKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* num_unique_matrix = ctx->Tensor4ArgNameAndIndex("num_unique_matrix", 0);
