@@ -101,9 +101,6 @@ class SbpEdge final {
   // Get the maximum element in Cost
   double GetMaxCost() const;
 
-  // Detect and spread overlaps for this edge and start_node_ if it is a proxy of lbi.
-  void DetectSpreadOverlap(double overlap_ratio);
-
   // Adjust cost with overlaps
   void AdjustOverlapCost();
 
@@ -368,26 +365,6 @@ double SbpEdge<SbpSignature>::GetMaxCost() const {
     }
   }
   return max_cost;
-}
-
-// Detect and spread overlaps for this edge and start_node_ if it is a proxy of lbi.
-template<class SbpSignature>
-void SbpEdge<SbpSignature>::DetectSpreadOverlap(double overlap_ratio) {
-  if (overlap_ratio < 1.0) {
-    if (overlap_ratio < 0.0) { overlap_ratio = 0.0; }
-
-    if (start_node_->op_node_) {
-      // change overlap ratio for a normal edge
-      // We could use the minimum or multiplication here.
-      // To be noted that sbp_proxy may have multiple outcoming edges, we can not adjust overlap
-      // cost right away.
-      if (overlap_ratio < overlap_ratio_) { overlap_ratio_ = overlap_ratio; }
-    } else {
-      // For an edge with a proxy start node, do not change the overlap ratio since the cost only
-      // contains 0 and 3e38. Change the overlap ratio for the previous edge.
-      start_node_->DetectSpreadOverlap(overlap_ratio_);
-    }
-  }
 }
 
 // Adjust cost with overlaps

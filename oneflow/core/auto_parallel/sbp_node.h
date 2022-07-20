@@ -49,10 +49,6 @@ class SbpNode {
   // Identity, use it to distinguish itself from node set
   int32_t id = -1;
 
-  // We should use Sbp-signature for edge with lowest order_value_
-  std::vector<int32_t> order_value_;
-  // Lowest order_value_
-  int32_t low_order_value_ = -1;
   // Available SbpSignature pointer for this node
   std::vector<SbpSignature*> sbp_sig_list_;
   // Available SbpSignature object for this node
@@ -98,21 +94,6 @@ class SbpNode {
   // Accumulate mainstem cost from consumer to the end
   double acc_mainstem_cost_ = -1.0;
 
-#ifdef DEBUG_ALGORITHM_
-
-  // original edge out
-  std::vector<SbpNode*> NodesOut;
-  // original cost for edge out
-  std::vector<std::vector<std::vector<double>>> OriginCostOut;
-  // original edge in
-  std::vector<SbpNode*> NodesIn;
-  // Original Cost
-  std::vector<double> OriginCost;
-
-  // Current Degree is a tag used for Topological ordering
-  int32_t CurrDeg;
-#endif  // DEBUG_ALGORITHM_
-
   // default constructor
   SbpNode() : final_sbp_sig_id_(0) {}
 
@@ -143,11 +124,6 @@ class SbpNode {
     return nullptr;
   };
 
-  // initialize the order_value_ and Find the lowest one
-  void FindLowOrderValue(const std::function<int32_t()>& CalcOrderValue4SbpSig);
-  // Initialize SbpSignature
-  void InitializeSbp(const std::function<int32_t()>& CalcOrderValue4SbpSig,
-                     std::vector<SbpSignature*> GlobalSbpSignatureList);
   // Initialize SbpSignature from Signature Objects
   void InitializeSbp();
   // Compute Computation Cost
@@ -186,12 +162,6 @@ class SbpNode {
                          std::vector<int32_t>& nbh_1ring,
                          std::vector<SbpNode<SbpSignature>*>& NodeList,
                          std::vector<bool>& node_tags);
-
-  // Detect and spread overlaps for edges_out_.
-  void DetectSpreadOverlap(double max_1_comp_cost, double max_2_comp_cost, int32_t max_1_id,
-                           double min_ratio);
-  // Detect and spread overlaps for sbp proxy.
-  void DetectSpreadOverlap(double overlap_ratio);
 
   // Get or compute the minimum layer of this node
   int32_t GetMinLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
@@ -343,33 +313,6 @@ SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature>* first, SbpNode<SbpSignatur
 }
 
 template<class SbpSignature>
-void SbpNode<SbpSignature>::FindLowOrderValue(
-    const std::function<int32_t()>& CalcOrderValue4SbpSig) {
-  low_order_value_ = 0;
-  for (int32_t i = 0; i < order_value_.size(); i++) {
-    order_value_[i] = CalcOrderValue4SbpSig();
-    if (order_value_[i] < low_order_value_) { low_order_value_ = order_value_[i]; }
-  }
-};
-
-template<class SbpSignature>
-void SbpNode<SbpSignature>::InitializeSbp(const std::function<int32_t()>& CalcOrderValue4SbpSig,
-                                          std::vector<SbpSignature*> GlobalSbpSignatureList) {
-  global_sbp_sig_size_ = GlobalSbpSignatureList.size();
-  order_value_.resize(global_sbp_sig_size_);
-
-  FindLowOrderValue(CalcOrderValue4SbpSig);
-
-  sbp_sig_list_.clear();
-  for (int32_t sbp = 0; sbp < order_value_.size(); sbp++) {
-    if (order_value_[sbp] == low_order_value_) {
-      sbp_sig_list_.emplace_back(GlobalSbpSignatureList[sbp]);
-    }
-  }
-  cost_.resize(sbp_sig_list_.size());
-};
-
-template<class SbpSignature>
 void SbpNode<SbpSignature>::InitializeSbp() {
   global_sbp_sig_size_ = sbp_sig_obj_list_.size();
   sbp_sig_list_.clear();
@@ -391,10 +334,6 @@ void SbpNode<SbpSignature>::ComputeCost(
 // Let one node point to another
 template<class SbpSignature>
 void StartPointToEnd(SbpNode<SbpSignature>* start_node, SbpNode<SbpSignature>* end_node) {
-#ifdef DEBUG_ALGORITHM_
-  start_node->NodesOut.emplace_back(end_node);
-  end_node->NodesIn.emplace_back(start_node);
-#endif  // DEBUG_ALGORITHM_
   // generate the edge between them
   SbpEdge<SbpSignature>* e = new SbpEdge<SbpSignature>(start_node, end_node);
   start_node->edges_out_.emplace_back(e);
@@ -637,57 +576,6 @@ void SbpNode<SbpSignature>::NRingNeighborhood(int32_t n, std::vector<int32_t>& n
   }
   // Recover false for buffer
   for (auto nbh_id : nbh_nring) node_tags[nbh_id] = false;
-}
-
-// Detect and spread overlaps for edges_in_.
-template<class SbpSignature>
-void SbpNode<SbpSignature>::DetectSpreadOverlap(double max_1_comp_cost, double max_2_comp_cost,
-                                                int32_t max_1_id, double min_ratio) {
-  // min_ratio should be less than 1.0
-  CHECK(min_ratio < 1.0) << "Wrong overlap ratio here!" << std::endl;
-  // If one layer have multiple nodes, the overlap occurs.
-  // We need to skip sbp proxy and single node at each layer.
-  // Actually, it is skipped before this function.
-
-  // skip it if empty edges_out_
-  if (edges_out_.empty()) { return; }
-
-  // total maximum copy cost of outcoming edges
-  double total_copy_cost = 0.0;
-  for (SbpEdge<SbpSignature>* this_edge : edges_out_) {
-    total_copy_cost += this_edge->GetMaxCost();
-  }
-  // maximum of the computation cost of other operators
-  double max_comp_cost;
-  if (id == max_1_id) {
-    max_comp_cost = max_2_comp_cost;
-  } else {
-    max_comp_cost = max_1_comp_cost;
-  }
-  // Use the ratio between the total copy cost and maximum computation cost as ratio
-  double overlap_ratio;
-  if (max_comp_cost >= total_copy_cost) {
-    overlap_ratio = min_ratio;
-  } else {
-    overlap_ratio = 1.0 - (1.0 - min_ratio) * max_comp_cost / total_copy_cost;
-  }
-
-  // Set up overlap ratio for the outcoming edges
-  for (SbpEdge<SbpSignature>* this_edge : edges_out_) {
-    this_edge->DetectSpreadOverlap(overlap_ratio);
-  }
-}
-// Detect and spread overlaps for sbp proxy.
-template<class SbpSignature>
-void SbpNode<SbpSignature>::DetectSpreadOverlap(double overlap_ratio) {
-  if (op_node_) { return; }
-  if (overlap_ratio < 1.0) {
-    // overlap ratio should be non-negative
-    if (overlap_ratio < 0.0) { overlap_ratio = 0.0; }
-    // double check for sbp proxy
-    CHECK(edges_in_.size() == 1) << "Multiple incoming edges for sbp proxy" << std::endl;
-    edges_in_[0]->DetectSpreadOverlap(overlap_ratio);
-  }
 }
 
 // Get or compute the minimum layer of this node

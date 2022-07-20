@@ -119,9 +119,6 @@ class SbpGraph {
   // recommanded. We should carefully think about it before any clipping.
   void ClipEdge(SbpEdge<SbpSignature>* this_edge);
 
-  // Detect all the overlaps and then adjust copy cost correspondingly.
-  void DetectAdjustOverlap(double CostRatio);
-
   // Compute the minimum and maximum layer of each node in the graph
   int32_t ComputeLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
                        const oneflow::HashMap<const OpNode*, oneflow::HashSet<std::string>>&
@@ -860,54 +857,6 @@ void SbpGraph<SbpSignature>::ClipEdge(SbpEdge<SbpSignature>* this_edge) {
   CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(this_edge->end_node_->edges_in_, this_edge);
   CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(this_edge->start_node_->edges_out_, this_edge);
   delete this_edge;
-}
-
-// Detect all the overlaps and then adjust copy cost correspondingly.
-template<class SbpSignature>
-void SbpGraph<SbpSignature>::DetectAdjustOverlap(double CostRatio) {
-  // Find the maximum layer number in the graph
-  int32_t max_layer_num = -1;
-  for (const auto& this_node : NodeList) {
-    if (this_node->min_layer_ > max_layer_num) { max_layer_num = this_node->min_layer_; }
-  }
-  max_layer_num++;
-  // Prestore the first and second maximum computation cost for each layer
-  // In a layer, each operator will provide the mininum element in the array Cost.
-  // max_1_comp_cost[i] >= max_2_comp_cost[i] >= the rest computation cost on the i-th layer
-  std::vector<double> max_1_comp_cost(max_layer_num, -1.0);
-  std::vector<double> max_2_comp_cost(max_layer_num, -1.0);
-  // Prestore the id of the op with the maximum computation cost in the i-th layer
-  std::vector<int32_t> max_1_id(max_layer_num);
-
-  for (const auto& this_node : NodeList) {
-    int32_t lay_num = this_node->min_layer_;
-    if (lay_num < 0) { continue; }
-    double comp_cost = this_node->GetMinCost();
-    if (comp_cost > max_2_comp_cost[lay_num]) {
-      if (comp_cost > max_1_comp_cost[lay_num]) {
-        max_2_comp_cost[lay_num] = max_1_comp_cost[lay_num];
-        max_1_comp_cost[lay_num] = comp_cost;
-        max_1_id[lay_num] = this_node->id;
-      } else {
-        max_2_comp_cost[lay_num] = comp_cost;
-      }
-    }
-  }
-
-  // Detect all the overlaps
-  for (const auto& this_node : NodeList) {
-    int32_t lay_num = this_node->min_layer_;
-    // Skip proxy nodes and single node in one layer
-    if (lay_num < 0 || max_2_comp_cost[lay_num] < 0.0) { continue; }
-    // Detect overlap. We do not spread it since we only adjust outcoming edges.
-    double min_ratio = std::min(CostRatio, 0.5);
-    this_node->DetectSpreadOverlap(max_1_comp_cost[lay_num], max_2_comp_cost[lay_num],
-                                   max_1_id[lay_num], min_ratio);
-  }
-  // adjust copy cost correspondingly.
-  for (const auto& this_node : NodeList) {
-    for (const auto& this_edge : this_node->edges_in_) { this_edge->AdjustOverlapCost(); }
-  }
 }
 
 // Compute the minimum and maximum layer of each node in the graph
