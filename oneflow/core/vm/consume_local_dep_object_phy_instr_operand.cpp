@@ -20,22 +20,35 @@ namespace oneflow {
 
 namespace vm {
 
-void ConsumeLocalDepObjectPhyInstrOperand::ForEachConstDependence(
-    const std::function<void(Dependence* compute)>& DoEach) const {
+ConsumeLocalDepObjectPhyInstrOperand::ConsumeLocalDepObjectPhyInstrOperand(
+    small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&&
+        compute_local_dep_objects,
+    const std::string& modifier)
+    : compute_local_dep_objects_(std::move(compute_local_dep_objects)),
+      modifier_(modifier),
+      input_dependences_(),
+      output_dependences_() {
+  ForEachConstDependence([&](auto* dep) { input_dependences_.emplace_back(dep); });
+  ForEachMutDependence([&](auto* dep) { output_dependences_.emplace_back(dep); });
+  ForEachMut2Dependence([&](auto* dep) { output_dependences_.emplace_back(dep); });
+  stream_sequential_dependence_ = nullptr;
+}
+template<typename DoEachT>
+void ConsumeLocalDepObjectPhyInstrOperand::ForEachConstDependence(const DoEachT& DoEach) const {
   if (modifier_ == "const") {
     for (const auto& dep : compute_local_dep_objects_) { DoEach(dep.get()); }
   }
 }
 
-void ConsumeLocalDepObjectPhyInstrOperand::ForEachMutDependence(
-    const std::function<void(Dependence* compute)>& DoEach) const {
+template<typename DoEachT>
+void ConsumeLocalDepObjectPhyInstrOperand::ForEachMutDependence(const DoEachT& DoEach) const {
   if (modifier_ == "mut") {
     for (const auto& dep : compute_local_dep_objects_) { DoEach(dep.get()); }
   }
 }
 
-void ConsumeLocalDepObjectPhyInstrOperand::ForEachMut2Dependence(
-    const std::function<void(Dependence* compute)>& DoEach) const {
+template<typename DoEachT>
+void ConsumeLocalDepObjectPhyInstrOperand::ForEachMut2Dependence(const DoEachT& DoEach) const {
   if (modifier_ == "mut2") {
     for (const auto& dep : compute_local_dep_objects_) { DoEach(dep.get()); }
   }
