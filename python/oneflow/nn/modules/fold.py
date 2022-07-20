@@ -251,8 +251,7 @@ class Unfold(Module):
         equality holds:
 
         ::
-
-            fold(unfold(input)) == divisor * input
+                    fold(unfold(input)) == divisor * input
 
         where ``divisor`` is a tensor that depends only on the shape
         and dtype of the ``input``:
