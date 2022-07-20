@@ -68,9 +68,6 @@ class FuseInstructionPolicy final : public InstructionPolicy {
   InstructionList* mut_instruction_list() { return &instruction_list_; }
   void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {}
 
- protected:
-  Dependence* stream_sequential_dependence_;
-
  private:
   Maybe<void> Prepare(Instruction* instruction) override {
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, mut_instruction_list()) {
@@ -92,6 +89,7 @@ class FuseInstructionPolicy final : public InstructionPolicy {
   InstructionList instruction_list_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
+  Dependence* stream_sequential_dependence_;
 };
 
 }  // namespace vm
