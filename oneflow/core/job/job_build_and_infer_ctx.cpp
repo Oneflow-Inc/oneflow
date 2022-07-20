@@ -626,7 +626,7 @@ Maybe<void> JobBuildAndInferCtx::AddLossGlobalBlobName(const std::string& lbn) {
 }
 
 Maybe<void> JobBuildAndInferCtx::MarkVariableGradientBlobNames(
-    const HashMap<std::string, std::string>& variable_gradient_lbns) {
+    const HashMap<std::string, std::string>& variable_grad_lbns) {
   CHECK_OR_RETURN(job_->job_conf().has_train_conf())
       << Error::UnknownJobBuildAndInferError()
       << "job has no TrainConf when add variable gradient logical blob name";
@@ -634,11 +634,13 @@ Maybe<void> JobBuildAndInferCtx::MarkVariableGradientBlobNames(
   for (int i = 0; i < train_conf->optimizer_conf_size(); ++i) {
     auto* optimizer_conf = train_conf->mutable_optimizer_conf(i);
     for (const auto& variable_op_name : optimizer_conf->variable_op_names()) {
-      const auto& it = variable_gradient_lbns.find(variable_op_name + "/out");
-      CHECK_OR_RETURN(it != variable_gradient_lbns.end())
-          << Error::UnknownJobBuildAndInferError() << "gradient is missing for trainable variable "
-          << variable_op_name;
-      optimizer_conf->add_variable_gradient_lbns(it->second);
+      const auto& it = variable_grad_lbns.find(variable_op_name + "/out");
+      if (it != variable_grad_lbns.end()) {
+        optimizer_conf->add_variable_grad_lbns(it->second);
+      } else {
+        // add an empty gradient lbn for variable that has no gradient
+        optimizer_conf->add_variable_grad_lbns("");
+      }
     }
   }
   return Maybe<void>::Ok();
@@ -983,6 +985,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   }
 
   if (GlobalJobDesc().Bool("__is_user_function__")) {
+    JUST(DoPass("InsertPinnedIdentityOpPass"));
     JUST(DoPass("NormalizationExponentialAverageAutoTickPass"));
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));

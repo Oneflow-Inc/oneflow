@@ -107,12 +107,15 @@ Maybe<void> GenerateOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx) const {
   HashMap<LogicalBlobId, LogicalBlobId> model_lbi2model_diff_lbi;
   for (const auto& optimizer_conf : train_conf.optimizer_conf()) {
     CHECK_OR_RETURN(optimizer_conf.variable_op_names_size()
-                    == optimizer_conf.variable_gradient_lbns_size())
-        << "variable_op_names and variable_gradient_lbns size mismatch";
+                    == optimizer_conf.variable_grad_lbns_size())
+        << "variable_op_names and variable_grad_lbns size mismatch";
     for (int i = 0; i < optimizer_conf.variable_op_names_size(); ++i) {
       auto model_lbi = GenLogicalBlobId(optimizer_conf.variable_op_names(i) + "/out");
-      auto model_diff_lbi = GenLogicalBlobId(optimizer_conf.variable_gradient_lbns(i));
-      model_lbi2model_diff_lbi.emplace(model_lbi, model_diff_lbi);
+      const auto& model_diff_lbn = optimizer_conf.variable_grad_lbns(i);
+      // variable maybe has no gradient, so skip it if model_diff_lbn is empty
+      if (!model_diff_lbn.empty()) {
+        model_lbi2model_diff_lbi.emplace(model_lbi, GenLogicalBlobId(model_diff_lbn));
+      }
     }
   }
   const OpGraph op_graph(*job);

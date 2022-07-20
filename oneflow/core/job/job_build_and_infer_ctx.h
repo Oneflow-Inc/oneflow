@@ -41,7 +41,7 @@ class JobBuildAndInferCtx {
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
   Maybe<void> SetTrainConf(const TrainConf& train_conf);
   Maybe<void> MarkVariableGradientBlobNames(
-      const HashMap<std::string, std::string>& variable_gradient_lbns);
+      const HashMap<std::string, std::string>& variable_grad_lbns);
   Maybe<void> MarkOutputGradientBlobNames(
       const HashMap<std::string, std::string>& output_gradient_lbns);
 
