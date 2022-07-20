@@ -32,19 +32,16 @@ namespace oneflow {
   const int32_t pooled_h = ctx->Attr<int32_t>("pooled_h");
   const int32_t pooled_w = ctx->Attr<int32_t>("pooled_w");
   // x: feature map (N, C, H, W)
-  if (x_shape.NumAxes() != 4) {
-    throw Error::RuntimeError() << "The dimension of x tensor must be equal to 4, "
-                                << "but got " << x_shape.NumAxes();
-  }
+  CHECK_EQ_OR_RETURN(x_shape.NumAxes(), 4)
+      << Error::RuntimeError() << "The dimension of x tensor must be equal to 4, "
+      << "but got " << x_shape.NumAxes();
   // rois: (R, 5)
-  if (rois_shape.NumAxes() != 2) {
-    throw Error::RuntimeError() << "The dimension of rois tensor must be equal to 2, "
-                                << "but got " << rois_shape.NumAxes();
-  }
-  if (rois_shape.At(1) != 5) {
-    throw Error::RuntimeError() << "The size of rois tensor must be equal to 5 at dimension 1, "
-                                << "but got " << rois_shape.At(1);
-  }
+  CHECK_EQ_OR_RETURN(rois_shape.NumAxes(), 2)
+      << Error::RuntimeError() << "The dimension of rois tensor must be equal to 2, "
+      << "but got " << rois_shape.NumAxes();
+  CHECK_EQ_OR_RETURN(rois_shape.At(1), 5)
+      << Error::RuntimeError() << "The size of rois tensor must be equal to 5 at dimension 1, "
+      << "but got " << rois_shape.At(1);
   // y: (R, C, pool_h, pool_w)
   *ctx->OutputShape("y", 0) = Shape({rois_shape.At(0), x_shape.At(1), pooled_h, pooled_w});
   return Maybe<void>::Ok();
