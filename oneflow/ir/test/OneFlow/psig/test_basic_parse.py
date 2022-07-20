@@ -6,8 +6,8 @@ import os
 from google.protobuf import text_format
 
 # RUN: python3 %s | FileCheck %s
-# CHECK: sbp.b
-# CHECK: sbp.s<0>
+# CHECK: [#sbp.b]
+# CHECK: [#sbp.s<0>]
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 def _test_1nd_basic_parse(test_case):
