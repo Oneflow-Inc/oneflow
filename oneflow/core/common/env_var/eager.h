@@ -13,22 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_GLOBAL_TENSOR_META_H_
-#define ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_GLOBAL_TENSOR_META_H_
+#ifndef ONEFLOW_CORE_COMMON_ENV_VAR_EAGER_H_
+#define ONEFLOW_CORE_COMMON_ENV_VAR_EAGER_H_
 
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/symbol.h"
-#include "oneflow/core/framework/transport_util.h"
-#include "oneflow/core/framework/transport_token.h"
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
 
-namespace one {
-class GlobalTensorMeta;
-}
-
-Maybe<void> SyncSymbolGlobalTensorMeta(uint64_t symbol_id, Symbol<one::GlobalTensorMeta>);
+// NOTE: use env variable 'ONEFLOW_EAGER_ENABLE_LOCAL_INFER_CACHE' indicate whether the
+// use infer cache in naive local op interpret.
+DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_EAGER_ENABLE_LOCAL_INFER_CACHE, true);
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FRAMEWORK_SYNC_SYMBOL_GLOBAL_TENSOR_META_H_
+#endif  // ONEFLOW_CORE_COMMON_ENV_VAR_EAGER_H_
