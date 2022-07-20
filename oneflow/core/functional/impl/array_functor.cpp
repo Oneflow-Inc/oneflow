@@ -688,11 +688,10 @@ class UnsqueezeMultipleFunctor {
     if (dim.size() == 0 || x->ndim() == n_dims) {
       return x;
     } else if (dim.size() == 1) {
-      return functional::Unsqueeze(x, dim.at(0));
+      return JUST(functional::Unsqueeze(x, JUST(VectorAt(dim, 0))));
     } else {
-      std::vector<int32_t> unsqueeze_dims = dim;
       std::shared_ptr<Tensor> tensor = x;
-      const auto& dims_to_unsqueeze = JUST(dim_list_to_bitset(unsqueeze_dims, n_dims));
+      const auto& dims_to_unsqueeze = JUST(dim_list_to_bitset(dim, n_dims));
 
       // Unsqueeze is called several times to extend the dimension when the View mechanism is
       // enabled. Otherwise, calculate the target shape and call reshape.
