@@ -10,6 +10,17 @@ from google.protobuf import text_format
 # CHECK: [#sbp.s<0>]
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+
+def get_mlir_from_serialized_job(serialized_job):
+    from tempfile import TemporaryDirectory
+    with TemporaryDirectory() as dirname:
+        flow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(dirname))
+        f_name = os.path.join(dirname, 'model.mlir')
+        with open(f_name) as f:
+            return f.read()
+
+
+
 def _test_1nd_basic_parse(test_case):
     class ModuleToRun(flow.nn.Module):
         def __init__(self):
@@ -36,14 +47,8 @@ def _test_1nd_basic_parse(test_case):
     lazy_output = graph_to_run()
 
     serialized_job = str(text_format.MessageToString(graph_to_run._forward_job_proto))
-
-    from tempfile import TemporaryDirectory
-    with TemporaryDirectory() as dirname:
-        flow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(dirname))
-        f_name = os.path.join(dirname, 'model.mlir')
-        f = open(f_name)
-        print(f.read())
-        f.close()
+    mlir = get_mlir_from_serialized_job(serialized_job)
+    print(mlir)
 
 @flow.unittest.skip_unless_1n1d()
 class TestBasicParse(flow.unittest.TestCase):
