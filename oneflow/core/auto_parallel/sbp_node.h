@@ -59,7 +59,7 @@ class SbpNode {
   // this node point to another node
   void PointTo(SbpNode<SbpSignature>* end_node);
 
-  SbpEdge<SbpSignature>* FindEdgeWithNode(const SbpNode<SbpSignature>* other_node) {
+  SbpEdge<SbpSignature>* FindEdgeWithNode(const SbpNode<SbpSignature>* other_node) const {
     for (auto* sbp_edge : edges_in_) {
       if (sbp_edge->start_node_ == other_node) { return sbp_edge; }
     }
@@ -85,25 +85,25 @@ class SbpNode {
   // node You should have an initial strategy before running this
   double GreedyStrategy();
   // Evaluate summery of cost in 1-ring neighborhood.
-  double EvalNbhCost();
+  double EvalNbhCost() const;
   // Evaluate summery of cost between neighborhood and outside nodes
-  double EvalOutNbhCost(std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id);
+  double EvalOutNbhCost(std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id) const;
   // Evaluate summery of cost within neighborhood
   // We only accumulate the edge cost with a lower order.
   double EvalInNbhCost(std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
-                       std::vector<int32_t>& nbh_id2order);
+                       std::vector<int32_t>& nbh_id2order) const;
   // Evaluate summery of cost within neighborhood
   // We only accumulate the minimum edge cost with a higher order.
   double EvalMinInNbhCost(std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
-                          std::vector<int32_t>& nbh_id2order);
+                          std::vector<int32_t>& nbh_id2order) const;
   // Get the one ring neighborhood of this node, which is itself and all the adjacent nodes.
-  void OneRingNeighborhood(std::vector<int32_t>& nbh_1ring);
+  void OneRingNeighborhood(std::vector<int32_t>& nbh_1ring) const;
   // Get the n ring neighborhood of this node
   // Pre-allocate buffer, which will be faster.
   void NRingNeighborhood(int32_t n, std::vector<int32_t>& nbh_n_ring,
                          std::vector<int32_t>& nbh_1ring,
                          std::vector<SbpNode<SbpSignature>*>& node_list,
-                         std::vector<bool>& node_tags);
+                         std::vector<bool>& node_tags) const;
 
   // Get or compute the minimum layer of this node
   int32_t GetMinLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
@@ -126,9 +126,9 @@ class SbpNode {
   void DropTributaryLayer(int32_t upper_bound);
 
   // Get the minimum element in Cost
-  double GetMinCost();
+  double GetMinCost() const;
   // get the cut ratio
-  double GetCutRatio();
+  double GetCutRatio() const;
 
   // Judge if this node is on the mainstem
   // If so, judge it for its producer/upstream nodes
@@ -141,7 +141,7 @@ class SbpNode {
                            std::vector<double>& acc_mainstem_cost,
                            oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
                            double wait_time, double transfer_cost);
-  // Drop down the available wait time with the minimum cost from downstreams
+  // Drop down the available wait time with the minimum cost from downstream
   void DropAvailWaitTime(double curr_mainstem_cost);
   // Reduce and set the wait time for op in the mainstem
   void SetMainstemWaitTime(double mainstem_wait_time);
@@ -431,7 +431,7 @@ double SbpNode<SbpSignature>::GreedyStrategy() {
 }
 
 template<class SbpSignature>
-double SbpNode<SbpSignature>::EvalNbhCost() {
+double SbpNode<SbpSignature>::EvalNbhCost() const {
   // Current Cost, Minimum Cost, Cost with original sbp
   double curr_cost = cost_[final_sbp_sig_id_];
   for (SbpEdge<SbpSignature>* this_edge : edges_in_) {
@@ -445,7 +445,7 @@ double SbpNode<SbpSignature>::EvalNbhCost() {
 
 template<class SbpSignature>
 double SbpNode<SbpSignature>::EvalOutNbhCost(
-    std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id) {
+    std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id) const {
   // check if this node is in the node list
   CHECK(node_list_id_ >= 0) << "Compute out cost for a node out of the node list" << std::endl;
   // Cost with original sbp
@@ -470,13 +470,14 @@ double SbpNode<SbpSignature>::EvalOutNbhCost(
 // Compute the cost between this node and adjacent nodes with a lower order
 template<class SbpSignature>
 double SbpNode<SbpSignature>::EvalInNbhCost(
-    std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id, std::vector<int32_t>& nbh_id2order) {
+    std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
+    std::vector<int32_t>& nbh_id2order) const {
   // check if this node is in the node list
-  CHECK(node_list_id_ >= 0) << "Compute in cost for a node out of the node list" << std::endl;
+  CHECK(node_list_id_ >= 0) << "Compute in cost for a node out of the node list";
   // check if the node is in the neighborhood
   auto this_it = node_list_id2nbh_id.find(node_list_id_);
   CHECK(this_it != node_list_id2nbh_id.end())
-      << "Compute in cost for a node out of the neighborhood" << std::endl;
+      << "Compute in cost for a node out of the neighborhood";
   // Compute the minimum cost between this node and adjacent nodes with a lower order
   int32_t order = nbh_id2order[this_it->second];
   double curr_cost = 0;
@@ -502,7 +503,8 @@ double SbpNode<SbpSignature>::EvalInNbhCost(
 
 template<class SbpSignature>
 double SbpNode<SbpSignature>::EvalMinInNbhCost(
-    std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id, std::vector<int32_t>& nbh_id2order) {
+    std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
+    std::vector<int32_t>& nbh_id2order) const {
   // check if this node is in the node list
   CHECK(node_list_id_ >= 0) << "Compute out cost for a node out of the node list" << std::endl;
   // check if the node is in the neighborhood
@@ -530,7 +532,7 @@ double SbpNode<SbpSignature>::EvalMinInNbhCost(
 }
 
 template<class SbpSignature>
-void SbpNode<SbpSignature>::OneRingNeighborhood(std::vector<int32_t>& nbh_1ring) {
+void SbpNode<SbpSignature>::OneRingNeighborhood(std::vector<int32_t>& nbh_1ring) const {
   nbh_1ring.resize(edges_in_.size() + edges_out_.size() + 1);
   int32_t nbh_id = 0;
   nbh_1ring[nbh_id] = node_list_id_;
@@ -550,7 +552,7 @@ template<class SbpSignature>
 void SbpNode<SbpSignature>::NRingNeighborhood(int32_t n, std::vector<int32_t>& nbh_n_ring,
                                               std::vector<int32_t>& nbh_1ring,
                                               std::vector<SbpNode<SbpSignature>*>& node_list,
-                                              std::vector<bool>& node_tags) {
+                                              std::vector<bool>& node_tags) const {
   // Initialize 0 ring
   if (n <= 0) { n = 0; }
   nbh_n_ring.resize(1);
@@ -650,7 +652,7 @@ void SbpNode<SbpSignature>::LiftMaxLayer(int32_t upper_bound) {
 
 // Get the minimum element in Cost
 template<class SbpSignature>
-double SbpNode<SbpSignature>::GetMinCost() {
+double SbpNode<SbpSignature>::GetMinCost() const {
   // Check the size of Cost
   CHECK(cost_.size() > 0) << "Cost not initialized!" << std::endl;
   // Compute the min_comp_cost
@@ -659,7 +661,7 @@ double SbpNode<SbpSignature>::GetMinCost() {
 
 // Set the cut ratio
 template<class SbpSignature>
-double SbpNode<SbpSignature>::GetCutRatio() {
+double SbpNode<SbpSignature>::GetCutRatio() const {
   double curr_cut_ratio = 1.0;
   for (auto* this_edge : edges_in_) { curr_cut_ratio *= this_edge->GetCutRatio(); }
   for (auto* this_edge : edges_out_) { curr_cut_ratio *= this_edge->GetCutRatio(); }
@@ -716,7 +718,7 @@ void SbpNode<SbpSignature>::SpreadAvailWaitTime(
   // Have not finished spreading for consumers or downstream nodes or already visited.
   if (counter_) { return; }
   if (on_mainstem_) {
-    // Nodes on the mianstem does not have any accumulate cost
+    // Nodes on the mainstem does not have any accumulate cost
     acc_mainstem_cost_ = 0;
   } else {
     if (acc_mainstem_cost_ < 0) {
@@ -731,7 +733,7 @@ void SbpNode<SbpSignature>::SpreadAvailWaitTime(
   // Reduce the wait time for edges_in_, put the rest of the mainstem cost in the producers
   for (SbpEdge<SbpSignature>* this_edge : edges_in_) {
     CHECK(this_edge->wait_time_ < 0)
-        << "Double assgin values into wait_time_ of this edge!" << std::endl;
+        << "Double assign values into wait_time_ of this edge!" << std::endl;
     SbpNode<SbpSignature>* producer = this_edge->start_node_;
     // Accumulate the cost from the start node to this node
     double curr_mainstem_cost = acc_mainstem_cost_ + acc_mainstem_cost[producer->min_layer_]
@@ -782,7 +784,7 @@ void SbpNode<SbpSignature>::SpreadAvailWaitTime(
   counter_--;
 }
 
-// Drop down the available wait time with the minimum cost from downstreams
+// Drop down the available wait time with the minimum cost from downstream
 template<class SbpSignature>
 void SbpNode<SbpSignature>::DropAvailWaitTime(double curr_mainstem_cost) {
   if (acc_mainstem_cost_ < 0.0 || acc_mainstem_cost_ > curr_mainstem_cost) {
