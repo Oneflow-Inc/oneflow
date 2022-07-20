@@ -176,14 +176,14 @@ template<class SbpSignature>
 void SbpEdge<SbpSignature>::ComputeCost(
     const std::function<double(SbpNode<SbpSignature>*, SbpSignature*, SbpNode<SbpSignature>*,
                                SbpSignature*)>& SbpInferHint4Ibn) {
-  cost_.resize(start_node_->Cost.size());
+  cost_.resize(start_node_->cost_.size());
   int32_t end_node_sbp_size = end_node_->cost_.size();
   for (int32_t sbp_start = 0; sbp_start < cost_.size(); sbp_start++) {
     cost_[sbp_start].resize(end_node_sbp_size);
     for (int32_t sbp_end = 0; sbp_end < end_node_sbp_size; sbp_end++) {
       cost_[sbp_start][sbp_end] =
-          SbpInferHint4Ibn(start_node_, start_node_->SbpSignatureList[sbp_start], end_node_,
-                           end_node_->SbpSignatureList[sbp_end]);
+          SbpInferHint4Ibn(start_node_, start_node_->sbp_sig_list_[sbp_start], end_node_,
+                           end_node_->sbp_sig_list_[sbp_end]);
     }
   }
 };
@@ -191,17 +191,17 @@ void SbpEdge<SbpSignature>::ComputeCost(
 template<class SbpSignature>
 void SbpEdge<SbpSignature>::SummarizeCost() {
   if (mid_node_) {
-    cost_.resize(start_node_->Cost.size());
-    mid_node_sbp_sig_.resize(start_node_->Cost.size());
-    int32_t end_node_sbp_size = end_node_->Cost.size();
-    int32_t mid_node_sbp_size = mid_node_->Cost.size();
+    cost_.resize(start_node_->cost_.size());
+    mid_node_sbp_sig_.resize(start_node_->cost_.size());
+    int32_t end_node_sbp_size = end_node_->cost_.size();
+    int32_t mid_node_sbp_size = mid_node_->cost_.size();
     for (int32_t sbp_start = 0; sbp_start < cost_.size(); sbp_start++) {
       cost_[sbp_start].resize(end_node_sbp_size);
       mid_node_sbp_sig_[sbp_start].resize(end_node_sbp_size);
       for (int32_t sbp_end = 0; sbp_end < end_node_sbp_size; sbp_end++) {
         for (int32_t sbp_mid = 0; sbp_mid < mid_node_sbp_size; sbp_mid++) {
           // Add middle node cost
-          double temp_cost = mid_node_->Cost[sbp_mid];
+          double temp_cost = mid_node_->cost_[sbp_mid];
           // Add first edge cost
           if (edge_list_[0]->start_node_ == start_node_) {
             temp_cost += edge_list_[0]->cost_[sbp_start][sbp_mid];
@@ -227,8 +227,8 @@ void SbpEdge<SbpSignature>::SummarizeCost() {
       }
     }
   } else {
-    cost_.resize(start_node_->Cost.size());
-    int32_t end_node_sbp_size = end_node_->Cost.size();
+    cost_.resize(start_node_->cost_.size());
+    int32_t end_node_sbp_size = end_node_->cost_.size();
     for (int32_t sbp_start = 0; sbp_start < cost_.size(); sbp_start++) {
       cost_[sbp_start].resize(end_node_sbp_size);
       for (int32_t sbp_end = 0; sbp_end < end_node_sbp_size; sbp_end++) {
@@ -285,8 +285,8 @@ template<class SbpSignature>
 void SbpEdge<SbpSignature>::FinalizeSbp() {
   // Finalize Sbp for mid_node_
   if (mid_node_) {
-    mid_node_->FinalSbpSignatureId =
-        mid_node_sbp_sig_[start_node_->FinalSbpSignatureId][end_node_->FinalSbpSignatureId];
+    mid_node_->final_sbp_sig_id_ =
+        mid_node_sbp_sig_[start_node_->final_sbp_sig_id_][end_node_->final_sbp_sig_id_];
     mid_node_->FinalizeSbp();
   }
   for (const auto& this_edge : edge_list_) { this_edge->FinalizeSbp(); }
@@ -295,21 +295,21 @@ void SbpEdge<SbpSignature>::FinalizeSbp() {
 template<class SbpSignature>
 double SbpEdge<SbpSignature>::GreedyStrategy() {
   // Sbp combination of the minimum cost
-  int32_t min_sbp_start = start_node_->FinalSbpSignatureId,
-          min_sbp_end = end_node_->FinalSbpSignatureId;
+  int32_t min_sbp_start = start_node_->final_sbp_sig_id_,
+          min_sbp_end = end_node_->final_sbp_sig_id_;
   // An unordered_map to evaluate cost between two edge nodes and other nodes.
-  std::unordered_map<int32_t, int32_t> node_list_id2nbh_id = {{start_node_->NodeListId, 0},
-                                                              {end_node_->NodeListId, 1}};
+  std::unordered_map<int32_t, int32_t> node_list_id2nbh_id = {{start_node_->node_list_id_, 0},
+                                                              {end_node_->node_list_id_, 1}};
   // pre-compute and store the current cost between end_node_ and outside.
-  std::vector<double> end_node_out_cost(end_node_->Cost.size());
+  std::vector<double> end_node_out_cost(end_node_->cost_.size());
   for (int32_t sbp_end = 0; sbp_end < cost_[0].size(); sbp_end++) {
-    end_node_->FinalSbpSignatureId = sbp_end;
+    end_node_->final_sbp_sig_id_ = sbp_end;
     end_node_out_cost[sbp_end] = end_node_->EvalOutNbhCost(node_list_id2nbh_id);
   }
   // pre-compute and store the current cost between start_node_ and outside.
-  std::vector<double> start_node_out_cost(start_node_->Cost.size());
+  std::vector<double> start_node_out_cost(start_node_->cost_.size());
   for (int32_t sbp_start = 0; sbp_start < cost_.size(); sbp_start++) {
-    start_node_->FinalSbpSignatureId = sbp_start;
+    start_node_->final_sbp_sig_id_ = sbp_start;
     start_node_out_cost[sbp_start] = start_node_->EvalOutNbhCost(node_list_id2nbh_id);
   }
   // Current Cost, Minimum Cost, Cost with original sbp
@@ -321,7 +321,7 @@ double SbpEdge<SbpSignature>::GreedyStrategy() {
   for (int32_t sbp_start = 0; sbp_start < cost_.size(); sbp_start++) {
     for (int32_t sbp_end = 0; sbp_end < cost_[0].size(); sbp_end++) {
       // compute Current Cost for Neighborhood of edge
-      end_node_->FinalSbpSignatureId = sbp_end;
+      end_node_->final_sbp_sig_id_ = sbp_end;
       curr_cost =
           start_node_out_cost[sbp_start] + end_node_out_cost[sbp_end] + cost_[sbp_start][sbp_end];
       // Find the minimum current cost
@@ -332,8 +332,8 @@ double SbpEdge<SbpSignature>::GreedyStrategy() {
       }
     }
   }
-  start_node_->FinalSbpSignatureId = min_sbp_start;
-  end_node_->FinalSbpSignatureId = min_sbp_end;
+  start_node_->final_sbp_sig_id_ = min_sbp_start;
+  end_node_->final_sbp_sig_id_ = min_sbp_end;
   return min_cost - original_cost;
 }
 
@@ -376,7 +376,7 @@ void SbpEdge<SbpSignature>::DetectSpreadOverlap(double overlap_ratio) {
   if (overlap_ratio < 1.0) {
     if (overlap_ratio < 0.0) { overlap_ratio = 0.0; }
 
-    if (start_node_->op_node) {
+    if (start_node_->op_node_) {
       // change overlap ratio for a normal edge
       // We could use the minimum or multiplication here.
       // To be noted that sbp_proxy may have multiple outcoming edges, we can not adjust overlap
@@ -409,8 +409,8 @@ template<class SbpSignature>
 void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool compute_cost,
                                                bool use_sbp_collector) {
   // In this part, we assemble the cost from nodes to nodes.
-  if (start_node_->op_node && end_node_->op_node) {
-    oneflow::OpNode* consumer = end_node_->op_node;
+  if (start_node_->op_node_ && end_node_->op_node_) {
+    oneflow::OpNode* consumer = end_node_->op_node_;
 
     // Add copy cost for each blob
     const oneflow::LogicalBlobId& lbi = consumer->op().BnInOp2Lbi(ibn);
@@ -418,7 +418,7 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
     // Check whether lbi is transferred by this edge
     if (use_sbp_collector && compute_cost && !SearchLbi(lbi)) { return; }
 
-    oneflow::OpNode* producer = start_node_->op_node;
+    oneflow::OpNode* producer = start_node_->op_node_;
     const std::string& producer_lbn = *CHECK_JUST(producer->op().obn4lbi(lbi));
     const oneflow::ParallelDesc& producer_parallel_desc =
         *CHECK_JUST(producer->op().GetParallelDesc4BnInOp(producer_lbn));
@@ -432,22 +432,22 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
     // If we are deciding whether we need the wait time, then make is_same_sbp true.
     // B->S cause cudaEventSynchronize in current implementation.
     bool is_same_sbp = (!compute_cost) || IsSameSbp(consumer, ibn);
-    int32_t consumer_sbp_size = end_node_->SbpSignatureList.size();
+    int32_t consumer_sbp_size = end_node_->sbp_sig_list_.size();
     LazyMode::Guard enable_lazy_mode(true);
 
     // look through sbp signature in producer
-    for (int32_t sbp_id_producer = 0; sbp_id_producer < start_node_->SbpSignatureList.size();
+    for (int32_t sbp_id_producer = 0; sbp_id_producer < start_node_->sbp_sig_list_.size();
          sbp_id_producer++) {
       // get sbp parallel for a logical blob in producer
       const auto producer_sbp_bn_in_op2sbp_parallel =
-          start_node_->SbpSignatureList[sbp_id_producer]->bn_in_op2nd_sbp();
+          start_node_->sbp_sig_list_[sbp_id_producer]->bn_in_op2nd_sbp();
       const NdSbp& sbp_producer = producer_sbp_bn_in_op2sbp_parallel.at(obn);
 
       // look through sbp signature in consumer
       for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
         // get sbp parallel for a logical blob in consumer
         const auto consumer_sbp_bn_in_op2sbp_parallel =
-            end_node_->SbpSignatureList[sbp_id_consumer]->bn_in_op2nd_sbp();
+            end_node_->sbp_sig_list_[sbp_id_consumer]->bn_in_op2nd_sbp();
         const NdSbp& sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
 
         // compute copy cost for a specific logical blob
