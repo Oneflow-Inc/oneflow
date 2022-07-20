@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/dispatch_frame.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/framework/local_tensor_infer_cache.h"
 #include "oneflow/core/framework/global_tensor_infer_cache.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
@@ -457,6 +458,7 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   if (registry->device_and_stream_infer_fn) {
     device_and_stream_infer_fn_ = registry->device_and_stream_infer_fn;
   }
+  local_tensor_infer_cache_.reset(new LocalTensorInferCache(self));
   global_tensor_infer_cache_.reset(new GlobalTensorInferCache(self));
   return Maybe<void>::Ok();
 }
