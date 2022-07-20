@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/common/functor_util.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -40,31 +41,70 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input) -> Maybe<Tensor> {
         return OpInterpUtil::Dispatch<Tensor>(*op, {input});
       });
+  struct DispatchFeedVariable final {
+    Maybe<AttrMap> operator()(double l2) const {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("l2", l2));
+      return AttrMap(attrs);
+    }
+  };
   m.add_functor("DispatchFeedVariable",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const Scalar& l2) -> Maybe<Tensor> {
-                  MutableAttrMap attrs;
-                  JUST(attrs.SetAttr<double>("l2", l2.As<double>()));
-                  return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
+                  constexpr static auto* GetAttrs = CACHED_FUNCTOR_PTR(DispatchFeedVariable);
+                  const auto& attrs = JUST(GetAttrs(l2.As<double>()));
+                  return OpInterpUtil::Dispatch<Tensor>(*op, {input}, *attrs);
                 });
+  struct DispatchOfrecordReader {
+    Maybe<AttrMap> operator()(const std::string& data_dir, int32_t data_part_num,
+                              const std::string& part_name_prefix, int32_t part_name_suffix_length,
+                              int32_t batch_size, int32_t shuffle_buffer_size, bool random_shuffle,
+                              bool shuffle_after_epoch, int64_t seed) const {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr("data_dir", data_dir));
+      JUST(attrs.SetAttr("data_part_num", data_part_num));
+      JUST(attrs.SetAttr("part_name_prefix", part_name_prefix));
+      JUST(attrs.SetAttr("part_name_suffix_length", part_name_suffix_length));
+      JUST(attrs.SetAttr("batch_size", batch_size));
+      JUST(attrs.SetAttr("shuffle_buffer_size", shuffle_buffer_size));
+      JUST(attrs.SetAttr("random_shuffle", random_shuffle));
+      JUST(attrs.SetAttr("shuffle_after_epoch", shuffle_after_epoch));
+      JUST(attrs.SetAttr("seed", seed));
+      return AttrMap(attrs);
+    }
+  };
   m.add_functor(
       "DispatchOfrecordReader",
       [](const std::shared_ptr<OpExpr>& op, const std::string& data_dir, int32_t data_part_num,
          const std::string& part_name_prefix, int32_t part_name_suffix_length, int32_t batch_size,
          int32_t shuffle_buffer_size, bool random_shuffle, bool shuffle_after_epoch, int64_t seed,
          const Optional<Symbol<Device>>& device) -> Maybe<Tensor> {
-        MutableAttrMap attrs;
-        JUST(attrs.SetAttr("data_dir", data_dir));
-        JUST(attrs.SetAttr("data_part_num", data_part_num));
-        JUST(attrs.SetAttr("part_name_prefix", part_name_prefix));
-        JUST(attrs.SetAttr("part_name_suffix_length", part_name_suffix_length));
-        JUST(attrs.SetAttr("batch_size", batch_size));
-        JUST(attrs.SetAttr("shuffle_buffer_size", shuffle_buffer_size));
-        JUST(attrs.SetAttr("random_shuffle", random_shuffle));
-        JUST(attrs.SetAttr("shuffle_after_epoch", shuffle_after_epoch));
-        JUST(attrs.SetAttr("seed", seed));
-        return OpInterpUtil::Dispatch<Tensor>(*op, {}, OpExprInterpContext(attrs, JUST(device)));
+        constexpr static auto* GetAttrs = CACHED_FUNCTOR_PTR(DispatchOfrecordReader);
+        const auto& attrs = JUST(GetAttrs(data_dir, data_part_num, part_name_prefix,
+                                          part_name_suffix_length, batch_size, shuffle_buffer_size,
+                                          random_shuffle, shuffle_after_epoch, seed));
+        return OpInterpUtil::Dispatch<Tensor>(*op, {}, OpExprInterpContext(*attrs, JUST(device)));
       });
+  struct DispatchOfrecordReaderWithNdSbp {
+    Maybe<AttrMap> operator()(const std::string& data_dir, int32_t data_part_num,
+                              const std::string& part_name_prefix, int32_t part_name_suffix_length,
+                              int32_t batch_size, int32_t shuffle_buffer_size, bool random_shuffle,
+                              bool shuffle_after_epoch, int64_t seed,
+                              const std::vector<std::string>& nd_sbp) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr("data_dir", data_dir));
+      JUST(attrs.SetAttr("data_part_num", data_part_num));
+      JUST(attrs.SetAttr("part_name_prefix", part_name_prefix));
+      JUST(attrs.SetAttr("part_name_suffix_length", part_name_suffix_length));
+      JUST(attrs.SetAttr("batch_size", batch_size));
+      JUST(attrs.SetAttr("shuffle_buffer_size", shuffle_buffer_size));
+      JUST(attrs.SetAttr("random_shuffle", random_shuffle));
+      JUST(attrs.SetAttr("shuffle_after_epoch", shuffle_after_epoch));
+      JUST(attrs.SetAttr("seed", seed));
+      JUST(attrs.SetAttr("nd_sbp", nd_sbp));
+      return AttrMap(attrs);
+    }
+  };
   m.add_functor(
       "DispatchOfrecordReader",
       [](const std::shared_ptr<OpExpr>& op, const std::string& data_dir, int32_t data_part_num,
@@ -72,57 +112,77 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
          int32_t shuffle_buffer_size, bool random_shuffle, bool shuffle_after_epoch, int64_t seed,
          const Symbol<ParallelDesc>& placement,
          const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
-        MutableAttrMap attrs;
-        JUST(attrs.SetAttr("data_dir", data_dir));
-        JUST(attrs.SetAttr("data_part_num", data_part_num));
-        JUST(attrs.SetAttr("part_name_prefix", part_name_prefix));
-        JUST(attrs.SetAttr("part_name_suffix_length", part_name_suffix_length));
-        JUST(attrs.SetAttr("batch_size", batch_size));
-        JUST(attrs.SetAttr("shuffle_buffer_size", shuffle_buffer_size));
-        JUST(attrs.SetAttr("random_shuffle", random_shuffle));
-        JUST(attrs.SetAttr("shuffle_after_epoch", shuffle_after_epoch));
-        JUST(attrs.SetAttr("seed", seed));
-        JUST(attrs.SetAttr("nd_sbp", *JUST(GetNdSbpStrList(sbp_tuple))));
+        constexpr static auto* GetAttrs = CACHED_FUNCTOR_PTR(DispatchOfrecordReaderWithNdSbp);
+        const auto& attrs =
+            JUST(GetAttrs(data_dir, data_part_num, part_name_prefix, part_name_suffix_length,
+                          batch_size, shuffle_buffer_size, random_shuffle, shuffle_after_epoch,
+                          seed, *JUST(GetNdSbpStrList(sbp_tuple))));
         auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
         return OpInterpUtil::Dispatch<Tensor>(*op, {},
-                                              OpExprInterpContext(attrs, placement, nd_sbp));
+                                              OpExprInterpContext(*attrs, placement, nd_sbp));
       });
+  struct DispatchOfrecordRawDecoder {
+    Maybe<AttrMap> operator()(const std::string& name, const Shape& shape,
+                              const Symbol<DType>& data_type, bool dim1_varying_length,
+                              bool truncate) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr("name", name));
+      JUST(attrs.SetAttr("shape", shape));
+      JUST(attrs.SetAttr("data_type", data_type->data_type()));
+      JUST(attrs.SetAttr("dim1_varying_length", dim1_varying_length));
+      JUST(attrs.SetAttr("truncate", truncate));
+      return AttrMap(attrs);
+    }
+  };
   m.add_functor("DispatchOfrecordRawDecoder",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const std::string& name, const Shape& shape, const Symbol<DType>& data_type,
                    bool dim1_varying_length, bool truncate) -> Maybe<Tensor> {
-                  MutableAttrMap attrs;
-                  JUST(attrs.SetAttr("name", name));
-                  JUST(attrs.SetAttr("shape", shape));
-                  JUST(attrs.SetAttr("data_type", data_type->data_type()));
-                  JUST(attrs.SetAttr("dim1_varying_length", dim1_varying_length));
-                  JUST(attrs.SetAttr("truncate", truncate));
-                  return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
+                  constexpr static auto* GetAttrs = CACHED_FUNCTOR_PTR(DispatchOfrecordRawDecoder);
+                  const auto& attrs =
+                      JUST(GetAttrs(name, shape, data_type, dim1_varying_length, truncate));
+                  return OpInterpUtil::Dispatch<Tensor>(*op, {input}, *attrs);
                 });
+  struct DispatchCoinFlip {
+    Maybe<AttrMap> operator()(int64_t batch_size, float probability, int64_t seed, bool has_seed) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr("probability", probability));
+      JUST(attrs.SetAttr("batch_size", batch_size));
+      JUST(attrs.SetAttr("seed", seed));
+      JUST(attrs.SetAttr("has_seed", has_seed));
+      return AttrMap(attrs);
+    }
+  };
   m.add_functor(
       "DispatchCoinFlip",
       [](const std::shared_ptr<OpExpr>& op, int64_t batch_size, Scalar probability, int64_t seed,
          bool has_seed, const Optional<Symbol<Device>>& device) -> Maybe<Tensor> {
-        MutableAttrMap attrs;
-        JUST(attrs.SetAttr("probability", probability.As<float>()));
-        JUST(attrs.SetAttr("batch_size", batch_size));
-        JUST(attrs.SetAttr("seed", seed));
-        JUST(attrs.SetAttr("has_seed", has_seed));
-        return OpInterpUtil::Dispatch<Tensor>(*op, {}, OpExprInterpContext(attrs, JUST(device)));
+        constexpr static auto* GetAttrs = CACHED_FUNCTOR_PTR(DispatchCoinFlip);
+        const auto& attrs = JUST(GetAttrs(batch_size, probability.As<float>(), seed, has_seed));
+        return OpInterpUtil::Dispatch<Tensor>(*op, {}, OpExprInterpContext(*attrs, JUST(device)));
       });
+  struct DispatchCoinFlipWithNdSbp {
+    Maybe<AttrMap> operator()(int64_t batch_size, float probability, int64_t seed, bool has_seed,
+                              const std::vector<std::string>& nd_sbp) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr("batch_size", batch_size));
+      JUST(attrs.SetAttr("probability", probability));
+      JUST(attrs.SetAttr("seed", seed));
+      JUST(attrs.SetAttr("has_seed", has_seed));
+      JUST(attrs.SetAttr("nd_sbp", nd_sbp));
+      return AttrMap(attrs);
+    }
+  };
   m.add_functor("DispatchCoinFlip",
                 [](const std::shared_ptr<OpExpr>& op, int64_t batch_size, Scalar probability,
                    int64_t seed, bool has_seed, const Symbol<ParallelDesc>& placement,
                    const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
-                  MutableAttrMap attrs;
-                  JUST(attrs.SetAttr("probability", probability.As<float>()));
-                  JUST(attrs.SetAttr("batch_size", batch_size));
-                  JUST(attrs.SetAttr("seed", seed));
-                  JUST(attrs.SetAttr("has_seed", has_seed));
-                  JUST(attrs.SetAttr("nd_sbp", *JUST(GetNdSbpStrList(sbp_tuple))));
+                  constexpr static auto* GetAttrs = CACHED_FUNCTOR_PTR(DispatchCoinFlipWithNdSbp);
+                  const auto& attrs = JUST(GetAttrs(batch_size, probability.As<float>(), seed,
+                                                    has_seed, *JUST(GetNdSbpStrList(sbp_tuple))));
                   auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
                   return OpInterpUtil::Dispatch<Tensor>(
-                      *op, {}, OpExprInterpContext(attrs, placement, nd_sbp));
+                      *op, {}, OpExprInterpContext(*attrs, placement, nd_sbp));
                 });
   m.add_functor(
       "DispatchDistributedPariticalFCSample",
@@ -461,24 +521,36 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
                   return Maybe<void>::Ok();
                 });
+
+  struct DispatchMomentumUpdate {
+    Maybe<AttrMap> operator()(float learning_rate_val, double scale, float l1, float l2, float beta,
+                              float dampening, bool nesterov, bool maximize,
+                              float weight_decay) const {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr("learning_rate_val", learning_rate_val));
+      JUST(attrs.SetAttr("scale", scale));
+      JUST(attrs.SetAttr("l1", l1));
+      JUST(attrs.SetAttr("l2", l2));
+      JUST(attrs.SetAttr("beta", beta));
+      JUST(attrs.SetAttr("dampening", dampening));
+      JUST(attrs.SetAttr("nesterov", nesterov));
+      JUST(attrs.SetAttr("maximize", maximize));
+      JUST(attrs.SetAttr("weight_decay", weight_decay));
+      return AttrMap(attrs);
+    }
+  };
   m.add_functor(
       "DispatchMomentumUpdate",
       [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs, float learning_rate,
          double scale, float l1, float l2, float beta, float dampening, bool nesterov,
          bool maximize, float weight_decay) -> Maybe<void> {
-        MutableAttrMap attrs;
-        JUST(attrs.SetAttr("learning_rate_val", learning_rate));
-        JUST(attrs.SetAttr("scale", scale));
-        JUST(attrs.SetAttr("l1", l1));
-        JUST(attrs.SetAttr("l2", l2));
-        JUST(attrs.SetAttr("beta", beta));
-        JUST(attrs.SetAttr("dampening", dampening));
-        JUST(attrs.SetAttr("nesterov", nesterov));
-        JUST(attrs.SetAttr("maximize", maximize));
-        JUST(attrs.SetAttr("weight_decay", weight_decay));
-        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
+        constexpr static auto* GetAttrs = CACHED_FUNCTOR_PTR(DispatchMomentumUpdate);
+        const auto& attrs = JUST(GetAttrs(learning_rate, scale, l1, l2, beta, dampening, nesterov,
+                                          maximize, weight_decay));
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, *attrs));
         return Maybe<void>::Ok();
       });
+
   m.add_functor(
       "DispatchSgdUpdate",
       [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs, float learning_rate,
