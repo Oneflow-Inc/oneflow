@@ -23,9 +23,7 @@ namespace mlir {
 
 namespace sbp {
 
-void SBPDialect::initialize() {
-  registerAttributes();
-}
+void SBPDialect::initialize() { registerAttributes(); }
 
 }  // namespace sbp
 

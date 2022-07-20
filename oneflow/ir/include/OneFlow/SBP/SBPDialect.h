@@ -21,4 +21,4 @@ limitations under the License.
 
 #include "OneFlow/SBPDialect.h.inc"
 
-#endif // ONEFLOW_IR_INCLUDE_SBP_SBPDIALECT_H_
+#endif  // ONEFLOW_IR_INCLUDE_SBP_SBPDIALECT_H_

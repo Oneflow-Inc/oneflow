@@ -41,7 +41,6 @@ class FuncOp;
 
 }  // namespace mlir
 
-
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlowOps.h.inc"
 #define GET_OP_CLASSES
