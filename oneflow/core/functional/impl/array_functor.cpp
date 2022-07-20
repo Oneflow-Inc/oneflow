@@ -2030,7 +2030,7 @@ class TensorSetItemFunctor {
     // TODO: replace reshape by unsqueeze with view mechanism.
     // after here, each scalar tensor will be one with one dimension.
     for (auto& tensor : tensor_indices) {
-      if (tensor->ndim() == 0) { tensor = JUST(functional::Reshape(tensor, Shape({1}))); }
+      if (tensor && tensor->ndim() == 0) { tensor = JUST(functional::Reshape(tensor, Shape({1}))); }
     }
 
     DimVector slice_dims(ndims);
@@ -2071,6 +2071,8 @@ class TensorSetItemFunctor {
       if (is_identity) {
         result = x;
       } else {
+        CHECK_OR_RETURN(view::IsViewApplicable(x))
+            << "combined slice setitem must enable view, please try to set ONEFLOW_DISABLE_VIEW=0";
         result = JUST(Slice(x, start, end, step, /*enable_view_slice=*/true));
       }
       if (target_shape != *(result->shape())) {

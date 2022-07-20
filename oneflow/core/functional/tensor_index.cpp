@@ -127,6 +127,11 @@ Maybe<TensorTuple> ExpandIndices(const TensorTuple& indices) {
   return expanded_indices;
 }
 
+// NOTE(wyg):
+// Judge whether all index dims are contiguous.
+// e.g. [:, index0, index1, :] -> True
+// [index0, :, index1] -> False
+// [index0, index1, :] -> True
 Maybe<bool> IsContinuousSubspace(const TensorTuple& indices) {
   int token = 0;
   for (int i = 0; i < indices.size(); ++i) {
@@ -141,6 +146,9 @@ Maybe<bool> IsContinuousSubspace(const TensorTuple& indices) {
   return true;
 }
 
+// NOTE(wyg):
+// Move contiguous indices subspace to ahead.
+// e.g. [:, index0, index1] -> [index0, index1, :]
 Maybe<void> TransposeFront(const std::shared_ptr<Tensor>& input, const TensorTuple& indices,
                            std::shared_ptr<Tensor>* output, TensorTuple* valid_indices) {
   std::vector<int> permute;
@@ -397,7 +405,7 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
     std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
     packed_indices =
         JUST(ToGlobal(packed_indices, placement, std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
-                      grad_sbp_tuple, /* check_meta */ false));
+                      grad_sbp_tuple, /*check_meta=*/false));
   } else {
     Symbol<Device> device = JUST(transposed_input->device());
     if (JUST(packed_indices->device()) != device) {
@@ -405,12 +413,13 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
           JUST(Copy(packed_indices, device->type(), device->device_id(), /*pin_memory=*/false));
     }
   }
+  std::cout << "transposed_input is_contiguous: " << transposed_input->is_contiguous() << std::endl;
   JUST(TensorScatterNdUpdate(transposed_input, packed_indices, value, /*inplace=*/true));
 
-  int required_ndim = input->ndim() - valid_indices.size() + index_ndim;
-  CHECK_EQ_OR_RETURN(transposed_input->ndim(), required_ndim)
-      << Error::RuntimeError() << "The indexing result dimension is " << transposed_input->ndim()
-      << ", but shoule be " << required_ndim;
+  // int required_ndim = input->ndim() - valid_indices.size() + index_ndim;
+  // CHECK_EQ_OR_RETURN(transposed_input->ndim(), required_ndim)
+  //     << Error::RuntimeError() << "The indexing result dimension is " << transposed_input->ndim()
+  //     << ", but shoule be " << required_ndim;
   if (is_continuous_subspace) { JUST(AdjustSubspace(transposed_input, indices, index_ndim)); }
   return Maybe<void>::Ok();
 }
@@ -448,7 +457,7 @@ Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
 
 Maybe<void> UnifyLocalTensorAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
                                                TensorTuple& tensor_indices) {
-  if (!x->is_global()) {
+  if (x->is_local()) {
     const auto x_device = JUST(x->device());
     for (int64_t i = 0; i < tensor_indices.size(); ++i) {
       const auto tensor_index = tensor_indices[i];
