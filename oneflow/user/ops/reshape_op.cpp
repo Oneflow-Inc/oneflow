@@ -61,8 +61,8 @@ namespace oneflow {
   }
   *out_shape = shape;
   *out_stride = Stride(shape);
-  // For 0-size tensor we don't need check shape element.
-  if (in_shape.elem_cnt() > 0) { CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt()); }
+  // For 0-size tensor we don't need check shape element equal.
+  if (in_shape.elem_cnt() > 0) { CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt()); //NOLINT }
   return Maybe<void>::Ok();
 }
 
