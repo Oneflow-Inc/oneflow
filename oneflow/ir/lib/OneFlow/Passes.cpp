@@ -623,6 +623,78 @@ bool IsSameDtype(mlir::OpResult cast_result, mlir::Value input) {
 namespace mlir {
 
 namespace oneflow {
+
+template<typename Op>
+struct FusedSequenceAddPattern : public OpRewritePattern<Op> {
+  explicit FusedSequenceAddPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<Op>(context, /*benefit=*/1) {}
+
+ public:
+  LogicalResult matchAndRewrite(Op op, PatternRewriter& rewriter) const override;
+};
+
+SmallVector<mlir::Value, 4> getSequenceAddOperands(const mlir::Value& operand,
+                                                   const SmallVector<mlir::Value, 4>& opOperands) {
+  SmallVector<mlir::Value, 4> operands;
+  SmallVector<mlir::Value, 4> inputOpOperands;
+  mlir::Value inputOpResult;
+  if (AddNOp addInputOp = operand.getDefiningOp<AddNOp>()) {
+    inputOpOperands = addInputOp.in();
+    inputOpResult = addInputOp.out();
+  } else if (Add2Op addInputOp = operand.getDefiningOp<Add2Op>()) {
+    inputOpOperands = {addInputOp.in0(), addInputOp.in1()};
+    inputOpResult = addInputOp.out();
+  }
+  for (mlir::Value operand : opOperands) {
+    if (operand != inputOpResult) {
+      operands.push_back(operand);
+    } else {
+      operands.insert(operands.end(), inputOpOperands.begin(), inputOpOperands.end());
+    }
+  }
+  return operands;
+}
+
+template<>
+LogicalResult FusedSequenceAddPattern<AddNOp>::matchAndRewrite(AddNOp op,
+                                                               PatternRewriter& rewriter) const {
+  std::cout << "apply FusedSequenceAddPattern" << std::endl;
+  SmallVector<mlir::Value, 4> opOperands = op.in();
+  for (mlir::Value operand : opOperands) {
+    if (!operand.getDefiningOp<AddNOp>() && !operand.getDefiningOp<Add2Op>()) { continue; }
+    // check if only has one user
+    for (const auto& use : operand.getUses()) {
+      if (use.getOwner() != op) { continue; }
+    }
+    SmallVector<mlir::Value, 4> operands = getSequenceAddOperands(operand, opOperands);
+    auto new_op =
+        rewriter.create<AddNOp>(op->getLoc(), op->getResultTypes(), operands, op->getAttrs());
+    rewriter.replaceOp(op, new_op.out());
+    return success();
+  }
+  return failure();
+}
+
+template<>
+LogicalResult FusedSequenceAddPattern<Add2Op>::matchAndRewrite(Add2Op op,
+                                                               PatternRewriter& rewriter) const {
+  std::cout << "apply FusedSequenceAddPattern" << std::endl;
+  SmallVector<mlir::Value, 4> opOperands = {op.in0(), op.in1()};
+  for (mlir::Value operand : opOperands) {
+    if (!operand.getDefiningOp<AddNOp>() && !operand.getDefiningOp<Add2Op>()) { continue; }
+    // check if only has one user
+    for (const auto& use : operand.getUses()) {
+      if (use.getOwner() != op) { continue; }
+    }
+    SmallVector<mlir::Value, 4> operands = getSequenceAddOperands(operand, opOperands);
+    auto new_op =
+        rewriter.create<AddNOp>(op->getLoc(), op->getResultTypes(), operands, op->getAttrs());
+    rewriter.replaceOp(op, new_op.out());
+    return success();
+  }
+  return failure();
+}
+
 struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
   explicit AutoNhwcPattern(mlir::MLIRContext* context)
       : OpInterfaceRewritePattern<NCHWCompatible>(context, /*benefit=*/1) {}
@@ -802,6 +874,8 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
   patterns.add<DeleteSameDtypeCastOpPattern>(patterns.getContext());
+  patterns.add<FusedSequenceAddPattern<Add2Op>>(patterns.getContext());
+  patterns.add<FusedSequenceAddPattern<AddNOp>>(patterns.getContext());
 }
 
 void populateAutoNhwcPatterns(::mlir::RewritePatternSet& patterns) {
