@@ -273,7 +273,6 @@ class BroadcastMinMax : public BroadcastBinaryGrad {
         if (left_extended_x_shape == out_shape) {
           broad_x_ = JUST(functional::ReshapeLike(x, JUST(VectorAt(out_grads, 0))));
         } else {
-          const AxisVector& broadcast_axis_vec = left_extended_x_shape.Axes4BroadcastTo(out_shape);
           broad_x_ = JUST(functional::BroadcastLike(x, JUST(VectorAt(out_grads, 0)), {}));
         }
       }
@@ -284,7 +283,6 @@ class BroadcastMinMax : public BroadcastBinaryGrad {
         if (left_extended_y_shape == out_shape) {
           broad_y_ = JUST(functional::ReshapeLike(y, JUST(VectorAt(out_grads, 0))));
         } else {
-          const AxisVector& broadcast_axis_vec = left_extended_y_shape.Axes4BroadcastTo(out_shape);
           broad_y_ = JUST(functional::BroadcastLike(y, JUST(VectorAt(out_grads, 0)), {}));
         }
       }
