@@ -41,7 +41,9 @@ class DtrCudaAllocator final : public Allocator {
   bool left = true;
 
  private:
-  ptrdiff_t get_offset(const char* mem_ptr) const;
+  using offset_t = size_t;
+
+  offset_t get_offset(const char* mem_ptr) const;
 
   static constexpr int32_t kInvalidBinNum = -1;
   static constexpr int32_t kBinNumSize = 20;
@@ -93,6 +95,10 @@ class DtrCudaAllocator final : public Allocator {
 
   bool InSmallMemoryArea(void* ptr);
 
+  offset_t FindProperPositionInGroup(size_t group_idx, size_t request_size);
+
+  Piece* AllocateMemoryInPiece(Piece* piece, offset_t offset_in_piece, size_t size);
+
   // Try find free Piece which size is larger than aligned_size in Bins.
   // Return nullptr when find failure
   Piece* FindPiece(size_t aligned_size, bool after_eviction);
@@ -131,6 +137,10 @@ class DtrCudaAllocator final : public Allocator {
   Piece* recycle_piece_list_;
   size_t total_allocate_bytes_ = 0;
   size_t total_deallocate_bytes_ = 0;
+
+  // -----
+  // size_t group_num_;
+  // size_t cur_group_index_;
 };
 
 }  // namespace vm

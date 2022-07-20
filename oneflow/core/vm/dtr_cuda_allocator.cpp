@@ -62,7 +62,7 @@ DtrCudaAllocator::~DtrCudaAllocator() {
   if (memory_ != nullptr) { OF_CUDA_CHECK(cudaFree(memory_)); }
 }
 
-ptrdiff_t DtrCudaAllocator::get_offset(const char* mem_ptr) const {
+DtrCudaAllocator::offset_t DtrCudaAllocator::get_offset(const char* mem_ptr) const {
   return mem_ptr - (char*)memory_;
 }
 
@@ -76,7 +76,10 @@ int32_t DtrCudaAllocator::UpperBoundBinId4NormalPiece(size_t size) { return kBin
 void DtrCudaAllocator::Mark(DTREagerBlobObject* ebo, char* mem_ptr) {
   Piece* piece = ptr2piece_.at(mem_ptr);
   piece->tensor = ebo;
-  if (dtr::debug_level() >= 1) { LOG(INFO) << "tensor " << ebo->id() << " is allocated at " << get_offset(mem_ptr) << ", left: " << piece->is_left; }
+  if (dtr::debug_level() >= 1) {
+    LOG(INFO) << "tensor " << ebo->id() << " is allocated at " << get_offset(mem_ptr)
+              << ", left: " << piece->is_left;
+  }
 }
 
 bool DtrCudaAllocator::InSmallMemoryArea(void* ptr) {
@@ -153,9 +156,7 @@ double get_cost(const vm::DTREagerBlobObject* ebo, int& coeff, size_t size) {
   return cost;
 }
 
-double get_cost(const vm::DTREagerBlobObject* ebo, int& coeff) {
-  return get_cost(ebo, coeff, 0);
-}
+double get_cost(const vm::DTREagerBlobObject* ebo, int& coeff) { return get_cost(ebo, coeff, 0); }
 
 void DtrCudaAllocator::DisplayAllPieces() {
   for (const auto& pair : ptr2piece_) {
@@ -195,6 +196,67 @@ void DtrCudaAllocator::Display() {
             << ", total allocate bytes: " << bytes2Mb(total_allocate_bytes_) << "MB"
             << ", total deallocate bytes: " << bytes2Mb(total_deallocate_bytes_) << "MB"
             << std::endl;
+}
+
+DtrCudaAllocator::offset_t DtrCudaAllocator::FindProperPositionInGroup(size_t group_idx,
+                                                                       size_t request_size) {
+  UNIMPLEMENTED();
+}
+
+auto DtrCudaAllocator::AllocateMemoryInPiece(Piece* piece, offset_t offset_in_piece, size_t size)
+    -> Piece* {
+  auto SplitPiece = [this](Piece* piece, offset_t offset_in_piece) -> Piece* {
+    // offset_in_piece must be less (not equal) than piece->size so that
+    // new_piece has size
+    CHECK_LE(offset_in_piece, piece->size);
+    Piece* new_piece = AllocatePiece();
+    new_piece->ptr = piece->ptr + offset_in_piece;
+    new_piece->size = piece->size - offset_in_piece;
+    piece->size = offset_in_piece;
+
+    Piece* next_p = piece->next;
+    piece->next = new_piece;
+    new_piece->prev = piece;
+    new_piece->next = next_p;
+    if (next_p != nullptr) { next_p->prev = new_piece; }
+    InsertPiece2PtrMap(new_piece);
+
+    CHECK(IsAlignedSize(piece->size));
+    CHECK(IsAlignedSize(new_piece->size));
+    return new_piece;
+  };
+  auto SplitPiece3 = [&SplitPiece](
+                         Piece* piece, offset_t offset1_in_piece,
+                         offset_t offset2_in_piece) -> std::tuple<Piece*, Piece*, Piece*> {
+    Piece* piece1 = nullptr;
+    Piece* piece2 = nullptr;
+    Piece* piece3 = nullptr;
+    bool has_piece3 = offset2_in_piece != piece->size;
+    if (offset1_in_piece > 0) {
+      piece1 = piece;
+      piece2 = SplitPiece(piece, offset1_in_piece);
+    } else {
+      piece1 = nullptr;
+      piece2 = piece;
+    }
+    if (has_piece3) { piece3 = SplitPiece(piece2, offset2_in_piece - offset1_in_piece); }
+    return {piece1, piece2, piece3};
+  };
+  auto pieces = SplitPiece3(piece, offset_in_piece, offset_in_piece + size);
+  Piece *piece1 = std::get<0>(pieces), *piece2 = std::get<1>(pieces), *piece3 = std::get<2>(pieces);
+  if (piece1 != nullptr) {
+    // piece1 is already free
+    piece1->bin_num = kInvalidBinNum;
+    InsertPiece2Bin(piece1);
+  }
+  piece2->bin_num = kInvalidBinNum;
+  piece2->is_free = false;
+  if (piece3 != nullptr) {
+    piece3->bin_num = kInvalidBinNum;
+    piece3->is_free = true;
+    InsertPiece2Bin(piece3);
+  }
+  return piece2;
 }
 
 DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size, bool after_eviction) {
@@ -256,79 +318,27 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size, bool a
       if (piece->size >= aligned_size) {
         bin->pieces.erase(it);
 
-        if (piece->size == aligned_size) {
-          piece->bin_num = kInvalidBinNum;
-          piece->is_free = false;
-        } else if (piece->size > aligned_size) {
-          const std::string& name = Global<dtr::TensorPool>::Get()->current_op_type_name();
-          const bool choose_left = [&]() {
-            if (after_eviction) {
+        const std::string& name = Global<dtr::TensorPool>::Get()->current_op_type_name();
+        const bool choose_left = [&]() {
+          if (after_eviction) { return true; }
+          if (EnvBool<OF_DTR_NLR>()) {
+            // CHECK(ParseBooleanFromEnv("OF_DTR_HIGH_CONV", true));
+            // CHECK(ParseBooleanFromEnv("OF_DTR_HIGH_ADD_N", true));
+            std::vector<std::string> high_compute_cost_names{"conv2d", "conv_data_grad",
+                                                             "conv_filter_grad", "add_n"};
+            if (std::find(high_compute_cost_names.cbegin(), high_compute_cost_names.cend(), name)
+                != high_compute_cost_names.cend()) {
               return true;
             }
-            if (EnvBool<OF_DTR_NLR>()) {
-              // CHECK(ParseBooleanFromEnv("OF_DTR_HIGH_CONV", true));
-              // CHECK(ParseBooleanFromEnv("OF_DTR_HIGH_ADD_N", true));
-              std::vector<std::string> high_compute_cost_names{"conv2d", "conv_data_grad",
-                                                               "conv_filter_grad", "add_n"};
-              if (std::find(high_compute_cost_names.cbegin(), high_compute_cost_names.cend(), name)
-                  != high_compute_cost_names.cend()) {
-                return true;
-              }
-              return false;
+            return false;
 
-            } else {
-              return left;
-            }
-          }();
-          if (choose_left) {
-            if (dtr::debug_level() >= 2) { LOG(INFO) << "left: " << name; }
-            piece->bin_num = kInvalidBinNum;
-            piece->is_free = false;
-
-            Piece* new_piece = AllocatePiece();
-            new_piece->ptr = piece->ptr + aligned_size;
-            new_piece->size = piece->size - aligned_size;
-            piece->size = aligned_size;
-
-            Piece* next_p = piece->next;
-            piece->next = new_piece;
-            new_piece->prev = piece;
-            new_piece->next = next_p;
-            if (next_p != nullptr) { next_p->prev = new_piece; }
-
-            new_piece->is_free = true;
-            new_piece->bin_num = kInvalidBinNum;
-            CHECK(IsAlignedSize(piece->size));
-            CHECK(IsAlignedSize(new_piece->size));
-            InsertPiece2Bin(new_piece);
-            InsertPiece2PtrMap(new_piece);
           } else {
-            // is right
-            piece->bin_num = kInvalidBinNum;
-            // piece is still free
-
-            Piece* new_piece = AllocatePiece();
-            new_piece->ptr = piece->ptr + piece->size - aligned_size;
-            new_piece->size = aligned_size;
-            piece->size -= aligned_size;
-
-            Piece* next_p = piece->next;
-            piece->next = new_piece;
-            new_piece->prev = piece;
-            new_piece->next = next_p;
-            if (next_p != nullptr) { next_p->prev = new_piece; }
-
-            new_piece->is_free = false;
-            new_piece->is_left = false;
-            new_piece->bin_num = kInvalidBinNum;
-            CHECK(IsAlignedSize(piece->size));
-            CHECK(IsAlignedSize(new_piece->size));
-            InsertPiece2Bin(piece);
-            InsertPiece2PtrMap(new_piece);
-            return new_piece;
+            // left is updated in opkernel_instruction_type.cpp
+            return left;
           }
-        }
-        return piece;
+        }();
+        const offset_t offset_in_piece = choose_left ? 0 : piece->size - aligned_size;
+        return AllocateMemoryInPiece(piece, offset_in_piece, aligned_size);
       }
     }
   }
@@ -355,14 +365,12 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceMegEngineStyle(size_
               << "START-EvictAndFindPiece" << std::endl;
   }
   if (dtr::debug_level() >= 2) { LOG(INFO) << "required size: " << required_size; }
-  auto GetSizeIncludingNeighborhood = [](auto it, auto begin, auto end) -> size_t{
+  auto GetSizeIncludingNeighborhood = [](auto it, auto begin, auto end) -> size_t {
     size_t size = it->second->size;
     if (it != begin) {
       for (auto t = std::prev(it); t->second->tensor == nullptr; t--) {
         size += t->second->size;
-        if (t == begin) {
-          break;
-        }
+        if (t == begin) { break; }
       }
     }
     if (it != end) {
@@ -376,11 +384,13 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceMegEngineStyle(size_
   while (true) {
     double min_cost = std::numeric_limits<double>::max();
     vm::DTREagerBlobObject* min_tensor = nullptr;
-    for (auto it = ptr2piece_.begin(); it != ptr2piece_.end() && !InSmallMemoryArea(it->second->ptr); it++) {
+    for (auto it = ptr2piece_.begin();
+         it != ptr2piece_.end() && !InSmallMemoryArea(it->second->ptr); it++) {
       int coeff = -1;
       auto* tensor = it->second->tensor;
       if (tensor != nullptr && !tensor->is_pinned() && tensor->is_evictable()) {
-        auto cur_op_cost = get_cost(tensor, coeff, GetSizeIncludingNeighborhood(it, ptr2piece_.begin(), ptr2piece_.end()));
+        auto cur_op_cost = get_cost(
+            tensor, coeff, GetSizeIncludingNeighborhood(it, ptr2piece_.begin(), ptr2piece_.end()));
         if (cur_op_cost < min_cost) {
           min_cost = cur_op_cost;
           min_tensor = tensor;
@@ -390,9 +400,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceMegEngineStyle(size_
     if (min_tensor) {
       CHECK_JUST(min_tensor->evict(false));
       Piece* piece = FindPiece(required_size, true);
-      if (piece != nullptr) {
-        return piece;
-      }
+      if (piece != nullptr) { return piece; }
     } else {
       LOG(FATAL) << "eviction fail";
     }
@@ -467,9 +475,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required
       start++;
     }
     double cost = cost_except_size;
-    if (EnvBool<ONEFLOW_DTR_HEURISTIC_WITH_SIZE>()) {
-      cost /= total_size;
-    }
+    if (EnvBool<ONEFLOW_DTR_HEURISTIC_WITH_SIZE>()) { cost /= total_size; }
     if (total_size >= required_size && cost < min_cost) {
       min_cost = cost;
       min_start = start;
@@ -530,9 +536,7 @@ void DtrCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
 
   if (piece == nullptr) {
     if (first_time) {
-      if (EnvBool<ONEFLOW_DTR_DISPLAY_IN_FIRST_TIME>()) {
-        DisplayAllPieces();
-      }
+      if (EnvBool<ONEFLOW_DTR_DISPLAY_IN_FIRST_TIME>()) { DisplayAllPieces(); }
       first_time = false;
     }
     if (EnvBool<ONEFLOW_DTR_MEGENGINE_STYLE>()) {
