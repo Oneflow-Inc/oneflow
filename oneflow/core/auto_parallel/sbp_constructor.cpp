@@ -246,14 +246,14 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
     // Initialize copy cost between two nodes
     for (auto* sbp_edge : sbp_node_consumer->EdgesIn) {
       // producer sbp node
-      const auto* sbp_node_producer = sbp_edge->StartNode;
+      const auto* sbp_node_producer = sbp_edge->start_node_;
       // skip it if proxy
       if (!sbp_node_producer->op_node) { continue; }
-      sbp_edge->Cost.resize(sbp_node_producer->SbpSignatureList.size());
+      sbp_edge->cost_.resize(sbp_node_producer->SbpSignatureList.size());
       int32_t consumer_sbp_size = sbp_node_consumer->SbpSignatureList.size();
       // look through sbp signature in producer
       for (int32_t i = 0; i < sbp_node_producer->SbpSignatureList.size(); ++i) {
-        sbp_edge->Cost[i].resize(consumer_sbp_size, 0);
+        sbp_edge->cost_[i].resize(consumer_sbp_size, 0);
       }
     }
     // Find all those cases with wait time
@@ -261,12 +261,12 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
     sbp_node_consumer->InitializeCopyCost(false, use_sbp_collector_);
     for (auto* sbp_edge : sbp_node_consumer->EdgesIn) {
       // skip it if proxy
-      if (!sbp_edge->StartNode->op_node) { continue; }
+      if (!sbp_edge->start_node_->op_node) { continue; }
       // Reset Wait time
-      for (int32_t i = 0; i < sbp_edge->Cost.size(); ++i) {
-        for (int32_t j = 0; j < sbp_edge->Cost[i].size(); ++j) {
+      for (int32_t i = 0; i < sbp_edge->cost_.size(); ++i) {
+        for (int32_t j = 0; j < sbp_edge->cost_[i].size(); ++j) {
           // If transferring between devices, we need to add wait time.
-          if (sbp_edge->Cost[i][j] > 0.0) { sbp_edge->Cost[i][j] = sbp_edge->WaitTime; }
+          if (sbp_edge->cost_[i][j] > 0.0) { sbp_edge->cost_[i][j] = sbp_edge->wait_time_; }
         }
       }
     }
@@ -301,7 +301,7 @@ void SbpConstructor::LoadLbi2SbpEdge(const OpGraph& op_graph) {
       // producer sbp node
       const auto* sbp_node_producer = op_name2sbp_node_[producer->op().op_name()];
       // TODO: recode this
-      auto* edge_found = auto_parallel::FindEdgeBetweenNodes(sbp_node_producer, sbp_node_consumer);
+      auto* edge_found = sbp_node_consumer->FindEdgeWithNode(sbp_node_producer);
 
       CHECK(edge_found != NULL) << "SbpEdge not found while loading!" << std::endl;
 
