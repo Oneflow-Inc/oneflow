@@ -206,8 +206,8 @@ Maybe<void> ConvDataGradGrad::Capture(ConvDataGradGradCaptureState* ctx, const T
                                       const TensorTuple& outputs, const AttrMap& attrs) const {
   // input: dy, w, x_like, [add to output]
   // output: dx
-  CHECK_EQ_OR_RETURN(inputs.size(), 3);
-  CHECK_EQ_OR_RETURN(outputs.size(), 1);
+  CHECK_EQ_OR_RETURN(inputs.size(), 3);   // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
 
   ctx->w_requires_grad = inputs.at(1)->requires_grad();
   ctx->grad_requires_grad = inputs.at(0)->requires_grad();
@@ -234,10 +234,10 @@ Maybe<void> ConvDataGradGrad::Apply(const ConvDataGradGradCaptureState* ctx,
 
   // x_grad       = grad * w            (y.shape * w.shape -> x.shape)  call ConvDataGrad
   // x_grad_grad  = grad * out_grads_w  (y.shape * w.shape -> x.shape)  call ConvDataGrad
-  // grad_grad_x  = out_grads_x * w     (x.shape * w.shape -> y.shape)  call ConvDataGrad
+  // grad_grad_x  = out_grads_x * w     (x.shape * w.shape -> y.shape)  call ConvND
   // w_grad       = x * grad            (x.shape * y.shape -> w.shape)  call ConvFilterGrad
   // w_grad_grad  = out_grads_x * grad  (x.shape * y.shape -> w.shape)  call ConvFilterGrad
-  // grad_grad_w  = x * out_grads_w     (x.shape * w.shape -> y.shape)  call ConvFilterGrad
+  // grad_grad_w  = x * out_grads_w     (x.shape * w.shape -> y.shape)  call ConvND
 
   // w_grad_grad
   if (ctx->w_requires_grad) {
@@ -250,10 +250,14 @@ Maybe<void> ConvDataGradGrad::Apply(const ConvDataGradGradCaptureState* ctx,
   // grad_grad_x
   if (ctx->grad_requires_grad) {
     const auto& w = ctx->SavedTensors().at(ctx->w_index);
-    const auto& grad = ctx->SavedTensors().at(ctx->grad_index);
-    in_grads->at(0) = JUST(functional::ConvDataGrad(
-        out_grads.at(0), w, JUST(grad->detach()), num_spatial_dims, ctx->kernel_size, ctx->strides,
-        ctx->padding_before, /**/ ctx->dilation_rate, ctx->groups, ctx->data_format));
+    const int32_t ndims = ctx->kernel_size.size();
+    const auto Conv = (ndims == 1 ? functional::Conv1d
+                                  : (ndims == 2 ? functional::Conv2d
+                                                : (ndims == 3 ? functional::Conv3d : nullptr)));
+    CHECK_NOTNULL_OR_RETURN(Conv);  // NOLINT(maybe-need-error-msg)
+    in_grads->at(0) =
+        JUST(Conv(out_grads.at(0), w, Optional<Tensor>(), ctx->strides, ctx->padding_before,
+                  ctx->dilation_rate, ctx->groups, ctx->data_format));
   }
 
   return Maybe<void>::Ok();
@@ -297,8 +301,8 @@ Maybe<void> ConvFilterGradGrad::Capture(ConvFilterGradGradCaptureState* ctx,
                                         const AttrMap& attrs) const {
   // input: dy, x
   // output: dw
-  CHECK_EQ_OR_RETURN(inputs.size(), 2);
-  CHECK_EQ_OR_RETURN(outputs.size(), 1);
+  CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
 
   ctx->x_requires_grad = inputs.at(1)->requires_grad();
   ctx->grad_requires_grad = inputs.at(0)->requires_grad();
@@ -325,10 +329,10 @@ Maybe<void> ConvFilterGradGrad::Apply(const ConvFilterGradGradCaptureState* ctx,
 
   // x_grad       = grad * w            (y.shape * w.shape -> x.shape)  call ConvDataGrad
   // x_grad_grad  = grad * out_grads_w  (y.shape * w.shape -> x.shape)  call ConvDataGrad
-  // grad_grad_x  = out_grads_x * w     (x.shape * w.shape -> y.shape)  call ConvDataGrad
+  // grad_grad_x  = out_grads_x * w     (x.shape * w.shape -> y.shape)  call ConvND
   // w_grad       = x * grad            (x.shape * y.shape -> w.shape)  call ConvFilterGrad
   // w_grad_grad  = out_grads_x * grad  (x.shape * y.shape -> w.shape)  call ConvFilterGrad
-  // grad_grad_w  = x * out_grads_w     (x.shape * w.shape -> y.shape)  call ConvFilterGrad
+  // grad_grad_w  = x * out_grads_w     (x.shape * w.shape -> y.shape)  call ConvND
 
   // x_grad_grad
   if (ctx->x_requires_grad) {
@@ -342,11 +346,14 @@ Maybe<void> ConvFilterGradGrad::Apply(const ConvFilterGradGradCaptureState* ctx,
   // grad_grad_w
   if (ctx->grad_requires_grad) {
     const auto& x = ctx->SavedTensors().at(ctx->x_index);
-    const auto& grad = ctx->SavedTensors().at(ctx->grad_index);
-
-    in_grads->at(0) = JUST(functional::ConvFilterGrad(
-        out_grads.at(0), x, num_spatial_dims, ctx->kernel_size, ctx->strides,
-        /**/ ctx->padding_before, /**/ ctx->dilation_rate, ctx->groups, ctx->data_format));
+    const int32_t ndims = ctx->kernel_size.size();
+    const auto Conv = (ndims == 1 ? functional::Conv1d
+                                  : (ndims == 2 ? functional::Conv2d
+                                                : (ndims == 3 ? functional::Conv3d : nullptr)));
+    CHECK_NOTNULL_OR_RETURN(Conv);  // NOLINT(maybe-need-error-msg)
+    in_grads->at(0) =
+        JUST(Conv(x, out_grads.at(0), Optional<Tensor>(), ctx->strides, ctx->padding_before,
+                  ctx->dilation_rate, ctx->groups, ctx->data_format));
   }
 
   return Maybe<void>::Ok();
