@@ -160,7 +160,7 @@ REGISTER_USER_OP_GRAD("fused_cross_feature_interaction")
       } else {
         UNIMPLEMENTED();
       }
-      builder.Output("dx", 0).Output("dw", 0).Output("dx0", 0).Output("dbias", 0);
+      builder.Output("dx").Output("dw").Output("dx0").Output("dbias");
       auto grad_op = builder.Build();
       AddOp(grad_op);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
