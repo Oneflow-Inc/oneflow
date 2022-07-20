@@ -26,9 +26,6 @@ limitations under the License.
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/auto_parallel/algorithm_util.h"
 
-#define ms_1 1e11
-#define us_1 1e8
-#define s_1 1e14
 #define cut_cost 3e38
 
 namespace oneflow {
@@ -38,62 +35,11 @@ template<class SbpSignature>
 class SbpEdge;
 
 template<class SbpSignature>
+class SbpGraph;
+
+template<class SbpSignature>
 class SbpNode {
  public:
-  // Data Structure
-
-  // compound edge in
-  std::vector<SbpEdge<SbpSignature>*> edges_in_;
-  // compound edge out
-  std::vector<SbpEdge<SbpSignature>*> edges_out_;
-  // Identity, use it to distinguish itself from node set
-  int32_t id = -1;
-
-  // Available SbpSignature pointer for this node
-  std::vector<SbpSignature*> sbp_sig_list_;
-  // Available SbpSignature object for this node
-  std::vector<SbpSignature> sbp_sig_obj_list_;
-  // Global SbpSignature List Size
-  int32_t global_sbp_sig_size_ = -1;
-  // Decide to use SbpSignature with this id
-  int32_t final_sbp_sig_id_;
-  // Location in NodeList
-  int32_t node_list_id_ = -1;
-
-  // Child node list
-  std::vector<SbpNode<SbpSignature>*> children_;
-  // SbpSignature for each child node when using specific SbpSignature for this
-  // node Its dimension is Number of Child Nodes * Number of Available
-  // SbpSignatures for this node
-  std::vector<std::vector<int32_t>> child_node_sbp_sig_;
-
-  // Merge two nodes into this compound node
-  std::vector<SbpNode<SbpSignature>*> half_node_;
-  // We should delete those merged-signatures which has very large cost for speed up
-  // New sbp_sig_list_ index map to each half_node_'s sig_index
-  std::vector<std::pair<int32_t, int32_t>> merged_sig_id2children_sig_id_;
-
-  // Cost[sbp] is Computation Cost when using sbp_sig_list_[sbp]
-  std::vector<double> cost_;
-
-  std::vector<BinarySet> parallel_candidates_;
-
-  oneflow::OpNode* op_node_ = nullptr;
-
-  // We devide the sbp graph into multiple layers.
-  // min_layer_ is the minimum layer number to run this op as soon as possible.
-  // max_layer_ is the maximum layer number without slowing down the whole process of the graph.
-  // producer.max_layer_ < this_node.min_layer_ <= this_node.max_layer_ < consumer.min_layer_
-  int32_t min_layer_ = -1, max_layer_ = -1;
-  // Maximum layer in tributaries
-  int32_t tributary_layer_ = -1;
-  // Whether we are on the mainstem
-  bool on_mainstem_ = false;
-  // A counter_ buffer for topological traversal or something else
-  int32_t counter_ = 0;
-  // Accumulate mainstem cost from consumer to the end
-  double acc_mainstem_cost_ = -1.0;
-
   // default constructor
   SbpNode() : final_sbp_sig_id_(0) {}
 
@@ -203,6 +149,65 @@ class SbpNode {
 
   // Assemble copy cost for all the incoming edges
   void InitializeCopyCost(bool compute_cost, bool use_sbp_collector_);
+
+ private:
+  friend class SbpEdge<SbpSignature>;
+  friend class SbpGraph<SbpSignature>;
+  friend class SbpCollector;
+  friend class SbpConstructor;
+
+  // compound edge in
+  std::vector<SbpEdge<SbpSignature>*> edges_in_;
+  // compound edge out
+  std::vector<SbpEdge<SbpSignature>*> edges_out_;
+
+  // Available SbpSignature pointer for this node
+  std::vector<SbpSignature*> sbp_sig_list_;
+  // Available SbpSignature object for this node
+  std::vector<SbpSignature> sbp_sig_obj_list_;
+  // Global SbpSignature List Size
+  int32_t global_sbp_sig_size_ = -1;
+  // Decide to use SbpSignature with this id
+  int32_t final_sbp_sig_id_;
+  // Location in NodeList
+  int32_t node_list_id_ = -1;
+
+  // Child node list
+  std::vector<SbpNode<SbpSignature>*> children_;
+  // SbpSignature for each child node when using specific SbpSignature for this
+  // node Its dimension is Number of Child Nodes * Number of Available
+  // SbpSignatures for this node
+  std::vector<std::vector<int32_t>> child_node_sbp_sig_;
+
+  // Merge two nodes into this compound node
+  std::vector<SbpNode<SbpSignature>*> half_node_;
+  // We should delete those merged-signatures which has very large cost for speed up
+  // New sbp_sig_list_ index map to each half_node_'s sig_index
+  std::vector<std::pair<int32_t, int32_t>> merged_sig_id2children_sig_id_;
+
+  // Cost[sbp] is Computation Cost when using sbp_sig_list_[sbp]
+  std::vector<double> cost_;
+
+  std::vector<BinarySet> parallel_candidates_;
+
+  oneflow::OpNode* op_node_ = nullptr;
+
+  // We devide the sbp graph into multiple layers.
+  // min_layer_ is the minimum layer number to run this op as soon as possible.
+  // max_layer_ is the maximum layer number without slowing down the whole process of the graph.
+  // producer.max_layer_ < this_node.min_layer_ <= this_node.max_layer_ < consumer.min_layer_
+  int32_t min_layer_ = -1, max_layer_ = -1;
+  // Maximum layer in tributaries
+  int32_t tributary_layer_ = -1;
+  // Whether we are on the mainstem
+  bool on_mainstem_ = false;
+  // A counter_ buffer for topological traversal or something else
+  int32_t counter_ = 0;
+  // Accumulate mainstem cost from consumer to the end
+  double acc_mainstem_cost_ = -1.0;
+
+  // Let one node point to another
+  void StartPointToEnd(SbpNode<SbpSignature>* start_node, SbpNode<SbpSignature>* end_node);
 };  // class SbpNode
 
 // function in cpp. Should be put in one file due to use of template
@@ -321,7 +326,8 @@ void SbpNode<SbpSignature>::InitializeSbp() {
 
 // Let one node point to another
 template<class SbpSignature>
-void StartPointToEnd(SbpNode<SbpSignature>* start_node, SbpNode<SbpSignature>* end_node) {
+void SbpNode<SbpSignature>::StartPointToEnd(SbpNode<SbpSignature>* start_node,
+                                            SbpNode<SbpSignature>* end_node) {
   // generate the edge between them
   SbpEdge<SbpSignature>* e = new SbpEdge<SbpSignature>(start_node, end_node);
   start_node->edges_out_.emplace_back(e);

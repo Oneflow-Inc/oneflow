@@ -38,8 +38,6 @@ class SbpGraph {
   // Limitation: Merged node should not have a number of Sbp Signature greater
   // than threshold.
   int32_t Threshold = 100;
-  // The next id that we are going to use for nodes.
-  int32_t NextId = 0;
   // Overlayable wait time for copy cost, which occurs before communication between devices.
   double wait_time;
   // Uncovered wait time for copy cost.
@@ -166,7 +164,6 @@ template<class SbpSignature>
 SbpNode<SbpSignature>* SbpGraph<SbpSignature>::GenerateNode() {
   SbpNode<SbpSignature>* this_node = new SbpNode<SbpSignature>();
   NodeList.emplace_back(this_node);
-  this_node->id = NextId++;
   this_node->node_list_id_ = NodeList.size() - 1;
   return this_node;
 }
@@ -412,8 +409,6 @@ int32_t SbpGraph<SbpSignature>::NodeMerging(SbpNode<SbpSignature>* first,
 
   new_node->node_list_id_ = NodeList.size();
   NodeList.emplace_back(new_node);
-
-  new_node->id = NextId++;
 
   return 1;
 }
