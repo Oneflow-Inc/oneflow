@@ -84,7 +84,7 @@ Maybe<void> ReshapeUserOpUtil::Squeeze(const Shape& origin, Shape* shape,
                                << " : " << origin.DebugStr();
     if (dim == 1) { continue; }
     CHECK_OR_RETURN(squeezed_axis2origin_axis->emplace(dim_vec.size(), axis)
-                        .second);  // NOLINT(maybe-need-error-msg)
+                        .second) <<"emplace error";  // NOLINT(maybe-need-error-msg)
     dim_vec.emplace_back(dim);
   }
   *shape = Shape(dim_vec);
@@ -202,7 +202,7 @@ Maybe<void> ReshapeUserOpUtil::InferNdSbp(user_op::InferNdSbpFnContext* ctx,
     NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex(arg.name(), arg.index());
     JUST(GetInputNdSbp(ctx, arg, in_distribution));
     CHECK_OR_RETURN(ibn2nd_sbp.emplace(GenRepeatedBn(arg.name(), arg.index()), *in_distribution)
-                        .second);  // NOLINT(maybe-need-error-msg)
+                        .second) <<"emplace error";  // NOLINT(maybe-need-error-msg)
   }
   NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
 
