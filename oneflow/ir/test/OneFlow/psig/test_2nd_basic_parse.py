@@ -21,7 +21,7 @@ def _test_nd_basic_parse(test_case):
     class ModuleToRun(flow.nn.Module):
         def __init__(self):
             super().__init__()
-            P0 = flow.placement("cuda", ranks=[[0], [1]])
+            P0 = flow.placement("cpu", ranks=[[0], [1]])
             a0_sbp = (flow.sbp.broadcast, flow.sbp.split(0))
             b0_sbp = (flow.sbp.broadcast, flow.sbp.split(0))
 
