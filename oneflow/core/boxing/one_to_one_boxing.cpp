@@ -31,6 +31,8 @@ Maybe<void> RawCheckNaiveOneToOne(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> ou
   CHECK_EQ_OR_RETURN(out->placement()->parallel_num(), 1);
   CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
   CHECK_OR_RETURN(in->placement() != out->placement());
+  CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kCPU
+                  || in->placement()->device_type() == DeviceType::kCUDA);
   return Maybe<void>::Ok();
 }
 // NOLINTEND(maybe-need-error-msg)
@@ -65,9 +67,9 @@ Maybe<one::Tensor> NaiveOneToOne(const std::shared_ptr<one::Tensor>& tensor, Sym
                                                 JUST(local_tensor->device()), NullOpt));
     }
   }
-  return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(),
-                                                 *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
-                                                 tensor->dtype()));
+  return JUST(one::functional::LocalToGlobal(local_tensor, out->placement(),
+                                             *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
+                                             tensor->dtype(), /* sync_data */ false));
 }
 
 COMMAND(RegisterBoxingFunction("naive-1-to-1", CheckNaiveOneToOne, &NaiveOneToOne));

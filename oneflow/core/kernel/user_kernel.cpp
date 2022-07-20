@@ -774,11 +774,11 @@ void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) co
 }
 
 std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
-    const std::shared_ptr<user_op::OpKernelState>& old_opkernel_state, DeviceCtx* device_ctx,
+    const std::shared_ptr<user_op::OpKernelState>& old_opkernel_state, ep::Stream* stream,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   std::shared_ptr<user_op::OpKernelState> new_opkernel_state;
-  CHECK_NOTNULL(device_ctx);
-  UserKernelInitAndCacheContext init_and_cache_ctx(device_ctx->stream(), kernel_conf());
+  CHECK_NOTNULL(stream);
+  UserKernelInitAndCacheContext init_and_cache_ctx(stream, kernel_conf());
   if (old_opkernel_state) {
     new_opkernel_state = old_opkernel_state;
   } else {
@@ -793,7 +793,7 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   }
 
   // TODO(lixinqi): refactor to a lightweight KernelComputeContext
-  UserKernelComputeContext compute_ctx(device_ctx->stream(), kernel_conf());
+  UserKernelComputeContext compute_ctx(stream, kernel_conf());
   compute_ctx.UpdateTensorWithCorrBlob(BnInOp2Blob);
   kernel_->Compute(&compute_ctx, new_opkernel_state.get(), cache_.get());
   return new_opkernel_state;

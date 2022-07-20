@@ -1019,9 +1019,9 @@ class Arange2Functor {
   }
 };
 
-class ConsistentArangeFunctor {
+class GlobalArangeFunctor {
  public:
-  ConsistentArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
+  GlobalArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
@@ -1071,13 +1071,13 @@ class ConsistentArangeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ConsistentArange2Functor {
+class GlobalArange2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& limit, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    return ConsistentArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
+    return GlobalArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
   }
 };
 
@@ -1426,7 +1426,8 @@ class NormFunctor {
   NormFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& ord,
                            const Optional<std::vector<int32_t>>& input_dim, const bool& keepdim,
-                           const Optional<Symbol<DType>>& dtype) const {
+                           const Optional<Symbol<DType>>& dtype, const bool& for_norm) const {
+    // If for_norm, the functor will be used to oneflow.norm.
     std::shared_ptr<one::Tensor> res;
     if (dtype) {
       Symbol<DType> dtype_val = JUST(dtype);
@@ -1444,8 +1445,9 @@ class NormFunctor {
       }
     }
     Scalar ord_sca;
+    bool ord_type = false;
     if (ord.has_value()) {
-      auto ord_type = (*JUST(ord)).IsIntegral();
+      ord_type = (*JUST(ord)).IsIntegral();
       if (ord_type) {
         ord_sca = Scalar((*JUST(ord)).As<double>());
       } else {
@@ -1475,6 +1477,17 @@ class NormFunctor {
       if (ord.has_value()) {
         CHECK_OR_RETURN(x->ndim() <= 2)
             << "linalg.norm(): input must be 1-D or 2-D when dim is None and ord is not None";
+        if (ord_type) {
+          const double ord_double = (*JUST(ord)).As<double>();
+          if (for_norm && (ord_double >= 2 || ord_double <= -2)) {
+            const int32_t num_axes = x->shape()->NumAxes();
+            std::vector<int32_t> axes_vec(num_axes);
+            std::iota(axes_vec.begin(), axes_vec.end(), 0);
+            return ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord_sca, false)), axes_vec,
+                                            /*keepdims=*/false)),
+                             1 / ord_double, false);
+          }
+        }
         if (x->ndim() == 1) {
           res = JUST(VectorNorm(x, ord_sca, input_dim, keepdim, dtype));
         } else {
@@ -1545,7 +1558,7 @@ class ScalarNormFunctor {
     }
     if (input_dim.IsIntegral()) {
       std::vector<int32_t> dim(1, input_dim.As<int>());
-      return functional::Norm(x, ord, dim, keepdim, dtype);
+      return functional::Norm(x, ord, dim, keepdim, dtype, /*for_norm=*/false);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "linalg_norm(): only supports int dim.";
     }
@@ -2263,6 +2276,25 @@ class ErfinvInplaceFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class GeluWithApproximateFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::string& approximate) const {
+    if (approximate == "tanh") {
+      return JUST(
+          Mul(JUST(ScalarAdd(JUST(Tanh(JUST(ScalarMul(
+                                 JUST(Add(x,
+                                          JUST(ScalarMul(JUST(ScalarPow(x, Scalar(3.0), false)),
+                                                         Scalar(0.044715), false)),
+                                          1.0, false)),
+                                 Scalar(sqrt(2.0 / M_PI)), false)))),
+                             Scalar(1.0), 1.0, false)),
+              JUST(ScalarMul(x, 0.5, false))));
+    }
+    return Gelu(x);
+  }
+};
+
 class CumBaseFunctor {
  public:
   explicit CumBaseFunctor(std::string op_name) {
@@ -2944,7 +2976,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<Transpose2dimFunctor>("Swapaxes");
   m.add_functor<Transpose2dimFunctor>("Swapdims");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
-  m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
+  m.add_functor<GlobalArangeFunctor, GlobalArange2Functor>("GlobalArange");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampInplaceFunctor>("ClampInplace");
@@ -2993,6 +3025,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CumProdFunctor>("Cumprod");
   m.add_functor<CumProdGradFunctor>("CumprodGrad");
   m.add_functor<EinSumFunctor>("EinSum");
+  m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
 };
 
 }  // namespace functional

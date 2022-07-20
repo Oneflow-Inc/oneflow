@@ -59,13 +59,13 @@ Maybe<Scope> MakeScope(const JobConfigProto& config_proto, const Device& device)
 }
 
 Maybe<Scope> MakeInitialScope(const JobConfigProto& job_conf, Symbol<ParallelDesc> placement,
-                              bool is_mirrored) {
+                              bool is_local) {
   std::shared_ptr<Scope> scope;
   JUST(PhysicalRun([&scope, &job_conf, placement,
-                    is_mirrored](InstructionsBuilder* builder) -> Maybe<void> {
+                    is_local](InstructionsBuilder* builder) -> Maybe<void> {
     int64_t session_id = JUST(GetDefaultSessionId());
     scope =
-        JUST(builder->BuildInitialScopeWithPlacement(session_id, job_conf, placement, is_mirrored));
+        JUST(builder->BuildInitialScopeWithPlacement(session_id, job_conf, placement, is_local));
     return Maybe<void>::Ok();
   }));
   return scope;

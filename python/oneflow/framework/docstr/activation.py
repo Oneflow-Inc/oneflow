@@ -75,10 +75,23 @@ add_docstr(
     r"""
     gelu(x: Tensor) -> Tensor 
 
-    The equation is:
+    Applies the Gaussian Error Linear Units function:
 
-    .. math::
-         out = 0.5 * x * (1 + tanh(\sqrt{\frac{2}{\pi}} * (x + 0.044715x^{3})))
+    .. math:: \\text{GELU}(x) = x * \Phi(x)
+
+    where :math:`\Phi(x)` is the Cumulative Distribution Function for Gaussian Distribution.
+
+    When the approximate argument is 'tanh', Gelu is estimated with:
+
+    .. math:: \\text{GELU}(x) = 0.5 * x * (1 + \\text{Tanh}(\sqrt(2 / \pi) * (x + 0.044715 * x^3)))
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+        approximate (string, optional): the gelu approximation algorithm to use:
+            ``'none'`` | ``'tanh'``. Default: ``'none'``
+
+    Returns:
+        oneflow.Tensor: A Tensor has same shape as the input.
     
     For example:
 
@@ -397,7 +410,11 @@ add_docstr(
     """
     selu(x: Tensor) -> Tensor
 
-    Applies element-wise function :math:`\text{SELU}(x) = scale * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))`, with :math:`\alpha=1.6732632423543772848170429916717` and  :math:`scale=1.0507009873554804934193349852946`.
+    Applies element-wise function
+
+    .. math::
+
+        \text{SELU}(x) = scale * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))`, with :math:`\alpha=1.6732632423543772848170429916717` and  :math:`scale=1.0507009873554804934193349852946`.
 
     See :class:`~oneflow.nn.SELU` for more details.
 

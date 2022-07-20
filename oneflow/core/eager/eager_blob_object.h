@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/op_args_reserved_size.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/memory/memory_allocator.h"
@@ -132,7 +133,7 @@ class EagerBlobObject final : public user_op::Tensor,
                "possible. Almost all methods of `Blob` are also in `EagerBlobObject`.")]] Blob*
   blob();
 
-  Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx);
+  Maybe<void> TryAllocateBlobBodyMemory(vm::Allocator* allocator);
   Maybe<void> DeallocateBlobDataPtr() {
     tensor_storage_->Release();
     tensor_storage_.reset(new TensorStorage);
@@ -148,10 +149,6 @@ class EagerBlobObject final : public user_op::Tensor,
   }
 
   std::shared_ptr<TensorStorage>& tensor_storage() { return tensor_storage_; }
-
-  bool is_shape_synced() const { return is_shape_synced_; }
-
-  void set_is_shape_synced(bool val) { is_shape_synced_ = val; }
 
   const Optional<Symbol<::oneflow::Stream>>& producer_stream() const {
     return tensor_storage_->producer_stream();
@@ -192,6 +189,8 @@ class EagerBlobObject final : public user_op::Tensor,
     }
   }
 
+  void TryInitNonPODTypeEagerBlobObjectIfNeed();
+
  private:
   void InitMemPtrForAllocationComputationPipelining() {
     auto* ptr = tensor_storage_->blob_dptr();
@@ -212,7 +211,7 @@ class EagerBlobObject final : public user_op::Tensor,
   // are kept even after tensor_storage_.reset().
   char* mem_ptr_for_allocation_compuation_pipelining_;
   bool inited_mem_ptr_for_allocation_compuation_pipelining_;
-  std::atomic<bool> is_shape_synced_;
+  bool is_non_pod_object_placement_newed_;
   bool pin_memory_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
 
@@ -221,7 +220,11 @@ class EagerBlobObject final : public user_op::Tensor,
   std::unique_ptr<Blob> blob_;
 };
 
+using EagerBlobObjectList = small_vector<std::shared_ptr<vm::EagerBlobObject>, kOpArgsReservedSize>;
+using EagerBlobObjectListPtr = std::shared_ptr<const EagerBlobObjectList>;
+
 }  // namespace vm
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_EAGER_BLOB_OBJECT_H_

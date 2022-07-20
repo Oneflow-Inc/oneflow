@@ -185,6 +185,9 @@ add_docstr(
 
     The shape of the tensor is defined by the variable argument ``size``.
 
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.randint.html.
+
     Args:
         low (int, optional):  Lowest integer to be drawn from the distribution. Default: 0.
         high (int):  One above the highest integer to be drawn from the distribution.
@@ -192,13 +195,13 @@ add_docstr(
           Can be a variable number of arguments or a collection like a list or tuple or oneflow.Size.
 
     Keyword args:
-        dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.int64``.
-        generator (flow.Generator, optional) – a pseudorandom number generator for sampling
-        device (flow.device, optional): The desired device of returned local tensor. If None, uses the
+        dtype (oneflow.dtype, optional): The desired data type of returned tensor. Default: ``flow.int64``.
+        generator (oneflow.Generator, optional) – a pseudorandom number generator for sampling
+        device (oneflow.device, optional): The desired device of returned local tensor. If None, uses the
           current device.
-        placement (flow.placement, optional): The desired device of returned global tensor. If None, will
+        placement (oneflow.placement, optional): The desired device of returned global tensor. If None, will
           construct local tensor.
-        sbp (flow.sbp, optional): The desired sbp of returned global tensor. It must be equal with the
+        sbp (oneflow.sbp, optional): The desired sbp of returned global tensor. It must be equal with the
           numbers of placement.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
@@ -218,6 +221,55 @@ add_docstr(
         False
         >>> placement = flow.placement("cpu", ranks=[0])
         >>> y = flow.randint(0, 5, (3,3), generator=generator, placement=placement, sbp=flow.sbp.broadcast) # construct global tensor
+        >>> y.is_global
+        True
+
+    """,
+)
+
+add_docstr(
+    oneflow._C.randint_like,
+    """
+    randint_like(input, low=0, high, size, *, dtype=None, generator=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
+
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.randint_like.html.
+
+    Returns a tensor filled with random integers generated uniformly between low (inclusive) and high (exclusive).
+
+    Args:
+        input (oneflow.Tensor): the size of ``input`` will determine size of the output tensor.
+        low (int, optional):  Lowest integer to be drawn from the distribution. Default: 0.
+        high (int):  One above the highest integer to be drawn from the distribution.
+
+
+    Keyword args:
+        dtype (oneflow.dtype, optional): The desired data type of returned tensor. Default: ``flow.int64``.
+        generator (oneflow.Generator, optional) – a pseudorandom number generator for sampling
+        device (oneflow.device, optional): The desired device of returned local tensor. If None, uses the
+          current device.
+        placement (oneflow.placement, optional): The desired device of returned global tensor. If None, will
+          construct local tensor.
+        sbp (oneflow.sbp, optional): The desired sbp of returned global tensor. It must be equal with the
+          numbers of placement.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> generator = flow.Generator()
+        >>> generator.manual_seed(0)
+        >>> x = flow.randn(2, 2, generator=generator)
+        >>> y = flow.randint_like(x, 0, 5, generator=generator) # construct local tensor
+        >>> y
+        tensor([[3, 4],
+                [2, 4]], dtype=oneflow.int64)
+        >>> y.is_global
+        False
+        >>> placement = flow.placement("cpu", ranks=[0])
+        >>> y = flow.randint_like(x, 0, 5, generator=generator, placement=placement, sbp=flow.sbp.broadcast) # construct global tensor
         >>> y.is_global
         True
 

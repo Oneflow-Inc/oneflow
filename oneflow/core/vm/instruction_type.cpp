@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/instruction_type.h"
+#include "oneflow/core/vm/phy_instr_operand.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/common/util.h"
@@ -22,13 +23,13 @@ namespace oneflow {
 namespace vm {
 
 void InstructionType::InitInstructionStatus(Instruction* instruction) const {
-  instruction->stream_type().InitInstructionStatus(instruction->stream(),
-                                                   instruction->mut_status_buffer());
+  instruction->stream_policy().InitInstructionStatus(instruction->stream(),
+                                                     instruction->mut_status_buffer());
 }
 
 void InstructionType::DeleteInstructionStatus(Instruction* instruction) const {
-  instruction->stream_type().DeleteInstructionStatus(instruction->stream(),
-                                                     instruction->mut_status_buffer());
+  instruction->stream_policy().DeleteInstructionStatus(instruction->stream(),
+                                                       instruction->mut_status_buffer());
 }
 
 namespace {

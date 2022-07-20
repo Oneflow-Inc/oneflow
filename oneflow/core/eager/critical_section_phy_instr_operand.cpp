@@ -27,20 +27,20 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void CriticalSectionBeginPhyInstrOperand::ForEachMirroredObject(
-    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
+void CriticalSectionBeginPhyInstrOperand::ForEachDependence(
+    const std::function<void(vm::Dependence* compute)>& DoEach) const {
   for (const auto& eager_blob_object : *eager_blob_objects_) {
     DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
   }
 }
 
-void CriticalSectionEndPhyInstrOperand::ForEachMirroredObject(
-    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
+void CriticalSectionEndPhyInstrOperand::ForEachDependence(
+    const std::function<void(vm::Dependence* compute)>& DoEach) const {
   DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object()));
 }
 
-void CriticalSectionBeginPhyInstrOperand::ForEachMutMirroredObject(
-    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
+void CriticalSectionBeginPhyInstrOperand::ForEachMutDependence(
+    const std::function<void(vm::Dependence* compute)>& DoEach) const {
   DoEach(vm_stream_->schedule_local_dep_object().get());
 }
 
@@ -108,8 +108,8 @@ void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_b
   }
 }
 
-void CriticalSectionEndPhyInstrOperand::ForEachMutMirroredObject(
-    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
+void CriticalSectionEndPhyInstrOperand::ForEachMutDependence(
+    const std::function<void(vm::Dependence* compute)>& DoEach) const {
   DoEach(vm_stream_->schedule_local_dep_object().get());
 }
 
