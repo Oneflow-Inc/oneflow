@@ -19,30 +19,28 @@ limitations under the License.
 #include <string>
 #include <typeindex>
 #include <glog/logging.h>
-#include "oneflow/core/vm/stream_desc.h"
-#include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
+#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
+
+class Device;
 
 namespace vm {
 
 class Stream;
-struct InstructionStatusBuffer;
+class InstructionStatusBuffer;
 class Instruction;
-class InstructionMsg;
 class InstructionType;
 
 class StreamType {
  public:
   virtual ~StreamType() = default;
 
-  void Run(Instruction* instruction) const { Compute(instruction); }
-
-  virtual const char* stream_tag() const = 0;
-
-  virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const = 0;
+  virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
+                             Symbol<Device> device) const = 0;
 
   virtual void InitInstructionStatus(const Stream& stream,
                                      InstructionStatusBuffer* status_buffer) const = 0;
@@ -50,14 +48,10 @@ class StreamType {
                                        InstructionStatusBuffer* status_buffer) const = 0;
   virtual bool QueryInstructionStatusDone(const Stream& stream,
                                           const InstructionStatusBuffer& status_buffer) const = 0;
-  virtual void Compute(Instruction* instruction) const = 0;
+  virtual void Run(Instruction* instruction) const = 0;
 
-  virtual intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                                           int64_t this_machine_id) const = 0;
-
-  virtual bool OnSchedulerThread() const = 0;
+  virtual bool OnSchedulerThread(StreamRole stream_role) const;
   virtual bool SupportingTransportInstructions() const = 0;
-  virtual bool IsControlStreamType() const { return false; }
 
  protected:
   StreamType() = default;

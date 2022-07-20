@@ -26,7 +26,7 @@ limitations under the License.
 #include "oneflow/api/common/job_build_and_infer_ctx.h"
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
 #include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/shape.h"
@@ -127,6 +127,9 @@ class Graph::GraphImpl final {
   std::vector<Tensor> Forward(const std::vector<Tensor>& inputs);
   void set_batch_size(int batch_size) { batch_size_ = batch_size; }
 
+  of::Maybe<void> RegisterJobPass(
+      const std::function<std::string(const std::string& job)>& pass_fn);
+
  private:
   of::Maybe<void> CollectInputOutputInfos();
   of::Maybe<void> Compile(const std::vector<Tensor>& inputs);
@@ -135,6 +138,7 @@ class Graph::GraphImpl final {
   of::Maybe<void> BuildGraph();
   of::Maybe<void> LoadCheckpoint();
   of::Maybe<void> RegisterTensors(const std::vector<Tensor>& inputs);
+  of::Maybe<of::Job> ApplyJobPasses(const of::Job& job);
 
   std::shared_ptr<of::NNGraph> graph_ = nullptr;
   std::string model_path_;
@@ -149,6 +153,7 @@ class Graph::GraphImpl final {
   of::HashMap<std::string, std::shared_ptr<of::one::Tensor>> variable_op_name_to_tensor_;
   std::shared_ptr<of::one::TensorTuple> output_tensor_tuple_;
   std::shared_ptr<of::one::TensorTuple> parameter_tensor_tuple_;
+  std::vector<std::function<std::string(const std::string&)>> registered_job_passes_;
 };
 
 Graph::Graph(const std::string& model_path, const Device& device)
@@ -167,6 +172,10 @@ Graph& Graph::operator=(Graph&& graph) noexcept {
 InputOutputInfos Graph::GetInputInfos() { return graph_->GetInputInfos(); }
 
 InputOutputInfos Graph::GetOutputInfos() { return graph_->GetOutputInfos(); }
+
+void Graph::RegisterJobPass(const std::function<std::string(const std::string& job)>& pass_fn) {
+  CHECK_JUST(graph_->RegisterJobPass(pass_fn));
+}
 
 IValue Graph::Forward(const IValue& inputs) {
   std::vector<Tensor> input_tensors;
@@ -234,6 +243,28 @@ of::Maybe<void> Graph::GraphImpl::CollectInputOutputInfos() {
   return of::Maybe<void>::Ok();
 }
 
+of::Maybe<void> Graph::GraphImpl::RegisterJobPass(
+    const std::function<std::string(const std::string& job)>& pass_fn) {
+  if (is_compiled_) {
+    return of::Error::RuntimeError() << "job pass should be registered before compile and forward";
+  }
+  registered_job_passes_.emplace_back(pass_fn);
+  return of::Maybe<void>::Ok();
+}
+
+of::Maybe<of::Job> Graph::GraphImpl::ApplyJobPasses(const of::Job& job) {
+  auto current_job = std::make_shared<of::Job>(job);
+  for (const auto& pass_fn : registered_job_passes_) {
+    std::string new_serialized_job = pass_fn(current_job->SerializeAsString());
+    of::Job new_job;
+    if (!new_job.ParseFromString(new_serialized_job)) {
+      return of::Error::RuntimeError() << "invalid serialized job after pass applied";
+    }
+    current_job->Swap(&new_job);
+  }
+  return current_job;
+}
+
 std::vector<Tensor> Graph::GraphImpl::Forward(const std::vector<Tensor>& inputs) {
   if (!is_compiled_) {
     static std::mutex mtx;
@@ -275,7 +306,7 @@ of::Maybe<void> Graph::GraphImpl::AddOp(of::OperatorConf op_conf) {
         0, batch_size_);
   }
   auto* ctx = JUST(of::GetCurInferCtx());
-  JUST(ctx->AddAndInferConsistentOp(op_conf));
+  JUST(ctx->AddAndInferGlobalOp(op_conf));
   return of::Maybe<void>::Ok();
 }
 
@@ -299,11 +330,14 @@ of::Maybe<void> Graph::GraphImpl::BuildGraph() {
   }
   JUST(LoadCheckpoint());
   JUST(of::CurJobBuildAndInferCtx_Complete());
-  const std::shared_ptr<of::Job> complete_job = JUST(of::GetCurrentJob());
+  std::shared_ptr<of::Job> complete_job = JUST(of::GetCurrentJob());
   int64_t job_id = JUST(of::JobBuildAndInferCtx_GetCurrentJobId());
-  CHECK(of::Global<OneFlowEnv>::Get() != nullptr);
+  CHECK(of::Singleton<OneFlowEnv>::Get() != nullptr);
+
+  // apply custom job passes
+  complete_job = JUST(ApplyJobPasses(*complete_job));
   graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name(), *complete_job, job_id,
-                                         of::Global<OneFlowEnv>::Get()->GetSessionCtx());
+                                         of::Singleton<OneFlowEnv>::Get()->GetSessionCtx());
   {
     const of::OpGraph complete_graph(*complete_job);
     complete_graph.TopoForEachNode([&](const of::OpNode* node) -> of::Maybe<void> {

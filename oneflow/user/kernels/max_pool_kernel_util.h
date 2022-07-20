@@ -41,7 +41,7 @@ namespace oneflow {
 
 #define POOL_DATA_TYPE_CUDA_SEQ POOL_DATA_TYPE_SEQ
 
-typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
+typedef small_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
 
 template<typename T>
 struct DeviceAdd {

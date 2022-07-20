@@ -68,6 +68,13 @@ class TestConstantModule(flow.unittest.TestCase):
         y = torch.zeros_like(x)
         return y
 
+    @autotest(auto_backward=True, check_graph=True)
+    def test_flow_zeros_like_list_with_random_data_and_requires_grad(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        y = torch.zeros_like(x, requires_grad=True)
+        return y
+
     @autotest(auto_backward=False, check_graph=True)
     def test_flow_zeros_like_list_with_0dim_data(test_case):
         device = random_device()
@@ -80,6 +87,13 @@ class TestConstantModule(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         y = torch.ones_like(x)
+        return y
+
+    @autotest(auto_backward=True, check_graph=True)
+    def test_flow_ones_like_list_with_random_data_and_requires_grad(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        y = torch.ones_like(x, requires_grad=True)
         return y
 
     @autotest(auto_backward=False, check_graph=True)
@@ -134,6 +148,13 @@ class TestConstantModule(flow.unittest.TestCase):
         device = random_device()
         shape = random_tensor(low=1, high=6, requires_grad=False).pytorch.shape
         y = torch.full(shape, 2.0, requires_grad=True)
+        return y
+
+    @autotest(n=10, auto_backward=True)
+    def test_full_like_with_random_data_float(test_case):
+        device = random_device()
+        x = random_tensor(low=1, high=6, requires_grad=False).to(device)
+        y = torch.full_like(x, 2.0, requires_grad=True)
         return y
 
     def test_cast(test_case):

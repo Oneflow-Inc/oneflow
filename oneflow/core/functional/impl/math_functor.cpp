@@ -119,9 +119,16 @@ class ScalarMathBaseFunctor {
     if (inplace) {
       JUST(CheckInplaceCastValid(x, casted_vec[0]));
       JUST(CheckInplaceValid(x));
+
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      (*outputs)[0] = x;
+      // TODO:(zhaoluyang)
+      // If the op need inplace operaton, and input tensor is non-contiguous,
+      // the interpreter will do input->contiguous() operaton for geting the correct result,
+      // therefore, output tensor and input will not inplaced. When scalar_math op/kernel
+      // support strided tensor as input, the problem above will be solved!
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(),
+                                  OpExprInterpContext(attrs, /*inplace=*/true)));
       return outputs->at(0);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
@@ -372,12 +379,7 @@ class Max2Functor {
                                 const bool& keepdims) const {
     auto outputs = std::make_shared<TensorTuple>(2);
     int32_t axis = dim;
-    if (axis < -x->ndim() || axis >= x->ndim()) {
-      return Error::IndexError() << "Dimension out of range (expected to be in range of ["
-                                 << -x->ndim() << ", " << x->ndim() - 1 << "], but got " << axis
-                                 << ")";
-    }
-    if (axis < 0) { axis += x->ndim(); }
+    axis = JUST(maybe_wrap_dim(axis, x->ndim()));
     (*outputs)[0] = JUST(ReduceMax(x, {axis}, keepdims));
     (*outputs)[1] = JUST(ArgMax(x, dim, keepdims, NullOpt));
     return outputs;
@@ -399,12 +401,7 @@ class Min2Functor {
                                 const bool& keepdims) const {
     auto outputs = std::make_shared<TensorTuple>(2);
     int32_t axis = dim;
-    if (axis < -x->ndim() || axis >= x->ndim()) {
-      return Error::IndexError() << "Dimension out of range (expected to be in range of ["
-                                 << -x->ndim() << ", " << x->ndim() - 1 << "], but got " << axis
-                                 << ")";
-    }
-    if (axis < 0) { axis += x->ndim(); }
+    axis = JUST(maybe_wrap_dim(axis, x->ndim()));
     (*outputs)[0] = JUST(ReduceMin(x, {axis}, keepdims));
     (*outputs)[1] = JUST(ArgMin(x, dim, keepdims, NullOpt));
     return outputs;
@@ -419,13 +416,7 @@ class AminFunctor {
 
     const int32_t ndim = x->ndim();
     std::vector<int32_t>& dims = *JUST(dim);
-    for (int i = 0; i < dims.size(); i++) {
-      if (dims[i] < -ndim || dims[i] >= ndim) {
-        return Error::IndexError() << "Dimension out of range (expected to be in range of ["
-                                   << -ndim << ", " << ndim - 1 << "], but got " << dims[i] << ")";
-      }
-      if (dims[i] < 0) { dims[i] += ndim; }
-    }
+    for (int i = 0; i < dims.size(); i++) { dims[i] = JUST(maybe_wrap_dim(dims[i], ndim)); }
     return ReduceMin(x, dims, keepdim);
   }
 };
@@ -438,13 +429,7 @@ class AmaxFunctor {
 
     const int32_t ndim = x->ndim();
     std::vector<int32_t>& dims = *JUST(dim);
-    for (int i = 0; i < dims.size(); i++) {
-      if (dims[i] < -ndim || dims[i] >= ndim) {
-        return Error::IndexError() << "Dimension out of range (expected to be in range of ["
-                                   << -ndim << ", " << ndim - 1 << "], but got " << dims[i] << ")";
-      }
-      if (dims[i] < 0) { dims[i] += ndim; }
-    }
+    for (int i = 0; i < dims.size(); i++) { dims[i] = JUST(maybe_wrap_dim(dims[i], ndim)); }
     return ReduceMax(x, dims, keepdim);
   }
 };
@@ -458,6 +443,7 @@ class ReduceSumWholeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     MutableAttrMap attrs;
     const int32_t naxis = x->ndim();
+    if (naxis == 0) { return x; }  // for 0-dim Tensor
     std::vector<int32_t> axis(naxis);
     std::iota(axis.begin(), axis.end(), 0);
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
@@ -819,18 +805,14 @@ class MedianWithIndicesFunctor {
                                 const bool& keepdim) const {
     MutableAttrMap attrs;
     int32_t axis = dim;
-    if (axis < -x->ndim() || axis >= x->ndim()) {
-      return Error::IndexError() << "Dimension out of range (expected to be in range of ["
-                                 << -x->ndim() << ", " << x->ndim() - 1 << "], but got " << axis
-                                 << ")";
-    }
-    if (axis < 0) { axis += x->ndim(); }
+    const int64_t ndim = x->ndim();
+    axis = JUST(maybe_wrap_dim(axis, ndim));
     std::shared_ptr<one::Tensor> tensor = x;
     if (x->dim(axis) == 0) {
       return Error::IndexError() << "IndexError: Expected reduction dim " << axis
                                  << " to have non-zero size.";
     }
-    if (axis != x->ndim() - 1) {
+    if (axis != ndim - 1) {
       tensor = JUST(functional::Squeeze(
           JUST(functional::Transpose2dim(JUST(functional::Unsqueeze(x, -1)), axis, -1)),
           std::vector<int32_t>({axis})));
@@ -897,10 +879,7 @@ class TransposeFunctor {
     // so copy it to local var and do modification.
     auto positive_perm = permute;
     for (auto i = 0; i < positive_perm.size(); i++) {
-      if (positive_perm[i] < 0) { positive_perm[i] += ndim; }
-      CHECK_OR_RETURN(positive_perm[i] >= 0 && positive_perm[i] < ndim)
-          << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
-          << "," << ndim << " ) but got " << positive_perm[i] << ")";
+      positive_perm[i] = JUST(maybe_wrap_dim(positive_perm[i], ndim));
     }
     // currently, view only support eager and local mode
     if (view::IsViewApplicable(input)) { return JUST(view::Transpose(input, positive_perm)); }
@@ -926,15 +905,8 @@ class Transpose2dimFunctor {
     int32_t dim_0 = dim0;
     int32_t dim_1 = dim1;
 
-    if (dim0 < 0) { dim_0 += ndim; }
-    if (dim1 < 0) { dim_1 += ndim; }
-
-    CHECK_OR_RETURN(dim_0 >= 0 && dim0 < ndim)
-        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
-        << ", " << ndim - 1 << "], but got " << dim_0 << ")";
-    CHECK_OR_RETURN(dim_1 >= 0 && dim1 < ndim)
-        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
-        << ", " << ndim - 1 << "], but got " << dim_1 << ")";
+    dim_0 = JUST(maybe_wrap_dim(dim_0, ndim));
+    dim_1 = JUST(maybe_wrap_dim(dim_1, ndim));
     for (int32_t i = 0; i < ndim; ++i) { permute.emplace_back(i); }
     std::swap(permute[dim_0], permute[dim_1]);
     Shape shape(DimVector(permute.begin(), permute.end()));
@@ -1047,9 +1019,9 @@ class Arange2Functor {
   }
 };
 
-class ConsistentArangeFunctor {
+class GlobalArangeFunctor {
  public:
-  ConsistentArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
+  GlobalArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
@@ -1099,13 +1071,13 @@ class ConsistentArangeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ConsistentArange2Functor {
+class GlobalArange2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& limit, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    return ConsistentArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
+    return GlobalArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
   }
 };
 
@@ -1117,13 +1089,8 @@ class CastFunctor {
     if (x->dtype() == dtype) { return x; }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    if (x->is_local()) {
-      bool cast_pin_memory = JUST(x->device())->type() == "cuda" ? false : pin_memory;
-      return OpInterpUtil::Dispatch<Tensor>(
-          *op_, {x}, OpExprInterpContext(attrs, JUST(x->device()), /*pin_memory=*/cast_pin_memory));
-    } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-    }
+    JUST(attrs.SetAttr<bool>("pin_memory", pin_memory));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1459,7 +1426,8 @@ class NormFunctor {
   NormFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& ord,
                            const Optional<std::vector<int32_t>>& input_dim, const bool& keepdim,
-                           const Optional<Symbol<DType>>& dtype) const {
+                           const Optional<Symbol<DType>>& dtype, const bool& for_norm) const {
+    // If for_norm, the functor will be used to oneflow.norm.
     std::shared_ptr<one::Tensor> res;
     if (dtype) {
       Symbol<DType> dtype_val = JUST(dtype);
@@ -1477,8 +1445,9 @@ class NormFunctor {
       }
     }
     Scalar ord_sca;
+    bool ord_type = false;
     if (ord.has_value()) {
-      auto ord_type = (*JUST(ord)).IsIntegral();
+      ord_type = (*JUST(ord)).IsIntegral();
       if (ord_type) {
         ord_sca = Scalar((*JUST(ord)).As<double>());
       } else {
@@ -1508,6 +1477,17 @@ class NormFunctor {
       if (ord.has_value()) {
         CHECK_OR_RETURN(x->ndim() <= 2)
             << "linalg.norm(): input must be 1-D or 2-D when dim is None and ord is not None";
+        if (ord_type) {
+          const double ord_double = (*JUST(ord)).As<double>();
+          if (for_norm && (ord_double >= 2 || ord_double <= -2)) {
+            const int32_t num_axes = x->shape()->NumAxes();
+            std::vector<int32_t> axes_vec(num_axes);
+            std::iota(axes_vec.begin(), axes_vec.end(), 0);
+            return ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord_sca, false)), axes_vec,
+                                            /*keepdims=*/false)),
+                             1 / ord_double, false);
+          }
+        }
         if (x->ndim() == 1) {
           res = JUST(VectorNorm(x, ord_sca, input_dim, keepdim, dtype));
         } else {
@@ -1578,7 +1558,7 @@ class ScalarNormFunctor {
     }
     if (input_dim.IsIntegral()) {
       std::vector<int32_t> dim(1, input_dim.As<int>());
-      return functional::Norm(x, ord, dim, keepdim, dtype);
+      return functional::Norm(x, ord, dim, keepdim, dtype, /*for_norm=*/false);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "linalg_norm(): only supports int dim.";
     }
@@ -1681,10 +1661,7 @@ class SelectFunctor {
                            const int32_t& index) const {
     int32_t ndim = input->ndim();
     CHECK_OR_RETURN(ndim > 0) << "select() cannot be applied to a 0-dim tensor.";
-    CHECK_OR_RETURN((dim >= -ndim) && (dim < ndim))
-        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
-        << "," << ndim - 1 << "], but got " << dim << ")";
-    int32_t pos_dim = dim >= 0 ? dim : dim + ndim;
+    int32_t pos_dim = JUST(maybe_wrap_dim(dim, ndim));
     auto size = input->dim(pos_dim);
     CHECK_OR_RETURN((index >= -size) && (index < size))
         << "Index out of range (expected to be in range of [" << -size << "," << size - 1
@@ -1692,7 +1669,7 @@ class SelectFunctor {
     int32_t pos_index = index >= 0 ? index : index + size;
 
     std::vector<int32_t> sizes(input->shape()->dim_vec().begin(), input->shape()->dim_vec().end());
-    const auto& stride = JUST(input->stride())->StrideVec();
+    const auto& stride = *JUST(input->stride());
     std::vector<int32_t> strides(stride.begin(), stride.end());
     auto storage_offset = JUST(input->storage_offset()) + pos_index * strides[pos_dim];
 
@@ -1952,7 +1929,12 @@ class StandardDeviationFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<std::vector<int32_t>>& dim,
                            const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
-    std::vector<int32_t> axis = *JUST(CheckAxis(*JUST(dim), input->ndim()));
+    std::vector<int32_t> axis;
+    if (!dim) {
+      for (int i = 0; i < input->ndim(); i++) { axis.emplace_back(i); }
+    } else {
+      axis = *JUST(CheckAxis(*JUST(dim), input->ndim()));
+    }
     bool unbias = true;
     bool keepdims = false;
     if (unbiased.has_value()) { unbias = JUST(unbiased); }
@@ -2043,9 +2025,7 @@ class VarianceFunctor {
       for (int i = 0; i < ndim; i++) { axis.emplace_back(i); }
     } else {
       std::vector<int32_t>& dims = *JUST(dim);
-      CHECK_GE_OR_RETURN(ndim, dims.size())
-          << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
-          << ", " << ndim - 1 << "], but got " << dims.size() << ")";
+      JUST(maybe_wrap_dim(dims.size(), ndim));
       std::sort(dims.begin(), dims.end());
       axis.assign(dims.begin(), dims.end());
     }
@@ -2083,10 +2063,7 @@ class MovedimVecFunctor {
     std::vector<bool> is_used(ndim, false);
     FOR_RANGE(size_t, i, 0, perm.size()) {
       int32_t item = perm[i];
-      if (item < 0) { item += ndim; }
-      CHECK_OR_RETURN(item >= -ndim && item < ndim)
-          << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
-          << ", " << ndim - 1 << "], but got " << item << ")";
+      item = JUST(maybe_wrap_dim(item, ndim));
       CHECK_EQ_OR_RETURN(is_used[item], false) << "repeated dim in " << desc;
 
       is_used[item] = true;
@@ -2153,10 +2130,7 @@ class TensorSplitVecFunctor {
                                 const std::vector<int32_t>& indices_or_sections,
                                 const int32_t& dim) const {
     int32_t ndim = input->ndim();
-    CHECK_OR_RETURN((dim >= -ndim) && (dim < ndim))
-        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
-        << "," << ndim - 1 << "], but got " << dim << ")";
-    int32_t pos_dim = dim >= 0 ? dim : dim + ndim;
+    int32_t pos_dim = JUST(maybe_wrap_dim(dim, ndim));
 
     std::vector<int64_t> start(ndim, 0);
     std::vector<int64_t> stop(ndim);
@@ -2171,7 +2145,7 @@ class TensorSplitVecFunctor {
       output[i] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/false));
       start[pos_dim] = end_idx;
     }
-    stop[pos_dim] = input->shape()->At(ndim - 1);
+    stop[pos_dim] = input->shape()->At(pos_dim);
     output[num_indices] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/false));
 
     return output;
@@ -2184,12 +2158,9 @@ class TensorSplitIntFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input,
                                 const int32_t& indices_or_sections, const int32_t& dim) const {
     int32_t ndim = input->ndim();
-    CHECK_OR_RETURN((dim >= -ndim) && (dim < ndim))
-        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
-        << "," << ndim - 1 << "], but got " << dim << ")";
+    int32_t pos_dim = JUST(maybe_wrap_dim(dim, ndim));
     CHECK_OR_RETURN(indices_or_sections > 0)
         << "number of sections must be larger than 0, got ," << indices_or_sections << ");";
-    int32_t pos_dim = dim >= 0 ? dim : dim + ndim;
 
     const auto dim_size = input->dim(pos_dim);
     int64_t min_split_size = dim_size / indices_or_sections;
@@ -2305,6 +2276,25 @@ class ErfinvInplaceFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class GeluWithApproximateFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::string& approximate) const {
+    if (approximate == "tanh") {
+      return JUST(
+          Mul(JUST(ScalarAdd(JUST(Tanh(JUST(ScalarMul(
+                                 JUST(Add(x,
+                                          JUST(ScalarMul(JUST(ScalarPow(x, Scalar(3.0), false)),
+                                                         Scalar(0.044715), false)),
+                                          1.0, false)),
+                                 Scalar(sqrt(2.0 / M_PI)), false)))),
+                             Scalar(1.0), 1.0, false)),
+              JUST(ScalarMul(x, 0.5, false))));
+    }
+    return Gelu(x);
+  }
+};
+
 class CumBaseFunctor {
  public:
   explicit CumBaseFunctor(std::string op_name) {
@@ -2313,10 +2303,7 @@ class CumBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim,
                            const Optional<Symbol<DType>>& dtype) const {
     auto ndim = input->ndim();
-    if (dim < 0) { dim += ndim; }
-    CHECK_OR_RETURN(dim >= 0 && dim < ndim)
-        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
-        << "," << ndim << " ) but got " << dim << ")";
+    dim = JUST(maybe_wrap_dim(dim, ndim));
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("dim", dim));
@@ -2989,7 +2976,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<Transpose2dimFunctor>("Swapaxes");
   m.add_functor<Transpose2dimFunctor>("Swapdims");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
-  m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
+  m.add_functor<GlobalArangeFunctor, GlobalArange2Functor>("GlobalArange");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampInplaceFunctor>("ClampInplace");
@@ -3038,6 +3025,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CumProdFunctor>("Cumprod");
   m.add_functor<CumProdGradFunctor>("CumprodGrad");
   m.add_functor<EinSumFunctor>("EinSum");
+  m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
 };
 
 }  // namespace functional

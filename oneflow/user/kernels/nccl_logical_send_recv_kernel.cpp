@@ -56,7 +56,6 @@ class NcclLogicalSendRecvState final : public user_op::OpKernelState {
     return *comm_;
   }
 
-  bool has_independent_stream_;
   std::string stream_name_;
   std::unique_ptr<ParallelDesc> parallel_desc_;
   mutable std::unique_ptr<Comm> comm_;
@@ -68,8 +67,8 @@ class NcclLogicalSendRecvState final : public user_op::OpKernelState {
 };
 
 NcclLogicalSendRecvState::NcclLogicalSendRecvState(user_op::KernelInitContext* ctx)
-    : has_independent_stream_(ctx->op_conf().has_stream_name_hint()) {
-  if (has_independent_stream_) { stream_name_ = ctx->op_conf().stream_name_hint(); }
+    : stream_name_(EagerNcclCommMgr::kDefaultStreamName) {
+  if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
   parallel_desc_ = std::make_unique<ParallelDesc>(ctx->parallel_desc());
   NdSbp src_nd_sbp;
@@ -127,13 +126,9 @@ void NcclLogicalSendRecvState::InitComm() const {
     int64_t device_id = CHECK_JUST(parallel_desc_->DeviceId4ParallelId(parallel_id));
     device_set.emplace(std::make_pair(machine_id, device_id));
   }
-  EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+  EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
   ncclComm_t comm = nullptr;
-  if (has_independent_stream_) {
-    comm = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
-  } else {
-    comm = comm_mgr->GetCommForDevice(device_set);
-  }
+  comm = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
   comm_.reset(new Comm(comm));
 }
 
@@ -152,6 +147,10 @@ class NcclLogicalSendRecv final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override {
+    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
+    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
+  }
 };
 
 void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
@@ -227,24 +226,24 @@ void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::O
       if (out_tensor_slice_copier_vec.at(i)) {
         if (is_first_slice) {
           is_first_slice = false;
-          if (recv_elem_cnts.at(i) != out->shape().elem_cnt()) {
+          if (recv_elem_cnts.at(i) != out->shape_view().elem_cnt()) {
             // if not same shape, memset out
             memset_primitive->Launch(ctx->stream(), out->mut_dptr(), 0,
-                                     out->shape().elem_cnt() * GetSizeOfDataType(data_type));
+                                     out->shape_view().elem_cnt() * GetSizeOfDataType(data_type));
           }
           out_tensor_slice_copier_vec.at(i)->Copy(ctx->stream(), out->mut_dptr(),
                                                   recv_out_ptr.at(i));
         } else {
-          if (recv_elem_cnts.at(i) == out->shape().elem_cnt()) {
+          if (recv_elem_cnts.at(i) == out->shape_view().elem_cnt()) {
             add_primitive->Launch(ctx->stream(), out->dptr(), recv_out_ptr.at(i), out->mut_dptr(),
-                                  out->shape().elem_cnt());
+                                  out->shape_view().elem_cnt());
           } else {
             void* out_buf = reinterpret_cast<void*>(buf_ptr + offset);
             memset_primitive->Launch(ctx->stream(), out_buf, 0,
-                                     out->shape().elem_cnt() * GetSizeOfDataType(data_type));
+                                     out->shape_view().elem_cnt() * GetSizeOfDataType(data_type));
             out_tensor_slice_copier_vec.at(i)->Copy(ctx->stream(), out_buf, recv_out_ptr.at(i));
             add_primitive->Launch(ctx->stream(), out->dptr(), out_buf, out->mut_dptr(),
-                                  out->shape().elem_cnt());
+                                  out->shape_view().elem_cnt());
           }
         }
       }

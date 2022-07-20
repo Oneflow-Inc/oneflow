@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+from random import shuffle
 from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
@@ -154,6 +155,16 @@ class TestTensorOps(flow.unittest.TestCase):
         y = x.long()
         return y
 
+    @autotest(n=5, auto_backward=False)
+    def test_long_with_non_contiguous_input(test_case):
+        device = random_device()
+        permute_list = list(range(4))
+        shuffle(permute_list)
+        input = random_tensor(ndim=4).to(device)
+        x = input.permute(permute_list)
+        y = x.long()
+        return y
+
     @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
     def test_int(test_case):
         device = random_device()
@@ -166,6 +177,20 @@ class TestTensorOps(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
         y = x.int()
+        return y
+
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    def test_half(test_case):
+        device = random_device()
+        x = random_tensor(dtype=int).to(device)
+        y = x.half()
+        return y
+
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    def test_half_0dim(test_case):
+        device = random_device()
+        x = random_tensor(ndim=0, dtype=int).to(device)
+        y = x.half()
         return y
 
     @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)

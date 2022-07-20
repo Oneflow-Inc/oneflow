@@ -20,6 +20,8 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
 template<typename T>
 class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
                                                 public user_op::CudaGraphSupport {
@@ -41,7 +43,6 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
     const user_op::Tensor* aux = ctx->Tensor4ArgNameAndIndex("aux", 0);
     user_op::Tensor* d_bias = ctx->Tensor4ArgNameAndIndex("d_bias", 0);
     user_op::Tensor* d_grad = ctx->Tensor4ArgNameAndIndex("d_grad", 0);
-
     const auto* matmul_grad_cache =
         CHECK_NOTNULL(dynamic_cast<const CublasFusedMLPKernelCache*>(cache));
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
@@ -52,16 +53,16 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
     size_t cublas_m = 0, cublas_n = 0, cublas_k = 0;
     int64_t cublas_lda = 0, cublas_ldb = 0, cublas_ldc = 0;
 
-    const double alpha = 1.0;
+    const double alpha = ctx->Attr<double>("alpha");
     const auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
     const double beta = 0.0;
     const auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
 
     // currently only support 2D matmul.
     DimVector dy_shape(2);
-    dy->shape().ToDimVector(&dy_shape);
+    dy->shape_view().ToDimVector(&dy_shape);
     DimVector weight_shape(2);
-    weight->shape().ToDimVector(&weight_shape);
+    weight->shape_view().ToDimVector(&weight_shape);
     cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_DRELU_BGRAD;
 
     InferMatmulCublasMNK(dy_shape, weight_shape,
@@ -98,6 +99,8 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
 REGISTER_CUBLAS_BIAS_ADD_RELU_MATMUL_GRAD_KERNEL(float)
 REGISTER_CUBLAS_BIAS_ADD_RELU_MATMUL_GRAD_KERNEL(double)
 REGISTER_CUBLAS_BIAS_ADD_RELU_MATMUL_GRAD_KERNEL(half)
+
+}  // namespace
 
 }  // namespace oneflow
 
