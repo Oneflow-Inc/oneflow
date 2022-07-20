@@ -105,10 +105,6 @@ TensorSliceView GetTensorSliceView4ParallelRank(const Shape& parallel_hierarchy,
     ranges[i].mut_begin() = 0;
     ranges[i].mut_end() = logical_shape.At(i);
   }
-  if (logical_shape.NumAxes() == 0) {
-    // NOTE(chengcheng): For Scalar Tensor.
-    ranges.emplace_back(0, 1);
-  }
   if (parallel_hierarchy.elem_cnt() == 1) { return TensorSliceView(ranges); }
   if (parallel_hierarchy.NumAxes() == 1) {
     const SbpParallel& sbp_parallel = nd_sbp.sbp_parallel(0);

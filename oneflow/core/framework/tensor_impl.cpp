@@ -139,16 +139,6 @@ Maybe<void> EagerLocalTensorImpl::set_eager_blob_object(
 
 std::shared_ptr<const Shape> EagerLocalTensorImpl::shape() const {
   if (!eager_blob_object_) { return tensor_meta()->shape_ptr(); }
-  if (!eager_blob_object_->is_shape_synced()) {
-    auto btb = std::make_shared<BlockingThenBusy>(1);
-    CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(
-          this, btb, [](uint64_t) {}, "const");
-    }));
-    TRY(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()))
-        .GetOrThrow();
-    eager_blob_object_->set_is_shape_synced(true);
-  }
   return eager_blob_object_->shape_ptr();
 }
 
