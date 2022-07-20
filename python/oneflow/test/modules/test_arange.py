@@ -93,6 +93,15 @@ class TestArange(flow.unittest.TestCase):
         x.to(device)
         return x
 
+    @autotest(n=5, auto_backward=False, rtol=1e-5, atol=1e-5, check_graph=True)
+    def test_arange_input_float_scalar_tensor(test_case):
+        start = random().to(float)
+        end = start + random().to(float)
+        x = torch.arange(start=torch.tensor(start), end=torch.tensor(end))
+        device = random_device()
+        x.to(device)
+        return x
+
     def test_global_naive(test_case):
         placement = flow.placement("cpu", ranks=[0])
         sbp = (flow.sbp.broadcast,)
