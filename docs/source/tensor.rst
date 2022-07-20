@@ -244,7 +244,6 @@ Tensor class reference
     Tensor.fmod
     Tensor.gather
     Tensor.ge
-    Tensor.gelu
     Tensor.get_device
     
     Tensor.grad_fn

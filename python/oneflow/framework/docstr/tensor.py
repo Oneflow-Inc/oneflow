@@ -1058,13 +1058,6 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.Tensor.gelu,
-    """
-    See :func:`oneflow.gelu`
-    """,
-)
-
-add_docstr(
     oneflow.Tensor.get_device,
     """
     Tensor.get_device() -> Device ordinal (Integer)
