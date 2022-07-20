@@ -359,7 +359,7 @@ llvm::Optional<Type> Importer::GetTypeFromOneFlowDataType(::oneflow::DataType dt
   }
 }
 
-LogicalResult ParseSbpStrFromAttr(Attribute sbp_attr, std::string* sbp) {
+LogicalResult PrintSbpAttrToString(Attribute sbp_attr, std::string* sbp) {
   if (auto sbp_s_attr = sbp_attr.dyn_cast<sbp::SplitAttr>()) {
     *sbp = "S(" + std::to_string(sbp_s_attr.getAxis()) + ")";
   } else if (auto sbp_b_attr = sbp_attr.dyn_cast<sbp::BroadcastAttr>()) {
@@ -1012,12 +1012,12 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
       if (auto nd_outputs = output.dyn_cast<ArrayAttr>()) {
         for (auto nd_output : nd_outputs) {
           std::string sbp;
-          if (failed(ParseSbpStrFromAttr(nd_output, &sbp))) return failure();
+          if (failed(PrintSbpAttrToString(nd_output, &sbp))) return failure();
           var_op_conf->add_nd_sbp(sbp);
         }
       } else {
         std::string sbp;
-        if (failed(ParseSbpStrFromAttr(output, &sbp))) return failure();
+        if (failed(PrintSbpAttrToString(output, &sbp))) return failure();
         var_op_conf->add_nd_sbp(sbp);
       }
     }
