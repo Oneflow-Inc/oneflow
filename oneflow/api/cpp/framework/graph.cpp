@@ -228,6 +228,7 @@ Graph Graph::LoadOneEmbedding(const std::string& model_path, const Device& devic
     CHECK(snapshot_file.is_open());
     std::string snapshot;
     snapshot_file >> snapshot;
+    snapshot_file.close();
     return snapshot;
   }();
   embedding::LoadSnapshot(snapshot, embedding_name);
