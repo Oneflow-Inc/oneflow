@@ -408,7 +408,7 @@ Attribute ConvertNdSbpToAttr_(Builder& builder, const ::oneflow::NdSbp& nd_sbp) 
     } else if (sbp.has_partial_sum_parallel()) {
       attr = sbp::PartialSumAttr::get(ctx);
     } else {
-      llvm::errs() << "unsupported sbp";
+      llvm::errs() << "unsupported sbp: nd_sbp";
     }
   }
 
@@ -432,7 +432,7 @@ Attribute ConvertNdSbpToAttr_(Builder& builder,
     } else if (sbp.has_partial_sum_parallel()) {
       attr = sbp::PartialSumAttr::get(ctx);
     } else {
-      llvm::errs() << "unsupported sbp";
+      llvm::errs() << "unsupported sbp: nd_sbp from string";
     }
     outputs_vec.push_back(attr);
   }
@@ -464,6 +464,25 @@ Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp) {
   }
   return builder.getStrArrayAttr(
       makeArrayRef(llvm::SmallVector<StringRef>(sbp_strs.begin(), sbp_strs.end())));
+}
+
+Attribute ConvertSBPToString(Builder& builder, ::mlir::sbp::ParallelSignatureAttr& parallel_signature) {
+  std::vector<std::string> list;
+  for (auto output : parallel_signature.getOutputs()) {
+    if (auto nd_outputs = output.dyn_cast<ArrayAttr>()) {
+      for (auto nd_output : nd_outputs) {
+        std::string sbp;
+        if (failed(PrintSbpAttrToString(nd_output, &sbp))) return {};
+        list.push_back(sbp);
+      }
+    } else {
+      std::string sbp;
+      if (failed(PrintSbpAttrToString(output, &sbp))) return {};
+      list.push_back(sbp);
+    }
+  }
+  return builder.getStrArrayAttr(
+      makeArrayRef(llvm::SmallVector<StringRef>(list.begin(), list.end())));
 }
 
 LogicalResult ValidateUserOpConf(const ::oneflow::OperatorConf& op_conf, UserOpArgs args,
@@ -1005,7 +1024,7 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
   if (op->hasAttr("trainable")) { var_op_conf->set_trainable(op.trainable()); }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getNdSbpAttrName())) {
-    for (auto output : op.nd_sbp()->getOutputs()) {
+    for (auto output : op.parallel_signature()->getOutputs()) {
       if (auto nd_outputs = output.dyn_cast<ArrayAttr>()) {
         for (auto nd_output : nd_outputs) {
           std::string sbp;

@@ -167,7 +167,7 @@ def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", [OneFlow_TensorSou
     DefaultValuedAttr<BoolAttr, "true">:$trainable,
     OptionalAttr<F32Attr>:$float_initializer,
     OptionalAttr<SI64Attr>:$integer_initializer,
-    OptionalAttr<SBP_ParallelSignatureAttr>:$nd_sbp
+    OptionalAttr<SBP_ParallelSignatureAttr>:$parallel_signature
   );
 }
 

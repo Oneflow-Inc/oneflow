@@ -18,6 +18,7 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/OneFlowSupport.h"
+#include "OneFlow/SBP/SBPAttributes.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "mlir-c/BuiltinAttributes.h"
@@ -57,6 +58,9 @@ limitations under the License.
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
+#include "oneflow/core/operator/variable_op.h"
+#include "oneflow/core/framework/sbp_context.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 #ifdef WITH_MLIR_CUDA_CODEGEN
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
@@ -495,7 +499,32 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
     attrs.set(op.device_nameAttrName(), op.device_nameAttr());
     attrs.set(op.scope_symbol_idAttrName(), op.scope_symbol_idAttr());
     attrs.set(op.hierarchyAttrName(), op.hierarchyAttr());
-    attrs.set(op.nd_sbpAttrName(), op.nd_sbpAttr());
+    auto name = FrozenVariableOp::nd_sbpAttrName(
+        OperationName(FrozenVariableOp::getOperationName(), rewriter.getContext()));
+    auto elem2str = [&](mlir::Attribute& attr) -> std::string {
+      std::string res;
+      if (auto s = attr.dyn_cast<sbp::SplitAttr>()) {
+        res = "S(" + std::to_string(s.getAxis()) + ")";
+      } else if (attr.dyn_cast<sbp::BroadcastAttr>()) {
+        res = std::string("B");
+      } else if (attr.dyn_cast<sbp::PartialSumAttr>()) {
+        res = std::string("P");
+      }
+      return res;
+    };
+    auto sbp2str = [&](::mlir::sbp::ParallelSignatureAttr sbp) -> ArrayAttr {
+      SmallVector<Attribute, 4> res;
+      for (auto elem : sbp.getOutputs()) {
+        if (auto list = elem.dyn_cast<mlir::ArrayAttr>()) {
+          for (auto list_elem : list) {
+            res.push_back(StringAttr::get(rewriter.getContext(), elem2str(list_elem)));
+          }
+        }
+        res.push_back(StringAttr::get(rewriter.getContext(), elem2str(elem)));
+      }
+      return ArrayAttr::get(rewriter.getContext(), res);
+    };
+    attrs.set(name, sbp2str(op.parallel_signatureAttr()));
     auto op_new = rewriter.create<oneflow::FrozenVariableOp>(op->getLoc(), op.output().getType(),
                                                              ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
@@ -528,7 +557,44 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
     attrs.set(op.device_nameAttrName(), op.device_nameAttr());
     attrs.set(op.scope_symbol_idAttrName(), op.scope_symbol_idAttr());
     attrs.set(op.hierarchyAttrName(), op.hierarchyAttr());
-    attrs.set(op.nd_sbpAttrName(), op.nd_sbpAttr());
+    auto name = VariableOp::parallel_signatureAttrName(
+        OperationName(VariableOp::getOperationName(), rewriter.getContext()));
+
+    auto str2sbp = [&](ArrayAttr nd_sbp, int nd_size) -> Attribute {
+      auto ctx = rewriter.getContext();
+      std::vector<mlir::Attribute> outputs_vec;
+      for (const auto& sbp_data : nd_sbp) {
+        ::oneflow::SbpParallel sbp;
+        auto sbp_string = sbp_data.dyn_cast<StringAttr>().str();
+        if (sbp_string == "") continue;
+        ParseSbpParallelFromString(sbp_string, &sbp);
+        Attribute attr;
+        if (sbp.has_split_parallel()) {
+          attr = sbp::SplitAttr::get(ctx, sbp.split_parallel().axis());
+        } else if (sbp.has_broadcast_parallel()) {
+          attr = sbp::BroadcastAttr::get(ctx);
+        } else if (sbp.has_partial_sum_parallel()) {
+          attr = sbp::PartialSumAttr::get(ctx);
+        } else {
+          llvm::errs() << "unsupported sbp: nd_sbp from string\n";
+        }
+        outputs_vec.push_back(attr);
+      }
+
+      auto inputs = rewriter.getArrayAttr({});
+      ArrayAttr outputs;
+
+      std::vector<mlir::Attribute> outputs_vec_nd;
+      for (auto iter = outputs_vec.begin(); iter < outputs_vec.end(); iter += nd_size) {
+        outputs_vec_nd.emplace_back(
+            rewriter.getArrayAttr(std::vector<Attribute>(iter, iter + nd_size)));
+      }
+      outputs = rewriter.getArrayAttr(outputs_vec_nd);
+      auto res = sbp::ParallelSignatureAttr::get(ctx, inputs, outputs);
+      return res;
+    };
+    auto nd_size = op.hierarchy()->size();
+    attrs.set(name, str2sbp(op.nd_sbpAttr(), nd_size));
     auto op_new = rewriter.create<oneflow::VariableOp>(op->getLoc(), op.output().getType(),
                                                        ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
