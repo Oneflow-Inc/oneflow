@@ -64,7 +64,7 @@ def SBP_ParallelSignatureAttr : SBP_Attr<"ParallelSignature", "parallel_signatur
     ```
   }];
   let parameters = (ins "ArrayAttr":$inputs, "ArrayAttr":$outputs);
-  let assemblyFormat = "`<` $inputs `->` custom<SBP>($outputs) `>`";
+  let assemblyFormat = "`<` custom<SBP>($inputs) `->` custom<SBP>($outputs) `>`";
 }
 
 #endif // ONEFLOW_IR_INCLUDE_SBP_SBPBASE_H_
