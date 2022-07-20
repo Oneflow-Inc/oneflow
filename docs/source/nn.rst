@@ -12,6 +12,13 @@ These are the basic building blocks for graphs:
     :class: this-will-duplicate-information-and-it-is-still-useful-here
     :backlinks: top
 
+.. currentmodule:: oneflow.nn
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: 
+
+    Parameter
 
 Containers
 ----------------------------------
@@ -230,6 +237,28 @@ DataParallel Layers (multi-GPU, distributed)
     :nosignatures:
     
     nn.parallel.DistributedDataParallel
+
+
+Other Layers
+-------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    nn.COCOReader
+    nn.CoinFlip
+    nn.CropMirrorNormalize
+    nn.FakeQuantization
+    nn.MinMaxObserver
+    nn.MovingAverageMinMaxObserver
+    nn.OFRecordBytesDecoder
+    nn.OFRecordImageDecoder
+    nn.OFRecordImageDecoderRandomCrop
+    nn.OFRecordRawDecoder
+    nn.OFRecordReader
+    nn.Quantization
+
 
 Utilities
 ---------
