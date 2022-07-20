@@ -39,7 +39,6 @@ LogicalResult parseSBP(AsmParser& parser, FailureOr<ArrayAttr>& args) {
   };
 
   if (parser.parseCommaSeparatedList([&]() {
-        // if (succeeded(parser.parseLSquare())) {
         if (succeeded(parser.parseOptionalLSquare())) { return parserList(); }
         return parserListElem(res);
       })
