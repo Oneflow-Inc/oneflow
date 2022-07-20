@@ -35,7 +35,7 @@ namespace {
 one_embedding::OneEmbeddingHandler LoadOneEmbeddingHandler() {
   std::string option("{\"name\": \"sparse_embedding\", \"key_type_size\": 8, \"value_type_size\": 4, \"value_type\": \"oneflow.float32\", \"storage_dim\": 128, \"kv_store\": {\"caches\": [{\"policy\": \"full\", \"capacity\": 33762577, \"value_memory_kind\": \"device\"}], \"persistent_table\": {\"path\": \"/home/zhengzekang/models/RecommenderSystems/dlrm/init_model\", \"physical_block_size\": 512, \"capacity_hint\": 33762577}}, \"parallel_num\": 1}"); 
   one_embedding::OneEmbeddingHandler handler(option);  
-  handler.LoadSnapeshot("2022-07-18-21-45-00-867156")
+  handler.LoadSnapshot("2022-07-18-21-45-00-867156");
   return handler;
 }
 
