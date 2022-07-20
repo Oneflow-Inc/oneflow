@@ -77,6 +77,11 @@ class ParamGroup(object):
     def items(self):
         return self.__dict__.items()
 
+    def __repr__(self):
+        res = self.options
+        res["params"] = self.parameters
+        return str(res)
+
     @property
     def options(self):
         return self._options
@@ -107,6 +112,16 @@ def _decorate_step(step):
     return decorated_step
 
 
+class _RequiredParameter(object):
+    """Singleton class representing a required parameter for an Optimizer."""
+
+    def __repr__(self):
+        return "<required parameter>"
+
+
+required = _RequiredParameter()
+
+
 class Optimizer(object):
     def __init__(self, parameters, options):
         self.param_groups = list()
@@ -119,7 +134,82 @@ class Optimizer(object):
         self.step = _decorate_step(self.step)
 
     def add_param_group(self, param_group) -> None:
-        raise NotImplementedError()
+        r"""
+        
+        Add a param group to the :class:`Optimizer` s `param_groups`.
+        This can be useful when fine tuning a pre-trained network as frozen layers can be made
+        trainable and added to the :class:`Optimizer` as training progresses.
+        
+        Args:
+            param_group (dict): Specifies what Tensors should be optimized along with group
+                specific optimization options.
+        
+        Example:
+
+        >>> import oneflow
+        >>> import oneflow.optim as optim
+        >>> w1 = oneflow.ones(3, 3)
+        >>> w1.requires_grad = True
+        >>> w2 = oneflow.ones(3, 3)
+        >>> w2.requires_grad = True
+        >>> o = optim.SGD([w1])
+        >>> o.param_groups[0]
+        {'lr': 0.001, 'momentum': 0.0, 'dampening': 0.0, 'weight_decay': 0.0, 'nesterov': False, 'maximize': False, 'params': [tensor([[1., 1., 1.],
+                [1., 1., 1.],
+                [1., 1., 1.]], dtype=oneflow.float32, requires_grad=True)]}
+        >>> o.add_param_group({'params': w2})
+        >>> o.param_groups[1]
+        {'lr': 0.001, 'momentum': 0.0, 'dampening': 0.0, 'weight_decay': 0.0, 'nesterov': False, 'maximize': False, 'params': [tensor([[1., 1., 1.],
+                [1., 1., 1.],
+                [1., 1., 1.]], dtype=oneflow.float32, requires_grad=True)]}
+
+        """
+        assert isinstance(param_group, dict), "param group must be a dict"
+
+        params = param_group["params"]
+        if isinstance(params, flow.Tensor):
+            param_group["params"] = [params]
+        elif isinstance(params, set):
+            raise TypeError(
+                "optimizer parameters need to be organized in ordered collections, but "
+                "the ordering of tensors in sets will change between runs. Please use a list instead."
+            )
+        else:
+            param_group["params"] = list(params)
+
+        for param in param_group["params"]:
+            if not isinstance(param, flow.Tensor):
+                raise TypeError(
+                    "optimizer can only optimize Tensors, "
+                    "but one of the params is " + type(param)
+                )
+            if not param.is_leaf:
+                raise ValueError("can't optimize a non-leaf Tensor")
+
+        for name, default in self._default_options.items():
+            if default is required and name not in param_group:
+                raise ValueError(
+                    "parameter group didn't specify a value of required optimization parameter "
+                    + name
+                )
+            else:
+                param_group.setdefault(name, default)
+        params = param_group["params"]
+        if len(params) != len(set(params)):
+            warnings.warn(
+                "optimizer contains a parameter group with duplicate parameters; "
+                "in future, this will cause an error; ",
+                stacklevel=3,
+            )
+
+        param_set = set()
+        for group in self.param_groups:
+            param_set.update(set(group.parameters))
+
+        if not param_set.isdisjoint(set(param_group["params"])):
+            raise ValueError("some parameters appear in more than one parameter group")
+
+        self.param_groups.append(ParamGroup(param_group, self._default_options))
 
     def load_state_dict(self, state_dict) -> None:
         r"""
@@ -197,7 +287,7 @@ class Optimizer(object):
 
     def state_dict(self):
         r"""
-        Returns the state of the optimizer as a :class:`dict`.
+        Returns the state of the optimizer as a :py:class:`dict`.
 
         It contains two entries:
 
@@ -273,7 +363,7 @@ class Optimizer(object):
                 )
 
     def zero_grad(self, set_to_none: bool = False):
-        """Sets the gradients of all optimized torch.Tensor s to zero.
+        """Sets the gradients of all optimized :class:`oneflow.Tensor` s to zero.
 
         Args:
             set_to_none (bool): instead of setting to zero, set the grads to None.

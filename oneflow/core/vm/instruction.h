@@ -22,7 +22,8 @@ limitations under the License.
 #include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/intrusive/object_pool.h"
 #include "oneflow/core/vm/vm_object.h"
-#include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/vm/instruction_policy.h"
+#include "oneflow/core/vm/stream_policy.h"
 #include "oneflow/core/vm/phy_instr_operand.h"
 
 namespace oneflow {
@@ -30,6 +31,8 @@ namespace oneflow {
 class Stream;
 
 namespace vm {
+
+class InstructionType;
 
 static const int kInstructionStatusBufferBytes = 64;
 
@@ -103,15 +106,16 @@ class Instruction final : public intrusive::Base {
   using DependenceAccessList =
       intrusive::List<INTRUSIVE_FIELD(DependenceAccess, instruction_access_hook_)>;
 
-  void __Init__(Stream* stream, const InstructionType* instruction_type,
-                const std::shared_ptr<PhyInstrOperand>& phy_instr_operand);
+  void __Init__(Stream* stream, std::unique_ptr<InstructionPolicy>&& instruction_policy);
 
   // Getters
   const Stream& stream() const { return *stream_; }
   const InstructionStatusBuffer& status_buffer() const { return status_buffer_; }
   const intrusive::ListHook& main_instruction_hook() const { return main_instruction_hook_; }
-  const InstructionType& instruction_type() const { return *instruction_type_; }
-  const std::shared_ptr<PhyInstrOperand>& phy_instr_operand() const { return phy_instr_operand_; }
+  const InstructionPolicy& instruction_policy() const { return *instruction_policy_; }
+  const std::shared_ptr<PhyInstrOperand>& phy_instr_operand() const {
+    return instruction_policy_->phy_instr_operand();
+  }
   std::string DebugName() const;
 
   const intrusive::ListHook& dispatched_instruction_hook() const {
@@ -132,6 +136,7 @@ class Instruction final : public intrusive::Base {
   // Setters
   Stream* mut_stream() { return stream_; }
   InstructionStatusBuffer* mut_status_buffer() { return &status_buffer_; }
+  InstructionPolicy* mut_instruction_policy() { return instruction_policy_.get(); }
   InEdgeList* mut_in_edges() { return &in_edges_; }
   OutEdgeList* mut_out_edges() { return &out_edges_; }
   DependenceAccessList* mut_access_list() { return &access_list_; }
@@ -140,7 +145,8 @@ class Instruction final : public intrusive::Base {
   void InitStatus();
   void DeleteStatusAndClearEdges();
   bool Done() const;
-  const StreamType& stream_type() const;
+  StreamPolicy* mut_stream_policy();
+  const StreamPolicy& stream_policy() const;
 
   intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }
 
@@ -186,8 +192,7 @@ class Instruction final : public intrusive::Base {
         out_edges_(),
         intrusive_ref_(),
         stream_(),
-        instruction_type_(),
-        phy_instr_operand_(),
+        instruction_policy_(),
         status_buffer_() {}
 
   // lists
@@ -198,8 +203,7 @@ class Instruction final : public intrusive::Base {
   // fields
   intrusive::Ref intrusive_ref_;
   Stream* stream_;
-  const InstructionType* instruction_type_;
-  std::shared_ptr<PhyInstrOperand> phy_instr_operand_;
+  std::unique_ptr<InstructionPolicy> instruction_policy_;
   InstructionStatusBuffer status_buffer_;
 };
 

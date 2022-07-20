@@ -36,7 +36,7 @@ EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
       tensor_storage_(tensor_storage),
       mem_ptr_for_allocation_compuation_pipelining_(nullptr),
       inited_mem_ptr_for_allocation_compuation_pipelining_(false),
-      is_shape_synced_(true),
+      is_non_pod_object_placement_newed_(false),
       compute_local_dep_object_(dep_object),
       blob_desc_(shape, stride, data_type) {
   CHECK(static_cast<bool>(shape));
@@ -53,8 +53,16 @@ Blob* EagerBlobObject::blob() {
 
 void EagerBlobObject::set_storage_offset(const int64_t offset) { storage_offset_ = offset; }
 
-Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
-  vm::Allocator* allocator = device_ctx->mut_allocator();
+void EagerBlobObject::TryInitNonPODTypeEagerBlobObjectIfNeed() {
+  if (!IsPODDataType(data_type())) {
+    if (!is_non_pod_object_placement_newed_) {
+      InitNonPODTypeEagerBlobObjectIfNeed(tensor_storage_->non_pod_allocator(), this);
+      is_non_pod_object_placement_newed_ = true;
+    }
+  }
+}
+
+Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator) {
   size_t required_body_bytes = AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
     CHECK_ISNULL_OR_RETURN(tensor_storage_->blob_dptr());
@@ -72,7 +80,6 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
                                    required_body_bytes);
     InitMemPtrForAllocationComputationPipelining();
-    InitNonPODTypeEagerBlobObjectIfNeed(tensor_storage_->non_pod_allocator(), this);
   }
   InitOrCheckMemPtrForAllocationComputationPipelining();
   return Maybe<void>::Ok();
