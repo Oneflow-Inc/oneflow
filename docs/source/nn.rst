@@ -231,6 +231,17 @@ DataParallel Layers (multi-GPU, distributed)
     
     nn.parallel.DistributedDataParallel
 
+Quantization Aware Training
+--------------------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    
+    nn.MinMaxObserver
+    nn.MovingAverageMinMaxObserver
+    nn.FakeQuantization
+
 Utilities
 ---------
 
