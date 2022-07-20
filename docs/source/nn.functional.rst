@@ -125,6 +125,8 @@ Loss functions
     cross_entropy
     smooth_l1_loss
     triplet_margin_loss
+    binary_cross_entropy
+    binary_cross_entropy_with_logits
 
 Vision functions
 ----------------
