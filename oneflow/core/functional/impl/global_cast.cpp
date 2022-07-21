@@ -363,6 +363,7 @@ Maybe<void> CheckNdSbpValid(Symbol<NdSbp> nd_sbp, const Shape& logical_shape) {
 }
 
 namespace {
+
 Maybe<one::OpExpr> RawGetGlobalToGlobalOpExpr(
     const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels) {
   Optional<Symbol<NdSbp>> grad_nd_sbp;
@@ -371,7 +372,7 @@ Maybe<one::OpExpr> RawGetGlobalToGlobalOpExpr(
   return op_expr;
 }
 
-}
+}  // namespace
 
 static constexpr auto* GetGlobalToGlobalOpExpr =
     DECORATE(&RawGetGlobalToGlobalOpExpr, ThreadLocalCopiable);
