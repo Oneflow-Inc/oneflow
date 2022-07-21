@@ -18,6 +18,8 @@ import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
+import tempfile
+import os
 
 
 class DataLoaderGraph1(flow.nn.Graph):
@@ -45,10 +47,11 @@ class RawReaderTestCase(oneflow.unittest.TestCase):
         batch_size = 16
         instances_size = 128
         data = np.random.randn(total_instances, instances_size).astype(np.float32)
-        with open("test.bin", "wb") as f:
+        (fd, filename) = tempfile.mkstemp()
+        with os.fdopen(fd, "wb") as f:
             f.write(data.tobytes())
         raw_reader = flow.nn.RawReader(
-            ["test.bin"],
+            [filename],
             (instances_size,),
             flow.float32,
             batch_size,
@@ -65,16 +68,18 @@ class RawReaderTestCase(oneflow.unittest.TestCase):
             outs.append(loader_graph().numpy())
         out = np.concatenate(outs, axis=0)
         test_case.assertTrue(np.array_equal(out, data))
+        os.unlink(filename)
 
     def test_case2(test_case):
         total_instances = 1024
         batch_size = 16
         instances_size = 128
         data = np.random.randn(total_instances, instances_size).astype(np.float32)
-        with open("test.bin", "wb") as f:
+        (fd, filename) = tempfile.mkstemp()
+        with os.fdopen(fd, "wb") as f:
             f.write(data.tobytes())
         reader0 = flow.nn.RawReader(
-            ["test.bin"],
+            [filename],
             (instances_size,),
             flow.float32,
             batch_size,
@@ -82,7 +87,7 @@ class RawReaderTestCase(oneflow.unittest.TestCase):
             random_seed=1234,
         )
         reader1 = flow.nn.RawReader(
-            ["test.bin"],
+            [filename],
             (instances_size,),
             flow.float32,
             batch_size,
@@ -93,38 +98,7 @@ class RawReaderTestCase(oneflow.unittest.TestCase):
         for i in range(total_instances // batch_size * 2):
             out0, out1 = loader_graph()
             test_case.assertTrue(np.array_equal(out0.numpy(), out1.numpy()))
-
-
-@flow.unittest.skip_unless_1n2d()
-class RawReaderDistributedTestCase(flow.unittest.TestCase):
-    def test_case1(test_case):
-        total_instances = 1024
-        batch_size = 16
-        instances_size = 128
-        np.random.seed(1234)
-        data = np.random.randn(total_instances, instances_size).astype(np.float32)
-        if flow.env.get_rank() == 0:
-            with open("test.bin", "wb") as f:
-                f.write(data.tobytes())
-        flow._oneflow_internal.eager.Sync()
-        raw_reader = flow.nn.RawReader(
-            ["test.bin"],
-            (instances_size,),
-            flow.float32,
-            batch_size,
-            random_shuffle=False,
-        )
-        loader_graph = DataLoaderGraph1(raw_reader)
-        outs = []
-        for i in range(total_instances // batch_size):
-            outs.append(loader_graph().numpy())
-        out = np.concatenate(outs, axis=0)
-        test_case.assertTrue(np.array_equal(out, data))
-        outs = []
-        for i in range(total_instances // batch_size):
-            outs.append(loader_graph().numpy())
-        out = np.concatenate(outs, axis=0)
-        test_case.assertTrue(np.array_equal(out, data))
+        os.unlink(filename)
 
 
 if __name__ == "__main__":
