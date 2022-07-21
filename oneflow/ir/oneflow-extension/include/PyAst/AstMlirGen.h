@@ -16,8 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_PYAST_AST_MLIR_GEN_H_
 #define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_PYAST_AST_MLIR_GEN_H_
 
-
-
 #include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowLRJITRegistry.h"
 #include "oneflow/ir/oneflow-extension/include/PyAst/Ast.h"
 
@@ -71,8 +69,6 @@ limitations under the License.
 #include <any>
 #include <functional>
 #include <memory>
-
-
 
 class BuilderWithSymbolTable {
  protected:
