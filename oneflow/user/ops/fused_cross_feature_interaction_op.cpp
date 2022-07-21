@@ -50,8 +50,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FusedCrossFeatureInteractionOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("x", 0);
-  *ctx->OutputDType("matmul_result", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("matmul_result", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -89,10 +89,10 @@ namespace oneflow {
 
 /* static */ Maybe<void> FusedCrossFeatureInteractionV1GradOp::InferDataType(
     user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx0", 0) = ctx->InputDType("x", 0);
-  *ctx->OutputDType("dw", 0) = ctx->InputDType("x", 0);
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
-  *ctx->OutputDType("dbias", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("dx0", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("dw", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("dbias", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -131,10 +131,10 @@ namespace oneflow {
 
 /* static */ Maybe<void> FusedCrossFeatureInteractionV2GradOp::InferDataType(
     user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx0", 0) = ctx->InputDType("x", 0);
-  *ctx->OutputDType("dw", 0) = ctx->InputDType("x", 0);
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
-  *ctx->OutputDType("dbias", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("dx0", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("dw", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("dbias", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 

@@ -41,10 +41,10 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx) {
                                       "Because last layer's bias_grad is computed by ReduceSum. ";
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   for (int idx = weight_num - 1; idx >= 0; idx--) {
-    *ctx->OutputDType("d_weights", idx) = dy_desc.data_type();
-    *ctx->OutputDType("d_biases", idx) = dy_desc.data_type();
+    *ctx->MutOutputDType("d_weights", idx) = dy_desc.data_type();
+    *ctx->MutOutputDType("d_biases", idx) = dy_desc.data_type();
   }
-  *ctx->OutputDType("d_x", 0) = dy_desc.data_type();
+  *ctx->MutOutputDType("d_x", 0) = dy_desc.data_type();
   return Maybe<void>::Ok();
 }
 

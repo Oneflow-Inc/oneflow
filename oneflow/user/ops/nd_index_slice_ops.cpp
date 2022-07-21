@@ -47,7 +47,7 @@ Maybe<void> InferScatterNdTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferScatterNdDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("updates", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("updates", 0);
   return Maybe<void>::Ok();
 }
 
@@ -61,7 +61,7 @@ Maybe<void> InferScatterNdLikeTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferScatterNdLikeDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("updates", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("updates", 0);
   return Maybe<void>::Ok();
 }
 
@@ -75,7 +75,7 @@ Maybe<void> InferTensorScatterNdOptTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferTensorScatterNdOptDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("params", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("params", 0);
   return Maybe<void>::Ok();
 }
 
@@ -168,7 +168,7 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
 }
 
 /* static */ Maybe<void> GatherNdOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("params", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("params", 0);
   return Maybe<void>::Ok();
 }
 

@@ -29,8 +29,8 @@ namespace oneflow {
                                                   << input_dtype << ", but got " << weight_dtype;
   }
 
-  *ctx->OutputDType("output", 0) = input_dtype;
-  *ctx->OutputDType("out_weight", 0) = input_dtype;
+  *ctx->MutOutputDType("output", 0) = input_dtype;
+  *ctx->MutOutputDType("out_weight", 0) = input_dtype;
 
   return Maybe<void>::Ok();
 }
@@ -126,7 +126,7 @@ namespace oneflow {
         << ctx->InputDType("weight", 0);
   }
 
-  *ctx->OutputDType("in_grad", 0) = input_dtype;
+  *ctx->MutOutputDType("in_grad", 0) = input_dtype;
 
   return Maybe<void>::Ok();
 }

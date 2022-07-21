@@ -33,7 +33,7 @@ Maybe<void> InferMultiReduceOpDataType(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(ctx->InputDType("x", i), x_0_dtype)
         << ctx->op_name() << ": the " << i << " th input has the different data type with others";
   }
-  *ctx->OutputDType("y", 0) = x_0_dtype;
+  *ctx->MutOutputDType("y", 0) = x_0_dtype;
   return Maybe<void>::Ok();
 }
 

@@ -63,7 +63,7 @@ Maybe<void> UnfoldTensorDescInferFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> SetUnfoldDTypeFn(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -123,7 +123,7 @@ Maybe<void> FoldTensorDescInferFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> FoldDTypeFn(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 

@@ -50,7 +50,7 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> PreluOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -105,8 +105,8 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> PreluGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
-  *ctx->OutputDType("alpha_diff", 0) = ctx->InputDType("alpha", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("alpha_diff", 0) = ctx->InputDType("alpha", 0);
   return Maybe<void>::Ok();
 }
 

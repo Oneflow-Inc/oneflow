@@ -87,8 +87,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> MovingAverageMinMaxObserverOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("scale", 0) = ctx->InputDType("in", 0);
-  *ctx->OutputDType("zero_point", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("scale", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("zero_point", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 

@@ -68,7 +68,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EmbeddingLookupPlaceholderOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("embeddings", 0) = ctx->InputDType("shadow", 0);
+  *ctx->MutOutputDType("embeddings", 0) = ctx->InputDType("shadow", 0);
   return Maybe<void>::Ok();
 }
 
@@ -135,7 +135,7 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
 }
 
 /* static */ Maybe<void> EmbeddingPrefetchOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("context", 0) = ctx->InputDType("num_unique_ids", 0);
+  *ctx->MutOutputDType("context", 0) = ctx->InputDType("num_unique_ids", 0);
   return Maybe<void>::Ok();
 }
 
@@ -203,9 +203,9 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
 }
 
 /* static */ Maybe<void> EmbeddingLookupOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("unique_values", 0) = ctx->Attr<DataType>("dtype");
+  *ctx->MutOutputDType("unique_values", 0) = ctx->Attr<DataType>("dtype");
   if (ctx->has_output("embeddings", 0)) {
-    *ctx->OutputDType("embeddings", 0) = ctx->Attr<DataType>("embeddings_dtype");
+    *ctx->MutOutputDType("embeddings", 0) = ctx->Attr<DataType>("embeddings_dtype");
   }
   return Maybe<void>::Ok();
 }
@@ -333,7 +333,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
 
 /* static */ Maybe<void> SgdEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
   JUST(CheckDataType(ctx));
-  *ctx->OutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
+  *ctx->MutOutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
   return Maybe<void>::Ok();
 }
 
@@ -362,7 +362,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
 
 /* static */ Maybe<void> MomentumEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
   JUST(CheckDataType(ctx));
-  *ctx->OutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
+  *ctx->MutOutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
   return Maybe<void>::Ok();
 }
 
@@ -389,7 +389,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
 
 /* static */ Maybe<void> AdamEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
   JUST(CheckDataType(ctx));
-  *ctx->OutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
+  *ctx->MutOutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
   return Maybe<void>::Ok();
 }
 
@@ -418,7 +418,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
 
 /* static */ Maybe<void> AdagradEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
   JUST(CheckDataType(ctx));
-  *ctx->OutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
+  *ctx->MutOutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
   return Maybe<void>::Ok();
 }
 
@@ -445,7 +445,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
 
 /* static */ Maybe<void> FtrlEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
   JUST(CheckDataType(ctx));
-  *ctx->OutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
+  *ctx->MutOutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
   return Maybe<void>::Ok();
 }
 
@@ -477,14 +477,14 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> IdShuffleCopyOutOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out_num_unique_matrix", 0) = ctx->InputDType("num_unique_matrix", 0);
-  *ctx->OutputDType("out_inverse_unique_partition_indices", 0) =
+  *ctx->MutOutputDType("out_num_unique_matrix", 0) = ctx->InputDType("num_unique_matrix", 0);
+  *ctx->MutOutputDType("out_inverse_unique_partition_indices", 0) =
       ctx->InputDType("inverse_unique_partition_indices", 0);
-  *ctx->OutputDType("out_cur_rank_num_unique", 0) = ctx->InputDType("cur_rank_num_unique", 0);
-  *ctx->OutputDType("out_cur_rank_unique_ids", 0) = ctx->InputDType("cur_rank_unique_ids", 0);
-  *ctx->OutputDType("out_cur_rank_unique_table_ids", 0) =
+  *ctx->MutOutputDType("out_cur_rank_num_unique", 0) = ctx->InputDType("cur_rank_num_unique", 0);
+  *ctx->MutOutputDType("out_cur_rank_unique_ids", 0) = ctx->InputDType("cur_rank_unique_ids", 0);
+  *ctx->MutOutputDType("out_cur_rank_unique_table_ids", 0) =
       ctx->InputDType("cur_rank_unique_table_ids", 0);
-  *ctx->OutputDType("out_cur_rank_inverse_indices", 0) =
+  *ctx->MutOutputDType("out_cur_rank_inverse_indices", 0) =
       ctx->InputDType("cur_rank_inverse_indices", 0);
   return Maybe<void>::Ok();
 }

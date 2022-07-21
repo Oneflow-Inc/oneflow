@@ -98,7 +98,7 @@ namespace oneflow {
     CHECK_EQ_OR_RETURN(first_feature_dtype, ctx->InputDType("sparse_feature", 0))
         << "get " << first_feature_dtype << " and " << ctx->InputDType("sparse_feature", 0);
   }
-  *ctx->OutputDType("out", 0) = first_feature_dtype;
+  *ctx->MutOutputDType("out", 0) = first_feature_dtype;
   return Maybe<void>::Ok();
 }
 
@@ -139,13 +139,13 @@ namespace oneflow {
     user_op::InferContext* ctx) {
   const auto& dy_dtype = ctx->InputDType("dy", 0);
   for (int64_t i = 0; i < ctx->output_size("features_grad"); ++i) {
-    *ctx->OutputDType("features_grad", i) = dy_dtype;
+    *ctx->MutOutputDType("features_grad", i) = dy_dtype;
   }
   if (ctx->has_output("output_concat_grad", 0)) {
-    *ctx->OutputDType("output_concat_grad", 0) = dy_dtype;
+    *ctx->MutOutputDType("output_concat_grad", 0) = dy_dtype;
   }
   if (ctx->has_output("sparse_feature_grad", 0)) {
-    *ctx->OutputDType("sparse_feature_grad", 0) = dy_dtype;
+    *ctx->MutOutputDType("sparse_feature_grad", 0) = dy_dtype;
   }
   return Maybe<void>::Ok();
 }

@@ -37,7 +37,7 @@ Maybe<void> CumsumOp::GetSbp(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> CumsumOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -91,7 +91,7 @@ Maybe<void> CumProdOp::GetSbp(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> CumProdOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -113,7 +113,7 @@ Maybe<void> CumProdGradOp::GetSbp(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> CumProdGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
   return Maybe<void>::Ok();
 }
 

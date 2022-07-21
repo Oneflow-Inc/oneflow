@@ -37,7 +37,7 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
   user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
 
   *ctx->OutputShape("out", 0) = ctx->InputShape("a", 0);
-  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("a", 0);
+  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("a", 0);
 
   int64_t m, n, k;  // tensor a (no trans): m*k, tensor b (no trans): k*n
   if (!transpose_a) {
@@ -69,7 +69,7 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   if (ctx->has_input("_add_to_output", 0)) {
     CHECK_EQ_OR_RETURN(ctx->InputDType("_add_to_output", 0), dtype);
   }
-  *ctx->OutputDType("out", 0) = dtype;
+  *ctx->MutOutputDType("out", 0) = dtype;
   return Maybe<void>::Ok();
 }
 

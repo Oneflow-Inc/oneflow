@@ -56,7 +56,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> UniformOp::InferDataType(user_op::InferContext* ctx) {
   auto dtype = ctx->Attr<DataType>("dtype");
-  *ctx->OutputDType("out", 0) = dtype;
+  *ctx->MutOutputDType("out", 0) = dtype;
   return Maybe<void>::Ok();
 }
 

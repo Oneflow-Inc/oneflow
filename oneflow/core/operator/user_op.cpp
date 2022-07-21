@@ -193,23 +193,39 @@ class UserOpInferContext final : public user_op::InferContext {
     return it->second.mut_stride();
   }
   const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
-    return *const_cast<UserOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
-  }
-  DataType* OutputDType(const std::string& arg_name, int32_t index) override {
     return Dtype4ArgNameAndIndex(arg_name, index);
   }
-  DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  const DataType& OutputDType(const std::string& arg_name, int32_t index) const override {
+    return Dtype4ArgNameAndIndex(arg_name, index);
+  }
+  DataType* MutOutputDType(const std::string& arg_name, int32_t index) override {
+    return MutDtype4ArgNameAndIndex(arg_name, index);
+  }
+  const DataType& Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return DataType::kInvalidDataType; };
+    return it->second.data_type();
+  }
+  DataType* MutDtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return nullptr; };
     return it->second.mut_data_type();
   }
   bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
-    return *const_cast<UserOpInferContext*>(this)->IsDynamic4ArgNameAndIndex(arg_name, index);
-  }
-  bool* OutputIsDynamic(const std::string& arg_name, int32_t index) override {
     return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
-  bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  bool OutputIsDynamic(const std::string& arg_name, int32_t index) const override {
+    return IsDynamic4ArgNameAndIndex(arg_name, index);
+  }
+  bool* MutOutputIsDynamic(const std::string& arg_name, int32_t index) override {
+    return MutIsDynamic4ArgNameAndIndex(arg_name, index);
+  }
+  bool IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return false; };
+    return it->second.is_dynamic();
+  }
+  bool* MutIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return nullptr; };
     return it->second.mut_is_dynamic();
@@ -611,10 +627,10 @@ Maybe<void> UserOp::InferOutBlobDescs(
     JUST(val_->physical_tensor_desc_infer_fn(&infer_ctx));
     for (const auto& pair : infer_ctx.outputs()) {
       BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
-      out_blob_desc->set_data_type(*(infer_ctx.OutputDType(pair.first, pair.second)));
+      out_blob_desc->set_data_type(infer_ctx.OutputDType(pair.first, pair.second));
       out_blob_desc->mut_shape() = *(infer_ctx.OutputShape(pair.first, pair.second));
       out_blob_desc->mut_stride() = Stride(*(infer_ctx.OutputShape(pair.first, pair.second)));
-      out_blob_desc->set_is_dynamic(*infer_ctx.OutputIsDynamic(pair.first, pair.second));
+      out_blob_desc->set_is_dynamic(*infer_ctx.MutOutputIsDynamic(pair.first, pair.second));
     }
     return Maybe<void>::Ok();
   }

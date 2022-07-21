@@ -35,7 +35,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EyeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
+  *ctx->MutOutputDType("out", 0) = ctx->Attr<DataType>("dtype");
   return Maybe<void>::Ok();
 }
 

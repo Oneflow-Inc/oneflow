@@ -198,26 +198,42 @@ class UserOpInferContextHelper final {
   }
   const DataType& InputDType(eager::CallContext* call_ctx, const std::string& arg_name,
                              int32_t index) const {
-    return *Dtype4ArgNameAndIndex(call_ctx, arg_name, index);
-  }
-  DataType* OutputDType(eager::CallContext* call_ctx, const std::string& arg_name,
-                        int32_t index) const {
     return Dtype4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  DataType* Dtype4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
-                                  int32_t index) const {
+  const DataType& OutputDType(eager::CallContext* call_ctx, const std::string& arg_name,
+                              int32_t index) const {
+    return Dtype4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  DataType* MutOutputDType(eager::CallContext* call_ctx, const std::string& arg_name,
+                           int32_t index) const {
+    return MutDtype4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  const DataType& Dtype4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                        int32_t index) const {
+    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->data_type();
+  }
+  DataType* MutDtype4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                     int32_t index) const {
     return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_data_type();
   }
   bool InputIsDynamic(eager::CallContext* call_ctx, const std::string& arg_name,
                       int32_t index) const {
-    return *IsDynamic4ArgNameAndIndex(call_ctx, arg_name, index);
-  }
-  bool* OutputIsDynamic(eager::CallContext* call_ctx, const std::string& arg_name,
-                        int32_t index) const {
     return IsDynamic4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  bool* IsDynamic4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
-                                  int32_t index) const {
+  bool OutputIsDynamic(eager::CallContext* call_ctx, const std::string& arg_name,
+                       int32_t index) const {
+    return IsDynamic4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  bool* MutOutputIsDynamic(eager::CallContext* call_ctx, const std::string& arg_name,
+                           int32_t index) const {
+    return MutIsDynamic4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  bool IsDynamic4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                 int32_t index) const {
+    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->is_dynamic();
+  }
+  bool* MutIsDynamic4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                     int32_t index) const {
     return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_is_dynamic();
   }
 
@@ -335,20 +351,32 @@ class UserOpInferContext : public user_op::InferContext {
   const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
     return helper_->InputDType(call_ctx_, arg_name, index);
   }
-  DataType* OutputDType(const std::string& arg_name, int32_t index) override {
+  const DataType& OutputDType(const std::string& arg_name, int32_t index) const override {
     return helper_->OutputDType(call_ctx_, arg_name, index);
   }
-  DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  DataType* MutOutputDType(const std::string& arg_name, int32_t index) override {
+    return helper_->MutOutputDType(call_ctx_, arg_name, index);
+  }
+  const DataType& Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return helper_->Dtype4ArgNameAndIndex(call_ctx_, arg_name, index);
+  }
+  DataType* MutDtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return helper_->MutDtype4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
   bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return helper_->InputIsDynamic(call_ctx_, arg_name, index);
   }
-  bool* OutputIsDynamic(const std::string& arg_name, int32_t index) override {
+  bool OutputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return helper_->OutputIsDynamic(call_ctx_, arg_name, index);
   }
-  bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return helper_->IsDynamic4ArgNameAndIndex(call_ctx_, arg_name, index);
+  bool* MutOutputIsDynamic(const std::string& arg_name, int32_t index) override {
+    return helper_->MutOutputIsDynamic(call_ctx_, arg_name, index);
+  }
+  bool IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    return helper_->MutIsDynamic4ArgNameAndIndex(call_ctx_, arg_name, index);
+  }
+  bool* MutIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return helper_->MutIsDynamic4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
 
   const ArgVec& inputs() const override { return helper_->inputs(); }

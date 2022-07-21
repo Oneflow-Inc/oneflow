@@ -48,7 +48,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> ArgSortOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kInt32;
+  *ctx->MutOutputDType("out", 0) = DataType::kInt32;
   return Maybe<void>::Ok();
 }
 
