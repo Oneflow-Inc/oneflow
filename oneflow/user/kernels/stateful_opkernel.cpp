@@ -51,9 +51,20 @@ class ZeroCopyBaseContextHelper {
                              index);                                                              \
   if (i >= 0) { return (outputs).at(i) post_action; }
 
-  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
-                                                  const std::string& arg_name,
-                                                  const int32_t index) const {
+  const user_op::TensorDesc& TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                        const std::string& arg_name,
+                                                        const int32_t index) const {
+    int32_t inedx = TryGetTensorTupleIndex(input_arg_tuple_->arg_name2bn_index2tensor_tuple_index(),
+                                           arg_name, index);
+    if (inedx >= 0) { return *call_ctx->inputs().at(inedx); }
+    inedx = TryGetTensorTupleIndex(output_arg_tuple_->arg_name2bn_index2tensor_tuple_index(),
+                                   arg_name, index);
+    if (inedx >= 0) { return *call_ctx->outputs().at(inedx); }
+    return *(user_op::TensorDesc*)nullptr;
+  }
+  user_op::TensorDesc* MutTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                     const std::string& arg_name,
+                                                     const int32_t index) const {
     RETURN_IF_FOUND(call_ctx->inputs(), call_ctx->outputs(), .get());
     return nullptr;
   }
@@ -159,17 +170,22 @@ class UserOpInferContextHelper final {
 
   const user_op::TensorDesc& InputTensorDesc(eager::CallContext* call_ctx,
                                              const std::string& arg_name, int32_t index) const {
-    return *CHECK_NOTNULL(TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index));
+    return *CHECK_NOTNULL(MutTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index));
   }
 
   user_op::TensorDesc* OutputTensorDesc(eager::CallContext* call_ctx, const std::string& arg_name,
                                         int32_t index) const {
-    return TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
+    return MutTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
-                                                  const std::string& arg_name,
-                                                  int32_t index) const {
+  const user_op::TensorDesc& TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                        const std::string& arg_name,
+                                                        int32_t index) const {
     return zero_copy_base_ctx_helper_.TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  user_op::TensorDesc* MutTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                     const std::string& arg_name,
+                                                     int32_t index) const {
+    return zero_copy_base_ctx_helper_.MutTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
   }
 
   const Shape& InputShape(eager::CallContext* call_ctx, const std::string& arg_name,
@@ -186,11 +202,11 @@ class UserOpInferContextHelper final {
   }
   const Shape& Shape4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                      int32_t index) const {
-    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->shape();
+    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index).shape();
   }
   Shape* MutShape4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                   int32_t index) const {
-    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_shape();
+    return MutNonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_shape();
   }
   const Stride& InputStride(eager::CallContext* call_ctx, const std::string& arg_name,
                             int32_t index) const {
@@ -206,11 +222,11 @@ class UserOpInferContextHelper final {
   }
   const Stride& Stride4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                        int32_t index) const {
-    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->stride();
+    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index).stride();
   }
   Stride* MutStride4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                     int32_t index) const {
-    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_stride();
+    return MutNonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_stride();
   }
   DataType InputDType(eager::CallContext* call_ctx, const std::string& arg_name,
                       int32_t index) const {
@@ -226,11 +242,11 @@ class UserOpInferContextHelper final {
   }
   DataType Dtype4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                  int32_t index) const {
-    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->data_type();
+    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index).data_type();
   }
   DataType* MutDtype4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                      int32_t index) const {
-    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_data_type();
+    return MutNonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_data_type();
   }
   bool InputIsDynamic(eager::CallContext* call_ctx, const std::string& arg_name,
                       int32_t index) const {
@@ -246,11 +262,11 @@ class UserOpInferContextHelper final {
   }
   bool IsDynamic4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                  int32_t index) const {
-    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->is_dynamic();
+    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index).is_dynamic();
   }
   bool* MutIsDynamic4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                      int32_t index) const {
-    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_is_dynamic();
+    return MutNonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_is_dynamic();
   }
 
   const ArgVec& inputs() const { return zero_copy_base_ctx_helper_.inputs(); }
@@ -311,10 +327,17 @@ class UserOpInferContextHelper final {
   }
 
  private:
-  user_op::TensorDesc* NonNullTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
-                                                         const std::string& arg_name,
-                                                         int32_t index) const {
-    user_op::TensorDesc* tensor_desc = TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
+  const user_op::TensorDesc& NonNullTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                               const std::string& arg_name,
+                                                               int32_t index) const {
+    const user_op::TensorDesc& tensor_desc = TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
+    if (!(&tensor_desc)) { LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found"; }
+    return tensor_desc;
+  }
+  user_op::TensorDesc* MutNonNullTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                            const std::string& arg_name,
+                                                            int32_t index) const {
+    user_op::TensorDesc* tensor_desc = MutTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
     if (!tensor_desc) { LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found"; }
     return tensor_desc;
   }
@@ -342,8 +365,12 @@ class UserOpInferContext : public user_op::InferContext {
   user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
     return helper_->OutputTensorDesc(call_ctx_, arg_name, index);
   }
-  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) {
+  const user_op::TensorDesc& TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) const {
     return helper_->TensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
+  }
+  user_op::TensorDesc* MutTensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) {
+    return helper_->MutTensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
 
   const Shape& InputShape(const std::string& arg_name, int32_t index) const override {
@@ -465,10 +492,16 @@ class UserKernelComputeContextHelper final {
 
   ~UserKernelComputeContextHelper() = default;
 
-  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+  const user_op::TensorDesc& TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
                                                         const std::string& arg_name,
                                                         int32_t index) const {
     return base_ctx_helper_.TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+
+  const user_op::TensorDesc* MutTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                           const std::string& arg_name,
+                                                           int32_t index) const {
+    return base_ctx_helper_.MutTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
   }
 
   user_op::Tensor* Tensor4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
@@ -505,7 +538,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
 
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
-    return helper_->TensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
+    return helper_->MutTensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
 
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
@@ -552,10 +585,15 @@ class UserKernelRegContextHelper final {
   const ParallelContext& parallel_ctx(eager::CallContext* call_ctx) const {
     return base_ctx_helper_.parallel_ctx(call_ctx);
   }
-  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+  const user_op::TensorDesc& TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
                                                         const std::string& arg_name,
                                                         int32_t index) const {
     return base_ctx_helper_.TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  const user_op::TensorDesc* MutTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                           const std::string& arg_name,
+                                                           int32_t index) const {
+    return base_ctx_helper_.MutTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
   }
   const ArgVec& inputs() const { return base_ctx_helper_.inputs(); }
   const ArgVec& outputs() const { return base_ctx_helper_.outputs(); }
@@ -582,7 +620,7 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
   const ParallelContext& parallel_ctx() const override { return helper_->parallel_ctx(call_ctx_); }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
-    return helper_->TensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
+    return helper_->MutTensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
   const ArgVec& inputs() const override { return helper_->inputs(); }
   const ArgVec& outputs() const override { return helper_->outputs(); }
@@ -616,10 +654,15 @@ class UserKernelInitAndCacheContextHelper final {
   const ParallelContext& parallel_ctx(eager::CallContext* call_ctx) const {
     return base_ctx_helper_.parallel_ctx(call_ctx);
   }
-  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+  const user_op::TensorDesc& TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
                                                         const std::string& arg_name,
                                                         int32_t index) const {
     return base_ctx_helper_.TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  const user_op::TensorDesc* MutTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                           const std::string& arg_name,
+                                                           int32_t index) const {
+    return base_ctx_helper_.MutTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
   }
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
                                                                const std::string& arg_name,
@@ -676,7 +719,7 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
   const ParallelContext& parallel_ctx() const override { return helper_->parallel_ctx(call_ctx_); }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
-    return helper_->TensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
+    return helper_->MutTensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                                int32_t index) const override {
