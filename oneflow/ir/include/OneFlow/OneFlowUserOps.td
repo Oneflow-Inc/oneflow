@@ -4690,6 +4690,9 @@ def OneFlow_CublasFusedMLPGradOp : OneFlow_BaseOp<"cublas_fused_mlp_grad", [NoSi
     Variadic<OneFlow_Tensor>:$d_biases, 
     Variadic<OneFlow_Tensor>:$d_weights
   );
+  let attrs = (ins
+    F32ArrayAttr:$alpha_list
+  ); 
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
