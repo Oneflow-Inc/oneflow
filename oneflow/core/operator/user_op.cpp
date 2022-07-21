@@ -214,16 +214,16 @@ class UserOpInferContext final : public user_op::InferContext {
     if (it == arg2tensor_desc_.end()) { return nullptr; };
     return it->second.mut_stride();
   }
-  const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
+  DataType InputDType(const std::string& arg_name, int32_t index) const override {
     return Dtype4ArgNameAndIndex(arg_name, index);
   }
-  const DataType& OutputDType(const std::string& arg_name, int32_t index) const override {
+  DataType OutputDType(const std::string& arg_name, int32_t index) const override {
     return Dtype4ArgNameAndIndex(arg_name, index);
   }
   DataType* MutOutputDType(const std::string& arg_name, int32_t index) override {
     return MutDtype4ArgNameAndIndex(arg_name, index);
   }
-  const DataType& Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+  DataType Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return DataType::kInvalidDataType; };
     return it->second.data_type();

@@ -52,10 +52,10 @@ class InferContext {
   virtual Stride* MutOutputStride(const std::string&, int32_t) = 0;
   virtual const Stride& Stride4ArgNameAndIndex(const std::string&, int32_t) const = 0;
   virtual Stride* MutStride4ArgNameAndIndex(const std::string&, int32_t) = 0;
-  virtual const DataType& InputDType(const std::string&, int32_t) const = 0;
-  virtual const DataType& OutputDType(const std::string&, int32_t) const = 0;
+  virtual DataType InputDType(const std::string&, int32_t) const = 0;
+  virtual DataType OutputDType(const std::string&, int32_t) const = 0;
   virtual DataType* MutOutputDType(const std::string&, int32_t) = 0;
-  virtual const DataType& Dtype4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual DataType Dtype4ArgNameAndIndex(const std::string&, int32_t) const = 0;
   virtual DataType* MutDtype4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
