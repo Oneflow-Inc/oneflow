@@ -84,8 +84,6 @@ class SbpNode {
   // Use Greedy Strategy to pick the sbp signature with minimum cost for this
   // node You should have an initial strategy before running this
   double GreedyStrategy();
-  // Evaluate summery of cost in 1-ring neighborhood.
-  double EvalNbhCost() const;
   // Evaluate summery of cost between neighborhood and outside nodes
   double EvalOutNbhCost(std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id) const;
   // Evaluate summery of cost within neighborhood
@@ -113,8 +111,6 @@ class SbpNode {
   void SpreadMaxLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
                       const oneflow::HashMap<const OpNode*, oneflow::HashSet<std::string>>&
                           op_node2mutable_op_ctrl_deps);
-  // Drop down the maximum layer with the minimum layer form consumer
-  void DropMaxLayer(int32_t upper_bound);
   // Set max_layer_ = min_layer_ if this node does not have any consumer
   void LiftMaxLayer();
   // Set max_layer_ = upper_bound if this node does not have any consumer
@@ -141,8 +137,6 @@ class SbpNode {
                            std::vector<double>& acc_mainstem_cost,
                            oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
                            double wait_time, double transfer_cost);
-  // Drop down the available wait time with the minimum cost from downstream
-  void DropAvailWaitTime(double curr_mainstem_cost);
   // Reduce and set the wait time for op in the mainstem
   void SetMainstemWaitTime(double mainstem_wait_time);
 
@@ -207,6 +201,13 @@ class SbpNode {
 
   // Let one node point to another
   void StartPointToEnd(SbpNode<SbpSignature>* start_node, SbpNode<SbpSignature>* end_node);
+
+  // Evaluate summery of cost in 1-ring neighborhood.
+  double EvalNbhCost() const;
+  // Drop down the maximum layer with the minimum layer form consumer
+  void DropMaxLayer(int32_t upper_bound);
+  // Drop down the available wait time with the minimum cost from downstream
+  void DropAvailWaitTime(double curr_mainstem_cost);
 };  // class SbpNode
 
 // function in cpp. Should be put in one file due to use of template

@@ -96,9 +96,6 @@ class SbpEdge final {
   // Get the maximum element in Cost
   double GetMaxCost() const;
 
-  // Adjust cost with overlaps
-  void AdjustOverlapCost();
-
   // Assemble copy cost
   // compute_cost = true: It is computing cost
   // compute_cost = false: It is deciding whether this edge needs the wait time.
@@ -145,12 +142,6 @@ class SbpEdge final {
   // Would be initialized after GetMinCost();
   // Only used in the final graph.
   double min_cost_ = -1.0;
-  // Maximum cost in the 2D array Cost.
-  // Would be initialized after GetMaxCost();
-  // Only used in the original graph.
-  // double max_cost = -1.0;
-  // overlap ratio. Applied in copy cost.
-  double overlap_ratio_ = 1.0;
 };
 
 // function in cpp. Should be put in one file due to use of template
@@ -344,20 +335,6 @@ double SbpEdge<SbpSignature>::GetMaxCost() const {
     }
   }
   return max_cost;
-}
-
-// Adjust cost with overlaps
-template<class SbpSignature>
-void SbpEdge<SbpSignature>::AdjustOverlapCost() {
-  if (overlap_ratio_ >= 1.0) { return; }
-  if (overlap_ratio_ < 0.0) { overlap_ratio_ = 0.0; }
-  for (int32_t i = 0; i < cost_.size(); i++) {
-    for (int32_t j = 0; j < cost_[i].size(); j++) {
-      if (cost_[i][j] > 0.0 && cost_[i][j] < GetValidMaxCopyCost()) {
-        cost_[i][j] = overlap_ratio_ * cost_[i][j];
-      }
-    }
-  }
 }
 
 // Assemble copy cost
