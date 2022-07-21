@@ -19,7 +19,7 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow._C.cosine_similarity,
     r"""
-    cosine_similarity(x1: Tensor, x2: Tensor, dim: int=1, eps: Float=1e-8) -> Tensor
+    cosine_similarity(x1: Tensor, x2: Tensor, dim: int=1, eps: float=1e-8) -> Tensor
 
     Returns cosine similarity between ``x1`` and ``x2``, computed along dim. ``x1`` and ``x2`` must be broadcastable
     to a common shape. ``dim`` refers to the dimension in this common shape. Dimension ``dim`` of the output is
