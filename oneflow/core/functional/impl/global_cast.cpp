@@ -380,7 +380,7 @@ static constexpr auto* GetGlobalToGlobalOpExpr =
 Maybe<Tensor> GlobalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
                              const std::vector<Symbol<SbpParallel>>& sbp_parallels,
                              const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels,
-                             const bool copy) {
+                             bool copy) {
   const auto& global_tensor = JUST(x->AsGlobalTensor());
   CHECK_NOTNULL_OR_RETURN(global_tensor) << "global tensors supported only";
   const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
@@ -410,8 +410,7 @@ Maybe<Tensor> GlobalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDe
 
 Maybe<Tensor> LocalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
                             const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                            const std::shared_ptr<OpExpr>& op, bool check_meta_hint,
-                            const bool copy) {
+                            const std::shared_ptr<OpExpr>& op, bool check_meta_hint, bool copy) {
   CHECK_OR_RETURN(!x->is_lazy())
       << Error::RuntimeError()
       << "local_tensor.to_global() is not supported within nn.Graph for now";
@@ -467,7 +466,7 @@ class LocalToGlobalFunctor {
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<SbpParallel>>& sbp_parallels,
                            const Shape& shape, const Symbol<DType>& dtype, bool sync_data,
-                           const bool copy) const {
+                           bool copy) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope no_recursive_meta_info_conisitency_check_scope;
     JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, 1, /* force_check */ false));
@@ -519,7 +518,7 @@ class ToGlobalFunctor {
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<SbpParallel>>& sbp_parallels,
                            const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels,
-                           bool check_meta, const bool copy) const {
+                           bool check_meta, bool copy) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope scope;
     JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, grad_sbp_parallels, 1,
@@ -559,7 +558,7 @@ class GlobalToLocalFunctor {
     op_ = CHECK_JUST(one::CastFromGlobalOpExpr::New(*CHECK_JUST(UniqueStr("global_to_local"))));
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const bool copy) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool copy) const {
     CHECK_OR_RETURN(!x->is_lazy())
         << Error::RuntimeError()
         << "global_tensor.to_local() is not supported within nn.Graph for now";
