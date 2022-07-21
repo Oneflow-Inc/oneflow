@@ -30,7 +30,7 @@ namespace oneflow {
   DimVector out_dim_vec = ids_shape.dim_vec();
   const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
   out_dim_vec.push_back(embedding_size);
-  *ctx->MutMutOutputShape("embeddings", 0) = Shape(out_dim_vec);
+  *ctx->MutOutputShape("embeddings", 0) = Shape(out_dim_vec);
   return Maybe<void>::Ok();
 }
 
@@ -116,7 +116,7 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
   CHECK_EQ_OR_RETURN(unique_ids_shape, table_ids_shape)
       << "table_ids shape must equal to ids shape";
   CHECK_EQ_OR_RETURN(num_unique_ids_shape.elem_cnt(), 1);
-  *ctx->MutMutOutputShape("context", 0) = num_unique_ids_shape;
+  *ctx->MutOutputShape("context", 0) = num_unique_ids_shape;
   return Maybe<void>::Ok();
 }
 
@@ -155,19 +155,19 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
   const bool use_dynamic_memory_allocation = embedding::UseDynamicMemoryAllocation();
   if (ctx->has_output("embeddings", 0)) {
     if (use_dynamic_memory_allocation) {
-      *ctx->MutMutOutputShape("embeddings", 0) = Shape({1});
+      *ctx->MutOutputShape("embeddings", 0) = Shape({1});
     } else {
       DimVector embeddings_dim_vec = unique_ids_shape.dim_vec();
       embeddings_dim_vec.push_back(embedding_size);
-      *ctx->MutMutOutputShape("embeddings", 0) = Shape(embeddings_dim_vec);
+      *ctx->MutOutputShape("embeddings", 0) = Shape(embeddings_dim_vec);
     }
   }
   if (use_dynamic_memory_allocation) {
-    *ctx->MutMutOutputShape("unique_values", 0) = Shape({1});
+    *ctx->MutOutputShape("unique_values", 0) = Shape({1});
   } else {
     DimVector unique_values_dim_vec = unique_ids_shape.dim_vec();
     unique_values_dim_vec.push_back(line_size);
-    *ctx->MutMutOutputShape("unique_values", 0) = Shape(unique_values_dim_vec);
+    *ctx->MutOutputShape("unique_values", 0) = Shape(unique_values_dim_vec);
   }
 
   return Maybe<void>::Ok();
@@ -318,7 +318,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
   CHECK_EQ_OR_RETURN(line_size, embedding_size) << "get " << line_size << " " << embedding_size;
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  *ctx->MutMutOutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
+  *ctx->MutOutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
 
@@ -346,7 +346,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
   CHECK_EQ_OR_RETURN(line_size, embedding_size * 2) << "get " << line_size << " " << embedding_size;
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  *ctx->MutMutOutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
+  *ctx->MutOutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
 
@@ -374,7 +374,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
   CHECK_EQ_OR_RETURN(line_size, embedding_size * 3) << "get " << line_size << " " << embedding_size;
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  *ctx->MutMutOutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
+  *ctx->MutOutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
 
@@ -402,7 +402,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
   CHECK_EQ_OR_RETURN(line_size, embedding_size * 2) << "get " << line_size << " " << embedding_size;
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  *ctx->MutMutOutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
+  *ctx->MutOutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
 
@@ -430,7 +430,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
   CHECK_EQ_OR_RETURN(line_size, embedding_size * 3) << "get " << line_size << " " << embedding_size;
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  *ctx->MutMutOutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
+  *ctx->MutOutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
 
