@@ -263,15 +263,20 @@ class RawReaderKernelState final : public user_op::OpKernelState {
     CHECK_GT(batch_size_, 0);
     size_t num_instances = 0;
     std::vector<std::unique_ptr<embedding::PosixFile>> files;
+    int flags = O_RDONLY;
+    if (ParseBooleanFromEnv("ONEFLOW_RAW_READER_FORCE_DIRECT_IO", false)) { flags |= O_DIRECT; }
     for (const auto& filename : filenames) {
-      std::unique_ptr<embedding::PosixFile> file(
-          new embedding::PosixFile(filename, O_RDONLY, 0644));
+      std::unique_ptr<embedding::PosixFile> file(new embedding::PosixFile(filename, flags, 0644));
       if (file->Size() == 0) { continue; }
       CHECK_EQ(file->Size() % instance_size_, 0);
       num_instances += file->Size() / instance_size_;
       files.emplace_back(std::move(file));
     }
-    num_batches_ = RoundUp(num_instances, batch_size_) / batch_size_;
+    if ((flags & O_DIRECT) != 0) {
+      num_batches_ = num_instances / batch_size_;
+    } else {
+      num_batches_ = RoundUp(num_instances, batch_size_) / batch_size_;
+    }
     block_size_bytes_ = block_size_ * instance_size_;
     local_batch_size_bytes_ = local_batch_size_ * instance_size_;
     num_blocks_per_local_batch_ = local_batch_size_ / block_size_;
