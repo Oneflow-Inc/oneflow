@@ -21,15 +21,11 @@ limitations under the License.
 #include <iostream>
 #include <vector>
 
-#include "binary_set.h"
+#include "oneflow/core/auto_parallel/binary_set.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/graph/op_graph.h"
-#include "algorithm_util.h"
-
-#define ms_1 1e11
-#define us_1 1e8
-#define s_1 1e14
-#define cut_cost 3e38
+#include "oneflow/core/auto_parallel/algorithm_util.h"
 
 namespace oneflow {
 namespace auto_parallel {
@@ -38,94 +34,24 @@ template<class SbpSignature>
 class SbpEdge;
 
 template<class SbpSignature>
+class SbpGraph;
+
+template<class SbpSignature>
 class SbpNode {
  public:
-  // Data Structure
-
-  // compound edge in
-  std::vector<SbpEdge<SbpSignature>*> EdgesIn;
-  // compound edge out
-  std::vector<SbpEdge<SbpSignature>*> EdgesOut;
-  // Identity, use it to distinguish itself from node set
-  int32_t id = -1;
-
-  // We should use Sbp-signature for edge with lowest OrderValue
-  std::vector<int32_t> OrderValue;
-  // Lowest OrderValue
-  int32_t LowOrderValue = -1;
-  // Available SbpSignature pointer for this node
-  std::vector<SbpSignature*> SbpSignatureList;
-  // Available SbpSignature object for this node
-  std::vector<SbpSignature> SbpSignatureObjList;
-  // Global SbpSignature List Size
-  int32_t GlobalSbpSigSize = -1;
-  // Decide to use SbpSignature with this id
-  int32_t FinalSbpSignatureId;
-  // Location in NodeList
-  int32_t NodeListId = -1;
-
-  // Child node list
-  std::vector<SbpNode<SbpSignature>*> Children;
-  // SbpSignature for each child node when using specific SbpSignature for this
-  // node Its dimension is Number of Child Nodes * Number of Available
-  // SbpSignatures for this node
-  std::vector<std::vector<int32_t>> ChildNodeSbpSig;
-
-  // Merge two nodes into this compound node
-  std::vector<SbpNode<SbpSignature>*> HalfNode;
-  // We should delete those merged-signatures which has very large cost for speed up
-  // New SbpSignatureList index map to each HalfNode's sig_index
-  std::vector<std::pair<int32_t, int32_t>> MergedSigId2ChildrenSigId;
-
-  // Cost[sbp] is Computation Cost when using SbpSignatureList[sbp]
-  std::vector<double> Cost;
-
-  std::vector<BinarySet> ParallelCandidates;
-
-  oneflow::OpNode* op_node = nullptr;
-
-  // We devide the sbp graph into multiple layers.
-  // MinLayer is the minimum layer number to run this op as soon as possible.
-  // MaxLayer is the maximum layer number without slowing down the whole process of the graph.
-  // producer.MaxLayer < this_node.MinLayer <= this_node.MaxLayer < consumer.MinLayer
-  int32_t MinLayer = -1, MaxLayer = -1;
-  // Maximum layer in tributaries
-  int32_t TributaryLayer = -1;
-  // Whether we are on the mainstem
-  bool IfMainstem = false;
-  // A counter buffer for topological traversal or something else
-  int32_t counter = 0;
-  // Accumulate mainstem cost from consumer to the end
-  double AccMainstemCost = -1.0;
-
-#ifdef DEBUG_ALGORITHM_
-
-  // original edge out
-  std::vector<SbpNode*> NodesOut;
-  // original cost for edge out
-  std::vector<std::vector<std::vector<double>>> OriginCostOut;
-  // original edge in
-  std::vector<SbpNode*> NodesIn;
-  // Original Cost
-  std::vector<double> OriginCost;
-
-  // Current Degree is a tag used for Topological ordering
-  int32_t CurrDeg;
-#endif  // DEBUG_ALGORITHM_
-
   // default constructor
-  SbpNode() : FinalSbpSignatureId(0) {}
+  SbpNode() : final_sbp_sig_id_(0) {}
 
   // This constructor is to merge two node into one
   SbpNode(SbpNode<SbpSignature>* first, SbpNode<SbpSignature>* second);
 
   ~SbpNode() {
-    for (auto& edge_out : EdgesOut) { delete edge_out; }
-    for (auto& childnode : Children) {
-      if (childnode->EdgesIn.size()) { delete childnode->EdgesIn[0]; }
-      delete childnode;
+    for (auto& edge_out : edges_out_) { delete edge_out; }
+    for (auto& child_node : children_) {
+      if (child_node->edges_in_.size()) { delete child_node->edges_in_[0]; }
+      delete child_node;
     }
-    for (auto& half_node : HalfNode) { delete half_node; }
+    for (auto& half_node : half_node_) { delete half_node; }
   }
 
   // another node point to this node
@@ -133,30 +59,22 @@ class SbpNode {
   // this node point to another node
   void PointTo(SbpNode<SbpSignature>* end_node);
 
-  SbpEdge<SbpSignature>* FindEdgeWithNode(const SbpNode<SbpSignature>* other_node) {
-    for (auto* sbp_edge : EdgesIn) {
+  SbpEdge<SbpSignature>* FindEdgeWithNode(const SbpNode<SbpSignature>* other_node) const {
+    for (auto* sbp_edge : edges_in_) {
       if (sbp_edge->start_node_ == other_node) { return sbp_edge; }
     }
-    for (auto* sbp_edge : EdgesOut) {
+    for (auto* sbp_edge : edges_out_) {
       if (sbp_edge->end_node_ == other_node) { return sbp_edge; }
     }
     return nullptr;
   };
 
-  // initialize the OrderValue and Find the lowest one
-  void FindLowOrderValue(const std::function<int32_t()>& CalcOrderValue4SbpSig);
-  // Initialize SbpSignature
-  void InitializeSbp(const std::function<int32_t()>& CalcOrderValue4SbpSig,
-                     std::vector<SbpSignature*> GlobalSbpSignatureList);
   // Initialize SbpSignature from Signature Objects
   void InitializeSbp();
-  // Compute Computation Cost
-  void ComputeCost(
-      const std::function<double(SbpNode<SbpSignature>*, SbpSignature*)>& SbpComputationCost);
   // Decide to use this SbpSignature
   SbpSignature* FinalSbpSignature() const {
-    if (SbpSignatureList.empty()) { return nullptr; }
-    return SbpSignatureList[FinalSbpSignatureId];
+    if (sbp_sig_list_.empty()) { return nullptr; }
+    return sbp_sig_list_[final_sbp_sig_id_];
   };
 
   // Recompute Computation Cost after adding child nodes in it
@@ -167,31 +85,25 @@ class SbpNode {
   // node You should have an initial strategy before running this
   double GreedyStrategy();
   // Evaluate summery of cost in 1-ring neighborhood.
-  double EvalNbhCost();
+  double EvalNbhCost() const;
   // Evaluate summery of cost between neighborhood and outside nodes
-  double EvalOutNbhCost(std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id);
+  double EvalOutNbhCost(std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id) const;
   // Evaluate summery of cost within neighborhood
   // We only accumulate the edge cost with a lower order.
-  double EvalInNbhCost(std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id,
-                       std::vector<int32_t>& nbh_id2order);
+  double EvalInNbhCost(std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
+                       std::vector<int32_t>& nbh_id2order) const;
   // Evaluate summery of cost within neighborhood
   // We only accumulate the minimum edge cost with a higher order.
-  double EvalMinInNbhCost(std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id,
-                          std::vector<int32_t>& nbh_id2order);
+  double EvalMinInNbhCost(std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
+                          std::vector<int32_t>& nbh_id2order) const;
   // Get the one ring neighborhood of this node, which is itself and all the adjacent nodes.
-  void OneRingNeighborhood(std::vector<int32_t>& nbh_1ring);
+  void OneRingNeighborhood(std::vector<int32_t>& nbh_1ring) const;
   // Get the n ring neighborhood of this node
   // Pre-allocate buffer, which will be faster.
-  void NRingNeighborhood(int32_t n, std::vector<int32_t>& nbh_nring,
+  void NRingNeighborhood(int32_t n, std::vector<int32_t>& nbh_n_ring,
                          std::vector<int32_t>& nbh_1ring,
-                         std::vector<SbpNode<SbpSignature>*>& NodeList,
-                         std::vector<bool>& node_tags);
-
-  // Detect and spread overlaps for EdgesOut.
-  void DetectSpreadOverlap(double max_1_comp_cost, double max_2_comp_cost, int32_t max_1_id,
-                           double min_ratio);
-  // Detect and spread overlaps for sbp proxy.
-  void DetectSpreadOverlap(double overlap_ratio);
+                         std::vector<SbpNode<SbpSignature>*>& node_list,
+                         std::vector<bool>& node_tags) const;
 
   // Get or compute the minimum layer of this node
   int32_t GetMinLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
@@ -203,9 +115,9 @@ class SbpNode {
                           op_node2mutable_op_ctrl_deps);
   // Drop down the maximum layer with the minimum layer form consumer
   void DropMaxLayer(int32_t upper_bound);
-  // Set MaxLayer = MinLayer if this node does not have any consumer
+  // Set max_layer_ = min_layer_ if this node does not have any consumer
   void LiftMaxLayer();
-  // Set MaxLayer = upper_bound if this node does not have any consumer
+  // Set max_layer_ = upper_bound if this node does not have any consumer
   void LiftMaxLayer(int32_t upper_bound);
   // Compute maximum layer for tributaries
   void SpreadTributaryLayer(
@@ -214,9 +126,9 @@ class SbpNode {
   void DropTributaryLayer(int32_t upper_bound);
 
   // Get the minimum element in Cost
-  double GetMinCost();
+  double GetMinCost() const;
   // get the cut ratio
-  double GetCutRatio();
+  double GetCutRatio() const;
 
   // Judge if this node is on the mainstem
   // If so, judge it for its producer/upstream nodes
@@ -229,13 +141,72 @@ class SbpNode {
                            std::vector<double>& acc_mainstem_cost,
                            oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
                            double wait_time, double transfer_cost);
-  // Drop down the available wait time with the minimum cost from downstreams
+  // Drop down the available wait time with the minimum cost from downstream
   void DropAvailWaitTime(double curr_mainstem_cost);
   // Reduce and set the wait time for op in the mainstem
   void SetMainstemWaitTime(double mainstem_wait_time);
 
   // Assemble copy cost for all the incoming edges
-  void InitializeCopyCost(bool compute_cost, bool use_sbp_collector_);
+  void InitializeCopyCost(bool compute_cost, bool use_sbp_collector);
+
+ private:
+  friend class SbpEdge<SbpSignature>;
+  friend class SbpGraph<SbpSignature>;
+  friend class SbpCollector;
+  friend class SbpConstructor;
+
+  // compound edge in
+  std::vector<SbpEdge<SbpSignature>*> edges_in_;
+  // compound edge out
+  std::vector<SbpEdge<SbpSignature>*> edges_out_;
+
+  // Available SbpSignature pointer for this node
+  std::vector<SbpSignature*> sbp_sig_list_;
+  // Available SbpSignature object for this node
+  std::vector<SbpSignature> sbp_sig_obj_list_;
+  // Global SbpSignature List Size
+  int32_t global_sbp_sig_size_ = -1;
+  // Decide to use SbpSignature with this id
+  int32_t final_sbp_sig_id_;
+  // Location in node_list of SbpGraph
+  int32_t node_list_id_ = -1;
+
+  // Child node list
+  std::vector<SbpNode<SbpSignature>*> children_;
+  // SbpSignature for each child node when using specific SbpSignature for this
+  // node Its dimension is Number of Child Nodes * Number of Available
+  // SbpSignatures for this node
+  std::vector<std::vector<int32_t>> child_node_sbp_sig_;
+
+  // Merge two nodes into this compound node
+  std::vector<SbpNode<SbpSignature>*> half_node_;
+  // We should delete those merged-signatures which has very large cost for speed up
+  // New sbp_sig_list_ index map to each half_node_'s sig_index
+  std::vector<std::pair<int32_t, int32_t>> merged_sig_id2children_sig_id_;
+
+  // Cost[sbp] is Computation Cost when using sbp_sig_list_[sbp]
+  std::vector<double> cost_;
+
+  std::vector<BinarySet> parallel_candidates_;
+
+  oneflow::OpNode* op_node_ = nullptr;
+
+  // We divide the sbp graph into multiple layers.
+  // min_layer_ is the minimum layer number to run this op as soon as possible.
+  // max_layer_ is the maximum layer number without slowing down the whole process of the graph.
+  // producer.max_layer_ < this_node.min_layer_ <= this_node.max_layer_ < consumer.min_layer_
+  int32_t min_layer_ = -1, max_layer_ = -1;
+  // Maximum layer in tributaries
+  int32_t tributary_layer_ = -1;
+  // Whether we are on the mainstem
+  bool on_mainstem_ = false;
+  // A counter_ buffer for topological traversal or something else
+  int32_t counter_ = 0;
+  // Accumulate mainstem cost from consumer to the end
+  double acc_mainstem_cost_ = -1.0;
+
+  // Let one node point to another
+  void StartPointToEnd(SbpNode<SbpSignature>* start_node, SbpNode<SbpSignature>* end_node);
 };  // class SbpNode
 
 // function in cpp. Should be put in one file due to use of template
@@ -243,21 +214,21 @@ class SbpNode {
 
 template<class SbpSignature>
 SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature>* first, SbpNode<SbpSignature>* second) {
-  HalfNode.resize(2);
-  HalfNode[0] = first;
-  HalfNode[1] = second;
+  half_node_.resize(2);
+  half_node_[0] = first;
+  half_node_[1] = second;
 
   // Get the edge between first and second
   // NOTE: It must zero or one edge between them
   SbpEdge<SbpSignature>* common_edge = nullptr;
-  for (int32_t k = 0; k < first->EdgesIn.size(); k++) {
-    if (first->EdgesIn[k]->start_node_ == second) {
+  for (int32_t k = 0; k < first->edges_in_.size(); k++) {
+    if (first->edges_in_[k]->start_node_ == second) {
       // CHECK_ISNULL(edge);
-      common_edge = first->EdgesIn[k];
+      common_edge = first->edges_in_[k];
     }
   }
-  for (int32_t k = 0; k < first->EdgesOut.size(); k++) {
-    if (first->EdgesOut[k]->end_node_ == second) { common_edge = first->EdgesOut[k]; }
+  for (int32_t k = 0; k < first->edges_out_.size(); k++) {
+    if (first->edges_out_[k]->end_node_ == second) { common_edge = first->edges_out_[k]; }
   }
 
   // Find all available merged-SbpSignature(edge's cost less than threshold).
@@ -267,138 +238,99 @@ SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature>* first, SbpNode<SbpSignatur
       for (const double& c : row) min_cost = std::min(min_cost, c);
     }
     // If there is no one case can choose, we will blow up
-    for (int32_t i = 0; i < first->Cost.size(); i++) {
-      for (int32_t j = 0; j < second->Cost.size(); j++) {
+    for (int32_t i = 0; i < first->cost_.size(); i++) {
+      for (int32_t j = 0; j < second->cost_.size(); j++) {
         const double edge_cost =
             common_edge->start_node_ == first ? common_edge->cost_[i][j] : common_edge->cost_[j][i];
-        if (edge_cost < cut_cost) {
-          MergedSigId2ChildrenSigId.emplace_back(std::make_pair(i, j));
-          Cost.emplace_back(edge_cost + first->Cost[i] + second->Cost[j]);
+        if (edge_cost < GetValidMaxCopyCost()) {
+          merged_sig_id2children_sig_id_.emplace_back(std::make_pair(i, j));
+          cost_.emplace_back(edge_cost + first->cost_[i] + second->cost_[j]);
         }
       }
     }
-    CHECK(MergedSigId2ChildrenSigId.size() > 0)
+    CHECK(merged_sig_id2children_sig_id_.size() > 0)
         << "0 size for merge child edge, min cost: " << min_cost;
   } else {
-    for (int32_t i = 0; i < first->Cost.size(); i++) {
-      for (int32_t j = 0; j < second->Cost.size(); j++) {
-        MergedSigId2ChildrenSigId.emplace_back(std::make_pair(i, j));
-        Cost.emplace_back(first->Cost[i] + second->Cost[j]);
+    for (int32_t i = 0; i < first->cost_.size(); i++) {
+      for (int32_t j = 0; j < second->cost_.size(); j++) {
+        merged_sig_id2children_sig_id_.emplace_back(std::make_pair(i, j));
+        cost_.emplace_back(first->cost_[i] + second->cost_[j]);
       }
     }
   }
 
   // Initialize default sbp choice
   // If the original sbp pair does not go through, then use 0 as default.
-  FinalSbpSignatureId = 0;
+  final_sbp_sig_id_ = 0;
   // Track the original strategy
-  for (int32_t sig_id = 0; sig_id < MergedSigId2ChildrenSigId.size(); sig_id++) {
-    if (MergedSigId2ChildrenSigId[sig_id].first == first->FinalSbpSignatureId
-        && MergedSigId2ChildrenSigId[sig_id].second == second->FinalSbpSignatureId) {
-      FinalSbpSignatureId = sig_id;
+  for (int32_t sig_id = 0; sig_id < merged_sig_id2children_sig_id_.size(); sig_id++) {
+    if (merged_sig_id2children_sig_id_[sig_id].first == first->final_sbp_sig_id_
+        && merged_sig_id2children_sig_id_[sig_id].second == second->final_sbp_sig_id_) {
+      final_sbp_sig_id_ = sig_id;
     }
   }
 
-  // Merge EdgesIn
-  EdgesIn.reserve(first->EdgesIn.size() + second->EdgesIn.size());
-  EdgesIn.insert(EdgesIn.end(), first->EdgesIn.begin(), first->EdgesIn.end());
-  EdgesIn.insert(EdgesIn.end(), second->EdgesIn.begin(), second->EdgesIn.end());
-  // Merge EdgesOut
-  EdgesOut.reserve(first->EdgesOut.size() + second->EdgesOut.size());
-  EdgesOut.insert(EdgesOut.end(), first->EdgesOut.begin(), first->EdgesOut.end());
-  EdgesOut.insert(EdgesOut.end(), second->EdgesOut.begin(), second->EdgesOut.end());
+  // Merge edges_in_
+  edges_in_.reserve(first->edges_in_.size() + second->edges_in_.size());
+  edges_in_.insert(edges_in_.end(), first->edges_in_.begin(), first->edges_in_.end());
+  edges_in_.insert(edges_in_.end(), second->edges_in_.begin(), second->edges_in_.end());
+  // Merge edges_out_
+  edges_out_.reserve(first->edges_out_.size() + second->edges_out_.size());
+  edges_out_.insert(edges_out_.end(), first->edges_out_.begin(), first->edges_out_.end());
+  edges_out_.insert(edges_out_.end(), second->edges_out_.begin(), second->edges_out_.end());
   // Merge SbpEdge Cost
-  for (SbpEdge<SbpSignature>*& this_edge : first->EdgesIn) {
-    this_edge->DuplicateCost(false, true, MergedSigId2ChildrenSigId);
+  for (SbpEdge<SbpSignature>*& this_edge : first->edges_in_) {
+    this_edge->DuplicateCost(false, true, merged_sig_id2children_sig_id_);
     this_edge->end_node_ = this;
   }
-  for (SbpEdge<SbpSignature>*& this_edge : first->EdgesOut) {
-    this_edge->DuplicateCost(true, true, MergedSigId2ChildrenSigId);
+  for (SbpEdge<SbpSignature>*& this_edge : first->edges_out_) {
+    this_edge->DuplicateCost(true, true, merged_sig_id2children_sig_id_);
     this_edge->start_node_ = this;
   }
-  for (SbpEdge<SbpSignature>*& this_edge : second->EdgesIn) {
-    this_edge->DuplicateCost(false, false, MergedSigId2ChildrenSigId);
+  for (SbpEdge<SbpSignature>*& this_edge : second->edges_in_) {
+    this_edge->DuplicateCost(false, false, merged_sig_id2children_sig_id_);
     this_edge->end_node_ = this;
   }
-  for (SbpEdge<SbpSignature>*& this_edge : second->EdgesOut) {
-    this_edge->DuplicateCost(true, false, MergedSigId2ChildrenSigId);
+  for (SbpEdge<SbpSignature>*& this_edge : second->edges_out_) {
+    this_edge->DuplicateCost(true, false, merged_sig_id2children_sig_id_);
     this_edge->start_node_ = this;
   }
   // Remove edges from original nodes
-  first->EdgesIn.clear();
-  first->EdgesOut.clear();
-  second->EdgesIn.clear();
-  second->EdgesOut.clear();
+  first->edges_in_.clear();
+  first->edges_out_.clear();
+  second->edges_in_.clear();
+  second->edges_out_.clear();
 
   // Move edges between two nodes to each half node
-  for (int32_t k = EdgesOut.size() - 1; k >= 0; k--) {
-    if (EdgesOut[k]->end_node_ == this) {
-      // Remove this edge from EdgesOut and EdgesIn and put it inside the node
-      CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(EdgesIn, EdgesOut[k]);
-      first->EdgesOut.emplace_back(EdgesOut[k]);
-      second->EdgesIn.emplace_back(EdgesOut[k]);
-      RemoveFrom<SbpEdge<SbpSignature>*>(EdgesOut, k);
+  for (int32_t k = edges_out_.size() - 1; k >= 0; k--) {
+    if (edges_out_[k]->end_node_ == this) {
+      // Remove this edge from edges_out_ and edges_in_ and put it inside the node
+      CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(edges_in_, edges_out_[k]);
+      first->edges_out_.emplace_back(edges_out_[k]);
+      second->edges_in_.emplace_back(edges_out_[k]);
+      RemoveFrom<SbpEdge<SbpSignature>*>(edges_out_, k);
     }
   }
 }
 
 template<class SbpSignature>
-void SbpNode<SbpSignature>::FindLowOrderValue(
-    const std::function<int32_t()>& CalcOrderValue4SbpSig) {
-  LowOrderValue = 0;
-  for (int32_t i = 0; i < OrderValue.size(); i++) {
-    OrderValue[i] = CalcOrderValue4SbpSig();
-    if (OrderValue[i] < LowOrderValue) { LowOrderValue = OrderValue[i]; }
-  }
-};
-
-template<class SbpSignature>
-void SbpNode<SbpSignature>::InitializeSbp(const std::function<int32_t()>& CalcOrderValue4SbpSig,
-                                          std::vector<SbpSignature*> GlobalSbpSignatureList) {
-  GlobalSbpSigSize = GlobalSbpSignatureList.size();
-  OrderValue.resize(GlobalSbpSigSize);
-
-  FindLowOrderValue(CalcOrderValue4SbpSig);
-
-  SbpSignatureList.clear();
-  for (int32_t sbp = 0; sbp < OrderValue.size(); sbp++) {
-    if (OrderValue[sbp] == LowOrderValue) {
-      SbpSignatureList.emplace_back(GlobalSbpSignatureList[sbp]);
-    }
-  }
-  Cost.resize(SbpSignatureList.size());
-};
-
-template<class SbpSignature>
 void SbpNode<SbpSignature>::InitializeSbp() {
-  GlobalSbpSigSize = SbpSignatureObjList.size();
-  SbpSignatureList.clear();
-  for (int32_t i = 0; i < SbpSignatureObjList.size(); i++) {
-    SbpSignatureList.emplace_back(&(SbpSignatureObjList[i]));
+  global_sbp_sig_size_ = sbp_sig_obj_list_.size();
+  sbp_sig_list_.clear();
+  for (int32_t i = 0; i < sbp_sig_obj_list_.size(); i++) {
+    sbp_sig_list_.emplace_back(&(sbp_sig_obj_list_[i]));
   }
-  Cost.resize(SbpSignatureList.size());
-};
-
-template<class SbpSignature>
-void SbpNode<SbpSignature>::ComputeCost(
-    const std::function<double(SbpNode<SbpSignature>*, SbpSignature*)>& SbpComputationCost) {
-  Cost.resize(SbpSignatureList.size());
-  for (int32_t sbp = 0; sbp < SbpSignatureList.size(); sbp++) {
-    Cost[sbp] = SbpComputationCost(this, SbpSignatureList[sbp]);
-  }
+  cost_.resize(sbp_sig_list_.size());
 };
 
 // Let one node point to another
 template<class SbpSignature>
-void StartPointToEnd(SbpNode<SbpSignature>* start_node, SbpNode<SbpSignature>* end_node) {
-#ifdef DEBUG_ALGORITHM_
-  start_node->NodesOut.emplace_back(end_node);
-  end_node->NodesIn.emplace_back(start_node);
-#endif  // DEBUG_ALGORITHM_
+void SbpNode<SbpSignature>::StartPointToEnd(SbpNode<SbpSignature>* start_node,
+                                            SbpNode<SbpSignature>* end_node) {
   // generate the edge between them
   SbpEdge<SbpSignature>* e = new SbpEdge<SbpSignature>(start_node, end_node);
-  start_node->EdgesOut.emplace_back(e);
-  end_node->EdgesIn.emplace_back(e);
+  start_node->edges_out_.emplace_back(e);
+  end_node->edges_in_.emplace_back(e);
 };
 
 template<class SbpSignature>
@@ -413,281 +345,234 @@ void SbpNode<SbpSignature>::PointTo(SbpNode<SbpSignature>* end_node) {
 
 template<class SbpSignature>
 void SbpNode<SbpSignature>::SummarizeCost() {
-  if (Children.size() == ChildNodeSbpSig.size()) { return; }
-  int32_t PreviousChildrenSize = ChildNodeSbpSig.size();
-  ChildNodeSbpSig.resize(Children.size());
-  // Only deal with new Children
-  for (int32_t child = PreviousChildrenSize; child < Children.size(); child++) {
-    ChildNodeSbpSig[child].resize(Cost.size());
+  if (children_.size() == child_node_sbp_sig_.size()) { return; }
+  int32_t previous_children_size = child_node_sbp_sig_.size();
+  child_node_sbp_sig_.resize(children_.size());
+  // Only deal with new children_
+  for (int32_t child = previous_children_size; child < children_.size(); child++) {
+    child_node_sbp_sig_[child].resize(cost_.size());
 
-    for (int32_t sbp_this = 0; sbp_this < Cost.size(); sbp_this++) {
-      double MinCost = 0, CurrCost;
-      for (int32_t sbp_child = 0; sbp_child < Children[child]->Cost.size(); sbp_child++) {
-        if (Children[child]->EdgesIn.size()) {
+    for (int32_t sbp_this = 0; sbp_this < cost_.size(); sbp_this++) {
+      double min_cost = 0, curr_cost = 0;
+      for (int32_t sbp_child = 0; sbp_child < children_[child]->cost_.size(); sbp_child++) {
+        if (children_[child]->edges_in_.size()) {
           // edge in graph: father -> child
-          CurrCost = Children[child]->EdgesIn[0]->cost_[sbp_this][sbp_child]
-                     + Children[child]->Cost[sbp_child];
+          curr_cost = children_[child]->edges_in_[0]->cost_[sbp_this][sbp_child]
+                      + children_[child]->cost_[sbp_child];
 
         } else {
           // edge in graph: child -> father
-          CurrCost = Children[child]->EdgesOut[0]->cost_[sbp_child][sbp_this]
-                     + Children[child]->Cost[sbp_child];
+          curr_cost = children_[child]->edges_out_[0]->cost_[sbp_child][sbp_this]
+                      + children_[child]->cost_[sbp_child];
         }
-        // update MinCost with fixed SbpSignature for this node and child node
-        if (sbp_child == 0 || CurrCost < MinCost) {
-          MinCost = CurrCost;
-          ChildNodeSbpSig[child][sbp_this] = sbp_child;
+        // update min_cost with fixed SbpSignature for this node and child node
+        if (sbp_child == 0 || curr_cost < min_cost) {
+          min_cost = curr_cost;
+          child_node_sbp_sig_[child][sbp_this] = sbp_child;
         }
       }
       // Add the cost for child node to this node
-      Cost[sbp_this] += MinCost;
+      cost_[sbp_this] += min_cost;
     }
   }
 }
 
 template<class SbpSignature>
 void SbpNode<SbpSignature>::FinalizeSbp() {
-  if (!HalfNode.empty()) {
+  if (!half_node_.empty()) {
     // Finalize Sbp of merged nodes
-    HalfNode[0]->FinalSbpSignatureId = MergedSigId2ChildrenSigId[FinalSbpSignatureId].first;
-    HalfNode[1]->FinalSbpSignatureId = MergedSigId2ChildrenSigId[FinalSbpSignatureId].second;
+    half_node_[0]->final_sbp_sig_id_ = merged_sig_id2children_sig_id_[final_sbp_sig_id_].first;
+    half_node_[1]->final_sbp_sig_id_ = merged_sig_id2children_sig_id_[final_sbp_sig_id_].second;
   }
 
-  // Finalize Sbp of Children
-  for (int32_t i = 0; i < Children.size(); i++) {
-    Children[i]->FinalSbpSignatureId = ChildNodeSbpSig[i][this->FinalSbpSignatureId];
+  // Finalize Sbp of children_
+  for (int32_t i = 0; i < children_.size(); i++) {
+    children_[i]->final_sbp_sig_id_ = child_node_sbp_sig_[i][this->final_sbp_sig_id_];
   }
 
-  // Finalize Sbp of HalfNode Attachment
-  if (!HalfNode.empty()) {
-    HalfNode[0]->FinalizeSbp();
-    HalfNode[1]->FinalizeSbp();
+  // Finalize Sbp of half_node_ Attachment
+  if (!half_node_.empty()) {
+    half_node_[0]->FinalizeSbp();
+    half_node_[1]->FinalizeSbp();
   }
 
-  // Finalize Sbp of edges in EdgesOut
-  for (const auto& edge_out : EdgesOut) edge_out->FinalizeSbp();
+  // Finalize Sbp of edges in edges_out_
+  for (const auto& edge_out : edges_out_) edge_out->FinalizeSbp();
 
   // Finalize Sbp again in case of the node on the other side is not finalized
   // yet. This may happen when Two side of an edge merged into two larger nodes
   // and this edge is just a sub edge.
-  for (const auto& edge_in : EdgesIn) edge_in->FinalizeSbp();
+  for (const auto& edge_in : edges_in_) edge_in->FinalizeSbp();
 
-  // Finalize Sbp of Children Attachment
-  for (int32_t i = 0; i < Children.size(); i++) {
-    Children[i]->FinalizeSbp();
-    for (const auto& edge_in : Children[i]->EdgesIn) edge_in->FinalizeSbp();
+  // Finalize Sbp of children_ Attachment
+  for (int32_t i = 0; i < children_.size(); i++) {
+    children_[i]->FinalizeSbp();
+    for (const auto& edge_in : children_[i]->edges_in_) edge_in->FinalizeSbp();
   }
 }
 
 template<class SbpSignature>
 double SbpNode<SbpSignature>::GreedyStrategy() {
   // Current Cost, Minimum Cost, Cost with original sbp
-  double CurrCost, MinCost, OrgCost;
-  OrgCost = EvalNbhCost();
-  MinCost = OrgCost;
-  int32_t MinSbp = FinalSbpSignatureId;
-  for (int32_t sbp = 0; sbp < Cost.size(); sbp++) {
-    FinalSbpSignatureId = sbp;
-    CurrCost = EvalNbhCost();
-    if (CurrCost < MinCost) {
-      MinCost = CurrCost;
-      MinSbp = sbp;
+  double curr_cost = 0;
+  double original_cost = EvalNbhCost();
+  double min_cost = original_cost;
+  int32_t min_sbp = final_sbp_sig_id_;
+  for (int32_t sbp = 0; sbp < cost_.size(); sbp++) {
+    final_sbp_sig_id_ = sbp;
+    curr_cost = EvalNbhCost();
+    if (curr_cost < min_cost) {
+      min_cost = curr_cost;
+      min_sbp = sbp;
     }
   }
-  FinalSbpSignatureId = MinSbp;
-  return MinCost - OrgCost;
+  final_sbp_sig_id_ = min_sbp;
+  return min_cost - original_cost;
 }
 
 template<class SbpSignature>
-double SbpNode<SbpSignature>::EvalNbhCost() {
+double SbpNode<SbpSignature>::EvalNbhCost() const {
   // Current Cost, Minimum Cost, Cost with original sbp
-  double CurrCost = Cost[FinalSbpSignatureId];
-  for (SbpEdge<SbpSignature>* this_edge : EdgesIn) {
-    CurrCost += this_edge->cost_[this_edge->start_node_->FinalSbpSignatureId][FinalSbpSignatureId];
+  double curr_cost = cost_[final_sbp_sig_id_];
+  for (SbpEdge<SbpSignature>* this_edge : edges_in_) {
+    curr_cost += this_edge->cost_[this_edge->start_node_->final_sbp_sig_id_][final_sbp_sig_id_];
   }
-  for (SbpEdge<SbpSignature>* this_edge : EdgesOut) {
-    CurrCost += this_edge->cost_[FinalSbpSignatureId][this_edge->end_node_->FinalSbpSignatureId];
+  for (SbpEdge<SbpSignature>* this_edge : edges_out_) {
+    curr_cost += this_edge->cost_[final_sbp_sig_id_][this_edge->end_node_->final_sbp_sig_id_];
   }
-  return CurrCost;
+  return curr_cost;
 }
 
 template<class SbpSignature>
 double SbpNode<SbpSignature>::EvalOutNbhCost(
-    std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id) {
+    std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id) const {
   // check if this node is in the node list
-  CHECK(NodeListId >= 0) << "Compute out cost for a node out of the node list" << std::endl;
+  CHECK(node_list_id_ >= 0) << "Compute out cost for a node out of the node list" << std::endl;
   // Cost with original sbp
-  double CurrCost = Cost[FinalSbpSignatureId];
-  for (SbpEdge<SbpSignature>* this_edge : EdgesIn) {
+  double curr_cost = cost_[final_sbp_sig_id_];
+  for (SbpEdge<SbpSignature>* this_edge : edges_in_) {
     // if the start node is not in the neighborhood
-    if (NodeListId2nbh_id.find(this_edge->start_node_->NodeListId) == NodeListId2nbh_id.end()) {
-      CurrCost +=
-          this_edge->cost_[this_edge->start_node_->FinalSbpSignatureId][FinalSbpSignatureId];
+    if (node_list_id2nbh_id.find(this_edge->start_node_->node_list_id_)
+        == node_list_id2nbh_id.end()) {
+      curr_cost += this_edge->cost_[this_edge->start_node_->final_sbp_sig_id_][final_sbp_sig_id_];
     }
   }
-  for (SbpEdge<SbpSignature>* this_edge : EdgesOut) {
+  for (SbpEdge<SbpSignature>* this_edge : edges_out_) {
     // if the end node is not in the neighborhood
-    if (NodeListId2nbh_id.find(this_edge->end_node_->NodeListId) == NodeListId2nbh_id.end()) {
-      CurrCost += this_edge->cost_[FinalSbpSignatureId][this_edge->end_node_->FinalSbpSignatureId];
+    if (node_list_id2nbh_id.find(this_edge->end_node_->node_list_id_)
+        == node_list_id2nbh_id.end()) {
+      curr_cost += this_edge->cost_[final_sbp_sig_id_][this_edge->end_node_->final_sbp_sig_id_];
     }
   }
-  return CurrCost;
+  return curr_cost;
 }
 
 // Compute the cost between this node and adjacent nodes with a lower order
 template<class SbpSignature>
-double SbpNode<SbpSignature>::EvalInNbhCost(std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id,
-                                            std::vector<int32_t>& nbh_id2order) {
+double SbpNode<SbpSignature>::EvalInNbhCost(
+    std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
+    std::vector<int32_t>& nbh_id2order) const {
   // check if this node is in the node list
-  CHECK(NodeListId >= 0) << "Compute in cost for a node out of the node list" << std::endl;
+  CHECK(node_list_id_ >= 0) << "Compute in cost for a node out of the node list";
   // check if the node is in the neighborhood
-  auto this_it = NodeListId2nbh_id.find(NodeListId);
-  CHECK(this_it != NodeListId2nbh_id.end())
-      << "Compute in cost for a node out of the neighborhood" << std::endl;
+  auto this_it = node_list_id2nbh_id.find(node_list_id_);
+  CHECK(this_it != node_list_id2nbh_id.end())
+      << "Compute in cost for a node out of the neighborhood";
   // Compute the minimum cost between this node and adjacent nodes with a lower order
   int32_t order = nbh_id2order[this_it->second];
-  double CurrCost = 0;
-  for (SbpEdge<SbpSignature>* this_edge : EdgesIn) {
-    auto it = NodeListId2nbh_id.find(this_edge->start_node_->NodeListId);
+  double curr_cost = 0;
+  for (SbpEdge<SbpSignature>* this_edge : edges_in_) {
+    auto it = node_list_id2nbh_id.find(this_edge->start_node_->node_list_id_);
     // if the start node is in the neighborhood
-    if (it != NodeListId2nbh_id.end() && nbh_id2order[it->second] < order) {
-      CurrCost +=
-          this_edge->cost_[this_edge->start_node_->FinalSbpSignatureId][FinalSbpSignatureId];
+    if (it != node_list_id2nbh_id.end() && nbh_id2order[it->second] < order) {
+      curr_cost += this_edge->cost_[this_edge->start_node_->final_sbp_sig_id_][final_sbp_sig_id_];
       // End this function and return infinity.
-      if (CurrCost > cut_cost) { return GetMaxVal<float>(); }
+      if (curr_cost > GetValidMaxCopyCost()) { return GetMaxVal<float>(); }
     }
   }
-  for (SbpEdge<SbpSignature>* this_edge : EdgesOut) {
-    auto it = NodeListId2nbh_id.find(this_edge->end_node_->NodeListId);
+  for (SbpEdge<SbpSignature>* this_edge : edges_out_) {
+    auto it = node_list_id2nbh_id.find(this_edge->end_node_->node_list_id_);
     // if the end node is in the neighborhood
-    if (it != NodeListId2nbh_id.end() && nbh_id2order[it->second] < order) {
-      CurrCost += this_edge->cost_[FinalSbpSignatureId][this_edge->end_node_->FinalSbpSignatureId];
-      if (CurrCost > cut_cost) { return GetMaxVal<float>(); }
+    if (it != node_list_id2nbh_id.end() && nbh_id2order[it->second] < order) {
+      curr_cost += this_edge->cost_[final_sbp_sig_id_][this_edge->end_node_->final_sbp_sig_id_];
+      if (curr_cost > GetValidMaxCopyCost()) { return GetMaxVal<float>(); }
     }
   }
-  return CurrCost;
+  return curr_cost;
 }
 
 template<class SbpSignature>
 double SbpNode<SbpSignature>::EvalMinInNbhCost(
-    std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id, std::vector<int32_t>& nbh_id2order) {
+    std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
+    std::vector<int32_t>& nbh_id2order) const {
   // check if this node is in the node list
-  CHECK(NodeListId >= 0) << "Compute out cost for a node out of the node list" << std::endl;
+  CHECK(node_list_id_ >= 0) << "Compute out cost for a node out of the node list" << std::endl;
   // check if the node is in the neighborhood
-  auto this_it = NodeListId2nbh_id.find(NodeListId);
-  CHECK(this_it != NodeListId2nbh_id.end())
+  auto this_it = node_list_id2nbh_id.find(node_list_id_);
+  CHECK(this_it != node_list_id2nbh_id.end())
       << "Compute out cost for a node out of the neighborhood" << std::endl;
   // Compute the minimum cost between this node and adjacent nodes with a higher order
   int32_t order = nbh_id2order[this_it->second];
-  double CurrCost = 0;
-  for (SbpEdge<SbpSignature>* this_edge : EdgesIn) {
-    auto it = NodeListId2nbh_id.find(this_edge->start_node_->NodeListId);
+  double curr_cost = 0;
+  for (SbpEdge<SbpSignature>* this_edge : edges_in_) {
+    auto it = node_list_id2nbh_id.find(this_edge->start_node_->node_list_id_);
     // if the start node is in the neighborhood
-    if (it != NodeListId2nbh_id.end() && nbh_id2order[it->second] > order) {
-      CurrCost += this_edge->GetMinCost();
+    if (it != node_list_id2nbh_id.end() && nbh_id2order[it->second] > order) {
+      curr_cost += this_edge->GetMinCost();
     }
   }
-  for (SbpEdge<SbpSignature>* this_edge : EdgesOut) {
-    auto it = NodeListId2nbh_id.find(this_edge->end_node_->NodeListId);
+  for (SbpEdge<SbpSignature>* this_edge : edges_out_) {
+    auto it = node_list_id2nbh_id.find(this_edge->end_node_->node_list_id_);
     // if the end node is in the neighborhood
-    if (it != NodeListId2nbh_id.end() && nbh_id2order[it->second] > order) {
-      CurrCost += this_edge->GetMinCost();
+    if (it != node_list_id2nbh_id.end() && nbh_id2order[it->second] > order) {
+      curr_cost += this_edge->GetMinCost();
     }
   }
-  return CurrCost;
+  return curr_cost;
 }
 
 template<class SbpSignature>
-void SbpNode<SbpSignature>::OneRingNeighborhood(std::vector<int32_t>& nbh_1ring) {
-  nbh_1ring.resize(EdgesIn.size() + EdgesOut.size() + 1);
+void SbpNode<SbpSignature>::OneRingNeighborhood(std::vector<int32_t>& nbh_1ring) const {
+  nbh_1ring.resize(edges_in_.size() + edges_out_.size() + 1);
   int32_t nbh_id = 0;
-  nbh_1ring[nbh_id] = NodeListId;
-  for (SbpEdge<SbpSignature>* this_edge : EdgesIn) {
+  nbh_1ring[nbh_id] = node_list_id_;
+  for (SbpEdge<SbpSignature>* this_edge : edges_in_) {
     nbh_id++;
-    nbh_1ring[nbh_id] = this_edge->start_node_->NodeListId;
+    nbh_1ring[nbh_id] = this_edge->start_node_->node_list_id_;
   }
-  for (SbpEdge<SbpSignature>* this_edge : EdgesOut) {
+  for (SbpEdge<SbpSignature>* this_edge : edges_out_) {
     nbh_id++;
-    nbh_1ring[nbh_id] = this_edge->end_node_->NodeListId;
+    nbh_1ring[nbh_id] = this_edge->end_node_->node_list_id_;
   }
 }
 
 // Get the n ring neighborhood of this node
 // Pre-allocate buffer, which will be faster.
 template<class SbpSignature>
-void SbpNode<SbpSignature>::NRingNeighborhood(int32_t n, std::vector<int32_t>& nbh_nring,
+void SbpNode<SbpSignature>::NRingNeighborhood(int32_t n, std::vector<int32_t>& nbh_n_ring,
                                               std::vector<int32_t>& nbh_1ring,
-                                              std::vector<SbpNode<SbpSignature>*>& NodeList,
-                                              std::vector<bool>& node_tags) {
+                                              std::vector<SbpNode<SbpSignature>*>& node_list,
+                                              std::vector<bool>& node_tags) const {
   // Initialize 0 ring
   if (n <= 0) { n = 0; }
-  nbh_nring.resize(1);
-  nbh_nring[0] = NodeListId;
-  node_tags[NodeListId] = true;
-  int32_t l = 0, r;
+  nbh_n_ring.resize(1);
+  nbh_n_ring[0] = node_list_id_;
+  node_tags[node_list_id_] = true;
+  int32_t l = 0;
   // do ring expansion for n times
   for (int32_t i = 0; i < n; i++) {
-    for (r = nbh_nring.size(); l < r; l++) {
-      NodeList[nbh_nring[l]]->OneRingNeighborhood(nbh_1ring);
+    for (int32_t r = nbh_n_ring.size(); l < r; l++) {
+      node_list[nbh_n_ring[l]]->OneRingNeighborhood(nbh_1ring);
       for (auto nbh_id : nbh_1ring) {
         if (!node_tags[nbh_id]) {
-          nbh_nring.push_back(nbh_id);
+          nbh_n_ring.push_back(nbh_id);
           node_tags[nbh_id] = true;
         }
       }
     }
   }
   // Recover false for buffer
-  for (auto nbh_id : nbh_nring) node_tags[nbh_id] = false;
-}
-
-// Detect and spread overlaps for EdgesIn.
-template<class SbpSignature>
-void SbpNode<SbpSignature>::DetectSpreadOverlap(double max_1_comp_cost, double max_2_comp_cost,
-                                                int32_t max_1_id, double min_ratio) {
-  // min_ratio should be less than 1.0
-  CHECK(min_ratio < 1.0) << "Wrong overlap ratio here!" << std::endl;
-  // If one layer have multiple nodes, the overlap occurs.
-  // We need to skip sbp proxy and single node at each layer.
-  // Actually, it is skipped before this function.
-
-  // skip it if empty EdgesOut
-  if (EdgesOut.empty()) { return; }
-
-  // total maximum copy cost of outcoming edges
-  double total_copy_cost = 0.0;
-  for (SbpEdge<SbpSignature>* this_edge : EdgesOut) { total_copy_cost += this_edge->GetMaxCost(); }
-  // maximum of the computation cost of other operators
-  double max_comp_cost;
-  if (id == max_1_id) {
-    max_comp_cost = max_2_comp_cost;
-  } else {
-    max_comp_cost = max_1_comp_cost;
-  }
-  // Use the ratio between the total copy cost and maximum computation cost as ratio
-  double overlap_ratio;
-  if (max_comp_cost >= total_copy_cost) {
-    overlap_ratio = min_ratio;
-  } else {
-    overlap_ratio = 1.0 - (1.0 - min_ratio) * max_comp_cost / total_copy_cost;
-  }
-
-  // Set up overlap ratio for the outcoming edges
-  for (SbpEdge<SbpSignature>* this_edge : EdgesOut) {
-    this_edge->DetectSpreadOverlap(overlap_ratio);
-  }
-}
-// Detect and spread overlaps for sbp proxy.
-template<class SbpSignature>
-void SbpNode<SbpSignature>::DetectSpreadOverlap(double overlap_ratio) {
-  if (op_node) { return; }
-  if (overlap_ratio < 1.0) {
-    // overlap ratio should be non-negative
-    if (overlap_ratio < 0.0) { overlap_ratio = 0.0; }
-    // double check for sbp proxy
-    CHECK(EdgesIn.size() == 1) << "Multiple incoming edges for sbp proxy" << std::endl;
-    EdgesIn[0]->DetectSpreadOverlap(overlap_ratio);
-  }
+  for (auto nbh_id : nbh_n_ring) node_tags[nbh_id] = false;
 }
 
 // Get or compute the minimum layer of this node
@@ -696,32 +581,32 @@ int32_t SbpNode<SbpSignature>::GetMinLayer(
     oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
     const oneflow::HashMap<const OpNode*, oneflow::HashSet<std::string>>&
         op_node2mutable_op_ctrl_deps) {
-  if (MinLayer >= 0) { return MinLayer; }
-  if (!op_node) { return MinLayer; }
-  for (SbpEdge<SbpSignature>* this_edge : EdgesIn) {
+  if (min_layer_ >= 0) { return min_layer_; }
+  if (!op_node_) { return min_layer_; }
+  for (SbpEdge<SbpSignature>* this_edge : edges_in_) {
     int32_t producer_min_layer =
         this_edge->start_node_->GetMinLayer(op_name2sbp_node, op_node2mutable_op_ctrl_deps);
-    if (producer_min_layer > MinLayer) { MinLayer = producer_min_layer; }
+    if (producer_min_layer > min_layer_) { min_layer_ = producer_min_layer; }
   }
-  for (const auto& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
+  for (const auto& ctrl_in_op_name : op_node_->op().op_conf().ctrl_in_op_name()) {
     auto it = op_name2sbp_node.find(ctrl_in_op_name);
     if (it != op_name2sbp_node.end()) {
       int32_t producer_min_layer =
           it->second->GetMinLayer(op_name2sbp_node, op_node2mutable_op_ctrl_deps);
-      if (producer_min_layer > MinLayer) { MinLayer = producer_min_layer; }
+      if (producer_min_layer > min_layer_) { min_layer_ = producer_min_layer; }
     }
   }
-  if (op_node2mutable_op_ctrl_deps.find(op_node) != op_node2mutable_op_ctrl_deps.end()) {
-    for (const auto& ctrl_in_op_name : op_node2mutable_op_ctrl_deps.at(op_node)) {
+  if (op_node2mutable_op_ctrl_deps.find(op_node_) != op_node2mutable_op_ctrl_deps.end()) {
+    for (const auto& ctrl_in_op_name : op_node2mutable_op_ctrl_deps.at(op_node_)) {
       auto it = op_name2sbp_node.find(ctrl_in_op_name);
       if (it != op_name2sbp_node.end()) {
         int32_t producer_min_layer =
             it->second->GetMinLayer(op_name2sbp_node, op_node2mutable_op_ctrl_deps);
-        if (producer_min_layer > MinLayer) { MinLayer = producer_min_layer; }
+        if (producer_min_layer > min_layer_) { min_layer_ = producer_min_layer; }
       }
     }
   }
-  return ++MinLayer;
+  return ++min_layer_;
 }
 
 // Spread the minimum layer to compute the maximum layer of producers
@@ -730,17 +615,17 @@ void SbpNode<SbpSignature>::SpreadMaxLayer(
     oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
     const oneflow::HashMap<const OpNode*, oneflow::HashSet<std::string>>&
         op_node2mutable_op_ctrl_deps) {
-  if (MinLayer <= 0) { return; }
-  int32_t producer_max_lay = MinLayer - 1;
-  for (SbpEdge<SbpSignature>* this_edge : EdgesIn) {
+  if (min_layer_ <= 0) { return; }
+  int32_t producer_max_lay = min_layer_ - 1;
+  for (SbpEdge<SbpSignature>* this_edge : edges_in_) {
     this_edge->start_node_->DropMaxLayer(producer_max_lay);
   }
-  for (const auto& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
+  for (const auto& ctrl_in_op_name : op_node_->op().op_conf().ctrl_in_op_name()) {
     auto it = op_name2sbp_node.find(ctrl_in_op_name);
     if (it != op_name2sbp_node.end()) { it->second->DropMaxLayer(producer_max_lay); }
   }
-  if (op_node2mutable_op_ctrl_deps.find(op_node) != op_node2mutable_op_ctrl_deps.end()) {
-    for (const auto& ctrl_in_op_name : op_node2mutable_op_ctrl_deps.at(op_node)) {
+  if (op_node2mutable_op_ctrl_deps.find(op_node_) != op_node2mutable_op_ctrl_deps.end()) {
+    for (const auto& ctrl_in_op_name : op_node2mutable_op_ctrl_deps.at(op_node_)) {
       auto it = op_name2sbp_node.find(ctrl_in_op_name);
       if (it != op_name2sbp_node.end()) { it->second->DropMaxLayer(producer_max_lay); }
     }
@@ -750,36 +635,36 @@ void SbpNode<SbpSignature>::SpreadMaxLayer(
 // Drop down the maximum layer with the minimum layer form consumer
 template<class SbpSignature>
 void SbpNode<SbpSignature>::DropMaxLayer(int32_t upper_bound) {
-  if (upper_bound < MaxLayer || MaxLayer < 0) { MaxLayer = upper_bound; }
+  if (upper_bound < max_layer_ || max_layer_ < 0) { max_layer_ = upper_bound; }
 }
-// Set MaxLayer = MinLayer if this node does not have any consumer
+// Set max_layer_ = min_layer_ if this node does not have any consumer
 // This is the end of the whole graph
-// We could also set it to be the maximum of the MinLayer in the graph. (It should be the same.)
+// We could also set it to be the maximum of the min_layer_ in the graph. (It should be the same.)
 template<class SbpSignature>
 void SbpNode<SbpSignature>::LiftMaxLayer() {
-  if (MaxLayer < MinLayer) { MaxLayer = MinLayer; }
+  if (max_layer_ < min_layer_) { max_layer_ = min_layer_; }
 }
-// Set MaxLayer = upper_bound if this node does not have any consumer
+// Set max_layer_ = upper_bound if this node does not have any consumer
 template<class SbpSignature>
 void SbpNode<SbpSignature>::LiftMaxLayer(int32_t upper_bound) {
-  if (MaxLayer < MinLayer) { MaxLayer = upper_bound; }
+  if (max_layer_ < min_layer_) { max_layer_ = upper_bound; }
 }
 
 // Get the minimum element in Cost
 template<class SbpSignature>
-double SbpNode<SbpSignature>::GetMinCost() {
+double SbpNode<SbpSignature>::GetMinCost() const {
   // Check the size of Cost
-  CHECK(Cost.size() > 0) << "Cost not initialized!" << std::endl;
+  CHECK(cost_.size() > 0) << "Cost not initialized!" << std::endl;
   // Compute the min_comp_cost
-  return *std::min_element(Cost.begin(), Cost.end());
+  return *std::min_element(cost_.begin(), cost_.end());
 }
 
 // Set the cut ratio
 template<class SbpSignature>
-double SbpNode<SbpSignature>::GetCutRatio() {
+double SbpNode<SbpSignature>::GetCutRatio() const {
   double curr_cut_ratio = 1.0;
-  for (auto* this_edge : EdgesIn) { curr_cut_ratio *= this_edge->GetCutRatio(); }
-  for (auto* this_edge : EdgesOut) { curr_cut_ratio *= this_edge->GetCutRatio(); }
+  for (auto* this_edge : edges_in_) { curr_cut_ratio *= this_edge->GetCutRatio(); }
+  for (auto* this_edge : edges_out_) { curr_cut_ratio *= this_edge->GetCutRatio(); }
   return curr_cut_ratio;
 }
 
@@ -789,20 +674,20 @@ template<class SbpSignature>
 void SbpNode<SbpSignature>::SpreadMainstem(
     oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
   // Skip it if this node is already judged.
-  if (IfMainstem) { return; }
+  if (on_mainstem_) { return; }
   // Skip sbp proxy. This is before we have proxy.
-  if (MinLayer < 0) { return; }
-  IfMainstem = true;
-  // If I am in the mainstem, then all the children with (MinLayer >= my layer id - 1) would be
+  if (min_layer_ < 0) { return; }
+  on_mainstem_ = true;
+  // If I am in the mainstem, then all the children with (min_layer_ >= my layer id - 1) would be
   // considered as in the mainstem
-  for (SbpEdge<SbpSignature>* this_edge : EdgesIn) {
-    if (this_edge->start_node_->MinLayer >= MinLayer - 1) {
+  for (SbpEdge<SbpSignature>* this_edge : edges_in_) {
+    if (this_edge->start_node_->min_layer_ >= min_layer_ - 1) {
       this_edge->start_node_->SpreadMainstem(op_name2sbp_node);
     }
   }
-  for (const auto& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
+  for (const auto& ctrl_in_op_name : op_node_->op().op_conf().ctrl_in_op_name()) {
     auto it = op_name2sbp_node.find(ctrl_in_op_name);
-    if (it != op_name2sbp_node.end() && it->second->MinLayer >= MinLayer - 1) {
+    if (it != op_name2sbp_node.end() && it->second->min_layer_ >= min_layer_ - 1) {
       it->second->SpreadMainstem(op_name2sbp_node);
     }
   }
@@ -814,11 +699,11 @@ void SbpNode<SbpSignature>::RaiseConsumerNum(
     oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
   // Should clear it before running.
   // skip the proxy nodes and the sources
-  if (MinLayer <= 0) { return; }
-  for (SbpEdge<SbpSignature>* this_edge : EdgesIn) { this_edge->start_node_->counter++; }
-  for (const auto& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
+  if (min_layer_ <= 0) { return; }
+  for (SbpEdge<SbpSignature>* this_edge : edges_in_) { this_edge->start_node_->counter_++; }
+  for (const auto& ctrl_in_op_name : op_node_->op().op_conf().ctrl_in_op_name()) {
     auto it = op_name2sbp_node.find(ctrl_in_op_name);
-    if (it != op_name2sbp_node.end()) { it->second->counter++; }
+    if (it != op_name2sbp_node.end()) { it->second->counter_++; }
   }
 }
 
@@ -829,30 +714,30 @@ void SbpNode<SbpSignature>::SpreadAvailWaitTime(
     oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node, double wait_time,
     double transfer_cost) {
   // skip the proxy nodes and the sources
-  if (MinLayer <= 0) { return; }
+  if (min_layer_ <= 0) { return; }
   // Have not finished spreading for consumers or downstream nodes or already visited.
-  if (counter) { return; }
-  if (IfMainstem) {
-    // Nodes on the mianstem does not have any accumulate cost
-    AccMainstemCost = 0;
+  if (counter_) { return; }
+  if (on_mainstem_) {
+    // Nodes on the mainstem does not have any accumulate cost
+    acc_mainstem_cost_ = 0;
   } else {
-    if (AccMainstemCost < 0) {
+    if (acc_mainstem_cost_ < 0) {
       // Do not have any consumer or downstream node
-      AccMainstemCost = acc_mainstem_cost[MinLayer - 1];
+      acc_mainstem_cost_ = acc_mainstem_cost[min_layer_ - 1];
     } else {
       // Add the mainstem cost at this layer
-      AccMainstemCost += mainstem_cost[MinLayer];
+      acc_mainstem_cost_ += mainstem_cost[min_layer_];
     }
   }
 
-  // Reduce the wait time for EdgesIn, put the rest of the mainstem cost in the producers
-  for (SbpEdge<SbpSignature>* this_edge : EdgesIn) {
+  // Reduce the wait time for edges_in_, put the rest of the mainstem cost in the producers
+  for (SbpEdge<SbpSignature>* this_edge : edges_in_) {
     CHECK(this_edge->wait_time_ < 0)
-        << "Double assgin values into wait_time_ of this edge!" << std::endl;
+        << "Double assign values into wait_time_ of this edge!" << std::endl;
     SbpNode<SbpSignature>* producer = this_edge->start_node_;
     // Accumulate the cost from the start node to this node
-    double curr_mainstem_cost =
-        AccMainstemCost + acc_mainstem_cost[producer->MinLayer] - acc_mainstem_cost[MinLayer - 1];
+    double curr_mainstem_cost = acc_mainstem_cost_ + acc_mainstem_cost[producer->min_layer_]
+                                - acc_mainstem_cost[min_layer_ - 1];
     if (curr_mainstem_cost >= wait_time) {
       // Remain cost in the mainstem is able to cover all the wait time
       this_edge->wait_time_ = 0.0;
@@ -869,58 +754,58 @@ void SbpNode<SbpSignature>::SpreadAvailWaitTime(
     // We would use (2) when the tensor is relatively tiny.
     this_edge->wait_time_ += transfer_cost;
     // Do not inherit mainstem cost for nodes on the mainstem
-    if (!producer->IfMainstem) {
+    if (!producer->on_mainstem_) {
       // Inherit the minimal of the mainstem cost from consumers
       producer->DropAvailWaitTime(curr_mainstem_cost);
     }
-    producer->counter--;
+    producer->counter_--;
     producer->SpreadAvailWaitTime(mainstem_cost, acc_mainstem_cost, op_name2sbp_node, wait_time,
                                   transfer_cost);
   }
   // Put the rest the mainstem cost in the upstream nodes.
-  for (const auto& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
+  for (const auto& ctrl_in_op_name : op_node_->op().op_conf().ctrl_in_op_name()) {
     auto it = op_name2sbp_node.find(ctrl_in_op_name);
     if (it != op_name2sbp_node.end()) {
       SbpNode<SbpSignature>* producer = it->second;
       // Do not inherit mainstem cost for nodes on the mainstem
-      if (!producer->IfMainstem) {
+      if (!producer->on_mainstem_) {
         // Accumulate the cost from the start node to this node
-        double curr_mainstem_cost = AccMainstemCost + acc_mainstem_cost[producer->MinLayer]
-                                    - acc_mainstem_cost[MinLayer - 1];
+        double curr_mainstem_cost = acc_mainstem_cost_ + acc_mainstem_cost[producer->min_layer_]
+                                    - acc_mainstem_cost[min_layer_ - 1];
         // Inherit the minimal of the mainstem cost from consumers
         producer->DropAvailWaitTime(curr_mainstem_cost);
       }
-      producer->counter--;
+      producer->counter_--;
       producer->SpreadAvailWaitTime(mainstem_cost, acc_mainstem_cost, op_name2sbp_node, wait_time,
                                     transfer_cost);
     }
   }
-  // Set counter to be -1, do not visit it again.
-  counter--;
+  // Set counter_ to be -1, do not visit it again.
+  counter_--;
 }
 
-// Drop down the available wait time with the minimum cost from downstreams
+// Drop down the available wait time with the minimum cost from downstream
 template<class SbpSignature>
 void SbpNode<SbpSignature>::DropAvailWaitTime(double curr_mainstem_cost) {
-  if (AccMainstemCost < 0.0 || AccMainstemCost > curr_mainstem_cost) {
-    AccMainstemCost = curr_mainstem_cost;
+  if (acc_mainstem_cost_ < 0.0 || acc_mainstem_cost_ > curr_mainstem_cost) {
+    acc_mainstem_cost_ = curr_mainstem_cost;
   }
 }
 
 // Assemble copy cost for all the incoming edges
 template<class SbpSignature>
-void SbpNode<SbpSignature>::InitializeCopyCost(bool compute_cost, bool use_sbp_collector_) {
-  for (SbpEdge<SbpSignature>* this_edge : EdgesIn) {
+void SbpNode<SbpSignature>::InitializeCopyCost(bool compute_cost, bool use_sbp_collector) {
+  for (SbpEdge<SbpSignature>* this_edge : edges_in_) {
     const auto* sbp_node_producer = this_edge->start_node_;
-    oneflow::OpNode* producer = sbp_node_producer->op_node;
+    oneflow::OpNode* producer = sbp_node_producer->op_node_;
 
     // skip it if proxy
-    if (use_sbp_collector_ && !producer) { continue; }
+    if (use_sbp_collector && !producer) { continue; }
 
     // look through input blobs
-    for (const std::string& ibn : op_node->op().input_bns()) {
-      if (producer->op().op_name() == op_node->SrcNode4Ibn(ibn).op().op_name()) {
-        this_edge->InitializeCopyCost(ibn, compute_cost, use_sbp_collector_);
+    for (const std::string& ibn : op_node_->op().input_bns()) {
+      if (producer->op().op_name() == op_node_->SrcNode4Ibn(ibn).op().op_name()) {
+        this_edge->InitializeCopyCost(ibn, compute_cost, use_sbp_collector);
       }
     }
   }
@@ -930,50 +815,50 @@ void SbpNode<SbpSignature>::InitializeCopyCost(bool compute_cost, bool use_sbp_c
 template<class SbpSignature>
 void SbpNode<SbpSignature>::SetMainstemWaitTime(double mainstem_wait_time) {
   // only reduce the wait time for operators in the mainstem
-  if (IfMainstem) {
-    // Reduce the wait time for EdgesOut
-    for (SbpEdge<SbpSignature>* edge_out : EdgesOut) {
+  if (on_mainstem_) {
+    // Reduce the wait time for edges_out_
+    for (SbpEdge<SbpSignature>* edge_out : edges_out_) {
       if (edge_out->wait_time_ < 0.0 || edge_out->wait_time_ > mainstem_wait_time) {
         edge_out->wait_time_ = mainstem_wait_time;
       }
     }
-    // Might reduce it for EdgesIn
+    // Might reduce it for edges_in_
   }
 }
 
 // Drop down the maximum layer with the minimum layer form consumer
 template<class SbpSignature>
 void SbpNode<SbpSignature>::DropTributaryLayer(int32_t upper_bound) {
-  if (upper_bound < TributaryLayer || TributaryLayer < 0) { TributaryLayer = upper_bound; }
+  if (upper_bound < tributary_layer_ || tributary_layer_ < 0) { tributary_layer_ = upper_bound; }
 }
 
 // Compute maximum layer for tributaries
 template<class SbpSignature>
 void SbpNode<SbpSignature>::SpreadTributaryLayer(
     oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
-  if (counter || MinLayer <= 0) { return; }
+  if (counter_ || min_layer_ <= 0) { return; }
   int32_t producer_max_lay = 0;
-  if (IfMainstem) {
-    producer_max_lay = MinLayer - 1;
+  if (on_mainstem_) {
+    producer_max_lay = min_layer_ - 1;
   } else {
     // On a tributary, the operator could be run later.
-    producer_max_lay = TributaryLayer;
-    // producer_max_lay = TributaryLayer - 1;
+    producer_max_lay = tributary_layer_;
+    // producer_max_lay = tributary_layer_ - 1;
   }
-  for (SbpEdge<SbpSignature>* this_edge : EdgesIn) {
+  for (SbpEdge<SbpSignature>* this_edge : edges_in_) {
     this_edge->start_node_->DropTributaryLayer(producer_max_lay);
-    if (--this_edge->start_node_->counter == 0) {
+    if (--this_edge->start_node_->counter_ == 0) {
       this_edge->start_node_->SpreadTributaryLayer(op_name2sbp_node);
     }
   }
-  for (const auto& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
+  for (const auto& ctrl_in_op_name : op_node_->op().op_conf().ctrl_in_op_name()) {
     auto it = op_name2sbp_node.find(ctrl_in_op_name);
     if (it != op_name2sbp_node.end()) {
       it->second->DropTributaryLayer(producer_max_lay);
-      if (--it->second->counter == 0) { it->second->SpreadTributaryLayer(op_name2sbp_node); }
+      if (--it->second->counter_ == 0) { it->second->SpreadTributaryLayer(op_name2sbp_node); }
     }
   }
-  counter--;
+  counter_--;
 }
 
 }  // namespace auto_parallel
