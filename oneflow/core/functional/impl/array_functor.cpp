@@ -696,18 +696,18 @@ class UnsqueezeMultipleFunctor {
       // Unsqueeze is called several times to extend the dimension when the View mechanism is
       // enabled. Otherwise, calculate the target shape and call reshape.
       if (view::IsViewApplicable(tensor)) {
-        for (int32_t dim = 0; dim < n_dims; dim++) {
-          if ((*dims_to_unsqueeze)[dim]) { tensor = JUST(view::Unsqueeze(tensor, dim)); }
+        for (int32_t i = 0; i < n_dims; i++) {
+          if ((*dims_to_unsqueeze)[i]) { tensor = JUST(view::Unsqueeze(tensor, i)); }
         }
       } else {
         std::vector<int64_t> target_dims(n_dims, 0);
         int32_t tensor_index = 0;
-        for (int32_t dim = 0; dim < n_dims; dim++) {
-          if ((*dims_to_unsqueeze)[dim]) {
-            target_dims[dim] = 1;
+        for (int32_t i = 0; i < n_dims; i++) {
+          if ((*dims_to_unsqueeze)[i]) {
+            target_dims[i] = 1;
           } else {
             CHECK_LT_OR_RETURN(tensor_index, tensor->ndim());  // NOLINT(maybe-need-error-msg)
-            target_dims[dim] = tensor->shape()->at(tensor_index);
+            target_dims[i] = tensor->shape()->at(tensor_index);
             tensor_index++;
           }
         }
@@ -717,9 +717,6 @@ class UnsqueezeMultipleFunctor {
       return tensor;
     }
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 class SqueezeFunctor {
