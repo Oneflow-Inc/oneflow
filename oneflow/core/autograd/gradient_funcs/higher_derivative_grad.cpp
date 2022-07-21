@@ -214,11 +214,8 @@ Maybe<void> ConvDataGradGrad::Capture(ConvDataGradGradCaptureState* ctx, const T
 
   if (!(ctx->w_requires_grad || ctx->grad_requires_grad)) { return Maybe<void>::Ok(); }
 
-  if (ctx->grad_requires_grad) {
-    ctx->w_index = ctx->SaveTensorForBackward(inputs.at(1));
-  } else {
-    ctx->grad_index = ctx->SaveTensorForBackward(inputs.at(0));
-  }
+  if (ctx->grad_requires_grad) { ctx->w_index = ctx->SaveTensorForBackward(inputs.at(1)); }
+  if (ctx->w_requires_grad) { ctx->grad_index = ctx->SaveTensorForBackward(inputs.at(0)); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
