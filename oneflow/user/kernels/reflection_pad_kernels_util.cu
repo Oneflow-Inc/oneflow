@@ -46,9 +46,11 @@ __global__ void DoCUDAReflectionPad1dGrad(const IN_T* src, IN_T* dest,
 template<typename IN_T>
 __global__ void DoCUDAReflectionPad2d(const IN_T* src, IN_T* dest,
                                       const NdIndexOffsetHelper<int64_t, 4> index_helper,
-                                      int64_t elem_num, int64_t src_num, int64_t dest_num,
-                                      int64_t y_height, int64_t y_width, int64_t x_height,
-                                      int64_t x_width, int64_t pad_left, int64_t pad_top) {
+                                      const int64_t elem_num, const int64_t src_num,
+                                      const int64_t dest_num, const int64_t y_height,
+                                      const int64_t y_width, const int64_t x_height,
+                                      const int64_t x_width, const int64_t pad_left,
+                                      const int64_t pad_top) {
   DoReflectionPad2d<IN_T>(src, dest, index_helper, elem_num, src_num, dest_num, y_height, y_width,
                           x_height, x_width, pad_left, pad_top);
 };
@@ -56,9 +58,11 @@ __global__ void DoCUDAReflectionPad2d(const IN_T* src, IN_T* dest,
 template<typename IN_T>
 __global__ void DoCUDAReflectionPad2dGrad(const IN_T* src, IN_T* dest,
                                           const NdIndexOffsetHelper<int64_t, 4> index_helper,
-                                          int64_t elem_num, int64_t src_num, int64_t dest_num,
-                                          int64_t dy_height, int64_t dy_width, int64_t dx_height,
-                                          int64_t dx_width, int64_t pad_left, int64_t pad_top) {
+                                          const int64_t elem_num, const int64_t src_num,
+                                          const int64_t dest_num, const int64_t dy_height,
+                                          const int64_t dy_width, const int64_t dx_height,
+                                          const int64_t dx_width, const int64_t pad_left,
+                                          const int64_t pad_top) {
   DoReflectionPad2dGrad<IN_T>(src, dest, index_helper, elem_num, src_num, dest_num, dy_height,
                               dy_width, dx_height, dx_width, pad_left, pad_top);
 };
@@ -127,9 +131,10 @@ void ReflectionPad1dGradFunctor<DeviceType::kCUDA, float16>::operator()(
 template<typename IN_T>
 struct ReflectionPad2dFunctor<DeviceType::kCUDA, IN_T> final {
   void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
-                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
-                  int64_t n_channel, int64_t y_height, int64_t y_width, int64_t x_height,
-                  int64_t x_width, int64_t pad_left, int64_t pad_top) {
+                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t n_batch,
+                  const int64_t n_channel, const int64_t y_height, const int64_t y_width,
+                  const int64_t x_height, const int64_t x_width, const int64_t pad_left,
+                  const int64_t pad_top) {
     int64_t dest_num = n_channel * y_height * y_width;
     int64_t src_num = n_channel * x_height * x_width;
     int64_t elem_num = n_batch * dest_num;
@@ -144,9 +149,9 @@ struct ReflectionPad2dFunctor<DeviceType::kCUDA, IN_T> final {
 template<>
 void ReflectionPad2dFunctor<DeviceType::kCUDA, float16>::operator()(
     ep::Stream* stream, const float16* src, float16* dest,
-    const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch, int64_t n_channel,
-    int64_t y_height, int64_t y_width, int64_t x_height, int64_t x_width, int64_t pad_left,
-    int64_t pad_top) {
+    const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t n_batch,
+    const int64_t n_channel, const int64_t y_height, const int64_t y_width, const int64_t x_height,
+    const int64_t x_width, const int64_t pad_left, const int64_t pad_top) {
   int64_t dest_num = n_channel * y_height * y_width;
   int64_t src_num = n_channel * x_height * x_width;
   int64_t elem_num = n_batch * dest_num;
@@ -159,9 +164,10 @@ void ReflectionPad2dFunctor<DeviceType::kCUDA, float16>::operator()(
 template<typename IN_T>
 struct ReflectionPad2dGradFunctor<DeviceType::kCUDA, IN_T> final {
   void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
-                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
-                  int64_t n_channel, int64_t dy_height, int64_t dy_width, int64_t dx_height,
-                  int64_t dx_width, int64_t pad_left, int64_t pad_top) {
+                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t n_batch,
+                  const int64_t n_channel, const int64_t dy_height, const int64_t dy_width,
+                  const int64_t dx_height, const int64_t dx_width, const int64_t pad_left,
+                  const int64_t pad_top) {
     int64_t dest_num = n_channel * dx_height * dx_width;
     int64_t src_num = n_channel * dy_height * dy_width;
     int64_t elem_num = n_batch * src_num;
@@ -176,9 +182,10 @@ struct ReflectionPad2dGradFunctor<DeviceType::kCUDA, IN_T> final {
 template<>
 void ReflectionPad2dGradFunctor<DeviceType::kCUDA, float16>::operator()(
     ep::Stream* stream, const float16* src, float16* dest,
-    const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch, int64_t n_channel,
-    int64_t dy_height, int64_t dy_width, int64_t dx_height, int64_t dx_width, int64_t pad_left,
-    int64_t pad_top) {
+    const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t n_batch,
+    const int64_t n_channel, const int64_t dy_height, const int64_t dy_width,
+    const int64_t dx_height, const int64_t dx_width, const int64_t pad_left,
+    const int64_t pad_top) {
   int64_t dest_num = n_channel * dx_height * dx_width;
   int64_t src_num = n_channel * dy_height * dy_width;
   int64_t elem_num = n_batch * src_num;

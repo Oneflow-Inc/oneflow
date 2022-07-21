@@ -47,25 +47,29 @@ struct DeviceAdd {
 template<DeviceType device_type, typename IN_T>
 struct ReplicationPad2dFunctor final {
   void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
-                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
-                  int64_t n_channel, int64_t y_height, int64_t y_width, int64_t x_height,
-                  int64_t x_width, int64_t pad_left, int64_t pad_top);
+                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t n_batch,
+                  const int64_t n_channel, const int64_t y_height, const int64_t y_width,
+                  const int64_t x_height, const int64_t x_width, const int64_t pad_left,
+                  const int64_t pad_top);
 };
 
 template<DeviceType device_type, typename IN_T>
 struct ReplicationPad2dGradFunctor final {
   void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
-                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
-                  int64_t n_channel, int64_t dy_height, int64_t dy_width, int64_t dx_height,
-                  int64_t dx_width, int64_t pad_left, int64_t pad_top);
+                  const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t n_batch,
+                  const int64_t n_channel, const int64_t dy_height, const int64_t dy_width,
+                  const int64_t dx_height, const int64_t dx_width, const int64_t pad_left,
+                  const int64_t pad_top);
 };
 
 template<typename IN_T>
 OF_DEVICE_FUNC void DoReplicationPad2d(const IN_T* src, IN_T* dest,
                                        const NdIndexOffsetHelper<int64_t, 4>& index_helper,
-                                       int64_t elem_num, int64_t src_num, int64_t dest_num,
-                                       int64_t y_height, int64_t y_width, int64_t x_height,
-                                       int64_t x_width, int64_t pad_left, int64_t pad_top) {
+                                       const int64_t elem_num, const int64_t src_num,
+                                       const int64_t dest_num, const int64_t y_height,
+                                       const int64_t y_width, const int64_t x_height,
+                                       const int64_t x_width, const int64_t pad_left,
+                                       const int64_t pad_top) {
   XPU_1D_KERNEL_LOOP(k, elem_num) {
     int64_t n, c, i, j, ip_x, ip_y;
     int64_t coord_y[4];
@@ -101,9 +105,11 @@ OF_DEVICE_FUNC void DoReplicationPad2d(const IN_T* src, IN_T* dest,
 template<typename IN_T>
 OF_DEVICE_FUNC void DoReplicationPad2dGrad(const IN_T* src, IN_T* dest,
                                            const NdIndexOffsetHelper<int64_t, 4>& index_helper,
-                                           int64_t elem_num, int64_t src_num, int64_t dest_num,
-                                           int64_t dy_height, int64_t dy_width, int64_t dx_height,
-                                           int64_t dx_width, int64_t pad_left, int64_t pad_top) {
+                                           const int64_t elem_num, const int64_t src_num,
+                                           const int64_t dest_num, const int64_t dy_height,
+                                           const int64_t dy_width, const int64_t dx_height,
+                                           const int64_t dx_width, const int64_t pad_left,
+                                           const int64_t pad_top) {
   XPU_1D_KERNEL_LOOP(k, elem_num) {
     int64_t n, c, i, j, ip_x, ip_y;
     int64_t coord[4];

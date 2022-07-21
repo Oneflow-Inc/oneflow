@@ -75,11 +75,11 @@ class ReflectionPad1dGradKernel final : public OpKernel {
     const int64_t c_idx = 1;
     const int64_t w_idx = 2;
 
-    int64_t pad_left = padding[0];
-    int64_t n_batch = dy->shape_view().At(n_idx);
-    int64_t n_channel = dy->shape_view().At(c_idx);
-    int64_t dy_width = dy->shape_view().At(w_idx);
-    int64_t dx_width = dx->shape_view().At(w_idx);
+    const int64_t pad_left = padding[0];
+    const int64_t n_batch = dy->shape_view().At(n_idx);
+    const int64_t n_channel = dy->shape_view().At(c_idx);
+    const int64_t dy_width = dy->shape_view().At(w_idx);
+    const int64_t dx_width = dx->shape_view().At(w_idx);
 
     const IN_T* src = dy->dptr<IN_T>();
     IN_T* dest = dx->mut_dptr<IN_T>();
