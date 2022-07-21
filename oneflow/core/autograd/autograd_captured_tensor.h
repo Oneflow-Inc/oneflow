@@ -25,7 +25,6 @@ namespace one {
 class AutogradCapturedTensor final : public ProxyTensor<AutogradCapturedTensor> {
  public:
   static Maybe<AutogradCapturedTensor> MakeTensor(const std::shared_ptr<Tensor>& tensor) {
-    std::cout << "type:" << tensor->is_global() << std::endl;
     if (tensor->requires_grad()) {
       CHECK_NOTNULL_OR_RETURN(tensor->grad_fn_node().get())
           << Error::RuntimeError()
