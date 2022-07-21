@@ -239,8 +239,8 @@ DataParallel Layers (multi-GPU, distributed)
     nn.parallel.DistributedDataParallel
 
 
-Other Layers
--------------------------
+Data loading and preprocessing Layers
+----------------------------------------
 
 .. autosummary::
     :toctree: generated
@@ -249,16 +249,12 @@ Other Layers
     nn.COCOReader
     nn.CoinFlip
     nn.CropMirrorNormalize
-    nn.FakeQuantization
-    nn.MinMaxObserver
-    nn.MovingAverageMinMaxObserver
     nn.OFRecordBytesDecoder
     nn.OFRecordImageDecoder
     nn.OFRecordImageDecoderRandomCrop
     nn.OFRecordRawDecoder
     nn.OFRecordReader
-    nn.Quantization
-
+    
 
 Utilities
 ---------
@@ -294,3 +290,19 @@ Utility functions in other modules
     :template:
 
     nn.Flatten
+
+Quantized Functions
+--------------------
+
+Quantization refers to techniques for performing computations and 
+storing tensors at lower bitwidths than floating point precision.
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template:
+
+    nn.FakeQuantization
+    nn.MinMaxObserver
+    nn.MovingAverageMinMaxObserver
+    nn.Quantization
