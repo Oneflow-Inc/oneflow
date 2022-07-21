@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/operator/nccl_send_recv_boxing_op_util.h"
@@ -75,7 +76,7 @@ Maybe<void> NcclSendRecvBoxingOp::InferInternalBlobDescs(
     buf->set_data_type(in->data_type());
     CHECK_EQ(src_send_intersections.size(), parallel_num);
     for (int64_t i = 0; i < parallel_num; ++i) {
-      const TensorSliceView& intersection = src_send_intersections.at(i);
+      const TensorSliceView& intersection = JUST(VectorAt(src_send_intersections, i));
       if (!intersection.IsEmpty()) { buf_count += intersection.shape().elem_cnt(); }
     }
   }
@@ -83,7 +84,7 @@ Maybe<void> NcclSendRecvBoxingOp::InferInternalBlobDescs(
     const BlobDesc* out = GetBlobDesc4BnInOp("out");
     buf->set_data_type(out->data_type());
     for (int64_t i = 0; i < parallel_num; ++i) {
-      const TensorSliceView& intersection = dst_recv_intersections.at(i);
+      const TensorSliceView& intersection = JUST(VectorAt(dst_recv_intersections, i));
       if (!intersection.IsEmpty()) { buf_count += intersection.shape().elem_cnt(); }
     }
     if (NdSbpHasPartialParallel(src_nd_sbp)) {
@@ -109,26 +110,25 @@ Maybe<void> NcclSendRecvBoxingOp::InferOutBlobDescs(
   const NcclSendRecvBoxingOpConf& conf = this->op_conf().nccl_send_recv_boxing_conf();
   const Shape& logical_shape = Shape(conf.logical_shape());
   const ParallelDesc& parallel_desc = ParallelDesc(conf.parallel_conf());
-  const int64_t machine_id =
-      CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_ctx->parallel_id()));
-  const int64_t device_index =
-      CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_ctx->parallel_id()));
+  const int64_t machine_id = JUST(parallel_desc.MachineId4ParallelId(parallel_ctx->parallel_id()));
+  const int64_t device_index = JUST(parallel_desc.DeviceId4ParallelId(parallel_ctx->parallel_id()));
   if (conf.has_input()) {
     const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
     const NdSbp& src_nd_sbp = conf.src_nd_sbp();
     const ParallelDesc& src_parallel_desc = ParallelDesc(conf.src_parallel_conf());
     int64_t src_parallel_id =
-        CHECK_JUST(src_parallel_desc.ParallelId4MachineDeviceId(machine_id, device_index));
+        JUST(src_parallel_desc.ParallelId4MachineDeviceId(machine_id, device_index));
     std::shared_ptr<Shape> in_shape =
         JUST(GetPhysicalShape(logical_shape, src_nd_sbp, src_parallel_desc, src_parallel_id));
-    CHECK_EQ_OR_RETURN(*in_shape, in_blob_desc->shape());
+    CHECK_EQ_OR_RETURN(*in_shape, in_blob_desc->shape())
+        << "Non-matching shape of blobs for pieces of nccl send recv";
   }
   if (conf.has_output()) {
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
     const NdSbp& dst_nd_sbp = conf.dst_nd_sbp();
     const ParallelDesc& dst_parallel_desc = ParallelDesc(conf.dst_parallel_conf());
     int64_t dst_parallel_id =
-        CHECK_JUST(dst_parallel_desc.ParallelId4MachineDeviceId(machine_id, device_index));
+        JUST(dst_parallel_desc.ParallelId4MachineDeviceId(machine_id, device_index));
     std::shared_ptr<Shape> out_shape =
         JUST(GetPhysicalShape(logical_shape, dst_nd_sbp, dst_parallel_desc, dst_parallel_id));
     out_blob_desc->mut_shape() = *out_shape;
