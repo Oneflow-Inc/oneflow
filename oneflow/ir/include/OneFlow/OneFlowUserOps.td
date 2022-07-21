@@ -4690,6 +4690,9 @@ def OneFlow_CublasFusedMLPGradOp : OneFlow_BaseOp<"cublas_fused_mlp_grad", [NoSi
     Variadic<OneFlow_Tensor>:$d_biases, 
     Variadic<OneFlow_Tensor>:$d_weights
   );
+  let attrs = (ins
+    F32ArrayAttr:$alpha_list
+  ); 
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -9601,6 +9604,33 @@ def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpI
     StrAttr:$embedding_name
   );
   let same_output_regst_num = 2;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_IdShuffleCopyOutOp : OneFlow_BaseOp<"id_shuffle_copy_out", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$num_unique_matrix,
+    OneFlow_Tensor:$inverse_unique_partition_indices,
+    OneFlow_Tensor:$cur_rank_num_unique,
+    OneFlow_Tensor:$cur_rank_unique_ids,
+    OneFlow_Tensor:$cur_rank_unique_table_ids,
+    OneFlow_Tensor:$cur_rank_inverse_indices
+  );
+  let output = (outs
+    OneFlow_Tensor:$out_num_unique_matrix,
+    OneFlow_Tensor:$out_inverse_unique_partition_indices,
+    OneFlow_Tensor:$out_cur_rank_num_unique,
+    OneFlow_Tensor:$out_cur_rank_unique_ids,
+    OneFlow_Tensor:$out_cur_rank_unique_table_ids,
+    OneFlow_Tensor:$out_cur_rank_inverse_indices
+  );
+  let attrs = (ins
+    StrAttr:$embedding_name
+  );
+  let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
