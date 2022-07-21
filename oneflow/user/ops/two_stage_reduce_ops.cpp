@@ -33,7 +33,7 @@ Maybe<void> InferReduceDeviceStageLogicalTensorDescFn(user_op::InferContext* ctx
   const Shape& input_shape = ctx->InputShape("in", 0);
   const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
   const int64_t num_axes = input_shape.NumAxes();
-  Shape* output_shape = ctx->OutputShape("out", 0);
+  Shape* output_shape = ctx->MutOutputShape("out", 0);
   if (axis.empty()) {
     *output_shape = Shape::Ones(num_axes);
   } else {
@@ -63,8 +63,8 @@ Maybe<void> InferReduceDeviceStageLogicalTensorDescFn(user_op::InferContext* ctx
     *output_shape = Shape(dim_vec);
   }
 
-  *ctx->OutputShape("mask", 0) = input_shape;
-  *ctx->OutputShape("count", 0) = *output_shape;
+  *ctx->MutOutputShape("mask", 0) = input_shape;
+  *ctx->MutOutputShape("count", 0) = *output_shape;
 
   return Maybe<void>::Ok();
 }
@@ -72,7 +72,7 @@ Maybe<void> InferReduceDeviceStageLogicalTensorDescFn(user_op::InferContext* ctx
 Maybe<void> InferReduceDeviceStagePhysicalTensorDescFn(user_op::InferContext* ctx) {
   const Shape& input_shape = ctx->InputShape("in", 0);
   const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
-  Shape* output_shape = ctx->OutputShape("out", 0);
+  Shape* output_shape = ctx->MutOutputShape("out", 0);
   if (axis.empty()) {
     *output_shape = Shape::Ones(input_shape.NumAxes());
   } else {
@@ -81,8 +81,8 @@ Maybe<void> InferReduceDeviceStagePhysicalTensorDescFn(user_op::InferContext* ct
     *output_shape = reduced_shape;
   }
 
-  *ctx->OutputShape("mask", 0) = input_shape;
-  *ctx->OutputShape("count", 0) = *output_shape;
+  *ctx->MutOutputShape("mask", 0) = input_shape;
+  *ctx->MutOutputShape("count", 0) = *output_shape;
 
   return Maybe<void>::Ok();
 }
@@ -96,7 +96,7 @@ Maybe<void> InferReduceDeviceStageGradDtypeFn(user_op::InferContext* ctx) {
 
 Maybe<void> InferReduceDeviceStageGradTensorDescFn(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputShape("out_diff", 0), ctx->InputShape("count", 0));
-  *ctx->OutputShape("in_diff", 0) = ctx->InputShape("mask", 0);
+  *ctx->MutOutputShape("in_diff", 0) = ctx->InputShape("mask", 0);
   return Maybe<void>::Ok();
 }
 
@@ -114,7 +114,7 @@ Maybe<void> InferReduceGlobalStageTensorDescFn(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(input_shape, device_count_shape);
   const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
   bool keepdims = ctx->Attr<bool>("keepdims");
-  Shape* output_shape = ctx->OutputShape("out", 0);
+  Shape* output_shape = ctx->MutOutputShape("out", 0);
   if (axis.empty()) {
     if (keepdims) {
       *output_shape = Shape::Ones(input_shape.NumAxes());
@@ -131,7 +131,7 @@ Maybe<void> InferReduceGlobalStageTensorDescFn(user_op::InferContext* ctx) {
     }
   }
 
-  *ctx->OutputShape("mask", 0) = input_shape;
+  *ctx->MutOutputShape("mask", 0) = input_shape;
 
   return Maybe<void>::Ok();
 }
@@ -149,7 +149,7 @@ Maybe<void> InferReduceGlobalStageGradTensorDescFn(user_op::InferContext* ctx) {
   const Shape& mask_shape = ctx->InputShape("mask", 0);
   const Shape& device_count_shape = ctx->InputShape("device_count", 0);
   CHECK_EQ_OR_RETURN(device_count_shape, mask_shape);
-  *ctx->OutputShape("in_diff", 0) = mask_shape;
+  *ctx->MutOutputShape("in_diff", 0) = mask_shape;
   return Maybe<void>::Ok();
 }
 

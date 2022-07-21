@@ -23,16 +23,16 @@ namespace oneflow {
 
   if (ctx->Attr<std::string>("quantization_formula") == "google") {
     if (ctx->Attr<bool>("per_layer_quantization") == true) {
-      *ctx->OutputShape("scale", 0) = Shape({1});
-      *ctx->OutputShape("zero_point", 0) = Shape({1});
+      *ctx->MutOutputShape("scale", 0) = Shape({1});
+      *ctx->MutOutputShape("zero_point", 0) = Shape({1});
     } else {
       // NOTE(Liang Depeng): For now per-channel quantization only support axis 0
-      *ctx->OutputShape("scale", 0) = Shape({in_shape.At(0)});
-      *ctx->OutputShape("zero_point", 0) = Shape({in_shape.At(0)});
+      *ctx->MutOutputShape("scale", 0) = Shape({in_shape.At(0)});
+      *ctx->MutOutputShape("zero_point", 0) = Shape({in_shape.At(0)});
     }
   } else {  // quantization_formula == "cambricon"
-    *ctx->OutputShape("scale", 0) = Shape({1});
-    *ctx->OutputShape("zero_point", 0) = Shape({1});
+    *ctx->MutOutputShape("scale", 0) = Shape({1});
+    *ctx->MutOutputShape("zero_point", 0) = Shape({1});
   }
   return Maybe<void>::Ok();
 }

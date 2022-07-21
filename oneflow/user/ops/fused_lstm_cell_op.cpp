@@ -21,9 +21,9 @@ namespace oneflow {
 
 /* static */ Maybe<void> FusedLstmCellOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& cx_shape = ctx->InputShape("cx", 0);
-  *ctx->OutputShape("hy", 0) = cx_shape;
-  *ctx->OutputShape("cy", 0) = cx_shape;
-  *ctx->OutputShape("workspace", 0) = ctx->InputShape("input_gates", 0);
+  *ctx->MutOutputShape("hy", 0) = cx_shape;
+  *ctx->MutOutputShape("cy", 0) = cx_shape;
+  *ctx->MutOutputShape("workspace", 0) = ctx->InputShape("input_gates", 0);
   return Maybe<void>::Ok();
 }
 
@@ -71,12 +71,14 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FusedLstmCellGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("grad_gates", 0) = ctx->InputShape("workspace", 0);
+  *ctx->MutOutputShape("grad_gates", 0) = ctx->InputShape("workspace", 0);
 
-  if (ctx->has_output("grad_cx", 0)) { *ctx->OutputShape("grad_cx", 0) = ctx->InputShape("cx", 0); }
+  if (ctx->has_output("grad_cx", 0)) {
+    *ctx->MutOutputShape("grad_cx", 0) = ctx->InputShape("cx", 0);
+  }
 
   if (ctx->has_output("grad_bias", 0)) {
-    *ctx->OutputShape("grad_bias", 0) = Shape({ctx->InputShape("workspace", 0).At(1)});
+    *ctx->MutOutputShape("grad_bias", 0) = Shape({ctx->InputShape("workspace", 0).At(1)});
   }
 
   return Maybe<void>::Ok();

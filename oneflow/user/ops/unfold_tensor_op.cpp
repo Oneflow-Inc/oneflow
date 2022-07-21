@@ -57,7 +57,7 @@ namespace oneflow {
       out_shape.at(d) = in_size_at_d;
     }
   }
-  *ctx->OutputShape("y", 0) = Shape(out_shape);
+  *ctx->MutOutputShape("y", 0) = Shape(out_shape);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnfoldTensorOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {

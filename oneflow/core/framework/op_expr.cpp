@@ -221,14 +221,27 @@ class UserOpExprInferContext : public user_op::InferContext {
     return tensor_meta4input_index_(tuple_index)->shape();
   }
 
-  Shape* OutputShape(const std::string& name, int32_t index) override {
+  const Shape& OutputShape(const std::string& name, int32_t index) const override {
+    const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+    CHECK_GE(tuple_index, 0);
+    return tensor_meta4input_index_(tuple_index)->shape();
+  }
+
+  Shape* MutOutputShape(const std::string& name, int32_t index) override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
     return tensor_meta4output_index_(tuple_index)->mut_shape();
   }
 
-  Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    return const_cast<UserOpExprInferContext*>(this)
+        ->TensorDesc4ArgNameAndIndex(arg_name, index)
+        ->shape();
+  }
+
+  Shape* MutShape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
 
@@ -239,14 +252,27 @@ class UserOpExprInferContext : public user_op::InferContext {
     return tensor_meta4input_index_(tuple_index)->stride();
   }
 
-  Stride* OutputStride(const std::string& name, int32_t index) override {
+  const Stride& OutputStride(const std::string& name, int32_t index) const override {
+    const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+    CHECK_GE(tuple_index, 0);
+    return tensor_meta4input_index_(tuple_index)->stride();
+  }
+
+  Stride* MutOutputStride(const std::string& name, int32_t index) override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
     return tensor_meta4output_index_(tuple_index)->mut_stride();
   }
 
-  Stride* Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  const Stride& Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    return const_cast<UserOpExprInferContext*>(this)
+        ->TensorDesc4ArgNameAndIndex(arg_name, index)
+        ->stride();
+  }
+
+  Stride* MutStride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_stride();
   }
 

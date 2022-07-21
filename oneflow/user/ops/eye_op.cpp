@@ -21,7 +21,7 @@ namespace oneflow {
 /* static */ Maybe<void> EyeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   int64_t rows = ctx->Attr<int64_t>("rows");
   int64_t cols = ctx->Attr<int64_t>("cols");
-  *ctx->OutputShape("out", 0) = Shape({rows, cols});
+  *ctx->MutOutputShape("out", 0) = Shape({rows, cols});
   return Maybe<void>::Ok();
 }
 

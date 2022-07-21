@@ -40,7 +40,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> PreluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
-  Shape* y_shape = ctx->OutputShape("y", 0);
+  Shape* y_shape = ctx->MutOutputShape("y", 0);
   const Shape& alpha_shape = ctx->InputShape("alpha", 0);
   CHECK_EQ_OR_RETURN(alpha_shape.NumAxes(), 1);
   *y_shape = x_shape;
@@ -91,8 +91,8 @@ namespace oneflow {
 /*static*/ Maybe<void> PreluGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  Shape* dx_shape = ctx->OutputShape("dx", 0);
-  Shape* alpha_diff_shape = ctx->OutputShape("alpha_diff", 0);
+  Shape* dx_shape = ctx->MutOutputShape("dx", 0);
+  Shape* alpha_diff_shape = ctx->MutOutputShape("alpha_diff", 0);
   const Shape& alpha_shape = ctx->InputShape("alpha", 0);
   CHECK_EQ_OR_RETURN(alpha_shape.NumAxes(), 1);
   CHECK_OR_RETURN((alpha_shape.At(0) == x_shape.At(1)) || (alpha_shape.At(0) == 1));

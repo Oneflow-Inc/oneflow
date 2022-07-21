@@ -25,10 +25,10 @@ Maybe<void> InferTensorDesc4FusedMatmulBackward(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   for (int idx = weight_num - 1; idx >= 0; idx--) {
     const user_op::TensorDesc& weight_desc = ctx->InputTensorDesc("weights", idx);
-    *ctx->OutputShape("d_weights", idx) = weight_desc.shape();
-    *ctx->OutputShape("d_biases", idx) = Shape({weight_desc.shape().At(0)});
+    *ctx->MutOutputShape("d_weights", idx) = weight_desc.shape();
+    *ctx->MutOutputShape("d_biases", idx) = Shape({weight_desc.shape().At(0)});
   }
-  *ctx->OutputShape("d_x", 0) = x_desc.shape();
+  *ctx->MutOutputShape("d_x", 0) = x_desc.shape();
   return Maybe<void>::Ok();
 }
 

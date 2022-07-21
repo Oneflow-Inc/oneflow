@@ -25,7 +25,7 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferTensorDesc4FusedReluDropoutGrad(user_op::InferContext* ctx) {
-  *ctx->OutputShape("dx", 0) = ctx->InputShape("dy", 0);
+  *ctx->MutOutputShape("dx", 0) = ctx->InputShape("dy", 0);
   return Maybe<void>::Ok();
 }
 

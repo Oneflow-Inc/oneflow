@@ -32,7 +32,7 @@ namespace oneflow {
   std::vector<int32_t> stride;
   CHECK_JUST(getOutShapeAndStrideForFp(in_shape, logical_expand_shape, out_shape, stride));
 
-  Shape* output_shape = ctx->OutputShape("out", 0);
+  Shape* output_shape = ctx->MutOutputShape("out", 0);
   DimVector dim_vec(out_shape.begin(), out_shape.end());
   *output_shape = Shape(dim_vec);
 
@@ -90,7 +90,7 @@ namespace oneflow {
   CHECK_JUST(getOutShapeAndStrideForBp(logical_out_shape, logical_expand_shape, in_shape, out_shape,
                                        stride));
 
-  Shape* output_shape = ctx->OutputShape("out", 0);
+  Shape* output_shape = ctx->MutOutputShape("out", 0);
   DimVector dim_vec(out_shape.begin(), out_shape.end());
   *output_shape = Shape(dim_vec);
   return Maybe<void>::Ok();

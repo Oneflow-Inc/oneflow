@@ -31,8 +31,8 @@ namespace oneflow {
 
   CHECK_OR_RETURN(current_train_step.NumAxes() == 1 && current_train_step.At(0) == 1);
 
-  *ctx->OutputShape("scale", 0) = Shape({1});
-  *ctx->OutputShape("zero_point", 0) = Shape({1});
+  *ctx->MutOutputShape("scale", 0) = Shape({1});
+  *ctx->MutOutputShape("zero_point", 0) = Shape({1});
   return Maybe<void>::Ok();
 }
 

@@ -28,7 +28,7 @@ namespace oneflow {
   CHECK_OR_RETURN(x.shape().NumAxes() == 1)
       << Error::RuntimeError() << "1D tensors expected, but got " << x.shape().NumAxes()
       << "D tensors";
-  *ctx->OutputShape("out", 0) = Shape({});
+  *ctx->MutOutputShape("out", 0) = Shape({});
   return Maybe<void>::Ok();
 }
 

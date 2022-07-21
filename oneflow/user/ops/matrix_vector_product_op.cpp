@@ -26,7 +26,7 @@ Maybe<void> InferTensorDesc4MatrixVectorProduct(user_op::InferContext* ctx) {
   int64_t m = a.shape().At(0);
   int64_t k = a.shape().At(1);
   CHECK_EQ_OR_RETURN(k, b.shape().At(0)) << "Dim K should be equal to vector b's dim0. ";
-  *ctx->OutputShape("out", 0) = Shape({m});
+  *ctx->MutOutputShape("out", 0) = Shape({m});
   return Maybe<void>::Ok();
 }
 
@@ -47,7 +47,7 @@ Maybe<void> InferTensorDesc4MatrixVectorProductGradA(user_op::InferContext* ctx)
   const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
   int64_t m = dy.shape().At(0);
   int64_t n = b.shape().At(0);
-  *ctx->OutputShape("dx", 0) = Shape({m, n});
+  *ctx->MutOutputShape("dx", 0) = Shape({m, n});
   return Maybe<void>::Ok();
 }
 
@@ -58,7 +58,7 @@ Maybe<void> InferTensorDesc4MatrixVectorProductGradB(user_op::InferContext* ctx)
   */
   const user_op::TensorDesc& a = ctx->InputTensorDesc("a", 0);
   int64_t n = a.shape().At(1);
-  *ctx->OutputShape("dx", 0) = Shape({n});
+  *ctx->MutOutputShape("dx", 0) = Shape({n});
   return Maybe<void>::Ok();
 }
 

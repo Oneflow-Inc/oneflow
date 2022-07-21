@@ -24,7 +24,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> EagerSToBOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = Shape(ctx->Attr<Shape>("shape").dim_vec());
+  *ctx->MutOutputShape("out", 0) = Shape(ctx->Attr<Shape>("shape").dim_vec());
   return Maybe<void>::Ok();
 }
 

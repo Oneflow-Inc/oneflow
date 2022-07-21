@@ -21,7 +21,7 @@ namespace oneflow {
 /* static */ Maybe<void> ArgmaxOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   auto dim_vec = ctx->InputShape("in", 0).dim_vec();
   dim_vec.pop_back();
-  *ctx->OutputShape("out", 0) = Shape(std::move(dim_vec));
+  *ctx->MutOutputShape("out", 0) = Shape(std::move(dim_vec));
   return Maybe<void>::Ok();
 }
 

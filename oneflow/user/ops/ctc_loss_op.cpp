@@ -34,8 +34,8 @@ namespace oneflow {
   CHECK_GE_OR_RETURN(ctx->Attr<int32_t>("blank"), 0);
   CHECK_LT_OR_RETURN(ctx->Attr<int32_t>("blank"), log_probs.shape().At(2));
 
-  *ctx->OutputShape("loss", 0) = Shape({batch_size});
-  *ctx->OutputShape("alpha", 0) =
+  *ctx->MutOutputShape("loss", 0) = Shape({batch_size});
+  *ctx->MutOutputShape("alpha", 0) =
       Shape({batch_size, log_probs.shape().At(0), 2 * max_target_length + 1});
   return Maybe<void>::Ok();
 }
@@ -78,7 +78,7 @@ namespace oneflow {
   CHECK_GE_OR_RETURN(ctx->Attr<int32_t>("blank"), 0);
   CHECK_LT_OR_RETURN(ctx->Attr<int32_t>("blank"), log_probs.shape().At(2));
 
-  *ctx->OutputShape("grad", 0) = log_probs.shape();
+  *ctx->MutOutputShape("grad", 0) = log_probs.shape();
   return Maybe<void>::Ok();
 }
 
@@ -110,8 +110,8 @@ namespace oneflow {
   const user_op::TensorDesc& input_lengths = ctx->InputTensorDesc("input_lengths", 0);
   const int64_t batch_size = log_probs.shape().At(1);
   CHECK_EQ_OR_RETURN(batch_size, input_lengths.shape().At(0));
-  *ctx->OutputShape("decoded", 0) = Shape({batch_size, log_probs.shape().At(0)});
-  *ctx->OutputShape("neg_sum_logits", 0) = Shape({batch_size, 1});
+  *ctx->MutOutputShape("decoded", 0) = Shape({batch_size, log_probs.shape().At(0)});
+  *ctx->MutOutputShape("neg_sum_logits", 0) = Shape({batch_size, 1});
   return Maybe<void>::Ok();
 }
 

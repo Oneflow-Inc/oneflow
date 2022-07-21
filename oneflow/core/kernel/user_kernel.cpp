@@ -261,21 +261,37 @@ class UserKernelOpInferContext : public user_op::InferContext {
     return it->second.get();
   }
   const Shape& InputShape(const std::string& arg_name, int32_t index) const override {
-    return *const_cast<UserKernelOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
-  }
-  Shape* OutputShape(const std::string& arg_name, int32_t index) override {
     return Shape4ArgNameAndIndex(arg_name, index);
   }
-  Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  const Shape& OutputShape(const std::string& arg_name, int32_t index) const override {
+    return Shape4ArgNameAndIndex(arg_name, index);
+  }
+  Shape* MutOutputShape(const std::string& arg_name, int32_t index) override {
+    return MutShape4ArgNameAndIndex(arg_name, index);
+  }
+  const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    return const_cast<UserKernelOpInferContext*>(this)
+        ->TensorDesc4ArgNameAndIndex(arg_name, index)
+        ->shape();
+  }
+  Shape* MutShape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
   const Stride& InputStride(const std::string& arg_name, int32_t index) const override {
-    return *const_cast<UserKernelOpInferContext*>(this)->Stride4ArgNameAndIndex(arg_name, index);
-  }
-  Stride* OutputStride(const std::string& arg_name, int32_t index) override {
     return Stride4ArgNameAndIndex(arg_name, index);
   }
-  Stride* Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  const Stride& OutputStride(const std::string& arg_name, int32_t index) const override {
+    return Stride4ArgNameAndIndex(arg_name, index);
+  }
+  Stride* MutOutputStride(const std::string& arg_name, int32_t index) override {
+    return MutStride4ArgNameAndIndex(arg_name, index);
+  }
+  const Stride& Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    return const_cast<UserKernelOpInferContext*>(this)
+        ->TensorDesc4ArgNameAndIndex(arg_name, index)
+        ->stride();
+  }
+  Stride* MutStride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_stride();
   }
   const DataType& InputDType(const std::string& arg_name, int32_t index) const override {

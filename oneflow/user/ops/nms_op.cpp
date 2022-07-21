@@ -21,7 +21,7 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferNmsTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = Shape({ctx->InputShape("in", 0).At(0)});
+  *ctx->MutOutputShape("out", 0) = Shape({ctx->InputShape("in", 0).At(0)});
   return Maybe<void>::Ok();
 }
 
