@@ -29,29 +29,14 @@ namespace auto_parallel {
 template<class SbpSignature>
 class SbpGraph {
  public:
-  // Data Structure
-  // All the nodes
-  std::vector<SbpNode<SbpSignature>*> NodeList;
-
-  // Over All Cost under current strategy
-  double GraphCost = 0;
-  // Limitation: Merged node should not have a number of Sbp Signature greater
-  // than threshold.
-  int32_t Threshold = 100;
-  // Overlayable wait time for copy cost, which occurs before communication between devices.
-  double wait_time;
-  // Uncovered wait time for copy cost.
-  double transfer_cost;
-
-  // functions
+  // Constructor
   SbpGraph();
+
+  // Deconstructor
   ~SbpGraph() {
     for (auto this_node : NodeList) { delete this_node; }
     NodeList.clear();
   }
-
-  // Use our algorithm to decide SbpSignature for each op-node
-  void DecideSbpSignature();
 
   // Randomly assign a SbpSignature strategy
   void RandomSbpSignature(bool use_sbp_collector_);
@@ -64,24 +49,9 @@ class SbpGraph {
   // Generate a node
   SbpNode<SbpSignature>* GenerateNode();
 
-  // Remove a node from nodelist
-  void RemoveFromNodeList(SbpNode<SbpSignature>* this_node);
-
-  // Check and eliminate one node with only one degree-in and one degree-out
-  int32_t NodeElimination(SbpNode<SbpSignature>* this_node);
-  // Merge all parallel edges with given start_node_ and end_node_
-  int32_t EdgeElimination(SbpNode<SbpSignature>* this_node);
-  // Ckeck and eliminate one child node
-  int32_t ChildElimination(SbpNode<SbpSignature>* this_node);
-
   // Merge all parallel edges & Check and eliminate all nodes with only one
   // degree-in and one degree-out
   int32_t NodeAndEdgeEliminations();
-
-  // Merge two nodes
-  int32_t NodeMerging(SbpNode<SbpSignature>* first, SbpNode<SbpSignature>* second);
-  // Select two nodes and merge them
-  int32_t PickAndMerge();
 
   // Finalize Sbp Cost for the whole graph
   void FinalizeSbp();
@@ -123,6 +93,37 @@ class SbpGraph {
   void SetTransferCost(double transfer_cost_);
 
  private:
+  friend class SbpCollector;
+  friend class SbpConstructor;
+
+  // All the nodes
+  std::vector<SbpNode<SbpSignature>*> NodeList;
+
+  // Over All Cost under current strategy
+  double GraphCost = 0;
+  // Limitation: Merged node should not have a number of Sbp Signature greater
+  // than threshold.
+  int32_t Threshold = 100;
+  // Overlayable wait time for copy cost, which occurs before communication between devices.
+  double wait_time;
+  // Uncovered wait time for copy cost.
+  double transfer_cost;
+
+  // Remove a node from nodelist
+  void RemoveFromNodeList(SbpNode<SbpSignature>* this_node);
+
+  // Check and eliminate one node with only one degree-in and one degree-out
+  int32_t NodeElimination(SbpNode<SbpSignature>* this_node);
+  // Merge all parallel edges with given start_node_ and end_node_
+  int32_t EdgeElimination(SbpNode<SbpSignature>* this_node);
+  // Ckeck and eliminate one child node
+  int32_t ChildElimination(SbpNode<SbpSignature>* this_node);
+
+  // Merge two nodes
+  int32_t NodeMerging(SbpNode<SbpSignature>* first, SbpNode<SbpSignature>* second);
+  // Select two nodes and merge them
+  int32_t PickAndMerge();
+
   void DfsAddNbhCost(std::vector<int32_t>& nbh_id2NodeListId,
                      std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id,
                      std::vector<int32_t>& order2nbh_id, std::vector<int32_t>& nbh_id2order,
