@@ -66,11 +66,20 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
 }
 
 bool IsAxesLegal(const AxisVector& axis_vec, const Shape& like_shape, const Shape& in_shape) {
-  Shape reduced_shape = CreateReducedShape(like_shape, axis_vec);
+  Shape reduced_like_shape = CreateReducedShape(like_shape, axis_vec);
   if (like_shape.NumAxes() > in_shape.NumAxes()) {
-    reduced_shape = reduced_shape.RemoveOnes(axis_vec);
+    std::vector<int64_t> in_shape_vec;
+    std::vector<int64_t> like_shape_vec;
+    for (const int64_t& dim : in_shape.dim_vec()) {
+      if (dim != 1) { in_shape_vec.emplace_back(dim); }
+    }
+    for (const int64_t& dim : reduced_like_shape.dim_vec()) {
+      if (dim != 1) { like_shape_vec.emplace_back(dim); }
+    }
+    return std::equal(in_shape_vec.begin(), in_shape_vec.end(), like_shape_vec.begin(),
+                      like_shape_vec.end());
   }
-  return reduced_shape.dim_vec() == in_shape.dim_vec();
+  return reduced_like_shape.dim_vec() == in_shape.dim_vec();
 }
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
@@ -81,7 +90,9 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   Shape* out_shape = ctx->OutputShape("y", 0);
   Stride* out_stride = ctx->OutputStride("y", 0);
   const AxisVector axis_vec = {broadcast_axes.begin(), broadcast_axes.end()};
-  CHECK_OR_RETURN(IsAxesLegal(axis_vec, like_shape, in_shape));
+  CHECK_OR_RETURN(IsAxesLegal(axis_vec, like_shape, in_shape))
+      << Error::RuntimeError() << "Invalid input parameter: like shape:" << like_shape.ToString()
+      << ", in shape:" << in_shape.ToString() << ", axis_vec size:" << axis_vec.size();
   *out_shape = like_shape;
   *out_stride = Stride(like_shape);
   return Maybe<void>::Ok();
