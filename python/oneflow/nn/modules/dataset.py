@@ -1207,6 +1207,63 @@ class GPTIndexedBinDataReader(Module):
         return output
 
 
+class RawReader(Module):
+    def __init__(
+        self,
+        files: List[str],
+        shape: Sequence[int],
+        dtype: flow.dtype,
+        batch_size: int,
+        random_shuffle: bool = True,
+        shuffle_block_size: int = 0,
+        random_seed: Optional[int] = None,
+        placement: flow.placement = None,
+        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
+    ):
+
+        super().__init__()
+
+        _handle_shuffle_args(self, random_shuffle, random_seed)
+        _handle_distributed_args(self, None, placement, sbp)
+
+        self.files = files
+        self.shape = shape
+        self.dtype = dtype
+        self.batch_size = batch_size
+        self.shuffle_block_size = shuffle_block_size
+
+        self.op = flow.stateful_op("raw_reader").Output("out").Build()
+
+    def forward(self):
+        if self.placement is None:
+
+            output = _C.dispatch_raw_reader(
+                self.op,
+                files=self.files,
+                shape=self.shape,
+                data_type=self.dtype,
+                batch_size=self.batch_size,
+                random_shuffle=self.shuffle,
+                shuffle_block_size=self.shuffle_block_size,
+                random_seed=self.random_seed,
+                device=self.device,
+            )
+        else:
+            output = _C.dispatch_raw_reader(
+                self.op,
+                files=self.files,
+                shape=self.shape,
+                data_type=self.dtype,
+                batch_size=self.batch_size,
+                random_shuffle=self.shuffle,
+                shuffle_block_size=self.shuffle_block_size,
+                random_seed=self.random_seed,
+                placement=self.placement,
+                sbp=self.sbp,
+            )
+        return output
+
+
 def _handle_distributed_args(module, device, placement, sbp):
     module.placement = placement
     if placement is None:
