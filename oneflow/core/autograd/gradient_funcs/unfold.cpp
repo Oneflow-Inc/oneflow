@@ -73,8 +73,8 @@ Maybe<void> Unfold::Apply(const UnfoldInterpState* ctx, const TensorTuple& out_g
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   in_grads->resize(1);
   in_grads->at(0) =
-      JUST(functional::Fold(out_grads.at(0), ctx->data_format, ctx->output_size, ctx->kernel_size,
-                            ctx->dilation_rate, ctx->padding, ctx->strides));
+      JUST(functional::Fold(out_grads.at(0), ctx->output_size, ctx->kernel_size, ctx->dilation_rate,
+                            ctx->padding, ctx->strides, ctx->data_format));
   return Maybe<void>::Ok();
 }
 
