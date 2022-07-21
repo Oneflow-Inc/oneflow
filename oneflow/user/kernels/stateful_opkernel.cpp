@@ -194,11 +194,11 @@ class UserOpInferContextHelper final {
   }
   const Stride& InputStride(eager::CallContext* call_ctx, const std::string& arg_name,
                             int32_t index) const {
-    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->stride();
+    return Stride4ArgNameAndIndex(call_ctx, arg_name, index);
   }
   const Stride& OutputStride(eager::CallContext* call_ctx, const std::string& arg_name,
                              int32_t index) const {
-    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->stride();
+    return Stride4ArgNameAndIndex(call_ctx, arg_name, index);
   }
   Stride* MutOutputStride(eager::CallContext* call_ctx, const std::string& arg_name,
                           int32_t index) const {
