@@ -43,7 +43,8 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "embedding_lookup_placeholder",
                                "embedding_update_placeholder",
                                "binary_cross_entropy_with_logits_reduce_mean",
-                               "binary_cross_entropy_with_logits_reduce_mean_grad"};
+                               "binary_cross_entropy_with_logits_reduce_mean_grad",
+                               "pinned_identity"};
   return white_list;
 }
 

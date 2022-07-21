@@ -44,14 +44,12 @@ void DfsTopoGraphTraversal(const OpGraph& graph, bool reversed,
       return;
     }
     if (IsCurNodeSatisfied(node)) {
-      bool has_no_father_node = true;
       bool is_one_father_of_node_satisfied = false;
       NodeOnInEdge(node, [&](OpNode* father_node) {
-        has_no_father_node = false;
         if (is_one_father_of_node_satisfied) { return; }
         if (IsFatherNodeSatisfied(father_node)) { is_one_father_of_node_satisfied = true; }
       });
-      if (has_no_father_node || is_one_father_of_node_satisfied) { NodeHandler(node); }
+      if (is_one_father_of_node_satisfied) { NodeHandler(node); }
     }
   });
 }
