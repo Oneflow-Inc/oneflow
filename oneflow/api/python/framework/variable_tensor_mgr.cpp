@@ -16,27 +16,17 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <tuple>
+#include "oneflow/api/common/variable_tensor_mgr.h"
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/common/global.h"
-#include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/variable_tensor_mgr.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("FillVariableTensorMgr",
-        [](const std::vector<std::string>& variable_op_names,
-           const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors) {
-          auto mgr = Global<VariableTensorMgr>::Get();
-          mgr->Fill(variable_op_names, variable_tensors).GetOrThrow();
-        });
-  m.def("DumpVariableTensorMgr",
-        []() -> std::tuple<std::vector<std::string>, std::vector<std::shared_ptr<one::Tensor>>> {
-          auto mgr = Global<VariableTensorMgr>::Get();
-          return mgr->Dump();
-        });
+  m.def("FillVariableTensorMgr", &FillVariableTensorMgr);
+  m.def("DumpVariableTensorMgr", &DumpVariableTensorMgr);
+  m.def("ClearVariableTensorMgr", &ClearVariableTensorMgr);
 }
 
 }  // namespace oneflow

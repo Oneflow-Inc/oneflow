@@ -38,13 +38,11 @@ void DispatchIndexSize(ep::Stream* stream, const int64_t elem_cnt, const int64_t
                        const T* in, const int64_t* sort_indices, T* out, int64_t* out_indices) {
   const int64_t reduce_elem_cnt = elem_cnt / stride;
   if (IsSafeUseIndex32(elem_cnt)) {
-    MedianSelectCuda<T, int32_t><<<BlocksNum4ThreadsNum(reduce_elem_cnt), kCudaThreadsNumPerBlock,
-                                   0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-        reduce_elem_cnt, stride, in, sort_indices, out, out_indices);
+    RUN_CUDA_KERNEL((MedianSelectCuda<T, int32_t>), stream, reduce_elem_cnt, reduce_elem_cnt,
+                    stride, in, sort_indices, out, out_indices);
   } else {
-    MedianSelectCuda<T, int64_t><<<BlocksNum4ThreadsNum(reduce_elem_cnt), kCudaThreadsNumPerBlock,
-                                   0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-        reduce_elem_cnt, stride, in, sort_indices, out, out_indices);
+    RUN_CUDA_KERNEL((MedianSelectCuda<T, int64_t>), stream, reduce_elem_cnt, reduce_elem_cnt,
+                    stride, in, sort_indices, out, out_indices);
   }
 }
 
@@ -107,19 +105,18 @@ class CudaMedianWithIndicesKernel final : public user_op::OpKernel {
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("input", 0);
-    if (in->shape().elem_cnt() == 0) return;
+    if (in->shape_view().elem_cnt() == 0) return;
     user_op::Tensor* values = ctx->Tensor4ArgNameAndIndex("values", 0);
     user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    TmpBufferManager<T> buf_manager(tmp_buffer->shape().elem_cnt(), tmp_buffer->mut_dptr<void>(),
-                                    in->shape());
+    TmpBufferManager<T> buf_manager(tmp_buffer->shape_view().elem_cnt(),
+                                    tmp_buffer->mut_dptr<void>(), in->shape_view());
 
-    const int64_t elem_cnt = in->shape().elem_cnt();
-    const int64_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
+    const int64_t elem_cnt = in->shape_view().elem_cnt();
+    const int64_t instance_size = in->shape_view().At(in->shape_view().NumAxes() - 1);
     const int64_t instance_num = elem_cnt / instance_size;
-    InitializeIndices<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-        elem_cnt, buf_manager.InIndicesPtr(), instance_size);
+    RUN_CUDA_KERNEL(InitializeIndices, ctx->stream(), elem_cnt, elem_cnt,
+                    buf_manager.InIndicesPtr(), instance_size);
     SortPairsAscending(in->dptr<T>(), buf_manager.InIndicesPtr(), instance_num, instance_size,
                        buf_manager.TempStoragePtr(), buf_manager.TempStorageBytes(),
                        buf_manager.SortedInPtr(), buf_manager.OutIndicesPtr(),

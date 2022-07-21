@@ -52,10 +52,11 @@ class Scope final {
   Maybe<int64_t> GetParallelDescSymbolId(const OperatorConf& op_conf) const;
   Maybe<Symbol<ParallelDesc>> GetParallelDesc(const OperatorConf& op_conf) const;
 
-  const OptMirroredParallel& opt_mirrored_parallel_conf() const {
-    return scope_proto_.opt_mirrored_parallel_conf();
+  const OptLocalParallel& opt_local_parallel_conf() const {
+    return scope_proto_.opt_local_parallel_conf();
   }
   const ScopeProto& scope_proto() const { return scope_proto_; }
+  const ScopeProto& data() const { return scope_proto_; }
 
 #define DEFINE_SCOPE_CONFIG_GETTER(T, func_name, field_name) \
   T func_name(const std::string& field_name) const {         \

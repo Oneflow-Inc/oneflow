@@ -36,12 +36,22 @@ class profile:
         self,
         activities: Optional[Iterable[ProfilerActivity]] = None,
         record_shapes: bool = False,
+        record_bandwidth_for_cuda: bool = False,
     ) -> None:
         self.activities = set(activities) if activities else supported_activities()
         assert (
             len(self.activities) > 0
         ), "At least one ProfilerActivity must be specified."
+        for item in self.activities:
+            assert (
+                item in supported_activities()
+            ), f"Unsupported ProfilerActivity {item}"
         self.record_shapes = record_shapes
+        if not (ProfilerActivity.CUDA in self.activities):
+            assert (
+                record_bandwidth_for_cuda == False
+            ), "record_bandwidth_for_cuda = True can only work with cuda."
+        self.record_bandwidth_for_cuda = record_bandwidth_for_cuda
         self.profile_events: Optional[Events] = None
 
     def __enter__(self):
@@ -49,6 +59,7 @@ class profile:
             ProfilerActivity.CPU in self.activities,
             ProfilerActivity.CUDA in self.activities,
             self.record_shapes,
+            self.record_bandwidth_for_cuda,
         )
         return self
 
@@ -61,9 +72,11 @@ class profile:
         if self.profile_events is None:
             raise RuntimeError("Profiler didn't finish running")
 
-    def key_averages(self):
+    def key_averages(self, group_by_input_shape=False):
         self.__check_finish()
-        return self.profile_events.key_averages()
+        return self.profile_events.key_averages(
+            group_by_input_shape=group_by_input_shape
+        )
 
     def events(self):
         self.__check_finish()

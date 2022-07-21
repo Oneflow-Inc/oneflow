@@ -15,14 +15,18 @@ limitations under the License.
 */
 
 #include "oneflow/core/profiler/profiler.h"
-#include "oneflow/core/profiler/collection.h"
+#include "oneflow/core/profiler/profile_manager.h"
+#include "oneflow/core/profiler/kineto_shim.h"
+#include "oneflow/core/profiler/event_recorder.h"
 #include "oneflow/core/vm/vm_util.h"
+#ifdef WITH_CUDA
+#include "oneflow/core/device/cuda_util.h"
+#endif  // WITH_CUDA
 #ifdef OF_ENABLE_PROFILER
 #include <nvtx3/nvToolsExt.h>
 #include <sys/syscall.h>
 #include <iostream>
 #include <cuda_profiler_api.h>
-#include "oneflow/core/device/cuda_util.h"
 #endif  // OF_ENABLE_PROFILER
 
 namespace oneflow {
@@ -90,32 +94,34 @@ void ProfilerStop() {
 #endif  // OF_ENABLE_PROFILER
 }
 
-void EnableProfiler(bool use_cpu, bool use_cuda, bool record_shapes) {
+void EnableProfiler(bool use_cpu, bool use_cuda, bool record_shapes, bool record_bandwidth) {
   CHECK_JUST(vm::ClusterSync());
-  if (Global<ProfileMgr>::Get() == nullptr) {
-    Global<ProfileMgr>::New(use_cpu, use_cuda, record_shapes);
+  if (Singleton<ProfileManager>::Get() == nullptr) {
+    Singleton<ProfileManager>::New(use_cpu, use_cuda, record_shapes, record_bandwidth);
   }
 }
 
 // DisableProfilerAndReturnResult will return a json of profile results.
 Maybe<std::string> DisableProfilerAndReturnResult() {
   JUST(vm::ClusterSync());
-
-  auto* pmgr = JUST(GlobalMaybe<ProfileMgr>());
+#if defined(WITH_CUDA)
+  OF_CUDA_CHECK(cudaDeviceSynchronize());
+#endif  // WITH_CUDA
+  auto* pmgr = JUST(SingletonMaybe<ProfileManager>());
   std::string results = pmgr->DumpResultsJson();
-  Global<ProfileMgr>::Delete();
+  Singleton<ProfileManager>::Delete();
   return results;
 }
 
 Maybe<std::string> StartRecord(const std::string& name) {
-  auto* pmgr = JUST(GlobalMaybe<ProfileMgr>());
+  auto* pmgr = JUST(SingletonMaybe<ProfileManager>());
   JUST(vm::ClusterSync());
   return pmgr->RegisterEventRecorder(profiler::EventRecorder::CreateCustomEventRecorder(name),
                                      name);
 }
 
 Maybe<void> EndRecord(const std::string& event_recorder_key) {
-  auto* pmgr = JUST(GlobalMaybe<ProfileMgr>());
+  auto* pmgr = JUST(SingletonMaybe<ProfileManager>());
   JUST(vm::ClusterSync());
   pmgr->UnregisterEventRecorder(event_recorder_key);
   return Maybe<void>::Ok();

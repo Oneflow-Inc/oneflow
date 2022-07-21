@@ -24,7 +24,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestAvgPoolingModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_avgpool1d_with_random_data(test_case):
         m = torch.nn.AvgPool1d(
             kernel_size=random(4, 6),
@@ -40,7 +40,7 @@ class TestAvgPoolingModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_avgpool2d_with_random_data(test_case):
         m = torch.nn.AvgPool2d(
             kernel_size=random(4, 6),
@@ -57,7 +57,7 @@ class TestAvgPoolingModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_avgpool3d_with_random_data(test_case):
         m = torch.nn.AvgPool3d(
             kernel_size=random(4, 6),
@@ -79,7 +79,7 @@ class TestAvgPoolingModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestAvgPoolingFunctional(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_avgpool1d_functional(test_case):
         device = random_device()
         x = random_tensor(ndim=3, dim2=random(20, 22)).to(device)
@@ -93,7 +93,7 @@ class TestAvgPoolingFunctional(flow.unittest.TestCase):
         )
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_avgpool2d_functional(test_case):
         device = random_device()
         x = random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(device)
@@ -107,7 +107,7 @@ class TestAvgPoolingFunctional(flow.unittest.TestCase):
         )
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_avgpool3d_functional(test_case):
         device = random_device()
         x = random_tensor(
@@ -122,6 +122,28 @@ class TestAvgPoolingFunctional(flow.unittest.TestCase):
             count_include_pad=random_bool(),
         )
         return y
+
+    @profile(torch.nn.functional.avg_pool2d)
+    def profile_avgpool2d(test_case):
+        torch.nn.functional.avg_pool2d(
+            torch.ones(1, 128, 28, 28), kernel_size=3, padding=1
+        )
+        torch.nn.functional.avg_pool2d(
+            torch.ones(1, 128, 28, 28), kernel_size=3, stride=2, padding=1
+        )
+        torch.nn.functional.avg_pool2d(
+            torch.ones(16, 128, 28, 28), kernel_size=3, padding=1
+        )
+        torch.nn.functional.avg_pool2d(
+            torch.ones(16, 128, 28, 28), kernel_size=3, stride=2, padding=1
+        )
+        torch.nn.functional.avg_pool2d(
+            torch.ones(16, 128, 28, 28),
+            kernel_size=3,
+            stride=2,
+            padding=1,
+            ceil_mode=True,
+        )
 
 
 if __name__ == "__main__":

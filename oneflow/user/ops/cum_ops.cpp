@@ -41,39 +41,33 @@ Maybe<void> CumsumOp::InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CumsumGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("dx", 0) = ctx->InputShape("dy", 0);
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> CumsumGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
-Maybe<void> CumsumGradOp::GetSbp(user_op::SbpContext* ctx) {
-  const auto& dy_tensor_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
-  for (auto i = 0; i < dy_tensor_desc.shape().NumAxes(); i++) {
-    ctx->NewBuilder().Split(user_op::OpArg("dy", 0), i).Split(user_op::OpArg("dx", 0), i).Build();
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> CumsumGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-  return Maybe<void>::Ok();
-}
-
 REGISTER_USER_OP_GRAD("cumsum").SetGenBackwardOpConfFn(
     [](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("cumsum_grad")
-                                                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                                                 .Output("dx")
-                                                 .Attr("dim", op.attr<int64_t>("dim"))
+        const int64_t dim = op.attr<int64_t>("dim");
+        const std::vector<int32_t> flip_dim(1, dim);
+        user_op::UserOpConfWrapperBuilder flip_builder(op.op_name() + "_grad_flip_out_0");
+        user_op::UserOpConfWrapper flip_op = flip_builder.Op("flip")
+                                                 .Input("x", op.GetGradTensorWithOpOutput("y", 0))
+                                                 .Output("y")
+                                                 .Attr("dims", flip_dim)
                                                  .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        AddOp(grad_op);
+        AddOp(flip_op);
+        user_op::UserOpConfWrapperBuilder cumsum_builder(op.op_name() + "_grad_cumsum_out");
+        user_op::UserOpConfWrapper cumsum_op = cumsum_builder.Op("cumsum")
+                                                   .Input("x", flip_op.output("y", 0))
+                                                   .Output("y")
+                                                   .Attr("dim", dim)
+                                                   .Build();
+        AddOp(cumsum_op);
+        flip_builder = user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_flip_out_1");
+        flip_op = flip_builder.Op("flip")
+                      .Input("x", cumsum_op.output("y", 0))
+                      .Output("y")
+                      .Attr("dims", flip_dim)
+                      .Build();
+        AddOp(flip_op);
+        op.BindGradTensorWithOpInput(flip_op.output("y", 0), "x", 0);
       }
       return Maybe<void>::Ok();
     });

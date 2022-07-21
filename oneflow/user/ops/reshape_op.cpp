@@ -34,22 +34,26 @@ namespace oneflow {
   Shape shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
+
   const Shape& in_shape = in_tensor_desc.shape();
   Shape* out_shape = out_tensor_desc->mut_shape();
-  CHECK_OR_RETURN(in_tensor_desc.is_dynamic() == false);
-  *out_tensor_desc = in_tensor_desc;
+  Stride* out_stride = out_tensor_desc->mut_stride();
+  CHECK_OR_RETURN(in_tensor_desc.is_dynamic() == false);  // NOLINT(maybe-need-error-msg)
+  *out_tensor_desc->mut_data_type() = in_tensor_desc.data_type();
   if (in_shape.NumAxes() == 0 || shape.NumAxes() == 0) {
     // NOTE(chengcheng): input/output Scalar
     // do nothing
   } else {
-    CHECK_GE_OR_RETURN(shape.NumAxes(), 1);
-    CHECK_GE_OR_RETURN(in_shape.NumAxes(), 1);
+    CHECK_GE_OR_RETURN(shape.NumAxes(), 1);     // NOLINT(maybe-need-error-msg)
+    CHECK_GE_OR_RETURN(in_shape.NumAxes(), 1);  // NOLINT(maybe-need-error-msg)
+
     int need_infer_axis = -1;
     size_t count = 1;
     for (int i = 0; i < shape.NumAxes(); ++i) {
       if (shape.At(i) == -1) {
         CHECK_EQ_OR_RETURN(need_infer_axis, -1)
-            << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
+            << Error::RuntimeError() << "Shape " << shape.ToString()
+            << " has more than 1 axis that needs to be infered";
         need_infer_axis = i;
       } else {
         count *= shape.At(i);
@@ -58,7 +62,14 @@ namespace oneflow {
     if (need_infer_axis != -1) { shape.Set(need_infer_axis, in_shape.elem_cnt() / count); }
   }
   *out_shape = shape;
-  CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
+  *out_stride = Stride(shape);
+  CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt())
+      << Error::RuntimeError() << "Reshape infer ERROR! in op_name: " << ctx->op_name()
+      << " input shape is : " << in_shape.ToString()
+      << " , output shape is : " << out_shape->ToString()
+      << " , and reshape shape conf is : " << ctx->Attr<Shape>("shape").ToString()
+      << " op_loc: " << ctx->op_loc();
+
   return Maybe<void>::Ok();
 }
 
@@ -66,16 +77,19 @@ namespace oneflow {
   Shape logical_shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
+
   const Shape& in_shape = in_tensor_desc.shape();
   Shape* out_shape = out_tensor_desc->mut_shape();
+  Stride* out_stride = out_tensor_desc->mut_stride();
   *out_tensor_desc->mut_shape() = in_tensor_desc.shape();
+  *out_tensor_desc->mut_stride() = Stride(in_tensor_desc.shape());
   *out_tensor_desc->mut_is_dynamic() = in_tensor_desc.is_dynamic();
   if (in_shape.NumAxes() == 0 || logical_shape.NumAxes() == 0) {
     // NOTE(chengcheng): input/output Scalar
     // do nothing
   } else {
-    CHECK_GE_OR_RETURN(logical_shape.NumAxes(), 1);
-    CHECK_GE_OR_RETURN(in_shape.NumAxes(), 1);
+    CHECK_GE_OR_RETURN(logical_shape.NumAxes(), 1);  // NOLINT(maybe-need-error-msg)
+    CHECK_GE_OR_RETURN(in_shape.NumAxes(), 1);       // NOLINT(maybe-need-error-msg)
     const auto& in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
     const Shape in_logical_shape =
         *JUST(GetLogicalShape(in_shape, in_nd_sbp, ctx->parallel_desc()));
@@ -84,8 +98,8 @@ namespace oneflow {
     for (int i = 0; i < logical_shape.NumAxes(); ++i) {
       if (logical_shape.At(i) == -1) {
         CHECK_EQ_OR_RETURN(need_infer_axis, -1)
-            << "Shape " << logical_shape.ToString()
-            << " has more than 1 axis that needs to be infered.";
+            << Error::RuntimeError() << "Shape " << logical_shape.ToString()
+            << " has more than 1 axis that needs to be infered";
         need_infer_axis = i;
       } else {
         count *= logical_shape.At(i);
@@ -98,12 +112,13 @@ namespace oneflow {
   const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   *out_shape =
       *JUST(GetPhysicalShape(logical_shape, nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
+  *out_stride = Stride(*out_shape);
   CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt())
-      << " Reshape infer ERROR! in op_name: " << ctx->op_name()
+      << Error::RuntimeError() << " Reshape infer ERROR! in op_name: " << ctx->op_name()
       << " input shape is : " << in_shape.ToString()
       << " , output shape is : " << out_shape->ToString() << " , output logical shape is "
       << logical_shape.ToString()
-      << " , And reshape shape conf is : " << ctx->Attr<Shape>("shape").ToString()
+      << " , and reshape shape conf is : " << ctx->Attr<Shape>("shape").ToString()
       << " op_loc: " << ctx->op_loc();
   return Maybe<void>::Ok();
 }

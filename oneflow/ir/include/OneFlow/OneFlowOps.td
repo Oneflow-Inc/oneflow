@@ -282,12 +282,10 @@ def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createLowerOneFlowToTosaPass()";
   let dependentDialects = ["tosa::TosaDialect", "memref::MemRefDialect", "mlir::func::FuncDialect"];
-}
-
-def MapSCFToGPUPass : Pass<"gpu-greedy-parallel-loop-mapping", "ModuleOp"> {
-  let summary = "Greedily maps all parallel loops to gpu hardware ids";
-  let constructor = "mlir::oneflow::createMapSCFToGPUPass()";
-  let dependentDialects = ["scf::SCFDialect"];
+  let options = [
+    Option<"variableAsConstant", "variable-as-constant", "int", "0",
+           "convert variable op as const op of tosa">,
+  ];
 }
 
 def BufferHostRegisterPass : Pass<"buffer-host-register", "func::FuncOp"> {

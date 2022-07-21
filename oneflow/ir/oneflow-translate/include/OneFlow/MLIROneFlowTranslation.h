@@ -105,6 +105,7 @@ class Importer {
   }
 
   ArrayAttr GetAttrFromShape(const ::oneflow::ShapeProto& shape);
+  ArrayAttr GetAttrFromStride(const ::oneflow::Int64ListProto& stride);
   llvm::Optional<Type> GetTypeFromOneFlowDataType(::oneflow::DataType dt);
   OpBuilder& GetBuilder() { return builder_; }
   MLIRContext* GetMLIRContext() { return context_; }
@@ -149,6 +150,7 @@ void RoundTripOneFlowJob(
 
 void registerFromOneFlowJobTranslation();
 
+std::string ConvertJobToTosaIR(RoundTripOneFlowJobWrapperInterface& job_wrapper);
 void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path);
 void LoadJobFromIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path);
 

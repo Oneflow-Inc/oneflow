@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EP_COMMON_PRIMITIVE_UTIL_H_
 #define ONEFLOW_CORE_EP_COMMON_PRIMITIVE_UTIL_H_
 
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -34,6 +35,71 @@ bool IsPackSizeSupported(const size_t pack_size, size_t num_dims, const int64_t*
                          const void* ptr) {
   return (dims[num_dims - 1] % pack_size == 0)
          && (reinterpret_cast<std::uintptr_t>(ptr) % (pack_size * sizeof(T)) == 0);
+}
+
+inline void CheckInplace(size_t num_dims, const int64_t* src_dims_or_strides, const void* src,
+                         const int64_t* dst_dims_or_strides, const void* dst) {
+  if (src == dst) {
+    for (int64_t i = 0; i < num_dims; ++i) {
+      CHECK_EQ(src_dims_or_strides[i], dst_dims_or_strides[i]);
+    }
+  }
+}
+
+template<size_t max_num_dims>
+inline void SimplifyBroadcastDims(size_t num_src_dims, const int64_t* src_dims,
+                                  const int64_t* src_strides, size_t num_dst_dims,
+                                  const int64_t* dst_dims, const int64_t* dst_strides,
+                                  size_t* simplified_num_dims, int64_t* simplified_src_dims,
+                                  int64_t* simplified_src_strides, int64_t* simplified_dst_dims,
+                                  int64_t* simplified_dst_strides) {
+  *simplified_num_dims = 0;
+  std::pair<int64_t, size_t> sorted_dst_strides[max_num_dims];
+  int64_t new_dst_dims[max_num_dims];
+  int64_t new_src_dims[max_num_dims];
+  int64_t new_dst_strides[max_num_dims];
+  int64_t new_src_strides[max_num_dims];
+  for (size_t i = 0; i < num_dst_dims; i++) { sorted_dst_strides[i] = {dst_strides[i], i}; }
+  std::sort(sorted_dst_strides, sorted_dst_strides + num_dst_dims,
+            [](auto pair1, auto pair2) { return pair1.first > pair2.first; });
+  const int64_t num_src_padding_dims = num_dst_dims - num_src_dims;
+  // dimension completion
+  int64_t expanded_src_dims[max_num_dims];
+  int64_t expanded_src_strides[max_num_dims];
+  for (int64_t i = num_dst_dims - 1; i >= 0; i--) {
+    expanded_src_dims[i] = i < num_src_padding_dims ? 1 : src_dims[i - num_src_padding_dims];
+    expanded_src_strides[i] = i < num_src_padding_dims ? 0 : src_strides[i - num_src_padding_dims];
+  }
+  // dimension permutation
+  for (int64_t i = num_dst_dims - 1; i >= 0; i--) {
+    size_t idx = sorted_dst_strides[i].second;
+    new_dst_dims[i] = dst_dims[idx];
+    new_dst_strides[i] = dst_strides[idx];
+    new_src_dims[i] = expanded_src_dims[idx];
+    new_src_strides[i] = expanded_src_strides[idx];
+  }
+  // dimension merge
+  bool prev_broadcast_src = false;
+  for (int64_t i = 0; i < num_dst_dims; ++i) {
+    const bool broadcast_src = (new_src_dims[i] == 1);
+    if (new_dst_dims[i] == 1) {
+      continue;
+    } else if (*simplified_num_dims != 0 && prev_broadcast_src == broadcast_src
+               && (new_src_strides[i - 1] == new_src_strides[i] * new_src_dims[i])
+               && (new_dst_strides[i - 1] == new_dst_strides[i] * new_dst_dims[i])) {
+      simplified_src_dims[*simplified_num_dims - 1] *= new_src_dims[i];
+      simplified_dst_dims[*simplified_num_dims - 1] *= new_dst_dims[i];
+      simplified_src_strides[*simplified_num_dims - 1] = new_src_strides[i];
+      simplified_dst_strides[*simplified_num_dims - 1] = new_dst_strides[i];
+    } else {
+      simplified_src_dims[*simplified_num_dims] = new_src_dims[i];
+      simplified_dst_dims[*simplified_num_dims] = new_dst_dims[i];
+      simplified_src_strides[*simplified_num_dims] = new_src_strides[i];
+      simplified_dst_strides[*simplified_num_dims] = new_dst_strides[i];
+      *simplified_num_dims += 1;
+      prev_broadcast_src = broadcast_src;
+    }
+  }
 }
 
 inline void SimplifyBroadcastDims(size_t num_a_dims, const int64_t* a_dims, size_t num_b_dims,
@@ -119,6 +185,14 @@ inline void SimplifyBroadcastDims(size_t num_src0_dims, const int64_t* src0_dims
   for (int64_t i = 0; i < *simplified_num_dims; ++i) {
     CHECK_EQ(broadcast_dims[i], simplified_dst_dims[i]);
   }
+}
+
+template<typename T, typename D>
+std::unique_ptr<T> NewPrimitiveFromHandlers(
+    const std::map<D, std::function<std::unique_ptr<T>()>>& handlers, const D& key) {
+  const auto iter = handlers.find(key);
+  if (iter != handlers.end()) { return iter->second(); }
+  return nullptr;
 }
 
 }  // namespace primitive

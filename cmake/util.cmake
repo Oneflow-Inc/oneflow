@@ -269,6 +269,12 @@ function(set_compile_options_to_oneflow_target target)
   endif()
 endfunction()
 
+function(check_variable_defined variable)
+  if(NOT DEFINED ${variable})
+    message(FATAL_ERROR "Variable ${variable} is not defined")
+  endif()
+endfunction()
+
 function(checkDirAndAppendSlash)
   set(singleValues DIR;OUTPUT)
   set(prefix ARG)
@@ -280,4 +286,14 @@ function(checkDirAndAppendSlash)
     set(${${prefix}_OUTPUT} "${${prefix}_DIR}/" PARENT_SCOPE)
   endif()
 
+endfunction()
+
+function(mark_targets_as_system)
+  # TODO(daquexian): update this function once https://gitlab.kitware.com/cmake/cmake/-/merge_requests/7308
+  # and its following PRs are merged in cmake v3.25.
+  foreach(target ${ARGV})
+    get_target_property(include_dir ${target} INTERFACE_INCLUDE_DIRECTORIES)
+    set_target_properties(${target} PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                                               "${include_dir}")
+  endforeach()
 endfunction()

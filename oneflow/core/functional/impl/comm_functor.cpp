@@ -17,10 +17,11 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.h"
+#include "oneflow/core/framework/op_interpreter/eager_local_op_interpreter.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
@@ -39,29 +40,6 @@ namespace functional {
 namespace impl {
 
 namespace {
-
-bool IsAllBroadcastNdSbp(Symbol<NdSbp> nd_sbp) {
-  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
-    if (!sbp_parallel.has_broadcast_parallel()) { return false; }
-  }
-  return true;
-}
-
-bool IsAllPartialSumNdSbp(Symbol<NdSbp> nd_sbp) {
-  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
-    if (!sbp_parallel.has_partial_sum_parallel()) { return false; }
-  }
-  return true;
-}
-
-bool IsAllSplitNdSbp(Symbol<NdSbp> nd_sbp, int64_t axis) {
-  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
-    if (!(sbp_parallel.has_split_parallel() && sbp_parallel.split_parallel().axis() == axis)) {
-      return false;
-    }
-  }
-  return true;
-}
 
 bool IsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_split_parallel(); }
 
@@ -194,7 +172,7 @@ class LocalAllReduceFunctor {
         JUST(CachedRankGroupAndDeviceType2AllReduceOpExpr(rank_group, device_type));
     auto op_input = x;
     if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(x)) {
-      op_input = std::dynamic_pointer_cast<Tensor>(JUST(static_zeros_tensor->AsMirroredTensor()));
+      op_input = std::dynamic_pointer_cast<Tensor>(JUST(static_zeros_tensor->AsLocalTensor()));
     }
     if (inplace) {
       JUST(CheckInplaceValid(op_input));
@@ -207,13 +185,14 @@ class LocalAllReduceFunctor {
   }
 };
 
-class ConsistentAllReduceFunctor {
+class GlobalAllReduceFunctor {
  public:
-  ConsistentAllReduceFunctor() = default;
+  GlobalAllReduceFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     {
-      CHECK_OR_RETURN(x->is_consistent());
-      CHECK_OR_RETURN(IsAllPartialSumNdSbp(JUST(x->nd_sbp())));
+      CHECK_OR_RETURN(x->is_global()) << "Tensor is not global";
+      CHECK_OR_RETURN(NdSbpIsAllPartialSum(*JUST(x->nd_sbp())))
+          << "Tensor's sbp must be partial_sum";
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllReduceOpExpr(JUST(x->parallel_desc())));
@@ -221,18 +200,21 @@ class ConsistentAllReduceFunctor {
   }
 };
 
-class ConsistentReduceScatterFunctor {
+class GlobalReduceScatterFunctor {
  public:
-  ConsistentReduceScatterFunctor() = default;
+  GlobalReduceScatterFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::string& op_type) const {
     {
-      CHECK_OR_RETURN(x->is_consistent());
+      CHECK_OR_RETURN(x->is_global());  // NOLINT
       if (op_type == "max") {
-        CHECK_OR_RETURN(IsAllBroadcastNdSbp(JUST(x->nd_sbp())));
-        CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kCUDA);
+        CHECK_OR_RETURN(NdSbpIsAllBroadcast(*JUST(x->nd_sbp())))
+            << "Tensor's sbp must be broadcast to get reduce_max";
+        CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kCUDA)
+            << "reduce_max only support CUDA";
       } else if (op_type == "sum") {
-        CHECK_OR_RETURN(IsAllPartialSumNdSbp(JUST(x->nd_sbp())));
+        CHECK_OR_RETURN(NdSbpIsAllPartialSum(*JUST(x->nd_sbp())))
+            << "Tensor's sbp must be partial_sum to get reduce_sum";
       } else {
         UNIMPLEMENTED_THEN_RETURN();
       }
@@ -243,13 +225,14 @@ class ConsistentReduceScatterFunctor {
   }
 };
 
-class ConsistentAllGatherFunctor {
+class GlobalAllGatherFunctor {
  public:
-  ConsistentAllGatherFunctor() = default;
+  GlobalAllGatherFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     {
-      CHECK_OR_RETURN(x->is_consistent());
-      CHECK_OR_RETURN(IsAllSplitNdSbp(JUST(x->nd_sbp()), 0));
+      CHECK_OR_RETURN(x->is_global()) << "Tensor is not global";
+      CHECK_OR_RETURN(NdSbpIsAllSplit(*JUST(x->nd_sbp()), 0))
+          << "Tensor's sbp must be split to get all_gather";
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllGatherOpExpr(JUST(x->parallel_desc())));
@@ -257,15 +240,15 @@ class ConsistentAllGatherFunctor {
   }
 };
 
-class ConsistentS2SFunctor {
+class GlobalS2SFunctor {
  public:
-  ConsistentS2SFunctor() = default;
+  GlobalS2SFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<Symbol<SbpParallel>>& sbp_parallels) const {
     Symbol<NdSbp> in_nd_sbp = JUST(x->nd_sbp());
     Symbol<NdSbp> out_nd_sbp = JUST(GetNdSbp(sbp_parallels));
     {
-      CHECK_OR_RETURN(x->is_consistent());
+      CHECK_OR_RETURN(x->is_global());  // NOLINT
       CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(), 1);
       CHECK_OR_RETURN(IsSplitSbp(in_nd_sbp->sbp_parallel(0)));
       CHECK_EQ_OR_RETURN(out_nd_sbp->sbp_parallel_size(), 1);
@@ -403,10 +386,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::StreamTouchFunctor>("StreamTouch");
   m.add_functor<impl::BroadcastFunctor>("Broadcast");
   m.add_functor<impl::LocalAllReduceFunctor>("LocalAllReduce");
-  m.add_functor<impl::ConsistentAllReduceFunctor>("ConsistentAllReduce");
-  m.add_functor<impl::ConsistentReduceScatterFunctor>("ConsistentReduceScatter");
-  m.add_functor<impl::ConsistentAllGatherFunctor>("ConsistentAllGather");
-  m.add_functor<impl::ConsistentS2SFunctor>("ConsistentS2S");
+  m.add_functor<impl::GlobalAllReduceFunctor>("GlobalAllReduce");
+  m.add_functor<impl::GlobalReduceScatterFunctor>("GlobalReduceScatter");
+  m.add_functor<impl::GlobalAllGatherFunctor>("GlobalAllGather");
+  m.add_functor<impl::GlobalS2SFunctor>("GlobalS2S");
   m.add_functor<impl::SendFunctor>("Send");
   m.add_functor<impl::RecvFunctor>("Recv");
   m.add_functor<impl::LocalReduceFunctor>("LocalReduce");
