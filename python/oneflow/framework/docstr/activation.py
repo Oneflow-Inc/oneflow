@@ -495,7 +495,7 @@ add_docstr(
 add_docstr(
     oneflow._C.threshold,
     """
-    threshold(input,threshold,value) -> Tensor
+    threshold(input: Tensor, threshold: Float, value: Float) -> Tensor
 
     Thresholds each element of the input Tensor.
 
@@ -506,7 +506,7 @@ add_docstr(
 add_docstr(
     oneflow._C.hardshrink,
     """
-    hardshrink(input, lambd=0.5) -> Tensor
+    hardshrink(input: Tensor, lambd: Float=0.5, inplace: bool=False) -> Tensor
 
     Applies the hard shrinkage function in an element-wise manner.
 
@@ -517,7 +517,7 @@ add_docstr(
 add_docstr(
     oneflow._C.softshrink,
     """
-    softshrink(input, lambd=0.5) -> Tensor
+    softshrink(input: Tensor, lambd: Float=0.5, inplace: bool=False) -> Tensor
 
     Applies the soft shrinkage function in an element-wise manner.
 
