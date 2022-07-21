@@ -24,6 +24,8 @@ Convolution functions
     conv_transpose1d
     conv_transpose2d
     conv_transpose3d
+    fold
+    unfold
 
 Pooling functions
 ----------------------------------
