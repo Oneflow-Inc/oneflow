@@ -273,7 +273,7 @@ size_t InferTmpBufferSize(user_op::InferContext* ctx) {
 
 size_t InferGradTmpBufferSize(user_op::InferContext* ctx) {
   const Shape& value_shape = ctx->InputShape("value_grad", 0);
-  const DataType& value_dtype = ctx->InputDType("value_grad", 0);
+  DataType value_dtype = ctx->InputDType("value_grad", 0);
   return value_shape.elem_cnt() * GetSizeOfDataType(value_dtype);
 }
 
