@@ -996,10 +996,14 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("AutoTrainStep"));
     JUST(DoPass("AutoLearningRate"));
     JUST(DoPass("QuantAwareTraining"));
+    // run FuseAddToOutputPass before IRRoundTripBeforeAD pass since add_2 maybe fused as add_n in
+    // IRRoundTripBeforeAD pass
+    JUST(DoPass("FuseAddToOutputPass"));
 #ifdef WITH_MLIR
     JUST(DoPass("IRRoundTripBeforeAD"));
 #endif  // WITH_MLIR
     JUST(DoPass("GenerateOptimizerOpConfs"));
+    JUST(DoPass("PrunePinnedIdentityOpPass"));
     JUST(DoPass("ReplaceEmbeddingOps"));
     JUST(DoPass("FuseEmbeddingShuffleInteractionPass"));
     JUST(DoPass("AddSspVariableProxy"));
@@ -1009,7 +1013,6 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
 #ifdef WITH_MLIR
     JUST(DoPass("IRRoundTrip"));
 #endif  // WITH_MLIR
-    JUST(DoPass("FuseAddToOutputPass"));
     // run this pass again to fuse ops created in the first run.
     // TODO(guoran): loop multiple times inside the pass
     JUST(DoPass("FuseAddToOutputPass", 1));

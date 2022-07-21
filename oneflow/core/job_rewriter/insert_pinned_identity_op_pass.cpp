@@ -87,7 +87,6 @@ Maybe<void> InsertPinnedIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const {
       optimizer_conf->set_variable_grad_lbns(j, it->second);
     }
   }
-  job_builder.MutOpTransactionCommit();
   return Maybe<void>::Ok();
 }
 
