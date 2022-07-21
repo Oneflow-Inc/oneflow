@@ -46,7 +46,7 @@ class TestAsStrided(flow.unittest.TestCase):
 
     @autotest(n=10)
     def test_flow_as_strided_with_stride(test_case):
-        device = cpu_device()
+        device = random_device()
         dim0 = np.random.randint(2, 4)
         dim1 = np.random.randint(2, 4)
         dim2 = np.random.randint(2, 4)
