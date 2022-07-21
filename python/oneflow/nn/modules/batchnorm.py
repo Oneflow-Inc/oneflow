@@ -81,7 +81,17 @@ class _NormBase(Module):
     ):
         if self.track_running_stats:
             num_batches_tracked_key = prefix + "num_batches_tracked"
-            state_dict[num_batches_tracked_key] = flow.tensor(0, dtype=flow.long)
+            if not num_batches_tracked_key in state_dict:
+                if self.running_mean.is_global:
+                    sbp = self.running_mean.sbp
+                    placement = self.running_mean.placement
+                    state_dict[num_batches_tracked_key] = flow.tensor(
+                        0, dtype=flow.long
+                    ).to_global(sbp=sbp, placement=placement)
+                else:
+                    state_dict[num_batches_tracked_key] = flow.tensor(
+                        0, dtype=flow.long
+                    )
         super(_NormBase, self)._load_from_state_dict(
             state_dict,
             prefix,
