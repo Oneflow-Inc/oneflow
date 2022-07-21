@@ -54,9 +54,15 @@ class BiasAddFunctor {
   BiasAddFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
   }
+  struct BiasAdd {
+    Maybe<AttrMap> operator()(int32_t axis_val) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int32_t>("axis", axis_val));
+      return AttrMap(attrs);
+    }
+  };
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& bias, const int32_t& axis) const {
-    MutableAttrMap attrs;
     int32_t axis_val = axis;
     if (axis_val < 0) {
       const int64_t num_axes = x->shape()->NumAxes();
@@ -70,7 +76,8 @@ class BiasAddFunctor {
         << Error::RuntimeError() << "The size of tensor x " << x->shape()->ToString()
         << " must match the size of tensor b " << bias->shape()->ToString() << " at dimension "
         << axis_val;
-    JUST(attrs.SetAttr<int32_t>("axis", axis_val));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(BiasAdd);
+    const auto attrs = *JUST(GetAttrs(axis_val));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, bias}, attrs);
   }
 
@@ -84,12 +91,12 @@ class ConvBaseFunctor {
     bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
   }
   virtual ~ConvBaseFunctor() = default;
-  struct RawGetAttrs {
+
+  struct ConvBase {
     Maybe<AttrMap> operator()(int num_spatial_dims, const std::vector<int32_t>& stride,
                               const std::vector<int32_t>& padding,
                               const std::vector<int32_t>& dilation, const int32_t& groups,
                               const std::string& channel_pos, const Shape& weight_shape) {
-      MutableAttrMap conv_attrs;
       std::vector<int32_t> kernel_size_vec(num_spatial_dims);
       int32_t channel_idx = 1;
       int32_t kernel_idx_offset = 2;
@@ -101,6 +108,7 @@ class ConvBaseFunctor {
       for (int i = 0; i < num_spatial_dims; i++) {
         kernel_size_vec.at(i) = (weight_shape.At(i + kernel_idx_offset));
       }
+      MutableAttrMap conv_attrs;
       JUST(conv_attrs.SetAttr<int32_t>("filters", weight_shape.At(0)));
       JUST(conv_attrs.SetAttr<std::vector<int32_t>>("padding_before", padding));
       JUST(conv_attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size_vec));
@@ -118,7 +126,7 @@ class ConvBaseFunctor {
                            const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& dilation, const int32_t& groups,
                            const std::string& channel_pos) const {
-    constexpr static auto* GetAttrs = CACHED_FUNCTOR_PTR(RawGetAttrs);
+    constexpr static auto* GetAttrs = CACHED_FUNCTOR_PTR(ConvBase);
     const auto& conv_attrs = JUST(GetAttrs(num_spatial_dims_, stride, padding, dilation, groups,
                                            channel_pos, *weight->shape()));
     const std::shared_ptr<one::Tensor>& conv_out =
@@ -167,6 +175,39 @@ class DeConvBaseFunctor {
     bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
   }
   virtual ~DeConvBaseFunctor() = default;
+  struct DeConvBase {
+    Maybe<AttrMap> operator()(int num_spatial_dims, const Shape weight_shape,
+                              const std::vector<int32_t>& stride,
+                              const std::vector<int32_t>& padding,
+                              const std::vector<int32_t>& output_padding, const int32_t& groups,
+                              const std::vector<int32_t>& dilation,
+                              const std::string& data_format) {
+      std::vector<int32_t> kernel_size_vec(num_spatial_dims);
+      int32_t kernel_idx_offset = 2;
+      if (data_format == "channels_last") { kernel_idx_offset = 1; }
+      for (int i = 0; i < num_spatial_dims; i++) {
+        kernel_size_vec[i] = (weight_shape.At(i + kernel_idx_offset));
+      }
+
+      MutableAttrMap deconv_attrs;
+      JUST(deconv_attrs.SetAttr<int32_t>("filters", weight_shape.At(1) * groups));
+      JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("padding_before", padding));
+      JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size_vec));
+      JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("output_padding", output_padding));
+      JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("strides", stride));
+      JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation));
+      JUST(deconv_attrs.SetAttr<int32_t>("groups", groups));
+      JUST(deconv_attrs.SetAttr<std::string>("data_format", data_format));
+      return AttrMap(deconv_attrs);
+    }
+  };
+  struct Bias {
+    Maybe<AttrMap> operator()() {
+      MutableAttrMap bias_attrs;
+      JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
+      return AttrMap(bias_attrs);
+    }
+  };
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& weight,
                            const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
@@ -174,27 +215,14 @@ class DeConvBaseFunctor {
                            const std::vector<int32_t>& output_padding, const int32_t& groups,
                            const std::vector<int32_t>& dilation,
                            const std::string& data_format) const {
-    MutableAttrMap deconv_attrs;
-    std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
-    int32_t kernel_idx_offset = 2;
-    if (data_format == "channels_last") { kernel_idx_offset = 1; }
-    for (int i = 0; i < num_spatial_dims_; i++) {
-      kernel_size_vec[i] = ((weight->shape())->At(i + kernel_idx_offset));
-    }
-
-    JUST(deconv_attrs.SetAttr<int32_t>("filters", (weight->shape())->At(1) * groups));
-    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("padding_before", padding));
-    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size_vec));
-    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("output_padding", output_padding));
-    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("strides", stride));
-    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation));
-    JUST(deconv_attrs.SetAttr<int32_t>("groups", groups));
-    JUST(deconv_attrs.SetAttr<std::string>("data_format", data_format));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(DeConvBase);
+    const auto deconv_attrs = *JUST(GetAttrs(num_spatial_dims_, *weight->shape(), stride, padding,
+                                             output_padding, groups, dilation, data_format));
     std::shared_ptr<one::Tensor> deconv_out = nullptr;
     deconv_out = JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x, weight}, deconv_attrs));
     if (bias) {
-      MutableAttrMap bias_attrs;
-      JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
+      constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Bias);
+      const auto bias_attrs = *JUST(GetAttrs());
       return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {deconv_out, JUST(bias)}, bias_attrs);
     } else {
       return deconv_out;
@@ -238,6 +266,15 @@ class EmbeddingReNormFunctor {
         one::OpBuilder("embedding_renorm").Input("in").Input("indices").Output("out").Build());
   }
 
+  struct EmbeddingReNorm {
+    Maybe<AttrMap> operator()(const double& max_norm, const double& norm_type) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("max_norm", max_norm));
+      JUST(attrs.SetAttr<double>("norm_type", norm_type));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
                            const std::shared_ptr<one::Tensor>& indices, const double& max_norm,
                            const double& norm_type) const {
@@ -246,10 +283,8 @@ class EmbeddingReNormFunctor {
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     JUST(oneflow::VectorAt(*outputs, 0)) = in;
 
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("max_norm", max_norm));
-    JUST(attrs.SetAttr<double>("norm_type", norm_type));
-
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(EmbeddingReNorm);
+    const auto attrs = *JUST(GetAttrs(max_norm, norm_type));
     JUST(OpInterpUtil::Dispatch(*op_, {in, indices}, outputs.get(), attrs));
     return JUST(oneflow::VectorAt(*outputs, 0));
   }
@@ -264,6 +299,14 @@ class EmbeddingFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("embedding").Input("weight").Input("indices").Output("out").Build());
   }
+  struct Embedding {
+    Maybe<AttrMap> operator()(int64_t new_padding_idx, bool scale_grad_by_freq) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("padding_idx", new_padding_idx));
+      JUST(attrs.SetAttr<bool>("scale_grad_by_freq", scale_grad_by_freq));
+      return AttrMap(attrs);
+    }
+  };
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& weight,
                            const std::shared_ptr<one::Tensor>& indices,
                            const Optional<int64_t>& padding_idx,
@@ -271,9 +314,8 @@ class EmbeddingFunctor {
     CHECK_EQ_OR_RETURN(weight->ndim(), 2) << "The dimension of weight should be 2";
     int64_t new_padding_idx = -1;
     if (padding_idx.has_value()) { new_padding_idx = JUST(padding_idx); }
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("padding_idx", new_padding_idx));
-    JUST(attrs.SetAttr<bool>("scale_grad_by_freq", scale_grad_by_freq));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Embedding);
+    const auto attrs = *JUST(GetAttrs(new_padding_idx, scale_grad_by_freq));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {weight, indices}, attrs);
   }
 
@@ -309,6 +351,16 @@ class MatMulFunctor {
     bcast_matmul_op_ =
         CHECK_JUST(one::OpBuilder("broadcast_matmul").Input("a").Input("b").Output("out").Build());
   }
+  struct MatMul {
+    Maybe<AttrMap> operator()(const bool& transpose_a, const bool& transpose_b,
+                              const double& alpha) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
+      JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
+      JUST(attrs.SetAttr<double>("alpha", alpha));
+      return AttrMap(attrs);
+    }
+  };
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b, const bool& transpose_a,
                            const bool& transpose_b, const double& alpha) const {
@@ -319,11 +371,8 @@ class MatMulFunctor {
         << Error::RuntimeError() << "Tensor a's dim should >= 1";
     CHECK_GE_OR_RETURN(b_shape->NumAxes(), 1)
         << Error::RuntimeError() << "Tensor b's dim should >= 1";
-
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
-    JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
-    JUST(attrs.SetAttr<double>("alpha", alpha));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(MatMul);
+    const auto attrs = *JUST(GetAttrs(transpose_a, transpose_b, alpha));
     const int64_t a_num_axes = a_shape->NumAxes();
     const int64_t b_num_axes = b_shape->NumAxes();
     if (a_num_axes == 1 && b_num_axes == 2) { return VectorMatrixProduct(a, b); }
@@ -358,6 +407,16 @@ class BatchMatMulFunctor {
     batch_matmul_op_ =
         CHECK_JUST(one::OpBuilder("batch_matmul").Input("a").Input("b").Output("out").Build());
   }
+  struct BatchMatMul {
+    Maybe<AttrMap> operator()(const bool& transpose_a, const bool& transpose_b,
+                              const double& alpha) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
+      JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
+      JUST(attrs.SetAttr<double>("alpha", alpha));
+      return AttrMap(attrs);
+    }
+  };
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b, const bool& transpose_a,
                            const bool& transpose_b, const double& alpha) const {
@@ -373,10 +432,8 @@ class BatchMatMulFunctor {
         << Error::RuntimeError() << "Batch dim not match, please check input!";
     CHECK_EQ_OR_RETURN(a_shape->At(2), b_shape->At(1))
         << Error::RuntimeError() << "Matmul dim not match, please check input!";
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
-    JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
-    JUST(attrs.SetAttr<double>("alpha", alpha));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(BatchMatMul);
+    const auto attrs = *JUST(GetAttrs(transpose_a, transpose_b, alpha));
     return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
   }
 
@@ -603,9 +660,15 @@ class FusedMLPFunctor {
       input[0] = x;
       std::copy(weights.begin(), weights.end(), input.begin() + 1);
       std::copy(biases.begin(), biases.end(), input.begin() + 1 + weight_size);
-
-      MutableAttrMap attrs;
-      JUST(attrs.SetAttr<bool>("skip_final_activation", skip_final_activation));
+      struct FusedAttr {
+        Maybe<AttrMap> operator()(bool skip_final_activation) {
+          MutableAttrMap attrs;
+          JUST(attrs.SetAttr<bool>("skip_final_activation", skip_final_activation));
+          return AttrMap(attrs);
+        };
+      };
+      constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(FusedAttr);
+      const auto attrs = *JUST(GetAttrs(skip_final_activation));
       return OpInterpUtil::Dispatch<Tensor>(*fused_op_[weight_size], input, attrs);
     }
 #endif  // CUDA_VERSION >= 11060
@@ -705,9 +768,17 @@ class FusedMatmulBiasAddReluDropoutFunctor {
       input[0] = x;
       std::copy(weights.begin(), weights.end(), input.begin() + 1);
       std::copy(biases.begin(), biases.end(), input.begin() + 1 + weight_size);
-      MutableAttrMap attrs;
-      JUST(attrs.SetAttr<bool>("skip_final_activation", skip_final_activation));
-      JUST(attrs.SetAttr<std::vector<float>>("dropout_rate_list", dropout_rate_list));
+      struct FuseAttr {
+        Maybe<AttrMap> operator()(bool skip_final_activation,
+                                  const std::vector<float>& dropout_rate_list) {
+          MutableAttrMap attrs;
+          JUST(attrs.SetAttr<bool>("skip_final_activation", skip_final_activation));
+          JUST(attrs.SetAttr<std::vector<float>>("dropout_rate_list", dropout_rate_list));
+          return AttrMap(attrs);
+        }
+      };
+      constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(FuseAttr);
+      const auto attrs = *JUST(GetAttrs(skip_final_activation, dropout_rate_list));
       return OpInterpUtil::Dispatch<Tensor>(*fused_op_[weight_size], input,
                                             OpExprInterpContext(attrs, dropout_state));
     }
@@ -751,14 +822,22 @@ class LayerNormFunctor {
                          .Output("inv_variance")
                          .Build());
   }
+  struct LayerNorm {
+    Maybe<AttrMap> operator()(const int64_t& begin_norm_axis, const int64_t& begin_params_axis,
+                              const double& epsilon) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
+      JUST(attrs.SetAttr<int64_t>("begin_params_axis", begin_params_axis));
+      JUST(attrs.SetAttr<double>("epsilon", epsilon));
+      JUST(attrs.SetAttr<bool>("center", false));
+      JUST(attrs.SetAttr<bool>("scale", false));
+      return AttrMap(attrs);
+    }
+  };
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& begin_norm_axis,
                            const int64_t& begin_params_axis, const double& epsilon) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
-    JUST(attrs.SetAttr<int64_t>("begin_params_axis", begin_params_axis));
-    JUST(attrs.SetAttr<double>("epsilon", epsilon));
-    JUST(attrs.SetAttr<bool>("center", false));
-    JUST(attrs.SetAttr<bool>("scale", false));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(LayerNorm);
+    const auto attrs = *JUST(GetAttrs(begin_norm_axis, begin_params_axis, epsilon));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -778,16 +857,26 @@ class LayerNormAffineFunctor {
                          .Output("inv_variance")
                          .Build());
   }
+
+  struct LayerNormAffine {
+    Maybe<AttrMap> operator()(const int64_t& begin_norm_axis, const int64_t& begin_params_axis,
+                              const double& epsilon) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
+      JUST(attrs.SetAttr<int64_t>("begin_params_axis", begin_params_axis));
+      JUST(attrs.SetAttr<double>("epsilon", epsilon));
+      JUST(attrs.SetAttr<bool>("center", true));
+      JUST(attrs.SetAttr<bool>("scale", true));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& gamma,
                            const std::shared_ptr<one::Tensor>& beta, const int64_t& begin_norm_axis,
                            const int64_t& begin_params_axis, const double& epsilon) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
-    JUST(attrs.SetAttr<int64_t>("begin_params_axis", begin_params_axis));
-    JUST(attrs.SetAttr<double>("epsilon", epsilon));
-    JUST(attrs.SetAttr<bool>("center", true));
-    JUST(attrs.SetAttr<bool>("scale", true));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(LayerNormAffine);
+    const auto attrs = *JUST(GetAttrs(begin_norm_axis, begin_params_axis, epsilon));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, gamma, beta}, attrs);
   }
 
@@ -833,20 +922,32 @@ class TFPoolNDFunctor {
  public:
   TFPoolNDFunctor() = default;
   virtual ~TFPoolNDFunctor() = default;
+  struct TFPoolND {
+    Maybe<AttrMap> operator()(const std::vector<int32_t>& kernel_size,
+                              const std::vector<int32_t>& strides, const std::string& padding,
+                              const std::vector<int32_t>& padding_before,
+                              const std::vector<int32_t>& padding_after,
+                              const std::string& data_format, const bool& ceil_mode) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::vector<int32_t>>("pool_size", kernel_size));
+      JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
+      JUST(attrs.SetAttr<std::string>("padding", padding));
+      JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
+      JUST(attrs.SetAttr<std::vector<int32_t>>("padding_after", padding_after));
+      JUST(attrs.SetAttr<std::string>("data_format", data_format));
+      JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
+      return AttrMap(attrs);
+    }
+  };
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& kernel_size,
                            const std::vector<int32_t>& strides, const std::string& padding,
                            const std::vector<int32_t>& padding_before,
                            const std::vector<int32_t>& padding_after,
                            const std::string& data_format, const bool& ceil_mode) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("pool_size", kernel_size));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
-    JUST(attrs.SetAttr<std::string>("padding", padding));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_after", padding_after));
-    JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(TFPoolND);
+    const auto attrs = *JUST(GetAttrs(kernel_size, strides, padding, padding_before, padding_after,
+                                      data_format, ceil_mode));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -868,40 +969,57 @@ class MaxPoolNDFunctor {
       if (!return_indices && dilation.at(0) == 1 && dilation.at(1) == 1) {
         // legacy tf style maxpool2d , use cudnn implementation
         // with high performance but do not support dilation/return_indices
-        MutableAttrMap attrs;
         std::vector<int32_t> padding_before{padding.at(0), padding.at(1)};
         std::vector<int32_t> padding_after{padding.at(0), padding.at(1)};
-
-        JUST(attrs.SetAttr<std::vector<int32_t>>("pool_size", kernel_size));
-        if (stride.has_value()) {
-          JUST(attrs.SetAttr<std::vector<int32_t>>("strides", *JUST(stride)));
-        } else {
-          JUST(attrs.SetAttr<std::vector<int32_t>>("strides", kernel_size));
-        }
-        JUST(attrs.SetAttr<std::string>("padding", "customized"));
-        JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
-        JUST(attrs.SetAttr<std::vector<int32_t>>("padding_after", padding_after));
-        JUST(attrs.SetAttr<std::string>("data_format", data_format));
-        JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
+        struct TfMaxPooling {
+          Maybe<AttrMap> operator()(const std::vector<int32_t>& kernel_size,
+                                    const std::vector<int32_t>& strides,
+                                    const std::vector<int32_t>& padding_before,
+                                    const std::vector<int32_t>& padding_after,
+                                    const std::string& data_format, bool ceil_mode) {
+            MutableAttrMap attrs;
+            JUST(attrs.SetAttr<std::vector<int32_t>>("pool_size", kernel_size));
+            JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
+            JUST(attrs.SetAttr<std::string>("padding", "customized"));
+            JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
+            JUST(attrs.SetAttr<std::vector<int32_t>>("padding_after", padding_after));
+            JUST(attrs.SetAttr<std::string>("data_format", data_format));
+            JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
+            return AttrMap(attrs);
+          }
+        };
+        constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(TfMaxPooling);
+        const auto attrs =
+            *JUST(GetAttrs(kernel_size, stride.has_value() ? *JUST(stride) : kernel_size,
+                           padding_before, padding_after, data_format, ceil_mode));
         TensorTuple output;
         output.emplace_back(JUST(OpInterpUtil::Dispatch<Tensor>(*tf_maxpool_op_, {x}, attrs)));
         return output;
       }
     }
 
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
-    if (stride.has_value()) {
-      JUST(attrs.SetAttr<std::vector<int32_t>>("stride", *JUST(stride)));
-    } else {
-      JUST(attrs.SetAttr<std::vector<int32_t>>(
-          "stride", kernel_size));  // If stride is None, we set it as kernel_size to align Pytorch.
-    }
-    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation", dilation));
-    JUST(attrs.SetAttr<bool>("return_indices", return_indices));
-    JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
+    struct MaxPoolND {
+      Maybe<AttrMap> operator()(const std::string& data_format, const std::vector<int32_t>& padding,
+                                const std::vector<int32_t>& kernel_size,
+                                const std::vector<int32_t>& stride,
+                                const std::vector<int32_t>& dilation, bool return_indices,
+                                bool ceil_mode) {
+        MutableAttrMap attrs;
+        JUST(attrs.SetAttr<std::string>("data_format", data_format));
+        JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
+        JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+        JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
+        JUST(attrs.SetAttr<std::vector<int32_t>>("dilation", dilation));
+        JUST(attrs.SetAttr<bool>("return_indices", return_indices));
+        JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
+        return AttrMap(attrs);
+      }
+    };
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(MaxPoolND);
+    // If stride is None, we set it as kernel_size to align Pytorch.
+    const auto attrs = *JUST(GetAttrs(data_format, padding, kernel_size,
+                                      (stride.has_value() ? *JUST(stride) : kernel_size), dilation,
+                                      return_indices, ceil_mode));
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
   }
 
@@ -943,10 +1061,17 @@ class AdaptivePoolNDFunctor {
  public:
   AdaptivePoolNDFunctor() = default;
   virtual ~AdaptivePoolNDFunctor() = default;
+  struct AdaptivePoolND {
+    Maybe<AttrMap> operator()(const std::vector<int64_t>& output_size) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::vector<int64_t>>("output_size", output_size));
+      return AttrMap(attrs);
+    }
+  };
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int64_t>& output_size) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int64_t>>("output_size", output_size));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(AdaptivePoolND);
+    const auto attrs = *JUST(GetAttrs(output_size));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -1022,11 +1147,18 @@ class SmoothL1LossFunctor : LossFunctorBase {
     op_ = CHECK_JUST(
         one::OpBuilder("smooth_l1_loss").Input("input").Input("target").Output("out").Build());
   }
+  struct SmoothL1Loss {
+    Maybe<AttrMap> operator()(float beta) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<float>("beta", beta));
+      return AttrMap(attrs);
+    }
+  };
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target, const float& beta,
                            const std::string& reduction) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<float>("beta", beta));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(SmoothL1Loss);
+    const auto attrs = *JUST(GetAttrs(beta));
     return apply_reduction(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs), reduction);
   }
 
@@ -1040,11 +1172,18 @@ class KLDivLossFunctor : public LossFunctorBase {
     op_ = CHECK_JUST(
         one::OpBuilder("kl_div_loss").Input("input").Input("target").Output("out").Build());
   }
+  struct KLDivLoss {
+    Maybe<AttrMap> operator()(bool log_target) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<bool>("log_target", log_target));
+      return AttrMap(attrs);
+    }
+  };
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target, const bool log_target,
                            const std::string& reduction) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<bool>("log_target", log_target));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(KLDivLoss);
+    const auto attrs = *JUST(GetAttrs(log_target));
     return apply_reduction(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs), reduction);
   }
 
