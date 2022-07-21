@@ -157,9 +157,6 @@ Maybe<void> DimScatterUpdateScalar::Apply(const DimScatterCaptureState* ctx,
 
   in_grads->resize(2);
 
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<int32_t>("dim", ctx->dim));
-  JUST(attrs.SetAttr<float>("src_scalar", 0.0f));
   in_grads->at(0) =
       JUST(functional::DimScatterUpdateScalar(out_grads.at(0), ctx->dim, index, 0.0f));
 

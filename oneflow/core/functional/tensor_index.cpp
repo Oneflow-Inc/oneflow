@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/stride.h"
+#include "oneflow/core/common/functor_util.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 
@@ -384,10 +385,18 @@ Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
   if (view::IsViewApplicable(input)) {
     return view::AsStrided(input, sizes, strides, storage_offset);
   } else {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("size", sizes));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("stride", strides));
-    JUST(attrs.SetAttr<int32_t>("storage_offset", storage_offset));
+    struct AsStridedAttrs {
+      Maybe<AttrMap> operator()(const std::vector<int32_t>& sizes,
+                                const std::vector<int32_t>& strides, int32_t storage_offset) {
+        MutableAttrMap attrs;
+        JUST(attrs.SetAttr<std::vector<int32_t>>("size", sizes));
+        JUST(attrs.SetAttr<std::vector<int32_t>>("stride", strides));
+        JUST(attrs.SetAttr<int32_t>("storage_offset", storage_offset));
+        return AttrMap(attrs);
+      }
+    };
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(AsStridedAttrs);
+    const auto attrs = *JUST(GetAttrs(sizes, strides, storage_offset));
     std::shared_ptr<OpExpr> op_ =
         JUST(one::OpBuilder("as_strided").Input("input").Output("output").Build());
     return one::OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);

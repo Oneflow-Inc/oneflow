@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/functor_util.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -47,13 +48,19 @@ class BernoulliFunctor {
   BernoulliFunctor() {
     bernoulli_op_ = CHECK_JUST(one::OpBuilder("bernoulli").Input("in").Output("out").Build());
   }
+  struct Bernoulli {
+    Maybe<AttrMap> operator()(DataType dtype, int64_t seed) {
+      MutableAttrMap bernoulli_attrs;
+      JUST(bernoulli_attrs.SetAttr<DataType>("dtype", dtype));
+      JUST(bernoulli_attrs.SetAttr<int64_t>("seed", seed));
+      return AttrMap(bernoulli_attrs);
+    }
+  };
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Symbol<DType>& dtype,
                            const Optional<one::Generator>& generator) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap bernoulli_attrs;
-    JUST(bernoulli_attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    JUST(bernoulli_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Bernoulli);
+    const auto bernoulli_attrs = *JUST(GetAttrs(dtype->data_type(), gen->current_seed()));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     return OpInterpUtil::Dispatch<Tensor>(*bernoulli_op_, {x},
@@ -67,6 +74,17 @@ class BernoulliFunctor {
 class RandFunctor {
  public:
   RandFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
+  struct Rand {
+    Maybe<AttrMap> operator()(const Shape& shape, DataType dtype, int64_t seed) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("from", 0));
+      JUST(attrs.SetAttr<double>("to", 1));
+      JUST(attrs.SetAttr<Shape>("shape", shape));
+      JUST(attrs.SetAttr<DataType>("dtype", dtype));
+      JUST(attrs.SetAttr<int64_t>("seed", seed));
+      return AttrMap(attrs);
+    }
+  };
   Maybe<Tensor> operator()(const Shape& shape, const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
@@ -80,13 +98,8 @@ class RandFunctor {
     }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("from", 0));
-    JUST(attrs.SetAttr<double>("to", 1));
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Rand);
+    const auto attrs = *JUST(GetAttrs(shape, dtype_val, gen->current_seed()));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     OpExprInterpContext ctx(attrs, distribution_state);
@@ -103,6 +116,21 @@ class RandFunctor {
 class GlobalRandFunctor {
  public:
   GlobalRandFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
+  struct GlobalRand {
+    Maybe<AttrMap> operator()(const Shape& shape, DataType dtype, int64_t seed,
+                              bool is_lazy_mode_enabled, Symbol<NdSbp> nd_sbp) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("from", 0));
+      JUST(attrs.SetAttr<double>("to", 1));
+      JUST(attrs.SetAttr<Shape>("shape", shape));
+      JUST(attrs.SetAttr<DataType>("dtype", dtype));
+      JUST(attrs.SetAttr<int64_t>("seed", seed));
+      if (is_lazy_mode_enabled) {
+        JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
+      }
+      return AttrMap(attrs);
+    }
+  };
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                            const Optional<Symbol<DType>>& dtype,
@@ -117,20 +145,12 @@ class GlobalRandFunctor {
       }
     }
 
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("from", 0));
-    JUST(attrs.SetAttr<double>("to", 1));
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    if (LazyMode::is_enabled()) {
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
-    }
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(GlobalRand);
+    const auto attrs =
+        *JUST(GetAttrs(shape, dtype_val, gen->current_seed(), LazyMode::is_enabled(), nd_sbp));
+    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
     JUST(result->set_requires_grad(requires_grad));
@@ -144,6 +164,17 @@ class GlobalRandFunctor {
 class RandNFunctor {
  public:
   RandNFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
+  struct RandN {
+    Maybe<AttrMap> operator()(const Shape& shape, DataType dtype, int64_t seed) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("from", 0));
+      JUST(attrs.SetAttr<double>("to", 1));
+      JUST(attrs.SetAttr<Shape>("shape", shape));
+      JUST(attrs.SetAttr<DataType>("dtype", dtype));
+      JUST(attrs.SetAttr<int64_t>("seed", seed));
+      return AttrMap(attrs);
+    }
+  };
   Maybe<Tensor> operator()(const Shape& shape, const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
@@ -155,13 +186,8 @@ class RandNFunctor {
     }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("mean", 0));
-    JUST(attrs.SetAttr<double>("std", 1));
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(RandN);
+    const auto attrs = *JUST(GetAttrs(shape, dtype_val, gen->current_seed()));
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     OpExprInterpContext ctx(attrs, distribution_state);
@@ -178,6 +204,21 @@ class RandNFunctor {
 class GlobalRandNFunctor {
  public:
   GlobalRandNFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
+  struct GlobalRandN {
+    Maybe<AttrMap> operator()(const Shape& shape, DataType dtype, int64_t seed,
+                              bool is_lazy_mode_enabled, Symbol<NdSbp> nd_sbp) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("from", 0));
+      JUST(attrs.SetAttr<double>("to", 1));
+      JUST(attrs.SetAttr<Shape>("shape", shape));
+      JUST(attrs.SetAttr<DataType>("dtype", dtype));
+      JUST(attrs.SetAttr<int64_t>("seed", seed));
+      if (is_lazy_mode_enabled) {
+        JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
+      }
+      return AttrMap(attrs);
+    }
+  };
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                            const Optional<Symbol<DType>>& dtype,
@@ -191,19 +232,11 @@ class GlobalRandNFunctor {
     }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("mean", 0));
-    JUST(attrs.SetAttr<double>("std", 1));
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    if (LazyMode::is_enabled()) {
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
-    }
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(GlobalRandN);
+    const auto attrs =
+        *JUST(GetAttrs(shape, dtype_val, gen->current_seed(), LazyMode::is_enabled(), nd_sbp));
+    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
     JUST(result->set_requires_grad(requires_grad));
@@ -218,6 +251,19 @@ class RandIntFunctor {
  public:
   RandIntFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform_int").Output("out").Build()); }
 
+  struct RandInt {
+    Maybe<AttrMap> operator()(const Shape& shape, int64_t low, int64_t high, DataType dtype,
+                              int64_t seed) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<Shape>("shape", shape));
+      JUST(attrs.SetAttr<int64_t>("from", low));
+      JUST(attrs.SetAttr<int64_t>("to", high));
+      JUST(attrs.SetAttr<DataType>("dtype", dtype));
+      JUST(attrs.SetAttr<int64_t>("seed", seed));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const int64_t low, const int64_t high, const Shape& shape,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device,
@@ -227,12 +273,8 @@ class RandIntFunctor {
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<int64_t>("from", low));
-    JUST(attrs.SetAttr<int64_t>("to", high));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(RandInt);
+    const auto attrs = *JUST(GetAttrs(shape, low, high, dtype_val, gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
@@ -287,6 +329,22 @@ class GlobalRandIntFunctor {
  public:
   GlobalRandIntFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform_int").Output("out").Build()); }
 
+  struct GlobalRandInt {
+    Maybe<AttrMap> operator()(const Shape& shape, int64_t low, int64_t high, DataType dtype,
+                              int64_t seed, bool is_lazy_mode, Symbol<NdSbp> nd_sbp) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<Shape>("shape", shape));
+      JUST(attrs.SetAttr<int64_t>("from", low));
+      JUST(attrs.SetAttr<int64_t>("to", high));
+      JUST(attrs.SetAttr<DataType>("dtype", dtype));
+      JUST(attrs.SetAttr<int64_t>("seed", seed));
+      if (is_lazy_mode) {
+        JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
+      }
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const int64_t low, const int64_t high, const Shape& shape,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp,
@@ -298,19 +356,13 @@ class GlobalRandIntFunctor {
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<int64_t>("from", low));
-    JUST(attrs.SetAttr<int64_t>("to", high));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    const auto& nd_sbp = JUST(GetNdSbp(sbp));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(GlobalRandInt);
+    const auto attrs = *JUST(
+        GetAttrs(shape, low, high, dtype_val, gen->current_seed(), LazyMode::is_enabled(), nd_sbp));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
-    const auto& nd_sbp = JUST(GetNdSbp(sbp));
-    if (LazyMode::is_enabled()) {
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
-    }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
 
@@ -364,13 +416,20 @@ class GlobalRandIntLike2Functor {
 class RandPermFunctor {
  public:
   RandPermFunctor() { randperm_op_ = CHECK_JUST(one::OpBuilder("randperm").Output("out").Build()); }
+  struct RandPerm {
+    Maybe<AttrMap> operator()(int32_t n, int64_t seed) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int32_t>("n", n));
+      JUST(attrs.SetAttr<int64_t>("seed", seed));
+      return AttrMap(attrs);
+    }
+  };
   Maybe<Tensor> operator()(const int32_t n, const Optional<one::Generator>& generator,
                            const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("n", n));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(RandPerm);
+    const auto attrs = *JUST(GetAttrs(n, gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
@@ -391,22 +450,27 @@ class GlobalRandPermFunctor {
   GlobalRandPermFunctor() {
     randperm_op_ = CHECK_JUST(one::OpBuilder("randperm").Output("out").Build());
   }
+  struct GlobalRandPerm {
+    Maybe<AttrMap> operator()(int32_t n, int64_t seed, bool is_lazy_mode, Symbol<NdSbp> nd_sbp) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int32_t>("n", n));
+      JUST(attrs.SetAttr<int64_t>("seed", seed));
+      if (is_lazy_mode) {
+        JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
+      }
+      return AttrMap(attrs);
+    }
+  };
   Maybe<Tensor> operator()(const int32_t n, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                            const Optional<one::Generator>& generator, const Symbol<DType>& dtype,
                            const bool& requires_grad) const {
     JUST(CheckDeviceIdsIsValid(placement));
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("n", n));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
-
-    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    if (LazyMode::is_enabled()) {
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
-    }
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(GlobalRandPerm);
+    const auto attrs = *JUST(GetAttrs(n, gen->current_seed(), LazyMode::is_enabled(), nd_sbp));
+    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *randperm_op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
 

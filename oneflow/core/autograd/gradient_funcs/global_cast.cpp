@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/common/functor_util.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -96,15 +97,24 @@ class CastFromGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
     return Maybe<void>::Ok();
   }
 
+  struct CastFromGlobalGradAttr {
+    Maybe<AttrMap> operator()(const Shape& shape, DataType dtype, bool sync_data) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<Shape>("shape", shape));
+      JUST(attrs.SetAttr<DataType>("dtype", dtype));
+      JUST(attrs.SetAttr<bool>("sync_data", sync_data));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<void> Apply(const CastGlobalCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& dual_nd_sbp = JUST(GetDualNdSbp(ctx->nd_sbp));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", *ctx->shape));
-    JUST(attrs.SetAttr<DataType>("dtype", ctx->dtype->data_type()));
-    JUST(attrs.SetAttr<bool>("sync_data", true));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(CastFromGlobalGradAttr);
+    const auto& attrs = JUST(GetAttrs(*ctx->shape, ctx->dtype->data_type(), true));
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *grad_op_, {out_grads.at(0)}, OpExprInterpContext(attrs, ctx->parallel_desc, dual_nd_sbp)));
+        *grad_op_, {out_grads.at(0)},
+        OpExprInterpContext(*attrs, ctx->parallel_desc, dual_nd_sbp)));
     return Maybe<void>::Ok();
   }
 
