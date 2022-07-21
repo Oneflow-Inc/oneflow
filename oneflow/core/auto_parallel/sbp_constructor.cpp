@@ -197,7 +197,7 @@ Maybe<void> SbpConstructor::FillSbpSignatureForOpNode(const OpGraph& op_graph, c
 
 Maybe<void> SbpConstructor::StealSbpSignatureFromOpNode(const OpGraph& op_graph, const Job& job) {
   // Steal some strategy from original op graph
-  for (auto* sbp_node : sbp_graph_.NodeList) {
+  for (auto* sbp_node : sbp_graph_.node_list_) {
     // sbp_collectors do not have op_node
     if (sbp_node->op_node_) {
       for (int32_t sbp_id = 0; sbp_id < sbp_node->sbp_sig_obj_list_.size(); sbp_id++) {
@@ -291,7 +291,7 @@ Maybe<void> SbpConstructor::ApplyMainstemAlgo() {
 void SbpConstructor::LoadLbi2SbpEdge(const OpGraph& op_graph) {
   // Load logical blobs onto sbp edges
 
-  for (auto* sbp_node_consumer : sbp_graph_.NodeList) {
+  for (auto* sbp_node_consumer : sbp_graph_.node_list_) {
     auto* op_node = sbp_node_consumer->op_node_;
 
     // Loading logical blobs between two nodes
@@ -390,8 +390,8 @@ Maybe<HashMap<const OpNode*, HashSet<std::string>>> SbpConstructor::GetMutableOp
 void SbpConstructor::PrintSBPGraphDebugInfo() {
   // sbp constructor information
   std::cout << "cost_ratio_:" << cost_ratio_ << std::endl;
-  std::cout << "transfer_cost_:" << sbp_graph_.transfer_cost << std::endl;
-  std::cout << "wait_time_:" << sbp_graph_.wait_time << std::endl;
+  std::cout << "transfer_cost_:" << sbp_graph_.transfer_cost_ << std::endl;
+  std::cout << "wait_time_:" << sbp_graph_.wait_time_ << std::endl;
   std::cout << "use_sbp_collector_" << use_sbp_collector_ << std::endl;
   // test debug
   std::cout << "Get Into Print Op Graph" << std::endl;
