@@ -50,10 +50,6 @@ class SbpGraph {
     NodeList.clear();
   }
 
-  // Setup SbpSignature Candidates
-  void AssembleSbpSignature(const std::function<int32_t()>& CalcOrderValue4SbpSig,
-                            std::vector<SbpSignature*> GlobalSbpSignatureList);
-
   // Use our algorithm to decide SbpSignature for each op-node
   void DecideSbpSignature();
 
@@ -139,21 +135,6 @@ class SbpGraph {
   bool DfsFindReasonableCost(std::vector<int32_t>& nbh_id2NodeListId,
                              std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id,
                              std::vector<int32_t>& nbh_id2order, int32_t nbh_id);
-
-#ifdef DEBUG_ALGORITHM_
-
-  // Compute Cost for current startegy with original graph
-  double ComputeOriginCost();
-
-  // Original NodeList
-  std::vector<SbpNode<SbpSignature>*> OriginalNodeList;
-
-  // get ready for Topological sorting
-  void InitTopologicalSort() {
-    for (const auto& this_node : NodeList) { this_node->CurrDeg = this_node->edges_in_.size(); }
-  }
-
-#endif  // DEBUG_ALGORITHM_
 };
 
 // function in cpp. Should be put in one file due to use of template
@@ -178,15 +159,6 @@ void SbpGraph<SbpSignature>::RemoveFromNodeList(SbpNode<SbpSignature>* this_node
 
 template<class SbpSignature>
 SbpGraph<SbpSignature>::SbpGraph() {}
-
-template<class SbpSignature>
-void SbpGraph<SbpSignature>::AssembleSbpSignature(
-    const std::function<int32_t()>& CalcOrderValue4SbpSig,
-    std::vector<SbpSignature*> GlobalSbpSignatureList) {
-  for (const auto& this_node : NodeList) {
-    this_node->InitializeSbp(CalcOrderValue4SbpSig, GlobalSbpSignatureList);
-  }
-};
 
 template<class SbpSignature>
 void SbpGraph<SbpSignature>::RandomSbpSignature(bool use_sbp_collector_) {
@@ -985,23 +957,6 @@ template<class SbpSignature>
 void SbpGraph<SbpSignature>::SetTransferCost(double transfer_cost_) {
   transfer_cost = transfer_cost_;
 }
-
-#ifdef DEBUG_ALGORITHM_
-
-template<class SbpSignature>
-double SbpGraph<SbpSignature>::ComputeOriginCost() {
-  double GraphCost = 0;
-  for (SbpNode<SbpSignature>* this_node : OriginalNodeList) {
-    int32_t this_id = this_node->final_sbp_sig_id_;
-    GraphCost += this_node->OriginCost[this_id];
-    for (int32_t j = 0; j < this_node->OriginCostOut.size(); j++) {
-      GraphCost += this_node->OriginCostOut[j][this_id][this_node->NodesOut[j]->final_sbp_sig_id_];
-    }
-  }
-  return GraphCost;
-}
-
-#endif  // DEBUG_ALGORITHM_
 
 }  // namespace auto_parallel
 }  // namespace oneflow
