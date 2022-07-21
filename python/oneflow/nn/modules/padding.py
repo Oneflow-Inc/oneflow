@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Union, Sequence
+from typing import Union
 
 import oneflow as flow
-from oneflow.nn.common_types import _size_4_t
+from oneflow.nn.common_types import _size_2_t, _size_4_t
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _quadruple
+from oneflow.nn.modules.utils import _pair, _quadruple
 
 
 class ReplicationPad2d(Module):
@@ -80,6 +80,64 @@ class ReplicationPad2d(Module):
 
     def forward(self, x):
         return flow._C.pad(x, pad=self.padding, mode="replicate")
+
+    def extra_repr(self) -> str:
+        return "{}".format(self.padding)
+
+
+class ReflectionPad1d(Module):
+    """
+    This operator pads the input tensor using the reflection of the input boundary.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.ReflectionPad1d.html.
+
+    Args:
+        padding (Union[int,tuple]): The size or bundary of padding, if is `int` uses the same padding in all dimension; if 4-dims `tuple`, uses :math:`(\\text{padding}_{\\text{left}}, \\text{padding}_{\\text{right}}, \\text{padding}_{\\text{top}}, \\text{padding}_{\\text{bottom}} )`
+
+    Returns:
+        Tensor: Returns a new tensor which is result of the reflection padding of the input tensor.
+
+    Shape:
+        - Input: :math:`(N, C, W_{\\text{in}})`
+        - Output: :math:`(N, C, W_{\\text{out}})` where
+
+          :math:`W_{\\text{out}} = W_{\\text{in}} + \\text{padding}_{\\text{left}} + \\text{padding}_{\\text{right}}`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> input = flow.tensor(np.arange(18).reshape((2, 3, 3)).astype(np.float32))
+        >>> m = flow.nn.ReflectionPad1d((2, 2))
+        >>> out = m(input)
+        >>> out
+        tensor([[[ 2.,  1.,  0.,  1.,  2.,  1.,  0.],
+                 [ 5.,  4.,  3.,  4.,  5.,  4.,  3.],
+                 [ 8.,  7.,  6.,  7.,  8.,  7.,  6.]],
+        <BLANKLINE>
+                [[11., 10.,  9., 10., 11., 10.,  9.],
+                 [14., 13., 12., 13., 14., 13., 12.],
+                 [17., 16., 15., 16., 17., 16., 15.]]], dtype=oneflow.float32)
+
+    """
+
+    def __init__(self, padding: _size_2_t) -> None:
+        super().__init__()
+        if isinstance(padding, tuple):
+            assert len(padding) == 2, ValueError("Padding length must be 2")
+            boundary = [*padding]
+        elif isinstance(padding, int):
+            boundary = _pair(padding)
+        else:
+            raise ValueError("padding must be in or list or tuple!")
+        self.padding = boundary
+
+    def forward(self, x):
+        return flow._C.pad(x, pad=self.padding, mode="reflect")
 
     def extra_repr(self) -> str:
         return "{}".format(self.padding)

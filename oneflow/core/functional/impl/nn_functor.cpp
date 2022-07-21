@@ -2147,8 +2147,10 @@ class PadFunctor {
  public:
   PadFunctor() {
     pad_ = CHECK_JUST(one::OpBuilder("pad").Input("x").Output("y").Build());
-    reflect_pad_ = CHECK_JUST(one::OpBuilder("reflection_pad2d").Input("x").Output("y").Build());
-    replicate_pad_ = CHECK_JUST(one::OpBuilder("replication_pad2d").Input("x").Output("y").Build());
+    reflect_pad1d_ = CHECK_JUST(one::OpBuilder("reflection_pad1d").Input("x").Output("y").Build());
+    reflect_pad2d_ = CHECK_JUST(one::OpBuilder("reflection_pad2d").Input("x").Output("y").Build());
+    replicate_pad2d_ =
+        CHECK_JUST(one::OpBuilder("replication_pad2d").Input("x").Output("y").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& pad,
                            const std::string& mode, const Scalar& value) const {
@@ -2184,14 +2186,20 @@ class PadFunctor {
       return OpInterpUtil::Dispatch<Tensor>(*pad_, {x}, attrs);
 
     } else if (mode == "reflect") {
-      const int64_t pad_h = x->shape()->dim_vec().at(2);
-      const int64_t pad_w = x->shape()->dim_vec().at(3);
-      CHECK_OR_RETURN(pad[2] < pad_h && pad[3] < pad_h && pad[0] < pad_w && pad[1] < pad_w)
-          << Error::RuntimeError()
-          << "padding size should be less than the corresponding input dimension!";
-      return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_, {x}, attrs);
+      if (ndim == 3) {
+        return OpInterpUtil::Dispatch<Tensor>(*reflect_pad1d_, {x}, attrs);
+      } else if (ndim == 4) {
+        const int64_t pad_h = x->shape()->dim_vec().at(2);
+        const int64_t pad_w = x->shape()->dim_vec().at(3);
+        CHECK_OR_RETURN(pad[2] < pad_h && pad[3] < pad_h && pad[0] < pad_w && pad[1] < pad_w)
+            << Error::RuntimeError()
+            << "padding size should be less than the corresponding input dimension!";
+        return OpInterpUtil::Dispatch<Tensor>(*reflect_pad2d_, {x}, attrs);
+      } else {
+        UNIMPLEMENTED_THEN_RETURN();
+      }
     } else if (mode == "replicate") {
-      return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_, {x}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*replicate_pad2d_, {x}, attrs);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode
                                   << ", but only constant, reflect and replicate are valid.";
@@ -2200,8 +2208,9 @@ class PadFunctor {
 
  private:
   std::shared_ptr<OpExpr> pad_;
-  std::shared_ptr<OpExpr> reflect_pad_;
-  std::shared_ptr<OpExpr> replicate_pad_;
+  std::shared_ptr<OpExpr> reflect_pad1d_;
+  std::shared_ptr<OpExpr> reflect_pad2d_;
+  std::shared_ptr<OpExpr> replicate_pad2d_;
 };
 
 class DropoutFunctor {

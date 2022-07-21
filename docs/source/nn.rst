@@ -72,6 +72,7 @@ Padding Layers
     nn.ConstantPad1d 
     nn.ConstantPad2d 
     nn.ConstantPad3d
+    nn.ReflectionPad1d
     nn.ReflectionPad2d
     nn.ReplicationPad2d
     nn.ZeroPad2d
