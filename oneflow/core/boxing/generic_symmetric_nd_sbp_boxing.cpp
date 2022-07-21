@@ -165,7 +165,7 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
           << logical_shape->ToString() << ")!";
       std::shared_ptr<one::Tensor> sub_global_tensor = JUST(one::functional::LocalToGlobal(
           local_tensor, sub_parallel_desc, *JUST(GetSbpList(one_dim_nd_sbp)), sub_logical_shape,
-          local_tensor->dtype(), /* sync_data */ false));
+          local_tensor->dtype(), /* sync_data */ false, /*copy=*/false));
 
       sub_global_tensor =
           JUST(Apply1DBoxing(sub_global_tensor, one_dim_nd_sbp, JUST(SbpToNdSbp(broadcast_sbp)),
@@ -175,9 +175,9 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
 
       const auto& new_nd_sbp = JUST(SetSbpAtAxis(*nd_sbp, *broadcast_sbp, i));
 
-      output = JUST(one::functional::LocalToGlobal(local_tensor, in_parallel_desc,
-                                                   *JUST(GetSbpList(new_nd_sbp)), *logical_shape,
-                                                   local_tensor->dtype(), /* sync_data */ false));
+      output = JUST(one::functional::LocalToGlobal(
+          local_tensor, in_parallel_desc, *JUST(GetSbpList(new_nd_sbp)), *logical_shape,
+          local_tensor->dtype(), /* sync_data */ false, /*copy=*/false));
     }
 
     CHECK_OR_RETURN(IsAllBroadcastNdSbpAfterDim(JUST(output->nd_sbp()), first_diff_sbp_dim))
@@ -204,7 +204,7 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
 
       std::shared_ptr<one::Tensor> sub_global_tensor = JUST(one::functional::LocalToGlobal(
           local_tensor, sub_parallel_desc, *JUST(GetSbpList(JUST(SbpToNdSbp(broadcast_sbp)))),
-          *sub_logical_shape, local_tensor->dtype(), /* sync_data */ false));
+          *sub_logical_shape, local_tensor->dtype(), /* sync_data */ false, /*copy=*/false));
 
       const auto& one_dim_nd_sbp = JUST(SbpToNdSbp(sbp_parallel));
       sub_global_tensor = JUST(Apply1DBoxing(sub_global_tensor, JUST(SbpToNdSbp(broadcast_sbp)),
@@ -223,9 +223,9 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
 
       const auto& new_nd_sbp = JUST(SetSbpAtAxis(*nd_sbp, sbp_parallel, i));
 
-      output = JUST(one::functional::LocalToGlobal(local_tensor, in_parallel_desc,
-                                                   *JUST(GetSbpList(new_nd_sbp)), *logical_shape,
-                                                   local_tensor->dtype(), /* sync_data */ false));
+      output = JUST(one::functional::LocalToGlobal(
+          local_tensor, in_parallel_desc, *JUST(GetSbpList(new_nd_sbp)), *logical_shape,
+          local_tensor->dtype(), /* sync_data */ false, /*copy=*/false));
       // physical_shape of this axis is logical shape of next axis
       sub_logical_shape = physical_shape;
     }

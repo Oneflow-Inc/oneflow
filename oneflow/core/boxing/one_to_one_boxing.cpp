@@ -67,9 +67,9 @@ Maybe<one::Tensor> NaiveOneToOne(const std::shared_ptr<one::Tensor>& tensor, Sym
                                                 JUST(local_tensor->device()), NullOpt));
     }
   }
-  return JUST(one::functional::LocalToGlobal(local_tensor, out->placement(),
-                                             *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
-                                             tensor->dtype(), /* sync_data */ false));
+  return JUST(one::functional::LocalToGlobal(
+      local_tensor, out->placement(), *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
+      tensor->dtype(), /* sync_data */ false, /*copy=*/false));
 }
 
 COMMAND(RegisterBoxingFunction("naive-1-to-1", CheckNaiveOneToOne, &NaiveOneToOne));
