@@ -23,12 +23,6 @@ import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgList
 
 
-def _compute_cosine_distance(l_np, r_np):
-    return np.sum(l_np * r_np) / (
-        np.sqrt(np.sum(np.square(l_np))) * np.sqrt(np.sum(np.square(r_np)))
-    )
-
-
 def _test_qat_conv1d(
     test_case,
     device,
@@ -79,15 +73,18 @@ def _test_qat_conv1d(
     qat_out = qat_conv1d(qat_input)
     out = conv1d(normal_input)
 
-    test_case.assertTrue(_compute_cosine_distance(qat_out.numpy(), out.numpy()) > atol)
+    cosine_distance = flow.nn.functional.cosine_similarity(
+        qat_out.flatten(), out.flatten(), dim=0
+    )
+    test_case.assertTrue(cosine_distance.numpy() > atol)
 
     qat_out.sum().backward()
     out.sum().backward()
 
-    test_case.assertTrue(
-        _compute_cosine_distance(qat_input.grad.numpy(), normal_input.grad.numpy())
-        > atol
+    cosine_distance = flow.nn.functional.cosine_similarity(
+        qat_input.grad.flatten(), normal_input.grad.flatten(), dim=0
     )
+    test_case.assertTrue(cosine_distance.numpy() > atol)
 
 
 def _test_qat_conv2d(
@@ -140,15 +137,18 @@ def _test_qat_conv2d(
     qat_out = qat_conv2d(qat_input)
     out = conv2d(normal_input)
 
-    test_case.assertTrue(_compute_cosine_distance(qat_out.numpy(), out.numpy()) > atol)
+    cosine_distance = flow.nn.functional.cosine_similarity(
+        qat_out.flatten(), out.flatten(), dim=0
+    )
+    test_case.assertTrue(cosine_distance.numpy() > atol)
 
     qat_out.sum().backward()
     out.sum().backward()
 
-    test_case.assertTrue(
-        _compute_cosine_distance(qat_input.grad.numpy(), normal_input.grad.numpy())
-        > atol
+    cosine_distance = flow.nn.functional.cosine_similarity(
+        qat_input.grad.flatten(), normal_input.grad.flatten(), dim=0
     )
+    test_case.assertTrue(cosine_distance.numpy() > atol)
 
 
 def _test_qat_conv3d(
@@ -203,15 +203,18 @@ def _test_qat_conv3d(
     qat_out = qat_conv3d(qat_input)
     out = conv3d(normal_input)
 
-    test_case.assertTrue(_compute_cosine_distance(qat_out.numpy(), out.numpy()) > atol)
+    cosine_distance = flow.nn.functional.cosine_similarity(
+        qat_out.flatten(), out.flatten(), dim=0
+    )
+    test_case.assertTrue(cosine_distance.numpy() > atol)
 
     qat_out.sum().backward()
     out.sum().backward()
 
-    test_case.assertTrue(
-        _compute_cosine_distance(qat_input.grad.numpy(), normal_input.grad.numpy())
-        > atol
+    cosine_distance = flow.nn.functional.cosine_similarity(
+        qat_input.grad.flatten(), normal_input.grad.flatten(), dim=0
     )
+    test_case.assertTrue(cosine_distance.numpy() > atol)
 
 
 @flow.unittest.skip_unless_1n1d()
