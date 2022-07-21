@@ -62,7 +62,7 @@ double Penalty4PartialInConsumer(double logical_blob_size, int32_t producer_para
 }
 
 int32_t Ratio4Sbp(const NdSbp& nd_sbp, const ParallelDesc& parallel_desc,
-                  std::function<bool(const SbpParallel&)> classifier) {
+                  const std::function<bool(const SbpParallel&)>& classifier) {
   int32_t ratio = 1;
   for (int32_t sbp_id = 0; sbp_id < nd_sbp.sbp_parallel_size(); sbp_id++) {
     if (classifier(nd_sbp.sbp_parallel(sbp_id))) { ratio *= parallel_desc.hierarchy()->At(sbp_id); }
