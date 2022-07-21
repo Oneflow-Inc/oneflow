@@ -82,9 +82,9 @@ class SbpGraph {
                        const oneflow::HashMap<const OpNode*, oneflow::HashSet<std::string>>&
                            op_node2mutable_op_ctrl_deps);
 
-  // Find the mainstem of the sbp graph, then reduce the wait time for tributaries
-  void FindMainstem(int32_t max_min_layer,
-                    oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
+  // Find the trunk of the sbp graph, then reduce the wait time for tributaries
+  void FindTrunk(int32_t max_min_layer,
+                 oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
 
   // Set wait time
   void SetWaitTime(double wait_time);
@@ -830,30 +830,30 @@ int32_t SbpGraph<SbpSignature>::ComputeLayer(
   return max_min_layer;
 }
 
-// Find the mainstem of the sbp graph, then reduce the wait time for tributaries
+// Find the trunk of the sbp graph, then reduce the wait time for tributaries
 template<class SbpSignature>
-void SbpGraph<SbpSignature>::FindMainstem(
+void SbpGraph<SbpSignature>::FindTrunk(
     int32_t max_min_layer,
     oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
-  // Summarize cost for each layer, on the mainstem or tributaries
-  std::vector<double> mainstem_cost(max_min_layer + 1, 0);
+  // Summarize cost for each layer, on the trunk or tributaries
+  std::vector<double> trunk_cost(max_min_layer + 1, 0);
   for (SbpNode<SbpSignature>* this_node : node_list_) {
-    mainstem_cost[this_node->min_layer_] += this_node->GetMinCost();
+    trunk_cost[this_node->min_layer_] += this_node->GetMinCost();
   }
-  // Decide mainstems
+  // Decide trunks
   double acc_cost = 0;
-  // All the nodes with MinLayer>=mainstem_end_id would be considerd as mainstems
-  int32_t mainstem_end_id = max_min_layer;
+  // All the nodes with MinLayer>=trunk_end_id would be considerd as trunks
+  int32_t trunk_end_id = max_min_layer;
   for (int32_t layer_id = max_min_layer; layer_id >= 0; layer_id--) {
-    acc_cost += mainstem_cost[layer_id];
+    acc_cost += trunk_cost[layer_id];
     if (acc_cost > 0.5 * wait_time_) {
-      mainstem_end_id = layer_id;
+      trunk_end_id = layer_id;
       break;
     }
   }
-  // Find out all the nodes on the mainstem.
+  // Find out all the nodes on the trunk.
   for (SbpNode<SbpSignature>* this_node : node_list_) {
-    if (this_node->min_layer_ >= mainstem_end_id) { this_node->SpreadMainstem(op_name2sbp_node); }
+    if (this_node->min_layer_ >= trunk_end_id) { this_node->SpreadTrunk(op_name2sbp_node); }
   }
 
   // Compute maximum layer for tributaries
@@ -871,19 +871,19 @@ void SbpGraph<SbpSignature>::FindMainstem(
     this_node->SpreadTributaryLayer(op_name2sbp_node);
   }
 
-  // Summarize cost for each layer on the mainstem, store it to avoid substraction of large values.
-  mainstem_cost.assign(max_min_layer + 1, 0);
+  // Summarize cost for each layer on the trunk, store it to avoid substraction of large values.
+  trunk_cost.assign(max_min_layer + 1, 0);
   // tributary cost start from each min layer
   std::vector<double> tributary_cost(max_min_layer + 1, 0);
   // tributary cost would be outdated after Max Layer (before Max Layer + 1)
   std::vector<double> outdated_tributary_cost(max_min_layer + 1, 0);
-  // number of operators in the mainstem
-  std::vector<std::vector<SbpNode<SbpSignature>*>> mainstem_ops(max_min_layer + 1);
+  // number of operators in the trunk
+  std::vector<std::vector<SbpNode<SbpSignature>*>> trunk_ops(max_min_layer + 1);
 
   for (SbpNode<SbpSignature>* this_node : node_list_) {
-    if (this_node->on_mainstem_) {
-      mainstem_cost[this_node->min_layer_] += this_node->GetMinCost();
-      mainstem_ops[this_node->min_layer_].emplace_back(this_node);
+    if (this_node->on_trunk_) {
+      trunk_cost[this_node->min_layer_] += this_node->GetMinCost();
+      trunk_ops[this_node->min_layer_].emplace_back(this_node);
     } else {
       double curr_min_cost = this_node->GetMinCost();
       tributary_cost[this_node->min_layer_] += curr_min_cost;
@@ -891,9 +891,9 @@ void SbpGraph<SbpSignature>::FindMainstem(
     }
   }
   // Accumulate the cost from the consumer to the end, not including itself
-  std::vector<double> acc_mainstem_cost(max_min_layer + 1, 0);
+  std::vector<double> acc_trunk_cost(max_min_layer + 1, 0);
   for (int32_t layer_id = max_min_layer; layer_id > 0; layer_id--) {
-    acc_mainstem_cost[layer_id - 1] = acc_mainstem_cost[layer_id] + mainstem_cost[layer_id];
+    acc_trunk_cost[layer_id - 1] = acc_trunk_cost[layer_id] + trunk_cost[layer_id];
   }
 
   // Clear counter for each sbp node
@@ -904,11 +904,11 @@ void SbpGraph<SbpSignature>::FindMainstem(
   }
   // Reduce the wait time for tributaries
   for (SbpNode<SbpSignature>* this_node : node_list_) {
-    this_node->SpreadAvailWaitTime(mainstem_cost, acc_mainstem_cost, op_name2sbp_node, wait_time_,
+    this_node->SpreadAvailWaitTime(trunk_cost, acc_trunk_cost, op_name2sbp_node, wait_time_,
                                    transfer_cost_);
   }
 
-  // Reduce the wait time for mainstem from the end to the begining
+  // Reduce the wait time for trunk from the end to the begining
   double acc_tributary_cost = outdated_tributary_cost[max_min_layer];
   double used_tributary_cost = 0.0;
   double curr_wait_time;
@@ -941,9 +941,9 @@ void SbpGraph<SbpSignature>::FindMainstem(
         used_tributary_cost += acc_tributary_cost;
         acc_tributary_cost = 0.0;
       }
-      // Reduce the wait time in the mainstem
-      for (SbpNode<SbpSignature>* this_node : mainstem_ops[layer_id]) {
-        this_node->SetMainstemWaitTime(curr_wait_time);
+      // Reduce the wait time in the trunk
+      for (SbpNode<SbpSignature>* this_node : trunk_ops[layer_id]) {
+        this_node->SetTrunkWaitTime(curr_wait_time);
       }
     }
   }
