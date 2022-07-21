@@ -87,7 +87,7 @@ bool NeedUnifiedNcclCommInit(const OperatorConf& op_conf) {
   } else {
     // Please check the .h file for hard-coding of the name
     return UserKernelUnifiedNcclCommInitRegistry::Instance().IsRegistered(
-        "sys_op_" + std::to_string(op_conf.op_type_case()));
+        kSystemOpPrefix + std::to_string(op_conf.op_type_case()));
   }
 }
 
