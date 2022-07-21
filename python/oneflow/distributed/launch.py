@@ -110,7 +110,7 @@ def main():
 
     if args.master_port is None or args.master_port >= 2 ** 16:
         raise ValueError(
-            f"The port number of the rendezvous endpoint '{args.master_addr}:{args.master_port}' must be an integer "
+            f"The port number of the master endpoint '{args.master_addr}:{args.master_port}' must be an integer "
             "between 0 and 65536."
         )
 
