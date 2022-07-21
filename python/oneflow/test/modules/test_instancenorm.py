@@ -406,19 +406,19 @@ def _test_instancenorm3d_backward(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestInstanceNorm(flow.unittest.TestCase):
-    # def test_instancenorm(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["test_fun"] = [
-    #         _test_instancenorm1d,
-    #         _test_instancenorm2d,
-    #         _test_instancenorm3d,
-    #         _test_instancenorm1d_backward,
-    #         _test_instancenorm2d_backward,
-    #         _test_instancenorm3d_backward,
-    #     ]
-    #     arg_dict["device"] = ["cpu", "cuda"]
-    #     for arg in GenArgList(arg_dict):
-    #         arg[0](test_case, *arg[1:])
+    def test_instancenorm(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_instancenorm1d,
+            _test_instancenorm2d,
+            _test_instancenorm3d,
+            _test_instancenorm1d_backward,
+            _test_instancenorm2d_backward,
+            _test_instancenorm3d_backward,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
     # NOTE: in the following tese cases, if set track_running_stats=True, will fail!
     # it could be some bud to be fixed in nn.InstanceNorm
