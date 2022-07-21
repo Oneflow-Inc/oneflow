@@ -28,6 +28,7 @@ namespace one {
 struct GlobalToGlobalState : public AutoGradCaptureState {
   Symbol<ParallelDesc> parallel_desc;
   Symbol<NdSbp> nd_sbp;
+  bool lazy_skip_backward = false;
 };
 
 class GlobalToGlobalGradFunction : public OpExprGradFunction<GlobalToGlobalState> {
@@ -45,6 +46,7 @@ class GlobalToGlobalGradFunction : public OpExprGradFunction<GlobalToGlobalState
     CHECK_EQ_OR_RETURN(inputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->parallel_desc = JUST(inputs.at(0)->parallel_desc());
     ctx->nd_sbp = JUST(inputs.at(0)->nd_sbp());
+    ctx->lazy_skip_backward = !grad_nd_sbp_ && ctx->nd_sbp == JUST(interp_ctx.nd_sbp);
     return Maybe<void>::Ok();
   }
 
@@ -56,11 +58,15 @@ class GlobalToGlobalGradFunction : public OpExprGradFunction<GlobalToGlobalState
         << Error::RuntimeError()
         << "Expected global tensor for global_to_global but got local tensor";
     in_grads->resize(1);
-    const auto& grad_nd_sbp = grad_nd_sbp_.value_or(JUST(out_grad->nd_sbp()));
-    const auto& grad_sbp_list = JUST(GetSbpList(grad_nd_sbp));
-    const auto& grad_grad_sbp_list = JUST(GetSbpList(ctx->nd_sbp));
-    (*in_grads)[0] = JUST(one::functional::ToGlobal(out_grad, ctx->parallel_desc, *grad_sbp_list,
-                                                    *grad_grad_sbp_list, /* check_meta */ false));
+    if (LazyMode::is_enabled() && ctx->lazy_skip_backward) {
+      (*in_grads)[0] = out_grad;
+    } else {
+      const auto& grad_nd_sbp = grad_nd_sbp_.value_or(JUST(out_grad->nd_sbp()));
+      const auto& grad_sbp_list = JUST(GetSbpList(grad_nd_sbp));
+      const auto& grad_grad_sbp_list = JUST(GetSbpList(ctx->nd_sbp));
+      (*in_grads)[0] = JUST(one::functional::ToGlobal(out_grad, ctx->parallel_desc, *grad_sbp_list,
+                                                      *grad_grad_sbp_list, /* check_meta */ false));
+    }
     return Maybe<void>::Ok();
   }
 

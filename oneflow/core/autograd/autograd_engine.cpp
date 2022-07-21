@@ -19,15 +19,16 @@ limitations under the License.
 #include <queue>
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_meta.h"
+#include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
-#include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/global_param_grad_sync_mode.h"
-#include "oneflow/core/common/container_util.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
@@ -153,7 +154,7 @@ Maybe<void> FunctionNode::AccGrad4LeafTensor(bool create_graph) {
 
       // control acc_grad to do boxing conditionally
       const auto& acc_grad = out->acc_grad();
-      if (GlobalGradSyncMode::is_enabled() && acc_grad->is_global()) {
+      if (!LazyMode::is_enabled() && GlobalGradSyncMode::is_enabled() && acc_grad->is_global()) {
         auto& tensor_info = output_tensor_infos_[i];
         const auto& placement = JUST(tensor_info.placement());
         const auto& nd_sbp = JUST(tensor_info.sbp());
