@@ -69,7 +69,9 @@ bool IsAxesLegal(const AxisVector& axis_vec, const Shape& like_shape, const Shap
   Shape reduced_like_shape = CreateReducedShape(like_shape, axis_vec);
   if (like_shape.NumAxes() > in_shape.NumAxes()) {
     std::vector<int64_t> in_shape_vec;
+    in_shape_vec.reserve(in_shape.NumAxes());
     std::vector<int64_t> like_shape_vec;
+    like_shape_vec.reserve(reduced_like_shape.NumAxes());
     for (const int64_t& dim : in_shape.dim_vec()) {
       if (dim != 1) { in_shape_vec.emplace_back(dim); }
     }
