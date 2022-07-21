@@ -39,7 +39,7 @@ class SbpGraph {
   }
 
   // Randomly assign a SbpSignature strategy
-  void RandomSbpSignature(bool use_sbp_collector_);
+  void RandomSbpSignature(bool use_sbp_collector);
   // assign 0 to a SbpSignature strategy to avoid randomness
   void Set0SbpSignature();
 
@@ -58,23 +58,23 @@ class SbpGraph {
 
   // Use Greedy Strategy to decide Sbp for Nodes in node_list_. Should be used
   // after we have a initial strategy.
-  // Set ForceNode to be true will only use GreedyStrategy on Nodes.
-  double GreedyStrategy(bool ForceNode);
+  // Set for_node to be true will only use GreedyStrategy on Nodes.
+  double GreedyStrategy(bool for_node);
   // Use greedy strategy on the one ring neighborhood with the maximum number of points nbh_num.
   double GreedyStrategy(int32_t nbh_num = 4);
 
   // Find one strategy with finite cost for adjustment
   Maybe<void> Find1Strategy4Greedy();
   // Use brute force to search for a strategy with minimum cost for a neighborhood
-  double NbhGreedyStrategy(std::vector<int32_t>& nbh_id2NodeListId);
+  double NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id);
 
   // Set threshold_ for SbpNode Merging
-  void SetThreshold(int32_t thrhld) { threshold_ = thrhld; }
+  void SetThreshold(int32_t threshold) { threshold_ = threshold; }
 
   // Clip an edge, remove it from graph
   // Clipping an edge will also delete the nodes and edges contained in this edge. Though not
-  // sufferring from any compiling and runtime bugs, clipping an edge on a shrunk graph is not
-  // recommanded. We should carefully think about it before any clipping.
+  // suffering from any compiling and runtime bugs, clipping an edge on a shrunk graph is not
+  // recommended. We should carefully think about it before any clipping.
   void ClipEdge(SbpEdge<SbpSignature>* this_edge);
 
   // Compute the minimum and maximum layer of each node in the graph
@@ -82,8 +82,8 @@ class SbpGraph {
                        const oneflow::HashMap<const OpNode*, oneflow::HashSet<std::string>>&
                            op_node2mutable_op_ctrl_deps);
 
-  // Find the mianstem of the sbp graph, then reduce the wait time for tributaries
-  void FindMainstem(int32_t max_MinLayer,
+  // Find the mainstem of the sbp graph, then reduce the wait time for tributaries
+  void FindMainstem(int32_t max_min_layer,
                     oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
 
   // Set wait time
@@ -109,14 +109,14 @@ class SbpGraph {
   // Uncovered wait time for copy cost.
   double transfer_cost_;
 
-  // Remove a node from nodelist
+  // Remove a node from the node list
   void RemoveFromNodeList(SbpNode<SbpSignature>* this_node);
 
   // Check and eliminate one node with only one degree-in and one degree-out
   int32_t NodeElimination(SbpNode<SbpSignature>* this_node);
   // Merge all parallel edges with given start_node_ and end_node_
   int32_t EdgeElimination(SbpNode<SbpSignature>* this_node);
-  // Ckeck and eliminate one child node
+  // Check and eliminate one child node
   int32_t ChildElimination(SbpNode<SbpSignature>* this_node);
 
   // Merge two nodes
@@ -124,17 +124,17 @@ class SbpGraph {
   // Select two nodes and merge them
   int32_t PickAndMerge();
 
-  void DfsAddNbhCost(std::vector<int32_t>& nbh_id2NodeListId,
-                     std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id,
+  void DfsAddNbhCost(std::vector<int32_t>& nbh_id2node_list_id,
+                     std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
                      std::vector<int32_t>& order2nbh_id, std::vector<int32_t>& nbh_id2order,
-                     std::vector<double>& order2AccMinInNbhCost,
-                     std::vector<std::vector<double>>& OutNbhCosts,
+                     std::vector<double>& order2acc_min_in_nbh_cost,
+                     std::vector<std::vector<double>>& out_nbh_costs,
                      std::vector<std::vector<int32_t>>& nbh_id2order2sbp_id,
-                     std::vector<int32_t>& MinSbpSignatureId, double& MinCost, int32_t order,
-                     double CurrCost);
+                     std::vector<int32_t>& min_sbp_sig_id, double& min_cost, int32_t order,
+                     double curr_cost);
 
-  bool DfsFindReasonableCost(std::vector<int32_t>& nbh_id2NodeListId,
-                             std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id,
+  bool DfsFindReasonableCost(std::vector<int32_t>& nbh_id2node_list_id,
+                             std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
                              std::vector<int32_t>& nbh_id2order, int32_t nbh_id);
 };
 
@@ -162,9 +162,9 @@ template<class SbpSignature>
 SbpGraph<SbpSignature>::SbpGraph() {}
 
 template<class SbpSignature>
-void SbpGraph<SbpSignature>::RandomSbpSignature(bool use_sbp_collector_) {
+void SbpGraph<SbpSignature>::RandomSbpSignature(bool use_sbp_collector) {
   for (const auto& this_node : node_list_) {
-    if (use_sbp_collector_) {
+    if (use_sbp_collector) {
       if (this_node->sbp_sig_list_.size() > 0) {
         this_node->final_sbp_sig_id_ = rand() % this_node->sbp_sig_list_.size();
       } else {
@@ -392,7 +392,7 @@ void SbpGraph<SbpSignature>::FinalizeSbp() {
 }
 
 template<class SbpSignature>
-double SbpGraph<SbpSignature>::GreedyStrategy(bool ForceNode) {
+double SbpGraph<SbpSignature>::GreedyStrategy(bool for_node) {
   // Overall, this function should be replaced by GreedyStrategy(nbh_num);
   // Total Cost Reduce & Cost Reduce for one loop
   double TtlCostRdc = 0, CostRdc;
@@ -401,7 +401,7 @@ double SbpGraph<SbpSignature>::GreedyStrategy(bool ForceNode) {
     for (SbpNode<SbpSignature>* this_node : node_list_) {
       // Use GreedyStrategy on Nodes if there is one node left for this
       // connected component. Otherwise, Use GreedyStrategy on Edges.
-      if (ForceNode || this_node->edges_in_.size() + this_node->edges_out_.size() == 0) {
+      if (for_node || this_node->edges_in_.size() + this_node->edges_out_.size() == 0) {
         CostRdc += this_node->GreedyStrategy();
       } else {
         // GreedyStrategy on Edges.
@@ -423,10 +423,10 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
   // Total Cost Reduce & Cost Reduce for one loop
   double TtlCostRdc = 0, CostRdc;
   // A global buffer to store part of the one ring neighborhood.
-  std::vector<int32_t> nbh_id2NodeListId;
+  std::vector<int32_t> nbh_id2node_list_id;
   // Not accept a number lower than 1
   if (nbh_num < 1) { nbh_num = 1; }
-  nbh_id2NodeListId.resize(nbh_num);
+  nbh_id2node_list_id.resize(nbh_num);
   std::vector<int32_t> OrgSbpSignatureId(nbh_num);
   // store all the NodeListId whose corresponding nodes will be visited
   // We can use unordered_map to do this but vector is faster
@@ -446,8 +446,8 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
   while (head != tail && step < node_list_.size()) {
     auto* this_node = node_list_[PreVisitNodeList[head]];
     if (nbh_num <= 1) {
-      // Greedy strategy on nodes, here we use nbh_1ring to store the nbh_id2NodeListId information
-      // for reutilization
+      // Greedy strategy on nodes, here we use nbh_1ring to store the nbh_id2node_list_id
+      // information for reutilization
       nbh_1ring[0] = this_node->node_list_id_;
       // store the original sbp signature of the 1-ring neighborhood for comparison
       OrgSbpSignatureId[0] = this_node->final_sbp_sig_id_;
@@ -469,14 +469,14 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
         // Initialize part of the one ring neighborhood
         int32_t nbh_1ring_id = nbh_1ring.size() - nbh_num;
         for (int32_t nbh_id = 1; nbh_id < nbh_num; ++nbh_id) {
-          nbh_id2NodeListId[nbh_id] = nbh_1ring[++nbh_1ring_id];
+          nbh_id2node_list_id[nbh_id] = nbh_1ring[++nbh_1ring_id];
         }
         // loop through the one ring neighborhood
         CostRdc = 0;
         int32_t nbh_id = 0;
         for (nbh_1ring_id = 0; nbh_1ring_id < nbh_1ring.size(); ++nbh_1ring_id) {
-          nbh_id2NodeListId[nbh_id] = nbh_1ring[nbh_1ring_id];
-          CostRdc += NbhGreedyStrategy(nbh_id2NodeListId);
+          nbh_id2node_list_id[nbh_id] = nbh_1ring[nbh_1ring_id];
+          CostRdc += NbhGreedyStrategy(nbh_id2node_list_id);
           // nbh_id for the next step
           if (++nbh_id >= nbh_num) { nbh_id = 1; }
         }
@@ -517,56 +517,55 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
 }
 
 template<class SbpSignature>
-void SbpGraph<SbpSignature>::DfsAddNbhCost(std::vector<int32_t>& nbh_id2NodeListId,
-                                           std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id,
-                                           std::vector<int32_t>& order2nbh_id,
-                                           std::vector<int32_t>& nbh_id2order,
-                                           std::vector<double>& order2AccMinInNbhCost,
-                                           std::vector<std::vector<double>>& OutNbhCosts,
-                                           std::vector<std::vector<int32_t>>& nbh_id2order2sbp_id,
-                                           std::vector<int32_t>& MinSbpSignatureId, double& MinCost,
-                                           int32_t order, double CurrCost) {
+void SbpGraph<SbpSignature>::DfsAddNbhCost(
+    std::vector<int32_t>& nbh_id2node_list_id,
+    std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id, std::vector<int32_t>& order2nbh_id,
+    std::vector<int32_t>& nbh_id2order, std::vector<double>& order2acc_min_in_nbh_cost,
+    std::vector<std::vector<double>>& out_nbh_costs,
+    std::vector<std::vector<int32_t>>& nbh_id2order2sbp_id, std::vector<int32_t>& min_sbp_sig_id,
+    double& min_cost, int32_t order, double curr_cost) {
   // We have finished visiting the neighborhood
-  if (order >= nbh_id2NodeListId.size()) {
+  if (order >= nbh_id2node_list_id.size()) {
     // relative difference > 1e-12
-    if (CurrCost < MinCost * 0.999999999999) {
-      MinCost = CurrCost;
-      for (int32_t nbh_id = 0; nbh_id < nbh_id2NodeListId.size(); nbh_id++) {
-        MinSbpSignatureId[nbh_id] = node_list_[nbh_id2NodeListId[nbh_id]]->final_sbp_sig_id_;
+    if (curr_cost < min_cost * 0.999999999999) {
+      min_cost = curr_cost;
+      for (int32_t nbh_id = 0; nbh_id < nbh_id2node_list_id.size(); nbh_id++) {
+        min_sbp_sig_id[nbh_id] = node_list_[nbh_id2node_list_id[nbh_id]]->final_sbp_sig_id_;
       }
     }
     return;
   }
   // Pruning, remove all those branch with large cost
-  if (CurrCost + order2AccMinInNbhCost[order] >= MinCost) { return; }
+  if (curr_cost + order2acc_min_in_nbh_cost[order] >= min_cost) { return; }
   // Deep first search in the next order
   int32_t nbh_id = order2nbh_id[order];
-  SbpNode<SbpSignature>* sbp_node = node_list_[nbh_id2NodeListId[nbh_id]];
+  SbpNode<SbpSignature>* sbp_node = node_list_[nbh_id2node_list_id[nbh_id]];
   for (int32_t sbp_id : nbh_id2order2sbp_id[nbh_id]) {
     sbp_node->final_sbp_sig_id_ = sbp_id;
-    DfsAddNbhCost(nbh_id2NodeListId, NodeListId2nbh_id, order2nbh_id, nbh_id2order,
-                  order2AccMinInNbhCost, OutNbhCosts, nbh_id2order2sbp_id, MinSbpSignatureId,
-                  MinCost, order + 1,
-                  CurrCost + OutNbhCosts[nbh_id][sbp_id]
-                      + sbp_node->EvalInNbhCost(NodeListId2nbh_id, nbh_id2order));
+    DfsAddNbhCost(nbh_id2node_list_id, node_list_id2nbh_id, order2nbh_id, nbh_id2order,
+                  order2acc_min_in_nbh_cost, out_nbh_costs, nbh_id2order2sbp_id, min_sbp_sig_id,
+                  min_cost, order + 1,
+                  curr_cost + out_nbh_costs[nbh_id][sbp_id]
+                      + sbp_node->EvalInNbhCost(node_list_id2nbh_id, nbh_id2order));
   }
 }
 
 template<class SbpSignature>
 bool SbpGraph<SbpSignature>::DfsFindReasonableCost(
-    std::vector<int32_t>& nbh_id2NodeListId,
-    std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id, std::vector<int32_t>& nbh_id2order,
+    std::vector<int32_t>& nbh_id2node_list_id,
+    std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id, std::vector<int32_t>& nbh_id2order,
     int32_t nbh_id) {
   // We found such a strategy
   if (nbh_id == nbh_id2order.size()) { return true; }
-  SbpNode<SbpSignature>* sbp_node = node_list_[nbh_id2NodeListId[nbh_id]];
+  SbpNode<SbpSignature>* sbp_node = node_list_[nbh_id2node_list_id[nbh_id]];
   // Start from B.
   for (int32_t sbp_id = sbp_node->cost_.size() - 1; sbp_id >= 0; sbp_id--) {
     sbp_node->final_sbp_sig_id_ = sbp_id;
     // If the cost for this node is reasonable, then go to the next one
-    if (sbp_node->cost_[sbp_id] + sbp_node->EvalInNbhCost(NodeListId2nbh_id, nbh_id2order)
+    if (sbp_node->cost_[sbp_id] + sbp_node->EvalInNbhCost(node_list_id2nbh_id, nbh_id2order)
         < GetValidMaxCopyCost()) {
-      if (DfsFindReasonableCost(nbh_id2NodeListId, NodeListId2nbh_id, nbh_id2order, nbh_id + 1)) {
+      if (DfsFindReasonableCost(nbh_id2node_list_id, node_list_id2nbh_id, nbh_id2order,
+                                nbh_id + 1)) {
         // If we found one strategy, then exist the Dfs.
         return true;
       }
@@ -580,7 +579,7 @@ bool SbpGraph<SbpSignature>::DfsFindReasonableCost(
 // Find one strategy with finite cost for adjustment
 template<class SbpSignature>
 Maybe<void> SbpGraph<SbpSignature>::Find1Strategy4Greedy() {
-  std::vector<int32_t> nbh_id2NodeListId;
+  std::vector<int32_t> nbh_id2node_list_id;
   std::vector<bool> not_visited(node_list_.size(), true);
   std::vector<int32_t> nbh_1ring;
   int32_t head = 0;
@@ -605,20 +604,20 @@ Maybe<void> SbpGraph<SbpSignature>::Find1Strategy4Greedy() {
       }
     }
     // put this node into the open set
-    nbh_id2NodeListId.push_back(node_with_min_cut_ratio);
+    nbh_id2node_list_id.push_back(node_with_min_cut_ratio);
     not_visited[node_with_min_cut_ratio] = false;
     tail++;
     // BFS
     while (head < tail) {
       // look for the neighborhood of the head
-      int32_t NodeListId = nbh_id2NodeListId[head];
+      int32_t NodeListId = nbh_id2node_list_id[head];
       node_list_[NodeListId]->OneRingNeighborhood(nbh_1ring);
       // sort
       std::sort(nbh_1ring.begin(), nbh_1ring.end(),
                 [&](int32_t i, int32_t j) { return node_cut_ratios[i] < node_cut_ratios[j]; });
       for (int32_t curr_id : nbh_1ring) {
         if (not_visited[curr_id]) {
-          nbh_id2NodeListId.push_back(curr_id);
+          nbh_id2node_list_id.push_back(curr_id);
           tail++;
           not_visited[curr_id] = false;
         }
@@ -626,49 +625,49 @@ Maybe<void> SbpGraph<SbpSignature>::Find1Strategy4Greedy() {
       head++;
     }
   }
-  // mapping from the NodeListId to the id in the nbh_id2NodeListId
-  std::unordered_map<int32_t, int32_t> NodeListId2nbh_id;
-  InverseFunction<int32_t>(nbh_id2NodeListId, NodeListId2nbh_id);
+  // mapping from the NodeListId to the id in the nbh_id2node_list_id
+  std::unordered_map<int32_t, int32_t> node_list_id2nbh_id;
+  InverseFunction<int32_t>(nbh_id2node_list_id, node_list_id2nbh_id);
   // Initial an ordinary order
-  std::vector<int32_t> nbh_id2order(nbh_id2NodeListId.size());
-  for (int32_t nbh_id = 0; nbh_id < nbh_id2NodeListId.size(); nbh_id++) {
+  std::vector<int32_t> nbh_id2order(nbh_id2node_list_id.size());
+  for (int32_t nbh_id = 0; nbh_id < nbh_id2node_list_id.size(); nbh_id++) {
     nbh_id2order[nbh_id] = nbh_id;
   }
   // Combining deep first search and pruning based on cut ratio
-  CHECK(DfsFindReasonableCost(nbh_id2NodeListId, NodeListId2nbh_id, nbh_id2order, 0))
+  CHECK(DfsFindReasonableCost(nbh_id2node_list_id, node_list_id2nbh_id, nbh_id2order, 0))
       << "Can't find a reasonable strateggy!";
   return Maybe<void>::Ok();
 }
 
 // Use brute force to search for a strategy with minimum cost for a neighborhood
 template<class SbpSignature>
-double SbpGraph<SbpSignature>::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2NodeListId) {
+double SbpGraph<SbpSignature>::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) {
   // number of nodes in the neighborhood
-  int32_t num_nbh = nbh_id2NodeListId.size();
-  // mapping from the NodeListId to the id in the nbh_id2NodeListId
-  std::unordered_map<int32_t, int32_t> NodeListId2nbh_id;
-  InverseFunction<int32_t>(nbh_id2NodeListId, NodeListId2nbh_id);
+  int32_t num_nbh = nbh_id2node_list_id.size();
+  // mapping from the NodeListId to the id in the nbh_id2node_list_id
+  std::unordered_map<int32_t, int32_t> node_list_id2nbh_id;
+  InverseFunction<int32_t>(nbh_id2node_list_id, node_list_id2nbh_id);
   // a sbp signature id set minimizing the overall cost, store the original one as default
-  std::vector<int32_t> MinSbpSignatureId(num_nbh);
+  std::vector<int32_t> min_sbp_sig_id(num_nbh);
   for (int32_t nbh_id = 0; nbh_id < num_nbh; nbh_id++) {
-    MinSbpSignatureId[nbh_id] = node_list_[nbh_id2NodeListId[nbh_id]]->final_sbp_sig_id_;
+    min_sbp_sig_id[nbh_id] = node_list_[nbh_id2node_list_id[nbh_id]]->final_sbp_sig_id_;
   }
 
   // pre-compute and store the cost between neighborhood and outside nodes under different sbp for
   // each node within the neighborhood
-  std::vector<std::vector<double>> OutNbhCosts(num_nbh);
+  std::vector<std::vector<double>> out_nbh_costs(num_nbh);
   for (int32_t nbh_id = 0; nbh_id < num_nbh; nbh_id++) {
-    SbpNode<SbpSignature>* sbp_node = node_list_[nbh_id2NodeListId[nbh_id]];
-    OutNbhCosts[nbh_id].resize(sbp_node->cost_.size());
+    SbpNode<SbpSignature>* sbp_node = node_list_[nbh_id2node_list_id[nbh_id]];
+    out_nbh_costs[nbh_id].resize(sbp_node->cost_.size());
     for (int32_t sbp_id = sbp_node->cost_.size() - 1; sbp_id >= 0; sbp_id--) {
       sbp_node->final_sbp_sig_id_ = sbp_id;
-      OutNbhCosts[nbh_id][sbp_id] = sbp_node->EvalOutNbhCost(NodeListId2nbh_id);
+      out_nbh_costs[nbh_id][sbp_id] = sbp_node->EvalOutNbhCost(node_list_id2nbh_id);
     }
   }
-  // pre-compute and store the order of the OutNbhCosts
+  // pre-compute and store the order of the out_nbh_costs
   std::vector<std::vector<int32_t>> nbh_id2order2sbp_id(num_nbh);
   for (int32_t nbh_id = 0; nbh_id < num_nbh; nbh_id++) {
-    DecideOrder(OutNbhCosts[nbh_id], nbh_id2order2sbp_id[nbh_id],
+    DecideOrder(out_nbh_costs[nbh_id], nbh_id2order2sbp_id[nbh_id],
                 [](double a, double b) { return a < b; });
   }
 
@@ -677,8 +676,8 @@ double SbpGraph<SbpSignature>::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2No
   std::vector<double> OutNbhCostDiff(num_nbh);
   for (int32_t nbh_id = 0; nbh_id < num_nbh; nbh_id++) {
     OutNbhCostDiff[nbh_id] =
-        *std::max_element(OutNbhCosts[nbh_id].begin(), OutNbhCosts[nbh_id].end())
-        - *std::min_element(OutNbhCosts[nbh_id].begin(), OutNbhCosts[nbh_id].end());
+        *std::max_element(out_nbh_costs[nbh_id].begin(), out_nbh_costs[nbh_id].end())
+        - *std::min_element(out_nbh_costs[nbh_id].begin(), out_nbh_costs[nbh_id].end());
   }
   std::vector<int32_t> order2nbh_id;
   DecideOrder(OutNbhCostDiff, order2nbh_id, [](double a, double b) { return a > b; });
@@ -687,46 +686,48 @@ double SbpGraph<SbpSignature>::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2No
   InverseOrder(order2nbh_id, nbh_id2order);
 
   // Current Cost, Minimum Cost, Cost with original sbp
-  double MinCost, OrgCost = 0;
+  double min_cost, OrgCost = 0;
   // Recover original sbp
   for (int32_t nbh_id = 0; nbh_id < num_nbh; nbh_id++) {
-    node_list_[nbh_id2NodeListId[nbh_id]]->final_sbp_sig_id_ = MinSbpSignatureId[nbh_id];
+    node_list_[nbh_id2node_list_id[nbh_id]]->final_sbp_sig_id_ = min_sbp_sig_id[nbh_id];
   }
   // Compute cost with original sbp
   for (int32_t nbh_id = 0; nbh_id < num_nbh; nbh_id++) {
-    SbpNode<SbpSignature>* sbp_node = node_list_[nbh_id2NodeListId[nbh_id]];
-    OrgCost += OutNbhCosts[nbh_id][MinSbpSignatureId[nbh_id]];
-    OrgCost += sbp_node->EvalInNbhCost(NodeListId2nbh_id, nbh_id2order);
+    SbpNode<SbpSignature>* sbp_node = node_list_[nbh_id2node_list_id[nbh_id]];
+    OrgCost += out_nbh_costs[nbh_id][min_sbp_sig_id[nbh_id]];
+    OrgCost += sbp_node->EvalInNbhCost(node_list_id2nbh_id, nbh_id2order);
   }
-  MinCost = OrgCost;
+  min_cost = OrgCost;
   // Accumulate minimum cost form the current node to the end of the neighborhood node list.
   // The accumulated cost include the current node.
-  std::vector<double> order2AccMinInNbhCost(num_nbh);
-  order2AccMinInNbhCost[num_nbh - 1] = *std::min_element(
-      OutNbhCosts[order2nbh_id[num_nbh - 1]].begin(), OutNbhCosts[order2nbh_id[num_nbh - 1]].end());
+  std::vector<double> order2acc_min_in_nbh_cost(num_nbh);
+  order2acc_min_in_nbh_cost[num_nbh - 1] =
+      *std::min_element(out_nbh_costs[order2nbh_id[num_nbh - 1]].begin(),
+                        out_nbh_costs[order2nbh_id[num_nbh - 1]].end());
   for (int32_t order = num_nbh - 2; order >= 0; order--) {
     int32_t nbh_id = order2nbh_id[order];
-    order2AccMinInNbhCost[order] =
-        order2AccMinInNbhCost[order + 1]
-        + *std::min_element(OutNbhCosts[nbh_id].begin(), OutNbhCosts[nbh_id].end())
-        + node_list_[nbh_id2NodeListId[nbh_id]]->EvalMinInNbhCost(NodeListId2nbh_id, nbh_id2order);
+    order2acc_min_in_nbh_cost[order] =
+        order2acc_min_in_nbh_cost[order + 1]
+        + *std::min_element(out_nbh_costs[nbh_id].begin(), out_nbh_costs[nbh_id].end())
+        + node_list_[nbh_id2node_list_id[nbh_id]]->EvalMinInNbhCost(node_list_id2nbh_id,
+                                                                    nbh_id2order);
   }
   // Use brute force (DFS) to adjust for the best strategy in the neighborhood.
-  DfsAddNbhCost(nbh_id2NodeListId, NodeListId2nbh_id, order2nbh_id, nbh_id2order,
-                order2AccMinInNbhCost, OutNbhCosts, nbh_id2order2sbp_id, MinSbpSignatureId, MinCost,
-                0, 0);
+  DfsAddNbhCost(nbh_id2node_list_id, node_list_id2nbh_id, order2nbh_id, nbh_id2order,
+                order2acc_min_in_nbh_cost, out_nbh_costs, nbh_id2order2sbp_id, min_sbp_sig_id,
+                min_cost, 0, 0);
   // Use the sbp strategy with minimum cost
   for (int32_t nbh_id = 0; nbh_id < num_nbh; nbh_id++) {
-    node_list_[nbh_id2NodeListId[nbh_id]]->final_sbp_sig_id_ = MinSbpSignatureId[nbh_id];
+    node_list_[nbh_id2node_list_id[nbh_id]]->final_sbp_sig_id_ = min_sbp_sig_id[nbh_id];
   }
 
-  if (MinCost < OrgCost) {
-    // Directly return (MinCost - OrgCost) might have floating point error up to 3e-16
-    // For example, OrgCost: 2.22507e+06, MinCost: 2.22507e+06,
+  if (min_cost < OrgCost) {
+    // Directly return (min_cost - OrgCost) might have floating point error up to 3e-16
+    // For example, OrgCost: 2.22507e+06, min_cost: 2.22507e+06,
     // diff: -4.65661e-10, relative diff:2.09279e-16
     // Therefore, we use a threshold to filter out such fake true detection to
     // avoid unlimited search.
-    if ((OrgCost - MinCost) / OrgCost > 1e-12) { return MinCost - OrgCost; }
+    if ((OrgCost - min_cost) / OrgCost > 1e-12) { return min_cost - OrgCost; }
   }
   return 0.0;
 }
@@ -817,32 +818,33 @@ int32_t SbpGraph<SbpSignature>::ComputeLayer(
     this_node->GetMinLayer(op_name2sbp_node, op_node2mutable_op_ctrl_deps);
   }
   // Find the largest minimum layer
-  int32_t max_MinLayer = -1;
+  int32_t max_min_layer = -1;
   for (SbpNode<SbpSignature>* this_node : node_list_) {
-    if (max_MinLayer < this_node->min_layer_) { max_MinLayer = this_node->min_layer_; }
+    if (max_min_layer < this_node->min_layer_) { max_min_layer = this_node->min_layer_; }
   }
   // Compute maximum layer
   for (SbpNode<SbpSignature>* this_node : node_list_) {
     this_node->SpreadMaxLayer(op_name2sbp_node, op_node2mutable_op_ctrl_deps);
   }
-  for (SbpNode<SbpSignature>* this_node : node_list_) { this_node->LiftMaxLayer(max_MinLayer); }
-  return max_MinLayer;
+  for (SbpNode<SbpSignature>* this_node : node_list_) { this_node->LiftMaxLayer(max_min_layer); }
+  return max_min_layer;
 }
 
-// Find the mianstem of the sbp graph, then reduce the wait time for tributaries
+// Find the mainstem of the sbp graph, then reduce the wait time for tributaries
 template<class SbpSignature>
 void SbpGraph<SbpSignature>::FindMainstem(
-    int32_t max_MinLayer, oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
-  // Summerize cost for each layer, on the mainstem or tributaries
-  std::vector<double> mainstem_cost(max_MinLayer + 1, 0);
+    int32_t max_min_layer,
+    oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
+  // Summarize cost for each layer, on the mainstem or tributaries
+  std::vector<double> mainstem_cost(max_min_layer + 1, 0);
   for (SbpNode<SbpSignature>* this_node : node_list_) {
     mainstem_cost[this_node->min_layer_] += this_node->GetMinCost();
   }
   // Decide mainstems
   double acc_cost = 0;
   // All the nodes with MinLayer>=mainstem_end_id would be considerd as mainstems
-  int32_t mainstem_end_id = max_MinLayer;
-  for (int32_t layer_id = max_MinLayer; layer_id >= 0; layer_id--) {
+  int32_t mainstem_end_id = max_min_layer;
+  for (int32_t layer_id = max_min_layer; layer_id >= 0; layer_id--) {
     acc_cost += mainstem_cost[layer_id];
     if (acc_cost > 0.5 * wait_time_) {
       mainstem_end_id = layer_id;
@@ -858,7 +860,7 @@ void SbpGraph<SbpSignature>::FindMainstem(
   // Clear counter and initialize tributary layer for each sbp node
   for (SbpNode<SbpSignature>* this_node : node_list_) {
     this_node->counter_ = 0;
-    this_node->DropTributaryLayer(max_MinLayer);
+    this_node->DropTributaryLayer(max_min_layer);
   }
   // Count the number of consumers and downstream nodes
   for (SbpNode<SbpSignature>* this_node : node_list_) {
@@ -869,14 +871,14 @@ void SbpGraph<SbpSignature>::FindMainstem(
     this_node->SpreadTributaryLayer(op_name2sbp_node);
   }
 
-  // Summerize cost for each layer on the mainstem, store it to avoid substraction of large values.
-  mainstem_cost.assign(max_MinLayer + 1, 0);
+  // Summarize cost for each layer on the mainstem, store it to avoid substraction of large values.
+  mainstem_cost.assign(max_min_layer + 1, 0);
   // tributary cost start from each min layer
-  std::vector<double> tributary_cost(max_MinLayer + 1, 0);
+  std::vector<double> tributary_cost(max_min_layer + 1, 0);
   // tributary cost would be outdated after Max Layer (before Max Layer + 1)
-  std::vector<double> outdated_tributary_cost(max_MinLayer + 1, 0);
+  std::vector<double> outdated_tributary_cost(max_min_layer + 1, 0);
   // number of operators in the mainstem
-  std::vector<std::vector<SbpNode<SbpSignature>*>> mainstem_ops(max_MinLayer + 1);
+  std::vector<std::vector<SbpNode<SbpSignature>*>> mainstem_ops(max_min_layer + 1);
 
   for (SbpNode<SbpSignature>* this_node : node_list_) {
     if (this_node->on_mainstem_) {
@@ -889,8 +891,8 @@ void SbpGraph<SbpSignature>::FindMainstem(
     }
   }
   // Accumulate the cost from the consumer to the end, not including itself
-  std::vector<double> acc_mainstem_cost(max_MinLayer + 1, 0);
-  for (int32_t layer_id = max_MinLayer; layer_id > 0; layer_id--) {
+  std::vector<double> acc_mainstem_cost(max_min_layer + 1, 0);
+  for (int32_t layer_id = max_min_layer; layer_id > 0; layer_id--) {
     acc_mainstem_cost[layer_id - 1] = acc_mainstem_cost[layer_id] + mainstem_cost[layer_id];
   }
 
@@ -907,10 +909,10 @@ void SbpGraph<SbpSignature>::FindMainstem(
   }
 
   // Reduce the wait time for mainstem from the end to the begining
-  double acc_tributary_cost = outdated_tributary_cost[max_MinLayer];
+  double acc_tributary_cost = outdated_tributary_cost[max_min_layer];
   double used_tributary_cost = 0.0;
   double curr_wait_time;
-  for (int32_t layer_id = max_MinLayer - 1; layer_id >= 0; layer_id--) {
+  for (int32_t layer_id = max_min_layer - 1; layer_id >= 0; layer_id--) {
     // Can not move it backward since we need to do this at the 0th layer.
     // At some moment, the cost haven't been used would disappear.
     if (tributary_cost[layer_id + 1] > used_tributary_cost) {
