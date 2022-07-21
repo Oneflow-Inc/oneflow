@@ -32,10 +32,16 @@ namespace oneflow {
   const int32_t pooled_h = ctx->Attr<int32_t>("pooled_h");
   const int32_t pooled_w = ctx->Attr<int32_t>("pooled_w");
   // x: feature map (N, C, H, W)
-  CHECK_EQ(x_shape.NumAxes(), 4);
+  CHECK_EQ_OR_RETURN(x_shape.NumAxes(), 4)
+      << Error::RuntimeError() << "The dimension of x tensor must be equal to 4, "
+      << "but got " << x_shape.NumAxes();
   // rois: (R, 5)
-  CHECK_EQ(rois_shape.NumAxes(), 2);
-  CHECK_EQ(rois_shape.At(1), 5);
+  CHECK_EQ_OR_RETURN(rois_shape.NumAxes(), 2)
+      << Error::RuntimeError() << "The dimension of rois tensor must be equal to 2, "
+      << "but got " << rois_shape.NumAxes();
+  CHECK_EQ_OR_RETURN(rois_shape.At(1), 5)
+      << Error::RuntimeError() << "The size of rois tensor must be equal to 5 at dimension 1, "
+      << "but got " << rois_shape.At(1);
   // y: (R, C, pool_h, pool_w)
   *ctx->OutputShape("y", 0) = Shape({rois_shape.At(0), x_shape.At(1), pooled_h, pooled_w});
   return Maybe<void>::Ok();
@@ -50,10 +56,10 @@ namespace oneflow {
 /*static*/ Maybe<void> RoiAlignOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,
                                                   const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* roi_modifier = GetInputArgModifierFn("rois", 0);
-  CHECK_OR_RETURN(roi_modifier != nullptr);
+  CHECK_OR_RETURN(roi_modifier != nullptr);  // NOLINT(maybe-need-error-msg)
   roi_modifier->set_requires_grad(false);
   user_op::InputArgModifier* feat_modifier = GetInputArgModifierFn("x", 0);
-  CHECK_OR_RETURN(feat_modifier != nullptr);
+  CHECK_OR_RETURN(feat_modifier != nullptr);  //  NOLINT(maybe-need-error-msg)
   feat_modifier->set_requires_grad(true);
   return Maybe<void>::Ok();
 }
@@ -74,13 +80,22 @@ namespace oneflow {
   const int32_t pooled_h = ctx->Attr<int32_t>("pooled_h");
   const int32_t pooled_w = ctx->Attr<int32_t>("pooled_w");
   // x: feature map (N, C, H, W)
-  CHECK_EQ_OR_RETURN(x_like_shape.NumAxes(), 4);
+  CHECK_EQ_OR_RETURN(x_like_shape.NumAxes(), 4)
+      << Error::RuntimeError() << "The dimension of x_like tensor must be equal to 4, "
+      << "but got " << x_like_shape.NumAxes();
+
   // rois: (R, 5)
-  CHECK_EQ_OR_RETURN(rois_shape.NumAxes(), 2);
-  CHECK_EQ_OR_RETURN(rois_shape.At(1), 5);
+  CHECK_EQ_OR_RETURN(rois_shape.NumAxes(), 2)
+      << Error::RuntimeError() << "The dimension of rois tensor must be equal to 2, "
+      << "but got " << rois_shape.NumAxes();
+  CHECK_EQ_OR_RETURN(rois_shape.At(1), 5)
+      << Error::RuntimeError() << "The size of rois tensor must be equal to 5 "
+      << "at dimension 1, "
+      << "but got " << rois_shape.At(1);
   // y: (R, C, pool_h, pool_w)
   const Shape& y_shape = Shape({rois_shape.At(0), x_like_shape.At(1), pooled_h, pooled_w});
-  CHECK_EQ_OR_RETURN(y_shape, dy_shape);
+  CHECK_EQ_OR_RETURN(y_shape, dy_shape)
+      << Error::RuntimeError() << "Tensors y and dy must have same shape";
   *ctx->OutputShape("dx", 0) = x_like_shape;
   return Maybe<void>::Ok();
 }
@@ -88,7 +103,9 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> RoiAlignGradOp::InferDataType(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("x_like", 0));
+  CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("x_like", 0))
+      << Error::TypeError() << "The dy tensor and x_like tensor must have same type";
+
   *ctx->OutputDType("dx", 0) = ctx->InputDType("x_like", 0);
   return Maybe<void>::Ok();
 }
