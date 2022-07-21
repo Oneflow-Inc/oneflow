@@ -13,26 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/singleton.h"
+#include "oneflow/ir/oneflow-extension/include/PyAst/Ast.h"
 
 #include <llvm/IR/IntrinsicsS390.h>
+
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
+#include <pybind11/stl.h>
+
 #include <algorithm>
 #include <string>
 #include <iostream>
-#include <pybind11/stl.h>
 #include <tuple>
 #include <vector>
-#include "oneflow/core/common/singleton.h"
-#include "oneflow/ir/oneflow-extension/include/PyAst/Ast.h"
 
 #ifdef WITH_MLIR
 
 #include "oneflow/ir/include/OneFlow/Extension.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowRoundTrip.h"
 #include "oneflow/ir/oneflow-extension/include/OneFlow/OneFlowLRJITRegistry.h"
-#include <glog/logging.h>
 #include "oneflow/api/python/of_api_registry.h"
+#include <glog/logging.h>
 #include <functional>
 #include <utility>
 
