@@ -30,7 +30,7 @@ def _test_convnd_grad_grad_impl(test_case, ndim, placement, x_sbp, w_sbp):
     w_data_shape = [8 for i in range(ndim)]
     x_shape = [16, 8, *x_data_shape]
     w_shape = [8, 8, *w_data_shape]
-    grad_shape = [16, 8, 9, 9]
+    grad_shape = [16, 8] + [9 for _ in range(ndim)]
 
     x = (
         torch.tensor(np.random.rand(*x_shape))
@@ -40,15 +40,15 @@ def _test_convnd_grad_grad_impl(test_case, ndim, placement, x_sbp, w_sbp):
     w = (
         torch.tensor(np.random.rand(*w_shape))
         .requires_grad_(True)
-        .to_global(placement=placement, sbp=flow.sbp.broadcast)
+        .to_global(placement=placement, sbp=w_sbp)
     )
     init_grad_y = (
         torch.tensor(np.random.rand(*grad_shape))
         .requires_grad_(True)
-        .to_global(placement=placement, sbp=x_sbp)
+        .to_global(placement=placement, sbp=flow.sbp.broadcast)
     )
     init_grad_x = torch.tensor(np.random.rand(*x.oneflow.shape)).to_global(
-        placement=placement, sbp=x_sbp
+        placement=placement, sbp=flow.sbp.broadcast
     )
     init_grad_w = torch.tensor(np.random.rand(*w.oneflow.shape)).to_global(
         placement=placement, sbp=flow.sbp.broadcast
@@ -57,9 +57,7 @@ def _test_convnd_grad_grad_impl(test_case, ndim, placement, x_sbp, w_sbp):
     y = eval(f"torch.nn.functional.conv{ndim}d")(
         x, w, stride=1, padding=0, groups=1, dilation=1
     )
-    # init_grad_y.to_global(placement=placement, sbp=y.sbp)
-    # print(init_grad_y.pytorch.shape, y.pytorch.shape, x.pytorch.shape)
-    assert init_grad_y.pytorch.shape == y.pytorch.shape
+
     dx = torch.autograd.grad(
         outputs=y,
         inputs=x,
@@ -69,9 +67,7 @@ def _test_convnd_grad_grad_impl(test_case, ndim, placement, x_sbp, w_sbp):
     )[0]
 
     test_case.assertTrue(
-        np.allclose(
-            dx.pytorch.detach().cpu().numpy(), dx.oneflow.to_local().detach().numpy()
-        )
+        np.allclose(dx.pytorch.detach().cpu().numpy(), dx.oneflow.detach().numpy())
     )
 
     dw = torch.autograd.grad(
@@ -139,23 +135,23 @@ class TestGlobalConvHigherDerivative(flow.unittest.TestCase):
     @globaltest
     def test_conv1d_grad_grad(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=2):
-                _test_convnd_grad_grad_impl(test_case, 1, placement, sbp)
+            for x_sbp in all_sbp(placement, max_dim=2):
+                for w_sbp in all_sbp(placement, max_dim=2):
+                    _test_convnd_grad_grad_impl(test_case, 1, placement, x_sbp, w_sbp)
 
     @globaltest
     def test_conv2d_grad_grad(test_case):
         for placement in all_placement():
-            for x_sbp in all_sbp(placement, max_dim=1):
-                # for w_sbp in all_sbp(placement, max_dim=2):
-                _test_convnd_grad_grad_impl(
-                    test_case, 2, placement, x_sbp, flow.sbp.broadcast
-                )
+            for x_sbp in all_sbp(placement, max_dim=2):
+                for w_sbp in all_sbp(placement, max_dim=2):
+                    _test_convnd_grad_grad_impl(test_case, 2, placement, x_sbp, w_sbp)
 
     @globaltest
     def test_conv3d_grad_grad(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=2):
-                _test_convnd_grad_grad_impl(test_case, 3, placement, sbp)
+            for x_sbp in all_sbp(placement, max_dim=2):
+                for w_sbp in all_sbp(placement, max_dim=2):
+                    _test_convnd_grad_grad_impl(test_case, 3, placement, x_sbp, w_sbp)
 
 
 if __name__ == "__main__":
