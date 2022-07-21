@@ -105,9 +105,9 @@ class SbpGraph {
   // than threshold.
   int32_t threshold_ = 100;
   // Overlayable wait time for copy cost, which occurs before communication between devices.
-  double wait_time_;
-  // Uncovered wait time for copy cost.
-  double transfer_cost_;
+  double wait_time_ = 16500.0;
+  // Uncovered wait time for copy cost, which is already set up somewhere else
+  double transfer_cost_ = 0.0;
 
   // Remove a node from the node list
   void RemoveFromNodeList(SbpNode<SbpSignature>* this_node);
@@ -239,7 +239,7 @@ int32_t SbpGraph<SbpSignature>::NodeElimination(SbpNode<SbpSignature>* this_node
     TwoNode[0]->edges_out_.emplace_back(e);
     TwoNode[1]->edges_in_.emplace_back(e);
 
-    // eliminate the node from graph by swaping with the last element and
+    // eliminate the node from graph by swapping with the last element and
     // popping
     RemoveFromNodeList(this_node);
 
@@ -296,13 +296,13 @@ int32_t SbpGraph<SbpSignature>::EdgeElimination(SbpNode<SbpSignature>* this_node
   };
   auto LookForParallelEdge = [](SbpEdge<SbpSignature>*& e, SbpNode<SbpSignature>* start_node,
                                 SbpNode<SbpSignature>* end_node, bool if_reverse,
-                                int32_t stopsign) -> int32_t {
+                                int32_t stop_sign) -> int32_t {
     // elimination edges with specific start node and end node in
-    // start_node->edges_out_ from index stopsign to the end.
-    // start_node->edges_out_[Stopsign] not included and need special treatment
+    // start_node->edges_out_ from index stop sign to the end.
+    // start_node->edges_out_[stop_sign] not included and need special treatment
     // after this process.
     int32_t elimination_num = 0;
-    for (int32_t j = start_node->edges_out_.size() - 1; j > stopsign; j--) {
+    for (int32_t j = start_node->edges_out_.size() - 1; j > stop_sign; j--) {
       if (end_node == start_node->edges_out_[j]->end_node_) {
         if (!e) {
           if (if_reverse) {
@@ -328,7 +328,7 @@ int32_t SbpGraph<SbpSignature>::EdgeElimination(SbpNode<SbpSignature>* this_node
     elimination_num += LookForParallelEdge(e, this_node, this_node->edges_out_[i]->end_node_,
                                            /*if_reverse=*/false, i);
     elimination_num += LookForParallelEdge(e, this_node->edges_out_[i]->end_node_, this_node,
-                                           /*if_reverse=*/true, /*stopsign=*/-1);
+                                           /*if_reverse=*/true, /*stop_sign=*/-1);
     if (e) {
       // Delete Parallel Edges from edges_in_
       RemoveFromEdgesIn(this_node, e->end_node_);
@@ -395,33 +395,33 @@ template<class SbpSignature>
 double SbpGraph<SbpSignature>::GreedyStrategy(bool for_node) {
   // Overall, this function should be replaced by GreedyStrategy(nbh_num);
   // Total Cost Reduce & Cost Reduce for one loop
-  double TtlCostRdc = 0, CostRdc;
+  double total_cost_reduction = 0, cost_reduction = 0;
   for (int32_t step = node_list_.size(); step >= 0; step--) {
-    CostRdc = 0;
+    cost_reduction = 0;
     for (SbpNode<SbpSignature>* this_node : node_list_) {
       // Use GreedyStrategy on Nodes if there is one node left for this
       // connected component. Otherwise, Use GreedyStrategy on Edges.
       if (for_node || this_node->edges_in_.size() + this_node->edges_out_.size() == 0) {
-        CostRdc += this_node->GreedyStrategy();
+        cost_reduction += this_node->GreedyStrategy();
       } else {
         // GreedyStrategy on Edges.
         for (SbpEdge<SbpSignature>* this_edge : this_node->edges_out_) {
           double second_rdc = this_edge->GreedyStrategy();
-          CostRdc += second_rdc;
+          cost_reduction += second_rdc;
         }
       }
     }
-    if (CostRdc == 0) { break; }
-    TtlCostRdc += CostRdc;
+    if (cost_reduction == 0) { break; }
+    total_cost_reduction += cost_reduction;
   }
-  return TtlCostRdc;
+  return total_cost_reduction;
 }
 
 template<class SbpSignature>
 double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
   // nbh_num is the maximum number of neighborhood to adjust sbp strategy in each step
   // Total Cost Reduce & Cost Reduce for one loop
-  double TtlCostRdc = 0, CostRdc;
+  double total_cost_reduction = 0, cost_reduction = 0;
   // A global buffer to store part of the one ring neighborhood.
   std::vector<int32_t> nbh_id2node_list_id;
   // Not accept a number lower than 1
@@ -451,7 +451,7 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
       nbh_1ring[0] = this_node->node_list_id_;
       // store the original sbp signature of the 1-ring neighborhood for comparison
       OrgSbpSignatureId[0] = this_node->final_sbp_sig_id_;
-      CostRdc = NbhGreedyStrategy(nbh_1ring);
+      cost_reduction = NbhGreedyStrategy(nbh_1ring);
     } else {
       // Use GreedyStrategy on the one ring neighborhood of this node.
       this_node->OneRingNeighborhood(nbh_1ring);
@@ -461,7 +461,7 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
         OrgSbpSignatureId[nbh_id] = node_list_[nbh_1ring[nbh_id]]->final_sbp_sig_id_;
       }
       if (nbh_1ring.size() <= nbh_num) {
-        CostRdc = NbhGreedyStrategy(nbh_1ring);
+        cost_reduction = NbhGreedyStrategy(nbh_1ring);
       } else {
         // Use GreedyStrategy on part of the one ring neighborhood.
         // Loop through the neighborhood. Each loop should contain the centroid.
@@ -472,18 +472,18 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
           nbh_id2node_list_id[nbh_id] = nbh_1ring[++nbh_1ring_id];
         }
         // loop through the one ring neighborhood
-        CostRdc = 0;
+        cost_reduction = 0;
         int32_t nbh_id = 0;
         for (nbh_1ring_id = 0; nbh_1ring_id < nbh_1ring.size(); ++nbh_1ring_id) {
           nbh_id2node_list_id[nbh_id] = nbh_1ring[nbh_1ring_id];
-          CostRdc += NbhGreedyStrategy(nbh_id2node_list_id);
+          cost_reduction += NbhGreedyStrategy(nbh_id2node_list_id);
           // nbh_id for the next step
           if (++nbh_id >= nbh_num) { nbh_id = 1; }
         }
       }
     }
     // change of strategies
-    if (CostRdc != 0) {
+    if (cost_reduction != 0) {
       // Add neighborhood into pre-visited node list for each node with changing strategy
       for (int32_t nbh_id = 0; nbh_id < nbh_1ring.size(); nbh_id++) {
         // If changes occur
@@ -511,9 +511,9 @@ double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
       step++;
     }
 
-    TtlCostRdc += CostRdc;
+    total_cost_reduction += cost_reduction;
   }
-  return TtlCostRdc;
+  return total_cost_reduction;
 }
 
 template<class SbpSignature>
@@ -635,7 +635,7 @@ Maybe<void> SbpGraph<SbpSignature>::Find1Strategy4Greedy() {
   }
   // Combining deep first search and pruning based on cut ratio
   CHECK(DfsFindReasonableCost(nbh_id2node_list_id, node_list_id2nbh_id, nbh_id2order, 0))
-      << "Can't find a reasonable strateggy!";
+      << "Can't find a reasonable strategy!";
   return Maybe<void>::Ok();
 }
 
@@ -686,7 +686,7 @@ double SbpGraph<SbpSignature>::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2no
   InverseOrder(order2nbh_id, nbh_id2order);
 
   // Current Cost, Minimum Cost, Cost with original sbp
-  double min_cost, OrgCost = 0;
+  double original_cost = 0;
   // Recover original sbp
   for (int32_t nbh_id = 0; nbh_id < num_nbh; nbh_id++) {
     node_list_[nbh_id2node_list_id[nbh_id]]->final_sbp_sig_id_ = min_sbp_sig_id[nbh_id];
@@ -694,10 +694,10 @@ double SbpGraph<SbpSignature>::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2no
   // Compute cost with original sbp
   for (int32_t nbh_id = 0; nbh_id < num_nbh; nbh_id++) {
     SbpNode<SbpSignature>* sbp_node = node_list_[nbh_id2node_list_id[nbh_id]];
-    OrgCost += out_nbh_costs[nbh_id][min_sbp_sig_id[nbh_id]];
-    OrgCost += sbp_node->EvalInNbhCost(node_list_id2nbh_id, nbh_id2order);
+    original_cost += out_nbh_costs[nbh_id][min_sbp_sig_id[nbh_id]];
+    original_cost += sbp_node->EvalInNbhCost(node_list_id2nbh_id, nbh_id2order);
   }
-  min_cost = OrgCost;
+  double min_cost = original_cost;
   // Accumulate minimum cost form the current node to the end of the neighborhood node list.
   // The accumulated cost include the current node.
   std::vector<double> order2acc_min_in_nbh_cost(num_nbh);
@@ -721,13 +721,13 @@ double SbpGraph<SbpSignature>::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2no
     node_list_[nbh_id2node_list_id[nbh_id]]->final_sbp_sig_id_ = min_sbp_sig_id[nbh_id];
   }
 
-  if (min_cost < OrgCost) {
-    // Directly return (min_cost - OrgCost) might have floating point error up to 3e-16
-    // For example, OrgCost: 2.22507e+06, min_cost: 2.22507e+06,
+  if (min_cost < original_cost) {
+    // Directly return (min_cost - original_cost) might have floating point error up to 3e-16
+    // For example, original_cost: 2.22507e+06, min_cost: 2.22507e+06,
     // diff: -4.65661e-10, relative diff:2.09279e-16
     // Therefore, we use a threshold to filter out such fake true detection to
     // avoid unlimited search.
-    if ((OrgCost - min_cost) / OrgCost > 1e-12) { return min_cost - OrgCost; }
+    if ((original_cost - min_cost) / original_cost > 1e-12) { return min_cost - original_cost; }
   }
   return 0.0;
 }
@@ -738,7 +738,7 @@ int32_t SbpGraph<SbpSignature>::PickAndMerge() {
   if (node_list_.size() < 4) { return 0; }
   // Pick the one with the smallest cut ratio
   double min_cut_ratio = 1.0;
-  double curr_cut_ratio;
+  double curr_cut_ratio = 0.0;
   SbpEdge<SbpSignature>* merging_edge = nullptr;
   for (int32_t i = 0; i < node_list_.size(); i++) {
     for (SbpEdge<SbpSignature>* edge_in : node_list_[i]->edges_in_) {
@@ -755,44 +755,44 @@ int32_t SbpGraph<SbpSignature>::PickAndMerge() {
     return NodeMerging(merging_edge->start_node_, merging_edge->end_node_);
   } else {
     // Pick the couple with the largest similar neighborhood
-    std::vector<BinarySet> NodeBinarySets(node_list_.size());
+    std::vector<BinarySet> node_binary_sets(node_list_.size());
     for (int32_t i = 0; i < node_list_.size(); i++) {
       // Transfer edge to binary set
-      NodeBinarySets[i].Initialize(node_list_.size());
-      NodeBinarySets[i].AddEntry(i);
+      node_binary_sets[i].Initialize(node_list_.size());
+      node_binary_sets[i].AddEntry(i);
       for (const SbpEdge<SbpSignature>* edge_in : node_list_[i]->edges_in_) {
-        NodeBinarySets[i].AddEntry(edge_in->start_node_->node_list_id_);
+        node_binary_sets[i].AddEntry(edge_in->start_node_->node_list_id_);
       }
       for (const SbpEdge<SbpSignature>* edge_out : node_list_[i]->edges_out_) {
-        NodeBinarySets[i].AddEntry(edge_out->start_node_->node_list_id_);
+        node_binary_sets[i].AddEntry(edge_out->start_node_->node_list_id_);
       }
     }
     // Find two nodes with largest common subset
     // buffer of binary set
-    BinarySet BuffBnrSet(node_list_.size());
+    BinarySet buffer_binary_set(node_list_.size());
     // Number of common edges
-    int32_t MaxCommEdgeNum = 0, CurrCommEdgeNum;
-    int32_t MinNodePair[2];
+    int32_t max_comm_edge_num = 0, curr_comm_edge_num = 0;
+    int32_t min_node_pair[2];
     // Number of Sbp Signature in merged node
-    int32_t MinSbpNum = 0, CurrSbpNum;
+    int32_t min_sbp_num = 0, curr_sbp_num = 0;
     for (int32_t i = 0; i < node_list_.size(); i++) {
       for (int32_t j = i + 1; j < node_list_.size(); j++) {
-        CurrSbpNum = node_list_[i]->cost_.size() * node_list_[j]->cost_.size();
-        if (CurrSbpNum <= threshold_) {
-          NodeBinarySets[i].IntersectionTo(NodeBinarySets[j], BuffBnrSet);
-          CurrCommEdgeNum = BuffBnrSet.Total();
-          if (CurrCommEdgeNum > MaxCommEdgeNum
-              || (CurrCommEdgeNum == MaxCommEdgeNum && CurrSbpNum < MinSbpNum)) {
-            MinNodePair[0] = i;
-            MinNodePair[1] = j;
-            MaxCommEdgeNum = CurrCommEdgeNum;
-            MinSbpNum = CurrSbpNum;
+        curr_sbp_num = node_list_[i]->cost_.size() * node_list_[j]->cost_.size();
+        if (curr_sbp_num <= threshold_) {
+          node_binary_sets[i].IntersectionTo(node_binary_sets[j], buffer_binary_set);
+          curr_comm_edge_num = buffer_binary_set.Total();
+          if (curr_comm_edge_num > max_comm_edge_num
+              || (curr_comm_edge_num == max_comm_edge_num && curr_sbp_num < min_sbp_num)) {
+            min_node_pair[0] = i;
+            min_node_pair[1] = j;
+            max_comm_edge_num = curr_comm_edge_num;
+            min_sbp_num = curr_sbp_num;
           }
         }
       }
     }
-    if (MaxCommEdgeNum > 0) {
-      return NodeMerging(node_list_[MinNodePair[0]], node_list_[MinNodePair[1]]);
+    if (max_comm_edge_num > 0) {
+      return NodeMerging(node_list_[min_node_pair[0]], node_list_[min_node_pair[1]]);
     } else {
       return 0;
     }
@@ -842,7 +842,7 @@ void SbpGraph<SbpSignature>::FindTrunk(
   }
   // Decide trunks
   double acc_cost = 0;
-  // All the nodes with MinLayer>=trunk_end_id would be considerd as trunks
+  // All the nodes with MinLayer>=trunk_end_id would be considered as trunks
   int32_t trunk_end_id = max_min_layer;
   for (int32_t layer_id = max_min_layer; layer_id >= 0; layer_id--) {
     acc_cost += trunk_cost[layer_id];
@@ -871,7 +871,7 @@ void SbpGraph<SbpSignature>::FindTrunk(
     this_node->SpreadTributaryLayer(op_name2sbp_node);
   }
 
-  // Summarize cost for each layer on the trunk, store it to avoid substraction of large values.
+  // Summarize cost for each layer on the trunk, store it to avoid subtraction of large values.
   trunk_cost.assign(max_min_layer + 1, 0);
   // tributary cost start from each min layer
   std::vector<double> tributary_cost(max_min_layer + 1, 0);
@@ -908,10 +908,10 @@ void SbpGraph<SbpSignature>::FindTrunk(
                                    transfer_cost_);
   }
 
-  // Reduce the wait time for trunk from the end to the begining
+  // Reduce the wait time for trunk from the end to the begin
   double acc_tributary_cost = outdated_tributary_cost[max_min_layer];
   double used_tributary_cost = 0.0;
-  double curr_wait_time;
+  double curr_wait_time = 0.0;
   for (int32_t layer_id = max_min_layer - 1; layer_id >= 0; layer_id--) {
     // Can not move it backward since we need to do this at the 0th layer.
     // At some moment, the cost haven't been used would disappear.
@@ -930,7 +930,7 @@ void SbpGraph<SbpSignature>::FindTrunk(
     // accumulate tributary cost at this layer
     acc_tributary_cost += outdated_tributary_cost[layer_id];
     // If we have more cost in tributaries, we reduce the wait time
-    // This code maintains ( acc_triburary_cost + used_tributary_cost )
+    // This code maintains ( acc_tributary_cost + used_tributary_cost )
     if (acc_tributary_cost > 0.0) {
       if (acc_tributary_cost > wait_time_) {
         curr_wait_time = transfer_cost_;
