@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/scalar.h"
