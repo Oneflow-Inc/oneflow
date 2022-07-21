@@ -449,4 +449,44 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+/*static*/ Maybe<void> IdShuffleCopyOutOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Split(ctx->inputs(), 0)
+      .Split(ctx->outputs(), 0)
+      .Broadcast(user_op::OpArg("num_unique_matrix", 0))
+      .Broadcast(user_op::OpArg("out_num_unique_matrix", 0))
+      .Broadcast(user_op::OpArg("cur_rank_num_unique", 0))
+      .Broadcast(user_op::OpArg("out_cur_rank_num_unique", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> IdShuffleCopyOutOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  *ctx->OutputShape("out_num_unique_matrix", 0) = ctx->InputShape("num_unique_matrix", 0);
+  *ctx->OutputShape("out_inverse_unique_partition_indices", 0) =
+      ctx->InputShape("inverse_unique_partition_indices", 0);
+  *ctx->OutputShape("out_cur_rank_num_unique", 0) = ctx->InputShape("cur_rank_num_unique", 0);
+  *ctx->OutputShape("out_cur_rank_unique_ids", 0) = ctx->InputShape("cur_rank_unique_ids", 0);
+  *ctx->OutputShape("out_cur_rank_unique_table_ids", 0) =
+      ctx->InputShape("cur_rank_unique_table_ids", 0);
+  *ctx->OutputShape("out_cur_rank_inverse_indices", 0) =
+      ctx->InputShape("cur_rank_inverse_indices", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> IdShuffleCopyOutOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> IdShuffleCopyOutOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out_num_unique_matrix", 0) = ctx->InputDType("num_unique_matrix", 0);
+  *ctx->OutputDType("out_inverse_unique_partition_indices", 0) =
+      ctx->InputDType("inverse_unique_partition_indices", 0);
+  *ctx->OutputDType("out_cur_rank_num_unique", 0) = ctx->InputDType("cur_rank_num_unique", 0);
+  *ctx->OutputDType("out_cur_rank_unique_ids", 0) = ctx->InputDType("cur_rank_unique_ids", 0);
+  *ctx->OutputDType("out_cur_rank_unique_table_ids", 0) =
+      ctx->InputDType("cur_rank_unique_table_ids", 0);
+  *ctx->OutputDType("out_cur_rank_inverse_indices", 0) =
+      ctx->InputDType("cur_rank_inverse_indices", 0);
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow
