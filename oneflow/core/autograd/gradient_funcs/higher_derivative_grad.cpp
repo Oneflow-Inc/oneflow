@@ -214,8 +214,11 @@ Maybe<void> ConvDataGradGrad::Capture(ConvDataGradGradCaptureState* ctx, const T
 
   if (!(ctx->w_requires_grad || ctx->grad_requires_grad)) { return Maybe<void>::Ok(); }
 
-  ctx->w_index = ctx->SaveTensorForBackward(inputs.at(1));     // w
-  ctx->grad_index = ctx->SaveTensorForBackward(inputs.at(0));  // grad
+  if (ctx->grad_requires_grad) {
+    ctx->w_index = ctx->SaveTensorForBackward(inputs.at(1));
+  } else {
+    ctx->grad_index = ctx->SaveTensorForBackward(inputs.at(0));
+  }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
@@ -251,13 +254,13 @@ Maybe<void> ConvDataGradGrad::Apply(const ConvDataGradGradCaptureState* ctx,
   if (ctx->grad_requires_grad) {
     const auto& w = ctx->SavedTensors().at(ctx->w_index);
     const int32_t ndims = ctx->kernel_size.size();
-    const auto Conv = (ndims == 1 ? functional::Conv1d
-                                  : (ndims == 2 ? functional::Conv2d
-                                                : (ndims == 3 ? functional::Conv3d : nullptr)));
-    CHECK_NOTNULL_OR_RETURN(Conv);  // NOLINT(maybe-need-error-msg)
+    const auto conv_op = (ndims == 1 ? functional::Conv1d
+                                     : (ndims == 2 ? functional::Conv2d
+                                                   : (ndims == 3 ? functional::Conv3d : nullptr)));
+    CHECK_NOTNULL_OR_RETURN(conv_op);  // NOLINT(maybe-need-error-msg)
     in_grads->at(0) =
-        JUST(Conv(out_grads.at(0), w, Optional<Tensor>(), ctx->strides, ctx->padding_before,
-                  ctx->dilation_rate, ctx->groups, ctx->data_format));
+        JUST(conv_op(out_grads.at(0), w, Optional<Tensor>(), ctx->strides, ctx->padding_before,
+                     ctx->dilation_rate, ctx->groups, ctx->data_format));
   }
 
   return Maybe<void>::Ok();
@@ -277,6 +280,7 @@ struct ConvFilterGradGradCaptureState : public AutoGradCaptureState {
   std::vector<int32_t> dilation_rate;
   int32_t groups;
 };
+
 class ConvFilterGradGrad : public OpExprGradFunction<ConvFilterGradGradCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
@@ -309,8 +313,8 @@ Maybe<void> ConvFilterGradGrad::Capture(ConvFilterGradGradCaptureState* ctx,
 
   if (!(ctx->x_requires_grad || ctx->grad_requires_grad)) { return Maybe<void>::Ok(); }
 
-  ctx->x_index = ctx->SaveTensorForBackward(inputs.at(1));     // x
-  ctx->grad_index = ctx->SaveTensorForBackward(inputs.at(0));  // grad
+  ctx->x_index = ctx->SaveTensorForBackward(inputs.at(1));
+  if (ctx->x_requires_grad) { ctx->grad_index = ctx->SaveTensorForBackward(inputs.at(0)); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
@@ -339,21 +343,21 @@ Maybe<void> ConvFilterGradGrad::Apply(const ConvFilterGradGradCaptureState* ctx,
     const auto& grad = ctx->SavedTensors().at(ctx->grad_index);
     const auto& x = ctx->SavedTensors().at(ctx->x_index);
     in_grads->at(1) = JUST(functional::ConvDataGrad(
-        grad, out_grads.at(0), /**/ JUST(x->detach()), num_spatial_dims, ctx->kernel_size,
-        ctx->strides, ctx->padding_before, ctx->dilation_rate, ctx->groups, ctx->data_format));
+        grad, out_grads.at(0), JUST(x->detach()), num_spatial_dims, ctx->kernel_size, ctx->strides,
+        ctx->padding_before, ctx->dilation_rate, ctx->groups, ctx->data_format));
   }
 
   // grad_grad_w
   if (ctx->grad_requires_grad) {
     const auto& x = ctx->SavedTensors().at(ctx->x_index);
     const int32_t ndims = ctx->kernel_size.size();
-    const auto Conv = (ndims == 1 ? functional::Conv1d
-                                  : (ndims == 2 ? functional::Conv2d
-                                                : (ndims == 3 ? functional::Conv3d : nullptr)));
-    CHECK_NOTNULL_OR_RETURN(Conv);  // NOLINT(maybe-need-error-msg)
+    const auto conv_op = (ndims == 1 ? functional::Conv1d
+                                     : (ndims == 2 ? functional::Conv2d
+                                                   : (ndims == 3 ? functional::Conv3d : nullptr)));
+    CHECK_NOTNULL_OR_RETURN(conv_op);  // NOLINT(maybe-need-error-msg)
     in_grads->at(0) =
-        JUST(Conv(x, out_grads.at(0), Optional<Tensor>(), ctx->strides, ctx->padding_before,
-                  ctx->dilation_rate, ctx->groups, ctx->data_format));
+        JUST(conv_op(x, out_grads.at(0), Optional<Tensor>(), ctx->strides, ctx->padding_before,
+                     ctx->dilation_rate, ctx->groups, ctx->data_format));
   }
 
   return Maybe<void>::Ok();
