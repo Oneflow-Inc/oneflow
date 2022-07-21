@@ -13,11 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <glog/logging.h>
-#include <any>
-#include <functional>
-#include <memory>
-#include "llvm/ADT/StringRef.h"
+#include "oneflow/ir/oneflow-extension/include/PyAst/Ast.h"
+#include "oneflow/ir/oneflow-extension/include/PyAst/AstMlirGen.h"
+
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
@@ -54,18 +52,22 @@ limitations under the License.
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/Transforms/Passes.h"
+
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
-#include "mlir/IR/MLIRContext.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include <numeric>
+#include "llvm/ADT/StringRef.h"
 
-#include "mlir/Transforms/Passes.h"
-#include "oneflow/ir/oneflow-extension/include/PyAst/Ast.h"
-#include "oneflow/ir/oneflow-extension/include/PyAst/AstMlirGen.h"
+#include <glog/logging.h>
+#include <numeric>
+#include <any>
+#include <functional>
+#include <memory>
 
 using llvm::ArrayRef;
 using llvm::ScopedHashTableScope;
