@@ -538,7 +538,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
 
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
-    return helper_->MutTensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
+    return &helper_->TensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
 
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
@@ -620,7 +620,7 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
   const ParallelContext& parallel_ctx() const override { return helper_->parallel_ctx(call_ctx_); }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
-    return helper_->MutTensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
+    return &helper_->TensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
   const ArgVec& inputs() const override { return helper_->inputs(); }
   const ArgVec& outputs() const override { return helper_->outputs(); }
