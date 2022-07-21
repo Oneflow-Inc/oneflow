@@ -181,7 +181,7 @@ void EagerNcclCommMgr::CreateCommFromPlan(const Plan& plan) {
     if (!NeedUnifiedNcclCommInit(op_conf)) { continue; }
     if (!op_attr->has_parallel_conf_signature()) { continue; }
     if (!op_attr->parallel_conf_signature().has_op_parallel_conf()) { continue; }
-    
+
     std::vector<std::pair<int64_t, int64_t>> device_vec;
     ParallelDesc parallel_desc(op_attr->parallel_conf_signature().op_parallel_conf());
     for (int64_t parallel_id = 0; parallel_id < parallel_desc.parallel_num(); ++parallel_id) {

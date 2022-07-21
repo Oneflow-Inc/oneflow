@@ -531,9 +531,9 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
        && !NdSbpHasPartialParallel(consumer_sbp_parallel))
       && producer_parallel_desc.device_type() == DeviceType::kCUDA
       && consumer_parallel_desc.device_type() == DeviceType::kCUDA) {
-    return Ratio4GeneralBasicCommunication(producer_sbp_parallel, consumer_sbp_parallel,
-                                           logical_blob_desc, producer_parallel_desc,
-                                           consumer_parallel_desc)
+    return Cost4GeneralBasicCommunication(producer_sbp_parallel, consumer_sbp_parallel,
+                                          logical_blob_desc, producer_parallel_desc,
+                                          consumer_parallel_desc)
            + GetTransferCost();
   }
 #endif  // WITH_CUDA
@@ -695,9 +695,9 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
        && !NdSbpHasPartialParallel(consumer_sbp_parallel))
       && producer_parallel_desc.device_type() == DeviceType::kCUDA
       && consumer_parallel_desc.device_type() == DeviceType::kCUDA) {
-    return Ratio4GeneralBasicCommunication(producer_sbp_parallel, consumer_sbp_parallel,
-                                           logical_blob_desc, producer_parallel_desc,
-                                           consumer_parallel_desc)
+    return Cost4GeneralBasicCommunication(producer_sbp_parallel, consumer_sbp_parallel,
+                                          logical_blob_desc, producer_parallel_desc,
+                                          consumer_parallel_desc)
            + GetTransferCost();
   }
 #endif  // WITH_CUDA
@@ -804,11 +804,11 @@ double ComputeSbpInferPriority(const NdSbp& producer_nd_sbp, const NdSbp& consum
 // Cost = ratio * data amount
 // When we get the this function, either producer_sbp_parallel != consumer_sbp_parallel
 // or producer_parallel_desc != consumer_parallel_desc
-double Ratio4GeneralBasicCommunication(const NdSbp& producer_sbp_parallel,
-                                       const NdSbp& consumer_sbp_parallel,
-                                       const BlobDesc& logical_blob_desc,
-                                       const ParallelDesc& producer_parallel_desc,
-                                       const ParallelDesc& consumer_parallel_desc) {
+double Cost4GeneralBasicCommunication(const NdSbp& producer_sbp_parallel,
+                                      const NdSbp& consumer_sbp_parallel,
+                                      const BlobDesc& logical_blob_desc,
+                                      const ParallelDesc& producer_parallel_desc,
+                                      const ParallelDesc& consumer_parallel_desc) {
   // The upper bound of the amount of the transferred data
   int32_t producer_partial_ratio =
       PartialRatio4Producer(producer_sbp_parallel, producer_parallel_desc);
