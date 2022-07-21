@@ -28,8 +28,6 @@ limitations under the License.
 #include <iostream>
 #include <string>
 
-
-
 namespace mlir {
 class ExecutionEngine;
 }
