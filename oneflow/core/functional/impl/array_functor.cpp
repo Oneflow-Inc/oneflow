@@ -1225,9 +1225,9 @@ class InplaceToContiguousFunctor {
     std::shared_ptr<EagerLocalTensorImpl> final_tensor_impl =
         std::make_shared<EagerLocalTensorImpl>(JUST(input->tensor_storage()),
                                                input->requires_grad(), input->is_leaf());
-    final_tensor_impl->set_retain_grad(input->retain_grad());
-    final_tensor_impl->InitEagerBlobObject(new_tensor_meta,
-                                           JUST(blob_object->compute_local_dep_object()));
+    JUST(final_tensor_impl->set_retain_grad(input->retain_grad()));
+    JUST(final_tensor_impl->InitEagerBlobObject(new_tensor_meta,
+                                                JUST(blob_object->compute_local_dep_object())));
     JUST(JUST(input->AsLocalTensor())->set_impl(final_tensor_impl));
 
     // assign contiguous tensor data

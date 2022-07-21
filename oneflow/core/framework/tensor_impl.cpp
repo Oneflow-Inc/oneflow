@@ -107,7 +107,7 @@ Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
     const Symbol<one::LocalTensorMeta>& local_tensor_meta,
     const std::shared_ptr<const one::MutLocalTensorMeta>& mut_local_tensor_meta,
     const intrusive::shared_ptr<LocalDepObject>& dep_object) {
-  CHECK_OR_RETURN(static_cast<bool>(local_tensor_meta->device()));
+  CHECK_OR_RETURN(static_cast<bool>(local_tensor_meta->device()));  // NOLINT
   const auto& mem_case = local_tensor_meta->device()->mem_case();
 
   if (tensor_storage_) {

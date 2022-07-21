@@ -38,6 +38,7 @@ EagerBlobObject::EagerBlobObject(
       mem_ptr_for_allocation_compuation_pipelining_(nullptr),
       inited_mem_ptr_for_allocation_compuation_pipelining_(false),
       is_non_pod_object_placement_newed_(false),
+      pin_memory_(false),
       compute_local_dep_object_(dep_object),
       blob_desc_(static_cast<bool>(mut_local_tensor_meta)
                      ? std::const_pointer_cast<Shape>(mut_local_tensor_meta->shape_ptr())

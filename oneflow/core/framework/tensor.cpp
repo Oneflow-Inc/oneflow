@@ -72,7 +72,7 @@ std::shared_ptr<Tensor> Parameter::pin_memory() const {
   } else {
     const auto& impl = std::make_shared<EagerLocalTensorImpl>(requires_grad, is_leaf);
     const auto& dep_object = NewLocalDepObject();
-    impl->InitEagerBlobObject(tensor_meta, dep_object);
+    JUST(impl->InitEagerBlobObject(tensor_meta, dep_object));
     return std::make_shared<LocalTensor>(impl);
   }
 }
