@@ -16,6 +16,11 @@ limitations under the License.
 #ifndef ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_AST_JIT_H_
 #define ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_AST_JIT_H_
 
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/common/singleton.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/ir/oneflow-extension/include/PyAst/Ast.h"
+
 #include <cstdint>
 #include <memory>
 #include <unordered_map>
@@ -23,10 +28,7 @@ limitations under the License.
 #include <iostream>
 #include <string>
 
-#include "oneflow/core/common/just.h"
-#include "oneflow/core/common/singleton.h"
-#include "oneflow/core/common/util.h"
-#include "oneflow/ir/oneflow-extension/include/PyAst/Ast.h"
+
 
 namespace mlir {
 class ExecutionEngine;
