@@ -28,7 +28,7 @@ namespace oneflow {
                      mask_desc.shape().At(mask_shape.NumAxes() - 1))
       << " last dim of x and mask is not equal.";
   *ctx->MutOutputShape("y", 0) = x_desc.shape();
-  *ctx->OutputIsDynamic("y", 0) = x_desc.is_dynamic();
+  *ctx->MutOutputIsDynamic("y", 0) = x_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedScaleMaskSoftmaxOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
@@ -39,7 +39,7 @@ namespace oneflow {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
   CHECK_EQ_OR_RETURN(mask_desc.data_type(), DataType::kBool) << " mask dtype only support bool.";
-  *ctx->OutputDType("y", 0) = x_desc.data_type();
+  *ctx->MutOutputDType("y", 0) = x_desc.data_type();
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedScaleMaskSoftmaxOp::ModifyInputArg(
@@ -83,7 +83,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(y_desc.shape().At(y_desc.shape().NumAxes() - 1),
                      mask_desc.shape().At(mask_desc.shape().NumAxes() - 1))
       << " last dim of y and mask is not equal.";
-  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
   *dx_desc->mut_shape() = dy_desc.shape();
   *dx_desc->mut_is_dynamic() = dy_desc.is_dynamic();
   return Maybe<void>::Ok();
@@ -99,7 +99,7 @@ namespace oneflow {
   const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
   CHECK_EQ_OR_RETURN(dy_desc.data_type(), y_desc.data_type()) << " dy and y dtype must equal";
   CHECK_EQ_OR_RETURN(mask_desc.data_type(), DataType::kBool) << " mask dtype only support bool.";
-  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
   *dx_desc->mut_data_type() = dy_desc.data_type();
   return Maybe<void>::Ok();
 }

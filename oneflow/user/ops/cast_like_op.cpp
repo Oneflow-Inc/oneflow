@@ -20,7 +20,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> CastLikeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -65,7 +65,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> CastLikeOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dtype_like_tensor_desc = ctx->InputTensorDesc("dtype_like", 0);
-  user_op::TensorDesc* output_tensor_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* output_tensor_desc = ctx->MutOutputTensorDesc("out", 0);
   *output_tensor_desc->mut_data_type() = dtype_like_tensor_desc.data_type();
   return Maybe<void>::Ok();
 }

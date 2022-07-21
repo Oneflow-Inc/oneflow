@@ -85,7 +85,7 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
       }
     }
   }
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   const int64_t max_dim_size = ctx->Attr<int64_t>("max_dim_size");
   CHECK_LE_OR_RETURN(out_dim_vec.at(axis), max_dim_size)
       << "The out shape at axis " << axis << " should be less equal to " << max_dim_size;
@@ -130,7 +130,7 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
     CHECK_EQ_OR_RETURN(in_desc.data_type(), first_in_desc.data_type())
         << "The input's data type should be equal to first input's data type. ";
   }
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_data_type() = first_in_desc.data_type();
   return Maybe<void>::Ok();
 }
@@ -184,7 +184,7 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
       << "The axis should be less equal than num axes of `like` tensor. ";
   FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
     const user_op::TensorDesc& like_i_desc = ctx->InputTensorDesc("like", i);
-    user_op::TensorDesc* out_i_desc = ctx->OutputTensorDesc("out", i);
+    user_op::TensorDesc* out_i_desc = ctx->MutOutputTensorDesc("out", i);
     CHECK_EQ_OR_RETURN(like_i_desc.shape().NumAxes(), like_num_axes)
         << "The num axes of `like` tensor at index " << i
         << " should be equal to first `like` tensor. ";
@@ -230,7 +230,7 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
 /*static*/ Maybe<void> StackGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
-    user_op::TensorDesc* out_i_desc = ctx->OutputTensorDesc("out", i);
+    user_op::TensorDesc* out_i_desc = ctx->MutOutputTensorDesc("out", i);
     *out_i_desc->mut_data_type() = in_desc.data_type();
   }
   return Maybe<void>::Ok();

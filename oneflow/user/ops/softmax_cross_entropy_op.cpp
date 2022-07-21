@@ -52,8 +52,8 @@ namespace oneflow {
     out_dim_vector.emplace_back(prediction_desc.shape().At(i));
   }
   *ctx->MutOutputShape("prob", 0) = ctx->InputShape("prediction", 0);
-  *ctx->OutputIsDynamic("prob", 0) = ctx->InputIsDynamic("prediction", 0);
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  *ctx->MutOutputIsDynamic("prob", 0) = ctx->InputIsDynamic("prediction", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_is_dynamic() = prediction_desc.is_dynamic();
   *out_desc->mut_shape() = Shape(out_dim_vector);
   return Maybe<void>::Ok();
@@ -69,8 +69,8 @@ namespace oneflow {
       << "label and prediction are expected to have the same dtype, but found "
       << DataType_Name(label_desc.data_type()) << " and "
       << DataType_Name(prediction_desc.data_type());
-  *ctx->OutputDType("prob", 0) = ctx->InputDType("prediction", 0);
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  *ctx->MutOutputDType("prob", 0) = ctx->InputDType("prediction", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_data_type() = prediction_desc.data_type();
   return Maybe<void>::Ok();
 }
@@ -119,7 +119,7 @@ namespace oneflow {
       << Error::RuntimeError() << "The size of label " << label_desc.shape()
       << " must match the size of prob " << prob_desc.shape();
   *ctx->MutOutputShape("prediction_diff", 0) = ctx->InputShape("prob", 0);
-  *ctx->OutputIsDynamic("prediction_diff", 0) = ctx->InputIsDynamic("prob", 0);
+  *ctx->MutOutputIsDynamic("prediction_diff", 0) = ctx->InputIsDynamic("prob", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SoftmaxCrossEntropyGradOp::InferPhysicalTensorDesc(
@@ -136,7 +136,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(dy_desc.data_type(), prob_desc.data_type())
       << Error::TypeError() << "dy and prob are expected to have the same dtype, but found "
       << DataType_Name(dy_desc.data_type()) << " and " << DataType_Name(prob_desc.data_type());
-  *ctx->OutputDType("prediction_diff", 0) = ctx->InputDType("prob", 0);
+  *ctx->MutOutputDType("prediction_diff", 0) = ctx->InputDType("prob", 0);
   return Maybe<void>::Ok();
 }
 

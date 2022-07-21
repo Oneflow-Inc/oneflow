@@ -35,7 +35,7 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> MedianOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("output", 0) = ctx->InputDType("input", 0);
+  *ctx->MutOutputDType("output", 0) = ctx->InputDType("input", 0);
   return Maybe<void>::Ok();
 }
 

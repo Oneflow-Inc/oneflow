@@ -26,7 +26,7 @@ Maybe<void> InferNmsTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferNmsDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kInt8;
+  *ctx->MutOutputDType("out", 0) = DataType::kInt8;
   return Maybe<void>::Ok();
 }
 

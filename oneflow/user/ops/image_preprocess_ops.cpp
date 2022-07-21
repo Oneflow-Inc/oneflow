@@ -31,7 +31,7 @@ namespace oneflow {
     CHECK_OR_RETURN(mirror_tensor.shape().NumAxes() == 1
                     && in_tensor.shape().At(0) == mirror_tensor.shape().At(0));
   }
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   int64_t N = in_tensor.shape().At(0);
   int64_t H = ctx->Attr<int64_t>("crop_h");
   int64_t W = ctx->Attr<int64_t>("crop_w");
@@ -71,7 +71,7 @@ namespace oneflow {
     CHECK_EQ_OR_RETURN(mirror_tensor.data_type(), DataType::kInt8);
   }
 
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   DataType output_dtype = ctx->Attr<DataType>("output_dtype");
   CHECK_EQ_OR_RETURN(output_dtype,
                      DataType::kFloat);  // only support float now; for float16 in future
@@ -89,7 +89,7 @@ namespace oneflow {
     CHECK_OR_RETURN(mirror_tensor.shape().NumAxes() == 1
                     && in_tensor.shape().At(0) == mirror_tensor.shape().At(0));
   }
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   int64_t N = in_tensor.shape().At(0);
   int64_t H = ctx->Attr<int64_t>("crop_h");
   int64_t W = ctx->Attr<int64_t>("crop_w");
@@ -134,7 +134,7 @@ namespace oneflow {
     const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
     CHECK_EQ_OR_RETURN(mirror_tensor.data_type(), DataType::kInt8);
   }
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   DataType output_dtype = ctx->Attr<DataType>("output_dtype");
   CHECK_EQ_OR_RETURN(output_dtype,
                      DataType::kFloat);  // only support float now; for float16 in future
@@ -143,7 +143,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CoinFlipOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   int64_t batch_size = ctx->Attr<int64_t>("batch_size");
   *out_tensor->mut_shape() = Shape({batch_size});
   return Maybe<void>::Ok();
@@ -202,14 +202,14 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CoinFlipOp::InferDataType(user_op::InferContext* ctx) {
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   *out_tensor->mut_data_type() = DataType::kInt8;
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> ImageRandomCropOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   *out_tensor->mut_shape() = in_tensor.shape();
   *out_tensor->mut_is_dynamic() = in_tensor.is_dynamic();
   return Maybe<void>::Ok();
@@ -234,7 +234,7 @@ namespace oneflow {
 /* static */ Maybe<void> ImageRandomCropOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   CHECK_OR_RETURN(in_tensor.data_type() == DataType::kTensorBuffer);
-  *ctx->OutputDType("out", 0) = in_tensor.data_type();
+  *ctx->MutOutputDType("out", 0) = in_tensor.data_type();
   return Maybe<void>::Ok();
 }
 

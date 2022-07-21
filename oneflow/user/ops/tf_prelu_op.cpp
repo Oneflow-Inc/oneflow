@@ -39,7 +39,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> TfPreluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-  user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
   const Shape& alpha_shape = ctx->InputShape("alpha", 0);
   CHECK_EQ_OR_RETURN(x_desc.shape().NumAxes(), alpha_shape.NumAxes() + 1);
   FOR_RANGE(int64_t, i, 1, x_desc.shape().NumAxes()) {
@@ -54,7 +54,7 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> TfPreluOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -91,7 +91,7 @@ namespace oneflow {
 /*static*/ Maybe<void> TfPreluGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
   const user_op::TensorDesc& alpha_desc = ctx->InputTensorDesc("alpha", 0);
   CHECK_EQ_OR_RETURN(x_desc.shape().NumAxes(), alpha_desc.shape().NumAxes() + 1);
   FOR_RANGE(int64_t, i, 1, x_desc.shape().NumAxes()) {
@@ -103,15 +103,15 @@ namespace oneflow {
   *dx_desc->mut_shape() = x_desc.shape();
   *dx_desc->mut_is_dynamic() = x_desc.is_dynamic();
   *ctx->MutOutputShape("alpha_diff", 0) = alpha_desc.shape();
-  *ctx->OutputIsDynamic("alpha_diff", 0) = alpha_desc.is_dynamic();
+  *ctx->MutOutputIsDynamic("alpha_diff", 0) = alpha_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TfPreluGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> TfPreluGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
-  *ctx->OutputDType("alpha_diff", 0) = ctx->InputDType("alpha", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("alpha_diff", 0) = ctx->InputDType("alpha", 0);
   return Maybe<void>::Ok();
 }
 

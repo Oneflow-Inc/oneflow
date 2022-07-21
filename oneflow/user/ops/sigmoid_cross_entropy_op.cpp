@@ -36,7 +36,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(label_desc.shape(), prediction_desc.shape())
       << Error::RuntimeError() << "The size of label " << label_desc.shape()
       << " must match the size of prediction " << prediction_desc.shape();
-  user_op::TensorDesc* loss_desc = ctx->OutputTensorDesc("loss", 0);
+  user_op::TensorDesc* loss_desc = ctx->MutOutputTensorDesc("loss", 0);
   *loss_desc->mut_shape() = prediction_desc.shape();
   *loss_desc->mut_is_dynamic() = prediction_desc.is_dynamic();
   return Maybe<void>::Ok();
@@ -45,7 +45,7 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SigmoidCrossEntropyOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("loss", 0) = ctx->InputDType("prediction", 0);
+  *ctx->MutOutputDType("loss", 0) = ctx->InputDType("prediction", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SigmoidCrossEntropyOp::ModifyInputArg(
@@ -79,7 +79,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(loss_diff_desc.shape(), prediction_desc.shape())
       << Error::RuntimeError() << "The size of loss_diff " << loss_diff_desc.shape()
       << " must match the size of prediction " << prediction_desc.shape();
-  user_op::TensorDesc* prediction_diff = ctx->OutputTensorDesc("prediction_diff", 0);
+  user_op::TensorDesc* prediction_diff = ctx->MutOutputTensorDesc("prediction_diff", 0);
   *prediction_diff->mut_shape() = prediction_desc.shape();
   *prediction_diff->mut_is_dynamic() = prediction_desc.is_dynamic();
   return Maybe<void>::Ok();
@@ -89,7 +89,7 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SigmoidCrossEntropyGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("prediction_diff", 0) = ctx->InputDType("prediction", 0);
+  *ctx->MutOutputDType("prediction_diff", 0) = ctx->InputDType("prediction", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SigmoidCrossEntropyGradOp::ModifyInputArg(

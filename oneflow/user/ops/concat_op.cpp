@@ -72,7 +72,7 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
     }
   }
 
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   const int64_t max_dim_size = ctx->Attr<int64_t>("max_dim_size");
   CHECK_LE_OR_RETURN(out_dim_vec.at(axis), max_dim_size);
   if (dynamic_dim_size == 0) {
@@ -107,7 +107,7 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
         ctx->InputTensorDesc(in_arg_pair.first, in_arg_pair.second);
     CHECK_EQ_OR_RETURN(in_desc.data_type(), first_in_desc.data_type());
   }
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_data_type() = first_in_desc.data_type();
   return Maybe<void>::Ok();
 }

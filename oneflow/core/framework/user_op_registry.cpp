@@ -228,7 +228,7 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
                           == in_physical.shape());
         }
         for (const auto& pair : ctx->outputs()) {
-          TensorDesc* desc = ctx->OutputTensorDesc(pair.first, pair.second);
+          TensorDesc* desc = ctx->MutOutputTensorDesc(pair.first, pair.second);
           *desc = *ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
           const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex(pair.first, pair.second);
           *desc->mut_shape() = *JUST(

@@ -39,7 +39,7 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(NDims, strides.size());
     CHECK_EQ_OR_RETURN(NDims, padding_before.size());
 
-    user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+    user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
     DimVector out_shape(NDims + 2);
     out_shape.at(0) = in.shape().At(0);
     const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
@@ -248,7 +248,7 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
 }
 
 /* static */ Maybe<void> Conv1DOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -270,7 +270,7 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
 }
 
 /* static */ Maybe<void> Conv2DOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -292,7 +292,7 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
 }
 
 /* static */ Maybe<void> Conv3DOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -309,7 +309,7 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
     CHECK_EQ_OR_RETURN(add_to_output.shape(), x_like.shape());
   }
   *ctx->MutOutputShape("dx", 0) = ctx->InputShape("x_like", 0);
-  *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x_like", 0);
+  *ctx->MutOutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x_like", 0);
   return Maybe<void>::Ok();
 }
 
@@ -342,7 +342,7 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
     const user_op::TensorDesc& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
     CHECK_EQ_OR_RETURN(add_to_output.data_type(), x_like.data_type());
   }
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("x_like", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x_like", 0);
   return Maybe<void>::Ok();
 }
 
@@ -378,7 +378,7 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
     filter_diff_dim_vec.emplace_back(x.shape().dim_vec().back() / groups);
   }
 
-  user_op::TensorDesc* filter_diff = ctx->OutputTensorDesc("filter_diff", 0);
+  user_op::TensorDesc* filter_diff = ctx->MutOutputTensorDesc("filter_diff", 0);
   *filter_diff->mut_shape() = Shape(filter_diff_dim_vec);
   filter_diff->set_is_dynamic(false);
 
@@ -407,14 +407,14 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   CHECK_EQ_OR_RETURN(x.data_type(), dy.data_type());
-  user_op::TensorDesc* filter_diff = ctx->OutputTensorDesc("filter_diff", 0);
+  user_op::TensorDesc* filter_diff = ctx->MutOutputTensorDesc("filter_diff", 0);
   *filter_diff->mut_data_type() = x.data_type();
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> ConvBiasGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
-  user_op::TensorDesc* bias_diff = ctx->OutputTensorDesc("bias_diff", 0);
+  user_op::TensorDesc* bias_diff = ctx->MutOutputTensorDesc("bias_diff", 0);
 
   int32_t num_spatial_dims = ctx->Attr<int32_t>("num_spatial_dims");
   std::string data_format = ctx->Attr<std::string>("data_format");
@@ -456,7 +456,7 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
 
 /* static */ Maybe<void> ConvBiasGradOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
-  user_op::TensorDesc* bias_diff = ctx->OutputTensorDesc("bias_diff", 0);
+  user_op::TensorDesc* bias_diff = ctx->MutOutputTensorDesc("bias_diff", 0);
   *bias_diff->mut_data_type() = dy.data_type();
   return Maybe<void>::Ok();
 }

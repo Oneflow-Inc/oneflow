@@ -26,7 +26,7 @@ namespace oneflow {
   // For 0-dim Tensor
   CHECK_GE_OR_RETURN(indices_desc.shape().NumAxes(), 0)
       << "indices dim must be great or equal than 0";
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_is_dynamic() = indices_desc.is_dynamic();
   DimVector dim_vec = indices_desc.shape().dim_vec();
   dim_vec.emplace_back(depth);
@@ -62,7 +62,7 @@ namespace oneflow {
 /* static */ Maybe<void> OneHotOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& indices_desc = ctx->InputTensorDesc("indices", 0);
   CHECK_OR_RETURN(IsIndexDataType(indices_desc.data_type()));
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   DataType dtype = ctx->Attr<DataType>("dtype");
   *out_desc->mut_data_type() = dtype;
   return Maybe<void>::Ok();

@@ -566,7 +566,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
                        && ChannelsLastMatmulPrimitiveExists())                              \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                         \
         size_t tmp_buffer_size = 0;                                                         \
-        const auto& out_shape = ctx->OutputTensorDesc("out", 0)->shape();                   \
+        const auto& out_shape = ctx->OutputTensorDesc("out", 0).shape();                    \
         const auto& weight_shape = ctx->InputTensorDesc("weight", 0).shape();               \
                                                                                             \
         int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));              \
@@ -781,7 +781,7 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                             \
         size_t tmp_buffer_size = 0;                                                             \
         const auto& out_diff_shape = ctx->InputTensorDesc("dy", 0).shape();                     \
-        const auto& weight_diff_shape = ctx->OutputTensorDesc("filter_diff", 0)->shape();       \
+        const auto& weight_diff_shape = ctx->OutputTensorDesc("filter_diff", 0).shape();        \
                                                                                                 \
         int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));                  \
         tmp_buffer_size +=                                                                      \

@@ -22,7 +22,7 @@ namespace oneflow {
   const int32_t start_dim = ctx->Attr<int32_t>("start_dim");
   const int32_t end_dim = ctx->Attr<int32_t>("end_dim");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor_desc = ctx->MutOutputTensorDesc("out", 0);
   const Shape& in_shape = ExpandDimIf0D(in_tensor_desc.shape());
   CHECK_GE_OR_RETURN(start_dim, 0);
   CHECK_LT_OR_RETURN(start_dim, in_shape.NumAxes());
@@ -82,7 +82,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FlattenOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 

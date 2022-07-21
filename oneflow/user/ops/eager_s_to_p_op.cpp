@@ -41,7 +41,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerSToPOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 

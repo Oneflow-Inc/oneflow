@@ -276,9 +276,9 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
 };
 
 size_t InferAllGatherNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
-  return GetCudaAlignedSize(out_tensor->shape().elem_cnt()
-                            * GetSizeOfDataType(out_tensor->data_type()));
+  const user_op::TensorDesc& out_tensor = ctx->OutputTensorDesc("out", 0);
+  return GetCudaAlignedSize(out_tensor.shape().elem_cnt()
+                            * GetSizeOfDataType(out_tensor.data_type()));
 }
 
 template<typename T>
@@ -348,9 +348,9 @@ class NcclLogicalReduceScatterNoncontinuous final : public user_op::OpKernel {
 };
 
 size_t InferReduceScatterNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* in_tensor = ctx->OutputTensorDesc("in", 0);
-  return GetCudaAlignedSize(in_tensor->shape().elem_cnt()
-                            * GetSizeOfDataType(in_tensor->data_type()));
+  const user_op::TensorDesc& in_tensor = ctx->OutputTensorDesc("in", 0);
+  return GetCudaAlignedSize(in_tensor.shape().elem_cnt()
+                            * GetSizeOfDataType(in_tensor.data_type()));
 }
 
 template<typename T>

@@ -98,7 +98,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
         << "The size of slice tuple must be equal to the size of value tensor at dimension " << i
         << ", but got " << (stop - start + step - 1) / step << " and " << value_shape.At(i);
   }
-  auto* y_desc = ctx->OutputTensorDesc("y", 0);
+  auto* y_desc = ctx->MutOutputTensorDesc("y", 0);
   *y_desc->mut_shape() = ref_desc.shape();
   *y_desc->mut_is_dynamic() = ref_desc.is_dynamic();
   return Maybe<void>::Ok();
@@ -111,7 +111,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   const user_op::TensorDesc& value_desc = ctx->InputTensorDesc("value", 0);
   CHECK_OR_RETURN(ref_desc.data_type() == value_desc.data_type())
       << Error::TypeError() << "Tensors ref and value must have same type";
-  auto* y_desc = ctx->OutputTensorDesc("y", 0);
+  auto* y_desc = ctx->MutOutputTensorDesc("y", 0);
   *y_desc->mut_data_type() = ref_desc.data_type();
   return Maybe<void>::Ok();
 }
@@ -202,7 +202,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -259,7 +259,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
 /*static*/ Maybe<void> SliceGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   Shape logical_shape = ctx->Attr<Shape>("like_shape");
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
   *dx_desc->mut_is_dynamic() = dy_desc.is_dynamic();
 
   const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("dx", 0);
@@ -273,7 +273,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceGradOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,

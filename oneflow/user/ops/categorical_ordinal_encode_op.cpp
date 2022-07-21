@@ -72,7 +72,7 @@ namespace oneflow {
   CHECK_OR_RETURN(IsIndexDataType(data_type));
   CHECK_EQ_OR_RETURN(ctx->InputDType("table", 0), data_type);
   CHECK_EQ_OR_RETURN(ctx->InputDType("size", 0), data_type);
-  *ctx->OutputDType("out", 0) = data_type;
+  *ctx->MutOutputDType("out", 0) = data_type;
   return Maybe<void>::Ok();
 }
 
