@@ -15,16 +15,14 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/common/wrap_dim_utils.h"
 
 namespace oneflow {
 
 namespace {
 
-int32_t TransformNegativeAxisToPositive(int32_t axis, const int32_t num_axes) {
-  axis = axis < 0 ? axis + num_axes + 1 : axis;
-  CHECK_GE(axis, 0);
-  CHECK_LE(axis, num_axes);
-  return axis;
+Maybe<int32_t> TransformNegativeAxisToPositive(int32_t axis, const int32_t num_axes) {
+  return JUST(maybe_wrap_dim(axis, num_axes + 1));
 }
 
 }  // namespace
@@ -33,7 +31,7 @@ int32_t TransformNegativeAxisToPositive(int32_t axis, const int32_t num_axes) {
   const Shape& in_shape = ctx->InputShape("in", 0);
   Shape* out_shape = ctx->OutputShape("out", 0);
   const int32_t axis =
-      TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_shape.NumAxes());
+      JUST(TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_shape.NumAxes()));
 
   auto dim_vec = in_shape.dim_vec();
   dim_vec.insert(dim_vec.begin() + axis, 1);
@@ -47,8 +45,8 @@ int32_t TransformNegativeAxisToPositive(int32_t axis, const int32_t num_axes) {
 
 /* static */ Maybe<void> ExpandDimsOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-  const int32_t axis =
-      TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_tensor.shape().NumAxes());
+  const int32_t axis = JUST(
+      TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_tensor.shape().NumAxes()));
 
   auto dim_vec = in_tensor.shape().dim_vec();
   FOR_RANGE(int32_t, in_axis, 0, dim_vec.size()) {

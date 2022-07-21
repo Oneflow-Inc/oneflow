@@ -23,8 +23,8 @@ namespace oneflow {
   const int32_t diagonal = ctx->Attr<int32_t>("diagonal");
   const ShapeView& in_shape = in.shape();
   const int32_t in_dim = in_shape.NumAxes();
-  CHECK_GE_OR_RETURN(in_dim, 1);
-  CHECK_LE_OR_RETURN(in_dim, 2);
+  CHECK_OR_RETURN(in_dim >= 1 && in_dim <= 2)
+      << Error::RuntimeError() << "matrix or a vector expected";
 
   DimVector out_dim_vec = {0};
   if (in_dim == 1) {
