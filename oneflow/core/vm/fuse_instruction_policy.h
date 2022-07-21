@@ -61,9 +61,6 @@ class FuseInstructionPolicy final : public InstructionPolicy {
 
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
-  Dependence* stream_sequential_dependence() const override {
-    return stream_sequential_dependence_;
-  }
 
   InstructionList* mut_instruction_list() { return &instruction_list_; }
   void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {}
@@ -89,7 +86,6 @@ class FuseInstructionPolicy final : public InstructionPolicy {
   InstructionList instruction_list_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
-  Dependence* stream_sequential_dependence_;
 };
 
 }  // namespace vm
