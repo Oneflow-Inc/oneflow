@@ -26,6 +26,7 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "conv_bias_grad",
                                "amp_white_identity",
                                "broadcast_matmul",
+                               "broadcast_matmul_grad_b",
                                "fused_self_attention_query_mul_key_and_value",
                                "fused_self_attention_query_mul_key_and_value_grad",
                                "prelu",
@@ -69,8 +70,10 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "sqrt",
                               "sqrt_grad",
                               "scalar_mul",
+                              "scalar_mul_by_tensor",
                               "scalar_add",
                               "scalar_div",
+                              "scalar_pow",
                               "broadcast_add",
                               "broadcast_sub",
                               "broadcast_mul",
@@ -105,13 +108,17 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "fused_bias_add_gelu",
                               "fused_bias_add_gelu_grad",
                               "fused_bias_add_mask_scale",
-                              "acc"};
+                              "acc",
+                              "reciprocal",
+                              "reciprocal_no_nan"};
   return gray_list;
 }
 
 const AMPList& AutoMixedPrecisionLists::ClearList() {
   // TODO(niuchong): tuple_identity
-  static AMPList clear_list = {"gather",
+  static AMPList clear_list = {"broadcast_like",
+                               "gather",
+                               "unsorted_segment_sum_like",
                                "tf_max_pool_1d",
                                "tf_max_pool_1d_grad",
                                "tf_max_pool_2d",
@@ -138,6 +145,8 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "squeeze",
                                "embedding",
                                "embedding_grad",
+                               "expand",
+                               "expand_grad",
                                "expand_dims",
                                "cast_to_static_shape",
                                "parallel_cast",
@@ -149,7 +158,8 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "nvtx_start",
                                "nvtx_end",
                                "narrow",
-                               "narrow_grad"};
+                               "narrow_grad",
+                               "ones_like"};
 
   return clear_list;
 }
