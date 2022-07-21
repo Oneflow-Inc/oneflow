@@ -40,6 +40,8 @@ class DtrCudaAllocator final : public Allocator {
   void set_left(bool is_left) { left = is_left; }
   bool left = true;
 
+  size_t iterate_group_index() const;
+
  private:
   using offset_t = size_t;
 
@@ -102,7 +104,8 @@ class DtrCudaAllocator final : public Allocator {
   struct PieceCmp {
     bool operator()(const Piece* lhs, const Piece* rhs) const {
       if (lhs->size != rhs->size) { return lhs->size < rhs->size; }
-      return lhs->ptr < rhs->ptr;
+      // compare pointer by raw < or > is undefined behavior
+      return std::less<>{}(lhs->ptr, rhs->ptr);
     }
   };
   std::vector<std::set<Piece*, PieceCmp>> free_pieces_overlapping_with_group_;
@@ -119,7 +122,7 @@ class DtrCudaAllocator final : public Allocator {
   bool enable_left_and_right_;
   std::vector<std::pair<offset_t, offset_t>> group_boundaries_;
 
-  size_t iterate_group_index() const;
+  size_t group_index() const;
 };
 
 }  // namespace vm

@@ -112,7 +112,8 @@ struct LocalCallOpKernelUtil final {
                 dynamic_cast<vm::ThreadSafeAllocator*>(device_ctx->mut_allocator())) {
           if (auto* dtr_allocator =
                   dynamic_cast<vm::DtrCudaAllocator*>(thread_safe_allocator->backend_allocator())) {
-            dtr_allocator->left = !dtr_allocator->left;
+            dtr_allocator->iterate_group_index();
+            // dtr_allocator->left = !dtr_allocator->left;
           } else {
             CHECK_OR_RETURN(false);
           }
