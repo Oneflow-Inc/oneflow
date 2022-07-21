@@ -168,10 +168,10 @@ REGISTER_USER_OP_GRAD("fused_matmul_bias_add_relu_dropout")
       if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_ASYNC_GRAD", false)) {
         std::vector<float> alpha_list(weight_num - 1, 1.0);
         for (int i = 0; i < weight_num - 1; i++) {
-          rate = dropout_rate_list.at(i);
+          rate = dropout_rate_list[i];
           scale = 1.0;
           if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
-          alpha_list.at(i) = scale;
+          alpha_list[i] = scale;
         }
         user_op::UserOpConfWrapperBuilder fused_mlp_grad_builder(op.op_name() + "_fused_mlp_grad");
         fused_mlp_grad_builder.Op("cublas_fused_mlp_grad")
