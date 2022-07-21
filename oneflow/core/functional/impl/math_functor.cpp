@@ -26,12 +26,14 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/tensor_processor.h"
 
+#include <memory>
 #include <sstream>
 #include <bitset>
 
@@ -2042,6 +2044,31 @@ class VarianceFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class RMSLayerNormalizationFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& hidden_states,
+                           const std::shared_ptr<Tensor>& weight,
+                           const float& variance_epsilon) const {
+    std::shared_ptr<Tensor> cast_hidden_states = hidden_states;
+    if (hidden_states->dtype() != DType::Float()) {
+      cast_hidden_states =
+          JUST(functional::Cast(hidden_states, DType::Float(), /*pin_memory=*/false));
+    }
+    std::shared_ptr<Tensor> normalized_hidden_states = JUST(functional::MatMul(
+        cast_hidden_states,
+        JUST(functional::Rsqrt(JUST(functional::ScalarAdd(
+            JUST(functional::Variance(hidden_states, std::vector<int32_t>{-1}, false, true)),
+            Scalar(variance_epsilon), 1.0, false)))),
+        false, false, 1.0));
+    if (weight->dtype() == DType::Float16()) {
+      normalized_hidden_states =
+          JUST(functional::Cast(normalized_hidden_states, weight->dtype(), /*pin_memory=*/false));
+    }
+    return JUST(functional::MatMul(weight, normalized_hidden_states, /*transpose_a=*/false,
+                                   /*transpose_b=*/false, 1.0));
+  }
+};
+
 class DotFunctor {
  public:
   DotFunctor() {
@@ -3010,6 +3037,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarLogicalXorFunctor, ScalarLogicalXor2Functor>("ScalarLogicalXor");
   m.add_functor<StandardDeviationFunctor>("StandardDeviation");
   m.add_functor<VarianceFunctor>("Variance");
+  m.add_functor<RMSLayerNormalizationFunctor>("RMSLayerNormalization");
   m.add_functor<DotFunctor>("Dot");
   m.add_functor<MovedimVecFunctor>("MovedimVec");
   m.add_functor<MovedimIntFunctor>("MovedimInt");
