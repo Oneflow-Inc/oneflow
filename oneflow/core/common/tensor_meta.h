@@ -60,15 +60,30 @@ class TensorMeta : public user_op::TensorDesc {
   bool is_dynamic() const override { return is_dynamic_; }
   bool is_contiguous() const { return IsContiguous(shape(), *stride_); }
 
-  void set_shape(const std::shared_ptr<const Shape>& val) { shape_ = val; }
-  Shape* mut_shape() override { return const_cast<Shape*>(shape_.get()); }
-  void set_stride(const std::shared_ptr<const Stride>& val) { stride_ = val; }
-  Stride* mut_stride() override { return const_cast<Stride*>(stride_.get()); }
-  DataType* mut_dtype() { return &data_type_; }
-  void set_dtype(DataType data_type) { data_type_ = data_type; }
-  DataType* mut_data_type() override { return &data_type_; }
-  bool* mut_is_dynamic() override { return &is_dynamic_; }
-  void set_is_dynamic(bool val) override { is_dynamic_ = val; }
+  virtual Shape* mut_shape() override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return nullptr;
+  }
+  virtual Stride* mut_stride() override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return nullptr;
+  }
+  virtual DataType* mut_data_type() override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return nullptr;
+  }
+  virtual bool* mut_is_dynamic() override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return nullptr;
+  }
+  virtual void set_is_dynamic(bool val) override { PRINT_BUG_PROMPT_AND_ABORT(); }
+
+  virtual void set_shape(const std::shared_ptr<const Shape>& val) { PRINT_BUG_PROMPT_AND_ABORT(); }
+  virtual void set_stride(const std::shared_ptr<const Stride>& val) {
+    PRINT_BUG_PROMPT_AND_ABORT();
+  }
+  virtual DataType* mut_dtype() { PRINT_BUG_PROMPT_AND_ABORT(); }
+  virtual void set_dtype(DataType data_type) { PRINT_BUG_PROMPT_AND_ABORT(); }
 
  protected:
   TensorMeta& operator=(const TensorMeta& other) {
@@ -79,7 +94,6 @@ class TensorMeta : public user_op::TensorDesc {
     return *this;
   }
 
- private:
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const Stride> stride_;
   DataType data_type_;
@@ -99,9 +113,6 @@ class LocalTensorMeta : public TensorMeta {
 
   const Symbol<Device>& device() const { return device_; }
   int64_t storage_offset() const { return storage_offset_; }
-
-  Symbol<Device>* mut_device() { return &device_; }
-  void set_storage_offset(int64_t offset) { storage_offset_ = offset; }
 
   bool operator==(const LocalTensorMeta& other) const;
   size_t CalcHashValue() const;
@@ -130,6 +141,17 @@ class MutLocalTensorMeta : public TensorMeta {
 
   Symbol<Device>* mut_device() { return &device_; }
   void set_storage_offset(int64_t offset) { storage_offset_ = offset; }
+
+  Shape* mut_shape() override { return const_cast<Shape*>(shape_.get()); }
+  Stride* mut_stride() override { return const_cast<Stride*>(stride_.get()); }
+  DataType* mut_data_type() override { return &data_type_; }
+  bool* mut_is_dynamic() override { return &is_dynamic_; }
+  void set_is_dynamic(bool val) override { is_dynamic_ = val; }
+
+  void set_shape(const std::shared_ptr<const Shape>& val) override { shape_ = val; }
+  void set_stride(const std::shared_ptr<const Stride>& val) override { stride_ = val; }
+  DataType* mut_dtype() override { return &data_type_; }
+  void set_dtype(DataType data_type) override { data_type_ = data_type; }
 
   bool operator==(const MutLocalTensorMeta& other) const;
   size_t CalcHashValue() const;
