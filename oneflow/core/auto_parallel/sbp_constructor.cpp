@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
 #include "oneflow/core/auto_parallel/sbp_node.h"
 #include "oneflow/core/auto_parallel/sbp_util.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -66,7 +67,7 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
   LOG(INFO) << "Initial cost: " << ori_cost;
   int elimination_num = sbp_graph_.NodeAndEdgeEliminations();
   LOG(INFO) << "Elimination number: " << elimination_num;
-  if (ori_cost > cut_cost) {
+  if (ori_cost > GetValidMaxCopyCost()) {
     JUST(sbp_graph_.Find1Strategy4Greedy());
     ori_cost = sbp_graph_.ComputeCost();
     LOG(INFO) << "Greedy cost: " << ori_cost;
@@ -78,7 +79,7 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
   LOG(INFO) << "Final cost: " << final_cost;
   if (ori_cost + 1.0 < final_cost) { LOG(WARNING) << "ori_cost less than final_cost!!!"; }
   // TODO: Restart searching with another original random strategy
-  CHECK_LT_OR_RETURN(final_cost, cut_cost)
+  CHECK_LT_OR_RETURN(final_cost, GetValidMaxCopyCost())
       << "Failed! Auto parallel can't find a strategy with reasonable cost!";
   return Maybe<void>::Ok();
 }
@@ -137,7 +138,7 @@ Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph, const J
     // Generate sbp node in cost model and link it with corresponding op node
     SbpNode<NdSbpSignature>* sbp_node = sbp_graph_.GenerateNode();
     // Mapping from sbp_node to op_node
-    sbp_node->op_node = op_node;  // TODO: SetOpNode()
+    sbp_node->op_node_ = op_node;  // TODO: SetOpNode()
     op_name2sbp_node_[op_node->op().op_name()] = sbp_node;
   }
   // Create sbp edges
@@ -187,7 +188,7 @@ Maybe<void> SbpConstructor::FillSbpSignatureForOpNode(const OpGraph& op_graph, c
     // Get all valid sbp_signatures
     SbpNode<NdSbpSignature>* sbp_node = op_name2sbp_node_[op_node->op().op_name()];
     JUST(op_node->op().GetValidNdSbpSignatureList(LogicalBlobDesc4Ibn, op_node->parallel_desc(),
-                                                  &sbp_node->SbpSignatureObjList));
+                                                  &sbp_node->sbp_sig_obj_list_));
     sbp_node->InitializeSbp();
     return Maybe<void>::Ok();
   }));
@@ -198,11 +199,11 @@ Maybe<void> SbpConstructor::StealSbpSignatureFromOpNode(const OpGraph& op_graph,
   // Steal some strategy from original op graph
   for (auto* sbp_node : sbp_graph_.NodeList) {
     // sbp_collectors do not have op_node
-    if (sbp_node->op_node) {
-      for (int32_t sbp_id = 0; sbp_id < sbp_node->SbpSignatureObjList.size(); sbp_id++) {
-        if (*JUST(sbp_node->op_node->op().nd_sbp_signature())
-            == sbp_node->SbpSignatureObjList[sbp_id]) {
-          sbp_node->FinalSbpSignatureId = sbp_id;
+    if (sbp_node->op_node_) {
+      for (int32_t sbp_id = 0; sbp_id < sbp_node->sbp_sig_obj_list_.size(); sbp_id++) {
+        if (*JUST(sbp_node->op_node_->op().nd_sbp_signature())
+            == sbp_node->sbp_sig_obj_list_[sbp_id]) {
+          sbp_node->final_sbp_sig_id_ = sbp_id;
           break;
         }
       }
@@ -219,18 +220,18 @@ Maybe<void> SbpConstructor::InitComputationCost(const OpGraph& op_graph) {
     // get parallel description. Number of devices.
     const ParallelDesc& parallel_desc = op_node->parallel_desc();
 
-    CHECK_EQ_OR_RETURN(sbp_node->Cost.size(), sbp_node->SbpSignatureList.size());
+    CHECK_EQ_OR_RETURN(sbp_node->cost_.size(), sbp_node->sbp_sig_list_.size());
     auto logical_blob_desc4bn = [&](const std::string& bn) -> const BlobDesc& {
       const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(bn);
       return op_node->LogicalBlobDesc4Lbi(lbi);
     };
-    for (int32_t sbp_id = 0; sbp_id < sbp_node->SbpSignatureList.size(); sbp_id++) {
+    for (int32_t sbp_id = 0; sbp_id < sbp_node->sbp_sig_list_.size(); sbp_id++) {
       double comp_cost = JUST(op_node->op().GetComputeComplexity(
-          sbp_node->SbpSignatureList[sbp_id], logical_blob_desc4bn, parallel_desc));
-      if (comp_cost > cut_cost) {
-        sbp_node->Cost.at(sbp_id) = comp_cost;
+          sbp_node->sbp_sig_list_[sbp_id], logical_blob_desc4bn, parallel_desc));
+      if (comp_cost > GetValidMaxCopyCost()) {
+        sbp_node->cost_.at(sbp_id) = comp_cost;
       } else {
-        sbp_node->Cost.at(sbp_id) = cost_ratio_ * comp_cost;
+        sbp_node->cost_.at(sbp_id) = cost_ratio_ * comp_cost;
       }
     }
     return Maybe<void>::Ok();
@@ -244,24 +245,24 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
     // get corresponding sbp node consumer
     SbpNode<NdSbpSignature>* sbp_node_consumer = op_name2sbp_node_[op_node->op().op_name()];
     // Initialize copy cost between two nodes
-    for (auto* sbp_edge : sbp_node_consumer->EdgesIn) {
+    for (auto* sbp_edge : sbp_node_consumer->edges_in_) {
       // producer sbp node
       const auto* sbp_node_producer = sbp_edge->start_node_;
       // skip it if proxy
-      if (!sbp_node_producer->op_node) { continue; }
-      sbp_edge->cost_.resize(sbp_node_producer->SbpSignatureList.size());
-      int32_t consumer_sbp_size = sbp_node_consumer->SbpSignatureList.size();
+      if (!sbp_node_producer->op_node_) { continue; }
+      sbp_edge->cost_.resize(sbp_node_producer->sbp_sig_list_.size());
+      int32_t consumer_sbp_size = sbp_node_consumer->sbp_sig_list_.size();
       // look through sbp signature in producer
-      for (int32_t i = 0; i < sbp_node_producer->SbpSignatureList.size(); ++i) {
+      for (int32_t i = 0; i < sbp_node_producer->sbp_sig_list_.size(); ++i) {
         sbp_edge->cost_[i].resize(consumer_sbp_size, 0);
       }
     }
     // Find all those cases with wait time
     // Do not skip edges carrying no lbi
     sbp_node_consumer->InitializeCopyCost(false, use_sbp_collector_);
-    for (auto* sbp_edge : sbp_node_consumer->EdgesIn) {
+    for (auto* sbp_edge : sbp_node_consumer->edges_in_) {
       // skip it if proxy
-      if (!sbp_edge->start_node_->op_node) { continue; }
+      if (!sbp_edge->start_node_->op_node_) { continue; }
       // Reset Wait time
       for (int32_t i = 0; i < sbp_edge->cost_.size(); ++i) {
         for (int32_t j = 0; j < sbp_edge->cost_[i].size(); ++j) {
@@ -291,7 +292,7 @@ void SbpConstructor::LoadLbi2SbpEdge(const OpGraph& op_graph) {
   // Load logical blobs onto sbp edges
 
   for (auto* sbp_node_consumer : sbp_graph_.NodeList) {
-    auto* op_node = sbp_node_consumer->op_node;
+    auto* op_node = sbp_node_consumer->op_node_;
 
     // Loading logical blobs between two nodes
     // look through input blobs
@@ -397,7 +398,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
   // Collect op_node
   std::vector<OpNode*> NodeList;
   for (const auto& op_name_sbp_node : op_name2sbp_node_) {
-    auto* op_node_ = op_name_sbp_node.second->op_node;
+    auto* op_node_ = op_name_sbp_node.second->op_node_;
     if (op_node_) { NodeList.push_back(op_node_); }
   }
 
@@ -421,11 +422,11 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
     // Print debug information for sbp graph
     CHECK(it != op_name2sbp_node_.end());
     const SbpNode<NdSbpSignature>* sbp_node = it->second;
-    std::cout << "Computation Cost: " << sbp_node->Cost[sbp_node->FinalSbpSignatureId];
-    std::cout << ", Min Layer: " << sbp_node->MinLayer << ", Max Layer: " << sbp_node->MaxLayer
-              << ", Tributary Layer: " << sbp_node->TributaryLayer
-              << ", in mainstem: " << sbp_node->IfMainstem
-              << ", Remain Cost: " << sbp_node->AccMainstemCost << std::endl;
+    std::cout << "Computation Cost: " << sbp_node->cost_[sbp_node->final_sbp_sig_id_];
+    std::cout << ", Min Layer: " << sbp_node->min_layer_ << ", Max Layer: " << sbp_node->max_layer_
+              << ", Tributary Layer: " << sbp_node->tributary_layer_
+              << ", in mainstem: " << sbp_node->on_mainstem_
+              << ", Remain Cost: " << sbp_node->acc_mainstem_cost_ << std::endl;
     // Sort before printing
     const auto& op_input_bns = op_node->op().input_bns();
     auto comp = [](const std::string& a, const std::string& b) { return a.compare(b) > 0; };
