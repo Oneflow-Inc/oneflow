@@ -19,7 +19,7 @@ from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from typing import Union
 
 
-def get_fake_quantized(
+def get_conv_fake_quantized(
     input, input_observer, current_train_step, weight, weight_observer, fake_quantizer
 ):
     in_scale, in_zero_point = input_observer(input, current_train_step)
@@ -29,7 +29,7 @@ def get_fake_quantized(
     return input_fake_quanted, weight_fake_quanted
 
 
-def init_fake_quants(
+def init_conv_fake_quants(
     self,
     quantization_formula: str = "google",
     quantization_bit: int = 8,
@@ -149,7 +149,7 @@ class QatConv1d(nn.Conv1d):
             padding_mode,
         )
         self.channel_pos = "channels_first"
-        init_fake_quants(
+        init_conv_fake_quants(
             self,
             quantization_formula=quantization_formula,
             quantization_bit=quantization_bit,
@@ -159,7 +159,7 @@ class QatConv1d(nn.Conv1d):
         )
 
     def forward(self, x):
-        fake_quan_input, fake_quan_weight = get_fake_quantized(
+        fake_quan_input, fake_quan_weight = get_conv_fake_quantized(
             x,
             self.input_min_max_observer,
             self.current_train_step,
@@ -267,7 +267,7 @@ class QatConv2d(nn.Conv2d):
             padding_mode,
         )
         self.channel_pos = "channels_first"
-        init_fake_quants(
+        init_conv_fake_quants(
             self,
             quantization_formula=quantization_formula,
             quantization_bit=quantization_bit,
@@ -277,7 +277,7 @@ class QatConv2d(nn.Conv2d):
         )
 
     def forward(self, x):
-        fake_quan_input, fake_quan_weight = get_fake_quantized(
+        fake_quan_input, fake_quan_weight = get_conv_fake_quantized(
             x,
             self.input_min_max_observer,
             self.current_train_step,
@@ -385,7 +385,7 @@ class QatConv3d(nn.Conv3d):
             padding_mode,
         )
         self.channel_pos = "channels_first"
-        init_fake_quants(
+        init_conv_fake_quants(
             self,
             quantization_formula=quantization_formula,
             quantization_bit=quantization_bit,
@@ -395,7 +395,7 @@ class QatConv3d(nn.Conv3d):
         )
 
     def forward(self, x):
-        fake_quan_input, fake_quan_weight = get_fake_quantized(
+        fake_quan_input, fake_quan_weight = get_conv_fake_quantized(
             x,
             self.input_min_max_observer,
             self.current_train_step,
