@@ -299,16 +299,16 @@ class UserKernelOpInferContext : public user_op::InferContext {
   Stride* MutStride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_stride();
   }
-  const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
+  DataType InputDType(const std::string& arg_name, int32_t index) const override {
     return Dtype4ArgNameAndIndex(arg_name, index);
   }
-  const DataType& OutputDType(const std::string& arg_name, int32_t index) const override {
+  DataType OutputDType(const std::string& arg_name, int32_t index) const override {
     return Dtype4ArgNameAndIndex(arg_name, index);
   }
   DataType* MutOutputDType(const std::string& arg_name, int32_t index) override {
     return MutDtype4ArgNameAndIndex(arg_name, index);
   }
-  const DataType& Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+  DataType Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return const_cast<UserKernelOpInferContext*>(this)
         ->TensorDesc4ArgNameAndIndex(arg_name, index)
         ->data_type();

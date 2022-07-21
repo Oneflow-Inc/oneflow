@@ -215,20 +215,20 @@ class UserOpInferContextHelper final {
                                     int32_t index) const {
     return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_stride();
   }
-  const DataType& InputDType(eager::CallContext* call_ctx, const std::string& arg_name,
-                             int32_t index) const {
+  DataType InputDType(eager::CallContext* call_ctx, const std::string& arg_name,
+                      int32_t index) const {
     return Dtype4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  const DataType& OutputDType(eager::CallContext* call_ctx, const std::string& arg_name,
-                              int32_t index) const {
+  DataType OutputDType(eager::CallContext* call_ctx, const std::string& arg_name,
+                       int32_t index) const {
     return Dtype4ArgNameAndIndex(call_ctx, arg_name, index);
   }
   DataType* MutOutputDType(eager::CallContext* call_ctx, const std::string& arg_name,
                            int32_t index) const {
     return MutDtype4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  const DataType& Dtype4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
-                                        int32_t index) const {
+  DataType Dtype4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                 int32_t index) const {
     return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->data_type();
   }
   DataType* MutDtype4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
@@ -383,16 +383,16 @@ class UserOpInferContext : public user_op::InferContext {
   Stride* MutStride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return helper_->MutStride4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
-  const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
+  DataType InputDType(const std::string& arg_name, int32_t index) const override {
     return helper_->InputDType(call_ctx_, arg_name, index);
   }
-  const DataType& OutputDType(const std::string& arg_name, int32_t index) const override {
+  DataType OutputDType(const std::string& arg_name, int32_t index) const override {
     return helper_->OutputDType(call_ctx_, arg_name, index);
   }
   DataType* MutOutputDType(const std::string& arg_name, int32_t index) override {
     return helper_->MutOutputDType(call_ctx_, arg_name, index);
   }
-  const DataType& Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+  DataType Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return helper_->Dtype4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
   DataType* MutDtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
