@@ -43,7 +43,7 @@ TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
 
     const Params3D params_3d(dim, x_shape, data_format, padding, padding_before, padding_after,
                              pool_size, strides, ceil_mode);
-    user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
+    user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
     *y_desc->mut_shape() = params_3d.GetYShape();
     *y_desc->mut_is_dynamic() = ctx->InputIsDynamic("x", 0);
     return Maybe<void>::Ok();

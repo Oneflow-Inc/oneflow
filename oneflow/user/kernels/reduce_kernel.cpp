@@ -307,7 +307,7 @@ REGISTER_USER_KERNEL("reduce_sum")
                      && ReduceMatmulNoTransAPrimitiveExists())
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       const Shape& in_shape = ctx->InputTensorDesc("input_tensor", 0).shape();
-      const Shape& out_shape = ctx->OutputTensorDesc("output_tensor", 0)->shape();
+      const Shape& out_shape = ctx->OutputTensorDesc("output_tensor", 0).shape();
       const auto& axis = RegularAxis(ctx->Attr<std::vector<int32_t>>("axis"));
       bool is_axis_contiguous = false;
       int64_t outer_size = 0, inner_size = 0, reduce_size = 0;

@@ -29,7 +29,7 @@ namespace oneflow {
   CHECK_GE_OR_RETURN(length, 0);
   // length should be input size if split the full slice dimension
   if (start == 0 && length > in.shape().At(dim)) { length = in.shape().At(dim); }
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
 
   DimVector dim_vec;
   dim_vec.insert(dim_vec.end(), in.shape().dim_vec().cbegin(), in.shape().dim_vec().cbegin() + dim);
@@ -72,7 +72,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> NarrowOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   *out->mut_data_type() = in.data_type();
   return Maybe<void>::Ok();
 }

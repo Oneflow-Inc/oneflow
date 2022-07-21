@@ -36,7 +36,7 @@ bool PowerOfTwo(T x) {
   DimVector dim_vec(shape_attr.NumAxes() + 1);
   dim_vec.at(0) = in_desc.shape().elem_cnt();
   FOR_RANGE(int64_t, i, 0, shape_attr.NumAxes()) { dim_vec.at(i + 1) = shape_attr.At(i); }
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_shape() = Shape(dim_vec);
   out_desc->set_is_dynamic(dynamic_out);
   return Maybe<void>::Ok();
@@ -90,7 +90,7 @@ bool PowerOfTwo(T x) {
 /* static */ Maybe<void> ImageBatchAlignOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   CHECK_OR_RETURN(in_desc.data_type() == DataType::kTensorBuffer);
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_data_type() = ctx->Attr<DataType>("data_type");
   return Maybe<void>::Ok();
 }

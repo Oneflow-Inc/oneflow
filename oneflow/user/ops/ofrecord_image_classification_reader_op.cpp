@@ -20,8 +20,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> OfrecordImageClassificationReaderOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  user_op::TensorDesc* image_tensor = ctx->OutputTensorDesc("image", 0);
-  user_op::TensorDesc* label_tensor = ctx->OutputTensorDesc("label", 0);
+  user_op::TensorDesc* image_tensor = ctx->MutOutputTensorDesc("image", 0);
+  user_op::TensorDesc* label_tensor = ctx->MutOutputTensorDesc("label", 0);
   int32_t batch_size = ctx->Attr<int32_t>("batch_size");
   *image_tensor->mut_shape() = Shape({batch_size});
   *label_tensor->mut_shape() = Shape({batch_size});
@@ -30,8 +30,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> OfrecordImageClassificationReaderOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
-  user_op::TensorDesc* image_tensor = ctx->OutputTensorDesc("image", 0);
-  user_op::TensorDesc* label_tensor = ctx->OutputTensorDesc("label", 0);
+  user_op::TensorDesc* image_tensor = ctx->MutOutputTensorDesc("image", 0);
+  user_op::TensorDesc* label_tensor = ctx->MutOutputTensorDesc("label", 0);
   int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
   int64_t parallel_num = ctx->parallel_ctx().parallel_num();
 

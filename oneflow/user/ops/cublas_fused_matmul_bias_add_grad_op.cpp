@@ -47,8 +47,8 @@ Maybe<void> InferDataType4MatmulBiasAddBackward(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(x_desc.data_type(), dy_desc.data_type())
       << "x's datatype should be the same as y's datatype";
 
-  user_op::TensorDesc* w_grad_desc = ctx->OutputTensorDesc("w_grad", 0);
-  user_op::TensorDesc* b_grad_desc = ctx->OutputTensorDesc("b_grad", 0);
+  user_op::TensorDesc* w_grad_desc = ctx->MutOutputTensorDesc("w_grad", 0);
+  user_op::TensorDesc* b_grad_desc = ctx->MutOutputTensorDesc("b_grad", 0);
 
   *w_grad_desc->mut_data_type() = dy_desc.data_type();
   *b_grad_desc->mut_data_type() = dy_desc.data_type();

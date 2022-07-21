@@ -80,7 +80,7 @@ namespace oneflow {
         << " when the input axis list is empty";
   }
 
-  user_op::TensorDesc* y_tensor = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y_tensor = ctx->MutOutputTensorDesc("y", 0);
   *y_tensor->mut_shape() = like_tensor.shape();
   *y_tensor->mut_is_dynamic() = like_tensor.is_dynamic();
   return Maybe<void>::Ok();

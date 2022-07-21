@@ -221,11 +221,11 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
         const auto& in = ctx->InputTensorDesc("in", 0);                                 \
         if (in.shape().elem_cnt() == 0) return 0;                                       \
         const auto& weight = ctx->InputTensorDesc("weight", 0);                         \
-        const auto* out = ctx->OutputTensorDesc("out", 0);                              \
+        const auto& out = ctx->OutputTensorDesc("out", 0);                              \
         const auto& cudnn_conf =                                                        \
             Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();        \
         return InferTmpSizeWithCudnn<cudnnConvolutionFwdAlgoPerf_t>(                    \
-            &in, &weight, out, *ctx, cudnn_conf.has_cudnn_conv_force_fwd_algo(),        \
+            &in, &weight, &out, *ctx, cudnn_conf.has_cudnn_conv_force_fwd_algo(),       \
             cudnn_conf.cudnn_conv_force_fwd_algo());                                    \
       })
 
@@ -300,12 +300,12 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                             \
         const auto& dy = ctx->InputTensorDesc("dy", 0);                                         \
         const auto& filter = ctx->InputTensorDesc("filter", 0);                                 \
-        const auto* dx = ctx->OutputTensorDesc("dx", 0);                                        \
-        if (dx->shape().elem_cnt() == 0) return 0;                                              \
+        const auto& dx = ctx->OutputTensorDesc("dx", 0);                                        \
+        if (dx.shape().elem_cnt() == 0) return 0;                                               \
         const auto& cudnn_conf =                                                                \
             Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();                \
         return InferTmpSizeWithCudnn<cudnnConvolutionBwdDataAlgoPerf_t>(                        \
-            dx, &filter, &dy, *ctx, cudnn_conf.has_cudnn_conv_force_bwd_data_algo(),            \
+            &dx, &filter, &dy, *ctx, cudnn_conf.has_cudnn_conv_force_bwd_data_algo(),           \
             cudnn_conf.cudnn_conv_force_bwd_data_algo());                                       \
       })                                                                                        \
       .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
@@ -364,21 +364,21 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel, public user_op::
   }
 };
 
-#define REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(dtype)                                   \
-  REGISTER_USER_KERNEL("conv_filter_grad")                                                 \
-      .SetCreateFn<ConvFilterGradGpuKernel<dtype>>()                                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                     \
-                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))    \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                        \
-        const auto& dy = ctx->InputTensorDesc("dy", 0);                                    \
-        const auto& x = ctx->InputTensorDesc("x", 0);                                      \
-        if (x.shape().elem_cnt() == 0) return 0;                                           \
-        const auto* filter_diff = ctx->OutputTensorDesc("filter_diff", 0);                 \
-        const auto& cudnn_conf =                                                           \
-            Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();           \
-        return InferTmpSizeWithCudnn<cudnnConvolutionBwdFilterAlgoPerf_t>(                 \
-            &x, filter_diff, &dy, *ctx, cudnn_conf.has_cudnn_conv_force_bwd_filter_algo(), \
-            cudnn_conf.cudnn_conv_force_bwd_filter_algo());                                \
+#define REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(dtype)                                    \
+  REGISTER_USER_KERNEL("conv_filter_grad")                                                  \
+      .SetCreateFn<ConvFilterGradGpuKernel<dtype>>()                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                      \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))     \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                         \
+        const auto& dy = ctx->InputTensorDesc("dy", 0);                                     \
+        const auto& x = ctx->InputTensorDesc("x", 0);                                       \
+        if (x.shape().elem_cnt() == 0) return 0;                                            \
+        const auto& filter_diff = ctx->OutputTensorDesc("filter_diff", 0);                  \
+        const auto& cudnn_conf =                                                            \
+            Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();            \
+        return InferTmpSizeWithCudnn<cudnnConvolutionBwdFilterAlgoPerf_t>(                  \
+            &x, &filter_diff, &dy, *ctx, cudnn_conf.has_cudnn_conv_force_bwd_filter_algo(), \
+            cudnn_conf.cudnn_conv_force_bwd_filter_algo());                                 \
       })
 
 REGISTER_CONV_FILTER_GRAD_FLOATING_KERNEL(float);

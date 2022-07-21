@@ -26,7 +26,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   const auto& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_EQ_OR_RETURN(input_desc.shape(), target_desc.shape())
       << "Input shape should be equal to Target shape. ";
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_is_dynamic() = false;
   *out_desc->mut_shape() = Shape({});
   return Maybe<void>::Ok();
@@ -47,7 +47,7 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   const auto& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_EQ_OR_RETURN(input_desc.shape(), target_desc.shape())
       << "Input shape should be equal to Target shape. ";
-  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
   *dx_desc->mut_is_dynamic() = false;
   *dx_desc->mut_shape() = input_desc.shape();
   return Maybe<void>::Ok();

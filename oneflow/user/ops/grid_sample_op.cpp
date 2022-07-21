@@ -47,7 +47,7 @@ Maybe<void> GridSampleOp::CheckAttr(const user_op::UserOpDefWrapper& def,
 /*static*/ auto GridSampleOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
   const user_op::TensorDesc& input = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& grid = ctx->InputTensorDesc("grid", 0);
-  user_op::TensorDesc& output = *(ctx->OutputTensorDesc("output", 0));
+  user_op::TensorDesc& output = *(ctx->MutOutputTensorDesc("output", 0));
   // Only support 4D or 5D input with NCHW layout
   // For 4D grid: input  = { N, C, H_in, W_in },
   //              grid   = { N, H_out, W_out, 2 }
@@ -111,8 +111,8 @@ Maybe<void> GridSampleGradOp::CheckAttr(const user_op::UserOpDefWrapper& def,
 
 /*static*/ auto GridSampleGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
     -> Maybe<void> {
-  *(ctx->OutputTensorDesc("dinput", 0)->mut_shape()) = ctx->InputTensorDesc("input", 0).shape();
-  *(ctx->OutputTensorDesc("dgrid", 0)->mut_shape()) = ctx->InputTensorDesc("grid", 0).shape();
+  *(ctx->MutOutputTensorDesc("dinput", 0)->mut_shape()) = ctx->InputTensorDesc("input", 0).shape();
+  *(ctx->MutOutputTensorDesc("dgrid", 0)->mut_shape()) = ctx->InputTensorDesc("grid", 0).shape();
   return Maybe<void>::Ok();
 }
 /*static*/ auto GridSampleGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)

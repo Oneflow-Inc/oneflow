@@ -31,7 +31,7 @@ bool IsZeroDimTensor(const user_op::TensorDesc* tensor) { return tensor->shape()
 Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
   const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
-  user_op::TensorDesc* tensor_z = ctx->OutputTensorDesc("z", 0);
+  user_op::TensorDesc* tensor_z = ctx->MutOutputTensorDesc("z", 0);
 
   size_t output_num_axes = std::max(tensor_x.shape().NumAxes(), tensor_y.shape().NumAxes());
   if (IsZeroDimTensor(&tensor_x)) {

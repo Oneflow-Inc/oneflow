@@ -36,7 +36,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(pos_weight_desc.shape(),
                        Shape({input_desc.shape().At(input_desc.shape().NumAxes() - 1)}));
   }
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_is_dynamic() = input_desc.is_dynamic();
   *out_desc->mut_shape() = input_desc.shape();
 
@@ -78,7 +78,7 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
                        Shape({input_desc.shape().At(input_desc.shape().NumAxes() - 1)}));
   }
 
-  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
   *dx_desc->mut_is_dynamic() = input_desc.is_dynamic();
   *dx_desc->mut_shape() = input_desc.shape();
 

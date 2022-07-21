@@ -20,7 +20,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> OnerecDecoderOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   CHECK_OR_RETURN(in_tensor.shape().NumAxes() == 1 && in_tensor.shape().At(0) >= 1);
   const Shape& static_shape = ctx->Attr<Shape>("static_shape");
   DimVector dim_vec(1 + static_shape.NumAxes());
@@ -65,7 +65,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> OnerecDecoderOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   CHECK_OR_RETURN(in_tensor.data_type() == DataType::kTensorBuffer);
   *out_tensor->mut_data_type() = ctx->Attr<DataType>("data_type");
   return Maybe<void>::Ok();

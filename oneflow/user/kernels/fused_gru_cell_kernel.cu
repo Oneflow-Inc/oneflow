@@ -459,7 +459,7 @@ REGISTER_USER_KERNEL("fused_gru_cell_grad")
       size_t tmp_bytes = 0;
       if (ctx->has_output("grad_input_bias", 0) && ctx->has_output("grad_hidden_bias", 0)) {
         const Shape& in_shape = ctx->InputTensorDesc("grad_hy", 0).shape();
-        const Shape& out_shape = ctx->OutputTensorDesc("grad_input_bias", 0)->shape();
+        const Shape& out_shape = ctx->OutputTensorDesc("grad_input_bias", 0).shape();
         tmp_bytes = (2 * GetCudaAlignedSize(in_shape.elem_cnt() * 3 * sizeof(float))
                      + GetCudaAlignedSize(out_shape.elem_cnt() * sizeof(float)));
       } else {

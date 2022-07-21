@@ -25,7 +25,7 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& scalar = ctx->InputTensorDesc("scalar", 0);
   CHECK_EQ_OR_RETURN(scalar.shape().elem_cnt(), 1)
       << Error::RuntimeError() << "The input scalar tensor is not a scalar";
-  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
   *y->mut_shape() = x.shape();
   *y->mut_is_dynamic() = x.is_dynamic();
   return Maybe<void>::Ok();
@@ -36,7 +36,7 @@ Maybe<void> DataTypeInferFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& scalar = ctx->InputTensorDesc("scalar", 0);
   CHECK_EQ_OR_RETURN(x.data_type(), scalar.data_type())
       << Error::TypeError() << "Tensors x and scalar have different type";
-  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
   *y->mut_data_type() = x.data_type();
   return Maybe<void>::Ok();
 }

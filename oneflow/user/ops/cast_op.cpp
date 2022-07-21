@@ -38,7 +38,7 @@ Maybe<Symbol<Stream>> MakeCastStream(const Symbol<Device>& in_device,
 
 /* static */ Maybe<void> CastOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_tensor_desc = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* output_tensor_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* output_tensor_desc = ctx->MutOutputTensorDesc("out", 0);
   *output_tensor_desc->mut_shape() = input_tensor_desc.shape();
   *output_tensor_desc->mut_stride() =
       input_tensor_desc.stride();  // output's stride should consistent with input's
@@ -60,7 +60,7 @@ Maybe<Symbol<Stream>> MakeCastStream(const Symbol<Device>& in_device,
 }
 
 /* static */ Maybe<void> CastOp::InferDataType(user_op::InferContext* ctx) {
-  user_op::TensorDesc* output_tensor_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* output_tensor_desc = ctx->MutOutputTensorDesc("out", 0);
   DataType* dtype = output_tensor_desc->mut_data_type();
   *dtype = ctx->Attr<DataType>("dtype");
   return Maybe<void>::Ok();

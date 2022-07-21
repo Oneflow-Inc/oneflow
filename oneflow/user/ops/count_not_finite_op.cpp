@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> CountNotFiniteOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
   *y_desc->mut_shape() = Shape({1});
   return Maybe<void>::Ok();
 }
@@ -37,13 +37,13 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CountNotFiniteOp::InferDataType(user_op::InferContext* ctx) {
-  user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
   *y_desc->mut_data_type() = DataType::kInt64;
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> MultiCountNotFiniteOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
   *y_desc->mut_shape() = Shape({1});
   return Maybe<void>::Ok();
 }
@@ -70,7 +70,7 @@ namespace oneflow {
     const user_op::TensorDesc& x_desc = ctx->InputTensorDesc(in_arg_pair.first, in_arg_pair.second);
     CHECK_EQ_OR_RETURN(x_desc.data_type(), first_x_desc.data_type());
   }
-  user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
   *y_desc->mut_data_type() = DataType::kInt64;
   return Maybe<void>::Ok();
 }

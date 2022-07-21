@@ -38,8 +38,8 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   CHECK_EQ_OR_RETURN(weight_desc.data_type(), dy_desc.data_type());
 
-  user_op::TensorDesc* d_grad_desc = ctx->OutputTensorDesc("d_grad", 0);
-  user_op::TensorDesc* d_bias_desc = ctx->OutputTensorDesc("d_bias", 0);
+  user_op::TensorDesc* d_grad_desc = ctx->MutOutputTensorDesc("d_grad", 0);
+  user_op::TensorDesc* d_bias_desc = ctx->MutOutputTensorDesc("d_bias", 0);
 
   *d_grad_desc->mut_data_type() = dy_desc.data_type();
   *d_bias_desc->mut_data_type() = dy_desc.data_type();

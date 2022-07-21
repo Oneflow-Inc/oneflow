@@ -73,7 +73,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
     CHECK_LE_OR_RETURN(index.shape().At(i), src.shape().At(i));
   }
 
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("output", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("output", 0);
   *out->mut_shape() = input ? input->shape() : like->shape();
   return Maybe<void>::Ok();
 }
@@ -96,7 +96,7 @@ Maybe<void> InferScalarTensorDesc(user_op::InferContext* ctx) {
     CHECK_LE_OR_RETURN(index.shape().At(i), input.shape().At(i));
   }
 
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("output", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("output", 0);
   *out->mut_shape() = input.shape();
   return Maybe<void>::Ok();
 }
