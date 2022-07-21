@@ -71,6 +71,20 @@ __global__ void AsStridedGrad_kernel(const T* dy_buf, T* dx_buf,
   }
 }
 
+template<>
+__global__ void AsStridedGrad_kernel(const bool* dy_buf, bool* dx_buf,
+                                     AsStridedParams<NUM_DIM, int64_t> params) {
+  const int64_t* dest_dims = reinterpret_cast<const int64_t*>(params.dest_dims);
+  const int32_t* stride = reinterpret_cast<const int32_t*>(params.stride);
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, params.output_num) {
+    int64_t dy_index[NUM_DIM];
+    params.destIndexOffsetHelper.OffsetToNdIndex(i, dy_index, params.dest_num_dims);
+    int32_t index_in_dx = params.storage_offset;
+    FOR_RANGE(int64_t, j, 0, params.dest_num_dims) { index_in_dx += dy_index[j] * stride[j]; }
+    *(dx_buf + index_in_dx) = *(dx_buf + index_in_dx) && dy_buf[i];
+  }
+}
+
 template<typename T>
 struct AsStridedFunctor final {
   void operator()(ep::Stream* stream, const T* input_buf, T* output_buf, const int64_t* dest_dims,
@@ -188,6 +202,7 @@ class GpuAsStridedGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                        \
                        && (user_op::HobDataType("input", 0) == GetDataType<in_type>::value));
 
+REGISTER_GPUASSTRIDED_KERNEL(bool);
 REGISTER_GPUASSTRIDED_KERNEL(half);
 REGISTER_GPUASSTRIDED_KERNEL(float);
 REGISTER_GPUASSTRIDED_KERNEL(double);

@@ -24,7 +24,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestAsStrided(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=10)
     def test_flow_AsStrided(test_case):
         device = random_device()
         ndim = np.random.randint(3, 6)
@@ -44,10 +44,9 @@ class TestAsStrided(flow.unittest.TestCase):
         z = torch.as_strided(x, (2, 2, 3), (1, 1, 2), storage_offset)
         return z
 
-    # TODO:(zhaoluyang) some bug in as_strided backward to be fixed
-    @autotest(n=10, auto_backward=False, check_graph=False)
+    @autotest(n=10)
     def test_flow_as_strided_with_stride(test_case):
-        device = random_device()
+        device = cpu_device()
         dim0 = np.random.randint(2, 4)
         dim1 = np.random.randint(2, 4)
         dim2 = np.random.randint(2, 4)
@@ -58,8 +57,31 @@ class TestAsStrided(flow.unittest.TestCase):
         perm = [0, 1, 2, 3]
         shuffle(perm)
         y = x.permute(perm)
+        y = y.contiguous()
         z = torch.as_strided(y, (2, 2, 3), (1, 1, 2), storage_offset)
         return z
+
+    @autotest(n=10, auto_backward=False)
+    def test_flow_as_strided_bool(test_case):
+        device = random_device()
+        ndim = np.random.randint(3, 6)
+        dim0 = np.random.randint(2, 4)
+        dim1 = np.random.randint(2, 4)
+        dim2 = np.random.randint(2, 4)
+        dim3 = np.random.randint(2, 4)
+        dim4 = np.random.randint(2, 4)
+        if ndim == 3:
+            x = random_tensor(3, dim0, dim1, dim2)
+        elif ndim == 4:
+            x = random_tensor(4, dim0, dim1, dim2, dim3)
+        elif ndim == 5:
+            x = random_tensor(5, dim0, dim1, dim2, dim3, dim4)
+        x = x.to(device)
+        x = x.to(torch.bool)
+        storage_offset = random(0, 3).to(int)
+        z = torch.as_strided(x, (2, 2, 3), (1, 1, 2), storage_offset)
+        return z
+
 
 
 if __name__ == "__main__":
