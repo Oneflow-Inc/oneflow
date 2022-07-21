@@ -45,7 +45,6 @@ limitations under the License.
 #include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
-#include "oneflow/core/functional/impl/global_cast.h"
 
 namespace oneflow {
 namespace one {
@@ -363,6 +362,7 @@ Maybe<void> CheckNdSbpValid(Symbol<NdSbp> nd_sbp, const Shape& logical_shape) {
   return Maybe<void>::Ok();
 }
 
+namespace {
 Maybe<one::OpExpr> RawGetGlobalToGlobalOpExpr(
     const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels) {
   Optional<Symbol<NdSbp>> grad_nd_sbp;
@@ -371,8 +371,40 @@ Maybe<one::OpExpr> RawGetGlobalToGlobalOpExpr(
   return op_expr;
 }
 
+}
+
 static constexpr auto* GetGlobalToGlobalOpExpr =
     DECORATE(&RawGetGlobalToGlobalOpExpr, ThreadLocalCopiable);
+
+Maybe<Tensor> GlobalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
+                             const std::vector<Symbol<SbpParallel>>& sbp_parallels,
+                             const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels) {
+  const auto& global_tensor = JUST(x->AsGlobalTensor());
+  CHECK_NOTNULL_OR_RETURN(global_tensor) << "global tensors supported only";
+  const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
+  JUST(CheckNdSbpValid(nd_sbp, *x->shape()));
+  std::shared_ptr<one::OpExpr> op;
+  if (unlikely(!LazyMode::is_enabled()
+               && JUST(x->parallel_desc())->hierarchy()->NumAxes()
+                      != parallel_desc->hierarchy()->NumAxes()
+               && grad_sbp_parallels.size() == 0)) {
+    op = JUST(GetGlobalToGlobalOpExpr(*JUST(GetSbpList(JUST(x->nd_sbp())))));
+  } else {
+    op = JUST(GetGlobalToGlobalOpExpr(grad_sbp_parallels));
+  }
+  if (!LazyMode::is_enabled() && JUST(x->nd_sbp()) == nd_sbp
+      && JUST(x->parallel_desc()) == parallel_desc && grad_sbp_parallels.size() == 0) {
+    return x;
+  }
+  const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+      *op, {global_tensor}, OpExprInterpContext(AttrMap{}, parallel_desc, nd_sbp)));
+  if (!LazyMode::is_enabled() && tensor != x && !IsGlobalTensorMetaCheckDisabled()) {
+    const auto& input_global_id = JUST(x->transport_token());
+    const auto& output_consistend_id = JUST(tensor->transport_token());
+    CHECK_NE_OR_RETURN(input_global_id, output_consistend_id);  // NOLINT(maybe-need-error-msg)
+  }
+  return tensor;
+}
 
 Maybe<Tensor> LocalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
                             const std::vector<Symbol<SbpParallel>>& sbp_parallels,
@@ -418,36 +450,6 @@ Maybe<Tensor> LocalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDes
 }
 
 }  //  namespace
-
-Maybe<Tensor> GlobalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDesc> parallel_desc,
-                             const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                             const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels) {
-  const auto& global_tensor = JUST(x->AsGlobalTensor());
-  CHECK_NOTNULL_OR_RETURN(global_tensor) << "consistent tensors supported only";
-  const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
-  JUST(CheckNdSbpValid(nd_sbp, *x->shape()));
-  std::shared_ptr<one::OpExpr> op;
-  if (unlikely(!LazyMode::is_enabled()
-               && JUST(x->parallel_desc())->hierarchy()->NumAxes()
-                      != parallel_desc->hierarchy()->NumAxes()
-               && grad_sbp_parallels.size() == 0)) {
-    op = JUST(GetGlobalToGlobalOpExpr(*JUST(GetSbpList(JUST(x->nd_sbp())))));
-  } else {
-    op = JUST(GetGlobalToGlobalOpExpr(grad_sbp_parallels));
-  }
-  if (!LazyMode::is_enabled() && JUST(x->nd_sbp()) == nd_sbp
-      && JUST(x->parallel_desc()) == parallel_desc && grad_sbp_parallels.size() == 0) {
-    return x;
-  }
-  const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-      *op, {global_tensor}, OpExprInterpContext(AttrMap{}, parallel_desc, nd_sbp)));
-  if (!LazyMode::is_enabled() && tensor != x && !IsGlobalTensorMetaCheckDisabled()) {
-    const auto& input_global_id = JUST(x->transport_token());
-    const auto& output_consistend_id = JUST(tensor->transport_token());
-    CHECK_NE_OR_RETURN(input_global_id, output_consistend_id);  // NOLINT(maybe-need-error-msg)
-  }
-  return tensor;
-}
 
 class LocalToGlobalFunctor {
  public:
