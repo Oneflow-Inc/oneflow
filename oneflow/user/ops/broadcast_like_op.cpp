@@ -78,8 +78,11 @@ bool IsAxesLegal(const AxisVector& axis_vec, const Shape& like_shape, const Shap
     for (const int64_t& dim : reduced_like_shape.dim_vec()) {
       if (dim != 1) { like_shape_vec.emplace_back(dim); }
     }
-    return std::equal(in_shape_vec.begin(), in_shape_vec.end(), like_shape_vec.begin(),
-                      like_shape_vec.end());
+    if (in_shape_vec.size() > like_shape_vec.size()) {
+      return false;
+    } else {
+      return std::equal(in_shape_vec.begin(), in_shape_vec.end(), like_shape_vec.begin());
+    }
   }
   return reduced_like_shape.dim_vec() == in_shape.dim_vec();
 }
