@@ -397,7 +397,7 @@ LogicalResult ParseNdSbpFromAttr(::llvm::ArrayRef<Attribute> nd_sbp_attr,
   return success();
 }
 
-Attribute ConvertNdSbpToPsig(Builder& builder,
+Attribute ConvertNdSbpToparallel(Builder& builder,
                               const ::google::protobuf::RepeatedPtrField<std::string>& nd_sbp,
                               int nd_size) {
   auto ctx = builder.getContext();
@@ -447,9 +447,9 @@ Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp) {
       makeArrayRef(llvm::SmallVector<StringRef>(sbp_strs.begin(), sbp_strs.end())));
 }
 
-Attribute ConvertSBPToString(Builder& builder, ::mlir::sbp::ParallelSignatureAttr& psig) {
+Attribute ConvertSBPToString(Builder& builder, ::mlir::sbp::ParallelSignatureAttr& parallel) {
   std::vector<std::string> list;
-  for (auto output : psig.getOutputs()) {
+  for (auto output : parallel.getOutputs()) {
     if (auto nd_outputs = output.dyn_cast<ArrayAttr>()) {
       for (auto nd_output : nd_outputs) {
         std::string sbp;
@@ -1005,7 +1005,7 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
   if (op->hasAttr("trainable")) { var_op_conf->set_trainable(op.trainable()); }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getNdSbpAttrName())) {
-    for (auto output : op.psig()->getOutputs()) {
+    for (auto output : op.parallel()->getOutputs()) {
       if (auto nd_outputs = output.dyn_cast<ArrayAttr>()) {
         for (auto nd_output : nd_outputs) {
           std::string sbp;

@@ -311,13 +311,13 @@ LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_c
           GetBuilder().getNamedAttr("integer_initializer", const_initialize_attr));
     }
   }
-  // attr psig
+  // attr parallel
   auto conf = this->job_wrapper_.ParallelConf4OpName(op_conf.name());
 
   auto nd_size = conf.hierarchy().dim().size();
-  auto psig = ConvertNdSbpToPsig(GetBuilder(), op_conf.variable_conf().nd_sbp(), nd_size);
+  auto parallel = ConvertNdSbpToparallel(GetBuilder(), op_conf.variable_conf().nd_sbp(), nd_size);
   attr_vec.emplace_back(
-      GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getSbpAttrName(), psig));
+      GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getSbpAttrName(), parallel));
   // add attrs
   state.addAttributes(attr_vec);
   // operands
