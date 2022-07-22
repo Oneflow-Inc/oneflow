@@ -20,8 +20,8 @@ limitations under the License.
 #include <unordered_map>
 #include <vector>
 
-// log_2 index only support 32-bit int. Don't know why.
-// Don't have any other bugs for unsigned long long int.
+// log_2_ index only support 32-bit int. Don't know why.
+// Don't have any other bugs for unsigned int.
 #define kBinarySetEntryType unsigned int
 
 namespace oneflow {
@@ -63,18 +63,18 @@ class BinarySet {
 
  private:
   friend struct BinarySetHasher;
-  // binary_set_values contains a vector of 64-bit or 32-bit int.
+  // binary_set_values_ contains a vector of 64-bit or 32-bit int.
   // Each bit means whether an entry is in the set
-  std::vector<kBinarySetEntryType> binary_set_values;
+  std::vector<kBinarySetEntryType> binary_set_values_;
 
   int32_t size_of_set_ = -1;
 
-  // total bits of the entry type in vector binary_set_values.
-  static const int32_t bit_entry_type = 8 * sizeof(kBinarySetEntryType);
-  // A static function for initialization of log_2 mapping
+  // total bits of the entry type in vector binary_set_values_.
+  static const int32_t bit_entry_type_ = 8 * sizeof(kBinarySetEntryType);
+  // A static function for initialization of log_2_ mapping
   static std::unordered_map<kBinarySetEntryType, int32_t> InitLog2();
   // Take log2 of a integer value: 2^n -> n.
-  static const std::unordered_map<kBinarySetEntryType, int32_t> log_2;
+  static const std::unordered_map<kBinarySetEntryType, int32_t> log_2_;
 };
 
 struct BinarySetHasher {
@@ -83,8 +83,8 @@ struct BinarySetHasher {
     using std::size_t;
 
     size_t h = 0;
-    for (int i = 0; i < bs.binary_set_values.size(); i++) {
-      h ^= (hash<kBinarySetEntryType>()(bs.binary_set_values[i]) << i);
+    for (int i = 0; i < bs.binary_set_values_.size(); i++) {
+      h ^= (hash<kBinarySetEntryType>()(bs.binary_set_values_[i]) << i);
     }
     return h;
   };
