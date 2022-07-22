@@ -78,7 +78,7 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
 /*static*/ Maybe<void> ReflectionPad1DOp::ModifyInputArg(
     const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
-  CHECK_NOTNULL_OR_RETURN(x_modifier);
+  CHECK_NOTNULL_OR_RETURN(x_modifier);  // NOLINT
   x_modifier->set_requires_grad(true);
   return Maybe<void>::Ok();
 }
@@ -144,7 +144,7 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
 /*static*/ Maybe<void> ReflectionPad2DOp::ModifyInputArg(
     const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
-  CHECK_NOTNULL_OR_RETURN(x_modifier);
+  CHECK_NOTNULL_OR_RETURN(x_modifier);  // NOLINT
   x_modifier->set_requires_grad(true);
   return Maybe<void>::Ok();
 }

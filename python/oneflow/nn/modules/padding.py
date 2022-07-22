@@ -96,8 +96,8 @@ class ReplicationPad2d(Module):
         padding (Union[int, tuple, list]):  the size of the padding. If is `int`, uses the same padding in all boundaries. If a 4-`tuple`, uses (:math:`\\mathrm{padding_{left}}`, :math:`\\mathrm{padding_{right}}`, :math:`\\mathrm{padding_{top}}`, :math:`\\mathrm{padding_{bottom}}`)
 
     Shape:
-        - Input: :math:`(N, C, H_{in}, W_{in})`
-        - Output: :math:`(N, C, H_{out}, W_{out})` where
+        - Input: :math:`(N, C, H_{\\text{in}}, W_{\\text{in}})` or :math:`(C, H_{in}, W_{in})`
+        - Output: :math:`(N, C, H_{\\text{out}}, W_{\\text{out}})` or :math:`(C, H_{out}, W_{out})` where
 
             :math:`H_{out} = H_{in} + \\mathrm{padding_{top}} + \\mathrm{padding_{bottom}}`
 
@@ -165,10 +165,10 @@ class ReflectionPad1d(Module):
         Tensor: Returns a new tensor which is result of the reflection padding of the input tensor.
 
     Shape:
-        - Input: :math:`(N, C, W_{\\text{in}})`
-        - Output: :math:`(N, C, W_{\\text{out}})` where
+        - Input: :math:`(C, W_{in})` or :math:`(N, C, W_{in})`.
+        - Output: :math:`(C, W_{out})` or :math:`(N, C, W_{out})`, where
 
-          :math:`W_{\\text{out}} = W_{\\text{in}} + \\text{padding}_{\\text{left}} + \\text{padding}_{\\text{right}}`
+          :math:`W_{out} = W_{in} + \\text{padding_left} + \\text{padding_right}`
 
     For example:
 
@@ -225,8 +225,8 @@ class ReflectionPad2d(Module):
         Tensor: Returns a new tensor which is result of the reflection padding of the input tensor.
 
     Shape:
-        - Input: :math:`(N, C, H_{\\text{in}}, W_{\\text{in}})`
-        - Output: :math:`(N, C, H_{\\text{out}}, W_{\\text{out}})` where
+        - Input: :math:`(N, C, H_{\\text{in}}, W_{\\text{in}})` or :math:`(C, H_{in}, W_{in})`
+        - Output: :math:`(N, C, H_{\\text{out}}, W_{\\text{out}})` or :math:`(C, H_{out}, W_{out})` where
 
           :math:`H_{\\text{out}} = H_{\\text{in}} + \\text{padding}_{\\text{top}} + \\text{padding}_{\\text{bottom}}`
 
