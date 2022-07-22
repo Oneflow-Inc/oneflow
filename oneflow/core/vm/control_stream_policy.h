@@ -29,9 +29,18 @@ class ControlStreamPolicy final : public StreamPolicy {
   ControlStreamPolicy() = default;
   ~ControlStreamPolicy() = default;
 
-  ep::Stream* stream() override;
-  vm::Allocator* mut_allocator() override;
-  DeviceType device_type() const override;
+  vm::Allocator* mut_allocator() override { return (vm::Allocator*)nullptr; }
+
+  DeviceType device_type() const override {
+    UNIMPLEMENTED();
+    return DeviceType::kInvalidDevice;
+  }
+
+  ep::Stream* stream() override {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+
   void InitInstructionStatus(const Stream& stream,
                              InstructionStatusBuffer* status_buffer) const override {
     static_assert(sizeof(NaiveInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
