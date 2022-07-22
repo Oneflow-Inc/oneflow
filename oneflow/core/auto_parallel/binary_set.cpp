@@ -19,9 +19,9 @@ namespace oneflow {
 namespace auto_parallel {
 
 // A static function for initialization of log_2 mapping
-std::unordered_map<kBinarySetEntryType, int32_t> BinarySet::Initialize_log2() {
+std::unordered_map<kBinarySetEntryType, int32_t> BinarySet::InitLog2() {
   std::unordered_map<kBinarySetEntryType, int32_t> log_2_;
-  for (int32_t i = 0; i < BinarySet::bit_of_BinarySetEntryType; i++) {
+  for (int32_t i = 0; i < BinarySet::bit_entry_type; i++) {
     log_2_[(kBinarySetEntryType)(1 << i)] = i;
   }
   return log_2_;
@@ -29,70 +29,70 @@ std::unordered_map<kBinarySetEntryType, int32_t> BinarySet::Initialize_log2() {
 
 // Initialization of log_2 mapping
 const std::unordered_map<kBinarySetEntryType, int32_t> BinarySet::log_2 =
-    BinarySet::Initialize_log2();
+    BinarySet::InitLog2();
 
 // Constructor
-BinarySet::BinarySet(int32_t size_of_set) : SizeOfSet(size_of_set) {
-  int32_t k = (size_of_set - 1) / bit_of_BinarySetEntryType + 1;
-  BinarySetValues.resize(k, 0);
+BinarySet::BinarySet(int32_t size_of_set) : size_of_set_(size_of_set) {
+  int32_t k = (size_of_set - 1) / bit_entry_type + 1;
+  binary_set_values.resize(k, 0);
 }
 
 // Initialization if needed
 void BinarySet::Initialize(int32_t size_of_set) {
-  SizeOfSet = size_of_set;
-  int32_t k = (size_of_set - 1) / bit_of_BinarySetEntryType + 1;
-  BinarySetValues.resize(k, 0);
+  size_of_set_ = size_of_set;
+  int32_t k = (size_of_set - 1) / bit_entry_type + 1;
+  binary_set_values.resize(k, 0);
 }
 
 // Clear all the elements in the set
-void BinarySet::Clear() { BinarySetValues.assign(BinarySetValues.size(), 0); }
+void BinarySet::Clear() { binary_set_values.assign(binary_set_values.size(), 0); }
 
 // Check if i-th element in this subset
 int32_t BinarySet::CheckExistence(int32_t i) const {
-  int32_t k = i / bit_of_BinarySetEntryType;
-  int32_t j = i % bit_of_BinarySetEntryType;
-  return BinarySetValues[k] >> j & 1;
+  int32_t k = i / bit_entry_type;
+  int32_t j = i % bit_entry_type;
+  return binary_set_values[k] >> j & 1;
 }
 
 // Add i-th element into this subset
 void BinarySet::AddEntry(int32_t i) {
-  int32_t k = i / bit_of_BinarySetEntryType;
-  int32_t j = i % bit_of_BinarySetEntryType;
-  BinarySetValues[k] |= 1 << j;
+  int32_t k = i / bit_entry_type;
+  int32_t j = i % bit_entry_type;
+  binary_set_values[k] |= 1 << j;
 }
 // Take i-th element out from this subset
 void BinarySet::DeleteEntry(int32_t i) {
-  int32_t k = i / bit_of_BinarySetEntryType;
-  int32_t j = i % bit_of_BinarySetEntryType;
-  BinarySetValues[k] &= ~(1 << j);
+  int32_t k = i / bit_entry_type;
+  int32_t j = i % bit_entry_type;
+  binary_set_values[k] &= ~(1 << j);
 }
 // Get the union with another subset and store it into u
 void BinarySet::UnionTo(const BinarySet& bs, BinarySet& u) {
-  for (int32_t k = 0; k < BinarySetValues.size(); k++) {
-    u.BinarySetValues[k] = BinarySetValues[k] | bs.BinarySetValues[k];
+  for (int32_t k = 0; k < binary_set_values.size(); k++) {
+    u.binary_set_values[k] = binary_set_values[k] | bs.binary_set_values[k];
   }
 }
 // If this binary set intersects another one
 bool BinarySet::IfIntersect(const BinarySet& bs) const {
-  int32_t min_bs_size = std::min(BinarySetValues.size(), bs.BinarySetValues.size());
+  int32_t min_bs_size = std::min(binary_set_values.size(), bs.binary_set_values.size());
   for (int32_t k = 0; k < min_bs_size; k++) {
-    if (BinarySetValues[k] & bs.BinarySetValues[k]) { return true; }
+    if (binary_set_values[k] & bs.binary_set_values[k]) { return true; }
   }
   return false;
 }
 // Get the intersection with another subset and store it into i
 void BinarySet::IntersectionTo(const BinarySet& bs, BinarySet& i) const {
-  int32_t min_bs_size = std::min(BinarySetValues.size(), bs.BinarySetValues.size());
-  if (min_bs_size > i.BinarySetValues.size()) { i.BinarySetValues.resize(min_bs_size, 0); }
-  for (int32_t k = 0; k < BinarySetValues.size(); k++) {
-    i.BinarySetValues[k] = BinarySetValues[k] & bs.BinarySetValues[k];
+  int32_t min_bs_size = std::min(binary_set_values.size(), bs.binary_set_values.size());
+  if (min_bs_size > i.binary_set_values.size()) { i.binary_set_values.resize(min_bs_size, 0); }
+  for (int32_t k = 0; k < binary_set_values.size(); k++) {
+    i.binary_set_values[k] = binary_set_values[k] & bs.binary_set_values[k];
   }
 }
 // Count number of elements in this subset
 int32_t BinarySet::Total() const {
   int32_t t = 0;
-  for (int32_t k = 0; k < BinarySetValues.size(); k++) {
-    kBinarySetEntryType bsv = BinarySetValues[k];
+  for (int32_t k = 0; k < binary_set_values.size(); k++) {
+    kBinarySetEntryType bsv = binary_set_values[k];
     bsv = (bsv & 0x5555555555555555) + ((bsv >> 1) & 0x5555555555555555);
     bsv = (bsv & 0x3333333333333333) + ((bsv >> 2) & 0x3333333333333333);
     bsv = (bsv & 0x0F0F0F0F0F0F0F0F) + ((bsv >> 4) & 0x0F0F0F0F0F0F0F0F);
@@ -107,7 +107,7 @@ int32_t BinarySet::Total() const {
 // Output all the elements in the subset
 void BinarySet::OutPut(std::vector<int32_t>& out) const {
   out.clear();
-  for (int32_t i = 0; i < SizeOfSet; i++) {
+  for (int32_t i = 0; i < size_of_set_; i++) {
     if (CheckExistence(i)) { out.emplace_back(i); }
   }
 }
@@ -115,13 +115,13 @@ void BinarySet::OutPut(std::vector<int32_t>& out) const {
 // Output all the elements in the subset
 void BinarySet::QuickOutPut(std::vector<int32_t>& out) const {
   out.clear();
-  for (int32_t i = 0; i < BinarySetValues.size(); i++) {
-    kBinarySetEntryType x = BinarySetValues[i];
+  for (int32_t i = 0; i < binary_set_values.size(); i++) {
+    kBinarySetEntryType x = binary_set_values[i];
     kBinarySetEntryType y = 0;
     while (x) {
       y = x;
       x &= x - 1;
-      out.emplace_back(i * BinarySet::bit_of_BinarySetEntryType + log_2.find(y - x)->second);
+      out.emplace_back(i * BinarySet::bit_entry_type + log_2.find(y - x)->second);
     }
   }
 }
@@ -133,9 +133,9 @@ void BinarySet::AddEntries(std::vector<int32_t>& in) {
 
 // If two binary sets are equal to each other
 bool BinarySet::operator==(const BinarySet& rhs) const {
-  if (SizeOfSet != rhs.SizeOfSet) { return false; }
-  for (int32_t i = 0; i < BinarySetValues.size(); i++) {
-    if (BinarySetValues[i] != rhs.BinarySetValues[i]) { return false; }
+  if (size_of_set_ != rhs.size_of_set_) { return false; }
+  for (int32_t i = 0; i < binary_set_values.size(); i++) {
+    if (binary_set_values[i] != rhs.binary_set_values[i]) { return false; }
   }
   return true;
 }
