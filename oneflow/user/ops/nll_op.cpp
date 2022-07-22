@@ -22,9 +22,9 @@ namespace oneflow {
   CHECK_OR_RETURN(IsIndexDataType(ctx->InputDType("target", 0)))
       << ctx->op_name() << ": expected target being integer type";
 
-  auto input_dtype = ctx->InputDType("input", 0);
+  DataType input_dtype = ctx->InputDType("input", 0);
   if (ctx->has_input("weight", 0)) {
-    auto weight_dtype = ctx->InputDType("weight", 0);
+    DataType weight_dtype = ctx->InputDType("weight", 0);
     CHECK_EQ_OR_RETURN(weight_dtype, input_dtype) << ctx->op_name() << ": expected weight dtype "
                                                   << input_dtype << ", but got " << weight_dtype;
   }
@@ -115,7 +115,7 @@ namespace oneflow {
   CHECK_OR_RETURN(IsIndexDataType(ctx->InputDType("target", 0)))
       << ctx->op_name() << ": expected target being integer type";
 
-  auto input_dtype = ctx->InputDType("input", 0);
+  DataType input_dtype = ctx->InputDType("input", 0);
   CHECK_EQ_OR_RETURN(ctx->InputDType("out_grad", 0), input_dtype)
       << ctx->op_name() << ": expected out_grad dtype " << input_dtype << ", got "
       << ctx->InputDType("out_grad", 0);

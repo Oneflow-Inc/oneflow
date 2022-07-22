@@ -31,7 +31,7 @@ Maybe<void> InferTensorDesc4MatrixVectorProduct(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferDataType4MatrixVectorProduct(user_op::InferContext* ctx) {
-  const DataType& dtype = ctx->InputDType("a", 0);
+  DataType dtype = ctx->InputDType("a", 0);
   CHECK_EQ_OR_RETURN(ctx->InputDType("b", 0), dtype)
       << "Matrix A datatype should be equal to Vector B. ";
   *ctx->MutOutputDType("out", 0) = dtype;
@@ -63,7 +63,7 @@ Maybe<void> InferTensorDesc4MatrixVectorProductGradB(user_op::InferContext* ctx)
 }
 
 Maybe<void> InferDataType4Grad(user_op::InferContext* ctx) {
-  const DataType& dtype = ctx->InputDType("dy", 0);
+  DataType dtype = ctx->InputDType("dy", 0);
   *ctx->MutOutputDType("dx", 0) = dtype;
   return Maybe<void>::Ok();
 }

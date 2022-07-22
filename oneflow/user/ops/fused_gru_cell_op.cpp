@@ -60,7 +60,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FusedGruCellOp::InferDataType(user_op::InferContext* ctx) {
-  const oneflow::DataType& in_types = ctx->InputDType("hx", 0);
+  DataType in_types = ctx->InputDType("hx", 0);
   *ctx->MutOutputDType("hy", 0) = in_types;
   *ctx->MutOutputDType("workspace", 0) = in_types;
   return Maybe<void>::Ok();
@@ -117,7 +117,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FusedGruCellGradOp ::InferDataType(user_op::InferContext* ctx) {
-  const oneflow::DataType& in_types = ctx->InputDType("grad_hy", 0);
+  DataType in_types = ctx->InputDType("grad_hy", 0);
   *ctx->MutOutputDType("grad_input_gates", 0) = in_types;
   *ctx->MutOutputDType("grad_hidden_gates", 0) = in_types;
   if (ctx->has_output("grad_hx", 0)) { *ctx->MutOutputDType("grad_hx", 0) = in_types; }

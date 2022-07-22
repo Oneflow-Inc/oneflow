@@ -87,7 +87,7 @@ namespace oneflow {
 /* static */ Maybe<void> FusedDotFeatureInteractionOp::InferDataType(user_op::InferContext* ctx) {
   const int64_t feature_input_size = ctx->input_size("features");
   CHECK_GE_OR_RETURN(feature_input_size, 1);
-  const auto& first_feature_dtype = ctx->InputDType("features", 0);
+  DataType first_feature_dtype = ctx->InputDType("features", 0);
   for (int64_t i = 1; i < feature_input_size; ++i) {
     CHECK_EQ_OR_RETURN(first_feature_dtype, ctx->InputDType("features", i));
   }
@@ -137,7 +137,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> FusedDotFeatureInteractionGradOp::InferDataType(
     user_op::InferContext* ctx) {
-  const auto& dy_dtype = ctx->InputDType("dy", 0);
+  DataType dy_dtype = ctx->InputDType("dy", 0);
   for (int64_t i = 0; i < ctx->output_size("features_grad"); ++i) {
     *ctx->MutOutputDType("features_grad", i) = dy_dtype;
   }
