@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> BroadcastPowXGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
+  *ctx->MutOutputShape("dx", 0) = ctx->InputShape("x", 0);
   *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x", 0);
   return Maybe<void>::Ok();
 }
@@ -76,7 +76,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> BroadcastPowYGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("dy", 0) = ctx->InputShape("y", 0);
+  *ctx->MutOutputShape("dy", 0) = ctx->InputShape("y", 0);
   *ctx->OutputIsDynamic("dy", 0) = ctx->InputIsDynamic("y", 0);
   return Maybe<void>::Ok();
 }

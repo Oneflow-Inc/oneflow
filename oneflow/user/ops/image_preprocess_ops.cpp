@@ -159,7 +159,7 @@ namespace oneflow {
   const auto tensor_slice_view =
       GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id);
   const Shape& physical_shape = tensor_slice_view.shape();
-  *ctx->OutputShape("out", 0) = physical_shape;
+  *ctx->MutOutputShape("out", 0) = physical_shape;
   return Maybe<void>::Ok();
 }
 
