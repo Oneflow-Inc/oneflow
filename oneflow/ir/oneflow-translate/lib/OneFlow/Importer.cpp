@@ -466,8 +466,7 @@ Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp) {
       makeArrayRef(llvm::SmallVector<StringRef>(sbp_strs.begin(), sbp_strs.end())));
 }
 
-Attribute ConvertSBPToString(Builder& builder,
-                             ::mlir::sbp::ParallelSignatureAttr& psig) {
+Attribute ConvertSBPToString(Builder& builder, ::mlir::sbp::ParallelSignatureAttr& psig) {
   std::vector<std::string> list;
   for (auto output : psig.getOutputs()) {
     if (auto nd_outputs = output.dyn_cast<ArrayAttr>()) {
