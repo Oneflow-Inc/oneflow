@@ -584,6 +584,10 @@
   signature: "Tensor (Tensor dy, Tensor x) => GeluGrad"
   bind_python: False
 
+- name: "gelu_with_approximate"
+  signature: "Tensor (Tensor x, String approximate=\"none\") => GeluWithApproximate"
+  bind_python: True
+
 - name: "glu"
   signature: "Tensor (Tensor input, Int64 dim=-1) => Glu"
   bind_python: True
@@ -984,7 +988,7 @@
 
 - name: "fused_mlp_grad"
   signature:
-    "TensorTuple (Tensor dy, Tensor x, TensorTuple weights, TensorTuple cublas_aux, TensorTuple hidden) => FusedMLPGrad"
+    "TensorTuple (Tensor dy, Tensor x, TensorTuple weights, TensorTuple cublas_aux, TensorTuple hidden, FloatList alpha_list) => FusedMLPGrad"
   bind_python: False
 
 - name: "cublas_bias_add_relu_matmul_grad"
@@ -2028,16 +2032,13 @@
 
 - name: "unfold"
   signature:
-    'Tensor (Tensor x, String data_format="channels_first", Int32List kernel_size,
-    Int32List dilation_rate, Int32List padding,
-    Int32List strides) => Unfold'
+    'Tensor (Tensor x, Int32List[2] kernel_size, Int32List[2] dilation=1, Int32List[2] padding=0,
+    Int32List[2] stride=1, String data_format="channels_first") => Unfold'
   bind_python: True
 
 - name: "fold"
-  signature: 'Tensor (Tensor x, String data_format="channels_first",
-    Int32List output_size, Int32List kernel_size,
-    Int32List dilation_rate, Int32List padding,
-    Int32List strides) => Fold'
+  signature: 'Tensor (Tensor x, Int32List[1] output_size, Int32List[2] kernel_size, Int32List[2] dilation=1, 
+    Int32List[2] padding=0, Int32List[2] stride=1, String data_format="channels_first") => Fold'
   bind_python: True
 
 - name: "split"

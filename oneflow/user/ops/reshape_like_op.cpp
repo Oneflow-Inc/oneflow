@@ -44,7 +44,7 @@ namespace oneflow {
       << "The element number of the in tensor must be equal to the element number of the "
          "like tensor, "
       << "but got " << in_shape.elem_cnt() << " and " << like_shape.elem_cnt();
-  *ctx->OutputShape("out", 0) = like_shape;
+  *ctx->MutOutputShape("out", 0) = like_shape;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReshapeLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
