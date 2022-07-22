@@ -28,7 +28,7 @@ namespace {
 // Whether the given binary set intersects all the sbp sets of the consumers
 bool IfIntersectAll(
     const HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
-    BinarySet& bs) {
+    const BinarySet& bs) {
   for (const auto& sbp_set_group : consumer_bn2sbp_set) {
     if (!bs.IfIntersect(sbp_set_group.second)) { return false; }
   }
@@ -101,9 +101,8 @@ SbpCollector::SbpCollector() {
 }
 
 // Collect all the possible Sbp Parallel from a NdSbpSignature
-void SbpCollector::CollectUniverse(NdSbpSignature& sbp_) {
-  auto& bn_in_op2sbp_parallels = *sbp_.mutable_bn_in_op2nd_sbp();
-  for (auto& OpSbpPair : bn_in_op2sbp_parallels) {
+void SbpCollector::CollectUniverse(const NdSbpSignature& sbp_) {
+  for (auto& OpSbpPair : sbp_.bn_in_op2nd_sbp()) {
     if (SbpParallelUniverse.find(OpSbpPair.second) == SbpParallelUniverse.end()) {
       int32_t curr_size = SbpParallelUniverse.size();
       SbpParallelUniverse[OpSbpPair.second] = curr_size;
@@ -112,11 +111,11 @@ void SbpCollector::CollectUniverse(NdSbpSignature& sbp_) {
   }
 }
 // Collect all the possible Sbp Parallel from a SbpNode
-void SbpCollector::CollectUniverse(SbpNode<NdSbpSignature>* sbp_node) {
+void SbpCollector::CollectUniverse(const SbpNode<NdSbpSignature>* sbp_node) {
   for (auto& sbp_ : sbp_node->sbp_sig_obj_list_) { CollectUniverse(sbp_); }
 }
 // Collect all the possible Sbp Parallel from a SbpGraph
-void SbpCollector::CollectUniverse(SbpGraph<NdSbpSignature>& sbp_graph) {
+void SbpCollector::CollectUniverse(const SbpGraph<NdSbpSignature>& sbp_graph) {
   for (auto* sbp_node : sbp_graph.node_list_) { CollectUniverse(sbp_node); }
   accumulator.resize(SbpParallelUniverse.size(), 0);
   bs_buffer.Initialize(SbpParallelUniverse.size());
@@ -127,7 +126,7 @@ void SbpCollector::CollectUniverse(SbpGraph<NdSbpSignature>& sbp_graph) {
 // In this moment their hierarchy is the same!
 
 // Initialize copy cost from producer to proxy of producer
-void SbpCollector::InitializeCopyCostFromNode2Proxy(SbpNode<NdSbpSignature>* sbp_proxy,
+void SbpCollector::InitializeCopyCostFromNode2Proxy(const SbpNode<NdSbpSignature>* sbp_proxy,
                                                     const LogicalBlobId& lbi) {
   // the only edge from producer  to proxy of producer
   SbpEdge<NdSbpSignature>* sbp_edge = sbp_proxy->edges_in_[0];
@@ -163,7 +162,7 @@ void SbpCollector::InitializeCopyCostFromNode2Proxy(SbpNode<NdSbpSignature>* sbp
 
     // look through sbp parallel set in consumer
     for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
-      BinarySet& sbp_parallel_set = sbp_proxy->parallel_candidates_[sbp_id_consumer];
+      const BinarySet& sbp_parallel_set = sbp_proxy->parallel_candidates_[sbp_id_consumer];
       sbp_parallel_set.QuickOutPut(sbp_parallel_ids);
 
       // look through all sbp parallels in a sbp parallel set
@@ -185,12 +184,13 @@ void SbpCollector::InitializeCopyCostFromNode2Proxy(SbpNode<NdSbpSignature>* sbp
 // Initialize copy cost from proxy of producer to consumers
 void SbpCollector::InitializeCopyCostFromProxy2Consumer(
     SbpNode<NdSbpSignature>* sbp_proxy,
-    HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
-    HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node) {
+    const HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
+    const HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node) {
   // Connect sbp proxy and consumers
   for (const auto& consumer_bn_group : consumer_bn2sbp_set) {
     // consumer in cost model
-    SbpNode<NdSbpSignature>* sbp_node_consumer = op_name2sbp_node[consumer_bn_group.first.first];
+    SbpNode<NdSbpSignature>* sbp_node_consumer =
+        op_name2sbp_node.find(consumer_bn_group.first.first)->second;
     // input blob name of logical blob in consumer
     const std::string& ibn = consumer_bn_group.first.second;
 
@@ -230,7 +230,7 @@ void SbpCollector::InitializeCopyCostFromProxy2Consumer(
 
 // Export list of possible combination of Sbp Parallels
 void SbpCollector::ProxySbpCandidate(
-    const OpGraph& op_graph, HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node,
+    const OpGraph& op_graph, const HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node,
     SbpGraph<NdSbpSignature>& sbp_graph) {
   // If needed, we can output the mapping from operator name to its proxy.
   // HashMap<std::string, HashMap<LogicalBlobId, SbpNode<NdSbpSignature>*>>&
@@ -314,7 +314,7 @@ void SbpCollector::ProxySbpCandidate(
         std::min(max_num_sbp_proxy_, index2consumer_bn2sbp_set[index].size());
     // producer in cost model
     const std::string& producer_name = index2producer[index]->op().op_name();
-    SbpNode<NdSbpSignature>* sbp_node_producer = op_name2sbp_node[producer_name];
+    SbpNode<NdSbpSignature>* sbp_node_producer = op_name2sbp_node.find(producer_name)->second;
 
     const LogicalBlobId& lbi = lbi_index.first;
     // store all the binary sets of SBP Parallel into an unordered_set.
@@ -349,7 +349,8 @@ void SbpCollector::ProxySbpCandidate(
     // Unloading
     for (const auto& consumer_bn_group : index2consumer_bn2sbp_set[index]) {
       // consumer in cost model
-      SbpNode<NdSbpSignature>* sbp_node_consumer = op_name2sbp_node[consumer_bn_group.first.first];
+      SbpNode<NdSbpSignature>* sbp_node_consumer =
+          op_name2sbp_node.find(consumer_bn_group.first.first)->second;
       // the sbp edge connecting producer and consumer
       SbpEdge<NdSbpSignature>* edge_found = sbp_node_consumer->FindEdgeWithNode(sbp_node_producer);
       // unload logical blob from sbp edges
@@ -369,8 +370,8 @@ void SbpCollector::ProxySbpCandidate(
 // Depth first search to collect Sbp Parallel information for different lbis
 void SbpCollector::DfsSbpSet(
     int32_t depth, int32_t max_depth, const std::unordered_set<int32_t>& sbp_sets,
-    const std::unordered_set<int32_t>::iterator start_it,
-    HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
+    const std::unordered_set<int32_t>::iterator& start_it,
+    const HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
     const std::vector<BinarySet>& unique_sbp_groups, std::vector<BinarySet>& ParallelCandidates) {
   if (depth > 0) {
     if (IfIntersectAll(consumer_bn2sbp_set, bs_buffer)

@@ -41,11 +41,11 @@ class SbpCollector {
   ~SbpCollector() {}
 
   // Collect all the possible Sbp Parallel from a SbpGraph
-  void CollectUniverse(SbpGraph<NdSbpSignature>& sbp_graph);
+  void CollectUniverse(const SbpGraph<NdSbpSignature>& sbp_graph);
 
   // Export list of possible combination of Sbp Parallels
   void ProxySbpCandidate(const OpGraph& op_graph,
-                         HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node,
+                         const HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node,
                          SbpGraph<NdSbpSignature>& sbp_graph);
 
  private:
@@ -59,27 +59,27 @@ class SbpCollector {
   BinarySet bs_buffer;
 
   // Collect all the possible Sbp Parallel from a NdSbpSignature
-  void CollectUniverse(NdSbpSignature& sbp_);
+  void CollectUniverse(const NdSbpSignature& sbp_);
   // Collect all the possible Sbp Parallel from a SbpNode
-  void CollectUniverse(SbpNode<NdSbpSignature>* sbp_node);
+  void CollectUniverse(const SbpNode<NdSbpSignature>* sbp_node);
 
   // Initialize copy cost from producer to proxy of producer
-  void InitializeCopyCostFromNode2Proxy(SbpNode<NdSbpSignature>* sbp_proxy,
+  void InitializeCopyCostFromNode2Proxy(const SbpNode<NdSbpSignature>* sbp_proxy,
                                         const LogicalBlobId& lbi);
 
   // Initialize copy cost from proxy of producer to consumers
   void InitializeCopyCostFromProxy2Consumer(
       SbpNode<NdSbpSignature>* sbp_proxy,
-      HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
-      HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node);
+      const HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
+      const HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node);
 
   // Maximum number of possible sbp in the proxy
   const unsigned long max_num_sbp_proxy_ = 3;
 
   // Depth first search to collect Sbp Parallel information for the whole sbp set
   void DfsSbpSet(int32_t depth, int32_t max_depth, const std::unordered_set<int32_t>& sbp_sets,
-                 const std::unordered_set<int32_t>::iterator sbp_set_it,
-                 HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
+                 const std::unordered_set<int32_t>::iterator& sbp_set_it,
+                 const HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
                  const std::vector<BinarySet>& unique_sbp_groups,
                  std::vector<BinarySet>& ParallelCandidates);
 };  // class SbpCollector
