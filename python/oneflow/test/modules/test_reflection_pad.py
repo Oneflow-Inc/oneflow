@@ -112,7 +112,7 @@ class TestReflectionPadModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_reflection_pad2d(test_case, *arg)
-    
+
     @autotest(n=5)
     def test_reflection_pad_1d_with_random_data(test_case):
         c = random(1, 6).to(int)

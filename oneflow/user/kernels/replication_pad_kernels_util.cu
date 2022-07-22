@@ -24,6 +24,26 @@ namespace oneflow {
 namespace user_op {
 
 template<typename IN_T>
+__global__ void DoCUDAReplicationPad1d(const IN_T* src, IN_T* dest,
+                                       const NdIndexOffsetHelper<int64_t, 3> index_helper,
+                                       const int64_t elem_num, const int64_t src_num,
+                                       const int64_t dest_num, const int64_t y_width,
+                                       const int64_t x_width, const int64_t pad_left) {
+  DoReplicationPad1d<IN_T>(src, dest, index_helper, elem_num, src_num, dest_num, y_width, x_width,
+                           pad_left);
+};
+
+template<typename IN_T>
+__global__ void DoCUDAReplicationPad1dGrad(const IN_T* src, IN_T* dest,
+                                           const NdIndexOffsetHelper<int64_t, 3> index_helper,
+                                           const int64_t elem_num, const int64_t src_num,
+                                           const int64_t dest_num, const int64_t dy_width,
+                                           const int64_t dx_width, const int64_t pad_left) {
+  DoReplicationPad1dGrad<IN_T>(src, dest, index_helper, elem_num, src_num, dest_num, dy_width,
+                               dx_width, pad_left);
+};
+
+template<typename IN_T>
 __global__ void DoCUDAReplicationPad2d(const IN_T* src, IN_T* dest,
                                        const NdIndexOffsetHelper<int64_t, 4> index_helper,
                                        const int64_t elem_num, const int64_t src_num,
@@ -46,6 +66,67 @@ __global__ void DoCUDAReplicationPad2dGrad(const IN_T* src, IN_T* dest,
   DoReplicationPad2dGrad<IN_T>(src, dest, index_helper, elem_num, src_num, dest_num, dy_height,
                                dy_width, dx_height, dx_width, pad_left, pad_top);
 };
+
+template<typename IN_T>
+struct ReplicationPad1dFunctor<DeviceType::kCUDA, IN_T> final {
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
+                  const NdIndexOffsetHelper<int64_t, 3>& index_helper, const int64_t n_batch,
+                  const int64_t n_channel, const int64_t y_width, const int64_t x_width,
+                  const int64_t pad_left) {
+    int64_t dest_num = n_channel * y_width;
+    int64_t src_num = n_channel * x_width;
+    int64_t elem_num = n_batch * dest_num;
+    DoCUDAReplicationPad1d<IN_T><<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0,
+                                   stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        src, dest, index_helper, elem_num, src_num, dest_num, y_width, x_width, pad_left);
+  }
+};
+
+// float16 implementation
+template<>
+void ReplicationPad1dFunctor<DeviceType::kCUDA, float16>::operator()(
+    ep::Stream* stream, const float16* src, float16* dest,
+    const NdIndexOffsetHelper<int64_t, 3>& index_helper, const int64_t n_batch,
+    const int64_t n_channel, const int64_t y_width, const int64_t x_width, const int64_t pad_left) {
+  int64_t dest_num = n_channel * y_width;
+  int64_t src_num = n_channel * x_width;
+  int64_t elem_num = n_batch * dest_num;
+  DoCUDAReplicationPad1d<half><<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0,
+                                 stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), index_helper, elem_num,
+      src_num, dest_num, y_width, x_width, pad_left);
+}
+
+template<typename IN_T>
+struct ReplicationPad1dGradFunctor<DeviceType::kCUDA, IN_T> final {
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
+                  const NdIndexOffsetHelper<int64_t, 3>& index_helper, const int64_t n_batch,
+                  const int64_t n_channel, const int64_t dy_width, const int64_t dx_width,
+                  const int64_t pad_left) {
+    int64_t dest_num = n_channel * dx_width;
+    int64_t src_num = n_channel * dy_width;
+    int64_t elem_num = n_batch * src_num;
+    DoCUDAReplicationPad1dGrad<IN_T><<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0,
+                                       stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        src, dest, index_helper, elem_num, src_num, dest_num, dy_width, dx_width, pad_left);
+  }
+};
+
+// float16 implementation
+template<>
+void ReplicationPad1dGradFunctor<DeviceType::kCUDA, float16>::operator()(
+    ep::Stream* stream, const float16* src, float16* dest,
+    const NdIndexOffsetHelper<int64_t, 3>& index_helper, const int64_t n_batch,
+    const int64_t n_channel, const int64_t dy_width, const int64_t dx_width,
+    const int64_t pad_left) {
+  int64_t dest_num = n_channel * dx_width;
+  int64_t src_num = n_channel * dy_width;
+  int64_t elem_num = n_batch * src_num;
+  DoCUDAReplicationPad1dGrad<half><<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0,
+                                     stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), index_helper, elem_num,
+      src_num, dest_num, dy_width, dx_width, pad_left);
+}
 
 template<typename IN_T>
 struct ReplicationPad2dFunctor<DeviceType::kCUDA, IN_T> final {
@@ -114,14 +195,12 @@ void ReplicationPad2dGradFunctor<DeviceType::kCUDA, float16>::operator()(
       src_num, dest_num, dy_height, dy_width, dx_height, dx_width, pad_left, pad_top);
 }
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REPLICATION_PAD2D_FUNCTOR,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REPLICATION_PAD_FUNCTOR,
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
                                  PADDING_DATA_TYPE_CUDA_SEQ);
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REPLICATION_PAD2D_GRAD_FUNCTOR,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REPLICATION_PAD_GRAD_FUNCTOR,
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
                                  PADDING_DATA_TYPE_CUDA_SEQ);
-
 }  // namespace user_op
 }  // namespace oneflow
 

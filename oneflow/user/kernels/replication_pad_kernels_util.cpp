@@ -21,6 +21,54 @@ namespace oneflow {
 namespace user_op {
 
 template<typename IN_T>
+__global__ void DoCUDAReplicationPad1d(const IN_T* src, IN_T* dest,
+                                       const NdIndexOffsetHelper<int64_t, 3> index_helper,
+                                       const int64_t elem_num, const int64_t src_num,
+                                       const int64_t dest_num, const int64_t y_width,
+                                       const int64_t x_width, const int64_t pad_left) {
+  DoReplicationPad1d<IN_T>(src, dest, index_helper, elem_num, src_num, dest_num, y_width, x_width,
+                           pad_left);
+};
+
+template<typename IN_T>
+__global__ void DoCUDAReplicationPad1dGrad(const IN_T* src, IN_T* dest,
+                                           const NdIndexOffsetHelper<int64_t, 3> index_helper,
+                                           const int64_t elem_num, const int64_t src_num,
+                                           const int64_t dest_num, const int64_t dy_width,
+                                           const int64_t dx_width, const int64_t pad_left) {
+  DoReplicationPad1dGrad<IN_T>(src, dest, index_helper, elem_num, src_num, dest_num, dy_width,
+                               dx_width, pad_left);
+};
+
+template<typename IN_T>
+struct ReplicationPad1dFunctor<DeviceType::kCPU, IN_T> final {
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
+                  const NdIndexOffsetHelper<int64_t, 3>& index_helper, const int64_t n_batch,
+                  const int64_t n_channel, const int64_t y_width, const int64_t x_width,
+                  const int64_t pad_left) {
+    int64_t dest_num = n_channel * y_width;
+    int64_t src_num = n_channel * x_width;
+    int64_t elem_num = n_batch * dest_num;
+    DoReplicationPad1d<IN_T>(src, dest, index_helper, elem_num, src_num, dest_num, y_width, x_width,
+                             pad_left);
+  }
+};
+
+template<typename IN_T>
+struct ReplicationPad1dGradFunctor<DeviceType::kCPU, IN_T> final {
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
+                  const NdIndexOffsetHelper<int64_t, 3>& index_helper, const int64_t n_batch,
+                  const int64_t n_channel, const int64_t dy_width, const int64_t dx_width,
+                  const int64_t pad_left) {
+    int64_t dest_num = n_channel * dx_width;
+    int64_t src_num = n_channel * dy_width;
+    int64_t elem_num = n_batch * src_num;
+    DoReplicationPad1dGrad<IN_T>(src, dest, index_helper, elem_num, src_num, dest_num, dy_width,
+                                 dx_width, pad_left);
+  }
+};
+
+template<typename IN_T>
 struct ReplicationPad2dFunctor<DeviceType::kCPU, IN_T> final {
   void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t n_batch,
@@ -50,10 +98,10 @@ struct ReplicationPad2dGradFunctor<DeviceType::kCPU, IN_T> final {
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REPLICATION_PAD2D_FUNCTOR, (DeviceType::kCPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REPLICATION_PAD_FUNCTOR, (DeviceType::kCPU),
                                  PADDING_DATA_TYPE_CPU_SEQ);
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REPLICATION_PAD2D_GRAD_FUNCTOR, (DeviceType::kCPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REPLICATION_PAD_GRAD_FUNCTOR, (DeviceType::kCPU),
                                  PADDING_DATA_TYPE_CPU_SEQ);
 
 }  // namespace user_op

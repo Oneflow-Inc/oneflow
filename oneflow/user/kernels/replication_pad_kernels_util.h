@@ -45,6 +45,22 @@ struct DeviceAdd {
 };
 
 template<DeviceType device_type, typename IN_T>
+struct ReplicationPad1dFunctor final {
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
+                  const NdIndexOffsetHelper<int64_t, 3>& index_helper, const int64_t n_batch,
+                  const int64_t n_channel, const int64_t y_width, const int64_t x_width,
+                  const int64_t pad_left);
+};
+
+template<DeviceType device_type, typename IN_T>
+struct ReplicationPad1dGradFunctor final {
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
+                  const NdIndexOffsetHelper<int64_t, 3>& index_helper, const int64_t n_batch,
+                  const int64_t n_channel, const int64_t dy_width, const int64_t dx_width,
+                  const int64_t pad_left);
+};
+
+template<DeviceType device_type, typename IN_T>
 struct ReplicationPad2dFunctor final {
   void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 4>& index_helper, const int64_t n_batch,
@@ -61,6 +77,63 @@ struct ReplicationPad2dGradFunctor final {
                   const int64_t dx_height, const int64_t dx_width, const int64_t pad_left,
                   const int64_t pad_top);
 };
+
+template<typename IN_T>
+OF_DEVICE_FUNC void DoReplicationPad1d(const IN_T* src, IN_T* dest,
+                                       const NdIndexOffsetHelper<int64_t, 3>& index_helper,
+                                       const int64_t elem_num, const int64_t src_num,
+                                       const int64_t dest_num, const int64_t y_width,
+                                       const int64_t x_width, const int64_t pad_left) {
+  XPU_1D_KERNEL_LOOP(k, elem_num) {
+    int64_t n, c, j, ip_x;
+    int64_t coord_y[4];
+    index_helper.OffsetToNdIndex(k, coord_y);
+    n = coord_y[0];
+    c = coord_y[1];
+    j = coord_y[2];
+    if (j < pad_left) {
+      ip_x = pad_left;
+    } else if (j >= pad_left && j < x_width + pad_left) {
+      ip_x = j;
+    } else {
+      ip_x = x_width + pad_left - 1;
+    }
+
+    ip_x = ip_x - pad_left;
+    int64_t dest_index = n * dest_num + c * y_width + j;
+    int64_t src_index = n * src_num + c * x_width + ip_x;
+    dest[dest_index] = src[src_index];
+  }
+}
+
+template<typename IN_T>
+OF_DEVICE_FUNC void DoReplicationPad1dGrad(const IN_T* src, IN_T* dest,
+                                           const NdIndexOffsetHelper<int64_t, 3>& index_helper,
+                                           const int64_t elem_num, const int64_t src_num,
+                                           const int64_t dest_num, const int64_t dy_width,
+                                           const int64_t dx_width, const int64_t pad_left) {
+  XPU_1D_KERNEL_LOOP(k, elem_num) {
+    int64_t n, c, j, ip_x;
+    int64_t coord[4];
+    index_helper.OffsetToNdIndex(k, coord);
+    n = coord[0];
+    c = coord[1];
+    j = coord[2];
+    if (j < pad_left) {
+      ip_x = pad_left;
+    } else if (j >= pad_left && j < dx_width + pad_left) {
+      ip_x = j;
+    } else {
+      ip_x = dx_width + pad_left - 1;
+    }
+
+    ip_x = ip_x - pad_left;
+
+    int64_t src_index = n * src_num + c * dy_width + j;
+    int64_t dest_index = n * dest_num + c * dx_width + ip_x;
+    DeviceAdd<IN_T>::Invoke(src + src_index, dest + dest_index);
+  }
+}
 
 template<typename IN_T>
 OF_DEVICE_FUNC void DoReplicationPad2d(const IN_T* src, IN_T* dest,
@@ -143,10 +216,12 @@ OF_DEVICE_FUNC void DoReplicationPad2dGrad(const IN_T* src, IN_T* dest,
 }
 
 // macros for functors instantiate(used by pad2d_kernels_util.cu)
-#define INSTANTIATE_REPLICATION_PAD2D_FUNCTOR(device_type_v, dtype_pair) \
+#define INSTANTIATE_REPLICATION_PAD_FUNCTOR(device_type_v, dtype_pair)                  \
+  template struct ReplicationPad1dFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>; \
   template struct ReplicationPad2dFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
 
-#define INSTANTIATE_REPLICATION_PAD2D_GRAD_FUNCTOR(device_type_v, dtype_pair) \
+#define INSTANTIATE_REPLICATION_PAD_GRAD_FUNCTOR(device_type_v, dtype_pair)                 \
+  template struct ReplicationPad1dGradFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>; \
   template struct ReplicationPad2dGradFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
 
 }  // namespace user_op

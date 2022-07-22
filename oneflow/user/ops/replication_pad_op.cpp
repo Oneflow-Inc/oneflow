@@ -47,6 +47,75 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
 
 }  // namespace
 
+/*static*/ Maybe<void> ReplicationPad1DOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetOpSbpSignature(ctx);
+}
+/*static*/ Maybe<void> ReplicationPad1DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& x_shape = ctx->InputShape("x", 0);
+  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
+  CHECK_EQ_OR_RETURN(padding.size(), x_shape.NumAxes() - 1);  // NOLINT
+  const int64_t n_idx = 0;
+  const int64_t c_idx = 1;
+  const int64_t w_idx = 2;
+
+  // Ensure the padding size is less than the input dimension.
+  CHECK_LT_OR_RETURN(padding[0], x_shape.At(w_idx));  // NOLINT
+  CHECK_LT_OR_RETURN(padding[1], x_shape.At(w_idx));  // NOLINT
+
+  DimVector y_dim_vec(x_shape.NumAxes());
+  const int64_t w_x = x_shape.At(w_idx);
+
+  y_dim_vec[n_idx] = x_shape.At(n_idx);
+  y_dim_vec[c_idx] = x_shape.At(c_idx);
+  y_dim_vec[w_idx] = w_x + padding[0] + padding[1];
+
+  *ctx->MutOutputShape("y", 0) = Shape(y_dim_vec);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ReplicationPad1DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return ReplicationPad1DOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ReplicationPad1DOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ReplicationPad1DOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
+  user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
+  CHECK_NOTNULL_OR_RETURN(x_modifier);
+  x_modifier->set_requires_grad(true);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> ReplicationPad1DGradOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetOpGradSbpSignature(ctx);
+}
+/*static*/ Maybe<void> ReplicationPad1DGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& dy_shape = ctx->InputShape("dy", 0);
+  const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
+  CHECK_EQ_OR_RETURN(padding.size(), dy_shape.NumAxes() - 1);  // NOLINT
+  const int64_t n_idx = 0;
+  const int64_t c_idx = 1;
+  const int64_t w_idx = 2;
+
+  DimVector dx_dim_vec(dy_shape.NumAxes());
+  int64_t w_dy = dy_shape.At(w_idx);
+
+  dx_dim_vec[n_idx] = dy_shape.At(0);
+  dx_dim_vec[c_idx] = dy_shape.At(1);
+  dx_dim_vec[w_idx] = w_dy - padding[0] - padding[1];
+
+  *ctx->MutOutputShape("dx", 0) = Shape(dx_dim_vec);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ReplicationPad1DGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return ReplicationPad2DGradOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ReplicationPad1DGradOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  return Maybe<void>::Ok();
+}
+
 /*static*/ Maybe<void> ReplicationPad2DOp::GetSbp(user_op::SbpContext* ctx) {
   return GetOpSbpSignature(ctx);
 }
