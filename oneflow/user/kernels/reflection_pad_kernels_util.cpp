@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
-
 namespace user_op {
 
 template<typename IN_T>
