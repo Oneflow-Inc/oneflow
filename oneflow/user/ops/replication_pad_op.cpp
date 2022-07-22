@@ -25,7 +25,7 @@ namespace {
 Maybe<void> GetOpSbpSignature(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   const int64_t input_dims = x_tensor.shape().NumAxes();
-  CHECK_EQ_OR_RETURN(input_dims, 4);
+  CHECK_EQ_OR_RETURN(input_dims, 4);  // NOLINT
   // NOTE(Liang Depeng): assume data format is NCHW.
   const int64_t first_two_dims = input_dims - 2;
   FOR_RANGE(int64_t, i, 0, first_two_dims) {
@@ -37,7 +37,7 @@ Maybe<void> GetOpSbpSignature(user_op::SbpContext* ctx) {
 Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
   const int64_t grad_dims = dy_tensor.shape().NumAxes();
-  CHECK_EQ_OR_RETURN(grad_dims, 4);
+  CHECK_EQ_OR_RETURN(grad_dims, 4);  // NOLINT
   const int64_t first_two_dims = grad_dims - 2;
   FOR_RANGE(int64_t, i, 0, first_two_dims) {
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
@@ -118,7 +118,7 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
 /*static*/ Maybe<void> ReplicationPad2DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-  CHECK_EQ_OR_RETURN(padding.size(), x_shape.NumAxes());
+  CHECK_EQ_OR_RETURN(padding.size(), x_shape.NumAxes());  // NOLINT
   const int64_t n_idx = 0;
   const int64_t c_idx = 1;
   const int64_t h_idx = 2;
@@ -146,7 +146,7 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
 /*static*/ Maybe<void> ReplicationPad2DOp::ModifyInputArg(
     const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
-  CHECK_NOTNULL_OR_RETURN(x_modifier);
+  CHECK_NOTNULL_OR_RETURN(x_modifier);  // NOLINT
   x_modifier->set_requires_grad(true);
   return Maybe<void>::Ok();
 }
@@ -157,7 +157,7 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
 /*static*/ Maybe<void> ReplicationPad2DGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& dy_shape = ctx->InputShape("dy", 0);
   const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-  CHECK_EQ_OR_RETURN(padding.size(), dy_shape.NumAxes());
+  CHECK_EQ_OR_RETURN(padding.size(), dy_shape.NumAxes());  // NOLINT
   const int64_t n_idx = 0;
   const int64_t c_idx = 1;
   const int64_t h_idx = 2;
@@ -202,7 +202,7 @@ REGISTER_USER_OP_GRAD("replication_pad1d")
 
 REGISTER_USER_OP_GRAD("replication_pad2d")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =

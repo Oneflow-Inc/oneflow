@@ -21,8 +21,8 @@ namespace oneflow {
 namespace one {
 
 struct PadNdCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  std::vector<int64_t> paddings;
+  bool requires_grad = false;
+  std::vector<int64_t> paddings{};
 };
 
 class PadNd : public OpExprGradFunction<PadNdCaptureState> {
