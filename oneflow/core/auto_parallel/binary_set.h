@@ -20,7 +20,9 @@ limitations under the License.
 #include <unordered_map>
 #include <vector>
 
-#define kBinarySetEntryType unsigned long long int
+// log_2 index only support 32-bit int. Don't know why.
+// Don't have any other bugs for unsigned long long int.
+#define kBinarySetEntryType unsigned int
 
 namespace oneflow {
 namespace auto_parallel {

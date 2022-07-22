@@ -50,14 +50,14 @@ void BinarySet::Clear() { binary_set_values.assign(binary_set_values.size(), 0);
 int32_t BinarySet::CheckExistence(int32_t i) const {
   int32_t k = i / bit_entry_type;
   int32_t j = i % bit_entry_type;
-  return binary_set_values[k] >> j & 1;
+  return (binary_set_values[k] >> j) & 1;
 }
 
 // Add i-th element into this subset
 void BinarySet::AddEntry(int32_t i) {
   int32_t k = i / bit_entry_type;
   int32_t j = i % bit_entry_type;
-  binary_set_values[k] |= 1 << j;
+  binary_set_values[k] |= (1 << j);
 }
 // Take i-th element out from this subset
 void BinarySet::DeleteEntry(int32_t i) {
@@ -127,7 +127,7 @@ void BinarySet::QuickOutPut(std::vector<int32_t>& out) const {
 
 // Add elements of input into this subset
 void BinarySet::AddEntries(std::vector<int32_t>& in) {
-  for (int32_t i = 0; i < in.size(); i++) { AddEntry(i); }
+  for (int32_t i : in) { AddEntry(i); }
 }
 
 // If two binary sets are equal to each other
