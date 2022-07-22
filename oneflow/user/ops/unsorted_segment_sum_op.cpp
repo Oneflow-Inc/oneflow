@@ -52,7 +52,7 @@ namespace oneflow {
   const Shape& data_shape = ctx->InputShape("data", 0);
   const int64_t axis = ctx->Attr<int64_t>("axis");
   const int64_t num_segments = ctx->Attr<int64_t>("num_segments");
-  Shape* out_shape = ctx->OutputShape("out", 0);
+  Shape* out_shape = ctx->MutOutputShape("out", 0);
   const Shape& segment_ids_shape = ctx->InputShape("segment_ids", 0);
 
   DimVector dim_vec;
@@ -163,7 +163,7 @@ REGISTER_USER_OP_GRAD("unsorted_segment_sum")
   FOR_RANGE(int64_t, i, axis + 1, like_shape.NumAxes()) {
     CHECK_EQ_OR_RETURN(like_shape.At(i), data_shape.At(i + segment_ids_shape.NumAxes() - 1));
   }
-  *ctx->OutputShape("out", 0) = ctx->InputShape("like", 0);
+  *ctx->MutOutputShape("out", 0) = ctx->InputShape("like", 0);
   *ctx->IsDynamic4ArgNameAndIndex("out", 0) = ctx->InputIsDynamic("like", 0);
   return Maybe<void>::Ok();
 }
