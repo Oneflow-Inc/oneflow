@@ -119,7 +119,7 @@ void VirtualMachineEngine::MakeAndAppendFusedInstruction(
 constexpr static int kPendingHandleWindow = 10;
 void VirtualMachineEngine::FetchAndTryFusePendingInstructions(
     InstructionList* /*out*/ pending_instructions) {
-  size_t window_size = kPendingHandleWindow;
+  size_t window_size = ParseIntegerFromEnv("ONEFLOW_VM_PENDING_HANDLE_WINDOW_SIZE", kPendingHandleWindow);;
   InstructionList fused_instruction_list;
   INTRUSIVE_FOR_EACH_PTR(instruction, mut_local_pending_instruction_list()) {
     if (window_size-- <= 0) { break; }
