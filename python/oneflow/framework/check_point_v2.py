@@ -202,22 +202,22 @@ def tensor_setstate(self, pickle_dict):
         rel_dir_name = pickle_dict["path"]
         abs_dir_name = save_load_path / rel_dir_name
         tmp_tensor = _LoadSingleVariable(str(abs_dir_name), global_src_dsk_rank)
-        if isinstance(map_location, flow.device):
-            tmp_tensor = tmp_tensor.to(map_location)
-        elif isinstance(map_location, flow.placement):
-            tmp_tensor = tmp_tensor.to_global(map_location)
-        else:
-            raise ValueError(f"Unsupported 'map_location' type {type(map_location)}.")
+        if map_location is not None:
+            if isinstance(map_location, flow.device):
+                tmp_tensor = tmp_tensor.to(map_location)
+            elif isinstance(map_location, flow.placement):
+                tmp_tensor = tmp_tensor.to_global(map_location)
+            else:
+                raise ValueError(f"Unsupported 'map_location' type {type(map_location)}.")
         self.__init__(tmp_tensor)
     else:
+        assert map_location is None
         if "placement" in pickle_dict:
             return self.__init__(
                 flow.tensor(
                     pickle_dict["data"],
                     dtype=pickle_dict["dtype"],
-                    placement=pickle_dict["placement"]
-                    if map_location is None
-                    else map_location,
+                    placement=pickle_dict["placement"],
                     sbp=pickle_dict["sbp"],
                 )
             )
@@ -226,9 +226,7 @@ def tensor_setstate(self, pickle_dict):
                 flow.tensor(
                     pickle_dict["data"],
                     dtype=pickle_dict["dtype"],
-                    device=pickle_dict["device"]
-                    if map_location is None
-                    else map_location,
+                    device=pickle_dict["device"],
                 )
             )
 
