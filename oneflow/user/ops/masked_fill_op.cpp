@@ -22,7 +22,7 @@ namespace {
 
 Maybe<void> InferMaskedFillTensorDesc(user_op::InferContext* ctx) {
   const Shape& mask_shape = ctx->InputShape("mask", 0);
-  *ctx->OutputShape("out", 0) = mask_shape;
+  *ctx->MutOutputShape("out", 0) = mask_shape;
   return Maybe<void>::Ok();
 }
 
