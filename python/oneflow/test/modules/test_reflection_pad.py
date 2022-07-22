@@ -124,6 +124,17 @@ class TestReflectionPadModule(flow.unittest.TestCase):
         x = random_tensor(ndim=3, dim1=c, dim2=w).to(device)
         y = m(x)
         return y
+    
+    @autotest(n=5)
+    def test_reflection_pad_1d_with_2d_input(test_case):
+        w = random(1, 6).to(int)
+        m = torch.nn.ReflectionPad1d(padding=random(low=0, high=7).to(int))
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=2, dim1=w).to(device)
+        y = m(x)
+        return y
 
     @autotest(n=5)
     def test_reflection_pad_2d_with_random_data(test_case):
