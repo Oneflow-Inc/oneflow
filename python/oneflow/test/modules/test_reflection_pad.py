@@ -148,7 +148,7 @@ class TestReflectionPadModule(flow.unittest.TestCase):
         x = random_tensor(ndim=4, dim1=c, dim2=h, dim3=w).to(device)
         y = m(x)
         return y
-    
+
     @autotest(n=5)
     def test_functional_reflection_pad_1d_with_random_data(test_case):
         c = random(1, 6).to(int)

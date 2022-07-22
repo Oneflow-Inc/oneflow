@@ -24,16 +24,22 @@ import oneflow.unittest
 @autotest(n=5, check_graph=False)
 def _test_pad_1d_impl(test_case, placement, sbp):
     pad = [random(0, 5).to(int) for i in range(2)]
-    x = random_tensor(ndim=3, dim0=3, dim1=random(2, 8).to(int), dim2=random(2, 8).to(int)).to_global(placement=placement, sbp=sbp)
+    x = random_tensor(
+        ndim=3, dim0=3, dim1=random(2, 8).to(int), dim2=random(2, 8).to(int)
+    ).to_global(placement=placement, sbp=sbp)
     y = torch.nn.functional.pad(x, pad, mode=oneof("constant", "reflect", "replicate"))
     return y
+
 
 @autotest(n=5, check_graph=False)
 def _test_pad_2d_impl(test_case, placement, sbp):
     pad = [random(0, 5).to(int) for i in range(4)]
-    x = random_tensor(ndim=4, dim0=4, dim1=8, dim2=random(2, 8).to(int), dim3=random(2, 8).to(int)).to_global(placement=placement, sbp=sbp)
+    x = random_tensor(
+        ndim=4, dim0=4, dim1=8, dim2=random(2, 8).to(int), dim3=random(2, 8).to(int)
+    ).to_global(placement=placement, sbp=sbp)
     y = torch.nn.functional.pad(x, pad, mode=oneof("constant", "reflect", "replicate"))
     return y
+
 
 class TestPad(flow.unittest.TestCase):
     @globaltest
