@@ -30,7 +30,7 @@ namespace oneflow {
   DimVector out_dim_vec = ids_shape.dim_vec();
   const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
   out_dim_vec.push_back(embedding_size);
-  *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);
+  *ctx->MutOutputShape("embeddings", 0) = Shape(out_dim_vec);
   return Maybe<void>::Ok();
 }
 
@@ -116,7 +116,7 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
   CHECK_EQ_OR_RETURN(unique_ids_shape, table_ids_shape)
       << "table_ids shape must equal to ids shape";
   CHECK_EQ_OR_RETURN(num_unique_ids_shape.elem_cnt(), 1);
-  *ctx->OutputShape("context", 0) = num_unique_ids_shape;
+  *ctx->MutOutputShape("context", 0) = num_unique_ids_shape;
   return Maybe<void>::Ok();
 }
 
@@ -155,19 +155,19 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
   const bool use_dynamic_memory_allocation = embedding::UseDynamicMemoryAllocation();
   if (ctx->has_output("embeddings", 0)) {
     if (use_dynamic_memory_allocation) {
-      *ctx->OutputShape("embeddings", 0) = Shape({1});
+      *ctx->MutOutputShape("embeddings", 0) = Shape({1});
     } else {
       DimVector embeddings_dim_vec = unique_ids_shape.dim_vec();
       embeddings_dim_vec.push_back(embedding_size);
-      *ctx->OutputShape("embeddings", 0) = Shape(embeddings_dim_vec);
+      *ctx->MutOutputShape("embeddings", 0) = Shape(embeddings_dim_vec);
     }
   }
   if (use_dynamic_memory_allocation) {
-    *ctx->OutputShape("unique_values", 0) = Shape({1});
+    *ctx->MutOutputShape("unique_values", 0) = Shape({1});
   } else {
     DimVector unique_values_dim_vec = unique_ids_shape.dim_vec();
     unique_values_dim_vec.push_back(line_size);
-    *ctx->OutputShape("unique_values", 0) = Shape(unique_values_dim_vec);
+    *ctx->MutOutputShape("unique_values", 0) = Shape(unique_values_dim_vec);
   }
 
   return Maybe<void>::Ok();
@@ -318,7 +318,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
   CHECK_EQ_OR_RETURN(line_size, embedding_size) << "get " << line_size << " " << embedding_size;
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
+  *ctx->MutOutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
 
@@ -346,7 +346,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
   CHECK_EQ_OR_RETURN(line_size, embedding_size * 2) << "get " << line_size << " " << embedding_size;
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
+  *ctx->MutOutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
 
@@ -374,7 +374,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
   CHECK_EQ_OR_RETURN(line_size, embedding_size * 3) << "get " << line_size << " " << embedding_size;
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
+  *ctx->MutOutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
 
@@ -402,7 +402,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
   CHECK_EQ_OR_RETURN(line_size, embedding_size * 2) << "get " << line_size << " " << embedding_size;
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
+  *ctx->MutOutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
 
@@ -430,7 +430,7 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
   CHECK_NE_OR_RETURN(line_size, 0) << "should set attr line_size";
   CHECK_EQ_OR_RETURN(line_size, embedding_size * 3) << "get " << line_size << " " << embedding_size;
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
+  *ctx->MutOutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
 
@@ -446,6 +446,46 @@ Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
 /* static */ Maybe<void> FtrlEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
   JUST(CheckDataType(ctx));
   *ctx->OutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> IdShuffleCopyOutOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Split(ctx->inputs(), 0)
+      .Split(ctx->outputs(), 0)
+      .Broadcast(user_op::OpArg("num_unique_matrix", 0))
+      .Broadcast(user_op::OpArg("out_num_unique_matrix", 0))
+      .Broadcast(user_op::OpArg("cur_rank_num_unique", 0))
+      .Broadcast(user_op::OpArg("out_cur_rank_num_unique", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> IdShuffleCopyOutOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  *ctx->MutOutputShape("out_num_unique_matrix", 0) = ctx->InputShape("num_unique_matrix", 0);
+  *ctx->MutOutputShape("out_inverse_unique_partition_indices", 0) =
+      ctx->InputShape("inverse_unique_partition_indices", 0);
+  *ctx->MutOutputShape("out_cur_rank_num_unique", 0) = ctx->InputShape("cur_rank_num_unique", 0);
+  *ctx->MutOutputShape("out_cur_rank_unique_ids", 0) = ctx->InputShape("cur_rank_unique_ids", 0);
+  *ctx->MutOutputShape("out_cur_rank_unique_table_ids", 0) =
+      ctx->InputShape("cur_rank_unique_table_ids", 0);
+  *ctx->MutOutputShape("out_cur_rank_inverse_indices", 0) =
+      ctx->InputShape("cur_rank_inverse_indices", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> IdShuffleCopyOutOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> IdShuffleCopyOutOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out_num_unique_matrix", 0) = ctx->InputDType("num_unique_matrix", 0);
+  *ctx->OutputDType("out_inverse_unique_partition_indices", 0) =
+      ctx->InputDType("inverse_unique_partition_indices", 0);
+  *ctx->OutputDType("out_cur_rank_num_unique", 0) = ctx->InputDType("cur_rank_num_unique", 0);
+  *ctx->OutputDType("out_cur_rank_unique_ids", 0) = ctx->InputDType("cur_rank_unique_ids", 0);
+  *ctx->OutputDType("out_cur_rank_unique_table_ids", 0) =
+      ctx->InputDType("cur_rank_unique_table_ids", 0);
+  *ctx->OutputDType("out_cur_rank_inverse_indices", 0) =
+      ctx->InputDType("cur_rank_inverse_indices", 0);
   return Maybe<void>::Ok();
 }
 

@@ -22,8 +22,8 @@ namespace oneflow {
   const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   const std::vector<int32_t>& dims = ctx->Attr<std::vector<int32_t>>("dims");
 
-  CHECK_GT_OR_RETURN(dims.size(), 0);
-
+  CHECK_GT_OR_RETURN(dims.size(), 0)
+      << Error::RuntimeError() << "The input list of dims doesn't allow to be empty";
   // NOTE(Liang Depeng): (dims.size == 1 && dims[0] == -1) means that user call flow.roll with
   // dims == None
   if (dims[0] != -1) {
@@ -45,7 +45,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> RollOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
-  *ctx->OutputShape("out", 0) = in_shape;
+  *ctx->MutOutputShape("out", 0) = in_shape;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> RollOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {

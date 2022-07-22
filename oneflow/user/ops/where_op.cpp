@@ -81,11 +81,11 @@ Maybe<void> InferWhereTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& y_shape = ctx->InputShape("y", 0);
   if (x_shape == y_shape && y_shape == cond_shape) {
-    *ctx->OutputShape("out", 0) = cond_shape;
+    *ctx->MutOutputShape("out", 0) = cond_shape;
   } else {
     Shape max_shape = *JUST(GetBroadcastShape(cond_shape, x_shape));
     max_shape = *JUST(GetBroadcastShape(max_shape, y_shape));
-    *ctx->OutputShape("out", 0) = max_shape;
+    *ctx->MutOutputShape("out", 0) = max_shape;
   }
   return Maybe<void>::Ok();
 }
@@ -94,10 +94,10 @@ Maybe<void> InferWhereXScalarTensorDesc(user_op::InferContext* ctx) {
   const Shape& cond_shape = ctx->InputShape("condition", 0);
   const Shape& y_shape = ctx->InputShape("y", 0);
   if (cond_shape == y_shape) {
-    *ctx->OutputShape("out", 0) = cond_shape;
+    *ctx->MutOutputShape("out", 0) = cond_shape;
   } else {
     Shape max_shape = *JUST(GetBroadcastShape(cond_shape, y_shape));
-    *ctx->OutputShape("out", 0) = max_shape;
+    *ctx->MutOutputShape("out", 0) = max_shape;
   }
   return Maybe<void>::Ok();
 }
@@ -106,16 +106,16 @@ Maybe<void> InferWhereYScalarTensorDesc(user_op::InferContext* ctx) {
   const Shape& cond_shape = ctx->InputShape("condition", 0);
   const Shape& x_shape = ctx->InputShape("x", 0);
   if (cond_shape == x_shape) {
-    *ctx->OutputShape("out", 0) = cond_shape;
+    *ctx->MutOutputShape("out", 0) = cond_shape;
   } else {
     Shape max_shape = *JUST(GetBroadcastShape(cond_shape, x_shape));
-    *ctx->OutputShape("out", 0) = max_shape;
+    *ctx->MutOutputShape("out", 0) = max_shape;
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferWhereXYScalarTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("condition", 0);
+  *ctx->MutOutputShape("out", 0) = ctx->InputShape("condition", 0);
   return Maybe<void>::Ok();
 }
 

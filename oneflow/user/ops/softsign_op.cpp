@@ -26,7 +26,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SoftsignOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SoftsignOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -51,7 +51,7 @@ namespace oneflow {
 /*static*/ Maybe<void> SoftsignGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  Shape* dx_shape = ctx->OutputShape("dx", 0);
+  Shape* dx_shape = ctx->MutOutputShape("dx", 0);
   CHECK_OR_RETURN(dy_shape == x_shape) << Error::RuntimeError() << "The size of dy " << dy_shape
                                        << " must match the size of x " << x_shape;
   *dx_shape = dy_shape;

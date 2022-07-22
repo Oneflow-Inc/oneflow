@@ -2691,11 +2691,11 @@ class UnfoldFunctor {
     }
   };
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& data_format,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& kernel_size,
                            const std::vector<int32_t>& dilation_rate,
-                           const std::vector<int32_t>& padding,
-                           const std::vector<int32_t>& strides) const {
+                           const std::vector<int32_t>& padding, const std::vector<int32_t>& strides,
+                           const std::string& data_format) const {
     const auto& x_shape = x->shape();
     // Only Support 4d tensor now.
     CHECK_EQ_OR_RETURN(x_shape->NumAxes(), 4)
@@ -2730,12 +2730,12 @@ class FoldFunctor {
     }
   };
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& data_format,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& output_size,
                            const std::vector<int32_t>& kernel_size,
                            const std::vector<int32_t>& dilation_rate,
-                           const std::vector<int32_t>& padding,
-                           const std::vector<int32_t>& strides) const {
+                           const std::vector<int32_t>& padding, const std::vector<int32_t>& strides,
+                           const std::string& data_format) const {
     const auto& x_shape = x->shape();
     // Only Support 3d tensor fold now. format is (N, C*K*K, L)
     CHECK_EQ_OR_RETURN(x_shape->NumAxes(), 3)
