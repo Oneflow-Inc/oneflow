@@ -917,7 +917,7 @@
   bind_python: True
 
 - name: "unsqueeze_multiple"
-  signature: "Tensor (Tensor input, Int32List[1] dim, Int32 dims) => UnsqueezeMultiple"
+  signature: "Tensor (Tensor input, Int32List dim, Int32 dims) => UnsqueezeMultiple"
   bind_python: False
   
 - name: "squeeze"
