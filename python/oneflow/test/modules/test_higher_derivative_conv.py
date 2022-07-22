@@ -33,18 +33,18 @@ def _test_convnd_grad_grad_impl(test_case, ndim):
     stride = np.random.randint(1, 3)
     dilation = np.random.randint(1, 3)
 
-    x_data_shape = [np.random.randint(8, 15) for i in range(ndim)]
-    w_data_shape = [np.random.randint(2, 8) for i in range(ndim)]
-    x_shape = (minibatch, in_channels, *x_data_shape)
-    w_shape = (out_channels, in_channels // groups, *w_data_shape)
+    x_shape = [minibatch, in_channels] + [np.random.randint(8, 12) for i in range(ndim)]
+    w_shape = [out_channels, in_channels // groups] + [np.random.randint(2, 5) for i in range(ndim)]
 
-    x = torch.tensor(np.random.rand(*x_shape)).requires_grad_(True)
-    w = torch.tensor(np.random.rand(*w_shape)).requires_grad_(True)
+    x = random_tensor(len(x_shape), *x_shape)
+    w = random_tensor(len(w_shape), *w_shape)
+    init_grad_x = random_tensor(len(x_shape), *x_shape)
+    init_grad_w = random_tensor(len(w_shape), *w_shape)
 
     y = eval(f"torch.nn.functional.conv{ndim}d")(
         x, w, stride=stride, padding=padding, groups=groups, dilation=dilation
     )
-    init_grad_y = torch.tensor(np.random.rand(*y.oneflow.shape)).requires_grad_(True)
+    init_grad_y = random_tensor(len(y.oneflow.shape), *y.oneflow.shape)
 
     dx = torch.autograd.grad(
         outputs=y,
@@ -68,10 +68,9 @@ def _test_convnd_grad_grad_impl(test_case, ndim):
         np.allclose(dw.pytorch.detach().cpu().numpy(), dw.oneflow.detach().numpy())
     )
 
-    init_grad_x = torch.tensor(np.random.rand(*dx.oneflow.shape))
-    init_grad_w = torch.tensor(np.random.rand(*dw.oneflow.shape))
 
-    # autotest torch.autograd.grad 不支持 inputs/outpus/grad_outputs 为 list
+
+    # autotest torch.autograd.grad 不支持 inputs/outpus/grad_outputs 为 list，所以使用原始 pytorch/oneflow
     ddx_pytorch, ddw_pytorch = pytorch_origin.autograd.grad(
         outputs=[dx.pytorch, dw.pytorch],
         inputs=[x.pytorch, w.pytorch],

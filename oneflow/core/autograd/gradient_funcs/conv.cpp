@@ -85,8 +85,8 @@ Maybe<void> ConvolutionNd::Apply(const ConvolutionNdCaptureState* ctx, const Ten
     const auto& weight = ctx->SavedTensors().at(ctx->weight_index);
     const auto& input = ctx->SavedTensors().at(ctx->input_index);
     in_grads->at(0) = JUST(functional::ConvDataGrad(
-        out_grads.at(0), weight, JUST(input->detach()), num_spatial_dims, ctx->kernel_size,
-        ctx->strides, ctx->padding_before, ctx->dilation_rate, ctx->groups, ctx->data_format));
+        out_grads.at(0), weight, input, num_spatial_dims, ctx->kernel_size, ctx->strides,
+        ctx->padding_before, ctx->dilation_rate, ctx->groups, ctx->data_format));
   }
   if (ctx->weight_requires_grad) {
     const auto& input = ctx->SavedTensors().at(ctx->input_index);

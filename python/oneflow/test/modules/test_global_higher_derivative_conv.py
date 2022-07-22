@@ -24,34 +24,25 @@ import torch as pytorch_origin
 import oneflow as oneflow_origin
 
 
-def _test_convnd_grad_grad_impl(test_case, ndim, placement, x_sbp, w_sbp):
-    # print(placement, x_sbp, w_sbp)
-    x_data_shape = [16 for i in range(ndim)]
-    w_data_shape = [8 for i in range(ndim)]
-    x_shape = [16, 8, *x_data_shape]
-    w_shape = [8, 8, *w_data_shape]
-    grad_shape = [16, 8] + [9 for _ in range(ndim)]
+def _test_convnd_grad_grad_impl(test_case, ndim, placement, x_sbp):
+    x_shape = [8, 8] + [5 for _ in range(ndim)]
+    w_shape = [8, 8] + [3 for _ in range(ndim)]
+    y_shape = [8, 8] + [3 for _ in range(ndim)]
 
-    x = (
-        torch.tensor(np.random.rand(*x_shape))
-        .requires_grad_(True)
-        .to_global(placement=placement, sbp=x_sbp)
+    x = random_tensor(len(x_shape), *x_shape).to_global(
+        placement=placement, sbp=x_sbp
     )
-    w = (
-        torch.tensor(np.random.rand(*w_shape))
-        .requires_grad_(True)
-        .to_global(placement=placement, sbp=w_sbp)
+    w = random_tensor(len(w_shape), *w_shape).to_global(
+        placement=placement, sbp=random_sbp(placement, max_dim=2)
     )
-    init_grad_y = (
-        torch.tensor(np.random.rand(*grad_shape))
-        .requires_grad_(True)
-        .to_global(placement=placement, sbp=flow.sbp.broadcast)
+    init_grad_x = random_tensor(len(x_shape), *x_shape).to_global(
+        placement=placement, sbp=random_sbp(placement, max_dim=2)
     )
-    init_grad_x = torch.tensor(np.random.rand(*x.oneflow.shape)).to_global(
-        placement=placement, sbp=flow.sbp.broadcast
+    init_grad_w = random_tensor(len(w_shape), *w_shape).to_global(
+        placement=placement, sbp=random_sbp(placement, max_dim=2)
     )
-    init_grad_w = torch.tensor(np.random.rand(*w.oneflow.shape)).to_global(
-        placement=placement, sbp=flow.sbp.broadcast
+    init_grad_y = random_tensor(len(y_shape), *y_shape).to_global(
+        placement=placement, sbp=random_sbp(placement, max_dim=2)
     )
 
     y = eval(f"torch.nn.functional.conv{ndim}d")(
@@ -81,7 +72,7 @@ def _test_convnd_grad_grad_impl(test_case, ndim, placement, x_sbp, w_sbp):
         np.allclose(dw.pytorch.detach().cpu().numpy(), dw.oneflow.detach().numpy())
     )
 
-    # autotest torch.autograd.grad 不支持 inputs/outpus/grad_outputs 为 list
+    # autotest torch.autograd.grad 不支持 inputs/outpus/grad_outputs 为 list，所以使用原始 pytorch/oneflow
     ddx_pytorch, ddw_pytorch = pytorch_origin.autograd.grad(
         outputs=[dx.pytorch, dw.pytorch],
         inputs=[x.pytorch, w.pytorch],
@@ -131,27 +122,25 @@ def _test_convnd_grad_grad_impl(test_case, ndim, placement, x_sbp, w_sbp):
     )
 
 
+
 class TestGlobalConvHigherDerivative(flow.unittest.TestCase):
     @globaltest
     def test_conv1d_grad_grad(test_case):
         for placement in all_placement():
             for x_sbp in all_sbp(placement, max_dim=2):
-                for w_sbp in all_sbp(placement, max_dim=2):
-                    _test_convnd_grad_grad_impl(test_case, 1, placement, x_sbp, w_sbp)
+                _test_convnd_grad_grad_impl(test_case, ndim=1, placement=placement, x_sbp=x_sbp)
 
     @globaltest
     def test_conv2d_grad_grad(test_case):
         for placement in all_placement():
             for x_sbp in all_sbp(placement, max_dim=2):
-                for w_sbp in all_sbp(placement, max_dim=2):
-                    _test_convnd_grad_grad_impl(test_case, 2, placement, x_sbp, w_sbp)
+                _test_convnd_grad_grad_impl(test_case, ndim=2, placement=placement, x_sbp=x_sbp)
 
     @globaltest
     def test_conv3d_grad_grad(test_case):
         for placement in all_placement():
             for x_sbp in all_sbp(placement, max_dim=2):
-                for w_sbp in all_sbp(placement, max_dim=2):
-                    _test_convnd_grad_grad_impl(test_case, 3, placement, x_sbp, w_sbp)
+                _test_convnd_grad_grad_impl(test_case, ndim=3, placement=placement, x_sbp=x_sbp)
 
 
 if __name__ == "__main__":
