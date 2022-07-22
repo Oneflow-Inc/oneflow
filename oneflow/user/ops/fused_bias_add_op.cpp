@@ -27,7 +27,7 @@ namespace oneflow {
   CHECK_GE_OR_RETURN(bias_add_axis, 0);
   CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc.shape().NumAxes());
   CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0));
-  *ctx->OutputShape("out", 0) = a_tensor_desc.shape();
+  *ctx->MutOutputShape("out", 0) = a_tensor_desc.shape();
   *ctx->OutputIsDynamic("out", 0) = a_tensor_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
@@ -67,7 +67,7 @@ namespace oneflow {
   CHECK_GE_OR_RETURN(bias_add_axis, 0);
   CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc.shape().NumAxes());
   CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0));
-  *ctx->OutputShape("dx", 0) = a_tensor_desc.shape();
+  *ctx->MutOutputShape("dx", 0) = a_tensor_desc.shape();
   *ctx->OutputIsDynamic("dx", 0) = a_tensor_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
@@ -152,7 +152,7 @@ REGISTER_USER_OP_GRAD("fused_bias_add_gelu")
   CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc.shape().NumAxes());
   CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0));
   CHECK_EQ_OR_RETURN(a_tensor_desc.shape(), mask_tensor_desc.shape());
-  *ctx->OutputShape("out", 0) = a_tensor_desc.shape();
+  *ctx->MutOutputShape("out", 0) = a_tensor_desc.shape();
   *ctx->OutputIsDynamic("out", 0) = a_tensor_desc.is_dynamic();
   return Maybe<void>::Ok();
 }

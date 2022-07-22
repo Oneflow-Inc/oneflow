@@ -102,7 +102,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(dy_desc.data_type(), x_desc.data_type());
   *dx_desc->mut_shape() = x_desc.shape();
   *dx_desc->mut_is_dynamic() = x_desc.is_dynamic();
-  *ctx->OutputShape("alpha_diff", 0) = alpha_desc.shape();
+  *ctx->MutOutputShape("alpha_diff", 0) = alpha_desc.shape();
   *ctx->OutputIsDynamic("alpha_diff", 0) = alpha_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
