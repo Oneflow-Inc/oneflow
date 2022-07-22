@@ -140,6 +140,25 @@ def ones_op(
     return Ones(size, dtype, device, placement, sbp, requires_grad)()
 
 
+def ones_like_op(
+    input,
+    dtype: Optional[flow.dtype] = None,
+    device: Union[flow.device, str, None] = None,
+    placement: flow.placement = None,
+    sbp: flow._oneflow_internal.sbp.sbp = None,
+    requires_grad: bool = False,
+):
+    if placement is None and input.is_global and input.placement is not None:
+        placement = input.placement
+    if sbp is None and input.is_global and input.sbp is not None:
+        sbp = input.sbp
+    if dtype is None:
+        dtype = input.dtype
+    if placement is None and device is None:
+        device = input.device
+    return Ones(input.size(), dtype, device, placement, sbp, requires_grad)()
+
+
 class Zeros(_ConstantBase):
     def __init__(
         self,
@@ -190,6 +209,25 @@ def zeros_op(
     """
     size = _handle_size_arg(size)
     return Zeros(size, dtype, device, placement, sbp, requires_grad)()
+
+
+def zeros_like_op(
+    input,
+    dtype: Optional[flow.dtype] = None,
+    device: Union[flow.device, str, None] = None,
+    placement: flow.placement = None,
+    sbp: flow._oneflow_internal.sbp.sbp = None,
+    requires_grad: bool = False,
+):
+    if placement is None and input.is_global and input.placement is not None:
+        placement = input.placement
+    if sbp is None and input.is_global and input.sbp is not None:
+        sbp = input.sbp
+    if dtype is None:
+        dtype = input.dtype
+    if placement is None and device is None:
+        device = input.device
+    return Zeros(input.size(), dtype, device, placement, sbp, requires_grad)()
 
 
 class Full(_ConstantBase):
