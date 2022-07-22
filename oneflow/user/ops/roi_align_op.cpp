@@ -43,7 +43,7 @@ namespace oneflow {
       << Error::RuntimeError() << "The size of rois tensor must be equal to 5 at dimension 1, "
       << "but got " << rois_shape.At(1);
   // y: (R, C, pool_h, pool_w)
-  *ctx->OutputShape("y", 0) = Shape({rois_shape.At(0), x_shape.At(1), pooled_h, pooled_w});
+  *ctx->MutOutputShape("y", 0) = Shape({rois_shape.At(0), x_shape.At(1), pooled_h, pooled_w});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> RoiAlignOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -96,7 +96,7 @@ namespace oneflow {
   const Shape& y_shape = Shape({rois_shape.At(0), x_like_shape.At(1), pooled_h, pooled_w});
   CHECK_EQ_OR_RETURN(y_shape, dy_shape)
       << Error::RuntimeError() << "Tensors y and dy must have same shape";
-  *ctx->OutputShape("dx", 0) = x_like_shape;
+  *ctx->MutOutputShape("dx", 0) = x_like_shape;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> RoiAlignGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
