@@ -84,19 +84,6 @@ def api_load_library(val: str) -> None:
     oneflow._oneflow_internal.LoadLibrary(val)
 
 
-def api_gpu_device_num(val: int) -> None:
-    """Set number of GPUs on each machine to run oneflow on.
-
-    Args:
-        val (int): number of GPUs. It is identical on every machine. In other words,
-        you can't specify different number of GPUs you would like to use on each machine.
-    """
-
-    print(
-        "'gpu_device_num' has been deprecated, has no effect and will be removed in the future."
-    )
-
-
 def api_numa_aware_cuda_malloc_host(val: bool = True) -> None:
     """Whether or not let numa know  that  cuda allocated host's memory.
 
