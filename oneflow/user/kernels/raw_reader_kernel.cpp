@@ -56,7 +56,7 @@ class BatchReader {
           BatchReaderRequest request;
           auto status = sq->Receive(&request);
           if (status == kChannelStatusErrorClosed) { break; }
-          CHECK_EQ(status, kChannelStatusSuccess);
+          CHECK_EQ(status, kChannelStatusSuccess) << "channel error";
           size_t buffer_offset = 0;
           for (size_t i = 0; i < request.blocks->size(); ++i) {
             size_t block_index = request.blocks->at(i);
@@ -70,7 +70,8 @@ class BatchReader {
               PCHECK(pread(files_[file_index]->fd(),
                            reinterpret_cast<unsigned char*>(request.buffer) + buffer_offset,
                            bytes_to_read, file_offset)
-                     == bytes_to_read);
+                     == bytes_to_read)
+                  << "file read error";
               remaining -= bytes_to_read;
               buffer_offset += bytes_to_read;
               if (remaining != 0) {
@@ -79,7 +80,7 @@ class BatchReader {
               }
             }
           }
-          CHECK(cq->Send(std::move(request)) == kChannelStatusSuccess);
+          CHECK(cq->Send(std::move(request)) == kChannelStatusSuccess) << "channel error";
         }
       });
       workers_.emplace_back(std::move(worker));
@@ -132,8 +133,8 @@ size_t GetNumShards(const Shape& hierarchy, const NdSbp& nd_sbp) {
 size_t GetShardIndex(const Shape& hierarchy, const NdSbp& nd_sbp, size_t rank) {
   using index_helper_t = NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE>;
   size_t ndim = hierarchy.NumAxes();
-  CHECK_GT(ndim, 0);
-  CHECK_LE(ndim, SHAPE_MAX_AXIS_SIZE);
+  CHECK_GT(ndim, 0) << "wrong hierarchy";
+  CHECK_LE(ndim, SHAPE_MAX_AXIS_SIZE) << "wrong hierarchy";
   index_helper_t index_helper(hierarchy.dim_vec().data(), ndim);
   int64_t nd_index[SHAPE_MAX_AXIS_SIZE] = {0};
   index_helper.OffsetToNdIndex(rank, nd_index);
@@ -241,17 +242,17 @@ class RawReaderKernelState final : public user_op::OpKernelState {
     shard_index_ =
         GetShardIndex(*ctx->parallel_desc().hierarchy(), nd_sbp, ctx->parallel_ctx().parallel_id());
     batch_size_ = ctx->Attr<int64_t>("batch_size");
-    CHECK_EQ(batch_size_ % num_shards_, 0);
+    CHECK_EQ(batch_size_ % num_shards_, 0) << "batch_size must be a multiple of num_shards";
     local_batch_size_ = batch_size_ / num_shards_;
     random_shuffle_ = ctx->Attr<bool>("random_shuffle");
     block_size_ = ctx->Attr<int64_t>("shuffle_block_size");
     if (block_size_ <= 0 || !random_shuffle_) { block_size_ = local_batch_size_; }
-    CHECK_EQ(batch_size_ % block_size_, 0);
+    CHECK_EQ(batch_size_ % block_size_, 0) << "batch_size must be a multiple of block_size";
     if (block_size_ > local_batch_size_) { block_size_ = local_batch_size_; }
     const std::vector<std::string>& filenames = ctx->Attr<std::vector<std::string>>("files");
     const Shape& instance_shape = ctx->Attr<Shape>("shape");
     const size_t elem_cnt = instance_shape.elem_cnt();
-    CHECK_GT(elem_cnt, 0);
+    CHECK_GT(elem_cnt, 0) << "instance size must be greater than 0";
     DimVector dim_vec;
     dim_vec.push_back(local_batch_size_);
     for (int64_t i = 0; i < instance_shape.NumAxes(); ++i) {
@@ -260,7 +261,7 @@ class RawReaderKernelState final : public user_op::OpKernelState {
     out_shape_ = Shape(dim_vec);
     data_type_ = ctx->Attr<DataType>("data_type");
     instance_size_ = ctx->Attr<Shape>("shape").elem_cnt() * GetSizeOfDataType(data_type_);
-    CHECK_GT(batch_size_, 0);
+    CHECK_GT(batch_size_, 0) << "batch size must be greater than 0";
     size_t num_instances = 0;
     std::vector<std::unique_ptr<embedding::PosixFile>> files;
     int flags = O_RDONLY;
@@ -268,7 +269,7 @@ class RawReaderKernelState final : public user_op::OpKernelState {
     for (const auto& filename : filenames) {
       std::unique_ptr<embedding::PosixFile> file(new embedding::PosixFile(filename, flags, 0644));
       if (file->Size() == 0) { continue; }
-      CHECK_EQ(file->Size() % instance_size_, 0);
+      CHECK_EQ(file->Size() % instance_size_, 0) << "file_size must be a multiple of instance_size";
       num_instances += file->Size() / instance_size_;
       files.emplace_back(std::move(file));
     }
@@ -356,8 +357,8 @@ class RawReaderKernelState final : public user_op::OpKernelState {
 
   void Next(user_op::KernelComputeContext* ctx) {
     auto* tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(tensor->data_type(), data_type_);
-    CHECK(tensor->shape_view() == ShapeView(out_shape_));
+    CHECK_EQ(tensor->data_type(), data_type_) << "data type mismatch";
+    CHECK(tensor->shape_view() == ShapeView(out_shape_)) << "shape mismatch";
     BatchReaderRequest request;
     batch_reader_->WaitCompleted(&request);
     if (ctx->stream()->device_type() == DeviceType::kCPU) {
@@ -371,11 +372,11 @@ class RawReaderKernelState final : public user_op::OpKernelState {
       UNIMPLEMENTED();
 #endif
     } else {
-      UNIMPLEMENTED();
+      UNIMPLEMENTED() << "only support CPU or CUDA";
     }
-    ctx->stream()->Sync();
-    CHECK(request.blocks);
-    CHECK_EQ(request.blocks->size(), num_blocks_per_local_batch_);
+    CHECK_JUST(ctx->stream()->Sync());
+    CHECK(request.blocks) << "blocks is NULL";
+    CHECK_EQ(request.blocks->size(), num_blocks_per_local_batch_) << "blocks size mismatch";
     batch_generator_->Next(request.blocks->data());
     batch_reader_->SubmitRequest(std::move(request));
   }
