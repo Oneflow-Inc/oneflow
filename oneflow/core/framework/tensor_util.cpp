@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/common/blocking_then_busy.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/instructions_builder.h"
-#include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/register/ofblob.h"
 
 namespace oneflow {
@@ -36,14 +35,13 @@ Maybe<void> SyncAccessTensorWithTimeOut(const std::shared_ptr<Tensor>& tensor,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CopyTensorDataTo(const std::shared_ptr<Tensor>& input, void* mem_ptr, size_t size) {
-  std::shared_ptr<one::LocalTensor> local_tensor;
-  if (input->is_global()) {
-    CHECK(NdSbpIsAllBroadcast(*JUST(input->nd_sbp())));
-    local_tensor = JUST(input->cur_rank_phy_tensor());
-  } else {
-    local_tensor = JUST(input->AsLocalTensor());
-  }
+Maybe<void> CopyLocalTensorDataTo(const std::shared_ptr<Tensor>& input, void* mem_ptr,
+                                  size_t size) {
+  CHECK_OR_RETURN(input->is_local());  // NOLINT
+  CHECK_OR_RETURN(input->is_contiguous()) << Error::RuntimeError() << kOfBugIssueUploadPrompt;
+  CHECK_EQ_OR_RETURN(input->shape()->elem_cnt() * JUST(input->dtype()->bytes()), size)
+      << Error::RuntimeError() << kOfBugIssueUploadPrompt;
+  std::shared_ptr<one::LocalTensor> local_tensor = JUST(input->AsLocalTensor());
   const auto& Callback = [&](uint64_t ofblob_ptr) {
     reinterpret_cast<const OfBlob*>(ofblob_ptr)->AutoMemCopyTo(mem_ptr, size);
   };

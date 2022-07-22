@@ -49,6 +49,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/tensor_util.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 
 namespace oneflow {
 namespace one {
@@ -433,7 +434,14 @@ class NonZeroFunctor {
     CHECK_OR_RETURN(size->dtype() == JUST(DType::Get(DataType::kInt64)))
         << Error::RuntimeError() << kOfBugIssueUploadPrompt;
     int64_t size_val = -1;
-    JUST(CopyTensorDataTo(size, (void*)(&size_val), GetSizeOfDataType(DataType::kInt64)));
+    {
+      if (size->is_global()) {
+        CHECK_OR_RETURN(JUST(size->parallel_desc())->parallel_num() == 1
+                        || NdSbpIsAllBroadcast(*JUST(size->nd_sbp())));  // NOLINT
+      }
+      JUST(CopyLocalTensorDataTo(size->is_local() ? size : JUST(size->cur_rank_phy_tensor()),
+                                 (void*)(&size_val), GetSizeOfDataType(DataType::kInt64)));
+    }
     std::vector<int64_t> start{0, 0};
     std::vector<int64_t> stop{size_val, ndim};
     std::vector<int64_t> step{1, 1};

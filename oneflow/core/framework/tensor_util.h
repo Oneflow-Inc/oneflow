@@ -30,7 +30,7 @@ Maybe<void> SyncAccessTensorWithTimeOut(const std::shared_ptr<Tensor>& tensor,
                                         const std::function<void(uint64_t)>& callback,
                                         const std::string& modifier);
 
-Maybe<void> CopyTensorDataTo(const std::shared_ptr<Tensor>& input, void* mem_ptr, size_t size);
+Maybe<void> CopyLocalTensorDataTo(const std::shared_ptr<Tensor>& input, void* mem_ptr, size_t size);
 
 }  // namespace one
 }  // namespace oneflow
