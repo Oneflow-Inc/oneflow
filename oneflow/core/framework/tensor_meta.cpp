@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_meta.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 namespace one {
@@ -77,6 +78,11 @@ bool IsContiguous(const Shape& shape, const Stride& stride) {
     }
   }
   return contig_if_nonempty;
+}
+
+bool IsContiguous(const ShapeView& shape_view, const Stride& stride) {
+  Shape shape(shape_view);
+  return IsContiguous(shape, stride);
 }
 
 }  // namespace one

@@ -21,52 +21,69 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T, typename I>
 struct NdIndexSliceArgs {
   static const size_t kMaxDims = 8;
-  int64_t num_slices;
-  int64_t slice_size;
-  int64_t index_ndims;
+  int64_t num_slices;   // The number of slices (indices_shape.Count(0, -1))
+  int64_t slice_size;   // The element_cnt of each slice (sliced_shape.Count(indices_num_axes-1))
+  int64_t index_ndims;  // The number of dims which are sliced (indices_shape.At(-1))
+  int64_t dense_ndims;
   int64_t dense_shape[kMaxDims];
+  int64_t dense_stride[kMaxDims];
+  int64_t slices_ndims;
+  int64_t slices_shape[kMaxDims];
+  int64_t slices_stride[kMaxDims];
 };
 
-template<typename T, typename I>
-inline NdIndexSliceArgs<T, I> ConstructNdIndexSliceArgs(const user_op::Tensor& dense,
-                                                        const user_op::Tensor& slices,
-                                                        const user_op::Tensor& indices) {
-  NdIndexSliceArgs<T, I> args;
-  std::memset(&args, 0, sizeof(NdIndexSliceArgs<T, I>));
+inline NdIndexSliceArgs ConstructNdIndexSliceArgs(const user_op::Tensor& dense,
+                                                  const user_op::Tensor& slices,
+                                                  const user_op::Tensor& indices) {
+  NdIndexSliceArgs args;
+  std::memset(&args, 0, sizeof(NdIndexSliceArgs));
   args.num_slices = indices.shape_view().Count(0, indices.shape_view().NumAxes() - 1);
   args.index_ndims = indices.shape_view().At(indices.shape_view().NumAxes() - 1);
   args.slice_size = slices.shape_view().Count(indices.shape_view().NumAxes() - 1);
+
+  args.dense_ndims = dense.shape_view().NumAxes();
   FOR_RANGE(int64_t, i, 0, dense.shape_view().NumAxes()) {
     args.dense_shape[i] = dense.shape_view().At(i);
+    args.dense_stride[i] = dense.stride().at(i);
+  }
+  args.slices_ndims = slices.shape_view().NumAxes();
+  FOR_RANGE(int64_t, i, 0, slices.stride().size()) {
+    args.slices_shape[i] = slices.shape_view().At(i);
+    args.slices_stride[i] = slices.stride().at(i);
   }
   return args;
 }
 
 template<DeviceType device_type, typename T, typename I>
 struct GatherNdFunctor final {
-  void operator()(ep::Stream* stream, const NdIndexSliceArgs<T, I>& args, const I* indices,
+  void operator()(ep::Stream* stream, const NdIndexSliceArgs& args, const I* indices,
                   const T* dense, T* slices) const;
 };
 
 template<DeviceType device_type, typename T, typename I>
 struct ScatterNdAddFunctor final {
-  void operator()(ep::Stream* stream, const NdIndexSliceArgs<T, I>& args, const I* indices,
+  void operator()(ep::Stream* stream, const NdIndexSliceArgs& args, const I* indices,
                   const T* slices, T* dense) const;
 };
 
 template<DeviceType device_type, typename T, typename I>
 struct ScatterNdUpdateFunctor final {
-  void operator()(ep::Stream* stream, const NdIndexSliceArgs<T, I>& args, const I* indices,
+  void operator()(ep::Stream* stream, const NdIndexSliceArgs& args, const I* indices,
+                  const T* slices, T* dense) const;
+};
+
+template<DeviceType device_type, typename T, typename I>
+struct ScatterNdUpdateWithStrideFunctor final {
+  void operator()(ep::Stream* stream, const NdIndexSliceArgs& args, const I* indices,
                   const T* slices, T* dense) const;
 };
 
 template<DeviceType device_type, typename T, typename I>
 struct FillByNdIndexFunctor final {
-  void operator()(ep::Stream* stream, const NdIndexSliceArgs<T, I>& args, const I* indices,
-                  T* dense, T value) const;
+  void operator()(ep::Stream* stream, const NdIndexSliceArgs& args, const I* indices, T* dense,
+                  T value) const;
 };
 
 template<typename I>
@@ -82,6 +99,16 @@ OF_DEVICE_FUNC int64_t OffsetInSliceToOffsetInDense(int64_t slice_size, int64_t 
     product *= dense_shape[i];
   }
   return offset * slice_size + n % slice_size;
+}
+
+OF_DEVICE_FUNC int64_t GetMemoryOffset4ElementIdx(int64_t n, int64_t ndims, const int64_t* shape,
+                                                  const int64_t* stride) {
+  int64_t offset = 0;
+  for (int64_t i = ndims - 1; i >= 0; --i) {
+    offset += n % shape[i] * stride[i];
+    n /= shape[i];
+  }
+  return offset;
 }
 
 template<typename T, typename I>
@@ -116,6 +143,22 @@ OF_DEVICE_FUNC void DoScatterNdUpdate(int64_t elem_cnt, int64_t slice_size, int6
   XPU_1D_KERNEL_LOOP(i, elem_cnt) {
     int64_t offset = OffsetInSliceToOffsetInDense(slice_size, index_ndims, dense_shape, indices, i);
     dense[offset] = slices[i];
+  }
+}
+
+template<DeviceType device_type, typename T, typename I>
+OF_DEVICE_FUNC void DoScatterNdUpdateWithStride(int64_t elem_cnt, const NdIndexSliceArgs& args,
+                                                const I* indices, const T* slices, T* dense) {
+  XPU_1D_KERNEL_LOOP(i, elem_cnt) {
+    // dense tensor memory offset
+    int64_t dense_index = OffsetInSliceToOffsetInDense(args.slice_size, args.index_ndims,
+                                                       args.dense_shape, indices, i);
+    int64_t dense_mem_offset = GetMemoryOffset4ElementIdx(dense_index, args.dense_ndims,
+                                                          args.dense_shape, args.dense_stride);
+    // update tensor memory offset
+    int64_t slice_mem_offset =
+        GetMemoryOffset4ElementIdx(i, args.slices_ndims, args.slices_shape, args.slices_stride);
+    dense[dense_mem_offset] = slices[slice_mem_offset];
   }
 }
 
