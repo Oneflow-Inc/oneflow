@@ -23,6 +23,9 @@ def pad(
 ) -> Tensor:
     r"""Pads tensor.
 
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.functional.pad.html.
+
     Padding size:
         The padding size by which to pad some dimensions of :attr:`input`
         are described starting from the last dimension and moving forward.
@@ -30,18 +33,18 @@ def pad(
         of ``input`` will be padded.
         For example, to pad only the last dimension of the input tensor, then
         :attr:`pad` has the form
-        :math:`(\text{padding\_left}, \text{padding\_right})`;
+        :math:`(\text{padding_left}, \text{padding_right})`;
         to pad the last 2 dimensions of the input tensor, then use
-        :math:`(\text{padding\_left}, \text{padding\_right},`
-        :math:`\text{padding\_top}, \text{padding\_bottom})`;
+        :math:`(\text{padding_left}, \text{padding_right},`
+        :math:`\text{padding_top}, \text{padding_bottom})`;
         to pad the last 3 dimensions, use
-        :math:`(\text{padding\_left}, \text{padding\_right},`
-        :math:`\text{padding\_top}, \text{padding\_bottom}`
-        :math:`\text{padding\_front}, \text{padding\_back})`.
+        :math:`(\text{padding_left}, \text{padding_right},`
+        :math:`\text{padding_top}, \text{padding_bottom}`
+        :math:`\text{padding_front}, \text{padding_back})`.
 
     Padding mode:
-        See :class:`torch.nn.ConstantPad2d`, :class:`torch.nn.ReflectionPad2d`, and
-        :class:`torch.nn.ReplicationPad2d` for concrete examples on how each of the
+        See :class:`oneflow.nn.ConstantPad2d`, :class:`oneflow.nn.ReflectionPad2d`, and
+        :class:`oneflow.nn.ReplicationPad2d` for concrete examples on how each of the
         padding modes works. Constant padding is implemented for arbitrary dimensions.
         Replicate and reflection padding is implemented for padding the last 3
         dimensions of 5D input tensor, or the last 2 dimensions of 4D input
@@ -50,7 +53,6 @@ def pad(
     Note:
         When using the CUDA backend, this operation may induce nondeterministic
         behaviour in its backward pass that is not easily switched off.
-        Please see the notes on :doc:`/notes/randomness` for background.
 
     Args:
         input (Tensor): N-dimensional tensor
@@ -62,20 +64,13 @@ def pad(
 
     Examples::
 
-        >>> t4d = torch.empty(3, 3, 4, 2)
-        >>> p1d = (1, 1) # pad last dim by 1 on each side
-        >>> out = F.pad(t4d, p1d, "constant", 0)  # effectively zero padding
-        >>> print(out.size())
-        torch.Size([3, 3, 4, 4])
-        >>> p2d = (1, 1, 2, 2) # pad last dim by (1, 1) and 2nd to last by (2, 2)
-        >>> out = F.pad(t4d, p2d, "constant", 0)
-        >>> print(out.size())
-        torch.Size([3, 3, 8, 4])
-        >>> t4d = torch.empty(3, 3, 4, 2)
-        >>> p3d = (0, 1, 2, 1, 3, 3) # pad by (0, 1), (2, 1), and (3, 3)
-        >>> out = F.pad(t4d, p3d, "constant", 0)
-        >>> print(out.size())
-        torch.Size([3, 9, 7, 3])
+        >>> import oneflow as flow
+        >>> import oneflow.nn.functional as F
+        >>> t4d = flow.empty(3, 3, 4, 2)
+        >>> p1d = (1, 1)
+        >>> out = F.pad(t4d, p1d)
+        >>> out.size()
+        oneflow.Size([3, 3, 4, 4])
 
     """
     assert len(pad) % 2 == 0, "Padding length must be divisible by 2"
@@ -90,9 +85,7 @@ def pad(
             if mode == "reflect":
                 return flow._C.pad(input, pad, mode="reflect")
             elif mode == "replicate":
-                raise NotImplementedError(
-                    "1D replicate padding are not supported for now"
-                )
+                return flow._C.pad(input, pad, mode="replicate")
             elif mode == "circular":
                 raise NotImplementedError(
                     "1D circular padding are not supported for now"

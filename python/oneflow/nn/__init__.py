@@ -122,6 +122,7 @@ from oneflow.nn.modules.padding import (
     ConstantPad3d,
     ReflectionPad1d,
     ReflectionPad2d,
+    ReplicationPad1d,
     ReplicationPad2d,
     ZeroPad2d,
 )
