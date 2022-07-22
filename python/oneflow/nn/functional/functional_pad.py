@@ -18,8 +18,9 @@ from oneflow.framework.tensor import Tensor
 import oneflow as flow
 
 
-
-def pad(input: Tensor, pad: List[int], mode: str = "constant", value: float = 0.0) -> Tensor:
+def pad(
+    input: Tensor, pad: List[int], mode: str = "constant", value: float = 0.0
+) -> Tensor:
     r"""Pads tensor.
 
     Padding size:
@@ -82,14 +83,20 @@ def pad(input: Tensor, pad: List[int], mode: str = "constant", value: float = 0.
     if mode == "constant":
         return flow._C.pad(input, pad, mode="constant", value=value)
     else:
-        assert value == 0.0, 'Padding mode "{}"" doesn\'t take in value argument'.format(mode)
+        assert (
+            value == 0.0
+        ), 'Padding mode "{}"" doesn\'t take in value argument'.format(mode)
         if len(pad) == 2 and (input.dim() == 2 or input.dim() == 3):
             if mode == "reflect":
                 return flow._C.pad(input, pad, mode="reflect")
             elif mode == "replicate":
-                raise NotImplementedError("1D replicate padding are not supported for now")
+                raise NotImplementedError(
+                    "1D replicate padding are not supported for now"
+                )
             elif mode == "circular":
-                raise NotImplementedError("1D circular padding are not supported for now")
+                raise NotImplementedError(
+                    "1D circular padding are not supported for now"
+                )
             else:
                 raise NotImplementedError
 
@@ -99,18 +106,28 @@ def pad(input: Tensor, pad: List[int], mode: str = "constant", value: float = 0.
             elif mode == "replicate":
                 flow._C.pad(input, pad, mode="replicate")
             elif mode == "circular":
-                raise NotImplementedError("2D circular padding are not supported for now")
+                raise NotImplementedError(
+                    "2D circular padding are not supported for now"
+                )
             else:
                 raise NotImplementedError
 
         elif len(pad) == 6 and (input.dim() == 4 or input.dim() == 5):
             if mode == "reflect":
-                raise NotImplementedError("3D reflect padding are not supported for now")
+                raise NotImplementedError(
+                    "3D reflect padding are not supported for now"
+                )
             elif mode == "replicate":
-                raise NotImplementedError("3D replicate padding are not supported for now")
+                raise NotImplementedError(
+                    "3D replicate padding are not supported for now"
+                )
             elif mode == "circular":
-                raise NotImplementedError("3D circular padding are not supported for now")
+                raise NotImplementedError(
+                    "3D circular padding are not supported for now"
+                )
             else:
                 raise NotImplementedError
         else:
-            raise NotImplementedError("Only 2D, 3D, 4D, 5D padding with non-constant padding are supported for now")
+            raise NotImplementedError(
+                "Only 2D, 3D, 4D, 5D padding with non-constant padding are supported for now"
+            )
