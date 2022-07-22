@@ -29,10 +29,11 @@ Maybe<void> GetOpSbpSignature(user_op::SbpContext* ctx) {
   const int64_t input_dims = x_tensor.shape().NumAxes();
   CHECK_EQ_OR_RETURN(input_dims, ndim);
   // NOTE: assume data format is NCHW.
-  const int64_t split_dims = input_dims - 2;
+  const int64_t split_dims = input_dims - (ndim - 2);
   FOR_RANGE(int64_t, i, 0, split_dims) {
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
   }
+  ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
 
@@ -41,10 +42,11 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
   const int64_t grad_dims = dy_tensor.shape().NumAxes();
   CHECK_EQ_OR_RETURN(grad_dims, ndim);
-  const int64_t split_dims = grad_dims - 2;
+  const int64_t split_dims = grad_dims - (ndim - 2);
   FOR_RANGE(int64_t, i, 0, split_dims) {
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
   }
+  ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
 
