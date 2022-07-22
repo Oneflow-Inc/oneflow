@@ -28,7 +28,7 @@ class SBP_Attr<string name, string attrMnemonic, list<Trait> traits = []>
   let mnemonic = attrMnemonic;
 }
 
-def SBP_SplitAttr : SBP_Attr<"Split", "s"> {
+def SBP_SplitAttr : SBP_Attr<"Split", "S"> {
   let summary = "Signature S";
   let description = [{
     signature split, representing a sharded tensor at the `axis`
@@ -37,14 +37,14 @@ def SBP_SplitAttr : SBP_Attr<"Split", "s"> {
   let assemblyFormat = "`<` $axis `>`";
 }
 
-def SBP_BroadcastAttr : SBP_Attr<"Broadcast", "b"> {
+def SBP_BroadcastAttr : SBP_Attr<"Broadcast", "B"> {
   let summary = "Signature B";
   let description = [{
     signature broadcast, representing a tensor to be duplicated
   }];
 }
 
-def SBP_PartialSumAttr : SBP_Attr<"PartialSum", "p"> {
+def SBP_PartialSumAttr : SBP_Attr<"PartialSum", "P"> {
   let summary = "Signature P";
   let description = [{
     signature partial sum, representing a shareded tensor will be reduced lazily
