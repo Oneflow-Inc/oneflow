@@ -64,7 +64,7 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
-  const DataType& dtype = ctx->InputDType("a", 0);
+  DataType dtype = ctx->InputDType("a", 0);
   CHECK_EQ_OR_RETURN(ctx->InputDType("b", 0), dtype);
   if (ctx->has_input("_add_to_output", 0)) {
     CHECK_EQ_OR_RETURN(ctx->InputDType("_add_to_output", 0), dtype);

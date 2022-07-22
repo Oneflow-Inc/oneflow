@@ -79,7 +79,7 @@ REGISTER_USER_OP_GRAD("cast").SetGenBackwardOpConfFn([](const user_op::UserOpWra
                                                         user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    const DataType& dtype = op.TensorDesc4ArgNameAndIndex("in", 0).data_type();
+    DataType dtype = op.TensorDesc4ArgNameAndIndex("in", 0).data_type();
     user_op::UserOpConfWrapper cast_grad_op =
         builder.Op("cast")
             .Input("in", op.GetGradTensorWithOpOutput("out", 0))
