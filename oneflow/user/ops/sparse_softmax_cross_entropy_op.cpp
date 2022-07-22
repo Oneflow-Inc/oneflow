@@ -43,7 +43,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   }
   *ctx->OutputIsDynamic("prob", 0) = prediction_desc.is_dynamic();
   // 'prob' is just for compute prediction's grad, prob's grad will be ignored
-  *ctx->OutputShape("prob", 0) = prediction_desc.shape();
+  *ctx->MutOutputShape("prob", 0) = prediction_desc.shape();
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
   *out_desc->mut_is_dynamic() = prediction_desc.is_dynamic();
   *out_desc->mut_shape() = label_desc.shape();
@@ -75,7 +75,7 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(dy_desc.shape(), label_desc.shape())
       << Error::RuntimeError() << "The size of dy " << dy_desc.shape()
       << " must match the size of label " << label_desc.shape();
-  *ctx->OutputShape("prediction_diff", 0) = prob_desc.shape();
+  *ctx->MutOutputShape("prediction_diff", 0) = prob_desc.shape();
   *ctx->OutputIsDynamic("prediction_diff", 0) = prob_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
