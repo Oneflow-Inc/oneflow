@@ -58,7 +58,7 @@ class TestLinspaceGlobal(flow.unittest.TestCase):
     def test_linspace_graph(test_case):
         arg_dict = OrderedDict()
         arg_dict["start"] = [-2, 0, 2]
-        arg_dict["end"] = [2, 4, 8]
+        arg_dict["end"] = [4, 8, 16]
         arg_dict["steps"] = [8, 16, 24]
         arg_dict["placement"] = [
             # 1d
