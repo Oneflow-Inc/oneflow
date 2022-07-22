@@ -299,6 +299,16 @@ Comparison Ops
     minimum
     not_equal
 
+Spectral Ops
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    
+    hann_window
+    
 Other Ops
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

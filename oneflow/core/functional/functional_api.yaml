@@ -528,6 +528,15 @@
   signature: "Tensor (Tensor dy, Tensor y) => ReluGrad"
   bind_python: False
 
+- name: "hann_window"
+  signature: [
+    "Tensor (Int64 window_length, Bool periodic=True, *, Device device=None, DataType dtype=None, 
+      Bool requires_grad=False) => HannWindow",
+    "Tensor (Int64 window_length, Bool periodic=True, *, Placement placement, SbpList sbp, DataType dtype=None,
+      Bool requires_grad=False) => GlobalHannWindow" 
+      ]
+  bind_python: True
+
 - name: "hardtanh"
   signature: "Tensor (Tensor x, Double min_val, Double max_val) => HardTanh"
   bind_python: True
