@@ -110,7 +110,7 @@ class TestReplicationPadModule(flow.unittest.TestCase):
             _test_ReplicationPad2d(test_case, *arg)
 
     @autotest(n=5)
-    def test_replication_pad1d_with_random_data(test_case):
+    def test_replication_pad1d_with_3d_input(test_case):
         c = random(1, 6).to(int)
         w = random(1, 6).to(int)
         pad = random(low=0, high=7).to(int)
