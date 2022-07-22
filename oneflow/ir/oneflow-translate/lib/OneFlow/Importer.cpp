@@ -397,26 +397,7 @@ LogicalResult ParseNdSbpFromAttr(::llvm::ArrayRef<Attribute> nd_sbp_attr,
   return success();
 }
 
-Attribute ConvertNdSbpToAttr_(Builder& builder, const ::oneflow::NdSbp& nd_sbp) {
-  auto ctx = builder.getContext();
-  mlir::Attribute attr;
-  for (const auto& sbp : nd_sbp.sbp_parallel()) {
-    if (sbp.has_split_parallel()) {
-      attr = sbp::SplitAttr::get(ctx, sbp.split_parallel().axis());
-    } else if (sbp.has_broadcast_parallel()) {
-      attr = sbp::BroadcastAttr::get(ctx);
-    } else if (sbp.has_partial_sum_parallel()) {
-      attr = sbp::PartialSumAttr::get(ctx);
-    } else {
-      llvm::errs() << "unsupported sbp: nd_sbp";
-    }
-  }
-
-  auto res = sbp::ParallelSignatureAttr::get(ctx, {}, builder.getArrayAttr({attr}));
-  return res;
-}
-
-Attribute ConvertNdSbpToAttr_(Builder& builder,
+Attribute ConvertNdSbpToPsig(Builder& builder,
                               const ::google::protobuf::RepeatedPtrField<std::string>& nd_sbp,
                               int nd_size) {
   auto ctx = builder.getContext();
