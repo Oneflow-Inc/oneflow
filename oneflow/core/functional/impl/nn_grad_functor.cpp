@@ -653,7 +653,7 @@ class PadGradFunctor {
       } else if (ndim == 4) {
         return OpInterpUtil::Dispatch<Tensor>(*reflect_pad2d_grad_, {dy}, attrs);
       } else {
-        UNIMPLEMENTED_THEN_RETURN();
+        UNIMPLEMENTED_THEN_RETURN() << "only 3D/4D reflect padding are supported for now";
       }
 
     } else if (mode == "replicate") {
@@ -662,7 +662,7 @@ class PadGradFunctor {
       } else if (ndim == 4) {
         return OpInterpUtil::Dispatch<Tensor>(*replicate_pad2d_grad_, {dy}, attrs);
       } else {
-        UNIMPLEMENTED_THEN_RETURN();
+        UNIMPLEMENTED_THEN_RETURN() << "only 3D/4D replicate padding are supported for now";
       }
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode
