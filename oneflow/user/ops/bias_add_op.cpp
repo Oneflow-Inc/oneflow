@@ -35,7 +35,7 @@ namespace oneflow {
       << Error::RuntimeError() << "The size of tensor " << a_tensor_desc.shape().ToString()
       << " must match the size of tensor " << b_tensor_desc.shape().ToString() << " at dimension "
       << bias_add_axis;
-  *ctx->OutputShape("out", 0) = ctx->InputShape("a", 0);
+  *ctx->MutOutputShape("out", 0) = ctx->InputShape("a", 0);
   *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("a", 0);
   return Maybe<void>::Ok();
 }
