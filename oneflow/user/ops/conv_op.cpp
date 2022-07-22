@@ -308,7 +308,7 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
     const user_op::TensorDesc& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
     CHECK_EQ_OR_RETURN(add_to_output.shape(), x_like.shape());
   }
-  *ctx->OutputShape("dx", 0) = ctx->InputShape("x_like", 0);
+  *ctx->MutOutputShape("dx", 0) = ctx->InputShape("x_like", 0);
   *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x_like", 0);
   return Maybe<void>::Ok();
 }
