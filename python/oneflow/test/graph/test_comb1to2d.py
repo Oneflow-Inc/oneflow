@@ -32,7 +32,6 @@ class _TestModuleDiffHierarchy(nn.Module):
             flow.sbp.split(0),
             flow.sbp.split(1),
             flow.sbp.split(2),
-            flow.sbp.split(3),
         ]
 
         for sbp1 in sbp_1ds:
@@ -63,7 +62,6 @@ class _TestModuleDiffPlacement(nn.Module):
             flow.sbp.split(0),
             flow.sbp.split(1),
             flow.sbp.split(2),
-            flow.sbp.split(3),
         ]
 
         for sbp1 in sbp_1ds:
@@ -106,7 +104,6 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
             4,
             12,
             4,
-            12,
             sbp=[flow.sbp.broadcast, flow.sbp.broadcast],
             placement=flow.placement(
                 type="cuda", ranks=np.array(range(4)).reshape(2, 2)

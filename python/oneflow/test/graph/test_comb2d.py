@@ -32,7 +32,6 @@ class _TestModule(nn.Module):
             flow.sbp.split(0),
             flow.sbp.split(1),
             flow.sbp.split(2),
-            flow.sbp.split(3),
         ]
         y = x
 
@@ -40,6 +39,9 @@ class _TestModule(nn.Module):
             for sbp2 in sbp_1ds:
 
                 for sbp3 in sbp_1ds:
+                    # in this case, use intra group boxing
+                    if sbp1 == sbp3:
+                        continue
                     for sbp4 in sbp_1ds:
                         # (2, 2) -> (2, 2)
                         x = x.to_global(sbp=[sbp1, sbp2])
@@ -66,7 +68,6 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
         graph = _TestGraph(model)
 
         x = flow.ones(
-            4,
             4,
             4,
             4,

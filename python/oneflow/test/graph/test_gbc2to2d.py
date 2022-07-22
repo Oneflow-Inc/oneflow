@@ -35,6 +35,9 @@ def _test_general_basic_communication_2d_to_2d(test_case, src_nd_sbp, dst_nd_sbp
     if flow.sbp.partial_sum() in dst_nd_sbp:
         return
 
+    if dst_nd_sbp[0] == dst_nd_sbp[1] and src_nd_sbp[0] == src_nd_sbp[1]:
+        return
+
     # input
     placement_x = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
     placement_y = flow.placement("cuda", ranks=[[0, 3, 4], [2, 5, 6]])
