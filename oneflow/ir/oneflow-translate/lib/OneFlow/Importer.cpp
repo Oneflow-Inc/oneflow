@@ -397,9 +397,9 @@ LogicalResult ParseNdSbpFromAttr(::llvm::ArrayRef<Attribute> nd_sbp_attr,
   return success();
 }
 
-Attribute ConvertNdSbpToparallel(Builder& builder,
-                              const ::google::protobuf::RepeatedPtrField<std::string>& nd_sbp,
-                              int nd_size) {
+Attribute ConvertNdSbpToPsig(Builder& builder,
+                             const ::google::protobuf::RepeatedPtrField<std::string>& nd_sbp,
+                             int nd_size) {
   auto ctx = builder.getContext();
   std::vector<mlir::Attribute> outputs_vec;
   for (const auto& sbp_data : nd_sbp) {

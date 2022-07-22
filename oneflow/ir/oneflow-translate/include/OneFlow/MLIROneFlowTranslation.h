@@ -54,9 +54,9 @@ LogicalResult ConvertOutputOpConf(OutputOp op, ::oneflow::OperatorConf* op_conf)
 LogicalResult ParseNdSbpFromAttr(ArrayAttr nd_sbp_attr, ::oneflow::NdSbp* nd_sbp);
 Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp);
 Attribute ConvertSBPToString(Builder& builder, ::mlir::sbp::ParallelSignatureAttr& parallel);
-Attribute ConvertNdSbpToparallel(Builder& builder,
-                              const ::google::protobuf::RepeatedPtrField<std::string>& nd_sbp,
-                              int nd_size);
+Attribute ConvertNdSbpToPsig(Builder& builder,
+                             const ::google::protobuf::RepeatedPtrField<std::string>& nd_sbp,
+                             int nd_size);
 
 class Importer {
  public:
