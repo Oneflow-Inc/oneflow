@@ -26,7 +26,7 @@ namespace oneflow {
   const int64_t in_size = ctx->input_size("in");
   CHECK_EQ_OR_RETURN(ctx->output_size("out"), in_size);
   for (int64_t i = 0; i < in_size; ++i) {
-    *ctx->OutputShape("out", i) = ctx->InputShape("in", i);
+    *ctx->MutOutputShape("out", i) = ctx->InputShape("in", i);
     *ctx->IsDynamic4ArgNameAndIndex("out", i) = ctx->InputIsDynamic("in", i);
   }
   return Maybe<void>::Ok();

@@ -20,8 +20,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> DropoutOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
-  *ctx->OutputShape("out", 0) = in_shape;
-  *ctx->OutputShape("mask", 0) = in_shape;
+  *ctx->MutOutputShape("out", 0) = in_shape;
+  *ctx->MutOutputShape("mask", 0) = in_shape;
   *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
   return Maybe<void>::Ok();
 }
@@ -53,7 +53,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> DropoutGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  *ctx->OutputShape("dx", 0) = dy_shape;
+  *ctx->MutOutputShape("dx", 0) = dy_shape;
   *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("dy", 0);
   CHECK_EQ_OR_RETURN(ctx->InputShape("mask", 0), dy_shape);
   return Maybe<void>::Ok();
@@ -89,7 +89,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> RandomMaskLikeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("like", 0);
+  *ctx->MutOutputShape("out", 0) = ctx->InputShape("like", 0);
   return Maybe<void>::Ok();
 }
 
