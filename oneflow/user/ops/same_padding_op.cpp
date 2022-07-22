@@ -108,7 +108,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SamePaddingGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("dx", 0) = ctx->InputShape("x_like", 0);
+  *ctx->MutOutputShape("dx", 0) = ctx->InputShape("x_like", 0);
   *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x_like", 0);
   return Maybe<void>::Ok();
 }

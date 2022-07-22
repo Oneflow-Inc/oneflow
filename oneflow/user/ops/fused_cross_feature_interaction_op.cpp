@@ -24,11 +24,11 @@ namespace oneflow {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& weight_shape = ctx->InputShape("weight", 0);
   CHECK_EQ_OR_RETURN(x_shape.At(1), weight_shape.At(1)) << "Matmul K dims should be equal. ";
-  *ctx->OutputShape("matmul_result", 0) = Shape({x_shape.At(0), weight_shape.At(0)});
+  *ctx->MutOutputShape("matmul_result", 0) = Shape({x_shape.At(0), weight_shape.At(0)});
   const Shape& x0_shape = ctx->InputShape("x0", 0);
   const Shape& bias_shape = ctx->InputShape("bias", 0);
   CHECK_EQ_OR_RETURN(bias_shape.At(0), x0_shape.At(1)) << "Bias dim should be equal to X0 dim1. ";
-  *ctx->OutputShape("out", 0) = x0_shape;
+  *ctx->MutOutputShape("out", 0) = x0_shape;
   return Maybe<void>::Ok();
 }
 
@@ -59,10 +59,10 @@ namespace oneflow {
     user_op::InferContext* ctx) {
   const Shape& x0_shape = ctx->InputShape("x0", 0);
   const Shape& weight_shape = ctx->InputShape("weight", 0);
-  *ctx->OutputShape("dx0", 0) = x0_shape;
-  *ctx->OutputShape("dw", 0) = weight_shape;
-  *ctx->OutputShape("dx", 0) = x0_shape;
-  *ctx->OutputShape("dbias", 0) = Shape({x0_shape.At(1)});
+  *ctx->MutOutputShape("dx0", 0) = x0_shape;
+  *ctx->MutOutputShape("dw", 0) = weight_shape;
+  *ctx->MutOutputShape("dx", 0) = x0_shape;
+  *ctx->MutOutputShape("dbias", 0) = Shape({x0_shape.At(1)});
   return Maybe<void>::Ok();
 }
 
@@ -100,10 +100,10 @@ namespace oneflow {
     user_op::InferContext* ctx) {
   const Shape& x0_shape = ctx->InputShape("x0", 0);
   const Shape& weight_shape = ctx->InputShape("weight", 0);
-  *ctx->OutputShape("dx0", 0) = x0_shape;
-  *ctx->OutputShape("dw", 0) = weight_shape;
-  *ctx->OutputShape("dx", 0) = x0_shape;
-  *ctx->OutputShape("dbias", 0) = Shape({x0_shape.At(1)});
+  *ctx->MutOutputShape("dx0", 0) = x0_shape;
+  *ctx->MutOutputShape("dw", 0) = weight_shape;
+  *ctx->MutOutputShape("dx", 0) = x0_shape;
+  *ctx->MutOutputShape("dbias", 0) = Shape({x0_shape.At(1)});
   return Maybe<void>::Ok();
 }
 
@@ -160,7 +160,7 @@ REGISTER_USER_OP_GRAD("fused_cross_feature_interaction")
       } else {
         UNIMPLEMENTED();
       }
-      builder.Output("dx", 0).Output("dw", 0).Output("dx0", 0).Output("dbias", 0);
+      builder.Output("dx").Output("dw").Output("dx0").Output("dbias");
       auto grad_op = builder.Build();
       AddOp(grad_op);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {

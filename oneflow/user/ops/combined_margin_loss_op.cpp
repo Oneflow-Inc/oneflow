@@ -24,7 +24,7 @@ namespace oneflow {
   user_op::TensorDesc* theta = ctx->OutputTensorDesc("theta", 0);
   CHECK_EQ_OR_RETURN(label.shape().At(0), x.shape().At(0));
   CHECK_GE_OR_RETURN(x.shape().NumAxes(), 2);
-  *ctx->OutputShape("y", 0) = ctx->InputShape("x", 0);
+  *ctx->MutOutputShape("y", 0) = ctx->InputShape("x", 0);
   *ctx->IsDynamic4ArgNameAndIndex("y", 0) = ctx->InputIsDynamic("x", 0);
   *theta->mut_is_dynamic() = x.is_dynamic();
   *theta->mut_shape() = label.shape();
@@ -72,7 +72,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(label.shape().At(0), dy.shape().At(0));
   CHECK_EQ_OR_RETURN(label.shape().At(0), theta.shape().At(0));
   CHECK_GE_OR_RETURN(dy.shape().NumAxes(), 2);
-  *ctx->OutputShape("dx", 0) = ctx->InputShape("dy", 0);
+  *ctx->MutOutputShape("dx", 0) = ctx->InputShape("dy", 0);
   *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = ctx->InputIsDynamic("dy", 0);
   return Maybe<void>::Ok();
 }
