@@ -34,7 +34,7 @@ def _test_pad_impl(test_case, ndim, placement, sbp):
 
 class TestPad(flow.unittest.TestCase):
     @globaltest
-    def test_sign(test_case):
+    def test_pad(test_case):
         for placement in all_placement():
             ndim = random(2, 6).to(int).value()
             for sbp in all_sbp(placement, max_dim=ndim):

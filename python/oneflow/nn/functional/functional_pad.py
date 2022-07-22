@@ -85,7 +85,7 @@ def pad(
             if mode == "reflect":
                 return flow._C.pad(input, pad, mode="reflect")
             elif mode == "replicate":
-                return flow._C.pad(input, pad, mode="reflect")
+                return flow._C.pad(input, pad, mode="replicate")
             elif mode == "circular":
                 raise NotImplementedError(
                     "1D circular padding are not supported for now"

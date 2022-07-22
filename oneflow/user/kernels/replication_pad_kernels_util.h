@@ -86,7 +86,7 @@ OF_DEVICE_FUNC void DoReplicationPad1d(const IN_T* src, IN_T* dest,
                                        const int64_t x_width, const int64_t pad_left) {
   XPU_1D_KERNEL_LOOP(k, elem_num) {
     int64_t n, c, j, ip_x;
-    int64_t coord_y[4];
+    int64_t coord_y[3];
     index_helper.OffsetToNdIndex(k, coord_y);
     n = coord_y[0];
     c = coord_y[1];
@@ -114,7 +114,7 @@ OF_DEVICE_FUNC void DoReplicationPad1dGrad(const IN_T* src, IN_T* dest,
                                            const int64_t dx_width, const int64_t pad_left) {
   XPU_1D_KERNEL_LOOP(k, elem_num) {
     int64_t n, c, j, ip_x;
-    int64_t coord[4];
+    int64_t coord[3];
     index_helper.OffsetToNdIndex(k, coord);
     n = coord[0];
     c = coord[1];
