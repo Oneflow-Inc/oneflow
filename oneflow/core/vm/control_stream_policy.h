@@ -32,12 +32,12 @@ class ControlStreamPolicy final : public StreamPolicy {
   vm::Allocator* mut_allocator() override { return (vm::Allocator*)nullptr; }
 
   DeviceType device_type() const override {
-    UNIMPLEMENTED();
+    PRINT_BUG_PROMPT_AND_ABORT();
     return DeviceType::kInvalidDevice;
   }
 
   ep::Stream* stream() override {
-    UNIMPLEMENTED();
+    PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
 
