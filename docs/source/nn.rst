@@ -265,7 +265,20 @@ Data loading and preprocessing Layers
     nn.OFRecordImageDecoderRandomCrop
     nn.OFRecordRawDecoder
     nn.OFRecordReader
-    
+
+Quantization Aware Training
+--------------------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    nn.MinMaxObserver
+    nn.MovingAverageMinMaxObserver
+    nn.FakeQuantization
+    nn.QatConv1d
+    nn.QatConv2d
+    nn.QatConv3d
 
 Utilities
 ---------
