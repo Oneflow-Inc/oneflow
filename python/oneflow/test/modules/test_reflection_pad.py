@@ -114,7 +114,7 @@ class TestReflectionPadModule(flow.unittest.TestCase):
             _test_reflection_pad2d(test_case, *arg)
 
     @autotest(n=5)
-    def test_reflection_pad_1d_with_random_data(test_case):
+    def test_reflection_pad_1d_with_3d_input(test_case):
         c = random(1, 6).to(int)
         w = random(1, 6).to(int)
         m = torch.nn.ReflectionPad1d(padding=random(low=0, high=7).to(int))
