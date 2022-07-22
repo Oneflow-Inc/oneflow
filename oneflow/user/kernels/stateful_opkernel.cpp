@@ -335,7 +335,6 @@ class UserOpInferContextHelper final {
                                                                const std::string& arg_name,
                                                                int32_t index) const {
     const user_op::TensorDesc& tensor_desc = TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
-    if (!(&tensor_desc)) { LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found"; }
     return tensor_desc;
   }
   user_op::TensorDesc* MutNonNullTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
