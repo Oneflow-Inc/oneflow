@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <vector>
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/error.h"
@@ -32,7 +31,6 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -2275,9 +2273,11 @@ class PadFunctor {
     } else if (mode == "replicate") {
       if (pad_size == 2) {
         // 2D/3D replicate padding
-        CHECK_OR_RETURN((ndim == 2 && input->shape()->At(1) != 0)
+        CHECK_OR_RETURN((ndim == 2 && input->shape()->At(0) != 0 && input->shape()->At(1) != 0)
                         || (ndim == 3 && input->shape()->At(1) != 0 && input->shape()->At(2) != 0))
-            << "2D or 3D (batch mode) tensor expected for input, but got: " << ndim;
+            << "Expected 2D or 3D (batch mode) tensor with possibly 0 batch size and other "
+               "non-zero dimensions for input, but got: "
+            << ndim;
         const int64_t pad_left = pad[0];
         const int64_t pad_right = pad[1];
         const int64_t dim_w = (ndim == 3) ? 2 : 1;
