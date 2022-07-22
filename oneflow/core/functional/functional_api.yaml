@@ -916,6 +916,10 @@
   signature: "Tensor (Tensor input, Int32 dim) => Unsqueeze"
   bind_python: True
 
+- name: "unsqueeze_multiple"
+  signature: "Tensor (Tensor input, Int32List dim, Int32 dims) => UnsqueezeMultiple"
+  bind_python: False
+  
 - name: "squeeze"
   signature: [
     "Tensor (Tensor x, Int32List[1] dim=None) => Squeeze",
