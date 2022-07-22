@@ -15,11 +15,13 @@ limitations under the License.
 */
 
 #include <cstdint>
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/user_op_hob.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -68,20 +70,6 @@ __global__ void AsStridedGrad_kernel(const T* dy_buf, T* dx_buf,
     int32_t index_in_dx = params.storage_offset;
     FOR_RANGE(int64_t, j, 0, params.dest_num_dims) { index_in_dx += dy_index[j] * stride[j]; }
     cuda::atomic::Add(dx_buf + index_in_dx, dy_buf[i]);
-  }
-}
-
-template<>
-__global__ void AsStridedGrad_kernel(const bool* dy_buf, bool* dx_buf,
-                                     AsStridedParams<NUM_DIM, int64_t> params) {
-  const int64_t* dest_dims = reinterpret_cast<const int64_t*>(params.dest_dims);
-  const int32_t* stride = reinterpret_cast<const int32_t*>(params.stride);
-  CUDA_1D_KERNEL_LOOP_T(int64_t, i, params.output_num) {
-    int64_t dy_index[NUM_DIM];
-    params.destIndexOffsetHelper.OffsetToNdIndex(i, dy_index, params.dest_num_dims);
-    int32_t index_in_dx = params.storage_offset;
-    FOR_RANGE(int64_t, j, 0, params.dest_num_dims) { index_in_dx += dy_index[j] * stride[j]; }
-    *(dx_buf + index_in_dx) = *(dx_buf + index_in_dx) && dy_buf[i];
   }
 }
 
@@ -202,12 +190,16 @@ class GpuAsStridedGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                        \
                        && (user_op::HobDataType("input", 0) == GetDataType<in_type>::value));
 
-REGISTER_GPUASSTRIDED_KERNEL(bool);
 REGISTER_GPUASSTRIDED_KERNEL(half);
 REGISTER_GPUASSTRIDED_KERNEL(float);
 REGISTER_GPUASSTRIDED_KERNEL(double);
 REGISTER_GPUASSTRIDED_KERNEL(int64_t);
 
 #undef REGISTER_GPUASSTRIDED_KERNEL
+
+REGISTER_USER_KERNEL("as_strided")
+    .SetCreateFn<GpuAsStridedKernel<bool>>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
+                     && (user_op::HobDataType("input", 0) == GetDataType<bool>::value));
 
 }  // namespace oneflow
