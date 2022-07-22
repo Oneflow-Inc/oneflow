@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef BINARY_SET_H_
-#define BINARY_SET_H_
+#ifndef ONEFLOW_CORE_AUTO_PARALLEL_BINARY_SET_H_
+#define ONEFLOW_CORE_AUTO_PARALLEL_BINARY_SET_H_
 
 #include <cstdlib>
 #include <unordered_map>
@@ -91,4 +91,4 @@ struct BinarySetHasher {
 }  // namespace auto_parallel
 }  // namespace oneflow
 
-#endif  // BINARY_SET_H_
+#endif  // ONEFLOW_CORE_AUTO_PARALLEL_BINARY_SET_H_

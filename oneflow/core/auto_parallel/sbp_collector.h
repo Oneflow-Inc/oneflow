@@ -50,13 +50,13 @@ class SbpCollector {
 
  private:
   // Stores all the possible NdSbp.
-  std::unordered_map<NdSbp, int32_t> nd_sbp_universe;
+  std::unordered_map<NdSbp, int32_t> nd_sbp_universe_;
   // Relationship between id and Sbp Parallel
-  std::vector<NdSbp> id2nd_sbp;
+  std::vector<NdSbp> id2nd_sbp_;
   // Calculate number of downstream sbp
-  std::vector<int32_t> accumulator;
+  std::vector<int32_t> accumulator_;
   // A binary set buffer to indicate sets of downstream sbp
-  BinarySet bs_buffer;
+  BinarySet bs_buffer_;
 
   // Collect all the possible Sbp Parallel from a NdSbpSignature
   void CollectUniverse(const NdSbpSignature& nd_sbp_sig);
@@ -65,13 +65,13 @@ class SbpCollector {
 
   // Initialize copy cost from producer to proxy of producer
   void InitializeCopyCostFromNode2Proxy(const SbpNode<NdSbpSignature>* sbp_proxy,
-                                        const LogicalBlobId& lbi);
+                                        const LogicalBlobId& lbi) const;
 
   // Initialize copy cost from proxy of producer to consumers
   void InitializeCopyCostFromProxy2Consumer(
       SbpNode<NdSbpSignature>* sbp_proxy,
       const HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
-      const HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node);
+      const HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node) const;
 
   // Maximum number of possible sbp in the proxy
   const unsigned long max_num_sbp_proxy_ = 3;
