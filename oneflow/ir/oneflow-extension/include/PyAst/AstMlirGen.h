@@ -72,12 +72,12 @@ limitations under the License.
 
 class BuilderWithSymbolTable {
  protected:
-  mlir::OpBuilder _builder;
-  mlir::ModuleOp _theModule;
-  std::map<std::string, mlir::Value> _symbolTable;
-  mlir::Block* _symbolTableForDeclareBlock{};
+  mlir::OpBuilder builder_;
+  mlir::ModuleOp theModule_;
+  std::map<std::string, mlir::Value> symbolTable_;
+  mlir::Block* symbolTableForDeclareBlock_{};
 
-  explicit BuilderWithSymbolTable(mlir::MLIRContext& context) : _builder(&context) {}
+  explicit BuilderWithSymbolTable(mlir::MLIRContext& context) : builder_(&context) {}
   virtual ~BuilderWithSymbolTable() = default;
 
   mlir::LogicalResult Declare(const std::string& var, mlir::Value value);

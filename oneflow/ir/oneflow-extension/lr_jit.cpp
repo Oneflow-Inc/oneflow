@@ -166,12 +166,12 @@ static LRJITRegistry_Store_ GenFunc(pyast::FunctionDef& ast, bool is_dump) {
 void LRJITRegistry::Register(const std::string& function_id, pyast::FunctionDef& ast,
                              bool is_dump) {
   auto jit = GenFunc(ast, is_dump);
-  _functionId2engine[function_id] = jit;
+  functionId2engine_[function_id] = jit;
 }
 
 std::function<double(double, double)> LRJITRegistry::LookUp(const std::string& function_id) {
-  auto iter = _functionId2engine.find(function_id);
-  if (iter != _functionId2engine.end()) { return iter->second.second; }
+  auto iter = functionId2engine_.find(function_id);
+  if (iter != functionId2engine_.end()) { return iter->second.second; }
   llvm::errs() << "function '" << function_id << "' not be registered before lookup.";
   return nullptr;
 };
