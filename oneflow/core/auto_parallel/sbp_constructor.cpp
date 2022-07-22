@@ -38,7 +38,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   JUST(GenerateNodeAndEdge(op_graph, job));
   JUST(FillSbpSignatureForOpNode(op_graph, job));
   JUST(InitComputationCost(op_graph));
-  if (enable_mainstem_algo_) { JUST(ApplyMainstemAlgo()); }
+  if (enable_trunk_algo_) { JUST(ApplyTrunkAlgo()); }
   if (use_sbp_collector_) {
     // Load logical blobs on all sbp edges.
     LoadLbi2SbpEdge(op_graph);
@@ -197,7 +197,7 @@ Maybe<void> SbpConstructor::FillSbpSignatureForOpNode(const OpGraph& op_graph, c
 
 Maybe<void> SbpConstructor::StealSbpSignatureFromOpNode(const OpGraph& op_graph, const Job& job) {
   // Steal some strategy from original op graph
-  for (auto* sbp_node : sbp_graph_.NodeList) {
+  for (auto* sbp_node : sbp_graph_.node_list_) {
     // sbp_collectors do not have op_node
     if (sbp_node->op_node_) {
       for (int32_t sbp_id = 0; sbp_id < sbp_node->sbp_sig_obj_list_.size(); sbp_id++) {
@@ -278,12 +278,12 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SbpConstructor::ApplyMainstemAlgo() {
+Maybe<void> SbpConstructor::ApplyTrunkAlgo() {
   auto op_node2mutable_op_ctrl_deps = JUST(GetMutableOpCtrlDeps(*op_graph_));
   // Compute layer number for each node
   int32_t max_MinLayer = sbp_graph_.ComputeLayer(op_name2sbp_node_, *op_node2mutable_op_ctrl_deps);
-  // Accumulate cost on the mainstem after initializing computation cost
-  sbp_graph_.FindMainstem(max_MinLayer, op_name2sbp_node_);
+  // Accumulate cost on the trunk after initializing computation cost
+  sbp_graph_.FindTrunk(max_MinLayer, op_name2sbp_node_);
   return Maybe<void>::Ok();
 }
 
@@ -291,7 +291,7 @@ Maybe<void> SbpConstructor::ApplyMainstemAlgo() {
 void SbpConstructor::LoadLbi2SbpEdge(const OpGraph& op_graph) {
   // Load logical blobs onto sbp edges
 
-  for (auto* sbp_node_consumer : sbp_graph_.NodeList) {
+  for (auto* sbp_node_consumer : sbp_graph_.node_list_) {
     auto* op_node = sbp_node_consumer->op_node_;
 
     // Loading logical blobs between two nodes
@@ -390,8 +390,8 @@ Maybe<HashMap<const OpNode*, HashSet<std::string>>> SbpConstructor::GetMutableOp
 void SbpConstructor::PrintSBPGraphDebugInfo() {
   // sbp constructor information
   std::cout << "cost_ratio_:" << cost_ratio_ << std::endl;
-  std::cout << "transfer_cost_:" << sbp_graph_.transfer_cost << std::endl;
-  std::cout << "wait_time_:" << sbp_graph_.wait_time << std::endl;
+  std::cout << "transfer_cost_:" << sbp_graph_.transfer_cost_ << std::endl;
+  std::cout << "wait_time_:" << sbp_graph_.wait_time_ << std::endl;
   std::cout << "use_sbp_collector_" << use_sbp_collector_ << std::endl;
   // test debug
   std::cout << "Get Into Print Op Graph" << std::endl;
@@ -425,8 +425,8 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
     std::cout << "Computation Cost: " << sbp_node->cost_[sbp_node->final_sbp_sig_id_];
     std::cout << ", Min Layer: " << sbp_node->min_layer_ << ", Max Layer: " << sbp_node->max_layer_
               << ", Tributary Layer: " << sbp_node->tributary_layer_
-              << ", in mainstem: " << sbp_node->on_mainstem_
-              << ", Remain Cost: " << sbp_node->acc_mainstem_cost_ << std::endl;
+              << ", in trunk: " << sbp_node->on_trunk_
+              << ", Remain Cost: " << sbp_node->acc_trunk_cost_ << std::endl;
     // Sort before printing
     const auto& op_input_bns = op_node->op().input_bns();
     auto comp = [](const std::string& a, const std::string& b) { return a.compare(b) > 0; };

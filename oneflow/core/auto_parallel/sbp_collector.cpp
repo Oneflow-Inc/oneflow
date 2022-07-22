@@ -117,7 +117,7 @@ void SbpCollector::CollectUniverse(SbpNode<NdSbpSignature>* sbp_node) {
 }
 // Collect all the possible Sbp Parallel from a SbpGraph
 void SbpCollector::CollectUniverse(SbpGraph<NdSbpSignature>& sbp_graph) {
-  for (auto* sbp_node : sbp_graph.NodeList) { CollectUniverse(sbp_node); }
+  for (auto* sbp_node : sbp_graph.node_list_) { CollectUniverse(sbp_node); }
   accumulator.resize(SbpParallelUniverse.size(), 0);
   bs_buffer.Initialize(SbpParallelUniverse.size());
 }
@@ -245,7 +245,7 @@ void SbpCollector::ProxySbpCandidate(
   // mapping from consumers and input blob names to an unordered_set of SBP Parallel.
   std::vector<HashMap<std::pair<std::string, std::string>, BinarySet>> index2consumer_bn2sbp_set;
 
-  for (auto* consumer_sbp_node : sbp_graph.NodeList) {
+  for (auto* consumer_sbp_node : sbp_graph.node_list_) {
     auto* node = consumer_sbp_node->op_node_;
 
     OperatorConf::OpTypeCase op_type_case = node->op().op_conf().op_type_case();
@@ -359,7 +359,7 @@ void SbpCollector::ProxySbpCandidate(
       // We don't clip edges before since we have transfer cost
       // Now we clip edges, which makes the topology simplier
       if (edge_found->EmptyLbi() && edge_found->wait_time_ <= 0.0 && edge_found->wait_time_ > -0.5
-          && sbp_graph.transfer_cost <= 0.0) {
+          && sbp_graph.transfer_cost_ <= 0.0) {
         sbp_graph.ClipEdge(edge_found);
       }
     }

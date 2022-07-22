@@ -34,7 +34,7 @@ class SbpConstructor final {
   SbpConstructor() = delete;
   SbpConstructor(const OpGraph& op_graph, Job* job)
       : cost_ratio_(job->job_conf().auto_parallel_computation_cost_ratio()),
-        enable_mainstem_algo_(job->job_conf().enable_auto_parallel_mainstem_algo()),
+        enable_trunk_algo_(job->job_conf().enable_auto_parallel_mainstem_algo()),
         use_sbp_collector_(!Singleton<ResourceDesc, ForSession>::Get()
                                 ->resource()
                                 .disable_group_boxing_by_dst_parallel()
@@ -61,13 +61,13 @@ class SbpConstructor final {
   Maybe<void> StealSbpSignatureFromOpNode(const OpGraph& op_graph, const Job& job);
   Maybe<void> InitComputationCost(const OpGraph& op_graph);
   Maybe<void> InitCopyCost(const OpGraph& op_graph);
-  Maybe<void> ApplyMainstemAlgo();
+  Maybe<void> ApplyTrunkAlgo();
   Maybe<HashMap<const OpNode*, HashSet<std::string>>> GetMutableOpCtrlDeps(const OpGraph& op_graph);
   // Load logical blob ids onto sbp edges
   void LoadLbi2SbpEdge(const OpGraph& op_graph);
 
   double cost_ratio_;
-  bool enable_mainstem_algo_;
+  bool enable_trunk_algo_;
   bool use_sbp_collector_;
   SbpGraph<NdSbpSignature> sbp_graph_;
   const OpGraph* op_graph_;

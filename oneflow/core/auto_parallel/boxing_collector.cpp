@@ -16,6 +16,7 @@ limitations under the License.
 
 #include <memory>
 #include <string>
+#include "oneflow/core/auto_parallel/algorithm_util.h"
 #include "oneflow/core/auto_parallel/boxing_collector.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/device_type.pb.h"
@@ -848,9 +849,9 @@ Maybe<void> BoxingCollector::Generate1Combination4DiffHierarchy(
 
       min_path_length = path_length;
       // Find a candidate with small cost
-      if (curr_cost < min_cost * 1.0000001) {
+      if (curr_cost < min_cost * float_deviation_plus) {
         // Find a smaller cost, clear the previous path.
-        if (curr_cost < min_cost * 0.9999999) {
+        if (curr_cost < min_cost * float_deviation_minus) {
           min_cost = curr_cost;
           diag_nodes.clear();
         }

@@ -73,6 +73,10 @@ void DecideOrder(const T& v, std::vector<int32_t>& order, Compare comp) {
 void InverseOrder(const std::vector<int32_t>& order, std::vector<int32_t>& InvOrder);
 
 }  // namespace auto_parallel
+
+static const double float_deviation_minus = 0.9999999;
+static const double float_deviation_plus = 1.0000001;
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_AUTO_PARALLEL_ALGORITHM_UTIL_H_

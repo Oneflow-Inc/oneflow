@@ -84,8 +84,6 @@ class SbpNode {
   // Use Greedy Strategy to pick the sbp signature with minimum cost for this
   // node You should have an initial strategy before running this
   double GreedyStrategy();
-  // Evaluate summery of cost in 1-ring neighborhood.
-  double EvalNbhCost() const;
   // Evaluate summery of cost between neighborhood and outside nodes
   double EvalOutNbhCost(std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id) const;
   // Evaluate summery of cost within neighborhood
@@ -113,8 +111,6 @@ class SbpNode {
   void SpreadMaxLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
                       const oneflow::HashMap<const OpNode*, oneflow::HashSet<std::string>>&
                           op_node2mutable_op_ctrl_deps);
-  // Drop down the maximum layer with the minimum layer form consumer
-  void DropMaxLayer(int32_t upper_bound);
   // Set max_layer_ = min_layer_ if this node does not have any consumer
   void LiftMaxLayer();
   // Set max_layer_ = upper_bound if this node does not have any consumer
@@ -130,21 +126,18 @@ class SbpNode {
   // get the cut ratio
   double GetCutRatio() const;
 
-  // Judge if this node is on the mainstem
+  // Judge if this node is on the trunk
   // If so, judge it for its producer/upstream nodes
-  void SpreadMainstem(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
+  void SpreadTrunk(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
   // Count consumers and any downstream nodes defined by control edges
   // for producers or upstream nodes
   void RaiseConsumerNum(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
   // Compute the minimal available wait time for producers or upstream nodes
-  void SpreadAvailWaitTime(std::vector<double>& mainstem_cost,
-                           std::vector<double>& acc_mainstem_cost,
+  void SpreadAvailWaitTime(std::vector<double>& trunk_cost, std::vector<double>& acc_trunk_cost,
                            oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
                            double wait_time, double transfer_cost);
-  // Drop down the available wait time with the minimum cost from downstream
-  void DropAvailWaitTime(double curr_mainstem_cost);
-  // Reduce and set the wait time for op in the mainstem
-  void SetMainstemWaitTime(double mainstem_wait_time);
+  // Reduce and set the wait time for op in the trunk
+  void SetTrunkWaitTime(double trunk_wait_time);
 
   // Assemble copy cost for all the incoming edges
   void InitializeCopyCost(bool compute_cost, bool use_sbp_collector);
@@ -198,15 +191,22 @@ class SbpNode {
   int32_t min_layer_ = -1, max_layer_ = -1;
   // Maximum layer in tributaries
   int32_t tributary_layer_ = -1;
-  // Whether we are on the mainstem
-  bool on_mainstem_ = false;
+  // Whether we are on the trunk
+  bool on_trunk_ = false;
   // A counter_ buffer for topological traversal or something else
   int32_t counter_ = 0;
-  // Accumulate mainstem cost from consumer to the end
-  double acc_mainstem_cost_ = -1.0;
+  // Accumulate trunk cost from consumer to the end
+  double acc_trunk_cost_ = -1.0;
 
   // Let one node point to another
   void StartPointToEnd(SbpNode<SbpSignature>* start_node, SbpNode<SbpSignature>* end_node);
+
+  // Evaluate summery of cost in 1-ring neighborhood.
+  double EvalNbhCost() const;
+  // Drop down the maximum layer with the minimum layer form consumer
+  void DropMaxLayer(int32_t upper_bound);
+  // Drop down the available wait time with the minimum cost from downstream
+  void DropAvailWaitTime(double curr_trunk_cost);
 };  // class SbpNode
 
 // function in cpp. Should be put in one file due to use of template
@@ -668,27 +668,27 @@ double SbpNode<SbpSignature>::GetCutRatio() const {
   return curr_cut_ratio;
 }
 
-// Judge if this node is on the mainstem
+// Judge if this node is on the trunk
 // If so, judge it for its producer/upstream nodes
 template<class SbpSignature>
-void SbpNode<SbpSignature>::SpreadMainstem(
+void SbpNode<SbpSignature>::SpreadTrunk(
     oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
   // Skip it if this node is already judged.
-  if (on_mainstem_) { return; }
+  if (on_trunk_) { return; }
   // Skip sbp proxy. This is before we have proxy.
   if (min_layer_ < 0) { return; }
-  on_mainstem_ = true;
-  // If I am in the mainstem, then all the children with (min_layer_ >= my layer id - 1) would be
-  // considered as in the mainstem
+  on_trunk_ = true;
+  // If I am in the trunk, then all the children with (min_layer_ >= my layer id - 1) would be
+  // considered as in the trunk
   for (SbpEdge<SbpSignature>* this_edge : edges_in_) {
     if (this_edge->start_node_->min_layer_ >= min_layer_ - 1) {
-      this_edge->start_node_->SpreadMainstem(op_name2sbp_node);
+      this_edge->start_node_->SpreadTrunk(op_name2sbp_node);
     }
   }
   for (const auto& ctrl_in_op_name : op_node_->op().op_conf().ctrl_in_op_name()) {
     auto it = op_name2sbp_node.find(ctrl_in_op_name);
     if (it != op_name2sbp_node.end() && it->second->min_layer_ >= min_layer_ - 1) {
-      it->second->SpreadMainstem(op_name2sbp_node);
+      it->second->SpreadTrunk(op_name2sbp_node);
     }
   }
 }
@@ -710,42 +710,42 @@ void SbpNode<SbpSignature>::RaiseConsumerNum(
 // Compute the minimal available wait time for producers or upstream nodes
 template<class SbpSignature>
 void SbpNode<SbpSignature>::SpreadAvailWaitTime(
-    std::vector<double>& mainstem_cost, std::vector<double>& acc_mainstem_cost,
+    std::vector<double>& trunk_cost, std::vector<double>& acc_trunk_cost,
     oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node, double wait_time,
     double transfer_cost) {
   // skip the proxy nodes and the sources
   if (min_layer_ <= 0) { return; }
   // Have not finished spreading for consumers or downstream nodes or already visited.
   if (counter_) { return; }
-  if (on_mainstem_) {
-    // Nodes on the mainstem does not have any accumulate cost
-    acc_mainstem_cost_ = 0;
+  if (on_trunk_) {
+    // Nodes on the trunk does not have any accumulate cost
+    acc_trunk_cost_ = 0;
   } else {
-    if (acc_mainstem_cost_ < 0) {
+    if (acc_trunk_cost_ < 0) {
       // Do not have any consumer or downstream node
-      acc_mainstem_cost_ = acc_mainstem_cost[min_layer_ - 1];
+      acc_trunk_cost_ = acc_trunk_cost[min_layer_ - 1];
     } else {
-      // Add the mainstem cost at this layer
-      acc_mainstem_cost_ += mainstem_cost[min_layer_];
+      // Add the trunk cost at this layer
+      acc_trunk_cost_ += trunk_cost[min_layer_];
     }
   }
 
-  // Reduce the wait time for edges_in_, put the rest of the mainstem cost in the producers
+  // Reduce the wait time for edges_in_, put the rest of the trunk cost in the producers
   for (SbpEdge<SbpSignature>* this_edge : edges_in_) {
     CHECK(this_edge->wait_time_ < 0)
         << "Double assign values into wait_time_ of this edge!" << std::endl;
     SbpNode<SbpSignature>* producer = this_edge->start_node_;
     // Accumulate the cost from the start node to this node
-    double curr_mainstem_cost = acc_mainstem_cost_ + acc_mainstem_cost[producer->min_layer_]
-                                - acc_mainstem_cost[min_layer_ - 1];
-    if (curr_mainstem_cost >= wait_time) {
-      // Remain cost in the mainstem is able to cover all the wait time
+    double curr_trunk_cost =
+        acc_trunk_cost_ + acc_trunk_cost[producer->min_layer_] - acc_trunk_cost[min_layer_ - 1];
+    if (curr_trunk_cost >= wait_time) {
+      // Remain cost in the trunk is able to cover all the wait time
       this_edge->wait_time_ = 0.0;
-      curr_mainstem_cost -= wait_time;
+      curr_trunk_cost -= wait_time;
     } else {
-      // Remain cost in the mainstem can only cover partial wait time
-      this_edge->wait_time_ = wait_time - curr_mainstem_cost;
-      curr_mainstem_cost = 0.0;
+      // Remain cost in the trunk can only cover partial wait time
+      this_edge->wait_time_ = wait_time - curr_trunk_cost;
+      curr_trunk_cost = 0.0;
     }
     // Reducing non-matching edges
     // For example:
@@ -753,30 +753,30 @@ void SbpNode<SbpSignature>::SpreadAvailWaitTime(
     // (2) p->B->B->B->B
     // We would use (2) when the tensor is relatively tiny.
     this_edge->wait_time_ += transfer_cost;
-    // Do not inherit mainstem cost for nodes on the mainstem
-    if (!producer->on_mainstem_) {
-      // Inherit the minimal of the mainstem cost from consumers
-      producer->DropAvailWaitTime(curr_mainstem_cost);
+    // Do not inherit trunk cost for nodes on the trunk
+    if (!producer->on_trunk_) {
+      // Inherit the minimal of the trunk cost from consumers
+      producer->DropAvailWaitTime(curr_trunk_cost);
     }
     producer->counter_--;
-    producer->SpreadAvailWaitTime(mainstem_cost, acc_mainstem_cost, op_name2sbp_node, wait_time,
+    producer->SpreadAvailWaitTime(trunk_cost, acc_trunk_cost, op_name2sbp_node, wait_time,
                                   transfer_cost);
   }
-  // Put the rest the mainstem cost in the upstream nodes.
+  // Put the rest the trunk cost in the upstream nodes.
   for (const auto& ctrl_in_op_name : op_node_->op().op_conf().ctrl_in_op_name()) {
     auto it = op_name2sbp_node.find(ctrl_in_op_name);
     if (it != op_name2sbp_node.end()) {
       SbpNode<SbpSignature>* producer = it->second;
-      // Do not inherit mainstem cost for nodes on the mainstem
-      if (!producer->on_mainstem_) {
+      // Do not inherit trunk cost for nodes on the trunk
+      if (!producer->on_trunk_) {
         // Accumulate the cost from the start node to this node
-        double curr_mainstem_cost = acc_mainstem_cost_ + acc_mainstem_cost[producer->min_layer_]
-                                    - acc_mainstem_cost[min_layer_ - 1];
-        // Inherit the minimal of the mainstem cost from consumers
-        producer->DropAvailWaitTime(curr_mainstem_cost);
+        double curr_trunk_cost =
+            acc_trunk_cost_ + acc_trunk_cost[producer->min_layer_] - acc_trunk_cost[min_layer_ - 1];
+        // Inherit the minimal of the trunk cost from consumers
+        producer->DropAvailWaitTime(curr_trunk_cost);
       }
       producer->counter_--;
-      producer->SpreadAvailWaitTime(mainstem_cost, acc_mainstem_cost, op_name2sbp_node, wait_time,
+      producer->SpreadAvailWaitTime(trunk_cost, acc_trunk_cost, op_name2sbp_node, wait_time,
                                     transfer_cost);
     }
   }
@@ -786,9 +786,9 @@ void SbpNode<SbpSignature>::SpreadAvailWaitTime(
 
 // Drop down the available wait time with the minimum cost from downstream
 template<class SbpSignature>
-void SbpNode<SbpSignature>::DropAvailWaitTime(double curr_mainstem_cost) {
-  if (acc_mainstem_cost_ < 0.0 || acc_mainstem_cost_ > curr_mainstem_cost) {
-    acc_mainstem_cost_ = curr_mainstem_cost;
+void SbpNode<SbpSignature>::DropAvailWaitTime(double curr_trunk_cost) {
+  if (acc_trunk_cost_ < 0.0 || acc_trunk_cost_ > curr_trunk_cost) {
+    acc_trunk_cost_ = curr_trunk_cost;
   }
 }
 
@@ -811,15 +811,15 @@ void SbpNode<SbpSignature>::InitializeCopyCost(bool compute_cost, bool use_sbp_c
   }
 }
 
-// Reduce and set the wait time for op in the mainstem
+// Reduce and set the wait time for op in the trunk
 template<class SbpSignature>
-void SbpNode<SbpSignature>::SetMainstemWaitTime(double mainstem_wait_time) {
-  // only reduce the wait time for operators in the mainstem
-  if (on_mainstem_) {
+void SbpNode<SbpSignature>::SetTrunkWaitTime(double trunk_wait_time) {
+  // only reduce the wait time for operators in the trunk
+  if (on_trunk_) {
     // Reduce the wait time for edges_out_
     for (SbpEdge<SbpSignature>* edge_out : edges_out_) {
-      if (edge_out->wait_time_ < 0.0 || edge_out->wait_time_ > mainstem_wait_time) {
-        edge_out->wait_time_ = mainstem_wait_time;
+      if (edge_out->wait_time_ < 0.0 || edge_out->wait_time_ > trunk_wait_time) {
+        edge_out->wait_time_ = trunk_wait_time;
       }
     }
     // Might reduce it for edges_in_
@@ -838,7 +838,7 @@ void SbpNode<SbpSignature>::SpreadTributaryLayer(
     oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
   if (counter_ || min_layer_ <= 0) { return; }
   int32_t producer_max_lay = 0;
-  if (on_mainstem_) {
+  if (on_trunk_) {
     producer_max_lay = min_layer_ - 1;
   } else {
     // On a tributary, the operator could be run later.
