@@ -34,13 +34,13 @@ class ReplicationPad1d(Module):
     Args:
         padding (int, tuple): the size of the padding. If is `int`, uses the same
             padding in all boundaries. If a 2-`tuple`, uses
-            (:math:`\text{padding\_left}`, :math:`\text{padding\_right}`)
+            (:math:`\text{padding_left}`, :math:`\text{padding_right}`)
 
     Shape:
         - Input: :math:`(C, W_{in})` or :math:`(N, C, W_{in})`.
         - Output: :math:`(C, W_{out})` or :math:`(N, C, W_{out})`, where
 
-          :math:`W_{out} = W_{in} + \text{padding\_left} + \text{padding\_right}`
+          :math:`W_{out} = W_{in} + \text{padding_left} + \text{padding_right}`
 
     For example:
 
