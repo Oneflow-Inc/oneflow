@@ -501,7 +501,7 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
     attrs.set(op.hierarchyAttrName(), op.hierarchyAttr());
     auto name = FrozenVariableOp::nd_sbpAttrName(
         OperationName(FrozenVariableOp::getOperationName(), rewriter.getContext()));
-    auto elem2str = [&](mlir::Attribute& attr) -> std::string {
+    auto elem2str = [](mlir::Attribute& attr) -> std::string {
       std::string res;
       if (auto s = attr.dyn_cast<sbp::SplitAttr>()) {
         res = "S(" + std::to_string(s.getAxis()) + ")";
