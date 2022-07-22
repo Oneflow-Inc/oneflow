@@ -30,14 +30,14 @@ def pad(
         of ``input`` will be padded.
         For example, to pad only the last dimension of the input tensor, then
         :attr:`pad` has the form
-        :math:`(\text{padding\_left}, \text{padding\_right})`;
+        :math:`(\text{padding_left}, \text{padding_right})`;
         to pad the last 2 dimensions of the input tensor, then use
-        :math:`(\text{padding\_left}, \text{padding\_right},`
-        :math:`\text{padding\_top}, \text{padding\_bottom})`;
+        :math:`(\text{padding_left}, \text{padding_right},`
+        :math:`\text{padding_top}, \text{padding_bottom})`;
         to pad the last 3 dimensions, use
-        :math:`(\text{padding\_left}, \text{padding\_right},`
-        :math:`\text{padding\_top}, \text{padding\_bottom}`
-        :math:`\text{padding\_front}, \text{padding\_back})`.
+        :math:`(\text{padding_left}, \text{padding_right},`
+        :math:`\text{padding_top}, \text{padding_bottom}`
+        :math:`\text{padding_front}, \text{padding_back})`.
 
     Padding mode:
         See :class:`torch.nn.ConstantPad2d`, :class:`torch.nn.ReflectionPad2d`, and
@@ -50,7 +50,6 @@ def pad(
     Note:
         When using the CUDA backend, this operation may induce nondeterministic
         behaviour in its backward pass that is not easily switched off.
-        Please see the notes on :doc:`/notes/randomness` for background.
 
     Args:
         input (Tensor): N-dimensional tensor

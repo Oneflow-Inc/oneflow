@@ -23,6 +23,8 @@ from oneflow.nn.modules.utils import _pair, _quadruple
 
 class ReplicationPad1d(Module):
     r"""
+    ReplicationPad1d(padding)
+
     Pads the input tensor using replication of the input boundary.
 
     The interface is consistent with PyTorch.
@@ -82,6 +84,8 @@ class ReplicationPad1d(Module):
 
 class ReplicationPad2d(Module):
     """
+    ReplicationPad2d(padding)
+
     Pads the input tensor using the replication of the input boundary.
 
     The interface is consistent with PyTorch.
@@ -146,6 +150,8 @@ class ReplicationPad2d(Module):
 
 class ReflectionPad1d(Module):
     """
+    ReflectionPad1d(padding)
+
     This operator pads the input tensor using the reflection of the input boundary.
 
     The interface is consistent with PyTorch.
@@ -204,6 +210,8 @@ class ReflectionPad1d(Module):
 
 class ReflectionPad2d(Module):
     """
+    ReflectionPad2d(padding)
+
     This operator pads the input tensor using the reflection of the input boundary.
 
     The interface is consistent with PyTorch.
@@ -267,7 +275,11 @@ class ReflectionPad2d(Module):
 
 
 class ConstantPad1d(Module):
-    """Pads the input tensor boundaries with a constant value.
+    """
+    ConstantPad1d(padding)
+    
+    Pads the input tensor boundaries with a constant value.
+
     The interface is consistent with PyTorch, and referenced from:
     https://pytorch.org/docs/1.10/generated/torch.nn.ConstantPad1d.html.
 
@@ -322,6 +334,8 @@ class ConstantPad1d(Module):
 
 class ConstantPad2d(Module):
     """
+    ConstantPad2d(padding)
+
     This operator pads the input with constant value that user specifies.
     User can set the amount of padding by setting the parameter `paddings`.
 
@@ -387,7 +401,10 @@ class ConstantPad2d(Module):
 
 
 class ConstantPad3d(Module):
-    """Pads the input tensor boundaries with a constant value.
+    """
+    ConstantPad3d(padding)
+    
+    Pads the input tensor boundaries with a constant value.
     The interface is consistent with PyTorch, and referenced from:
     https://pytorch.org/docs/1.10/generated/torch.nn.ConstantPad3d.html.
 
@@ -459,6 +476,8 @@ class ConstantPad3d(Module):
 
 class ZeroPad2d(Module):
     """
+    ZeroPad2d(padding)
+
     Pads the input tensor boundaries with zero. User can set the amount of padding by setting the parameter `paddings`.
 
     The interface is consistent with PyTorch.

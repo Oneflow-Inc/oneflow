@@ -22,33 +22,37 @@ namespace oneflow {
 
 namespace {
 
+template<size_t ndim>
 Maybe<void> GetOpSbpSignature(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   const int64_t input_dims = x_tensor.shape().NumAxes();
   CHECK_EQ_OR_RETURN(input_dims, 4);  // NOLINT
   // NOTE(Liang Depeng): assume data format is NCHW.
-  const int64_t first_two_dims = input_dims - 2;
+  const int64_t first_two_dims = input_dims - (ndim - 2);
   FOR_RANGE(int64_t, i, 0, first_two_dims) {
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
   }
+  ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
 
+template<size_t ndim>
 Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
   const int64_t grad_dims = dy_tensor.shape().NumAxes();
   CHECK_EQ_OR_RETURN(grad_dims, 4);  // NOLINT
-  const int64_t first_two_dims = grad_dims - 2;
+  const int64_t first_two_dims = grad_dims - (ndim - 2);
   FOR_RANGE(int64_t, i, 0, first_two_dims) {
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
   }
+  ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
 
 }  // namespace
 
 /*static*/ Maybe<void> ReplicationPad1DOp::GetSbp(user_op::SbpContext* ctx) {
-  return GetOpSbpSignature(ctx);
+  return GetOpSbpSignature<3>(ctx);
 }
 /*static*/ Maybe<void> ReplicationPad1DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
@@ -84,7 +88,7 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
 }
 
 /*static*/ Maybe<void> ReplicationPad1DGradOp::GetSbp(user_op::SbpContext* ctx) {
-  return GetOpGradSbpSignature(ctx);
+  return GetOpGradSbpSignature<3>(ctx);
 }
 /*static*/ Maybe<void> ReplicationPad1DGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& dy_shape = ctx->InputShape("dy", 0);
@@ -113,7 +117,7 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
 }
 
 /*static*/ Maybe<void> ReplicationPad2DOp::GetSbp(user_op::SbpContext* ctx) {
-  return GetOpSbpSignature(ctx);
+  return GetOpSbpSignature<4>(ctx);
 }
 /*static*/ Maybe<void> ReplicationPad2DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
@@ -152,7 +156,7 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
 }
 
 /*static*/ Maybe<void> ReplicationPad2DGradOp::GetSbp(user_op::SbpContext* ctx) {
-  return GetOpGradSbpSignature(ctx);
+  return GetOpGradSbpSignature<4>(ctx);
 }
 /*static*/ Maybe<void> ReplicationPad2DGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& dy_shape = ctx->InputShape("dy", 0);
