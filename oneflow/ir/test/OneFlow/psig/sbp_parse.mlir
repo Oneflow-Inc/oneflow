@@ -5,10 +5,10 @@
 // CHECK-LABEL: test_single
 module {
   oneflow.job @test_single(){
-// CHECK: parallel_signature = #sbp.parallel_signature<[] -> [#sbp.b, #sbp.s<0>]>
-    %output = "oneflow.variable"() {data_type = 2 : i32, device_name = ["@0:0", "@1:1"], device_tag = "cuda", hierarchy = [2, 1], parallel_signature = #sbp.parallel_signature<[] -> [#sbp.b, #sbp.s<0>]>, op_name = "net-FreeEagerTensor-1", output_lbns = ["net-FreeEagerTensor-1/out"], scope_symbol_id = 14 : i64, shape = [4 : si64, 5 : si64], trainable = false} : () -> tensor<4x5xf32>
-// CHECK: parallel_signature = #sbp.parallel_signature<[] -> [#sbp.b, #sbp.p]>
-    %output_0 = "oneflow.variable"() {data_type = 2 : i32, device_name = ["@0:0", "@1:1"], device_tag = "cuda", hierarchy = [2, 1], parallel_signature = #sbp.parallel_signature<[] -> [#sbp.b, #sbp.p]>, op_name = "net-FreeEagerTensor-2", output_lbns = ["net-FreeEagerTensor-2/out"], scope_symbol_id = 14 : i64, shape = [5 : si64, 8 : si64], trainable = false} : () -> tensor<5x8xf32>
+// CHECK: psig = #sbp.psig<[] -> [#sbp.b, #sbp.s<0>]>
+    %output = "oneflow.variable"() {data_type = 2 : i32, device_name = ["@0:0", "@1:1"], device_tag = "cuda", hierarchy = [2, 1], psig = #sbp.psig<[] -> [#sbp.b, #sbp.s<0>]>, op_name = "net-FreeEagerTensor-1", output_lbns = ["net-FreeEagerTensor-1/out"], scope_symbol_id = 14 : i64, shape = [4 : si64, 5 : si64], trainable = false} : () -> tensor<4x5xf32>
+// CHECK: psig = #sbp.psig<[] -> [#sbp.b, #sbp.p]>
+    %output_0 = "oneflow.variable"() {data_type = 2 : i32, device_name = ["@0:0", "@1:1"], device_tag = "cuda", hierarchy = [2, 1], psig = #sbp.psig<[] -> [#sbp.b, #sbp.p]>, op_name = "net-FreeEagerTensor-2", output_lbns = ["net-FreeEagerTensor-2/out"], scope_symbol_id = 14 : i64, shape = [5 : si64, 8 : si64], trainable = false} : () -> tensor<5x8xf32>
     oneflow.return
   }
 }
@@ -17,9 +17,9 @@ module {
 module {
   oneflow.job @test_nd(){
     // CHECK: #sbp.b, #sbp.s<0>
-    %output = "oneflow.variable"() {data_type = 2 : i32, device_name = ["@0:0", "@1:1"], device_tag = "cuda", hierarchy = [2, 1], parallel_signature = #sbp.parallel_signature<[] -> [[#sbp.b, #sbp.s<0>]]>, op_name = "net-FreeEagerTensor-1", output_lbns = ["net-FreeEagerTensor-1/out"], scope_symbol_id = 14 : i64, shape = [4 : si64, 5 : si64], trainable = false} : () -> tensor<4x5xf32>
+    %output = "oneflow.variable"() {data_type = 2 : i32, device_name = ["@0:0", "@1:1"], device_tag = "cuda", hierarchy = [2, 1], psig = #sbp.psig<[] -> [[#sbp.b, #sbp.s<0>]]>, op_name = "net-FreeEagerTensor-1", output_lbns = ["net-FreeEagerTensor-1/out"], scope_symbol_id = 14 : i64, shape = [4 : si64, 5 : si64], trainable = false} : () -> tensor<4x5xf32>
     // CHECK: [#sbp.b, #sbp.p]
-    %output_0 = "oneflow.variable"() {data_type = 2 : i32, device_name = ["@0:0", "@1:1"], device_tag = "cuda", hierarchy = [2, 1], parallel_signature = #sbp.parallel_signature<[] -> [[#sbp.b, #sbp.p]]>, op_name = "net-FreeEagerTensor-2", output_lbns = ["net-FreeEagerTensor-2/out"], scope_symbol_id = 14 : i64, shape = [5 : si64, 8 : si64], trainable = false} : () -> tensor<5x8xf32>
+    %output_0 = "oneflow.variable"() {data_type = 2 : i32, device_name = ["@0:0", "@1:1"], device_tag = "cuda", hierarchy = [2, 1], psig = #sbp.psig<[] -> [[#sbp.b, #sbp.p]]>, op_name = "net-FreeEagerTensor-2", output_lbns = ["net-FreeEagerTensor-2/out"], scope_symbol_id = 14 : i64, shape = [5 : si64, 8 : si64], trainable = false} : () -> tensor<5x8xf32>
     oneflow.return
   }
 }

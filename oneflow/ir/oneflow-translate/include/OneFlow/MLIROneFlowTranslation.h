@@ -54,7 +54,7 @@ LogicalResult ConvertOutputOpConf(OutputOp op, ::oneflow::OperatorConf* op_conf)
 LogicalResult ParseNdSbpFromAttr(ArrayAttr nd_sbp_attr, ::oneflow::NdSbp* nd_sbp);
 Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp);
 Attribute ConvertSBPToString(Builder& builder,
-                             ::mlir::sbp::ParallelSignatureAttr& parallel_signature);
+                             ::mlir::sbp::ParallelSignatureAttr& psig);
 Attribute ConvertNdSbpToAttr_(Builder& builder, const ::oneflow::NdSbp& nd_sbp);
 Attribute ConvertNdSbpToAttr_(Builder& builder,
                               const ::google::protobuf::RepeatedPtrField<std::string>& nd_sbp,

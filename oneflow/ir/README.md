@@ -32,7 +32,7 @@ In the `include` and `lib` directories, there are definitions of MLIR OneFlow di
 - There is parallel signature as 0 for OneFlow Ops in MLIR. It is implemented as MLIR dialect attribute. Some examples:
     - 1D SBP
         ```mlir
-        %100 = "oneflow.relu"(%99) {parallel_signature = #sbp.parallel_signature<[#sbp.s<0>] -> [#sbp.s<0>]>, ...
+        %100 = "oneflow.relu"(%99) {psig = #sbp.parallel_signature<[#sbp.s<0>] -> [#sbp.s<0>]>, ...
         ```
     - multiple inputs and outputs 1D SBP
         ```mlir

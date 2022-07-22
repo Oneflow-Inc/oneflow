@@ -467,9 +467,9 @@ Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp) {
 }
 
 Attribute ConvertSBPToString(Builder& builder,
-                             ::mlir::sbp::ParallelSignatureAttr& parallel_signature) {
+                             ::mlir::sbp::ParallelSignatureAttr& psig) {
   std::vector<std::string> list;
-  for (auto output : parallel_signature.getOutputs()) {
+  for (auto output : psig.getOutputs()) {
     if (auto nd_outputs = output.dyn_cast<ArrayAttr>()) {
       for (auto nd_output : nd_outputs) {
         std::string sbp;
@@ -1025,7 +1025,7 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
   if (op->hasAttr("trainable")) { var_op_conf->set_trainable(op.trainable()); }
 
   if (op->hasAttr(OpTrait::TensorSource<void>::getNdSbpAttrName())) {
-    for (auto output : op.parallel_signature()->getOutputs()) {
+    for (auto output : op.psig()->getOutputs()) {
       if (auto nd_outputs = output.dyn_cast<ArrayAttr>()) {
         for (auto nd_output : nd_outputs) {
           std::string sbp;

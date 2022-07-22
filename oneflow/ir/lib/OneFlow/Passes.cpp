@@ -524,7 +524,7 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
       }
       return ArrayAttr::get(rewriter.getContext(), res);
     };
-    attrs.set(name, sbp2str(op.parallel_signatureAttr()));
+    attrs.set(name, sbp2str(op.psigAttr()));
     auto op_new = rewriter.create<oneflow::FrozenVariableOp>(op->getLoc(), op.output().getType(),
                                                              ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
@@ -557,7 +557,7 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
     attrs.set(op.device_nameAttrName(), op.device_nameAttr());
     attrs.set(op.scope_symbol_idAttrName(), op.scope_symbol_idAttr());
     attrs.set(op.hierarchyAttrName(), op.hierarchyAttr());
-    auto name = VariableOp::parallel_signatureAttrName(
+    auto name = VariableOp::psigAttrName(
         OperationName(VariableOp::getOperationName(), rewriter.getContext()));
 
     auto str2sbp = [&](ArrayAttr nd_sbp, int nd_size) -> Attribute {
