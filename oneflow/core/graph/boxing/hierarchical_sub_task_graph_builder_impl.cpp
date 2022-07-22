@@ -166,10 +166,11 @@ class NDNcclSendRecvBoxingSubTskGphBuilder final : public HierarchicalSubTskGphB
       }
       return BuildSubTskGphBuilderStatus("NDNcclSendRecvBoxingSubTskGphBuilder", "");
 #else
-      return Error::BoxingNotSupportedError();
+      return Error::BoxingNotSupportedError() << "No CUDA or low NCCL version";
 #endif
     } else {
-      return Error::BoxingNotSupportedError();
+      return Error::BoxingNotSupportedError()
+             << "Partial SBP in the consumer or not running on CUDA";
     }
   }
 };
