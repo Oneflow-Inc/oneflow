@@ -15,10 +15,10 @@ limitations under the License.
 */
 
 #include <string>
-#include "sbp_collector.h"
+#include "oneflow/core/auto_parallel/sbp_collector.h"
 #include "oneflow/core/auto_parallel/binary_set.h"
 #include "oneflow/core/auto_parallel/sbp_util.h"
-#include "sbp_constructor.h"
+#include "oneflow/core/auto_parallel/sbp_constructor.h"
 
 namespace oneflow {
 
@@ -78,7 +78,7 @@ void FindUniqueSbpGroups(
 
 // If not contains two sbp from a same unique group
 bool No2SbpFromSameUniqueGroup(BinarySet& bs, const std::vector<BinarySet>& unique_sbp_groups) {
-  BinarySet intersection(bs.SizeOfSet);
+  BinarySet intersection(bs.GetSizeOfSet());
   for (const auto& unique_sbp_group : unique_sbp_groups) {
     bs.IntersectionTo(unique_sbp_group, intersection);
     // For example {B, S1, S2} is an impossible proxy candidate,
@@ -220,7 +220,7 @@ void SbpCollector::InitializeCopyCostFromProxy2Consumer(
             sbp_node_consumer->sbp_sig_list_[sbp_id_consumer]->bn_in_op2nd_sbp();
         const NdSbp& sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
 
-        if ((!parallel_candidate.CheckExistency(SbpParallelUniverse[sbp_consumer]))) {
+        if ((!parallel_candidate.CheckExistence(SbpParallelUniverse[sbp_consumer]))) {
           sbp_edge->cost_[sbp_id_producer][sbp_id_consumer] = GetMaxVal<float>();
         }
       }

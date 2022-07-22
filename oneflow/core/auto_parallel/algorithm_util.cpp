@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "algorithm_util.h"
+#include "oneflow/core/auto_parallel/algorithm_util.h"
 
 namespace oneflow {
 namespace auto_parallel {

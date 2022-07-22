@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/job/job.pb.h"
-#include "sbp_collector.h"
+#include "oneflow/core/auto_parallel/sbp_collector.h"
 
 namespace oneflow {
 
