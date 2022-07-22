@@ -32,18 +32,18 @@ In the `include` and `lib` directories, there are definitions of MLIR OneFlow di
 - There is parallel signature as 0 for OneFlow Ops in MLIR. It is implemented as MLIR dialect attribute. Some examples:
     - 1D SBP
         ```mlir
-        %100 = "oneflow.relu"(%99) {psig = #sbp.parallel_signature<[#sbp.s<0>] -> [#sbp.s<0>]>, ...
+        %100 = "oneflow.relu"(%99) {parallel = #sbp.parallel<[#sbp.S<0>] -> [#sbp.S<0>]>, ...
         ```
     - multiple inputs and outputs 1D SBP
         ```mlir
-        %102 = "oneflow.add_n2"(%101, %97) {parallel_signature = #sbp.parallel_signature<[#sbp.s<0>, #sbp.s<0>] -> [#sbp.s<0>]>, ...
+        %102 = "oneflow.add_n2"(%101, %97) {parallel = #sbp.parallel<[#sbp.S<0>, #sbp.S<0>] -> [#sbp.S<0>]>, ...
         ```
     - 2D SBP `matmul`
         ```
-        %120 = "oneflow.matmul"(%119, %output_105) {parallel_signature = #sbp.parallel_signature<[[#sbp.s<0>, #sbp.p], #sbp.s<0>] -> [#sbp.s<0>]>, ...
+        %120 = "oneflow.matmul"(%119, %output_105) {parallel = #sbp.parallel<[[#sbp.S<0>, #sbp.P], #sbp.S<0>] -> [#sbp.S<0>]>, ...
         ```
 
-- To avoid confusion and potential parsing error, use the term "parallel_signature" instead of using "sbp" but conceptually and documentally there are the same.
+- To avoid confusion and potential parsing error, use the term "parallel" instead of using "sbp" but conceptually and documentally there are the same.
 
 ### Principle
 - In IR, The signature should be orthogonal to device placement information althogh in some passes they might be related to each other.
