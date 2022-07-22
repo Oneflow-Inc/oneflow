@@ -36,6 +36,19 @@ namespace auto_parallel {
 
 class SbpCollector {
  public:
+  SbpCollector();
+
+  ~SbpCollector() {}
+
+  // Collect all the possible Sbp Parallel from a SbpGraph
+  void CollectUniverse(SbpGraph<NdSbpSignature>& sbp_graph);
+
+  // Export list of possible combination of Sbp Parallels
+  void ProxySbpCandidate(const OpGraph& op_graph,
+                         HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node,
+                         SbpGraph<NdSbpSignature>& sbp_graph);
+
+ private:
   // Stores all the possible NdSbp.
   std::unordered_map<::oneflow::NdSbp, int32_t> SbpParallelUniverse;
   // Relationship between id and Sbp Parallel
@@ -45,16 +58,10 @@ class SbpCollector {
   // A binary set buffer to indicate sets of downstream sbp
   BinarySet bs_buffer;
 
-  SbpCollector();
-
-  ~SbpCollector() {}
-
   // Collect all the possible Sbp Parallel from a NdSbpSignature
   void CollectUniverse(NdSbpSignature& sbp_);
   // Collect all the possible Sbp Parallel from a SbpNode
   void CollectUniverse(SbpNode<NdSbpSignature>* sbp_node);
-  // Collect all the possible Sbp Parallel from a SbpGraph
-  void CollectUniverse(SbpGraph<NdSbpSignature>& sbp_graph);
 
   // Initialize copy cost from producer to proxy of producer
   void InitializeCopyCostFromNode2Proxy(SbpNode<NdSbpSignature>* sbp_proxy,
@@ -66,12 +73,6 @@ class SbpCollector {
       HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
       HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node);
 
-  // Export list of possible combination of Sbp Parallels
-  void ProxySbpCandidate(const OpGraph& op_graph,
-                         HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node,
-                         SbpGraph<NdSbpSignature>& sbp_graph);
-
- private:
   // Maximum number of possible sbp in the proxy
   const unsigned long max_num_sbp_proxy_ = 3;
 
