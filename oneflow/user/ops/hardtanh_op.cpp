@@ -20,7 +20,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> HardtanhOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->OutputShape("out", 0);
+  Shape* out_shape = ctx->MutOutputShape("out", 0);
   *out_shape = in_shape;
   double min_val = ctx->Attr<double>("min_val");
   double max_val = ctx->Attr<double>("max_val");
@@ -48,7 +48,7 @@ namespace oneflow {
 /* static */ Maybe<void> HardtanhGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& y_shape = ctx->InputShape("y", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  Shape* dx_shape = ctx->OutputShape("dx", 0);
+  Shape* dx_shape = ctx->MutOutputShape("dx", 0);
   CHECK_OR_RETURN(dy_shape == y_shape);
   *dx_shape = dy_shape;
   double min_val = ctx->Attr<double>("min_val");

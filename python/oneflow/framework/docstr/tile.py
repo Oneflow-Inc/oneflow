@@ -21,10 +21,6 @@ add_docstr(
     """
     tile(input, dims) -> Tensor
 
-    The interface is consistent with PyTorch.
-    The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.tile.html.
-
     Constructs a tensor by repeating the elements of ``input``.  The ``dims`` argument specifies the number
     of repetitions in each dimension.
 
@@ -39,6 +35,10 @@ add_docstr(
 
     .. note::
         This function is similar to NumPy’s tile function.
+    
+    The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.tile.html.
 
     Args:
         input (oneflow.Tensor): the tensor whose elements to repeat.

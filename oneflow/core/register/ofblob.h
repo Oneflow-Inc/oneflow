@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/memory/memory_case_util.h"
 
 namespace oneflow {
 
@@ -29,7 +30,7 @@ class OfBlob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OfBlob);
   OfBlob(ep::Stream* stream, Blob* blob) : stream_(stream), blob_(blob) {
-    mem_case_.mutable_host_mem();
+    mem_case_ = memory::MakeHostMemCase();
   }
   ~OfBlob() = default;
 

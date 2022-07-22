@@ -19,11 +19,12 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.unbind,
     """
-    This function is equivalent to PyTorch's unbind function.
     Removes a tensor dimension.
 
     Returns a tuple of all slices along a given dimension, already without it.
-        
+    
+    This function is equivalent to PyTorch's unbind function.
+
     Args:
         x(Tensor): the tensor to unbind
         dim(int): dimension to remove

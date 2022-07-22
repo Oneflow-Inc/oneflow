@@ -27,7 +27,7 @@ Maybe<void> VarOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const AxisVector reduce_axes_vec = {reduce_axes.begin(), reduce_axes.end()};
   const Shape& reduce_shape = CreateReducedShape(input_shape, reduce_axes_vec);
   const bool keepdim = ctx->Attr<bool>("keepdim");
-  Shape* output_shape = ctx->OutputShape("output", 0);
+  Shape* output_shape = ctx->MutOutputShape("output", 0);
   if (keepdim) {
     *output_shape = reduce_shape;
   } else {

@@ -211,6 +211,10 @@ class Optimizer(object):
 
         self.param_groups.append(ParamGroup(param_group, self._default_options))
 
+        for param in param_group["params"]:
+            assert param.is_leaf, "parameters must be leaf tensor"
+            self._state[param] = dict()
+
     def load_state_dict(self, state_dict) -> None:
         r"""
         Load the state of the optimizer which is created by `state_dict` function.
@@ -287,7 +291,7 @@ class Optimizer(object):
 
     def state_dict(self):
         r"""
-        Returns the state of the optimizer as a :class:`dict`.
+        Returns the state of the optimizer as a :py:class:`dict`.
 
         It contains two entries:
 
@@ -363,7 +367,7 @@ class Optimizer(object):
                 )
 
     def zero_grad(self, set_to_none: bool = False):
-        """Sets the gradients of all optimized torch.Tensor s to zero.
+        """Sets the gradients of all optimized :class:`oneflow.Tensor` s to zero.
 
         Args:
             set_to_none (bool): instead of setting to zero, set the grads to None.
