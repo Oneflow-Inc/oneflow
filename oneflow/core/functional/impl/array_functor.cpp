@@ -48,6 +48,7 @@ limitations under the License.
 #include "oneflow/api/common/ofblob.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/framework/tensor_util.h"
 
 namespace oneflow {
 namespace one {
@@ -421,35 +422,27 @@ class NonZeroFunctor {
  public:
   NonZeroFunctor() {}
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, bool as_tuple) const {
-    std::shared_ptr<one::Tensor> input = JUST(x->AsLocalTensor());
+    std::shared_ptr<one::Tensor> input = x;
     int64_t ndim = input->ndim();
     if (as_tuple && ndim == 0) { input = JUST(functional::Unsqueeze(input, 0)); }
     const auto& output_tuple =
         JUST(functional::ArgWhere(input, JUST(DType::Get(DataType::kInt64))));
-    const std::shared_ptr<one::Tensor>& size = output_tuple->at(1);
-    CHECK_OR_RETURN(size->shape()->elem_cnt() == 1)
+    const std::shared_ptr<one::Tensor>& size = JUST(VectorAt(*output_tuple, 1));
+    CHECK_EQ_OR_RETURN(size->shape()->elem_cnt(), 1)
         << Error::RuntimeError() << kOfBugIssueUploadPrompt;
     CHECK_OR_RETURN(size->dtype() == JUST(DType::Get(DataType::kInt64)))
         << Error::RuntimeError() << kOfBugIssueUploadPrompt;
-    int64_t size_val = -1;
-    const auto& Callback = [&](uint64_t ofblob_ptr) {
-      reinterpret_cast<const OfBlob*>(ofblob_ptr)->AutoMemCopyTo<int64_t>(&size_val, 1);
-    };
-    auto btb = std::make_shared<BlockingThenBusy>(1);
-    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(JUST(size->AsLocalTensor()), btb, Callback, "const");
-    }));
-    JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
-    std::vector<int64_t> start(2, 0);
-    std::vector<int64_t> stop(2, 0);
-    std::vector<int64_t> step(2, 1);
-    stop[0] = size_val;
-    stop[1] = ndim;
+    int64_t size_val = JUST(GetItem4Tensor<int64_t>(size));
+    std::vector<int64_t> start{0, 0};
+    std::vector<int64_t> stop{size_val, ndim};
+    std::vector<int64_t> step{1, 1};
     const auto& output = JUST(
         functional::Slice(output_tuple->at(0), start, stop, step, /*enable_view_slice=*/false));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>();
     if (as_tuple) {
-      stop[1] = size_val;
+      std::vector<int64_t> start{0, 0};
+      std::vector<int64_t> stop{1, size_val};
+      std::vector<int64_t> step{1, 1};
       const auto& transposed_output = JUST(functional::Transpose2dim(output, 1, 0));
       for (int64_t i = 0; i < ndim; ++i) {
         start[0] = i;
