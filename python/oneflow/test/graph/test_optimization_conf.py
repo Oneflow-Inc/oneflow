@@ -17,6 +17,7 @@ import os
 import unittest
 import oneflow.framework.session_context as session_ctx
 import oneflow as flow
+import oneflow.unittest
 import oneflow.framework.config_util as config_util
 import oneflow.framework.attr_util as attr_util
 import random
@@ -42,7 +43,6 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
         flow.boxing.nccl.enable_use_compute_stream(True)
         flow.boxing.nccl.disable_group_boxing_by_dst_parallel(True)
 
-        flow.backends.cudnn.set_reserved_mem_mbytes(1000)
         flow.backends.cudnn.enable_fused_normalization_add_relu(True)
 
         flow.utils.load_library("")
