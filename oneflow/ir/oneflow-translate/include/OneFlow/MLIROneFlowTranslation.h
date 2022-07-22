@@ -55,8 +55,8 @@ LogicalResult ParseNdSbpFromAttr(ArrayAttr nd_sbp_attr, ::oneflow::NdSbp* nd_sbp
 Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp);
 Attribute ConvertSBPToString(Builder& builder, ::mlir::sbp::ParallelSignatureAttr& psig);
 Attribute ConvertNdSbpToPsig(Builder& builder,
-                              const ::google::protobuf::RepeatedPtrField<std::string>& nd_sbp,
-                              int nd_size);
+                             const ::google::protobuf::RepeatedPtrField<std::string>& nd_sbp,
+                             int nd_size);
 
 class Importer {
  public:
