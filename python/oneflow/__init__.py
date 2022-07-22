@@ -326,6 +326,7 @@ from oneflow.nn.modules.einsum import einsum_op as einsum
 from oneflow.nn.modules.is_tensor import is_tensor_op as is_tensor
 from oneflow.nn.modules.arange import arange_op as arange
 from oneflow.nn.modules.linspace import linspace_op as linspace
+from oneflow.nn.modules.logspace import logspace_op as logspace
 from oneflow.nn.modules.argsort import argsort_op as argsort
 from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.constant import ones_op as ones
