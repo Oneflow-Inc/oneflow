@@ -385,6 +385,17 @@ ParallelConf GenParallelConfOfCpuZeroOnAllMachines() {
   return parallel_conf;
 }
 
+ParallelConf GenParallelConfOfCpuOnAllRanks() {
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag("cpu");
+  int64_t node_size = GlobalProcessCtx::NodeSize();
+  int64_t device_num = GlobalProcessCtx::NumOfProcessPerNode();
+  for (int64_t node_id = 0; node_id < node_size; ++node_id) {
+    parallel_conf.add_device_name(std::to_string(node_id) + ":0-" + std::to_string(device_num - 1));
+  }
+  return parallel_conf;
+}
+
 namespace {
 
 Maybe<Optional<int64_t>> CalcParallelId4CurrentProcessCtx(Symbol<ParallelDesc> parallel_desc) {
