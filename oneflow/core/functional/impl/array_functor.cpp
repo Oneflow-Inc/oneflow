@@ -432,7 +432,8 @@ class NonZeroFunctor {
         << Error::RuntimeError() << kOfBugIssueUploadPrompt;
     CHECK_OR_RETURN(size->dtype() == JUST(DType::Get(DataType::kInt64)))
         << Error::RuntimeError() << kOfBugIssueUploadPrompt;
-    int64_t size_val = JUST(GetItem4Tensor<int64_t>(size));
+    int64_t size_val = -1;
+    JUST(CopyTensorDataTo(size, (void*)(&size_val), GetSizeOfDataType(DataType::kInt64)));
     std::vector<int64_t> start{0, 0};
     std::vector<int64_t> stop{size_val, ndim};
     std::vector<int64_t> step{1, 1};
