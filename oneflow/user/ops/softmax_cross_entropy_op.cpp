@@ -51,7 +51,7 @@ namespace oneflow {
   FOR_RANGE(int64_t, i, 0, num_out_axes) {
     out_dim_vector.emplace_back(prediction_desc.shape().At(i));
   }
-  *ctx->OutputShape("prob", 0) = ctx->InputShape("prediction", 0);
+  *ctx->MutOutputShape("prob", 0) = ctx->InputShape("prediction", 0);
   *ctx->OutputIsDynamic("prob", 0) = ctx->InputIsDynamic("prediction", 0);
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
   *out_desc->mut_is_dynamic() = prediction_desc.is_dynamic();
@@ -118,7 +118,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(label_desc.shape(), prob_desc.shape())
       << Error::RuntimeError() << "The size of label " << label_desc.shape()
       << " must match the size of prob " << prob_desc.shape();
-  *ctx->OutputShape("prediction_diff", 0) = ctx->InputShape("prob", 0);
+  *ctx->MutOutputShape("prediction_diff", 0) = ctx->InputShape("prob", 0);
   *ctx->OutputIsDynamic("prediction_diff", 0) = ctx->InputIsDynamic("prob", 0);
   return Maybe<void>::Ok();
 }

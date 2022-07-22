@@ -58,7 +58,7 @@ Maybe<void> UnfoldTensorDescInferFn(user_op::InferContext* ctx) {
       * std::accumulate(kernel_size.begin(), kernel_size.end(), 1, std::multiplies<int>());
   y_shape.at(2) = std::accumulate(dhw_shape.begin(), dhw_shape.end(), 1, std::multiplies<int>());
 
-  *ctx->OutputShape("y", 0) = Shape(y_shape);
+  *ctx->MutOutputShape("y", 0) = Shape(y_shape);
   return Maybe<void>::Ok();
 }
 
@@ -118,7 +118,7 @@ Maybe<void> FoldTensorDescInferFn(user_op::InferContext* ctx) {
   y_shape.at(2) = output_size[0];
   y_shape.at(3) = output_size[1];
 
-  *ctx->OutputShape("y", 0) = Shape(y_shape);
+  *ctx->MutOutputShape("y", 0) = Shape(y_shape);
   return Maybe<void>::Ok();
 }
 
