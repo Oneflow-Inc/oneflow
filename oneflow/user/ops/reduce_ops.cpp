@@ -23,8 +23,8 @@ namespace oneflow {
 Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   const Shape& input_shape = ctx->InputShape("input_tensor", 0);
   const auto& reduce_axes = ctx->Attr<std::vector<int32_t>>("axis");
-  Shape* output_shape = ctx->OutputShape("output_tensor", 0);
-  Stride* output_stride = ctx->OutputStride("output_tensor", 0);
+  Shape* output_shape = ctx->MutOutputShape("output_tensor", 0);
+  Stride* output_stride = ctx->MutOutputStride("output_tensor", 0);
   // For 0-dim Tensor
   if (reduce_axes.empty()) {
     *output_shape = input_shape;

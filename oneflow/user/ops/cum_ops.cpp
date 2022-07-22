@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<void> CumsumOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("y", 0) = ctx->InputShape("x", 0);
+  *ctx->MutOutputShape("y", 0) = ctx->InputShape("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -73,7 +73,7 @@ REGISTER_USER_OP_GRAD("cumsum").SetGenBackwardOpConfFn(
     });
 
 Maybe<void> CumProdOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("y", 0) = ctx->InputShape("x", 0);
+  *ctx->MutOutputShape("y", 0) = ctx->InputShape("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -96,7 +96,7 @@ Maybe<void> CumProdOp::InferDataType(user_op::InferContext* ctx) {
 }
 
 Maybe<void> CumProdGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("dx", 0) = ctx->InputShape("dy", 0);
+  *ctx->MutOutputShape("dx", 0) = ctx->InputShape("dy", 0);
   return Maybe<void>::Ok();
 }
 

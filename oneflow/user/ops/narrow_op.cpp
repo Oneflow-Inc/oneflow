@@ -83,7 +83,7 @@ namespace oneflow {
   const int64_t ndim = dy_shape.NumAxes();
   CHECK_EQ_OR_RETURN(like_shape.NumAxes(), ndim);
 
-  *ctx->OutputShape("dx", 0) = like_shape;
+  *ctx->MutOutputShape("dx", 0) = like_shape;
   return Maybe<void>::Ok();
 }
 

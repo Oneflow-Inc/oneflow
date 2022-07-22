@@ -62,7 +62,7 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(dy_desc.shape(), label_desc.shape())
       << Error::RuntimeError() << "The size of dy " << dy_desc.shape()
       << " must match the size of label " << label_desc.shape();
-  *ctx->OutputShape("prediction_diff", 0) = prediction_desc.shape();
+  *ctx->MutOutputShape("prediction_diff", 0) = prediction_desc.shape();
   *ctx->OutputIsDynamic("prediction_diff", 0) = prediction_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
