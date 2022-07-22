@@ -24,13 +24,13 @@ import torch as pytorch_origin
 import oneflow as oneflow_origin
 
 
-def _test_convnd_grad_grad_impl(test_case, ndim, placement, x_sbp):
+def _test_convnd_grad_grad_impl(test_case, ndim, placement):
     x_shape = [8, 8] + [5 for _ in range(ndim)]
     w_shape = [8, 8] + [3 for _ in range(ndim)]
     y_shape = [8, 8] + [3 for _ in range(ndim)]
 
     x = random_tensor(len(x_shape), *x_shape).to_global(
-        placement=placement, sbp=x_sbp
+        placement=placement, sbp=random_sbp(placement, max_dim=2)
     )
     w = random_tensor(len(w_shape), *w_shape).to_global(
         placement=placement, sbp=random_sbp(placement, max_dim=2)
@@ -127,20 +127,20 @@ class TestGlobalConvHigherDerivative(flow.unittest.TestCase):
     @globaltest
     def test_conv1d_grad_grad(test_case):
         for placement in all_placement():
-            for x_sbp in all_sbp(placement, max_dim=2):
-                _test_convnd_grad_grad_impl(test_case, ndim=1, placement=placement, x_sbp=x_sbp)
+            for i in range(5):
+                _test_convnd_grad_grad_impl(test_case, ndim=1, placement=placement)
 
     @globaltest
     def test_conv2d_grad_grad(test_case):
         for placement in all_placement():
-            for x_sbp in all_sbp(placement, max_dim=2):
-                _test_convnd_grad_grad_impl(test_case, ndim=2, placement=placement, x_sbp=x_sbp)
+            for i in range(5):
+                _test_convnd_grad_grad_impl(test_case, ndim=2, placement=placement)
 
     @globaltest
     def test_conv3d_grad_grad(test_case):
         for placement in all_placement():
-            for x_sbp in all_sbp(placement, max_dim=2):
-                _test_convnd_grad_grad_impl(test_case, ndim=3, placement=placement, x_sbp=x_sbp)
+            for i in range(5):
+                _test_convnd_grad_grad_impl(test_case, ndim=3, placement=placement)
 
 
 if __name__ == "__main__":
