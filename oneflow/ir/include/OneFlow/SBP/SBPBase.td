@@ -56,11 +56,11 @@ def SBP_ParallelSignatureAttr : SBP_Attr<"ParallelSignature", "psig"> {
   let description = [{
     To represent a signature, with a arrow in beween, pass two listes corepondent to the data input and data output tensors. For example:
     ```
-    #sbp.psig<[#sbp.s<0>] -> [#sbp.s<0>]>
+    #sbp.psig<[#sbp.S<0>] -> [#sbp.S<0>]>
     ```
     One level nested list is used to represent a 2D parallelism signature. For example:
     ```
-    #sbp.psig<[[#sbp.s<0>, #sbp.p]] -> [#sbp.s<0>]>
+    #sbp.psig<[[#sbp.S<0>, #sbp.P]] -> [#sbp.S<0>]>
     ```
   }];
   let parameters = (ins "ArrayAttr":$inputs, "ArrayAttr":$outputs);

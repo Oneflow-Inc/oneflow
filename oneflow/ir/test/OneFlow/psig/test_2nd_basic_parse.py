@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 # RUN: python3 -m oneflow.distributed.launch --nproc_per_node 2 %s | FileCheck %s
-# CHECK: [#sbp.b, #sbp.s<0>]
-# CHECK: [#sbp.b, #sbp.s<0>]
+# CHECK: [#sbp.B, #sbp.S<0>]
+# CHECK: [#sbp.B, #sbp.S<0>]
 
 import oneflow as flow
 import unittest

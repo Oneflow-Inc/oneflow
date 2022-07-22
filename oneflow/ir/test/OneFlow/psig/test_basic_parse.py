@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 # RUN: python3 %s | FileCheck %s
-# CHECK: [#sbp.b]
-# CHECK: [#sbp.s<0>]
+# CHECK: [#sbp.B]
+# CHECK: [#sbp.S<0>]
 
 import oneflow as flow
 import unittest
