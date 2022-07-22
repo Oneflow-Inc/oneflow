@@ -60,6 +60,7 @@ class ZeroCopyBaseContextHelper {
     inedx = TryGetTensorTupleIndex(output_arg_tuple_->arg_name2bn_index2tensor_tuple_index(),
                                    arg_name, index);
     if (inedx >= 0) { return *call_ctx->outputs().at(inedx); }
+    PRINT_BUG_PROMPT_AND_ABORT();
     return *(user_op::TensorDesc*)nullptr;
   }
   user_op::TensorDesc* MutTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
