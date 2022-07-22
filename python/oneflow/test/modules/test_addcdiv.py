@@ -18,7 +18,7 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 
-
+@flow.unittest.skip_unless_1n1d()
 class TestAddcdiv(flow.unittest.TestCase):
     @autotest(n=5)
     def test_addcdiv(test_case):
