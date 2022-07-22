@@ -43,8 +43,7 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "embedding_lookup_placeholder",
                                "embedding_update_placeholder",
                                "binary_cross_entropy_with_logits_reduce_mean",
-                               "binary_cross_entropy_with_logits_reduce_mean_grad",
-                               "pinned_identity"};
+                               "binary_cross_entropy_with_logits_reduce_mean_grad"};
   return white_list;
 }
 
@@ -160,7 +159,8 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "nvtx_end",
                                "narrow",
                                "narrow_grad",
-                               "ones_like"};
+                               "ones_like",
+                               "pinned_identity"};
 
   return clear_list;
 }

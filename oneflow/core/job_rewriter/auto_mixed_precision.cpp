@@ -256,12 +256,15 @@ void AutoMixedPrecision::FillWhiteSet(const OpGraph& op_graph,
                                       std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
                                       const HashSet<OpNode*>& black_set,
                                       HashSet<OpNode*>* white_set) const {
-  HashSet<OpNode*> upstream_or_part_of_white;
-  auto IsWhiteAndAllowedToRunHalf = [&](OpNode* node) {
-    return IsAllowedToRunWithHalf(node) && IsNodeInList(white_list_, node);
+  auto IsWhiteOrSinkAndAllowedToRunHalf = [&](OpNode* node) {
+    return IsAllowedToRunWithHalf(node)
+           && (IsNodeInList(white_list_, node)
+               || (node->out_edges().empty()
+                   && (IsNodeInList(gray_list_, node) || IsNodeInList(clear_list_, node))));
   };
+  HashSet<OpNode*> upstream_or_part_of_white;
   DfsTopoGraphTraversal(
-      op_graph, true, IsWhiteAndAllowedToRunHalf,
+      op_graph, true, IsWhiteOrSinkAndAllowedToRunHalf,
       [&](OpNode* node) {
         return !IsKeyFound(black_set, node) && IsAllowedToRunWithHalf(node)
                && (IsNodeInList(gray_list_, node) || IsNodeInList(clear_list_, node));
@@ -273,6 +276,9 @@ void AutoMixedPrecision::FillWhiteSet(const OpGraph& op_graph,
                 << " to upstream_or_part_of_white";
       });
 
+  auto IsWhiteAndAllowedToRunHalf = [&](OpNode* node) {
+    return IsAllowedToRunWithHalf(node) && IsNodeInList(white_list_, node);
+  };
   DfsTopoGraphTraversal(
       op_graph, false, IsWhiteAndAllowedToRunHalf,
       [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_white, node); },
