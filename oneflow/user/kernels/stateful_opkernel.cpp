@@ -174,26 +174,42 @@ class UserOpInferContextHelper final {
 
   const Shape& InputShape(eager::CallContext* call_ctx, const std::string& arg_name,
                           int32_t index) const {
-    return *Shape4ArgNameAndIndex(call_ctx, arg_name, index);
-  }
-  Shape* OutputShape(eager::CallContext* call_ctx, const std::string& arg_name,
-                     int32_t index) const {
     return Shape4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  Shape* Shape4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
-                               int32_t index) const {
+  const Shape& OutputShape(eager::CallContext* call_ctx, const std::string& arg_name,
+                           int32_t index) const {
+    return Shape4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  Shape* MutOutputShape(eager::CallContext* call_ctx, const std::string& arg_name,
+                        int32_t index) const {
+    return MutShape4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  const Shape& Shape4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                     int32_t index) const {
+    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->shape();
+  }
+  Shape* MutShape4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                  int32_t index) const {
     return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_shape();
   }
   const Stride& InputStride(eager::CallContext* call_ctx, const std::string& arg_name,
                             int32_t index) const {
-    return *Stride4ArgNameAndIndex(call_ctx, arg_name, index);
-  }
-  Stride* OutputStride(eager::CallContext* call_ctx, const std::string& arg_name,
-                       int32_t index) const {
     return Stride4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  Stride* Stride4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
-                                 int32_t index) const {
+  const Stride& OutputStride(eager::CallContext* call_ctx, const std::string& arg_name,
+                             int32_t index) const {
+    return Stride4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  Stride* MutOutputStride(eager::CallContext* call_ctx, const std::string& arg_name,
+                          int32_t index) const {
+    return MutStride4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  const Stride& Stride4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                       int32_t index) const {
+    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->stride();
+  }
+  Stride* MutStride4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                    int32_t index) const {
     return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_stride();
   }
   const DataType& InputDType(eager::CallContext* call_ctx, const std::string& arg_name,
@@ -317,20 +333,32 @@ class UserOpInferContext : public user_op::InferContext {
   const Shape& InputShape(const std::string& arg_name, int32_t index) const override {
     return helper_->InputShape(call_ctx_, arg_name, index);
   }
-  Shape* OutputShape(const std::string& arg_name, int32_t index) override {
+  const Shape& OutputShape(const std::string& arg_name, int32_t index) const override {
     return helper_->OutputShape(call_ctx_, arg_name, index);
   }
-  Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  Shape* MutOutputShape(const std::string& arg_name, int32_t index) override {
+    return helper_->MutOutputShape(call_ctx_, arg_name, index);
+  }
+  const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return helper_->Shape4ArgNameAndIndex(call_ctx_, arg_name, index);
+  }
+  Shape* MutShape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return helper_->MutShape4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
   const Stride& InputStride(const std::string& arg_name, int32_t index) const override {
     return helper_->InputStride(call_ctx_, arg_name, index);
   }
-  Stride* OutputStride(const std::string& arg_name, int32_t index) override {
-    return helper_->OutputStride(call_ctx_, arg_name, index);
+  const Stride& OutputStride(const std::string& arg_name, int32_t index) const override {
+    return helper_->InputStride(call_ctx_, arg_name, index);
   }
-  Stride* Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  Stride* MutOutputStride(const std::string& arg_name, int32_t index) override {
+    return helper_->MutOutputStride(call_ctx_, arg_name, index);
+  }
+  const Stride& Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return helper_->Stride4ArgNameAndIndex(call_ctx_, arg_name, index);
+  }
+  Stride* MutStride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return helper_->MutStride4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
   const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
     return helper_->InputDType(call_ctx_, arg_name, index);

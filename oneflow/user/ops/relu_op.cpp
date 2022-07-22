@@ -27,7 +27,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> ReluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("x", 0);
-  Shape* out_shape = ctx->OutputShape("y", 0);
+  Shape* out_shape = ctx->MutOutputShape("y", 0);
   *out_shape = in_shape;
   return Maybe<void>::Ok();
 }
@@ -53,7 +53,7 @@ namespace oneflow {
 /*static*/ Maybe<void> ReluGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& y_shape = ctx->InputShape("y", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  Shape* dx_shape = ctx->OutputShape("dx", 0);
+  Shape* dx_shape = ctx->MutOutputShape("dx", 0);
   CHECK_OR_RETURN(dy_shape == y_shape)
       << Error::RuntimeError() << "Tensors y and dy must have the same shape";
   *dx_shape = dy_shape;

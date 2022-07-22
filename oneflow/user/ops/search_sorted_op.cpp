@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> SearchSortedOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("values", 0);
+  *ctx->MutOutputShape("out", 0) = ctx->InputShape("values", 0);
   return Maybe<void>::Ok();
 }
 
@@ -54,7 +54,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> SearchSortedScalarOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = Shape({});
+  *ctx->MutOutputShape("out", 0) = Shape({});
   return Maybe<void>::Ok();
 }
 

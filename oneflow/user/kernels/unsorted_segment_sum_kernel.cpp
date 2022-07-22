@@ -193,8 +193,8 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
           && (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_type))    \
           && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_type)))                   \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
-        const Shape* out_shape = ctx->OutputShape("out", 0);                                    \
-        return GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(float));                       \
+        const Shape& out_shape = ctx->OutputShape("out", 0);                                    \
+        return GetCudaAlignedSize(out_shape.elem_cnt() * sizeof(float));                        \
       });
 
 #define REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE(out_type, segment_ids_type) \
