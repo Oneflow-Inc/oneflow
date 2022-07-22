@@ -201,10 +201,6 @@ class UserOpExprInferContext : public user_op::InferContext {
     return MutTensorDesc4ArgNameAndIndex(name, index);
   }
 
-  user_op::TensorDesc* OutputTensorDesc(const std::string& name, int32_t index) override {
-    return MutTensorDesc4ArgNameAndIndex(name, index);
-  }
-
   const user_op::TensorDesc& TensorDesc4ArgNameAndIndex(const std::string& name,
                                                         int32_t index) const {
     {
@@ -380,7 +376,7 @@ class UserOpExprPhysicalInferContext final : public UserOpExprInferContext {
 
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& name,
                                                                int32_t index) const override {
-    UNIMPLEMENTED();
+    PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
 
@@ -424,7 +420,8 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
 
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& name,
                                                                int32_t index) const override {
-    UNIMPLEMENTED();
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return nullptr;
   }
 
   const ParallelContext& parallel_ctx() const override { return parallel_ctx_; }
