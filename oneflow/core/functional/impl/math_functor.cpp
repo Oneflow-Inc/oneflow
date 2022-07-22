@@ -2054,18 +2054,16 @@ class RMSLayerNormalizationFunctor {
       cast_hidden_states =
           JUST(functional::Cast(hidden_states, DType::Float(), /*pin_memory=*/false));
     }
-    std::shared_ptr<Tensor> normalized_hidden_states = JUST(functional::MatMul(
-        cast_hidden_states,
-        JUST(functional::Rsqrt(JUST(functional::ScalarAdd(
-            JUST(functional::Variance(hidden_states, std::vector<int32_t>{-1}, false, true)),
-            Scalar(variance_epsilon), 1.0, false)))),
-        false, false, 1.0));
+    std::shared_ptr<Tensor> normalized_hidden_states = JUST(functional::Mul(
+        cast_hidden_states, JUST(functional::Rsqrt(JUST(functional::ScalarAdd(
+                                JUST(functional::ReduceMean(JUST(Square(hidden_states)),
+                                                            std::vector<int32_t>{-1}, true)),
+                                Scalar(variance_epsilon), 1.0, false))))));
     if (weight->dtype() == DType::Float16()) {
       normalized_hidden_states =
           JUST(functional::Cast(normalized_hidden_states, weight->dtype(), /*pin_memory=*/false));
     }
-    return JUST(functional::MatMul(weight, normalized_hidden_states, /*transpose_a=*/false,
-                                   /*transpose_b=*/false, 1.0));
+    return JUST(functional::Mul(normalized_hidden_states, weight));
   }
 };
 

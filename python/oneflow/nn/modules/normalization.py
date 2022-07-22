@@ -328,7 +328,28 @@ class RMSLayerNorm(Module):
     
     w/o mean and there is no bias. Additionally we want to make sure that the accumulation for
     
-    half-precision inputs is done in fp32
+    half-precision inputs is done in fp32.
+
+    Args:
+        hidden_size (int): number of features in the hidden state
+        eps: a value added to the denominator for numerical stability. Default: 1e-6
+
+    Shape:
+        - Input: :math:`(N, *)`
+        - Output: :math:`(N, *)` (same shape as input)
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> x = flow.randn(2, 4, 3)
+        >>> m = flow.nn.RMSLayerNorm(3)
+        >>> y = m(x)
+        >>> y.size()
+        oneflow.Size([2, 4, 3])
+
     """
 
     def __init__(self, hidden_size, eps=1e-6):
