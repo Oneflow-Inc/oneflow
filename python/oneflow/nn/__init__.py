@@ -159,3 +159,9 @@ from oneflow.nn.modules.rnn import (
     LSTM,
     GRU,
 )
+
+from oneflow.nn.qat.pooling import (
+    QuantMaxPool1d,
+    QuantMaxPool2d,
+    QuantMaxPool3d,
+)
