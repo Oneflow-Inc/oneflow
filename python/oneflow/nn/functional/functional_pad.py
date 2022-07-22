@@ -23,6 +23,9 @@ def pad(
 ) -> Tensor:
     r"""Pads tensor.
 
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.functional.pad.html.
+
     Padding size:
         The padding size by which to pad some dimensions of :attr:`input`
         are described starting from the last dimension and moving forward.
@@ -40,8 +43,8 @@ def pad(
         :math:`\text{padding_front}, \text{padding_back})`.
 
     Padding mode:
-        See :class:`torch.nn.ConstantPad2d`, :class:`torch.nn.ReflectionPad2d`, and
-        :class:`torch.nn.ReplicationPad2d` for concrete examples on how each of the
+        See :class:`oneflow.nn.ConstantPad2d`, :class:`oneflow.nn.ReflectionPad2d`, and
+        :class:`oneflow.nn.ReplicationPad2d` for concrete examples on how each of the
         padding modes works. Constant padding is implemented for arbitrary dimensions.
         Replicate and reflection padding is implemented for padding the last 3
         dimensions of 5D input tensor, or the last 2 dimensions of 4D input
@@ -61,20 +64,13 @@ def pad(
 
     Examples::
 
-        >>> t4d = torch.empty(3, 3, 4, 2)
-        >>> p1d = (1, 1) # pad last dim by 1 on each side
-        >>> out = F.pad(t4d, p1d, "constant", 0)  # effectively zero padding
-        >>> print(out.size())
-        torch.Size([3, 3, 4, 4])
-        >>> p2d = (1, 1, 2, 2) # pad last dim by (1, 1) and 2nd to last by (2, 2)
-        >>> out = F.pad(t4d, p2d, "constant", 0)
-        >>> print(out.size())
-        torch.Size([3, 3, 8, 4])
-        >>> t4d = torch.empty(3, 3, 4, 2)
-        >>> p3d = (0, 1, 2, 1, 3, 3) # pad by (0, 1), (2, 1), and (3, 3)
-        >>> out = F.pad(t4d, p3d, "constant", 0)
-        >>> print(out.size())
-        torch.Size([3, 9, 7, 3])
+        >>> import oneflow as flow
+        >>> import oneflow.nn.functional as F
+        >>> t4d = flow.empty(3, 3, 4, 2)
+        >>> p1d = (1, 1)
+        >>> out = F.pad(t4d, p1d)
+        >>> out.size()
+        oneflow.Size([3, 3, 4, 4])
 
     """
     assert len(pad) % 2 == 0, "Padding length must be divisible by 2"
