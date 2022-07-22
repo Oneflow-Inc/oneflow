@@ -95,9 +95,9 @@ def pad(
 
         elif len(pad) == 4 and (input.dim() == 3 or input.dim() == 4):
             if mode == "reflect":
-                flow._C.pad(input, pad, mode="reflect")
+                return flow._C.pad(input, pad, mode="reflect")
             elif mode == "replicate":
-                flow._C.pad(input, pad, mode="replicate")
+                return flow._C.pad(input, pad, mode="replicate")
             elif mode == "circular":
                 raise NotImplementedError(
                     "2D circular padding are not supported for now"

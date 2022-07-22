@@ -21,24 +21,27 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow.unittest
 
 
-@autotest(n=10, check_graph=False)
-def _test_pad_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 3) * 8 for i in range(ndim)]
-    pad = []
-    for i in range(ndim * 2):
-        pad.append(1)
-    x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
+@autotest(n=5, check_graph=False)
+def _test_pad_1d_impl(test_case, placement, sbp):
+    pad = [random(0, 5).to(int) for i in range(2)]
+    x = random_tensor(ndim=3, dim0=3, dim1=random(2, 8).to(int), dim2=random(2, 8).to(int)).to_global(placement=placement, sbp=sbp)
     y = torch.nn.functional.pad(x, pad, mode=oneof("constant", "reflect", "replicate"))
     return y
 
+@autotest(n=5, check_graph=False)
+def _test_pad_2d_impl(test_case, placement, sbp):
+    pad = [random(0, 5).to(int) for i in range(4)]
+    x = random_tensor(ndim=4, dim0=4, dim1=8, dim2=random(2, 8).to(int), dim3=random(2, 8).to(int)).to_global(placement=placement, sbp=sbp)
+    y = torch.nn.functional.pad(x, pad, mode=oneof("constant", "reflect", "replicate"))
+    return y
 
 class TestPad(flow.unittest.TestCase):
     @globaltest
-    def test_pad(test_case):
+    def test_pad_1d(test_case):
         for placement in all_placement():
-            ndim = random(2, 6).to(int).value()
-            for sbp in all_sbp(placement, max_dim=ndim):
-                _test_pad_impl(test_case, ndim, placement, sbp)
+            for sbp in all_sbp(placement, max_dim=2):
+                _test_pad_1d_impl(test_case, placement, sbp)
+                _test_pad_2d_impl(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
