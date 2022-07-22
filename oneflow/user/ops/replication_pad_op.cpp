@@ -26,8 +26,6 @@ template<size_t ndim>
 Maybe<void> GetOpSbpSignature(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   const int64_t input_dims = x_tensor.shape().NumAxes();
-  CHECK_EQ_OR_RETURN(input_dims, ndim);  // NOLINT
-  // NOTE(Liang Depeng): assume data format is NCHW.
   const int64_t first_two_dims = input_dims - (ndim - 2);
   FOR_RANGE(int64_t, i, 0, first_two_dims) {
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
@@ -57,7 +55,6 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
 /*static*/ Maybe<void> ReplicationPad1DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-  CHECK_EQ_OR_RETURN(padding.size(), x_shape.NumAxes() - 1);  // NOLINT
   const int64_t n_idx = 0;
   const int64_t c_idx = 1;
   const int64_t w_idx = 2;
