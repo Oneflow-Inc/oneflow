@@ -15,9 +15,11 @@ limitations under the License.
 """
 import ast
 
+
 class MathParamsTransformer(ast.NodeTransformer):
     def visit_Attribute(self, node):
         import math
+
         list = ["pi"]
         if node.value.id == "math":
             if node.attr in list:

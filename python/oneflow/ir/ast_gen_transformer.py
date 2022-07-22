@@ -17,7 +17,6 @@ import oneflow
 import ast
 
 
-
 class ASTTransformer(ast.NodeTransformer):
     def visit_arg(self, node: ast.arg):
         node.ast = oneflow._oneflow_internal.ir.arg_(node.arg)
@@ -27,7 +26,7 @@ class ASTTransformer(ast.NodeTransformer):
         for arg in node.args:
             self.visit(arg)
 
-        list = [ arg.ast for arg in node.args]
+        list = [arg.ast for arg in node.args]
         node.ast = oneflow._oneflow_internal.ir.arguments_(list)
         return node
 
@@ -35,9 +34,11 @@ class ASTTransformer(ast.NodeTransformer):
         for arg in node.body:
             self.visit(arg)
 
-        body = [ arg.ast for arg in node.body]
+        body = [arg.ast for arg in node.body]
         self.visit(node.args)
-        node.ast = oneflow._oneflow_internal.ir.FunctionDef_("get_lr", node.args.ast, body)
+        node.ast = oneflow._oneflow_internal.ir.FunctionDef_(
+            "get_lr", node.args.ast, body
+        )
         return node
 
     def visit_Return(self, node: ast.Return):
@@ -51,7 +52,7 @@ class ASTTransformer(ast.NodeTransformer):
         for arg in node.targets:
             self.visit(arg)
 
-        targets = [ arg.ast for arg in node.targets]
+        targets = [arg.ast for arg in node.targets]
         node.ast = oneflow._oneflow_internal.ir.Assign_(targets, node.value.ast)
         return node
 
@@ -65,8 +66,8 @@ class ASTTransformer(ast.NodeTransformer):
                 self.visit(arg)
 
         test = node.test.ast
-        body = [ arg.ast for arg in node.body]
-        orelse = [ arg.ast for arg in node.orelse]
+        body = [arg.ast for arg in node.body]
+        orelse = [arg.ast for arg in node.orelse]
         node.ast = oneflow._oneflow_internal.ir.If_(test, body, orelse)
         return node
 
@@ -117,7 +118,7 @@ class ASTTransformer(ast.NodeTransformer):
             self.visit(arg)
 
         left = node.left.ast
-        comparators = [ arg.ast for arg in node.comparators]
+        comparators = [arg.ast for arg in node.comparators]
 
         def get_op(op: ast.operator):
             list = [ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE]
@@ -126,7 +127,8 @@ class ASTTransformer(ast.NodeTransformer):
                 if isinstance(op, elem):
                     return res
                 res += 1
-        ops = [ get_op(arg) for arg in node.ops ]
+
+        ops = [get_op(arg) for arg in node.ops]
 
         node.ast = oneflow._oneflow_internal.ir.Compare_(left, ops, comparators)
         return node
@@ -138,7 +140,7 @@ class ASTTransformer(ast.NodeTransformer):
             self.visit(arg)
 
         func = node.func.ast
-        args = [ arg.ast for arg in node.args]
+        args = [arg.ast for arg in node.args]
 
         node.ast = oneflow._oneflow_internal.ir.Call_(func, args)
         return node
