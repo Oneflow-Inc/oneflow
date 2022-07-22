@@ -61,10 +61,6 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   const int64_t c_idx = 1;
   const int64_t w_idx = 2;
 
-  // Ensure the padding size is less than the input dimension.
-  CHECK_LT_OR_RETURN(padding[0], x_shape.At(w_idx));  // NOLINT
-  CHECK_LT_OR_RETURN(padding[1], x_shape.At(w_idx));  // NOLINT
-
   DimVector y_dim_vec(x_shape.NumAxes());
   const int64_t w_x = x_shape.At(w_idx);
 
@@ -130,12 +126,6 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   const int64_t c_idx = 1;
   const int64_t h_idx = 2;
   const int64_t w_idx = 3;
-
-  // Ensure the padding size is less than the input dimension.
-  CHECK_LT_OR_RETURN(padding[0], x_shape.At(w_idx));
-  CHECK_LT_OR_RETURN(padding[1], x_shape.At(w_idx));
-  CHECK_LT_OR_RETURN(padding[2], x_shape.At(h_idx));
-  CHECK_LT_OR_RETURN(padding[3], x_shape.At(h_idx));
 
   DimVector y_dim_vec(x_shape.NumAxes());
   const int64_t h_x = x_shape.At(h_idx);
@@ -215,7 +205,7 @@ REGISTER_USER_OP_GRAD("reflection_pad1d")
 
 REGISTER_USER_OP_GRAD("reflection_pad2d")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
