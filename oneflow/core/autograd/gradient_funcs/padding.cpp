@@ -64,7 +64,7 @@ class ReflectionPadNd : public PadNd {
   }
 };
 
-class ReplicationPad2d : public PadNd {
+class ReplicationPadNd : public PadNd {
  public:
   Maybe<void> Apply(const PadNdCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
@@ -123,7 +123,8 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
 REGISTER_OP_EXPR_GRAD_FUNCTION("pad", ConstantPadNd);
 REGISTER_OP_EXPR_GRAD_FUNCTION("reflection_pad1d", ReflectionPadNd);
 REGISTER_OP_EXPR_GRAD_FUNCTION("reflection_pad2d", ReflectionPadNd);
-REGISTER_OP_EXPR_GRAD_FUNCTION("replication_pad2d", ReplicationPad2d);
+REGISTER_OP_EXPR_GRAD_FUNCTION("replication_pad1d", ReplicationPadNd);
+REGISTER_OP_EXPR_GRAD_FUNCTION("replication_pad2d", ReplicationPadNd);
 
 }  // namespace one
 }  // namespace oneflow

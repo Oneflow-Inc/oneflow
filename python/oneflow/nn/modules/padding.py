@@ -21,6 +21,65 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _pair, _quadruple
 
 
+class ReplicationPad1d(Module):
+    r"""
+    Pads the input tensor using replication of the input boundary.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.ReplicationPad1d.html.
+
+    For `N`-dimensional padding, use :func:`oneflow.nn.functional.pad()`.
+
+    Args:
+        padding (int, tuple): the size of the padding. If is `int`, uses the same
+            padding in all boundaries. If a 2-`tuple`, uses
+            (:math:`\text{padding\_left}`, :math:`\text{padding\_right}`)
+
+    Shape:
+        - Input: :math:`(C, W_{in})` or :math:`(N, C, W_{in})`.
+        - Output: :math:`(C, W_{out})` or :math:`(N, C, W_{out})`, where
+
+          :math:`W_{out} = W_{in} + \text{padding\_left} + \text{padding\_right}`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> m = flow.nn.ReplicationPad1d((2, 2))
+        >>> input = flow.tensor(np.arange(18).reshape((2, 3, 3)).astype(np.float32))
+        >>> out = m(input)
+        >>> out
+        tensor([[[ 0.,  0.,  0.,  1.,  2.,  2.,  2.],
+                [ 3.,  3.,  3.,  4.,  5.,  5.,  5.],
+                [ 6.,  6.,  6.,  7.,  8.,  8.,  8.]],
+
+                [[ 9.,  9.,  9., 10., 11., 11., 11.],
+                [12., 12., 12., 13., 14., 14., 14.],
+                [15., 15., 15., 16., 17., 17., 17.]]], dtype=oneflow.float32)
+
+    """
+
+    def __init__(self, padding: _size_4_t):
+        super().__init__()
+        if isinstance(padding, tuple):
+            assert len(padding) == 2, ValueError("Padding length must be 2")
+            boundary = [*padding]
+        elif isinstance(padding, int):
+            boundary = _pair(padding)
+        else:
+            raise ValueError("padding must be in or list or tuple!")
+        self.padding = boundary
+
+    def forward(self, x):
+        return flow._C.pad(x, pad=self.padding, mode="replicate")
+
+    def extra_repr(self) -> str:
+        return "{}".format(self.padding)
+
+
 class ReplicationPad2d(Module):
     """
     Pads the input tensor using the replication of the input boundary.

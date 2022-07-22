@@ -637,7 +637,9 @@ class PadGradFunctor {
         CHECK_JUST(one::OpBuilder("reflection_pad1d_grad").Input("dy").Output("dx").Build());
     reflect_pad2d_grad_ =
         CHECK_JUST(one::OpBuilder("reflection_pad2d_grad").Input("dy").Output("dx").Build());
-    replicate_pad_grad_ =
+    replicate_pad1d_grad_ =
+        CHECK_JUST(one::OpBuilder("replication_pad1d_grad").Input("dy").Output("dx").Build());
+    replicate_pad2d_grad_ =
         CHECK_JUST(one::OpBuilder("replication_pad2d_grad").Input("dy").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, const std::vector<int64_t>& pad,
@@ -655,7 +657,13 @@ class PadGradFunctor {
       }
 
     } else if (mode == "replicate") {
-      return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_grad_, {dy}, attrs);
+      if (ndim == 3) {
+        return OpInterpUtil::Dispatch<Tensor>(*replicate_pad1d_grad_, {dy}, attrs);
+      } else if (ndim == 4) {
+        return OpInterpUtil::Dispatch<Tensor>(*replicate_pad2d_grad_, {dy}, attrs);
+      } else {
+        UNIMPLEMENTED_THEN_RETURN();
+      }
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode
                                   << ", but only constant, reflect and replicate are valid.";
@@ -665,7 +673,8 @@ class PadGradFunctor {
  private:
   std::shared_ptr<OpExpr> reflect_pad1d_grad_;
   std::shared_ptr<OpExpr> reflect_pad2d_grad_;
-  std::shared_ptr<OpExpr> replicate_pad_grad_;
+  std::shared_ptr<OpExpr> replicate_pad1d_grad_;
+  std::shared_ptr<OpExpr> replicate_pad2d_grad_;
 };
 
 class AvgPoolNdGradFunctor {
