@@ -14,5 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.framework.config_util import (
+    api_reserved_device_mem_mbyte as set_reserved_mem_mbytes,
+)
+from oneflow.framework.config_util import (
     api_enable_cudnn_fused_normalization_add_relu as enable_fused_normalization_add_relu,
 )

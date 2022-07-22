@@ -94,6 +94,14 @@ def api_numa_aware_cuda_malloc_host(val: bool = True) -> None:
         "'enable_numa_aware_cuda_malloc_host' has been deprecated, has no effect and will be removed in the future."
     )
 
+def api_reserved_device_mem_mbyte(val: int) -> None:
+    """Set up the memory size of reserved device
+    Args:
+        val (int):  memory size, e.g. 1024(mb)
+    """
+
+    attrs, type_ = api_attrs_and_type[api_reserved_device_mem_mbyte]
+    _set_resource_attr(attrs, val, type_)
 
 def api_enable_cudnn_fused_normalization_add_relu(val: bool) -> None:
     """Whether enable cudnn_fused_normalization_add_relu.
@@ -261,6 +269,7 @@ def api_nccl_enable_mixed_fusion(val: bool) -> None:
 
 
 api_attrs_and_type = {
+    api_reserved_device_mem_mbyte: ("reserved_device_mem_mbyte", int),
     api_enable_cudnn_fused_normalization_add_relu: (
         ["cudnn_conf", "enable_cudnn_fused_normalization_add_relu"],
         bool,
