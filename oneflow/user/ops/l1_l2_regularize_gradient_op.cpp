@@ -24,7 +24,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
   const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", 0);
   CHECK_EQ_OR_RETURN(model_diff.shape(), model.shape());
-  *ctx->OutputShape("out", 0) = ctx->InputShape("model", 0);
+  *ctx->MutOutputShape("out", 0) = ctx->InputShape("model", 0);
   *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("model", 0);
   return Maybe<void>::Ok();
 }

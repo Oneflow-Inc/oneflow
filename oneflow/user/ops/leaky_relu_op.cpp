@@ -20,7 +20,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> LeakyReluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
-  Shape* y_shape = ctx->OutputShape("y", 0);
+  Shape* y_shape = ctx->MutOutputShape("y", 0);
   *y_shape = x_shape;
   return Maybe<void>::Ok();
 }
@@ -45,7 +45,7 @@ namespace oneflow {
 /* static */ Maybe<void> LeakyReluGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  Shape* dx_shape = ctx->OutputShape("dx", 0);
+  Shape* dx_shape = ctx->MutOutputShape("dx", 0);
   CHECK_OR_RETURN(dy_shape == x_shape);
   *dx_shape = dy_shape;
   return Maybe<void>::Ok();
