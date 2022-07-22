@@ -315,7 +315,7 @@ LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_c
   auto conf = this->job_wrapper_.ParallelConf4OpName(op_conf.name());
 
   auto nd_size = conf.hierarchy().dim().size();
-  auto parallel = ConvertNdSbpToparallel(GetBuilder(), op_conf.variable_conf().nd_sbp(), nd_size);
+  auto parallel = ConvertNdSbpToPsig(GetBuilder(), op_conf.variable_conf().nd_sbp(), nd_size);
   attr_vec.emplace_back(
       GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getSbpAttrName(), parallel));
   // add attrs
