@@ -2195,11 +2195,11 @@ class PadFunctor {
         CHECK_OR_RETURN((ndim == 2 && input->shape()->At(1) != 0)
                         || (ndim == 3 && input->shape()->At(1) != 0 && input->shape()->At(2) != 0))
             << "2D or 3D (batch mode) tensor expected for input, but got: " << ndim;
-        int64_t pad_left = pad[0];
-        int64_t pad_right = pad[1];
-        int64_t dim_w = (ndim == 3) ? 2 : 1;
-        int64_t input_width = input->shape()->At(dim_w);
-        int64_t output_w = input_width + pad_left + pad_right;
+        const int64_t pad_left = pad[0];
+        const int64_t pad_right = pad[1];
+        const int64_t dim_w = (ndim == 3) ? 2 : 1;
+        const int64_t input_width = input->shape()->At(dim_w);
+        const int64_t output_w = input_width + pad_left + pad_right;
         CHECK_OR_RETURN(pad_left < input_width && pad_right < input_width)
             << "Padding size should be less than the corresponding input dimension, but got: "
                "padding ("
@@ -2230,15 +2230,15 @@ class PadFunctor {
           dim_h++;
         }
 
-        int64_t pad_left = pad[0];
-        int64_t pad_right = pad[1];
-        int64_t pad_top = pad[2];
-        int64_t pad_bottom = pad[3];
+        const int64_t pad_left = pad[0];
+        const int64_t pad_right = pad[1];
+        const int64_t pad_top = pad[2];
+        const int64_t pad_bottom = pad[3];
 
-        int64_t input_h = input->shape()->At(dim_h);
-        int64_t input_w = input->shape()->At(dim_w);
-        int64_t output_h = input_h + pad_top + pad_bottom;
-        int64_t output_w = input_w + pad_left + pad_right;
+        const int64_t input_h = input->shape()->At(dim_h);
+        const int64_t input_w = input->shape()->At(dim_w);
+        const int64_t output_h = input_h + pad_top + pad_bottom;
+        const int64_t output_w = input_w + pad_left + pad_right;
         CHECK_OR_RETURN(pad_left < input_w && pad_right < input_w)
             << Error::RuntimeError()
             << "Padding size should be less than the corresponding input "
