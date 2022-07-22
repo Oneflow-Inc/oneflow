@@ -2749,6 +2749,7 @@ def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", [NoSideEffect, De
 }
 
 def OneFlow_PinnedIdentityOp : OneFlow_BaseOp<"pinned_identity", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let summary = "mark defining op of operand can't be erased";
   let input = (ins
     OneFlow_Tensor:$in
   );
