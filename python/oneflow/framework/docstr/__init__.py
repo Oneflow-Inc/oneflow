@@ -75,4 +75,5 @@ from .searchsorted import *
 from .amin import *
 from .deconv import *
 from .logical_ops import *
+from .hann_window import *
 from .convolution import *
