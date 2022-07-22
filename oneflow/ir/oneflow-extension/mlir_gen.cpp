@@ -121,7 +121,7 @@ void MLIRGenImpl::MlirGen(pyast::If* expr) {
   mlir::Block* after_block = _builder.createBlock(_builder.getBlock()->getParent());
   _builder.setInsertionPointAfterValue(test);
   _builder.create<mlir::cf::CondBranchOp>(Loc(), test, then_block, llvm::None, else_block,
-                                         llvm::None);
+                                          llvm::None);
 
   _builder.setInsertionPointToStart(then_block);
   for (auto& expr : expr->get_body()) { MlirGen(expr.get()); }
