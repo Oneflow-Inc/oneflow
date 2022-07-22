@@ -37,8 +37,11 @@ template<typename T>
 Maybe<T> GetItem4Tensor(const std::shared_ptr<Tensor>& input) {
   CHECK_EQ_OR_RETURN(input->shape()->elem_cnt(), 1)
       << Error::InvalidValueError() << "only one element tensors can be converted to scalars";
-  CHECK_OR_RETURN(IsPODDataType(GetDataType<T>::value));
-  CHECK_OR_RETURN(input->dtype()->data_type() == GetDataType<T>::value);
+  CHECK_OR_RETURN(IsPODDataType(GetDataType<T>::value))
+      << Error::InvalidValueError() << "only POD tensors can be converted to scalars";
+  CHECK_OR_RETURN(input->dtype()->data_type() == GetDataType<T>::value)
+      << Error::InvalidValueError() << "dtype of input must be same with the template parameters, "
+      << kOfBugIssueUploadPrompt;
   T item = -1;
   std::shared_ptr<one::LocalTensor> local_tensor;
   if (input->is_global()) {
