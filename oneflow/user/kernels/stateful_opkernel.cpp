@@ -170,7 +170,7 @@ class UserOpInferContextHelper final {
 
   const user_op::TensorDesc& InputTensorDesc(eager::CallContext* call_ctx,
                                              const std::string& arg_name, int32_t index) const {
-    return *CHECK_NOTNULL(MutTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index));
+    return TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
   }
 
   user_op::TensorDesc* OutputTensorDesc(eager::CallContext* call_ctx, const std::string& arg_name,
