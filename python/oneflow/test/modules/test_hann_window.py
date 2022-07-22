@@ -19,6 +19,7 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestHannWindow(flow.unittest.TestCase):
     @autotest(n=5, auto_backward=False, check_graph=False)
