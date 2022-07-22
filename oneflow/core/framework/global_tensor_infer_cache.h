@@ -140,7 +140,7 @@ class OpArgMutGlobalTensorMeta final {
   TensorMeta* mut_tensor_meta() { return &tensor_meta_; }
 
  private:
-  TensorMeta tensor_meta_;
+  MutTensorMeta tensor_meta_;
 };
 
 }  // namespace one
