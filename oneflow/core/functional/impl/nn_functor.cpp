@@ -2152,9 +2152,10 @@ class PadFunctor {
     replicate_pad2d_ =
         CHECK_JUST(one::OpBuilder("replication_pad2d").Input("x").Output("y").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& pad,
-                           const std::string& mode, const Scalar& value) const {
-    const int64_t ndim = x->shape()->NumAxes();
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::vector<int64_t>& pad, const std::string& mode,
+                           const Scalar& value) const {
+    const int64_t ndim = input->shape()->NumAxes();
     CHECK_LE_OR_RETURN(pad.size(), 2 * ndim)
         << Error::RuntimeError() << "Pad size should less than or equal to input axes * 2.";
     MutableAttrMap attrs;
@@ -2163,11 +2164,11 @@ class PadFunctor {
       CHECK_EQ_OR_RETURN(pad.size() % 2, 0)
           << Error::RuntimeError() << "Length of pad must be even but instead it equals "
           << pad.size();
-      if (IsFloatingDataType(x->dtype()->data_type())
-          || x->dtype()->data_type() == DataType::kFloat16) {
+      if (IsFloatingDataType(input->dtype()->data_type())
+          || input->dtype()->data_type() == DataType::kFloat16) {
         JUST(attrs.SetAttr<double>("floating_constant_value", value.As<double>()));
         JUST(attrs.SetAttr<int64_t>("integral_constant_value", 0));
-      } else if (IsIntegralDataType(x->dtype()->data_type())) {
+      } else if (IsIntegralDataType(input->dtype()->data_type())) {
         JUST(attrs.SetAttr<double>("floating_constant_value", 0));
         JUST(attrs.SetAttr<int64_t>("integral_constant_value", value.As<int64_t>()));
       } else {
@@ -2183,23 +2184,26 @@ class PadFunctor {
       }
       JUST(attrs.SetAttr<std::vector<int64_t>>("padding_before", pad_before));
       JUST(attrs.SetAttr<std::vector<int64_t>>("padding_after", pad_after));
-      return OpInterpUtil::Dispatch<Tensor>(*pad_, {x}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*pad_, {input}, attrs);
 
     } else if (mode == "reflect") {
       if (ndim == 3) {
-        return OpInterpUtil::Dispatch<Tensor>(*reflect_pad1d_, {x}, attrs);
+        CHECK_OR_RETURN((ndim == 2 && input->shape()->At(1) != 0)
+                        || (ndim == 3 && input->shape()->At(1) != 0 && input->shape()->At(2) != 0))
+            << "2D or 3D (batch mode) tensor expected for input, but got: " << ndim;
+        return OpInterpUtil::Dispatch<Tensor>(*reflect_pad1d_, {input}, attrs);
       } else if (ndim == 4) {
-        const int64_t pad_h = x->shape()->dim_vec().at(2);
-        const int64_t pad_w = x->shape()->dim_vec().at(3);
+        const int64_t pad_h = input->shape()->At(2);
+        const int64_t pad_w = input->shape()->At(3);
         CHECK_OR_RETURN(pad[2] < pad_h && pad[3] < pad_h && pad[0] < pad_w && pad[1] < pad_w)
             << Error::RuntimeError()
             << "padding size should be less than the corresponding input dimension!";
-        return OpInterpUtil::Dispatch<Tensor>(*reflect_pad2d_, {x}, attrs);
+        return OpInterpUtil::Dispatch<Tensor>(*reflect_pad2d_, {input}, attrs);
       } else {
         UNIMPLEMENTED_THEN_RETURN();
       }
     } else if (mode == "replicate") {
-      return OpInterpUtil::Dispatch<Tensor>(*replicate_pad2d_, {x}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*replicate_pad2d_, {input}, attrs);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode
                                   << ", but only constant, reflect and replicate are valid.";
