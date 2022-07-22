@@ -25,7 +25,7 @@ from oneflow.test_utils.test_util import GenArgDict
 
 
 def _test_global_logspace(test_case, placement, sbp):
-    x = flow.logspace(start=-10, end=10, steps=2, placement=placement, sbp=sbp)
+    x = flow.logspace(start=-10, end=10, steps=8, placement=placement, sbp=sbp)
 
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
@@ -65,7 +65,7 @@ class TestLogspaceGlobal(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["start"] = [-2, 0, 2]
         arg_dict["end"] = [2, 4, 8]
-        arg_dict["steps"] = [2, 4, 8]
+        arg_dict["steps"] = [8, 16, 24]
         arg_dict["placement"] = [
             # 1d
             flow.placement("cpu", ranks=[0, 1]),
