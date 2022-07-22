@@ -32,10 +32,10 @@ namespace oneflow {
       CHECK_EQ_OR_RETURN(keys_shape.At(1), num_tables) << "keys cols must equal to num_tables";
     }
   }
-  *ctx->OutputShape("num_unique", 0) = Shape({1});
-  *ctx->OutputShape("unique_keys", 0) = Shape({keys_shape.elem_cnt()});
-  *ctx->OutputShape("unique_values", 0) = Shape({keys_shape.elem_cnt()});
-  *ctx->OutputShape("inverse_indices", 0) = keys_shape;
+  *ctx->MutOutputShape("num_unique", 0) = Shape({1});
+  *ctx->MutOutputShape("unique_keys", 0) = Shape({keys_shape.elem_cnt()});
+  *ctx->MutOutputShape("unique_values", 0) = Shape({keys_shape.elem_cnt()});
+  *ctx->MutOutputShape("inverse_indices", 0) = keys_shape;
   return Maybe<void>::Ok();
 }
 
@@ -74,12 +74,12 @@ namespace oneflow {
   }
   const int64_t num_ids = ids_shape.elem_cnt();
   const int64_t parallel_num = ctx->parallel_num();
-  *ctx->OutputShape("num_unique_matrix", 0) = Shape({parallel_num * parallel_num});
-  *ctx->OutputShape("inverse_unique_partition_indices", 0) = ids_shape;
-  *ctx->OutputShape("cur_rank_num_unique", 0) = Shape({1});
-  *ctx->OutputShape("cur_rank_unique_ids", 0) = Shape({num_ids * parallel_num});
-  *ctx->OutputShape("cur_rank_inverse_indices", 0) = Shape({num_ids * parallel_num});
-  *ctx->OutputShape("cur_rank_unique_table_ids", 0) = Shape({num_ids * parallel_num});
+  *ctx->MutOutputShape("num_unique_matrix", 0) = Shape({parallel_num * parallel_num});
+  *ctx->MutOutputShape("inverse_unique_partition_indices", 0) = ids_shape;
+  *ctx->MutOutputShape("cur_rank_num_unique", 0) = Shape({1});
+  *ctx->MutOutputShape("cur_rank_unique_ids", 0) = Shape({num_ids * parallel_num});
+  *ctx->MutOutputShape("cur_rank_inverse_indices", 0) = Shape({num_ids * parallel_num});
+  *ctx->MutOutputShape("cur_rank_unique_table_ids", 0) = Shape({num_ids * parallel_num});
   return Maybe<void>::Ok();
 }
 
@@ -135,7 +135,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(cur_rank_inverse_indices_shape.elem_cnt(), parallel_num * num_ids);
   DimVector out_dim_vec = inverse_unique_partition_indices_shape.dim_vec();
   out_dim_vec.push_back(embedding_size);
-  *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);
+  *ctx->MutOutputShape("embeddings", 0) = Shape(out_dim_vec);
   return Maybe<void>::Ok();
 }
 
@@ -179,7 +179,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(cur_rank_inverse_indices_shape.elem_cnt(), parallel_num * num_ids);
   DimVector out_dim_vec = cur_rank_inverse_indices_shape.dim_vec();
   out_dim_vec.push_back(embedding_size);
-  *ctx->OutputShape("cur_rank_unique_embedding_grad", 0) = Shape(out_dim_vec);
+  *ctx->MutOutputShape("cur_rank_unique_embedding_grad", 0) = Shape(out_dim_vec);
   return Maybe<void>::Ok();
 }
 

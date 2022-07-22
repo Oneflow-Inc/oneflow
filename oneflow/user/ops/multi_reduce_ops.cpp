@@ -23,7 +23,7 @@ namespace {
 
 Maybe<void> InferMultiReduceOpShape(user_op::InferContext* ctx) {
   CHECK_GT_OR_RETURN(ctx->input_size("x"), 0) << ctx->op_name() << "must have at least 1 input";
-  *ctx->OutputShape("y", 0) = Shape({});
+  *ctx->MutOutputShape("y", 0) = Shape({});
   return Maybe<void>::Ok();
 }
 
@@ -67,13 +67,13 @@ Maybe<void> InferLocalMultiReduceOpLogicalShape(user_op::InferContext* ctx) {
   for (int64_t i = 0; i < rank_mesh->NumAxes(); ++i) {
     if (any_nd_sbp.sbp_parallel(i).has_split_parallel()) { split_num *= rank_mesh->At(i); }
   }
-  *ctx->OutputShape("y", 0) = Shape({split_num});
+  *ctx->MutOutputShape("y", 0) = Shape({split_num});
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferLocalMultiReduceOpPhysicalShape(user_op::InferContext* ctx) {
   CHECK_GT_OR_RETURN(ctx->input_size("x"), 0) << ctx->op_name() << "must have at least 1 input";
-  *ctx->OutputShape("y", 0) = Shape({1});
+  *ctx->MutOutputShape("y", 0) = Shape({1});
   return Maybe<void>::Ok();
 }
 
