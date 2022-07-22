@@ -436,8 +436,8 @@ class NonZeroFunctor {
     int64_t size_val = -1;
     {
       if (size->is_global()) {
-        CHECK_OR_RETURN(JUST(size->parallel_desc())->parallel_num() == 1
-                        || NdSbpIsAllBroadcast(*JUST(size->nd_sbp())));  // NOLINT
+        CHECK_OR_RETURN(JUST(size->parallel_desc())->parallel_num() == 1  // NOLINT
+                        || NdSbpIsAllBroadcast(*JUST(size->nd_sbp())));   // NOLINT
       }
       JUST(CopyLocalTensorDataTo(size->is_local() ? size : JUST(size->cur_rank_phy_tensor()),
                                  (void*)(&size_val), GetSizeOfDataType(DataType::kInt64)));
