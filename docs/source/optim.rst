@@ -172,7 +172,6 @@ Algorithms
     :toctree: generated
     :nosignatures:
 
-    Optimizer
     Adagrad
     Adam
     AdamW

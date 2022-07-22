@@ -180,6 +180,7 @@ Dropout Layers
 .. autosummary::
     :toctree: generated
     :nosignatures:
+    :template: classtemplate.rst
 
     nn.Dropout
 
