@@ -39,12 +39,12 @@ class SbpGraph {
   }
 
   // Randomly assign a SbpSignature strategy
-  void RandomSbpSignature(bool use_sbp_collector);
+  void RandomSbpSignature(bool use_sbp_collector) const;
   // assign 0 to a SbpSignature strategy to avoid randomness
-  void Set0SbpSignature();
+  void Set0SbpSignature() const;
 
   // Compute Cost for current strategy
-  double ComputeCost();
+  double ComputeCost() const;
 
   // Generate a node
   SbpNode<SbpSignature>* GenerateNode();
@@ -54,19 +54,19 @@ class SbpGraph {
   int32_t NodeAndEdgeEliminations();
 
   // Finalize Sbp Cost for the whole graph
-  void FinalizeSbp();
+  void FinalizeSbp() const;
 
   // Use Greedy Strategy to decide Sbp for Nodes in node_list_. Should be used
   // after we have a initial strategy.
   // Set for_node to be true will only use GreedyStrategy on Nodes.
-  double GreedyStrategy(bool for_node);
+  double GreedyStrategy(bool for_node) const;
   // Use greedy strategy on the one ring neighborhood with the maximum number of points nbh_num.
-  double GreedyStrategy(int32_t nbh_num = 4);
+  double GreedyStrategy(int32_t nbh_num = 4) const;
 
   // Find one strategy with finite cost for adjustment
-  Maybe<void> Find1Strategy4Greedy();
+  Maybe<void> Find1Strategy4Greedy() const;
   // Use brute force to search for a strategy with minimum cost for a neighborhood
-  double NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id);
+  double NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) const;
 
   // Set threshold_ for SbpNode Merging
   void SetThreshold(int32_t threshold) { threshold_ = threshold; }
@@ -75,16 +75,16 @@ class SbpGraph {
   // Clipping an edge will also delete the nodes and edges contained in this edge. Though not
   // suffering from any compiling and runtime bugs, clipping an edge on a shrunk graph is not
   // recommended. We should carefully think about it before any clipping.
-  void ClipEdge(SbpEdge<SbpSignature>* this_edge);
+  void ClipEdge(SbpEdge<SbpSignature>* this_edge) const;
 
   // Compute the minimum and maximum layer of each node in the graph
   int32_t ComputeLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
                        const oneflow::HashMap<const OpNode*, oneflow::HashSet<std::string>>&
-                           op_node2mutable_op_ctrl_deps);
+                           op_node2mutable_op_ctrl_deps) const;
 
   // Find the trunk of the sbp graph, then reduce the wait time for tributaries
   void FindTrunk(int32_t max_min_layer,
-                 oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
+                 oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) const;
 
   // Set wait time
   void SetWaitTime(double wait_time);
@@ -99,8 +99,6 @@ class SbpGraph {
   // All the nodes
   std::vector<SbpNode<SbpSignature>*> node_list_;
 
-  // Over All Cost under current strategy
-  double graph_cost_ = 0;
   // Limitation: Merged node should not have a number of Sbp Signature greater
   // than threshold.
   int32_t threshold_ = 100;
@@ -115,7 +113,7 @@ class SbpGraph {
   // Check and eliminate one node with only one degree-in and one degree-out
   int32_t NodeElimination(SbpNode<SbpSignature>* this_node);
   // Merge all parallel edges with given start_node_ and end_node_
-  int32_t EdgeElimination(SbpNode<SbpSignature>* this_node);
+  int32_t EdgeElimination(SbpNode<SbpSignature>* this_node) const;
   // Check and eliminate one child node
   int32_t ChildElimination(SbpNode<SbpSignature>* this_node);
 
@@ -131,11 +129,11 @@ class SbpGraph {
                      std::vector<std::vector<double>>& out_nbh_costs,
                      std::vector<std::vector<int32_t>>& nbh_id2order2sbp_id,
                      std::vector<int32_t>& min_sbp_sig_id, double& min_cost, int32_t order,
-                     double curr_cost);
+                     double curr_cost) const;
 
   bool DfsFindReasonableCost(std::vector<int32_t>& nbh_id2node_list_id,
                              std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
-                             std::vector<int32_t>& nbh_id2order, int32_t nbh_id);
+                             std::vector<int32_t>& nbh_id2order, int32_t nbh_id) const;
 };
 
 // function in cpp. Should be put in one file due to use of template
@@ -162,7 +160,7 @@ template<class SbpSignature>
 SbpGraph<SbpSignature>::SbpGraph() {}
 
 template<class SbpSignature>
-void SbpGraph<SbpSignature>::RandomSbpSignature(bool use_sbp_collector) {
+void SbpGraph<SbpSignature>::RandomSbpSignature(bool use_sbp_collector) const {
   for (const auto& this_node : node_list_) {
     if (use_sbp_collector) {
       if (this_node->sbp_sig_list_.size() > 0) {
@@ -177,13 +175,14 @@ void SbpGraph<SbpSignature>::RandomSbpSignature(bool use_sbp_collector) {
 };
 
 template<class SbpSignature>
-void SbpGraph<SbpSignature>::Set0SbpSignature() {
+void SbpGraph<SbpSignature>::Set0SbpSignature() const {
   for (const auto& this_node : node_list_) { this_node->final_sbp_sig_id_ = 0; }
 };
 
 template<class SbpSignature>
-double SbpGraph<SbpSignature>::ComputeCost() {
-  graph_cost_ = 0;
+double SbpGraph<SbpSignature>::ComputeCost() const {
+  // Over All Cost under current strategy
+  double graph_cost_ = 0;
   for (const auto& this_node : node_list_) {
     int32_t this_id = this_node->final_sbp_sig_id_;
 
@@ -284,7 +283,7 @@ int32_t SbpGraph<SbpSignature>::NodeAndEdgeEliminations() {
 }
 
 template<class SbpSignature>
-int32_t SbpGraph<SbpSignature>::EdgeElimination(SbpNode<SbpSignature>* this_node) {
+int32_t SbpGraph<SbpSignature>::EdgeElimination(SbpNode<SbpSignature>* this_node) const {
   // Remove all edges with (start_node -> end_node) from edges_in_ of end_node
   auto RemoveFromEdgesIn = [](SbpNode<SbpSignature>* start_node,
                               SbpNode<SbpSignature>* end_node) -> void {
@@ -387,12 +386,12 @@ int32_t SbpGraph<SbpSignature>::NodeMerging(SbpNode<SbpSignature>* first,
 }
 
 template<class SbpSignature>
-void SbpGraph<SbpSignature>::FinalizeSbp() {
+void SbpGraph<SbpSignature>::FinalizeSbp() const {
   for (const auto& this_node : node_list_) { this_node->FinalizeSbp(); }
 }
 
 template<class SbpSignature>
-double SbpGraph<SbpSignature>::GreedyStrategy(bool for_node) {
+double SbpGraph<SbpSignature>::GreedyStrategy(bool for_node) const {
   // Overall, this function should be replaced by GreedyStrategy(nbh_num);
   // Total Cost Reduce & Cost Reduce for one loop
   double total_cost_reduction = 0, cost_reduction = 0;
@@ -418,7 +417,7 @@ double SbpGraph<SbpSignature>::GreedyStrategy(bool for_node) {
 }
 
 template<class SbpSignature>
-double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) {
+double SbpGraph<SbpSignature>::GreedyStrategy(int32_t nbh_num) const {
   // nbh_num is the maximum number of neighborhood to adjust sbp strategy in each step
   // Total Cost Reduce & Cost Reduce for one loop
   double total_cost_reduction = 0, cost_reduction = 0;
@@ -525,7 +524,7 @@ void SbpGraph<SbpSignature>::DfsAddNbhCost(
     std::vector<int32_t>& nbh_id2order, std::vector<double>& order2acc_min_in_nbh_cost,
     std::vector<std::vector<double>>& out_nbh_costs,
     std::vector<std::vector<int32_t>>& nbh_id2order2sbp_id, std::vector<int32_t>& min_sbp_sig_id,
-    double& min_cost, int32_t order, double curr_cost) {
+    double& min_cost, int32_t order, double curr_cost) const {
   // We have finished visiting the neighborhood
   if (order >= nbh_id2node_list_id.size()) {
     // relative difference > 1e-12
@@ -556,7 +555,7 @@ template<class SbpSignature>
 bool SbpGraph<SbpSignature>::DfsFindReasonableCost(
     std::vector<int32_t>& nbh_id2node_list_id,
     std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id, std::vector<int32_t>& nbh_id2order,
-    int32_t nbh_id) {
+    int32_t nbh_id) const {
   // We found such a strategy
   if (nbh_id == nbh_id2order.size()) { return true; }
   SbpNode<SbpSignature>* sbp_node = node_list_[nbh_id2node_list_id[nbh_id]];
@@ -580,7 +579,7 @@ bool SbpGraph<SbpSignature>::DfsFindReasonableCost(
 
 // Find one strategy with finite cost for adjustment
 template<class SbpSignature>
-Maybe<void> SbpGraph<SbpSignature>::Find1Strategy4Greedy() {
+Maybe<void> SbpGraph<SbpSignature>::Find1Strategy4Greedy() const {
   std::vector<int32_t> nbh_id2node_list_id;
   std::vector<bool> not_visited(node_list_.size(), true);
   std::vector<int32_t> nbh_1ring;
@@ -643,7 +642,7 @@ Maybe<void> SbpGraph<SbpSignature>::Find1Strategy4Greedy() {
 
 // Use brute force to search for a strategy with minimum cost for a neighborhood
 template<class SbpSignature>
-double SbpGraph<SbpSignature>::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) {
+double SbpGraph<SbpSignature>::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) const {
   // number of nodes in the neighborhood
   int32_t num_nbh = nbh_id2node_list_id.size();
   // mapping from the node_list_id to the id in the nbh_id2node_list_id
@@ -803,7 +802,7 @@ int32_t SbpGraph<SbpSignature>::PickAndMerge() {
 
 // Clip an edge, remove it from graph
 template<class SbpSignature>
-void SbpGraph<SbpSignature>::ClipEdge(SbpEdge<SbpSignature>* this_edge) {
+void SbpGraph<SbpSignature>::ClipEdge(SbpEdge<SbpSignature>* this_edge) const {
   CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(this_edge->end_node_->edges_in_, this_edge);
   CheckAndRemoveFrom<SbpEdge<SbpSignature>*>(this_edge->start_node_->edges_out_, this_edge);
   delete this_edge;
@@ -814,7 +813,7 @@ template<class SbpSignature>
 int32_t SbpGraph<SbpSignature>::ComputeLayer(
     oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
     const oneflow::HashMap<const OpNode*, oneflow::HashSet<std::string>>&
-        op_node2mutable_op_ctrl_deps) {
+        op_node2mutable_op_ctrl_deps) const {
   // Compute minimum layer
   for (SbpNode<SbpSignature>* this_node : node_list_) {
     this_node->GetMinLayer(op_name2sbp_node, op_node2mutable_op_ctrl_deps);
@@ -836,7 +835,7 @@ int32_t SbpGraph<SbpSignature>::ComputeLayer(
 template<class SbpSignature>
 void SbpGraph<SbpSignature>::FindTrunk(
     int32_t max_min_layer,
-    oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
+    oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) const {
   // Summarize cost for each layer, on the trunk or tributaries
   std::vector<double> trunk_cost(max_min_layer + 1, 0);
   for (SbpNode<SbpSignature>* this_node : node_list_) {

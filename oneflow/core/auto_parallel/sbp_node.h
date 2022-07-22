@@ -100,7 +100,7 @@ class SbpNode {
   // Pre-allocate buffer, which will be faster.
   void NRingNeighborhood(int32_t n, std::vector<int32_t>& nbh_n_ring,
                          std::vector<int32_t>& nbh_1ring,
-                         std::vector<SbpNode<SbpSignature>*>& node_list,
+                         const std::vector<SbpNode<SbpSignature>*>& node_list,
                          std::vector<bool>& node_tags) const;
 
   // Get or compute the minimum layer of this node
@@ -551,7 +551,7 @@ void SbpNode<SbpSignature>::OneRingNeighborhood(std::vector<int32_t>& nbh_1ring)
 template<class SbpSignature>
 void SbpNode<SbpSignature>::NRingNeighborhood(int32_t n, std::vector<int32_t>& nbh_n_ring,
                                               std::vector<int32_t>& nbh_1ring,
-                                              std::vector<SbpNode<SbpSignature>*>& node_list,
+                                              const std::vector<SbpNode<SbpSignature>*>& node_list,
                                               std::vector<bool>& node_tags) const {
   // Initialize 0 ring
   if (n <= 0) { n = 0; }
