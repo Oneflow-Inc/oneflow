@@ -15,13 +15,12 @@ limitations under the License.
 """
 import unittest
 from oneflow.test_utils.automated_test_util import *
+
 import oneflow as flow
 import oneflow.unittest
 
-
+@flow.unittest.skip_unless_1n1d()
 class TestHannWindow(flow.unittest.TestCase):
-    # check_graph is False because an unknown error occurred at CI
-    # https://github.com/Oneflow-Inc/oneflow/runs/7341508549?check_suite_focus=true
     @autotest(n=5, auto_backward=False, check_graph=False)
     def test_hann_window(test_case):
         device = random_device()
