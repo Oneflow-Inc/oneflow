@@ -208,7 +208,9 @@ def tensor_setstate(self, pickle_dict):
             elif isinstance(map_location, flow.placement):
                 tmp_tensor = tmp_tensor.to_global(map_location)
             else:
-                raise ValueError(f"Unsupported 'map_location' type {type(map_location)}.")
+                raise ValueError(
+                    f"Unsupported 'map_location' type {type(map_location)}."
+                )
         self.__init__(tmp_tensor)
     else:
         assert map_location is None
