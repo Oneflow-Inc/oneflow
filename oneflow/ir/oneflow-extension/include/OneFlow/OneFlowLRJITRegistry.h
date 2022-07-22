@@ -47,7 +47,7 @@ class LRJITRegistry final {
   friend class oneflow::Singleton<LRJITRegistry>;
   LRJITRegistry() = default;
 
-  std::unordered_map<std::string, LRJITRegistry_Store_> function_id2engine_;
+  std::unordered_map<std::string, LRJITRegistry_Store_> _functionId2engine;
 };
 
 #endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_ONEFLOW_AST_JIT_H_

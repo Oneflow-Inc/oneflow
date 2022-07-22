@@ -100,7 +100,7 @@ static mlir::LogicalResult lowerToLLVMDialect(mlir::ModuleOp module) {
 }
 
 // generate a simple mlir module for test
-static mlir::OwningOpRef<mlir::ModuleOp> genModuleForTest(mlir::MLIRContext& context) {
+static mlir::OwningOpRef<mlir::ModuleOp> GenModuleForTest(mlir::MLIRContext& context) {
   std::string moduleStr = R"mlir(
   func.func @get_lr(%arg0 : f32, %arg1 : i32) -> f32 attributes { llvm.emit_c_interface } {
     return %arg0 : f32
@@ -112,18 +112,18 @@ static mlir::OwningOpRef<mlir::ModuleOp> genModuleForTest(mlir::MLIRContext& con
 }
 
 // generate a module op from a function def python ast
-static mlir::OwningOpRef<mlir::ModuleOp> genModule(mlir::MLIRContext& context,
+static mlir::OwningOpRef<mlir::ModuleOp> GenModule(mlir::MLIRContext& context,
                                                    pyast::FunctionDef& ast) {
   using namespace pyast;
 
   MLIRGenImpl mlir_gen(context);
-  mlir::OwningOpRef<mlir::ModuleOp> module = mlir_gen.genModule(&ast);
+  mlir::OwningOpRef<mlir::ModuleOp> module = mlir_gen.GenModule(&ast);
   // module->dump();
   return module;
 }
 
 // generate store of lr jit registry from a function def python ast
-static LRJITRegistry_Store_ genFunc(pyast::FunctionDef& ast, bool is_dump) {
+static LRJITRegistry_Store_ GenFunc(pyast::FunctionDef& ast, bool is_dump) {
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
   mlir::registerLLVMDialectTranslation(registry);
@@ -136,7 +136,7 @@ static LRJITRegistry_Store_ genFunc(pyast::FunctionDef& ast, bool is_dump) {
   context.loadDialect<mlir::cf::ControlFlowDialect>();
   context.loadDialect<mlir::AffineDialect>();
 
-  auto module = genModule(context, ast);
+  auto module = GenModule(context, ast);
   if (is_dump) { module->dump(); }
   // auto module = genModuleForTest(context);
   CHECK(!!module) << "failed to parse module";
@@ -165,13 +165,13 @@ static LRJITRegistry_Store_ genFunc(pyast::FunctionDef& ast, bool is_dump) {
 
 void LRJITRegistry::Register(const std::string& function_id, pyast::FunctionDef& ast,
                              bool is_dump) {
-  auto jit = genFunc(ast, is_dump);
-  function_id2engine_[function_id] = jit;
+  auto jit = GenFunc(ast, is_dump);
+  _functionId2engine[function_id] = jit;
 }
 
 std::function<double(double, double)> LRJITRegistry::LookUp(const std::string& function_id) {
-  auto iter = function_id2engine_.find(function_id);
-  if (iter != function_id2engine_.end()) { return iter->second.second; }
+  auto iter = _functionId2engine.find(function_id);
+  if (iter != _functionId2engine.end()) { return iter->second.second; }
   llvm::errs() << "function '" << function_id << "' not be registered before lookup.";
   return nullptr;
 };

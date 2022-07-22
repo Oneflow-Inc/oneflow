@@ -72,39 +72,39 @@ limitations under the License.
 
 class BuilderWithSymbolTable {
  protected:
-  mlir::OpBuilder builder;
-  mlir::ModuleOp theModule;
-  std::map<std::string, mlir::Value> symbolTable;
-  mlir::Block* symbolTableForDeclareBlock;
+  mlir::OpBuilder _builder;
+  mlir::ModuleOp _theModule;
+  std::map<std::string, mlir::Value> _symbolTable;
+  mlir::Block* _symbolTableForDeclareBlock{};
 
-  BuilderWithSymbolTable(mlir::MLIRContext& context) : builder(&context) {}
+  explicit BuilderWithSymbolTable(mlir::MLIRContext& context) : _builder(&context) {}
   virtual ~BuilderWithSymbolTable() = default;
 
-  mlir::LogicalResult declare(const std::string& var, mlir::Value value);
-  mlir::Value lookup(const std::string& var);
-  mlir::Location loc(const std::string& file_name = "unknown", int line = 0, int col = 0);
-  void dump();
+  mlir::LogicalResult Declare(const std::string& var, mlir::Value value);
+  mlir::Value LoopUp(const std::string& var);
+  mlir::Location Loc(const std::string& file_name = "unknown", int line = 0, int col = 0);
+  void Dump();
 };
 
 class MLIRGenImpl : public BuilderWithSymbolTable {
  public:
   explicit MLIRGenImpl(mlir::MLIRContext& context) : BuilderWithSymbolTable(context) {}
 
-  mlir::ModuleOp genModule(pyast::FunctionDef* func);
+  mlir::ModuleOp GenModule(pyast::FunctionDef* func);
 
-  mlir::Value mlirGen(pyast::Compare* expr);
-  mlir::Value mlirGen(pyast::BinOp* expr);
-  mlir::Value mlirGen(pyast::Call* expr);
-  mlir::Value mlirGen(pyast::Constant* expr);
-  mlir::Value mlirGen(pyast::Name* expr);
+  mlir::Value MlirGen(pyast::Compare* expr);
+  mlir::Value MlirGen(pyast::BinOp* expr);
+  mlir::Value MlirGen(pyast::Call* expr);
+  mlir::Value MlirGen(pyast::Constant* expr);
+  mlir::Value MlirGen(pyast::Name* expr);
 
-  mlir::Value mlirGen(pyast::expr* expr);
+  mlir::Value MlirGen(pyast::expr* expr);
 
-  void mlirGen(pyast::If* stmt);
-  void mlirGen(pyast::Assign* stmt);
-  void mlirGen(pyast::Return* stmt);
+  void MlirGen(pyast::If* stmt);
+  void MlirGen(pyast::Assign* stmt);
+  void MlirGen(pyast::Return* stmt);
 
-  void mlirGen(pyast::stmt* stmt);
+  void MlirGen(pyast::stmt* stmt);
 };
 
 #endif  // ONEFLOW_IR_ONEFLOW_EXTENSION_INCLUDE_PYAST_AST_MLIR_GEN_H_
