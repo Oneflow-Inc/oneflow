@@ -55,6 +55,7 @@ Creation Ops
     empty
     full
     full_like
+    logspace
 
 .. _indexing-slicing-joining:
 
@@ -336,6 +337,4 @@ BLAS and LAPACK Operations
     matmul
     mm
     mv
-
-
 
