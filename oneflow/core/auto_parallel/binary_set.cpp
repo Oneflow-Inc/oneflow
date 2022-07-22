@@ -28,8 +28,7 @@ std::unordered_map<kBinarySetEntryType, int32_t> BinarySet::InitLog2() {
 }
 
 // Initialization of log_2 mapping
-const std::unordered_map<kBinarySetEntryType, int32_t> BinarySet::log_2 =
-    BinarySet::InitLog2();
+const std::unordered_map<kBinarySetEntryType, int32_t> BinarySet::log_2 = BinarySet::InitLog2();
 
 // Constructor
 BinarySet::BinarySet(int32_t size_of_set) : size_of_set_(size_of_set) {

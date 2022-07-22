@@ -22,7 +22,7 @@ limitations under the License.
 #include <unordered_set>
 #include <utility>
 #include <type_traits>
-#include "sbp_graph.h"
+#include "oneflow/core/auto_parallel/sbp_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
@@ -50,16 +50,16 @@ class SbpCollector {
 
  private:
   // Stores all the possible NdSbp.
-  std::unordered_map<::oneflow::NdSbp, int32_t> SbpParallelUniverse;
+  std::unordered_map<NdSbp, int32_t> nd_sbp_universe;
   // Relationship between id and Sbp Parallel
-  std::vector<::oneflow::NdSbp> id2SbpParallel;
+  std::vector<NdSbp> id2nd_sbp;
   // Calculate number of downstream sbp
   std::vector<int32_t> accumulator;
   // A binary set buffer to indicate sets of downstream sbp
   BinarySet bs_buffer;
 
   // Collect all the possible Sbp Parallel from a NdSbpSignature
-  void CollectUniverse(const NdSbpSignature& sbp_);
+  void CollectUniverse(const NdSbpSignature& nd_sbp_sig);
   // Collect all the possible Sbp Parallel from a SbpNode
   void CollectUniverse(const SbpNode<NdSbpSignature>* sbp_node);
 
@@ -81,7 +81,7 @@ class SbpCollector {
                  const std::unordered_set<int32_t>::iterator& sbp_set_it,
                  const HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
                  const std::vector<BinarySet>& unique_sbp_groups,
-                 std::vector<BinarySet>& ParallelCandidates);
+                 std::vector<BinarySet>& parallel_candidates);
 };  // class SbpCollector
 
 }  // namespace auto_parallel

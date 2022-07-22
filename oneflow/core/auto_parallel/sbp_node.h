@@ -20,7 +20,6 @@ limitations under the License.
 #include <functional>
 #include <iostream>
 #include <vector>
-
 #include "oneflow/core/auto_parallel/binary_set.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/framework/sbp_infer_util.h"

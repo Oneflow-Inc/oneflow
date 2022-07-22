@@ -96,29 +96,29 @@ SbpCollector::SbpCollector() {
   // initialize Sbp Parallel Universe with broadcast.
   // NdSbp sbp_broadcast;
   // sbp_broadcast.mutable_broadcast_parallel();
-  // SbpParallelUniverse[sbp_broadcast] = 0;
-  // id2SbpParallel.push_back(sbp_broadcast);
+  // nd_sbp_universe[sbp_broadcast] = 0;
+  // id2nd_sbp.push_back(sbp_broadcast);
 }
 
 // Collect all the possible Sbp Parallel from a NdSbpSignature
-void SbpCollector::CollectUniverse(const NdSbpSignature& sbp_) {
-  for (auto& OpSbpPair : sbp_.bn_in_op2nd_sbp()) {
-    if (SbpParallelUniverse.find(OpSbpPair.second) == SbpParallelUniverse.end()) {
-      int32_t curr_size = SbpParallelUniverse.size();
-      SbpParallelUniverse[OpSbpPair.second] = curr_size;
-      id2SbpParallel.push_back(OpSbpPair.second);
+void SbpCollector::CollectUniverse(const NdSbpSignature& nd_sbp_sig) {
+  for (auto& bn_sbp_pair : nd_sbp_sig.bn_in_op2nd_sbp()) {
+    if (nd_sbp_universe.find(bn_sbp_pair.second) == nd_sbp_universe.end()) {
+      int32_t curr_size = nd_sbp_universe.size();
+      nd_sbp_universe[bn_sbp_pair.second] = curr_size;
+      id2nd_sbp.push_back(bn_sbp_pair.second);
     }
   }
 }
 // Collect all the possible Sbp Parallel from a SbpNode
 void SbpCollector::CollectUniverse(const SbpNode<NdSbpSignature>* sbp_node) {
-  for (auto& sbp_ : sbp_node->sbp_sig_obj_list_) { CollectUniverse(sbp_); }
+  for (auto& nd_sbp_sig : sbp_node->sbp_sig_obj_list_) { CollectUniverse(nd_sbp_sig); }
 }
 // Collect all the possible Sbp Parallel from a SbpGraph
 void SbpCollector::CollectUniverse(const SbpGraph<NdSbpSignature>& sbp_graph) {
   for (auto* sbp_node : sbp_graph.node_list_) { CollectUniverse(sbp_node); }
-  accumulator.resize(SbpParallelUniverse.size(), 0);
-  bs_buffer.Initialize(SbpParallelUniverse.size());
+  accumulator.resize(nd_sbp_universe.size(), 0);
+  bs_buffer.Initialize(nd_sbp_universe.size());
 }
 
 // TODO: Auto Placement!
@@ -168,7 +168,7 @@ void SbpCollector::InitializeCopyCostFromNode2Proxy(const SbpNode<NdSbpSignature
       // look through all sbp parallels in a sbp parallel set
       for (int32_t sbp_parallel_id : sbp_parallel_ids) {
         // get sbp parallel for a logical blob in consumer
-        const NdSbp& sbp_consumer = id2SbpParallel[sbp_parallel_id];
+        const NdSbp& sbp_consumer = id2nd_sbp[sbp_parallel_id];
 
         // compute copy cost for a specific logical blob
         // Use the parallel description of producer as those for consumer for now.
@@ -220,7 +220,7 @@ void SbpCollector::InitializeCopyCostFromProxy2Consumer(
             sbp_node_consumer->sbp_sig_list_[sbp_id_consumer]->bn_in_op2nd_sbp();
         const NdSbp& sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
 
-        if ((!parallel_candidate.CheckExistence(SbpParallelUniverse[sbp_consumer]))) {
+        if ((!parallel_candidate.CheckExistence(nd_sbp_universe[sbp_consumer]))) {
           sbp_edge->cost_[sbp_id_producer][sbp_id_consumer] = GetMaxVal<float>();
         }
       }
@@ -280,10 +280,10 @@ void SbpCollector::ProxySbpCandidate(
 
       // a set to store the id of all possible SBP Parallel for a downstream op
       // should filter out repeated SBP Parallel by pre-storing them into an unordered_set
-      BinarySet& SbpParallelIDs = index2consumer_bn2sbp_set[index][{node->op().op_name(), ibn}];
-      SbpParallelIDs.Initialize(SbpParallelUniverse.size());
+      BinarySet& nd_sbp_ids = index2consumer_bn2sbp_set[index][{node->op().op_name(), ibn}];
+      nd_sbp_ids.Initialize(nd_sbp_universe.size());
       // The union sbp set of all the consumers
-      std::unordered_set<int32_t>& UnionSbpParallelIDs = index2sbp_set[index];
+      std::unordered_set<int32_t>& union_nd_sbp_ids = index2sbp_set[index];
       // TODO: use sbp_sig_list_ instead of sbp_sig_obj_list_
       for (auto& sbp_sig : consumer_sbp_node->sbp_sig_obj_list_) {
         const auto& map = sbp_sig.bn_in_op2nd_sbp();
@@ -291,18 +291,18 @@ void SbpCollector::ProxySbpCandidate(
         CHECK(iter != map.end()) << "blob_name " << ibn << " not found in sbp signature";
         const NdSbp& consumer_sbp = iter->second;
         // filter out repeated SBP
-        int32_t sbp_universe_id = SbpParallelUniverse[consumer_sbp];
-        SbpParallelIDs.AddEntry(sbp_universe_id);
-        UnionSbpParallelIDs.insert(sbp_universe_id);
+        int32_t sbp_universe_id = nd_sbp_universe[consumer_sbp];
+        nd_sbp_ids.AddEntry(sbp_universe_id);
+        union_nd_sbp_ids.insert(sbp_universe_id);
       }
     }
   };
 
   // A set of binary set with broadcast only
-  // std::unordered_set<BinarySet, BinarySetHasher> ParallelCandidatesInitializer;
-  // BinarySet one_broadcast(SbpParallelUniverse.size());
+  // std::unordered_set<BinarySet, BinarySetHasher> parallel_candidates_initializer;
+  // BinarySet one_broadcast(nd_sbp_universe.size());
   // one_broadcast.AddEntry(0);
-  // ParallelCandidatesInitializer.insert(std::move(one_broadcast));
+  // parallel_candidates_initializer.insert(std::move(one_broadcast));
 
   // Decide if we should insert a proxy for each logical blob
   for (auto& lbi_index : lbi2index) {
@@ -318,7 +318,7 @@ void SbpCollector::ProxySbpCandidate(
 
     const LogicalBlobId& lbi = lbi_index.first;
     // store all the binary sets of SBP Parallel into an unordered_set.
-    // std::vector<BinarySet> ParallelCandidates;
+    // std::vector<BinarySet> parallel_candidates;
 
     // generate sbp proxy
     SbpNode<NdSbpSignature>* sbp_proxy = sbp_graph.GenerateNode();
@@ -358,7 +358,7 @@ void SbpCollector::ProxySbpCandidate(
       // Do not clip this edge. Save it for wait time.
       // clip this edge if it no longer carries any blob
       // We don't clip edges before since we have transfer cost
-      // Now we clip edges, which makes the topology simplier
+      // Now we clip edges, which makes the topology simpler
       if (edge_found->EmptyLbi() && edge_found->wait_time_ <= 0.0 && edge_found->wait_time_ > -0.5
           && sbp_graph.transfer_cost_ <= 0.0) {
         sbp_graph.ClipEdge(edge_found);
@@ -367,17 +367,17 @@ void SbpCollector::ProxySbpCandidate(
   }
 }
 
-// Depth first search to collect Sbp Parallel information for different lbis
+// Depth first search to collect Sbp Parallel information for different logical blob ids
 void SbpCollector::DfsSbpSet(
     int32_t depth, int32_t max_depth, const std::unordered_set<int32_t>& sbp_sets,
     const std::unordered_set<int32_t>::iterator& start_it,
     const HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
-    const std::vector<BinarySet>& unique_sbp_groups, std::vector<BinarySet>& ParallelCandidates) {
+    const std::vector<BinarySet>& unique_sbp_groups, std::vector<BinarySet>& parallel_candidates) {
   if (depth > 0) {
     if (IfIntersectAll(consumer_bn2sbp_set, bs_buffer)
         && No2SbpFromSameUniqueGroup(bs_buffer, unique_sbp_groups)) {
       // store the binary set into an unordered_set
-      ParallelCandidates.push_back(bs_buffer);
+      parallel_candidates.push_back(bs_buffer);
     }
   }
   if (depth >= max_depth) { return; }
@@ -386,16 +386,16 @@ void SbpCollector::DfsSbpSet(
   std::unordered_set<int32_t>::iterator curr_it = start_it;
   while (curr_it != sbp_sets.end()) {
     // Take the value out
-    int32_t SbpParallelNum = *curr_it;
+    int32_t nd_sbp_num = *curr_it;
     // Then move to the next pointer
     ++curr_it;
-    if (accumulator[SbpParallelNum] == 0) {
-      bs_buffer.AddEntry(SbpParallelNum);
-      ++accumulator[SbpParallelNum];
+    if (accumulator[nd_sbp_num] == 0) {
+      bs_buffer.AddEntry(nd_sbp_num);
+      ++accumulator[nd_sbp_num];
       DfsSbpSet(depth + 1, max_depth, sbp_sets, curr_it, consumer_bn2sbp_set, unique_sbp_groups,
-                ParallelCandidates);
-      bs_buffer.DeleteEntry(SbpParallelNum);
-      --accumulator[SbpParallelNum];
+                parallel_candidates);
+      bs_buffer.DeleteEntry(nd_sbp_num);
+      --accumulator[nd_sbp_num];
     }
   }
 }
