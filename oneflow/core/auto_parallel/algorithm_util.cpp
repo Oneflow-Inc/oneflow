@@ -20,13 +20,13 @@ namespace oneflow {
 namespace auto_parallel {
 
 // Inverse function of order
-// The reason why we need the InvOrder, a.k.a id2order, instead of id2value is to eliminate
+// The reason why we need the inverse_order, a.k.a id2order, instead of id2value is to eliminate
 // equality. For example, we have v[0] < v[1] = v[2] < v[3] We do not know v[1] is before or after
 // v[2] with comp(v[1], v[2]). But if we transfer it to order order[0] < order[1] < order[2] <
 // order[3] We know the strict order.
-void InverseOrder(const std::vector<int32_t>& order, std::vector<int32_t>& InvOrder) {
-  InvOrder.resize(order.size());
-  for (int32_t i = 0; i < order.size(); i++) { InvOrder[order[i]] = i; }
+void InverseOrder(const std::vector<int32_t>& order, std::vector<int32_t>& inverse_order) {
+  inverse_order.resize(order.size());
+  for (int32_t i = 0; i < order.size(); i++) { inverse_order[order[i]] = i; }
 }
 
 }  // namespace auto_parallel
