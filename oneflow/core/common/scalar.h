@@ -18,7 +18,7 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_SCALAR_H_
 
 #include <type_traits>
-
+#include <functional>
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/maybe.h"
 
@@ -88,6 +88,16 @@ class Scalar {
   Scalar& operator*=(const Scalar& other);
   Scalar& operator/=(const Scalar& other);
 
+  bool operator==(const Scalar& other) const {
+    static_assert(sizeof(value_) == sizeof(int64_t), "");
+    return active_tag_ == other.active_tag_ && value_.s == other.value_.s;
+  }
+
+  size_t HashValue() const {
+    static_assert(sizeof(value_) == sizeof(int64_t), "");
+    return std::hash<int>()(static_cast<int>(active_tag_)) ^ std::hash<int64_t>()(value_.s);
+  }
+
  private:
   union Value {
     bool b;
@@ -99,5 +109,14 @@ class Scalar {
 };
 
 }  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<::oneflow::Scalar> final {
+  size_t operator()(const ::oneflow::Scalar& scalar) const { return scalar.HashValue(); }
+};
+
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_COMMON_SCALAR_H_

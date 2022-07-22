@@ -1229,7 +1229,7 @@ class BinaryCrossEntropyLossFunctor : public LossFunctorBase {
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight,
                            const std::string& reduction) const {
-    MutableAttrMap attrs;
+    AttrMap attrs{};
     auto out =
         weight ? OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight)}, attrs)
                : OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs);
@@ -1274,13 +1274,20 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
                                      .Output("out")
                                      .Build());
   }
+  struct BinaryCrossEntropyWithLogitsLoss {
+    Maybe<AttrMap> operator()(bool has_pos_weight) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<bool>("has_pos_weight", has_pos_weight));
+      return AttrMap(attrs);
+    }
+  };
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight,
                            const Optional<one::Tensor>& pos_weight,
                            const std::string& reduction) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<bool>("has_pos_weight", pos_weight.has_value()));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(BinaryCrossEntropyWithLogitsLoss);
+    const auto attrs = *JUST(GetAttrs(pos_weight.has_value()));
 
     std::shared_ptr<Tensor> out;
     if (weight) {
@@ -1376,9 +1383,15 @@ class NLLLossFunctor {
       input_ = input;
       target_ = target;
     }
-
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
+    struct OpWeightAttrs {
+      Maybe<AttrMap> operator()(int64_t ignore_index) {
+        MutableAttrMap attrs;
+        JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
+        return AttrMap(attrs);
+      }
+    };
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(OpWeightAttrs);
+    const auto attrs = *JUST(GetAttrs(ignore_index));
 
     std::shared_ptr<TensorTuple> nll_result;
     if (weight) {
@@ -1449,8 +1462,15 @@ class CrossEntropyFunctor {
 
     const auto target_ = JUST(functional::Flatten(target, 0, target->shape()->NumAxes() - 1));
 
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
+    struct OpNLLAttrs {
+      Maybe<AttrMap> operator()(int64_t ignore_index) {
+        MutableAttrMap attrs;
+        JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
+        return AttrMap(attrs);
+      }
+    };
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(OpNLLAttrs);
+    const auto attrs = *JUST(GetAttrs(ignore_index));
 
     std::shared_ptr<TensorTuple> nll_result;
     if (weight) {
@@ -1486,11 +1506,17 @@ class SparseCrossEntropyFunctor {
                          .Output("out")
                          .Build());
   }
+  struct SparseCrossEntropy {
+    Maybe<AttrMap> operator()(int64_t depth) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("depth", depth));
+      return AttrMap(attrs);
+    }
+  };
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& prediction,
                            const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("depth", depth));
-
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(SparseCrossEntropy);
+    const auto attrs = *JUST(GetAttrs(depth));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction, label}, attrs);
   }
 
@@ -1507,11 +1533,17 @@ class SparseCrossEntropyMsFunctor {
                          .Output("out")
                          .Build());
   }
+  struct SparseCrossEntropyMs {
+    Maybe<AttrMap> operator()(int64_t depth) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("depth", depth));
+      return AttrMap(attrs);
+    }
+  };
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& prediction,
                            const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("depth", depth));
-
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(SparseCrossEntropyMs);
+    const auto attrs = *JUST(GetAttrs(depth));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction, label}, attrs);
   }
 
@@ -1600,21 +1632,37 @@ class SparseSoftmaxCrossEntropyFunctor {
     return true;
   }
 
+  struct SparseSoftmaxCrossEntropy {
+    Maybe<AttrMap> operator()(int64_t depth) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("depth", depth));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> SparseSoftmaxCrossEntropyOperator(const std::shared_ptr<one::Tensor>& logits,
                                                   const std::shared_ptr<one::Tensor>& label) const {
-    MutableAttrMap attrs;
     int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
-    JUST(attrs.SetAttr<int64_t>("depth", depth));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(SparseSoftmaxCrossEntropy);
+    const auto attrs = *JUST(GetAttrs(depth));
     const auto& result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_sparse_softmax_cross_entropy_,
                                                                   {logits, label}, attrs));
     return result->at(1);
   }
 
+  struct LazySparseSoftmaxCrossEntropyMs {
+    Maybe<AttrMap> operator()(int64_t depth) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("depth", depth));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> LazySparseSoftmaxCrossEntropyMsOperator(
       const std::shared_ptr<one::Tensor>& logits, const std::shared_ptr<one::Tensor>& label) const {
-    MutableAttrMap attrs;
     int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
-    JUST(attrs.SetAttr<int64_t>("depth", depth));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(LazySparseSoftmaxCrossEntropyMs);
+    const auto attrs = *JUST(GetAttrs(depth));
     const auto& result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
         *op_sparse_softmax_cross_entropy_ms_, {logits, label}, attrs));
     return result->at(1);
@@ -1623,10 +1671,17 @@ class SparseSoftmaxCrossEntropyFunctor {
   Maybe<Tensor> EagerSparseSoftmaxCrossEntropyMsOperator(
       const std::shared_ptr<one::Tensor>& logits, const std::shared_ptr<one::Tensor>& label) const {
     // op_reduce_max_device_stage_
-    MutableAttrMap attrs;
     int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
     int32_t axis = logits->shape()->NumAxes() - 1;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", {axis}));
+    struct ReduceMaxDeviceStage {
+      Maybe<AttrMap> operator()(int32_t axis) {
+        MutableAttrMap attrs;
+        JUST(attrs.SetAttr<std::vector<int32_t>>("axis", {axis}));
+        return AttrMap(attrs);
+      }
+    };
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(ReduceMaxDeviceStage);
+    auto attrs = *JUST(GetAttrs(axis));
     const auto& max_device_stage =
         JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_reduce_max_device_stage_, {logits}, attrs));
     std::shared_ptr<Tensor> max_global_stage_input0 = max_device_stage->at(0);
@@ -1664,9 +1719,17 @@ class SparseSoftmaxCrossEntropyFunctor {
           s0s1_sbp_parallels, /* check_meta */ false));
     }
     // op_reduce_max_global_stage_
-    attrs.clear();
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", {axis}));
-    JUST(attrs.SetAttr<bool>("keepdims", true));
+    struct ReduceMaxGlobal {
+      Maybe<AttrMap> operator()(int32_t axis) {
+        MutableAttrMap attrs{};
+        JUST(attrs.SetAttr<std::vector<int32_t>>("axis", {axis}));
+        JUST(attrs.SetAttr<bool>("keepdims", true));
+        return AttrMap(attrs);
+      }
+    };
+    constexpr auto* GetAttrsReduceMaxGlobal = CACHED_FUNCTOR_PTR(ReduceMaxGlobal);
+    attrs = *JUST(GetAttrsReduceMaxGlobal(axis));
+
     const auto& max_global_stage = JUST(OpInterpUtil::Dispatch<TensorTuple>(
         *op_reduce_max_global_stage_, {max_global_stage_input0, max_global_stage_input1}, attrs));
     auto& broadcast_sub_input = max_global_stage->at(0);
@@ -1676,15 +1739,24 @@ class SparseSoftmaxCrossEntropyFunctor {
                                new_sbp_parallels, new_sbp_parallels, /* check_meta */ false));
     }
     // op_broadcast_sub_
-    attrs.clear();
+    attrs = AttrMap{};
     const auto& output_broadcast_sub = JUST(OpInterpUtil::Dispatch<TensorTuple>(
         *op_broadcast_sub_, {logits, broadcast_sub_input}, attrs));
     // op_exp_
     const auto& output_exp =
         JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_exp_, {(*output_broadcast_sub)[0]}, attrs));
     // op_reduce_sum_
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", {axis}));
-    JUST(attrs.SetAttr<bool>("keepdims", true));
+    struct ReduceSumAttrs {
+      Maybe<AttrMap> operator()(int32_t axis) {
+        MutableAttrMap attrs{};
+        JUST(attrs.SetAttr<std::vector<int32_t>>("axis", {axis}));
+        JUST(attrs.SetAttr<bool>("keepdims", true));
+        return AttrMap(attrs);
+      }
+    };
+    constexpr auto* GetAttrsReduceSumAttrs = CACHED_FUNCTOR_PTR(ReduceSumAttrs);
+    attrs = *JUST(GetAttrsReduceSumAttrs(axis));
+
     const auto& output_reduce_sum =
         JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_reduce_sum_, {(*output_exp)[0]}, attrs));
     std::shared_ptr<Tensor> broadcast_div_input1 = output_reduce_sum->at(0);
@@ -1695,11 +1767,20 @@ class SparseSoftmaxCrossEntropyFunctor {
           new_sbp_parallels, new_sbp_parallels, /* check_meta */ false));
     }
     // op_broadcast_div_
-    attrs.clear();
+    attrs = AttrMap{};
     const auto& predictions = JUST(OpInterpUtil::Dispatch<TensorTuple>(
         *op_broadcast_div_, {(*output_exp)[0], broadcast_div_input1}, attrs));
     // op_sparse_cross_entropy_ms_
-    JUST(attrs.SetAttr<int64_t>("depth", depth));
+    struct SparseCrossEntropy {
+      Maybe<AttrMap> operator()(int64_t depth) {
+        MutableAttrMap attrs{};
+        JUST(attrs.SetAttr<int64_t>("depth", depth));
+        return AttrMap(attrs);
+      }
+    };
+    constexpr auto* GetAttrsSparseCrossEntropy = CACHED_FUNCTOR_PTR(SparseCrossEntropy);
+    attrs = *JUST(GetAttrsSparseCrossEntropy(depth));
+
     const auto& output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_sparse_cross_entropy_ms_,
                                                              {(*predictions)[0], label}, attrs));
     return output;
@@ -1770,14 +1851,22 @@ class CombinedMarginLossFunctor {
                          .Output("theta")
                          .Build());
   }
+  struct CombinedMarginLoss {
+    Maybe<AttrMap> operator()(float m1, float m2, float m3, int64_t depth) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<float>("m1", m1));
+      JUST(attrs.SetAttr<float>("m2", m2));
+      JUST(attrs.SetAttr<float>("m3", m3));
+      JUST(attrs.SetAttr<int64_t>("depth", depth));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& label, const float& m1,
                            const float& m2, const float& m3) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<float>("m1", m1));
-    JUST(attrs.SetAttr<float>("m2", m2));
-    JUST(attrs.SetAttr<float>("m3", m3));
-    JUST(attrs.SetAttr<int64_t>("depth", x->shape()->At(1)));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(CombinedMarginLoss);
+    const auto attrs = *JUST(GetAttrs(m1, m2, m3, x->shape()->At(1)));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, label}, attrs);
   }
 
@@ -1798,16 +1887,24 @@ class CtcLossFunctor {
                          .Build());
     op_xdivy_ = CHECK_JUST(one::OpBuilder("xdivy").Input("x").Input("y").Output("z").Build());
   }
+  struct CtcLoss {
+    Maybe<AttrMap> operator()(int64_t max_target_length, int32_t blank, bool zero_infinity) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("max_target_length", max_target_length));
+      JUST(attrs.SetAttr<int32_t>("blank", blank));
+      JUST(attrs.SetAttr<bool>("zero_infinity", zero_infinity));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& log_probs,
                            const std::shared_ptr<one::Tensor>& targets,
                            const std::shared_ptr<one::Tensor>& input_lengths,
                            const std::shared_ptr<one::Tensor>& target_lengths,
                            const int64_t& max_target_length, const int& blank,
                            const bool& zero_infinity, const std::string& reduction) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("max_target_length", max_target_length));
-    JUST(attrs.SetAttr<int32_t>("blank", blank));
-    JUST(attrs.SetAttr<bool>("zero_infinity", zero_infinity));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(CtcLoss);
+    const auto attrs = *JUST(GetAttrs(max_target_length, blank, zero_infinity));
     auto out = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {log_probs, targets, input_lengths, target_lengths}, attrs));
     if (zero_infinity) {
@@ -1902,11 +1999,19 @@ class AffineGridFunctor {
   AffineGridFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("affine_grid").Input("theta").Output("grid").Build());
   }
+  struct AffineGrid {
+    Maybe<AttrMap> operator()(const Shape& size, const bool& align_corners) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<Shape>("size", size));
+      JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& theta, const Shape& size,
                            const bool& align_corners) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("size", size));
-    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(AffineGrid);
+    const auto attrs = *JUST(GetAttrs(size, align_corners));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {theta}, attrs);
   }
 
@@ -1920,14 +2025,23 @@ class GridSampleFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("grid_sample").Input("input").Input("grid").Output("output").Build());
   }
+  struct GridSample {
+    Maybe<AttrMap> operator()(const std::string& interpolation_mode,
+                              const std::string& padding_mode, const bool& align_corners) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::string>("interpolation_mode", interpolation_mode));
+      JUST(attrs.SetAttr<std::string>("padding_mode", padding_mode));
+      JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& grid,
                            const std::string& interpolation_mode, const std::string& padding_mode,
                            const bool& align_corners) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("interpolation_mode", interpolation_mode));
-    JUST(attrs.SetAttr<std::string>("padding_mode", padding_mode));
-    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(GridSample);
+    const auto attrs = *JUST(GetAttrs(interpolation_mode, padding_mode, align_corners));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, grid}, attrs);
   }
 
@@ -1938,6 +2052,19 @@ class GridSampleFunctor {
 class NormalFunctor {
  public:
   NormalFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
+  struct Normal {
+    Maybe<AttrMap> operator()(double mean, double std, const Shape& shape, DataType dtype,
+                              int64_t seed) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("mean", mean));
+      JUST(attrs.SetAttr<double>("std", std));
+      JUST(attrs.SetAttr<Shape>("shape", shape));
+      JUST(attrs.SetAttr<DataType>("dtype", dtype));
+      JUST(attrs.SetAttr<int64_t>("seed", seed));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const float& mean, const float& std, const Shape& shape,
                            const Optional<one::Tensor>& out,
                            const Optional<Symbol<DType>>& optional_dtype,
@@ -1973,12 +2100,8 @@ class NormalFunctor {
     }
 
     const auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("mean", mean));
-    JUST(attrs.SetAttr<double>("std", std));
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Normal);
+    const auto attrs = *JUST(GetAttrs(mean, std, shape, dtype->data_type(), gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, distribution_state);
@@ -2016,6 +2139,22 @@ class Normal2Functor {
 class GlobalNormalFunctor {
  public:
   GlobalNormalFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
+  struct GlobalNormal {
+    Maybe<AttrMap> operator()(double mean, double std, const Shape& shape, DataType dtype,
+                              int64_t seed, bool is_lazy_mode, Symbol<NdSbp> nd_sbp) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("mean", mean));
+      JUST(attrs.SetAttr<double>("std", std));
+      JUST(attrs.SetAttr<Shape>("shape", shape));
+      JUST(attrs.SetAttr<DataType>("dtype", dtype));
+      JUST(attrs.SetAttr<int64_t>("seed", seed));
+      if (is_lazy_mode) {
+        JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
+      }
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const float& mean, const float& std, const Shape& shape,
                            const Optional<one::Tensor>& out, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple,
@@ -2044,18 +2183,12 @@ class GlobalNormalFunctor {
     }
 
     const auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("mean", mean));
-    JUST(attrs.SetAttr<double>("std", std));
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(GlobalNormal);
+    const auto attrs = *JUST(GetAttrs(mean, std, shape, dtype->data_type(), gen->current_seed(),
+                                      LazyMode::is_enabled(), nd_sbp));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    if (LazyMode::is_enabled()) {
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
-    }
 
     if (out.has_value()) {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
@@ -2123,17 +2256,25 @@ class NormalizationFunctor {
                                                 .Attr("training", true)
                                                 .Build());
   }
+  struct Normalization {
+    Maybe<AttrMap> operator()(int32_t axis, float epsilon, float momentum) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int32_t>("axis", axis));
+      JUST(attrs.SetAttr<float>("epsilon", epsilon));
+      // convert torch momentum to tensorflow momentum.
+      JUST(attrs.SetAttr<float>("momentum", 1.0 - momentum));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<one::Tensor>& moving_mean,
                            const Optional<one::Tensor>& moving_variance,
                            const Optional<one::Tensor>& gamma, const Optional<one::Tensor>& beta,
                            const int32_t& axis, const float& epsilon, const float& momentum,
                            const bool& training) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", axis));
-    JUST(attrs.SetAttr<float>("epsilon", epsilon));
-    // convert torch momentum to tensorflow momentum
-    JUST(attrs.SetAttr<float>("momentum", 1.0 - momentum));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Normalization);
+    const auto attrs = *JUST(GetAttrs(axis, epsilon, momentum));
 
     CHECK_OR_RETURN((moving_mean && moving_variance) || (!moving_mean && !moving_variance))
         << Error::RuntimeError()
@@ -2236,6 +2377,17 @@ class NormalizationAddReluFunctor {
                                                              .Attr("training", true)
                                                              .Build());
   }
+  struct NormalizationAddRelu {
+    Maybe<AttrMap> operator()(const int32_t& axis, const float& epsilon, const float& momentum) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int32_t>("axis", axis));
+      JUST(attrs.SetAttr<float>("epsilon", epsilon));
+      // convert torch momentum to tensorflow momentum
+      JUST(attrs.SetAttr<float>("momentum", 1.0f - momentum));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<one::Tensor>& addend,
                            const Optional<one::Tensor>& moving_mean,
@@ -2244,12 +2396,8 @@ class NormalizationAddReluFunctor {
                            const std::shared_ptr<one::Tensor>& beta, const int32_t& axis,
                            const float& epsilon, const float& momentum,
                            const bool& is_training) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", axis));
-    JUST(attrs.SetAttr<float>("epsilon", epsilon));
-    // convert torch momentum to tensorflow momentum
-    JUST(attrs.SetAttr<float>("momentum", 1.0f - momentum));
-
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(NormalizationAddRelu);
+    const auto attrs = *JUST(GetAttrs(axis, epsilon, momentum));
     CHECK_OR_RETURN((moving_mean && moving_variance) || (!moving_mean && !moving_variance))
         << Error::RuntimeError()
         << "Both moving_mean and moving_variance should be None or Tensor.";
@@ -2303,22 +2451,18 @@ class PadFunctor {
     reflect_pad_ = CHECK_JUST(one::OpBuilder("reflection_pad2d").Input("x").Output("y").Build());
     replicate_pad_ = CHECK_JUST(one::OpBuilder("replication_pad2d").Input("x").Output("y").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& pad,
-                           const std::string& mode, const Scalar& value) const {
-    const int64_t ndim = x->shape()->NumAxes();
-    CHECK_LE_OR_RETURN(pad.size(), 2 * ndim)
-        << Error::RuntimeError() << "Pad size should less than or equal to input axes * 2.";
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
-    if (mode == "constant") {
+  struct ConstantModeAttrs {
+    Maybe<AttrMap> operator()(int64_t ndim, const std::vector<int64_t>& pad, DataType x_data_type,
+                              const Scalar& value) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
       CHECK_EQ_OR_RETURN(pad.size() % 2, 0)
           << Error::RuntimeError() << "Length of pad must be even but instead it equals "
           << pad.size();
-      if (IsFloatingDataType(x->dtype()->data_type())
-          || x->dtype()->data_type() == DataType::kFloat16) {
+      if (IsFloatingDataType(x_data_type) || x_data_type == DataType::kFloat16) {
         JUST(attrs.SetAttr<double>("floating_constant_value", value.As<double>()));
         JUST(attrs.SetAttr<int64_t>("integral_constant_value", 0));
-      } else if (IsIntegralDataType(x->dtype()->data_type())) {
+      } else if (IsIntegralDataType(x_data_type)) {
         JUST(attrs.SetAttr<double>("floating_constant_value", 0));
         JUST(attrs.SetAttr<int64_t>("integral_constant_value", value.As<int64_t>()));
       } else {
@@ -2334,9 +2478,30 @@ class PadFunctor {
       }
       JUST(attrs.SetAttr<std::vector<int64_t>>("padding_before", pad_before));
       JUST(attrs.SetAttr<std::vector<int64_t>>("padding_after", pad_after));
+      return AttrMap(attrs);
+    }
+  };
+  struct PaddingAttr {
+    Maybe<AttrMap> operator()(const std::vector<int64_t>& pad) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
+      return AttrMap(attrs);
+    }
+  };
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& pad,
+                           const std::string& mode, const Scalar& value) const {
+    const int64_t ndim = x->shape()->NumAxes();
+    CHECK_LE_OR_RETURN(pad.size(), 2 * ndim)
+        << Error::RuntimeError() << "Pad size should less than or equal to input axes * 2.";
+    if (mode == "constant") {
+      constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(ConstantModeAttrs);
+      const auto attrs = *JUST(GetAttrs(ndim, pad, x->dtype()->data_type(), value));
       return OpInterpUtil::Dispatch<Tensor>(*pad_, {x}, attrs);
 
     } else if (mode == "reflect") {
+      constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(PaddingAttr);
+      const auto attrs = *JUST(GetAttrs(pad));
       const int64_t pad_h = x->shape()->dim_vec().at(2);
       const int64_t pad_w = x->shape()->dim_vec().at(3);
       CHECK_OR_RETURN(pad[2] < pad_h && pad[3] < pad_h && pad[0] < pad_w && pad[1] < pad_w)
@@ -2344,6 +2509,8 @@ class PadFunctor {
           << "padding size should be less than the corresponding input dimension!";
       return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_, {x}, attrs);
     } else if (mode == "replicate") {
+      constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(PaddingAttr);
+      const auto attrs = *JUST(GetAttrs(pad));
       return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_, {x}, attrs);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode
@@ -2370,6 +2537,15 @@ class DropoutFunctor {
                                         .Build());
     add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
   }
+
+  struct Dropout {
+    Maybe<AttrMap> operator()(float p) {
+      MutableAttrMap dropout_attrs;
+      JUST(dropout_attrs.SetAttr<float>("rate", p));
+      return AttrMap(dropout_attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
                            const bool& training, const bool& inplace,
                            const Optional<one::Generator>& generator,
@@ -2381,8 +2557,8 @@ class DropoutFunctor {
     }
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
-    MutableAttrMap dropout_attrs;
-    JUST(dropout_attrs.SetAttr<float>("rate", p));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Dropout);
+    const auto dropout_attrs = *JUST(GetAttrs(p));
     if (addend) {
       if ((!training) || p == 0.0) {
         JUST(OpInterpUtil::Dispatch(*add_op_, {x, JUST(addend)}, outputs.get()));
@@ -2415,10 +2591,18 @@ class DropoutGradFunctor {
     dropout_grad_op_ =
         CHECK_JUST(one::OpBuilder("dropout_grad").Input("dy").Input("mask").Output("dx").Build());
   }
+  struct DropoutGrad {
+    Maybe<AttrMap> operator()(float scale) {
+      MutableAttrMap dropout_grad_attrs;
+      JUST(dropout_grad_attrs.SetAttr<float>("scale", scale));
+      return AttrMap(dropout_grad_attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
-    MutableAttrMap dropout_grad_attrs;
-    JUST(dropout_grad_attrs.SetAttr<float>("scale", scale));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(DropoutGrad);
+    const auto dropout_grad_attrs = *JUST(GetAttrs(scale));
     return OpInterpUtil::Dispatch<Tensor>(*dropout_grad_op_, {dy, mask}, dropout_grad_attrs);
   }
 
@@ -2430,25 +2614,34 @@ class AvgPoolNDFunctor {
  public:
   AvgPoolNDFunctor() = default;
   virtual ~AvgPoolNDFunctor() = default;
+  struct AvgPoolND {
+    Maybe<AttrMap> operator()(const std::string& data_format, const std::vector<int32_t>& padding,
+                              const std::vector<int32_t>& kernel_size,
+                              const std::vector<int32_t>& stride, bool ceil_mode,
+                              bool count_include_pad, int32_t divisor_override) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::string>("data_format", data_format));
+      JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
+      JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+      JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
+      JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
+      JUST(attrs.SetAttr<bool>("count_include_pad", count_include_pad));
+      JUST(attrs.SetAttr<int32_t>("divisor_override", divisor_override));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& kernel_size,
                            const Optional<std::vector<int32_t>>& stride,
                            const std::vector<int32_t>& padding, const bool& ceil_mode,
                            const bool& count_include_pad, const int32_t& divisor_override,
                            const std::string& data_format) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
-    if (stride.has_value()) {
-      JUST(attrs.SetAttr<std::vector<int32_t>>("stride", *JUST(stride)));
-    } else {
-      JUST(attrs.SetAttr<std::vector<int32_t>>(
-          "stride", kernel_size));  // If stride is None, we set it as kernel_size to align Pytorch.
-    }
-    JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
-    JUST(attrs.SetAttr<bool>("count_include_pad", count_include_pad));
-    JUST(attrs.SetAttr<int32_t>("divisor_override", divisor_override));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(AvgPoolND);
+    // If stride is None, we set it as kernel_size to align Pytorch
+    const auto attrs = *JUST(GetAttrs(data_format, padding, kernel_size,
+                                      (stride.has_value() ? *JUST(stride) : kernel_size), ceil_mode,
+                                      count_include_pad, divisor_override));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -2482,6 +2675,22 @@ class UnfoldFunctor {
   UnfoldFunctor() {
     unfold_op_ = CHECK_JUST(one::OpBuilder("unfold").Input("x").Output("y").Build());
   }
+  struct Unfold {
+    Maybe<AttrMap> operator()(const std::string& data_format,
+                              const std::vector<int32_t>& kernel_size,
+                              const std::vector<int32_t>& dilation_rate,
+                              const std::vector<int32_t>& padding,
+                              const std::vector<int32_t>& strides) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::string>("data_format", data_format));
+      JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+      JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
+      JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
+      JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& data_format,
                            const std::vector<int32_t>& kernel_size,
                            const std::vector<int32_t>& dilation_rate,
@@ -2491,13 +2700,8 @@ class UnfoldFunctor {
     // Only Support 4d tensor now.
     CHECK_EQ_OR_RETURN(x_shape->NumAxes(), 4)
         << Error::RuntimeError() << "Input Tensor dim should == 4";
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
-
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Unfold);
+    const auto attrs = *JUST(GetAttrs(data_format, kernel_size, dilation_rate, padding, strides));
     return OpInterpUtil::Dispatch<Tensor>(*unfold_op_, {x}, attrs);
   }
 
@@ -2508,6 +2712,24 @@ class UnfoldFunctor {
 class FoldFunctor {
  public:
   FoldFunctor() { fold_op_ = CHECK_JUST(one::OpBuilder("fold").Input("x").Output("y").Build()); }
+  struct Fold {
+    Maybe<AttrMap> operator()(const std::string& data_format,
+                              const std::vector<int32_t>& output_size,
+                              const std::vector<int32_t>& kernel_size,
+                              const std::vector<int32_t>& dilation_rate,
+                              const std::vector<int32_t>& padding,
+                              const std::vector<int32_t>& strides) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::string>("data_format", data_format));
+      JUST(attrs.SetAttr<std::vector<int32_t>>("output_size", output_size));
+      JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+      JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
+      JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
+      JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& data_format,
                            const std::vector<int32_t>& output_size,
                            const std::vector<int32_t>& kernel_size,
@@ -2518,14 +2740,10 @@ class FoldFunctor {
     // Only Support 3d tensor fold now. format is (N, C*K*K, L)
     CHECK_EQ_OR_RETURN(x_shape->NumAxes(), 3)
         << Error::RuntimeError() << "Input Tensor dim should == 3";
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("output_size", output_size));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
 
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Fold);
+    const auto attrs =
+        *JUST(GetAttrs(data_format, output_size, kernel_size, dilation_rate, padding, strides));
     return OpInterpUtil::Dispatch<Tensor>(*fold_op_, {x}, attrs);
   }
 
@@ -2538,11 +2756,36 @@ class OneHotFunctor {
   OneHotFunctor() {
     one_hot_op_ = CHECK_JUST(one::OpBuilder("one_hot").Input("indices").Output("out").Build());
   }
+
+  struct OneHot {
+    Maybe<AttrMap> operator()(int64_t depth, const Scalar& on_value, const Scalar& off_value) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("depth", depth));
+      // Refer to: https://github.com/Oneflow-Inc/oneflow/pull/5315/files#r755823506
+      bool is_on_value_double = on_value.IsFloatingPoint();
+      bool is_off_value_double = off_value.IsFloatingPoint();
+      if (is_on_value_double || is_off_value_double) {
+        JUST(attrs.SetAttr<DataType>("dtype", kFloat));
+        JUST(attrs.SetAttr<double>("floating_on_value", on_value.As<double>()));
+        JUST(attrs.SetAttr<double>("floating_off_value", off_value.As<double>()));
+        JUST(attrs.SetAttr<int64_t>("integer_on_value", 0));
+        JUST(attrs.SetAttr<int64_t>("integer_off_value", 0));
+      } else {
+        JUST(attrs.SetAttr<DataType>("dtype", kInt64));
+        JUST(attrs.SetAttr<double>("floating_on_value", 0));
+        JUST(attrs.SetAttr<double>("floating_off_value", 0));
+        JUST(attrs.SetAttr<int64_t>("integer_on_value", on_value.As<int64_t>()));
+        JUST(attrs.SetAttr<int64_t>("integer_off_value", off_value.As<int64_t>()));
+      }
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& num_classes,
                            const Scalar& on_value, const Scalar& off_value) const {
     CHECK_OR_RETURN(!IsFloatingDataType(input->dtype()->data_type()))
         << Error::RuntimeError() << "one_hot is only applicable to index tensor.";
-    MutableAttrMap attrs;
+    int64_t depth = 0;
     if (num_classes == -1) {
       std::vector<int32_t> axis(input->ndim());
       std::iota(axis.begin(), axis.end(), 0);
@@ -2554,27 +2797,12 @@ class OneHotFunctor {
         of_blob->AutoMemCopyTo<int64_t>(&max, 1);  // copy 1 scalar(int64_t) tensor's value to max
       };
       JUST(SyncAccessTensorWithTimeOut(tensor_max, callback, "const"));
-      JUST(attrs.SetAttr<int64_t>("depth", max + 1));
-
+      depth = max + 1;
     } else {
-      JUST(attrs.SetAttr<int64_t>("depth", num_classes));
+      depth = num_classes;
     }
-    // Refer to: https://github.com/Oneflow-Inc/oneflow/pull/5315/files#r755823506
-    bool is_on_value_double = on_value.IsFloatingPoint();
-    bool is_off_value_double = off_value.IsFloatingPoint();
-    if (is_on_value_double || is_off_value_double) {
-      JUST(attrs.SetAttr<DataType>("dtype", kFloat));
-      JUST(attrs.SetAttr<double>("floating_on_value", on_value.As<double>()));
-      JUST(attrs.SetAttr<double>("floating_off_value", off_value.As<double>()));
-      JUST(attrs.SetAttr<int64_t>("integer_on_value", 0));
-      JUST(attrs.SetAttr<int64_t>("integer_off_value", 0));
-    } else {
-      JUST(attrs.SetAttr<DataType>("dtype", kInt64));
-      JUST(attrs.SetAttr<double>("floating_on_value", 0));
-      JUST(attrs.SetAttr<double>("floating_off_value", 0));
-      JUST(attrs.SetAttr<int64_t>("integer_on_value", on_value.As<int64_t>()));
-      JUST(attrs.SetAttr<int64_t>("integer_off_value", off_value.As<int64_t>()));
-    }
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(OneHot);
+    const auto attrs = *JUST(GetAttrs(depth, on_value, off_value));
     return OpInterpUtil::Dispatch<Tensor>(*one_hot_op_, {input}, attrs);
   }
 
@@ -2638,6 +2866,15 @@ class L2NormalizeFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("l2_normalize").Input("x").Output("y").Output("square_x_sum").Build());
   }
+  struct L2Normalize {
+    Maybe<AttrMap> operator()(float epsilon, int32_t final_dim) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<float>("epsilon", epsilon));
+      JUST(attrs.SetAttr<int32_t>("axis", final_dim));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& axis,
                            const float& epsilon) const {
     const auto ndims = input->shape()->NumAxes();
@@ -2649,9 +2886,8 @@ class L2NormalizeFunctor {
     CHECK_LE_OR_RETURN(axis_, final_dim) << Error::RuntimeError() << "Axis should < " << ndims
                                          << " but axis is " << axis_ << " now.";
 
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<float>("epsilon", epsilon));
-    JUST(attrs.SetAttr<int32_t>("axis", final_dim));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(L2Normalize);
+    const auto attrs = *JUST(GetAttrs(epsilon, final_dim));
 
     if (axis_ == final_dim) { return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs); }
 
@@ -2696,11 +2932,19 @@ class FusedSelfAttentionFunctor {
                          .Output("value")
                          .Build());
   }
+  struct FusedSelfAttention {
+    Maybe<AttrMap> operator()(int64_t head_size, float alpha) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("head_size", head_size));
+      JUST(attrs.SetAttr<float>("alpha", alpha));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& hidden_states,
                                 const int64_t& head_size, const float& alpha) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("head_size", head_size));
-    JUST(attrs.SetAttr<float>("alpha", alpha));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(FusedSelfAttention);
+    const auto attrs = *JUST(GetAttrs(head_size, alpha));
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {hidden_states}, attrs);
   }
 
@@ -2718,12 +2962,20 @@ class FusedSelfAttentionGradFunctor {
                          .Output("hidden_states_grad")
                          .Build());
   }
+  struct FusedSelfAttentionGrad {
+    Maybe<AttrMap> operator()(float alpha) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<float>("alpha", alpha));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& query_mul_key_grad,
                            const std::shared_ptr<one::Tensor>& value_grad,
                            const std::shared_ptr<one::Tensor>& hidden_states,
                            const float& alpha) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<float>("alpha", alpha));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(FusedSelfAttentionGrad);
+    const auto attrs = *JUST(GetAttrs(alpha));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {query_mul_key_grad, value_grad, hidden_states},
                                           attrs);
   }
@@ -2744,14 +2996,34 @@ class FusedScaleTrilSoftmaxMaskScaleFunctor {
                                .Output("softmax_y")
                                .Build());
   }
+  struct RandomMaskLike {
+    Maybe<AttrMap> operator()(float p, int64_t seed) {
+      MutableAttrMap random_mask_like_attrs;
+      JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
+      JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", seed));
+      return AttrMap(random_mask_like_attrs);
+    }
+  };
+
+  struct FuseOpAttr {
+    Maybe<AttrMap> operator()(int64_t diagonal, float tril_scale_value, float mask_scale_value,
+                              float tril_fill_value) {
+      MutableAttrMap fused_attrs;
+      JUST(fused_attrs.SetAttr<int64_t>("diagonal", diagonal));
+      JUST(fused_attrs.SetAttr<float>("tril_scale_value", tril_scale_value));
+      JUST(fused_attrs.SetAttr<float>("mask_scale_value", mask_scale_value));
+      JUST(fused_attrs.SetAttr<float>("tril_fill_value", tril_fill_value));
+      return AttrMap(fused_attrs);
+    }
+  };
+
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const float p,
                                 const int64_t diagonal, const float tril_scale_value,
                                 const float tril_fill_value,
                                 const Optional<one::Generator>& generator) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap random_mask_like_attrs;
-    JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
-    JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(RandomMaskLike);
+    const auto random_mask_like_attrs = *JUST(GetAttrs(p, gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
 
     const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
@@ -2760,11 +3032,9 @@ class FusedScaleTrilSoftmaxMaskScaleFunctor {
 
     float mask_scale_value = 1.0;
     if (p != 1.0) { mask_scale_value = 1.0 / (1.0 - p); }
-    MutableAttrMap fused_attrs;
-    JUST(fused_attrs.SetAttr<int64_t>("diagonal", diagonal));
-    JUST(fused_attrs.SetAttr<float>("tril_scale_value", tril_scale_value));
-    JUST(fused_attrs.SetAttr<float>("mask_scale_value", mask_scale_value));
-    JUST(fused_attrs.SetAttr<float>("tril_fill_value", tril_fill_value));
+    constexpr auto* GetAttrsFuseOpAttr = CACHED_FUNCTOR_PTR(FuseOpAttr);
+    const auto fused_attrs =
+        *JUST(GetAttrsFuseOpAttr(diagonal, tril_scale_value, mask_scale_value, tril_fill_value));
 
     return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_, {x, mask}, fused_attrs);
   }
@@ -2784,13 +3054,21 @@ class L2NormalizeGradFunctor {
                          .Output("dx")
                          .Build());
   }
+  struct L2NormalizeGrad {
+    Maybe<AttrMap> operator()(int32_t axis, float epsilon) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int32_t>("axis", axis));
+      JUST(attrs.SetAttr<float>("epsilon", epsilon));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& square_x_sum, const int32_t& axis,
                            const float& epsilon) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", axis));
-    JUST(attrs.SetAttr<float>("epsilon", epsilon));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(L2NormalizeGrad);
+    const auto attrs = *JUST(GetAttrs(axis, epsilon));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, y, square_x_sum}, attrs);
   }
 
@@ -2804,10 +3082,18 @@ class FusedBiasAddGeluFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("fused_bias_add_gelu").Input("a").Input("b").Output("out").Build());
   }
+  struct FusedBiasAddGelu {
+    Maybe<AttrMap> operator()(int32_t axis) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int32_t>("axis", axis));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b, const int32_t& axis) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(FusedBiasAddGelu);
+    const auto attrs = *JUST(GetAttrs(axis));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b}, attrs);
   }
 
@@ -2825,11 +3111,19 @@ class FusedBiasAddGeluGradFunctor {
                          .Output("dx")
                          .Build());
   }
+  struct FusedBiasAddGeluGrad {
+    Maybe<AttrMap> operator()(int32_t axis) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int32_t>("axis", axis));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b,
                            const std::shared_ptr<one::Tensor>& dy, const int32_t& axis) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(FusedBiasAddGeluGrad);
+    const auto attrs = *JUST(GetAttrs(axis));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b, dy}, attrs);
   }
 
@@ -2849,25 +3143,40 @@ class FusedBiasAddDropoutFunctor {
                                                    .Output("out")
                                                    .Build());
   }
+  struct RanddomMaskLike {
+    Maybe<AttrMap> operator()(float rate, int64_t seed) {
+      MutableAttrMap random_mask_like_attrs;
+      JUST(random_mask_like_attrs.SetAttr<float>("rate", rate));
+      JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", seed));
+      return AttrMap(random_mask_like_attrs);
+    }
+  };
+
+  struct FusedBiasAddMask {
+    Maybe<AttrMap> operator()(float scale, int32_t axis) {
+      MutableAttrMap fused_bias_add_mask_attrs;
+      JUST(fused_bias_add_mask_attrs.SetAttr<float>("scale", scale));
+      JUST(fused_bias_add_mask_attrs.SetAttr<int32_t>("axis", axis));
+      return AttrMap(fused_bias_add_mask_attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b, const float& p,
                            const int32_t& axis, const Optional<one::Generator>& generator) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap random_mask_like_attrs;
-    JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
-    JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    constexpr auto* GetAttrsRanddomMaskLike = CACHED_FUNCTOR_PTR(RanddomMaskLike);
+    const auto random_mask_like_attrs = *JUST(GetAttrsRanddomMaskLike(p, gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-
     float scale = 0.0;
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
-    MutableAttrMap fused_bias_add_mask_attrs;
-    JUST(fused_bias_add_mask_attrs.SetAttr<float>("scale", scale));
     int32_t axis_val = axis;
     if (axis_val < 0) {
       const int64_t num_axes = a->shape()->NumAxes();
       axis_val += num_axes;
     }
-    JUST(fused_bias_add_mask_attrs.SetAttr<int32_t>("axis", axis_val));
+    constexpr auto* GetAttrsFusedBiasAddMask = CACHED_FUNCTOR_PTR(FusedBiasAddMask);
+    const auto fused_bias_add_mask_attrs = *JUST(GetAttrsFusedBiasAddMask(scale, axis_val));
     if (p > 0.0) {
       return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
                return OpInterpUtil::Dispatch<Tensor>(
@@ -2895,31 +3204,40 @@ class FusedScaleTrilFunctor {
     op_ = CHECK_JUST(one::OpBuilder("fused_scale_tril").Input("in").Output("out").Build());
   }
 
+  struct FusedScaleTril {
+    Maybe<AttrMap> operator()(const int64_t& diagonal, const Scalar& fill_value,
+                              const Scalar& scale) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
+      bool is_fill_value_double = fill_value.IsFloatingPoint();
+      bool is_scale_double = scale.IsFloatingPoint();
+      if (is_fill_value_double) {
+        JUST(attrs.SetAttr<double>("floating_fill_value", fill_value.As<double>()));
+        JUST(attrs.SetAttr<int64_t>("integer_fill_value", 0));
+        JUST(attrs.SetAttr<bool>("is_floating_fill_value", true));
+      } else {
+        JUST(attrs.SetAttr<double>("floating_fill_value", 0));
+        JUST(attrs.SetAttr<int64_t>("integer_fill_value", fill_value.As<int64_t>()));
+        JUST(attrs.SetAttr<bool>("is_floating_fill_value", false));
+      }
+
+      if (is_scale_double) {
+        JUST(attrs.SetAttr<double>("floating_scale_value", scale.As<double>()));
+        JUST(attrs.SetAttr<int64_t>("integer_scale_value", 0));
+        JUST(attrs.SetAttr<bool>("is_floating_scale_value", true));
+      } else {
+        JUST(attrs.SetAttr<double>("floating_scale_value", 0));
+        JUST(attrs.SetAttr<int64_t>("integer_scale_value", scale.As<int64_t>()));
+        JUST(attrs.SetAttr<bool>("is_floating_scale_value", false));
+      }
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal,
                            const Scalar& fill_value, const Scalar& scale) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
-    bool is_fill_value_double = fill_value.IsFloatingPoint();
-    bool is_scale_double = scale.IsFloatingPoint();
-    if (is_fill_value_double) {
-      JUST(attrs.SetAttr<double>("floating_fill_value", fill_value.As<double>()));
-      JUST(attrs.SetAttr<int64_t>("integer_fill_value", 0));
-      JUST(attrs.SetAttr<bool>("is_floating_fill_value", true));
-    } else {
-      JUST(attrs.SetAttr<double>("floating_fill_value", 0));
-      JUST(attrs.SetAttr<int64_t>("integer_fill_value", fill_value.As<int64_t>()));
-      JUST(attrs.SetAttr<bool>("is_floating_fill_value", false));
-    }
-
-    if (is_scale_double) {
-      JUST(attrs.SetAttr<double>("floating_scale_value", scale.As<double>()));
-      JUST(attrs.SetAttr<int64_t>("integer_scale_value", 0));
-      JUST(attrs.SetAttr<bool>("is_floating_scale_value", true));
-    } else {
-      JUST(attrs.SetAttr<double>("floating_scale_value", 0));
-      JUST(attrs.SetAttr<int64_t>("integer_scale_value", scale.As<int64_t>()));
-      JUST(attrs.SetAttr<bool>("is_floating_scale_value", false));
-    }
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(FusedScaleTril);
+    const auto attrs = *JUST(GetAttrs(diagonal, fill_value, scale));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -2933,13 +3251,21 @@ class FusedScaleMaskSoftmaxFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("fused_scale_mask_softmax").Input("x").Input("mask").Output("y").Build());
   }
+  struct FusedScaleMaskSoftmax {
+    Maybe<AttrMap> operator()(const float& fill_value, const float& scale) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<float>("scale_value", scale));
+      JUST(attrs.SetAttr<float>("mask_fill_value", fill_value));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& mask, const float& fill_value,
                            const float& scale) const {
-    MutableAttrMap attrs_;
-    JUST(attrs_.SetAttr<float>("scale_value", scale));
-    JUST(attrs_.SetAttr<float>("mask_fill_value", fill_value));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask}, attrs_);
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(FusedScaleMaskSoftmax);
+    const auto attrs = *JUST(GetAttrs(scale, fill_value));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask}, attrs);
   }
 
  private:
@@ -2960,6 +3286,26 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
                        .Output("softmax_y")
                        .Build());
   }
+  struct RandomMaskLike {
+    Maybe<AttrMap> operator()(float rate, int64_t seed) {
+      MutableAttrMap random_mask_like_attrs;
+      JUST(random_mask_like_attrs.SetAttr<float>("rate", rate));
+      JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", seed));
+      return AttrMap(random_mask_like_attrs);
+    }
+  };
+
+  struct FusedScaleMaskSoftmaxDropout {
+    Maybe<AttrMap> operator()(float scale, float fill_value, float dropout_scale) {
+      MutableAttrMap fused_scale_mask_softmax_dropout_attrs;
+      JUST(fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("scale_value", scale));
+      JUST(fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("mask_fill_value", fill_value));
+      JUST(fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("dropout_scale_value",
+                                                                 dropout_scale));
+      return AttrMap(fused_scale_mask_softmax_dropout_attrs);
+    }
+  };
+
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
                                 const std::shared_ptr<one::Tensor>& mask, const float& fill_value,
                                 const float& scale, const float& p, const bool& training,
@@ -2967,9 +3313,8 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
     float rate = p;
     if (!training) rate = 0.0;
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap random_mask_like_attrs;
-    JUST(random_mask_like_attrs.SetAttr<float>("rate", rate));
-    JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    constexpr auto* GetAttrsRandomMaskLike = CACHED_FUNCTOR_PTR(RandomMaskLike);
+    const auto random_mask_like_attrs = *JUST(GetAttrsRandomMaskLike(rate, gen->current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
 
     const auto& dropout_mask = JUST(OpInterpUtil::Dispatch<Tensor>(
@@ -2978,11 +3323,9 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
 
     float dropout_scale = 0.0;
     if (rate != 1.0) { dropout_scale = 1.0 / (1.0 - rate); }
-    MutableAttrMap fused_scale_mask_softmax_dropout_attrs;
-    JUST(fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("scale_value", scale));
-    JUST(fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("mask_fill_value", fill_value));
-    JUST(fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("dropout_scale_value",
-                                                               dropout_scale));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(FusedScaleMaskSoftmaxDropout);
+    const auto fused_scale_mask_softmax_dropout_attrs =
+        *JUST(GetAttrs(scale, fill_value, dropout_scale));
 
     return OpInterpUtil::Dispatch<TensorTuple>(*fused_scale_mask_softmax_dropout_op_,
                                                {x, mask, dropout_mask},
@@ -3004,11 +3347,19 @@ class CtcGreedyDecoderFunctor {
                          .Output("neg_sum_logits")
                          .Build());
   }
+  struct CtcGreedyDecoder {
+    Maybe<AttrMap> operator()(bool merge_repeated) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<bool>("merge_repeated", merge_repeated));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& log_probs,
                                 const std::shared_ptr<one::Tensor>& input_lengths,
                                 const bool& merge_repeated) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<bool>("merge_repeated", merge_repeated));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(CtcGreedyDecoder);
+    const auto attrs = *JUST(GetAttrs(merge_repeated));
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {log_probs, input_lengths}, attrs);
   }
 
@@ -3039,11 +3390,19 @@ class NmsFunctor {
  public:
   NmsFunctor() { op_ = CHECK_JUST(one::OpBuilder("nms").Input("in").Output("out").Build()); }
 
+  struct Nms {
+    Maybe<AttrMap> operator()(float iou_threshold, int32_t keep_n) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<float>("iou_threshold", iou_threshold));
+      JUST(attrs.SetAttr<int32_t>("keep_n", keep_n));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& iou_threshold,
                            const int32_t& keep_n) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<float>("iou_threshold", iou_threshold));
-    JUST(attrs.SetAttr<int32_t>("keep_n", keep_n));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Nms);
+    const auto attrs = *JUST(GetAttrs(iou_threshold, keep_n));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -3057,16 +3416,26 @@ class RoiAlignFunctor {
     op_ = CHECK_JUST(one::OpBuilder("roi_align").Input("x").Input("rois").Output("y").Build());
   }
 
+  struct RoiAlign {
+    Maybe<AttrMap> operator()(const float& spatial_scale, const int32_t& pooled_h,
+                              const int32_t& pooled_w, const int32_t& sampling_ratio,
+                              const bool& aligned) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<float>("spatial_scale", spatial_scale));
+      JUST(attrs.SetAttr<int32_t>("pooled_h", pooled_h));
+      JUST(attrs.SetAttr<int32_t>("pooled_w", pooled_w));
+      JUST(attrs.SetAttr<int32_t>("sampling_ratio", sampling_ratio));
+      JUST(attrs.SetAttr<bool>("aligned", aligned));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& rois, const float& spatial_scale,
                            const int32_t& pooled_h, const int32_t& pooled_w,
                            const int32_t& sampling_ratio, const bool& aligned) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<float>("spatial_scale", spatial_scale));
-    JUST(attrs.SetAttr<int32_t>("pooled_h", pooled_h));
-    JUST(attrs.SetAttr<int32_t>("pooled_w", pooled_w));
-    JUST(attrs.SetAttr<int32_t>("sampling_ratio", sampling_ratio));
-    JUST(attrs.SetAttr<bool>("aligned", aligned));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(RoiAlign);
+    const auto attrs = *JUST(GetAttrs(spatial_scale, pooled_h, pooled_w, sampling_ratio, aligned));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, rois}, attrs);
   }
 
@@ -3085,17 +3454,27 @@ class RoiAlignGradFunctor {
                          .Build());
   }
 
+  struct RoiAlignGrad {
+    Maybe<AttrMap> operator()(const float& spatial_scale, const int32_t& pooled_h,
+                              const int32_t& pooled_w, const int32_t& sampling_ratio,
+                              const bool& aligned) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<float>("spatial_scale", spatial_scale));
+      JUST(attrs.SetAttr<int32_t>("pooled_h", pooled_h));
+      JUST(attrs.SetAttr<int32_t>("pooled_w", pooled_w));
+      JUST(attrs.SetAttr<int32_t>("sampling_ratio", sampling_ratio));
+      JUST(attrs.SetAttr<bool>("aligned", aligned));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x_like,
                            const std::shared_ptr<one::Tensor>& rois, const float& spatial_scale,
                            const int32_t& pooled_h, const int32_t& pooled_w,
                            const int32_t& sampling_ratio, const bool& aligned) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<float>("spatial_scale", spatial_scale));
-    JUST(attrs.SetAttr<int32_t>("pooled_h", pooled_h));
-    JUST(attrs.SetAttr<int32_t>("pooled_w", pooled_w));
-    JUST(attrs.SetAttr<int32_t>("sampling_ratio", sampling_ratio));
-    JUST(attrs.SetAttr<bool>("aligned", aligned));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(RoiAlignGrad);
+    const auto attrs = *JUST(GetAttrs(spatial_scale, pooled_h, pooled_w, sampling_ratio, aligned));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x_like, rois}, attrs);
   }
 
@@ -3123,13 +3502,21 @@ class FusedDotFeatureInteractionFunctor {
     }
   }
 
+  struct FusedDotFeatureInteraction {
+    Maybe<AttrMap> operator()(const bool& self_interaction, const int32_t& output_padding,
+                              const std::string& pooling, bool has_output_concat) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<bool>("self_interaction", self_interaction));
+      JUST(attrs.SetAttr<int32_t>("output_padding", output_padding));
+      JUST(attrs.SetAttr<std::string>("pooling", pooling));
+      JUST(attrs.SetAttr<bool>("has_output_concat", has_output_concat));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const TensorTuple& features, const Optional<one::Tensor>& output_concat,
                            const bool& self_interaction, const int32_t& output_padding,
                            const std::string& pooling) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<bool>("self_interaction", self_interaction));
-    JUST(attrs.SetAttr<int32_t>("output_padding", output_padding));
-    JUST(attrs.SetAttr<std::string>("pooling", pooling));
     const int64_t n_features = features.size();
     TensorTuple inputs;
     if (n_features > kMaxInputCount) {
@@ -3140,23 +3527,24 @@ class FusedDotFeatureInteractionFunctor {
     CHECK_OR_RETURN(pooling == "sum" || pooling == "none")
         << Error::RuntimeError() << "pooling should be sum or none, but get " << pooling;
 
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(FusedDotFeatureInteraction);
     if (pooling == "sum") {
       CHECK_EQ_OR_RETURN(output_padding, 0)
           << Error::RuntimeError() << "output_padding should be equal to 0. ";
       CHECK_OR_RETURN(!output_concat) << Error::RuntimeError() << "output_concat should not exist";
-      JUST(attrs.SetAttr<bool>("has_output_concat", false));
+      const auto attrs = *JUST(GetAttrs(self_interaction, output_padding, pooling, false));
       const std::shared_ptr<one::Tensor>& bi_interaction = JUST(OpInterpUtil::Dispatch<Tensor>(
           *JUST(oneflow::VectorAt(ops_no_output_concat_, n_features - 1)), inputs, attrs));
       std::vector<int32_t> reduce_axes_vec = {1};
       return functional::ReduceSum(bi_interaction, reduce_axes_vec, true);
     }
     if (output_concat) {
-      JUST(attrs.SetAttr<bool>("has_output_concat", true));
+      const auto attrs = *JUST(GetAttrs(self_interaction, output_padding, pooling, true));
       inputs.push_back(JUST(output_concat));
       return OpInterpUtil::Dispatch<Tensor>(
           *JUST(oneflow::VectorAt(ops_has_output_concat_, n_features - 1)), inputs, attrs);
     } else {
-      JUST(attrs.SetAttr<bool>("has_output_concat", false));
+      const auto attrs = *JUST(GetAttrs(self_interaction, output_padding, pooling, false));
       return OpInterpUtil::Dispatch<Tensor>(
           *JUST(oneflow::VectorAt(ops_no_output_concat_, n_features - 1)), inputs, attrs);
     }
@@ -3180,6 +3568,14 @@ class FusedCrossFeatureInteractionFunctor {
                          .Build());
   }
 
+  struct FusedCrossFeatureInteraction {
+    Maybe<AttrMap> operator()(const std::string& interaction_mode) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::string>("interaction_mode", interaction_mode));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& weight,
                            const std::shared_ptr<one::Tensor>& x0,
@@ -3189,8 +3585,8 @@ class FusedCrossFeatureInteractionFunctor {
       UNIMPLEMENTED_THEN_RETURN()
           << "Fused Cross Interaction mode only support `vector` and `matrix`. ";
     }
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("interaction_mode", interaction_mode));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(FusedCrossFeatureInteraction);
+    const auto attrs = *JUST(GetAttrs(interaction_mode));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, weight, x0, bias}, attrs);
   }
 
@@ -3222,12 +3618,20 @@ class OneEmbeddingIdShuffleFunctor {
                                                  .Build());
   }
 
+  struct OneEmbeddingIdShuffle {
+    Maybe<AttrMap> operator()(const int32_t& num_tables, const std::string& embedding_name) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int32_t>("num_tables", num_tables));
+      JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& ids,
                                 const Optional<one::Tensor>& table_ids, const int32_t& num_tables,
                                 const std::string& embedding_name) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("num_tables", num_tables));
-    JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(OneEmbeddingIdShuffle);
+    const auto attrs = *JUST(GetAttrs(num_tables, embedding_name));
     if (table_ids) {
       return OpInterpUtil::Dispatch<TensorTuple>(*op_table_ids_has_in_out_, {ids, JUST(table_ids)},
                                                  attrs);
@@ -3253,15 +3657,24 @@ class OneEmbeddingEmbeddingShuffleFunctor {
                          .Build());
   }
 
+  struct OneEmbeddingEmbeddingShuffle {
+    Maybe<AttrMap> operator()(int64_t embedding_size, const std::string& embedding_name) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+      JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& cur_rank_embeddings,
                            const std::shared_ptr<one::Tensor>& num_unique_matrix,
                            const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
                            const std::shared_ptr<one::Tensor>& inverse_unique_partition_indices,
                            const std::string& embedding_name) const {
-    MutableAttrMap attrs;
     const int64_t num_axes = cur_rank_embeddings->shape()->NumAxes();
-    JUST(attrs.SetAttr<int64_t>("embedding_size", cur_rank_embeddings->shape()->At(num_axes - 1)));
-    JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(OneEmbeddingEmbeddingShuffle);
+    const auto attrs =
+        *JUST(GetAttrs(cur_rank_embeddings->shape()->At(num_axes - 1), embedding_name));
     return OpInterpUtil::Dispatch<Tensor>(
         *op_,
         {cur_rank_embeddings, num_unique_matrix, cur_rank_inverse_indices,
@@ -3285,15 +3698,23 @@ class OneEmbeddingEmbeddingGradientShuffleFunctor {
                          .Build());
   }
 
+  struct OneEmbeddingEmbeddingGradientShuffle {
+    Maybe<AttrMap> operator()(int64_t embedding_size, const std::string& embedding_name) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+      JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& embedding_grad,
                            const std::shared_ptr<one::Tensor>& num_unique_matrix,
                            const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
                            const std::shared_ptr<one::Tensor>& inverse_unique_partition_indices,
                            const std::string& embedding_name) const {
-    MutableAttrMap attrs;
     const int64_t num_axes = embedding_grad->shape()->NumAxes();
-    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_grad->shape()->At(num_axes - 1)));
-    JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(OneEmbeddingEmbeddingGradientShuffle);
+    const auto attrs = *JUST(GetAttrs(embedding_grad->shape()->At(num_axes - 1), embedding_name));
     return OpInterpUtil::Dispatch<Tensor>(
         *op_,
         {embedding_grad, num_unique_matrix, cur_rank_inverse_indices,
@@ -3321,18 +3742,29 @@ class OneEmbeddingLookupFunctor {
                                       .Build());
   }
 
+  struct OneEmbeddingLookup {
+    Maybe<AttrMap> operator()(const Symbol<DType>& dtype, const int64_t embedding_size,
+                              const int32_t num_tables, const std::string& embedding_tables,
+                              const std::string& key_value_store_options) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+      JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+      JUST(attrs.SetAttr<int32_t>("num_tables", num_tables));
+      JUST(attrs.SetAttr<std::string>("embedding_tables", embedding_tables));
+      JUST(attrs.SetAttr<std::string>("key_value_store_options", key_value_store_options));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& shadow,
                            const std::shared_ptr<one::Tensor>& ids,
                            const Optional<one::Tensor>& table_ids, const Symbol<DType>& dtype,
                            const int64_t embedding_size, const int32_t num_tables,
                            const std::string& embedding_tables,
                            const std::string& key_value_store_options) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
-    JUST(attrs.SetAttr<int32_t>("num_tables", num_tables));
-    JUST(attrs.SetAttr<std::string>("embedding_tables", embedding_tables));
-    JUST(attrs.SetAttr<std::string>("key_value_store_options", key_value_store_options));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(OneEmbeddingLookup);
+    const auto attrs = *JUST(
+        GetAttrs(dtype, embedding_size, num_tables, embedding_tables, key_value_store_options));
     if (table_ids) {
       return OpInterpUtil::Dispatch<Tensor>(*op_has_table_ids_, {shadow, ids, JUST(table_ids)},
                                             attrs);
@@ -3366,11 +3798,19 @@ class OneEmbeddingUniqueKeyValuePairFunctor {
                                         .Build());
   }
 
+  struct OneEmbeddingUniqueKeyValuePair {
+    Maybe<AttrMap> operator()(int32_t num_tables) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int32_t>("num_tables", num_tables));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& keys,
                                 const Optional<one::Tensor>& values,
                                 const int32_t num_tables) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("num_tables", num_tables));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(OneEmbeddingUniqueKeyValuePair);
+    const auto attrs = *JUST(GetAttrs(num_tables));
     if (values) {
       return OpInterpUtil::Dispatch<TensorTuple>(*op_has_input_value_, {keys, JUST(values)}, attrs);
     } else {
@@ -3407,6 +3847,31 @@ class OneEmbeddingSgdUpdateFunctor {
                                   .Build());
   }
 
+  struct OneEmbeddingSgdUpdate {
+    Maybe<AttrMap> operator()(const double scale, const float weight_decay, const int64_t line_size,
+                              const int64_t embedding_size) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("scale", scale));
+      JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
+      JUST(attrs.SetAttr<int64_t>("line_size", line_size));
+      JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+      return AttrMap(attrs);
+    }
+  };
+
+  struct OneEmbeddingMomentumUpdate {
+    Maybe<AttrMap> operator()(const double scale, const float weight_decay, const float momentum,
+                              const int64_t line_size, const int64_t embedding_size) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("scale", scale));
+      JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
+      JUST(attrs.SetAttr<float>("beta", momentum));
+      JUST(attrs.SetAttr<int64_t>("line_size", line_size));
+      JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& num_unique_ids,
                            const std::shared_ptr<one::Tensor>& unique_embeddings,
                            const std::shared_ptr<one::Tensor>& embedding_grad,
@@ -3415,18 +3880,16 @@ class OneEmbeddingSgdUpdateFunctor {
                            const std::shared_ptr<one::Tensor>& skip_if, const double scale,
                            const float weight_decay, const float momentum, const int64_t line_size,
                            const int64_t embedding_size) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("scale", scale));
-    JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
-    JUST(attrs.SetAttr<int64_t>("line_size", line_size));
-    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
     if (momentum == 0) {
+      constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(OneEmbeddingSgdUpdate);
+      const auto attrs = *JUST(GetAttrs(scale, weight_decay, line_size, embedding_size));
       return OpInterpUtil::Dispatch<Tensor>(*sgd_op_,
                                             {num_unique_ids, unique_embeddings, embedding_grad,
                                              learning_rate, down_scale_by_tensor, skip_if},
                                             attrs);
     } else {
-      JUST(attrs.SetAttr<float>("beta", momentum));
+      constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(OneEmbeddingMomentumUpdate);
+      const auto attrs = *JUST(GetAttrs(scale, weight_decay, momentum, line_size, embedding_size));
       return OpInterpUtil::Dispatch<Tensor>(*momentum_op_,
                                             {num_unique_ids, unique_embeddings, embedding_grad,
                                              learning_rate, down_scale_by_tensor, skip_if},
@@ -3465,6 +3928,23 @@ class OneEmbeddingAdamUpdateFunctor {
                                             .Build());
   }
 
+  struct OneEmbeddingAdamUpdate {
+    Maybe<AttrMap> operator()(const double scale, const float weight_decay, const float beta1,
+                              const float beta2, const float epsilon, const bool do_bias_correction,
+                              const int64_t line_size, const int64_t embedding_size) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("scale", scale));
+      JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
+      JUST(attrs.SetAttr<float>("beta1", beta1));
+      JUST(attrs.SetAttr<float>("beta2", beta2));
+      JUST(attrs.SetAttr<float>("epsilon", epsilon));
+      JUST(attrs.SetAttr<bool>("do_bias_correction", do_bias_correction));
+      JUST(attrs.SetAttr<int64_t>("line_size", line_size));
+      JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& num_unique_ids,
                            const std::shared_ptr<one::Tensor>& unique_embeddings,
                            const std::shared_ptr<one::Tensor>& embedding_grad,
@@ -3476,15 +3956,9 @@ class OneEmbeddingAdamUpdateFunctor {
                            const float weight_decay, const float beta1, const float beta2,
                            const float epsilon, const bool do_bias_correction,
                            const int64_t line_size, const int64_t embedding_size) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("scale", scale));
-    JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
-    JUST(attrs.SetAttr<float>("beta1", beta1));
-    JUST(attrs.SetAttr<float>("beta2", beta2));
-    JUST(attrs.SetAttr<float>("epsilon", epsilon));
-    JUST(attrs.SetAttr<bool>("do_bias_correction", do_bias_correction));
-    JUST(attrs.SetAttr<int64_t>("line_size", line_size));
-    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(OneEmbeddingAdamUpdate);
+    const auto attrs = *JUST(GetAttrs(scale, weight_decay, beta1, beta2, epsilon,
+                                      do_bias_correction, line_size, embedding_size));
     if (do_bias_correction) {
       CHECK(bias_correction1);
       CHECK(bias_correction2);
@@ -3522,6 +3996,21 @@ class OneEmbeddingAdagradUpdateFunctor {
                          .Build());
   }
 
+  struct OneEmbeddingAdagradUpdate {
+    Maybe<AttrMap> operator()(const double scale, const float weight_decay, const float lr_decay,
+                              const float epsilon, const int64_t line_size,
+                              const int64_t embedding_size) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("scale", scale));
+      JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
+      JUST(attrs.SetAttr<float>("lr_decay", lr_decay));
+      JUST(attrs.SetAttr<float>("epsilon", epsilon));
+      JUST(attrs.SetAttr<int64_t>("line_size", line_size));
+      JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& num_unique_ids,
                            const std::shared_ptr<one::Tensor>& unique_embeddings,
                            const std::shared_ptr<one::Tensor>& embedding_grad,
@@ -3531,13 +4020,9 @@ class OneEmbeddingAdagradUpdateFunctor {
                            const std::shared_ptr<one::Tensor>& train_step, const double scale,
                            const float weight_decay, const float lr_decay, const float epsilon,
                            const int64_t line_size, const int64_t embedding_size) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("scale", scale));
-    JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
-    JUST(attrs.SetAttr<float>("lr_decay", lr_decay));
-    JUST(attrs.SetAttr<float>("epsilon", epsilon));
-    JUST(attrs.SetAttr<int64_t>("line_size", line_size));
-    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(OneEmbeddingAdagradUpdate);
+    const auto attrs =
+        *JUST(GetAttrs(scale, weight_decay, lr_decay, epsilon, line_size, embedding_size));
     return OpInterpUtil::Dispatch<Tensor>(
         *op_,
         {num_unique_ids, unique_embeddings, embedding_grad, learning_rate, down_scale_by_tensor,
@@ -3564,6 +4049,23 @@ class OneEmbeddingFtrlUpdateFunctor {
                          .Build());
   }
 
+  struct OneEmbeddingFtrlUpdate {
+    Maybe<AttrMap> operator()(const double scale, const float weight_decay, const float lr_power,
+                              const float lambda1, const float lambda2, const float beta,
+                              const int64_t line_size, const int64_t embedding_size) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("scale", scale));
+      JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
+      JUST(attrs.SetAttr<float>("lr_power", lr_power));
+      JUST(attrs.SetAttr<float>("lambda1", lambda1));
+      JUST(attrs.SetAttr<float>("lambda2", lambda2));
+      JUST(attrs.SetAttr<float>("beta", beta));
+      JUST(attrs.SetAttr<int64_t>("line_size", line_size));
+      JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& num_unique_ids,
                            const std::shared_ptr<one::Tensor>& unique_embeddings,
                            const std::shared_ptr<one::Tensor>& embedding_grad,
@@ -3573,15 +4075,9 @@ class OneEmbeddingFtrlUpdateFunctor {
                            const float weight_decay, const float lr_power, const float lambda1,
                            const float lambda2, const float beta, const int64_t line_size,
                            const int64_t embedding_size) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("scale", scale));
-    JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
-    JUST(attrs.SetAttr<float>("lr_power", lr_power));
-    JUST(attrs.SetAttr<float>("lambda1", lambda1));
-    JUST(attrs.SetAttr<float>("lambda2", lambda2));
-    JUST(attrs.SetAttr<float>("beta", beta));
-    JUST(attrs.SetAttr<int64_t>("line_size", line_size));
-    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(OneEmbeddingFtrlUpdate);
+    const auto attrs = *JUST(
+        GetAttrs(scale, weight_decay, lr_power, lambda1, lambda2, beta, line_size, embedding_size));
     return OpInterpUtil::Dispatch<Tensor>(*op_,
                                           {num_unique_ids, unique_embeddings, embedding_grad,
                                            learning_rate, down_scale_by_tensor, skip_if},
@@ -3622,12 +4118,20 @@ class MultiTensorSgdUpdateFunctor {
     }
   }
 
+  struct MultiTensorSgdUpdate {
+    Maybe<AttrMap> operator()(double scale, float weight_decay) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("scale", scale));
+      JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
                          const std::shared_ptr<one::Tensor>& learning_rate, const double& scale,
                          const float& weight_decay) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("scale", scale));
-    JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(MultiTensorSgdUpdate);
+    const auto attrs = *JUST(GetAttrs(scale, weight_decay));
     const int64_t weight_size = model.size();
     for (int i = 0; i < weight_size; i += kMaxInputCount) {
       size_t size = (i + kMaxInputCount) < weight_size ? kMaxInputCount : weight_size - i;
@@ -3660,21 +4164,32 @@ class MultiTensorAdamUpdateFunctor {
     }
   }
 
+  struct MultiTensorAdamUpdate {
+    Maybe<AttrMap> operator()(const float& beta1, const float& beta2,
+                              const float& bias_correction1_val, const float& bias_correction2_val,
+                              const bool& do_bias_correction, const double& scale,
+                              const float& weight_decay) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("scale", scale));
+      JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
+      JUST(attrs.SetAttr<float>("beta1", beta1));
+      JUST(attrs.SetAttr<float>("beta2", beta2));
+      JUST(attrs.SetAttr<float>("bias_correction1_val", bias_correction1_val));
+      JUST(attrs.SetAttr<float>("bias_correction2_val", bias_correction2_val));
+      JUST(attrs.SetAttr<bool>("do_bias_correction", do_bias_correction));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
                          const TensorTuple& m, const TensorTuple& v,
                          const std::shared_ptr<one::Tensor>& learning_rate, const float& beta1,
                          const float& beta2, const float& bias_correction1_val,
                          const float& bias_correction2_val, const bool& do_bias_correction,
                          const double& scale, const float& weight_decay) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("scale", scale));
-    JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
-    JUST(attrs.SetAttr<float>("beta1", beta1));
-    JUST(attrs.SetAttr<float>("beta2", beta2));
-    JUST(attrs.SetAttr<float>("bias_correction1_val", bias_correction1_val));
-    JUST(attrs.SetAttr<float>("bias_correction2_val", bias_correction2_val));
-    JUST(attrs.SetAttr<bool>("do_bias_correction", do_bias_correction));
-
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(MultiTensorAdamUpdate);
+    const auto attrs = *JUST(GetAttrs(beta1, beta2, bias_correction1_val, bias_correction2_val,
+                                      do_bias_correction, scale, weight_decay));
     const int64_t weight_size = model.size();
 
     for (int i = 0; i < weight_size; i += kMaxInputCount) {
