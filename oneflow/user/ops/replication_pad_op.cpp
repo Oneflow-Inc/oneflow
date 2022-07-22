@@ -26,7 +26,7 @@ template<size_t ndim>
 Maybe<void> GetOpSbpSignature(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   const int64_t input_dims = x_tensor.shape().NumAxes();
-  CHECK_EQ_OR_RETURN(input_dims, 4);  // NOLINT
+  CHECK_EQ_OR_RETURN(input_dims, ndim);  // NOLINT
   // NOTE(Liang Depeng): assume data format is NCHW.
   const int64_t first_two_dims = input_dims - (ndim - 2);
   FOR_RANGE(int64_t, i, 0, first_two_dims) {
@@ -40,7 +40,7 @@ template<size_t ndim>
 Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
   const int64_t grad_dims = dy_tensor.shape().NumAxes();
-  CHECK_EQ_OR_RETURN(grad_dims, 4);  // NOLINT
+  CHECK_EQ_OR_RETURN(grad_dims, ndim);  // NOLINT
   const int64_t first_two_dims = grad_dims - (ndim - 2);
   FOR_RANGE(int64_t, i, 0, first_two_dims) {
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
@@ -189,7 +189,7 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
 
 REGISTER_USER_OP_GRAD("replication_pad1d")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =

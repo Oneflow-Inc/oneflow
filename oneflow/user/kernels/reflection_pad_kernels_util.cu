@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
 #ifdef WITH_CUDA
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/framework/framework.h"
@@ -73,9 +72,9 @@ struct ReflectionPad1dFunctor<DeviceType::kCUDA, IN_T> final {
                   const NdIndexOffsetHelper<int64_t, 3>& index_helper, const int64_t n_batch,
                   const int64_t n_channel, const int64_t y_width, const int64_t x_width,
                   const int64_t pad_left) {
-    int64_t dest_num = n_channel * y_width;
-    int64_t src_num = n_channel * x_width;
-    int64_t elem_num = n_batch * dest_num;
+    const int64_t dest_num = n_channel * y_width;
+    const int64_t src_num = n_channel * x_width;
+    const int64_t elem_num = n_batch * dest_num;
     DoCUDAReflectionPad1d<IN_T><<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0,
                                   stream->As<ep::CudaStream>()->cuda_stream()>>>(
         src, dest, index_helper, elem_num, src_num, dest_num, y_width, x_width, pad_left);
@@ -88,9 +87,9 @@ void ReflectionPad1dFunctor<DeviceType::kCUDA, float16>::operator()(
     ep::Stream* stream, const float16* src, float16* dest,
     const NdIndexOffsetHelper<int64_t, 3>& index_helper, const int64_t n_batch,
     const int64_t n_channel, const int64_t y_width, const int64_t x_width, const int64_t pad_left) {
-  int64_t dest_num = n_channel * y_width;
-  int64_t src_num = n_channel * x_width;
-  int64_t elem_num = n_batch * dest_num;
+  const int64_t dest_num = n_channel * y_width;
+  const int64_t src_num = n_channel * x_width;
+  const int64_t elem_num = n_batch * dest_num;
   DoCUDAReflectionPad1d<half><<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0,
                                 stream->As<ep::CudaStream>()->cuda_stream()>>>(
       reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), index_helper, elem_num,
@@ -103,9 +102,9 @@ struct ReflectionPad1dGradFunctor<DeviceType::kCUDA, IN_T> final {
                   const NdIndexOffsetHelper<int64_t, 3>& index_helper, const int64_t n_batch,
                   const int64_t n_channel, const int64_t dy_width, const int64_t dx_width,
                   const int64_t pad_left) {
-    int64_t dest_num = n_channel * dx_width;
-    int64_t src_num = n_channel * dy_width;
-    int64_t elem_num = n_batch * src_num;
+    const int64_t dest_num = n_channel * dx_width;
+    const int64_t src_num = n_channel * dy_width;
+    const int64_t elem_num = n_batch * src_num;
     DoCUDAReflectionPad1dGrad<IN_T><<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0,
                                       stream->As<ep::CudaStream>()->cuda_stream()>>>(
         src, dest, index_helper, elem_num, src_num, dest_num, dy_width, dx_width, pad_left);
@@ -119,9 +118,9 @@ void ReflectionPad1dGradFunctor<DeviceType::kCUDA, float16>::operator()(
     const NdIndexOffsetHelper<int64_t, 3>& index_helper, const int64_t n_batch,
     const int64_t n_channel, const int64_t dy_width, const int64_t dx_width,
     const int64_t pad_left) {
-  int64_t dest_num = n_channel * dx_width;
-  int64_t src_num = n_channel * dy_width;
-  int64_t elem_num = n_batch * src_num;
+  const int64_t dest_num = n_channel * dx_width;
+  const int64_t src_num = n_channel * dy_width;
+  const int64_t elem_num = n_batch * src_num;
   DoCUDAReflectionPad1dGrad<half><<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0,
                                     stream->As<ep::CudaStream>()->cuda_stream()>>>(
       reinterpret_cast<const half*>(src), reinterpret_cast<half*>(dest), index_helper, elem_num,

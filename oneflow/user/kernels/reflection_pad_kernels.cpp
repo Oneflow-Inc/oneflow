@@ -107,8 +107,6 @@ class ReflectionPad2dKernel final : public OpKernel {
     const Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-    const int64_t ndims = x->shape_view().NumAxes();
-    CHECK_EQ(padding.size(), ndims);
     const int64_t n_idx = 0;
     const int64_t c_idx = 1;
     const int64_t h_idx = 2;
@@ -148,8 +146,6 @@ class ReflectionPad2dGradKernel final : public OpKernel {
     const Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-    const int64_t ndims = dy->shape_view().NumAxes();
-    CHECK_EQ(padding.size(), ndims);
 
     const int64_t n_idx = 0;
     const int64_t c_idx = 1;
