@@ -65,12 +65,12 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
     // Set Middle result shape.
     long cublas_aligned_aux_ld = AlignReluAuxLd(cublas_aux_ld);
     int64_t aux_size = cublas_aligned_aux_ld / 32;  // Cause we use int32_t as dtype
-    *ctx->OutputShape("cublas_aux", idx) = Shape({m, aux_size});
-    *ctx->OutputShape("hidden", idx) = Shape({m, n});
+    *ctx->MutOutputShape("cublas_aux", idx) = Shape({m, aux_size});
+    *ctx->MutOutputShape("hidden", idx) = Shape({m, n});
     // Set for next layer.
     k = n;
   }
-  *ctx->OutputShape("out", 0) = {m, n};
+  *ctx->MutOutputShape("out", 0) = {m, n};
   return Maybe<void>::Ok();
 }
 

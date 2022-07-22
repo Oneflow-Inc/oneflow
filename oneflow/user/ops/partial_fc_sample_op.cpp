@@ -111,11 +111,11 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> DistributedPartialFcSampleDisableBoxingOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->OutputShape("boxing_disabled_sampled_weight_diff", 0) =
+  *ctx->MutOutputShape("boxing_disabled_sampled_weight_diff", 0) =
       ctx->InputShape("sampled_weight_diff", 0);
   *ctx->OutputIsDynamic("boxing_disabled_sampled_weight_diff", 0) =
       ctx->InputIsDynamic("sampled_weight_diff", 0);
-  *ctx->OutputShape("boxing_disabled_sampled_label", 0) = ctx->InputShape("sampled_label", 0);
+  *ctx->MutOutputShape("boxing_disabled_sampled_label", 0) = ctx->InputShape("sampled_label", 0);
   *ctx->OutputIsDynamic("boxing_disabled_sampled_label", 0) =
       ctx->InputIsDynamic("sampled_label", 0);
   return Maybe<void>::Ok();

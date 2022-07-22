@@ -170,7 +170,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
     const int64_t diff = stop - start - 1;
     dim_vec[i] = diff / step + 1;
   }
-  *ctx->OutputShape("y", 0) = Shape(dim_vec);
+  *ctx->MutOutputShape("y", 0) = Shape(dim_vec);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -198,7 +198,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
   const TensorSliceView& slice_view =
       GetTensorSliceView4ParallelId(parallel_hierarchy, y_nd_sbp, logical_shape, parallel_id);
-  *ctx->OutputShape("y", 0) = Shape(slice_view.shape());
+  *ctx->MutOutputShape("y", 0) = Shape(slice_view.shape());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceOp::InferDataType(user_op::InferContext* ctx) {
@@ -253,7 +253,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
       << Error::RuntimeError()
       << "The size of step list must be equal to the dimension of ref tensor, "
       << "but got " << step_vec.size() << " and " << ndim;
-  *ctx->OutputShape("dx", 0) = like_shape;
+  *ctx->MutOutputShape("dx", 0) = like_shape;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
