@@ -31,7 +31,7 @@ class TestModule(flow.unittest.TestCase):
         with test_case.assertRaises(RuntimeError) as ctx:
             y = x.reshape((-2, 4))
         test_case.assertTrue("Invalid shape dimension -2" in str(ctx.exception))
-    
+
     def test_reshape_exception_invalid_size(test_case):
         # torch exception and messge:
         #
