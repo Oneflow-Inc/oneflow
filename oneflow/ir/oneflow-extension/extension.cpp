@@ -49,7 +49,7 @@ REGISTER_USER_OP("mlir_jit")
       CHECK_EQ(ctx->inputs().size(), 2);
       CHECK_EQ(ctx->outputs().size(), 1);
       const Shape& in_shape = ctx->InputShape("in", 0);
-      Shape* out_shape = ctx->OutputShape("out", 0);
+      Shape* out_shape = ctx->MutOutputShape("out", 0);
       *out_shape = in_shape;
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 1);
       return Maybe<void>::Ok();
