@@ -90,26 +90,6 @@ void ScanOuterDim(ep::Stream* ep_stream, const ShapeView& in_shape, int64_t dim,
                   space, down_space);
 }
 
-template<typename T, int num_threads_x, template<typename> class BinaryFunc>
-__inline__ __device__ void UpSweep(T* row_buf) {
-  for (uint32_t s = num_threads_x, d = 1; s >= 1; s >>= 1, d <<= 1) {
-    if (threadIdx.x < s) {
-      uint32_t offset = (2 * threadIdx.x + 1) * d - 1;
-      row_buf[offset + d] = BinaryFunc<T>()(row_buf[offset], row_buf[offset + d]);
-    }
-  }
-}
-
-template<typename T, int num_threads_x, template<typename> class BinaryFunc>
-__inline__ __device__ void DownSweep(T* row_buf) {
-  for (uint32_t s = 2, d = num_threads_x / 2; d >= 1; s <<= 1, d >>= 1) {
-    if (threadIdx.x < s - 1) {
-      uint32_t offset = 2 * (threadIdx.x + 1) * d - 1;
-      row_buf[offset + d] = BinaryFunc<T>()(row_buf[offset], row_buf[offset + d]);
-    }
-  }
-}
-
 // Refer from
 // https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/ScanKernels.cu
 template<typename T, int num_threads_x, int num_threads_y, template<typename> class BinaryFunc>
