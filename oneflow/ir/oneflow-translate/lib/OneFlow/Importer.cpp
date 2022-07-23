@@ -413,7 +413,7 @@ Attribute ConvertNdSbpToPsig(Builder& builder,
     } else if (sbp.has_partial_sum_parallel()) {
       attr = sbp::PartialSumAttr::get(ctx);
     } else {
-      llvm::errs() << "unsupported sbp: nd_sbp from string";
+      llvm::errs() << "Unsupported sbp type from nd_sbp";
     }
     outputs_vec.push_back(attr);
   }
