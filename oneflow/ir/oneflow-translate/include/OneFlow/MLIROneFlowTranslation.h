@@ -54,8 +54,7 @@ LogicalResult ConvertOutputOpConf(OutputOp op, ::oneflow::OperatorConf* op_conf)
 LogicalResult ParseNdSbpFromAttr(ArrayAttr nd_sbp_attr, ::oneflow::NdSbp* nd_sbp);
 Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp);
 Attribute ConvertSBPToString(Builder& builder, ::mlir::sbp::ParallelSignatureAttr& parallel);
-Attribute ConvertNdSbpToPsig(Builder& builder,
-                             const std::vector<std::string>& nd_sbp,
+Attribute ConvertNdSbpToPsig(Builder& builder, const std::vector<std::string>& nd_sbp,
                              const int nd_size);
 
 class Importer {

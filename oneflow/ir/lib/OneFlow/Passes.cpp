@@ -574,7 +574,6 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
       if (sbp_string != "") nd_sbp_str.push_back(sbp_string);
     });
 
-
     attrs.set(name, ConvertNdSbpToPsig(rewriter, nd_sbp_str, nd_size));
     auto op_new = rewriter.create<oneflow::VariableOp>(op->getLoc(), op.output().getType(),
                                                        ValueRange(), attrs);
