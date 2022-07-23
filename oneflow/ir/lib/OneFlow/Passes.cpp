@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <algorithm>
 #include <vector>
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
@@ -61,6 +62,7 @@ limitations under the License.
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/framework/sbp_context.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
 
 #ifdef WITH_MLIR_CUDA_CODEGEN
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
@@ -562,41 +564,16 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
     auto name = VariableOp::parallelAttrName(
         OperationName(VariableOp::getOperationName(), rewriter.getContext()));
 
-    auto str2sbp = [&](ArrayAttr nd_sbp, int nd_size) -> Attribute {
-      auto ctx = rewriter.getContext();
-      std::vector<mlir::Attribute> outputs_vec;
-      for (const auto& sbp_data : nd_sbp) {
-        ::oneflow::SbpParallel sbp;
-        auto sbp_string = sbp_data.dyn_cast<StringAttr>().str();
-        if (sbp_string == "") continue;
-        ParseSbpParallelFromString(sbp_string, &sbp);
-        Attribute attr;
-        if (sbp.has_split_parallel()) {
-          attr = sbp::SplitAttr::get(ctx, sbp.split_parallel().axis());
-        } else if (sbp.has_broadcast_parallel()) {
-          attr = sbp::BroadcastAttr::get(ctx);
-        } else if (sbp.has_partial_sum_parallel()) {
-          attr = sbp::PartialSumAttr::get(ctx);
-        } else {
-          llvm::errs() << "unsupported sbp: nd_sbp from string\n";
-        }
-        outputs_vec.push_back(attr);
-      }
-
-      auto inputs = rewriter.getArrayAttr({});
-      ArrayAttr outputs;
-
-      std::vector<mlir::Attribute> outputs_vec_nd;
-      for (auto iter = outputs_vec.begin(); iter < outputs_vec.end(); iter += nd_size) {
-        outputs_vec_nd.emplace_back(
-            rewriter.getArrayAttr(std::vector<Attribute>(iter, iter + nd_size)));
-      }
-      outputs = rewriter.getArrayAttr(outputs_vec_nd);
-      auto res = sbp::ParallelSignatureAttr::get(ctx, inputs, outputs);
-      return res;
-    };
     auto nd_size = op.hierarchy()->size();
-    attrs.set(name, str2sbp(op.nd_sbpAttr(), nd_size));
+    ArrayAttr nd_sbp = op.nd_sbp();
+    std::vector<std::string> nd_sbp_str;
+    std::for_each(nd_sbp.begin(), nd_sbp.end(), [&](Attribute elem) {
+      auto sbp_string = elem.dyn_cast<StringAttr>().str();
+      if (sbp_string != "") nd_sbp_str.push_back(sbp_string);
+    });
+
+
+    attrs.set(name, ConvertNdSbpToPsig(rewriter, nd_sbp_str, nd_size));
     auto op_new = rewriter.create<oneflow::VariableOp>(op->getLoc(), op.output().getType(),
                                                        ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
