@@ -31,7 +31,7 @@ int32_t TransformNegativeAxisToPositive(int32_t axis, const int32_t num_axes) {
 
 /* static */ Maybe<void> ExpandDimsOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->OutputShape("out", 0);
+  Shape* out_shape = ctx->MutOutputShape("out", 0);
   const int32_t axis =
       TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_shape.NumAxes());
 

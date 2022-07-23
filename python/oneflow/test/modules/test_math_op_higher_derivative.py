@@ -23,20 +23,30 @@ from oneflow.test_utils.automated_test_util import *
 
 def _test_math_op_grad_grad_impl(test_case, op_name):
     x = random_tensor(ndim=2).requires_grad_(True)
-    y = eval(f"x.{op_name}().sum()")
-    x_grad = torch.autograd.grad(y, x, create_graph=True)[0]
+    y = eval(f"x.{op_name}()")
+    np_arr = np.random.rand(*x.oneflow.shape)
+    init_grad = torch.tensor(np_arr).requires_grad_()
+
+    x_grad = torch.autograd.grad(y, x, init_grad, create_graph=True)[0]
     test_case.assertTrue(
         np.allclose(
             x_grad.pytorch.detach().cpu().numpy(), x_grad.oneflow.detach().numpy()
         )
     )
-    x_grad_grad = torch.autograd.grad(x_grad, x, torch.ones_like(x), create_graph=True)[
-        0
-    ]
+
+    x_grad_grad = torch.autograd.grad(x_grad, x, init_grad, create_graph=True)[0]
     test_case.assertTrue(
         np.allclose(
             x_grad_grad.pytorch.detach().cpu().numpy(),
             x_grad_grad.oneflow.detach().numpy(),
+        )
+    )
+
+    init_grad_grad = torch.tensor(np_arr).requires_grad_()
+    dgrad = torch.autograd.grad(x_grad, init_grad, init_grad_grad, create_graph=True)[0]
+    test_case.assertTrue(
+        np.allclose(
+            dgrad.pytorch.detach().cpu().numpy(), dgrad.oneflow.detach().numpy(),
         )
     )
 
