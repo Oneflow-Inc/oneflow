@@ -1342,6 +1342,25 @@ def OneFlow_BinaryCrossEntropyWithLogitsReduceMeanGradOp : OneFlow_BaseOp<"binar
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_FusedBCEReduceMeanFwBwOp : OneFlow_BaseOp<"fused_bce_reduce_mean_fw_bw", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$target
+  );
+  let output = (outs
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$dx
+  );
+  let attrs = (ins
+    OneFlow_DataType:$out_dtype,
+    DefaultValuedAttr<F64Attr, "0.">:$constant_value
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_SigmoidCrossEntropyOp : OneFlow_BaseOp<"sigmoid_cross_entropy", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$prediction,
