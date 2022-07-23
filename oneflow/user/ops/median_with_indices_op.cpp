@@ -31,8 +31,8 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> MedianWithIndicesOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& input_shape = ctx->InputShape("input", 0);
-  Shape* values_shape = ctx->OutputShape("values", 0);
-  Shape* indices_shape = ctx->OutputShape("indices", 0);
+  Shape* values_shape = ctx->MutOutputShape("values", 0);
+  Shape* indices_shape = ctx->MutOutputShape("indices", 0);
   const Shape& reduce_shape = CreateReducedShape(input_shape, {-1});
   *values_shape = reduce_shape.RemoveOnes({-1});
   *indices_shape = reduce_shape.RemoveOnes({-1});

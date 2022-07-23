@@ -528,6 +528,15 @@
   signature: "Tensor (Tensor dy, Tensor y) => ReluGrad"
   bind_python: False
 
+- name: "hann_window"
+  signature: [
+    "Tensor (Int64 window_length, Bool periodic=True, *, Device device=None, DataType dtype=None, 
+      Bool requires_grad=False) => HannWindow",
+    "Tensor (Int64 window_length, Bool periodic=True, *, Placement placement, SbpList sbp, DataType dtype=None,
+      Bool requires_grad=False) => GlobalHannWindow" 
+      ]
+  bind_python: True
+
 - name: "hardtanh"
   signature: "Tensor (Tensor x, Double min_val, Double max_val) => HardTanh"
   bind_python: True
@@ -916,6 +925,10 @@
   signature: "Tensor (Tensor input, Int32 dim) => Unsqueeze"
   bind_python: True
 
+- name: "unsqueeze_multiple"
+  signature: "Tensor (Tensor input, Int32List dim, Int32 dims) => UnsqueezeMultiple"
+  bind_python: False
+  
 - name: "squeeze"
   signature: [
     "Tensor (Tensor x, Int32List[1] dim=None) => Squeeze",
@@ -988,7 +1001,7 @@
 
 - name: "fused_mlp_grad"
   signature:
-    "TensorTuple (Tensor dy, Tensor x, TensorTuple weights, TensorTuple cublas_aux, TensorTuple hidden) => FusedMLPGrad"
+    "TensorTuple (Tensor dy, Tensor x, TensorTuple weights, TensorTuple cublas_aux, TensorTuple hidden, FloatList alpha_list) => FusedMLPGrad"
   bind_python: False
 
 - name: "cublas_bias_add_relu_matmul_grad"

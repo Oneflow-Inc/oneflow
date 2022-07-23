@@ -31,12 +31,12 @@ Maybe<void> InferFWTensorDesc(user_op::InferContext* ctx) {
     out_shape[i] = output_size.size() > i - 2 ? output_size[i - 2] : output_size[0];
   }
 
-  *ctx->OutputShape("y", 0) = Shape(out_shape);
+  *ctx->MutOutputShape("y", 0) = Shape(out_shape);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferBWTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
+  *ctx->MutOutputShape("dx", 0) = ctx->InputShape("x", 0);
   *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x", 0);
   return Maybe<void>::Ok();
 }
