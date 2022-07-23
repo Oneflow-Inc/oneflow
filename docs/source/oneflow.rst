@@ -199,6 +199,7 @@ Pointwise Ops
     arccos 
     arccosh
     add 
+    addcdiv
     addcmul
     asin 
     asinh 

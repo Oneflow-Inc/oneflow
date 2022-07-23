@@ -928,6 +928,20 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.addcdiv,
+    """
+    See :func:`oneflow.addcdiv`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.addcdiv_,
+    """
+    In-place version of :func:`oneflow.Tensor.addcdiv`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.dim,
     """
     Tensor.dim() → int
