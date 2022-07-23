@@ -55,6 +55,7 @@ Creation Ops
     empty
     full
     full_like
+    logspace
 
 .. _indexing-slicing-joining:
 
@@ -298,6 +299,16 @@ Comparison Ops
     minimum
     not_equal
 
+Spectral Ops
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    
+    hann_window
+    
 Other Ops
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -335,6 +346,4 @@ BLAS and LAPACK Operations
     matmul
     mm
     mv
-
-
 
