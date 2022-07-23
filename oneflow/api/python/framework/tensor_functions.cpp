@@ -256,6 +256,8 @@ DIRECT_PASS_FUNC(PyTensorObject_amin, functional::amin)
 DIRECT_PASS_FUNC(PyTensorObject_amax, functional::amax)
 DIRECT_PASS_FUNC(PyTensorObject_addcmul, functional::addcmul)
 DIRECT_PASS_FUNC(PyTensorObject_addcmul_, functional::addcmul_)
+DIRECT_PASS_FUNC(PyTensorObject_addcdiv, functional::addcdiv)
+DIRECT_PASS_FUNC(PyTensorObject_addcdiv_, functional::addcdiv_)
 DIRECT_PASS_FUNC(PyTensorObject_clip, functional::clip)
 DIRECT_PASS_FUNC(PyTensorObject_clip_, functional::clip_)
 DIRECT_PASS_FUNC(PyTensorObject_clamp, functional::clamp)
@@ -647,8 +649,9 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
     return NULL;
   };
 
-  CHECK_OR_THROW(placement_obj != Py_None && sbp_obj != Py_None) << Error::InvalidValueError(
-      "Converting a local tensor to global tensor must have placement and sbp parameters.");
+  CHECK_OR_THROW(placement_obj != Py_None && sbp_obj != Py_None)
+      << Error::InvalidValueError()
+      << "Converting a local tensor to global tensor must have placement and sbp parameters.";
   CHECK_OR_THROW(functional::PyParallelDescCheck(placement_obj))
       << Error::TypeError() << "Invalid parameter placement with type "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(placement_obj)));
@@ -811,6 +814,8 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"diagonal", (PyCFunction)PyTensorObject_diagonal, METH_VARARGS | METH_KEYWORDS, NULL},
     {"addcmul", (PyCFunction)PyTensorObject_addcmul, METH_VARARGS | METH_KEYWORDS, NULL},
     {"addcmul_", (PyCFunction)PyTensorObject_addcmul_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"addcdiv", (PyCFunction)PyTensorObject_addcdiv, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"addcdiv_", (PyCFunction)PyTensorObject_addcdiv_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"matmul", (PyCFunction)PyTensorObject_matmul, METH_VARARGS | METH_KEYWORDS, NULL},
     {"int", PyTensorObject_int, METH_NOARGS, NULL},
     {"long", PyTensorObject_long, METH_NOARGS, NULL},

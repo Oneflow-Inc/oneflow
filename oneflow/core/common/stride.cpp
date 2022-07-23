@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/stride.h"
+#include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/cplusplus_17.h"
 
@@ -29,7 +30,7 @@ Stride::Stride(const Shape& shape) {
                           std::multiplies<>{});
     } else if (ndim > 0 && shape.elem_cnt() == 0) {
       // 0-size shape
-      std::vector<int64_t> tmp_shape(ndim);
+      small_vector<int64_t, kMaxNumDims> tmp_shape(ndim);
       for (int64_t i = 0; i < ndim; ++i) { tmp_shape[i] = shape.At(i) > 0 ? shape.At(i) : 1; }
       std::exclusive_scan(tmp_shape.rbegin(), tmp_shape.rend(), rbegin(), (int64_t)1,
                           std::multiplies<>{});

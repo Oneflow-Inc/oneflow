@@ -221,14 +221,8 @@ class Tanh(Module):
 
 
 class ELU(Module):
-    """Applies the element-wise function:
-
-    .. math::
-
-        \\text{ELU}(x) = \\begin{cases}
-				x & \\text{ if } x \\gt 0  \\\\
-                \\alpha*(exp(x)-1) & \\text{ if } x \\le 0 \\\\
-    		    \\end{cases}
+    """Applies the element-wise function 
+        :math:`\\text{ELU}(x) = \\begin{cases}x & \\text{ if } x \\gt 0  \\\\\\alpha*(exp(x)-1) & \\text{ if } x \\le 0 \\\\\\end{cases}`
 
     Args:
         alpha: the :math:`\\alpha` value for the ELU formulation. Default: 1.0
@@ -325,18 +319,28 @@ class CELU(Module):
 
 
 class GELU(Module):
-    """Gelu activation operator.
+    """
+    GELU(approximate='none') -> Tensor
 
-    The equation is:
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.GELU.html.
 
-    .. math::
-        out = 0.5 * x * (1 + tanh(\\sqrt{\\frac{2}{\\pi}} * (x + 0.044715x^{3})))
+    Applies the Gaussian Error Linear Units function:
+
+    .. math:: \\text{GELU}(x) = x * \Phi(x)
+
+    where :math:`\Phi(x)` is the Cumulative Distribution Function for Gaussian Distribution.
+
+    When the approximate argument is 'tanh', Gelu is estimated with:
+
+    .. math:: \\text{GELU}(x) = 0.5 * x * (1 + \\text{Tanh}(\sqrt(2 / \pi) * (x + 0.044715 * x^3)))
 
     Args:
-        x (oneflow.Tensor): Input Tensor
+        input (oneflow.Tensor): Input Tensor
+        approximate (string, optional): the gelu approximation algorithm to use:
+            ``'none'`` | ``'tanh'``. Default: ``'none'``
 
     Returns:
-        oneflow.Tensor: A Tensor.
+        oneflow.Tensor: A Tensor has same shape as the input.
 
     For example:
 
@@ -355,11 +359,15 @@ class GELU(Module):
 
     """
 
-    def __init__(self):
+    def __init__(self, approximate: str = "none"):
         super().__init__()
+        self.approximate = approximate
 
-    def forward(self, x):
-        return flow._C.gelu(x)
+    def forward(self, input):
+        if self.approximate == "none" or self.approximate == "tanh":
+            return flow._C.gelu_with_approximate(input, self.approximate)
+        else:
+            raise NotImplementedError
 
 
 class Sigmoid(Module):
@@ -685,8 +693,8 @@ class Softplus(Module):
 
 
 class Hardswish(Module):
-    """Applies the hardswish function, element-wise, as described in the paper:
-    `Searching for MobileNetV3`_.
+    """Applies the hardswish function, element-wise, as described in the paper `Searching for MobileNetV3
+    <https://arxiv.org/abs/1905.02244>`__.
 
     .. math::
         \\text{Hardswish}(x) = \\begin{cases}
@@ -715,9 +723,7 @@ class Hardswish(Module):
         >>> out = hardswish(input)
         >>> out
         tensor([-0.2083,  0.0000,  0.2917], dtype=oneflow.float32)
-
-    .. _`Searching for MobileNetV3`:
-        https://arxiv.org/abs/1905.02244
+        
     """
 
     def __init__(self, inplace: bool = False):
@@ -994,9 +1000,6 @@ class SELU(Module):
 
 class Softshrink(Module):
     r"""
-    The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Softshrink.html.
-
     The Softshrink activation.
 
     The formula is:
@@ -1009,6 +1012,9 @@ class Softshrink(Module):
         x + \lambd, & \text{ if } x < -\lambda \\
         0, & \text{ otherwise }
         \end{cases}
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Softshrink.html.
 
     Args:
         lambd: the :math:`\lambda` value for the Softshrink formulation. Default: 0.5

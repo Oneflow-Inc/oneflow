@@ -45,7 +45,7 @@ def _test_deconv2d_impl(test_case, placement, input_sbp):
     )
     m.train(random())
 
-    weight_sbp = random_sbp(placement, max_dim=2)
+    weight_sbp = random_sbp(placement, max_dim=2, except_partial_sum=True)
     m.weight = torch.nn.Parameter(
         m.weight.to_global(placement=placement, sbp=weight_sbp)
     )
