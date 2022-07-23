@@ -257,10 +257,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
   const user_op::TensorDesc& TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-    if (it == arg2tensor_desc_.end()) {
-      PRINT_BUG_PROMPT_AND_ABORT();
-      return *(user_op::TensorDesc*)nullptr;
-    }
+    if (it == arg2tensor_desc_.end()) { return *(user_op::TensorDesc*)nullptr; }
     return *it->second;
   }
   user_op::TensorDesc* MutTensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) {

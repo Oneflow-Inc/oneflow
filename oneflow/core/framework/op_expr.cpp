@@ -212,7 +212,6 @@ class UserOpExprInferContext : public user_op::InferContext {
         return *const_cast<TensorMeta*>(tensor_meta4input_index_(tuple_index));
       }
     }
-    PRINT_BUG_PROMPT_AND_ABORT();
     return *(user_op::TensorDesc*)nullptr;
   }
 

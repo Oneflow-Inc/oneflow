@@ -60,7 +60,6 @@ class ZeroCopyBaseContextHelper {
     inedx = TryGetTensorTupleIndex(output_arg_tuple_->arg_name2bn_index2tensor_tuple_index(),
                                    arg_name, index);
     if (inedx >= 0) { return *call_ctx->outputs().at(inedx); }
-    PRINT_BUG_PROMPT_AND_ABORT();
     return *(user_op::TensorDesc*)nullptr;
   }
   user_op::TensorDesc* MutTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
@@ -332,6 +331,9 @@ class UserOpInferContextHelper final {
                                                                const std::string& arg_name,
                                                                int32_t index) const {
     const user_op::TensorDesc& tensor_desc = TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
+    if ((&tensor_desc) == nullptr) {
+      LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found";
+    }
     return tensor_desc;
   }
   user_op::TensorDesc* MutNonNullTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
@@ -498,12 +500,6 @@ class UserKernelComputeContextHelper final {
     return base_ctx_helper_.TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
   }
 
-  const user_op::TensorDesc* MutTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
-                                                           const std::string& arg_name,
-                                                           int32_t index) const {
-    return base_ctx_helper_.MutTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
-  }
-
   user_op::Tensor* Tensor4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
                                           int32_t index) const {
     return base_ctx_helper_.Tensor4ArgNameAndIndex(call_ctx, arg_name, index);
@@ -590,11 +586,6 @@ class UserKernelRegContextHelper final {
                                                         int32_t index) const {
     return base_ctx_helper_.TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  const user_op::TensorDesc* MutTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
-                                                           const std::string& arg_name,
-                                                           int32_t index) const {
-    return base_ctx_helper_.MutTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
-  }
   const ArgVec& inputs() const { return base_ctx_helper_.inputs(); }
   const ArgVec& outputs() const { return base_ctx_helper_.outputs(); }
 
@@ -659,11 +650,6 @@ class UserKernelInitAndCacheContextHelper final {
                                                         int32_t index) const {
     return base_ctx_helper_.TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
   }
-  const user_op::TensorDesc* MutTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
-                                                           const std::string& arg_name,
-                                                           int32_t index) const {
-    return base_ctx_helper_.MutTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
-  }
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
                                                                const std::string& arg_name,
                                                                int32_t index) const {
@@ -719,7 +705,7 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
   const ParallelContext& parallel_ctx() const override { return helper_->parallel_ctx(call_ctx_); }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
-    return helper_->MutTensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
+    return &helper_->TensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                                int32_t index) const override {
