@@ -903,7 +903,7 @@ std::string ConvertJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper) {
     return mlir;
   } else {
     const auto& job_name = job->job_conf().job_name();
-    llvm::errs() << "fail to convert job to IR, job_name: " << job_name << "\n";
+    llvm::errs() << "Failed to convert Job to IR, job_name: " << job_name << "\n";
     exit(EXIT_FAILURE);
   }
 }
