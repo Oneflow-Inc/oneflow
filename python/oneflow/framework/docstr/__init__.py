@@ -76,4 +76,5 @@ from .amin import *
 from .deconv import *
 from .logical_ops import *
 from .addcdiv import *
+from .hann_window import *
 from .convolution import *

@@ -177,6 +177,7 @@ from oneflow._C import permute
 from oneflow._C import select
 from oneflow._C import unbind
 from oneflow._C import tensor_split
+from oneflow._C import hann_window
 from oneflow._C import hsplit
 from oneflow._C import vsplit
 from oneflow._C import concat
