@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <cub/cub.cuh>
+#include <type_traits>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -146,12 +147,21 @@ __device__ void ScanInnerMostDimKernelImpl(T* row_buf, T* src_, T* tgt_, const u
       }
       __syncthreads();
 
-      if (row < num_rows) { UpSweep<T, num_threads_x, BinaryFunc>(row_buf); }
-      __syncthreads();
+      for (uint32_t s = num_threads_x, d = 1; s >= 1; s >>= 1, d <<= 1) {
+        if (row < num_rows && threadIdx.x < s) {
+          uint32_t offset = (2 * threadIdx.x + 1) * d - 1;
+          row_buf[offset + d] = BinaryFunc<T>()(row_buf[offset], row_buf[offset + d]);
+        }
+        __syncthreads();
+      }
 
-      if (row < num_rows) { DownSweep<T, num_threads_x, BinaryFunc>(row_buf); }
-      __syncthreads();
-
+      for (uint32_t s = 2, d = num_threads_x / 2; d >= 1; s <<= 1, d >>= 1) {
+        if (row < num_rows && threadIdx.x < s - 1) {
+          uint32_t offset = 2 * (threadIdx.x + 1) * d - 1;
+          row_buf[offset + d] = BinaryFunc<T>()(row_buf[offset], row_buf[offset + d]);
+        }
+        __syncthreads();
+      }
       // Write back to output.
       if (row < num_rows) {
         if (col1 < row_size) row_tgt[col1] = row_buf[threadIdx.x];
@@ -178,8 +188,17 @@ void ScanInnerMostDim(const T* in_ptr, T* out_ptr, const int64_t num_rows, const
   dim3 block(16, 32);
   const int64_t max_grid_dim = cuda_stream->device()->properties().maxGridSize[0];
   dim3 grid(std::min(max_grid_dim, CeilDiv(num_rows, (int64_t)block.y)));
-  ScanInnerMostDimKernel<T, 16, 32, BinaryFunctor>
-      <<<grid, block, 0, cuda_stream->cuda_stream()>>>(in_ptr, out_ptr, num_rows, row_size, 0);
+  if (std::is_same<BinaryFunctor<T>, SumFunctor<T>>::value) {
+    ScanInnerMostDimKernel<T, 16, 32, SumFunctor>
+        <<<grid, block, 0, cuda_stream->cuda_stream()>>>(in_ptr, out_ptr, num_rows, row_size,
+                                                         /*init*/ 0);
+  } else if (std::is_same<BinaryFunctor<T>, ProdFunctor<T>>::value) {
+    ScanInnerMostDimKernel<T, 16, 32, ProdFunctor>
+        <<<grid, block, 0, cuda_stream->cuda_stream()>>>(in_ptr, out_ptr, num_rows, row_size,
+                                                         /*init*/ 1);
+  } else {
+    UNIMPLEMENTED() << "Only Support cumsum and cumprod for now.";
+  }
 }
 
 template<typename T, template<typename> class BinaryFunc>
