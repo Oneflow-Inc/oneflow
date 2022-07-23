@@ -252,7 +252,7 @@ void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::O
 }
 
 size_t InferTmpBufferSize(user_op::InferContext* ctx) {
-  const Shape* out_shape = ctx->OutputShape("out", 0);
+  const Shape& out_shape = ctx->OutputShape("out", 0);
   const user_op::TensorDesc* logical_in_tensor = ctx->LogicalTensorDesc4ArgNameAndIndex("in", 0);
   const Shape& logical_shape = logical_in_tensor->shape();
   const DataType data_type = logical_in_tensor->data_type();
@@ -278,7 +278,7 @@ size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   }
   if (NdSbpHasPartialParallel(src_nd_sbp)) {
     // Note: when src_nd_sbp has partial_sum, need a out_size buffer to copy and add to out.
-    buf_count += out_shape->elem_cnt();
+    buf_count += out_shape.elem_cnt();
   }
   return buf_count * GetSizeOfDataType(data_type);
 }

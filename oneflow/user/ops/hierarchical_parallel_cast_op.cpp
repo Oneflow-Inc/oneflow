@@ -21,7 +21,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> HierarchicalParallelCastOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
   *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
   return Maybe<void>::Ok();
 }
@@ -57,7 +57,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> HierarchicalParallelCastLikeOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
   *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
   return Maybe<void>::Ok();
 }

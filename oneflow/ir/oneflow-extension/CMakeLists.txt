@@ -2,6 +2,8 @@ oneflow_add_mlir_library(
   MLIROneFlowExtension
   extension.cpp
   ir_pass.cpp
+  lr_jit.cpp
+  mlir_gen.cpp
   DEPENDS
   LINK_LIBS
   PUBLIC
