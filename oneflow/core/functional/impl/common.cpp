@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/wrap_dim_utils.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 namespace one {
@@ -138,34 +139,33 @@ Optional<Stride> ComputeStride(const Shape& shape, const Stride& stride,
   return target_stride;
 }
 
-Maybe<Shape> InferShape(const std::shared_ptr<one::Tensor>& x, const Shape& shape) {
+Maybe<Shape> CheckAndInferShape(const int64_t& elem_count, const Shape& target_shape) {
   int need_infer_axis = -1;
-  size_t count = 1;
-  for (int i = 0; i < shape.NumAxes(); ++i) {
-    if (shape.At(i) < -1) {
-      return Error::RuntimeError() << "Invalid shape dimension " << shape.At(i);
-    } else if (shape.At(i) == -1) {
-      CHECK_EQ_OR_RETURN(need_infer_axis, -1)
+  int64_t target_elem_count = 1;
+  for (int i = 0; i < target_shape.NumAxes(); ++i) {
+    if (target_shape.At(i) < -1) {
+      return Error::RuntimeError() << "Invalid shape dimension " << target_shape.At(i);
+    } else if (target_shape.At(i) == -1) {
+      CHECK_OR_RETURN_ERROR(need_infer_axis == -1)
           << Error::RuntimeError() << "only one dimension can be inferred";
       need_infer_axis = i;
     } else {
-      count *= shape.At(i);
+      target_elem_count *= target_shape.At(i);
     }
   }
-  size_t x_count = x->shape()->Count(0);
-  Shape infered_shape = shape;
+  Shape infered_shape = target_shape;
   if (need_infer_axis == -1) {
-    // For 0-size tensor, we we don't need to check the element size.
-    if (x_count > 0) {
-      CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
-          << Error::RuntimeError() << "shape '" << shape.ToString()
-          << "' is invalid for input of size " << x->nelement();
+    if (elem_count > 0) {
+      // For 0-size tensor, we we don't need to check the element size.
+      CHECK_OR_RETURN_ERROR(target_shape.Count(0) == elem_count)
+          << Error::RuntimeError() << "shape '" << target_shape.ToString()
+          << "' is invalid for input of size " << elem_count;
     }
   } else {
-    infered_shape.Set(need_infer_axis, x_count / count);
-    CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
-        << Error::RuntimeError() << "shape '" << shape.ToString()
-        << "' is invalid for input of size " << x->nelement();
+    infered_shape.Set(need_infer_axis, elem_count / target_elem_count);
+    CHECK_OR_RETURN_ERROR(infered_shape.Count(0) == elem_count)
+        << Error::RuntimeError() << "shape '" << target_shape.ToString()
+        << "' is invalid for input of size " << elem_count;
   }
   return infered_shape;
 }
