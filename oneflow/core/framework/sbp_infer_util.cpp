@@ -526,7 +526,8 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
   static const bool enable_general_basic_communication =
       ParseBooleanFromEnv("ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION", false);
   // Use a general basic communication if no P in the consumer
-  if (((Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
+  if ((((Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
+         && producer_parallel_desc == consumer_parallel_desc)
         || enable_general_basic_communication)
        && !NdSbpHasPartialParallel(consumer_sbp_parallel))
       && producer_parallel_desc.device_type() == DeviceType::kCUDA
@@ -690,7 +691,8 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
   static const bool enable_general_basic_communication =
       ParseBooleanFromEnv("ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION", false);
   // Use a general basic communication if no P in the consumer
-  if (((Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
+  if ((((Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
+         && producer_parallel_desc == consumer_parallel_desc)
         || enable_general_basic_communication)
        && !NdSbpHasPartialParallel(consumer_sbp_parallel))
       && producer_parallel_desc.device_type() == DeviceType::kCUDA
