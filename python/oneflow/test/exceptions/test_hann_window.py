@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,16 +12,25 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_CORE_COMMON_ENV_VAR_VM_H_
-#define ONEFLOW_CORE_COMMON_ENV_VAR_VM_H_
+"""
 
-#include "oneflow/core/common/env_var/env_var.h"
+import unittest
 
-namespace oneflow {
+import oneflow as flow
+import oneflow.unittest
 
-DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_VM_WORKLOAD_ON_SCHEDULER_THREAD, false);
-DEFINE_THREAD_LOCAL_ENV_INTEGER(ONEFLOW_VM_PENDING_HANDLE_WINDOW_SIZE, 10)
 
-}  // namespace oneflow
-#endif  // ONEFLOW_CORE_COMMON_ENV_VAR_VM_H_
+@flow.unittest.skip_unless_1n1d()
+class TestHannWindow(flow.unittest.TestCase):
+    def test_hann_window_dtype_not_support(test_case):
+        window_length = 8
+        dtype = flow.int64
+        with test_case.assertRaises(RuntimeError) as ctx:
+            x = flow.hann_window(window_length, dtype=dtype)
+        test_case.assertTrue(
+            "hann_window expects floating point dtypes, got: " in str(ctx.exception)
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()
