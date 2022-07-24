@@ -248,7 +248,7 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
 }
 
 /* static */ Maybe<void> Conv1DOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -270,7 +270,7 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
 }
 
 /* static */ Maybe<void> Conv2DOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -292,7 +292,7 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
 }
 
 /* static */ Maybe<void> Conv3DOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -309,7 +309,7 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
     CHECK_EQ_OR_RETURN(add_to_output.shape(), x_like.shape());
   }
   *ctx->MutOutputShape("dx", 0) = ctx->InputShape("x_like", 0);
-  *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x_like", 0);
+  *ctx->MutOutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x_like", 0);
   return Maybe<void>::Ok();
 }
 
@@ -342,7 +342,7 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
     const user_op::TensorDesc& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
     CHECK_EQ_OR_RETURN(add_to_output.data_type(), x_like.data_type());
   }
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("x_like", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x_like", 0);
   return Maybe<void>::Ok();
 }
 

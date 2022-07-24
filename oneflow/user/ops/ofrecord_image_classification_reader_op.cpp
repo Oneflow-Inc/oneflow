@@ -68,8 +68,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> OfrecordImageClassificationReaderOp::InferDataType(
     user_op::InferContext* ctx) {
-  *ctx->OutputDType("image", 0) = DataType::kTensorBuffer;
-  *ctx->OutputDType("label", 0) = DataType::kTensorBuffer;
+  *ctx->MutOutputDType("image", 0) = DataType::kTensorBuffer;
+  *ctx->MutOutputDType("label", 0) = DataType::kTensorBuffer;
   return Maybe<void>::Ok();
 }
 
