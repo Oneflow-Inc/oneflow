@@ -169,6 +169,8 @@ Tensor class reference
     Tensor.acosh
     Tensor.add
     Tensor.add_
+    Tensor.addcdiv
+    Tensor.addcdiv_
     Tensor.addcmul
     Tensor.addcmul_
     Tensor.addmm
