@@ -249,19 +249,16 @@ class UserKernelOpInferContext : public user_op::InferContext {
 
   const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
                                              int32_t index) const override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index);
+    return *TensorDesc4ArgNameAndIndex(arg_name, index);
   }
   user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
     return MutTensorDesc4ArgNameAndIndex(arg_name, index);
   }
-  const user_op::TensorDesc& TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-    if (it == arg2tensor_desc_.end()) {
-      PRINT_BUG_PROMPT_AND_ABORT();
-      return *(user_op::TensorDesc*)nullptr;  // NOLINT
-    }
-    return *it->second;
+    if (it == arg2tensor_desc_.end()) { return nullptr; }
+    return it->second.get();
   }
   user_op::TensorDesc* MutTensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
@@ -278,7 +275,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
     return MutShape4ArgNameAndIndex(arg_name, index);
   }
   const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index).shape();
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->shape();
   }
   Shape* MutShape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
@@ -293,7 +290,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
     return MutStride4ArgNameAndIndex(arg_name, index);
   }
   const Stride& Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index).stride();
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->stride();
   }
   Stride* MutStride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_stride();
@@ -308,7 +305,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
     return MutDtype4ArgNameAndIndex(arg_name, index);
   }
   DataType Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index).data_type();
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->data_type();
   }
   DataType* MutDtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
@@ -323,7 +320,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
     return MutIsDynamic4ArgNameAndIndex(arg_name, index);
   }
   bool IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index).is_dynamic();
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->is_dynamic();
   }
   bool* MutIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
