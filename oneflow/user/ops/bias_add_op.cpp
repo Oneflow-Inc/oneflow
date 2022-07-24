@@ -36,7 +36,7 @@ namespace oneflow {
       << " must match the size of tensor " << b_tensor_desc.shape().ToString() << " at dimension "
       << bias_add_axis;
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("a", 0);
-  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("a", 0);
+  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("a", 0);
   return Maybe<void>::Ok();
 }
 
@@ -64,7 +64,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> BiasAddOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("a", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("a", 0);
   return Maybe<void>::Ok();
 }
 
