@@ -424,8 +424,8 @@ class NonZeroFunctor {
   NonZeroFunctor() {}
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, bool as_tuple) const {
     std::shared_ptr<one::Tensor> input = x;
+    if (as_tuple && input->ndim() == 0) { input = JUST(functional::Unsqueeze(input, 0)); }
     int64_t ndim = input->ndim();
-    if (as_tuple && ndim == 0) { input = JUST(functional::Unsqueeze(input, 0)); }
     const auto& output_tuple =
         JUST(functional::ArgWhere(input, JUST(DType::Get(DataType::kInt64))));
     const std::shared_ptr<one::Tensor>& size = JUST(VectorAt(*output_tuple, 1));
@@ -449,15 +449,10 @@ class NonZeroFunctor {
         functional::Slice(output_tuple->at(0), start, stop, step, /*enable_view_slice=*/false));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>();
     if (as_tuple) {
-      std::vector<int64_t> start{0, 0};
-      std::vector<int64_t> stop{1, size_val};
-      std::vector<int64_t> step{1, 1};
       const auto& transposed_output = JUST(functional::Transpose2dim(output, 1, 0));
       for (int64_t i = 0; i < ndim; ++i) {
-        start[0] = i;
-        stop[0] = i + 1;
-        outputs->emplace_back(JUST(
-            functional::Slice(transposed_output, start, stop, step, /*enable_view_slice=*/false)));
+        outputs->emplace_back(
+            JUST(functional::TensorGetItem(transposed_output, {functional::detail::IndexItem(i)})));
       }
     } else {
       outputs->emplace_back(output);
