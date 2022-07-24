@@ -55,7 +55,7 @@ Maybe<Symbol<Device>> GetRecvOutputDeivce(user_op::DeviceAndStreamInferContext* 
   return SendOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> RecvOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
+  *ctx->MutOutputDType("out", 0) = ctx->Attr<DataType>("dtype");
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<Symbol<Stream>> RecvOp::InferDeviceAndStream(

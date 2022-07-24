@@ -53,8 +53,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> L2NormalizeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("square_x_sum", 0) = ctx->InputDType("x", 0);
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("square_x_sum", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -103,7 +103,7 @@ namespace oneflow {
 /* static */ Maybe<void> L2NormalizeGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("dy", 0));
   CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("square_x_sum", 0));
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
   return Maybe<void>::Ok();
 }
 
