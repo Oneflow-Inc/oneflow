@@ -212,7 +212,7 @@ class UserOpExprInferContext : public user_op::InferContext {
         return *const_cast<TensorMeta*>(tensor_meta4input_index_(tuple_index));
       }
     }
-    return *(user_op::TensorDesc*)nullptr;
+    return *(user_op::TensorDesc*)nullptr;  // NOLINT
   }
 
   user_op::TensorDesc* MutTensorDesc4ArgNameAndIndex(const std::string& name, int32_t index) {
