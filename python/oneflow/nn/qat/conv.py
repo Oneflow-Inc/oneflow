@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-import oneflow.nn as nn
+from oneflow import nn as nn
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from typing import Union
 

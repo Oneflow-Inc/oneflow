@@ -51,7 +51,8 @@ void Instruction::DeleteStatusAndClearEdges() {
 }
 
 bool Instruction::Done() const {
-  return stream_policy().QueryInstructionStatusDone(stream(), status_buffer());
+  return stream_policy().QueryInstructionStatusDone(stream(), status_buffer())
+         && in_edges().empty();
 }
 
 StreamPolicy* Instruction::mut_stream_policy() { return mut_stream()->mut_stream_policy(); }
