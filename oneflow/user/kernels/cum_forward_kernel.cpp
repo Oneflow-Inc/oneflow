@@ -67,39 +67,24 @@ class CpuCumKernel : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T>
-class CpuCumSumKernel final : public CpuCumKernel<T, BinaryFuncAdd> {
- public:
-  CpuCumSumKernel() = default;
-  ~CpuCumSumKernel() = default;
-};
+#define CUMOP_SEQ                                \
+  OF_PP_MAKE_TUPLE_SEQ("cumprod", BinaryFuncMul) \
+  OF_PP_MAKE_TUPLE_SEQ("cumsum", BinaryFuncAdd)
 
-#define REGISTER_CUMSUM_KERNEL(dtype)                                                   \
-  REGISTER_USER_KERNEL("cumsum").SetCreateFn<CpuCumSumKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kCPU)                                    \
+#define REGISTER_CUMOP_KERNEL(dtype, op_name, op_functor)                                       \
+  REGISTER_USER_KERNEL(op_name).SetCreateFn<CpuCumKernel<dtype, op_functor>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kCPU)                                            \
       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
-REGISTER_CUMSUM_KERNEL(int32_t)
-REGISTER_CUMSUM_KERNEL(int64_t)
-REGISTER_CUMSUM_KERNEL(float)
-REGISTER_CUMSUM_KERNEL(double)
-#undef REGISTER_CUMSUM_KERNEL
+#define REGISTER_CUMOP_KERNEL_WITH_DTYPE(op_name, op_functor) \
+  REGISTER_CUMOP_KERNEL(int32_t, op_name, op_functor)         \
+  REGISTER_CUMOP_KERNEL(int64_t, op_name, op_functor)         \
+  REGISTER_CUMOP_KERNEL(float, op_name, op_functor)           \
+  REGISTER_CUMOP_KERNEL(double, op_name, op_functor)
 
-template<typename T>
-class CpuCumProdKernel final : public CpuCumKernel<T, BinaryFuncMul> {
- public:
-  CpuCumProdKernel() = default;
-  ~CpuCumProdKernel() = default;
-};
+OF_PP_FOR_EACH_TUPLE(REGISTER_CUMOP_KERNEL_WITH_DTYPE, CUMOP_SEQ);
 
-#define REGISTER_CUMPROD_KERNEL(dtype)                                                    \
-  REGISTER_USER_KERNEL("cumprod").SetCreateFn<CpuCumProdKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kCPU)                                      \
-      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
-
-REGISTER_CUMPROD_KERNEL(int32_t)
-REGISTER_CUMPROD_KERNEL(int64_t)
-REGISTER_CUMPROD_KERNEL(float)
-REGISTER_CUMPROD_KERNEL(double)
-#undef REGISTER_CUMPROD_KERNEL
+#undef REGISTER_CUMOP_KERNEL
+#undef REGISTER_CUMOP_KERNEL_WITH_DTYPE
+#undef CUMOP_SEQ
 }  // namespace oneflow
