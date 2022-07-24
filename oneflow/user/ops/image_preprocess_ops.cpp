@@ -234,7 +234,7 @@ namespace oneflow {
 /* static */ Maybe<void> ImageRandomCropOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   CHECK_OR_RETURN(in_tensor.data_type() == DataType::kTensorBuffer);
-  *ctx->OutputDType("out", 0) = in_tensor.data_type();
+  *ctx->MutOutputDType("out", 0) = in_tensor.data_type();
   return Maybe<void>::Ok();
 }
 
