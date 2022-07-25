@@ -261,6 +261,7 @@ Tensor class reference
     Tensor.item
     Tensor.le
     Tensor.log
+    Tensor.log1p
     Tensor.log2
     Tensor.logical_and
     Tensor.logical_or
