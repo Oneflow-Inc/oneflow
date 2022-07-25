@@ -16,8 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_GLOBAL_SYNC_INSTRUCTION_POLICY_H_
 #define ONEFLOW_CORE_VM_GLOBAL_SYNC_INSTRUCTION_POLICY_H_
 
-
-
 #include "oneflow/core/rpc/include/base.h"
 #include "oneflow/core/vm/instruction_policy.h"
 namespace oneflow {
@@ -25,7 +23,7 @@ namespace vm {
 
 class GlobalSyncInstructionPolicy final : public InstructionPolicy {
  public:
-  GlobalSyncInstructionPolicy()  = default;
+  GlobalSyncInstructionPolicy() = default;
   ~GlobalSyncInstructionPolicy() override = default;
 
   const DependenceVector& input_dependences() const override {
@@ -42,11 +40,9 @@ class GlobalSyncInstructionPolicy final : public InstructionPolicy {
   bool IsBarrier() const override { return true; }
 
   std::string DebugName(const vm::Instruction& instruction) const override { return "GlobalSync"; }
-  Maybe<void> Prepare(Instruction* instruction)  override { return Maybe<void>::Ok(); }
-  void Compute(Instruction* instruction)  override { OF_ENV_BARRIER(); }
-
+  Maybe<void> Prepare(Instruction* instruction) override { return Maybe<void>::Ok(); }
+  void Compute(Instruction* instruction) override { OF_ENV_BARRIER(); }
 };
-
 
 }  // namespace vm
 }  // namespace oneflow

@@ -16,8 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_BARRIER_INSTRUCTION_POLICY_H_
 #define ONEFLOW_CORE_VM_BARRIER_INSTRUCTION_POLICY_H_
 
-
-
 #include "oneflow/core/vm/instruction_policy.h"
 namespace oneflow {
 namespace vm {
@@ -45,13 +43,12 @@ class BarrierInstructionPolicy final : public InstructionPolicy {
   bool IsBarrier() const override { return true; }
 
   std::string DebugName(const vm::Instruction& instruction) const override { return "Barrier"; }
-  Maybe<void> Prepare(Instruction* instruction)  override { return Maybe<void>::Ok(); }
-  void Compute(Instruction* instruction)  override { callback(); }
+  Maybe<void> Prepare(Instruction* instruction) override { return Maybe<void>::Ok(); }
+  void Compute(Instruction* instruction) override { callback(); }
 
  private:
   std::function<void()> callback_;
 };
-
 
 }  // namespace vm
 }  // namespace oneflow

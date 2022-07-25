@@ -103,8 +103,7 @@ void MakeBarrierInstructions(vm::InstructionList* list,
   {
     auto stream = CHECK_JUST(GetBarrierStream());
     auto instruction = intrusive::make_shared<vm::Instruction>(
-        CHECK_JUST(vm->GetVmStream(stream)),
-        std::make_unique<vm::GlobalSyncInstructionPolicy>());
+        CHECK_JUST(vm->GetVmStream(stream)), std::make_unique<vm::GlobalSyncInstructionPolicy>());
     list->EmplaceBack(std::move(instruction));
   }
   {
