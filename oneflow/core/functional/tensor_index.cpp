@@ -423,12 +423,6 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
   }
   std::cout << "transposed_input is_contiguous: " << transposed_input->is_contiguous() << std::endl;
   JUST(TensorScatterNdUpdate(transposed_input, packed_indices, value, /*inplace=*/true));
-
-  // int required_ndim = input->ndim() - valid_indices.size() + index_ndim;
-  // CHECK_EQ_OR_RETURN(transposed_input->ndim(), required_ndim)
-  //     << Error::RuntimeError() << "The indexing result dimension is " << transposed_input->ndim()
-  //     << ", but shoule be " << required_ndim;
-  if (is_continuous_subspace) { JUST(AdjustSubspace(transposed_input, indices, index_ndim)); }
   return Maybe<void>::Ok();
 }
 
