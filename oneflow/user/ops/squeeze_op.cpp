@@ -63,7 +63,7 @@ Maybe<void> CheckAndLabelAxesToSqueezeMinusOne(const AxisVector& axes, DimVector
 }
 /*static*/ Maybe<void> SqueezeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->OutputShape("out", 0);
+  Shape* out_shape = ctx->MutOutputShape("out", 0);
   AxisVector fixed_axes_vec;
   JUST(TransformNegativeAxesToPositive(ctx->Attr<std::vector<int32_t>>("axes"), in_shape.NumAxes(),
                                        &fixed_axes_vec));
@@ -78,7 +78,7 @@ Maybe<void> CheckAndLabelAxesToSqueezeMinusOne(const AxisVector& axes, DimVector
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SqueezeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 

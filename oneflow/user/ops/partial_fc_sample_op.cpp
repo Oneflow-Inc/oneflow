@@ -68,9 +68,9 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> DistributedPartialFcSampleOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("mapped_label", 0) = ctx->InputDType("label", 0);
-  *ctx->OutputDType("sampled_weight", 0) = ctx->InputDType("weight", 0);
-  *ctx->OutputDType("sampled_label", 0) = ctx->InputDType("label", 0);
+  *ctx->MutOutputDType("mapped_label", 0) = ctx->InputDType("label", 0);
+  *ctx->MutOutputDType("sampled_weight", 0) = ctx->InputDType("weight", 0);
+  *ctx->MutOutputDType("sampled_label", 0) = ctx->InputDType("label", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> DistributedPartialFcSampleOp::ModifyInputArg(
@@ -111,20 +111,20 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> DistributedPartialFcSampleDisableBoxingOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->OutputShape("boxing_disabled_sampled_weight_diff", 0) =
+  *ctx->MutOutputShape("boxing_disabled_sampled_weight_diff", 0) =
       ctx->InputShape("sampled_weight_diff", 0);
-  *ctx->OutputIsDynamic("boxing_disabled_sampled_weight_diff", 0) =
+  *ctx->MutOutputIsDynamic("boxing_disabled_sampled_weight_diff", 0) =
       ctx->InputIsDynamic("sampled_weight_diff", 0);
-  *ctx->OutputShape("boxing_disabled_sampled_label", 0) = ctx->InputShape("sampled_label", 0);
-  *ctx->OutputIsDynamic("boxing_disabled_sampled_label", 0) =
+  *ctx->MutOutputShape("boxing_disabled_sampled_label", 0) = ctx->InputShape("sampled_label", 0);
+  *ctx->MutOutputIsDynamic("boxing_disabled_sampled_label", 0) =
       ctx->InputIsDynamic("sampled_label", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> DistributedPartialFcSampleDisableBoxingOp::InferDataType(
     user_op::InferContext* ctx) {
-  *ctx->OutputDType("boxing_disabled_sampled_weight_diff", 0) =
+  *ctx->MutOutputDType("boxing_disabled_sampled_weight_diff", 0) =
       ctx->InputDType("sampled_weight_diff", 0);
-  *ctx->OutputDType("boxing_disabled_sampled_label", 0) = ctx->InputDType("sampled_label", 0);
+  *ctx->MutOutputDType("boxing_disabled_sampled_label", 0) = ctx->InputDType("sampled_label", 0);
   return Maybe<void>::Ok();
 }
 
