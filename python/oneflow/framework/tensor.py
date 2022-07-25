@@ -214,7 +214,7 @@ def _mv(self, vec):
     return flow._C.matrix_vector_product(self, vec)
 
 
-def _argsort(self, dim=None, descending=None):
+def _argsort(self, dim=-1, descending=None):
     return flow.argsort(self, dim=dim, descending=descending)
 
 
