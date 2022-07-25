@@ -34,7 +34,9 @@ def _test_convnd_grad_grad_impl(test_case, ndim):
     dilation = np.random.randint(1, 3)
 
     x_shape = [minibatch, in_channels] + [np.random.randint(8, 12) for i in range(ndim)]
-    w_shape = [out_channels, in_channels // groups] + [np.random.randint(2, 5) for i in range(ndim)]
+    w_shape = [out_channels, in_channels // groups] + [
+        np.random.randint(2, 5) for i in range(ndim)
+    ]
 
     x = random_tensor(len(x_shape), *x_shape)
     w = random_tensor(len(w_shape), *w_shape)
@@ -67,8 +69,6 @@ def _test_convnd_grad_grad_impl(test_case, ndim):
     test_case.assertTrue(
         np.allclose(dw.pytorch.detach().cpu().numpy(), dw.oneflow.detach().numpy())
     )
-
-
 
     # autotest torch.autograd.grad 不支持 inputs/outpus/grad_outputs 为 list，所以使用原始 pytorch/oneflow
     ddx_pytorch, ddw_pytorch = pytorch_origin.autograd.grad(
