@@ -75,10 +75,23 @@ add_docstr(
     r"""
     gelu(x: Tensor) -> Tensor 
 
-    The equation is:
+    Applies the Gaussian Error Linear Units function:
 
-    .. math::
-         out = 0.5 * x * (1 + tanh(\sqrt{\frac{2}{\pi}} * (x + 0.044715x^{3})))
+    .. math:: \\text{GELU}(x) = x * \Phi(x)
+
+    where :math:`\Phi(x)` is the Cumulative Distribution Function for Gaussian Distribution.
+
+    When the approximate argument is 'tanh', Gelu is estimated with:
+
+    .. math:: \\text{GELU}(x) = 0.5 * x * (1 + \\text{Tanh}(\sqrt(2 / \pi) * (x + 0.044715 * x^3)))
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+        approximate (string, optional): the gelu approximation algorithm to use:
+            ``'none'`` | ``'tanh'``. Default: ``'none'``
+
+    Returns:
+        oneflow.Tensor: A Tensor has same shape as the input.
     
     For example:
 
