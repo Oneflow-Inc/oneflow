@@ -65,12 +65,14 @@ std::shared_ptr<Tensor> Parameter::pin_memory() const {
                                                         const Symbol<Device>& device, bool is_lazy,
                                                         bool requires_grad, bool is_leaf) {
   const auto& tensor_meta =
-      std::make_shared<LocalTensorMeta>(std::make_shared<Shape>(*shape), dtype, device);
+      SymbolOf(LocalTensorMeta(std::make_shared<Shape>(*shape), dtype, device));
   if (is_lazy) {
     const auto& impl = std::make_shared<LazyLocalTensorImpl>(tensor_meta, requires_grad, is_leaf);
     return std::make_shared<LocalTensor>(impl);
   } else {
-    const auto& impl = std::make_shared<EagerLocalTensorImpl>(tensor_meta, requires_grad, is_leaf);
+    const auto& impl = std::make_shared<EagerLocalTensorImpl>(requires_grad, is_leaf);
+    const auto& dep_object = NewLocalDepObject();
+    JUST(impl->InitEagerBlobObject(tensor_meta, dep_object));
     return std::make_shared<LocalTensor>(impl);
   }
 }
