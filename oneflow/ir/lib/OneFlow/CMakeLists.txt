@@ -19,6 +19,7 @@ oneflow_add_mlir_dialect_library(
   MLIROneFlow
   SBP/SBPDialect.cpp
   SBP/SBPAttributes.cpp
+  SBP/SBPImporter.cpp
   OneFlowDialect.cpp
   OneFlowTypes.cpp
   OneFlowOps.cpp

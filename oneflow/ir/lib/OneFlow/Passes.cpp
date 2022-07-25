@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/sbp_context.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/framework/random_generator.h"
-#include "oneflow/ir/oneflow-translate/include/OneFlow/MLIROneFlowTranslation.h"
+#include "OneFlow/SBP/SBPImporter.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
@@ -506,7 +506,8 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
     auto name = FrozenVariableOp::nd_sbpAttrName(
         OperationName(FrozenVariableOp::getOperationName(), rewriter.getContext()));
 
-    attrs.set(name, ConvertSBPToString(rewriter, op.parallelAttr()));
+    auto parallel_attr = op.parallelAttr();
+    attrs.set(name, ConvertSBPToString(rewriter, parallel_attr));
     auto op_new = rewriter.create<oneflow::FrozenVariableOp>(op->getLoc(), op.output().getType(),
                                                              ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
@@ -546,8 +547,8 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
     ArrayAttr nd_sbp = op.nd_sbp();
     std::vector<std::string> nd_sbp_str;
     std::for_each(nd_sbp.begin(), nd_sbp.end(), [&](Attribute elem) {
-      if (auto sbp_str_attr = elem.dyn_cast<StringAttr>() && sbp_str_attr.str() != "") {
-        nd_sbp_str.push_back(sbp_str_attr.str());
+      if (auto sbp_str_attr = elem.dyn_cast<StringAttr>()) {
+        if (sbp_str_attr.str() != "") { nd_sbp_str.push_back(sbp_str_attr.str()); }
       }
     });
 
