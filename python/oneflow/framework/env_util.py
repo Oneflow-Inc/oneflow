@@ -49,7 +49,12 @@ def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.plac
     return oneflow._oneflow_internal.AllDevicePlacement(device_type)
 
 
-def enable_dtr(val: bool = False, thres: str = "1500MB", debug_level: int = 0, heuristic: str = "full") -> None:
+def enable_dtr(
+    val: bool = False,
+    thres: str = "1500MB",
+    debug_level: int = 0,
+    heuristic: str = "full",
+) -> None:
     """If True, DTR strategy will be launched. Memory threshold in percentage.
 
     Args:

@@ -89,7 +89,8 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 
   /**
    * 如果 Tensor 是那个盒子，即 inplace 时替换盒子里的 Tensor。
-   * 可以满足 view 的要求吗？不能，因为 view + inplace 要求大家指向同一个盒子，这样不同 view 的 shape 就无法不同了
+   * 可以满足 view 的要求吗？不能，因为 view + inplace 要求大家指向同一个盒子，这样不同 view 的
+   * shape 就无法不同了
    */
 
   /**
@@ -111,7 +112,6 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
    * dtr 跑的时候，记录下 shape、offset、stride 和盒子里的 TensorStorage
    * replay 时，on-the-fly 构造 EagerBlobObject
    */
-
 
   // new output tensor
   const auto& blob_object = JUST(input->eager_blob_object());

@@ -135,7 +135,11 @@ class CustomEvent(EventBase):
 
 class KernelEvent(EventBase):
     def __init__(
-        self, name: str, time_total: float, memory_size: int, description: Dict[str, str]
+        self,
+        name: str,
+        time_total: float,
+        memory_size: int,
+        description: Dict[str, str],
     ) -> None:
         super().__init__(name, time_total, EventType.Kernel)
         self.children: List[CustomEvent] = []
@@ -164,6 +168,7 @@ class KernelEvent(EventBase):
     def key(self):
         def flatten_desc(desc):
             return ",".join([f"{x}:{y}" for x, y in desc.items()])
+
         if len(self.children) == 0:
             return (self.name, flatten_desc(self.description))
         return (
@@ -212,9 +217,9 @@ class KernelEvent(EventBase):
         assert id(self) != id(event)
         assert isinstance(event, type(self))
         assert len(self.children) == len(event.children)
-        if self.key[0] in ['constant', 'ones_like']:
+        if self.key[0] in ["constant", "ones_like"]:
             return
-        if self.key[1] == 'attr:,shape:(), ()':
+        if self.key[1] == "attr:,shape:(), ()":
             return
         assert self.has_cuda_time() == event.has_cuda_time(), self.key
         assert self.key == event.key

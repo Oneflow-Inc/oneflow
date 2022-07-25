@@ -37,8 +37,10 @@ def sync():
 class TestDTRCorrectness(flow.unittest.TestCase):
     def setUp(self):
         super().setUp()
-        assert os.getenv('ONEFLOW_DISABLE_VIEW') is not None, "Please set ONEFLOW_DISABLE_VIEW to True, 1 or ON"
-        # wait for all previous operations to finish and 
+        assert (
+            os.getenv("ONEFLOW_DISABLE_VIEW") is not None
+        ), "Please set ONEFLOW_DISABLE_VIEW to True, 1 or ON"
+        # wait for all previous operations to finish and
         # check the memory is empty at the beginning of every test case
         flow.comm.barrier()
         self.assertEqual(flow._oneflow_internal.dtr.allocated_memory(), 0)
@@ -52,11 +54,11 @@ class TestDTRCorrectness(flow.unittest.TestCase):
         flow.enable_dtr(True, "2500mb", 0, "eq")
         bs = 80
         model = resnet50_model_dtr.resnet50()
-        model.load_state_dict(flow.load('rn50_weights'))
+        model.load_state_dict(flow.load("rn50_weights"))
 
         criterion = nn.CrossEntropyLoss()
 
-        cuda0 = flow.device('cuda:0')
+        cuda0 = flow.device("cuda:0")
 
         # enable module to use cuda
         model.to(cuda0)
@@ -69,7 +71,9 @@ class TestDTRCorrectness(flow.unittest.TestCase):
             np.random.uniform(size=(bs, 3, 224, 224)).astype(np.float32), device=cuda0
         )
         train_label = flow.tensor(
-            (np.random.uniform(size=(bs,)) * 1000).astype(np.int32), dtype=flow.int32, device=cuda0
+            (np.random.uniform(size=(bs,)) * 1000).astype(np.int32),
+            dtype=flow.int32,
+            device=cuda0,
         )
 
         WARMUP_ITERS = 5
@@ -87,7 +91,7 @@ class TestDTRCorrectness(flow.unittest.TestCase):
             optimizer.step()
             optimizer.zero_grad(True)
             if iter == ALL_ITERS - 1:
-                print(f'loss: {loss}')
+                print(f"loss: {loss}")
                 test_case.assertGreater(loss, 5.98)
                 test_case.assertLess(loss, 6.01)
             del logits
@@ -99,8 +103,10 @@ class TestDTRCorrectness(flow.unittest.TestCase):
                 total_time += this_time
 
         end_time = time.time()
-        print(f'{ALL_ITERS - WARMUP_ITERS} iters: avg {(total_time) / (ALL_ITERS - WARMUP_ITERS)}s')
+        print(
+            f"{ALL_ITERS - WARMUP_ITERS} iters: avg {(total_time) / (ALL_ITERS - WARMUP_ITERS)}s"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -283,9 +283,12 @@ class DTREagerMirroredTensorImpl final : public EagerMirroredTensorImpl {
   ~DTREagerMirroredTensorImpl() override {}
 
   Maybe<MirroredTensorImpl> detach() const override;
-  Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object, const bool pin_memory) override;
+  Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object,
+                                  const bool pin_memory) override;
 
-  Maybe<void> set_eager_blob_object(std::shared_ptr<vm::EagerBlobObject> eager_blob_object) override;
+  Maybe<void> set_eager_blob_object(
+      std::shared_ptr<vm::EagerBlobObject> eager_blob_object) override;
+
  private:
   Maybe<void> UpdateEvictTrigger();
 
