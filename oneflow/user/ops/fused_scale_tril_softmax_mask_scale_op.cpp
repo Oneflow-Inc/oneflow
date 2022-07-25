@@ -63,7 +63,7 @@ namespace oneflow {
     user_op::InferContext* ctx) -> Maybe<void> {
   const user_op::TensorDesc& softmax_y_desc = ctx->InputTensorDesc("softmax_y", 0);
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
   CHECK_OR_RETURN(dy_desc.shape() == softmax_y_desc.shape());
   *dx_desc->mut_shape() = dy_desc.shape();
   *dx_desc->mut_is_dynamic() = dy_desc.is_dynamic();
@@ -77,7 +77,7 @@ namespace oneflow {
     -> Maybe<void> {
   const user_op::TensorDesc& softmax_y_desc = ctx->InputTensorDesc("softmax_y", 0);
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
   CHECK_OR_RETURN(dy_desc.data_type() == softmax_y_desc.data_type());
   *dx_desc->mut_data_type() = dy_desc.data_type();
   return Maybe<void>::Ok();
