@@ -100,7 +100,7 @@ Maybe<void> GridSampleOp::CheckAttr(const user_op::UserOpDefWrapper& def,
   return Maybe<void>::Ok();
 }
 /*static*/ auto GridSampleOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
-  *ctx->OutputDType("output", 0) = ctx->InputDType("input", 0);
+  *ctx->MutOutputDType("output", 0) = ctx->InputDType("input", 0);
   return Maybe<void>::Ok();
 }
 
@@ -137,8 +137,8 @@ Maybe<void> GridSampleGradOp::CheckAttr(const user_op::UserOpDefWrapper& def,
   return Maybe<void>::Ok();
 }
 /*static*/ auto GridSampleGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
-  *ctx->OutputDType("dinput", 0) = ctx->InputDType("input", 0);
-  *ctx->OutputDType("dgrid", 0) = ctx->InputDType("grid", 0);
+  *ctx->MutOutputDType("dinput", 0) = ctx->InputDType("input", 0);
+  *ctx->MutOutputDType("dgrid", 0) = ctx->InputDType("grid", 0);
   return Maybe<void>::Ok();
 }
 

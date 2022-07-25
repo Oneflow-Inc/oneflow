@@ -85,7 +85,7 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferDataType_(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 

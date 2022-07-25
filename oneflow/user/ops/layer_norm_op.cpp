@@ -164,7 +164,7 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   CHECK_EQ_OR_RETURN(dy.data_type(), x.data_type());
   const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
   const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
-  const DataType& bn_param_data_type = InferBnParamDataType(x.data_type());
+  DataType bn_param_data_type = InferBnParamDataType(x.data_type());
   CHECK_EQ_OR_RETURN(mean.data_type(), bn_param_data_type);
   CHECK_EQ_OR_RETURN(inv_variance.data_type(), bn_param_data_type);
   user_op::TensorDesc* dx = ctx->OutputTensorDesc("dx", 0);

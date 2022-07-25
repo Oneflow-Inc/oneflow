@@ -65,7 +65,7 @@ int32_t TransformNegativeAxisToPositive(int32_t axis, const int32_t num_axes) {
 }
 
 /* static */ Maybe<void> ExpandDimsOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 

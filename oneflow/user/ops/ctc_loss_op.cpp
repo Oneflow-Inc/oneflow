@@ -57,8 +57,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CtcLossOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("loss", 0) = ctx->InputDType("log_probs", 0);
-  *ctx->OutputDType("alpha", 0) = ctx->InputDType("log_probs", 0);
+  *ctx->MutOutputDType("loss", 0) = ctx->InputDType("log_probs", 0);
+  *ctx->MutOutputDType("alpha", 0) = ctx->InputDType("log_probs", 0);
   return Maybe<void>::Ok();
 }
 
@@ -101,7 +101,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CtcLossGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("grad", 0) = ctx->InputDType("log_probs", 0);
+  *ctx->MutOutputDType("grad", 0) = ctx->InputDType("log_probs", 0);
   return Maybe<void>::Ok();
 }
 
@@ -130,8 +130,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CtcGreedyDecoderOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("decoded", 0) = ctx->InputDType("input_lengths", 0);
-  *ctx->OutputDType("neg_sum_logits", 0) = ctx->InputDType("log_probs", 0);
+  *ctx->MutOutputDType("decoded", 0) = ctx->InputDType("input_lengths", 0);
+  *ctx->MutOutputDType("neg_sum_logits", 0) = ctx->InputDType("log_probs", 0);
   return Maybe<void>::Ok();
 }
 

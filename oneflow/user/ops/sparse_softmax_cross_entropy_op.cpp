@@ -41,7 +41,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
         << Error::RuntimeError() << "The size of prediction (" << prediction_desc.shape().At(i)
         << ") must match the size of label (" << label_desc.shape().At(i) << ") at dimension " << i;
   }
-  *ctx->OutputIsDynamic("prob", 0) = prediction_desc.is_dynamic();
+  *ctx->MutOutputIsDynamic("prob", 0) = prediction_desc.is_dynamic();
   // 'prob' is just for compute prediction's grad, prob's grad will be ignored
   *ctx->MutOutputShape("prob", 0) = prediction_desc.shape();
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
@@ -76,7 +76,7 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
       << Error::RuntimeError() << "The size of dy " << dy_desc.shape()
       << " must match the size of label " << label_desc.shape();
   *ctx->MutOutputShape("prediction_diff", 0) = prob_desc.shape();
-  *ctx->OutputIsDynamic("prediction_diff", 0) = prob_desc.is_dynamic();
+  *ctx->MutOutputIsDynamic("prediction_diff", 0) = prob_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
 
@@ -85,8 +85,8 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(IsIndexDataType(label_desc.data_type()))
       << Error::TypeError() << "The dtype of label must be integer, but found "
       << DataType_Name(label_desc.data_type());
-  *ctx->OutputDType("prob", 0) = ctx->InputDType("prediction", 0);
-  *ctx->OutputDType("out", 0) = ctx->InputDType("prediction", 0);
+  *ctx->MutOutputDType("prob", 0) = ctx->InputDType("prediction", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("prediction", 0);
   return Maybe<void>::Ok();
 }
 
@@ -100,7 +100,7 @@ Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(dy_desc.data_type(), prob_desc.data_type())
       << Error::TypeError() << "dy and prob are expected to have the same dtype, but found "
       << DataType_Name(dy_desc.data_type()) << " and " << DataType_Name(prob_desc.data_type());
-  *ctx->OutputDType("prediction_diff", 0) = prob_desc.data_type();
+  *ctx->MutOutputDType("prediction_diff", 0) = prob_desc.data_type();
   return Maybe<void>::Ok();
 }
 

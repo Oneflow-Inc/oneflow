@@ -64,7 +64,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> OFRecordReaderOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kOFRecord;
+  *ctx->MutOutputDType("out", 0) = DataType::kOFRecord;
   return Maybe<void>::Ok();
 }
 

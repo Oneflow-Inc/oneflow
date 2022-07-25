@@ -56,7 +56,7 @@ namespace oneflow {
       << Error::TypeError() << "input and target are expected to have the same dtype, but found "
       << DataType_Name(input_desc.data_type()) << " and " << DataType_Name(target_desc.data_type());
 
-  *ctx->OutputDType("out", 0) = ctx->InputDType("input", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("input", 0);
 
   return Maybe<void>::Ok();
 }
@@ -115,7 +115,7 @@ namespace oneflow {
       << Error::TypeError() << "input and target are expected to have the same dtype, but found "
       << DataType_Name(input_desc.data_type()) << " and " << DataType_Name(target_desc.data_type());
 
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
 
   return Maybe<void>::Ok();
 }

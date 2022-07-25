@@ -38,7 +38,7 @@ Maybe<void> KlInferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_EQ_OR_RETURN(input_desc.data_type(), target_desc.data_type());
 
-  *ctx->OutputDType("out", 0) = ctx->InputDType("input", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("input", 0);
 
   return Maybe<void>::Ok();
 }
@@ -63,7 +63,7 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_EQ_OR_RETURN(input_desc.data_type(), target_desc.data_type());
 
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
 
   return Maybe<void>::Ok();
 }

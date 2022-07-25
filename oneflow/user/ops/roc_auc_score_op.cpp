@@ -38,7 +38,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> RocAucScoreOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kFloat;
+  *ctx->MutOutputDType("out", 0) = DataType::kFloat;
   const user_op::TensorDesc& label = ctx->InputTensorDesc("label", 0);
   CHECK_OR_RETURN(IsFloatingDataType(label.data_type()) || IsIntegralDataType(label.data_type()))
       << "Input `label` data type " << DataType_Name(label.data_type()) << " is not supported.";

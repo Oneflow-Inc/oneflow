@@ -27,9 +27,9 @@ Maybe<void> InferMaskedFillTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferMaskedFillDataType(user_op::InferContext* ctx) {
-  const DataType& mask_dtype = ctx->InputDType("mask", 0);
+  DataType mask_dtype = ctx->InputDType("mask", 0);
   CHECK_OR_RETURN(IsIntegralDataType(mask_dtype) || IsBoolDataType(mask_dtype));
-  *ctx->OutputDType("out", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
