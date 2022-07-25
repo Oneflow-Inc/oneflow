@@ -316,8 +316,9 @@ LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_c
 
   auto nd_size = conf.hierarchy().dim().size();
   auto nd_sbp = op_conf.variable_conf().nd_sbp();
-  auto parallel = mlir::oneflow::ConvertNdSbpToPsig(
-      GetBuilder(), std::vector<std::string>(nd_sbp.begin(), nd_sbp.end()), nd_size);
+  auto builder = GetBuilder();
+  auto nd_sbp_vec = std::vector<std::string>(nd_sbp.begin(), nd_sbp.end());
+  auto parallel = mlir::oneflow::ConvertNdSbpToPsig(builder, nd_sbp_vec, nd_size);
   attr_vec.emplace_back(
       GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getSbpAttrName(), parallel));
   // add attrs
