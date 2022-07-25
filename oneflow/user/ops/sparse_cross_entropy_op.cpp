@@ -63,7 +63,7 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
       << Error::RuntimeError() << "The size of dy " << dy_desc.shape()
       << " must match the size of label " << label_desc.shape();
   *ctx->MutOutputShape("prediction_diff", 0) = prediction_desc.shape();
-  *ctx->OutputIsDynamic("prediction_diff", 0) = prediction_desc.is_dynamic();
+  *ctx->MutOutputIsDynamic("prediction_diff", 0) = prediction_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
 
@@ -89,7 +89,7 @@ Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
       << Error::TypeError() << "dy and prediction are expected to have the same dtype, but found "
       << DataType_Name(dy_desc.data_type()) << " and "
       << DataType_Name(prediction_desc.data_type());
-  *ctx->OutputDType("prediction_diff", 0) = prediction_desc.data_type();
+  *ctx->MutOutputDType("prediction_diff", 0) = prediction_desc.data_type();
   return Maybe<void>::Ok();
 }
 
