@@ -392,17 +392,11 @@ Maybe<double> DTREagerBlobObject::cost(const std::string& heuristic, size_t over
     return compute_time_ / time_since_last_access;
   } else if (heuristic == "local_compute_time") {
     return compute_time_;
-  } else if (heuristic == "me_approx_mul_beta") {
+  } else if (heuristic == "eq_mul_beta") {
     return (JUST(approx_neighbor_cost()) * std::pow(0.5, recompute_times()))
            / (size_d * time_since_last_access);
-  } else if (heuristic == "me_approx_div_beta") {
+  } else if (heuristic == "eq_div_beta") {
     return JUST(approx_neighbor_cost())
-           / (size_d * time_since_last_access * std::pow(0.5, recompute_times()));
-  } else if (heuristic == "me_mul_beta") {
-    return (JUST(neighbor_cost()) * std::pow(0.5, recompute_times()))
-           / (size_d * time_since_last_access);
-  } else if (heuristic == "me_div_beta") {
-    return JUST(neighbor_cost())
            / (size_d * time_since_last_access * std::pow(0.5, recompute_times()));
   } else {
     return Error::InvalidValueError("");

@@ -118,7 +118,6 @@ if args.allocator:
     heuristic = "eq_compute_time_and_last_access"
     # heuristic = "full_compute_time_and_last_access"
     if args.me_style:
-        # heuristic = "eq"
         heuristic = args.me_method
 
 else:
