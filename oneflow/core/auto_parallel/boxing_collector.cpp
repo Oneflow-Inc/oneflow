@@ -147,6 +147,8 @@ Maybe<void> BoxingCollector::Init(int32_t max_axis) {
   JUST(GenerateCombination4SamePlacement(3));
   JUST(GenerateCombination4DiffHierarchy(this, this));
   JUST(GenerateCombination4DiffPlacement(this, this));
+  init_type_ = int32_t(enable_general_basic_communication
+                       || Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream());
   return Maybe<void>::Ok();
 }
 
@@ -161,6 +163,8 @@ Maybe<void> BoxingCollector::Init(const BlobDesc& logical_blob_desc,
   // Get copy cost in lazy mode
   LazyMode::Guard enable_lazy_mode(true);
   JUST(GenerateCombination4SamePlacement(5, logical_blob_desc, parallel_desc));
+  init_type_ = int32_t(enable_general_basic_communication
+                       || Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream());
   return Maybe<void>::Ok();
 }
 
@@ -228,6 +232,7 @@ void BoxingCollector::GenerateMap1d2nd() {
   // Generate the id Map from 1d sbp to nd sbp
   NdSbp nd_sbp;
   for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num_; dim_sbp++) { nd_sbp.add_sbp_parallel(); }
+  id_1d_2_nd_.clear();
   id_1d_2_nd_.resize(m, -1);
   for (int32_t id_1d = 0; id_1d < m; id_1d++) {
     for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num_; dim_sbp++) {
@@ -262,7 +267,9 @@ Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middl
                                                                const ParallelDesc& parallel_desc) {
   // Store the origin transfer cost information
   int32_t n = nd_sbp_lists_.size();
+  minimum_copy_cost_.clear();
   minimum_copy_cost_.resize(n);
+  middle_nodes_.clear();
   middle_nodes_.resize(n);
   for (int32_t i = 0; i < n; i++) {
     minimum_copy_cost_[i].resize(n);
@@ -349,6 +356,7 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffHierarchy(
 
   // Search the path that contains one of the diagonal sbp
   int32_t n = nd_sbp_lists_.size();
+  diag_node_diff_hierarchy_.clear();
   diag_node_diff_hierarchy_.resize(n);
   for (int32_t i = 0; i < n; i++) {
     diag_node_diff_hierarchy_[i].resize(n);
@@ -395,6 +403,7 @@ Maybe<void> BoxingCollector::ComputeCostFor1DSbpDiffPlacement(
   // Number of 1d sbp
   int32_t m = id2sbp_parallel_.size();
   // Compute the cost while transferring a 1D sbp between different placements
+  cost_4_diff_placement.clear();
   cost_4_diff_placement.resize(m);
   for (int32_t id_1d_producer = 0; id_1d_producer < m; id_1d_producer++) {
     cost_4_diff_placement[id_1d_producer].resize(m, GetMaxVal<float>());
@@ -425,6 +434,7 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(
 
   // Search the path that contains two of the diagonal sbp
   int32_t n = nd_sbp_lists_.size();
+  diag_node_diff_placement_.clear();
   diag_node_diff_placement_.resize(n);
   for (int32_t i = 0; i < n; i++) {
     diag_node_diff_placement_[i].resize(n);
@@ -570,8 +580,6 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
   }
 
 #ifdef WITH_CUDA
-  static const bool enable_general_basic_communication =
-      ParseBooleanFromEnv("ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION", false);
   // Use a general basic communication if no P in the consumer
   if (((Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
         && producer_parallel_desc == consumer_parallel_desc)
@@ -591,6 +599,23 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
     return Maybe<void>::Ok();
   }
 #endif  // WITH_CUDA
+
+  if (JUST(ComputeLazyCopyCostBetweenNdSbp(sbp_producer, sbp_consumer, logical_blob_desc,
+                                           producer_parallel_desc, consumer_parallel_desc,
+                                           /*requires_same_sbp=*/false))
+      < GetValidMaxCopyCost()) {
+    return Maybe<void>::Ok();
+  } else {
+    int32_t require_init_type =
+        int32_t(enable_general_basic_communication
+                || Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream());
+    if (init_type_ != require_init_type) {
+      // We assemble the boxing table from S(0) to S(5).
+      // Those splitting in higher axes are considered in the customized boxing.
+      constexpr int32_t kRegularMaxSplitAxes = 6;
+      JUST(Init(kRegularMaxSplitAxes));
+    }
+  }
 
   // Middle nodes algorithm supports transfer for different machines or devices or hierarchies
   if (producer_parallel_desc != consumer_parallel_desc) {

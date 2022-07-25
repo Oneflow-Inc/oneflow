@@ -27,8 +27,6 @@ import oneflow.unittest
 os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
 os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
 
-flow.boxing.nccl.enable_use_compute_stream(False)
-
 
 class _TestModuleDiffHierarchy(nn.Module):
     def forward(self, x):
@@ -115,6 +113,8 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
                 type="cuda", ranks=np.array(range(4)).reshape(2, 2)
             ),
         )
+
+        flow.boxing.nccl.enable_use_compute_stream(False)
 
         model_diff_hierarchy = _TestModuleDiffHierarchy()
         graph_diff_hierarchy = _TestGraph(model_diff_hierarchy)

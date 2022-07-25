@@ -163,6 +163,11 @@ class BoxingCollector final {
   std::vector<int32_t> id_1d_2_nd_;
   // The sbp size in the combination table
   int32_t hierarchy_num_;
+  // How the boxing collector is initialized
+  int32_t init_type_ = -1;
+  // Enable general basic communication or not
+  const bool enable_general_basic_communication =
+      ParseBooleanFromEnv("ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION", false);
 };  // class BoxingCollector
 
 }  // namespace oneflow

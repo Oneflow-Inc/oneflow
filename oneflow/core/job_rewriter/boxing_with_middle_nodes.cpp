@@ -25,37 +25,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-bool NeedBoxingCollector(const OpGraph& op_graph) {
-  bool need_boxing_collector = false;
-  op_graph.ForEachNode([&](const OpNode* node) {
-    if (need_boxing_collector) { return; }
-    OperatorConf::OpTypeCase op_type_case = node->op().op_conf().op_type_case();
-    if (IsClassRegistered<int32_t, DisableInputBoxingGroup>(op_type_case)) { return; }
-    for (const std::string& ibn : node->op().input_bns()) {
-      const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
-      const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
-      const NdSbp& producer_nd_sbp = producer.NdSbp4Lbi(lbi);
-      const NdSbp& consumer_nd_sbp = node->NdSbp4BnInOp(ibn);
-      // If dealing with different placement
-      if (producer.parallel_desc().parallel_num() != 1
-          || node->parallel_desc().parallel_num() != 1) {
-        const auto& logical_blob_desc = producer.LogicalBlobDesc4Lbi(lbi);
-        if (CHECK_JUST(ComputeLazyCopyCostBetweenNdSbp(producer_nd_sbp, consumer_nd_sbp,
-                                                       logical_blob_desc, producer.parallel_desc(),
-                                                       node->parallel_desc(),
-                                                       /*requires_same_sbp=*/false))
-            > GetValidMaxCopyCost()) {
-          need_boxing_collector = true;
-          return;
-        }
-      }
-    }
-  });
-  return need_boxing_collector;
-}
-}  // namespace
-
 Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_builder) {
   // Not allowed two-step boxing and disable checking for debugging
   if (ParseBooleanFromEnv("ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK", false)) {
@@ -63,12 +32,6 @@ Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_build
   }
   // Initialize boxing collector
   BoxingCollector boxing_collector;
-  if (NeedBoxingCollector(op_graph)) {
-    // We assemble the boxing table from S(0) to S(5).
-    // Those splitting in higher axes are considered in the customized boxing.
-    constexpr int32_t kRegularMaxSplitAxes = 6;
-    JUST(boxing_collector.Init(kRegularMaxSplitAxes));
-  }
   std::vector<NdSbp> middle_sbps;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   // Fill other unsupported combinations
