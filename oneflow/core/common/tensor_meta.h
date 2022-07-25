@@ -186,10 +186,6 @@ class GlobalTensorMeta : public TensorMeta {
   Symbol<NdSbp> nd_sbp() const { return nd_sbp_; }
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
 
-  void set_nd_sbp(Symbol<NdSbp> val) { nd_sbp_ = val; }
-
-  void set_parallel_desc(Symbol<ParallelDesc> val) { parallel_desc_ = val; }
-
   size_t CalcHashValue() const;
 
  private:
