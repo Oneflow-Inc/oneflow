@@ -72,7 +72,7 @@ class StatefulOpKernel final {
   }
 
   bool output_is_mut2_type(int64_t index) const {
-    return output_tuple_indexe2is_mut2_type_.at(index);
+    return output_tuple_indexes2is_mut2_type_.at(index);
   }
 
   const AttrMap& base_attrs() const { return base_attrs_; }
@@ -130,7 +130,7 @@ class StatefulOpKernel final {
   std::vector<int64_t> input_tuple_indexes4mut_ibns_;
   std::vector<int64_t> output_tuple_indexes4mut_obns_;
   std::vector<int64_t> output_tuple_indexes4mut2_obns_;
-  HashMap<int64_t, bool> output_tuple_indexe2is_mut2_type_;
+  HashMap<int64_t, bool> output_tuple_indexes2is_mut2_type_;
 };
 
 }  // namespace one
