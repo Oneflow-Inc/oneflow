@@ -78,7 +78,8 @@ class TestMaskedFill(flow.unittest.TestCase):
         return input.masked_fill(mask > 0.5, value)
 
     def test_graph_masked_fill(test_case):
-        model = nn.Sequential(nn.Linear(8, 8))
+        k = 8
+        model = nn.Sequential(nn.Linear(k, k))
         optimizer = flow.optim.SGD(model.parameters(), lr=1e-3)
         loss_fn = nn.MSELoss()
 
@@ -96,10 +97,8 @@ class TestMaskedFill(flow.unittest.TestCase):
                 loss.backward()
                 return loss
 
-        k1 = 8
-        k2 = 8
-        input = flow.randn(k1, k2).requires_grad_()
-        mask = flow.randn(k1, k2)
+        input = flow.randn(k, k).requires_grad_()
+        mask = flow.randn(k, k)
         model = MaskedFillGraph()
         return model(input, mask)
 
