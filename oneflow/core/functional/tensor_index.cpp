@@ -421,8 +421,22 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
           JUST(Copy(packed_indices, device->type(), device->device_id(), /*pin_memory=*/false));
     }
   }
+
   std::cout << "transposed_input is_contiguous: " << transposed_input->is_contiguous() << std::endl;
-  JUST(TensorScatterNdUpdate(transposed_input, packed_indices, value, /*inplace=*/true));
+  // expand the value when the value is a scalar.
+  std::shared_ptr<Tensor> expand_value = value;
+  if (value->shape()->elem_cnt() == 1) {
+    DimVector dims;
+    const Shape& packed_indices_shape = *packed_indices->shape();
+    // insert the number of slice tensors
+    dims.emplace_back(packed_indices_shape.Count(0, packed_ndim - 1));
+    // insert the shape of each slice tensor
+    int64_t slice_dims = packed_indices_shape.At(packed_ndim - 1);
+    dims.insert(dims.end(), transposed_input->shape()->begin() + slice_dims,
+                transposed_input->shape()->end());
+    expand_value = JUST(Expand(value, Shape(dims)));
+  }
+  JUST(TensorScatterNdUpdate(transposed_input, packed_indices, expand_value, /*inplace=*/true));
   return Maybe<void>::Ok();
 }
 
