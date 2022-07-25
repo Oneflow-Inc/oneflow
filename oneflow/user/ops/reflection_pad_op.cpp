@@ -72,7 +72,7 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   return ReflectionPad1DOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ReflectionPad1DOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReflectionPad1DOp::ModifyInputArg(
@@ -107,7 +107,7 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   return ReflectionPad2DGradOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ReflectionPad1DGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
   return Maybe<void>::Ok();
 }
 
@@ -138,7 +138,7 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   return ReflectionPad2DOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ReflectionPad2DOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReflectionPad2DOp::ModifyInputArg(
@@ -176,7 +176,7 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   return ReflectionPad2DGradOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ReflectionPad2DGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
   return Maybe<void>::Ok();
 }
 

@@ -51,7 +51,7 @@ REGISTER_USER_OP("mlir_jit")
       const Shape& in_shape = ctx->InputShape("in", 0);
       Shape* out_shape = ctx->MutOutputShape("out", 0);
       *out_shape = in_shape;
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 1);
+      *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 1);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -65,7 +65,7 @@ REGISTER_USER_OP("mlir_jit")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+      *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
