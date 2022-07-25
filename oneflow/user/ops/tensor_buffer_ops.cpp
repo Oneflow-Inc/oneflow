@@ -27,7 +27,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> TensorBufferToTensorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   out->set_is_dynamic(in.is_dynamic());
   const auto& instance_shape = ctx->Attr<Shape>("instance_shape");
   DimVector dim_vec;
@@ -41,7 +41,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> TensorBufferToTensorOp::InferDataType(user_op::InferContext* ctx) {
   const auto data_type = ctx->Attr<DataType>("dtype");
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   CHECK_OR_RETURN(IsPODDataType(data_type));
   *out->mut_data_type() = data_type;
   return Maybe<void>::Ok();
@@ -61,7 +61,7 @@ namespace oneflow {
   const Shape& in_shape = in.shape();
   const auto& instance_dims = ctx->Attr<int32_t>("instance_dims");
   CHECK_LT_OR_RETURN(instance_dims, in_shape.NumAxes());
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   out->set_is_dynamic(in.is_dynamic());
   DimVector out_dim_vec;
   out_dim_vec.insert(out_dim_vec.end(), in_shape.dim_vec().cbegin(),
@@ -75,7 +75,7 @@ namespace oneflow {
 /*static*/ Maybe<void> TensorToTensorBufferOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
   CHECK_OR_RETURN(IsPODDataType(in.data_type()));
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   *out->mut_data_type() = DataType::kTensorBuffer;
   return Maybe<void>::Ok();
 }
@@ -84,7 +84,7 @@ namespace oneflow {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }
 /*static*/ Maybe<void> GenTensorBufferOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   const Shape& shape = ctx->Attr<Shape>("shape");
   const int64_t num_tensor_buffers = shape.elem_cnt();
   const std::vector<Shape>& shape_list = ctx->Attr<std::vector<Shape>>("shape_list");
@@ -99,7 +99,7 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> GenTensorBufferOp::InferDataType(user_op::InferContext* ctx) {
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   *out->mut_data_type() = DataType::kTensorBuffer;
   return Maybe<void>::Ok();
 }
@@ -116,7 +116,7 @@ namespace oneflow {
   const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
   int64_t num_tensor_buffers = in.shape().elem_cnt();
   for (int64_t i = 0; i < num_tensor_buffers; ++i) {
-    user_op::TensorDesc* out_i = ctx->OutputTensorDesc("out", i);
+    user_op::TensorDesc* out_i = ctx->MutOutputTensorDesc("out", i);
     *out_i->mut_shape() = out_shape;
     out_i->set_is_dynamic(dynamic_out);
   }
@@ -133,7 +133,7 @@ namespace oneflow {
   CHECK_OR_RETURN(IsPODDataType(out_dtype));
   int64_t num_tensor_buffers = ctx->outputs().size();
   for (int64_t i = 0; i < num_tensor_buffers; ++i) {
-    user_op::TensorDesc* out_i = ctx->OutputTensorDesc("out", i);
+    user_op::TensorDesc* out_i = ctx->MutOutputTensorDesc("out", i);
     *out_i->mut_data_type() = out_dtype;
   }
   return Maybe<void>::Ok();
@@ -168,7 +168,7 @@ namespace oneflow {
   const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
   int64_t num_tensor_buffers = in.shape().elem_cnt();
   for (int64_t i = 0; i < num_tensor_buffers; ++i) {
-    user_op::TensorDesc* out_i = ctx->OutputTensorDesc("out", i);
+    user_op::TensorDesc* out_i = ctx->MutOutputTensorDesc("out", i);
     *out_i->mut_shape() = out_shapes[i];
     out_i->set_is_dynamic(dynamic_out);
   }
@@ -185,7 +185,7 @@ namespace oneflow {
   int64_t num_tensor_buffers = ctx->outputs().size();
   for (int64_t i = 0; i < num_tensor_buffers; ++i) {
     CHECK_OR_RETURN(IsPODDataType(out_dtypes[i]));
-    user_op::TensorDesc* out_i = ctx->OutputTensorDesc("out", i);
+    user_op::TensorDesc* out_i = ctx->MutOutputTensorDesc("out", i);
     *out_i->mut_data_type() = out_dtypes[i];
   }
   return Maybe<void>::Ok();
