@@ -20,7 +20,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> EmbeddingRenormOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -33,7 +33,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> EmbeddingRenormOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -73,7 +73,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> EmbeddingOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("weight", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("weight", 0);
   return Maybe<void>::Ok();
 }
 
@@ -126,7 +126,7 @@ namespace oneflow {
 /*static*/ Maybe<void> EmbeddingGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("weight", 0), ctx->InputDType("dy", 0))
       << "input grad has different type with weight";
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
   return Maybe<void>::Ok();
 }
 

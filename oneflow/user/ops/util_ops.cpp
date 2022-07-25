@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> IsNanOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -38,12 +38,12 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> IsNanOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kBool;
+  *ctx->MutOutputDType("out", 0) = DataType::kBool;
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> IsInfOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -62,7 +62,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> IsInfOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kBool;
+  *ctx->MutOutputDType("out", 0) = DataType::kBool;
   return Maybe<void>::Ok();
 }
 

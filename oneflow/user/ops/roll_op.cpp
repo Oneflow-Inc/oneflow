@@ -45,14 +45,14 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> RollOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
-  *ctx->OutputShape("out", 0) = in_shape;
+  *ctx->MutOutputShape("out", 0) = in_shape;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> RollOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> RollOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
