@@ -232,10 +232,10 @@ add_docstr(
     """
     randint_like(input, low=0, high, size, *, dtype=None, generator=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
 
+    Returns a tensor filled with random integers generated uniformly between low (inclusive) and high (exclusive).
+
     The interface is consistent with PyTorch.    
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.randint_like.html.
-
-    Returns a tensor filled with random integers generated uniformly between low (inclusive) and high (exclusive).
 
     Args:
         input (oneflow.Tensor): the size of ``input`` will determine size of the output tensor.
