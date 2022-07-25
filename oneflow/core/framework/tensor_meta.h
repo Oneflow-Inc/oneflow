@@ -31,6 +31,7 @@ class ParallelDesc;
 namespace one {
 
 bool IsContiguous(const Shape& shape, const Stride& stride);
+bool IsContiguous(const ShapeView& shape_view, const Stride& stride);
 
 class TensorMeta : public user_op::TensorDesc {
  public:
