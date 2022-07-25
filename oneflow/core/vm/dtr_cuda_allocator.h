@@ -41,15 +41,13 @@ class DtrCudaAllocator final : public Allocator {
   bool left = true;
 
  private:
-  ptrdiff_t get_offset(const char* mem_ptr) const;
+  using offset_t = size_t;
 
-  static constexpr int32_t kInvalidBinNum = -1;
-  static constexpr int32_t kBinNumSize = 20;
+  offset_t get_offset(const char* mem_ptr) const;
 
   // Piece is the basic memory unit of CudaAllocator.
   // A Piece is either is free(is_free = true) or in used(is_free = false).
-  // If the Piece is_free = true, the pointer to the piece will be stored in the Bin structure of
-  // the corresponding BinSize. Pieces are stored in a linked list. The Piece's prev and next are
+  // Pieces are stored in a linked list. The Piece's prev and next are
   // continuous with the current Piece in physical memory.
   struct Piece {
     size_t size = 0;
@@ -57,49 +55,23 @@ class DtrCudaAllocator final : public Allocator {
     bool is_free = false;
     Piece* prev = nullptr;
     Piece* next = nullptr;
-    int32_t bin_num = kInvalidBinNum;
     vm::DTREagerBlobObject* tensor = nullptr;
     bool is_left = true;
   };
 
-  // Bin is a structure that stores a set of pieces which is free and has similar size, and
-  // these Pieces are arger than the size of bin
-  //
-  // CudaAllocator has a set of Bin structures according to the binary multiple increasing relation,
-  // which is used to quickly index and find the free Piece of appropriate size when Allocate()
-  //
-  // The size of the smallest bin is 512 (512 is the smallest unit Allocated by CudaAllocator,
-  // and the memory size of all Allocated will be multiples of 512, 512 is kCudaMemAllocAlignSize).
-  // The size of each Bin is twice the size of the previous Bin, like
-  //    BinNum:   Bin0, Bin1, Bin2, Bin3, ..., Bin19
-  //    BinSize:  512, 1024, 2048, 4096, ... , 512MB
-  struct Bin {
-    size_t size = 0;
-
-    struct PieceCmp {
-      bool operator()(const Piece* lhs, const Piece* rhs) const {
-        if (lhs->size != rhs->size) { return lhs->size < rhs->size; }
-        return lhs->ptr < rhs->ptr;
-      }
-    };
-    std::set<Piece*, PieceCmp> pieces;
-  };
-
-  size_t BinSize4BinId(int32_t bin_num) { return kCudaMemAllocAlignSize << bin_num; }
-
-  int32_t LowerBoundBinId4NormalPiece(size_t size);
-
-  int32_t UpperBoundBinId4NormalPiece(size_t size);
-
   bool InSmallMemoryArea(void* ptr);
 
-  // Try find free Piece which size is larger than aligned_size in Bins.
+  offset_t FindProperPositionInGroup(size_t group_idx, size_t request_size);
+
+  Piece* AllocateMemoryInPiece(Piece* piece, offset_t offset_in_piece, size_t size);
+
+  void InsertToFreeList(Piece* piece);
+  void EraseFromFreeList(Piece* piece);
+
+  // Try find free Piece which size is larger than aligned_size
   // Return nullptr when find failure
   Piece* FindPiece(size_t aligned_size, bool after_eviction);
   void Display();
-
-  // Insert the free Piece to the appropriate Bin which bin size is smaller than piece
-  void InsertPiece2Bin(Piece* piece);
 
   // Create new empty Piece or recycle a Piece from recycle_piece_list_
   Piece* AllocatePiece();
@@ -114,7 +86,6 @@ class DtrCudaAllocator final : public Allocator {
   void ErasePieceFromPtrMap(Piece* piece);
 
   void MergeNeighbourFreePiece(Piece* lhs, Piece* rhs);
-  void RemovePieceFromBin(Piece* piece);
 
   Piece* EvictAndFindPieceOnce(size_t size);
   Piece* EvictAndFindPieceMegEngineStyle(size_t size);
@@ -124,13 +95,24 @@ class DtrCudaAllocator final : public Allocator {
   size_t memory_size_;
   void* small_piece_area_ptr_ = nullptr;
 
-  std::vector<Bin> bins_;
+  // hold the lifetime of Piece
   std::vector<std::unique_ptr<Piece>> pieces_;
+  struct PieceCmp {
+    bool operator()(const Piece* lhs, const Piece* rhs) const {
+      if (lhs->size != rhs->size) { return lhs->size < rhs->size; }
+      return lhs->ptr < rhs->ptr;
+    }
+  };
+  std::set<Piece*, PieceCmp> free_pieces_;
   // std::map is sorted by key, so we can find contiguous memory by it
   std::map<char*, Piece*> ptr2piece_;
   Piece* recycle_piece_list_;
   size_t total_allocate_bytes_ = 0;
   size_t total_deallocate_bytes_ = 0;
+
+  // -----
+  // size_t group_num_;
+  // size_t cur_group_index_;
 };
 
 }  // namespace vm
