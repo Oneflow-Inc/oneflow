@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/functor_util.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/device.h"
@@ -175,6 +176,14 @@ Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, in
 
 auto* CachedEagerNcclBroadcastOpExpr = DECORATE(&EagerNcclBroadcast, ThreadLocal);
 
+struct BroadcastAttrs {
+  Maybe<AttrMap> operator()(int64_t src_rank) {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("root", src_rank));
+    return AttrMap(attrs);
+  }
+};
+
 }  // namespace
 
 Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
@@ -183,8 +192,8 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
   if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
   std::shared_ptr<UserOpExpr> op_expr =
       JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank));
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<int64_t>("root", src_rank));
+  constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(BroadcastAttrs);
+  const auto attrs = *JUST(GetAttrs(src_rank));
   if (src_rank == GlobalProcessCtx::Rank() || inplace) {
     TensorTuple outputs{tensor};
     JUST(OpInterpUtil::Dispatch(*op_expr, {tensor}, &outputs,

@@ -69,7 +69,7 @@ class AttrMap final {
   using value_type = typename AttrName2AttrVal::value_type;
   AttrMap(std::initializer_list<value_type> init);
 
-  AttrMap(const MutableAttrMap& other);  // without coping AttrVal
+  explicit AttrMap(const MutableAttrMap& other);  // without coping AttrVal
 
   AttrMap(const AttrMap&) = default;
   AttrMap(AttrMap&&) = default;
