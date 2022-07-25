@@ -139,5 +139,16 @@ Vision functions
 
     pad
     interpolate
+    upsample
     grid_sample
     affine_grid
+
+Greedy decoder
+----------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    ctc_greedy_decoder
+
