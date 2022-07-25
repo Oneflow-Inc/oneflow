@@ -135,7 +135,7 @@ add_docstr(
     See :class:`~oneflow.nn.SmoothL1Loss` for details.
     """,
 )
-    
+
 add_docstr(
     oneflow._C.binary_cross_entropy_loss,
     r"""
