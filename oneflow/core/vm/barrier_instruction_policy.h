@@ -27,7 +27,6 @@ class BarrierInstructionPolicy final : public InstructionPolicy {
   }
   ~BarrierInstructionPolicy() override = default;
 
-  void callback() const { return callback_(); }
 
   const DependenceVector& input_dependences() const override {
     static DependenceVector dependences{};
@@ -44,7 +43,7 @@ class BarrierInstructionPolicy final : public InstructionPolicy {
 
   std::string DebugName(const vm::Instruction& instruction) const override { return "Barrier"; }
   Maybe<void> Prepare(Instruction* instruction) override { return Maybe<void>::Ok(); }
-  void Compute(Instruction* instruction) override { callback(); }
+  void Compute(Instruction* instruction) override { return callback_(); }
 
  private:
   std::function<void()> callback_;
