@@ -512,7 +512,7 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
       } else if (attr.dyn_cast<sbp::BroadcastAttr>()) {
         res = std::string("B");
       } else if (attr.dyn_cast<sbp::PartialSumAttr>()) {
-        res = std::string("P");
+        res = "P";
       } else {
         op->emitError("VariableOp with illegal sbp attribute");
       }
