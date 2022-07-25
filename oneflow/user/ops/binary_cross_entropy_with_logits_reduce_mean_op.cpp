@@ -177,8 +177,8 @@ REGISTER_USER_OP_GRAD("binary_cross_entropy_with_logits_reduce_mean")
       << "Input datatype should be equal to Target datatype. ";
   DataType out_dtype = ctx->Attr<DataType>("out_dtype");
   if (out_dtype == DataType::kInvalidDataType) { out_dtype = input_desc.data_type(); }
-  *ctx->OutputDType("out", 0) = out_dtype;
-  *ctx->OutputDType("dx", 0) = input_desc.data_type();
+  *ctx->MutOutputDType("out", 0) = out_dtype;
+  *ctx->MutOutputDType("dx", 0) = input_desc.data_type();
   return Maybe<void>::Ok();
 }
 
