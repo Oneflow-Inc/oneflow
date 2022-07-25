@@ -52,17 +52,17 @@ TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
 
 Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
   *ctx->MutOutputShape("dx", 0) = ctx->InputShape("x", 0);
-  *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x", 0);
+  *ctx->MutOutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> FwInferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 

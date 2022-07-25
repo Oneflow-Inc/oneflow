@@ -26,7 +26,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> OneRecReaderOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kTensorBuffer;
+  *ctx->MutOutputDType("out", 0) = DataType::kTensorBuffer;
   return Maybe<void>::Ok();
 }
 

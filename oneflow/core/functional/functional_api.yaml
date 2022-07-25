@@ -68,6 +68,14 @@
   signature: "Tensor (Tensor input, Tensor tensor1, Tensor tensor2, *, Scalar value=1) => InplaceAddcmul"
   bind_python: true
 
+- name: "addcdiv"
+  signature: "Tensor (Tensor input, Tensor tensor1, Tensor tensor2, *, Scalar value=1) => AddCDiv"
+  bind_python: true
+
+- name: "addcdiv_"
+  signature: "Tensor (Tensor input, Tensor tensor1, Tensor tensor2, *, Scalar value=1) => InplaceAddCDiv"
+  bind_python: true
+
 - name: "div"
   signature:
     [
@@ -527,6 +535,15 @@
 - name: "relu_grad"
   signature: "Tensor (Tensor dy, Tensor y) => ReluGrad"
   bind_python: False
+
+- name: "hann_window"
+  signature: [
+    "Tensor (Int64 window_length, Bool periodic=True, *, Device device=None, DataType dtype=None, 
+      Bool requires_grad=False) => HannWindow",
+    "Tensor (Int64 window_length, Bool periodic=True, *, Placement placement, SbpList sbp, DataType dtype=None,
+      Bool requires_grad=False) => GlobalHannWindow" 
+      ]
+  bind_python: True
 
 - name: "hardtanh"
   signature: "Tensor (Tensor x, Double min_val, Double max_val) => HardTanh"
@@ -1087,7 +1104,7 @@
   bind_python: False
 
 - name: "binary_cross_entropy_loss"
-  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, String reduction) => BinaryCrossEntropyLoss"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, String reduction=\"mean\") => BinaryCrossEntropyLoss"
   bind_python: True
 
 - name: "binary_cross_entropy_loss_grad"
@@ -1095,7 +1112,7 @@
   bind_python: False
 
 - name: "binary_cross_entropy_with_logits_loss"
-  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None, String reduction) => BinaryCrossEntropyWithLogitsLoss"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Tensor pos_weight=None, String reduction=\"mean\") => BinaryCrossEntropyWithLogitsLoss"
   bind_python: True
 
 - name: "binary_cross_entropy_with_logits_loss_grad"

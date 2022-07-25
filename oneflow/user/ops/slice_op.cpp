@@ -202,7 +202,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -273,7 +273,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceGradOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,

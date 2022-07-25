@@ -145,7 +145,7 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 }
 
 /* static */ Maybe<void> AffineGridOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("grid", 0) = ctx->InputDType("theta", 0);
+  *ctx->MutOutputDType("grid", 0) = ctx->InputDType("theta", 0);
   return Maybe<void>::Ok();
 }
 
@@ -180,7 +180,7 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 }
 
 /* static */ Maybe<void> AffineGridGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dtheta", 0) = ctx->InputDType("dgrid", 0);
+  *ctx->MutOutputDType("dtheta", 0) = ctx->InputDType("dgrid", 0);
   return Maybe<void>::Ok();
 }
 
