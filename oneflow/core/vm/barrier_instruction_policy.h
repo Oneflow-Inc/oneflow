@@ -27,7 +27,6 @@ class BarrierInstructionPolicy final : public InstructionPolicy {
   }
   ~BarrierInstructionPolicy() override = default;
 
-
   const DependenceVector& input_dependences() const override {
     static DependenceVector dependences{};
     return dependences;
