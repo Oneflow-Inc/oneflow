@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <cstdint>
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/util.h"
@@ -194,5 +193,10 @@ REGISTER_GPUASSTRIDED_KERNEL(double);
 REGISTER_GPUASSTRIDED_KERNEL(int64_t);
 
 #undef REGISTER_GPUASSTRIDED_KERNEL
+
+REGISTER_USER_KERNEL("as_strided")
+    .SetCreateFn<GpuAsStridedKernel<bool>>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
+                     && (user_op::HobDataType("input", 0) == GetDataType<bool>::value));
 
 }  // namespace oneflow
