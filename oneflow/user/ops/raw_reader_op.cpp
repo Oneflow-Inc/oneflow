@@ -42,7 +42,7 @@ namespace oneflow {
     for (int32_t i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
       if (nd_sbp.sbp_parallel(i).has_split_parallel()) { split_num *= hierarchy.At(i); }
     }
-    CHECK_EQ_OR_RETURN(batch_size % split_num, 0);
+    CHECK_EQ_OR_RETURN(batch_size % split_num, 0) << "batch_size must be a multiple of shard num";
     batch_size /= split_num;
   }
   const Shape& instance_shape = ctx->Attr<Shape>("shape");
