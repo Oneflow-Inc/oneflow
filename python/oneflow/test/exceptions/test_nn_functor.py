@@ -108,7 +108,7 @@ class TestPadError(flow.unittest.TestCase):
         with test_case.assertRaises(Exception) as ctx:
             x = flow.ones((1, 1, 2, 2), dtype=flow.float32)
             out = flow._C.pad(x, (4, 4, 4, 4), mode="reflect")
-        
+
         test_case.assertTrue(
             "Padding size should be less than the corresponding input dimension, but got:"
             in str(ctx.exception)
