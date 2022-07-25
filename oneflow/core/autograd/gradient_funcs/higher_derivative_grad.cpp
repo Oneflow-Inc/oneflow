@@ -212,8 +212,6 @@ Maybe<void> ConvDataGradGrad::Capture(ConvDataGradGradCaptureState* ctx, const T
   ctx->w_requires_grad = inputs.at(1)->requires_grad();
   ctx->grad_requires_grad = inputs.at(0)->requires_grad();
 
-  if (!(ctx->w_requires_grad || ctx->grad_requires_grad)) { return Maybe<void>::Ok(); }
-
   if (ctx->grad_requires_grad) { ctx->w_index = ctx->SaveTensorForBackward(inputs.at(1)); }
   if (ctx->w_requires_grad) { ctx->grad_index = ctx->SaveTensorForBackward(inputs.at(0)); }
 
@@ -307,8 +305,6 @@ Maybe<void> ConvFilterGradGrad::Capture(ConvFilterGradGradCaptureState* ctx,
 
   ctx->x_requires_grad = inputs.at(1)->requires_grad();
   ctx->grad_requires_grad = inputs.at(0)->requires_grad();
-
-  if (!(ctx->x_requires_grad || ctx->grad_requires_grad)) { return Maybe<void>::Ok(); }
 
   ctx->x_index = ctx->SaveTensorForBackward(inputs.at(1));
   if (ctx->x_requires_grad) { ctx->grad_index = ctx->SaveTensorForBackward(inputs.at(0)); }
