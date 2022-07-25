@@ -3,6 +3,9 @@
 #include <vector>
 #include <string>
 
+namespace mlir {
+namespace oneflow {
+
 mlir::LogicalResult PrintSbpAttrToString(mlir::Attribute sbp_attr, std::string* sbp) {
   if (auto sbp_s_attr = sbp_attr.dyn_cast<mlir::sbp::SplitAttr>()) {
     *sbp = "S(" + std::to_string(sbp_s_attr.getAxis()) + ")";
@@ -70,3 +73,5 @@ mlir::Attribute ConvertNdSbpToPsig(mlir::Builder& builder, std::vector<std::stri
   auto res = mlir::sbp::ParallelSignatureAttr::get(ctx, inputs, outputs);
   return res;
 }
+}  // namespace oneflow
+}  // namespace mlir
