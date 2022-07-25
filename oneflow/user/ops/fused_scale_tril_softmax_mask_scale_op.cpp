@@ -21,9 +21,9 @@ namespace oneflow {
     -> Maybe<void> {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   *ctx->MutOutputShape("y", 0) = x_desc.shape();
-  *ctx->OutputIsDynamic("y", 0) = x_desc.is_dynamic();
+  *ctx->MutOutputIsDynamic("y", 0) = x_desc.is_dynamic();
   *ctx->MutOutputShape("softmax_y", 0) = x_desc.shape();
-  *ctx->OutputIsDynamic("softmax_y", 0) = x_desc.is_dynamic();
+  *ctx->MutOutputIsDynamic("softmax_y", 0) = x_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedTrilScaleSoftmaxMaskScaleOp::InferPhysicalTensorDesc(
@@ -33,8 +33,8 @@ namespace oneflow {
 /*static*/ auto FusedTrilScaleSoftmaxMaskScaleOp::InferDataType(user_op::InferContext* ctx)
     -> Maybe<void> {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-  *ctx->OutputDType("y", 0) = x_desc.data_type();
-  *ctx->OutputDType("softmax_y", 0) = x_desc.data_type();
+  *ctx->MutOutputDType("y", 0) = x_desc.data_type();
+  *ctx->MutOutputDType("softmax_y", 0) = x_desc.data_type();
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedTrilScaleSoftmaxMaskScaleOp::ModifyInputArg(
