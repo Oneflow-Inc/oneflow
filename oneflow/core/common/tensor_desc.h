@@ -13,15 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_DESC_H_
-#define ONEFLOW_CORE_FRAMEWORK_TENSOR_DESC_H_
+#ifndef ONEFLOW_CORE_COMMON_TENSOR_DESC_H_
+#define ONEFLOW_CORE_COMMON_TENSOR_DESC_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/register/blob_desc.pb.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/stride.h"
+#include "oneflow/core/common/data_type.pb.h"
 
 namespace oneflow {
+
+class BlobDescProto;
 
 namespace user_op {
 
@@ -77,4 +79,4 @@ class NaiveTensorDesc final : public TensorDesc {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_DESC_H_
+#endif  // ONEFLOW_CORE_COMMON_TENSOR_DESC_H_
