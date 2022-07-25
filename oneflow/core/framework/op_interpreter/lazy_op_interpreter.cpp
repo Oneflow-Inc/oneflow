@@ -935,6 +935,12 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
       JUST(infer_ctx->DisableBoxing(lbn));
     }
   }
+
+  // Set UserOpConf's inplace flag
+  if (op_expr.input_size() == 1 && op_expr.output_size() == 1) {  // one input and one output
+    if ((*outputs)[0] != nullptr) { op_conf->mutable_user_conf()->set_is_inplace(true); }
+  }
+
   VLOG(2) << "Lazy nn.Graph name " << graph_name << " try to add op: \n"
           << op_conf->DebugString() << std::endl;
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(*op_conf));

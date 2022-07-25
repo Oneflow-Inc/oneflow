@@ -14,8 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
+#include <glog/logging.h>
+#include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/register/register_desc.h"
 
 namespace oneflow {
 
@@ -85,6 +88,25 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
   });
 }
 
+void NormalForwardCompTaskNode::HandleInplaceRegsts() {
+  if (IsInplaceOpTask()) {
+    std::cout << "set inplace: " << op().get()->op_name() << std::endl;
+    const auto& _op = op();
+    CHECK(_op->output_bns().size() == 1);
+    const std::string& obn = _op->output_bns()[0];
+    std::string out_regst_name = GetOutRegstNameByObn(obn);
+    std::shared_ptr<RegstDesc> out_regst = GetProducedRegst(out_regst_name);
+    CHECK(in_edges().size() == 1);
+    TaskEdge* task_edge = *in_edges().begin();
+    CHECK(task_edge->GetRegsts().size() == 1);
+    std::shared_ptr<RegstDesc> in_regst = task_edge->GetRegsts()[0];
+    std::cout << "in regst id: " << in_regst->regst_desc_id() << std::endl;
+    std::cout << "out regst id: " << out_regst->regst_desc_id() << std::endl;
+    in_regst->set_enable_reuse_mem(true);
+    out_regst->set_hint_inplace_consumed_regst_desc_id(in_regst->regst_desc_id());
+  }
+}
+
 void NormalForwardCompTaskNode::BuildExecGphAndRegst() {
   BuildExecGphStructAndBindInRegst();
   BuildOutRegst();
@@ -115,6 +137,11 @@ void NormalForwardCompTaskNode::BuildTmp7BufRegsts() {
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     node->AddBnToRegstAndBindIt(&Operator::tmp_bns, GetProducedRegst("tmp"));
   });
+}
+
+bool NormalForwardCompTaskNode::IsInplaceOpTask() {
+  if (op()->op_conf().has_user_conf() && op()->op_conf().user_conf().is_inplace()) { return true; }
+  return false;
 }
 
 REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kNormalForward);

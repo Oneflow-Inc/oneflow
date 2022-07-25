@@ -27,8 +27,10 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
   ~NormalForwardCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
-  void ConsumeAllRegsts() override;
+  void HandleInplaceRegsts() override;
 
+  void ConsumeAllRegsts() override;
+  bool IsInplaceOpTask() override;
   TaskType GetTaskType() const override { return TaskType::kNormalForward; }
 
  private:

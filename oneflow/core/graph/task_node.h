@@ -77,6 +77,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   // Build
   virtual void ProduceAllRegstsAndBindEdges() = 0;
   virtual void ConsumeAllRegsts() = 0;
+  virtual void HandleInplaceRegsts(){};
   void PinConsumedRegst();
   void InferTimeShapeIfMeaningful();
   void ForEachProducedDataRegst(const std::function<void(const std::string&, RegstDesc*)>& Handler);
@@ -90,6 +91,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void UnbindBnWithEmptyRegst();
 
   // Others
+  virtual bool IsInplaceOpTask() { return false; }
   virtual TaskType GetTaskType() const { return TaskType::kInvalid; }
   std::string VisualStr() const override;
   virtual bool IsMeaningLess();
