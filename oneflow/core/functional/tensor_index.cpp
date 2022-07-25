@@ -377,7 +377,6 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
   CHECK_GE_OR_RETURN(input->ndim(), indices.size())
       << Error::IndexError() << "Too many indices for tensor of dimension " << input->ndim();
   const auto& expanded_indices = JUST(ExpandIndices(indices));
-  bool is_continuous_subspace = JUST(IsContinuousSubspace(indices));
 
   // Since the start dimension cannot be specified for `scatter_nd`, so we should
   // transpose the input as long as the first index is null.
@@ -388,7 +387,6 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
     CHECK_EQ_OR_RETURN(value->nelement(), 0) << Error::IndexError() << "invalid indices";
     return Maybe<void>::Ok();
   }
-  int index_ndim = valid_indices.at(0)->ndim();
   auto packed_indices = JUST(Stack(valid_indices, 0));
   int packed_ndim = packed_indices->ndim();
   CHECK_GT_OR_RETURN(packed_ndim, 0)
@@ -414,7 +412,6 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
     }
   }
 
-  std::cout << "transposed_input is_contiguous: " << transposed_input->is_contiguous() << std::endl;
   // expand the value when the value is a scalar.
   std::shared_ptr<Tensor> expand_value = value;
   if (value->shape()->elem_cnt() == 1) {
