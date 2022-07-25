@@ -30,19 +30,21 @@ struct alignas(sizeof(T) * pack_size) Pack {
   T elem[pack_size];
 };
 
-template<typename T, int32_t pack_size>
-__device__ __inline__ void AtomicAdd(Pack<T, pack_size>* address, Pack<T, pack_size> val) {
+template<typename T, typename ComputeType, int32_t pack_size>
+__device__ __inline__ void AtomicAdd(Pack<T, pack_size>* address,
+                                     Pack<ComputeType, pack_size> val) {
+#pragma unroll
   for (int i = 0; i < pack_size; ++i) {
-    atomicAdd(reinterpret_cast<T*>(address) + i, static_cast<T>(val.elem[i]));
+    cuda::atomic::Add(reinterpret_cast<T*>(address) + i, static_cast<T>(val.elem[i]));
   }
 }
 
 template<>
-__device__ __inline__ void AtomicAdd<half, 2>(Pack<half, 2>* address, Pack<half, 2> val) {
+__device__ __inline__ void AtomicAdd<half, float, 2>(Pack<half, 2>* address, Pack<float, 2> val) {
   half2 h2_val;
   h2_val.x = static_cast<half>(val.elem[0]);
   h2_val.y = static_cast<half>(val.elem[1]);
-  atomicAdd(reinterpret_cast<half2*>(address), h2_val);
+  cuda::atomic::Add(reinterpret_cast<half2*>(address), h2_val);
 }
 
 template<typename T, typename IDX, int pack_size, int N>
