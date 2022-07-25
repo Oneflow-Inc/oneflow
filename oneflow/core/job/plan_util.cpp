@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
+#include "oneflow/core/graph/boxing/of_collective_boxing_util.h"
 #include "oneflow/core/memory/chunk_manager.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/register/runtime_register_desc.h"
@@ -687,6 +688,15 @@ bool IsCollectiveBoxingNode(const PlanTaskNode* node) {
   return task_type == TaskType::kCollectiveBoxingGeneric;
 }
 
+bool IsOfCollectiveBoxingTaskType(TaskType task_type) {
+  return task_type == TaskType::kOfCollectiveBoxingGeneric;
+}
+
+bool IsOfCollectiveBoxingNode(const PlanTaskNode* node) {
+  const TaskType task_type = node->task_proto()->task_type();
+  return task_type == TaskType::kOfCollectiveBoxingGeneric;
+}
+
 const boxing::collective::RankDesc& GetRankDesc(const OperatorConf& conf) {
   if (conf.has_collective_boxing_generic_conf()) {
     return conf.collective_boxing_generic_conf().rank_desc();
@@ -716,6 +726,123 @@ void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* 
   device_desc->set_device_type(device_id.device_type());
   device_desc->set_device_id(device_id.device_index());
 }
+
+const boxing::of_collective::RankDesc& OfGetRankDesc(const OperatorConf& conf) {
+  if (conf.has_of_collective_boxing_generic_conf()) {
+    return conf.of_collective_boxing_generic_conf().rank_desc();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+const boxing::of_collective::RankDesc& OfGetRankDesc(Plan* plan, const TaskProto& task_proto) {
+  CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
+  return OfGetRankDesc(PlanUtil::GetOpAttribute(plan, task_proto.job_id(),
+                                              task_proto.exec_sequence().exec_node(0).kernel_conf())
+                         .op_conf());
+}
+
+struct OfCollectiveBoxingRequestInfo {
+  boxing::of_collective::OpDesc op_desc;
+  std::map<int64_t, const PlanTaskNode*> rank2node;
+  int64_t order;
+  int64_t dependency_depth;
+};
+
+void OfGetDeviceDesc(const TaskProto* task_proto, boxing::of_collective::DeviceDesc* device_desc) {
+  device_desc->set_machine_id(task_proto->machine_id());
+  const StreamId stream_id = PlanUtil::GetStreamId(*task_proto);
+  const DeviceId& device_id = stream_id.device_id();
+  device_desc->set_device_type(device_id.device_type());
+  device_desc->set_device_id(device_id.device_index());
+}
+
+class NegoTreeBuilder {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NegoTreeBuilder);
+  NegoTreeBuilder() = default;
+  virtual ~NegoTreeBuilder() = default;
+  
+  virtual void CalcNegoTree(boxing::of_collective::RequestDesc* request_desc, const OfCollectiveBoxingRequestInfo& info) = 0;
+};
+
+class StarNegoTreeBuilder : public NegoTreeBuilder {
+ public:
+  void CalcNegoTree(boxing::of_collective::RequestDesc* request_desc, const OfCollectiveBoxingRequestInfo& info) override {
+    auto task_ids = std::vector<int64_t>(info.op_desc.num_ranks());
+    for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
+      task_ids[i] = info.rank2node.at(i)->task_proto()->task_id();
+    }
+    int64_t root = task_ids[0];
+
+    for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
+      int64_t task_id = info.rank2node.at(i)->task_proto()->task_id();
+      auto& nego_tree_info = (*(request_desc->mutable_negotiation_tree_topo()))[task_id];
+      if (task_id == root) {
+        nego_tree_info.set_upstream_id(-1);
+        *(nego_tree_info.mutable_downstream_id()) = StdVec2PbRf(
+          std::vector<int64_t>(task_ids.begin() + 1, task_ids.end()));
+      } else {
+        nego_tree_info.set_upstream_id(root);
+        *(nego_tree_info.mutable_downstream_id()) = StdVec2PbRf(
+          std::vector<int64_t>(0));
+      }
+    }
+
+    std::string task_ids_str = "";
+    for (int64_t i = 1; i < info.op_desc.num_ranks(); ++i) {
+      task_ids_str += std::to_string(task_ids[i]);
+      task_ids_str += ", ";
+    }
+    VLOG(1) << "Star Nego Tree root: " << root << " leaves: " << task_ids_str;
+  }
+};
+
+class BinomialNegoTreeBuilder : public NegoTreeBuilder {
+ public:
+  void CalcNegoTree(boxing::of_collective::RequestDesc* request_desc, const OfCollectiveBoxingRequestInfo& info) override {}
+};
+
+class ChainNegoTreeBuilder : public NegoTreeBuilder {
+ public:
+  void CalcNegoTree(boxing::of_collective::RequestDesc* request_desc, const OfCollectiveBoxingRequestInfo& info) override {
+    auto task_ids = std::vector<int64_t>(info.op_desc.num_ranks());
+    for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
+      task_ids[i] = info.rank2node.at(i)->task_proto()->task_id();
+
+      // VLOG(1) << "i is " << i << ", info.rank2node.at(i)->task_proto()->task_id() is " << info.rank2node.at(i)->task_proto()->task_id() << ", task_ids[i] is " << task_ids[i];
+    }
+    for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
+      int64_t task_id = info.rank2node.at(i)->task_proto()->task_id();
+      auto& nego_tree_info = (*(request_desc->mutable_negotiation_tree_topo()))[task_id];
+
+      if (i == 0) {
+        // root
+        nego_tree_info.set_upstream_id(-1);
+        *(nego_tree_info.mutable_downstream_id()) = StdVec2PbRf(
+          std::vector<int64_t>({task_ids[i + 1]}));
+      } else if (i == info.op_desc.num_ranks() - 1) {
+        // leave
+        nego_tree_info.set_upstream_id(task_ids[i - 1]);
+        *(nego_tree_info.mutable_downstream_id()) = StdVec2PbRf(
+          std::vector<int64_t>(0));
+      } else {
+        // middle
+        nego_tree_info.set_upstream_id(task_ids[i - 1]);
+        *(nego_tree_info.mutable_downstream_id()) = StdVec2PbRf(
+          std::vector<int64_t>({task_ids[i + 1]}));
+      }
+    }
+    
+    std::string task_ids_str = "";
+    for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
+      task_ids_str += std::to_string(task_ids[i]);
+      task_ids_str += " -> ";
+    }
+    VLOG(1) << "Chain Nego Tree: (root) " << task_ids_str;
+    
+  }
+};
 
 }  // namespace
 
@@ -814,6 +941,128 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
         }
         request_desc->set_order(info.order);
         request_desc->set_dependency_depth(info.dependency_depth);
+      } else {
+        CHECK_LT(info.rank2node.size(), info.op_desc.num_ranks());
+        for (const auto& pair : info.rank2node) { visited.erase(pair.second); }
+      }
+    }
+    CHECK_GT(collected, 0);
+    all_visited.insert(visited.begin(), visited.end());
+    ++dependency_depth;
+  }
+}
+
+void PlanUtil::GenOfCollectiveBoxingPlan(Job* job, Plan* plan) {
+  using namespace boxing::of_collective;
+
+  RequestSet* request_set = &(*plan->mutable_of_collective_boxing_plan()
+                                   ->mutable_job_id2request_set())[GlobalJobDesc().job_id()];
+  const int64_t cb_task_count = std::count_if(
+      plan->task().cbegin(), plan->task().cend(),
+      [](const TaskProto& task) { return IsOfCollectiveBoxingTaskType(task.task_type()); });
+  if (cb_task_count == 0) { return; }
+
+  PlanTaskGraph plan_task_graph(*plan);
+  int64_t dependency_depth = 0;
+  int64_t order = 0;
+  HashSet<const PlanTaskNode*> all_visited;
+
+  while (true) {
+    std::list<const PlanTaskNode*> src_nodes;
+    plan_task_graph.ForEachNode([&](const PlanTaskNode* node) {
+      if (all_visited.count(node) != 0) { return; }
+      int64_t in_cnt = 0;
+      node->ForEachNodeOnInEdge([&](const PlanTaskNode* node_on_in_edge) {
+        if (all_visited.count(node_on_in_edge) != 0) { return; }
+        in_cnt += 1;
+      });
+      if (in_cnt == 0) { src_nodes.emplace_back(node); }
+    });
+    if (src_nodes.empty()) { break; }
+    auto ForEachNodeOnInEdge = [&](const PlanTaskNode* node,
+                                   const std::function<void(const PlanTaskNode*)>& Handler) {
+      node->ForEachNodeOnInEdge([&](const PlanTaskNode* node_on_in_edge) {
+        if (all_visited.count(node_on_in_edge) == 0) { Handler(node_on_in_edge); }
+      });
+    };
+    auto ForEachNodeOnOutEdge = [&](const PlanTaskNode* node,
+                                    const std::function<void(const PlanTaskNode*)>& Handler) {
+      if (!IsOfCollectiveBoxingNode(node)) {
+        node->ForEachNodeOnOutEdge([&](const PlanTaskNode* node_on_out_edge) {
+          bool has_unvisited_of_collective_boxing_node_on_in_edges = false;
+          node_on_out_edge->ForEachNodeOnInEdge([&](const PlanTaskNode* node_on_in_edge) {
+            if (!has_unvisited_of_collective_boxing_node_on_in_edges
+                && IsOfCollectiveBoxingNode(node_on_in_edge)
+                && all_visited.count(node_on_in_edge) == 0) {
+              has_unvisited_of_collective_boxing_node_on_in_edges = true;
+            }
+          });
+          if (!has_unvisited_of_collective_boxing_node_on_in_edges) { Handler(node_on_out_edge); }
+        });
+      }
+    };
+    HashSet<const PlanTaskNode*> visited;
+    std::vector<const PlanTaskNode*> of_collective_boxing_nodes;
+    plan_task_graph.TopoForEachNode(src_nodes, ForEachNodeOnInEdge, ForEachNodeOnOutEdge,
+                                    [&](const PlanTaskNode* node) {
+                                      visited.insert(node);
+                                      if (IsOfCollectiveBoxingNode(node)) {
+                                        of_collective_boxing_nodes.emplace_back(node);
+                                      }
+                                    });
+    if (of_collective_boxing_nodes.empty()) { break; }
+    // reuse this struct
+    HashMap<std::string, OfCollectiveBoxingRequestInfo> name2request_info;
+    for (const PlanTaskNode* node : of_collective_boxing_nodes) {
+      const TaskProto* task_proto = node->task_proto();
+      const RankDesc& rank_desc = OfGetRankDesc(plan, *task_proto);
+      CHECK_GE(rank_desc.rank(), 0);
+      CHECK_LT(rank_desc.rank(), rank_desc.op_desc().num_ranks());
+      const std::string& name = rank_desc.op_desc().name();
+      boxing::of_collective::DeviceDesc device_desc;
+      OfGetDeviceDesc(task_proto, &device_desc);
+      auto it = name2request_info.find(name);
+      if (it == name2request_info.end()) {
+        // VLOG(1) << "task id is " << task_proto->task_id();
+        OfCollectiveBoxingRequestInfo request_info{
+            .op_desc = rank_desc.op_desc(),
+            .rank2node = {std::make_pair(rank_desc.rank(), node)},
+            .order = order,
+            .dependency_depth = dependency_depth,
+        };
+        name2request_info.emplace(std::make_pair(name, std::move(request_info)));
+        // VLOG(1) << "rank_desc.rank() is " << rank_desc.rank();
+        // VLOG(1) << "task id in the name2request_info is " << name2request_info[name].rank2node[rank_desc.rank()]->task_proto()->task_id();
+        // VLOG(1) << "task id in the name2request_info from PlanTaskNode is " << name2request_info[name].rank2node[rank_desc.rank()]->task_id();
+        order += 1;
+      } else {
+        CHECK(it->second.op_desc == rank_desc.op_desc());
+        CHECK(it->second.rank2node.emplace(std::make_pair(rank_desc.rank(), node)).second);
+      }
+    }
+    int64_t collected = 0;
+    for (const auto& name7request_info : name2request_info) {
+      const OfCollectiveBoxingRequestInfo& info = name7request_info.second;
+      if (info.rank2node.size() == info.op_desc.num_ranks()) {
+        collected += 1;
+        boxing::of_collective::RequestDesc* request_desc = request_set->mutable_request()->Add();
+        *request_desc->mutable_op_desc() = info.op_desc;
+        for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
+          OfGetDeviceDesc(info.rank2node.at(i)->task_proto(),
+                        request_desc->mutable_device_set()->mutable_device()->Add());
+        }
+        request_desc->set_order(info.order);
+        request_desc->set_dependency_depth(info.dependency_depth);
+        NegoTreeBuilder* nego_tree_builder;
+        if (ParseBooleanFromEnv("ONEFLOW_OFCCL_CHAIN", false)) {
+          nego_tree_builder = new ChainNegoTreeBuilder();
+          VLOG(1) << "Use ChainNegoTreeBuilder";
+        } else {
+          nego_tree_builder = new StarNegoTreeBuilder();
+          VLOG(1) << "Use StarNegoTreeBuilder";
+        }
+        nego_tree_builder->CalcNegoTree(request_desc, info);
+        delete nego_tree_builder;
       } else {
         CHECK_LT(info.rank2node.size(), info.op_desc.num_ranks());
         for (const auto& pair : info.rank2node) { visited.erase(pair.second); }

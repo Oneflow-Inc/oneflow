@@ -110,6 +110,7 @@ void Thread::ConstructActor(int64_t actor_id) {
     VLOG(3) << "Thread " << thrd_id_ << " construct LightActor " << TaskType_Name(task.task_type())
             << " " << actor_id;
   }
+  
   CHECK(id2actor_ptr_.emplace(actor_id, std::make_pair(std::move(actor_ctx), std::move(actor_ptr)))
             .second);
   CHECK(id2job_id_.emplace(actor_id, task.job_id()).second);

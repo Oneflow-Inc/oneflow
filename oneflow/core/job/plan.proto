@@ -5,6 +5,7 @@ import "oneflow/core/job/task.proto";
 import "oneflow/core/job/job_conf.proto";
 import "oneflow/core/memory/memory_block.proto";
 import "oneflow/core/graph/boxing/collective_boxing.proto";
+import "oneflow/core/graph/boxing/of_collective_boxing.proto";
 import "oneflow/core/operator/op_attribute.proto";
 
 message MachineIds {
@@ -17,6 +18,10 @@ message JobConfs {
 
 message CollectiveBoxingPlan {
   map<int64, boxing.collective.RequestSet> job_id2request_set = 1;
+}
+
+message OfCollectiveBoxingPlan {
+  map<int64, boxing.of_collective.RequestSet> job_id2request_set = 1;
 }
 
 message CtrlRegstDescInfo {
@@ -38,4 +43,5 @@ message Plan {
   required CollectiveBoxingPlan collective_boxing_plan= 5;
   required CtrlRegstDescInfo ctrl_regst_desc_info = 6;
   map<int64, OpAttributeRefTable> job_id2op_attribute_ref_table = 7;
+  required OfCollectiveBoxingPlan of_collective_boxing_plan= 8;
 }

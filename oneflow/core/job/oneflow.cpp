@@ -36,6 +36,7 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
+#include "oneflow/core/graph/boxing/of_collective_boxing_util.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
@@ -89,6 +90,11 @@ std::string job_id2job_conf(const std::string& plan_name) { return plan_name + "
 std::string GetCollectiveBoxingPlanKey(const std::string& plan_name) {
   return plan_name + "_collective_boxing_plan";
 }
+
+std::string GetOfCollectiveBoxingPlanKey(const std::string& plan_name) {
+  return plan_name + "_of_collective_boxing_plan";
+}
+
 
 std::string sub_plan_key(const std::string& plan_name, int64_t machine_id, int64_t thrd_id) {
   return plan_name + "_" + std::to_string(machine_id) + "_" + std::to_string(thrd_id);
@@ -146,6 +152,8 @@ void PushPlan(const std::string& plan_name, Plan&& plan) {
                                        plan.ctrl_regst_desc_info());
   Singleton<CtrlClient>::Get()->PushKV(job_id2job_conf(plan_name), plan.job_confs());
   Singleton<CtrlClient>::Get()->PushKV(GetCollectiveBoxingPlanKey(plan_name),
+                                    plan.of_collective_boxing_plan());
+  Singleton<CtrlClient>::Get()->PushKV(GetCollectiveBoxingPlanKey(plan_name),
                                        plan.collective_boxing_plan());
 }
 
@@ -170,6 +178,8 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   JobConfs job_confs;
   Singleton<CtrlClient>::Get()->PullKV(job_id2job_conf(plan_name), &job_confs);
   *(plan->mutable_job_confs()) = job_confs;
+  Singleton<CtrlClient>::Get()->PullKV(GetCollectiveBoxingPlanKey(plan_name),
+                                    plan->mutable_of_collective_boxing_plan());
   Singleton<CtrlClient>::Get()->PullKV(GetCollectiveBoxingPlanKey(plan_name),
                                        plan->mutable_collective_boxing_plan());
   MemBlockAndChunkList block7chunk;
@@ -196,7 +206,11 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) 
       TeePersistentLogStream::Create(StrCat("subplan_job_", job_desc.job_id()))->Write(*plan);
     }
   }
+  if (ParseBooleanFromEnv("ONEFLOW_ENABLE_OFCCL", false)){
+    PlanUtil::GenOfCollectiveBoxingPlan(job, plan);
+  }
   PlanUtil::GenCollectiveBoxingPlan(job, plan);
+    
   PlanUtil::GenRegisterHint(plan);
   return Maybe<void>::Ok();
 }
@@ -210,6 +224,10 @@ void MergePlan(Plan* plan, Plan&& other) {
 
   for (const auto& pair : other.job_confs().job_id2job_conf()) {
     CHECK(plan->mutable_job_confs()->mutable_job_id2job_conf()->insert(pair).second);
+  }
+  for (const auto& pair : other.of_collective_boxing_plan().job_id2request_set()) {
+    CHECK(
+        plan->mutable_of_collective_boxing_plan()->mutable_job_id2request_set()->insert(pair).second);
   }
   for (const auto& pair : other.collective_boxing_plan().job_id2request_set()) {
     CHECK(

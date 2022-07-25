@@ -103,6 +103,7 @@ bool IsTransferNode(TaskType task_type) {
   // They are sorted according to frequency of occurrences
   switch (task_type) {
     // We mark the number of occurrences in bert
+    case TaskType::kOfCollectiveBoxingGeneric:
     case TaskType::kCollectiveBoxingGeneric:        // 76
     case TaskType::kCopyHd:                         // 27
     case TaskType::kSliceBoxing:                    // 16
