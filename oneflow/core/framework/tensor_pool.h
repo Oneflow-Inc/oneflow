@@ -61,7 +61,8 @@ struct TensorPool {
   void update_after_compute(vm::DTREagerBlobObject* dtr_blob_object);
   Maybe<void> update_after_evict(vm::DTREagerBlobObject* dtr_blob_object);
   int update_after_pesudo_compute(vm::DTREagerBlobObject* dtr_blob_object);
-  Maybe<void> update_after_pesudo_evict(vm::DTREagerBlobObject* dtr_blob_object, const char* start_id, const char* end_id);
+  Maybe<void> update_after_pesudo_evict(vm::DTREagerBlobObject* dtr_blob_object,
+                                        const char* start_id, const char* end_id);
 
   std::set<vm::DTRInstrOperand*> operand_visited_;
   std::set<vm::DTREagerBlobObject*> need_eager_eviction_ebos_;
@@ -75,7 +76,7 @@ struct TensorPool {
   // std::set<std::weak_ptr<vm::DTREagerBlobObject>> candidates_;
   std::vector<std::weak_ptr<vm::DTREagerBlobObject>> candidates_;
   std::chrono::steady_clock::time_point start_time_;
-  size_t total_memory_bytes_;   // same in cuda_allocator.h
+  size_t total_memory_bytes_;  // same in cuda_allocator.h
   int num_eager_eviction_;
   int num_forced_eviction_;
   int num_recomputation_;

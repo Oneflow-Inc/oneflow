@@ -495,6 +495,7 @@ Maybe<void> _RecursivelyCompute(
       }
       // TODO for each ptr rather than shared_ptr
       JUST(_RecursivelyCompute(local_call_op, device_ctx));
+      input->add_recompute_times();
       Global<dtr::TensorPool>::Get()->add_recompute_times();
     }
   }

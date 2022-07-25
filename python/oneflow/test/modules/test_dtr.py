@@ -61,9 +61,7 @@ class TestDTR(flow.unittest.TestCase):
         assert (
             os.getenv("ONEFLOW_DISABLE_VIEW") is not None
         ), "Please set ONEFLOW_DISABLE_VIEW to True, 1 or ON"
-        assert (
-            os.getenv("OF_DTR") is not None
-        ), "Please set OF_DTR to True, 1 or ON"
+        assert os.getenv("OF_DTR") is not None, "Please set OF_DTR to True, 1 or ON"
         # wait for all previous operations to finish and
         # check the memory is empty at the beginning of every test case
         flow.comm.barrier()
@@ -289,12 +287,10 @@ class TestDTR(flow.unittest.TestCase):
         d.sum().backward()
         assert np.array_equal(a.grad.numpy(), a_grad_np), a.grad.numpy()
 
-    @unittest.skip(
-        reason="wait for zero_ kernel",
-    )
+    @unittest.skip(reason="wait for zero_ kernel",)
     def test_fbip2(test_case):
         flow.enable_dtr(True, "1MB", 0, "eq")
-        x1 = flow.ones(1024, device='cuda')
+        x1 = flow.ones(1024, device="cuda")
         print(flow._oneflow_internal.dtr.tensor_info(x1))
         x2 = x1 * 3
         x1.zero_()

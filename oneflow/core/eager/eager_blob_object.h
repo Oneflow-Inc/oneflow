@@ -196,6 +196,7 @@ class EagerBlobObject {
   std::shared_ptr<Shape> shape_;
   std::shared_ptr<Stride> stride_;
   int64_t storage_offset_;
+
  protected:
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::atomic<bool> is_shape_synced_;

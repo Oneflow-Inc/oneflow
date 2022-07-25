@@ -153,7 +153,9 @@ class SGD(Optimizer):
                             momentum_buf = flow.zeros_like(param)
                             self._state[param]["momentum_buf"] = momentum_buf
                             if flow._oneflow_internal.dtr.is_dtr_tensor(momentum_buf):
-                                flow._oneflow_internal.dtr.set_non_evictable(momentum_buf)
+                                flow._oneflow_internal.dtr.set_non_evictable(
+                                    momentum_buf
+                                )
                         momentum_buf = self._state[param]["momentum_buf"]
                         beta = param_group["momentum"]
                         # momentum is a mutable input, and defined by `flow.zeros_like(param)`,

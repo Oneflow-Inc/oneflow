@@ -264,7 +264,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
 
     for (const auto& output : *outputs) {
-      auto dtr_output = std::dynamic_pointer_cast<DTRMirroredTensor>(JUST(output->AsMirroredTensor()));
+      auto dtr_output =
+          std::dynamic_pointer_cast<DTRMirroredTensor>(JUST(output->AsMirroredTensor()));
       JUST(dtr_output->set_holder(input_holders));
     }
   }

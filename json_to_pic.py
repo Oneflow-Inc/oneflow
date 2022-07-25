@@ -80,6 +80,9 @@ def draw_from_files_and_draw(get_y, pic_name):
     draw_from_file(ax, rf"{model_name}-me-style-\d+.json", get_threshold_from_json_file, get_y, 'me style')
     draw_from_file(ax, rf"{model_name}-raw-dtr-\d+.json", get_threshold_from_json_file, get_y, 'raw dtr')
 
+    draw_from_file(ax, rf"{model_name}-me-style-div-beta-\d+.json", get_threshold_from_json_file, get_y, 'me div beta')
+    draw_from_file(ax, rf"{model_name}-me-style-mul-beta-\d+.json", get_threshold_from_json_file, get_y, 'me mul beta')
+
     ax.legend()
     plt.savefig(pic_name)
 
