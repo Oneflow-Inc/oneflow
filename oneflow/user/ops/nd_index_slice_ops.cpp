@@ -76,6 +76,7 @@ Maybe<void> InferTensorScatterNdOptTensorDesc(user_op::InferContext* ctx) {
   const Shape& indices_shape = ctx->InputShape("indices", 0);
   JUST(CheckScatterNdShape(params_shape, indices_shape, updates_shape));
   *ctx->OutputShape("out", 0) = params_shape;
+  *ctx->OutputStride("out", 0) = ctx->InputStride("params", 0);
   return Maybe<void>::Ok();
 }
 
