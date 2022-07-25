@@ -33,9 +33,9 @@ namespace oneflow {
   const int64_t num_sample = ctx->Attr<int64_t>("num_sample");
   const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);
   const user_op::TensorDesc& label = ctx->InputTensorDesc("label", 0);
-  user_op::TensorDesc* mapped_label = ctx->OutputTensorDesc("mapped_label", 0);
-  user_op::TensorDesc* sampled_weight = ctx->OutputTensorDesc("sampled_weight", 0);
-  user_op::TensorDesc* sampled_label = ctx->OutputTensorDesc("sampled_label", 0);
+  user_op::TensorDesc* mapped_label = ctx->MutOutputTensorDesc("mapped_label", 0);
+  user_op::TensorDesc* sampled_weight = ctx->MutOutputTensorDesc("sampled_weight", 0);
+  user_op::TensorDesc* sampled_label = ctx->MutOutputTensorDesc("sampled_label", 0);
   *mapped_label->mut_shape() = label.shape();
   *mapped_label->mut_is_dynamic() = label.is_dynamic();
   *sampled_weight->mut_shape() = weight.shape();
@@ -54,9 +54,9 @@ namespace oneflow {
   const int64_t num_sample_per_rank = num_sample / parallel_num;
   const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);
   const user_op::TensorDesc& label = ctx->InputTensorDesc("label", 0);
-  user_op::TensorDesc* mapped_label = ctx->OutputTensorDesc("mapped_label", 0);
-  user_op::TensorDesc* sampled_weight = ctx->OutputTensorDesc("sampled_weight", 0);
-  user_op::TensorDesc* sampled_label = ctx->OutputTensorDesc("sampled_label", 0);
+  user_op::TensorDesc* mapped_label = ctx->MutOutputTensorDesc("mapped_label", 0);
+  user_op::TensorDesc* sampled_weight = ctx->MutOutputTensorDesc("sampled_weight", 0);
+  user_op::TensorDesc* sampled_label = ctx->MutOutputTensorDesc("sampled_label", 0);
   *mapped_label->mut_shape() = label.shape();
   *mapped_label->mut_is_dynamic() = label.is_dynamic();
   *sampled_weight->mut_shape() = weight.shape();
@@ -93,7 +93,7 @@ namespace oneflow {
 /*static*/ Maybe<void> DistributedPartialFcSampleDisableBoxingOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   user_op::TensorDesc* boxing_disabled_sampled_weight_diff =
-      ctx->OutputTensorDesc("boxing_disabled_sampled_weight_diff", 0);
+      ctx->MutOutputTensorDesc("boxing_disabled_sampled_weight_diff", 0);
   *boxing_disabled_sampled_weight_diff->mut_shape() = ctx->InputShape("sampled_weight_diff", 0);
   CHECK_EQ_OR_RETURN(boxing_disabled_sampled_weight_diff->shape().At(0) % ctx->parallel_num(), 0);
   boxing_disabled_sampled_weight_diff->mut_shape()->Set(
@@ -101,7 +101,7 @@ namespace oneflow {
   *boxing_disabled_sampled_weight_diff->mut_is_dynamic() =
       ctx->InputIsDynamic("sampled_weight_diff", 0);
   user_op::TensorDesc* boxing_disabled_sampled_label =
-      ctx->OutputTensorDesc("boxing_disabled_sampled_label", 0);
+      ctx->MutOutputTensorDesc("boxing_disabled_sampled_label", 0);
   *boxing_disabled_sampled_label->mut_shape() = ctx->InputShape("sampled_label", 0);
   CHECK_EQ_OR_RETURN(boxing_disabled_sampled_label->shape().At(0) % ctx->parallel_num(), 0);
   boxing_disabled_sampled_label->mut_shape()->Set(

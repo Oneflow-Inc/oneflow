@@ -491,3 +491,36 @@ add_docstr(
         tensor([-0.3161,  0.0000,  0.5000], dtype=oneflow.float32)
     """,
 )
+
+add_docstr(
+    oneflow._C.threshold,
+    """
+    threshold(input: Tensor, threshold: float, value: float) -> Tensor
+
+    Thresholds each element of the input Tensor.
+
+    See :class:`~oneflow.nn.Threshold` for more details.
+    """,
+)
+
+add_docstr(
+    oneflow._C.hardshrink,
+    """
+    hardshrink(input: Tensor, lambd: float=0.5, inplace: bool=False) -> Tensor
+
+    Applies the hard shrinkage function in an element-wise manner.
+
+    See :class:`~oneflow.nn.Hardshrink` for more details.
+    """,
+)
+
+add_docstr(
+    oneflow._C.softshrink,
+    """
+    softshrink(input: Tensor, lambd: float=0.5, inplace: bool=False) -> Tensor
+
+    Applies the soft shrinkage function in an element-wise manner.
+
+    See :class:`~oneflow.nn.Softshrink` for more details.
+    """,
+)
