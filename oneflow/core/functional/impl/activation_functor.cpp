@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/functor_util.h"
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/functional/functional.h"
@@ -90,14 +91,22 @@ class PReluGradFunctor {
                          .Output("alpha_diff")
                          .Build());
   }
+  struct PReluGrad {
+    Maybe<AttrMap> operator()(bool alpha_requires_grad) {
+      MutableAttrMap attrs;
+      if (alpha_requires_grad) {
+        JUST(attrs.SetAttr<bool>("alpha_requires_grad", true));
+      } else {
+        JUST(attrs.SetAttr<bool>("alpha_requires_grad", false));
+      }
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& dy, const std::shared_ptr<Tensor>& x,
                                 const std::shared_ptr<Tensor>& alpha) const {
-    MutableAttrMap attrs;
-    if (alpha->requires_grad()) {
-      JUST(attrs.SetAttr<bool>("alpha_requires_grad", true));
-    } else {
-      JUST(attrs.SetAttr<bool>("alpha_requires_grad", false));
-    }
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(PReluGrad);
+    const auto attrs = *JUST(GetAttrs(alpha->requires_grad()));
     return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {dy, x, alpha}, attrs);
   }
 
@@ -110,11 +119,19 @@ class HardTanhFunctor {
   HardTanhFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("hardtanh").Input("in").Output("out").Build());
   }
+  struct HardTanh {
+    Maybe<AttrMap> operator()(double min_val, double max_val) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("min_val", min_val));
+      JUST(attrs.SetAttr<double>("max_val", max_val));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& min_val,
                            const double& max_val) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("min_val", min_val));
-    JUST(attrs.SetAttr<double>("max_val", max_val));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(HardTanh);
+    const auto attrs = *JUST(GetAttrs(min_val, max_val));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
   }
 
@@ -127,12 +144,20 @@ class HardTanhGradFunctor {
   HardTanhGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("hardtanh_grad").Input("y").Input("dy").Output("dx").Build());
   }
+  struct HardTanhGrad {
+    Maybe<AttrMap> operator()(double min_val, double max_val) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("min_val", min_val));
+      JUST(attrs.SetAttr<double>("max_val", max_val));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& dy, const double& min_val,
                            const double& max_val) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("min_val", min_val));
-    JUST(attrs.SetAttr<double>("max_val", max_val));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(HardTanhGrad);
+    const auto attrs = *JUST(GetAttrs(min_val, max_val));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {y, dy}, attrs);
   }
 
@@ -143,9 +168,17 @@ class HardTanhGradFunctor {
 class EluFunctor {
  public:
   EluFunctor() { op_ = CHECK_JUST(one::OpBuilder("elu").Input("in").Output("out").Build()); }
+  struct Elu {
+    Maybe<AttrMap> operator()(double alpha) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("alpha", alpha));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& alpha) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("alpha", alpha));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Elu);
+    const auto attrs = *JUST(GetAttrs(alpha));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
   }
 
@@ -158,10 +191,18 @@ class EluGradFunctor {
   EluGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("elu_grad").Input("x").Input("dy").Output("dx").Build());
   }
+  struct EluGrad {
+    Maybe<AttrMap> operator()(double alpha) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("alpha", alpha));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& dy, const double& alpha) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("alpha", alpha));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(EluGrad);
+    const auto attrs = *JUST(GetAttrs(alpha));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
   }
 
@@ -172,10 +213,18 @@ class EluGradFunctor {
 class CeluFunctor {
  public:
   CeluFunctor() { op_ = CHECK_JUST(one::OpBuilder("celu").Input("in").Output("out").Build()); }
+  struct Celu {
+    Maybe<AttrMap> operator()(double alpha) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("alpha", alpha));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& alpha,
                            bool inplace) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("alpha", alpha));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Celu);
+    const auto attrs = *JUST(GetAttrs(alpha));
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
@@ -196,10 +245,18 @@ class CeluGradFunctor {
   CeluGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("celu_grad").Input("x").Input("dy").Output("dx").Build());
   }
+  struct CeluGrad {
+    Maybe<AttrMap> operator()(double alpha) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("alpha", alpha));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& dy, const double& alpha) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("alpha", alpha));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(CeluGrad);
+    const auto attrs = *JUST(GetAttrs(alpha));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
   }
 
@@ -276,10 +333,18 @@ class HardShrinkFunctor {
     op_ = CHECK_JUST(one::OpBuilder("hardshrink").Input("in").Output("out").Build());
   }
 
+  struct HardShrink {
+    Maybe<AttrMap> operator()(double lambd) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("lambd", lambd));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& lambd,
                            bool inplace) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("lambd", lambd));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(HardShrink);
+    const auto attrs = *JUST(GetAttrs(lambd));
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
@@ -300,10 +365,18 @@ class HardShrinkGradFunctor {
   HardShrinkGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("hardshrink_grad").Input("dy").Input("y").Output("dx").Build());
   }
+  struct HardShrinkGrad {
+    Maybe<AttrMap> operator()(double lambd) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("lambd", lambd));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y, const std::shared_ptr<Tensor>& dy,
                            const double& lambd) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("lambd", lambd));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(HardShrinkGrad);
+    const auto attrs = *JUST(GetAttrs(lambd));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, y}, attrs);
   }
 
@@ -403,10 +476,18 @@ class LeakyReluFunctor {
   LeakyReluFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("leaky_relu").Input("x").Output("y").Build());
   }
+  struct LeakyRelu {
+    Maybe<AttrMap> operator()(float alpha) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<float>("alpha", alpha));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& alpha,
                            bool inplace) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<float>("alpha", alpha));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(LeakyRelu);
+    const auto attrs = *JUST(GetAttrs(alpha));
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
@@ -427,10 +508,18 @@ class LeakyReluGradFunctor {
   LeakyReluGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("leaky_relu_grad").Input("x").Input("dy").Output("dx").Build());
   }
+  struct LeakyReluGrad {
+    Maybe<AttrMap> operator()(float alpha) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<float>("alpha", alpha));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& dy, const float& alpha) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<float>("alpha", alpha));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(LeakyReluGrad);
+    const auto attrs = *JUST(GetAttrs(alpha));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
   }
 
@@ -444,11 +533,19 @@ class SoftplusFunctor {
     op_ = CHECK_JUST(one::OpBuilder("softplus").Input("in").Output("out").Build());
   }
 
+  struct Softplus {
+    Maybe<AttrMap> operator()(const double& beta, const double& threshold) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("beta", beta));
+      JUST(attrs.SetAttr<double>("threshold", threshold));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& beta,
                            const double& threshold) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("beta", beta));
-    JUST(attrs.SetAttr<double>("threshold", threshold));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Softplus);
+    const auto attrs = *JUST(GetAttrs(beta, threshold));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
   }
 
@@ -461,11 +558,19 @@ class SoftplusGradFunctor {
   SoftplusGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("softplus_grad").Input("x").Input("dy").Output("dx").Build());
   }
+  struct SoftplusGrad {
+    Maybe<AttrMap> operator()(const double& beta, const double& threshold) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("beta", beta));
+      JUST(attrs.SetAttr<double>("threshold", threshold));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& dy,
                            const double& beta, const double& threshold) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("beta", beta));
-    JUST(attrs.SetAttr<double>("threshold", threshold));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(SoftplusGrad);
+    const auto attrs = *JUST(GetAttrs(beta, threshold));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
   }
 
@@ -529,13 +634,21 @@ class SoftShrinkFunctor {
     op_ = CHECK_JUST(one::OpBuilder("softshrink").Input("in").Output("out").Build());
   }
 
+  struct SoftShrink {
+    Maybe<AttrMap> operator()(double alpha) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("alpha", alpha));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& alpha,
                            bool inplace) const {
-    MutableAttrMap attrs;
     CHECK_GE_OR_RETURN(alpha, 0) << Error::RuntimeError()
                                  << "alpha must be greater or equal to 0, but found to be " << alpha
                                  << ".";
-    JUST(attrs.SetAttr<double>("alpha", alpha));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(SoftShrink);
+    const auto attrs = *JUST(GetAttrs(alpha));
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
@@ -557,11 +670,19 @@ class ThresholdFunctor {
     op_ = CHECK_JUST(one::OpBuilder("threshold").Input("in").Output("out").Build());
   }
 
+  struct Threshold {
+    Maybe<AttrMap> operator()(const double& threshold, const double& value) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("threshold_val", threshold));
+      JUST(attrs.SetAttr<double>("value", value));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& threshold,
                            const double& value) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("threshold_val", threshold));
-    JUST(attrs.SetAttr<double>("value", value));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Threshold);
+    const auto attrs = *JUST(GetAttrs(threshold, value));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
   }
 
@@ -575,10 +696,18 @@ class ThresholdGradFunctor {
     op_ = CHECK_JUST(one::OpBuilder("threshold_grad").Input("x").Input("dy").Output("dx").Build());
   }
 
+  struct ThresholdGrad {
+    Maybe<AttrMap> operator()(double threshold) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("threshold_val", threshold));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& dy,
                            const double& threshold) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("threshold_val", threshold));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(ThresholdGrad);
+    const auto attrs = *JUST(GetAttrs(threshold));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
   }
 
@@ -591,10 +720,18 @@ class SoftShrinkGradFunctor {
   SoftShrinkGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("softshrink_grad").Input("dy").Input("y").Output("dx").Build());
   }
+  struct SoftShrinkGrad {
+    Maybe<AttrMap> operator()(double alpha) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<double>("alpha", alpha));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y, const std::shared_ptr<Tensor>& dy,
                            const double& alpha) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("alpha", alpha));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(SoftShrinkGrad);
+    const auto attrs = *JUST(GetAttrs(alpha));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, y}, attrs);
   }
 
