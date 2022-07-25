@@ -510,7 +510,7 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
       if (auto s = attr.dyn_cast<sbp::SplitAttr>()) {
         res = "S(" + std::to_string(s.getAxis()) + ")";
       } else if (attr.dyn_cast<sbp::BroadcastAttr>()) {
-        res = std::string("B");
+        res = "B";
       } else if (attr.dyn_cast<sbp::PartialSumAttr>()) {
         res = "P";
       } else {
