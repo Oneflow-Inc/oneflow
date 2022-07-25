@@ -570,8 +570,9 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
     ArrayAttr nd_sbp = op.nd_sbp();
     std::vector<std::string> nd_sbp_str;
     std::for_each(nd_sbp.begin(), nd_sbp.end(), [&](Attribute elem) {
-      auto sbp_string = elem.dyn_cast<StringAttr>().str();
-      if (sbp_string != "") nd_sbp_str.push_back(sbp_string);
+      if (auto sbp_str_attr = elem.dyn_cast<StringAttr>() && sbp_str_attr.str() != "") {
+        nd_sbp_str.push_back(sbp_str_attr.str());
+      }
     });
 
     attrs.set(name, ConvertNdSbpToPsig(rewriter, nd_sbp_str, nd_size));
