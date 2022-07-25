@@ -34,8 +34,6 @@ class OpKernel;
 
 namespace vm {
 
-struct OpCallInstructionUtil;
-
 class OpCallInstructionPolicy final : public InstructionPolicy {
  public:
   OpCallInstructionPolicy(const OpCallInstructionPolicy&) = delete;
@@ -104,7 +102,6 @@ class OpCallInstructionPolicy final : public InstructionPolicy {
   std::string DebugName(const vm::Instruction& instruction) const override;
 
  private:
-  friend struct OpCallInstructionUtil;
 
   Maybe<void> Init();
   void InitStreamSequentialDependence();

@@ -59,7 +59,7 @@ struct OpCallInstructionUtil final {
   static inline void InferTempStorageSize(OpCallInstructionPolicy* op_call_instruction_policy) {
     auto* tmp_tensor = op_call_instruction_policy->mut_call_ctx()->mut_tmp_tensor();
     size_t temp_size = op_call_instruction_policy->opkernel().InferTmpSize(
-        &op_call_instruction_policy->call_ctx_, op_call_instruction_policy->user_opkernel());
+        op_call_instruction_policy->mut_call_ctx(), op_call_instruction_policy->user_opkernel());
     tmp_tensor->set_tmp_buffer_size(temp_size);
   }
 
@@ -74,7 +74,7 @@ struct OpCallInstructionUtil final {
       state = nullptr;
     }
     op_call_instruction_policy->mut_opkernel()->TryInitOpKernelStateAndCache(
-        &op_call_instruction_policy->call_ctx_, stream, op_call_instruction_policy->user_opkernel(),
+        op_call_instruction_policy->mut_call_ctx(), stream, op_call_instruction_policy->user_opkernel(),
         state, cache);
   }
 
@@ -103,9 +103,8 @@ struct OpCallInstructionUtil final {
   static inline void OpKernelCompute(OpCallInstructionPolicy* op_call_instruction_policy,
                                      ep::Stream* stream, user_op::OpKernelState* state,
                                      user_op::OpKernelCache* cache) {
-    auto* call_ctx = &op_call_instruction_policy->call_ctx_;
     auto* user_kernel = op_call_instruction_policy->user_opkernel();
-    op_call_instruction_policy->mut_opkernel()->Compute(call_ctx, stream, user_kernel, state,
+    op_call_instruction_policy->mut_opkernel()->Compute(op_call_instruction_policy->mut_call_ctx(), stream, user_kernel, state,
                                                         cache);
   }
 
