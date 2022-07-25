@@ -37,7 +37,7 @@ def _test_argsort(test_case, data_shape, axis, descending, data_type, device):
         of_out = flow.argsort(input, dim=axis, descending=descending)
         np_out = np.argsort(np_input, axis=axis)
     else:
-        of_out = input.argsort(descending=descending)
+        of_out = flow.argsort(input, descending=descending)
         np_out = np.argsort(np_input)
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
