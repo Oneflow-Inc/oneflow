@@ -125,6 +125,18 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow._C.smooth_l1_loss,
+    """
+    smooth_l1_loss(input: Tensor, target: Tensor, size_average: bool=True, reduce: bool=True, reduction: str='mean', beta: float=1.0) -> Tensor
+
+    Function that uses a squared term if the absolute
+    element-wise error falls below beta and an L1 term otherwise.
+
+    See :class:`~oneflow.nn.SmoothL1Loss` for details.
+    """,
+)
+
+add_docstr(
     oneflow._C.binary_cross_entropy_loss,
     r"""
     binary_cross_entropy(input, target, weight=None, reduction='mean')

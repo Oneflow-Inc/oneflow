@@ -43,3 +43,11 @@ GPU tensor
     CharTensor
     IntTensor
     LongTensor
+
+Memory management
+-----------------------------
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    empty_cache
