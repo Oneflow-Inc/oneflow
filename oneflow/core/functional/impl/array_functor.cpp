@@ -2492,10 +2492,18 @@ class DiagonalGradFunctor {
   DiagonalGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("diagonal_grad").Input("dy").Input("in").Output("dx").Build());
   }
+  struct DiagonalGrad {
+    Maybe<AttrMap> operator()(int32_t offset) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int32_t>("offset", offset));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const int32_t& offset) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("offset", offset));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(DiagonalGrad);
+    const auto attrs = *JUST(GetAttrs(offset));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
@@ -2825,11 +2833,19 @@ class ReduceSumLikeFunctor {
     op_ =
         CHECK_JUST(one::OpBuilder("reduce_sum_like").Input("x").Input("like").Output("y").Build());
   }
+  struct ReduceSumLike {
+    Maybe<AttrMap> operator()(const std::vector<int32_t>& axis) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& like,
                            const std::vector<int32_t>& axis) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(ReduceSumLike);
+    const auto attrs = *JUST(GetAttrs(axis));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
   }
 
@@ -2939,6 +2955,14 @@ class SplitLikeFunctor {
                                .Build());
     }
   }
+  struct SplitLike {
+    Maybe<AttrMap> operator()(int64_t axis) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("axis", axis));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& like,
                                 const int64_t& axis) const {
     CHECK_GE_OR_RETURN(like.size(), 2)
@@ -2946,8 +2970,8 @@ class SplitLikeFunctor {
     CHECK_LE_OR_RETURN(like.size(), kMaxInputCount)
         << Error::RuntimeError() << "like.size() must not greater than " << kMaxInputCount
         << ", but got " << like.size();
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("axis", axis));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(SplitLike);
+    const auto attrs = *JUST(GetAttrs(axis));
     TensorTuple inputs(like.size() + 1);
     inputs[0] = x;
     for (int i = 0; i < like.size(); ++i) { inputs[i + 1] = JUST(like[i]->detach()); }
@@ -3011,11 +3035,19 @@ class UnsortedBatchSegmentSumFunctor {
                          .Output("out")
                          .Build());
   }
+  struct UnsortedBatchSegmentSum {
+    Maybe<AttrMap> operator()(int64_t num_segments) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("num_segments", num_segments));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& data,
                            const std::shared_ptr<one::Tensor>& segment_ids,
                            const int64_t& num_segments) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("num_segments", num_segments));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(UnsortedBatchSegmentSum);
+    const auto attrs = *JUST(GetAttrs(num_segments));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {data, segment_ids}, attrs);
   }
 
@@ -3028,27 +3060,35 @@ class MaskedFillFunctor {
   MaskedFillFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("masked_fill").Input("x").Input("mask").Output("out").Build());
   }
+  struct MaskedFill {
+    Maybe<AttrMap> operator()(DataType x_dtype, const Scalar& value) {
+      MutableAttrMap attrs;
+      if (IsFloatingDataType(x_dtype)) {
+        JUST(attrs.SetAttr<double>("float_operand", value.As<double>()));
+        JUST(attrs.SetAttr<bool>("has_float_operand", true));
+        JUST(attrs.SetAttr<bool>("has_int_operand", false));
+        JUST(attrs.SetAttr<bool>("has_bool_operand", false));
+      } else if (IsIntegralDataType(x_dtype)) {
+        JUST(attrs.SetAttr<int64_t>("int_operand", value.As<int64_t>()));
+        JUST(attrs.SetAttr<bool>("has_float_operand", false));
+        JUST(attrs.SetAttr<bool>("has_int_operand", true));
+        JUST(attrs.SetAttr<bool>("has_bool_operand", false));
+      } else if (IsBoolDataType(x_dtype)) {
+        JUST(attrs.SetAttr<bool>("bool_operand", value.As<bool>()));
+        JUST(attrs.SetAttr<bool>("has_float_operand", false));
+        JUST(attrs.SetAttr<bool>("has_int_operand", false));
+        JUST(attrs.SetAttr<bool>("has_bool_operand", true));
+      } else {
+        UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
+      }
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& mask, const Scalar& value) const {
-    MutableAttrMap attrs;
-    if (IsFloatingDataType(x->dtype()->data_type())) {
-      JUST(attrs.SetAttr<double>("float_operand", value.As<double>()));
-      JUST(attrs.SetAttr<bool>("has_float_operand", true));
-      JUST(attrs.SetAttr<bool>("has_int_operand", false));
-      JUST(attrs.SetAttr<bool>("has_bool_operand", false));
-    } else if (IsIntegralDataType(x->dtype()->data_type())) {
-      JUST(attrs.SetAttr<int64_t>("int_operand", value.As<int64_t>()));
-      JUST(attrs.SetAttr<bool>("has_float_operand", false));
-      JUST(attrs.SetAttr<bool>("has_int_operand", true));
-      JUST(attrs.SetAttr<bool>("has_bool_operand", false));
-    } else if (IsBoolDataType(x->dtype()->data_type())) {
-      JUST(attrs.SetAttr<bool>("bool_operand", value.As<bool>()));
-      JUST(attrs.SetAttr<bool>("has_float_operand", false));
-      JUST(attrs.SetAttr<bool>("has_int_operand", false));
-      JUST(attrs.SetAttr<bool>("has_bool_operand", true));
-    } else {
-      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
-    }
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(MaskedFill);
+    const auto attrs = *JUST(GetAttrs(x->dtype()->data_type(), value));
     const auto& x_shape = *(x->shape());
     const auto& mask_shape = *(mask->shape());
     if (x_shape != mask_shape) {
@@ -3292,10 +3332,18 @@ class To4Functor {
 class TopKFunctor {
  public:
   TopKFunctor() { op_ = CHECK_JUST(one::OpBuilder("top_k").Input("in").Output("out").Build()); }
+  struct TopK {
+    Maybe<AttrMap> operator()(int32_t k, bool sorted) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int32_t>("k", k));
+      JUST(attrs.SetAttr<bool>("sorted", sorted));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, int32_t k, bool sorted) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("k", k));
-    JUST(attrs.SetAttr<bool>("sorted", sorted));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(TopK);
+    const auto attrs = *JUST(GetAttrs(k, sorted));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
@@ -3309,6 +3357,14 @@ class InTopKFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("in_top_k").Input("targets").Input("predictions").Output("out").Build());
   }
+  struct InTopK {
+    Maybe<AttrMap> operator()(int32_t k) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int32_t>("k", k));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& targets,
                            const std::shared_ptr<Tensor>& predictions, int32_t k) const {
     CHECK_EQ_OR_RETURN(targets->shape()->At(0), predictions->shape()->At(0))
@@ -3317,8 +3373,8 @@ class InTopKFunctor {
         << Error::RuntimeError() << "The dimension of targets must be 1";
     CHECK_EQ_OR_RETURN(predictions->ndim(), 2)
         << Error::RuntimeError() << "The dimension of predictions must be 2";
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("k", k));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(InTopK);
+    const auto attrs = *JUST(GetAttrs(k));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {targets, predictions}, attrs);
   }
 
@@ -3331,11 +3387,19 @@ class TensorBufferToTensorFunctor {
   TensorBufferToTensorFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("tensor_buffer_to_tensor").Input("in").Output("out").Build());
   }
+  struct TensorBufferToTensor {
+    Maybe<AttrMap> operator()(const Shape& instance_shape, const Symbol<DType>& dtype) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<Shape>("instance_shape", instance_shape));
+      JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const Shape& instance_shape,
                            const Symbol<DType>& dtype) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("instance_shape", instance_shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(TensorBufferToTensor);
+    const auto attrs = *JUST(GetAttrs(instance_shape, dtype));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
@@ -3348,9 +3412,17 @@ class TensorToTensorBufferFunctor {
   TensorToTensorBufferFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("tensor_to_tensor_buffer").Input("in").Output("out").Build());
   }
+  struct TensorToTensorBuffer {
+    Maybe<AttrMap> operator()(int32_t instance_dims) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int32_t>("instance_dims", instance_dims));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, int32_t instance_dims) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("instance_dims", instance_dims));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(TensorToTensorBuffer);
+    const auto attrs = *JUST(GetAttrs(instance_dims));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
@@ -3363,15 +3435,25 @@ class GenTensorBufferFunctor {
   GenTensorBufferFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("gen_tensor_buffer").Output("out").Build());
   }
+  struct GenTensorBuffer {
+    Maybe<AttrMap> operator()(const Shape& shape, const std::vector<Shape>& shape_list,
+                              const std::vector<float>& value_list, const Symbol<DType>& dtype,
+                              bool dynamic_out) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<Shape>("shape", shape));
+      JUST(attrs.SetAttr<std::vector<Shape>>("shape_list", shape_list));
+      JUST(attrs.SetAttr<std::vector<float>>("value_list", value_list));
+      JUST(attrs.SetAttr<DataType>("data_type", dtype->data_type()));
+      JUST(attrs.SetAttr<bool>("dynamic_out", dynamic_out));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const Shape& shape, const std::vector<Shape>& shape_list,
                            const std::vector<float>& value_list, const Symbol<DType>& dtype,
                            bool dynamic_out) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<std::vector<Shape>>("shape_list", shape_list));
-    JUST(attrs.SetAttr<std::vector<float>>("value_list", value_list));
-    JUST(attrs.SetAttr<DataType>("data_type", dtype->data_type()));
-    JUST(attrs.SetAttr<bool>("dynamic_out", dynamic_out));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(GenTensorBuffer);
+    const auto attrs = *JUST(GetAttrs(shape, shape_list, value_list, dtype, dynamic_out));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
   }
 
@@ -3443,11 +3525,19 @@ class RepeatInterLeaveIndexFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("repeat_interleave").Input("in").Input("cumsum").Output("out").Build());
   }
+  struct RepeatInterLeaveIndex {
+    Maybe<AttrMap> operator()(int64_t repeat_num) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::int64_t>("repeat_num", repeat_num));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& cumsum,
                            const int32_t& repeat_num) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::int64_t>("repeat_num", repeat_num));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(RepeatInterLeaveIndex);
+    const auto attrs = *JUST(GetAttrs(repeat_num));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, cumsum}, attrs);
   }
 
@@ -3598,6 +3688,17 @@ class PinMemoryFunctor {
     op_ =
         CHECK_JUST(one::OpBuilder("slice_update").Input("ref").Input("value").Output("y").Build());
   }
+  struct SliceUpdate {
+    Maybe<AttrMap> operator()(const std::vector<int64_t>& starts, const std::vector<int64_t>& stops,
+                              const std::vector<int64_t>& steps) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::vector<int64_t>>("start", starts));
+      JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stops));
+      JUST(attrs.SetAttr<std::vector<int64_t>>("step", steps));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
     // TODO:(zhaoluyang) support global tensor.pin_memory()
     CHECK_OR_RETURN(input->is_local() && !(LazyMode::is_enabled()))
@@ -3622,14 +3723,12 @@ class PinMemoryFunctor {
       JUST(functional::TensorSetItem(empty, tensor_index, input));
       return empty;
     } else {
-      MutableAttrMap attrs;
       std::vector<int64_t> starts(ndim, 0);
       std::vector<int64_t> stops(ndim);
       std::vector<int64_t> steps(ndim, 1);
       for (int i = 0; i < ndim; ++i) { stops[i] = input->shape()->At(i); }
-      JUST(attrs.SetAttr<std::vector<int64_t>>("start", starts));
-      JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stops));
-      JUST(attrs.SetAttr<std::vector<int64_t>>("step", steps));
+      constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(SliceUpdate);
+      const auto attrs = *JUST(GetAttrs(starts, stops, steps));
       JUST(empty->set_requires_grad(requires_grad));
       auto outputs = TensorTuple{empty};
       JUST(OpInterpUtil::Dispatch(*op_, TensorTuple{empty, input}, &outputs, attrs));
@@ -3644,18 +3743,26 @@ class PinMemoryFunctor {
 class FillFunctor {
  public:
   FillFunctor() { op_ = CHECK_JUST(one::OpBuilder("fill_").Input("in").Output("out").Build()); }
+  struct Fill {
+    Maybe<AttrMap> operator()(DataType in_dtype, const Scalar& value) {
+      MutableAttrMap attrs;
+      if (IsFloatingDataType(in_dtype)) {
+        JUST(attrs.SetAttr<double>("floating_value", value.As<double>()));
+        JUST(attrs.SetAttr<bool>("is_floating_value", true));
+      } else if (IsIntegralDataType(in_dtype)) {
+        JUST(attrs.SetAttr<int64_t>("integral_value", value.As<int64_t>()));
+        JUST(attrs.SetAttr<bool>("is_floating_value", false));
+      } else {
+        UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
+      }
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const Scalar& value) const {
     JUST(CheckInplaceValid(in));
-    MutableAttrMap attrs;
-    if (IsFloatingDataType(in->dtype()->data_type())) {
-      JUST(attrs.SetAttr<double>("floating_value", value.As<double>()));
-      JUST(attrs.SetAttr<bool>("is_floating_value", true));
-    } else if (IsIntegralDataType(in->dtype()->data_type())) {
-      JUST(attrs.SetAttr<int64_t>("integral_value", value.As<int64_t>()));
-      JUST(attrs.SetAttr<bool>("is_floating_value", false));
-    } else {
-      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
-    }
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Fill);
+    const auto attrs = *JUST(GetAttrs(in->dtype()->data_type(), value));
     auto outputs = std::make_shared<TensorTuple>(1);
     (*outputs)[0] = in;
     JUST(OpInterpUtil::Dispatch(*op_, {in}, outputs.get(), attrs));
