@@ -425,7 +425,7 @@ static Maybe<double> GetDatasetComputeTime(vm::LocalCallOpKernelPhyInstrOperand*
   using json = nlohmann::json;
   static const json j = [&]() {
     json j;
-    std::ifstream i("/home/liupeihong/op_time_dataset.json");
+    std::ifstream i("/home/dev/op_time_dataset.json");
     i >> j;
     return j;
   }();
