@@ -376,7 +376,6 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
                                         const std::shared_ptr<Tensor>& value) {
   CHECK_GE_OR_RETURN(input->ndim(), indices.size())
       << Error::IndexError() << "Too many indices for tensor of dimension " << input->ndim();
-  std::cout << "indices size: " << indices.size() << std::endl;
   const auto& expanded_indices = JUST(ExpandIndices(indices));
   bool is_continuous_subspace = JUST(IsContinuousSubspace(indices));
 
@@ -384,18 +383,13 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
   // transpose the input as long as the first index is null.
   std::shared_ptr<Tensor> transposed_input;
   TensorTuple valid_indices;
-  std::cout << "input shape: " << input->shape()->ToString() << std::endl;
   JUST(TransposeFront(input, *expanded_indices, &transposed_input, &valid_indices));
-  std::cout << "trans_input shape: " << transposed_input->shape()->ToString() << std::endl;
-  std::cout << "valid indices: " << valid_indices.size() << std::endl;
   if (valid_indices.empty()) {
     CHECK_EQ_OR_RETURN(value->nelement(), 0) << Error::IndexError() << "invalid indices";
     return Maybe<void>::Ok();
   }
   int index_ndim = valid_indices.at(0)->ndim();
-  std::cout << "index_ndim: " << index_ndim << std::endl;
   auto packed_indices = JUST(Stack(valid_indices, 0));
-  std::cout << "packed_indices shape: " << packed_indices->shape()->ToString() << std::endl;
   int packed_ndim = packed_indices->ndim();
   CHECK_GT_OR_RETURN(packed_ndim, 0)
       << Error::RuntimeError() << "Index array dimension should be greater than 0.";
@@ -403,8 +397,6 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
   permute[packed_ndim - 1] = 0;
   std::iota(permute.begin(), permute.end() - 1, 1);
   packed_indices = JUST(Transpose(packed_indices, permute))->contiguous();
-  std::cout << "packed_indices after transpose shape: " << packed_indices->shape()->ToString()
-            << std::endl;
 
   if (transposed_input->is_global()) {
     const auto& placement = JUST(transposed_input->parallel_desc());

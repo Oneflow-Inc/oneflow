@@ -2041,8 +2041,6 @@ class TensorSetItemFunctor {
   TensorSetItemFunctor() {}
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index,
                          const std::shared_ptr<one::Tensor>& value) const {
-    std::cout << "setitem..." << std::endl;
-    std::cout << "index size: " << index.size() << std::endl;
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
     std::vector<int64_t> expand_dims;
@@ -2071,7 +2069,6 @@ class TensorSetItemFunctor {
     std::shared_ptr<one::Tensor> value_tensor(value);
     // TODO: replace reshape by unsqueeze with view mechanism.
     // after here, each scalar tensor will be one with one dimension.
-    std::cout << "tensor_indices size: " << tensor_indices.size() << std::endl;
     for (auto& tensor : tensor_indices) {
       if (tensor && tensor->ndim() == 0) { tensor = JUST(functional::Reshape(tensor, Shape({1}))); }
     }

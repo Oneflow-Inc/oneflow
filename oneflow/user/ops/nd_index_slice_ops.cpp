@@ -22,11 +22,6 @@ namespace {
 
 Maybe<void> CheckScatterNdShape(const Shape& params_shape, const Shape& indices_shape,
                                 const Shape& updates_shape) {
-  std::cout << "===== scatter_update op =====" << std::endl;
-  std::cout << "params_shape: " << params_shape.ToString() << std::endl;
-  std::cout << "indices_shape: " << indices_shape.ToString() << std::endl;
-  std::cout << "updates_shape: " << updates_shape.ToString() << std::endl;
-  std::cout << "=============================" << std::endl;
   int64_t batch_ndims = indices_shape.NumAxes() - 1;
   int64_t index_ndims = indices_shape.At(batch_ndims);
   CHECK_LE_OR_RETURN(batch_ndims, updates_shape.NumAxes());
