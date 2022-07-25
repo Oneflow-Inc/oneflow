@@ -492,7 +492,7 @@ REGISTER_USER_KERNEL("fused_lstm_cell_grad")
       size_t tmp_bytes = 0;
       if (ctx->has_output("grad_bias", 0)) {
         const Shape& in_shape = ctx->InputTensorDesc("workspace", 0).shape();
-        const Shape& out_shape = ctx->OutputTensorDesc("grad_bias", 0)->shape();
+        const Shape& out_shape = ctx->OutputTensorDesc("grad_bias", 0).shape();
         tmp_bytes = (2 * GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float))
                      + GetCudaAlignedSize(out_shape.elem_cnt() * sizeof(float)));
       } else {
