@@ -650,7 +650,6 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
   const auto& phy_instr_operand =
       std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(eager_blob_object, callback, modifier);
   Symbol<Device> device = JUST(GetDevice(tensor));
-  Symbol<Stream> stream = JUST(GetDefaultStreamByDevice(device));
   // Do not use producer_stream or last_used_stream.
   // Bug case when using producer_stream or last_used_stream:
   //
@@ -661,6 +660,8 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
   // ```
   // `ndarray` may not be ones because instruction AccessBlobByCallback is prescheduled before
   // oneflow.ones actually finished.
+  Symbol<Stream> stream = JUST(GetDefaultStreamByDevice(device));
+  JUST(SoftSyncStream({eager_blob_object}, stream));
   auto instruction = intrusive::make_shared<vm::Instruction>(
       // Never replace `stream` with producer_stream or last_used_stream.
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream)),
