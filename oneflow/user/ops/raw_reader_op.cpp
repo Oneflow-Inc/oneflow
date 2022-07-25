@@ -67,7 +67,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> RawReaderOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("data_type");
+  *ctx->MutOutputDType("out", 0) = ctx->Attr<DataType>("data_type");
   return Maybe<void>::Ok();
 }
 
