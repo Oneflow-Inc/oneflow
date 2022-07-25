@@ -680,6 +680,45 @@ class ExpandDimsFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class UnsqueezeMultipleFunctor {
+ public:
+  UnsqueezeMultipleFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& dim,
+                           const int32_t& n_dims) const {
+    if (dim.size() == 0 || x->ndim() == n_dims) {
+      return x;
+    } else if (dim.size() == 1) {
+      return JUST(functional::Unsqueeze(x, JUST(VectorAt(dim, 0))));
+    } else {
+      std::shared_ptr<Tensor> tensor = x;
+      const auto& dims_to_unsqueeze = JUST(dim_list_to_bitset(dim, n_dims));
+
+      // Unsqueeze is called several times to extend the dimension when the View mechanism is
+      // enabled. Otherwise, calculate the target shape and call reshape.
+      if (view::IsViewApplicable(tensor)) {
+        for (int32_t i = 0; i < n_dims; i++) {
+          if ((*dims_to_unsqueeze)[i]) { tensor = JUST(view::Unsqueeze(tensor, i)); }
+        }
+      } else {
+        std::vector<int64_t> target_dims(n_dims, 0);
+        int32_t tensor_index = 0;
+        for (int32_t i = 0; i < n_dims; i++) {
+          if ((*dims_to_unsqueeze)[i]) {
+            target_dims[i] = 1;
+          } else {
+            CHECK_LT_OR_RETURN(tensor_index, tensor->ndim());  // NOLINT(maybe-need-error-msg)
+            target_dims[i] = tensor->shape()->at(tensor_index);
+            tensor_index++;
+          }
+        }
+        Shape infered_shape(DimVector(target_dims.begin(), target_dims.end()));
+        tensor = JUST(functional::Reshape(tensor, infered_shape));
+      }
+      return tensor;
+    }
+  }
+};
+
 class SqueezeFunctor {
  public:
   SqueezeFunctor() {
@@ -2833,8 +2872,14 @@ class RepeatFunctor {
           }
         } else {
           input_reshape_vec.insert(input_reshape_vec.begin(), input_shape_val);
-          expand_shape_vec.insert(expand_shape_vec.begin(), input_shape_val);
-          output_reshape_vec.insert(output_reshape_vec.begin(), input_shape_val);
+          // For 0-size tensor, align with PyTorch.
+          if (repeat_shape_val == 0) {
+            expand_shape_vec.insert(expand_shape_vec.begin(), 0);
+            output_reshape_vec.insert(output_reshape_vec.begin(), 0);
+          } else {
+            expand_shape_vec.insert(expand_shape_vec.begin(), input_shape_val);
+            output_reshape_vec.insert(output_reshape_vec.begin(), input_shape_val);
+          }
         }
       } else {
         expand_shape_vec.insert(expand_shape_vec.begin(), repeat_shape.At(i));
@@ -3134,6 +3179,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ExpandGradFunctor>("ExpandGrad");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::ExpandDimsFunctor>("Unsqueeze");
+  m.add_functor<impl::UnsqueezeMultipleFunctor>("UnsqueezeMultiple");
   m.add_functor<impl::SqueezeFunctor>("Squeeze");
   m.add_functor<impl::RollFunctor>("Roll");
   m.add_functor<impl::GatherFunctor>("Gather");

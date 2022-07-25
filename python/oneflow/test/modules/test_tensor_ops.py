@@ -428,6 +428,7 @@ class TestTensorOps(flow.unittest.TestCase):
             flow.IntTensor: [flow.int32, flow.device("cpu")],
             flow.LongTensor: [flow.int64, flow.device("cpu")],
             flow.HalfTensor: [flow.float16, flow.device("cpu")],
+            flow.Tensor: [flow.float32, flow.device("cpu")],
             flow.FloatTensor: [flow.float32, flow.device("cpu")],
             flow.DoubleTensor: [flow.float64, flow.device("cpu")],
             flow.cuda.CharTensor: [flow.int8, flow.device("cuda")],

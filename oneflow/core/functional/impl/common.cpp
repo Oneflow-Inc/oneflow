@@ -155,9 +155,12 @@ Maybe<Shape> InferShape(const std::shared_ptr<one::Tensor>& x, const Shape& shap
   size_t x_count = x->shape()->Count(0);
   Shape infered_shape = shape;
   if (need_infer_axis == -1) {
-    CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
-        << Error::RuntimeError() << "shape '" << shape.ToString()
-        << "' is invalid for input of size " << x->nelement();
+    // For 0-size tensor, we we don't need to check the element size.
+    if (x_count > 0) {
+      CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
+          << Error::RuntimeError() << "shape '" << shape.ToString()
+          << "' is invalid for input of size " << x->nelement();
+    }
   } else {
     infered_shape.Set(need_infer_axis, x_count / count);
     CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)

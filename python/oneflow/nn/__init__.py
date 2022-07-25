@@ -159,3 +159,5 @@ from oneflow.nn.modules.rnn import (
     LSTM,
     GRU,
 )
+
+from oneflow.nn.qat.conv import QatConv1d, QatConv2d, QatConv3d

@@ -39,18 +39,25 @@ class InferContext {
   virtual ~InferContext() = default;
 
   virtual const TensorDesc& InputTensorDesc(const std::string&, int32_t) const = 0;
-  virtual TensorDesc* OutputTensorDesc(const std::string&, int32_t) = 0;
+  virtual const TensorDesc& OutputTensorDesc(const std::string&, int32_t) const = 0;
+  virtual TensorDesc* MutOutputTensorDesc(const std::string&, int32_t) = 0;
   virtual const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string&,
                                                               int32_t) const = 0;
   virtual const Shape& InputShape(const std::string&, int32_t) const = 0;
-  virtual Shape* OutputShape(const std::string&, int32_t) = 0;
-  virtual Shape* Shape4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual const Shape& OutputShape(const std::string&, int32_t) const = 0;
+  virtual Shape* MutOutputShape(const std::string&, int32_t) = 0;
+  virtual const Shape& Shape4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual Shape* MutShape4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual const Stride& InputStride(const std::string&, int32_t) const = 0;
-  virtual Stride* OutputStride(const std::string&, int32_t) = 0;
-  virtual Stride* Stride4ArgNameAndIndex(const std::string&, int32_t) = 0;
-  virtual const DataType& InputDType(const std::string&, int32_t) const = 0;
-  virtual DataType* OutputDType(const std::string&, int32_t) = 0;
-  virtual DataType* Dtype4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual const Stride& OutputStride(const std::string&, int32_t) const = 0;
+  virtual Stride* MutOutputStride(const std::string&, int32_t) = 0;
+  virtual const Stride& Stride4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual Stride* MutStride4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual DataType InputDType(const std::string&, int32_t) const = 0;
+  virtual DataType OutputDType(const std::string&, int32_t) const = 0;
+  virtual DataType* MutOutputDType(const std::string&, int32_t) = 0;
+  virtual DataType Dtype4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual DataType* MutDtype4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
   virtual const std::string& input(const std::string& arg_name, int32_t index) const = 0;
@@ -80,8 +87,10 @@ class InferContext {
   virtual const NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const = 0;
 
   virtual bool InputIsDynamic(const std::string&, int32_t) const = 0;
-  virtual bool* OutputIsDynamic(const std::string&, int32_t) = 0;
-  virtual bool* IsDynamic4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual bool OutputIsDynamic(const std::string&, int32_t) const = 0;
+  virtual bool* MutOutputIsDynamic(const std::string&, int32_t) = 0;
+  virtual bool IsDynamic4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual bool* MutIsDynamic4ArgNameAndIndex(const std::string&, int32_t) = 0;
 
   virtual int64_t parallel_num() const = 0;
 

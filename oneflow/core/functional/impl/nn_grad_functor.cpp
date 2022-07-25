@@ -1211,8 +1211,13 @@ class FusedMLPGradFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
                                 const std::shared_ptr<one::Tensor>& x, const TensorTuple& weights,
-                                const TensorTuple& cublas_aux, const TensorTuple& hidden) const {
+                                const TensorTuple& cublas_aux, const TensorTuple& hidden,
+                                const std::vector<float>& alpha_list) const {
+    MutableAttrMap attrs;
     const int64_t weight_size = weights.size();
+    CHECK_EQ_OR_RETURN(alpha_list.size(), weight_size - 1)
+        << "Alpha list size should be equal to weight_size - 1. ";
+    JUST(attrs.SetAttr<std::vector<float>>("alpha_list", alpha_list));
     TensorTuple input(2 + 3 * weight_size);
     input[0] = dy;
     input[1] = x;
@@ -1220,7 +1225,7 @@ class FusedMLPGradFunctor {
     std::copy(cublas_aux.begin(), cublas_aux.end(), input.begin() + 2 + weight_size);
     std::copy(hidden.begin(), hidden.end(), input.begin() + 2 + 2 * weight_size);
 #if CUDA_VERSION >= 11060
-    return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_[weight_size], input);
+    return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_[weight_size], input, attrs);
 #endif
     UNIMPLEMENTED_THEN_RETURN() << "Only Support in CUDA_VERSION >= 11060";
   }
