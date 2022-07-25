@@ -39,7 +39,7 @@ namespace oneflow {
     int64_t parallel_id = opt_parallel_id->value_or(0);
     dim_vec[out_split_axis] = bs.At(parallel_id).size();
   }
-  *ctx->OutputShape("out", 0) = Shape(dim_vec);
+  *ctx->MutOutputShape("out", 0) = Shape(dim_vec);
   return Maybe<void>::Ok();
 }
 
@@ -56,7 +56,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerBToSOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 

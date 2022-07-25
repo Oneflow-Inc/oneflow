@@ -29,7 +29,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> TopKOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->OutputShape("out", 0);
+  Shape* out_shape = ctx->MutOutputShape("out", 0);
   *out_shape = in_shape;
   out_shape->Set(in_shape.NumAxes() - 1, std::min(ctx->Attr<int32_t>("k"),
                                                   static_cast<int32_t>(in_shape.dim_vec().back())));
@@ -39,7 +39,7 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> TopKOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kInt64;
+  *ctx->MutOutputDType("out", 0) = DataType::kInt64;
   return Maybe<void>::Ok();
 }
 

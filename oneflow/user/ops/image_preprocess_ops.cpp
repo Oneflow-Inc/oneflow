@@ -159,7 +159,7 @@ namespace oneflow {
   const auto tensor_slice_view =
       GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id);
   const Shape& physical_shape = tensor_slice_view.shape();
-  *ctx->OutputShape("out", 0) = physical_shape;
+  *ctx->MutOutputShape("out", 0) = physical_shape;
   return Maybe<void>::Ok();
 }
 
@@ -234,7 +234,7 @@ namespace oneflow {
 /* static */ Maybe<void> ImageRandomCropOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   CHECK_OR_RETURN(in_tensor.data_type() == DataType::kTensorBuffer);
-  *ctx->OutputDType("out", 0) = in_tensor.data_type();
+  *ctx->MutOutputDType("out", 0) = in_tensor.data_type();
   return Maybe<void>::Ok();
 }
 

@@ -169,9 +169,6 @@ class CoinFlip(Module):
     r"""
     CoinFlip(batch_size=1, random_seed=None, probability=0.5, device=None, placement=None, sbp=None)
 
-    The documentation is referenced from:
-    https://docs.nvidia.com/deeplearning/dali/user-guide/docs/supported_ops_legacy.html#nvidia.dali.ops.CoinFlip.
-
     Generates random boolean values following a bernoulli distribution.
 
     The probability of generating a value 1 (true) is determined by the ``probability`` argument.
@@ -179,6 +176,9 @@ class CoinFlip(Module):
     The shape of the generated data can be either specified explicitly with a ``shape`` argument,
     or chosen to match the shape of the input, if provided. If none are present, a single value per
     sample is generated.
+
+    The documentation is referenced from:
+    https://docs.nvidia.com/deeplearning/dali/user-guide/docs/supported_ops_legacy.html#nvidia.dali.ops.CoinFlip.
 
     Args:
         batch_size (int, optional): Maximum batch size of the pipeline. Negative values for this parameter 
@@ -264,9 +264,6 @@ class CoinFlip(Module):
 class CropMirrorNormalize(Module):
     r"""
     CropMirrorNormalize(color_space="BGR", output_layout="NCHW", crop_h=0, crop_w=0, crop_pos_y=0.5, crop_pos_x=0.5, mean= [0.0], std= [1.0], output_dtype=oneflow.float)
-    
-    The documentation is referenced from:
-    https://docs.nvidia.com/deeplearning/dali/user-guide/docs/supported_ops_legacy.html#nvidia.dali.ops.CropMirrorNormalize.
 
     Performs fused cropping, normalization, format conversion
     (NHWC to NCHW) if desired, and type casting.
@@ -280,6 +277,9 @@ class CropMirrorNormalize(Module):
         If no cropping arguments are specified, only mirroring and normalization will occur.
 
     This operator allows sequence inputs and supports volumetric data.
+
+    The documentation is referenced from:
+    https://docs.nvidia.com/deeplearning/dali/user-guide/docs/supported_ops_legacy.html#nvidia.dali.ops.CropMirrorNormalize.
 
     Args:
         color_space (str, optional): The color space of the input image. Default: "BGR"

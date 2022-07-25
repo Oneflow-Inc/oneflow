@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> ArangeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  Shape* out_shape = ctx->OutputShape("out", 0);
+  Shape* out_shape = ctx->MutOutputShape("out", 0);
   DataType dtype = ctx->Attr<DataType>("dtype");
   int64_t range_elem_cnt = 0;
   if (IsIntegralDataType(dtype)) {
@@ -88,7 +88,7 @@ namespace oneflow {
       GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id);
   const Shape& physical_shape = tensor_slice_view.shape();
 
-  *ctx->OutputShape("out", 0) = physical_shape;
+  *ctx->MutOutputShape("out", 0) = physical_shape;
 
   return Maybe<void>::Ok();
 }
@@ -105,7 +105,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> ArangeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
+  *ctx->MutOutputDType("out", 0) = ctx->Attr<DataType>("dtype");
   return Maybe<void>::Ok();
 }
 

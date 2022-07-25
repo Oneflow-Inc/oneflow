@@ -230,17 +230,20 @@ class Conv1d(Module):
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
 
-    def forward(self, x):
+    def _conv_forward(self, x, weight, bias):
         return flow._C.conv1d(
             x,
-            self.weight,
-            self.bias,
+            weight,
+            bias,
             stride=self.stride,
             padding=self.padding,
             dilation=self.dilation,
             groups=self.groups,
             channel_pos=self.channel_pos,
         )
+
+    def forward(self, x):
+        return self._conv_forward(x, self.weight, self.bias)
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
@@ -429,7 +432,7 @@ class Conv2d(Module):
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
 
-    def forward(self, x):
+    def _conv_forward(self, x, weight, bias):
         if self.channel_pos == "channels_first":
             in_channel_axis = 1
         else:
@@ -440,14 +443,17 @@ class Conv2d(Module):
             )
         return flow._C.conv2d(
             x,
-            self.weight,
-            self.bias,
+            weight,
+            bias,
             stride=self.stride,
             padding=self.padding,
             dilation=self.dilation,
             groups=self.groups,
             channel_pos=self.channel_pos,
         )
+
+    def forward(self, x):
+        return self._conv_forward(x, self.weight, self.bias)
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
@@ -605,19 +611,22 @@ class Conv3d(Module):
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
 
-    def forward(self, x):
+    def _conv_forward(self, x, weight, bias):
         if x.shape[1] != self.in_channels:
             raise ValueError("The input channels should be equal to self.in_channels")
         return flow._C.conv3d(
             x,
-            self.weight,
-            self.bias,
+            weight,
+            bias,
             stride=self.stride,
             padding=self.padding,
             dilation=self.dilation,
             groups=self.groups,
             channel_pos=self.channel_pos,
         )
+
+    def forward(self, x):
+        return self._conv_forward(x, self.weight, self.bias)
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"

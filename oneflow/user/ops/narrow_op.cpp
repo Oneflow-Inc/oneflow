@@ -83,7 +83,7 @@ namespace oneflow {
   const int64_t ndim = dy_shape.NumAxes();
   CHECK_EQ_OR_RETURN(like_shape.NumAxes(), ndim);
 
-  *ctx->OutputShape("dx", 0) = like_shape;
+  *ctx->MutOutputShape("dx", 0) = like_shape;
   return Maybe<void>::Ok();
 }
 
@@ -131,7 +131,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> NarrowGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
   return Maybe<void>::Ok();
 }
 

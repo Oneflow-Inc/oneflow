@@ -63,12 +63,16 @@ namespace oneflow {
   }
   *out_shape = shape;
   *out_stride = Stride(shape);
-  CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt())
-      << Error::RuntimeError() << "Reshape infer ERROR! in op_name: " << ctx->op_name()
-      << " input shape is : " << in_shape.ToString()
-      << " , output shape is : " << out_shape->ToString()
-      << " , and reshape shape conf is : " << ctx->Attr<Shape>("shape").ToString()
-      << " op_loc: " << ctx->op_loc();
+  // For 0-size tensor, we don't need to check whether the input and output tensors have the same
+  // element size.
+  if (in_shape.elem_cnt() > 0) {
+    CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt())
+        << Error::RuntimeError() << "Reshape infer ERROR! in op_name: " << ctx->op_name()
+        << " input shape is : " << in_shape.ToString()
+        << " , output shape is : " << out_shape->ToString()
+        << " , and reshape shape conf is : " << ctx->Attr<Shape>("shape").ToString()
+        << " op_loc: " << ctx->op_loc();
+  }
 
   return Maybe<void>::Ok();
 }
@@ -124,7 +128,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> ReshapeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
