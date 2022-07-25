@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/functor_util.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter.h"
@@ -49,36 +50,48 @@ class DecodeOneRecFunctor {
     op_ = CHECK_JUST(one::OpBuilder("onerec_decoder").Input("in").Output("out").Build());
   }
 
+  struct DecodeOneRec {
+    Maybe<AttrMap> operator()(const std::string& key, const Symbol<DType>& dtype,
+                              const Shape& shape, const bool is_dynamic, bool reshape_has_value,
+                              const Shape& reshape_value, bool batch_padding_has_value,
+                              const Shape& batch_padding_value) {
+      MutableAttrMap attrs;
+      bool has_reshape = false;
+      bool has_batch_padding = false;
+
+      if (reshape_has_value) {
+        has_reshape = true;
+        JUST(attrs.SetAttr<Shape>("reshape", reshape_value));
+      } else {
+        has_reshape = false;
+        JUST(attrs.SetAttr<Shape>("reshape", shape));
+      }
+
+      if (batch_padding_has_value) {
+        has_batch_padding = true;
+        JUST(attrs.SetAttr<Shape>("batch_padding", batch_padding_value));
+      } else {
+        has_batch_padding = false;
+        JUST(attrs.SetAttr<Shape>("batch_padding", shape));
+      }
+      JUST(attrs.SetAttr<std::string>("key", key));
+      JUST(attrs.SetAttr<DataType>("data_type", dtype->data_type()));
+      JUST(attrs.SetAttr<Shape>("static_shape", shape));
+      JUST(attrs.SetAttr<bool>("is_dynamic", is_dynamic));
+      JUST(attrs.SetAttr<bool>("has_reshape", has_reshape));
+      JUST(attrs.SetAttr<bool>("has_batch_padding", has_batch_padding));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const std::string& key,
                            const Symbol<DType>& dtype, const Shape& shape, const bool is_dynamic,
                            const Optional<Shape>& reshape,
                            const Optional<Shape>& batch_padding) const {
-    MutableAttrMap attrs;
-    bool has_reshape = false;
-    bool has_batch_padding = false;
-
-    if (reshape.has_value()) {
-      has_reshape = true;
-      JUST(attrs.SetAttr<Shape>("reshape", *JUST(reshape)));
-    } else {
-      has_reshape = false;
-      JUST(attrs.SetAttr<Shape>("reshape", shape));
-    }
-
-    if (batch_padding.has_value()) {
-      has_batch_padding = true;
-      JUST(attrs.SetAttr<Shape>("batch_padding", *JUST(batch_padding)));
-    } else {
-      has_batch_padding = false;
-      JUST(attrs.SetAttr<Shape>("batch_padding", shape));
-    }
-    JUST(attrs.SetAttr<std::string>("key", key));
-    JUST(attrs.SetAttr<DataType>("data_type", dtype->data_type()));
-    JUST(attrs.SetAttr<Shape>("static_shape", shape));
-    JUST(attrs.SetAttr<bool>("is_dynamic", is_dynamic));
-    JUST(attrs.SetAttr<bool>("has_reshape", has_reshape));
-    JUST(attrs.SetAttr<bool>("has_batch_padding", has_batch_padding));
-
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(DecodeOneRec);
+    const auto attrs = *JUST(GetAttrs(key, dtype, shape, is_dynamic, reshape.has_value(),
+                                      reshape.value_or(Shape()), batch_padding.has_value(),
+                                      batch_padding.value_or(Shape())));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 

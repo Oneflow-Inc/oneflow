@@ -38,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/common/flat_shape.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/functor_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/optional.h"
@@ -441,10 +442,18 @@ Maybe<Tensor> LocalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDes
   bool sync_and_check_meta = NeedSyncAndCheckShapeAndDtype(check_meta_hint);
   JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp,
                                   sync_and_check_meta));
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<Shape>("shape", *shape));
-  JUST(attrs.SetAttr<DataType>("dtype", dtype));
-  JUST(attrs.SetAttr<bool>("sync_data", true));
+  struct LocalToGlobalAttrs {
+    Maybe<AttrMap> operator()(const Shape& shape, DataType dtype) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<Shape>("shape", shape));
+      JUST(attrs.SetAttr<DataType>("dtype", dtype));
+      JUST(attrs.SetAttr<bool>("sync_data", true));
+      return AttrMap(attrs);
+    }
+  };
+
+  constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(LocalToGlobalAttrs);
+  const auto attrs = *JUST(GetAttrs(*shape, dtype));
   const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
   return output;
@@ -485,10 +494,18 @@ class LocalToGlobalFunctor {
                                     /*pin_memory=*/false));
     }
     Symbol<NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    JUST(attrs.SetAttr<bool>("sync_data", sync_data));
+    struct LocalToGlobalAttrs {
+      Maybe<AttrMap> operator()(const Shape& shape, DataType dtype, bool sync_data) {
+        MutableAttrMap attrs;
+        JUST(attrs.SetAttr<Shape>("shape", shape));
+        JUST(attrs.SetAttr<DataType>("dtype", dtype));
+        JUST(attrs.SetAttr<bool>("sync_data", sync_data));
+        return AttrMap(attrs);
+      }
+    };
+
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(LocalToGlobalAttrs);
+    const auto attrs = *JUST(GetAttrs(shape, dtype->data_type(), sync_data));
     DisableCheckGlobalTensorMetaScope scope{};
     const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
         *op_, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));

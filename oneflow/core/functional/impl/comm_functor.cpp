@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/id_util.h"
+#include "oneflow/core/common/functor_util.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -266,9 +267,17 @@ class GlobalS2SFunctor {
 class SendFunctor {
  public:
   SendFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("send").Input("in").Build()); }
+  struct Send {
+    Maybe<AttrMap> operator()(int64_t dst) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("dst_process_id", dst));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& x, int64_t dst, bool send_meta) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("dst_process_id", dst));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Send);
+    const auto attrs = *JUST(GetAttrs(dst));
     if (send_meta) {
       std::shared_ptr<FlatShape> flat_shape = JUST(FlatShape::New(*x->shape()));
       JUST(ccl::Send<DeviceType::kCPU>(flat_shape.get(), sizeof(*flat_shape), DataType::kChar, dst,
@@ -292,12 +301,23 @@ class SendFunctor {
 class RecvFunctor {
  public:
   RecvFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("recv").Output("out").Build()); }
+  struct Recv {
+    Maybe<AttrMap> operator()(int64_t src, const Shape& shape, DataType data_type,
+                              const std::string& device_type, int64_t device_id) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("src_process_id", src));
+      JUST(attrs.SetAttr<Shape>("shape", shape));
+      JUST(attrs.SetAttr<DataType>("dtype", data_type));
+      JUST(attrs.SetAttr<std::string>("device_type", device_type));
+      JUST(attrs.SetAttr<int64_t>("device_id", device_id));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(int64_t src, const Optional<Shape>& optional_shape,
                            const Optional<Symbol<DType>>& optional_dtype,
                            const Optional<Symbol<Device>>& optional_device,
                            const Optional<one::Tensor>& out) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("src_process_id", src));
     Shape shape;
     DataType data_type = DataType::kInvalidDataType;
     Symbol<Device> device;
@@ -322,10 +342,8 @@ class RecvFunctor {
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "All or none of shape, dtype and device should have value.";
     }
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", data_type));
-    JUST(attrs.SetAttr<std::string>("device_type", device->type()));
-    JUST(attrs.SetAttr<int64_t>("device_id", device->device_id()));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Recv);
+    const auto attrs = *JUST(GetAttrs(src, shape, data_type, device->type(), device->device_id()));
 
     OpExprInterpContext op_expr_interp_context(attrs, device);
 

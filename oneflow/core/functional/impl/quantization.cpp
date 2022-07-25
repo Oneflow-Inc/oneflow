@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/functor_util.h"
 #include "oneflow/core/functional/impl/binary_functor.h"
 
 #include "oneflow/core/framework/attr_map.h"
@@ -39,16 +40,28 @@ class MinMaxObserverFunctor {
                          .Output("zero_point")
                          .Build());
   }
+  struct MinMaxObserver {
+    Maybe<AttrMap> operator()(const std::string& quantization_formula,
+                              const int32_t& quantization_bit,
+                              const std::string& quantization_scheme,
+                              const bool& per_layer_quantization) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
+      JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));
+      JUST(attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme));
+      JUST(attrs.SetAttr<bool>("per_layer_quantization", per_layer_quantization));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
                                 const std::string& quantization_formula,
                                 const int32_t& quantization_bit,
                                 const std::string& quantization_scheme,
                                 const bool& per_layer_quantization) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
-    JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));
-    JUST(attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme));
-    JUST(attrs.SetAttr<bool>("per_layer_quantization", per_layer_quantization));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(MinMaxObserver);
+    const auto attrs = *JUST(GetAttrs(quantization_formula, quantization_bit, quantization_scheme,
+                                      per_layer_quantization));
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in}, attrs);
   }
 
@@ -68,6 +81,22 @@ class MovingAverageMinMaxObserverFunctor {
                          .Output("zero_point")
                          .Build());
   }
+  struct MovingAverageMinMaxObserver {
+    Maybe<AttrMap> operator()(const bool& training, const int64_t& stop_update_after_iters,
+                              const std::string& quantization_formula,
+                              const int32_t& quantization_bit,
+                              const std::string& quantization_scheme, const float& momentum) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<bool>("training", training));
+      JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
+      JUST(attrs.SetAttr<int64_t>("stop_update_after_iters", stop_update_after_iters));
+      JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));
+      JUST(attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme));
+      JUST(attrs.SetAttr<float>("momentum", momentum));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
                                 const std::shared_ptr<one::Tensor>& current_train_step,
                                 const std::shared_ptr<one::Tensor>& moving_max,
@@ -77,13 +106,9 @@ class MovingAverageMinMaxObserverFunctor {
                                 const int32_t& quantization_bit,
                                 const std::string& quantization_scheme,
                                 const float& momentum) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<bool>("training", training));
-    JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
-    JUST(attrs.SetAttr<int64_t>("stop_update_after_iters", stop_update_after_iters));
-    JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));
-    JUST(attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme));
-    JUST(attrs.SetAttr<float>("momentum", momentum));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(MovingAverageMinMaxObserver);
+    const auto attrs = *JUST(GetAttrs(training, stop_update_after_iters, quantization_formula,
+                                      quantization_bit, quantization_scheme, momentum));
     return OpInterpUtil::Dispatch<TensorTuple>(
         *op_, {in, current_train_step, moving_max, moving_min}, attrs);
   }
@@ -102,15 +127,25 @@ class FakeQuantizationFunctor {
                          .Output("out")
                          .Build());
   }
+  struct FakeQuantization {
+    Maybe<AttrMap> operator()(const std::string& quantization_formula,
+                              const int32_t& quantization_bit,
+                              const std::string& quantization_scheme) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
+      JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));
+      JUST(attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
                            const std::shared_ptr<one::Tensor>& scale,
                            const std::shared_ptr<one::Tensor>& zero_point,
                            const std::string& quantization_formula, const int32_t& quantization_bit,
                            const std::string& quantization_scheme) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
-    JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));
-    JUST(attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(FakeQuantization);
+    const auto attrs = *JUST(GetAttrs(quantization_formula, quantization_bit, quantization_scheme));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in, scale, zero_point}, attrs);
   }
 
@@ -128,15 +163,25 @@ class QuantizationFunctor {
                          .Output("out")
                          .Build());
   }
+  struct Quantization {
+    Maybe<AttrMap> operator()(const std::string& quantization_formula,
+                              const int32_t& quantization_bit,
+                              const std::string& quantization_scheme) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
+      JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));
+      JUST(attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
                            const std::shared_ptr<one::Tensor>& scale,
                            const std::shared_ptr<one::Tensor>& zero_point,
-                           const std::string quantization_formula, const int32_t& quantization_bit,
-                           const std::string quantization_scheme) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
-    JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));
-    JUST(attrs.SetAttr<std::string>("quantization_scheme", quantization_scheme));
+                           const std::string& quantization_formula, const int32_t& quantization_bit,
+                           const std::string& quantization_scheme) const {
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Quantization);
+    const auto attrs = *JUST(GetAttrs(quantization_formula, quantization_bit, quantization_scheme));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in, scale, zero_point}, attrs);
   }
 

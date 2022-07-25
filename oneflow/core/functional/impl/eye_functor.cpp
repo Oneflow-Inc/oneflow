@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/functor_util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -43,13 +44,22 @@ namespace impl {
 class EyeDevcieFunctor {
  public:
   EyeDevcieFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
+  struct Eye {
+    Maybe<AttrMap> operator()(int64_t rows, int64_t cols, DataType dtype) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("rows", rows));
+      JUST(attrs.SetAttr<int64_t>("cols", cols));
+      JUST(attrs.SetAttr<DataType>("dtype", dtype));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("rows", rows.As<int64_t>()));
-    JUST(attrs.SetAttr<int64_t>("cols", cols.value_or(rows).As<int64_t>()));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(Eye);
+    const auto attrs =
+        *JUST(GetAttrs(rows.As<int64_t>(), cols.value_or(rows).As<int64_t>(), dtype->data_type()));
     OpExprInterpContext ctx(attrs);
     ctx.device = device;
     auto res = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
@@ -74,11 +84,30 @@ class EyeDeviceStrFunctor {
 class GlobalEyeSbpListFunctor {
  public:
   GlobalEyeSbpListFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
+  struct GlobalEyeSbpList {
+    Maybe<AttrMap> operator()(int64_t rows, int64_t cols, DataType dtype, bool is_lazy_mode,
+                              const std::vector<Symbol<SbpParallel>>& sbp_tuple) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("rows", rows));
+      JUST(attrs.SetAttr<int64_t>("cols", cols));
+      JUST(attrs.SetAttr<DataType>("dtype", dtype));
+      if (is_lazy_mode) {
+        std::vector<std::string> nd_sbp(sbp_tuple.size());
+        {
+          for (int i = 0; i < sbp_tuple.size(); ++i) {
+            nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+          }
+        }
+        JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
+      }
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Symbol<DType>& dtype, const bool& requires_grad,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
-    MutableAttrMap attrs;
     CHECK_EQ_OR_RETURN(sbp_tuple.size(), placement->hierarchy()->NumAxes())
         << "len(sbp) == len(placement.hierarchy) required, but "
         << "len(sbp)==" << sbp_tuple.size() << ", "
@@ -89,18 +118,9 @@ class GlobalEyeSbpListFunctor {
           << "sbp of eye should be broadcast only";
     }
 
-    JUST(attrs.SetAttr<int64_t>("rows", rows.As<int64_t>()));
-    JUST(attrs.SetAttr<int64_t>("cols", cols.value_or(rows).As<int64_t>()));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    if (LazyMode::is_enabled()) {
-      std::vector<std::string> nd_sbp(sbp_tuple.size());
-      {
-        for (int i = 0; i < sbp_tuple.size(); ++i) {
-          nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
-        }
-      }
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
-    }
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(GlobalEyeSbpList);
+    const auto attrs = *JUST(GetAttrs(rows.As<int64_t>(), cols.value_or(rows).As<int64_t>(),
+                                      dtype->data_type(), LazyMode::is_enabled(), sbp_tuple));
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     auto res = JUST(
         OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, placement, nd_sbp)));
