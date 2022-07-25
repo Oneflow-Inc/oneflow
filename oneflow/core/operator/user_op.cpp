@@ -64,8 +64,7 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
     const auto& op_conf = user_op->op_conf();
     CHECK(op_conf.has_user_conf());
 
-    device_tag_ = op_conf.device_tag();
-    device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
+    device_type_ = CHECK_JUST(DeviceType4DeviceTag(op_conf.device_tag()));
     parallel_ctx_ = parallel_ctx;
 
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
@@ -97,7 +96,7 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
   ~UserOpKernelRegContext() = default;
 
   DeviceType device_type() const override { return device_type_; }
-  const std::string& device_tag() const override { return device_tag_; }
+
   const ParallelContext& parallel_ctx() const override { return *parallel_ctx_; }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
@@ -120,7 +119,6 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
   ArgVec inputs_;
   ArgVec outputs_;
   DeviceType device_type_;
-  std::string device_tag_;
   const ParallelContext* parallel_ctx_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
 };
@@ -173,23 +171,45 @@ class UserOpInferContext final : public user_op::InferContext {
     }
   }
   const Shape& InputShape(const std::string& arg_name, int32_t index) const override {
-    return *const_cast<UserOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
-  }
-  Shape* OutputShape(const std::string& arg_name, int32_t index) override {
     return Shape4ArgNameAndIndex(arg_name, index);
   }
-  Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  const Shape& OutputShape(const std::string& arg_name, int32_t index) const override {
+    return Shape4ArgNameAndIndex(arg_name, index);
+  }
+  Shape* MutOutputShape(const std::string& arg_name, int32_t index) override {
+    return MutShape4ArgNameAndIndex(arg_name, index);
+  }
+  const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) {
+      thread_local static Shape non_shape;
+      return non_shape;
+    };
+    return it->second.shape();
+  }
+  Shape* MutShape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return nullptr; };
     return it->second.mut_shape();
   }
   const Stride& InputStride(const std::string& arg_name, int32_t index) const override {
-    return *const_cast<UserOpInferContext*>(this)->Stride4ArgNameAndIndex(arg_name, index);
-  }
-  Stride* OutputStride(const std::string& arg_name, int32_t index) override {
     return Stride4ArgNameAndIndex(arg_name, index);
   }
-  Stride* Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  const Stride& OutputStride(const std::string& arg_name, int32_t index) const override {
+    return Stride4ArgNameAndIndex(arg_name, index);
+  }
+  Stride* MutOutputStride(const std::string& arg_name, int32_t index) override {
+    return MutStride4ArgNameAndIndex(arg_name, index);
+  }
+  const Stride& Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) {
+      thread_local static Stride non_stride;
+      return non_stride;
+    };
+    return it->second.stride();
+  }
+  Stride* MutStride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return nullptr; };
     return it->second.mut_stride();
@@ -270,7 +290,7 @@ class UserOpInferContext final : public user_op::InferContext {
   }
   const std::string& op_name() const override { return user_op_conf().op_name(); }
   const std::string& op_type_name() const override { return user_op_conf().op_type_name(); }
-  const std::string& device_tag() const override { return user_op_conf().op_conf().device_tag(); }
+
   const std::string& op_loc() const override { return op_->op_loc(); }
 
  private:
@@ -614,8 +634,8 @@ Maybe<void> UserOp::InferOutBlobDescs(
     for (const auto& pair : infer_ctx.outputs()) {
       BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
       out_blob_desc->set_data_type(*(infer_ctx.OutputDType(pair.first, pair.second)));
-      out_blob_desc->mut_shape() = *(infer_ctx.OutputShape(pair.first, pair.second));
-      out_blob_desc->mut_stride() = Stride(*(infer_ctx.OutputShape(pair.first, pair.second)));
+      out_blob_desc->mut_shape() = infer_ctx.OutputShape(pair.first, pair.second);
+      out_blob_desc->mut_stride() = Stride(infer_ctx.OutputShape(pair.first, pair.second));
       out_blob_desc->set_is_dynamic(*infer_ctx.OutputIsDynamic(pair.first, pair.second));
     }
     return Maybe<void>::Ok();

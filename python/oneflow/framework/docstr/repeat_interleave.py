@@ -21,13 +21,13 @@ add_docstr(
     """
     repeat_interleave(input, repeats, dim=None, *, output_size=None) -> Tensor
 
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.repeat_interleave.html
-
     Repeat elements of a tensor.
 
     .. warning::
 
         This is different from :meth:`oneflow.Tensor.repeat` but similar to ``numpy.repeat``.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.repeat_interleave.html
 
     Args:
         input (oneflow.Tensor): the input Tensor.

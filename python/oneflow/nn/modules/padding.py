@@ -22,11 +22,12 @@ from oneflow.nn.modules.utils import _quadruple
 
 
 class ReplicationPad2d(Module):
-    """The interface is consistent with PyTorch.
+    """
+    Pads the input tensor using the replication of the input boundary.
+
+    The interface is consistent with PyTorch.
     The documentation is referenced from:
     https://pytorch.org/docs/1.10/generated/torch.nn.ReplicationPad2d.html.
-
-    Pads the input tensor using the replication of the input boundary.
 
     Args:
         padding (Union[int, tuple, list]):  the size of the padding. If is `int`, uses the same padding in all boundaries. If a 4-`tuple`, uses (:math:`\\mathrm{padding_{left}}`, :math:`\\mathrm{padding_{right}}`, :math:`\\mathrm{padding_{top}}`, :math:`\\mathrm{padding_{bottom}}`)
@@ -85,12 +86,12 @@ class ReplicationPad2d(Module):
 
 
 class ReflectionPad2d(Module):
-    """The interface is consistent with PyTorch.
+    """
+    This operator pads the input tensor using the reflection of the input boundary.
+
+    The interface is consistent with PyTorch.
     The documentation is referenced from:
     https://pytorch.org/docs/1.10/generated/torch.nn.ReflectionPad2d.html.
-
-
-    This operator pads the input tensor using the reflection of the input boundary.
 
     Args:
         padding (Union[int,tuple]): The size or bundary of padding, if is `int` uses the same padding in all dimension; if 4-dims `tuple`, uses :math:`(\\text{padding}_{\\text{left}}, \\text{padding}_{\\text{right}}, \\text{padding}_{\\text{top}}, \\text{padding}_{\\text{bottom}} )`
@@ -203,12 +204,13 @@ class ConstantPad1d(Module):
 
 
 class ConstantPad2d(Module):
-    """The interface is consistent with PyTorch.
-    The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.nn.ConstantPad2d.html.
-
+    """
     This operator pads the input with constant value that user specifies.
     User can set the amount of padding by setting the parameter `paddings`.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.ConstantPad2d.html.
 
     Args:
         padding (int, tuple, list):  the size of the padding.
@@ -339,11 +341,12 @@ class ConstantPad3d(Module):
 
 
 class ZeroPad2d(Module):
-    """The interface is consistent with PyTorch.
+    """
+    Pads the input tensor boundaries with zero. User can set the amount of padding by setting the parameter `paddings`.
+
+    The interface is consistent with PyTorch.
     The documentation is referenced from:
     https://pytorch.org/docs/1.10/generated/torch.nn.ZeroPad2d.html.
-
-    Pads the input tensor boundaries with zero. User can set the amount of padding by setting the parameter `paddings`.
 
     Args:
         padding (Union[int, tuple]):  the size of the padding. If is `int`, uses the same padding in all boundaries. If a 4-`tuple`, uses (:math:`\\mathrm{padding_{left}}`, :math:`\\mathrm{padding_{right}}`, :math:`\\mathrm{padding_{top}}`, :math:`\\mathrm{padding_{bottom}}`)

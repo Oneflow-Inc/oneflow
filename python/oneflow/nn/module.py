@@ -56,7 +56,7 @@ class Module(object):
     
     This class is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.Module.html.
+    https://pytorch.org/docs/1.10/generated/torch.nn.Module.html.
 
     Your models should also subclass this class.
 

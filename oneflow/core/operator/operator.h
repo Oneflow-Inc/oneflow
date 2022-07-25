@@ -24,7 +24,7 @@ limitations under the License.
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
-#include "oneflow/core/job/mirrored_parallel.pb.h"
+#include "oneflow/core/job/local_parallel.pb.h"
 #include "oneflow/core/operator/op_conf_util.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/job_builder.h"
@@ -34,7 +34,7 @@ limitations under the License.
 
 namespace oneflow {
 
-class MirroredSigInferHint;
+class LocalSigInferHint;
 class OpNodeSignature;
 class Scope;
 
@@ -151,18 +151,17 @@ class Operator {
   Maybe<void> InferNdSbpSignatureIf(
       const NdSbpSignature& nd_sbp_constraints, const ParallelDesc& parallel_desc,
       std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn);
-  // Infer blob's MirroredSignature
-  Maybe<void> InferMirroredSignatureIf(
-      std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
-          MirroredSigInferHint4Ibn,
-      bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc);
+  // Infer blob's LocalSignature
+  Maybe<void> InferLocalSignatureIf(
+      std::function<Maybe<const LocalSigInferHint*>(const std::string&)> LocalSigInferHint4Ibn,
+      bool is_local_parallel_view_conf, const ParallelDesc& parallel_desc);
   void GenKernelConf(const std::function<const BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
                      const ParallelContext*, KernelConf*) const;
   const InputBlobModifier& InputBlobModifier4Ibn(const std::string& ibn) const;
   const OutputBlobModifier& OutputBlobModifier4Obn(const std::string& obn) const;
   Maybe<const SbpParallel*> SbpParallel4BnInOp(const std::string& bn_in_op) const;
   Maybe<const NdSbp*> NdSbp4BnInOp(const std::string& bn_in_op) const;
-  Maybe<const OptMirroredParallel*> OptMirroredParallel4BnInOp(const std::string& bn_in_op) const;
+  Maybe<const OptLocalParallel*> OptLocalParallel4BnInOp(const std::string& bn_in_op) const;
 
   Maybe<void> GetSbpSignaturesIf(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
@@ -222,10 +221,9 @@ class Operator {
   virtual Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
     OF_UNIMPLEMENTED() << " GetSbpSignatures unimplemented, op name: " << op_name();
   }
-  virtual Maybe<void> InferMirroredSignature(
-      std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
-          MirroredSigInferHint4Ibn,
-      bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc);
+  virtual Maybe<void> InferLocalSignature(
+      std::function<Maybe<const LocalSigInferHint*>(const std::string&)> LocalSigInferHint4Ibn,
+      bool is_local_parallel_view_conf, const ParallelDesc& parallel_desc);
 
   virtual Maybe<void> InferInplaceObn2Ibn(
       HashMap<std::string, std::string>* mut_inplace_obn2ibn,
@@ -274,7 +272,7 @@ class Operator {
 
   InputBlobModifier* MutInputBlobModifier4Ibn(const std::string& ibn);
   OutputBlobModifier* MutOutputBlobModifier4Obn(const std::string& obn);
-  OptMirroredParallel* MutOptMirroredParallel(const std::string& bn_in_op);
+  OptLocalParallel* MutOptLocalParallel(const std::string& bn_in_op);
 
  private:
   enum BlobNameTag {
@@ -320,7 +318,7 @@ class Operator {
   ArgModifierSignature arg_modifier_signature_;
   std::unique_ptr<BlobLastUsedSignature> blob_last_used_signature_;
   std::unique_ptr<BlobBackwardUsedSignature> blob_backward_used_signature_;
-  std::unique_ptr<MirroredSignature> mirrored_signature_;
+  std::unique_ptr<LocalSignature> local_signature_;
 
   HashMap<std::string, std::pair<BlobNameTag, int32_t>> bn2index_pair_;
   HashMap<LogicalBlobId, int32_t> lbi2output_index_;

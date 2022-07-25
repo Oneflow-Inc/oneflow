@@ -67,9 +67,9 @@ Maybe<one::Tensor> Naive1ToP(const std::shared_ptr<one::Tensor>& tensor, Symbol<
     local_tensor = JUST(one::functional::Constant(*tensor->shape(), 0, tensor->dtype(),
                                                   JUST(Device::New(device_type))));
   }
-  return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(),
-                                                 *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
-                                                 tensor->dtype()));
+  return JUST(one::functional::LocalToGlobal(local_tensor, out->placement(),
+                                             *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
+                                             tensor->dtype(), /* sync_data */ false));
 }
 
 COMMAND(RegisterBoxingFunction("naive-1-to-p", CheckNaive1ToP, &Naive1ToP));

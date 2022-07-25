@@ -29,7 +29,7 @@ class EventRecordedEpStreamType final : public StreamType {
   EventRecordedEpStreamType() = default;
   ~EventRecordedEpStreamType() override = default;
 
-  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
+  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Symbol<Device> device) const override;
 
   void InitInstructionStatus(const Stream& stream,
                              InstructionStatusBuffer* status_buffer) const override;
@@ -37,8 +37,7 @@ class EventRecordedEpStreamType final : public StreamType {
                                InstructionStatusBuffer* status_buffer) const override;
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
-  void Compute(Instruction* instruction) const override;
-  bool OnSchedulerThread() const override { return true; }
+  void Run(Instruction* instruction) const override;
   bool SupportingTransportInstructions() const override { return true; }
 };
 

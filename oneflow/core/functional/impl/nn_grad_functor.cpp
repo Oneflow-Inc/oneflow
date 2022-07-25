@@ -504,6 +504,28 @@ class BinaryCrossEntropyWithLogitsLossGradFunctor {
   std::shared_ptr<OpExpr> op_weight_pos_;
 };
 
+class BinaryCrossEntropyWithLogitsReduceMeanLossGradFunctor {
+ public:
+  BinaryCrossEntropyWithLogitsReduceMeanLossGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits_reduce_mean_grad")
+                         .Input("dy")
+                         .Input("input")
+                         .Input("target")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target) const {
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, input, target});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> op_weight_;
+  std::shared_ptr<OpExpr> op_pos_;
+  std::shared_ptr<OpExpr> op_weight_pos_;
+};
 class CombinedMarginLossGradFunctor {
  public:
   CombinedMarginLossGradFunctor() {
@@ -1108,6 +1130,112 @@ class FusedCrossFeatureInteractionV2GradFunctor {
   std::shared_ptr<OpExpr> v2_grad_op_;
 };
 
+class MatrixVectorProductGradAFunctor {
+ public:
+  MatrixVectorProductGradAFunctor() {
+    matrix_vector_product_grad_a_op_ = CHECK_JUST(
+        one::OpBuilder("matrix_vector_product_grad_a").Input("dy").Input("b").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& b) const {
+    return OpInterpUtil::Dispatch<Tensor>(*matrix_vector_product_grad_a_op_, {dy, b});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> matrix_vector_product_grad_a_op_;
+};
+
+class MatrixVectorProductGradBFunctor {
+ public:
+  MatrixVectorProductGradBFunctor() {
+    matrix_vector_product_grad_b_op_ = CHECK_JUST(
+        one::OpBuilder("matrix_vector_product_grad_b").Input("dy").Input("a").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& a) const {
+    return OpInterpUtil::Dispatch<Tensor>(*matrix_vector_product_grad_b_op_, {dy, a});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> matrix_vector_product_grad_b_op_;
+};
+
+class VectorMatrixProductGradAFunctor {
+ public:
+  VectorMatrixProductGradAFunctor() {
+    vector_matrix_product_grad_a_op_ = CHECK_JUST(
+        one::OpBuilder("vector_matrix_product_grad_a").Input("dy").Input("b").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& b) const {
+    return OpInterpUtil::Dispatch<Tensor>(*vector_matrix_product_grad_a_op_, {dy, b});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> vector_matrix_product_grad_a_op_;
+};
+
+class VectorMatrixProductGradBFunctor {
+ public:
+  VectorMatrixProductGradBFunctor() {
+    vector_matrix_product_grad_b_op_ = CHECK_JUST(
+        one::OpBuilder("vector_matrix_product_grad_b").Input("dy").Input("a").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& a) const {
+    return OpInterpUtil::Dispatch<Tensor>(*vector_matrix_product_grad_b_op_, {dy, a});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> vector_matrix_product_grad_b_op_;
+};
+
+class FusedMLPGradFunctor {
+ public:
+  FusedMLPGradFunctor() {
+#if CUDA_VERSION >= 11060
+    fused_op_.resize(kMaxInputCount /*the maximum number of layers*/);
+    for (int n = 1; n < fused_op_.size(); ++n) {
+      fused_op_[n] = CHECK_JUST(one::OpBuilder("cublas_fused_mlp_grad")
+                                    .Input("dy")
+                                    .Input("x")
+                                    .Input("weights", n)
+                                    .Input("cublas_aux", n)
+                                    .Input("hidden", n)
+                                    .Output("d_x")
+                                    .Output("d_biases", n)
+                                    .Output("d_weights", n)
+                                    .Build());
+    }
+#endif
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                                const std::shared_ptr<one::Tensor>& x, const TensorTuple& weights,
+                                const TensorTuple& cublas_aux, const TensorTuple& hidden,
+                                const std::vector<float>& alpha_list) const {
+    MutableAttrMap attrs;
+    const int64_t weight_size = weights.size();
+    CHECK_EQ_OR_RETURN(alpha_list.size(), weight_size - 1)
+        << "Alpha list size should be equal to weight_size - 1. ";
+    JUST(attrs.SetAttr<std::vector<float>>("alpha_list", alpha_list));
+    TensorTuple input(2 + 3 * weight_size);
+    input[0] = dy;
+    input[1] = x;
+    std::copy(weights.begin(), weights.end(), input.begin() + 2);
+    std::copy(cublas_aux.begin(), cublas_aux.end(), input.begin() + 2 + weight_size);
+    std::copy(hidden.begin(), hidden.end(), input.begin() + 2 + 2 * weight_size);
+#if CUDA_VERSION >= 11060
+    return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_[weight_size], input, attrs);
+#endif
+    UNIMPLEMENTED_THEN_RETURN() << "Only Support in CUDA_VERSION >= 11060";
+  }
+
+ private:
+#if CUDA_VERSION >= 11060
+  std::vector<std::shared_ptr<OpExpr>> fused_op_;
+#endif
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1151,6 +1279,13 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "FusedCrossFeatureInteractionV1Grad");
   m.add_functor<impl::FusedCrossFeatureInteractionV2GradFunctor>(
       "FusedCrossFeatureInteractionV2Grad");
+  m.add_functor<impl::FusedMLPGradFunctor>("FusedMLPGrad");
+  m.add_functor<impl::BinaryCrossEntropyWithLogitsReduceMeanLossGradFunctor>(
+      "BinaryCrossEntropyWithLogitsReduceMeanLossGrad");
+  m.add_functor<impl::MatrixVectorProductGradAFunctor>("MatrixVectorProductGradA");
+  m.add_functor<impl::MatrixVectorProductGradBFunctor>("MatrixVectorProductGradB");
+  m.add_functor<impl::VectorMatrixProductGradAFunctor>("VectorMatrixProductGradA");
+  m.add_functor<impl::VectorMatrixProductGradBFunctor>("VectorMatrixProductGradB");
 };
 
 }  // namespace functional

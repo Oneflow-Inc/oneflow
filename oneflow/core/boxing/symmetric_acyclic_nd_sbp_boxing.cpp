@@ -29,30 +29,16 @@ namespace oneflow {
 
 namespace {
 
-Maybe<one::OpExpr> MakeToConsistentOpExpr() {
-  std::shared_ptr<one::OpExpr> op_expr =
-      JUST(one::CastToConsistentOpExpr::New(*JUST(UniqueStr("cast_to_consistent"))));
-  return op_expr;
-}
-
-static constexpr auto* GetLocalToConsistentOpExpr =
-    DECORATE(&MakeToConsistentOpExpr, ThreadLocalCachedCopiable);
-
-Maybe<one::Tensor> ReinterpterConsistentTensor(const std::shared_ptr<one::Tensor>& tensor,
-                                               const Shape& shape,
-                                               Symbol<ParallelDesc> parallel_desc,
-                                               Symbol<NdSbp> nd_sbp) {
-  const auto& op = JUST(GetLocalToConsistentOpExpr());
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<Shape>("shape", shape));
-  JUST(attrs.SetAttr<DataType>("dtype", tensor->dtype()->data_type()));
+Maybe<one::Tensor> ReinterpterGlobalTensor(const std::shared_ptr<one::Tensor>& tensor,
+                                           const Shape& shape, Symbol<ParallelDesc> parallel_desc,
+                                           Symbol<NdSbp> nd_sbp) {
   const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
   std::shared_ptr<Shape> pyhsical_shape =
       JUST(GetPhysicalShape(shape, *nd_sbp, *parallel_desc, JUST(*parallel_id)));
   std::shared_ptr<one::Tensor> x = JUST(tensor->cur_rank_phy_tensor());
   if (*x->shape() != *pyhsical_shape) { x = JUST(one::functional::Reshape(x, *pyhsical_shape)); }
-  return JUST(one::OpInterpUtil::Dispatch<one::Tensor>(
-      *op, {x}, one::OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
+  return JUST(one::functional::LocalToGlobal(x, parallel_desc, *JUST(GetSbpList(nd_sbp)), shape,
+                                             tensor->dtype(), /* sync_data */ false));
 }
 
 Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input, Symbol<NdSbp> in_nd_sbp,
@@ -81,7 +67,7 @@ Maybe<void> RawCheckSymmetricAcyclicNdSbpBoxing(Symbol<PlacedNdSbp> in, Symbol<P
 // NOLINTEND(maybe-need-error-msg)
 
 static constexpr auto* CheckSymmetricAcyclicNdSbpBoxing =
-    DECORATE(&RawCheckSymmetricAcyclicNdSbpBoxing, ThreadLocalCopiable);
+    DECORATE(&RawCheckSymmetricAcyclicNdSbpBoxing, ThreadLocalCachedCopiable);
 
 }  // namespace
 
@@ -101,27 +87,26 @@ Maybe<one::Tensor> SymmetricAcyclicNdSbpBoxing(const std::shared_ptr<one::Tensor
   std::shared_ptr<one::Tensor> output;
   const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
   if (out_parallel_id->has_value()) {
-    const auto& tensor_meta = JUST(input->consistent_tensor_meta());
+    const auto& tensor_meta = JUST(input->global_tensor_meta());
     const auto& naive_transformations =
         JUST(DecomposeIntoNaiveTransformations(tensor_meta, out_nd_sbp));
     std::shared_ptr<one::Tensor> tensor = input;
     for (const auto& naive_transformation : *naive_transformations) {
-      const auto& sub_tensor_meta = naive_transformation.consistent_tensor_meta;
-      tensor = JUST(ReinterpterConsistentTensor(tensor, sub_tensor_meta->shape(),
-                                                sub_tensor_meta->parallel_desc(),
-                                                sub_tensor_meta->nd_sbp()));
+      const auto& sub_tensor_meta = naive_transformation.global_tensor_meta;
+      tensor = JUST(ReinterpterGlobalTensor(tensor, sub_tensor_meta->shape(),
+                                            sub_tensor_meta->parallel_desc(),
+                                            sub_tensor_meta->nd_sbp()));
       tensor =
           JUST(Apply1DBoxing(tensor, sub_tensor_meta->nd_sbp(), naive_transformation.dst_nd_sbp,
                              sub_tensor_meta->parallel_desc(), sub_tensor_meta->parallel_desc()));
     }
-    output =
-        JUST(ReinterpterConsistentTensor(tensor, *input->shape(), out_parallel_desc, out_nd_sbp));
+    output = JUST(ReinterpterGlobalTensor(tensor, *input->shape(), out_parallel_desc, out_nd_sbp));
   } else {
-    one::ConsistentTensorMeta tensor_meta(input->shape(), input->dtype()->data_type(), out_nd_sbp,
-                                          out_parallel_desc);
-    const auto& tensor_impl = JUST(
-        one::EagerConsistentTensorImpl::New(SymbolOf(tensor_meta), input->requires_grad(), false));
-    output = std::make_shared<one::ConsistentTensor>(tensor_impl);
+    one::GlobalTensorMeta tensor_meta(input->shape(), input->dtype()->data_type(), out_nd_sbp,
+                                      out_parallel_desc);
+    const auto& tensor_impl =
+        JUST(one::EagerGlobalTensorImpl::New(SymbolOf(tensor_meta), input->requires_grad(), false));
+    output = std::make_shared<one::GlobalTensor>(tensor_impl);
   }
   return output;
 }

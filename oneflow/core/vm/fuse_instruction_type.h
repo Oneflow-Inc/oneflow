@@ -36,17 +36,23 @@ class FuseInstructionType : public vm::InstructionType {
     auto* ptr = dynamic_cast<vm::FusePhyInstrOperand*>(phy_instr_operand.get());
     auto* instruction_list = CHECK_NOTNULL(ptr)->mut_instruction_list();
     auto* last_instruction = CHECK_NOTNULL(instruction_list->Last());
-    last_instruction->instruction_type().InitInstructionStatusIf(instruction);
+    last_instruction->mut_instruction_policy()->InitInstructionStatusIf(instruction);
   }
 
+  Maybe<void> Prepare(vm::Instruction* instruction) const override {
+    const auto& phy_instr_operand = instruction->phy_instr_operand();
+    auto* ptr = dynamic_cast<vm::FusePhyInstrOperand*>(phy_instr_operand.get());
+    CHECK_NOTNULL_OR_RETURN(ptr);
+    auto* instruction_list = ptr->mut_instruction_list();
+    INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, instruction_list) { JUST(instruction->Prepare()); }
+    return Maybe<void>::Ok();
+  }
   void Compute(vm::Instruction* instruction) const override {
     const auto& phy_instr_operand = instruction->phy_instr_operand();
     auto* ptr = dynamic_cast<vm::FusePhyInstrOperand*>(phy_instr_operand.get());
     auto* instruction_list = CHECK_NOTNULL(ptr)->mut_instruction_list();
-    INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, instruction_list) {
-      OF_PROFILER_RANGE_GUARD("F:" + instruction->DebugName());
-      instruction->instruction_type().Compute(instruction);
-    }
+    OF_PROFILER_RANGE_GUARD("F:" + instruction->DebugName());
+    INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, instruction_list) { instruction->Compute(); }
   }
 };
 

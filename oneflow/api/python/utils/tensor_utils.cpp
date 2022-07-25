@@ -32,11 +32,11 @@ namespace py = pybind11;
 namespace oneflow {
 namespace one {
 
-Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t) {
+Maybe<void> EagerLocalTensorZeros(const std::shared_ptr<Tensor>& t) {
   JUST(functional::CheckInplaceValid(t));
-  std::shared_ptr<MirroredTensor> local_tensor;
+  std::shared_ptr<LocalTensor> local_tensor;
   if (t->is_local()) {
-    local_tensor = JUST(t->AsMirroredTensor());
+    local_tensor = JUST(t->AsLocalTensor());
   } else {
     local_tensor = JUST(t->cur_rank_phy_tensor());
   }
@@ -55,13 +55,13 @@ Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t) {
 }
 
 template<typename T>
-Maybe<void> CopyMirroredTensorFromUntypedArray(const std::shared_ptr<Tensor>& tensor,
-                                               PyObject* array) {
-  return CopyBetweenMirroredTensorAndNumpy<T>(tensor, array, BlobNumpyCopyUtil<T>::From, "mut",
-                                              /*block_host_until_done=*/false);
+Maybe<void> CopyLocalTensorFromUntypedArray(const std::shared_ptr<Tensor>& tensor,
+                                            PyObject* array) {
+  return CopyBetweenLocalTensorAndNumpy<T>(tensor, array, BlobNumpyCopyUtil<T>::From, "mut",
+                                           /*block_host_until_done=*/false);
 }
 
-Maybe<std::string> GetCopyMirroredTensorToNumpyFuncName(DataType dtype) {
+Maybe<std::string> GetCopyLocalTensorToNumpyFuncName(DataType dtype) {
   using namespace oneflow;
   static const HashMap<int64_t, std::shared_ptr<std::string>> data_type2func_name{
 #define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
@@ -72,7 +72,7 @@ Maybe<std::string> GetCopyMirroredTensorToNumpyFuncName(DataType dtype) {
   return JUST(MapAt(data_type2func_name, static_cast<int64_t>(dtype)));
 }
 
-Maybe<std::string> GetCopyMirroredTensorFromNumpyFuncName(DataType dtype) {
+Maybe<std::string> GetCopyLocalTensorFromNumpyFuncName(DataType dtype) {
   using namespace oneflow;
   static const HashMap<int64_t, std::shared_ptr<std::string>> data_type2func_name{
 #define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
@@ -85,7 +85,7 @@ Maybe<std::string> GetCopyMirroredTensorFromNumpyFuncName(DataType dtype) {
 
 Maybe<std::tuple<std::vector<Shape>, std::vector<Symbol<DType>>>>
 MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
-  const auto& tensor = JUST(t->AsMirroredTensor());
+  const auto& tensor = JUST(t->AsLocalTensor());
   if (tensor->dtype() != DType::TensorBuffer()) {
     return Error::RuntimeError() << "tensor buffer supported only";
   }
@@ -137,7 +137,8 @@ Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor) {
 }
 
 #define MAKE_SWITCH_ENTRY(func_name, dtype) func_name<dtype>
-DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, CopyMirroredTensorFromUntypedArray, MAKE_SWITCH_ENTRY,
+DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, CopyLocalTensorFromUntypedArray,  // NOLINT
+                          MAKE_SWITCH_ENTRY,                             // NOLINT
                           MAKE_DATA_TYPE_CTRV_SEQ(POD_AND_HALF_DATA_TYPE_SEQ));
 
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
@@ -180,7 +181,7 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   }
   std::shared_ptr<Tensor> tensor = JUST(
       functional::Empty(shape, JUST(DType::Get(data_type)), device_, /*pin_memory=*/pin_memory));
-  JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), tensor, array));
+  JUST(SwitchCopyLocalTensorFromUntypedArray(SwitchCase(data_type), tensor, array));
 
   Py_DECREF(array);
   JUST(tensor->set_requires_grad(requires_grad));
@@ -201,10 +202,10 @@ auto* CachedGetAllBroadcastNdSbp = DECORATE(&GetAllBroadcastNdSbp, ThreadLocal);
 
 }  // namespace
 
-Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
-                                           Symbol<ParallelDesc> placement,
-                                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                                           const bool requires_grad) {
+Maybe<Tensor> MakeGlobalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
+                                       Symbol<ParallelDesc> placement,
+                                       const std::vector<Symbol<SbpParallel>>& sbp_tuple,
+                                       const bool requires_grad) {
   PyObject* array = NULL;
   if (PyArray_Check(data)) {
     // Only NPY_CORDER is supported, and returns a new C-style contiguous array.
@@ -231,7 +232,7 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
   Symbol<Device> device = JUST(Device::New(placement->device_tag()));
   std::shared_ptr<Tensor> local_tensor =
       JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device, /*pin_memory=*/false));
-  JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), local_tensor, array));
+  JUST(SwitchCopyLocalTensorFromUntypedArray(SwitchCase(data_type), local_tensor, array));
 
   Py_DECREF(array);
   // Cast to float if data is double sequence, rather than numpy array.
@@ -246,14 +247,15 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
   size_t sbp_dims = sbp_tuple.size();
   Symbol<NdSbp> broadcast_nd_sbp = JUST(CachedGetAllBroadcastNdSbp(sbp_dims));
 
-  std::shared_ptr<Tensor> broadcast_tensor = JUST(functional::LocalToConsistent(
-      local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)), shape, local_tensor->dtype()));
+  std::shared_ptr<Tensor> broadcast_tensor =
+      JUST(functional::LocalToGlobal(local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)),
+                                     shape, local_tensor->dtype(), /* sync_data */ true));
 
   std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-  auto consistent_tensor = JUST(functional::ToConsistent(broadcast_tensor, placement, sbp_tuple,
-                                                         grad_sbp_tuple, /* check_meta */ false));
-  JUST(consistent_tensor->set_requires_grad(requires_grad));
-  return consistent_tensor;
+  auto global_tensor = JUST(functional::ToGlobal(broadcast_tensor, placement, sbp_tuple,
+                                                 grad_sbp_tuple, /* check_meta */ false));
+  JUST(global_tensor->set_requires_grad(requires_grad));
+  return global_tensor;
 }
 
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
@@ -265,9 +267,9 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
     const Symbol<NdSbp>& nd_sbp = JUST(other->nd_sbp());
     const std::vector<Symbol<SbpParallel>>& sbp_tuple = *JUST(GetSbpList(nd_sbp));
     std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-    // TODO:(zhaoluyang) consistent case support pin_memory
-    return functional::ToConsistent(other, JUST(other->parallel_desc()), sbp_tuple, grad_sbp_tuple,
-                                    /* check_meta */ false);
+    // TODO:(zhaoluyang) global case support pin_memory
+    return functional::ToGlobal(other, JUST(other->parallel_desc()), sbp_tuple, grad_sbp_tuple,
+                                /* check_meta */ false);
   }
 }
 
@@ -283,7 +285,7 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
     tensor = JUST(functional::Copy(other, device_->type(), device_->device_id(),
                                    pin_memory && !dtype.has_value()));
   } else {
-    tensor = JUST(functional::ConsistentToLocal(other));
+    tensor = JUST(functional::GlobalToLocal(other));
     if (!device) { device_ = JUST(Device::New("cpu")); }
     tensor = JUST(functional::Copy(tensor, device_->type(), device_->device_id(),
                                    pin_memory && !dtype.has_value()));
@@ -302,9 +304,9 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                                         const bool requires_grad) {
   std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-  bool check_meta = other->is_consistent() ? false : true;
+  bool check_meta = other->is_global() ? false : true;
   std::shared_ptr<Tensor> tensor =
-      JUST(functional::ToConsistent(other, placement, sbp_tuple, grad_sbp_tuple, check_meta));
+      JUST(functional::ToGlobal(other, placement, sbp_tuple, grad_sbp_tuple, check_meta));
   if (dtype) {
     const Symbol<DType>& dtype_ = JUST(dtype);
     if (tensor->dtype() != dtype_) {

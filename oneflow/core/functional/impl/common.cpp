@@ -65,27 +65,29 @@ Maybe<void> CheckInplaceCastValid(const std::shared_ptr<Tensor>& x,
   return Maybe<void>::Ok();
 }
 
-bool IsShapeCanExpandTo(const Shape& shape, const Shape& expand_shape) {
-  if (shape == expand_shape) { return true; }
-  if (expand_shape.NumAxes() < shape.NumAxes()) { return false; }
+Maybe<void> CheckInplaceShapeCanExpandTo(const Shape& shape, const Shape& expand_shape) {
+  if (shape == expand_shape) { return Maybe<void>::Ok(); }
+
+  CHECK_OR_RETURN(expand_shape.NumAxes() >= shape.NumAxes())
+      << Error::RuntimeError() << "Can not expand origin shape " << shape.ToString() << " to "
+      << expand_shape.ToString() << " in an inplace operation";
+
   int shift = expand_shape.NumAxes() - shape.NumAxes();
   for (int i = expand_shape.NumAxes() - 1; i >= 0; --i) {
     int index = i - shift;
     if (index >= 0) {
       int dim_a = expand_shape.At(i);
       int dim_b = shape.At(index);
-      if (dim_a != dim_b && (dim_a <= 0 || dim_b != 1)) { return false; }
+      // NOTE(lixiang): When a dimension of tensor a and tensor b are not equal in size, dim_a needs
+      // to be greater than 0, and dim_b should be equal to 1.
+      CHECK_OR_RETURN(!(dim_a != dim_b && (dim_a <= 0 || dim_b != 1)))
+          << Error::RuntimeError() << "Tensor with shape " << expand_shape.ToString()
+          << " doesn't match the broadcast shape in an inplace operation";
     } else {
-      if (expand_shape.At(i) <= 0) { return false; }
+      CHECK_OR_RETURN(expand_shape.At(i) > 0);  // NOLINT(maybe-need-error-msg)
     }
   }
-  return true;
-}
 
-Maybe<void> CheckShapeCanExpandTo(const Shape& shape, const Shape& expand_shape) {
-  CHECK_OR_RETURN(IsShapeCanExpandTo(shape, expand_shape))
-      << Error::RuntimeError() << "Can not expand shape " << shape.ToString() << " to "
-      << expand_shape.ToString();
   return Maybe<void>::Ok();
 }
 
@@ -153,9 +155,12 @@ Maybe<Shape> InferShape(const std::shared_ptr<one::Tensor>& x, const Shape& shap
   size_t x_count = x->shape()->Count(0);
   Shape infered_shape = shape;
   if (need_infer_axis == -1) {
-    CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
-        << Error::RuntimeError() << "shape '" << shape.ToString()
-        << "' is invalid for input of size " << x->nelement();
+    // For 0-size tensor, we we don't need to check the element size.
+    if (x_count > 0) {
+      CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
+          << Error::RuntimeError() << "shape '" << shape.ToString()
+          << "' is invalid for input of size " << x->nelement();
+    }
   } else {
     infered_shape.Set(need_infer_axis, x_count / count);
     CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)

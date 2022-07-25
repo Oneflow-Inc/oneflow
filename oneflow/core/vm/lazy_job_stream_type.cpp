@@ -26,7 +26,7 @@ namespace oneflow {
 namespace vm {
 
 void LazyJobStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
-                                      Stream* stream) const {
+                                      Symbol<Device> device) const {
   device_ctx->reset(new LazyJobDeviceCtx());
 }
 
@@ -47,9 +47,7 @@ bool LazyJobStreamType::QueryInstructionStatusDone(
   return NaiveInstrStatusQuerier::Cast(status_buffer.buffer())->done();
 }
 
-void LazyJobStreamType::Compute(Instruction* instruction) const {
-  instruction->instruction_type().Compute(instruction);
-}
+void LazyJobStreamType::Run(Instruction* instruction) const { instruction->Compute(); }
 
 }  // namespace vm
 }  // namespace oneflow

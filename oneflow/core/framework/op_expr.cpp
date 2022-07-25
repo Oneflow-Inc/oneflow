@@ -22,7 +22,8 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/dispatch_frame.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
-#include "oneflow/core/framework/consistent_tensor_infer_cache.h"
+#include "oneflow/core/framework/local_tensor_infer_cache.h"
+#include "oneflow/core/framework/global_tensor_infer_cache.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
 
@@ -48,8 +49,8 @@ DEFINE_OPEXPR_OP_TYPE_NAME(FeedVariableOpConf, "feed_variable");
 DEFINE_OPEXPR_OP_TYPE_NAME(FetchOutputOpConf, "fetch_output");
 DEFINE_OPEXPR_OP_TYPE_NAME(ImageDecoderRandomCropResizeOpConf, "image_gpu_decode");
 DEFINE_OPEXPR_OP_TYPE_NAME(VariableOpConf, "variable");
-DEFINE_OPEXPR_OP_TYPE_NAME(CastToMirroredOpConf, "cast_to_mirrored");
-DEFINE_OPEXPR_OP_TYPE_NAME(CastFromMirroredOpConf, "cast_from_mirrored");
+DEFINE_OPEXPR_OP_TYPE_NAME(CastToLocalOpConf, "cast_to_local");
+DEFINE_OPEXPR_OP_TYPE_NAME(CastFromLocalOpConf, "cast_from_local");
 DEFINE_OPEXPR_OP_TYPE_NAME(DistributeSplitOpConf, "distribute_split");
 DEFINE_OPEXPR_OP_TYPE_NAME(DistributeCloneOpConf, "distribute_clone");
 DEFINE_OPEXPR_OP_TYPE_NAME(DistributeConcatOpConf, "distribute_concat");
@@ -62,18 +63,18 @@ const std::string& BuiltinOpExprImpl<UserOpConf>::op_type_name() const {
   return op_proto_.op_type_name();
 }
 
-const std::string& ConsistentToConsistentOpExpr::op_type_name() const {
-  static const std::string kOpTypeName = "consistent_to_consistent";
+const std::string& GlobalToGlobalOpExpr::op_type_name() const {
+  static const std::string kOpTypeName = "global_to_global";
   return kOpTypeName;
 }
 
-const std::string& CastToConsistentOpExpr::op_type_name() const {
-  static const std::string kOpTypeName = "cast_to_consistent";
+const std::string& CastToGlobalOpExpr::op_type_name() const {
+  static const std::string kOpTypeName = "cast_to_global";
   return kOpTypeName;
 }
 
-const std::string& CastFromConsistentOpExpr::op_type_name() const {
-  static const std::string kOpTypeName = "cast_from_consistent";
+const std::string& CastFromGlobalOpExpr::op_type_name() const {
+  static const std::string kOpTypeName = "cast_from_global";
   return kOpTypeName;
 }
 
@@ -93,10 +94,8 @@ DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FetchOut
 DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(VariableOpConf, true);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(
     ImageDecoderRandomCropResizeOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastToMirroredOpConf,
-                                                                        false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastFromMirroredOpConf,
-                                                                        false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastToLocalOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastFromLocalOpConf, false);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeSplitOpConf,
                                                                         false);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeCloneOpConf,
@@ -176,7 +175,6 @@ class UserOpExprInferContext : public user_op::InferContext {
                          const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex)
       : user_op_expr_(user_op_expr),
         composed_attrs_(attrs, user_op_expr->base_attrs()),
-        device_tag_(device_tag),
         tensor_meta4input_index_(TensorMeta4InputIndex),
         tensor_meta4output_index_(TensorMeta4OutputIndex) {
     loc_ = DispatchFrame::get_str();
@@ -223,14 +221,27 @@ class UserOpExprInferContext : public user_op::InferContext {
     return tensor_meta4input_index_(tuple_index)->shape();
   }
 
-  Shape* OutputShape(const std::string& name, int32_t index) override {
+  const Shape& OutputShape(const std::string& name, int32_t index) const override {
+    const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+    CHECK_GE(tuple_index, 0);
+    return tensor_meta4input_index_(tuple_index)->shape();
+  }
+
+  Shape* MutOutputShape(const std::string& name, int32_t index) override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
     return tensor_meta4output_index_(tuple_index)->mut_shape();
   }
 
-  Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    return const_cast<UserOpExprInferContext*>(this)
+        ->TensorDesc4ArgNameAndIndex(arg_name, index)
+        ->shape();
+  }
+
+  Shape* MutShape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
 
@@ -241,14 +252,27 @@ class UserOpExprInferContext : public user_op::InferContext {
     return tensor_meta4input_index_(tuple_index)->stride();
   }
 
-  Stride* OutputStride(const std::string& name, int32_t index) override {
+  const Stride& OutputStride(const std::string& name, int32_t index) const override {
+    const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+    CHECK_GE(tuple_index, 0);
+    return tensor_meta4input_index_(tuple_index)->stride();
+  }
+
+  Stride* MutOutputStride(const std::string& name, int32_t index) override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
     return tensor_meta4output_index_(tuple_index)->mut_stride();
   }
 
-  Stride* Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  const Stride& Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    return const_cast<UserOpExprInferContext*>(this)
+        ->TensorDesc4ArgNameAndIndex(arg_name, index)
+        ->stride();
+  }
+
+  Stride* MutStride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_stride();
   }
 
@@ -302,7 +326,6 @@ class UserOpExprInferContext : public user_op::InferContext {
   }
   const std::string& op_name() const override { return user_op_expr_->op_name(); }
   const std::string& op_type_name() const override { return user_op_expr_->op_type_name(); }
-  const std::string& device_tag() const override { return device_tag_; }
   const std::string& op_loc() const override { return loc_; }
 
  private:
@@ -312,7 +335,6 @@ class UserOpExprInferContext : public user_op::InferContext {
   }
   const UserOpExpr* user_op_expr_;
   const ComposedAttrMap composed_attrs_;
-  const std::string& device_tag_;
   const std::function<const TensorMeta*(int32_t)>& tensor_meta4input_index_;
   const std::function<TensorMeta*(int32_t)>& tensor_meta4output_index_;
   std::string loc_;
@@ -376,7 +398,7 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
   const ParallelDesc& parallel_desc() const override { return *parallel_desc_; }
   const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& name,
                                                  int32_t index) const override {
-    auto* tensor_meta = dynamic_cast<ConsistentTensorMeta*>(
+    auto* tensor_meta = dynamic_cast<GlobalTensorMeta*>(
         const_cast<UserOpExprLogicalInferContext*>(this)->TensorDesc4ArgNameAndIndex(name, index));
     CHECK_NOTNULL(tensor_meta);
     Symbol<NdSbp> nd_sbp = tensor_meta->nd_sbp();
@@ -384,7 +406,7 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
     return nd_sbp->sbp_parallel(0);
   }
   const NdSbp& NdSbp4ArgNameAndIndex(const std::string& name, int32_t index) const override {
-    auto* tensor_meta = dynamic_cast<ConsistentTensorMeta*>(
+    auto* tensor_meta = dynamic_cast<GlobalTensorMeta*>(
         const_cast<UserOpExprLogicalInferContext*>(this)->TensorDesc4ArgNameAndIndex(name, index));
     CHECK_NOTNULL(tensor_meta);
     return *tensor_meta->nd_sbp();
@@ -462,7 +484,8 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   if (registry->device_and_stream_infer_fn) {
     device_and_stream_infer_fn_ = registry->device_and_stream_infer_fn;
   }
-  consistent_tensor_infer_cache_.reset(new ConsistentTensorInferCache(self));
+  local_tensor_infer_cache_.reset(new LocalTensorInferCache(self));
+  global_tensor_infer_cache_.reset(new GlobalTensorInferCache(self));
   return Maybe<void>::Ok();
 }
 
@@ -508,31 +531,28 @@ Maybe<Symbol<Stream>> UserOpExpr::InferDeviceAndStream(const AttrMap& attrs,
   return TRY(device_and_stream_infer_fn_(&device_infer_ctx));
 }
 
-ConsistentToConsistentOpExpr::ConsistentToConsistentOpExpr(
-    const Optional<Symbol<NdSbp>>& grad_nd_sbp)
+GlobalToGlobalOpExpr::GlobalToGlobalOpExpr(const Optional<Symbol<NdSbp>>& grad_nd_sbp)
     : grad_nd_sbp_(grad_nd_sbp) {}
 
-/* static */ Maybe<ConsistentToConsistentOpExpr> ConsistentToConsistentOpExpr::New(
+/* static */ Maybe<GlobalToGlobalOpExpr> GlobalToGlobalOpExpr::New(
     const Optional<Symbol<NdSbp>>& grad_nd_sbp) {
-  auto* ptr = new ConsistentToConsistentOpExpr(grad_nd_sbp);
-  return std::shared_ptr<ConsistentToConsistentOpExpr>(ptr);
+  auto* ptr = new GlobalToGlobalOpExpr(grad_nd_sbp);
+  return std::shared_ptr<GlobalToGlobalOpExpr>(ptr);
 }
 
-CastConsistentOpExpr::CastConsistentOpExpr(const std::string& op_name) : op_name_(op_name) {}
+CastGlobalOpExpr::CastGlobalOpExpr(const std::string& op_name) : op_name_(op_name) {}
 
-CastToConsistentOpExpr::CastToConsistentOpExpr(const std::string& op_name)
-    : CastConsistentOpExpr(op_name) {}
+CastToGlobalOpExpr::CastToGlobalOpExpr(const std::string& op_name) : CastGlobalOpExpr(op_name) {}
 
-/* static */ Maybe<CastToConsistentOpExpr> CastToConsistentOpExpr::New(const std::string& op_name) {
-  return std::shared_ptr<CastToConsistentOpExpr>(new CastToConsistentOpExpr(op_name));
+/* static */ Maybe<CastToGlobalOpExpr> CastToGlobalOpExpr::New(const std::string& op_name) {
+  return std::shared_ptr<CastToGlobalOpExpr>(new CastToGlobalOpExpr(op_name));
 }
 
-CastFromConsistentOpExpr::CastFromConsistentOpExpr(const std::string& op_name)
-    : CastConsistentOpExpr(op_name) {}
+CastFromGlobalOpExpr::CastFromGlobalOpExpr(const std::string& op_name)
+    : CastGlobalOpExpr(op_name) {}
 
-/* static */ Maybe<CastFromConsistentOpExpr> CastFromConsistentOpExpr::New(
-    const std::string& op_name) {
-  return std::shared_ptr<CastFromConsistentOpExpr>(new CastFromConsistentOpExpr(op_name));
+/* static */ Maybe<CastFromGlobalOpExpr> CastFromGlobalOpExpr::New(const std::string& op_name) {
+  return std::shared_ptr<CastFromGlobalOpExpr>(new CastFromGlobalOpExpr(op_name));
 }
 
 template<>
@@ -622,57 +642,56 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<VariableOpConf>::GetOrCreateOpGradClo
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<CastToMirroredOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                                 const AttrMap& attrs) const {
+Maybe<void> BuiltinOpExprImpl<CastToLocalOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                              const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
-  *(op_conf->mutable_cast_to_mirrored_conf()) = op_proto_;
+  *(op_conf->mutable_cast_to_local_conf()) = op_proto_;
   *(op_conf->mutable_loc()) = DispatchFrame::get_str();
   return Maybe<void>::Ok();
 }
 
 template<>
-Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastToMirroredOpConf>::GetOrCreateOpGradClosure() const {
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastToLocalOpConf>::GetOrCreateOpGradClosure() const {
   UNIMPLEMENTED_THEN_RETURN();
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<CastFromMirroredOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                                   const AttrMap& attrs) const {
+Maybe<void> BuiltinOpExprImpl<CastFromLocalOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                                const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
-  *(op_conf->mutable_cast_from_mirrored_conf()) = op_proto_;
+  *(op_conf->mutable_cast_from_local_conf()) = op_proto_;
   *(op_conf->mutable_loc()) = DispatchFrame::get_str();
   return Maybe<void>::Ok();
 }
 
 template<>
-Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastFromMirroredOpConf>::GetOrCreateOpGradClosure()
-    const {
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastFromLocalOpConf>::GetOrCreateOpGradClosure() const {
   UNIMPLEMENTED_THEN_RETURN();
 }
 
-Maybe<OpExprGradClosure> ConsistentToConsistentOpExpr::GetOrCreateOpGradClosure() const {
+Maybe<OpExprGradClosure> GlobalToGlobalOpExpr::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("consistent_to_consistent"));
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("global_to_global"));
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
     JUST(op_grad_func_->Init(*this));
   }
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
 }
 
-Maybe<OpExprGradClosure> CastToConsistentOpExpr::GetOrCreateOpGradClosure() const {
+Maybe<OpExprGradClosure> CastToGlobalOpExpr::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_to_consistent"));
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_to_global"));
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
     JUST(op_grad_func_->Init(*this));
   }
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
 }
 
-Maybe<OpExprGradClosure> CastFromConsistentOpExpr::GetOrCreateOpGradClosure() const {
+Maybe<OpExprGradClosure> CastFromGlobalOpExpr::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_from_consistent"));
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_from_global"));
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
     JUST(op_grad_func_->Init(*this));
   }

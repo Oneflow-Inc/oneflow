@@ -75,8 +75,6 @@ class StatefulOpKernel final {
 
   size_t InferTmpSize(eager::CallContext* call_ctx, const user_op::OpKernel* user_opkernel) const;
 
-  void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
-
   Maybe<void> ChooseOpKernel(eager::CallContext* call_ctx, const user_op::OpKernel** user_opkernel,
                              bool* need_temp_storage);
 
@@ -86,22 +84,20 @@ class StatefulOpKernel final {
   friend struct vm::OpCallInstructionUtil;
   StatefulOpKernel() = default;
 
-  void Compute(eager::CallContext* call_ctx, DeviceCtx* device_ctx,
+  void Compute(eager::CallContext* call_ctx, ep::Stream* stream,
                const user_op::OpKernel* user_opkernel, user_op::OpKernelState* state,
                const user_op::OpKernelCache* cache) const;
 
   user_op::TensorDescInferFn TensorDescInferFn() const;
   user_op::DataTypeInferFn DataTypeInferFn() const;
 
-  void TryInitOpKernelStateAndCache(eager::CallContext* call_ctx, DeviceCtx* device_ctx,
+  void TryInitOpKernelStateAndCache(eager::CallContext* call_ctx, ep::Stream* stream,
                                     const user_op::OpKernel* op_kernel,
                                     user_op::OpKernelState** state, user_op::OpKernelCache** cache);
 
   user_op::OpKernelState* mut_opkernel_state(const user_op::OpKernel* opkernel) {
     return op_kernel_state_map_.at(opkernel).get();
   }
-
-  bool need_check_mem_case() const { return need_check_mem_case_; }
 
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 
@@ -115,7 +111,6 @@ class StatefulOpKernel final {
   std::unique_ptr<const UserKernelComputeContextHelper> compute_ctx_helper_;
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
   std::shared_ptr<const ArgTuple> output_arg_tuple_;
-  bool need_check_mem_case_;
   user_op::TensorDescInferFn tensor_desc_infer_fn_;
   user_op::DataTypeInferFn data_type_infer_fn_;
   // NOTE: every device has its own stateful local opkernel instance,

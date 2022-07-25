@@ -43,11 +43,15 @@ class InferContext {
   virtual const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string&,
                                                               int32_t) const = 0;
   virtual const Shape& InputShape(const std::string&, int32_t) const = 0;
-  virtual Shape* OutputShape(const std::string&, int32_t) = 0;
-  virtual Shape* Shape4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual const Shape& OutputShape(const std::string&, int32_t) const = 0;
+  virtual Shape* MutOutputShape(const std::string&, int32_t) = 0;
+  virtual const Shape& Shape4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual Shape* MutShape4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual const Stride& InputStride(const std::string&, int32_t) const = 0;
-  virtual Stride* OutputStride(const std::string&, int32_t) = 0;
-  virtual Stride* Stride4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual const Stride& OutputStride(const std::string&, int32_t) const = 0;
+  virtual Stride* MutOutputStride(const std::string&, int32_t) = 0;
+  virtual const Stride& Stride4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual Stride* MutStride4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual const DataType& InputDType(const std::string&, int32_t) const = 0;
   virtual DataType* OutputDType(const std::string&, int32_t) = 0;
   virtual DataType* Dtype4ArgNameAndIndex(const std::string&, int32_t) = 0;
@@ -61,7 +65,6 @@ class InferContext {
   virtual int32_t output_size(const std::string& arg_name) const = 0;
   virtual const std::string& op_name() const = 0;
   virtual const std::string& op_type_name() const = 0;
-  virtual const std::string& device_tag() const = 0;
   virtual const std::string& op_loc() const = 0;
 
   template<typename T>
