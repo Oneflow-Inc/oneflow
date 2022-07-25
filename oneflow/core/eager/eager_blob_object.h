@@ -99,24 +99,24 @@ class EagerBlobObject final : public user_op::Tensor,
   EagerBlobObject(const EagerBlobObject&) = delete;
   EagerBlobObject(EagerBlobObject&&) = delete;
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
-                  const Symbol<one::LocalTensorMeta>& local_tensor_meta,
-                  const std::shared_ptr<const one::MutLocalTensorMeta>& mut_local_tensor_meta,
+                  const Symbol<one::LocalTensorMeta>& static_local_tensor_meta,
+                  const std::shared_ptr<const one::MutLocalTensorMeta>& dynamic_local_tensor_meta,
                   DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage)
-      : EagerBlobObject(mem_case, local_tensor_meta, mut_local_tensor_meta, data_type,
+      : EagerBlobObject(mem_case, static_local_tensor_meta, dynamic_local_tensor_meta, data_type,
                         tensor_storage, intrusive::shared_ptr<LocalDepObject>()) {}
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
-                  const Symbol<one::LocalTensorMeta>& local_tensor_meta,
-                  const std::shared_ptr<const one::MutLocalTensorMeta>& mut_local_tensor_meta,
+                  const Symbol<one::LocalTensorMeta>& static_local_tensor_meta,
+                  const std::shared_ptr<const one::MutLocalTensorMeta>& dynamic_local_tensor_meta,
                   DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
                   const intrusive::shared_ptr<LocalDepObject>& dep_object);
 
   ~EagerBlobObject() { tensor_storage_.reset(); }
 
   const std::shared_ptr<const one::MutLocalTensorMeta>& mut_tensor_meta() {
-    return mut_local_tensor_meta_;
+    return dynamic_local_tensor_meta_;
   }
   // Getters
-  const Symbol<one::LocalTensorMeta>& tensor_meta() const { return local_tensor_meta_; }
+  const Symbol<one::LocalTensorMeta>& tensor_meta() const { return static_local_tensor_meta_; }
 
   // user_op::TensorDesc overrides
   const Shape& shape() const override;
@@ -233,8 +233,8 @@ class EagerBlobObject final : public user_op::Tensor,
   // NOTE: Will be removed soon. Avoid to use it whenever possible.
   BlobDesc blob_desc_;
   std::unique_ptr<Blob> blob_;
-  Symbol<one::LocalTensorMeta> local_tensor_meta_;
-  std::shared_ptr<const one::MutLocalTensorMeta> mut_local_tensor_meta_;
+  Symbol<one::LocalTensorMeta> static_local_tensor_meta_;
+  std::shared_ptr<const one::MutLocalTensorMeta> dynamic_local_tensor_meta_;
 };
 
 using EagerBlobObjectList = small_vector<std::shared_ptr<vm::EagerBlobObject>, kOpArgsReservedSize>;

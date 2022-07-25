@@ -78,13 +78,6 @@ class TensorMeta : public user_op::TensorDesc {
   }
   virtual void set_is_dynamic(bool val) override { PRINT_BUG_PROMPT_AND_ABORT(); }
 
-  virtual void set_shape(const std::shared_ptr<const Shape>& val) { PRINT_BUG_PROMPT_AND_ABORT(); }
-  virtual void set_stride(const std::shared_ptr<const Stride>& val) {
-    PRINT_BUG_PROMPT_AND_ABORT();
-  }
-  virtual DataType* mut_dtype() { PRINT_BUG_PROMPT_AND_ABORT(); }
-  virtual void set_dtype(DataType data_type) { PRINT_BUG_PROMPT_AND_ABORT(); }
-
  protected:
   TensorMeta& operator=(const TensorMeta& other) {
     this->shape_ = std::make_shared<const Shape>(*other.shape_);
@@ -116,10 +109,10 @@ class MutTensorMeta : public TensorMeta {
   bool* mut_is_dynamic() override { return &is_dynamic_; }
   void set_is_dynamic(bool val) override { is_dynamic_ = val; }
 
-  void set_shape(const std::shared_ptr<const Shape>& val) override { shape_ = val; }
-  void set_stride(const std::shared_ptr<const Stride>& val) override { stride_ = val; }
-  DataType* mut_dtype() override { return &data_type_; }
-  void set_dtype(DataType data_type) override { data_type_ = data_type; }
+  void set_shape(const std::shared_ptr<const Shape>& val) { shape_ = val; }
+  void set_stride(const std::shared_ptr<const Stride>& val) { stride_ = val; }
+  DataType* mut_dtype() { return &data_type_; }
+  void set_dtype(DataType data_type) { data_type_ = data_type; }
 
   bool operator==(const MutTensorMeta& other) const;
   size_t CalcHashValue() const;
