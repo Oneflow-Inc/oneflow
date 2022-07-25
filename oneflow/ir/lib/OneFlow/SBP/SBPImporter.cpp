@@ -55,8 +55,8 @@ mlir::Attribute SBPTranslation::ConvertSBPToString(mlir::Builder& builder,
 }
 
 mlir::Attribute SBPTranslation::ConvertNdSbpToPsig(mlir::Builder& builder,
-                                            const std::vector<std::string>& nd_sbp,
-                                            const int nd_size) {
+                                                   const std::vector<std::string>& nd_sbp,
+                                                   const int nd_size) {
   auto ctx = builder.getContext();
   std::vector<mlir::Attribute> outputs_vec;
   for (const auto& sbp_data : nd_sbp) {
