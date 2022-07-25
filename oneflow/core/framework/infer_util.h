@@ -39,7 +39,8 @@ class InferContext {
   virtual ~InferContext() = default;
 
   virtual const TensorDesc& InputTensorDesc(const std::string&, int32_t) const = 0;
-  virtual TensorDesc* OutputTensorDesc(const std::string&, int32_t) = 0;
+  virtual const TensorDesc& OutputTensorDesc(const std::string&, int32_t) const = 0;
+  virtual TensorDesc* MutOutputTensorDesc(const std::string&, int32_t) = 0;
   virtual const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string&,
                                                               int32_t) const = 0;
   virtual const Shape& InputShape(const std::string&, int32_t) const = 0;
