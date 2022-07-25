@@ -349,7 +349,6 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
 
   HashMap<int64_t, int64_t> regst_desc_id2free_index;
   for (RegstDescProto* regst_desc : mem_reused_regsts) {
-    std::cout << "mem reused regst id: " << regst_desc->regst_desc_id() << std::endl;
     RegstDescProto* inplaced_regst_desc = TryFindFirstInplacedRegstDesc(regst_desc);
     if (inplaced_regst_desc != nullptr) {
       CHECK(consumer2inplaced_regst->emplace(regst_desc, inplaced_regst_desc).second);
@@ -842,8 +841,6 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
       RegstDescProto* consumer_regst_desc = consumer_inplace_pair.first;
       CHECK_EQ(consumer_regst_desc->mem_block_id(), -1);
       RegstDescProto* inplaced_regst_desc = consumer_inplace_pair.second;
-      std::cout << "consumer regst id: " << consumer_regst_desc->regst_desc_id() << std::endl;
-      std::cout << "inplaced regst id: " << inplaced_regst_desc->regst_desc_id() << std::endl;
       CHECK_EQ(inplaced_regst_desc->mem_block_id(), mem_block_id);
       CHECK_NE(inplaced_regst_desc->mem_block_offset(), -1);
       consumer_regst_desc->set_mem_block_id(inplaced_regst_desc->mem_block_id());

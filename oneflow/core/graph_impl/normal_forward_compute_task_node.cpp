@@ -90,7 +90,6 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
 
 void NormalForwardCompTaskNode::HandleInplaceRegsts() {
   if (IsInplaceOpTask()) {
-    std::cout << "set inplace: " << op().get()->op_name() << std::endl;
     const auto& _op = op();
     CHECK(_op->output_bns().size() == 1);
     const std::string& obn = _op->output_bns()[0];
@@ -100,8 +99,6 @@ void NormalForwardCompTaskNode::HandleInplaceRegsts() {
     TaskEdge* task_edge = *in_edges().begin();
     CHECK(task_edge->GetRegsts().size() == 1);
     std::shared_ptr<RegstDesc> in_regst = task_edge->GetRegsts()[0];
-    std::cout << "in regst id: " << in_regst->regst_desc_id() << std::endl;
-    std::cout << "out regst id: " << out_regst->regst_desc_id() << std::endl;
     in_regst->set_enable_reuse_mem(true);
     out_regst->set_hint_inplace_consumed_regst_desc_id(in_regst->regst_desc_id());
   }
