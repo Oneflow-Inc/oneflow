@@ -412,7 +412,10 @@ Attribute ConvertNdSbpToPsig(Builder& builder, const std::vector<std::string>& n
     } else if (sbp.has_partial_sum_parallel()) {
       attr = sbp::PartialSumAttr::get(ctx);
     } else {
-      llvm::errs() << "Unsupported sbp type from nd_sbp";
+      llvm::errs() << "Unsupported sbp type from nd_sbp: ";
+      for (const auto& sbp_data : nd_sbp) { llvm::errs() << sbp_data << " "; }
+      llvm::errs() << "\n";
+      exit(EXIT_FAILURE);
     }
     outputs_vec.push_back(attr);
   }
@@ -439,7 +442,8 @@ Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp) {
     } else if (sbp.has_partial_sum_parallel()) {
       sbp_strs.emplace_back("P");
     } else {
-      llvm::errs() << "unsupported sbp";
+      llvm::errs() << "unsupported sbp: " << nd_sbp.DebugString();
+      exit(EXIT_FAILURE);
     }
   }
   return builder.getStrArrayAttr(
