@@ -21,12 +21,13 @@ import numpy as np
 from oneflow.test_utils.automated_test_util import *
 
 import oneflow as flow
+from oneflow import nn
 import oneflow.unittest
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestMaskedFill(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=3)
     def test_flow_masked_fill_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -36,7 +37,7 @@ class TestMaskedFill(flow.unittest.TestCase):
         value = random().to(float)
         return input.masked_fill(mask > 0.5, value)
 
-    @autotest(check_graph=True)
+    @autotest(n=3)
     def test_flow_masked_fill_with_0dim_data(test_case):
         device = random_device()
         input = random_tensor(ndim=0).to(device)
@@ -44,7 +45,7 @@ class TestMaskedFill(flow.unittest.TestCase):
         value = random().to(float)
         return input.masked_fill(mask > 0, value)
 
-    @autotest(check_graph=True)
+    @autotest(n=3)
     def test_flow_masked_fill_broadcast_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -54,7 +55,7 @@ class TestMaskedFill(flow.unittest.TestCase):
         value = random().to(float)
         return input.masked_fill(mask > 0.5, value)
 
-    @autotest(check_graph=True)
+    @autotest(n=3)
     def test_flow_masked_fill_int_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -64,7 +65,7 @@ class TestMaskedFill(flow.unittest.TestCase):
         value = random().to(int)
         return input.masked_fill(mask > 0.5, value)
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(auto_backward=False, n=3)
     def test_flow_masked_fill_bool_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -75,6 +76,32 @@ class TestMaskedFill(flow.unittest.TestCase):
         mask = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         value = random().to(bool)
         return input.masked_fill(mask > 0.5, value)
+
+    def test_graph_masked_fill(test_case):
+        model = nn.Sequential(nn.Linear(8, 8))
+        optimizer = flow.optim.SGD(model.parameters(), lr=1e-3)
+        loss_fn = nn.MSELoss()
+
+        class MaskedFillGraph(flow.nn.Graph):
+            def __init__(self,):
+                super().__init__()
+                self.model = model
+                self.loss_fn = loss_fn
+                self.add_optimizer(optimizer)
+
+            def build(self, input, mask):
+                output = self.model(input)
+                output = flow.masked_fill(output, mask > 0.5, 0.5)
+                loss = self.loss_fn(output, input)
+                loss.backward()
+                return loss
+
+        k1 = 8
+        k2 = 8
+        input = flow.randn(k1, k2).requires_grad_()
+        mask = flow.randn(k1, k2)
+        model = MaskedFillGraph()
+        return model(input, mask)
 
 
 if __name__ == "__main__":

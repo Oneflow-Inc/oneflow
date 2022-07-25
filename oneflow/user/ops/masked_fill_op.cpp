@@ -89,4 +89,27 @@ Maybe<void> GetMaskedFillInputArgModify(const user_op::GetInputArgModifier& GetI
   return InferMaskedFillDataType(ctx);
 }
 
+REGISTER_USER_OP_GRAD("masked_fill")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        auto zero_like_op = user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_zero_like_out")
+                                .Op("zero_like")
+                                .Input("like", op.input("x", 0))
+                                .Output("out")
+                                .Build();
+        AddOp(zero_like_op);
+        auto where_op = user_op::UserOpConfWrapperBuilder(op.op_name() + "_grad_where_out")
+                            .Op("where")
+                            .Input("condition", op.input("mask", 0))
+                            .Input("x", zero_like_op.output("out", 0))
+                            .Input("y", op.GetGradTensorWithOpOutput("out", 0))
+                            .Output("out")
+                            .Build();
+        AddOp(where_op);
+        op.BindGradTensorWithOpInput(where_op.output("out", 0), "x", 0);
+      }
+      return Maybe<void>::Ok();
+    });
+
 }  // namespace oneflow
