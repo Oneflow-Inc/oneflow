@@ -45,7 +45,7 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SigmoidCrossEntropyOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("loss", 0) = ctx->InputDType("prediction", 0);
+  *ctx->MutOutputDType("loss", 0) = ctx->InputDType("prediction", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SigmoidCrossEntropyOp::ModifyInputArg(
@@ -89,7 +89,7 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SigmoidCrossEntropyGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("prediction_diff", 0) = ctx->InputDType("prediction", 0);
+  *ctx->MutOutputDType("prediction_diff", 0) = ctx->InputDType("prediction", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SigmoidCrossEntropyGradOp::ModifyInputArg(
