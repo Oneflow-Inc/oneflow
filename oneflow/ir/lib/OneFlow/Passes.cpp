@@ -507,7 +507,7 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
         OperationName(FrozenVariableOp::getOperationName(), rewriter.getContext()));
 
     auto parallel_attr = op.parallelAttr();
-    attrs.set(name, ConvertSBPToString(rewriter, parallel_attr));
+    attrs.set(name, SBPTranslation::ConvertSBPToString(rewriter, parallel_attr));
     auto op_new = rewriter.create<oneflow::FrozenVariableOp>(op->getLoc(), op.output().getType(),
                                                              ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
@@ -552,7 +552,7 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
       }
     });
 
-    attrs.set(name, ConvertNdSbpToPsig(rewriter, nd_sbp_str, nd_size));
+    attrs.set(name, SBPTranslation::ConvertNdSbpToPsig(rewriter, nd_sbp_str, nd_size));
     auto op_new = rewriter.create<oneflow::VariableOp>(op->getLoc(), op.output().getType(),
                                                        ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());

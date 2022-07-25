@@ -30,11 +30,16 @@ limitations under the License.
 namespace mlir {
 namespace oneflow {
 
-mlir::LogicalResult PrintSbpAttrToString(mlir::Attribute sbp_attr, std::string* sbp);
-mlir::Attribute ConvertSBPToString(mlir::Builder& builder,
-                                   mlir::sbp::ParallelSignatureAttr& parallel);
-mlir::Attribute ConvertNdSbpToPsig(mlir::Builder& builder, const std::vector<std::string>& nd_sbp,
-                                   const int nd_size);
+class SBPTranslation {
+ public:
+  static mlir::LogicalResult PrintSbpAttrToString(mlir::Attribute sbp_attr, std::string* sbp);
+  static mlir::Attribute ConvertSBPToString(mlir::Builder& builder,
+                                            mlir::sbp::ParallelSignatureAttr& parallel);
+  static mlir::Attribute ConvertNdSbpToPsig(mlir::Builder& builder,
+                                            const std::vector<std::string>& nd_sbp,
+                                            const int nd_size);
+};
+
 }  // namespace oneflow
 }  // namespace mlir
 
