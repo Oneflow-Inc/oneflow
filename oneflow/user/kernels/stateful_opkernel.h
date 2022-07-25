@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "oneflow/core/framework/arg_tuple.h"
 #include "oneflow/core/framework/op_interpreter.h"
+#include "oneflow/core/common/op_args_vector.h"
 
 namespace oneflow {
 
@@ -58,16 +59,16 @@ class StatefulOpKernel final {
   const Symbol<Stream>& stream() const { return stream_; }
   const std::shared_ptr<MemoryCase>& mem_case() const { return stream_->device()->mem_case(); }
   const std::string& op_type_name() const { return op_conf_->user_conf().op_type_name(); }
-  const std::vector<int64_t>& input_tuple_indexes4const_ibns() const {
+  const OpArgsVector<int64_t>& input_tuple_indexes4const_ibns() const {
     return input_tuple_indexes4const_ibns_;
   }
-  const std::vector<int64_t>& input_tuple_indexes4mut_ibns() const {
+  const OpArgsVector<int64_t>& input_tuple_indexes4mut_ibns() const {
     return input_tuple_indexes4mut_ibns_;
   }
-  const std::vector<int64_t>& output_tuple_indexes4mut_obns() const {
+  const OpArgsVector<int64_t>& output_tuple_indexes4mut_obns() const {
     return output_tuple_indexes4mut_obns_;
   }
-  const std::vector<int64_t>& output_tuple_indexes4mut2_obns() const {
+  const OpArgsVector<int64_t>& output_tuple_indexes4mut2_obns() const {
     return output_tuple_indexes4mut2_obns_;
   }
 
@@ -126,11 +127,11 @@ class StatefulOpKernel final {
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelState>> op_kernel_state_map_;
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelCache>> op_kernel_cache_map_;
   HashMap<const user_op::OpKernel*, const user_op::InferTmpSizeFn*> infer_tmp_size_fn_map_;
-  std::vector<int64_t> input_tuple_indexes4const_ibns_;
-  std::vector<int64_t> input_tuple_indexes4mut_ibns_;
-  std::vector<int64_t> output_tuple_indexes4mut_obns_;
-  std::vector<int64_t> output_tuple_indexes4mut2_obns_;
-  HashMap<int64_t, bool> output_tuple_indexes2is_mut2_type_;
+  OpArgsVector<int64_t> input_tuple_indexes4const_ibns_;
+  OpArgsVector<int64_t> input_tuple_indexes4mut_ibns_;
+  OpArgsVector<int64_t> output_tuple_indexes4mut_obns_;
+  OpArgsVector<int64_t> output_tuple_indexes4mut2_obns_;
+  OpArgsVector<bool> output_tuple_indexes2is_mut2_type_;
 };
 
 }  // namespace one
