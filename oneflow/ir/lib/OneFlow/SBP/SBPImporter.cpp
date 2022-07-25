@@ -21,7 +21,8 @@ limitations under the License.
 namespace mlir {
 namespace oneflow {
 
-mlir::LogicalResult PrintSbpAttrToString(mlir::Attribute sbp_attr, std::string* sbp) {
+mlir::LogicalResult SBPTranslation::PrintSbpAttrToString(mlir::Attribute sbp_attr,
+                                                         std::string* sbp) {
   if (auto sbp_s_attr = sbp_attr.dyn_cast<mlir::sbp::SplitAttr>()) {
     *sbp = "S(" + std::to_string(sbp_s_attr.getAxis()) + ")";
   } else if (auto sbp_b_attr = sbp_attr.dyn_cast<mlir::sbp::BroadcastAttr>()) {
@@ -33,19 +34,19 @@ mlir::LogicalResult PrintSbpAttrToString(mlir::Attribute sbp_attr, std::string* 
   }
   return mlir::success();
 }
-mlir::Attribute ConvertSBPToString(mlir::Builder& builder,
-                                   mlir::sbp::ParallelSignatureAttr& parallel) {
+mlir::Attribute SBPTranslation::ConvertSBPToString(mlir::Builder& builder,
+                                                   mlir::sbp::ParallelSignatureAttr& parallel) {
   std::vector<std::string> list;
   for (auto output : parallel.getOutputs()) {
     if (auto nd_outputs = output.dyn_cast<mlir::ArrayAttr>()) {
       for (auto nd_output : nd_outputs) {
         std::string sbp;
-        if (failed(PrintSbpAttrToString(nd_output, &sbp))) return {};
+        if (failed(SBPTranslation::PrintSbpAttrToString(nd_output, &sbp))) return {};
         list.push_back(sbp);
       }
     } else {
       std::string sbp;
-      if (failed(PrintSbpAttrToString(output, &sbp))) return {};
+      if (failed(SBPTranslation::PrintSbpAttrToString(output, &sbp))) return {};
       list.push_back(sbp);
     }
   }
@@ -53,8 +54,9 @@ mlir::Attribute ConvertSBPToString(mlir::Builder& builder,
       makeArrayRef(llvm::SmallVector<llvm::StringRef>(list.begin(), list.end())));
 }
 
-mlir::Attribute ConvertNdSbpToPsig(mlir::Builder& builder, std::vector<std::string>& nd_sbp,
-                                   const int nd_size) {
+mlir::Attribute SBPTranslation::ConvertNdSbpToPsig(mlir::Builder& builder,
+                                                   const std::vector<std::string>& nd_sbp,
+                                                   const int nd_size) {
   auto ctx = builder.getContext();
   std::vector<mlir::Attribute> outputs_vec;
   for (const auto& sbp_data : nd_sbp) {
