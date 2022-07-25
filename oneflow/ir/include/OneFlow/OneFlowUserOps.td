@@ -1754,6 +1754,7 @@ def OneFlow_RawReaderOp : OneFlow_BaseOp<"raw_reader", [NoSideEffect, NoGrad, De
     OneFlow_DataType:$data_type,
     ShapeAttr:$shape,
     SI64Attr:$batch_size,
+    SI64Attr:$shuffle_block_size,
     DefaultValuedAttr<BoolAttr, "true">:$random_shuffle,
     DefaultValuedAttr<SI64Attr, "0">:$seed,
     StrArrayAttr:$nd_sbp
