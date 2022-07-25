@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_
 
 #include "oneflow/core/eager/op_call_phy_instr_operand.h"
-#include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/job/job_desc.h"
