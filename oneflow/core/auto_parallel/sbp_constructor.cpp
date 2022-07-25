@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/job/job.pb.h"
-#include "sbp_collector.h"
+#include "oneflow/core/auto_parallel/sbp_collector.h"
 
 namespace oneflow {
 
@@ -111,7 +111,7 @@ Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph, const J
   JobParallelViewConf job_parallel_view_conf(job.job_parallel_view_conf());
 
   // Collect op_node
-  std::vector<OpNode*> OpNodeList;
+  std::vector<OpNode*> op_node_list;
   op_graph.ForEachNode([&](OpNode* op_node) {
     // TODO: support mirror op
     bool is_mirrored_conf = false;
@@ -121,7 +121,7 @@ Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph, const J
       if (iter != op_name2is_mirrored.end()) { is_mirrored_conf = iter->second; }
     }
     CHECK(is_mirrored_conf == false) << "Haven't deal with mirror operators.";
-    OpNodeList.push_back(op_node);
+    op_node_list.push_back(op_node);
   });
 
   // Decide the order to visit the op
@@ -129,12 +129,12 @@ Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph, const J
   auto comp_op_name = [&](OpNode* a, OpNode* b) {
     return a->op().op_name().compare(b->op().op_name()) > 0;
   };
-  auto_parallel::DecideOrder(OpNodeList, order, comp_op_name);
+  auto_parallel::DecideOrder(op_node_list, order, comp_op_name);
   std::vector<int32_t> output_order;
 
   // Create sbp nodes
-  for (int32_t i = 0; i < OpNodeList.size(); i++) {
-    OpNode* op_node = OpNodeList[order[i]];
+  for (int32_t i = 0; i < op_node_list.size(); i++) {
+    OpNode* op_node = op_node_list[order[i]];
     // Generate sbp node in cost model and link it with corresponding op node
     SbpNode<NdSbpSignature>* sbp_node = sbp_graph_.GenerateNode();
     // Mapping from sbp_node to op_node
@@ -142,17 +142,17 @@ Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph, const J
     op_name2sbp_node_[op_node->op().op_name()] = sbp_node;
   }
   // Create sbp edges
-  for (int32_t i = 0; i < OpNodeList.size(); i++) {
-    OpNode* op_node = OpNodeList[order[i]];
+  for (int32_t i = 0; i < op_node_list.size(); i++) {
+    OpNode* op_node = op_node_list[order[i]];
     // Get corresponding sbp node
     SbpNode<NdSbpSignature>* sbp_node = op_name2sbp_node_[op_node->op().op_name()];
-    std::vector<OpNode*> OutputNodeList;
+    std::vector<OpNode*> output_node_list;
     for (const auto op_edge : op_node->out_edges()) {
-      OutputNodeList.push_back(op_edge->dst_node());
+      output_node_list.push_back(op_edge->dst_node());
     }
-    auto_parallel::DecideOrder(OutputNodeList, output_order, comp_op_name);
+    auto_parallel::DecideOrder(output_node_list, output_order, comp_op_name);
     for (int32_t j : output_order) {
-      const auto& end_node_name = OutputNodeList[j]->op().op_name();
+      const auto& end_node_name = output_node_list[j]->op().op_name();
       // Generate sbp edge in cost model
       sbp_node->PointTo(op_name2sbp_node_[end_node_name]);
     }
@@ -281,9 +281,9 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
 Maybe<void> SbpConstructor::ApplyTrunkAlgo() {
   auto op_node2mutable_op_ctrl_deps = JUST(GetMutableOpCtrlDeps(*op_graph_));
   // Compute layer number for each node
-  int32_t max_MinLayer = sbp_graph_.ComputeLayer(op_name2sbp_node_, *op_node2mutable_op_ctrl_deps);
+  int32_t max_min_layer = sbp_graph_.ComputeLayer(op_name2sbp_node_, *op_node2mutable_op_ctrl_deps);
   // Accumulate cost on the trunk after initializing computation cost
-  sbp_graph_.FindTrunk(max_MinLayer, op_name2sbp_node_);
+  sbp_graph_.FindTrunk(max_min_layer, op_name2sbp_node_);
   return Maybe<void>::Ok();
 }
 
@@ -396,17 +396,17 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
   // test debug
   std::cout << "Get Into Print Op Graph" << std::endl;
   // Collect op_node
-  std::vector<OpNode*> NodeList;
+  std::vector<OpNode*> node_list;
   for (const auto& op_name_sbp_node : op_name2sbp_node_) {
     auto* op_node_ = op_name_sbp_node.second->op_node_;
-    if (op_node_) { NodeList.push_back(op_node_); }
+    if (op_node_) { node_list.push_back(op_node_); }
   }
 
   // test debug
   std::cout << "Deciding order" << std::endl;
   // Decide the order to visit the op
   std::vector<int32_t> order;
-  auto_parallel::DecideOrder(NodeList, order, [&](OpNode* a, OpNode* b) {
+  auto_parallel::DecideOrder(node_list, order, [&](OpNode* a, OpNode* b) {
     return a->op().op_name().compare(b->op().op_name()) > 0;
   });
   std::vector<int32_t> str_order;
@@ -414,8 +414,8 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
   // test debug
   std::cout << "Finish deciding order" << std::endl;
 
-  for (int32_t i = 0; i < NodeList.size(); i++) {
-    OpNode* op_node = NodeList[order[i]];
+  for (int32_t i = 0; i < node_list.size(); i++) {
+    OpNode* op_node = node_list[order[i]];
     std::cout << op_node->op().op_name() << " (^_^):" << std::endl;
     // get corresponding sbp node
     auto it = op_name2sbp_node_.find(op_node->op().op_name());

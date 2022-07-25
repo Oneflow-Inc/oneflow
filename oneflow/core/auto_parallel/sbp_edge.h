@@ -76,15 +76,15 @@ class SbpEdge final {
   std::unordered_set<oneflow::LogicalBlobId> carry_lbis;
 
   // load a logical blob
-  void LoadLbi(oneflow::LogicalBlobId lbi) { carry_lbis.insert(lbi); }
+  void LoadLbi(const oneflow::LogicalBlobId& lbi) { carry_lbis.insert(lbi); }
 
   // check the existence of a logical blob
-  bool SearchLbi(oneflow::LogicalBlobId lbi) const {
+  bool SearchLbi(const oneflow::LogicalBlobId& lbi) const {
     return carry_lbis.find(lbi) != carry_lbis.end();
   }
 
   // unload a logical blob
-  void UnloadLbi(oneflow::LogicalBlobId lbi) {
+  void UnloadLbi(const oneflow::LogicalBlobId& lbi) {
     if (carry_lbis.erase(lbi) == 0) { std::cout << "Unload an empty lbi!" << std::endl; }
   }
 

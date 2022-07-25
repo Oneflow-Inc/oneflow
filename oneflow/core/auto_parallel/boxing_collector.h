@@ -151,12 +151,12 @@ class BoxingCollector final {
   // nodes that needs to be inserted
   std::vector<std::vector<std::vector<std::vector<int32_t>>>> middle_nodes_;
   // Stores all the possible NdSbp.
-  std::unordered_map<::oneflow::NdSbp, int32_t> nd_sbp_universe_;
+  std::unordered_map<NdSbp, int32_t> nd_sbp_universe_;
   // Relationship between id and Nd Sbp
   std::vector<NdSbp> nd_sbp_lists_;
-  // The diagonal middle node for differe placements
+  // The diagonal middle node for different placements
   std::vector<std::vector<std::vector<std::vector<int32_t>>>> diag_node_diff_placement_;
-  // The diagonal middle node for differe hierarchies in the same placement
+  // The diagonal middle node for different hierarchies in the same placement
   std::vector<std::vector<std::vector<std::vector<int32_t>>>> diag_node_diff_hierarchy_;
   // Id Map from 1d sbp to 2d sbp
   // For example: B -> (B, B), S0 -> (S0, S0)

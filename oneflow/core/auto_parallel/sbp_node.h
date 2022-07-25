@@ -20,7 +20,6 @@ limitations under the License.
 #include <functional>
 #include <iostream>
 #include <vector>
-
 #include "oneflow/core/auto_parallel/binary_set.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
@@ -85,30 +84,30 @@ class SbpNode {
   // node You should have an initial strategy before running this
   double GreedyStrategy();
   // Evaluate summery of cost between neighborhood and outside nodes
-  double EvalOutNbhCost(std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id) const;
+  double EvalOutNbhCost(const std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id) const;
   // Evaluate summery of cost within neighborhood
   // We only accumulate the edge cost with a lower order.
-  double EvalInNbhCost(std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
-                       std::vector<int32_t>& nbh_id2order) const;
+  double EvalInNbhCost(const std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
+                       const std::vector<int32_t>& nbh_id2order) const;
   // Evaluate summery of cost within neighborhood
   // We only accumulate the minimum edge cost with a higher order.
-  double EvalMinInNbhCost(std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
-                          std::vector<int32_t>& nbh_id2order) const;
+  double EvalMinInNbhCost(const std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
+                          const std::vector<int32_t>& nbh_id2order) const;
   // Get the one ring neighborhood of this node, which is itself and all the adjacent nodes.
   void OneRingNeighborhood(std::vector<int32_t>& nbh_1ring) const;
   // Get the n ring neighborhood of this node
   // Pre-allocate buffer, which will be faster.
   void NRingNeighborhood(int32_t n, std::vector<int32_t>& nbh_n_ring,
                          std::vector<int32_t>& nbh_1ring,
-                         std::vector<SbpNode<SbpSignature>*>& node_list,
+                         const std::vector<SbpNode<SbpSignature>*>& node_list,
                          std::vector<bool>& node_tags) const;
 
   // Get or compute the minimum layer of this node
-  int32_t GetMinLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
+  int32_t GetMinLayer(const oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
                       const oneflow::HashMap<const OpNode*, oneflow::HashSet<std::string>>&
                           op_node2mutable_op_ctrl_deps);
   // Spread the minimum layer to compute the maximum layer of producers
-  void SpreadMaxLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
+  void SpreadMaxLayer(const oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
                       const oneflow::HashMap<const OpNode*, oneflow::HashSet<std::string>>&
                           op_node2mutable_op_ctrl_deps);
   // Set max_layer_ = min_layer_ if this node does not have any consumer
@@ -117,7 +116,7 @@ class SbpNode {
   void LiftMaxLayer(int32_t upper_bound);
   // Compute maximum layer for tributaries
   void SpreadTributaryLayer(
-      oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
+      const oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
   // Drop down the tributary layer
   void DropTributaryLayer(int32_t upper_bound);
 
@@ -128,14 +127,16 @@ class SbpNode {
 
   // Judge if this node is on the trunk
   // If so, judge it for its producer/upstream nodes
-  void SpreadTrunk(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
+  void SpreadTrunk(const oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
   // Count consumers and any downstream nodes defined by control edges
   // for producers or upstream nodes
-  void RaiseConsumerNum(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
+  void RaiseConsumerNum(
+      const oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
   // Compute the minimal available wait time for producers or upstream nodes
-  void SpreadAvailWaitTime(std::vector<double>& trunk_cost, std::vector<double>& acc_trunk_cost,
-                           oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
-                           double wait_time, double transfer_cost);
+  void SpreadAvailWaitTime(
+      const std::vector<double>& trunk_cost, const std::vector<double>& acc_trunk_cost,
+      const oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
+      double wait_time, double transfer_cost);
   // Reduce and set the wait time for op in the trunk
   void SetTrunkWaitTime(double trunk_wait_time);
 
@@ -445,7 +446,7 @@ double SbpNode<SbpSignature>::EvalNbhCost() const {
 
 template<class SbpSignature>
 double SbpNode<SbpSignature>::EvalOutNbhCost(
-    std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id) const {
+    const std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id) const {
   // check if this node is in the node list
   CHECK(node_list_id_ >= 0) << "Compute out cost for a node out of the node list" << std::endl;
   // Cost with original sbp
@@ -470,8 +471,8 @@ double SbpNode<SbpSignature>::EvalOutNbhCost(
 // Compute the cost between this node and adjacent nodes with a lower order
 template<class SbpSignature>
 double SbpNode<SbpSignature>::EvalInNbhCost(
-    std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
-    std::vector<int32_t>& nbh_id2order) const {
+    const std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
+    const std::vector<int32_t>& nbh_id2order) const {
   // check if this node is in the node list
   CHECK(node_list_id_ >= 0) << "Compute in cost for a node out of the node list";
   // check if the node is in the neighborhood
@@ -503,8 +504,8 @@ double SbpNode<SbpSignature>::EvalInNbhCost(
 
 template<class SbpSignature>
 double SbpNode<SbpSignature>::EvalMinInNbhCost(
-    std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
-    std::vector<int32_t>& nbh_id2order) const {
+    const std::unordered_map<int32_t, int32_t>& node_list_id2nbh_id,
+    const std::vector<int32_t>& nbh_id2order) const {
   // check if this node is in the node list
   CHECK(node_list_id_ >= 0) << "Compute out cost for a node out of the node list" << std::endl;
   // check if the node is in the neighborhood
@@ -551,7 +552,7 @@ void SbpNode<SbpSignature>::OneRingNeighborhood(std::vector<int32_t>& nbh_1ring)
 template<class SbpSignature>
 void SbpNode<SbpSignature>::NRingNeighborhood(int32_t n, std::vector<int32_t>& nbh_n_ring,
                                               std::vector<int32_t>& nbh_1ring,
-                                              std::vector<SbpNode<SbpSignature>*>& node_list,
+                                              const std::vector<SbpNode<SbpSignature>*>& node_list,
                                               std::vector<bool>& node_tags) const {
   // Initialize 0 ring
   if (n <= 0) { n = 0; }
@@ -578,7 +579,7 @@ void SbpNode<SbpSignature>::NRingNeighborhood(int32_t n, std::vector<int32_t>& n
 // Get or compute the minimum layer of this node
 template<class SbpSignature>
 int32_t SbpNode<SbpSignature>::GetMinLayer(
-    oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
+    const oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
     const oneflow::HashMap<const OpNode*, oneflow::HashSet<std::string>>&
         op_node2mutable_op_ctrl_deps) {
   if (min_layer_ >= 0) { return min_layer_; }
@@ -612,7 +613,7 @@ int32_t SbpNode<SbpSignature>::GetMinLayer(
 // Spread the minimum layer to compute the maximum layer of producers
 template<class SbpSignature>
 void SbpNode<SbpSignature>::SpreadMaxLayer(
-    oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
+    const oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
     const oneflow::HashMap<const OpNode*, oneflow::HashSet<std::string>>&
         op_node2mutable_op_ctrl_deps) {
   if (min_layer_ <= 0) { return; }
@@ -672,7 +673,7 @@ double SbpNode<SbpSignature>::GetCutRatio() const {
 // If so, judge it for its producer/upstream nodes
 template<class SbpSignature>
 void SbpNode<SbpSignature>::SpreadTrunk(
-    oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
+    const oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
   // Skip it if this node is already judged.
   if (on_trunk_) { return; }
   // Skip sbp proxy. This is before we have proxy.
@@ -696,7 +697,7 @@ void SbpNode<SbpSignature>::SpreadTrunk(
 // Count consumers and any downstream nodes defined by control edges
 template<class SbpSignature>
 void SbpNode<SbpSignature>::RaiseConsumerNum(
-    oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
+    const oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
   // Should clear it before running.
   // skip the proxy nodes and the sources
   if (min_layer_ <= 0) { return; }
@@ -710,8 +711,8 @@ void SbpNode<SbpSignature>::RaiseConsumerNum(
 // Compute the minimal available wait time for producers or upstream nodes
 template<class SbpSignature>
 void SbpNode<SbpSignature>::SpreadAvailWaitTime(
-    std::vector<double>& trunk_cost, std::vector<double>& acc_trunk_cost,
-    oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node, double wait_time,
+    const std::vector<double>& trunk_cost, const std::vector<double>& acc_trunk_cost,
+    const oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node, double wait_time,
     double transfer_cost) {
   // skip the proxy nodes and the sources
   if (min_layer_ <= 0) { return; }
@@ -835,7 +836,7 @@ void SbpNode<SbpSignature>::DropTributaryLayer(int32_t upper_bound) {
 // Compute maximum layer for tributaries
 template<class SbpSignature>
 void SbpNode<SbpSignature>::SpreadTributaryLayer(
-    oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
+    const oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
   if (counter_ || min_layer_ <= 0) { return; }
   int32_t producer_max_lay = 0;
   if (on_trunk_) {

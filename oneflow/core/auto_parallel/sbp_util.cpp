@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 #include <memory>
-#include "sbp_util.h"
+#include "oneflow/core/auto_parallel/sbp_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
@@ -24,7 +24,7 @@ namespace oneflow {
 namespace auto_parallel {
 
 // Judge whether we need the same SBP for both producer and consumer
-bool IsSameSbp(OpNode* consumer, const std::string& ibn) {
+bool IsSameSbp(const OpNode* consumer, const std::string& ibn) {
   // is mutable
   const auto input_blob_modifier_ = consumer->op().InputBlobModifier4Ibn(ibn);
   if (input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable()) { return true; }

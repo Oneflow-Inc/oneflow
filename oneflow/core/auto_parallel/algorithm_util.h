@@ -44,11 +44,11 @@ void CheckAndRemoveFrom(std::vector<T>& v, T& t) {
   }
 }
 
-// Inverse function, which transfer a vector to an unorder_map.
+// Inverse function, which transfer a vector to an unordered_map.
 template<class T>
-void InverseFunction(const std::vector<T>& v, std::unordered_map<T, int32_t>& InverseMap) {
-  InverseMap.clear();
-  for (int32_t i = 0; i < v.size(); i++) { InverseMap[v[i]] = i; }
+void InverseFunction(const std::vector<T>& v, std::unordered_map<T, int32_t>& inverse_map) {
+  inverse_map.clear();
+  for (int32_t i = 0; i < v.size(); i++) { inverse_map[v[i]] = i; }
 }
 
 // When you want to sort something but you can not move any elements, use order.
@@ -66,11 +66,11 @@ void DecideOrder(const T& v, std::vector<int32_t>& order, Compare comp) {
 }
 
 // Inverse function of order
-// The reason why we need the InvOrder, a.k.a id2order, instead of id2value is to eliminate
+// The reason why we need the inverse_order, a.k.a id2order, instead of id2value is to eliminate
 // equality. For example, we have v[0] < v[1] = v[2] < v[3] We do not know v[1] is before or after
 // v[2] with comp(v[1], v[2]). But if we transfer it to order order[0] < order[1] < order[2] <
 // order[3] We know the strict order.
-void InverseOrder(const std::vector<int32_t>& order, std::vector<int32_t>& InvOrder);
+void InverseOrder(const std::vector<int32_t>& order, std::vector<int32_t>& inverse_order);
 
 }  // namespace auto_parallel
 
