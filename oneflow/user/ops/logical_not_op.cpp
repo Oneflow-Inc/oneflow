@@ -21,7 +21,7 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferDataTypeLogicalNot(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = DataType::kBool;
+  *ctx->MutOutputDType("y", 0) = DataType::kBool;
   return Maybe<void>::Ok();
 }
 

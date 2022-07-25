@@ -35,7 +35,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ auto GeluOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -68,7 +68,7 @@ namespace oneflow {
 }
 /*static*/ auto GeluGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
   CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0));
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 

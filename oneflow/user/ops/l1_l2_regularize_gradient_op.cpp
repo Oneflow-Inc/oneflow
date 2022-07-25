@@ -25,7 +25,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", 0);
   CHECK_EQ_OR_RETURN(model_diff.shape(), model.shape());
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("model", 0);
-  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("model", 0);
+  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("model", 0);
   return Maybe<void>::Ok();
 }
 
@@ -57,7 +57,7 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
   const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", 0);
   CHECK_EQ_OR_RETURN(model_diff.data_type(), model.data_type());
-  *ctx->OutputDType("out", 0) = ctx->InputDType("model", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("model", 0);
   return Maybe<void>::Ok();
 }
 
