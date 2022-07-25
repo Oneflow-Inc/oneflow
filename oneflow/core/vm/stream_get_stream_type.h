@@ -55,7 +55,7 @@ struct CreateStreamPolicy final : public StreamRoleVisitor<CreateStreamPolicy> {
     return Create(stream_type, device);
   }
   static Maybe<vm::StreamPolicy> VisitBarrier(Symbol<Device> device) {
-    return std::make_shared<vm::StreamPolicy>(std::make_unique<vm::ControlStreamPolicy>());
+    return std::shared_ptr<vm::StreamPolicy>(new vm::ControlStreamPolicy());
   }
   static Maybe<vm::StreamPolicy> VisitCriticalSection(Symbol<Device> device) {
     const auto* stream_type = SingletonPtr<vm::CriticalSectionStreamType>();
