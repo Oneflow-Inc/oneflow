@@ -24,14 +24,14 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> ParallelCastOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
-  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ParallelCastOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return ParallelCastOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ParallelCastOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ParallelCastOp::InferSbpSignature(user_op::InferSbpSignatureFnContext* ctx) {
