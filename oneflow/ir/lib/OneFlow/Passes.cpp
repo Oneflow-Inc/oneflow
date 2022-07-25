@@ -505,32 +505,8 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
     attrs.set(op.hierarchyAttrName(), op.hierarchyAttr());
     auto name = FrozenVariableOp::nd_sbpAttrName(
         OperationName(FrozenVariableOp::getOperationName(), rewriter.getContext()));
-    auto elem2str = [&](mlir::Attribute& attr) -> std::string {
-      std::string res;
-      if (auto s = attr.dyn_cast<sbp::SplitAttr>()) {
-        res = "S(" + std::to_string(s.getAxis()) + ")";
-      } else if (attr.dyn_cast<sbp::BroadcastAttr>()) {
-        res = "B";
-      } else if (attr.dyn_cast<sbp::PartialSumAttr>()) {
-        res = "P";
-      } else {
-        op->emitError("VariableOp with illegal sbp attribute");
-      }
-      return res;
-    };
-    auto sbp2str = [&](::mlir::sbp::ParallelSignatureAttr sbp) -> ArrayAttr {
-      SmallVector<Attribute, 4> res;
-      for (auto elem : sbp.getOutputs()) {
-        if (auto list = elem.dyn_cast<mlir::ArrayAttr>()) {
-          for (auto list_elem : list) {
-            res.push_back(StringAttr::get(rewriter.getContext(), elem2str(list_elem)));
-          }
-        }
-        res.push_back(StringAttr::get(rewriter.getContext(), elem2str(elem)));
-      }
-      return ArrayAttr::get(rewriter.getContext(), res);
-    };
-    attrs.set(name, sbp2str(op.parallelAttr()));
+
+    attrs.set(name, ConvertSBPToString(rewriter, op.parallelAttr()));
     auto op_new = rewriter.create<oneflow::FrozenVariableOp>(op->getLoc(), op.output().getType(),
                                                              ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
