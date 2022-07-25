@@ -47,12 +47,12 @@ TensorDescInferFn MaxPoolMakeForwardTensorDescInferFn(const int32_t dim) {
 
     const MaxPoolParams3D params_3d(dim, x_shape, data_format, padding, kernel_size, stride,
                                     dilation, return_indices, ceil_mode);
-    user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
+    user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
     *y_desc = ctx->InputTensorDesc("x", 0);
     *y_desc->mut_shape() = params_3d.GetYShape();
 
-    user_op::TensorDesc* indice_desc = ctx->OutputTensorDesc("indice", 0);
-    *indice_desc = *ctx->OutputTensorDesc("y", 0);
+    user_op::TensorDesc* indice_desc = ctx->MutOutputTensorDesc("indice", 0);
+    *indice_desc = *ctx->MutOutputTensorDesc("y", 0);
     *indice_desc->mut_shape() = *y_desc->mut_shape();
     DataType* dtype = indice_desc->mut_data_type();
     *dtype = kInt64;
@@ -111,7 +111,7 @@ GenBackwardOpConfFn MaxPoolMakeBackwardOpConfFn(const int32_t dim) {
 }
 
 Maybe<void> BackwardTensorDescInferFn(user_op::InferContext* ctx) {
-  *ctx->OutputTensorDesc("dx", 0) = ctx->InputTensorDesc("x", 0);
+  *ctx->MutOutputTensorDesc("dx", 0) = ctx->InputTensorDesc("x", 0);
   return Maybe<void>::Ok();
 }
 
