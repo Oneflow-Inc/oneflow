@@ -67,7 +67,7 @@ def _test_global_where_scalar(test_case, placement, sbp):
 # Not check graph because of one reason:
 # Reason 1, lazy tensor cannot call .numpy(), tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor.
 # Please refer to File "python/oneflow/nn/modules/nonzero.py", line 29, in nonzero_op. Because nonzero_op is called by where.
-@autotest(n=1, auto_backward=False, check_graph="ValidatedFlase")
+@autotest(n=1, auto_backward=False, check_graph="ValidatedFalse")
 def _test_where_x_y_none(test_case, placement, sbp):
     condition = random_tensor(ndim=2, dim0=8, dim1=8, low=-1, high=1).to_global(
         placement, sbp
