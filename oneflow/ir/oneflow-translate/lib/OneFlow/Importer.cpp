@@ -384,7 +384,6 @@ LogicalResult ParseNdSbpFromAttr(::llvm::ArrayRef<Attribute> nd_sbp_attr,
   return success();
 }
 
-
 Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp) {
   llvm::SmallVector<std::string, 2> sbp_strs;
   for (const auto& sbp : nd_sbp.sbp_parallel()) {
@@ -402,7 +401,6 @@ Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp) {
   return builder.getStrArrayAttr(
       makeArrayRef(llvm::SmallVector<StringRef>(sbp_strs.begin(), sbp_strs.end())));
 }
-
 
 LogicalResult ValidateUserOpConf(const ::oneflow::OperatorConf& op_conf, UserOpArgs args,
                                  UserOpArgDefs arg_defs) {
