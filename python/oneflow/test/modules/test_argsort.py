@@ -32,7 +32,6 @@ def _test_argsort(test_case, data_shape, axis, descending, data_type, device):
         dtype=type_name_to_flow_type[data_type],
         device=flow.device(device),
     )
-
     np_input = -input.numpy() if descending else input.numpy()
     if axis is not None:
         of_out = flow.argsort(input, dim=axis, descending=descending)
