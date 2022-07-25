@@ -283,9 +283,6 @@ class EmbeddingGraidientShuffleP2PKernel final : public user_op::OpKernel,
     CHECK(ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ADD_ID_SHUFFLE_COPY_OUT",
                               true));  // when no identity, every time the cur_rank_inverse_indices
                                        // will change becauseof regster num=2.
-    CHECK(!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false))
-        << "p2p kernel not support quantize.";
-
     auto* kernel_state = dynamic_cast<DataShuffleKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);
@@ -345,10 +342,11 @@ class EmbeddingGraidientShuffleP2PKernel final : public user_op::OpKernel,
 
 REGISTER_USER_KERNEL("embedding_gradient_shuffle")
     .SetCreateFn<EmbeddingGraidientShuffleP2PKernel<half, uint32_t>>()
-    .SetIsMatchedHob(
-        (user_op::HobDeviceType() == DeviceType::kCUDA)
-        && (user_op::HobDataType("embedding_grad", 0) == DataType::kFloat16)
-        && (user_op::HobDataType("num_unique_matrix", 0) == DataType::kUInt32)
-        && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EMBEDDING_GRADIENT_SHUFFLE_USE_P2P", false));
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
+                     && (user_op::HobDataType("embedding_grad", 0) == DataType::kFloat16)
+                     && (user_op::HobDataType("num_unique_matrix", 0) == DataType::kUInt32)
+                     && (user_op::HobAttr<bool>("skip_first_scatter") == true)
+                     && (embedding::UseEmbeddingGradientShuffleP2PKernel(DataType::kFloat16,
+                                                                         DataType::kUInt32)));
 
 }  // namespace oneflow

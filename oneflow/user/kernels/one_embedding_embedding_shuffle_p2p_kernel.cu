@@ -241,7 +241,55 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
   std::vector<void*> is_kernel_start_ptr_;
 };
 
-constexpr int pack_size = 4;
+template<typename T, typename IDX, int pack_size>
+void LaunchKernel(user_op::KernelComputeContext* ctx, DataShuffleKernelState<IDX>* kernel_state) {
+  const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+  const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+  const user_op::Tensor* num_unique_matrix = ctx->Tensor4ArgNameAndIndex("num_unique_matrix", 0);
+  user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
+  const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+  DataType data_type = embeddings->data_type();
+  Param<T, IDX, pack_size, 8> param;
+  CHECK_LE(parallel_num, 8);
+  param.embedding_ptr = reinterpret_cast<Pack<T, pack_size>*>(embeddings->mut_dptr<T>());
+  for (int i = 0; i < parallel_num; ++i) {
+    param.inverse_indices[i] = reinterpret_cast<IDX*>(kernel_state->InverseIndices()->at(i));
+    param.unique_embeddings[i] =
+        reinterpret_cast<Pack<T, pack_size>*>(kernel_state->UniqueEmbeddings()->at(i));
+    param.is_kernel_start[i] = reinterpret_cast<int32_t*>(kernel_state->IsKernelStart()->at(i));
+  }
+  param.num_unique_matrix = reinterpret_cast<const uint32_t*>(num_unique_matrix->dptr());
+  int64_t embedding_num_pack = embedding_size / pack_size;
+  cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+  BarrierKernel<<<1, parallel_num, 0, cuda_stream>>>(parallel_id, parallel_num, param);
+  const int num_blocks =
+      2 * ctx->stream()->As<ep::CudaStream>()->device_properties().multiProcessorCount;
+
+  if (DisableFuseGatherCopy()) {
+    CHECK_EQ(kernel_state->UniqueEmbeddings()->at(parallel_id),
+             ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->dptr())
+        << parallel_id;
+    GatherKernel<<<num_blocks, 1024, 0, cuda_stream>>>(
+        parallel_id, parallel_num, embedding_num_pack, param.num_unique_matrix,
+        param.inverse_indices[parallel_id],
+        reinterpret_cast<const Pack<T, pack_size>*>(
+            ctx->Tensor4ArgNameAndIndex("cur_rank_embeddings", 0)->dptr()),
+        param.unique_embeddings[parallel_id]);
+    EmbeddingShuffleCopyKernel<<<num_blocks, 1024, 0, cuda_stream>>>(parallel_id, parallel_num,
+                                                                     embedding_num_pack, param);
+  } else {
+    CHECK_EQ(kernel_state->UniqueEmbeddings()->at(parallel_id),
+             ctx->Tensor4ArgNameAndIndex("cur_rank_embeddings", 0)->dptr())
+        << parallel_id;
+    EmbeddingShuffleCudaKernel<<<num_blocks, 1024, 0, cuda_stream>>>(parallel_id, parallel_num,
+                                                                     embedding_num_pack, param);
+  }
+  if (!ctx->Attr<bool>("is_train")) {
+    BarrierKernel<<<1, parallel_num, 0, cuda_stream>>>(
+        parallel_id, parallel_num,
+        param);  // if in eval, should add last barrier.
+  }
+}
 
 }  // namespace
 
@@ -275,67 +323,28 @@ class EmbeddingShuffleP2PKernel final : public user_op::OpKernel, public user_op
     CHECK(ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ADD_ID_SHUFFLE_COPY_OUT",
                               true));  // when no identity, every time the cur_rank_inverse_indices
                                        // will change becauseof regster num=2.
-    CHECK(!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false))
-        << "p2p kernel not support quantize.";
     auto* kernel_state = dynamic_cast<DataShuffleKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
-    const user_op::Tensor* num_unique_matrix = ctx->Tensor4ArgNameAndIndex("num_unique_matrix", 0);
     const user_op::Tensor* cur_rank_inverse_indices =
         ctx->Tensor4ArgNameAndIndex("cur_rank_inverse_indices", 0);
     const user_op::Tensor* inverse_unique_partition_indices =
         ctx->Tensor4ArgNameAndIndex("inverse_unique_partition_indices", 0);
-    user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
-    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
-    DataType data_type = embeddings->data_type();
-    const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-    const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
     const bool skip_last_gather = ctx->Attr<bool>("skip_last_gather");
     CHECK(skip_last_gather);
-    cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     if (current_iter_ == 0) {
       GetPtrs(ctx, kernel_state->UniqueEmbeddings(), kernel_state->InverseIndices(),
               kernel_state->IsKernelStart());
     }
+    const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
     CHECK_EQ(kernel_state->InverseIndices()->at(parallel_id), cur_rank_inverse_indices->dptr())
         << parallel_id;
-    Param<T, IDX, pack_size, 8> param;
-    CHECK_LE(parallel_num, 8);
-    param.embedding_ptr = reinterpret_cast<Pack<T, pack_size>*>(embeddings->mut_dptr<T>());
-    for (int i = 0; i < parallel_num; ++i) {
-      param.inverse_indices[i] = reinterpret_cast<IDX*>(kernel_state->InverseIndices()->at(i));
-      param.unique_embeddings[i] =
-          reinterpret_cast<Pack<T, pack_size>*>(kernel_state->UniqueEmbeddings()->at(i));
-      param.is_kernel_start[i] = reinterpret_cast<int32_t*>(kernel_state->IsKernelStart()->at(i));
-    }
-    param.num_unique_matrix = reinterpret_cast<const uint32_t*>(num_unique_matrix->dptr());
-    int64_t embedding_num_pack = embedding_size / pack_size;
-    BarrierKernel<<<1, parallel_num, 0, cuda_stream>>>(parallel_id, parallel_num, param);
-    const int num_blocks =
-        2 * ctx->stream()->As<ep::CudaStream>()->device_properties().multiProcessorCount;
-
-    if (DisableFuseGatherCopy()) {
-      CHECK_EQ(kernel_state->UniqueEmbeddings()->at(parallel_id),
-               ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->dptr())
-          << parallel_id;
-      GatherKernel<<<num_blocks, 1024, 0, cuda_stream>>>(
-          parallel_id, parallel_num, embedding_num_pack, param.num_unique_matrix,
-          param.inverse_indices[parallel_id],
-          reinterpret_cast<const Pack<T, pack_size>*>(
-              ctx->Tensor4ArgNameAndIndex("cur_rank_embeddings", 0)->dptr()),
-          param.unique_embeddings[parallel_id]);
-      EmbeddingShuffleCopyKernel<<<num_blocks, 1024, 0, cuda_stream>>>(parallel_id, parallel_num,
-                                                                       embedding_num_pack, param);
+    if (embedding_size % 4 == 0) {
+      LaunchKernel<T, IDX, 4>(ctx, kernel_state);
+    } else if (embedding_size % 2 == 0) {
+      LaunchKernel<T, IDX, 2>(ctx, kernel_state);
     } else {
-      CHECK_EQ(kernel_state->UniqueEmbeddings()->at(parallel_id),
-               ctx->Tensor4ArgNameAndIndex("cur_rank_embeddings", 0)->dptr())
-          << parallel_id;
-      EmbeddingShuffleCudaKernel<<<num_blocks, 1024, 0, cuda_stream>>>(parallel_id, parallel_num,
-                                                                       embedding_num_pack, param);
-    }
-    if (!ctx->Attr<bool>("is_train")) {
-      BarrierKernel<<<1, parallel_num, 0, cuda_stream>>>(
-          parallel_id, parallel_num,
-          param);  // if in eval, should add last barrier.
+      LaunchKernel<T, IDX, 1>(ctx, kernel_state);
     }
     current_iter_++;
   }
@@ -348,8 +357,9 @@ REGISTER_USER_KERNEL("embedding_shuffle")
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
                      && (user_op::HobDataType("cur_rank_embeddings", 0) == DataType::kFloat16)
                      && (user_op::HobDataType("num_unique_matrix", 0) == DataType::kUInt32)
-                     && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EMBEDDING_SHUFFLE_USE_P2P",
-                                            false))
+                     && (user_op::HobAttr<bool>("skip_last_gather") == true)
+                     && (embedding::UseEmbeddingShuffleP2PKernel(DataType::kFloat16,
+                                                                 DataType::kUInt32)))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       return GetCudaAlignedSize(ctx->InputTensorDesc("cur_rank_embeddings", 0).shape().elem_cnt()
                                 * sizeof(half));
