@@ -139,32 +139,32 @@ Optional<Stride> ComputeStride(const Shape& shape, const Stride& stride,
   return target_stride;
 }
 
-Maybe<Shape> CheckAndInferShape(const int64_t& elem_count, const Shape& target_shape) {
+Maybe<Shape> InferShapeUnspecifiedDim(const int64_t& elem_count, const Shape& shape) {
   int need_infer_axis = -1;
   int64_t target_elem_count = 1;
-  for (int i = 0; i < target_shape.NumAxes(); ++i) {
-    if (target_shape.At(i) < -1) {
-      return Error::RuntimeError() << "Invalid shape dimension " << target_shape.At(i);
-    } else if (target_shape.At(i) == -1) {
+  for (int i = 0; i < shape.NumAxes(); ++i) {
+    if (shape.At(i) < -1) {
+      return Error::RuntimeError() << "Invalid shape dimension " << shape.At(i);
+    } else if (shape.At(i) == -1) {
       CHECK_OR_RETURN_ERROR(need_infer_axis == -1)
           << Error::RuntimeError() << "only one dimension can be inferred";
       need_infer_axis = i;
     } else {
-      target_elem_count *= target_shape.At(i);
+      target_elem_count *= shape.At(i);
     }
   }
-  Shape infered_shape = target_shape;
+  Shape infered_shape = shape;
   if (need_infer_axis == -1) {
     if (elem_count > 0) {
-      // For 0-size tensor, we we don't need to check the element size.
-      CHECK_OR_RETURN_ERROR(target_shape.Count(0) == elem_count)
-          << Error::RuntimeError() << "shape '" << target_shape.ToString()
+      // For 0-size tensor, we don't need to check the element size.
+      CHECK_OR_RETURN_ERROR(shape.Count(0) == elem_count)
+          << Error::RuntimeError() << "shape '" << shape.ToString()
           << "' is invalid for input of size " << elem_count;
     }
   } else {
     infered_shape.Set(need_infer_axis, elem_count / target_elem_count);
     CHECK_OR_RETURN_ERROR(infered_shape.Count(0) == elem_count)
-        << Error::RuntimeError() << "shape '" << target_shape.ToString()
+        << Error::RuntimeError() << "shape '" << shape.ToString()
         << "' is invalid for input of size " << elem_count;
   }
   return infered_shape;
