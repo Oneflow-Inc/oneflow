@@ -322,14 +322,10 @@ def load(path: str, global_src_rank: Optional[int] = None,) -> Any:
     return res["data"]
 
 
-def save_one_embedding_info(obj: Any, path: Union[str, Path]) -> None:
+def save_one_embedding_info(state_dict: Any, path: Union[str, Path]) -> None:
     path: Path = Path(path)
 
-    assert isinstance(
-        obj, graph_util.Graph
-    ), "Only support save OneEmbedding Snapshot in Graph mode. "
-
-    for module_key in obj.state_dict()["module"].keys():
+    for module_key in state_dict["module"].keys():
         if (
             "OneEmbeddingSnapshot" in module_key
             or "OneEmbeddingKeyValueOptions" in module_key
@@ -342,7 +338,7 @@ def save_one_embedding_info(obj: Any, path: Union[str, Path]) -> None:
                 data_path = os.path.join(dir_name, "KeyValueOptions")
             os.makedirs(dir_name, exist_ok=True)
             with open(data_path, "w") as f:
-                f.write(obj.state_dict()["module"][module_key])
+                f.write(state_dict["module"][module_key])
 
 
 def save(
