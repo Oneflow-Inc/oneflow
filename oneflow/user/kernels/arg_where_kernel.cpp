@@ -32,6 +32,8 @@ class ArgWhereKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     int64_t ndims = ctx->Tensor4ArgNameAndIndex("input", 0)->shape_view().NumAxes();
     if (ndims == 0) {
+      // 0-dim tensor, elem_cnt of input is 1
+      CHECK_EQ(ctx->Tensor4ArgNameAndIndex("input", 0)->shape_view().elem_cnt(), 1);
       SetOutputSize<device_type, IN_T, OUT_T>(
           ctx->stream(), ctx->Tensor4ArgNameAndIndex("input", 0)->dptr<IN_T>(),
           ctx->Tensor4ArgNameAndIndex("output_size", 0)->mut_dptr<OUT_T>());
