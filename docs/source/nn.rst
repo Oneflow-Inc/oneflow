@@ -140,6 +140,7 @@ Normalization Layers
     nn.InstanceNorm2d 
     nn.InstanceNorm3d 
     nn.LayerNorm
+    nn.RMSLayerNorm
 
 Recurrent Layers
 ----------------
