@@ -20,9 +20,9 @@ namespace oneflow {
 
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueOp::InferDataType(user_op::InferContext* ctx)
     -> Maybe<void> {
-  const DataType& dtype = ctx->InputDType("hidden_states", 0);
-  *ctx->OutputDType("query_mul_key", 0) = dtype;
-  *ctx->OutputDType("value", 0) = dtype;
+  DataType dtype = ctx->InputDType("hidden_states", 0);
+  *ctx->MutOutputDType("query_mul_key", 0) = dtype;
+  *ctx->MutOutputDType("value", 0) = dtype;
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueOp::InferLogicalTensorDesc(
@@ -67,9 +67,9 @@ namespace oneflow {
 
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueGradOp::InferDataType(
     user_op::InferContext* ctx) -> Maybe<void> {
-  const DataType& dtype = ctx->InputDType("query_mul_key_grad", 0);
+  DataType dtype = ctx->InputDType("query_mul_key_grad", 0);
   CHECK_EQ_OR_RETURN(ctx->InputDType("value_grad", 0), dtype);
-  *ctx->OutputDType("hidden_states_grad", 0) = dtype;
+  *ctx->MutOutputDType("hidden_states_grad", 0) = dtype;
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedSelfAttentionQueryMulKeyAndValueGradOp::InferLogicalTensorDesc(

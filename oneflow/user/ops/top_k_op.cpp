@@ -39,7 +39,7 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> TopKOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kInt64;
+  *ctx->MutOutputDType("out", 0) = DataType::kInt64;
   return Maybe<void>::Ok();
 }
 
