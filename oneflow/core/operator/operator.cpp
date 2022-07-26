@@ -599,9 +599,37 @@ Maybe<void> Operator::InferSbpSignature(
     CalcOrderValue4SbpSig = [](const SbpSignature&) -> int32_t { return 0; };
   }
   if (op_parallel_desc_->parallel_num() == 1) {
-    auto* bn2sbp = infered_sbp_signature->mutable_bn_in_op2sbp_parallel();
-    for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn].mutable_broadcast_parallel(); }
-    for (const auto& obn : output_bns()) { (*bn2sbp)[obn].mutable_broadcast_parallel(); }
+    auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc&> {
+      const SbpInferHint* sbp_infer_hint = JUST(SbpInferHint4Ibn(ibn));
+      return Maybe<const BlobDesc&>(sbp_infer_hint->logical_blob_desc());
+    };
+
+    SbpSignatureList sbp_sig_candidates;
+    JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, *op_parallel_desc_, &sbp_sig_candidates));
+    // filter sbp signatures by logical shape
+
+    SbpSignatureList valid_sbp_sig_list;
+    JUST(FilterAndCheckValidSbpSignatureListByLogicalShape(
+        sbp_sig_candidates, LogicalBlobDesc4Ibn, *op_parallel_desc_, &valid_sbp_sig_list));
+
+    CHECK_GT_OR_RETURN(valid_sbp_sig_list.sbp_signature_size(), 0)
+        << op_name() << " has no maching sbp after flitering valid sbp list "
+        << valid_sbp_sig_list.DebugString() << " with sbp hint " << sbp_sig_conf.DebugString();
+
+    *infered_sbp_signature = *valid_sbp_sig_list.sbp_signature().begin();
+
+    // if (filtered_sbp_sigs_by_conf.sbp_signature_size() == 1) {
+    //   return Maybe<void>::Ok();
+    // }
+    // auto sbp_sig = *filtered_sbp_sigs_by_conf.sbp_signature().begin();
+
+    // auto bn2sbp2 = sbp_sig.bn_in_op2sbp_parallel();
+    // auto* bn2sbp = infered_sbp_signature->mutable_bn_in_op2sbp_parallel();
+    // for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn] = bn2sbp2[ibn]; }
+    // for (const auto& obn : output_bns()) { (*bn2sbp)[obn] = bn2sbp2[obn]; }
+
+    // for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn].mutable_broadcast_parallel(); }
+    // for (const auto& obn : output_bns()) { (*bn2sbp)[obn].mutable_broadcast_parallel(); }
   } else if (op_parallel_desc_->parallel_num() > 1) {
     JUST(InferSbpSignature(infered_sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig,
                            SbpInferHint4Ibn, *op_parallel_desc_));
@@ -975,8 +1003,8 @@ Maybe<const NdSbp*> Operator::NdSbp4BnInOp(const std::string& bn_in_op) const {
   CHECK_OR_RETURN(nd_sbp_signature_) << "parallel distribution signature not infered";
   const auto& map = nd_sbp_signature_->bn_in_op2nd_sbp();
   const auto& iter = map.find(bn_in_op);
-  CHECK_OR_RETURN(iter != map.end())
-      << "blob_name " << bn_in_op << " not found in parallel distribution";
+  CHECK_OR_RETURN(iter != map.end()) << "op_name " << op_name() << "blob_name " << bn_in_op
+                                     << " not found in parallel distribution";
   return &iter->second;
 }
 
