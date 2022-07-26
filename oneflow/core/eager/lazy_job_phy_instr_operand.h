@@ -25,13 +25,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace one {
-
-using EagerBlobObjectListPtr =
-    std::shared_ptr<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>;
-
-}
-
 namespace vm {
 
 class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
@@ -41,14 +34,14 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
   ~LaunchLazyJobPhyInstrOperand() override = default;
 
   LaunchLazyJobPhyInstrOperand(const std::shared_ptr<NNGraphIf>& nn_graph,
-                               const one::EagerBlobObjectListPtr& param_blob_objects)
+                               const vm::EagerBlobObjectListPtr& param_blob_objects)
       : nn_graph_(nn_graph),
         param_blob_objects_(param_blob_objects),
         input_dependences_(),
         output_dependences_() {
-    ForEachConstMirroredObject(SetInserter(&input_dependences_));
-    ForEachMutMirroredObject(SetInserter(&output_dependences_));
-    ForEachMut2MirroredObject(SetInserter(&output_dependences_));
+    ForEachConstDependence(SetInserter(&input_dependences_));
+    ForEachMutDependence(SetInserter(&output_dependences_));
+    ForEachMut2Dependence(SetInserter(&output_dependences_));
     stream_sequential_dependence_ = nullptr;
   }
 
@@ -57,15 +50,19 @@ class LaunchLazyJobPhyInstrOperand final : public PhyInstrOperand {
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  void ForEachConstMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const {}
+  void ForEachConstDependence(const std::function<void(vm::Dependence* compute)>&) const {}
 
-  void ForEachMutMirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const;
+  void ForEachMutDependence(const std::function<void(vm::Dependence* compute)>&) const;
 
-  void ForEachMut2MirroredObject(const std::function<void(vm::MirroredObject* compute)>&) const {}
+  void ForEachMut2Dependence(const std::function<void(vm::Dependence* compute)>&) const {}
+
+  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
+    for (const auto& eager_blob_object : *param_blob_objects_) { DoEach(eager_blob_object.get()); }
+  }
 
  private:
   std::shared_ptr<NNGraphIf> nn_graph_;
-  one::EagerBlobObjectListPtr param_blob_objects_;
+  vm::EagerBlobObjectListPtr param_blob_objects_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
 };

@@ -120,7 +120,9 @@ from oneflow.nn.modules.padding import (
     ConstantPad1d,
     ConstantPad2d,
     ConstantPad3d,
+    ReflectionPad1d,
     ReflectionPad2d,
+    ReplicationPad1d,
     ReplicationPad2d,
     ZeroPad2d,
 )
@@ -159,3 +161,5 @@ from oneflow.nn.modules.rnn import (
     LSTM,
     GRU,
 )
+
+from oneflow.nn.qat.conv import QatConv1d, QatConv2d, QatConv3d

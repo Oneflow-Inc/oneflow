@@ -39,6 +39,8 @@ Maybe<void> RawCheckAsymmetricBroadcast(Symbol<PlacedNdSbp> in, Symbol<PlacedNdS
   CHECK_OR_RETURN(NdSbpIsAllBroadcast(*out->nd_sbp()));
   CHECK_OR_RETURN(out->placement()->Bigger(*in->placement())
                   || in->placement()->Bigger(*out->placement()));
+  CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kCPU
+                  || in->placement()->device_type() == DeviceType::kCUDA);
   // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
@@ -122,9 +124,9 @@ Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tenso
       local_tensor = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {local_tensor}));
     }
   }
-  return one::functional::LocalToConsistent(local_tensor, out_placement,
-                                            *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
-                                            tensor->dtype());
+  return one::functional::LocalToGlobal(local_tensor, out_placement,
+                                        *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
+                                        tensor->dtype(), /* sync_data */ false);
 }
 
 COMMAND(RegisterBoxingFunction("asymmetric-broadcast", CheckAsymmetricBroadcast,

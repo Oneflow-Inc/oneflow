@@ -39,7 +39,7 @@ class SparseSoftmaxCrossEntropy : public OpExprGradFunction<SparseSoftmaxCrossEn
 
 Maybe<void> SparseSoftmaxCrossEntropy::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -50,8 +50,8 @@ Maybe<void> SparseSoftmaxCrossEntropy::Capture(SparseSoftmaxCrossEntropyCaptureS
                                                const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->depth = JUST(composed_attrs.GetAttr<int64_t>("depth"));
-  CHECK_EQ_OR_RETURN(inputs.size(), 2);
-  CHECK_EQ_OR_RETURN(outputs.size(), 2);
+  CHECK_EQ_OR_RETURN(inputs.size(), 2);       // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(outputs.size(), 2);      // NOLINT(maybe-need-error-msg)
   ctx->SaveTensorForBackward(outputs.at(0));  // prob
   ctx->SaveTensorForBackward(inputs.at(1));   // label
   return Maybe<void>::Ok();
@@ -60,7 +60,7 @@ Maybe<void> SparseSoftmaxCrossEntropy::Capture(SparseSoftmaxCrossEntropyCaptureS
 Maybe<void> SparseSoftmaxCrossEntropy::Apply(const SparseSoftmaxCrossEntropyCaptureState* ctx,
                                              const TensorTuple& out_grads,
                                              TensorTuple* in_grads) const {
-  CHECK_EQ_OR_RETURN(out_grads.size(), 2);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // NOLINT(maybe-need-error-msg)
   const auto& dy = out_grads.at(1);
   const auto& prob = ctx->SavedTensors().at(0);
   const auto& label = ctx->SavedTensors().at(1);

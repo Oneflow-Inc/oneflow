@@ -160,7 +160,7 @@ void ExecutorImpl::GroupRequests(
     const std::function<void(std::vector<RequestId>&&, GroupToken*)>& Handler) {
   if (request_ids.empty()) { return; }
   const CollectiveBoxingConf& conf =
-      Global<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
+      Singleton<ResourceDesc, ForSession>::Get()->collective_boxing_conf();
   auto BackendHandler = [&](std::vector<RequestId>&& group, void* backend_group_token) {
     GroupToken* group_token = CreateGroupToken(group, backend_group_token);
     Handler(std::move(group), group_token);

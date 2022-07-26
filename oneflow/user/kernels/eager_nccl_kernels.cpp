@@ -96,13 +96,13 @@ class EagerCclBroadcastKernel final : public user_op::OpKernel {
     int64_t root = ctx->Attr<int64_t>("root");
     const void* in_ptr = nullptr;
     if (GlobalProcessCtx::Rank() == root) {
-      CHECK_EQ(in->shape(), out->shape());
+      CHECK_EQ(in->shape_view(), out->shape_view());
       CHECK_EQ(in->data_type(), out->data_type());
       in_ptr = in->dptr();
     }
-    CHECK_JUST(ccl::Broadcast<DeviceType::kCPU>(in_ptr, out->mut_dptr(), out->shape().elem_cnt(),
-                                                out->data_type(), root,
-                                                kernel_cache->parallel_desc(), ctx->stream()));
+    CHECK_JUST(ccl::Broadcast<DeviceType::kCPU>(
+        in_ptr, out->mut_dptr(), out->shape_view().elem_cnt(), out->data_type(), root,
+        kernel_cache->parallel_desc(), ctx->stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -150,11 +150,11 @@ class EagerCclReduceKernel final : public user_op::OpKernel {
     int64_t root = ctx->Attr<int64_t>("root");
     void* out_ptr = nullptr;
     if (GlobalProcessCtx::Rank() == root) {
-      CHECK_EQ(in->shape(), out->shape());
+      CHECK_EQ(in->shape_view(), out->shape_view());
       CHECK_EQ(in->data_type(), out->data_type());
       out_ptr = out->mut_dptr();
     }
-    CHECK_JUST(ccl::Reduce<DeviceType::kCPU>(in->dptr(), out_ptr, in->shape().elem_cnt(),
+    CHECK_JUST(ccl::Reduce<DeviceType::kCPU>(in->dptr(), out_ptr, in->shape_view().elem_cnt(),
                                              in->data_type(), ccl::kSum, root,
                                              kernel_cache->parallel_desc(), ctx->stream()));
   };
@@ -183,11 +183,11 @@ class EagerCclAllReduceKernel final : public user_op::OpKernel {
     CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(in->shape(), out->shape());
+    CHECK_EQ(in->shape_view(), out->shape_view());
     CHECK_EQ(in->data_type(), out->data_type());
 
     CHECK_JUST(ccl::AllReduce<DeviceType::kCPU>(
-        in->dptr(), out->mut_dptr(), out->shape().elem_cnt(), out->data_type(), ccl::kSum,
+        in->dptr(), out->mut_dptr(), out->shape_view().elem_cnt(), out->data_type(), ccl::kSum,
         kernel_cache->parallel_desc(), ctx->stream()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -220,7 +220,7 @@ class EagerCclReduceScatterKernel final : public user_op::OpKernel {
     const auto& op_type = ctx->Attr<std::string>("op_type");
     CHECK_EQ(op_type, "sum");
     CHECK_JUST(ccl::ReduceScatter<DeviceType::kCPU>(
-        in->dptr(), out->mut_dptr(), out->shape().elem_cnt(), out->data_type(), ccl::kSum,
+        in->dptr(), out->mut_dptr(), out->shape_view().elem_cnt(), out->data_type(), ccl::kSum,
         kernel_cache->parallel_desc(), ctx->stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -250,9 +250,9 @@ class EagerCclAllGatherKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type());
-    CHECK_JUST(ccl::AllGather<DeviceType::kCPU>(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
-                                                out->data_type(), kernel_cache->parallel_desc(),
-                                                ctx->stream()));
+    CHECK_JUST(ccl::AllGather<DeviceType::kCPU>(in->dptr(), out->mut_dptr(),
+                                                in->shape_view().elem_cnt(), out->data_type(),
+                                                kernel_cache->parallel_desc(), ctx->stream()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -284,23 +284,23 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t dtype_size = GetSizeOfDataType(in->data_type());
-    int64_t data_size = in->shape().elem_cnt() * dtype_size;
+    int64_t data_size = in->shape_view().elem_cnt() * dtype_size;
     // NOTE: in (transpose)-> pack_to_ptr (all2all)-> unpack_from_ptr (transpose)-> out
     const char* pack_to_ptr = in->dptr<char>();
     char* unpack_from_ptr = out->mut_dptr<char>();
-    int64_t tmp_size = tmp_buffer->shape().elem_cnt();
+    int64_t tmp_size = tmp_buffer->shape_view().elem_cnt();
     CHECK_EQ(tmp_size, data_size * 2);
 
     CHECK_EQ(in->data_type(), out->data_type());
     const int64_t num_ranks = kernel_cache->parallel_desc()->parallel_num();
-    CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt())
-        << in->shape().ToString() << " vs " << out->shape().ToString();
-    const int64_t elem_cnt = in->shape().elem_cnt();
+    CHECK_EQ(in->shape_view().elem_cnt(), out->shape_view().elem_cnt())
+        << in->shape_view().ToString() << " vs " << out->shape_view().ToString();
+    const int64_t elem_cnt = in->shape_view().elem_cnt();
     const int64_t in_split_axis = ctx->Attr<int64_t>("in_split_axis");
     const int64_t out_split_axis = ctx->Attr<int64_t>("out_split_axis");
 
     DimVector logical_shape_dim_vec;
-    in->shape().ToDimVector(&logical_shape_dim_vec);
+    in->shape_view().ToDimVector(&logical_shape_dim_vec);
     logical_shape_dim_vec[in_split_axis] = logical_shape_dim_vec.at(in_split_axis) * num_ranks;
 
     if (out_split_axis != 0) {

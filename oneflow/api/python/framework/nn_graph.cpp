@@ -41,6 +41,11 @@ Maybe<py::object> APINNGraphAdditionalVarTensors(const std::shared_ptr<NNGraph>&
   py::list tensor_list = py::cast(tensors);
   return py::cast<py::object>(tensor_list);
 }
+
+Maybe<py::bytes> APINNGraphGetCurrentSerializedJob(const std::shared_ptr<NNGraph>& graph) {
+  const auto job = graph->job();
+  return py::bytes(job.SerializeAsString());
+}
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
@@ -75,7 +80,8 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
            &NNGraph::RegisterAdditionalVarOpNamesAndTensorsToBeLoaded)
       .def_property_readonly("additional_var_names", &APINNGraphAdditionalVarNames)
       .def_property_readonly("additional_var_tensors", &APINNGraphAdditionalVarTensors)
-      .def("complie_and_init_runtime", &NNGraph::CompileAndInitRuntime);
+      .def("complie_and_init_runtime", &NNGraph::CompileAndInitRuntime)
+      .def("get_current_job_str", &APINNGraphGetCurrentSerializedJob);
 
   m.def("RunLazyNNGraph", &RunLazyNNGraph);
   m.def("SoftSyncNNGraphBuffers", &SoftSyncNNGraphBuffers);

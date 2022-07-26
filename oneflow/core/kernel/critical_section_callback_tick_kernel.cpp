@@ -33,7 +33,7 @@ class CriticalSectionCallbackTickKernel final : public Kernel {
 };
 
 void CriticalSectionCallbackTickKernel::ForwardDataContent(KernelContext* ctx) const {
-  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
+  auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
   CHECK(op_conf().has_critical_section_callback_tick_conf());
   const std::string& buffer_name = op_conf().critical_section_callback_tick_conf().buffer_name();
   std::shared_ptr<CriticalSectionInstance> foreign_critical_section_instance;

@@ -22,7 +22,6 @@ limitations under the License.
 #include <unordered_set>
 #include <glog/logging.h>
 #include "oneflow/core/common/type_traits.h"
-#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/hash_eq_trait_ptr.h"
 
 namespace oneflow {
@@ -127,12 +126,6 @@ struct SymbolUtil final {
 
   static const std::shared_ptr<const T>& GetOrCreatePtr(const T& obj) {
     return LocalThreadGetOr<CreateGlobalSymbol>(obj);
-  }
-  static Maybe<Symbol<T>> GetSymbolByExistedRawPtr(const T* ptr) {
-    CHECK_GT_OR_RETURN(ThreadLocalSymbolPtrSet()->count(ptr), 0) << "ptr: " << ptr;
-    Symbol<T> symbol;
-    symbol.ptr_ = ptr;
-    return symbol;
   }
 };
 

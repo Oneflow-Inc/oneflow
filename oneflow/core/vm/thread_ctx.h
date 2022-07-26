@@ -21,41 +21,28 @@ limitations under the License.
 #include "oneflow/core/intrusive/mutexed_list.h"
 #include "oneflow/core/common/notifier.h"
 #include "oneflow/core/vm/stream.h"
-#include "oneflow/core/vm/stream_runtime_desc.h"
 
 namespace oneflow {
 namespace vm {
 
-using PendingInstructionMutexedList =
-    intrusive::MutexedList<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)>;
-using PendingInstructionList =
-    intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)>;
+using WorkerPendingInstructionMutexedList =
+    intrusive::MutexedList<INTRUSIVE_FIELD(Instruction, worker_pending_instruction_hook_)>;
 
 class ThreadCtx final : public intrusive::Base {
  public:
-  void __Init__() { clear_stream_rt_desc(); }
-
   // types
   using StreamList = intrusive::List<INTRUSIVE_FIELD(Stream, thread_ctx_stream_hook_)>;
 
   // Getters
-  bool has_stream_rt_desc() const { return stream_rt_desc_ != nullptr; }
-  const StreamRtDesc& stream_rt_desc() const { return *stream_rt_desc_; }
   const StreamList& stream_list() const { return stream_list_; }
 
   // Setters
-  void set_stream_rt_desc(const StreamRtDesc* val) { stream_rt_desc_ = val; }
-  void clear_stream_rt_desc() { stream_rt_desc_ = nullptr; }
   StreamList* mut_stream_list() { return &stream_list_; }
-  PendingInstructionMutexedList* mut_pending_instruction_list() {
-    return &pending_instruction_list_;
+  WorkerPendingInstructionMutexedList* mut_worker_pending_instruction_list() {
+    return &worker_pending_instruction_list_;
   }
 
   // methods
-  void __Init__(const StreamRtDesc& stream_rt_desc) {
-    __Init__();
-    set_stream_rt_desc(&stream_rt_desc);
-  }
   size_t TryReceiveAndRun();
 
   Notifier* mut_notifier() { return &notifier_; }
@@ -66,18 +53,16 @@ class ThreadCtx final : public intrusive::Base {
 
   ThreadCtx()
       : intrusive_ref_(),
-        stream_rt_desc_(),
         stream_list_(),
-        pending_instruction_mutex_(),
-        pending_instruction_list_(&pending_instruction_mutex_),
+        worker_pending_instruction_mutex_(),
+        worker_pending_instruction_list_(&worker_pending_instruction_mutex_),
+        notifier_(),
         thread_ctx_hook_() {}
   intrusive::Ref intrusive_ref_;
-  // fields
-  const StreamRtDesc* stream_rt_desc_;
   // lists
   StreamList stream_list_;
-  std::mutex pending_instruction_mutex_;
-  PendingInstructionMutexedList pending_instruction_list_;
+  std::mutex worker_pending_instruction_mutex_;
+  WorkerPendingInstructionMutexedList worker_pending_instruction_list_;
   Notifier notifier_;
 
  public:

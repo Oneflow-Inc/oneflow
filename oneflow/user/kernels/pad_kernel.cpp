@@ -48,7 +48,7 @@ class PadKernel final : public OpKernel, public CudaGraphSupport {
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    if (y->shape().NumAxes() > 0 && y->shape().elem_cnt() == 0) {
+    if (y->shape_view().NumAxes() > 0 && y->shape_view().elem_cnt() == 0) {
       // if output is 0-shape tensor, than do nothing and return
       return;
     }
@@ -62,14 +62,14 @@ class PadKernel final : public OpKernel, public CudaGraphSupport {
 
     const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
     const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
-    const int64_t ndims = x->shape().NumAxes();
+    const int64_t ndims = x->shape_view().NumAxes();
     CHECK_EQ(padding_before.size(), ndims);
 
     std::unique_ptr<ep::primitive::ConstantPad> pad_primitive = NewConstantPadPrimitive(ctx);
     CHECK(pad_primitive);
 
-    pad_primitive->Launch(ctx->stream(), ndims, x->shape().ptr(), x->dptr(), padding_before.data(),
-                          padding_after.data(), value, y->mut_dptr());
+    pad_primitive->Launch(ctx->stream(), ndims, x->shape_view().ptr(), x->dptr(),
+                          padding_before.data(), padding_after.data(), value, y->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

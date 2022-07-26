@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/scalar.h"
@@ -119,9 +120,16 @@ class ScalarMathBaseFunctor {
     if (inplace) {
       JUST(CheckInplaceCastValid(x, casted_vec[0]));
       JUST(CheckInplaceValid(x));
+
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      (*outputs)[0] = x;
+      // TODO:(zhaoluyang)
+      // If the op need inplace operaton, and input tensor is non-contiguous,
+      // the interpreter will do input->contiguous() operaton for geting the correct result,
+      // therefore, output tensor and input will not inplaced. When scalar_math op/kernel
+      // support strided tensor as input, the problem above will be solved!
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(),
+                                  OpExprInterpContext(attrs, /*inplace=*/true)));
       return outputs->at(0);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
@@ -1012,9 +1020,9 @@ class Arange2Functor {
   }
 };
 
-class ConsistentArangeFunctor {
+class GlobalArangeFunctor {
  public:
-  ConsistentArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
+  GlobalArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
@@ -1064,13 +1072,75 @@ class ConsistentArangeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ConsistentArange2Functor {
+class GlobalArange2Functor {
  public:
-  Maybe<Tensor> operator()(const Scalar& limit, const Symbol<DType>& dtype,
+  Maybe<Tensor> operator()(const Scalar& limit, const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    return ConsistentArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
+    return GlobalArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
+  }
+};
+
+class HannWindowFunctor {
+ public:
+  Maybe<Tensor> operator()(const int64_t window_length, const bool& periodic,
+                           const Optional<Symbol<Device>>& device,
+                           const Optional<Symbol<DType>>& dtype, const bool& requires_grad) const {
+    autograd::AutoGradMode mode(false);
+    if (dtype.has_value() && !IsFloatingDataType(JUST(dtype)->data_type())) {
+      return Error::RuntimeError()
+             << "hann_window expects floating point dtypes, got: " << JUST(dtype)->name();
+    }
+    // TODO: speedup
+    auto result = JUST(Arange(1, 2, 1, dtype, device));
+    if (window_length != 1) {
+      if (periodic) {
+        const auto indice = JUST(Arange(window_length + 1, dtype, device));
+        const auto div_result = JUST(ScalarDiv(JUST(ScalarMul(2 * M_PI, indice)), window_length));
+        result = JUST(Slice(JUST(ScalarDiv(JUST(ScalarSub(1, JUST(Cos(div_result)), 1)), 2)), {0},
+                            {window_length}, {1}, /*enable_view_slice=*/false));
+      } else {
+        const auto indice = JUST(Arange(window_length, dtype, device));
+        const auto div_result =
+            JUST(ScalarDiv(JUST(ScalarMul(2 * M_PI, indice)), window_length - 1));
+        result = JUST(ScalarDiv(JUST(ScalarSub(1, JUST(Cos(div_result)), 1)), 2));
+      }
+    }
+    JUST(result->set_requires_grad(requires_grad));
+    return result;
+  }
+};
+
+class GlobalHannWindowFunctor {
+ public:
+  Maybe<Tensor> operator()(const int64_t window_length, const bool& periodic,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<SbpParallel>>& sbp,
+                           const Optional<Symbol<DType>>& dtype, const bool& requires_grad) const {
+    autograd::AutoGradMode mode(false);
+    JUST(CheckDeviceIdsIsValid(placement));
+    if (dtype.has_value() && !IsFloatingDataType(JUST(dtype)->data_type())) {
+      return Error::RuntimeError()
+             << "hann_window expects floating point dtypes, got: " << JUST(dtype)->name();
+    }
+    auto result = JUST(GlobalArange(1, 1 + window_length, 1, dtype, placement, sbp));
+    if (window_length != 1) {
+      if (periodic) {
+        const auto indice = JUST(GlobalArange(window_length + 8, dtype, placement, sbp));
+        const auto div_result = JUST(ScalarDiv(JUST(ScalarMul(2 * M_PI, indice)), window_length));
+        result = JUST(Slice(JUST(ScalarDiv(JUST(ScalarSub(1, JUST(Cos(div_result)), 1)), 2)), {0},
+                            {window_length}, {1}, /*enable_view_slice=*/false));
+      } else {
+        const auto indice = JUST(GlobalArange(window_length, dtype, placement, sbp));
+        const auto div_result =
+            JUST(ScalarDiv(JUST(ScalarMul(2 * M_PI, indice)), window_length - 1));
+        result = JUST(ScalarDiv(JUST(ScalarSub(1, JUST(Cos(div_result)), 1)), 2));
+      }
+    }
+    result = JUST(ToGlobal(result, placement, sbp, {}, true));
+    JUST(result->set_requires_grad(requires_grad));
+    return result;
   }
 };
 
@@ -1082,13 +1152,8 @@ class CastFunctor {
     if (x->dtype() == dtype) { return x; }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    if (x->is_local()) {
-      bool cast_pin_memory = JUST(x->device())->type() == "cuda" ? false : pin_memory;
-      return OpInterpUtil::Dispatch<Tensor>(
-          *op_, {x}, OpExprInterpContext(attrs, JUST(x->device()), /*pin_memory=*/cast_pin_memory));
-    } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-    }
+    JUST(attrs.SetAttr<bool>("pin_memory", pin_memory));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1424,7 +1489,8 @@ class NormFunctor {
   NormFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& ord,
                            const Optional<std::vector<int32_t>>& input_dim, const bool& keepdim,
-                           const Optional<Symbol<DType>>& dtype) const {
+                           const Optional<Symbol<DType>>& dtype, const bool& for_norm) const {
+    // If for_norm, the functor will be used to oneflow.norm.
     std::shared_ptr<one::Tensor> res;
     if (dtype) {
       Symbol<DType> dtype_val = JUST(dtype);
@@ -1442,8 +1508,9 @@ class NormFunctor {
       }
     }
     Scalar ord_sca;
+    bool ord_type = false;
     if (ord.has_value()) {
-      auto ord_type = (*JUST(ord)).IsIntegral();
+      ord_type = (*JUST(ord)).IsIntegral();
       if (ord_type) {
         ord_sca = Scalar((*JUST(ord)).As<double>());
       } else {
@@ -1473,6 +1540,17 @@ class NormFunctor {
       if (ord.has_value()) {
         CHECK_OR_RETURN(x->ndim() <= 2)
             << "linalg.norm(): input must be 1-D or 2-D when dim is None and ord is not None";
+        if (ord_type) {
+          const double ord_double = (*JUST(ord)).As<double>();
+          if (for_norm && (ord_double >= 2 || ord_double <= -2)) {
+            const int32_t num_axes = x->shape()->NumAxes();
+            std::vector<int32_t> axes_vec(num_axes);
+            std::iota(axes_vec.begin(), axes_vec.end(), 0);
+            return ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord_sca, false)), axes_vec,
+                                            /*keepdims=*/false)),
+                             1 / ord_double, false);
+          }
+        }
         if (x->ndim() == 1) {
           res = JUST(VectorNorm(x, ord_sca, input_dim, keepdim, dtype));
         } else {
@@ -1543,7 +1621,7 @@ class ScalarNormFunctor {
     }
     if (input_dim.IsIntegral()) {
       std::vector<int32_t> dim(1, input_dim.As<int>());
-      return functional::Norm(x, ord, dim, keepdim, dtype);
+      return functional::Norm(x, ord, dim, keepdim, dtype, /*for_norm=*/false);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "linalg_norm(): only supports int dim.";
     }
@@ -1654,7 +1732,7 @@ class SelectFunctor {
     int32_t pos_index = index >= 0 ? index : index + size;
 
     std::vector<int32_t> sizes(input->shape()->dim_vec().begin(), input->shape()->dim_vec().end());
-    const auto& stride = JUST(input->stride())->StrideVec();
+    const auto& stride = *JUST(input->stride());
     std::vector<int32_t> strides(stride.begin(), stride.end());
     auto storage_offset = JUST(input->storage_offset()) + pos_index * strides[pos_dim];
 
@@ -2130,7 +2208,7 @@ class TensorSplitVecFunctor {
       output[i] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/false));
       start[pos_dim] = end_idx;
     }
-    stop[pos_dim] = input->shape()->At(ndim - 1);
+    stop[pos_dim] = input->shape()->At(pos_dim);
     output[num_indices] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/false));
 
     return output;
@@ -2259,6 +2337,25 @@ class ErfinvInplaceFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class GeluWithApproximateFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::string& approximate) const {
+    if (approximate == "tanh") {
+      return JUST(
+          Mul(JUST(ScalarAdd(JUST(Tanh(JUST(ScalarMul(
+                                 JUST(Add(x,
+                                          JUST(ScalarMul(JUST(ScalarPow(x, Scalar(3.0), false)),
+                                                         Scalar(0.044715), false)),
+                                          1.0, false)),
+                                 Scalar(sqrt(2.0 / M_PI)), false)))),
+                             Scalar(1.0), 1.0, false)),
+              JUST(ScalarMul(x, 0.5, false))));
+    }
+    return Gelu(x);
+  }
 };
 
 class CumBaseFunctor {
@@ -2892,6 +2989,30 @@ class EinSumFunctor {
   }
 };
 
+class AddCDivFunctor {
+ public:
+  AddCDivFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& tensor1,
+                           const std::shared_ptr<one::Tensor>& tensor2, const Scalar& value) const {
+    return JUST(Add(input, JUST(ScalarMul(JUST(Div(tensor1, tensor2)), value, false)), 1, false));
+  }
+};
+
+class InplaceAddCDivFunctor {
+ public:
+  InplaceAddCDivFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& tensor1,
+                           const std::shared_ptr<one::Tensor>& tensor2, const Scalar& value) const {
+    JUST(CheckInplaceValid(input));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    JUST(VectorAt(*outputs, 0)) = input;
+    JUST(Add(input, JUST(ScalarMul(JUST(Div(tensor1, tensor2)), value, false)), 1, true));
+    return JUST(VectorAt(*outputs, 0));
+  }
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -2902,6 +3023,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarSubFunctor, ScalarSub2Functor>("ScalarSub");
   m.add_functor<ScalarMulFunctor, ScalarMul2Functor>("ScalarMul");
   m.add_functor<InplaceScalarMulFunctor>("InplaceScalarMul");
+  m.add_functor<AddCDivFunctor>("AddCDiv");
+  m.add_functor<InplaceAddCDivFunctor>("InplaceAddCDiv");
   m.add_functor<ScalarDivFunctor, ScalarDiv2Functor>("ScalarDiv");
   m.add_functor<InplaceScalarDivFunctor>("InplaceScalarDiv");
   m.add_functor<ScalarPowFunctor>("ScalarPow");
@@ -2942,7 +3065,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<Transpose2dimFunctor>("Swapaxes");
   m.add_functor<Transpose2dimFunctor>("Swapdims");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
-  m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
+  m.add_functor<GlobalArangeFunctor, GlobalArange2Functor>("GlobalArange");
+  m.add_functor<HannWindowFunctor>("HannWindow");
+  m.add_functor<GlobalHannWindowFunctor>("GlobalHannWindow");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampInplaceFunctor>("ClampInplace");
@@ -2991,6 +3116,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CumProdFunctor>("Cumprod");
   m.add_functor<CumProdGradFunctor>("CumprodGrad");
   m.add_functor<EinSumFunctor>("EinSum");
+  m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
 };
 
 }  // namespace functional

@@ -37,8 +37,8 @@ class CpuExpandKernel final : public user_op::OpKernel {
       return;
     }
     std::vector<int32_t> in_shape;
-    in_shape.resize(in->shape().NumAxes());
-    for (int i = 0; i < in->shape().NumAxes(); ++i) { in_shape[i] = in->shape().At(i); }
+    in_shape.resize(in->shape_view().NumAxes());
+    for (int i = 0; i < in->shape_view().NumAxes(); ++i) { in_shape[i] = in->shape_view().At(i); }
 
     std::vector<int32_t> out_shape;
     std::vector<int32_t> expand_stride;
@@ -46,8 +46,8 @@ class CpuExpandKernel final : public user_op::OpKernel {
 
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
-    const int32_t out_dims = out->shape().NumAxes();
-    const int32_t out_size = out->shape().elem_cnt();
+    const int32_t out_dims = out->shape_view().NumAxes();
+    const int32_t out_size = out->shape_view().elem_cnt();
     int32_t out_stride[out_dims];
     InitStride(out_stride, out_shape.data(), out_dims);
     for (int32_t i = 0; i < out_size; ++i) {
@@ -88,8 +88,8 @@ class CpuExpandGradKernel final : public user_op::OpKernel {
         ctx->Attr<std::vector<int32_t>>("logical_expand_shape");
 
     std::vector<int32_t> in_shape;
-    in_shape.resize(in->shape().NumAxes());
-    for (int i = 0; i < in->shape().NumAxes(); ++i) { in_shape[i] = in->shape().At(i); }
+    in_shape.resize(in->shape_view().NumAxes());
+    for (int i = 0; i < in->shape_view().NumAxes(); ++i) { in_shape[i] = in->shape_view().At(i); }
     std::vector<int32_t> out_shape;
     std::vector<int32_t> expand_stride;
     CHECK_JUST(getOutShapeAndStrideForBp(logical_out_shape, logical_expand_shape, in_shape,
@@ -98,12 +98,12 @@ class CpuExpandGradKernel final : public user_op::OpKernel {
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
 
-    const int32_t in_dims = in->shape().NumAxes();
-    const int32_t in_size = in->shape().elem_cnt();
+    const int32_t in_dims = in->shape_view().NumAxes();
+    const int32_t in_size = in->shape_view().elem_cnt();
     int32_t in_stride[in_dims];
     InitStride(in_stride, in_shape.data(), in_dims);
 
-    std::fill(out_ptr, out_ptr + out->shape().elem_cnt(), static_cast<T>(0));
+    std::fill(out_ptr, out_ptr + out->shape_view().elem_cnt(), static_cast<T>(0));
     for (int i = 0; i < in_size; ++i) {
       int offset = OffsetToNdIndexToOffset(i, in_stride, expand_stride.data(), in_dims);
       out_ptr[offset] += in_ptr[i];

@@ -29,7 +29,7 @@ import os
 os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "1"
 
 
-def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
+def _test_nccl_logical_send_recv_2d(test_case, src_nd_sbp, dst_nd_sbp):
     # can not process p in dst
     if flow.sbp.partial_sum() in dst_nd_sbp:
         return
@@ -62,7 +62,7 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
     # check graph boxing
     flow.boxing.nccl.enable_use_compute_stream(True)
 
-    class TestNcclLogicalSendRecvGraph(flow.nn.Graph):
+    class TestNcclLogicalSendRecv2DGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
 
@@ -70,7 +70,7 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
             y = x.to_global(sbp=dst_nd_sbp, placement=placement)
             return y
 
-    graph = TestNcclLogicalSendRecvGraph()
+    graph = TestNcclLogicalSendRecv2DGraph()
     # graph.debug()
     y = graph(x)
     out_np = y.numpy()
@@ -84,7 +84,7 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
     test_case.assertTrue(np.array_equal(out_np, in_np))
 
 
-def gen_nd_sbp():
+def gen_2d_sbp():
     sbp_list = [
         flow.sbp.partial_sum(),
         flow.sbp.broadcast(),
@@ -101,13 +101,85 @@ def gen_nd_sbp():
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestNcclLogicalSendRecv(flow.unittest.TestCase):
-    def test_nccl_logical_send_recv(test_case):
+class TestNcclLogicalSendRecv2D(flow.unittest.TestCase):
+    def test_nccl_logical_send_recv_2d(test_case):
         arg_dict = OrderedDict()
-        arg_dict["src_nd_sbp"] = gen_nd_sbp()
-        arg_dict["dst_nd_sbp"] = gen_nd_sbp()
+        arg_dict["src_nd_sbp"] = gen_2d_sbp()
+        arg_dict["dst_nd_sbp"] = gen_2d_sbp()
         for arg in GenArgList(arg_dict):
-            _test_nccl_logical_send_recv(test_case, *arg)
+            _test_nccl_logical_send_recv_2d(test_case, *arg)
+
+
+def _test_nccl_logical_send_recv_1d(test_case, src_nd_sbp, dst_nd_sbp):
+    # can not process p in dst
+    if flow.sbp.partial_sum() in dst_nd_sbp:
+        return
+
+    # skip src == dst
+    if src_nd_sbp == dst_nd_sbp:
+        return
+
+    # input
+    placement = flow.placement("cuda", ranks=[0, 1])
+    local_np = np.arange(2 * 2 * 2).reshape(2, 2, 2)
+    x = flow.tensor(local_np, sbp=src_nd_sbp, placement=placement)
+
+    # check eager boxing
+    eager_out = x.to_global(sbp=dst_nd_sbp, placement=placement)
+    test_case.assertTrue(np.array_equal(eager_out.numpy(), x.numpy()))
+
+    # check graph boxing
+    flow.boxing.nccl.enable_use_compute_stream(True)
+
+    class TestNcclLogicalSendRecv1DGraph(flow.nn.Graph):
+        def __init__(self):
+            super().__init__()
+
+        def build(self, x):
+            y = x.to_global(sbp=dst_nd_sbp, placement=placement)
+            return y
+
+    graph = TestNcclLogicalSendRecv1DGraph()
+    # graph.debug(0)
+    y = graph(x)
+    out_np = y.numpy()
+    in_np = x.numpy()
+    # if flow.env.get_rank() == 0:
+    #    print("src sbp ", src_nd_sbp, ", dst sbp ", dst_nd_sbp)
+    #    print(graph)
+    #    equal = np.array_equal(out_np, in_np)
+    #    if not equal:
+    #        print("in ", in_np)
+    #        print("out ", out_np)
+    #    print("====================")
+    test_case.assertTrue(np.array_equal(out_np, in_np))
+
+
+def gen_1d_sbp():
+    sbp_list = [
+        flow.sbp.partial_sum(),
+        flow.sbp.broadcast(),
+        flow.sbp.split(0),
+        flow.sbp.split(1),
+        flow.sbp.split(2),
+    ]
+    nd_sbp_list = []
+    for sbp0 in sbp_list:
+        nd_sbp_list.append(
+            [sbp0,]
+        )
+    return nd_sbp_list
+
+
+@flow.unittest.skip_unless_1n2d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestNcclLogicalSendRecv1D(flow.unittest.TestCase):
+    def test_nccl_logical_send_recv_1d(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["src_nd_sbp"] = gen_1d_sbp()
+        arg_dict["dst_nd_sbp"] = gen_1d_sbp()
+        for arg in GenArgList(arg_dict):
+            _test_nccl_logical_send_recv_1d(test_case, *arg)
 
 
 if __name__ == "__main__":

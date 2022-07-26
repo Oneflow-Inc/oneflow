@@ -14,6 +14,7 @@ def OneFlow_Dialect : Dialect {
         "func::FuncDialect"
     ];
     let hasConstantMaterializer = 1;
+    let useDefaultTypePrinterParser = 1;
 }
 
 #endif // ONEFLOW_DIALECT

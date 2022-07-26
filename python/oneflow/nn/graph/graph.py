@@ -19,12 +19,13 @@ import time
 import inspect
 from collections import OrderedDict
 from functools import partial
-from typing import Dict, Optional, Union, List
+from typing import Dict, Optional, Union, List, Callable
 import weakref
 from google.protobuf import text_format
 
 import oneflow
 import oneflow._oneflow_internal
+import oneflow.core.job.job_pb2 as job_pb
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx
@@ -125,6 +126,8 @@ class Graph(object):
         self._forward_job_proto = None
         # forward, backward and optimized graph job proto
         self._full_job_proto = None
+        # completed graph job proto
+        self._compiled_job_proto = None
         self._job_id = None
         self._args_repr = []
         self._outs_repr = []
@@ -132,8 +135,14 @@ class Graph(object):
         self._debug_min_s_level = 2
         self._debug_max_v_level = 0
         self._debug_max_py_stack_depth = 2
+        self._debug_op_repr_with_py_stack = False
+        self._debug_only_user_py_stack = True
         self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
+
+        # For graph level op rewrite
+        self._unique_global_op_dict = dict()
+        self._unique_identity_op_dict = dict()
 
         self._session = session_ctx.GetDefaultSession()
         assert type(self._session) is MultiClientSession
@@ -212,6 +221,9 @@ class Graph(object):
 
         if not self._is_compiled:
             self._compile(*args, **kwargs)
+            self.__print(
+                0, 2, lambda: f"{self.name} with operators:\n" + self.__repr__()
+            )
 
         return self.__run(*args, **kwargs)
 
@@ -410,10 +422,12 @@ class Graph(object):
 
     def debug(
         self,
-        v_level: int = 0,
+        v_level: int = -1,
         *,
         ranks: Optional[Union[int, List[int]]] = None,
         max_py_stack_depth: int = 2,
+        only_user_py_stack=True,
+        op_repr_with_py_stack=False,
     ) -> None:
         r"""Open or close debug mode of the graph.
 
@@ -432,6 +446,10 @@ class Graph(object):
         Use ``ranks`` to choose which rank to print the debug information.
 
         Use ``max_py_stack_depth`` to specify the max Python stack depth for the debug information.
+        
+        Use ``only_user_py_stack`` to only print the operators' locations which are from users' code or models.
+
+        Use ``op_repr_with_py_stack`` to print operators' locations when printing nn.Graph's repr.
 
         For example:
 
@@ -445,13 +463,17 @@ class Graph(object):
             v_level (int): choose verbose debug info level, default v_level is 0, max v_level is 3. v_level can be set to -1 to close the debug mode.
             ranks (int or list(int)): choose ranks to print the debug information. Default rank ``0``.
                 You can choose any valid rank. Ranks equals ``-1`` means debug on all ranks.
-            max_py_stack_depth(int): the maximum depth for the Python stack debug information. Default: ``2``
+            max_py_stack_depth(int): the maximum depth for the Python stack debug information. Default: ``2``.
+            only_user_py_stack(bool): only to print the operators' locations from users' code. Default: ``True``.
+            op_repr_with_py_stack(bool):  print operators' locations when printing nn.Graph's repr. Default: ``False``. 
         """
         assert isinstance(v_level, int)
         assert v_level >= -1, "The min verbose debug info level is -1."
         assert v_level <= 3, "The max verbose debug info level is 3."
         assert max_py_stack_depth >= 0, "The min max stack depth is 0."
         assert isinstance(max_py_stack_depth, int)
+        assert isinstance(only_user_py_stack, bool)
+        assert isinstance(op_repr_with_py_stack, bool)
 
         if ranks is None:
             rank_list = [0]
@@ -470,9 +492,17 @@ class Graph(object):
                 self._debug_max_v_level = max(0, v_level)
             for name, block in self._blocks.items():
                 assert block.type == BlockType.MODULE
-                block.debug(v_level, ranks=ranks, max_py_stack_depth=max_py_stack_depth)
+                block.debug(
+                    v_level,
+                    ranks=ranks,
+                    max_py_stack_depth=max_py_stack_depth,
+                    only_user_py_stack=only_user_py_stack,
+                    op_repr_with_py_stack=op_repr_with_py_stack,
+                )
 
         self._debug_max_py_stack_depth = max_py_stack_depth
+        self._debug_op_repr_with_py_stack = op_repr_with_py_stack
+        self._debug_only_user_py_stack = only_user_py_stack
 
     def __repr__(self):
         r"""For printing the graph structure.
@@ -525,23 +555,29 @@ class Graph(object):
         return shallow_repr
 
     def _ops_repr(self):
-        r"""Generate this graph's operators' string representation
+        r"""Generate operators' string representation of this graph
         """
-        if self._is_compiled:
-            conf = self._graph_proto.module_name2module_conf[
-                self._config_proto.job_name
-            ]
-            return operators_repr(conf.ops)
+        if self._is_compiled and self._compiled_graph_proto is not None:
+            module_conf = self._compiled_graph_proto.module_name2module_conf[self.name]
+            return operators_repr(
+                module_conf.ops,
+                self._compiled_graph_proto,
+                self._debug_op_repr_with_py_stack,
+            )
+
         return []
 
-    def __print(self, s_level=2, v_level=0, msg: str = ""):
+    def __print(self, s_level=2, v_level=0, msg=None):
         r"""Do print according to info level."""
         assert isinstance(s_level, int)
         assert isinstance(v_level, int)
-        assert isinstance(msg, str)
+        assert isinstance(msg, str) or isinstance(msg, Callable)
         if s_level >= self._debug_min_s_level:
             if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
-                print(msg, flush=True)
+                if isinstance(msg, str):
+                    print(msg, flush=True)
+                elif isinstance(msg, Callable):
+                    print(msg(), flush=True)
 
     @property
     def _config_proto(self):
@@ -580,6 +616,17 @@ class Graph(object):
         ), "nn.Graph's full graph proto can only be set before the first compilation."
         self._full_job_proto = full_job_proto
         self._c_nn_graph.job = full_job_proto.SerializeToString()
+
+    @property
+    def _compiled_graph_proto(self):
+        if not self._is_compiled:
+            self.__print(
+                2,
+                0,
+                f"[ERROR]{self._shallow_repr()} has not been compiled, so it's compiled graph proto is None."
+                " You can call the graph to trigger it's compilation.",
+            )
+        return self._compiled_job_proto
 
     def _generate_name(self):
         child_name = self.__class__.__name__
@@ -732,6 +779,7 @@ class Graph(object):
                 self._debug_max_v_level,
                 self._debug,
                 self._debug_max_py_stack_depth,
+                self._debug_only_user_py_stack,
             ):
                 outputs = self.__build_graph(*args, **kwargs)
             build_graph_end = time.perf_counter()
@@ -747,12 +795,7 @@ class Graph(object):
             return outputs
         except:
             self.__print(
-                2,
-                0,
-                "[ERROR]"
-                + self._shallow_repr()
-                + " building graph got error: "
-                + sys_exc_error_msg(),
+                2, 0, "[ERROR]" + self._shallow_repr() + " building graph got error."
             )
             raise
 
@@ -780,8 +823,14 @@ class Graph(object):
                 self._debug_max_v_level,
                 self._debug,
                 self._debug_max_py_stack_depth,
+                self._debug_only_user_py_stack,
             ):
                 self._c_nn_graph.complie_and_init_runtime()
+            # Get compiled job
+            compiled_job_str = self._c_nn_graph.get_current_job_str()
+            self._compiled_job_proto = job_pb.Job()
+            self._compiled_job_proto.ParseFromString(compiled_job_str)
+
             compile_and_init_end = time.perf_counter()
             self.__print(
                 0,
@@ -794,12 +843,7 @@ class Graph(object):
             )
         except:
             self.__print(
-                2,
-                0,
-                "[ERROR]"
-                + self._shallow_repr()
-                + " building plan got error: "
-                + sys_exc_error_msg(),
+                2, 0, "[ERROR]" + self._shallow_repr() + " building plan got error."
             )
             raise
 
@@ -949,6 +993,10 @@ class Graph(object):
             self._c_nn_graph.register_variable_op_names_and_tensors(
                 state_op_names, self._state_tensor_tuple
             )
+
+        # Clear useless dict used in graph build.
+        self._unique_global_op_dict.clear()
+        self._unique_identity_op_dict.clear()
 
         # Always pack outputs to remain type of outputs
         return (
@@ -1336,6 +1384,13 @@ class Graph(object):
         )
 
     def __del__(self):
+        # Ensure vm has finished running this graph.
+        if self._session._env.is_shutting_down():
+            # After python shutting down, it's not safe to call oneflow._oneflow_internal.eager.
+            # But shutting down will do sync in SwitchToShuttingDownPhase.
+            # So it's safe to skip sync here.
+            return
+        oneflow._oneflow_internal.eager.Sync()
         current_env_enable_mlir_inference_opt = os.getenv(
             "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
         )
@@ -1345,13 +1400,6 @@ class Graph(object):
             os.environ[
                 "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
             ] = self.env_enable_mlir_inference_opt
-        # Ensure vm has finished running this graph.
-        if self._session._env.is_shutting_down():
-            # After python shutting down, it's not safe to call oneflow._oneflow_internal.eager.
-            # But shutting down will do sync in SwitchToShuttingDownPhase.
-            # So it's safe to skip sync here.
-            return
-        oneflow._oneflow_internal.eager.Sync()
         oneflow._oneflow_internal.ClearVariableTensorMgr()
 
     def __ensure_input_tensors_contiguous(self, *args, **kwargs):

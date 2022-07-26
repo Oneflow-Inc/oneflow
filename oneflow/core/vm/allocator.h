@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_ALLOCATOR_H_
 
 #include <cstddef>
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 namespace vm {
@@ -25,9 +26,9 @@ class Allocator {
  public:
   virtual ~Allocator() = default;
 
-  virtual void Allocate(char** mem_ptr, std::size_t size) = 0;
+  virtual Maybe<void> Allocate(char** mem_ptr, std::size_t size) = 0;
   virtual void Deallocate(char* mem_ptr, std::size_t size) = 0;
-  virtual void DeviceReset() {}
+  virtual void DeviceReset() = 0;
 
  protected:
   Allocator() = default;

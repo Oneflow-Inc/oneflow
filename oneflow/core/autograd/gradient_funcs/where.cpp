@@ -56,7 +56,7 @@ Maybe<void> Where::Capture(WhereCaptureState* ctx, const TensorTuple& inputs,
 Maybe<void> Where::Apply(const WhereCaptureState* ctx, const TensorTuple& out_grads,
                          TensorTuple* in_grads) const {
   if ((!ctx->requires_grad_x) && (!ctx->requires_grad_y)) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   const std::shared_ptr<oneflow::one::Tensor>& condition = ctx->SavedTensors().at(0);
   const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(1);
   const std::shared_ptr<oneflow::one::Tensor>& y = ctx->SavedTensors().at(2);
@@ -93,7 +93,7 @@ class WhereScalarX : public WhereScalar {
   Maybe<void> Apply(const WhereScalarCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     const std::shared_ptr<oneflow::one::Tensor>& condition = ctx->SavedTensors().at(0);
     const std::shared_ptr<oneflow::one::Tensor>& y = ctx->SavedTensors().at(1);
 
@@ -110,7 +110,7 @@ class WhereScalarY : public WhereScalar {
   Maybe<void> Apply(const WhereScalarCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     const std::shared_ptr<oneflow::one::Tensor>& condition = ctx->SavedTensors().at(0);
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(1);
 

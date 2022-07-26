@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
 #include "oneflow/core/ep/include/primitive/batch_matmul.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/cuda/atomic.cuh"
 #include <mma.h>
 
 namespace oneflow {
@@ -109,8 +110,8 @@ void ConcatFeatures(user_op::KernelComputeContext* ctx, int64_t dst_rows, int64_
   int64_t out_col_offset = 0;
   for (int64_t i = 0; i < feature_input_size; ++i) {
     const user_op::Tensor* feature = ctx->Tensor4ArgNameAndIndex("features", i);
-    const int64_t feature_rows = feature->shape().At(0);
-    const int64_t feature_cols = feature->shape().Count(1);
+    const int64_t feature_rows = feature->shape_view().At(0);
+    const int64_t feature_cols = feature->shape_view().Count(1);
     DimVector dst_pos_vec = {0, out_col_offset};
     DimVector src_shape = {feature_rows, feature_cols};
     DimVector src_pos_vec = {0, 0};
@@ -171,8 +172,8 @@ void ConcatFeaturesGrad(user_op::KernelComputeContext* ctx, const int64_t batch_
   int64_t in_col_offset = 0;
   for (int64_t i = 0; i < ctx->output_size("features_grad"); ++i) {
     user_op::Tensor* feature_grad = ctx->Tensor4ArgNameAndIndex("features_grad", i);
-    const int64_t feature_grad_rows = feature_grad->shape().At(0);
-    const int64_t feature_grad_cols = feature_grad->shape().Count(1);
+    const int64_t feature_grad_rows = feature_grad->shape_view().At(0);
+    const int64_t feature_grad_cols = feature_grad->shape_view().Count(1);
     DimVector dst_shape = {feature_grad_rows, feature_grad_cols};
     DimVector dst_pos_vec = {0, 0};
     DimVector src_pos_vec = {0, in_col_offset};
@@ -210,6 +211,10 @@ struct DotFwdParam {
   const T* in[max_in];
   int32_t in_feature_dim[max_in];
   int32_t dim_start_offset[max_in];
+  const T* sparse_feature;
+  const uint32_t* sparse_indices;
+  int32_t sparse_dim;
+  int32_t sparse_dim_start;
   int32_t features_dim;
   const T* output_concat;
   int32_t output_concat_size;
@@ -293,7 +298,13 @@ __global__ void DotFeatureInteractionWmmaImpl(
   const int output_concat_size = param.output_concat_size;
   const T* batch_output_concat =
       (param.output_concat) ? (param.output_concat + batch_idx * output_concat_size) : nullptr;
+  const uint32_t* batch_sparse_indices =
+      (param.sparse_indices) ? (param.sparse_indices + batch_idx * param.sparse_dim) : nullptr;
+  const Pack<T, pack_size>* sparse_feature_pack =
+      (param.sparse_feature) ? reinterpret_cast<const Pack<T, pack_size>*>(param.sparse_feature)
+                             : nullptr;
   for (int col = threadIdx.x; col < vector_num_pack; col += blockDim.x) {
+// load dense feature to shared_mem
 #pragma unroll
     for (int i = 0; i < max_in; ++i) {
       if (i >= param.num_in) { break; }
@@ -313,6 +324,22 @@ __global__ void DotFeatureInteractionWmmaImpl(
           }
           buf_pack[buf_row * in_shared_mem_cols_num_pack + col] = pack_in_val;
         }
+      }
+    }
+    // load sparse feature to shared_mem
+    for (int j = threadIdx.y * kUnrollDim; j < param.sparse_dim; j += blockDim.y * kUnrollDim) {
+#pragma unroll
+      for (int k = 0; k < kUnrollDim; ++k) {
+        int in_row = j + k;
+        if (in_row >= param.sparse_dim) { break; }
+        int buf_row = param.sparse_dim_start + in_row;
+        int sparse_in_row = batch_sparse_indices[in_row];
+        Pack<T, pack_size> pack_in_val = sparse_feature_pack[sparse_in_row * vector_num_pack + col];
+#pragma unroll
+        for (int t = 0; t < pack_size; ++t) {
+          pack_in_val.elem[t] = wmma.Convert(pack_in_val.elem[t]);
+        }
+        buf_pack[buf_row * in_shared_mem_cols_num_pack + col] = pack_in_val;
       }
     }
   }
@@ -432,6 +459,11 @@ struct DotBwdParam {
   const T* in[max_in];
   T* in_grad[max_in];
   T* output_concat_grad;
+  const T* sparse_feature;
+  const uint32_t* sparse_indices;
+  int32_t sparse_dim;
+  int32_t sparse_dim_start;
+  T* sparse_feature_grad;
   int32_t output_concat_size;
   int32_t in_feature_dim[max_in];
   int32_t dim_start_offset[max_in];
@@ -439,12 +471,30 @@ struct DotBwdParam {
   int32_t num_in;
 };
 
-template<typename T, typename ComputeType, int32_t max_in, int32_t pack_size, int mn_tile_dim,
-         int k_tile_dim>
+template<typename T, typename ComputeType, int32_t pack_size>
+__device__ __inline__ void AtomicAdd(Pack<T, pack_size>* address,
+                                     Pack<ComputeType, pack_size> val) {
+#pragma unroll
+  for (int i = 0; i < pack_size; ++i) {
+    cuda::atomic::Add(reinterpret_cast<T*>(address) + i, static_cast<T>(val.elem[i]));
+  }
+}
+
+template<>
+__device__ __inline__ void AtomicAdd<half, float, 2>(Pack<half, 2>* address, Pack<float, 2> val) {
+  half2 h2_val;
+  h2_val.x = static_cast<half>(val.elem[0]);
+  h2_val.y = static_cast<half>(val.elem[1]);
+  cuda::atomic::Add(reinterpret_cast<half2*>(address), h2_val);
+}
+
+template<typename T, typename ComputeType, int32_t max_in, int32_t pack_size,
+         int32_t sparse_grad_pack_size, int mn_tile_dim, int k_tile_dim>
 __global__ void DotFeatureInteractionBackwardWmmaImpl(
     int m_num_tiles, int n_num_tiles, int k_num_tiles, int64_t batch_size, int padded_num_rows,
-    int vector_num_pack, int padded_vector_num_pack, int out_num_cols, int in_shared_mem_cols,
-    int in_shared_mem_cols_num_pack, int matrix_out_grad_shared_mem_cols, int offset,
+    int vector_num_pack, int vector_num_sparse_grad_pack, int padded_vector_num_pack,
+    int out_num_cols, int in_shared_mem_cols, int in_shared_mem_cols_num_pack,
+    int in_shared_mem_cols_num_sparse_grad_pack, int matrix_out_grad_shared_mem_cols, int offset,
     DotBwdParam<T, max_in> param) {
 #if __CUDA_ARCH__ >= 700
   Wmma<T, ComputeType, mn_tile_dim, mn_tile_dim, k_tile_dim, nvcuda::wmma::row_major,
@@ -466,6 +516,12 @@ __global__ void DotFeatureInteractionBackwardWmmaImpl(
   T* batch_output_concat_grad = (param.output_concat_grad)
                                     ? (param.output_concat_grad + batch_idx * output_concat_size)
                                     : nullptr;
+  const uint32_t* batch_sparse_indices =
+      (param.sparse_indices) ? (param.sparse_indices + batch_idx * param.sparse_dim) : nullptr;
+  const Pack<T, pack_size>* sparse_feature_pack =
+      (param.sparse_feature) ? reinterpret_cast<const Pack<T, pack_size>*>(param.sparse_feature)
+                             : nullptr;
+
   int features_dim = param.features_dim;
   // 1.split out_grad to concat_out_grad and matrix_out_grad buf
   int thread_id = threadIdx.x + threadIdx.y * blockDim.x;
@@ -520,6 +576,22 @@ __global__ void DotFeatureInteractionBackwardWmmaImpl(
         }
       }
     }
+    // load sparse feature to shared_mem
+    for (int j = threadIdx.y * kUnrollDim; j < param.sparse_dim; j += blockDim.y * kUnrollDim) {
+#pragma unroll
+      for (int k = 0; k < kUnrollDim; ++k) {
+        int in_row = j + k;
+        if (in_row >= param.sparse_dim) { break; }
+        int buf_row = param.sparse_dim_start + in_row;
+        int sparse_in_row = batch_sparse_indices[in_row];
+        Pack<T, pack_size> pack_in_val = sparse_feature_pack[sparse_in_row * vector_num_pack + col];
+#pragma unroll
+        for (int t = 0; t < pack_size; ++t) {
+          pack_in_val.elem[t] = wmma.Convert(pack_in_val.elem[t]);
+        }
+        in_buf_pack[buf_row * in_shared_mem_cols_num_pack + col] = pack_in_val;
+      }
+    }
   }
   Pack<T, pack_size> zero;
 #pragma unroll
@@ -559,6 +631,7 @@ __global__ void DotFeatureInteractionBackwardWmmaImpl(
   __syncthreads();
 
   // 4.split in_grad buf to dx
+  // shared_mem to dense dx
   for (int col = threadIdx.x; col < vector_num_pack; col += blockDim.x) {
 #pragma unroll
     for (int i = 0; i < max_in; ++i) {
@@ -584,12 +657,34 @@ __global__ void DotFeatureInteractionBackwardWmmaImpl(
       }
     }
   }
+  // shared_mem to sparse dx, sparse in grad use sparse_grad_pack_size
+  Pack<ComputeType, sparse_grad_pack_size>* in_grad_buf_sparse_grad_pack =
+      reinterpret_cast<Pack<ComputeType, sparse_grad_pack_size>*>(in_grad_buf);
+  Pack<T, sparse_grad_pack_size>* sparse_feature_grad_pack =
+      reinterpret_cast<Pack<T, sparse_grad_pack_size>*>(param.sparse_feature_grad);
+  for (int col = threadIdx.x; col < vector_num_sparse_grad_pack; col += blockDim.x) {
+    for (int j = threadIdx.y * kUnrollDim; j < param.sparse_dim; j += blockDim.y * kUnrollDim) {
+#pragma unroll
+      for (int k = 0; k < kUnrollDim; ++k) {
+        int in_row = j + k;
+        if (in_row >= param.sparse_dim) { break; }
+        int buf_row = param.sparse_dim_start + in_row;
+        int sparse_in_row = batch_sparse_indices[in_row];
+        Pack<ComputeType, sparse_grad_pack_size> buf_grad_val =
+            in_grad_buf_sparse_grad_pack[buf_row * in_shared_mem_cols_num_sparse_grad_pack + col];
+        AtomicAdd<T, ComputeType, sparse_grad_pack_size>(
+            sparse_feature_grad_pack + sparse_in_row * vector_num_sparse_grad_pack + col,
+            buf_grad_val);
+      }
+    }
+  }
+
 #else
   __trap();
 #endif  // __CUDA_ARCH__ >= 700
 }
 
-template<typename T, int max_in, int32_t pack_size>
+template<typename T, int max_in, int32_t pack_size, int32_t sparse_grad_pack_size>
 struct DotFeatureInteractionBackwardKernel {
   static bool Launch(ep::Stream* stream, int64_t batch_size, int concated_padded_dim,
                      int vector_size, int out_num_cols, bool self_interaction,
@@ -619,32 +714,90 @@ struct DotFeatureInteractionBackwardKernel {
     const int vector_num_pack = vector_size / pack_size;
     const int padded_vector_num_pack = padded_vector_size / pack_size;
     const int in_shared_mem_cols_num_pack = in_shared_mem_num_cols / pack_size;
+    const int vector_num_sparse_grad_pack = vector_size / sparse_grad_pack_size;
+    const int in_shared_mem_cols_num_sparse_grad_pack =
+        in_shared_mem_num_cols / sparse_grad_pack_size;
+
     int max_active_blocks;
     OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
         &max_active_blocks,
-        DotFeatureInteractionBackwardWmmaImpl<T, ComputeType, max_in, pack_size, mn_tile_dim,
-                                              k_tile_dim>,
+        DotFeatureInteractionBackwardWmmaImpl<T, ComputeType, max_in, pack_size,
+                                              sparse_grad_pack_size, mn_tile_dim, k_tile_dim>,
         block_size, total_shared_mem_bytes));
     if (max_active_blocks <= 0) { return false; }
     cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
-    DotFeatureInteractionBackwardWmmaImpl<T, ComputeType, max_in, pack_size, mn_tile_dim,
-                                          k_tile_dim>
+    DotFeatureInteractionBackwardWmmaImpl<T, ComputeType, max_in, pack_size, sparse_grad_pack_size,
+                                          mn_tile_dim, k_tile_dim>
         <<<num_blocks, dim3(block_dim_x, block_dim_y), total_shared_mem_bytes, cuda_stream>>>(
             m_num_tiles, n_num_tiles, k_num_tiles, batch_size, concated_padded_dim, vector_num_pack,
-            padded_vector_num_pack, out_num_cols, in_shared_mem_num_cols,
-            in_shared_mem_cols_num_pack, matrix_out_grad_shared_mem_cols, offset, param);
+            vector_num_sparse_grad_pack, padded_vector_num_pack, out_num_cols,
+            in_shared_mem_num_cols, in_shared_mem_cols_num_pack,
+            in_shared_mem_cols_num_sparse_grad_pack, matrix_out_grad_shared_mem_cols, offset,
+            param);
 
     return true;
   }
 };
+
+template<typename T, size_t pack>
+__global__ void MemsetGpu(int64_t parallel_num, int64_t vector_size, const uint32_t* num_valid,
+                          T* dst) {
+  size_t count = 0;
+  for (int i = 0; i < parallel_num; ++i) { count += num_valid[i] * vector_size; }
+  const size_t pack_count = count / pack;
+  Pack<T, pack> pack_value;
+  for (int i = 0; i < pack; ++i) { pack_value.elem[i] = static_cast<T>(0); }
+  auto* pack_dst = reinterpret_cast<Pack<T, pack>*>(dst);
+  CUDA_1D_KERNEL_LOOP_T(size_t, i, pack_count) { pack_dst[i] = pack_value; }
+  T* tail_dst = dst + pack_count * pack;
+  const size_t tail_count = count - pack_count * pack;
+  CUDA_1D_KERNEL_LOOP_T(size_t, i, tail_count) { tail_dst[i] = static_cast<T>(0); }
+}
+
+template<typename T, size_t pack>
+typename std::enable_if<(pack != 0), void>::type LaunchPackMemsetGpu(cudaStream_t stream,
+                                                                     const uint32_t* num_valid,
+                                                                     T* ptr, size_t count,
+                                                                     int64_t vector_size,
+                                                                     int64_t parallel_num) {
+  MemsetGpu<T, pack><<<BlocksNum4ThreadsNum(count / pack), kCudaThreadsNumPerBlock, 0, stream>>>(
+      parallel_num, vector_size, num_valid, ptr);
+}
+
+template<typename T, size_t pack>
+typename std::enable_if<(pack == 0), void>::type LaunchPackMemsetGpu(cudaStream_t stream,
+                                                                     const uint32_t* num_valid,
+                                                                     T* ptr, size_t count,
+                                                                     int64_t vector_size,
+                                                                     int64_t parallel_num) {
+  LOG(FATAL) << "wrong alignment";
+}
+
+template<typename T>
+void LaunchMemset(cudaStream_t stream, size_t count, int64_t vector_size, int64_t parallel_num,
+                  const uint32_t* num_valid, T* ptr) {
+  auto uintptr = reinterpret_cast<std::uintptr_t>(ptr);
+  if (uintptr % 16 == 0) {
+    LaunchPackMemsetGpu<T, 16 / sizeof(T)>(stream, num_valid, ptr, count, vector_size,
+                                           parallel_num);
+  } else if (uintptr % 8 == 0) {
+    LaunchPackMemsetGpu<T, 8 / sizeof(T)>(stream, num_valid, ptr, count, vector_size, parallel_num);
+  } else if (uintptr % 4 == 0) {
+    LaunchPackMemsetGpu<T, 4 / sizeof(T)>(stream, num_valid, ptr, count, vector_size, parallel_num);
+  } else if (uintptr % 2 == 0) {
+    LaunchPackMemsetGpu<T, 2 / sizeof(T)>(stream, num_valid, ptr, count, vector_size, parallel_num);
+  } else {
+    LaunchPackMemsetGpu<T, 1 / sizeof(T)>(stream, num_valid, ptr, count, vector_size, parallel_num);
+  }
+}
 
 template<typename T, int max_in>
 bool DispatchFeatureInteractionDotPackSize(user_op::KernelComputeContext* ctx,
                                            const int32_t input_size) {
   CHECK_LE(input_size, max_in) << input_size;
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-  const int64_t batch_size = out->shape().At(0);
-  const int64_t out_num_cols = out->shape().At(1);
+  const int64_t batch_size = out->shape_view().At(0);
+  const int64_t out_num_cols = out->shape_view().At(1);
   const int64_t vector_size = ctx->TensorDesc4ArgNameAndIndex("features", 0)->shape().At(2);
   DotFwdParam<T, max_in> param;
   param.num_in = input_size;
@@ -656,12 +809,28 @@ bool DispatchFeatureInteractionDotPackSize(user_op::KernelComputeContext* ctx,
     param.dim_start_offset[i] = features_concated_dim;
     features_concated_dim += param.in_feature_dim[i];
   }
+  if (ctx->has_input("sparse_feature", 0)) {
+    CHECK(ctx->has_input("sparse_indices", 0));
+    const user_op::Tensor* sparse_feature = ctx->Tensor4ArgNameAndIndex("sparse_feature", 0);
+    const user_op::Tensor* sparse_indices = ctx->Tensor4ArgNameAndIndex("sparse_indices", 0);
+    param.sparse_feature = sparse_feature->dptr<T>();
+    CHECK_EQ(sparse_indices->data_type(), DataType::kUInt32);
+    param.sparse_indices = reinterpret_cast<const uint32_t*>(sparse_indices->dptr());
+    param.sparse_dim = ctx->TensorDesc4ArgNameAndIndex("sparse_indices", 0)->shape().At(1);
+    param.sparse_dim_start = features_concated_dim;
+    features_concated_dim += param.sparse_dim;
+  } else {
+    param.sparse_feature = nullptr;
+    param.sparse_indices = nullptr;
+    param.sparse_dim = 0;
+    param.sparse_dim_start = 0;
+  }
   const int64_t concated_padded_dim = GetPaddedDim(features_concated_dim);
   param.features_dim = features_concated_dim;
   if (ctx->has_input("output_concat", 0)) {
     const user_op::Tensor* output_concat = ctx->Tensor4ArgNameAndIndex("output_concat", 0);
     param.output_concat = output_concat->dptr<T>();
-    param.output_concat_size = output_concat->shape().At(1);
+    param.output_concat_size = output_concat->shape_view().At(1);
   } else {
     param.output_concat = nullptr;
     param.output_concat_size = 0;
@@ -688,8 +857,8 @@ bool DispatchFeatureInteractionDotBackwardPackSize(user_op::KernelComputeContext
                                                    const int32_t input_size) {
   CHECK_LE(input_size, max_in) << input_size;
   user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-  const int64_t batch_size = dy->shape().At(0);
-  const int64_t out_num_cols = dy->shape().At(1);
+  const int64_t batch_size = dy->shape_view().At(0);
+  const int64_t out_num_cols = dy->shape_view().At(1);
   const int64_t vector_size = ctx->TensorDesc4ArgNameAndIndex("features", 0)->shape().At(2);
   DotBwdParam<T, max_in> param;
   param.num_in = input_size;
@@ -702,27 +871,65 @@ bool DispatchFeatureInteractionDotBackwardPackSize(user_op::KernelComputeContext
     param.dim_start_offset[i] = features_concated_dim;
     features_concated_dim += param.in_feature_dim[i];
   }
+  if (ctx->has_input("sparse_feature", 0)) {
+    CHECK(ctx->has_input("sparse_indices", 0));
+    CHECK(ctx->has_input("num_valid_sparse_feature", 0));
+    CHECK(ctx->has_output("sparse_feature_grad", 0));
+    const user_op::Tensor* sparse_feature = ctx->Tensor4ArgNameAndIndex("sparse_feature", 0);
+    const user_op::Tensor* sparse_indices = ctx->Tensor4ArgNameAndIndex("sparse_indices", 0);
+    const user_op::Tensor* num_valid_sparse_feature =
+        ctx->Tensor4ArgNameAndIndex("num_valid_sparse_feature", 0);
+    param.sparse_feature = sparse_feature->dptr<T>();
+    CHECK_EQ(sparse_indices->data_type(), DataType::kUInt32);
+    param.sparse_indices = reinterpret_cast<const uint32_t*>(sparse_indices->dptr());
+    param.sparse_dim = ctx->TensorDesc4ArgNameAndIndex("sparse_indices", 0)->shape().At(1);
+    param.sparse_dim_start = features_concated_dim;
+    features_concated_dim += param.sparse_dim;
+    param.sparse_feature_grad =
+        ctx->Tensor4ArgNameAndIndex("sparse_feature_grad", 0)->mut_dptr<T>();
+    const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+    const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+    CHECK_EQ(num_valid_sparse_feature->data_type(), DataType::kUInt32);
+    LaunchMemset<T>(ctx->stream()->As<ep::CudaStream>()->cuda_stream(),
+                    ctx->Tensor4ArgNameAndIndex("sparse_feature_grad", 0)->shape_view().elem_cnt(),
+                    vector_size, parallel_num,
+                    reinterpret_cast<const uint32_t*>(num_valid_sparse_feature->dptr())
+                        + parallel_id * parallel_num,
+                    param.sparse_feature_grad);
+  } else {
+    param.sparse_feature = nullptr;
+    param.sparse_indices = nullptr;
+    param.sparse_feature_grad = nullptr;
+    param.sparse_dim = 0;
+    param.sparse_dim_start = 0;
+  }
   const int64_t concated_padded_dim = GetPaddedDim(features_concated_dim);
   param.features_dim = features_concated_dim;
   if (ctx->has_output("output_concat_grad", 0)) {
     user_op::Tensor* output_concat_grad = ctx->Tensor4ArgNameAndIndex("output_concat_grad", 0);
     param.output_concat_grad = output_concat_grad->mut_dptr<T>();
-    param.output_concat_size = output_concat_grad->shape().At(1);
+    param.output_concat_size = output_concat_grad->shape_view().At(1);
   } else {
     param.output_concat_grad = nullptr;
     param.output_concat_size = 0;
   }
   const bool self_interaction = ctx->Attr<bool>("self_interaction");
   if (vector_size % 4 == 0) {
-    return DotFeatureInteractionBackwardKernel<T, max_in, 4>::Launch(
+    return DotFeatureInteractionBackwardKernel<T, max_in, 4, 2>::Launch(
         ctx->stream(), batch_size, concated_padded_dim, vector_size, out_num_cols, self_interaction,
         param);
   } else if (vector_size % 2 == 0) {
-    return DotFeatureInteractionBackwardKernel<T, max_in, 2>::Launch(
+    return DotFeatureInteractionBackwardKernel<T, max_in, 2, 2>::Launch(
         ctx->stream(), batch_size, concated_padded_dim, vector_size, out_num_cols, self_interaction,
         param);
   } else {
-    return DotFeatureInteractionBackwardKernel<T, max_in, 1>::Launch(
+    if (ctx->has_input("sparse_feature", 0) && dy->data_type() == DataType::kFloat16) {
+      UNIMPLEMENTED()
+          << "fused dot interaction backward kernel not support sparse_feature with pack_size 1, "
+             "because atomicAdd(half) is too slow";
+      return false;
+    }
+    return DotFeatureInteractionBackwardKernel<T, max_in, 1, 1>::Launch(
         ctx->stream(), batch_size, concated_padded_dim, vector_size, out_num_cols, self_interaction,
         param);
   }
@@ -862,8 +1069,8 @@ void DispatchFeatureInteractionSumInputSize(user_op::KernelComputeContext* ctx,
                                             const int32_t input_size) {
   CHECK_LE(input_size, max_in) << input_size;
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-  const int64_t batch_size = out->shape().At(0);
-  const int64_t vector_size = out->shape().At(1);
+  const int64_t batch_size = out->shape_view().At(0);
+  const int64_t vector_size = out->shape_view().At(1);
   Param<T, max_in> param;
   param.num_in = input_size;
   param.out = out->mut_dptr<T>();
@@ -879,8 +1086,8 @@ void DispatchFeatureInteractionSumGradInputSize(user_op::KernelComputeContext* c
                                                 const int32_t input_size) {
   CHECK_LE(input_size, max_in) << input_size;
   const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-  const int64_t batch_size = dy->shape().At(0);
-  const int64_t vector_size = dy->shape().At(1);
+  const int64_t batch_size = dy->shape_view().At(0);
+  const int64_t vector_size = dy->shape_view().At(1);
   int block_dim_x;
   int block_dim_y;
   GetBlockDims(vector_size, &block_dim_x, &block_dim_y);
@@ -911,6 +1118,7 @@ class FusedDotFeatureInteractionPoolingSumKernel final : public user_op::OpKerne
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    CHECK(!ctx->has_input("sparse_feature", 0)) << "pooling sum, sparse_feature is not supported. ";
     const int input_size = ctx->input_size("features");
     if (input_size == 1) {
       DispatchFeatureInteractionSumInputSize<T, 1>(ctx, input_size);
@@ -966,8 +1174,7 @@ bool TryLaunchTensorCoreDotBackwardKernel(user_op::KernelComputeContext* ctx) {
   }
 }
 template<typename T>
-class FusedDotFeatureInteractionKernel final : public user_op::OpKernel,
-                                               public user_op::CudaGraphSupport {
+class FusedDotFeatureInteractionKernel final : public user_op::OpKernel {
  public:
   FusedDotFeatureInteractionKernel() = default;
   ~FusedDotFeatureInteractionKernel() override = default;
@@ -977,22 +1184,23 @@ class FusedDotFeatureInteractionKernel final : public user_op::OpKernel,
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const DataType data_type = out->data_type();
-    CHECK_LT(out->shape().elem_cnt(), GetMaxVal<int32_t>());
+    CHECK_LT(out->shape_view().elem_cnt(), GetMaxVal<int32_t>());
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
     if ((cuda_stream->device_properties().major >= 7 && data_type == DataType::kFloat16)
         || (cuda_stream->device_properties().major >= 8 && data_type == DataType::kFloat)) {
       bool success = TryLaunchTensorCoreDotKernel<T>(ctx);
       if (success == true) { return; }
     }
+    CHECK(!ctx->has_input("sparse_feature", 0)) << "sparse_feature is not supported. ";
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const int64_t batch_size = out->shape().At(0);
+    const int64_t batch_size = out->shape_view().At(0);
     int64_t features_concated_dim = 0;
     for (int64_t i = 0; i < ctx->input_size("features"); ++i) {
       features_concated_dim += ctx->TensorDesc4ArgNameAndIndex("features", i)->shape().At(1);
     }
     const int64_t concated_padded_dim = GetPaddedDim(features_concated_dim);
     const int64_t vector_size = ctx->TensorDesc4ArgNameAndIndex("features", 0)->shape().At(2);
-    const int64_t out_dim = out->shape().At(1);
+    const int64_t out_dim = out->shape_view().At(1);
     const int32_t output_padding = ctx->Attr<int32_t>("output_padding");
     const int64_t valid_out_dim = out_dim - output_padding;
     const bool self_interaction = ctx->Attr<bool>("self_interaction");
@@ -1010,7 +1218,7 @@ class FusedDotFeatureInteractionKernel final : public user_op::OpKernel,
         reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + matmul_out_size + gather_indices_size);
     size_t padded_concated_features_size =
         GetCudaAlignedSize(batch_size * concated_padded_dim * vector_size * sizeof(T));
-    CHECK_GE(tmp_buffer->shape().elem_cnt(),
+    CHECK_GE(tmp_buffer->shape_view().elem_cnt(),
              matmul_out_size + gather_indices_size + padded_concated_features_size);
     ConcatFeatures<T>(ctx, batch_size, concated_padded_dim * vector_size,
                       padded_concated_features_ptr);
@@ -1025,11 +1233,11 @@ class FusedDotFeatureInteractionKernel final : public user_op::OpKernel,
     const T* output_concat_ptr = nullptr;
     if (ctx->has_input("output_concat", 0)) {
       user_op::Tensor* output_concat = ctx->Tensor4ArgNameAndIndex("output_concat", 0);
-      output_concat_end_dim = output_concat->shape().At(1);
+      output_concat_end_dim = output_concat->shape_view().At(1);
       output_concat_ptr = output_concat->dptr<T>();
     }
     CHECK_EQ(valid_out_dim, output_concat_end_dim + interaction_dim);
-    GatherConcatKernel<T>(ctx->stream(), out->shape().elem_cnt(), out_dim, valid_out_dim,
+    GatherConcatKernel<T>(ctx->stream(), out->shape_view().elem_cnt(), out_dim, valid_out_dim,
                           features_concated_dim, concated_padded_dim, output_concat_end_dim,
                           self_interaction, matmul_out, output_concat_ptr, gather_indices_ptr,
                           out->mut_dptr<T>());
@@ -1073,8 +1281,7 @@ REGISTER_FUSED_DOT_FEATURE_INTERACTION_KERNEL(float)
 REGISTER_FUSED_DOT_FEATURE_INTERACTION_KERNEL(half)
 
 template<typename T>
-class FusedDotFeatureInteractionGradKernel final : public user_op::OpKernel,
-                                                   public user_op::CudaGraphSupport {
+class FusedDotFeatureInteractionGradKernel final : public user_op::OpKernel {
  public:
   FusedDotFeatureInteractionGradKernel() = default;
   ~FusedDotFeatureInteractionGradKernel() override = default;
@@ -1091,14 +1298,15 @@ class FusedDotFeatureInteractionGradKernel final : public user_op::OpKernel,
       bool success = TryLaunchTensorCoreDotBackwardKernel<T>(ctx);
       if (success == true) { return; }
     }
-    const int64_t batch_size = dy->shape().At(0);
+    CHECK(!ctx->has_input("sparse_feature", 0)) << "sparse_feature is not supported. ";
+    const int64_t batch_size = dy->shape_view().At(0);
     int64_t features_concated_dim = 0;
     for (int32_t i = 0; i < ctx->output_size("features_grad"); ++i) {
       features_concated_dim += ctx->TensorDesc4ArgNameAndIndex("features_grad", i)->shape().At(1);
     }
     const int64_t concated_padded_dim = GetPaddedDim(features_concated_dim);
     const int64_t vector_size = ctx->TensorDesc4ArgNameAndIndex("features_grad", 0)->shape().At(2);
-    const int64_t out_dim = dy->shape().At(1);
+    const int64_t out_dim = dy->shape_view().At(1);
     const bool self_interaction = ctx->Attr<bool>("self_interaction");
     T* matmul_out_grad_ptr = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>());
     size_t matmul_out_grad_size =
@@ -1112,7 +1320,7 @@ class FusedDotFeatureInteractionGradKernel final : public user_op::OpKernel,
     size_t padded_concated_features_size = padded_concated_features_grad_size;
     CHECK_LE(
         matmul_out_grad_size + padded_concated_features_grad_size + padded_concated_features_size,
-        tmp_buffer->shape().elem_cnt());
+        tmp_buffer->shape_view().elem_cnt());
     ConcatFeatures<T>(ctx, batch_size, concated_padded_dim * vector_size,
                       padded_concated_features_ptr);
 
@@ -1121,7 +1329,7 @@ class FusedDotFeatureInteractionGradKernel final : public user_op::OpKernel,
     if (ctx->has_output("output_concat_grad", 0)) {
       user_op::Tensor* output_concat_grad = ctx->Tensor4ArgNameAndIndex("output_concat_grad", 0);
       output_concat_grad_ptr = output_concat_grad->mut_dptr<T>();
-      output_concat_end_dim = output_concat_grad->shape().At(1);
+      output_concat_end_dim = output_concat_grad->shape_view().At(1);
     }
     ScatterSplitAddTranspose(ctx->stream(), batch_size, out_dim, concated_padded_dim,
                              features_concated_dim, output_concat_end_dim, self_interaction,

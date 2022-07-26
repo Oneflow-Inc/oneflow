@@ -55,6 +55,13 @@ CudaDevice::CudaDevice(int device_index, DeviceManager* device_manager)
       const_ones_buffer_bf16_(nullptr) {
   CudaCurrentDeviceGuard guard(device_index_);
   OF_CUDA_CHECK(cudaGetDeviceProperties(&properties_, device_index_));
+  {
+    const char* env_name = "ONEFLOW_EP_CUDA_DEVICE_FLAGS";
+    if (std::getenv(env_name) != nullptr) {
+      const unsigned int flags = ParseIntegerFromEnv(env_name, 0);
+      OF_CUDA_CHECK(cudaSetDeviceFlags(flags));
+    }
+  }
   event_flags_ = cudaEventDisableTiming;
   if (ParseBooleanFromEnv("ONEFLOW_STREAM_CUDA_EVENT_FLAG_BLOCKING_SYNC", false)) {
     event_flags_ |= cudaEventBlockingSync;
@@ -118,11 +125,10 @@ Maybe<void> CudaDevice::Alloc(const AllocationOptions& options, void** ptr, size
   CudaCurrentDeviceGuard guard(device_index_);
   CHECK(!options.HasPinnedDevice());
   cudaError_t err = cudaMalloc(ptr, size);
-  if (err != cudaSuccess) {
-    return Error::RuntimeError() << cudaGetErrorString(err);
-  } else {
-    return Maybe<void>::Ok();
-  }
+  if (err != cudaSuccess) { return Error::RuntimeError() << cudaGetErrorString(err); }
+  err = cudaMemset(*ptr, 0, size);
+  if (err != cudaSuccess) { return Error::RuntimeError() << cudaGetErrorString(err); }
+  return Maybe<void>::Ok();
 }
 
 void CudaDevice::Free(const AllocationOptions& attr, void* ptr) {

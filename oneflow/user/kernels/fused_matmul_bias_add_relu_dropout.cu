@@ -380,7 +380,7 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
 
     // Currently only support 2D matmul.
     DimVector in_shape(2);
-    x->shape().ToDimVector(&in_shape);
+    x->shape_view().ToDimVector(&in_shape);
     DimVector weight_shape(2);
 
     const void* in_buf_ptr = x->dptr();
@@ -391,8 +391,8 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
       user_op::Tensor* cublas_aux = ctx->Tensor4ArgNameAndIndex("cublas_aux", idx);
 
       const int64_t batchsize = in_shape.at(0);
-      const int64_t out_feature = weight->shape().At(0);
-      weight->shape().ToDimVector(&weight_shape);
+      const int64_t out_feature = weight->shape_view().At(0);
+      weight->shape_view().ToDimVector(&weight_shape);
       size_t matmul_out_elem_cnt = batchsize * out_feature;
 
       InferMatmulCublasMNK(in_shape, weight_shape,
@@ -428,7 +428,7 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
 
       if (idx != weight_size - 1 || !skip_final_activation || rate != 0.0f) {
         OF_CUDA_CHECK(cudaMemsetAsync(cublas_aux->mut_dptr<int32_t>(), 0,
-                                      cublas_aux->shape().elem_cnt() * sizeof(int32_t),
+                                      cublas_aux->shape_view().elem_cnt() * sizeof(int32_t),
                                       cuda_stream->cuda_stream()));
       }
 

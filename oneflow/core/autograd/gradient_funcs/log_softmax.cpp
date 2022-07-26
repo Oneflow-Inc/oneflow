@@ -40,7 +40,7 @@ class LogSoftmax : public OpExprGradFunction<LogSoftmaxCaptureState> {
 
 Maybe<void> LogSoftmax::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   const std::string& op_name = fw_op_expr->op_name();
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   grad_op_ = JUST(one::OpBuilder("log_softmax_grad", GradientOpName(op_name))
@@ -54,7 +54,7 @@ Maybe<void> LogSoftmax::Init(const OpExpr& op) {
 Maybe<void> LogSoftmax::Capture(LogSoftmaxCaptureState* ctx, const TensorTuple& inputs,
                                 const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  CHECK_EQ_OR_RETURN(inputs.size(), 1);
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);  // NOLINT(maybe-need-error-msg)
   ctx->requires_grad = inputs.at(0)->requires_grad();
 
   if (!ctx->requires_grad) return Maybe<void>::Ok();
@@ -66,7 +66,7 @@ Maybe<void> LogSoftmax::Capture(LogSoftmaxCaptureState* ctx, const TensorTuple& 
 Maybe<void> LogSoftmax::Apply(const LogSoftmaxCaptureState* ctx, const TensorTuple& out_grads,
                               TensorTuple* in_grads) const {
   if (!ctx->requires_grad) return Maybe<void>::Ok();
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   const auto& dy = out_grads.at(0);
   const auto& prob = ctx->SavedTensors().at(0);
   in_grads->resize(1);

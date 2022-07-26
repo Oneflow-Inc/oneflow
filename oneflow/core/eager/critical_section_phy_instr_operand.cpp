@@ -22,37 +22,26 @@ limitations under the License.
 #include "oneflow/core/device/ep_based_event_record.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/vm/stream.h"
 
 namespace oneflow {
 namespace vm {
 
-void CriticalSectionBeginPhyInstrOperand::ForEachMirroredObject(
-    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
+void CriticalSectionBeginPhyInstrOperand::ForEachDependence(
+    const std::function<void(vm::Dependence* compute)>& DoEach) const {
   for (const auto& eager_blob_object : *eager_blob_objects_) {
     DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
   }
 }
 
-void CriticalSectionEndPhyInstrOperand::ForEachMirroredObject(
-    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
+void CriticalSectionEndPhyInstrOperand::ForEachDependence(
+    const std::function<void(vm::Dependence* compute)>& DoEach) const {
   DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object()));
 }
 
-namespace {
-
-Maybe<LocalDepObject*> RawCriticalSectionLocalDepObject() {
-  const auto& device = JUST(Device::New("cpu"));
-  return Stream::New(device, StreamRole::kCriticalSection)->mut_schedule_local_dep_object();
-}
-
-constexpr auto* CriticalSectionLocalDepObject =
-    DECORATE(&RawCriticalSectionLocalDepObject, ThreadLocal);
-
-}  // namespace
-
-void CriticalSectionBeginPhyInstrOperand::ForEachMutMirroredObject(
-    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  DoEach(CHECK_JUST(CriticalSectionLocalDepObject()));
+void CriticalSectionBeginPhyInstrOperand::ForEachMutDependence(
+    const std::function<void(vm::Dependence* compute)>& DoEach) const {
+  DoEach(vm_stream_->schedule_local_dep_object().get());
 }
 
 void CriticalSectionBeginPhyInstrOperand::FinishInvalidInterfaceEventRecords() {
@@ -81,8 +70,7 @@ void InputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_bl
   {
     size_t header_size = of_blob->mut_blob()->blob_desc().ByteSizeOfBlobHeader();
     CHECK_EQ(header_size, eager_blob_object->shape().NumAxes() * sizeof(int64_t));
-    std::memcpy(of_blob->mut_blob()->mut_header_ptr(), eager_blob_object->mut_header_ptr(),
-                header_size);
+    CHECK_EQ(of_blob->blob().static_shape(), eager_blob_object->shape());
   }
   const auto& end_event_record = op_name2end_event_record_->at(op_name);
   if (eager_blob_object->dptr() == nullptr) {
@@ -104,7 +92,7 @@ void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_b
   CHECK(interfaces_valid().at(i));
   OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   auto& eager_blob_object = eager_blob_objects_->at(i);
-  of_blob->blob().shape_view().ToShape(&eager_blob_object->mut_shape());
+  CHECK_EQ(of_blob->blob().static_shape(), eager_blob_object->shape());
   const auto& end_event_record = op_name2end_event_record_->at(op_name);
   if (eager_blob_object->dptr() == nullptr) {
     end_event_record->Init(std::make_shared<NaiveEventRecord>());
@@ -119,9 +107,9 @@ void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_b
   }
 }
 
-void CriticalSectionEndPhyInstrOperand::ForEachMutMirroredObject(
-    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  DoEach(CHECK_JUST(CriticalSectionLocalDepObject()));
+void CriticalSectionEndPhyInstrOperand::ForEachMutDependence(
+    const std::function<void(vm::Dependence* compute)>& DoEach) const {
+  DoEach(vm_stream_->schedule_local_dep_object().get());
 }
 
 }  // namespace vm

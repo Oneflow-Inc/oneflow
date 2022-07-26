@@ -24,10 +24,7 @@ _shape_t = Union[int, Tuple[int], flow._oneflow_internal.Size]
 
 
 class GroupNorm(Module):
-    """The interface is consistent with PyTorch.
-    The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.nn.GroupNorm.html.
-
+    """
     Applies Group Normalization over a mini-batch of inputs as described in
     the paper `Group Normalization <https://arxiv.org/abs/1803.08494>`__
 
@@ -45,6 +42,10 @@ class GroupNorm(Module):
 
     This layer uses statistics computed from input data in both training and
     evaluation modes.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.GroupNorm.html.
 
     Args:
         num_groups (int): number of groups to separate the channels into

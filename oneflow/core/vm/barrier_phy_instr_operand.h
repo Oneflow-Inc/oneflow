@@ -41,6 +41,8 @@ class BarrierPhyInstrOperand : public PhyInstrOperand {
     return dependences;
   }
 
+  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {}
+
  private:
   std::function<void()> callback_;
 };

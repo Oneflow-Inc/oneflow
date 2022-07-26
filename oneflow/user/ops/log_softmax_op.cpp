@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> LogSoftmaxOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("prob", 0) = ctx->InputShape("in", 0);
+  *ctx->MutOutputShape("prob", 0) = ctx->InputShape("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -39,14 +39,14 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> LogSoftmaxOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("prob", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("prob", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> LogSoftmaxGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& y_shape = ctx->InputShape("prob", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
-  Shape* dx_shape = ctx->OutputShape("dx", 0);
+  Shape* dx_shape = ctx->MutOutputShape("dx", 0);
   CHECK_OR_RETURN(dy_shape == y_shape);
   *dx_shape = dy_shape;
   return Maybe<void>::Ok();
@@ -70,7 +70,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> LogSoftmaxGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("prob", 0), ctx->InputDType("dy", 0));
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("prob", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("prob", 0);
   return Maybe<void>::Ok();
 }
 

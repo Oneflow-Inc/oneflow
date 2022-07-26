@@ -24,7 +24,7 @@ limitations under the License.
 #include <random>
 #include <type_traits>
 #include "oneflow/api/cpp/env_impl.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/util.h"
@@ -42,7 +42,7 @@ namespace of = oneflow;
 
 namespace {  // for inltialize
 
-inline bool IsEnvInited() { return of::Global<of::EnvGlobalObjectsScope>::Get() != nullptr; }
+inline bool IsEnvInited() { return of::Singleton<of::EnvGlobalObjectsScope>::Get() != nullptr; }
 
 bool HasEnvVar(const std::string& key) {
   const char* value = getenv(key.c_str());

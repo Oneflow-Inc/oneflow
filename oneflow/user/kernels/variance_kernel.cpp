@@ -37,10 +37,10 @@ class VarKernel final : public user_op::OpKernel {
     const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("dim");
     // only all dims cuda case will use tmp buffer.
     T* tmp_buffer_ptr =
-        (axis.size() == input->shape().NumAxes() && DeviceType::kCUDA == device_type)
+        (axis.size() == input->shape_view().NumAxes() && DeviceType::kCUDA == device_type)
             ? ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr<T>()
             : nullptr;
-    VarParamHelper param_helper(input->shape(), axis, unbiased);
+    VarParamHelper param_helper(input->shape_view(), axis, unbiased);
     VarFunctor<device_type, T>()(ctx->stream(), in_ptr, out_ptr, tmp_buffer_ptr,
                                  param_helper.param);
   }

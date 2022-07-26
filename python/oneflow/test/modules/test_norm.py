@@ -263,15 +263,16 @@ class TestNormModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_no_dim_no_ord_norm_with_random_data(test_case):
         device = random_device()
         input = random_tensor().to(device)
         keepdim = random_bool()
         m = torch.linalg.norm(input, keepdim=keepdim)
-        return m
+        n = torch.norm(input, keepdim=keepdim)
+        return m, n
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_one_dim_norm_with_random_data(test_case):
         device = random_device()
         input = random_tensor(ndim=4).to(device)
@@ -280,9 +281,10 @@ class TestNormModule(flow.unittest.TestCase):
         ord = oneof(float("inf"), float("-inf"), k, None)
         keepdim = random_bool()
         m = torch.linalg.norm(input, ord, dim, keepdim)
-        return m
+        n = torch.norm(input, ord, dim, keepdim)
+        return m, n
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_no_dim_one_shape_norm_with_random_data(test_case):
         device = random_device()
         input = random_tensor(ndim=1).to(device)
@@ -290,9 +292,10 @@ class TestNormModule(flow.unittest.TestCase):
         ord = oneof(float("inf"), float("-inf"), k)
         keepdim = random_bool()
         m = torch.linalg.norm(input, ord=ord, keepdim=keepdim)
-        return m
+        n = torch.norm(input, p=ord, keepdim=keepdim)
+        return m, n
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_no_dim_two_shape_norm_with_random_data(test_case):
         device = random_device()
         input = random_tensor(ndim=2).to(device)
@@ -301,11 +304,10 @@ class TestNormModule(flow.unittest.TestCase):
         m = torch.linalg.norm(input, ord=ord, keepdim=keepdim)
         return m
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_tuple_dim_norm_with_random_data(test_case):
         device = random_device()
         input = random_tensor(ndim=2).to(device)
-        k = random(low=-2, high=1).to(int)
         dim = oneof((-2, -1), (0, 1), (-1, 0))
         ord = oneof(float("inf"), float("-inf"), "fro", 1, -1, None)
         keepdim = random().to(bool)
@@ -320,6 +322,17 @@ class TestNormModule(flow.unittest.TestCase):
         keepdim = random().to(bool)
         m = torch.linalg.vector_norm(input, ord=0, dim=dim, keepdim=keepdim)
         return m
+
+    @autotest(n=5)
+    def test_ord_random_data(test_case):
+        device = random_device()
+        ndim = random(1, 3).to(int)
+        input = random_tensor(ndim).to(device)
+        p1 = random(-5, -1).to(int).value()
+        p2 = random(2, 6).to(int).value()
+        m = input.norm(p1)
+        n = input.norm(p2)
+        return m, n
 
 
 if __name__ == "__main__":

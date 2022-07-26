@@ -49,9 +49,9 @@ REGISTER_USER_OP("mlir_jit")
       CHECK_EQ(ctx->inputs().size(), 2);
       CHECK_EQ(ctx->outputs().size(), 1);
       const Shape& in_shape = ctx->InputShape("in", 0);
-      Shape* out_shape = ctx->OutputShape("out", 0);
+      Shape* out_shape = ctx->MutOutputShape("out", 0);
       *out_shape = in_shape;
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 1);
+      *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 1);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -65,7 +65,7 @@ REGISTER_USER_OP("mlir_jit")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+      *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
@@ -77,8 +77,8 @@ OpaqueMemRefDescriptor CreateMemRefDescriptor(user_op::Tensor* tensor) {
   auto desc = new MemRefType();
   *desc = mlir::detail::makeStridedMemRefDescriptor<N>(
       tensor->dptr<T>(), tensor->dptr<T>(),
-      {tensor->shape().ptr(), tensor->shape().ptr() + tensor->shape().NumAxes()},
-      {tensor->shape().ptr(), tensor->shape().ptr() + tensor->shape().NumAxes()});
+      {tensor->shape_view().ptr(), tensor->shape_view().ptr() + tensor->shape_view().NumAxes()},
+      {tensor->shape_view().ptr(), tensor->shape_view().ptr() + tensor->shape_view().NumAxes()});
   auto deleter = [](void const* data) {
     auto p = static_cast<MemRefType const*>(data);
     delete p;
@@ -92,8 +92,8 @@ OpaqueMemRefDescriptor CreateMutMemRefDescriptor(user_op::Tensor* tensor) {
   auto desc = new MemRefType();
   *desc = mlir::detail::makeStridedMemRefDescriptor<N>(
       tensor->mut_dptr<T>(), tensor->mut_dptr<T>(),
-      {tensor->shape().ptr(), tensor->shape().ptr() + tensor->shape().NumAxes()},
-      {tensor->shape().ptr(), tensor->shape().ptr() + tensor->shape().NumAxes()});
+      {tensor->shape_view().ptr(), tensor->shape_view().ptr() + tensor->shape_view().NumAxes()},
+      {tensor->shape_view().ptr(), tensor->shape_view().ptr() + tensor->shape_view().NumAxes()});
   auto deleter = [](void const* data) {
     auto p = static_cast<MemRefType const*>(data);
     delete p;
@@ -120,13 +120,13 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
   for (auto& pair : ctx->inputs()) {
     auto tensor = ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
     auto ref = SwitchCreateMemRefDescriptor(
-        SwitchCase(tensor->shape().NumAxes(), tensor->data_type()), tensor);
+        SwitchCase(tensor->shape_view().NumAxes(), tensor->data_type()), tensor);
     args.push_back(ref);
   }
   for (auto& pair : ctx->outputs()) {
     auto tensor = ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
     auto ref = SwitchCreateMutMemRefDescriptor(
-        SwitchCase(tensor->shape().NumAxes(), tensor->data_type()), tensor);
+        SwitchCase(tensor->shape_view().NumAxes(), tensor->data_type()), tensor);
     args.push_back(ref);
   }
   return args;

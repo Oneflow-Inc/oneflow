@@ -17,21 +17,21 @@ limitations under the License.
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/thread/thread_consistent_id.h"
+#include "oneflow/core/thread/thread_global_id.h"
 #include "oneflow/core/framework/rank_group_rpc_util.h"
 
 namespace oneflow {
 
 /*static*/ Maybe<TransportToken> TransportToken::NewTransportToken(TransportTokenType type) {
-  int32_t thread_consistent_id = JUST(GetThisThreadConsistentId());
-  CHECK_GE_OR_RETURN(thread_consistent_id, 0);
-  CHECK_LT_OR_RETURN(thread_consistent_id, MaxNumberOfThreadConsistentUId());
-  return TransportToken(type, thread_consistent_id);
+  int32_t thread_global_id = JUST(GetThisThreadGlobalId());
+  CHECK_GE_OR_RETURN(thread_global_id, 0);                             // NOLINT
+  CHECK_LT_OR_RETURN(thread_global_id, MaxNumberOfThreadGlobalUId());  // NOLINT
+  return TransportToken(type, thread_global_id);
 }
 
-Maybe<void> TransportToken::CheckThreadConsistentId() const {
-  int32_t thread_consistent_id = JUST(GetThisThreadConsistentId());
-  CHECK_EQ_OR_RETURN(thread_consistent_id, this->thread_consistent_id());
+Maybe<void> TransportToken::CheckThreadGlobalId() const {
+  int32_t thread_global_id = JUST(GetThisThreadGlobalId());
+  CHECK_EQ_OR_RETURN(thread_global_id, this->thread_global_id());  // NOLINT
   return Maybe<void>::Ok();
 }
 

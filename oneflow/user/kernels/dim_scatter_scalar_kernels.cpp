@@ -35,7 +35,7 @@ class DimScatterScalarKernel final : public user_op::OpKernel {
     const IDX_T* index = index_tensor->dptr<IDX_T>();
     IN_T* output = out_tensor->mut_dptr<IN_T>();
     size_t out_bytes_size =
-        out_tensor->shape().elem_cnt() * GetSizeOfDataType(out_tensor->data_type());
+        out_tensor->shape_view().elem_cnt() * GetSizeOfDataType(out_tensor->data_type());
 
     Tensor* like_tensor = ctx->Tensor4ArgNameAndIndex("like", 0);
     const IN_T src_scalar = static_cast<IN_T>(ctx->Attr<float>("src_scalar"));
@@ -48,27 +48,28 @@ class DimScatterScalarKernel final : public user_op::OpKernel {
       UNIMPLEMENTED() << "Input tensor and like tensor cannot be empty simultaneously.";
     }
 
-    const int ndim = out_tensor->shape().NumAxes();
+    const int ndim = out_tensor->shape_view().NumAxes();
     small_vector<IDX_T, kDimGatherMaxDimCount> shape_vec(ndim);
     auto shape2dims = [&shape_vec, &ndim](const ShapeView& tensor_shape) -> void {
       std::transform(tensor_shape.ptr(), tensor_shape.ptr() + ndim, shape_vec.begin(),
                      [](int32_t dim) -> IDX_T { return static_cast<IDX_T>(dim); });
     };
-    shape2dims(index_tensor->shape());
+    shape2dims(index_tensor->shape_view());
     DimOpIndexNdHelper<IDX_T> idx_nd_helper(shape_vec.data(), ndim);
-    shape2dims(out_tensor->shape());
+    shape2dims(out_tensor->shape_view());
     DimOpIndexNdHelper<IDX_T> output_nd_helper(shape_vec.data(), ndim);
 
     int64_t upper_bound = 0;
     if (input_tensor) {
-      upper_bound = input_tensor->shape().At(dim);  // ensure the idx is smaller than upperbound
+      upper_bound =
+          input_tensor->shape_view().At(dim);  // ensure the idx is smaller than upperbound
     } else {
-      upper_bound = like_tensor->shape().At(dim);  // ensure the idx is smaller than upperbound
+      upper_bound = like_tensor->shape_view().At(dim);  // ensure the idx is smaller than upperbound
     }
 
     DimScatterScalarFunctor<device_type, IN_T, IDX_T, Opt>()(
-        ctx->stream(), idx_nd_helper, output_nd_helper, ndim, index_tensor->shape().elem_cnt(), dim,
-        upper_bound, index, src_scalar, output);
+        ctx->stream(), idx_nd_helper, output_nd_helper, ndim, index_tensor->shape_view().elem_cnt(),
+        dim, upper_bound, index, src_scalar, output);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

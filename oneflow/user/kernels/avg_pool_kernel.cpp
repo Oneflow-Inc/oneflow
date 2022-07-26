@@ -129,13 +129,13 @@ class AvgPool1dKernel final : public user_op::OpKernel {
     const auto* pool_cache = dynamic_cast<const AvgPoolOpKernelCache*>(cache);
     const AvgPoolParams3D& params_3d = pool_cache->GetParams3D();
 
-    const int64_t elem_num = y->shape().elem_cnt();
+    const int64_t elem_num = y->shape_view().elem_cnt();
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
 
     DimVector y_vector(2);
-    y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
-    y_vector.at(1) = y->shape().At(2);
+    y_vector.at(0) = y->shape_view().At(0) * y->shape_view().At(1);
+    y_vector.at(1) = y->shape_view().At(2);
     if (elem_num < GetMaxVal<int32_t>()) {
       NdIndexOffsetHelper<int32_t, 2> index_helper(y_vector.data());
       AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool1dForward(ctx->stream(), index_helper,
@@ -169,15 +169,15 @@ class AvgPool1dGradKernel final : public user_op::OpKernel {
     const auto* pool_cache = dynamic_cast<const AvgPoolOpKernelCache*>(cache);
     const AvgPoolParams3D& params_3d = pool_cache->GetParams3D();
 
-    const int64_t elem_num = dy->shape().elem_cnt();
+    const int64_t elem_num = dy->shape_view().elem_cnt();
     const T* src = dy->dptr<T>();
     T* dest = dx->mut_dptr<T>();
-    size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
+    size_t out_bytes_size = dx->shape_view().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
     DimVector dy_vector(2);
-    dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
-    dy_vector.at(1) = dy->shape().At(2);
+    dy_vector.at(0) = dy->shape_view().At(0) * dy->shape_view().At(1);
+    dy_vector.at(1) = dy->shape_view().At(2);
     if (elem_num < GetMaxVal<int32_t>()) {
       NdIndexOffsetHelper<int32_t, 2> index_helper(dy_vector.data());
       AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool1dBackward(ctx->stream(), index_helper,
@@ -211,14 +211,14 @@ class AvgPool2dKernel final : public user_op::OpKernel {
     const auto* pool_cache = dynamic_cast<const AvgPoolOpKernelCache*>(cache);
     const AvgPoolParams3D& params_3d = pool_cache->GetParams3D();
 
-    const int64_t elem_num = y->shape().elem_cnt();
+    const int64_t elem_num = y->shape_view().elem_cnt();
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
 
     DimVector y_vector(3);
-    y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
-    y_vector.at(1) = y->shape().At(2);
-    y_vector.at(2) = y->shape().At(3);
+    y_vector.at(0) = y->shape_view().At(0) * y->shape_view().At(1);
+    y_vector.at(1) = y->shape_view().At(2);
+    y_vector.at(2) = y->shape_view().At(3);
     if (elem_num < GetMaxVal<int32_t>()) {
       NdIndexOffsetHelper<int32_t, 3> index_helper(y_vector.data());
       AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool2dForward(ctx->stream(), index_helper,
@@ -252,17 +252,17 @@ class AvgPool2dGradKernel final : public user_op::OpKernel {
     const auto* pool_cache = dynamic_cast<const AvgPoolOpKernelCache*>(cache);
     const AvgPoolParams3D& params_3d = pool_cache->GetParams3D();
 
-    const int64_t elem_num = dy->shape().elem_cnt();
+    const int64_t elem_num = dy->shape_view().elem_cnt();
     const T* src = dy->dptr<T>();
     T* dest = dx->mut_dptr<T>();
 
-    size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
+    size_t out_bytes_size = dx->shape_view().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
     DimVector dy_vector(3);
-    dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
-    dy_vector.at(1) = dy->shape().At(2);
-    dy_vector.at(2) = dy->shape().At(3);
+    dy_vector.at(0) = dy->shape_view().At(0) * dy->shape_view().At(1);
+    dy_vector.at(1) = dy->shape_view().At(2);
+    dy_vector.at(2) = dy->shape_view().At(3);
     if (elem_num < GetMaxVal<int32_t>()) {
       NdIndexOffsetHelper<int32_t, 3> index_helper(dy_vector.data());
       AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool2dBackward(ctx->stream(), index_helper,
@@ -296,15 +296,15 @@ class AvgPool3dKernel final : public user_op::OpKernel {
     const auto* pool_cache = dynamic_cast<const AvgPoolOpKernelCache*>(cache);
     const AvgPoolParams3D& params_3d = pool_cache->GetParams3D();
 
-    const int64_t elem_num = y->shape().elem_cnt();
+    const int64_t elem_num = y->shape_view().elem_cnt();
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
 
     DimVector y_vector(4);
-    y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
-    y_vector.at(1) = y->shape().At(2);
-    y_vector.at(2) = y->shape().At(3);
-    y_vector.at(3) = y->shape().At(4);
+    y_vector.at(0) = y->shape_view().At(0) * y->shape_view().At(1);
+    y_vector.at(1) = y->shape_view().At(2);
+    y_vector.at(2) = y->shape_view().At(3);
+    y_vector.at(3) = y->shape_view().At(4);
     if (elem_num < GetMaxVal<int32_t>()) {
       NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
       AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool3dForward(ctx->stream(), index_helper,
@@ -338,18 +338,18 @@ class AvgPool3dGradKernel final : public user_op::OpKernel {
     const auto* pool_cache = dynamic_cast<const AvgPoolOpKernelCache*>(cache);
     const AvgPoolParams3D& params_3d = pool_cache->GetParams3D();
 
-    const int64_t elem_num = dy->shape().elem_cnt();
+    const int64_t elem_num = dy->shape_view().elem_cnt();
     const T* src = dy->dptr<T>();
     T* dest = dx->mut_dptr<T>();
 
-    size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
+    size_t out_bytes_size = dx->shape_view().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
     DimVector dy_vector(4);
-    dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
-    dy_vector.at(1) = dy->shape().At(2);
-    dy_vector.at(2) = dy->shape().At(3);
-    dy_vector.at(3) = dy->shape().At(4);
+    dy_vector.at(0) = dy->shape_view().At(0) * dy->shape_view().At(1);
+    dy_vector.at(1) = dy->shape_view().At(2);
+    dy_vector.at(2) = dy->shape_view().At(3);
+    dy_vector.at(3) = dy->shape_view().At(4);
     if (elem_num < GetMaxVal<int32_t>()) {
       NdIndexOffsetHelper<int32_t, 4> index_helper(dy_vector.data());
       AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool3dBackward(ctx->stream(), index_helper,

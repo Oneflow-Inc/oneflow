@@ -65,27 +65,29 @@ Maybe<void> CheckInplaceCastValid(const std::shared_ptr<Tensor>& x,
   return Maybe<void>::Ok();
 }
 
-bool IsShapeCanExpandTo(const Shape& shape, const Shape& expand_shape) {
-  if (shape == expand_shape) { return true; }
-  if (expand_shape.NumAxes() < shape.NumAxes()) { return false; }
+Maybe<void> CheckInplaceShapeCanExpandTo(const Shape& shape, const Shape& expand_shape) {
+  if (shape == expand_shape) { return Maybe<void>::Ok(); }
+
+  CHECK_OR_RETURN(expand_shape.NumAxes() >= shape.NumAxes())
+      << Error::RuntimeError() << "Can not expand origin shape " << shape.ToString() << " to "
+      << expand_shape.ToString() << " in an inplace operation";
+
   int shift = expand_shape.NumAxes() - shape.NumAxes();
   for (int i = expand_shape.NumAxes() - 1; i >= 0; --i) {
     int index = i - shift;
     if (index >= 0) {
       int dim_a = expand_shape.At(i);
       int dim_b = shape.At(index);
-      if (dim_a != dim_b && (dim_a <= 0 || dim_b != 1)) { return false; }
+      // NOTE(lixiang): When a dimension of tensor a and tensor b are not equal in size, dim_a needs
+      // to be greater than 0, and dim_b should be equal to 1.
+      CHECK_OR_RETURN(!(dim_a != dim_b && (dim_a <= 0 || dim_b != 1)))
+          << Error::RuntimeError() << "Tensor with shape " << expand_shape.ToString()
+          << " doesn't match the broadcast shape in an inplace operation";
     } else {
-      if (expand_shape.At(i) <= 0) { return false; }
+      CHECK_OR_RETURN(expand_shape.At(i) > 0);  // NOLINT(maybe-need-error-msg)
     }
   }
-  return true;
-}
 
-Maybe<void> CheckShapeCanExpandTo(const Shape& shape, const Shape& expand_shape) {
-  CHECK_OR_RETURN(IsShapeCanExpandTo(shape, expand_shape))
-      << Error::RuntimeError() << "Can not expand shape " << shape.ToString() << " to "
-      << expand_shape.ToString();
   return Maybe<void>::Ok();
 }
 
@@ -95,22 +97,20 @@ Optional<Stride> ComputeStride(const Shape& shape, const Stride& stride,
    * Description: in some case, view operate is not allowed, so need to check it's validation,
    * the check refers to torch(aten/src/ATen/native/TensorShape.cpp)
    *************************************************/
-  if (stride.NumAxes() == 0) {
+  if (stride.size() == 0) {
     // for scalar input tensor
-    DimVector newstride(target_shape.NumAxes(), 1);
-    return Stride(newstride);
+    return Stride(target_shape.NumAxes(), 1);
   }
   int64_t elem_count = shape.elem_cnt();
   int64_t ndim = shape.NumAxes();
   int64_t tgt_ndim = target_shape.NumAxes();
   DimVector shape_vec = shape.dim_vec();
   DimVector tgt_shape_vec = target_shape.dim_vec();
-  DimVector stride_vec = stride.StrideVec();
   if (elem_count == 0) { return NullOpt; }
 
   int64_t view_d = tgt_ndim - 1;
-  int64_t chunk_base_stride = stride_vec.back();
-  DimVector newstride(tgt_ndim);
+  int64_t chunk_base_stride = stride.back();
+  Stride target_stride(tgt_ndim);
   // stride for each subspace in the chunk
   // numel in current chunk
   int64_t tensor_numel = 1;
@@ -120,22 +120,21 @@ Optional<Stride> ComputeStride(const Shape& shape, const Stride& stride,
     // if end of tensor size chunk, check view
     if ((tensor_d == 0)
         || (shape_vec[tensor_d - 1] != 1
-            && stride_vec[tensor_d - 1] != tensor_numel * chunk_base_stride)) {
+            && stride[tensor_d - 1] != tensor_numel * chunk_base_stride)) {
       while (view_d >= 0 && (view_numel < tensor_numel || tgt_shape_vec[view_d] == 1)) {
-        newstride[view_d] = view_numel * chunk_base_stride;
+        target_stride[view_d] = view_numel * chunk_base_stride;
         view_numel *= tgt_shape_vec[view_d];
         view_d--;
       }
       if (view_numel != tensor_numel) { return NullOpt; }
       if (tensor_d > 0) {
-        chunk_base_stride = stride_vec[tensor_d - 1];
+        chunk_base_stride = stride[tensor_d - 1];
         tensor_numel = 1;
         view_numel = 1;
       }
     }
   }
   if (view_d != -1) { return NullOpt; }
-  Stride target_stride(newstride);
   return target_stride;
 }
 
@@ -156,9 +155,12 @@ Maybe<Shape> InferShape(const std::shared_ptr<one::Tensor>& x, const Shape& shap
   size_t x_count = x->shape()->Count(0);
   Shape infered_shape = shape;
   if (need_infer_axis == -1) {
-    CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
-        << Error::RuntimeError() << "shape '" << shape.ToString()
-        << "' is invalid for input of size " << x->nelement();
+    // For 0-size tensor, we we don't need to check the element size.
+    if (x_count > 0) {
+      CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
+          << Error::RuntimeError() << "shape '" << shape.ToString()
+          << "' is invalid for input of size " << x->nelement();
+    }
   } else {
     infered_shape.Set(need_infer_axis, x_count / count);
     CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
