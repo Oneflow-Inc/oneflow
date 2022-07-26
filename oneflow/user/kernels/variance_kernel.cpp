@@ -40,7 +40,7 @@ class VarKernel final : public user_op::OpKernel {
     for (int64_t i = 0; i < axis.size(); ++i) {
       axis_dim_element *= input->shape_view().At(axis[i]);
     }
-    // only all dims cuda case will use tmp buffer.
+    // only all elements cuda case will use tmp buffer.
     T* tmp_buffer_ptr =
         (input_dim_element > 0 && (axis.size() == input->shape_view().NumAxes() || input_dim_element == axis_dim_element) && DeviceType::kCUDA == device_type)
             ? ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr<T>()
