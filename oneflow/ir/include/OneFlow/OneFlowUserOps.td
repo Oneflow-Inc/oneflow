@@ -10060,4 +10060,46 @@ def OneFlow_FusedGruCellGradOp : OneFlow_BaseOp<"fused_gru_cell_grad", [NoSideEf
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_WkvForwardOp : OneFlow_BaseOp<"wkv_forward", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$w,
+    OneFlow_Tensor:$u,
+    OneFlow_Tensor:$k,
+    OneFlow_Tensor:$v,
+    OneFlow_Tensor:$y
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "0">:$B,
+    DefaultValuedAttr<SI32Attr, "0">:$T,
+    DefaultValuedAttr<SI32Attr, "0">:$C
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_WkvBackwardOp : OneFlow_BaseOp<"wkv_backward", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$w,
+    OneFlow_Tensor:$u,
+    OneFlow_Tensor:$k,
+    OneFlow_Tensor:$v,
+    OneFlow_Tensor:$gy,
+    OneFlow_Tensor:$gw,
+    OneFlow_Tensor:$gu,
+    OneFlow_Tensor:$gk,
+    OneFlow_Tensor:$gv
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "0">:$B,
+    DefaultValuedAttr<SI32Attr, "0">:$T,
+    DefaultValuedAttr<SI32Attr, "0">:$C
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS
