@@ -16,7 +16,7 @@ limitations under the License.
 #include <type_traits>
 #include "oneflow/core/common/blocking_then_busy.h"
 #include "oneflow/core/common/stream_role.h"
-#include "oneflow/core/framework/tensor_meta.h"
+#include "oneflow/core/common/tensor_meta.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_impl.h"
@@ -68,19 +68,13 @@ Maybe<LocalTensorImpl> LazyLocalTensorImpl::detach() const {
   return std::shared_ptr<LocalTensorImpl>(detached_impl);
 }
 
-EagerLocalTensorImpl::EagerLocalTensorImpl()
-    : LocalTensorImpl(std::make_shared<const LocalTensorMeta>(), false, false) {}
+EagerLocalTensorImpl::EagerLocalTensorImpl() : LocalTensorImpl(false, false) {}
 
-EagerLocalTensorImpl::EagerLocalTensorImpl(
-    const std::shared_ptr<const LocalTensorMeta>& tensor_meta, bool requires_grad, bool is_leaf)
-    : LocalTensorImpl(tensor_meta, requires_grad, is_leaf) {}
+EagerLocalTensorImpl::EagerLocalTensorImpl(const std::shared_ptr<TensorStorage>& tensor_storage,
+                                           bool requires_grad, bool is_leaf)
+    : LocalTensorImpl(requires_grad, is_leaf), tensor_storage_(tensor_storage) {}
 
 EagerLocalTensorImpl::~EagerLocalTensorImpl() {}
-
-EagerLocalTensorImpl::EagerLocalTensorImpl(
-    const std::shared_ptr<const LocalTensorMeta>& tensor_meta,
-    const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad, bool is_leaf)
-    : LocalTensorImpl(tensor_meta, requires_grad, is_leaf), tensor_storage_(tensor_storage) {}
 
 Maybe<void> EagerLocalTensorImpl::UpdateTensorStorage() {
   const auto& eager_blob_object = eager_blob_object_;
@@ -97,25 +91,34 @@ Maybe<void> EagerLocalTensorImpl::UpdateTensorStorage() {
   return Maybe<void>::Ok();
 }
 
+const std::shared_ptr<const MutLocalTensorMeta>& EagerLocalTensorImpl::mut_tensor_meta() {
+  return eager_blob_object_->mut_tensor_meta();
+}
+// Getters
+const Symbol<LocalTensorMeta>& EagerLocalTensorImpl::tensor_meta() const {
+  return eager_blob_object_->tensor_meta();
+}
+
 Maybe<LocalDepObject*> EagerLocalTensorImpl::compute_local_dep_object() const {
   return JUST(eager_blob_object())->compute_local_dep_object();
 }
 
 Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
+    const Symbol<one::LocalTensorMeta>& local_tensor_meta,
+    const std::shared_ptr<const one::MutLocalTensorMeta>& mut_local_tensor_meta,
     const intrusive::shared_ptr<LocalDepObject>& dep_object) {
-  CHECK_OR_RETURN(static_cast<bool>(device()));
-  const auto& mem_case = device()->mem_case();
-  const auto& mut_shape = std::const_pointer_cast<Shape>(tensor_meta()->shape_ptr());
-  const auto& mut_stride = std::const_pointer_cast<Stride>(tensor_meta()->stride_ptr());
+  CHECK_OR_RETURN(static_cast<bool>(local_tensor_meta->device()));  // NOLINT
+  const auto& mem_case = local_tensor_meta->device()->mem_case();
 
   if (tensor_storage_) {
     auto tensor_storage = tensor_storage_->storage();
-    eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, mut_stride,
-                                                               dtype(), tensor_storage, dep_object);
+    eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(
+        mem_case, local_tensor_meta, mut_local_tensor_meta, local_tensor_meta->dtype(),
+        tensor_storage, dep_object);
   } else {
-    const auto& eager_blob_object =
-        std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, mut_stride, dtype(),
-                                              std::make_shared<vm::TensorStorage>(), dep_object);
+    const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
+        mem_case, local_tensor_meta, mut_local_tensor_meta, local_tensor_meta->dtype(),
+        std::make_shared<vm::TensorStorage>(), dep_object);
     JUST(set_eager_blob_object(eager_blob_object));
   }
   return Maybe<void>::Ok();
@@ -129,8 +132,7 @@ Maybe<bool> EagerLocalTensorImpl::is_pinned() const {
 Maybe<void> EagerLocalTensorImpl::set_eager_blob_object(
     std::shared_ptr<vm::EagerBlobObject> eager_blob_object) {
   eager_blob_object_ = eager_blob_object;
-  CHECK_OR_RETURN(eager_blob_object_->shape_ptr().get() == tensor_meta()->shape_ptr().get())
-      << kOfBugIssueUploadPrompt;
+  CHECK_OR_RETURN(eager_blob_object_->shape() == tensor_meta()->shape()) << kOfBugIssueUploadPrompt;
   CHECK_OR_RETURN(eager_blob_object_->data_type() == tensor_meta()->dtype())
       << kOfBugIssueUploadPrompt;
   JUST(UpdateTensorStorage());
@@ -149,8 +151,7 @@ std::shared_ptr<const Stride> EagerLocalTensorImpl::stride() const {
 }
 
 Maybe<LocalTensorImpl> EagerLocalTensorImpl::detach() const {
-  auto detached_impl =
-      std::make_shared<EagerLocalTensorImpl>(tensor_meta_, tensor_storage_, false, true);
+  auto detached_impl = std::make_shared<EagerLocalTensorImpl>(tensor_storage_, false, true);
   detached_impl->eager_blob_object_ = eager_blob_object_;
   return std::shared_ptr<LocalTensorImpl>(detached_impl);
 }
@@ -211,11 +212,10 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
   // empty op.
   if (parallel_id.has_value() && shape->elem_cnt() != 0) {
     const auto& cur_rank_phy_tensor_meta =
-        std::make_shared<LocalTensorMeta>(cur_rank_phy_shape, dtype, device);
-    auto cur_rank_phy_tensor_impl =
-        std::make_shared<EagerLocalTensorImpl>(cur_rank_phy_tensor_meta, requires_grad, is_leaf);
+        SymbolOf(LocalTensorMeta(cur_rank_phy_shape, dtype, device));
+    auto cur_rank_phy_tensor_impl = std::make_shared<EagerLocalTensorImpl>(requires_grad, is_leaf);
     const auto& dep_object = NewLocalDepObject();
-    JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(dep_object));
+    JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(cur_rank_phy_tensor_meta, dep_object));
     cur_rank_phy_tensor = std::make_shared<LocalTensor>(cur_rank_phy_tensor_impl);
   } else {
     const auto& dtype_symbol = JUST(DType::Get(dtype));
