@@ -163,7 +163,7 @@ Maybe<Shape> InferShapeUnspecifiedDim(const int64_t& elem_count, const Shape& sh
     }
   } else {
     infered_shape.Set(need_infer_axis, elem_count / target_elem_count);
-    CHECK_OR_RETURN_ERROR(infered_shape.Count(0) == elem_count)
+    CHECK_OR_RETURN_ERROR(target_elem_count * infered_shape.At(need_infer_axis) == elem_count)
         << Error::RuntimeError() << "shape '" << shape.ToString()
         << "' is invalid for input of size " << elem_count;
   }
