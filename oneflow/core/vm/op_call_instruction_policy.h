@@ -88,9 +88,7 @@ class OpCallInstructionPolicy final : public InstructionPolicy {
   }
 
   eager::CallContext* mut_call_ctx() { return &call_ctx_; }
-  Dependence* stream_sequential_dependence() const override {
-    return stream_sequential_dependence_;
-  }
+
   Stream* vm_stream() const { return vm_stream_; }
 
   void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
@@ -119,7 +117,6 @@ class OpCallInstructionPolicy final : public InstructionPolicy {
   DependenceVector output_dependences_;
   bool is_all_outputs_pod_;
 
-  Dependence* stream_sequential_dependence_;
 };
 
 }  // namespace vm
