@@ -39,12 +39,6 @@ bool NdSbpIsAllSplit(const NdSbp& nd_sbp, int64_t axis);
 bool NdSbpHasPartialParallel(const NdSbp& nd_sbp);
 bool NdSbpHasBroadcastParallel(const NdSbp& nd_sbp);
 
-void GetRankSendRecvIntersection(int64_t parallel_id,
-                                 const std::shared_ptr<Shape>& parallel_hierarchy,
-                                 const NdSbp& src_nd_sbp, const NdSbp& dst_nd_sbp,
-                                 const Shape& logical_shape,
-                                 std::vector<TensorSliceView>* send_intersections,
-                                 std::vector<TensorSliceView>* recv_intersections);
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_SBP_PARALLEL_H_
