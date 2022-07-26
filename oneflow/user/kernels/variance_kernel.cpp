@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_reduce.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
@@ -35,9 +36,14 @@ class VarKernel final : public user_op::OpKernel {
     const T* in_ptr = input->dptr<T>();
     T* out_ptr = output->mut_dptr<T>();
     const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("dim");
+    const int64_t input_dim_element = input->shape_view().elem_cnt();
+    int64_t axis_dim_element = 1;
+    for (int64_t i = 0; i < axis.size(); ++i) {
+      axis_dim_element *= input->shape_view()[axis[i]];
+    }
     // only all dims cuda case will use tmp buffer.
     T* tmp_buffer_ptr =
-        (axis.size() == input->shape_view().NumAxes() && DeviceType::kCUDA == device_type)
+        (input_dim_element > 0 && (axis.size() == input->shape_view().NumAxes() || input_dim_element == axis_dim_element) && DeviceType::kCUDA == device_type)
             ? ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr<T>()
             : nullptr;
     VarParamHelper param_helper(input->shape_view(), axis, unbiased);
@@ -61,7 +67,12 @@ size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   const TensorDesc& input = ctx->InputTensorDesc("input", 0);
   const Shape& input_shape = input.shape();
   const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("dim");
-  if (axis.size() == input_shape.NumAxes()) {
+  const int64_t input_dim_element = input.shape().elem_cnt();
+  int64_t axis_dim_element = 1;
+  for (int64_t i = 0; i < axis.size(); ++i) {
+    axis_dim_element *= input.shape()[axis[i]];
+  }
+  if (input_dim_element > 0 && (axis.size() == input_shape.NumAxes() || input_dim_element == axis_dim_element)) {
     return GetCudaAlignedSize(
         std::min(static_cast<int32_t>(std::ceil(std::sqrt(input.shape().elem_cnt()))),
                  kCudaMaxBlocksNum)
