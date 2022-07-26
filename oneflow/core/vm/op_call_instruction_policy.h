@@ -116,7 +116,6 @@ class OpCallInstructionPolicy final : public InstructionPolicy {
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
   bool is_all_outputs_pod_;
-
 };
 
 }  // namespace vm
