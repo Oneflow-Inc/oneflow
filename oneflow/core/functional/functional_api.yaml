@@ -68,6 +68,14 @@
   signature: "Tensor (Tensor input, Tensor tensor1, Tensor tensor2, *, Scalar value=1) => InplaceAddcmul"
   bind_python: true
 
+- name: "addcdiv"
+  signature: "Tensor (Tensor input, Tensor tensor1, Tensor tensor2, *, Scalar value=1) => AddCDiv"
+  bind_python: true
+
+- name: "addcdiv_"
+  signature: "Tensor (Tensor input, Tensor tensor1, Tensor tensor2, *, Scalar value=1) => InplaceAddCDiv"
+  bind_python: true
+
 - name: "div"
   signature:
     [
@@ -741,6 +749,10 @@
 
 - name: "argwhere"
   signature: "TensorTuple (Tensor x, DataType dtype=kInt32) => ArgWhere"
+  bind_python: True
+
+- name: "nonzero"
+  signature: "TensorTuple (Tensor x, Bool as_tuple=False) => NonZero"
   bind_python: True
 
 - name: "broadcast_like"

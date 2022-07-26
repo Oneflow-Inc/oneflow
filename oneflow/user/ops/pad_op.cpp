@@ -47,7 +47,7 @@ namespace oneflow {
   return PadOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> PadOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 

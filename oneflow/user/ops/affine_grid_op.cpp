@@ -48,7 +48,7 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 
 /* static */ Maybe<void> AffineGridOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& theta = ctx->InputTensorDesc("theta", 0);
-  user_op::TensorDesc* grid = ctx->OutputTensorDesc("grid", 0);
+  user_op::TensorDesc* grid = ctx->MutOutputTensorDesc("grid", 0);
   const Shape& size = ctx->Attr<Shape>("size");
   // Only support 2D or 3D affine grid with NCHW layout
   // For 2D grid: theta = { N, 2, 3 },
@@ -85,7 +85,7 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 
 /*static*/ Maybe<void> AffineGridOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& theta = ctx->InputTensorDesc("theta", 0);
-  user_op::TensorDesc* grid = ctx->OutputTensorDesc("grid", 0);
+  user_op::TensorDesc* grid = ctx->MutOutputTensorDesc("grid", 0);
   const Shape& size = ctx->Attr<Shape>("size");
   // Only support 2D or 3D affine grid with NCHW layout
   // For 2D grid: theta = { N, 2, 3 },
@@ -145,7 +145,7 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 }
 
 /* static */ Maybe<void> AffineGridOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("grid", 0) = ctx->InputDType("theta", 0);
+  *ctx->MutOutputDType("grid", 0) = ctx->InputDType("theta", 0);
   return Maybe<void>::Ok();
 }
 
@@ -153,9 +153,9 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
   const user_op::TensorDesc& dgrid = ctx->InputTensorDesc("dgrid", 0);
   const Shape& size = ctx->Attr<Shape>("size");
   if (size.NumAxes() == 4) {
-    *(ctx->OutputTensorDesc("dtheta", 0)->mut_shape()) = {dgrid.shape().At(0), 2, 3};
+    *(ctx->MutOutputTensorDesc("dtheta", 0)->mut_shape()) = {dgrid.shape().At(0), 2, 3};
   } else if (size.NumAxes() == 5) {
-    *(ctx->OutputTensorDesc("dtheta", 0)->mut_shape()) = {dgrid.shape().At(0), 3, 4};
+    *(ctx->MutOutputTensorDesc("dtheta", 0)->mut_shape()) = {dgrid.shape().At(0), 3, 4};
   } else {
     CHECK_OR_RETURN(false) << "size MUST be 4D or 5D";
   }
@@ -180,7 +180,7 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 }
 
 /* static */ Maybe<void> AffineGridGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dtheta", 0) = ctx->InputDType("dgrid", 0);
+  *ctx->MutOutputDType("dtheta", 0) = ctx->InputDType("dgrid", 0);
   return Maybe<void>::Ok();
 }
 

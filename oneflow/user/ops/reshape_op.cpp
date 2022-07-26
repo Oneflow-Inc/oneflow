@@ -33,7 +33,7 @@ namespace oneflow {
 /*static*/ Maybe<void> ReshapeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   Shape shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor_desc = ctx->MutOutputTensorDesc("out", 0);
 
   const Shape& in_shape = in_tensor_desc.shape();
   Shape* out_shape = out_tensor_desc->mut_shape();
@@ -80,7 +80,7 @@ namespace oneflow {
 /*static*/ Maybe<void> ReshapeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   Shape logical_shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor_desc = ctx->MutOutputTensorDesc("out", 0);
 
   const Shape& in_shape = in_tensor_desc.shape();
   Shape* out_shape = out_tensor_desc->mut_shape();
@@ -128,7 +128,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> ReshapeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 

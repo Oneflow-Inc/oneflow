@@ -21,7 +21,7 @@ namespace oneflow {
 /* static */ Maybe<void> ImageDecodeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   CHECK_OR_RETURN(in_desc.shape().NumAxes() == 1 && in_desc.shape().At(0) >= 1);
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_shape() = in_desc.shape();
   return Maybe<void>::Ok();
 }
@@ -58,7 +58,7 @@ namespace oneflow {
 /* static */ Maybe<void> ImageDecodeOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   CHECK_OR_RETURN(in_desc.data_type() == DataType::kTensorBuffer);
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_data_type() = DataType::kTensorBuffer;
   return Maybe<void>::Ok();
 }

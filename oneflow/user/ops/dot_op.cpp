@@ -52,7 +52,7 @@ namespace oneflow {
   CHECK_OR_RETURN(x.data_type() == y.data_type())
       << Error::RuntimeError() << "expected both vectors to have same dtype, but found "
       << DataType_Name(x.data_type()) << " and " << DataType_Name(y.data_type());
-  *ctx->OutputDType("out", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 

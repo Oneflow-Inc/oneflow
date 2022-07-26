@@ -13,11 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_FRAMEWORK_TENSOR_META_H_
-#define ONEFLOW_FRAMEWORK_TENSOR_META_H_
+#ifndef ONEFLOW_COMMON_TENSOR_META_H_
+#define ONEFLOW_COMMON_TENSOR_META_H_
 
 #include <memory>
-#include "oneflow/core/framework/tensor_desc.h"
+#include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
@@ -60,15 +60,23 @@ class TensorMeta : public user_op::TensorDesc {
   bool is_dynamic() const override { return is_dynamic_; }
   bool is_contiguous() const { return IsContiguous(shape(), *stride_); }
 
-  void set_shape(const std::shared_ptr<const Shape>& val) { shape_ = val; }
-  Shape* mut_shape() override { return const_cast<Shape*>(shape_.get()); }
-  void set_stride(const std::shared_ptr<const Stride>& val) { stride_ = val; }
-  Stride* mut_stride() override { return const_cast<Stride*>(stride_.get()); }
-  DataType* mut_dtype() { return &data_type_; }
-  void set_dtype(DataType data_type) { data_type_ = data_type; }
-  DataType* mut_data_type() override { return &data_type_; }
-  bool* mut_is_dynamic() override { return &is_dynamic_; }
-  void set_is_dynamic(bool val) override { is_dynamic_ = val; }
+  virtual Shape* mut_shape() override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return nullptr;
+  }
+  virtual Stride* mut_stride() override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return nullptr;
+  }
+  virtual DataType* mut_data_type() override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return nullptr;
+  }
+  virtual bool* mut_is_dynamic() override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return nullptr;
+  }
+  virtual void set_is_dynamic(bool val) override { PRINT_BUG_PROMPT_AND_ABORT(); }
 
  protected:
   TensorMeta& operator=(const TensorMeta& other) {
@@ -79,11 +87,37 @@ class TensorMeta : public user_op::TensorDesc {
     return *this;
   }
 
- private:
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const Stride> stride_;
   DataType data_type_;
   bool is_dynamic_;
+};
+
+class MutTensorMeta : public TensorMeta {
+ public:
+  // uninitialized MutTensorMeta.
+  MutTensorMeta();
+  MutTensorMeta(const MutTensorMeta&) = default;
+  MutTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype);
+  MutTensorMeta(const std::shared_ptr<const Shape>& shape,
+                const std::shared_ptr<const Stride>& stride, DataType dtype);
+  virtual ~MutTensorMeta() = default;
+
+  Shape* mut_shape() override { return const_cast<Shape*>(shape_.get()); }
+  Stride* mut_stride() override { return const_cast<Stride*>(stride_.get()); }
+  DataType* mut_data_type() override { return &data_type_; }
+  bool* mut_is_dynamic() override { return &is_dynamic_; }
+  void set_is_dynamic(bool val) override { is_dynamic_ = val; }
+
+  void set_shape(const std::shared_ptr<const Shape>& val) { shape_ = val; }
+  void set_stride(const std::shared_ptr<const Stride>& val) { stride_ = val; }
+  DataType* mut_dtype() { return &data_type_; }
+  void set_dtype(DataType data_type) { data_type_ = data_type; }
+
+  bool operator==(const MutTensorMeta& other) const;
+  size_t CalcHashValue() const;
+
+  MutTensorMeta& operator=(const MutTensorMeta& other) = default;
 };
 
 class LocalTensorMeta : public TensorMeta {
@@ -100,13 +134,38 @@ class LocalTensorMeta : public TensorMeta {
   const Symbol<Device>& device() const { return device_; }
   int64_t storage_offset() const { return storage_offset_; }
 
-  Symbol<Device>* mut_device() { return &device_; }
-  void set_storage_offset(int64_t offset) { storage_offset_ = offset; }
-
   bool operator==(const LocalTensorMeta& other) const;
   size_t CalcHashValue() const;
 
   LocalTensorMeta& operator=(const LocalTensorMeta& other) = default;
+
+ private:
+  Symbol<Device> device_;
+  int64_t storage_offset_;
+};
+
+class MutLocalTensorMeta : public MutTensorMeta {
+ public:
+  // uninitialized MutLocalTensorMeta.
+  MutLocalTensorMeta();
+  MutLocalTensorMeta(const MutLocalTensorMeta&) = default;
+  MutLocalTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
+                     Symbol<Device> device);
+  MutLocalTensorMeta(const std::shared_ptr<const Shape>& shape,
+                     const std::shared_ptr<const Stride>& stride, DataType dtype,
+                     Symbol<Device> device, int64_t storage_offset);
+  virtual ~MutLocalTensorMeta() = default;
+
+  const Symbol<Device>& device() const { return device_; }
+  int64_t storage_offset() const { return storage_offset_; }
+
+  Symbol<Device>* mut_device() { return &device_; }
+  void set_storage_offset(int64_t offset) { storage_offset_ = offset; }
+
+  bool operator==(const MutLocalTensorMeta& other) const;
+  size_t CalcHashValue() const;
+
+  MutLocalTensorMeta& operator=(const MutLocalTensorMeta& other) = default;
 
  private:
   Symbol<Device> device_;
@@ -126,10 +185,6 @@ class GlobalTensorMeta : public TensorMeta {
 
   Symbol<NdSbp> nd_sbp() const { return nd_sbp_; }
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
-
-  void set_nd_sbp(Symbol<NdSbp> val) { nd_sbp_ = val; }
-
-  void set_parallel_desc(Symbol<ParallelDesc> val) { parallel_desc_ = val; }
 
   size_t CalcHashValue() const;
 
@@ -159,4 +214,4 @@ struct hash<oneflow::one::GlobalTensorMeta> final {
 
 }  // namespace std
 
-#endif  // ONEFLOW_FRAMEWORK_TENSOR_META_H_
+#endif  // ONEFLOW_COMMON_TENSOR_META_H_

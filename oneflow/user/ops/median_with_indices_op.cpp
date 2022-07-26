@@ -42,8 +42,8 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> MedianWithIndicesOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("values", 0) = ctx->InputDType("input", 0);
-  *ctx->OutputDType("indices", 0) = DataType::kInt64;
+  *ctx->MutOutputDType("values", 0) = ctx->InputDType("input", 0);
+  *ctx->MutOutputDType("indices", 0) = DataType::kInt64;
   return Maybe<void>::Ok();
 }
 
