@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_reduce.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
@@ -39,7 +38,7 @@ class VarKernel final : public user_op::OpKernel {
     const int64_t input_dim_element = input->shape_view().elem_cnt();
     int64_t axis_dim_element = 1;
     for (int64_t i = 0; i < axis.size(); ++i) {
-      axis_dim_element *= input->shape_view()[axis[i]];
+      axis_dim_element *= input->shape_view().At(axis[i]);
     }
     // only all dims cuda case will use tmp buffer.
     T* tmp_buffer_ptr =
@@ -70,7 +69,7 @@ size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   const int64_t input_dim_element = input.shape().elem_cnt();
   int64_t axis_dim_element = 1;
   for (int64_t i = 0; i < axis.size(); ++i) {
-    axis_dim_element *= input.shape()[axis[i]];
+    axis_dim_element *= input.shape().At(axis[i]);
   }
   if (input_dim_element > 0 && (axis.size() == input_shape.NumAxes() || input_dim_element == axis_dim_element)) {
     return GetCudaAlignedSize(
