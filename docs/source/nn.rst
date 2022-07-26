@@ -12,6 +12,13 @@ These are the basic building blocks for graphs:
     :class: this-will-duplicate-information-and-it-is-still-useful-here
     :backlinks: top
 
+.. currentmodule:: oneflow.nn
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: 
+
+    Parameter
 
 Containers
 ----------------------------------
@@ -173,6 +180,7 @@ Dropout Layers
 .. autosummary::
     :toctree: generated
     :nosignatures:
+    :template: classtemplate.rst
 
     nn.Dropout
 
@@ -241,12 +249,30 @@ DataParallel Layers (multi-GPU, distributed)
     
     nn.parallel.DistributedDataParallel
 
+
+Data loading and preprocessing Layers
+----------------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    nn.COCOReader
+    nn.CoinFlip
+    nn.CropMirrorNormalize
+    nn.OFRecordBytesDecoder
+    nn.OFRecordImageDecoder
+    nn.OFRecordImageDecoderRandomCrop
+    nn.OFRecordRawDecoder
+    nn.OFRecordReader
+
 Quantization Aware Training
 --------------------------------------------
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
+
     
     nn.MinMaxObserver
     nn.MovingAverageMinMaxObserver
@@ -291,3 +317,19 @@ Utility functions in other modules
     :template: classtemplate.rst
 
     nn.Flatten
+
+Quantized Functions
+--------------------
+
+Quantization refers to techniques for performing computations and 
+storing tensors at lower bitwidths than floating point precision.
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template:
+
+    nn.FakeQuantization
+    nn.MinMaxObserver
+    nn.MovingAverageMinMaxObserver
+    nn.Quantization

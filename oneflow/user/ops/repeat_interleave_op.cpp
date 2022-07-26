@@ -36,7 +36,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> Repeat_InterLeaveOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const int64_t repeat_num = ctx->Attr<int64_t>("repeat_num");
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_shape() = Shape({repeat_num});
   return Maybe<void>::Ok();
 }
