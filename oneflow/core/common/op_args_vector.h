@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,24 +12,18 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-from typing import Optional
+*/
+#ifndef ONEFLOW_CORE_COMMON_OP_ARGS_VECTOR_H_
+#define ONEFLOW_CORE_COMMON_OP_ARGS_VECTOR_H_
 
-import numpy as np
+#include "oneflow/core/common/small_vector.h"
+#include "oneflow/core/common/op_args_reserved_size.h"
 
-import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
-from oneflow.nn.module import Module
+namespace oneflow {
 
+template<typename T>
+using OpArgsVector = small_vector<T, kOpArgsReservedSize>;
 
-def nonzero_op(input, as_tuple=False):
-    if as_tuple:
-        return flow._C.nonzero(input, as_tuple)
-    else:
-        return flow._C.nonzero(input, as_tuple)[0]
+}
 
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
+#endif  // ONEFLOW_CORE_COMMON_OP_ARGS_VECTOR_H_

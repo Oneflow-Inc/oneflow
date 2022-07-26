@@ -741,13 +741,13 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
 
 namespace {
 
-Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>& op_conf,
-                                       const ArgVec& indexed_input_pairs,
-                                       const ArgVec& indexed_output_pairs,
-                                       std::vector<int64_t>* input_tuple_indexes4const_ibns,
-                                       std::vector<int64_t>* input_tuple_indexes4mut_ibns,
-                                       std::vector<int64_t>* output_tuple_indexes4mut_obns,
-                                       std::vector<int64_t>* output_tuple_indexes4mut2_obns) {
+Maybe<void> InitTensorTupleIndexes4Bns(
+    const std::shared_ptr<const OperatorConf>& op_conf, const ArgVec& indexed_input_pairs,
+    const ArgVec& indexed_output_pairs, OpArgsVector<int64_t>* input_tuple_indexes4const_ibns,
+    OpArgsVector<int64_t>* input_tuple_indexes4mut_ibns,
+    OpArgsVector<int64_t>* output_tuple_indexes4mut_obns,
+    OpArgsVector<int64_t>* output_tuple_indexes4mut2_obns,
+    small_vector<bool, kOpArgsReservedSize>* output_tuple_indexes2is_mut2_type) {
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf->user_conf().op_type_name());
   CHECK_NOTNULL_OR_RETURN(op_reg_val);
@@ -800,8 +800,10 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
     const std::string obn = GenRepeatedBn(pair.first, pair.second);
     if (arg_modifier_signature.obn2output_blob_modifier().at(obn).header_infered_before_compute()) {
       output_tuple_indexes4mut_obns->emplace_back(i);
+      output_tuple_indexes2is_mut2_type->emplace_back(false);
     } else {
       output_tuple_indexes4mut2_obns->emplace_back(i);
+      output_tuple_indexes2is_mut2_type->emplace_back(true);
     }
   }
   return Maybe<void>::Ok();
@@ -848,7 +850,7 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
       op_conf, input_arg_tuple->indexed_arg_name_and_index(),
       output_arg_tuple->indexed_arg_name_and_index(), &opkernel->input_tuple_indexes4const_ibns_,
       &opkernel->input_tuple_indexes4mut_ibns_, &opkernel->output_tuple_indexes4mut_obns_,
-      &opkernel->output_tuple_indexes4mut2_obns_));
+      &opkernel->output_tuple_indexes4mut2_obns_, &opkernel->output_tuple_indexes2is_mut2_type_));
 
   return opkernel;
 }
