@@ -27,6 +27,10 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/graph/nccl_send_recv_boxing_task_node.h"
+#include "oneflow/core/job/nd_sbp_util.h"
+#include "oneflow/core/graph/task_stream_id.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
@@ -44,6 +48,37 @@ std::shared_ptr<ChainSubTskGphBuilder> Make1DSubTskGphBuilder() {
   builders.emplace_back(new NaiveB2BSubTskGphBuilder());
   builders.emplace_back(new NaiveB2PSubTskGphBuilder());
   return std::make_shared<ChainSubTskGphBuilder>(builders);
+}
+
+void MergeParallelConf(const ParallelDesc& parallel_desc_0, const ParallelDesc& parallel_desc_1,
+                       ParallelConf* parallel_conf) {
+  CHECK_EQ(parallel_desc_0.device_tag(), parallel_desc_1.device_tag());
+  std::set<std::pair<int64_t, int64_t>> machine_device_ids;
+  for (int64_t machine_id : parallel_desc_0.sorted_machine_ids()) {
+    for (int64_t device_id : parallel_desc_0.sorted_dev_phy_ids(machine_id)) {
+      machine_device_ids.insert(std::make_pair(machine_id, device_id));
+    }
+  }
+  for (int64_t machine_id : parallel_desc_1.sorted_machine_ids()) {
+    for (int64_t device_id : parallel_desc_1.sorted_dev_phy_ids(machine_id)) {
+      machine_device_ids.insert(std::make_pair(machine_id, device_id));
+    }
+  }
+  parallel_conf->set_device_tag(parallel_desc_0.device_tag());
+  for (const auto& pair : machine_device_ids) {
+    parallel_conf->add_device_name("@" + std::to_string(pair.first) + ":"
+                                   + std::to_string(pair.second));
+  }
+}
+
+inline std::string NewUniqueIdGbc() {
+  static std::atomic<int64_t> counter(0);
+  static std::atomic<int64_t> curr_job_id(0);
+  if (curr_job_id != GlobalJobDesc().job_id()) {
+    curr_job_id = GlobalJobDesc().job_id();
+    counter = 0;
+  }
+  return std::to_string(counter.fetch_add(1, std::memory_order_relaxed));
 }
 
 }  // namespace
@@ -76,6 +111,68 @@ class FlatSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
 
  private:
   std::shared_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
+};
+
+class NDNcclSendRecvBoxingSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NDNcclSendRecvBoxingSubTskGphBuilder);
+  NDNcclSendRecvBoxingSubTskGphBuilder() {}
+  ~NDNcclSendRecvBoxingSubTskGphBuilder() override = default;
+
+  Maybe<SubTskGphBuilderStatus> Build(SubTskGphBuilderCtx* ctx,
+                                      const std::vector<TaskNode*>& sorted_in_tasks,
+                                      std::vector<TaskNode*>* sorted_out_tasks,
+                                      std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks,
+                                      const ParallelDesc& in_parallel_desc,
+                                      const ParallelDesc& out_parallel_desc,
+                                      const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
+                                      const NdSbp& in_nd_sbp, const NdSbp& out_nd_sbp,
+                                      const Shape& time_shape) const override {
+    if (in_parallel_desc.device_type() == DeviceType::kCUDA
+        && out_parallel_desc.device_type() == DeviceType::kCUDA
+        && !NdSbpHasPartialParallel(out_nd_sbp)) {
+#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+      ParallelConf merged_parallel_conf;
+      MergeParallelConf(in_parallel_desc.parallel_conf(), out_parallel_desc.parallel_conf(),
+                        &merged_parallel_conf);
+      ParallelDesc merged_parallel_desc(merged_parallel_conf);
+      TaskNode* first_in_node = sorted_in_tasks.front();
+      sorted_ctrl_tasks->resize(out_parallel_desc.parallel_num());
+      std::string stream_name = "NCCL_SEND_RECV_BOXING" + NewUniqueIdGbc();
+      FOR_RANGE(int64_t, id, 0, merged_parallel_desc.parallel_num()) {
+        NcclSendRecvBoxingTaskNode* node = ctx->task_graph()->NewNode<NcclSendRecvBoxingTaskNode>();
+        const int64_t machine_id = JUST(merged_parallel_desc.MachineId4ParallelId(id));
+        int64_t device_index = JUST(merged_parallel_desc.DeviceId4ParallelId(id));
+        int64_t thrd_id = EncodeStreamIdToInt64(GenerateNamedTaskStreamId(
+            machine_id, merged_parallel_desc.device_type(), device_index, stream_name));
+        bool has_input = in_parallel_desc.Containing(machine_id, device_index);
+        bool has_output = out_parallel_desc.Containing(machine_id, device_index);
+        node->Init(machine_id, thrd_id, lbi, logical_blob_desc.shape(),
+                   logical_blob_desc.data_type(), in_nd_sbp, out_nd_sbp, in_parallel_desc,
+                   out_parallel_desc, id, merged_parallel_desc, has_input, has_output, stream_name);
+        if (has_input) {
+          int64_t in_id =
+              JUST(in_parallel_desc.ParallelId4MachineDeviceId(machine_id, device_index));
+          ctx->task_graph()->ConnectWithLbi(sorted_in_tasks.at(in_id), node, lbi);
+        } else {
+          // TODO: find nearest
+          std::string regst_desc_name;
+          first_in_node->BuildCtrlRegstDesc(node, &regst_desc_name);
+          TaskEdge* edge = ctx->task_graph()->NewEdge();
+          Connect<TaskNode>(first_in_node, edge, node);
+          first_in_node->BindEdgeWithProducedRegst(edge, regst_desc_name);
+        }
+        if (has_output) { sorted_out_tasks->push_back(node); }
+      }
+      return BuildSubTskGphBuilderStatus("NDNcclSendRecvBoxingSubTskGphBuilder", "");
+#else
+      return Error::BoxingNotSupportedError() << "No CUDA or low NCCL version";
+#endif
+    } else {
+      return Error::BoxingNotSupportedError()
+             << "Partial SBP in the consumer or not running on CUDA";
+    }
+  }
 };
 
 class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
@@ -257,21 +354,22 @@ class Dim0NdSbpMismatchedSubTskGphBuilder final : public HierarchicalSubTskGphBu
     if (in_parallel_desc.hierarchy()->NumAxes() == 2
         && (*in_parallel_desc.hierarchy() == *out_parallel_desc.hierarchy())
         && in_nd_sbp.sbp_parallel(0) != out_nd_sbp.sbp_parallel(0)
-        && in_nd_sbp.sbp_parallel(1) == out_nd_sbp.sbp_parallel(1)) {
-      if (!(NdSbpAllSameSplitParallel(in_nd_sbp) || NdSbpAllSameSplitParallel(out_nd_sbp))) {
-        return inter_group_sub_tsk_gph_builder_->Build(
-            ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
-            out_parallel_desc, lbi, logical_blob_desc, in_nd_sbp, out_nd_sbp, time_shape);
-      } else {
-        return Error::BoxingNotSupportedError();
-      }
+        && in_nd_sbp.sbp_parallel(1) == out_nd_sbp.sbp_parallel(1)
+        && !(NdSbpAllSameSplitParallel(in_nd_sbp) || NdSbpAllSameSplitParallel(out_nd_sbp))) {
+      return inter_group_sub_tsk_gph_builder_->Build(
+          ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
+          out_parallel_desc, lbi, logical_blob_desc, in_nd_sbp, out_nd_sbp, time_shape);
     } else {
-      return Error::BoxingNotSupportedError();
+      return nd_nccl_send_recv_boxing_sub_tsk_gph_builder_->Build(
+          ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
+          out_parallel_desc, lbi, logical_blob_desc, in_nd_sbp, out_nd_sbp, time_shape);
     }
   }
 
  private:
   std::unique_ptr<InterGroupSubTskGphBuilder> inter_group_sub_tsk_gph_builder_;
+  std::unique_ptr<NDNcclSendRecvBoxingSubTskGphBuilder>
+      nd_nccl_send_recv_boxing_sub_tsk_gph_builder_;
 };
 
 class Same2DHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
@@ -298,12 +396,10 @@ class Same2DHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilde
         return intra_group_sub_tsk_gph_builder_->Build(
             ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
             out_parallel_desc, lbi, logical_blob_desc, in_nd_sbp, out_nd_sbp, time_shape);
-      } else if (in_nd_sbp.sbp_parallel(1) == out_nd_sbp.sbp_parallel(1)) {
+      } else {
         return dim0_nd_sbp_mismatched_sub_tsk_gph_builder_->Build(
             ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
             out_parallel_desc, lbi, logical_blob_desc, in_nd_sbp, out_nd_sbp, time_shape);
-      } else {
-        return Error::BoxingNotSupportedError();
       }
     } else {
       return Error::BoxingNotSupportedError();
@@ -371,6 +467,8 @@ struct DispatchHierarchicalSubTskGphBuilder::Impl {
   std::unique_ptr<Same2DHierarchySubTskGphBuilder> same_2d_hierarchy_sub_tsk_gph_builder_;
   std::unique_ptr<ExpandToSame2DHierarchySubTskGphBuilder>
       expand_to_same_2d_hierarchy_sub_tsk_gph_builder_;
+  std::unique_ptr<NDNcclSendRecvBoxingSubTskGphBuilder>
+      nd_nccl_send_recv_boxing_sub_tsk_gph_builder_;
 };
 
 DispatchHierarchicalSubTskGphBuilder::Impl::Impl() {
@@ -378,6 +476,7 @@ DispatchHierarchicalSubTskGphBuilder::Impl::Impl() {
   same_2d_hierarchy_sub_tsk_gph_builder_.reset(new Same2DHierarchySubTskGphBuilder());
   expand_to_same_2d_hierarchy_sub_tsk_gph_builder_.reset(
       new ExpandToSame2DHierarchySubTskGphBuilder());
+  nd_nccl_send_recv_boxing_sub_tsk_gph_builder_.reset(new NDNcclSendRecvBoxingSubTskGphBuilder());
 }
 
 DispatchHierarchicalSubTskGphBuilder::DispatchHierarchicalSubTskGphBuilder() {
@@ -402,6 +501,14 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
                          &reduced_out_nd_sbp);
   const auto& in_hierarchy = reduced_in_parallel_desc.hierarchy();
   const auto& out_hierarchy = reduced_out_parallel_desc.hierarchy();
+  if ((in_hierarchy->NumAxes() > 2 || out_hierarchy->NumAxes() > 2)
+      && reduced_in_parallel_desc.device_type() == DeviceType::kCUDA
+      && reduced_out_parallel_desc.device_type() == DeviceType::kCUDA) {
+    return impl_->nd_nccl_send_recv_boxing_sub_tsk_gph_builder_->Build(
+        ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
+        reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_nd_sbp, reduced_out_nd_sbp,
+        time_shape);
+  }
   if (in_hierarchy->NumAxes() <= 2 && out_hierarchy->NumAxes() <= 2) {
     if (in_hierarchy->NumAxes() == 1 && out_hierarchy->NumAxes() == 1) {
       return impl_->flat_sub_tsk_gph_builder_->Build(
@@ -417,6 +524,12 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
                && ((in_hierarchy->NumAxes() == 1 && out_hierarchy->NumAxes() == 2)
                    || (in_hierarchy->NumAxes() == 2 && out_hierarchy->NumAxes() == 1))) {
       return impl_->expand_to_same_2d_hierarchy_sub_tsk_gph_builder_->Build(
+          ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
+          reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_nd_sbp, reduced_out_nd_sbp,
+          time_shape);
+    } else if (reduced_in_parallel_desc.device_type() == DeviceType::kCUDA
+               && reduced_out_parallel_desc.device_type() == DeviceType::kCUDA) {
+      return impl_->nd_nccl_send_recv_boxing_sub_tsk_gph_builder_->Build(
           ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
           reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_nd_sbp, reduced_out_nd_sbp,
           time_shape);
