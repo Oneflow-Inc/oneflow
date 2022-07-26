@@ -16,12 +16,9 @@ limitations under the License.
 
 import unittest
 
-import numpy as np
-
 from oneflow.test_utils.automated_test_util import *
 
 import oneflow as flow
-from oneflow import nn
 import oneflow.unittest
 
 
@@ -76,31 +73,6 @@ class TestMaskedFill(flow.unittest.TestCase):
         mask = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         value = random().to(bool)
         return input.masked_fill(mask > 0.5, value)
-
-    def test_graph_masked_fill(test_case):
-        k = 8
-        model = nn.Sequential(nn.Linear(k, k))
-        optimizer = flow.optim.SGD(model.parameters(), lr=1e-3)
-        loss_fn = nn.MSELoss()
-
-        class MaskedFillGraph(flow.nn.Graph):
-            def __init__(self,):
-                super().__init__()
-                self.model = model
-                self.loss_fn = loss_fn
-                self.add_optimizer(optimizer)
-
-            def build(self, input, mask):
-                output = self.model(input)
-                output = flow.masked_fill(output, mask > 0.5, 0.5)
-                loss = self.loss_fn(output, input)
-                loss.backward()
-                return loss
-
-        input = flow.randn(k, k).requires_grad_()
-        mask = flow.randn(k, k)
-        model = MaskedFillGraph()
-        return model(input, mask)
 
 
 if __name__ == "__main__":
