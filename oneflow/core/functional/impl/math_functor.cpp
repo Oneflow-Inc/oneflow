@@ -656,14 +656,6 @@ class ReduceAnyFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-struct ReduceDeviceStageBaseAttrs {
-  Maybe<AttrMap> operator()(const std::vector<int32_t>& axis) {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    return AttrMap(attrs);
-  }
-};
-
 template<class T>
 class ReduceDeviceStageBaseFunctor {
  public:
@@ -677,6 +669,14 @@ class ReduceDeviceStageBaseFunctor {
 
   virtual ~ReduceDeviceStageBaseFunctor() = default;
 
+  struct ReduceDeviceStageBaseAttrs {
+    Maybe<AttrMap> operator()(const std::vector<int32_t>& axis) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+      return AttrMap(attrs);
+    }
+  };
+
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
                                 const std::vector<int32_t>& axis) const {
     constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(ReduceDeviceStageBaseAttrs);
@@ -686,14 +686,6 @@ class ReduceDeviceStageBaseFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
-};
-
-struct ReduceDeviceStageGradBase {
-  Maybe<AttrMap> operator()(const std::vector<int32_t>& axis) {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    return AttrMap(attrs);
-  }
 };
 
 template<class T>
@@ -706,6 +698,14 @@ class ReduceDeviceStageGradBaseFunctor {
                            .Input("count")
                            .Output("in_diff")
                            .Build())) {}
+
+  struct ReduceDeviceStageGradBase {
+    Maybe<AttrMap> operator()(const std::vector<int32_t>& axis) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+      return AttrMap(attrs);
+    }
+  };
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& out_diff,
                            const std::shared_ptr<one::Tensor>& mask,
@@ -745,15 +745,6 @@ class ReduceMaxDeviceStageGradFunctor
   static std::string GetOpName() { return "reduce_max_device_stage_grad"; }
 };
 
-struct ReduceGlobalStageBase {
-  Maybe<AttrMap> operator()(const std::vector<int32_t>& axis, bool keepdims) {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return AttrMap(attrs);
-  }
-};
-
 template<class T>
 class ReduceGlobalStageBaseFunctor {
  public:
@@ -764,6 +755,15 @@ class ReduceGlobalStageBaseFunctor {
                            .Output("out")
                            .Output("mask")
                            .Build())) {}
+
+  struct ReduceGlobalStageBase {
+    Maybe<AttrMap> operator()(const std::vector<int32_t>& axis, bool keepdims) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+      JUST(attrs.SetAttr<bool>("keepdims", keepdims));
+      return AttrMap(attrs);
+    }
+  };
 
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
                                 const std::shared_ptr<one::Tensor>& device_count,
@@ -778,15 +778,6 @@ class ReduceGlobalStageBaseFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-struct ReduceGlobalStageGradBase {
-  Maybe<AttrMap> operator()(const std::vector<int32_t>& axis, bool keepdims) {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return AttrMap(attrs);
-  }
-};
-
 template<class T>
 class ReduceGlobalStageGradBaseFunctor {
  public:
@@ -797,6 +788,15 @@ class ReduceGlobalStageGradBaseFunctor {
                            .Input("device_count")
                            .Output("in_diff")
                            .Build())) {}
+
+  struct ReduceGlobalStageGradBase {
+    Maybe<AttrMap> operator()(const std::vector<int32_t>& axis, bool keepdims) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+      JUST(attrs.SetAttr<bool>("keepdims", keepdims));
+      return AttrMap(attrs);
+    }
+  };
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& out_diff,
                            const std::shared_ptr<one::Tensor>& mask,
