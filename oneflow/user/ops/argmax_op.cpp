@@ -38,7 +38,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> ArgmaxOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kInt64;
+  *ctx->MutOutputDType("out", 0) = DataType::kInt64;
   return Maybe<void>::Ok();
 }
 

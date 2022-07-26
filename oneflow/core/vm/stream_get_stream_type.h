@@ -19,14 +19,13 @@ limitations under the License.
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/singleton_ptr.h"
+#include "oneflow/core/vm/control_stream_policy.h"
 #include "oneflow/core/vm/event_recorded_ep_stream_type.h"
-#include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/critical_section_stream_type.h"
 #include "oneflow/core/vm/ep_d2h_stream_type.h"
 #include "oneflow/core/vm/ep_stream_type.h"
 #include "oneflow/core/vm/pinned_ep_stream_type.h"
 #include "oneflow/core/vm/lazy_job_stream_type.h"
-#include "oneflow/core/vm/stream_get_stream_type.h"
 #include "oneflow/core/vm/naive_stream_policy.h"
 #include "oneflow/core/device/device_context.h"
 
@@ -56,8 +55,7 @@ struct CreateStreamPolicy final : public StreamRoleVisitor<CreateStreamPolicy> {
     return Create(stream_type, device);
   }
   static Maybe<vm::StreamPolicy> VisitBarrier(Symbol<Device> device) {
-    const auto* stream_type = SingletonPtr<vm::ControlStreamType>();
-    return Create(stream_type, device);
+    return std::shared_ptr<vm::StreamPolicy>(new vm::ControlStreamPolicy());
   }
   static Maybe<vm::StreamPolicy> VisitCriticalSection(Symbol<Device> device) {
     const auto* stream_type = SingletonPtr<vm::CriticalSectionStreamType>();

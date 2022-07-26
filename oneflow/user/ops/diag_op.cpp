@@ -41,7 +41,7 @@ namespace oneflow {
     CHECK_GE_OR_RETURN(out_dim_vec[0], 0);  // NOLINT
   }
 
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   out_desc->set_is_dynamic(false);
   *out_desc->mut_shape() = Shape(out_dim_vec);
   return Maybe<void>::Ok();
@@ -57,14 +57,14 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> DiagOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> DiagGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
   const Shape& in_shape = in.shape();
-  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
   *dx_desc->mut_shape() = Shape(in_shape.dim_vec());
   return Maybe<void>::Ok();
 }
@@ -79,7 +79,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> DiagGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
   return Maybe<void>::Ok();
 }
 

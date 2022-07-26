@@ -18,6 +18,20 @@ Tensor
     :toctree: generated
     :nosignatures:
 
+    BoolTensor
+    ByteTensor
+    CharTensor
+    DoubleTensor
+    FloatTensor
+    HalfTensor
+    IntTensor
+    LongTensor
+
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
     is_tensor
     is_floating_point
     is_nonzero
@@ -49,12 +63,17 @@ Creation Ops
     zeros_like
     ones
     ones_like
+    randint_like
+    masked_fill
+    new_ones
     arange
     linspace
     eye
     empty
     full
     full_like
+    tensor_scatter_nd_update
+    logspace
 
 .. _indexing-slicing-joining:
 
@@ -69,7 +88,10 @@ Indexing, Slicing, Joining, Mutating Ops
     cat
     concat
     chunk
+    expand
     gather
+    gather_nd
+    batch_gather
     hsplit
     vsplit
     index_select
@@ -78,11 +100,14 @@ Indexing, Slicing, Joining, Mutating Ops
     narrow
     nonzero
     permute
+    repeat
     reshape
     select
     scatter
     scatter_add
     scatter_nd
+    slice
+    slice_update
     split
     squeeze
     stack
@@ -198,6 +223,7 @@ Pointwise Ops
     arccos 
     arccosh
     add 
+    addcdiv
     addcmul
     asin 
     asinh 
@@ -222,14 +248,15 @@ Pointwise Ops
     floor 
     floor_ 
     fmod 
+    gelu
     log 
     log1p 
     log2 
     logical_and 
     logical_not 
     logical_or 
-     
     logical_xor 
+    mish
     mul 
     neg 
     negative 
@@ -237,6 +264,11 @@ Pointwise Ops
     reciprocal 
     round 
     rsqrt 
+    selu
+    softmax
+    softplus
+    softsign
+    silu
     sigmoid 
     sign 
     sin 
@@ -298,7 +330,7 @@ Comparison Ops
     minimum
     not_equal
 
-Other Ops
+Spectral Ops
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
@@ -306,15 +338,32 @@ Other Ops
     :nosignatures:
 
     
+    hann_window
+    
+Other Ops
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    adaptive_avg_pool1d
+    adaptive_avg_pool2d
+    adaptive_avg_pool3d
     broadcast_like 
+    cast
     cumprod 
     cumsum 
+    decode_onerec
     diag 
     diagonal 
     einsum 
     flatten 
     flip 
+    in_top_k
     meshgrid 
+    nms
+    roc_auc_score
     roll 
     searchsorted
     tensordot
@@ -335,6 +384,4 @@ BLAS and LAPACK Operations
     matmul
     mm
     mv
-
-
 

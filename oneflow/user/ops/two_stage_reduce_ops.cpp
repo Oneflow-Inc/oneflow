@@ -23,9 +23,9 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferReduceDeviceStageDtypeFn(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-  *ctx->OutputDType("mask", 0) = DataType::kBool;
-  *ctx->OutputDType("count", 0) = DataType::kInt32;
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("mask", 0) = DataType::kBool;
+  *ctx->MutOutputDType("count", 0) = DataType::kInt32;
   return Maybe<void>::Ok();
 }
 
@@ -90,7 +90,7 @@ Maybe<void> InferReduceDeviceStagePhysicalTensorDescFn(user_op::InferContext* ct
 Maybe<void> InferReduceDeviceStageGradDtypeFn(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kBool);
   CHECK_EQ_OR_RETURN(ctx->InputDType("count", 0), DataType::kInt32);
-  *ctx->OutputDType("in_diff", 0) = ctx->InputDType("out_diff", 0);
+  *ctx->MutOutputDType("in_diff", 0) = ctx->InputDType("out_diff", 0);
   return Maybe<void>::Ok();
 }
 
@@ -102,8 +102,8 @@ Maybe<void> InferReduceDeviceStageGradTensorDescFn(user_op::InferContext* ctx) {
 
 Maybe<void> InferReduceGlobalStageDtypeFn(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("device_count", 0), DataType::kInt32);
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-  *ctx->OutputDType("mask", 0) = DataType::kBool;
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("mask", 0) = DataType::kBool;
 
   return Maybe<void>::Ok();
 }
@@ -140,7 +140,7 @@ Maybe<void> InferReduceGlobalStageGradDtypeFn(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kBool);
   CHECK_EQ_OR_RETURN(ctx->InputDType("device_count", 0), DataType::kInt32);
 
-  *ctx->OutputDType("in_diff", 0) = ctx->InputDType("out_diff", 0);
+  *ctx->MutOutputDType("in_diff", 0) = ctx->InputDType("out_diff", 0);
 
   return Maybe<void>::Ok();
 }
