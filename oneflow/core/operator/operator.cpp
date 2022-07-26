@@ -549,6 +549,26 @@ Maybe<void> Operator::InferSbpSignatureIf(
   return Maybe<void>::Ok();
 }
 
+bool IsSbpSignatureContaining2(const SbpSignature& bigger, const SbpSignature& smaller) {
+  auto& bn2sbp = bigger.bn_in_op2sbp_parallel();
+  for (const auto& pair : smaller.bn_in_op2sbp_parallel()) {
+    if (pair.second.parallel_type_case() == SbpParallel::PARALLEL_TYPE_NOT_SET) { continue; }
+    if (bn2sbp.find(pair.first) == bn2sbp.end()) { return false; }
+    // CHECK(bn2sbp.find(pair.first) != bn2sbp.end()) << pair.first;
+    if (bn2sbp.at(pair.first) != pair.second) { return false; }
+  }
+  return true;
+}
+
+void FilterSbpSignatureList2(const SbpSignatureList& sbp_sig_list, const SbpSignature& sbp_sig_conf,
+                             SbpSignatureList* filtered_sbp_sig_list) {
+  for (const auto& sbp_signature : sbp_sig_list.sbp_signature()) {
+    if (IsSbpSignatureContaining2(sbp_signature, sbp_sig_conf)) {
+      *filtered_sbp_sig_list->mutable_sbp_signature()->Add() = sbp_signature;
+    }
+  }
+}
+
 Maybe<void> Operator::InferSbpSignature(
     SbpSignature* infered_sbp_signature, const SbpSignature& sbp_sig_conf,
     const HashMap<std::string, SbpInferHint>& ibn2sbp_infer_hint) const {
@@ -599,6 +619,11 @@ Maybe<void> Operator::InferSbpSignature(
     CalcOrderValue4SbpSig = [](const SbpSignature&) -> int32_t { return 0; };
   }
   if (op_parallel_desc_->parallel_num() == 1) {
+    std::cout << "+++++++++++++++++++++++++++++++++++++++++" << std::endl;
+    std::cout << "op_name :" << op_name() << " input_bns: " << input_bns().size()
+              << " output_bns: " << output_bns().size() << std::endl;
+    std::cout << "<sbp_sig_conf> \n" << sbp_sig_conf.DebugString() << std::endl;
+
     auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc&> {
       const SbpInferHint* sbp_infer_hint = JUST(SbpInferHint4Ibn(ibn));
       return Maybe<const BlobDesc&>(sbp_infer_hint->logical_blob_desc());
@@ -607,27 +632,64 @@ Maybe<void> Operator::InferSbpSignature(
     SbpSignatureList sbp_sig_candidates;
     JUST(GetSbpSignaturesIf(LogicalBlobDesc4Ibn, *op_parallel_desc_, &sbp_sig_candidates));
     // filter sbp signatures by logical shape
+    std::cout << "<sbp_sig_candidates> " << sbp_sig_candidates.sbp_signature().size() << std::endl;
+    // std::cout << "<sbp_sig_candidates> \n" << sbp_sig_candidates.DebugString() << std::endl;
 
     SbpSignatureList valid_sbp_sig_list;
     JUST(FilterAndCheckValidSbpSignatureListByLogicalShape(
         sbp_sig_candidates, LogicalBlobDesc4Ibn, *op_parallel_desc_, &valid_sbp_sig_list));
+    std::cout << "<valid_sbp_sig_list> " << valid_sbp_sig_list.sbp_signature().size() << std::endl;
+    // std::cout << "<valid_sbp_sig_list> \n" << valid_sbp_sig_list.DebugString() << std::endl;
 
-    CHECK_GT_OR_RETURN(valid_sbp_sig_list.sbp_signature_size(), 0)
+    SbpSignatureList filtered_sbp_sigs_by_conf;
+    FilterSbpSignatureList2(valid_sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);
+    CHECK_GT_OR_RETURN(filtered_sbp_sigs_by_conf.sbp_signature_size(), 0)
         << op_name() << " has no maching sbp after flitering valid sbp list "
         << valid_sbp_sig_list.DebugString() << " with sbp hint " << sbp_sig_conf.DebugString();
+    std::cout << "<filtered_sbp_sigs_by_conf> " << filtered_sbp_sigs_by_conf.sbp_signature().size()
+              << std::endl;
+    std::cout << "<filtered_sbp_sigs_by_conf> \n"
+              << filtered_sbp_sigs_by_conf.DebugString() << std::endl;
 
-    *infered_sbp_signature = *valid_sbp_sig_list.sbp_signature().begin();
+    if (filtered_sbp_sigs_by_conf.sbp_signature_size() == 1) {
+      *infered_sbp_signature = *filtered_sbp_sigs_by_conf.sbp_signature().begin();
+      return Maybe<void>::Ok();
+    }
 
-    // if (filtered_sbp_sigs_by_conf.sbp_signature_size() == 1) {
-    //   return Maybe<void>::Ok();
-    // }
-    // auto sbp_sig = *filtered_sbp_sigs_by_conf.sbp_signature().begin();
+    // sort sbp signatures by copy cost, then return the one with least cost
+    HashMap<std::string, const SbpParallel*> ibn2producer_sbp_parallel;
+    for (const auto& ibn : input_bns()) {
+      ibn2producer_sbp_parallel[ibn] = &(JUST(SbpInferHint4Ibn(ibn))->sbp_parallel());
+    }
+    std::vector<const SbpSignature*> sorted_sbp_signatures;
+    SortSbpSignatureListByCopyCost(filtered_sbp_sigs_by_conf, input_bns(), SbpInferHint4Ibn,
+                                   CalcOrderValue4SbpSig, &sorted_sbp_signatures);
+    *infered_sbp_signature = *sorted_sbp_signatures.at(0);
 
-    // auto bn2sbp2 = sbp_sig.bn_in_op2sbp_parallel();
+    auto* bn2sbp = infered_sbp_signature->mutable_bn_in_op2sbp_parallel();
+    for (const auto& ibn : input_bns()) {
+      if ((*bn2sbp)[ibn].parallel_type_case() == SbpParallel::PARALLEL_TYPE_NOT_SET) {
+        (*bn2sbp)[ibn].mutable_broadcast_parallel();
+      }
+    }
+    for (const auto& obn : output_bns()) {
+      if ((*bn2sbp)[obn].parallel_type_case() == SbpParallel::PARALLEL_TYPE_NOT_SET) {
+        (*bn2sbp)[obn].mutable_broadcast_parallel();
+      }
+    }
+
+    std::cout << "<infered_sbp_signature> \n" << infered_sbp_signature->DebugString() << std::endl;
+
+    auto bn2sbp_c = infered_sbp_signature->bn_in_op2sbp_parallel();
+    for (const auto& ibn : input_bns()) {
+      std::cout << ibn << "\tsbp: " << SbpToString(bn2sbp_c[ibn]) << std::endl;
+    }
+    for (const auto& obn : output_bns()) {
+      std::cout << obn << "\tsbp: " << SbpToString(bn2sbp_c[obn]) << std::endl;
+    }
+
+    std::cout << "-----------------------------------------" << std::endl;
     // auto* bn2sbp = infered_sbp_signature->mutable_bn_in_op2sbp_parallel();
-    // for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn] = bn2sbp2[ibn]; }
-    // for (const auto& obn : output_bns()) { (*bn2sbp)[obn] = bn2sbp2[obn]; }
-
     // for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn].mutable_broadcast_parallel(); }
     // for (const auto& obn : output_bns()) { (*bn2sbp)[obn].mutable_broadcast_parallel(); }
   } else if (op_parallel_desc_->parallel_num() > 1) {
@@ -636,6 +698,9 @@ Maybe<void> Operator::InferSbpSignature(
   } else {
     UNIMPLEMENTED();
   }
+
+  {}
+
   return Maybe<void>::Ok();
 }
 
@@ -822,6 +887,12 @@ Maybe<void> Operator::InferSbpSignature(
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   // get op sbp signatures
+  std::cout << "+++++++++++++++++++++++++++++++++++++++++" << std::endl;
+  std::cout << "op_name :" << op_name() << " input_bns: " << input_bns().size()
+            << " output_bns: " << output_bns().size() << std::endl;
+  std::cout << "<sbp_sig_conf> \n" << sbp_sig_conf.DebugString() << std::endl;
+  std::cout << "-----------------------------------------" << std::endl;
+
   auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc&> {
     const SbpInferHint* sbp_infer_hint = JUST(SbpInferHint4Ibn(ibn));
     return Maybe<const BlobDesc&>(sbp_infer_hint->logical_blob_desc());
