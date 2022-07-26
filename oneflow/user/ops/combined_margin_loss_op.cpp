@@ -21,7 +21,7 @@ namespace oneflow {
 /* static */ Maybe<void> CombinedMarginLossOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& label = ctx->InputTensorDesc("label", 0);
-  user_op::TensorDesc* theta = ctx->OutputTensorDesc("theta", 0);
+  user_op::TensorDesc* theta = ctx->MutOutputTensorDesc("theta", 0);
   CHECK_EQ_OR_RETURN(label.shape().At(0), x.shape().At(0));
   CHECK_GE_OR_RETURN(x.shape().NumAxes(), 2);
   *ctx->MutOutputShape("y", 0) = ctx->InputShape("x", 0);
