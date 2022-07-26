@@ -65,7 +65,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> CastLikeOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dtype_like_tensor_desc = ctx->InputTensorDesc("dtype_like", 0);
-  user_op::TensorDesc* output_tensor_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* output_tensor_desc = ctx->MutOutputTensorDesc("out", 0);
   *output_tensor_desc->mut_data_type() = dtype_like_tensor_desc.data_type();
   return Maybe<void>::Ok();
 }

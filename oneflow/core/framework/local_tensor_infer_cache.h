@@ -18,21 +18,17 @@ limitations under the License.
 
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/small_vector.h"
-#include "oneflow/core/common/op_args_reserved_size.h"
+#include "oneflow/core/common/op_args_vector.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
-#include "oneflow/core/framework/tensor_meta.h"
+#include "oneflow/core/common/tensor_meta.h"
 
 namespace oneflow {
 
 class Device;
 
 namespace one {
-
-template<typename T>
-using OpArgsVector = small_vector<T, kOpArgsReservedSize>;
 
 class TensorTuple;
 class UserOpExpr;
