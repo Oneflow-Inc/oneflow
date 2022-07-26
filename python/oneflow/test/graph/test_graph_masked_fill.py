@@ -62,5 +62,6 @@ class TestMaskedFillGraph(flow.unittest.TestCase):
         y_lazy = masked_fill_graph()
         test_case.assertTrue(np.array_equal(y_eager.numpy(), y_lazy.numpy()))
 
+
 if __name__ == "__main__":
     unittest.main()
