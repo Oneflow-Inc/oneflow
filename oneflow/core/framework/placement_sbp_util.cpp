@@ -17,7 +17,7 @@ limitations under the License.
 #include <algorithm>
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/framework/placed_nd_sbp.h"
-#include "oneflow/core/framework/tensor_meta.h"
+#include "oneflow/core/common/tensor_meta.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/util.h"

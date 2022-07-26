@@ -28,14 +28,14 @@ namespace oneflow {
   }                                                                                              \
   /*static*/ Maybe<void> name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {          \
     *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);                                   \
-    *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);                              \
+    *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);                           \
     return Maybe<void>::Ok();                                                                    \
   }                                                                                              \
   /*static*/ Maybe<void> name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) {         \
     return InferLogicalTensorDesc(ctx);                                                          \
   }                                                                                              \
   /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {                   \
-    *ctx->OutputDType("out", 0) = DataType::kBool;                                               \
+    *ctx->MutOutputDType("out", 0) = DataType::kBool;                                            \
     return Maybe<void>::Ok();                                                                    \
   }
 

@@ -24,24 +24,26 @@ from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgDict
 
 
-def _test_consistent_full(test_case, shape, placement, sbp):
-    x = flow.full(shape, 1.0, placement=placement, sbp=sbp)
+def _test_global_full_like(test_case, shape, placement, sbp):
+    x_ = flow.randn(shape)
+    x = flow.full_like(x_, 1.0, placement=placement, sbp=sbp)
 
     test_case.assertEqual(x.shape, flow.Size(shape))
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
 
 
-def _test_graph_full(test_case, shape, placement, sbp):
-    class ConsistentFullGraph(flow.nn.Graph):
+def _test_graph_full_like(test_case, shape, placement, sbp):
+    class GlobalFullLikeGraph(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
 
         def build(self):
-            x = flow.full(shape, 1.0, placement=placement, sbp=sbp)
+            x_ = flow.randn(shape)
+            x = flow.full_like(x_, 1.0, placement=placement, sbp=sbp)
             return x
 
-    model = ConsistentFullGraph()
+    model = GlobalFullLikeGraph()
     x = model()
 
     test_case.assertEqual(x.shape, flow.Size(shape))
@@ -49,20 +51,20 @@ def _test_graph_full(test_case, shape, placement, sbp):
     test_case.assertEqual(x.placement, placement)
 
 
-class TestFullConsistent(flow.unittest.TestCase):
+class TestFillLikeGlobal(flow.unittest.TestCase):
     @globaltest
-    def test_full_consistent(test_case):
+    def test_full_like_global(test_case):
         shapes = [(8,), (8, 8,), (8, 8, 8)]
         for shape in shapes:
             for placement in all_placement():
                 for sbp in all_sbp(
                     placement, max_dim=len(shape), except_partial_sum=True
                 ):
-                    _test_consistent_full(test_case, shape, placement, sbp)
+                    _test_global_full_like(test_case, shape, placement, sbp)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n2d()
-    def test_full_graph(test_case):
+    def test_full_like_graph(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [[8], [8, 8], [8, 8, 8]]
         arg_dict["placement"] = [
@@ -77,7 +79,7 @@ class TestFullConsistent(flow.unittest.TestCase):
             shape = args["shape"]
             placement = args["placement"]
             for sbp in all_sbp(placement, max_dim=len(shape), except_partial_sum=True):
-                _test_graph_full(test_case, shape, placement, sbp)
+                _test_graph_full_like(test_case, shape, placement, sbp)
 
 
 if __name__ == "__main__":

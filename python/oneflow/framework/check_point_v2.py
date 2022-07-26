@@ -201,8 +201,19 @@ def tensor_setstate(self, pickle_dict):
         assert isinstance(save_load_path, Path)
         rel_dir_name = pickle_dict["path"]
         abs_dir_name = save_load_path / rel_dir_name
-        self.__init__(_LoadSingleVariable(str(abs_dir_name), global_src_dsk_rank))
+        tmp_tensor = _LoadSingleVariable(str(abs_dir_name), global_src_dsk_rank)
+        if map_location is not None:
+            if isinstance(map_location, flow.device):
+                tmp_tensor = tmp_tensor.to(map_location)
+            elif isinstance(map_location, flow.placement):
+                tmp_tensor = tmp_tensor.to_global(map_location)
+            else:
+                raise ValueError(
+                    f"Unsupported 'map_location' type {type(map_location)}."
+                )
+        self.__init__(tmp_tensor)
     else:
+        assert map_location is None
         if "placement" in pickle_dict:
             return self.__init__(
                 flow.tensor(
@@ -267,19 +278,26 @@ def legacy_load(
 
 
 @contextmanager
-def tensor_pickling_context(path: Path, global_src_dst_rank: Optional[int]):
+def tensor_pickling_context(path: Path, global_src_dst_rank: Optional[int], mp):
     global save_load_path
     global global_src_dsk_rank
+    global map_location
     global_src_dsk_rank = global_src_dst_rank
     save_load_path = path
+    map_location = mp
     try:
         yield
     finally:
         global_src_dsk_rank = None
         save_load_path = None
+        map_location = None
 
 
-def load(path: str, global_src_rank: Optional[int] = None,) -> Any:
+def load(
+    path: str,
+    global_src_rank: Optional[int] = None,
+    map_location: Optional[Union[str, flow.device, flow.placement]] = None,
+) -> Any:
     r"""Loads an object saved with oneflow.save() from a directory.
 
     Args:
@@ -290,6 +308,8 @@ def load(path: str, global_src_rank: Optional[int] = None,) -> Any:
             read the files in `path`, and tensors in the loaded
             object will be consistent with placement = 
             `flow.placement('cuda', [global_src_rank])`
+        map_location (str, flow.device or flow.placement, optional):
+            indicates the location where all tensors should be loaded.
 
     Returns:
         The loaded object
@@ -316,7 +336,13 @@ def load(path: str, global_src_rank: Optional[int] = None,) -> Any:
     else:
         pickle_bytes = pickle_path.read_bytes()
 
-    with tensor_pickling_context(path, global_src_rank):
+    if map_location is not None:
+        if isinstance(map_location, str):
+            map_location: flow.device = flow.device(map_location)
+        assert isinstance(
+            map_location, (flow.device, flow.placement)
+        ), "'map_location' only supports str, device or placement."
+    with tensor_pickling_context(path, global_src_rank, map_location):
         res = pickle.loads(pickle_bytes)
     assert res["protocol_version"] == PROTOCOL_VERSION
     return res["data"]
@@ -354,7 +380,7 @@ def save(
         return
 
     obj = {"protocol_version": PROTOCOL_VERSION, "data": obj}
-    with tensor_pickling_context(path, global_dst_rank):
+    with tensor_pickling_context(path, global_dst_rank, None):
         pickled_bytes = pickle.dumps(obj)
 
     def write_to_path(path):
@@ -378,3 +404,4 @@ def save(
 
 save_load_path = None
 global_src_dsk_rank = None
+map_location = None

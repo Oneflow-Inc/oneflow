@@ -31,26 +31,26 @@ bool IsZeroDimTensor(const user_op::TensorDesc* tensor) { return tensor->shape()
 Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
   const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
-  user_op::TensorDesc* tensor_z = ctx->OutputTensorDesc("z", 0);
+  user_op::TensorDesc* tensor_z = ctx->MutOutputTensorDesc("z", 0);
 
   size_t output_num_axes = std::max(tensor_x.shape().NumAxes(), tensor_y.shape().NumAxes());
   if (IsZeroDimTensor(&tensor_x)) {
     *ctx->MutOutputShape("z", 0) = ctx->InputShape("y", 0);
-    *ctx->OutputIsDynamic("z", 0) = ctx->InputIsDynamic("y", 0);
+    *ctx->MutOutputIsDynamic("z", 0) = ctx->InputIsDynamic("y", 0);
   } else if (IsZeroDimTensor(&tensor_y)) {
     *ctx->MutOutputShape("z", 0) = ctx->InputShape("x", 0);
-    *ctx->OutputIsDynamic("z", 0) = ctx->InputIsDynamic("x", 0);
+    *ctx->MutOutputIsDynamic("z", 0) = ctx->InputIsDynamic("x", 0);
   } else if (IsScalarTensor(&tensor_x)) {
     *ctx->MutOutputShape("z", 0) = ctx->InputShape("y", 0);
-    *ctx->OutputIsDynamic("z", 0) = ctx->InputIsDynamic("y", 0);
+    *ctx->MutOutputIsDynamic("z", 0) = ctx->InputIsDynamic("y", 0);
   } else if (IsScalarTensor(&tensor_y)) {
     *ctx->MutOutputShape("z", 0) = ctx->InputShape("x", 0);
-    *ctx->OutputIsDynamic("z", 0) = ctx->InputIsDynamic("x", 0);
+    *ctx->MutOutputIsDynamic("z", 0) = ctx->InputIsDynamic("x", 0);
   } else {
     const auto& x_shape = CreateLeftExtendedShape(ShapeView(tensor_x.shape()), output_num_axes);
     const auto& y_shape = CreateLeftExtendedShape(ShapeView(tensor_y.shape()), output_num_axes);
     *ctx->MutOutputShape("z", 0) = ctx->InputShape("x", 0);
-    *ctx->OutputIsDynamic("z", 0) = ctx->InputIsDynamic("x", 0);
+    *ctx->MutOutputIsDynamic("z", 0) = ctx->InputIsDynamic("x", 0);
     Shape out_shape(x_shape);
     FOR_RANGE(int64_t, i, 0, x_shape.NumAxes()) {
       if (x_shape.At(i) != 1 && y_shape.At(i) != 1 && x_shape.At(i) != y_shape.At(i)) {
@@ -76,7 +76,7 @@ Maybe<void> InferDataTypeBinaryBroadcastNormal(user_op::InferContext* ctx) {
   const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
   CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type());  // NOLINT(maybe-need-error-msg)
-  *ctx->OutputDType("z", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("z", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -84,7 +84,7 @@ Maybe<void> InferDataTypeBinaryBroadcastLogical(user_op::InferContext* ctx) {
   const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
   CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type());  // NOLINT(maybe-need-error-msg)
-  *ctx->OutputDType("z", 0) = DataType::kBool;
+  *ctx->MutOutputDType("z", 0) = DataType::kBool;
   return Maybe<void>::Ok();
 }
 

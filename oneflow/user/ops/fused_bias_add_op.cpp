@@ -28,7 +28,7 @@ namespace oneflow {
   CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc.shape().NumAxes());
   CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0));
   *ctx->MutOutputShape("out", 0) = a_tensor_desc.shape();
-  *ctx->OutputIsDynamic("out", 0) = a_tensor_desc.is_dynamic();
+  *ctx->MutOutputIsDynamic("out", 0) = a_tensor_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedBiasAddGeluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
@@ -37,7 +37,7 @@ namespace oneflow {
 }
 /*static*/ auto FusedBiasAddGeluOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
   const auto& a_tensor_desc = ctx->InputTensorDesc("a", 0);
-  *ctx->OutputDType("out", 0) = a_tensor_desc.data_type();
+  *ctx->MutOutputDType("out", 0) = a_tensor_desc.data_type();
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedBiasAddGeluOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
@@ -68,7 +68,7 @@ namespace oneflow {
   CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc.shape().NumAxes());
   CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0));
   *ctx->MutOutputShape("dx", 0) = a_tensor_desc.shape();
-  *ctx->OutputIsDynamic("dx", 0) = a_tensor_desc.is_dynamic();
+  *ctx->MutOutputIsDynamic("dx", 0) = a_tensor_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
 
@@ -78,7 +78,7 @@ namespace oneflow {
 }
 /*static*/ auto FusedBiasAddGeluGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
   const auto& a_tensor_desc = ctx->InputTensorDesc("a", 0);
-  *ctx->OutputDType("dx", 0) = a_tensor_desc.data_type();
+  *ctx->MutOutputDType("dx", 0) = a_tensor_desc.data_type();
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedBiasAddGeluGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
@@ -153,7 +153,7 @@ REGISTER_USER_OP_GRAD("fused_bias_add_gelu")
   CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0));
   CHECK_EQ_OR_RETURN(a_tensor_desc.shape(), mask_tensor_desc.shape());
   *ctx->MutOutputShape("out", 0) = a_tensor_desc.shape();
-  *ctx->OutputIsDynamic("out", 0) = a_tensor_desc.is_dynamic();
+  *ctx->MutOutputIsDynamic("out", 0) = a_tensor_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedBiasAddMaskScaleOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
@@ -162,7 +162,7 @@ REGISTER_USER_OP_GRAD("fused_bias_add_gelu")
 }
 /*static*/ auto FusedBiasAddMaskScaleOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
   const auto& a_tensor_desc = ctx->InputTensorDesc("a", 0);
-  *ctx->OutputDType("out", 0) = a_tensor_desc.data_type();
+  *ctx->MutOutputDType("out", 0) = a_tensor_desc.data_type();
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedBiasAddMaskScaleOp::ModifyInputArg(

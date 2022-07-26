@@ -33,7 +33,7 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SoftsignOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -65,7 +65,7 @@ namespace oneflow {
       << Error::TypeError() << "dy and x are expected to have the same dtype, but found "
       << DataType_Name(ctx->InputDType("dy", 0)) << " and "
       << DataType_Name(ctx->InputDType("x", 0));
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 

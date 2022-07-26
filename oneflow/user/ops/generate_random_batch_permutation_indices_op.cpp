@@ -39,7 +39,7 @@ namespace oneflow {
 }
 /*static*/ auto GenerateRandomBatchPermutationIndicesOp::InferDataType(user_op::InferContext* ctx)
     -> Maybe<void> {
-  *ctx->OutputDType("y", 0) = DataType::kInt32;
+  *ctx->MutOutputDType("y", 0) = DataType::kInt32;
   return Maybe<void>::Ok();
 }
 
