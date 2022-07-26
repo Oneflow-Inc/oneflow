@@ -40,7 +40,7 @@ namespace oneflow {
       << Error::RuntimeError() << "beta must be greater than or equal to 0, but found it to be "
       << ctx->Attr<float>("beta");
 
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_is_dynamic() = input_desc.is_dynamic();
   *out_desc->mut_shape() = input_desc.shape();
 
@@ -56,7 +56,7 @@ namespace oneflow {
       << Error::TypeError() << "input and target are expected to have the same dtype, but found "
       << DataType_Name(input_desc.data_type()) << " and " << DataType_Name(target_desc.data_type());
 
-  *ctx->OutputDType("out", 0) = ctx->InputDType("input", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("input", 0);
 
   return Maybe<void>::Ok();
 }
@@ -99,7 +99,7 @@ namespace oneflow {
       << Error::RuntimeError() << "beta must be greater than or equal to 0, but found it to be "
       << ctx->Attr<float>("beta");
 
-  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
   *dx_desc->mut_is_dynamic() = input_desc.is_dynamic();
   *dx_desc->mut_shape() = input_desc.shape();
 
@@ -115,7 +115,7 @@ namespace oneflow {
       << Error::TypeError() << "input and target are expected to have the same dtype, but found "
       << DataType_Name(input_desc.data_type()) << " and " << DataType_Name(target_desc.data_type());
 
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
 
   return Maybe<void>::Ok();
 }

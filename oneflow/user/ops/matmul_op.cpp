@@ -34,10 +34,10 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
     for (int i = 0; i < num_axes - 2; ++i) { CHECK_EQ_OR_RETURN(a.shape().At(i), b.shape().At(i)); }
   }
 
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
 
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("a", 0);
-  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("a", 0);
+  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("a", 0);
 
   int64_t m, n, k;  // tensor a (no trans): m*k, tensor b (no trans): k*n
   if (!transpose_a) {
@@ -64,12 +64,12 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
-  const DataType& dtype = ctx->InputDType("a", 0);
+  DataType dtype = ctx->InputDType("a", 0);
   CHECK_EQ_OR_RETURN(ctx->InputDType("b", 0), dtype);
   if (ctx->has_input("_add_to_output", 0)) {
     CHECK_EQ_OR_RETURN(ctx->InputDType("_add_to_output", 0), dtype);
   }
-  *ctx->OutputDType("out", 0) = dtype;
+  *ctx->MutOutputDType("out", 0) = dtype;
   return Maybe<void>::Ok();
 }
 
@@ -286,7 +286,7 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
 
   const user_op::TensorDesc& a = ctx->InputTensorDesc("a", 0);
   const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
 
   const int64_t num_a_dims = a.shape().NumAxes();
   const int64_t num_b_dims = b.shape().NumAxes();
@@ -475,7 +475,7 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
     user_op::InferContext* ctx) {
   const user_op::TensorDesc& a = ctx->InputTensorDesc("a", 0);
   const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
 
   CHECK_EQ_OR_RETURN(a.shape().NumAxes(), b.shape().NumAxes());
   for (int i = 0; i < a.shape().NumAxes() - 1; ++i) {

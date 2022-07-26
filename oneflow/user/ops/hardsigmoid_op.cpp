@@ -38,7 +38,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> HardsigmoidOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -69,7 +69,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> HardsigmoidGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0));
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
