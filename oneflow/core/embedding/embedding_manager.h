@@ -65,7 +65,15 @@ inline bool UseEmbeddingShuffleP2PKernel(DataType embedding_dtype, DataType idx_
       return false;
     }
   }
+#if CUDA_VERSION >= 11030
   return use_embedding_shuffle_p2p_env;
+#else
+  if (use_embedding_shuffle_p2p_env) {
+    LOG(WARNING)
+        << "embedding shuffle p2p kernel only support when cuda_version greater equal than 11.3. ";
+  }
+  return false;
+#endif
 }
 
 inline bool UseEmbeddingGradientShuffleP2PKernel(DataType embedding_dtype, DataType idx_dtype) {
@@ -93,7 +101,15 @@ inline bool UseEmbeddingGradientShuffleP2PKernel(DataType embedding_dtype, DataT
       return false;
     }
   }
+#if CUDA_VERSION >= 11030
   return use_embedding_gradient_shuffle_p2p_env;
+#else
+  if (use_embedding_gradient_shuffle_p2p_env) {
+    LOG(WARNING) << "embedding gradient shuffle p2p kernel only support when cuda_version greater "
+                    "equal than 11.3. ";
+  }
+  return false;
+#endif
 }
 
 #ifdef WITH_CUDA

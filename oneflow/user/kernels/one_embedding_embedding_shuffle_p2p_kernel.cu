@@ -20,6 +20,9 @@ limitations under the License.
 #include "oneflow/core/embedding/embedding_manager.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include <cuda.h>
+
+#if CUDA_VERSION >= 10030
 
 namespace oneflow {
 
@@ -365,3 +368,5 @@ REGISTER_USER_KERNEL("embedding_shuffle")
                                 * sizeof(half));
     });
 }  // namespace oneflow
+
+#endif  // CUDA_VERSION >= 11030
