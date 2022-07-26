@@ -220,15 +220,22 @@ class UserOpExprInferContext : public user_op::InferContext {
     {
       const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
       int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
-      if (tuple_index >= 0) { return tensor_meta4output_index_(tuple_index); }
+      if (tuple_index >= 0) {
+        TensorMeta* tensor_meta_ptr = tensor_meta4output_index_(tuple_index);
+        CHECK_NOTNULL(dynamic_cast<MutTensorMeta*>(tensor_meta_ptr));
+        return tensor_meta_ptr;
+      }
     }
     {
       const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
       int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
       if (tuple_index >= 0) {
-        return const_cast<TensorMeta*>(tensor_meta4input_index_(tuple_index));
+        const TensorMeta* tensor_meta_ptr = tensor_meta4input_index_(tuple_index);
+        CHECK_NOTNULL(dynamic_cast<const MutTensorMeta*>(tensor_meta_ptr));
+        return const_cast<TensorMeta*>(tensor_meta_ptr);
       }
     }
+    PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
 
@@ -250,7 +257,9 @@ class UserOpExprInferContext : public user_op::InferContext {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
-    return tensor_meta4output_index_(tuple_index)->mut_shape();
+    TensorMeta* tensor_meta_ptr = tensor_meta4output_index_(tuple_index);
+    CHECK_NOTNULL(dynamic_cast<MutTensorMeta*>(tensor_meta_ptr));
+    return tensor_meta_ptr->mut_shape();
   }
 
   const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
@@ -279,7 +288,9 @@ class UserOpExprInferContext : public user_op::InferContext {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
-    return tensor_meta4output_index_(tuple_index)->mut_stride();
+    TensorMeta* tensor_meta_ptr = tensor_meta4output_index_(tuple_index);
+    CHECK_NOTNULL(dynamic_cast<MutTensorMeta*>(tensor_meta_ptr));
+    return tensor_meta_ptr->mut_stride();
   }
 
   const Stride& Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
