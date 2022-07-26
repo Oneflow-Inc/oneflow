@@ -179,7 +179,7 @@ class WkvForwordGPUKernel final : public user_op::OpKernel {
     const int64_t T = ctx->Attr<int64_t>("T");
     const int64_t C = ctx->Attr<int64_t>("C");
 
-    cuda_forward(B, T, C, w->dptr<F>(), u->dptr<F>(), k->dptr<F>(), v->dptr<F>(), y->dptr<F>());
+    cuda_forward(B, T, C, w->dptr<F>(), u->dptr<F>(), k->dptr<F>(), v->dptr<F>(), y->mut_dptr<F>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -216,7 +216,7 @@ class WkvBackwardGPUKernel final : public user_op::OpKernel {
     const int64_t C = ctx->Attr<int64_t>("C");
 
     cuda_backward(B, T, C, w->dptr<F>(), u->dptr<F>(), k->dptr<F>(), v->dptr<F>(), gy->dptr<F>(),
-                  gw->dptr<F>(), gu->dptr<F>(), gk->dptr<F>(), gv->dptr<F>());
+                  gw->mut_dptr<F>(), gu->mut_dptr<F>(), gk->mut_dptr<F>(), gv->mut_dptr<F>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
