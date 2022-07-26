@@ -47,8 +47,8 @@ Maybe<void> InferTensorDesc_(InferContext* ctx) {
     CHECK_EQ_OR_RETURN(tensor_x.shape().At(i), tensor_y.shape().At(i));
   }
 
-  TensorDesc* tensor_dx = ctx->OutputTensorDesc("dx", 0);
-  TensorDesc* tensor_dy = ctx->OutputTensorDesc("dy", 0);
+  TensorDesc* tensor_dx = ctx->MutOutputTensorDesc("dx", 0);
+  TensorDesc* tensor_dy = ctx->MutOutputTensorDesc("dy", 0);
 
   if (tensor_dx) { *tensor_dx->mut_shape() = tensor_x.shape(); }
 
@@ -59,8 +59,8 @@ Maybe<void> InferTensorDesc_(InferContext* ctx) {
 
 Maybe<void> InferDataType_(InferContext* ctx) {
   const TensorDesc& tensor_dz = ctx->InputTensorDesc("dz", 0);
-  TensorDesc* tensor_dx = ctx->OutputTensorDesc("dx", 0);
-  TensorDesc* tensor_dy = ctx->OutputTensorDesc("dy", 0);
+  TensorDesc* tensor_dx = ctx->MutOutputTensorDesc("dx", 0);
+  TensorDesc* tensor_dy = ctx->MutOutputTensorDesc("dy", 0);
 
   if (tensor_dx) { *tensor_dx->mut_data_type() = tensor_dz.data_type(); }
 

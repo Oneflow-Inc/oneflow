@@ -266,7 +266,7 @@ class LocalTensorSharedNumpyDataFunctor {
       }
       stride_val /= element_size_in_bytes;
     }
-    auto tensor_meta = std::make_shared<LocalTensorMeta>(shape, strides, data_type, device, 0);
+    auto tensor_meta = SymbolOf(LocalTensorMeta(shape, strides, data_type, device, 0));
 
     // Build TensorBuffer
     const auto& Free = [array](char* dptr) {
@@ -286,12 +286,12 @@ class LocalTensorSharedNumpyDataFunctor {
     auto tensor_storage = std::make_shared<TensorStorage>(tensor_data);
 
     // Build Tensor
-    auto tensor_impl = std::make_shared<EagerLocalTensorImpl>(tensor_meta, tensor_storage,
+    auto tensor_impl = std::make_shared<EagerLocalTensorImpl>(tensor_storage,
                                                               /*requires_grad=*/false,
                                                               /*ls_leaf=*/true);
 
     // Init blob
-    JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject()));
+    JUST(tensor_impl->InitEagerBlobObject(tensor_meta, NewLocalDepObject()));
     const auto& stream = JUST(GetDefaultStreamByDevice(device));
     const auto& eager_blob_object = JUST(tensor_impl->eager_blob_object());
     JUST(eager_blob_object->init_producer_stream(stream));
