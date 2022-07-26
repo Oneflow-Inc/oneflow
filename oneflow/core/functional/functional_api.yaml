@@ -1770,6 +1770,14 @@
   signature: 'Tensor (Tensor dy, Int64List pad, String mode="constant", Scalar value=0) => PadGrad'
   bind_python: False
 
+- name: "reflection_pad"
+  signature: 'Tensor (Tensor x, Int64List pad, Scalar value=0) => ReflectionPad'
+  bind_python: False
+
+- name: "replication_pad"
+  signature: 'Tensor (Tensor x, Int64List pad, Scalar value=0) => ReplicationPad'
+  bind_python: False
+
 - name: "silu"
   signature: "Tensor (Tensor x) => Silu"
   bind_python: True
