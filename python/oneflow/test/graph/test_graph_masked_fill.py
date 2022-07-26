@@ -27,7 +27,7 @@ from test_util import generate_graph
 @flow.unittest.skip_unless_1n1d()
 class TestMaskedFillGraph(flow.unittest.TestCase):
     def test_masked_fill_graph(test_case):
-        k = 8
+        k = random.randint(1, 10)
         model = nn.Sequential(nn.Linear(k, k))
         optimizer = flow.optim.SGD(model.parameters(), lr=1e-3)
         loss_fn = nn.MSELoss()
