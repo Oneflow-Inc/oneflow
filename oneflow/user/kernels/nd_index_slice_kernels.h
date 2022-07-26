@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_ND_INDEX_SLICE_KERNELS_H_
 
 #include "oneflow/user/kernels/nd_index_slice_util.h"
-#include "oneflow/core/framework/tensor_meta.h"
+#include "oneflow/core/common/tensor_meta.h"
 
 namespace oneflow {
 
