@@ -34,7 +34,7 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
     for (int i = 0; i < num_axes - 2; ++i) { CHECK_EQ_OR_RETURN(a.shape().At(i), b.shape().At(i)); }
   }
 
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
 
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("a", 0);
   *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("a", 0);
@@ -286,7 +286,7 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
 
   const user_op::TensorDesc& a = ctx->InputTensorDesc("a", 0);
   const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
 
   const int64_t num_a_dims = a.shape().NumAxes();
   const int64_t num_b_dims = b.shape().NumAxes();
@@ -475,7 +475,7 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
     user_op::InferContext* ctx) {
   const user_op::TensorDesc& a = ctx->InputTensorDesc("a", 0);
   const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
 
   CHECK_EQ_OR_RETURN(a.shape().NumAxes(), b.shape().NumAxes());
   for (int i = 0; i < a.shape().NumAxes() - 1; ++i) {
