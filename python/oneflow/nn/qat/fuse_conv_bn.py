@@ -48,7 +48,7 @@ class QatFuseConvBN(Module):
         >>> output = qat(input)
 
         >>> qat.eval()
-        >>> flow.nn.qat.freeze_all_qat_submodules(qat) # after training, freeze module for exporting to onnx for deployment.
+        >>> flow.nn.qat.freeze_all_qat_submodules(qat) # after training, freeze module before exporting to onnx for deployment.
 
     """
 
@@ -81,7 +81,7 @@ class QatFuseConvBN(Module):
 
     def _truly_fuse_bn_into_conv(self):
         with flow.no_grad():
-            weight, bias = self.fold_bn(
+            weight, bias = self._fold_bn(
                 self.bn_module.running_mean,
                 flow.sqrt(self.bn_module.running_var + self.bn_module.eps),
             )
@@ -89,7 +89,7 @@ class QatFuseConvBN(Module):
             self.conv_module.bias.data = bias
             self.is_freezed = True
 
-    def fold_bn(self, mean, std):
+    def _fold_bn(self, mean, std):
         # support conv1d, 2d, and 3d
         view_param = [1] * (len(self.conv_module.kernel_size) + 1)
         view_param = [self.conv_module.out_channels] + view_param
@@ -139,7 +139,7 @@ class QatFuseConvBN(Module):
 
             std = flow.sqrt(var + self.bn_module.eps)
 
-            weight, bias = self.fold_bn(mean, std)
+            weight, bias = self._fold_bn(mean, std)
         else:
             weight = self.conv_module.weight
             bias = self.conv_module.bias
@@ -150,13 +150,13 @@ class QatFuseConvBN(Module):
         return self.conv_module._conv_forward(x, weight, bias)
 
 
-def fuse_bn_into_conv(m):
+def _fuse_bn_into_conv(m):
     if type(m) == QatFuseConvBN:
         m._truly_fuse_bn_into_conv()
 
 
 def freeze_all_qat_submodules(module):
-    module.apply(fuse_bn_into_conv)
+    module.apply(_fuse_bn_into_conv)
 
 
 if __name__ == "__main__":
