@@ -74,7 +74,6 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
     ForEachConstDependence(InstructionPolicyUtil::SetInserter(&input_dependences_));
     ForEachMutDependence(InstructionPolicyUtil::SetInserter(&output_dependences_));
     ForEachMut2Dependence(InstructionPolicyUtil::SetInserter(&output_dependences_));
-    stream_sequential_dependence_ = nullptr;
   }
 
   const DependenceVector& input_dependences() const override { return input_dependences_; }
