@@ -383,6 +383,11 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
   std::shared_ptr<Tensor> transposed_input;
   TensorTuple valid_indices;
   JUST(TransposeFront(input, *expanded_indices, &transposed_input, &valid_indices));
+  CHECK_EQ_OR_RETURN(JUST(transposed_input->tensor_storage()), JUST(input->tensor_storage()))
+      << Error::RuntimeError()
+      << "This setitem operator must enable view mechanism, please try to set "
+         "ONEFLOW_DISABLE_VIEW=0";
+
   if (valid_indices.empty()) {
     CHECK_EQ_OR_RETURN(value->nelement(), 0) << Error::IndexError() << "invalid indices";
     return Maybe<void>::Ok();
