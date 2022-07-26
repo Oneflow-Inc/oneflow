@@ -93,8 +93,7 @@ mlir::Attribute SBPTranslation::ConvertNdSbpToPsig(mlir::Builder& builder,
         builder.getArrayAttr(std::vector<mlir::Attribute>(iter, iter + nd_size)));
   }
   outputs = builder.getArrayAttr(outputs_vec_nd);
-  auto res = mlir::sbp::ParallelSignatureAttr::get(ctx, inputs, outputs);
-  return res;
+  return mlir::sbp::ParallelSignatureAttr::get(ctx, inputs, outputs);
 }
 }  // namespace oneflow
 }  // namespace mlir

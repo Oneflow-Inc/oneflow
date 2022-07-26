@@ -551,9 +551,7 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
         nd_sbp_str.push_back(sbp_str_attr.str());
       }
     });
-    if (!nd_sbp_str.empty()) {
-      attrs.set(name, SBPTranslation::ConvertNdSbpToPsig(rewriter, nd_sbp_str, nd_size));
-    }
+    attrs.set(name, SBPTranslation::ConvertNdSbpToPsig(rewriter, nd_sbp_str, nd_size));
     auto op_new = rewriter.create<oneflow::VariableOp>(op->getLoc(), op.output().getType(),
                                                        ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
