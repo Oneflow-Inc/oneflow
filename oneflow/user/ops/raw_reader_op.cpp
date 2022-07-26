@@ -26,13 +26,13 @@ namespace oneflow {
   for (int64_t i = 0; i < instance_shape.NumAxes(); ++i) {
     dim_vec.push_back(instance_shape.At(i));
   }
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   *out_tensor->mut_shape() = Shape(dim_vec);
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> RawReaderOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   int32_t batch_size = ctx->Attr<int64_t>("batch_size");
   int64_t parallel_num = ctx->parallel_ctx().parallel_num();
   if (parallel_num > 1) {
