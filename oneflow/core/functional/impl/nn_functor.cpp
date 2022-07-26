@@ -2150,7 +2150,7 @@ class ReflectionPadFunctor {
     reflect_pad2d_ = CHECK_JUST(one::OpBuilder("reflection_pad2d").Input("x").Output("y").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::vector<int64_t>& pad, const Scalar& value) const {
+                           const std::vector<int64_t>& pad) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
     const int64_t pad_size = pad.size();
@@ -2250,7 +2250,7 @@ class ReplicationPadFunctor {
         CHECK_JUST(one::OpBuilder("replication_pad2d").Input("x").Output("y").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::vector<int64_t>& pad, const Scalar& value) const {
+                           const std::vector<int64_t>& pad) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
     const int64_t pad_size = pad.size();

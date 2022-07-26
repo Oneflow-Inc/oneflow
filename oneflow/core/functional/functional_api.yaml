@@ -1771,11 +1771,11 @@
   bind_python: False
 
 - name: "reflection_pad"
-  signature: 'Tensor (Tensor x, Int64List pad, Scalar value=0) => ReflectionPad'
+  signature: 'Tensor (Tensor x, Int64List pad) => ReflectionPad'
   bind_python: False
 
 - name: "replication_pad"
-  signature: 'Tensor (Tensor x, Int64List pad, Scalar value=0) => ReplicationPad'
+  signature: 'Tensor (Tensor x, Int64List pad) => ReplicationPad'
   bind_python: False
 
 - name: "silu"
