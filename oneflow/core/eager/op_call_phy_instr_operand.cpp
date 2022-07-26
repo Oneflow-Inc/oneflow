@@ -51,7 +51,6 @@ OpCallPhyInstrOperand::OpCallPhyInstrOperand(
 }
 
 Maybe<void> OpCallPhyInstrOperand::Init() {
-  OF_PROFILER_RANGE_GUARD("OpCallPhyInstrOperand::Init");
   return mut_opkernel()->ChooseOpKernel(&call_ctx_, &user_opkernel_, &need_temp_storage_);
 }
 

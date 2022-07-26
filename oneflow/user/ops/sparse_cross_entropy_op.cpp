@@ -48,7 +48,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
   const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
   JUST(CheckPredictionLabelDesc(&prediction_desc, &label_desc));
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_is_dynamic() = prediction_desc.is_dynamic();
   *out_desc->mut_shape() = label_desc.shape();
   return Maybe<void>::Ok();
@@ -73,7 +73,7 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(IsIndexDataType(label_desc.data_type()))
       << Error::TypeError() << "The dtype of label must be integer, but found "
       << DataType_Name(label_desc.data_type());
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_data_type() = prediction_desc.data_type();
   return Maybe<void>::Ok();
 }
