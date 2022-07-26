@@ -26,7 +26,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SqrtSquareSumOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
   *y->mut_shape() = Shape({});
   return Maybe<void>::Ok();
 }

@@ -83,16 +83,16 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(in_desc.data_type(), first_in_desc.data_type());
   }
 
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_data_type() = first_in_desc.data_type();
 
   for (int32_t i = 0; i < ctx->output_size("hidden"); i++) {
-    user_op::TensorDesc* hidden_desc = ctx->OutputTensorDesc("hidden", i);
+    user_op::TensorDesc* hidden_desc = ctx->MutOutputTensorDesc("hidden", i);
     *hidden_desc->mut_data_type() = first_in_desc.data_type();
   }
 
   for (int32_t i = 0; i < ctx->output_size("cublas_aux"); i++) {
-    user_op::TensorDesc* aux_desc = ctx->OutputTensorDesc("cublas_aux", i);
+    user_op::TensorDesc* aux_desc = ctx->MutOutputTensorDesc("cublas_aux", i);
     *aux_desc->mut_data_type() = DataType::kInt32;
   }
 

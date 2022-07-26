@@ -21,8 +21,8 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/tensor_storage.h"
-#include "oneflow/core/framework/tensor_desc.h"
-#include "oneflow/core/framework/tensor_meta.h"
+#include "oneflow/core/common/tensor_desc.h"
+#include "oneflow/core/common/tensor_meta.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/common/symbol.h"
@@ -105,14 +105,16 @@ class LocalTensorImpl : public TensorImpl {
   virtual ~LocalTensorImpl() = default;
 
   // Getters
-  DataType dtype() const override { return tensor_meta_->dtype(); }
-  const Symbol<Device>& device() const { return tensor_meta_->device(); }
-  const std::shared_ptr<const LocalTensorMeta>& tensor_meta() const { return tensor_meta_; }
-  bool is_contiguous() const override { return tensor_meta_->is_contiguous(); }
+  DataType dtype() const override { return tensor_meta()->dtype(); }
+  const Symbol<Device>& device() const { return tensor_meta()->device(); }
+  bool is_contiguous() const override { return tensor_meta()->is_contiguous(); }
 
+  virtual const Symbol<LocalTensorMeta>& tensor_meta() const = 0;
   // Setters
-  LocalTensorMeta* mut_tensor_meta() { return const_cast<LocalTensorMeta*>(tensor_meta_.get()); }
-  Maybe<Symbol<Device>*> mut_device() { return mut_tensor_meta()->mut_device(); }
+  virtual const std::shared_ptr<const MutLocalTensorMeta>& mut_tensor_meta() = 0;
+  Maybe<Symbol<Device>*> mut_device() {
+    return std::const_pointer_cast<MutLocalTensorMeta>(mut_tensor_meta())->mut_device();
+  }
   virtual Maybe<EagerLocalTensorImpl*> mut_eager_local_tensor_impl() {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
@@ -120,11 +122,7 @@ class LocalTensorImpl : public TensorImpl {
   virtual Maybe<LocalTensorImpl> detach() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
  protected:
-  LocalTensorImpl(const std::shared_ptr<const LocalTensorMeta>& tensor_meta, bool requires_grad,
-                  bool is_leaf)
-      : TensorImpl(requires_grad, is_leaf), tensor_meta_(tensor_meta) {}
-
-  std::shared_ptr<const LocalTensorMeta> tensor_meta_;
+  LocalTensorImpl(bool requires_grad, bool is_leaf) : TensorImpl(requires_grad, is_leaf) {}
 };
 
 class LocalTensor;
@@ -186,12 +184,12 @@ class GlobalTensorImpl : public TensorImpl {
 class LazyLocalTensorImpl final : public LocalTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LazyLocalTensorImpl);
-  LazyLocalTensorImpl(const std::shared_ptr<const LocalTensorMeta>& tensor_meta, bool requires_grad,
-                      bool is_leaf)
-      : LocalTensorImpl(tensor_meta, requires_grad, is_leaf) {}
+  LazyLocalTensorImpl(const Symbol<LocalTensorMeta>& tensor_meta, bool requires_grad, bool is_leaf)
+      : LocalTensorImpl(requires_grad, is_leaf), tensor_meta_(tensor_meta) {}
   ~LazyLocalTensorImpl() override = default;
 
   // Getters
+  const Symbol<LocalTensorMeta>& tensor_meta() const override { return tensor_meta_; }
   std::shared_ptr<const Shape> shape() const override { return tensor_meta()->shape_ptr(); }
   std::shared_ptr<const Stride> stride() const override { return tensor_meta()->stride_ptr(); }
   bool is_lazy() const override { return true; }
@@ -202,6 +200,10 @@ class LazyLocalTensorImpl final : public LocalTensorImpl {
   }
   Maybe<bool> is_pinned() const override { return false; }
 
+  const std::shared_ptr<const MutLocalTensorMeta>& mut_tensor_meta() override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+  }
+
   // Getters valid only for EagerLocalTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<LocalDepObject*> compute_local_dep_object() const override {
@@ -210,25 +212,30 @@ class LazyLocalTensorImpl final : public LocalTensorImpl {
   Maybe<TensorStorage> tensor_storage() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<bool> has_eager_blob_object() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<LocalTensorImpl> detach() const override;
+
+ private:
+  Symbol<LocalTensorMeta> tensor_meta_;
 };
 
 class EagerLocalTensorImpl final : public LocalTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerLocalTensorImpl);
   EagerLocalTensorImpl();
-  EagerLocalTensorImpl(const std::shared_ptr<const LocalTensorMeta>& tensor_meta,
-                       bool requires_grad, bool is_leaf);
-  EagerLocalTensorImpl(const std::shared_ptr<const LocalTensorMeta>& tensor_meta,
-                       const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad,
+  EagerLocalTensorImpl(const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad,
                        bool is_leaf);
+
+  EagerLocalTensorImpl(bool requires_grad, bool is_leaf)
+      : EagerLocalTensorImpl(std::shared_ptr<TensorStorage>(), requires_grad, is_leaf) {}
   ~EagerLocalTensorImpl() override;
 
+  const std::shared_ptr<const MutLocalTensorMeta>& mut_tensor_meta() override;
   // Getters
+  const Symbol<LocalTensorMeta>& tensor_meta() const override;
   std::shared_ptr<const Shape> shape() const override;
   std::shared_ptr<const Stride> stride() const override;
   Maybe<LocalTensorImpl> detach() const override;
   bool is_lazy() const override { return false; }
-  bool is_contiguous() const override { return tensor_meta_->is_contiguous(); }
+  bool is_contiguous() const override { return tensor_meta()->is_contiguous(); }
   Maybe<bool> is_pinned() const override;
 
   // Getters valid only for EagerLocalTensorImpl
@@ -242,12 +249,21 @@ class EagerLocalTensorImpl final : public LocalTensorImpl {
     return tensor_storage_;
   }
   Maybe<bool> has_eager_blob_object() const override { return eager_blob_object_.get(); }
-  Maybe<int64_t> storage_offset() const override { return tensor_meta_->storage_offset(); }
-
+  Maybe<int64_t> storage_offset() const override { return tensor_meta()->storage_offset(); }
   // Setters
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
 
-  Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object);
+  Maybe<void> InitEagerBlobObject(
+      const Symbol<one::LocalTensorMeta>& local_tensor_meta,
+      const std::shared_ptr<const one::MutLocalTensorMeta>& mut_local_tensor_meta,
+      const intrusive::shared_ptr<LocalDepObject>& dep_object);
+  Maybe<void> InitEagerBlobObject(const Symbol<one::LocalTensorMeta>& local_tensor_meta,
+                                  const intrusive::shared_ptr<LocalDepObject>& dep_object) {
+    JUST(InitEagerBlobObject(local_tensor_meta, std::shared_ptr<const one::MutLocalTensorMeta>(),
+                             dep_object));
+    return Maybe<void>::Ok();
+  }
+
   Maybe<EagerLocalTensorImpl*> mut_eager_local_tensor_impl() override { return this; }
 
   Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) override;
