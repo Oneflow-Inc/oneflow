@@ -77,8 +77,6 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
     stream_sequential_dependence_ = nullptr;
   }
 
-  const std::shared_ptr<NNGraphIf>& nn_graph() const { return nn_graph_; }
-
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
 
@@ -107,7 +105,7 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
     static thread_local int64_t run_id = 0;
     {
       OF_PROFILER_RANGE_GUARD("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
-      device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(nn_graph());
+      device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(nn_graph_);
     }
     {
       OF_PROFILER_RANGE_GUARD("Send all buffers to BufferMgr");
@@ -119,7 +117,7 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
     }
     OF_UNUSED(run_id);  // disable compiler warning.
     OF_PROFILER_RANGE_GUARD("EnqueueNNGraph");
-    device_ctx->EnqueueNNGraph(nn_graph());
+    device_ctx->EnqueueNNGraph(nn_graph_);
   }
 
  private:
@@ -139,7 +137,7 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
       auto* status_buffer = instruction->mut_status_buffer();
       NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer())->set_done();
     };
-    return std::make_shared<LazyJobInstance>(nn_graph()->job_name(), FinishCb);
+    return std::make_shared<LazyJobInstance>(nn_graph_->job_name(), FinishCb);
   }
   
   std::shared_ptr<NNGraphIf> nn_graph_;
