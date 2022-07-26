@@ -39,7 +39,7 @@ LogicalResult parseSBP(AsmParser& parser, FailureOr<ArrayAttr>& args) {
       return failure();
     }
     if (list.back().dyn_cast<sbp::SplitAttr>() || list.back().dyn_cast<sbp::BroadcastAttr>()
-        || list.back().dyn_cast<sbp::PartialSumAttr>()) {
+        || list.back().dyn_cast<sbp::PartialSumAttr>() || list.back().dyn_cast<sbp::AnyAttr>()) {
       return success();
     }
     parser.emitError(loc, "failed to parse a sbp attribute here");

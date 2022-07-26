@@ -29,6 +29,8 @@ mlir::LogicalResult SBPTranslation::PrintSbpAttrToString(mlir::Attribute sbp_att
     *sbp = "B";
   } else if (auto sbp_p_attr = sbp_attr.dyn_cast<mlir::sbp::PartialSumAttr>()) {
     *sbp = "P";
+  } else if (auto sbp_p_attr = sbp_attr.dyn_cast<mlir::sbp::AnyAttr>()) {
+    *sbp = "";
   } else {
     return mlir::failure();
   }
@@ -60,20 +62,24 @@ mlir::Attribute SBPTranslation::ConvertNdSbpToPsig(mlir::Builder& builder,
   auto ctx = builder.getContext();
   std::vector<mlir::Attribute> outputs_vec;
   for (const auto& sbp_data : nd_sbp) {
-    ::oneflow::SbpParallel sbp;
-    ParseSbpParallelFromString(sbp_data, &sbp);
     mlir::Attribute attr;
-    if (sbp.has_split_parallel()) {
-      attr = mlir::sbp::SplitAttr::get(ctx, sbp.split_parallel().axis());
-    } else if (sbp.has_broadcast_parallel()) {
-      attr = mlir::sbp::BroadcastAttr::get(ctx);
-    } else if (sbp.has_partial_sum_parallel()) {
-      attr = mlir::sbp::PartialSumAttr::get(ctx);
+    if (sbp_data == "") {
+      attr = mlir::sbp::AnyAttr::get(ctx);
     } else {
-      llvm::errs() << "Unsupported sbp type from nd_sbp: ";
-      for (const auto& sbp_data : nd_sbp) { llvm::errs() << sbp_data << " "; }
-      llvm::errs() << "\n";
-      exit(EXIT_FAILURE);
+      ::oneflow::SbpParallel sbp;
+      ParseSbpParallelFromString(sbp_data, &sbp);
+      if (sbp.has_split_parallel()) {
+        attr = mlir::sbp::SplitAttr::get(ctx, sbp.split_parallel().axis());
+      } else if (sbp.has_broadcast_parallel()) {
+        attr = mlir::sbp::BroadcastAttr::get(ctx);
+      } else if (sbp.has_partial_sum_parallel()) {
+        attr = mlir::sbp::PartialSumAttr::get(ctx);
+      } else {
+        llvm::errs() << "Unsupported sbp type from nd_sbp: ";
+        for (const auto& sbp_data : nd_sbp) { llvm::errs() << sbp_data << " "; }
+        llvm::errs() << "\n";
+        exit(EXIT_FAILURE);
+      }
     }
     outputs_vec.push_back(attr);
   }

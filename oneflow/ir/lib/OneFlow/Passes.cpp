@@ -548,11 +548,12 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
     std::vector<std::string> nd_sbp_str;
     std::for_each(nd_sbp.begin(), nd_sbp.end(), [&](Attribute elem) {
       if (auto sbp_str_attr = elem.dyn_cast<StringAttr>()) {
-        if (sbp_str_attr.str() != "") { nd_sbp_str.push_back(sbp_str_attr.str()); }
+        nd_sbp_str.push_back(sbp_str_attr.str());
       }
     });
-
-    attrs.set(name, SBPTranslation::ConvertNdSbpToPsig(rewriter, nd_sbp_str, nd_size));
+    if (!nd_sbp_str.empty()) {
+      attrs.set(name, SBPTranslation::ConvertNdSbpToPsig(rewriter, nd_sbp_str, nd_size));
+    }
     auto op_new = rewriter.create<oneflow::VariableOp>(op->getLoc(), op.output().getType(),
                                                        ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());

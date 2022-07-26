@@ -51,6 +51,13 @@ def SBP_PartialSumAttr : SBP_Attr<"PartialSum", "P"> {
   }];
 }
 
+def SBP_AnyAttr : SBP_Attr<"Any", "Any"> {
+  let summary = "Signature Any";
+  let description = [{
+    signature any, representing one of sbp tensor;
+  }];
+}
+
 def SBP_ParallelSignatureAttr : SBP_Attr<"ParallelSignature", "parallel"> {
   let summary = "Parallel signature of OneFlow Op, aka. SBP";
   let description = [{
