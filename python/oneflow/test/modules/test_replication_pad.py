@@ -100,7 +100,7 @@ def _test_ReplicationPad2d(test_case, shape, padding, device):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestReplicationPad2dModule(flow.unittest.TestCase):
+class TestReplicationPadModule(flow.unittest.TestCase):
     def test_ReplicationPad2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(1, 2, 3, 4), (8, 3, 4, 4)]
@@ -110,16 +110,61 @@ class TestReplicationPad2dModule(flow.unittest.TestCase):
             _test_ReplicationPad2d(test_case, *arg)
 
     @autotest(n=5)
+    def test_replication_pad1d_with_3d_input(test_case):
+        c = random(1, 6).to(int)
+        w = random(1, 6).to(int)
+        pad = random(low=0, high=5).to(int)
+        m = torch.nn.ReplicationPad1d(padding=pad)
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=3, dim1=c, dim2=w).to(device)
+        y = m(x)
+        return y
+
+    @autotest(n=5)
+    def test_replication_pad1d_with_2d_input(test_case):
+        w = random(1, 6).to(int)
+        m = torch.nn.ReplicationPad1d(padding=random(low=0, high=5).to(int))
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=2, dim1=w).to(device)
+        y = m(x)
+        return y
+
+    @autotest(n=5)
     def test_replication_pad2d_with_random_data(test_case):
         c = random(1, 6).to(int)
         h = random(1, 6).to(int)
         w = random(1, 6).to(int)
-        m = torch.nn.ReplicationPad2d(padding=random(low=0, high=7))
+        m = torch.nn.ReplicationPad2d(padding=random(low=0, high=5))
         m.train(random())
         device = random_device()
         m.to(device)
         x = random_tensor(ndim=4, dim1=c, dim2=h, dim3=w).to(device)
         y = m(x)
+        return y
+
+    @autotest(n=5)
+    def test_functional_replication_pad_1d_with_random_data(test_case):
+        c = random(1, 6).to(int)
+        w = random(1, 6).to(int)
+        pad = [0, 1]
+        device = random_device()
+        x = random_tensor(ndim=3, dim1=c, dim2=w).to(device)
+        y = torch.nn.functional.pad(input=x, pad=pad, mode="replicate")
+        return y
+
+    @autotest(n=5)
+    def test_functional_replication_pad_2d_with_random_data(test_case):
+        c = random(1, 6).to(int)
+        h = random(1, 6).to(int)
+        w = random(1, 6).to(int)
+        pad = [0, 1, 2, 3]
+        device = random_device()
+        x = random_tensor(ndim=4, dim1=c, dim2=h, dim3=w).to(device)
+        y = torch.nn.functional.pad(input=x, pad=pad, mode="replicate")
         return y
 
 
