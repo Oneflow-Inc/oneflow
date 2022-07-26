@@ -2365,9 +2365,9 @@ class PadFunctor {
       return OpInterpUtil::Dispatch<Tensor>(*pad_, {input}, attrs);
 
     } else if (mode == "reflect") {
-      return functional::ReflectionPad(input, pad, value);
+      return functional::ReflectionPad(input, pad);
     } else if (mode == "replicate") {
-      return functional::ReplicationPad(input, pad, value);
+      return functional::ReplicationPad(input, pad);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode
                                   << ", but only constant, reflect and replicate are valid.";
