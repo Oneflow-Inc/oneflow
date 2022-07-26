@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/sbp_context.h"
-#include "oneflow/core/framework/tensor_desc.h"
+#include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/framework/infer_output_blob_time_shape_fn_context.h"
@@ -149,16 +149,17 @@ class UserOpInferContext final : public user_op::InferContext {
                                              int32_t index) const override {
     return *TensorDesc4ArgNameAndIndex(arg_name, index);
   }
-  user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
+  const user_op::TensorDesc& OutputTensorDesc(const std::string& arg_name,
+                                              int32_t index) const override {
+    return *TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
+  user_op::TensorDesc* MutOutputTensorDesc(const std::string& arg_name, int32_t index) override {
     return MutTensorDesc4ArgNameAndIndex(arg_name, index);
   }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
-    if (it == arg2tensor_desc_.end()) {
-      PRINT_BUG_PROMPT_AND_ABORT();
-      return nullptr;
-    }
+    if (it == arg2tensor_desc_.end()) { return nullptr; }
     return &it->second;
   }
   user_op::TensorDesc* MutTensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) {
@@ -625,11 +626,11 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
   JUST(val_->logical_tensor_desc_infer_fn(&infer_ctx));
   for (const auto& pair : infer_ctx.outputs()) {
     BlobDesc* out_blob_desc = BlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
-    user_op::TensorDesc* tensor_desc = infer_ctx.OutputTensorDesc(pair.first, pair.second);
-    out_blob_desc->set_data_type(tensor_desc->data_type());
-    out_blob_desc->mut_shape() = tensor_desc->shape();
-    out_blob_desc->mut_stride() = tensor_desc->stride();
-    out_blob_desc->set_is_dynamic(tensor_desc->is_dynamic());
+    const user_op::TensorDesc& tensor_desc = infer_ctx.OutputTensorDesc(pair.first, pair.second);
+    out_blob_desc->set_data_type(tensor_desc.data_type());
+    out_blob_desc->mut_shape() = tensor_desc.shape();
+    out_blob_desc->mut_stride() = tensor_desc.stride();
+    out_blob_desc->set_is_dynamic(tensor_desc.is_dynamic());
   }
   return Maybe<void>::Ok();
 }

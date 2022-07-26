@@ -251,7 +251,11 @@ class UserKernelOpInferContext : public user_op::InferContext {
                                              int32_t index) const override {
     return *TensorDesc4ArgNameAndIndex(arg_name, index);
   }
-  user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
+  const user_op::TensorDesc& OutputTensorDesc(const std::string& arg_name,
+                                              int32_t index) const override {
+    return *TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
+  user_op::TensorDesc* MutOutputTensorDesc(const std::string& arg_name, int32_t index) override {
     return MutTensorDesc4ArgNameAndIndex(arg_name, index);
   }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
