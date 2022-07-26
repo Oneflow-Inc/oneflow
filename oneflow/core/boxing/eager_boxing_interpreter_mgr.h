@@ -36,12 +36,12 @@ class EagerBoxingInterpreterManager final {
 template<typename RetT, typename... Args>
 struct DisableRecusiveBoxingCall {
   static_assert(is_maybe<RetT>::value, "returned value type must be Maybe<T>.");
-  template<RetT (*func)(Args...)>
+  template<typename Functor>
   static RetT Call(Args... arg) {
     static thread_local bool disable_boxing = false;
     CHECK_OR_RETURN(!disable_boxing);
     disable_boxing = true;
-    RetT ret = func(arg...);
+    RetT ret = Functor()(arg...);
     disable_boxing = false;
     return ret;
   }

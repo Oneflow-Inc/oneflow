@@ -22,6 +22,7 @@ limitations under the License.
 #include "static_check.h"
 #include "oneflow/core/common/env_var/env_var.h"
 #include "oneflow/core/common/cpp_attribute.h"
+#include "oneflow/core/common/functor_traits.h"
 
 namespace oneflow {
 
@@ -29,39 +30,42 @@ template<template<typename...> class Decorator>
 struct WithDecorator final {
   template<typename T, typename = void>
   struct Decorate;
-  template<typename T, typename... Args>
-  struct Decorate<T (*)(Args...)> final {
-    template<T (*func)(Args...)>
-    static T Call(Args... args) {
-      return Decorator<T, Args...>::template Call<func>(args...);
-    }
+  template<typename Functor, typename T, typename... Args>
+  struct Decorate<T (Functor::*)(Args...)> final {
+    static T Call(Args... args) { return Decorator<T, Args...>::template Call<Functor>(args...); }
+  };
+  template<typename Functor, typename T, typename... Args>
+  struct Decorate<T (Functor::*)(Args...) const> final {
+    static T Call(Args... args) { return Decorator<T, Args...>::template Call<Functor>(args...); }
   };
 };
 
-#define DECORATE(fn_ptr, decorator) \
-  (&WithDecorator<decorator>::Decorate<decltype(fn_ptr)>::Call<fn_ptr>)
+#define FUNCTOR_DECORATE(functor, decorator) \
+  (&WithDecorator<decorator>::Decorate<decltype(&functor::operator())>::Call)
+
+#define DECORATE(fn_ptr, decorator) FUNCTOR_DECORATE(FUNCTOR_CLASS_FOR_FUNC_PTR(fn_ptr), decorator)
 
 template<typename... Args>
 struct ThreadLocalCopiable;
 
 template<typename RetT>
 struct ThreadLocalCopiable<RetT> {
-  template<RetT (*func)()>
+  template<typename Functor>
   static RetT Call() {
-    static thread_local RetT value = func();
+    static thread_local RetT value = Functor()();
     return value;
   }
 };
 
 template<typename RetT, typename Arg0>
 struct ThreadLocalCopiable<RetT, Arg0> {
-  template<RetT (*func)(Arg0)>
+  template<typename Functor>
   static RetT Call(Arg0 arg0) {
     using KeyT = typename std::decay<Arg0>::type;
     using MappedT = typename std::decay<RetT>::type;
     static thread_local std::unordered_map<KeyT, MappedT> map;
     auto iter = map.find(arg0);
-    if (iter == map.end()) { iter = map.emplace(arg0, func(arg0)).first; }
+    if (iter == map.end()) { iter = map.emplace(arg0, Functor()(arg0)).first; }
     return iter->second;
   }
 
@@ -72,7 +76,7 @@ struct ThreadLocalCopiable<RetT, Arg0> {
 
 template<typename RetT, typename Arg0, typename Arg1>
 struct ThreadLocalCopiable<RetT, Arg0, Arg1> {
-  template<RetT (*func)(Arg0, Arg1)>
+  template<typename Functor>
   static RetT Call(Arg0 arg0, Arg1 arg1) {
     using KeyT0 = typename std::decay<Arg0>::type;
     using KeyT1 = typename std::decay<Arg1>::type;
@@ -80,7 +84,7 @@ struct ThreadLocalCopiable<RetT, Arg0, Arg1> {
     static thread_local std::unordered_map<KeyT0, std::unordered_map<KeyT1, MappedT>> map;
     auto* last_map = &map[arg0];
     auto iter = last_map->find(arg1);
-    if (iter == last_map->end()) { iter = last_map->emplace(arg1, func(arg0, arg1)).first; }
+    if (iter == last_map->end()) { iter = last_map->emplace(arg1, Functor()(arg0, arg1)).first; }
     return iter->second;
   }
 
@@ -90,7 +94,7 @@ struct ThreadLocalCopiable<RetT, Arg0, Arg1> {
 
 template<typename RetT, typename Arg0, typename Arg1, typename Arg2>
 struct ThreadLocalCopiable<RetT, Arg0, Arg1, Arg2> {
-  template<RetT (*func)(Arg0, Arg1, Arg2)>
+  template<typename Functor>
   static RetT Call(Arg0 arg0, Arg1 arg1, Arg2 arg2) {
     using KeyT0 = typename std::decay<Arg0>::type;
     using KeyT1 = typename std::decay<Arg1>::type;
@@ -101,7 +105,9 @@ struct ThreadLocalCopiable<RetT, Arg0, Arg1, Arg2> {
         map;
     auto* last_map = &map[arg0][arg1];
     auto iter = last_map->find(arg2);
-    if (iter == last_map->end()) { iter = last_map->emplace(arg2, func(arg0, arg1, arg2)).first; }
+    if (iter == last_map->end()) {
+      iter = last_map->emplace(arg2, Functor()(arg0, arg1, arg2)).first;
+    }
     return iter->second;
   }
 
@@ -112,7 +118,7 @@ struct ThreadLocalCopiable<RetT, Arg0, Arg1, Arg2> {
 template<typename RetT, typename Arg0, typename Arg1, typename Arg2, typename Arg3,
          typename... Args>
 struct ThreadLocalCopiable<RetT, Arg0, Arg1, Arg2, Arg3, Args...> {
-  template<RetT (*func)(Arg0, Arg1, Arg2, Arg3, Args...)>
+  template<typename Functor>
   static RetT Call(Arg0 arg0, Arg1 arg1, Arg2 arg2, Arg3 arg3, Args... args) {
     using KeyT0 = typename std::decay<Arg0>::type;
     using KeyT1 = typename std::decay<Arg1>::type;
@@ -123,7 +129,9 @@ struct ThreadLocalCopiable<RetT, Arg0, Arg1, Arg2, Arg3, Args...> {
     static thread_local std::unordered_map<KeyT, MappedT> map;
     const auto& key = KeyT(arg0, arg1, arg2, arg3, args...);
     auto iter = map.find(key);
-    if (iter == map.end()) { iter = map.emplace(key, func(arg0, arg1, arg2, arg3, args...)).first; }
+    if (iter == map.end()) {
+      iter = map.emplace(key, Functor()(arg0, arg1, arg2, arg3, args...)).first;
+    }
     return iter->second;
   }
 
@@ -143,16 +151,16 @@ struct ThreadLocalCachedCopiable;
 
 template<typename RetT>
 struct ThreadLocalCachedCopiable<RetT> {
-  template<RetT (*func)()>
+  template<typename Functor>
   static RetT Call() {
-    static thread_local RetT value = func();
+    static thread_local RetT value = Functor()();
     return value;
   }
 };
 
 template<typename RetT, typename Arg0>
 struct ThreadLocalCachedCopiable<RetT, Arg0> {
-  template<RetT (*func)(Arg0)>
+  template<typename Functor>
   static RetT Call(Arg0 arg0) {
     using KeyT = typename std::decay<Arg0>::type;
     using MappedT = typename std::decay<RetT>::type;
@@ -162,7 +170,7 @@ struct ThreadLocalCachedCopiable<RetT, Arg0> {
       if (unlikely(map.size() >= ThreadLocalEnvInteger<ONEFLOW_THRAED_LOCAL_CACHED_SIZE>())) {
         map.clear();
       }
-      iter = map.emplace(arg0, func(arg0)).first;
+      iter = map.emplace(arg0, Functor()(arg0)).first;
     }
     return iter->second;
   }
@@ -174,7 +182,7 @@ struct ThreadLocalCachedCopiable<RetT, Arg0> {
 
 template<typename RetT, typename Arg0, typename... Args>
 struct ThreadLocalCachedCopiable<RetT, Arg0, Args...> {
-  template<RetT (*func)(Arg0, Args...)>
+  template<typename Functor>
   static RetT Call(Arg0 arg0, Args... args) {
     using KeyT0 = typename std::decay<Arg0>::type;
     using KeyT = std::tuple<KeyT0, typename std::decay<Args>::type...>;
@@ -186,7 +194,7 @@ struct ThreadLocalCachedCopiable<RetT, Arg0, Args...> {
       if (unlikely(map.size() >= ThreadLocalEnvInteger<ONEFLOW_THRAED_LOCAL_CACHED_SIZE>())) {
         map.clear();
       }
-      iter = map.emplace(key, func(arg0, args...)).first;
+      iter = map.emplace(key, Functor()(arg0, args...)).first;
     }
     return iter->second;
   }

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/functor_util.h"
+#include "oneflow/core/common/cached_functor_ptr.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/device.h"

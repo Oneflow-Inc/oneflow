@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/common/decorator.h"
-#include "oneflow/core/common/functor_util.h"
+#include "oneflow/core/common/cached_functor_ptr.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {

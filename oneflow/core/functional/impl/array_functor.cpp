@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/autograd/autograd_mode.h"
-#include "oneflow/core/common/functor_util.h"
+#include "oneflow/core/common/cached_functor_ptr.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"

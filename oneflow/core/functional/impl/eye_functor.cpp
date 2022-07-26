@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/functor_util.h"
+#include "oneflow/core/common/cached_functor_ptr.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"

@@ -25,7 +25,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/stride.h"
-#include "oneflow/core/common/functor_util.h"
+#include "oneflow/core/common/cached_functor_ptr.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 

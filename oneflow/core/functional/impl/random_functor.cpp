@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/common/functor_util.h"
+#include "oneflow/core/common/cached_functor_ptr.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"

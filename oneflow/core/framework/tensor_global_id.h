@@ -34,11 +34,11 @@ struct NonRecursiveInitGlobalId;
 
 template<typename Arg0, typename Arg1, typename... Args>
 struct NonRecursiveInitGlobalId<Maybe<void>, Arg0, Arg1, TensorTuple*, Args...> {
-  template<Maybe<void> (*func)(Arg0, Arg1, TensorTuple*, Args...)>
+  template<typename Functor>
   static Maybe<void> Call(Arg0 arg0, Arg1 arg1, TensorTuple* outputs, Args... args) {
     auto* recursive_depth = MutThreadLocalGlobalIdDepth();
     ++*recursive_depth;
-    Maybe<void> ret = func(arg0, arg1, outputs, args...);
+    Maybe<void> ret = Functor()(arg0, arg1, outputs, args...);
     --*recursive_depth;
     if (*recursive_depth == 0 && ret.IsOk()) { JUST(InitGlobalId(outputs)); }
     return ret;

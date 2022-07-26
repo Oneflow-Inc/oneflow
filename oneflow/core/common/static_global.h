@@ -26,16 +26,16 @@ struct StaticGlobalCopiable;
 
 template<typename RetT>
 struct StaticGlobalCopiable<RetT> {
-  template<RetT (*func)()>
+  template<typename Functor>
   static RetT Call() {
-    static RetT value = func();
+    static RetT value = Functor()();
     return value;
   }
 };
 
 template<typename RetT, typename Arg0>
 struct StaticGlobalCopiable<RetT, Arg0> {
-  template<RetT (*func)(Arg0)>
+  template<typename Functor>
   static RetT Call(Arg0 arg0) {
     using KeyT = typename std::decay<Arg0>::type;
     using MappedT = typename std::decay<RetT>::type;
@@ -46,7 +46,7 @@ struct StaticGlobalCopiable<RetT, Arg0> {
       auto iter = map.find(arg0);
       if (iter != map.end()) { return iter->second; }
     }
-    auto obj = func(arg0);
+    auto obj = Functor()(arg0);
     {
       std::unique_lock<std::mutex> lock(mutex);
       return map.emplace(arg0, std::move(obj)).first->second;
@@ -60,7 +60,7 @@ struct StaticGlobalCopiable<RetT, Arg0> {
 
 template<typename RetT, typename Arg0, typename Arg1, typename... Args>
 struct StaticGlobalCopiable<RetT, Arg0, Arg1, Args...> {
-  template<RetT (*func)(Arg0, Arg1, Args...)>
+  template<typename Functor>
   static RetT Call(Arg0 arg0, Arg1 arg1, Args... args) {
     using KeyT0 = typename std::decay<Arg0>::type;
     using KeyT1 = typename std::decay<Arg1>::type;
@@ -74,7 +74,7 @@ struct StaticGlobalCopiable<RetT, Arg0, Arg1, Args...> {
       auto iter = map.find(key);
       if (iter != map.end()) { return iter->second; }
     }
-    auto obj = func(arg0, arg1, args...);
+    auto obj = Functor()(arg0, arg1, args...);
     {
       std::unique_lock<std::mutex> lock(mutex);
       return map.emplace(key, std::move(obj)).first->second;

@@ -38,7 +38,7 @@ limitations under the License.
 #include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/common/flat_shape.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/functor_util.h"
+#include "oneflow/core/common/cached_functor_ptr.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/optional.h"

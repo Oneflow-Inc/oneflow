@@ -51,7 +51,7 @@ struct CheckGlobalTensorMeta;
 template<typename RetT, typename... Args>
 struct CheckGlobalTensorMeta<RetT, const std::shared_ptr<one::Tensor>&, Args...> {
   static_assert(is_maybe<RetT>::value, "returned value type must be Maybe<T>.");
-  template<RetT (*func)(const std::shared_ptr<one::Tensor>&, Args...)>
+  template<typename Functor>
   static RetT Call(const std::shared_ptr<one::Tensor>& tensor, Args... args) {
     std::shared_ptr<private_details::CheckConsistencyAsyncTransportCtx> ctx;
     static bool is_env_enabled_check = IsEnvEnabled(/* check_level */ 1);
@@ -60,7 +60,7 @@ struct CheckGlobalTensorMeta<RetT, const std::shared_ptr<one::Tensor>&, Args...>
       ctx = JUST(private_details::LaunchTensorMetaConsistencyCheck(*tensor));
     }
     ++*depth;
-    RetT ret = func(tensor, args...);
+    RetT ret = Functor()(tensor, args...);
     --*depth;
     // Always synchronize global tensor meta even if `func` failed.
     if (*depth == 0 && is_env_enabled_check) { JUST(private_details::BusyWaitAndCheck(ctx)); }

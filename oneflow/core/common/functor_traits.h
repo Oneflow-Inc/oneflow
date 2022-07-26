@@ -13,12 +13,30 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_FUNCTOR_UTIL_H_
-#define ONEFLOW_CORE_COMMON_FUNCTOR_UTIL_H_
-
-#include "oneflow/core/common/decorator.h"
+#ifndef ONEFLOW_CORE_COMMON_FUNCTOR_TRAITS_H_
+#define ONEFLOW_CORE_COMMON_FUNCTOR_TRAITS_H_
 
 namespace oneflow {
+
+template<typename X, typename = void>
+struct Functor4FuncPtr;
+template<typename T, typename... Args>
+struct Functor4FuncPtr<T (*)(Args...)> final {
+  template<T (*func)(Args...)>
+  struct Functor final {
+    T operator()(Args... args) { return func(args...); }
+  };
+};
+
+template<typename T, typename... Args>
+struct Functor4FuncPtr<T(Args...)> final {
+  template<T(func)(Args...)>
+  struct Functor final {
+    T operator()(Args... args) { return func(args...); }
+  };
+};
+
+#define FUNCTOR_CLASS_FOR_FUNC_PTR(ptr) ::oneflow::Functor4FuncPtr<decltype(ptr)>::Functor<ptr>
 
 template<typename X, typename = void>
 struct FuncPtrForFunctor;
@@ -33,10 +51,9 @@ struct FuncPtrForFunctor<RetT (Functor::*)(Args...) const> final {
   static RetT Call(Args... args) { return Functor()(args...); }
 };
 
-#define FUNC_PTR_FOR_FUNCTOR(cls) (&::oneflow::FuncPtrForFunctor<decltype(&cls::operator())>::Call)
-
-#define CACHED_FUNCTOR_PTR(cls) DECORATE(FUNC_PTR_FOR_FUNCTOR(cls), ThreadLocalCachedCopiable)
+#define FUNC_PTR_FOR_FUNCTOR_CLASS(cls) \
+  (&::oneflow::FuncPtrForFunctor<decltype(&cls::operator())>::Call)
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_FUNCTOR_UTIL_H_
+#endif  // ONEFLOW_CORE_COMMON_FUNCTOR_TRAITS_H_
