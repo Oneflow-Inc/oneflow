@@ -318,7 +318,7 @@ class RawReaderKernelState final : public user_op::OpKernelState {
       BatchReaderRequest request;
       request.blocks = std::make_shared<std::vector<size_t>>();
       if (ctx->device_type() == DeviceType::kCPU) {
-        request.buffer = malloc(local_batch_size_bytes_);
+        request.buffer = aligned_alloc(4096, RoundUp(local_batch_size_bytes_, 4096));  // NOLINT
       } else if (ctx->device_type() == DeviceType::kCUDA) {
 #ifdef WITH_CUDA
         int dev = 0;
@@ -342,7 +342,7 @@ class RawReaderKernelState final : public user_op::OpKernelState {
       BatchReaderRequest request;
       batch_reader_->WaitCompleted(&request);
       if (device_type_ == DeviceType::kCPU) {
-        free(request.buffer);
+        free(request.buffer);  // NOLINT
       } else if (device_type_ == DeviceType::kCUDA) {
 #ifdef WITH_CUDA
         OF_CUDA_CHECK(cudaFreeHost(request.buffer));
