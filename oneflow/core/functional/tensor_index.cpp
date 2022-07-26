@@ -147,7 +147,7 @@ Maybe<bool> IsContinuousSubspace(const TensorTuple& indices) {
 }
 
 // NOTE(wyg):
-// Move contiguous indices subspace to ahead.
+// Move indices subspace to be contiguous and ahead.
 // e.g. [:, index0, index1] -> [index0, index1, :]
 Maybe<void> TransposeFront(const std::shared_ptr<Tensor>& input, const TensorTuple& indices,
                            std::shared_ptr<Tensor>* output, TensorTuple* valid_indices) {
