@@ -1228,7 +1228,7 @@ class ReshapeFunctor {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    Shape infered_shape = *JUST(InferShape(x, shape));
+    Shape infered_shape = *JUST(InferShapeUnspecifiedDim(x->shape()->Count(0), shape));
 
     if (view::IsViewApplicable(x)) {
       Optional<Stride> infered_stride =
@@ -1250,7 +1250,7 @@ class ViewFunctor {
  public:
   ViewFunctor() { op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    Shape infered_shape = *JUST(InferShape(x, shape));
+    Shape infered_shape = *JUST(InferShapeUnspecifiedDim(x->shape()->Count(0), shape));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 
