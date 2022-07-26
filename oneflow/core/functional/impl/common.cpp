@@ -157,7 +157,7 @@ Maybe<Shape> InferShapeUnspecifiedDim(const int64_t& elem_count, const Shape& sh
   if (need_infer_axis == -1) {
     if (elem_count > 0) {
       // For 0-size tensor, we don't need to check the element size.
-      CHECK_OR_RETURN_ERROR(shape.Count(0) == elem_count)
+      CHECK_OR_RETURN_ERROR(target_elem_count == elem_count)
           << Error::RuntimeError() << "shape '" << shape.ToString()
           << "' is invalid for input of size " << elem_count;
     }
