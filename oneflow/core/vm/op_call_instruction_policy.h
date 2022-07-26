@@ -102,7 +102,6 @@ class OpCallInstructionPolicy final : public InstructionPolicy {
   std::string DebugName(const vm::Instruction& instruction) const override;
 
  private:
-
   Maybe<void> Init();
   void InitStreamSequentialDependence();
   Maybe<void> Prepare(Instruction* instruction) override;

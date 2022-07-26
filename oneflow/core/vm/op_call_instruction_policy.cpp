@@ -74,8 +74,8 @@ struct OpCallInstructionUtil final {
       state = nullptr;
     }
     op_call_instruction_policy->mut_opkernel()->TryInitOpKernelStateAndCache(
-        op_call_instruction_policy->mut_call_ctx(), stream, op_call_instruction_policy->user_opkernel(),
-        state, cache);
+        op_call_instruction_policy->mut_call_ctx(), stream,
+        op_call_instruction_policy->user_opkernel(), state, cache);
   }
 
   static inline Maybe<void> AllocateOutputBlobsMemory(
@@ -104,8 +104,8 @@ struct OpCallInstructionUtil final {
                                      ep::Stream* stream, user_op::OpKernelState* state,
                                      user_op::OpKernelCache* cache) {
     auto* user_kernel = op_call_instruction_policy->user_opkernel();
-    op_call_instruction_policy->mut_opkernel()->Compute(op_call_instruction_policy->mut_call_ctx(), stream, user_kernel, state,
-                                                        cache);
+    op_call_instruction_policy->mut_opkernel()->Compute(op_call_instruction_policy->mut_call_ctx(),
+                                                        stream, user_kernel, state, cache);
   }
 
   static inline void DeallocateTempStorage(OpCallInstructionPolicy* op_call_instruction_policy,
