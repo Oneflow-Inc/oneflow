@@ -87,12 +87,18 @@ class EagerCclBroadcastKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache* cache) const override {
+    size_t size = ctx->input_size("in");
+    CHECK_EQ(size, ctx->output_size("out"));
+    for (int i = 0; i < size; ++i) { ComputeForOneInput(ctx, state, cache, i); }
+  }
+  void ComputeForOneInput(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+                          const user_op::OpKernelCache* cache, int index) const {
     auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
     CHECK(kernel_cache != nullptr);
-    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", index);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", index);
     int64_t root = ctx->Attr<int64_t>("root");
     const void* in_ptr = nullptr;
     if (GlobalProcessCtx::Rank() == root) {

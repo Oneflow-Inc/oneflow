@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/attr_value.h"
@@ -112,6 +113,22 @@ class BroadcastFunctor {
     DeviceType device_type = device_type_str == "cuda" ? DeviceType::kCUDA : DeviceType::kCPU;
     const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
     return one::Broadcast(x, src_rank, parallel_desc, inplace);
+  }
+};
+
+class BroadcastTensorsFunctor {
+ public:
+  BroadcastTensorsFunctor() = default;
+  Maybe<one::TensorTuple> operator()(const one::TensorTuple& inputs, int64_t src_rank,
+                                     bool inplace) const {
+    if (inputs.empty()) { return inputs; }
+    const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
+    const auto& x = JUST(VectorAt(inputs, 0));
+    std::string device_type_str = JUST(x->device())->type();
+    CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu");
+    DeviceType device_type = device_type_str == "cuda" ? DeviceType::kCUDA : DeviceType::kCPU;
+    const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
+    return one::Broadcast(inputs, src_rank, parallel_desc, inplace);
   }
 };
 
@@ -385,6 +402,7 @@ class LocalReduceFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::StreamTouchFunctor>("StreamTouch");
   m.add_functor<impl::BroadcastFunctor>("Broadcast");
+  m.add_functor<impl::BroadcastTensorsFunctor>("BroadcastTensors");
   m.add_functor<impl::LocalAllReduceFunctor>("LocalAllReduce");
   m.add_functor<impl::GlobalAllReduceFunctor>("GlobalAllReduce");
   m.add_functor<impl::GlobalReduceScatterFunctor>("GlobalReduceScatter");

@@ -48,7 +48,9 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerNcclBroadcastOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
+  size_t size = ctx->input_size("in");
+  CHECK_EQ_OR_RETURN(size, ctx->output_size("out"));
+  for (int i = 0; i < size; ++i) { *ctx->MutOutputShape("out", i) = ctx->InputShape("in", i); }
   return Maybe<void>::Ok();
 }
 
@@ -57,14 +59,16 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerNcclBroadcastOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder().PartialSum(user_op::OpArg("in", 0)).Broadcast(user_op::OpArg("out", 0)).Build();
-  ctx->NewBuilder().Broadcast(user_op::OpArg("in", 0)).Broadcast(user_op::OpArg("out", 0)).Build();
-  ctx->NewBuilder().Split(user_op::OpArg("in", 0), 0).Broadcast(user_op::OpArg("out", 0)).Build();
+  ctx->NewBuilder().PartialSum(ctx->inputs()).Broadcast(ctx->outputs()).Build();
+  ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
+  ctx->NewBuilder().Split(ctx->inputs(), 0).Broadcast(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> EagerNcclBroadcastOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  size_t size = ctx->input_size("in");
+  CHECK_EQ_OR_RETURN(size, ctx->output_size("out"));
+  for (int i = 0; i < size; ++i) { *ctx->MutOutputDType("out", i) = ctx->InputDType("in", i); }
   return Maybe<void>::Ok();
 }
 

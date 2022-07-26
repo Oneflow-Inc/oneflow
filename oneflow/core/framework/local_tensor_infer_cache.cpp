@@ -183,6 +183,7 @@ Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTupl
       std::shared_ptr<Stride> stride(new Stride(output_mut_metas.at(i).shape()));
       output_mut_metas.at(i).set_stride(stride);
     }
+    CHECK_OR_RETURN(static_cast<bool>(output_mut_metas.at(i).device())) << "device not infered";
     mut_output_tensor_metas->at(i) = SymbolOf(output_mut_metas.at(i));
   }
   return std::shared_ptr<const LocalTensorInferResult>(std::move(result));
