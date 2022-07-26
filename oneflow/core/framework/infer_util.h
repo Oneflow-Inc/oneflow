@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/framework/tensor_desc.h"
+#include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/sbp_parallel.h"
@@ -39,7 +39,8 @@ class InferContext {
   virtual ~InferContext() = default;
 
   virtual const TensorDesc& InputTensorDesc(const std::string&, int32_t) const = 0;
-  virtual TensorDesc* OutputTensorDesc(const std::string&, int32_t) = 0;
+  virtual const TensorDesc& OutputTensorDesc(const std::string&, int32_t) const = 0;
+  virtual TensorDesc* MutOutputTensorDesc(const std::string&, int32_t) = 0;
   virtual const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string&,
                                                               int32_t) const = 0;
   virtual const Shape& InputShape(const std::string&, int32_t) const = 0;
