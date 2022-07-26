@@ -42,6 +42,21 @@ struct ArgWhereKernelUtil {
       ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ, \
       DIM_SEQ)
 
+template<DeviceType device_type, typename IN_T, typename OUT_T>
+void SetOutputSize(ep::Stream* stream, const IN_T* input_ptr, OUT_T* output_size_ptr);
+
+#define INSTANTIATE_SET_OUTPUT_SIZE(device, itype, otype)                                        \
+  template void SetOutputSize<device, itype, otype>(ep::Stream * stream, const itype* input_ptr, \
+                                                    otype* output_size_ptr);
+
+#define INSTANTIATE_SET_OUTPUT_SIZE_WITH_DTYPE_PAIR(device, itype_pair, otype_pair) \
+  INSTANTIATE_SET_OUTPUT_SIZE(device, OF_PP_PAIR_FIRST(itype_pair), OF_PP_PAIR_FIRST(otype_pair))
+
+#define INSTANTIATE_SET_OUTPUT_SIZE_FOR_DEVICE(device)       \
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(                          \
+      INSTANTIATE_SET_OUTPUT_SIZE_WITH_DTYPE_PAIR, (device), \
+      ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_KERNELS_ARG_WHERE_KERNEL_UTIL_H_

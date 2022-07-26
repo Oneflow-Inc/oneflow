@@ -26,8 +26,7 @@ class TestPad(flow.unittest.TestCase):
         with test_case.assertRaises(TypeError) as exp:
             F.pad(torch.randn(2, 2))
         test_case.assertTrue(
-            "pad(): argument 'x' must be tensor, not <class 'torch.Tensor'>"
-            in str(exp.exception)
+            "pad() missing 1 required positional argument: 'pad'" in str(exp.exception)
         )
 
     def test_numpy_type(test_case):
@@ -36,8 +35,7 @@ class TestPad(flow.unittest.TestCase):
         with test_case.assertRaises(TypeError) as exp:
             F.pad(np.random.randn(2, 2))
         test_case.assertTrue(
-            "pad(): argument 'x' must be tensor, not <class 'numpy.ndarray'>"
-            in str(exp.exception)
+            "pad() missing 1 required positional argument: 'pad'" in str(exp.exception)
         )
 
 

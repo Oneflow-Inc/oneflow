@@ -3275,6 +3275,30 @@ class EinSumFunctor {
   }
 };
 
+class AddCDivFunctor {
+ public:
+  AddCDivFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& tensor1,
+                           const std::shared_ptr<one::Tensor>& tensor2, const Scalar& value) const {
+    return JUST(Add(input, JUST(ScalarMul(JUST(Div(tensor1, tensor2)), value, false)), 1, false));
+  }
+};
+
+class InplaceAddCDivFunctor {
+ public:
+  InplaceAddCDivFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& tensor1,
+                           const std::shared_ptr<one::Tensor>& tensor2, const Scalar& value) const {
+    JUST(CheckInplaceValid(input));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    JUST(VectorAt(*outputs, 0)) = input;
+    JUST(Add(input, JUST(ScalarMul(JUST(Div(tensor1, tensor2)), value, false)), 1, true));
+    return JUST(VectorAt(*outputs, 0));
+  }
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -3285,6 +3309,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarSubFunctor, ScalarSub2Functor>("ScalarSub");
   m.add_functor<ScalarMulFunctor, ScalarMul2Functor>("ScalarMul");
   m.add_functor<InplaceScalarMulFunctor>("InplaceScalarMul");
+  m.add_functor<AddCDivFunctor>("AddCDiv");
+  m.add_functor<InplaceAddCDivFunctor>("InplaceAddCDiv");
   m.add_functor<ScalarDivFunctor, ScalarDiv2Functor>("ScalarDiv");
   m.add_functor<InplaceScalarDivFunctor>("InplaceScalarDiv");
   m.add_functor<ScalarPowFunctor>("ScalarPow");

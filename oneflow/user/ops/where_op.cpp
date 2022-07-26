@@ -209,11 +209,11 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> WhereOp::InferDataType(user_op::InferContext* ctx) {
-  const DataType& cond_dtype = ctx->InputDType("condition", 0);
+  DataType cond_dtype = ctx->InputDType("condition", 0);
   CHECK_OR_RETURN(IsBoolDataType(cond_dtype) || IsIntegralDataType(cond_dtype));
-  const DataType& x_dtype = ctx->InputDType("x", 0);
+  DataType x_dtype = ctx->InputDType("x", 0);
   CHECK_EQ_OR_RETURN(x_dtype, ctx->InputDType("y", 0));
-  *ctx->OutputDType("out", 0) = x_dtype;
+  *ctx->MutOutputDType("out", 0) = x_dtype;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> WhereOp::ModifyInputArg(const GetInputArgModifier& f,
@@ -231,9 +231,9 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> WhereScalarXOp::InferDataType(user_op::InferContext* ctx) {
-  const DataType& cond_dtype = ctx->InputDType("condition", 0);
+  DataType cond_dtype = ctx->InputDType("condition", 0);
   CHECK_OR_RETURN(IsBoolDataType(cond_dtype) || IsIntegralDataType(cond_dtype));
-  const DataType& y_dtype = ctx->InputDType("y", 0);
+  DataType y_dtype = ctx->InputDType("y", 0);
   if (ctx->Attr<bool>("has_int_operand")) {
     CHECK_EQ_OR_RETURN(y_dtype, GetDataType<int64_t>::value)
         << "expected scalar type " << GetDataType<int64_t>::value << "but found " << y_dtype;
@@ -244,7 +244,7 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
     CHECK_EQ_OR_RETURN(y_dtype, GetDataType<bool>::value)
         << "expected scalar type " << GetDataType<bool>::value << "but found " << y_dtype;
   }
-  *ctx->OutputDType("out", 0) = y_dtype;
+  *ctx->MutOutputDType("out", 0) = y_dtype;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> WhereScalarXOp::ModifyInputArg(const GetInputArgModifier& f,
@@ -262,9 +262,9 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> WhereScalarYOp::InferDataType(user_op::InferContext* ctx) {
-  const DataType& cond_dtype = ctx->InputDType("condition", 0);
+  DataType cond_dtype = ctx->InputDType("condition", 0);
   CHECK_OR_RETURN(IsBoolDataType(cond_dtype) || IsIntegralDataType(cond_dtype));
-  const DataType& x_dtype = ctx->InputDType("x", 0);
+  DataType x_dtype = ctx->InputDType("x", 0);
   if (ctx->Attr<bool>("has_int_operand")) {
     CHECK_EQ_OR_RETURN(x_dtype, GetDataType<int64_t>::value)
         << "expected scalar type " << GetDataType<int64_t>::value << "but found " << x_dtype;
@@ -275,7 +275,7 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
     CHECK_EQ_OR_RETURN(x_dtype, GetDataType<bool>::value)
         << "expected scalar type " << GetDataType<bool>::value << "but found " << x_dtype;
   }
-  *ctx->OutputDType("out", 0) = x_dtype;
+  *ctx->MutOutputDType("out", 0) = x_dtype;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> WhereScalarYOp::ModifyInputArg(const GetInputArgModifier& f,
@@ -293,14 +293,14 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> WhereScalarXyOp::InferDataType(user_op::InferContext* ctx) {
-  const DataType& cond_dtype = ctx->InputDType("condition", 0);
+  DataType cond_dtype = ctx->InputDType("condition", 0);
   CHECK_OR_RETURN(IsBoolDataType(cond_dtype) || IsIntegralDataType(cond_dtype));
   if (ctx->Attr<bool>("has_x_bool_operand") && ctx->Attr<bool>("has_y_bool_operand")) {
-    *ctx->OutputDType("out", 0) = GetDataType<bool>::value;
+    *ctx->MutOutputDType("out", 0) = GetDataType<bool>::value;
   } else if (ctx->Attr<bool>("has_x_int_operand") && ctx->Attr<bool>("has_y_int_operand")) {
-    *ctx->OutputDType("out", 0) = GetDataType<int64_t>::value;
+    *ctx->MutOutputDType("out", 0) = GetDataType<int64_t>::value;
   } else if (ctx->Attr<bool>("has_x_float_operand") && ctx->Attr<bool>("has_y_float_operand")) {
-    *ctx->OutputDType("out", 0) = GetDataType<double>::value;
+    *ctx->MutOutputDType("out", 0) = GetDataType<double>::value;
   } else {
     UNIMPLEMENTED();
   }

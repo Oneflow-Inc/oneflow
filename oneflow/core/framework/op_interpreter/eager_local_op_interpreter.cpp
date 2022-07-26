@@ -91,25 +91,32 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   const auto& output_tensor_metas = result->output_tensor_metas();
   vm::EagerBlobObjectList output_eager_blob_objects(outputs->size());
 
+  const auto& kernel = JUST(user_op_expr.MutKernel4Stream(result->stream()));
+
   for (int i = 0; i < outputs->size(); i++) {
     if (!outputs->at(i)) {
       // NOTE: if op support stride(non-contiguous input), then output tensor's stride
       // should be inferred in InferLogicalTensorDesc.
       // otherwise, it will be set here(according to shape).
-      // Note: symbol.shared_from_symbol() cannot be used here because set_stride happens in the
-      // next step.
-      std::shared_ptr<EagerLocalTensorImpl> tensor_impl = std::make_shared<EagerLocalTensorImpl>(
-          std::make_shared<LocalTensorMeta>(*output_tensor_metas.at(i)), false, false);
-      if (!JUST(user_op_expr.SupportNonContiguous())) {
-        std::shared_ptr<Stride> stride(new Stride(*tensor_impl->shape()));
-        tensor_impl->mut_tensor_meta()->set_stride(stride);
+      std::shared_ptr<MutLocalTensorMeta> mut_tensor_meta;
+      {
+        if (kernel->output_is_mut2_type(i)) {
+          mut_tensor_meta = std::make_shared<MutLocalTensorMeta>(
+              std::make_shared<Shape>(output_tensor_metas.at(i)->shape()),
+              std::make_shared<Stride>(output_tensor_metas.at(i)->stride()),
+              output_tensor_metas.at(i)->dtype(), output_tensor_metas.at(i)->device(),
+              output_tensor_metas.at(i)->storage_offset());
+        }
       }
+      std::shared_ptr<EagerLocalTensorImpl> tensor_impl =
+          std::make_shared<EagerLocalTensorImpl>(false, false);
       const auto& dep_object = NewLocalDepObject();
-      JUST(tensor_impl->InitEagerBlobObject(dep_object));
+      JUST(
+          tensor_impl->InitEagerBlobObject(output_tensor_metas.at(i), mut_tensor_meta, dep_object));
       output_eager_blob_objects.at(i) = JUST(tensor_impl->eager_blob_object());
       (*outputs)[i] = std::make_shared<LocalTensor>(tensor_impl);
     } else {
-      auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
+      const auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
       // output i is inplaced.
       // check TensorMeta of infer result and TensorMeta of output i.
       CHECK_OR_RETURN(tensor_impl->tensor_meta()->shape()      // NOLINT
@@ -125,8 +132,6 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
   }
 
-  const auto& kernel = JUST(user_op_expr.MutKernel4Stream(result->stream()));
-
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->Call(kernel, std::move(input_eager_blob_objects),
                          std::move(output_eager_blob_objects), ctx, result->stream());
@@ -139,6 +144,17 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
           tensor_impl, btb, [](uint64_t) {}, "const");
     }));
     JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+    const auto& mut_tensor_meta = const_cast<EagerLocalTensorImpl*>(tensor_impl)->mut_tensor_meta();
+    Symbol<LocalTensorMeta> new_tensor_meta = SymbolOf(LocalTensorMeta(
+        std::make_shared<Shape>(mut_tensor_meta->shape()),
+        std::make_shared<Stride>(mut_tensor_meta->stride()), mut_tensor_meta->dtype(),
+        mut_tensor_meta->device(), mut_tensor_meta->storage_offset()));
+    std::shared_ptr<EagerLocalTensorImpl> final_tensor_impl =
+        std::make_shared<EagerLocalTensorImpl>(JUST(tensor_impl->tensor_storage()), false, false);
+    JUST(final_tensor_impl->InitEagerBlobObject(
+        new_tensor_meta,
+        JUST(JUST(outputs->at(index)->eager_blob_object())->compute_local_dep_object())));
+    JUST(JUST(outputs->at(index)->AsLocalTensor())->set_impl(final_tensor_impl));
   }
 
   return Maybe<void>::Ok();
