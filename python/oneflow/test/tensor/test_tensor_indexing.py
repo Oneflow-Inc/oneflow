@@ -427,6 +427,14 @@ class TestTensorIndexing(flow.unittest.TestCase):
         np_in[:, np_mask_dim1, :, np_mask_dim3] = np_update
         test_case.assertTrue(np.array_equal(flow_in.numpy(), np_in))
 
+    def test_combined_indexing_setitem(test_case):
+        np_in = np.random.rand(2, 3, 4)
+        np_in[[0, 1], 1:2, [0, 1]] = 1.0
+
+        flow_in = flow.tensor(np_in)
+        flow_in[[0, 1], 1:2, [0, 1]] = 1.0
+        test_case.assertTrue(np.array_equal(flow_in.numpy(), np_in))
+
     def test_advanced_indexing_with_scalar_index(test_case):
         index = flow.tensor([0, 2])
         x = flow.randn(5)
