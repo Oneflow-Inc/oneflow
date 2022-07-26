@@ -13,10 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from typing import Union
+
 import oneflow as flow
 import oneflow.nn as nn
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
-from typing import Union
+from oneflow.nn.qat.utils import init_qat_helper_modules
 
 
 def get_conv_fake_quantized(
@@ -27,35 +29,6 @@ def get_conv_fake_quantized(
     w_scale, w_zero_point = weight_observer(weight)
     weight_fake_quanted = fake_quantizer(weight, w_scale, w_zero_point)
     return input_fake_quanted, weight_fake_quanted
-
-
-def init_conv_fake_quants(
-    self,
-    quantization_formula: str = "google",
-    quantization_bit: int = 8,
-    quantization_scheme: str = "symmetric",
-    weight_quant_per_layer: bool = True,
-    input_quant_momentum: float = 0.95,
-):
-    self.input_min_max_observer = nn.MovingAverageMinMaxObserver(
-        stop_update_after_iters=1,
-        quantization_formula=quantization_formula,
-        quantization_bit=quantization_bit,
-        quantization_scheme=quantization_scheme,
-        momentum=input_quant_momentum,
-    )
-    self.register_buffer("current_train_step", flow.zeros(1, dtype=flow.int64,))
-    self.weight_min_max_observer = nn.MinMaxObserver(
-        quantization_formula=quantization_formula,
-        quantization_bit=quantization_bit,
-        quantization_scheme=quantization_scheme,
-        per_layer_quantization=weight_quant_per_layer,
-    )
-    self.fake_quantizer = nn.FakeQuantization(
-        quantization_formula=quantization_formula,
-        quantization_bit=quantization_bit,
-        quantization_scheme=quantization_scheme,
-    )
 
 
 class QatConv1d(nn.Conv1d):
@@ -82,7 +55,7 @@ class QatConv1d(nn.Conv1d):
         quantization_formula (str): Support "google" or "cambricon".
         quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8.
         quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric".
-        weight_quant_per_layer (bool): True or False, means per-layer / per-channel for weight quantization. Defaults to True.
+        weight_per_layer_quantization (bool): True or False, means per-layer / per-channel for weight quantization. Defaults to True.
         input_quant_momentum (float): Smoothing parameter for exponential moving average operation for input quantization. Defaults to 0.95.
 
     Shape:
@@ -109,12 +82,10 @@ class QatConv1d(nn.Conv1d):
 
     .. code-block:: python
 
-        >>> import numpy as np
         >>> import oneflow as flow
         >>> import oneflow.nn as nn
         
-        >>> arr = np.random.randn(20, 16, 50)
-        >>> input = flow.Tensor(arr)
+        >>> input = flow.rand(20, 16, 50)
         >>> m = nn.QatConv1d(16, 33, 3, stride=2, quantization_formula="google", quantization_bit=8, quantization_scheme="symmetric")
         >>> output = m(input)
 
@@ -134,7 +105,7 @@ class QatConv1d(nn.Conv1d):
         quantization_formula: str = "google",
         quantization_bit: int = 8,
         quantization_scheme: str = "symmetric",
-        weight_quant_per_layer: bool = True,
+        weight_per_layer_quantization: bool = True,
         input_quant_momentum: float = 0.95,
     ):
         super().__init__(
@@ -149,12 +120,12 @@ class QatConv1d(nn.Conv1d):
             padding_mode,
         )
         self.channel_pos = "channels_first"
-        init_conv_fake_quants(
+        init_qat_helper_modules(
             self,
             quantization_formula=quantization_formula,
             quantization_bit=quantization_bit,
             quantization_scheme=quantization_scheme,
-            weight_quant_per_layer=weight_quant_per_layer,
+            weight_per_layer_quantization=weight_per_layer_quantization,
             input_quant_momentum=input_quant_momentum,
         )
 
@@ -193,7 +164,7 @@ class QatConv2d(nn.Conv2d):
         quantization_formula (str): Support "google" or "cambricon".
         quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8.
         quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric".
-        weight_quant_per_layer (bool): True or False, means per-layer / per-channel for weight quantization. Defaults to True.
+        weight_per_layer_quantization (bool): True or False, means per-layer / per-channel for weight quantization. Defaults to True.
         input_quant_momentum (float): Smoothing parameter for exponential moving average operation for input quantization. Defaults to 0.95.
 
 
@@ -227,12 +198,10 @@ class QatConv2d(nn.Conv2d):
 
     .. code-block:: python
 
-        >>> import numpy as np
         >>> import oneflow as flow
         >>> import oneflow.nn as nn
         
-        >>> arr = np.random.randn(20, 16, 50, 100)
-        >>> input = flow.Tensor(arr)
+        >>> input = flow.rand(20, 16, 50, 100)
         >>> m = nn.QatConv2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2), dilation=(3, 1), quantization_formula="google", quantization_bit=8, quantization_scheme="symmetric")
         >>> output = m(input)
 
@@ -252,7 +221,7 @@ class QatConv2d(nn.Conv2d):
         quantization_formula: str = "google",
         quantization_bit: int = 8,
         quantization_scheme: str = "symmetric",
-        weight_quant_per_layer: bool = True,
+        weight_per_layer_quantization: bool = True,
         input_quant_momentum: float = 0.95,
     ):
         super().__init__(
@@ -267,12 +236,12 @@ class QatConv2d(nn.Conv2d):
             padding_mode,
         )
         self.channel_pos = "channels_first"
-        init_conv_fake_quants(
+        init_qat_helper_modules(
             self,
             quantization_formula=quantization_formula,
             quantization_bit=quantization_bit,
             quantization_scheme=quantization_scheme,
-            weight_quant_per_layer=weight_quant_per_layer,
+            weight_per_layer_quantization=weight_per_layer_quantization,
             input_quant_momentum=input_quant_momentum,
         )
 
@@ -309,7 +278,7 @@ class QatConv3d(nn.Conv3d):
         quantization_formula (str): Support "google" or "cambricon".
         quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8.
         quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric".
-        weight_quant_per_layer (bool): True or False, means per-layer / per-channel for weight quantization. Defaults to True.
+        weight_per_layer_quantization (bool): True or False, means per-layer / per-channel for weight quantization. Defaults to True.
         input_quant_momentum (float): Smoothing parameter for exponential moving average operation for input quantization. Defaults to 0.95.
 
 
@@ -345,12 +314,10 @@ class QatConv3d(nn.Conv3d):
 
     .. code-block:: python
 
-        >>> import numpy as np
         >>> import oneflow as flow
         >>> import oneflow.nn as nn
 
-        >>> arr = np.random.randn(1, 2, 5, 5, 5)
-        >>> input = flow.Tensor(arr)
+        >>> input = flow.rand(1, 2, 5, 5, 5)
         >>> m = nn.QatConv3d(2, 4, kernel_size=3, stride=1, quantization_formula="google", quantization_bit=8, quantization_scheme="symmetric")
         >>> output = m(input)
 
@@ -370,7 +337,7 @@ class QatConv3d(nn.Conv3d):
         quantization_formula: str = "google",
         quantization_bit: int = 8,
         quantization_scheme: str = "symmetric",
-        weight_quant_per_layer: bool = True,
+        weight_per_layer_quantization: bool = True,
         input_quant_momentum: float = 0.95,
     ):
         super().__init__(
@@ -385,12 +352,12 @@ class QatConv3d(nn.Conv3d):
             padding_mode,
         )
         self.channel_pos = "channels_first"
-        init_conv_fake_quants(
+        init_qat_helper_modules(
             self,
             quantization_formula=quantization_formula,
             quantization_bit=quantization_bit,
             quantization_scheme=quantization_scheme,
-            weight_quant_per_layer=weight_quant_per_layer,
+            weight_per_layer_quantization=weight_per_layer_quantization,
             input_quant_momentum=input_quant_momentum,
         )
 

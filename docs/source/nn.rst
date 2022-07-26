@@ -254,6 +254,7 @@ Quantization Aware Training
     nn.QatConv1d
     nn.QatConv2d
     nn.QatConv3d
+    nn.QatFuseConvBN
 
 Utilities
 ---------

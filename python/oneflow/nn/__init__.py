@@ -161,3 +161,4 @@ from oneflow.nn.modules.rnn import (
 )
 
 from oneflow.nn.qat.conv import QatConv1d, QatConv2d, QatConv3d
+from oneflow.nn.qat.fuse_conv_bn import QatFuseConvBN
