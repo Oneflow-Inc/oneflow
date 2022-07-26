@@ -71,7 +71,7 @@ Maybe<void> TensorDescInferFnUtil::InOutCorrespond(InferContext* ctx) {
   for (size_t i = 0; i < ctx->inputs().size(); ++i) {
     const auto& input_arg = ctx->inputs().at(i);
     const auto& output_arg = ctx->outputs().at(i);
-    *ctx->OutputTensorDesc(output_arg.first, output_arg.second) =
+    *ctx->MutOutputTensorDesc(output_arg.first, output_arg.second) =
         ctx->InputTensorDesc(input_arg.first, input_arg.second);
   }
   return Maybe<void>::Ok();

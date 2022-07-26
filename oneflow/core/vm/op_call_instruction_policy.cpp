@@ -145,7 +145,6 @@ OpCallInstructionPolicy::OpCallInstructionPolicy(
 }
 
 Maybe<void> OpCallInstructionPolicy::Init() {
-  OF_PROFILER_RANGE_GUARD("OpCallInstructionPolicy::Init");
   return mut_opkernel()->ChooseOpKernel(&call_ctx_, &user_opkernel_, &need_temp_storage_);
 }
 
