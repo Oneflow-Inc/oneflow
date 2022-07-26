@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <stdio.h>
 #include <assert.h>
+#include <cstdint>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
@@ -29,7 +30,7 @@ namespace {
 #define Tmax (1024)
 
 template<typename F>
-__global__ void kernel_forward(const int B, const int T, const int C,
+__global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C,
                                const F* __restrict__ const _w, const F* __restrict__ const _u,
                                const F* __restrict__ const _k, const F* __restrict__ const _v,
                                F* __restrict__ const _y) {
@@ -64,7 +65,7 @@ __global__ void kernel_forward(const int B, const int T, const int C,
 }
 
 template<typename F>
-__global__ void kernel_backward(const int B, const int T, const int C,
+__global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t C,
                                 const F* __restrict__ const _w, const F* __restrict__ const _u,
                                 const F* __restrict__ const _k, const F* __restrict__ const _v,
                                 const F* __restrict__ const _gy, F* __restrict__ const _gw,
@@ -141,18 +142,18 @@ __global__ void kernel_backward(const int B, const int T, const int C,
 }
 
 template<typename F>
-void cuda_forward(const int B, const int T, const int C, const F* w, const F* u, const F* k,
-                  const F* v, const F* y) {
-  dim3 threadsPerBlock(min(C, 1024));
+void cuda_forward(const int64_t B, const int64_t T, const int64_t C, const F* w, const F* u,
+                  const F* k, const F* v, F* y) {
+  dim3 threadsPerBlock(min((int)C, 1024));
   assert(B * C % threadsPerBlock.x == 0);
   dim3 numBlocks(B * C / threadsPerBlock.x);
   kernel_forward<<<numBlocks, threadsPerBlock>>>(B, T, C, w, u, k, v, y);
 }
 
 template<typename F>
-void cuda_backward(const int B, const int T, const int C, const F* w, const F* u, const F* k,
-                   const F* v, const F* gy, const F* gw, const F* gu, const F* gk, const F* gv) {
-  dim3 threadsPerBlock(min(C, 1024));
+void cuda_backward(const int64_t B, const int64_t T, const int64_t C, const F* w, const F* u,
+                   const F* k, const F* v, const F* gy, F* gw, F* gu, F* gk, F* gv) {
+  dim3 threadsPerBlock(min((int)C, 1024));
   assert(B * C % threadsPerBlock.x == 0);
   dim3 numBlocks(B * C / threadsPerBlock.x);
   kernel_backward<<<numBlocks, threadsPerBlock>>>(B, T, C, w, u, k, v, gy, gw, gu, gk, gv);
@@ -173,7 +174,7 @@ class WkvForwordGPUKernel final : public user_op::OpKernel {
     const user_op::Tensor* u = ctx->Tensor4ArgNameAndIndex("u", 0);
     const user_op::Tensor* k = ctx->Tensor4ArgNameAndIndex("k", 0);
     const user_op::Tensor* v = ctx->Tensor4ArgNameAndIndex("v", 0);
-    const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int64_t B = ctx->Attr<int64_t>("B");
     const int64_t T = ctx->Attr<int64_t>("T");
     const int64_t C = ctx->Attr<int64_t>("C");
@@ -206,10 +207,10 @@ class WkvBackwardGPUKernel final : public user_op::OpKernel {
     const user_op::Tensor* k = ctx->Tensor4ArgNameAndIndex("k", 0);
     const user_op::Tensor* v = ctx->Tensor4ArgNameAndIndex("v", 0);
     const user_op::Tensor* gy = ctx->Tensor4ArgNameAndIndex("gy", 0);
-    const user_op::Tensor* gw = ctx->Tensor4ArgNameAndIndex("gw", 0);
-    const user_op::Tensor* gu = ctx->Tensor4ArgNameAndIndex("gu", 0);
-    const user_op::Tensor* gk = ctx->Tensor4ArgNameAndIndex("gk", 0);
-    const user_op::Tensor* gv = ctx->Tensor4ArgNameAndIndex("gv", 0);
+    user_op::Tensor* gw = ctx->Tensor4ArgNameAndIndex("gw", 0);
+    user_op::Tensor* gu = ctx->Tensor4ArgNameAndIndex("gu", 0);
+    user_op::Tensor* gk = ctx->Tensor4ArgNameAndIndex("gk", 0);
+    user_op::Tensor* gv = ctx->Tensor4ArgNameAndIndex("gv", 0);
     const int64_t B = ctx->Attr<int64_t>("B");
     const int64_t T = ctx->Attr<int64_t>("T");
     const int64_t C = ctx->Attr<int64_t>("C");
