@@ -42,7 +42,7 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
         flow.boxing.nccl.enable_all_to_all(True)
         flow.boxing.nccl.enable_use_compute_stream(True)
         flow.boxing.nccl.disable_group_boxing_by_dst_parallel(True)
-        
+
         flow.backends.cudnn.set_reserved_mem_mbytes(1000)
         flow.backends.cudnn.enable_fused_normalization_add_relu(True)
 
