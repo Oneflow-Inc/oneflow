@@ -89,4 +89,31 @@ Maybe<void> GetMaskedFillInputArgModify(const user_op::GetInputArgModifier& GetI
   return InferMaskedFillDataType(ctx);
 }
 
+namespace {
+Maybe<void> GenMaskedFillGradOp(user_op::BackwardOpConfContext* ctx) {
+  const std::string zero_like_op = ctx->FwOp().op_name() + "_grad_zero_like_op";
+  ctx->DefineOp(zero_like_op, [&](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("zero_like")
+        .InputBind("like", ctx->FwOp().input("x", 0))
+        .Output("out")
+        .Build();
+  });
+  const std::string where_op = ctx->FwOp().op_name() + "_grad_where_op";
+  ctx->DefineOp(where_op, [&](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("where")
+        .InputBind("condition", ctx->FwOp().input("mask", 0))
+        .InputBind("x", ctx->GetOp(zero_like_op).output("out", 0))
+        .InputBind("y", ctx->FwOp().GetGradTensorWithOpOutput("out", 0))
+        .Output("out")
+        .Build();
+  });
+  ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [&]() -> const std::string& {
+    return ctx->GetOp(where_op).output("out", 0);
+  });
+  return Maybe<void>::Ok();
+}
+}  // namespace
+
+REGISTER_USER_OP_GRAD("masked_fill").SetBackwardOpConfGenFn(GenMaskedFillGradOp);
+
 }  // namespace oneflow

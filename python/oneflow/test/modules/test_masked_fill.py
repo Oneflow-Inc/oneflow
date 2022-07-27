@@ -16,8 +16,6 @@ limitations under the License.
 
 import unittest
 
-import numpy as np
-
 from oneflow.test_utils.automated_test_util import *
 
 import oneflow as flow
@@ -26,7 +24,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestMaskedFill(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=3)
     def test_flow_masked_fill_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -36,7 +34,7 @@ class TestMaskedFill(flow.unittest.TestCase):
         value = random().to(float)
         return input.masked_fill(mask > 0.5, value)
 
-    @autotest(check_graph=True)
+    @autotest(n=3)
     def test_flow_masked_fill_with_0dim_data(test_case):
         device = random_device()
         input = random_tensor(ndim=0).to(device)
@@ -44,7 +42,7 @@ class TestMaskedFill(flow.unittest.TestCase):
         value = random().to(float)
         return input.masked_fill(mask > 0, value)
 
-    @autotest(check_graph=True)
+    @autotest(n=3)
     def test_flow_masked_fill_broadcast_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -54,7 +52,7 @@ class TestMaskedFill(flow.unittest.TestCase):
         value = random().to(float)
         return input.masked_fill(mask > 0.5, value)
 
-    @autotest(check_graph=True)
+    @autotest(n=3)
     def test_flow_masked_fill_int_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -64,7 +62,7 @@ class TestMaskedFill(flow.unittest.TestCase):
         value = random().to(int)
         return input.masked_fill(mask > 0.5, value)
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(auto_backward=False, n=3)
     def test_flow_masked_fill_bool_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
