@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/job/job_conf.pb.h"
-#include "oneflow/core/vm/symbol_storage.h"
 
 namespace oneflow {
 
