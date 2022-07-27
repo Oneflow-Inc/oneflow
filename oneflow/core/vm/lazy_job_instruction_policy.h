@@ -66,7 +66,7 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
   ~LaunchLazyJobInstructionPolicy() = default;
 
   LaunchLazyJobInstructionPolicy(const std::shared_ptr<NNGraphIf>& nn_graph,
-                               const EagerBlobObjectListPtr& param_blob_objects)
+                                 const EagerBlobObjectListPtr& param_blob_objects)
       : nn_graph_(nn_graph),
         param_blob_objects_(param_blob_objects),
         input_dependences_(),
@@ -82,12 +82,12 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
   void ForEachConstDependence(const std::function<void(Dependence* compute)>&) const {}
 
   void ForEachMutDependence(const std::function<void(Dependence* compute)>& DoEach) const {
-     for (const auto& eager_blob_object : *param_blob_objects_) {
-    DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
-  }
-  DoEach(CHECK_JUST(SingletonMaybe<VirtualMachine>())
-             ->FindOrCreateTransportLocalDepObject()
-             .Mutable());
+    for (const auto& eager_blob_object : *param_blob_objects_) {
+      DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
+    }
+    DoEach(CHECK_JUST(SingletonMaybe<VirtualMachine>())
+               ->FindOrCreateTransportLocalDepObject()
+               .Mutable());
   }
 
   void ForEachMut2Dependence(const std::function<void(Dependence* compute)>&) const {}
@@ -97,8 +97,8 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
   }
 
   std::string DebugName(const Instruction&) const override { return "LaunchLazyJob"; }
-  Maybe<void> Prepare(Instruction* instruction)  override { return Maybe<void>::Ok(); }
-  void Compute(Instruction* instruction)  override {
+  Maybe<void> Prepare(Instruction* instruction) override { return Maybe<void>::Ok(); }
+  void Compute(Instruction* instruction) override {
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);
 
     static thread_local int64_t run_id = 0;
@@ -138,7 +138,7 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
     };
     return std::make_shared<LazyJobInstance>(nn_graph_->job_name(), FinishCb);
   }
-  
+
   std::shared_ptr<NNGraphIf> nn_graph_;
   EagerBlobObjectListPtr param_blob_objects_;
   DependenceVector input_dependences_;
