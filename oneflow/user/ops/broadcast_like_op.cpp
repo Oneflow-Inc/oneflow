@@ -42,29 +42,7 @@ bool IsAxesLegal(const AxisVector& axis_vec, const Shape& like_shape, const Shap
   }
   return reduced_like_shape.dim_vec() == in_shape.dim_vec();
 }
-std::vector<bool> MakePredicatorIsReducedAxisVec(const Shape& like_shape, const Shape& x_shape,
-                                                 const std::vector<int>& reduced_axes) {
-  int32_t x_num_axes = x_shape.NumAxes();
-  int32_t like_num_axes = like_shape.NumAxes();
-  std::vector<bool> IsReducedAxis(like_num_axes, false);
-  if (x_num_axes + reduced_axes.size() == like_num_axes) {
-    for (const int32_t c : reduced_axes) { IsReducedAxis[c] = true; }
-  } else {
-    int32_t like_dim = 0;
-    int32_t x_dim = 0;
-    while (like_dim < like_num_axes && x_dim < x_num_axes) {
-      if (x_shape.at(x_dim) == 1 || x_shape.at(x_dim) == like_shape.at(like_dim)) {
-        x_dim++;
-        like_dim++;
-      } else {
-        IsReducedAxis[like_dim] = true;
-        like_dim++;
-      }
-    }
-    for (int i = like_dim; i < like_num_axes; i++) { IsReducedAxis[i] = true; }
-  }
-  return IsReducedAxis;
-}
+
 Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
   const auto& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
   const auto& like_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape();
@@ -76,11 +54,12 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
     return Error::RuntimeError() << "Can not broadcast shape " << x_shape.ToString() << " to "
                                  << like_shape.ToString();
   }
-
-  const auto IsReducedAxis = MakePredicatorIsReducedAxisVec(like_shape, x_shape, reduced_axes);
+  HashSet<int32_t> conf_axes;
+  ReduceSbpUtil::GetRegularAxes(like_num_axes, reduced_axes, &conf_axes);
+  auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, like_num_axes);
   int32_t num_reduced_axis = 0;
   FOR_RANGE(int64_t, i, 0, like_num_axes) {
-    if (IsReducedAxis[i]) {
+    if (IsReducedAxis(i)) {
       ctx->NewBuilder()
           .Broadcast(user_op::OpArg("x", 0))
           .Split(user_op::OpArg("like", 0), i)
@@ -114,8 +93,8 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(!broadcast_axes.empty());
   const Shape& in_shape = ctx->InputShape("x", 0);
   const Shape& like_shape = ctx->InputShape("like", 0);
-  Shape* out_shape = ctx->MutOutputShape("y", 0);
-  Stride* out_stride = ctx->MutOutputStride("y", 0);
+  Shape* out_shape = ctx->OutputShape("y", 0);
+  Stride* out_stride = ctx->OutputStride("y", 0);
   const AxisVector axis_vec = {broadcast_axes.begin(), broadcast_axes.end()};
   CHECK_OR_RETURN(IsAxesLegal(axis_vec, like_shape, in_shape))
       << Error::RuntimeError() << "Invalid input parameter: like shape:" << like_shape.ToString()
@@ -148,7 +127,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> BroadcastLikeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->MutOutputDType("y", 0) = ctx->InputDType("like", 0);
+  *ctx->OutputDType("y", 0) = ctx->InputDType("like", 0);
   return Maybe<void>::Ok();
 }
 
