@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/consume_local_dep_object_phy_instr_operand.h"
 #include "oneflow/core/eager/release_tensor_instruction_type.h"
+#include "oneflow/core/vm/critical_section_instruction_policy.h"
 #include "oneflow/core/vm/op_call_instruction_policy.h"
 #include "oneflow/core/vm/touch_tensors_instruction_type.h"
 #include "oneflow/core/eager/blob_instruction_type.h"
@@ -41,7 +42,6 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/framework/global_tensor_infer_cache.h"
 #include "oneflow/core/eager/local_dep_object.h"
-#include "oneflow/core/eager/critical_section_instruction_type.h"
 #include "oneflow/core/eager/lazy_job_instruction_type.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
@@ -71,26 +71,6 @@ static constexpr auto* GetLazyJobLauncherStream =
     DECORATE(&RawGetLazyJobLauncherStream, ThreadLocal);
 
 }  // namespace
-
-template<typename PhyInstrOperandT>
-Maybe<void> InstructionsBuilder::MakeCriticalSectionBegin(
-    vm::Stream* vm_stream, const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand) {
-  auto instruction = intrusive::make_shared<vm::Instruction>(
-      vm_stream, std::make_unique<vm::NaiveInstructionPolicy>(
-                     SingletonPtr<vm::CriticalSectionBeginInstructionType>(), phy_instr_operand));
-  instruction_list_->EmplaceBack(std::move(instruction));
-  return Maybe<void>::Ok();
-}
-
-template<typename PhyInstrOperandT>
-Maybe<void> InstructionsBuilder::MakeCriticalSectionEnd(
-    vm::Stream* vm_stream, const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand) {
-  auto instruction = intrusive::make_shared<vm::Instruction>(
-      vm_stream, std::make_unique<vm::NaiveInstructionPolicy>(
-                     SingletonPtr<vm::CriticalSectionEndInstructionType>(), phy_instr_operand));
-  instruction_list_->EmplaceBack(std::move(instruction));
-  return Maybe<void>::Ok();
-}
 
 // clang-format off
 // Job e.g.:
@@ -154,10 +134,10 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const vm::EagerBlobObjectListPtr&
 
       auto stream = JUST(GetCriticalSectionStream());
       auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
-      const auto& phy_instr_operand =
-          std::make_shared<vm::InputCriticalSectionBeginPhyInstrOperand>(
-              nn_graph, inputs, input_op_name2end_event_record, vm_stream);
-      JUST(MakeCriticalSectionBegin(vm_stream, phy_instr_operand));
+      auto instruction = intrusive::make_shared<vm::Instruction>(
+          vm_stream, std::make_unique<vm::InputCriticalSectionBeginInstructionPolicy>(
+                         nn_graph, inputs, input_op_name2end_event_record, vm_stream));
+      instruction_list_->EmplaceBack(std::move(instruction));
     }
     const auto& output_op_name2end_event_record =
         std::make_shared<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>();
@@ -168,10 +148,10 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const vm::EagerBlobObjectListPtr&
       }
       auto stream = JUST(GetCriticalSectionStream());
       auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
-      const auto& phy_instr_operand =
-          std::make_shared<vm::OutputCriticalSectionBeginPhyInstrOperand>(
-              nn_graph, outputs, output_op_name2end_event_record, vm_stream);
-      JUST(MakeCriticalSectionBegin(vm_stream, phy_instr_operand));
+      auto instruction = intrusive::make_shared<vm::Instruction>(
+          vm_stream, std::make_unique<vm::OutputCriticalSectionBeginInstructionPolicy>(
+                         nn_graph, outputs, output_op_name2end_event_record, vm_stream));
+      instruction_list_->EmplaceBack(std::move(instruction));
     }
     {
       const auto& phy_instr_operand =
@@ -189,17 +169,19 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const vm::EagerBlobObjectListPtr&
       const auto& eager_blob_object = inputs->at(i);
       const auto& op_name = nn_graph->inputs_op_names().at(i);
       const auto& event_record = JUST(MapAt(*input_op_name2end_event_record, op_name));
-      const auto& phy_instr_operand = std::make_shared<vm::InputCriticalSecondEndPhyInstrOperand>(
-          eager_blob_object, event_record, vm_stream);
-      JUST(MakeCriticalSectionEnd(vm_stream, phy_instr_operand));
+      auto instruction = intrusive::make_shared<vm::Instruction>(
+          vm_stream, std::make_unique<vm::InputCriticalSectionEndInstructionPolicy>(
+                         eager_blob_object, event_record, vm_stream));
+      instruction_list_->EmplaceBack(std::move(instruction));
     }
     for (int i = 0; i < nn_graph->outputs_op_names().size(); ++i) {
       const auto& eager_blob_object = outputs->at(i);
       const auto& op_name = nn_graph->outputs_op_names().at(i);
       const auto& event_record = JUST(MapAt(*output_op_name2end_event_record, op_name));
-      const auto& phy_instr_operand = std::make_shared<vm::OutputCriticalSecondEndPhyInstrOperand>(
-          eager_blob_object, event_record, vm_stream);
-      JUST(MakeCriticalSectionEnd(vm_stream, phy_instr_operand));
+      auto instruction = intrusive::make_shared<vm::Instruction>(
+          vm_stream, std::make_unique<vm::OutputCriticalSectionEndInstructionPolicy>(
+                         eager_blob_object, event_record, vm_stream));
+      instruction_list_->EmplaceBack(std::move(instruction));
     }
   }
   return Maybe<void>::Ok();

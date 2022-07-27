@@ -19,9 +19,9 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/device/event_record.h"
-#include "oneflow/core/eager/critical_section_phy_instr_operand.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/common/notifier.h"
+#include "oneflow/core/vm/phy_instr_operand.h"
 
 namespace oneflow {
 
