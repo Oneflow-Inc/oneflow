@@ -40,6 +40,78 @@ inline bool UseDynamicMemoryAllocation() {
 #endif
 }
 
+inline bool UseEmbeddingShuffleP2PKernel(DataType embedding_dtype, DataType idx_dtype) {
+  static bool use_embedding_shuffle_p2p_env =
+      ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EMBEDDING_SHUFFLE_USE_P2P", false);
+  static bool add_id_shuffle_copy_out_env =
+      ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ADD_ID_SHUFFLE_COPY_OUT", true);
+  static bool enable_quantized_comm =
+      ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false);
+  if (use_embedding_shuffle_p2p_env) {
+    if (embedding_dtype != DataType::kFloat16 || idx_dtype != DataType::kUInt32) {
+      // p2p kernel only registered kFloat16 and kUint32.
+      return false;
+    }
+    if (!add_id_shuffle_copy_out_env) {
+      // when not enable id shuffle copy out, the ptrs change every iter.
+      return false;
+    }
+    if (enable_quantized_comm) {
+      // p2p kernel not support quantize comm.
+      return false;
+    }
+    if (UseDynamicMemoryAllocation()) {
+      // p2p kernel not support dynamic memory allocation.
+      return false;
+    }
+  }
+#if CUDA_VERSION >= 11030
+  return use_embedding_shuffle_p2p_env;
+#else
+  if (use_embedding_shuffle_p2p_env) {
+    LOG(WARNING)
+        << "embedding shuffle p2p kernel only support when cuda_version greater equal than 11.3. ";
+  }
+  return false;
+#endif
+}
+
+inline bool UseEmbeddingGradientShuffleP2PKernel(DataType embedding_dtype, DataType idx_dtype) {
+  static bool use_embedding_gradient_shuffle_p2p_env =
+      ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EMBEDDING_GRADIENT_SHUFFLE_USE_P2P", false);
+  static bool add_id_shuffle_copy_out_env =
+      ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ADD_ID_SHUFFLE_COPY_OUT", true);
+  static bool enable_quantized_comm =
+      ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false);
+  if (use_embedding_gradient_shuffle_p2p_env) {
+    if (embedding_dtype != DataType::kFloat16 || idx_dtype != DataType::kUInt32) {
+      // p2p kernel only registered kFloat16 and kUint32.
+      return false;
+    }
+    if (!add_id_shuffle_copy_out_env) {
+      // when not enable id shuffle copy out, the ptrs change every iter.
+      return false;
+    }
+    if (enable_quantized_comm) {
+      // p2p kernel not support quantize comm.
+      return false;
+    }
+    if (UseDynamicMemoryAllocation()) {
+      // p2p kernel not support dynamic memory allocation.
+      return false;
+    }
+  }
+#if CUDA_VERSION >= 11030
+  return use_embedding_gradient_shuffle_p2p_env;
+#else
+  if (use_embedding_gradient_shuffle_p2p_env) {
+    LOG(WARNING) << "embedding gradient shuffle p2p kernel only support when cuda_version greater "
+                    "equal than 11.3. ";
+  }
+  return false;
+#endif
+}
+
 #ifdef WITH_CUDA
 
 class TmpBufferAllocator {
