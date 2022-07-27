@@ -14,13 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <typeinfo>
+#include "oneflow/core/vm/barrier_instruction_policy.h"
 #include "oneflow/core/vm/caching_allocator.h"
+#include "oneflow/core/vm/global_sync_instruction_policy.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/naive_instruction_policy.h"
-#include "oneflow/core/vm/barrier_instruction_type.h"
-#include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/common/blocking_counter.h"
@@ -101,21 +101,16 @@ void MakeBarrierInstructions(vm::InstructionList* list,
                              const std::function<void()>& BarrierCallback) {
   auto* vm = Singleton<VirtualMachine>::Get();
   {
-    const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>([]() {});
     auto stream = CHECK_JUST(GetBarrierStream());
     auto instruction = intrusive::make_shared<vm::Instruction>(
-        CHECK_JUST(vm->GetVmStream(stream)),
-        std::make_unique<vm::NaiveInstructionPolicy>(SingletonPtr<vm::GlobalSyncInstructionType>(),
-                                                     phy_instr_operand));
+        CHECK_JUST(vm->GetVmStream(stream)), std::make_unique<vm::GlobalSyncInstructionPolicy>());
     list->EmplaceBack(std::move(instruction));
   }
   {
-    const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>(BarrierCallback);
     auto stream = CHECK_JUST(GetBarrierStream());
     auto instruction = intrusive::make_shared<vm::Instruction>(
         CHECK_JUST(vm->GetVmStream(stream)),
-        std::make_unique<vm::NaiveInstructionPolicy>(SingletonPtr<vm::BarrierInstructionType>(),
-                                                     phy_instr_operand));
+        std::make_unique<vm::BarrierInstructionPolicy>(BarrierCallback));
     list->EmplaceBack(std::move(instruction));
   }
 }
