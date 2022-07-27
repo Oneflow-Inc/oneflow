@@ -187,14 +187,16 @@ class OpExprGradClosure {
       : OpExprGradClosure(impl, impl->MakeCustomState()) {}
   explicit OpExprGradClosure(const std::shared_ptr<OpExprGradFunctionIf>& impl,
                              const std::shared_ptr<AutoGradCaptureState>& state)
-      : impl_(impl), state_(state), scope_(nullptr) {
-    if (LazyMode::is_enabled()) { scope_ = CHECK_JUST(GetCurrentScope()); }
-  }
+      : impl_(impl), state_(state), scope_(nullptr) {}
 
   virtual ~OpExprGradClosure() = default;
 
   Maybe<void> Capture(const TensorTuple& inputs, const TensorTuple& outputs,
                       const OpExprInterpContext& interp_ctx) const {
+    if (LazyMode::is_enabled()) {
+      const auto& forward_scope = JUST(GetCurrentScope());
+      if (forward_scope) { scope_ = JUST(FindOrCreateBackwardPassScope(forward_scope)); }
+    }
     return impl_->CaptureIf(state_.get(), inputs, outputs, interp_ctx);
   }
 
@@ -211,7 +213,7 @@ class OpExprGradClosure {
  private:
   std::shared_ptr<OpExprGradFunctionIf> impl_;
   std::shared_ptr<AutoGradCaptureState> state_;
-  std::shared_ptr<Scope> scope_;
+  mutable std::shared_ptr<Scope> scope_;
 };
 
 #define REGISTER_OP_EXPR_GRAD_FUNCTION(op_type, op_grad) \

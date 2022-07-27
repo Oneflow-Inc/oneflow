@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/job/job_conf.pb.h"
+#include "oneflow/core/vm/symbol_storage.h"
 
 namespace oneflow {
 
@@ -101,5 +102,44 @@ ThreadLocalScopeGuard::ThreadLocalScopeGuard(const std::shared_ptr<Scope>& scope
 }
 
 ThreadLocalScopeGuard::~ThreadLocalScopeGuard() { ThreadLocalScopeStackPop(); }
+
+extern const std::string kBackwardPass;
+
+class BackwardPassScopeStorage {
+ public:
+  std::mutex mutex;
+
+  static BackwardPassScopeStorage* Global() {
+    static BackwardPassScopeStorage instance;
+    return &instance;
+  }
+  HashMap<int64_t, std::shared_ptr<Scope>>& get() { return scopes_; }
+
+ private:
+  HashMap<int64_t, std::shared_ptr<Scope>> scopes_;
+};
+
+Maybe<Scope> FindOrCreateBackwardPassScope(const std::shared_ptr<Scope>& scope) {
+  auto* storage = BackwardPassScopeStorage::Global();
+  auto& scopes = storage->get();
+  std::lock_guard<std::mutex> lock(storage->mutex);
+  auto it = scopes.find(JUST(scope->symbol_id()));
+  if (it != scopes.end()) { return it->second; }
+  auto scope_proto = JUST((scope->MakeChildScopeProto()));
+  scope_proto->set_calculation_pass_name(kBackwardPass);
+  std::shared_ptr<Scope> backward_pass_scope;
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    backward_pass_scope = JUST(builder->GetScopeSymbol(*scope_proto));
+    return Maybe<void>::Ok();
+  }));
+  scopes.emplace(JUST(scope->symbol_id()), backward_pass_scope);
+  return backward_pass_scope;
+}
+
+void ClearAllBackwardPassScope() {
+  auto* storage = BackwardPassScopeStorage::Global();
+  std::lock_guard<std::mutex> lock(storage->mutex);
+  storage->get().clear();
+}
 
 }  // namespace oneflow

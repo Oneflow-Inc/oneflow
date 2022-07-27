@@ -40,6 +40,9 @@ class ThreadLocalScopeGuard {
   ~ThreadLocalScopeGuard();
 };
 
+Maybe<Scope> FindOrCreateBackwardPassScope(const std::shared_ptr<Scope>& scope);
+void ClearAllBackwardPassScope();
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_SCOPE_UTIL_H_
