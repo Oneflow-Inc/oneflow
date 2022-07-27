@@ -599,21 +599,8 @@ Maybe<void> Operator::InferSbpSignature(
     CalcOrderValue4SbpSig = [](const SbpSignature&) -> int32_t { return 0; };
   }
 
-  if (op_parallel_desc_->parallel_num() >= 1) {
-    JUST(InferSbpSignature(infered_sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig,
-                           SbpInferHint4Ibn, *op_parallel_desc_));
-
-    if (op_parallel_desc_->parallel_num() == 1) {
-      auto* bn2sbp = infered_sbp_signature->mutable_bn_in_op2sbp_parallel();
-      for (const auto& obn : output_bns()) {
-        if ((*bn2sbp)[obn].parallel_type_case() == SbpParallel::PARALLEL_TYPE_NOT_SET) {
-          (*bn2sbp)[obn].mutable_broadcast_parallel();
-        }
-      }
-    }
-  } else {
-    UNIMPLEMENTED();
-  }
+  JUST(InferSbpSignature(infered_sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig,
+                         SbpInferHint4Ibn, *op_parallel_desc_));
 
   return Maybe<void>::Ok();
 }
