@@ -89,6 +89,7 @@ class AccessBlobArgCbInstructionPolicy final : public InstructionPolicy {
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
 };
+
 }  // namespace vm
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_VM_ACCESS_BLOB_ARG_CB_INSTRUCTION_POLICY_H_

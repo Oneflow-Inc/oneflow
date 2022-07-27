@@ -118,17 +118,17 @@ struct GetRecordEventInstructionPolicy : public StreamRoleVisitor<GetRecordEvent
   }
   template<typename... Args>
   static std::unique_ptr<vm::InstructionPolicy> VisitBarrier(DeviceType device_type, Args&&... args) {
-    UNIMPLEMENTED();
+    PRINT_BUG_PROMPT_AND_ABORT();
     return std::unique_ptr<vm::EpRecordEventInstructionPolicy>();
   }
   template<typename... Args>
   static std::unique_ptr<vm::InstructionPolicy> VisitCriticalSection(DeviceType device_type, Args&&... args) {
-    UNIMPLEMENTED();
+    PRINT_BUG_PROMPT_AND_ABORT();
     return std::unique_ptr<vm::EpRecordEventInstructionPolicy>();
   }
   template<typename... Args>
   static std::unique_ptr<vm::InstructionPolicy> VisitLazyJobLauncher(DeviceType device_type, Args&&... args) {
-    UNIMPLEMENTED();
+    PRINT_BUG_PROMPT_AND_ABORT();
    return std::unique_ptr<vm::EpRecordEventInstructionPolicy>();
   }
   template<typename... Args>
