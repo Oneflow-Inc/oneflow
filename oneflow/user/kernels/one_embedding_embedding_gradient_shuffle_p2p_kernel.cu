@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include <cuda.h>
 
-#if CUDA_VERSION >= 10030
+#if CUDA_VERSION >= 11030
 
 namespace oneflow {
 
