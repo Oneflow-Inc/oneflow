@@ -101,6 +101,12 @@ inline std::unique_ptr<Base> NewObjUniquePtr(Key k, Args&&... args) {
 }
 
 template<typename Key, typename Base, typename... Args>
+inline std::shared_ptr<Base> NewObjSharedPtr(Key k, Args&&... args) {
+  return std::shared_ptr<Base>(
+      AutoRegistrationFactory<Key, Base, Args...>::Get().New(k, std::forward<Args>(args)...));
+}
+
+template<typename Key, typename Base, typename... Args>
 inline bool IsClassRegistered(Key k, Args&&... args) {
   return AutoRegistrationFactory<Key, Base, Args...>::Get().IsClassRegistered(
       k, std::forward<Args>(args)...);

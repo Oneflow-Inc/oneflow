@@ -152,6 +152,6 @@
   signature: "Void (OpExpr op, TensorTuple inputs, Float learning_rate=0, Double scale=1.0, Float l1=0, Float l2=0, Float lr_power, Float lambda1, Float lambda2, Float beta, Float weight_decay=0) => DispatchFtrlUpdate"
   bind_python: True
 
-- name: "dispatch_eager_nccl_all_reduce"
+- name: "dispatch_eager_ccl_all_reduce"
   signature: "Tensor (OpExpr op, Tensor input, String parallel_conf, Bool async_launch=False) => DispatchEagerNcclAllReduce"
   bind_python: True

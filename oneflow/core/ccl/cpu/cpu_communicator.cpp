@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,22 +12,18 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import oneflow as flow
-from oneflow.nn.module import Module
+*/
+#include "oneflow/core/ccl/cpu/cpu_communicator.h"
+#include "oneflow/core/job/parallel_desc.h"
 
-from typing import Sequence
+namespace oneflow {
 
+namespace ccl {
 
-class AllReduce(Module):
-    def __init__(self, parallel_conf_str: str):
-        super().__init__()
-        self._op = (
-            flow.stateful_op("eager_ccl_all_reduce").Input("in").Output("out").Build()
-        )
-        self.parallel_conf = parallel_conf_str
+void CpuCommunicator::Init(Symbol<ParallelDesc> parallel_desc) { parallel_desc_ = parallel_desc; }
 
-    def forward(self, x):
-        assert x.device.type == "cuda"
-        assert x.device.index == flow.env.get_local_rank()
-        return flow._C.dispatch_eager_ccl_all_reduce(self._op, parallel_conf)
+REGISTER_COMMUNICATOR(DeviceType::kCPU, CpuCommunicator);
+
+}  // namespace ccl
+
+}  // namespace oneflow

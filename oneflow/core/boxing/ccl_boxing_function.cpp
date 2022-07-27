@@ -18,6 +18,8 @@ limitations under the License.
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/ccl/include/communicator.h"
+#include "oneflow/core/ccl/include/all_reduce.h"
 
 namespace oneflow {
 
@@ -33,8 +35,9 @@ Maybe<void> RawCheckCclP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   CHECK_OR_RETURN(NdSbpIsAllBroadcast(*out->nd_sbp()));
 
   CHECK_OR_RETURN(in->placement() == out->placement());
-  CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kCPU
-                  || in->placement()->device_type() == DeviceType::kCUDA);
+  DeviceType device_type = in->placement()->device_type();
+  CHECK_OR_RETURN(ccl::IsCommunicatorRegistered(device_type)
+                  && ccl::collective_communication::IsAllReduceRegistered(device_type));
   // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
