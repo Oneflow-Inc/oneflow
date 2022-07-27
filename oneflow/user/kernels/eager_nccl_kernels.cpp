@@ -91,10 +91,10 @@ class EagerCclBroadcastKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache* cache) const override {
     size_t size = ctx->input_size("in");
     CHECK_EQ(size, ctx->output_size("out"));
-    for (int i = 0; i < size; ++i) { ComputeForOneInput(ctx, state, cache, i); }
+    for (int i = 0; i < size; ++i) { ComputeForOneInput(ctx, cache, i); }
   }
-  void ComputeForOneInput(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
-                          const user_op::OpKernelCache* cache, int index) const {
+  void ComputeForOneInput(user_op::KernelComputeContext* ctx, const user_op::OpKernelCache* cache,
+                          int index) const {
     auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
     CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", index);

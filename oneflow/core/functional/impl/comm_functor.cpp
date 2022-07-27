@@ -124,9 +124,7 @@ class BroadcastTensorsFunctor {
     if (inputs.empty()) { return inputs; }
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
     const auto& x = JUST(VectorAt(inputs, 0));
-    std::string device_type_str = JUST(x->device())->type();
-    CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu");
-    DeviceType device_type = device_type_str == "cuda" ? DeviceType::kCUDA : DeviceType::kCPU;
+    DeviceType device_type = JUST(x->device())->enum_type();
     const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
     return one::Broadcast(inputs, src_rank, parallel_desc, inplace);
   }
