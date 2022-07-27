@@ -28,14 +28,16 @@ limitations under the License.
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
-#include "oneflow/core/vm/barrier_phy_instr_operand.h"
+#include "oneflow/core/vm/barrier_instruction_policy.h"
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/consume_local_dep_object_phy_instr_operand.h"
 #include "oneflow/core/eager/release_tensor_instruction_type.h"
+#include "oneflow/core/vm/global_sync_instruction_policy.h"
 #include "oneflow/core/vm/touch_tensors_instruction_type.h"
 #include "oneflow/core/eager/blob_instruction_type.h"
-#include "oneflow/core/eager/op_call_instruction_type.h"
-#include "oneflow/core/vm/barrier_instruction_type.h"
+#include "oneflow/core/vm/op_call_instruction_policy.h"
+#include "oneflow/core/vm/touch_tensors_instruction_type.h"
+#include "oneflow/core/eager/blob_instruction_type.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/naive_instruction_policy.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -383,13 +385,11 @@ Maybe<void> InstructionsBuilder::Call(
     output->set_last_used_stream(stream);
   }
   auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
-  auto phy_instr_operand = JUST(vm::OpCallPhyInstrOperand::New(
-      vm_stream, opkernel, std::move(input_eager_blob_objects),
-      std::move(output_eager_blob_objects), global_tensor_infer_result, ctx,
-      *one::CurrentDevVmDepObjectConsumeMode()));
   auto instruction = intrusive::make_shared<vm::Instruction>(
-      vm_stream, std::make_unique<vm::NaiveInstructionPolicy>(
-                     SingletonPtr<vm::OpCallInstructionType>(), phy_instr_operand));
+      vm_stream, std::make_unique<vm::OpCallInstructionPolicy>(
+                     vm_stream, opkernel, std::move(input_eager_blob_objects),
+                     std::move(output_eager_blob_objects), global_tensor_infer_result, ctx,
+                     *one::CurrentDevVmDepObjectConsumeMode()));
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
@@ -645,23 +645,19 @@ Maybe<Symbol<Stream>> GetBarrierStream() {
 }  // namespace
 
 Maybe<void> InstructionsBuilder::GlobalSync() {
-  const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>([]() {});
   auto stream = JUST(GetBarrierStream());
   auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream)),
-      std::make_unique<vm::NaiveInstructionPolicy>(SingletonPtr<vm::GlobalSyncInstructionType>(),
-                                                   phy_instr_operand));
+      std::make_unique<vm::GlobalSyncInstructionPolicy>());
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InstructionsBuilder::Barrier(const std::function<void()>& Callback) {
-  const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>(Callback);
   auto stream = JUST(GetBarrierStream());
   auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream)),
-      std::make_unique<vm::NaiveInstructionPolicy>(SingletonPtr<vm::BarrierInstructionType>(),
-                                                   phy_instr_operand));
+      std::make_unique<vm::BarrierInstructionPolicy>(Callback));
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
