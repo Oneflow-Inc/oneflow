@@ -2102,10 +2102,16 @@ class TensorSetItemFunctor {
     std::vector<int64_t> target_dims;
     JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &expand_dims,
                              &target_dims));
-    if (expand_dims.size()) {
-      slice_indices = *JUST(RemoveExpandDimSlice(slice_indices, expand_dims));
+    auto expand_input = x;
+    if (!expand_dims.empty()) {
+      CHECK_OR_RETURN(view::IsViewApplicable(x)) << "expand dims must enable view, "
+                                                    "please try to set ONEFLOW_DISABLE_VIEW=0";
+      for (int i = 0; i < expand_dims.size(); ++i) {
+        int64_t dim = expand_dims.at(i);
+        expand_input = JUST(functional::ExpandDims(expand_input, dim + i));
+      }
     }
-    int64_t ndims = x->shape()->NumAxes();
+    int64_t ndims = expand_input->shape()->NumAxes();
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims)
         << Error::RuntimeError() << "Failed to prepare slice indices.";
 
@@ -2142,39 +2148,30 @@ class TensorSetItemFunctor {
       if (slice_shape != *(value_tensor->shape())) {
         value_tensor = JUST(Reshape(value_tensor, slice_shape));
       }
-      JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
+      JUST(SliceUpdate(expand_input, value_tensor, start, end, step, /*inplace=*/true));
     } else {
-      if (ndims == 0 && index[0].IsEllipsis()) {
-        // for scalar input tensor setitem, only support ellipsis indexing type
-        Shape tmp_shape{1};
-        const auto& value_tensor = JUST(functional::View(value, tmp_shape));
-        const auto& input_tensor = JUST(functional::View(x, tmp_shape));
-        std::vector<int64_t> starts(1, 0);
-        std::vector<int64_t> stops(1, 1);
-        std::vector<int64_t> steps(1, 1);
-        JUST(SliceUpdate(input_tensor, value_tensor, starts, stops, steps, /*inplace=*/true));
-        return Maybe<void>::Ok();
-      }
       bool is_identity = [&]() {
         if (target_shape.NumAxes() == 0) { return false; }
         for (int i = 0; i < ndims; ++i) {
-          if (start[i] != 0 || end[i] != x->shape()->At(i) || step[i] != 1) { return false; }
+          if (start[i] != 0 || end[i] != expand_input->shape()->At(i) || step[i] != 1) {
+            return false;
+          }
         }
         return true;
       }();
       std::shared_ptr<one::Tensor> result;
       if (is_identity) {
-        result = x;
+        result = expand_input;
       } else {
-        CHECK_OR_RETURN(view::IsViewApplicable(x))
+        CHECK_OR_RETURN(view::IsViewApplicable(expand_input))
             << "combined slice setitem must enable view, please try to set ONEFLOW_DISABLE_VIEW=0";
-        result = JUST(Slice(x, start, end, step, /*enable_view_slice=*/true));
+        result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/true));
       }
       if (target_shape != *(result->shape())) {
         result = JUST(functional::View(result, target_shape));
       }
 
-      JUST(UnifyLocalTensorAndIndicesOnDevice(x, tensor_indices));
+      JUST(UnifyLocalTensorAndIndicesOnDevice(expand_input, tensor_indices));
       JUST(ApplyAdvancedIndexingUpdate(result, tensor_indices, value));
     }
     return Maybe<void>::Ok();

@@ -435,6 +435,15 @@ class TestTensorIndexing(flow.unittest.TestCase):
         flow_in[[0, 1], 1:2, [0, 1]] = 1.0
         test_case.assertTrue(np.array_equal(flow_in.numpy(), np_in))
 
+    def test_expand_dim_setitem(test_case):
+        a = flow.tensor(1.0)
+        a[True, ...] = 0.0
+        test_case.assertTrue(np.array_equal(a.numpy(), 0.0))
+
+        a = flow.tensor(1.0)
+        a[False, ...] = 1.0
+        test_case.assertTrue(np.array_equal(a.numpy(), 1.0))
+
     def test_advanced_indexing_with_scalar_index(test_case):
         index = flow.tensor([0, 2])
         x = flow.randn(5)
