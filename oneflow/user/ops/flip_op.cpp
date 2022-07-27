@@ -24,7 +24,7 @@ namespace oneflow {
   const std::vector<int32_t> dims = ctx->Attr<std::vector<int32_t>>("dims");
   CHECK_OR_RETURN(dims.size() <= input_dims) << "len of dims must less than len of input tensor";
   for (auto x : dims) { CHECK_OR_RETURN(x < input_dims) << "dims parameter is illegal."; }
-  user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
   *y_desc->mut_shape() = x_desc.shape();
   return Maybe<void>::Ok();
 }

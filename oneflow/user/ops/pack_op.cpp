@@ -34,7 +34,7 @@ namespace oneflow {
   const Shape& in_shape = in_desc.shape();
   const int32_t pack_num = ctx->Attr<int32_t>("pack_num");
   CHECK_GT_OR_RETURN(pack_num, 0);
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_is_dynamic() = in_desc.is_dynamic();
   if (in_shape.NumAxes() > 0) {
     *out_desc->mut_shape() = in_shape;
