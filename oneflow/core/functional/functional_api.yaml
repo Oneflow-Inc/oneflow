@@ -2404,3 +2404,11 @@
 - name: "multi_tensor_adam_update"
   signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple m, TensorTuple v, Tensor learning_rate, Float beta1, Float beta2, Float bias_correction1_val, Float bias_correction2_val, Bool do_bias_correction, Double scale, Float weight_decay) => MultiTensorAdamUpdate"
   bind_python: True
+
+- name: "wkv_forward"
+  signature: "Void (Int64 B, Int64 T, Int64 C, Tensor w, Tensor u, Tensor k, Tensor v, Tensor y) => WkvForward"
+  bind_python: True
+
+- name: "wkv_backward"
+  signature: "Void (Int64 B, Int64 T, Int64 C, Tensor w, Tensor u, Tensor k, Tensor v, Tensor gy, Tensor gw, Tensor gu, Tensor gk, Tensor gv) => WkvBackward"
+  bind_python: True
