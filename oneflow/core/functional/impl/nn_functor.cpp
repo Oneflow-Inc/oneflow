@@ -2143,6 +2143,49 @@ class NormalizationAddReluFunctor {
   std::shared_ptr<OpExpr> fused_addend_norm_training_no_stats_op_;
 };
 
+class ConstantPadFunctor {
+ public:
+  ConstantPadFunctor() {
+    constant_pad_ = CHECK_JUST(one::OpBuilder("pad").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::vector<int64_t>& pad, const Scalar& value) const {
+    const int64_t ndim = input->shape()->NumAxes();
+    const int64_t pad_size = pad.size();
+    CHECK_LE_OR_RETURN(pad_size, 2 * ndim)
+        << Error::RuntimeError() << "Pad size should less than or equal to input axes * 2.";
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
+    CHECK_EQ_OR_RETURN(pad_size % 2, 0)
+        << Error::RuntimeError() << "Length of pad must be even but instead it equals " << pad_size;
+    if (IsFloatingDataType(input->dtype()->data_type())
+        || input->dtype()->data_type() == DataType::kFloat16) {
+      JUST(attrs.SetAttr<double>("floating_constant_value", value.As<double>()));
+      JUST(attrs.SetAttr<int64_t>("integral_constant_value", 0));
+    } else if (IsIntegralDataType(input->dtype()->data_type())) {
+      JUST(attrs.SetAttr<double>("floating_constant_value", 0));
+      JUST(attrs.SetAttr<int64_t>("integral_constant_value", value.As<int64_t>()));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
+    }
+
+    std::vector<int64_t> pad_before(ndim, 0);
+    std::vector<int64_t> pad_after(ndim, 0);
+    const int64_t pad_pair = pad_size / 2;
+    for (int64_t i = 0; i < pad_pair; ++i) {
+      pad_before[ndim - i - 1] = pad[2 * i];
+      pad_after[ndim - i - 1] = pad[2 * i + 1];
+    }
+    JUST(attrs.SetAttr<std::vector<int64_t>>("padding_before", pad_before));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("padding_after", pad_after));
+    return OpInterpUtil::Dispatch<Tensor>(*constant_pad_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> constant_pad_;
+};
+
 class ReflectionPadFunctor {
  public:
   ReflectionPadFunctor() {
@@ -2155,6 +2198,9 @@ class ReflectionPadFunctor {
     JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
     const int64_t pad_size = pad.size();
     const size_t ndim = input->ndim();
+    CHECK_LE_OR_RETURN(pad_size, 2 * ndim)
+        << Error::RuntimeError() << "Pad size should less than or equal to input axes * 2.";
+
     if (pad_size == 2) {
       // 2D/3D reflect padding
       CHECK_OR_RETURN((ndim == 2 && input->shape()->At(1) != 0)
@@ -2255,6 +2301,8 @@ class ReplicationPadFunctor {
     JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
     const int64_t pad_size = pad.size();
     const size_t ndim = input->ndim();
+    CHECK_LE_OR_RETURN(pad_size, 2 * ndim)
+        << Error::RuntimeError() << "Pad size should less than or equal to input axes * 2.";
     if (pad_size == 2) {
       // 2D/3D replicate padding
       CHECK_OR_RETURN((ndim == 2 && input->shape()->At(0) != 0 && input->shape()->At(1) != 0)
@@ -2328,42 +2376,11 @@ class ReplicationPadFunctor {
 
 class PadFunctor {
  public:
-  PadFunctor() { pad_ = CHECK_JUST(one::OpBuilder("pad").Input("x").Output("y").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::vector<int64_t>& pad, const std::string& mode,
                            const Scalar& value) const {
-    const int64_t ndim = input->shape()->NumAxes();
-    const int64_t pad_size = pad.size();
-    CHECK_LE_OR_RETURN(pad_size, 2 * ndim)
-        << Error::RuntimeError() << "Pad size should less than or equal to input axes * 2.";
     if (mode == "constant") {
-      MutableAttrMap attrs;
-      JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
-      CHECK_EQ_OR_RETURN(pad_size % 2, 0)
-          << Error::RuntimeError() << "Length of pad must be even but instead it equals "
-          << pad_size;
-      if (IsFloatingDataType(input->dtype()->data_type())
-          || input->dtype()->data_type() == DataType::kFloat16) {
-        JUST(attrs.SetAttr<double>("floating_constant_value", value.As<double>()));
-        JUST(attrs.SetAttr<int64_t>("integral_constant_value", 0));
-      } else if (IsIntegralDataType(input->dtype()->data_type())) {
-        JUST(attrs.SetAttr<double>("floating_constant_value", 0));
-        JUST(attrs.SetAttr<int64_t>("integral_constant_value", value.As<int64_t>()));
-      } else {
-        UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
-      }
-
-      std::vector<int64_t> pad_before(ndim, 0);
-      std::vector<int64_t> pad_after(ndim, 0);
-      const int64_t pad_pair = pad_size / 2;
-      for (int64_t i = 0; i < pad_pair; ++i) {
-        pad_before[ndim - i - 1] = pad[2 * i];
-        pad_after[ndim - i - 1] = pad[2 * i + 1];
-      }
-      JUST(attrs.SetAttr<std::vector<int64_t>>("padding_before", pad_before));
-      JUST(attrs.SetAttr<std::vector<int64_t>>("padding_after", pad_after));
-      return OpInterpUtil::Dispatch<Tensor>(*pad_, {input}, attrs);
-
+      return functional::ConstantPad(input, pad, value);
     } else if (mode == "reflect") {
       return functional::ReflectionPad(input, pad);
     } else if (mode == "replicate") {
@@ -2373,9 +2390,6 @@ class PadFunctor {
                                   << ", but only constant, reflect and replicate are valid.";
     }
   }
-
- private:
-  std::shared_ptr<OpExpr> pad_;
 };
 
 class DropoutFunctor {
@@ -3792,9 +3806,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GridSampleFunctor>("GridSample");
   m.add_functor<impl::NormalizationFunctor>("Normalization");
   m.add_functor<impl::NormalizationAddReluFunctor>("NormalizationAddRelu");
-  m.add_functor<impl::PadFunctor>("Pad");
+  m.add_functor<impl::ConstantPadFunctor>("ConstantPad");
   m.add_functor<impl::ReflectionPadFunctor>("ReflectionPad");
   m.add_functor<impl::ReplicationPadFunctor>("ReplicationPad");
+  m.add_functor<impl::PadFunctor>("Pad");
   m.add_functor<impl::DropoutFunctor>("Dropout");
   m.add_functor<impl::DropoutGradFunctor>("DropoutGrad");
   m.add_functor<impl::PixelShuffleFunctor>("PixelShuffle");

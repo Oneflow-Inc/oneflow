@@ -1762,12 +1762,8 @@
   signature: "Tensor (Tensor dy, Tensor mask, Float scale) => DropoutGrad"
   bind_python: False
 
-- name: "pad"
-  signature: 'Tensor (Tensor x, Int64List pad, String mode="constant", Scalar value=0) => Pad'
-  bind_python: True
-
-- name: "pad_grad"
-  signature: 'Tensor (Tensor dy, Int64List pad, String mode="constant", Scalar value=0) => PadGrad'
+- name: "constant_pad"
+  signature: 'Tensor (Tensor x, Int64List pad, Scalar value=0) => ConstantPad'
   bind_python: False
 
 - name: "reflection_pad"
@@ -1776,6 +1772,14 @@
 
 - name: "replication_pad"
   signature: 'Tensor (Tensor x, Int64List pad) => ReplicationPad'
+  bind_python: False
+
+- name: "pad"
+  signature: 'Tensor (Tensor x, Int64List pad, String mode="constant", Scalar value=0) => Pad'
+  bind_python: True
+
+- name: "pad_grad"
+  signature: 'Tensor (Tensor dy, Int64List pad, String mode="constant", Scalar value=0) => PadGrad'
   bind_python: False
 
 - name: "silu"
