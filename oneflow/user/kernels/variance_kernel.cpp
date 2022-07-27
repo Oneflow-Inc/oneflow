@@ -40,9 +40,12 @@ class VarKernel final : public user_op::OpKernel {
     for (int64_t i = 0; i < axis.size(); ++i) {
       axis_dim_element *= input->shape_view().At(axis[i]);
     }
-    // when computing the variance with all the elements, the implementation of cuda kernel may use tmp buffer for computation.
+    // when computing the variance with all the elements, the implementation of cuda kernel may use
+    // tmp buffer for computation.
     T* tmp_buffer_ptr =
-        (input_dim_element > 0 && (axis.size() == input->shape_view().NumAxes() || input_dim_element == axis_dim_element) && DeviceType::kCUDA == device_type)
+        (input_dim_element > 0
+         && (axis.size() == input->shape_view().NumAxes() || input_dim_element == axis_dim_element)
+         && DeviceType::kCUDA == device_type)
             ? ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr<T>()
             : nullptr;
     VarParamHelper param_helper(input->shape_view(), axis, unbiased);
@@ -68,10 +71,9 @@ size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("dim");
   const int64_t input_dim_element = input.shape().elem_cnt();
   int64_t axis_dim_element = 1;
-  for (int64_t i = 0; i < axis.size(); ++i) {
-    axis_dim_element *= input.shape().At(axis[i]);
-  }
-  if (input_dim_element > 0 && (axis.size() == input_shape.NumAxes() || input_dim_element == axis_dim_element)) {
+  for (int64_t i = 0; i < axis.size(); ++i) { axis_dim_element *= input.shape().At(axis[i]); }
+  if (input_dim_element > 0
+      && (axis.size() == input_shape.NumAxes() || input_dim_element == axis_dim_element)) {
     return GetCudaAlignedSize(
         std::min(static_cast<int32_t>(std::ceil(std::sqrt(input.shape().elem_cnt()))),
                  kCudaMaxBlocksNum)
