@@ -2147,25 +2147,31 @@ class PadFunctor {
  public:
   PadFunctor() {
     pad_ = CHECK_JUST(one::OpBuilder("pad").Input("x").Output("y").Build());
-    reflect_pad_ = CHECK_JUST(one::OpBuilder("reflection_pad2d").Input("x").Output("y").Build());
-    replicate_pad_ = CHECK_JUST(one::OpBuilder("replication_pad2d").Input("x").Output("y").Build());
+    reflect_pad1d_ = CHECK_JUST(one::OpBuilder("reflection_pad1d").Input("x").Output("y").Build());
+    reflect_pad2d_ = CHECK_JUST(one::OpBuilder("reflection_pad2d").Input("x").Output("y").Build());
+    replicate_pad1d_ =
+        CHECK_JUST(one::OpBuilder("replication_pad1d").Input("x").Output("y").Build());
+    replicate_pad2d_ =
+        CHECK_JUST(one::OpBuilder("replication_pad2d").Input("x").Output("y").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& pad,
-                           const std::string& mode, const Scalar& value) const {
-    const int64_t ndim = x->shape()->NumAxes();
-    CHECK_LE_OR_RETURN(pad.size(), 2 * ndim)
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::vector<int64_t>& pad, const std::string& mode,
+                           const Scalar& value) const {
+    const int64_t ndim = input->shape()->NumAxes();
+    const int64_t pad_size = pad.size();
+    CHECK_LE_OR_RETURN(pad_size, 2 * ndim)
         << Error::RuntimeError() << "Pad size should less than or equal to input axes * 2.";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
     if (mode == "constant") {
-      CHECK_EQ_OR_RETURN(pad.size() % 2, 0)
+      CHECK_EQ_OR_RETURN(pad_size % 2, 0)
           << Error::RuntimeError() << "Length of pad must be even but instead it equals "
-          << pad.size();
-      if (IsFloatingDataType(x->dtype()->data_type())
-          || x->dtype()->data_type() == DataType::kFloat16) {
+          << pad_size;
+      if (IsFloatingDataType(input->dtype()->data_type())
+          || input->dtype()->data_type() == DataType::kFloat16) {
         JUST(attrs.SetAttr<double>("floating_constant_value", value.As<double>()));
         JUST(attrs.SetAttr<int64_t>("integral_constant_value", 0));
-      } else if (IsIntegralDataType(x->dtype()->data_type())) {
+      } else if (IsIntegralDataType(input->dtype()->data_type())) {
         JUST(attrs.SetAttr<double>("floating_constant_value", 0));
         JUST(attrs.SetAttr<int64_t>("integral_constant_value", value.As<int64_t>()));
       } else {
@@ -2174,24 +2180,162 @@ class PadFunctor {
 
       std::vector<int64_t> pad_before(ndim, 0);
       std::vector<int64_t> pad_after(ndim, 0);
-      const int64_t pad_pair = pad.size() / 2;
+      const int64_t pad_pair = pad_size / 2;
       for (int64_t i = 0; i < pad_pair; ++i) {
         pad_before[ndim - i - 1] = pad[2 * i];
         pad_after[ndim - i - 1] = pad[2 * i + 1];
       }
       JUST(attrs.SetAttr<std::vector<int64_t>>("padding_before", pad_before));
       JUST(attrs.SetAttr<std::vector<int64_t>>("padding_after", pad_after));
-      return OpInterpUtil::Dispatch<Tensor>(*pad_, {x}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*pad_, {input}, attrs);
 
     } else if (mode == "reflect") {
-      const int64_t pad_h = x->shape()->dim_vec().at(2);
-      const int64_t pad_w = x->shape()->dim_vec().at(3);
-      CHECK_OR_RETURN(pad[2] < pad_h && pad[3] < pad_h && pad[0] < pad_w && pad[1] < pad_w)
-          << Error::RuntimeError()
-          << "padding size should be less than the corresponding input dimension!";
-      return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_, {x}, attrs);
+      if (pad_size == 2) {
+        // 2D/3D reflect padding
+        CHECK_OR_RETURN((ndim == 2 && input->shape()->At(1) != 0)
+                        || (ndim == 3 && input->shape()->At(1) != 0 && input->shape()->At(2) != 0))
+            << "2D or 3D (batch mode) tensor expected for input, but got: " << ndim;
+        const int64_t pad_left = pad[0];
+        const int64_t pad_right = pad[1];
+        const int64_t dim_w = (ndim == 3) ? 2 : 1;
+        const int64_t input_width = input->shape()->At(dim_w);
+        const int64_t output_w = input_width + pad_left + pad_right;
+        CHECK_OR_RETURN(pad_left < input_width && pad_right < input_width)
+            << "Padding size should be less than the corresponding input dimension, but got: "
+               "padding ("
+            << pad_left << ", " << pad_right << ") at dimension " << dim_w << " of input "
+            << input->shape()->ToString();
+        CHECK_OR_RETURN(output_w >= 1)
+            << "input (W: " << input_width << ")is too small. Calculated output W: " << output_w;
+
+        if (ndim == 2) {
+          // for 2D input
+          auto unsqueezed_input = JUST(functional::Unsqueeze(input, 0));
+          auto unsqueezed_output =
+              JUST(OpInterpUtil::Dispatch<Tensor>(*reflect_pad1d_, {unsqueezed_input}, attrs));
+          return JUST(functional::Squeeze(unsqueezed_output, std::vector<int32_t>{0}));
+        }
+        return OpInterpUtil::Dispatch<Tensor>(*reflect_pad1d_, {input}, attrs);
+      } else if (pad_size == 4) {
+        // 3D/4D reflect padding
+        bool valid_dims = input->shape()->At(1) != 0 && input->shape()->At(2) != 0;
+        CHECK_OR_RETURN((ndim == 3 && valid_dims)
+                        || (ndim == 4 && valid_dims && input->shape()->At(3) != 0))
+            << "3D or 4D (batch mode) tensor expected for input, but got: " << ndim;
+
+        int dim_h = 1;
+        int dim_w = 2;
+        if (ndim == 4) {
+          dim_w++;
+          dim_h++;
+        }
+
+        const int64_t pad_left = pad[0];
+        const int64_t pad_right = pad[1];
+        const int64_t pad_top = pad[2];
+        const int64_t pad_bottom = pad[3];
+
+        const int64_t input_h = input->shape()->At(dim_h);
+        const int64_t input_w = input->shape()->At(dim_w);
+        const int64_t output_h = input_h + pad_top + pad_bottom;
+        const int64_t output_w = input_w + pad_left + pad_right;
+        CHECK_OR_RETURN(pad_left < input_w && pad_right < input_w)
+            << Error::RuntimeError()
+            << "Padding size should be less than the corresponding input "
+               "dimension, but got: padding ("
+            << pad_left << ", " << pad_right << ") at dimension " << dim_w << " of input " << ndim;
+
+        CHECK_OR_RETURN(pad_top < input_h && pad_bottom < input_h)
+            << Error::RuntimeError()
+            << "Padding size should be less than the corresponding input "
+               "dimension, but got: padding ("
+            << pad_top << ", " << pad_bottom << ") at dimension " << dim_h << " of input " << ndim;
+
+        CHECK_OR_RETURN(output_w >= 1 || output_h >= 1)
+            << Error::RuntimeError() << "input (H: " << input_h << ", W: " << input_w
+            << ")is too small. Calculated output H: " << output_h << " W: " << output_w;
+
+        if (ndim == 3) {
+          // for 3D input
+          auto unsqueezed_input = JUST(functional::Unsqueeze(input, 0));
+          auto unsqueezed_output =
+              JUST(OpInterpUtil::Dispatch<Tensor>(*reflect_pad2d_, {unsqueezed_input}, attrs));
+          return JUST(functional::Squeeze(unsqueezed_output, std::vector<int32_t>{0}));
+        }
+        return OpInterpUtil::Dispatch<Tensor>(*reflect_pad2d_, {input}, attrs);
+      } else if (pad_size == 6) {
+        UNIMPLEMENTED_THEN_RETURN() << "5D reflect padding are not supported for now";
+      } else {
+        UNIMPLEMENTED_THEN_RETURN()
+            << "Only 2D, 3D, 4D, 5D padding with non-constant padding are supported for now";
+      }
+
     } else if (mode == "replicate") {
-      return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_, {x}, attrs);
+      if (pad_size == 2) {
+        // 2D/3D replicate padding
+        CHECK_OR_RETURN((ndim == 2 && input->shape()->At(0) != 0 && input->shape()->At(1) != 0)
+                        || (ndim == 3 && input->shape()->At(1) != 0 && input->shape()->At(2) != 0))
+            << "Expected 2D or 3D (batch mode) tensor with possibly 0 batch size and other "
+               "non-zero dimensions for input, but got: "
+            << ndim;
+        const int64_t pad_left = pad[0];
+        const int64_t pad_right = pad[1];
+        const int64_t dim_w = (ndim == 3) ? 2 : 1;
+        const int64_t input_width = input->shape()->At(dim_w);
+        const int64_t output_w = input_width + pad_left + pad_right;
+        CHECK_OR_RETURN(output_w >= 1)
+            << "input (W: " << input_width << ")is too small. Calculated output W: " << output_w;
+
+        if (ndim == 2) {
+          // for 2D input
+          auto unsqueezed_input = JUST(functional::Unsqueeze(input, 0));
+          auto unsqueezed_output =
+              JUST(OpInterpUtil::Dispatch<Tensor>(*replicate_pad1d_, {unsqueezed_input}, attrs));
+          return JUST(functional::Squeeze(unsqueezed_output, std::vector<int32_t>{0}));
+        }
+        return OpInterpUtil::Dispatch<Tensor>(*replicate_pad1d_, {input}, attrs);
+      } else if (pad_size == 4) {
+        // 3D/4D replicate padding
+        bool valid_dims = input->shape()->At(1) != 0 && input->shape()->At(2) != 0;
+        CHECK_OR_RETURN((ndim == 3 && valid_dims)
+                        || (ndim == 4 && valid_dims && input->shape()->At(3) != 0))
+            << "3D or 4D (batch mode) tensor expected for input, but got: " << ndim;
+
+        int dim_h = 1;
+        int dim_w = 2;
+        if (ndim == 4) {
+          dim_w++;
+          dim_h++;
+        }
+
+        const int64_t pad_left = pad[0];
+        const int64_t pad_right = pad[1];
+        const int64_t pad_top = pad[2];
+        const int64_t pad_bottom = pad[3];
+
+        const int64_t input_h = input->shape()->At(dim_h);
+        const int64_t input_w = input->shape()->At(dim_w);
+        const int64_t output_h = input_h + pad_top + pad_bottom;
+        const int64_t output_w = input_w + pad_left + pad_right;
+        CHECK_OR_RETURN(output_w >= 1 || output_h >= 1)
+            << Error::RuntimeError() << "input (H: " << input_h << ", W: " << input_w
+            << ")is too small. Calculated output H: " << output_h << " W: " << output_w;
+
+        if (ndim == 3) {
+          // for 3D input
+          auto unsqueezed_input = JUST(functional::Unsqueeze(input, 0));
+          auto unsqueezed_output =
+              JUST(OpInterpUtil::Dispatch<Tensor>(*replicate_pad2d_, {unsqueezed_input}, attrs));
+          return JUST(functional::Squeeze(unsqueezed_output, std::vector<int32_t>{0}));
+        }
+        return OpInterpUtil::Dispatch<Tensor>(*replicate_pad2d_, {input}, attrs);
+      } else if (pad_size == 6) {
+        UNIMPLEMENTED_THEN_RETURN() << "5D replicate padding are not supported for now";
+      } else {
+        UNIMPLEMENTED_THEN_RETURN()
+            << "Only 2D, 3D, 4D, 5D padding with non-constant padding are supported for now";
+      }
+
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode
                                   << ", but only constant, reflect and replicate are valid.";
@@ -2200,8 +2344,10 @@ class PadFunctor {
 
  private:
   std::shared_ptr<OpExpr> pad_;
-  std::shared_ptr<OpExpr> reflect_pad_;
-  std::shared_ptr<OpExpr> replicate_pad_;
+  std::shared_ptr<OpExpr> reflect_pad1d_;
+  std::shared_ptr<OpExpr> reflect_pad2d_;
+  std::shared_ptr<OpExpr> replicate_pad1d_;
+  std::shared_ptr<OpExpr> replicate_pad2d_;
 };
 
 class DropoutFunctor {
