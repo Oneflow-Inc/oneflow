@@ -53,7 +53,7 @@ class TestVar(flow.unittest.TestCase):
             keepdim=random().to(bool),
         )
         return y
-    
+
     @autotest(n=5)
     def test_flow_var_all_dim_with_random_data_n5(test_case):
         device = random_device()
