@@ -241,6 +241,19 @@ Maybe<void> LocalRpcManager::CreateClient() {
 
 LocalRpcManager::~LocalRpcManager() { Singleton<CtrlClient>::Delete(); }
 
+Maybe<void> DryRunRpcManager::Bootstrap() {
+  SetLocalProcessCtx(Singleton<ProcessCtx>::Get());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DryRunRpcManager::CreateClient() {
+  auto* client = new DryRunCtrlClient(*Singleton<ProcessCtx>::Get());
+  Singleton<CtrlClient>::SetAllocated(client);
+  return Maybe<void>::Ok();
+}
+
+DryRunRpcManager::~DryRunRpcManager() { Singleton<CtrlClient>::Delete(); }
+
 }  // namespace oneflow
 
 #endif  // RPC_BACKEND_LOCAL
