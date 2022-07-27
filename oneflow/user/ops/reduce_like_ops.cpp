@@ -28,6 +28,7 @@ namespace oneflow {
     const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("axis");
     ReduceSbpUtil::GetRegularAxes(num_axes, reduced_axes, &conf_axes);
   }
+  
   const auto& like_num_axes =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
   const bool keep_dims = (num_axes == like_num_axes);
