@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/user_kernel.h"
 #include <string>
+#include <unordered_map>
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/op_kernel_infer_cache.h"
@@ -573,17 +574,25 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
-  void check_tensor_pointers() {
-    std::cout << "check pointers" << std::endl;
-    for (const auto& it : arg2bn_tensor_pair_) {
-      const auto& p = it.first;
-      std::string bn = p.first + "_" + std::to_string(p.second);
-      if (it.second.tensor.get() == nullptr) {
-        std::cout << "BN: " << bn << " is null" << std::endl;
-        continue;
+  void check_inplace_op_pointers() {
+    if (user_op_conf_.op_conf().user_conf().inplace_obn2ibn().size() > 0) {
+      std::unordered_map<std::string, const void*> bn2ptr;
+      for (const auto& it : arg2bn_tensor_pair_) {
+        const auto& p = it.first;
+        std::string bn = p.first + "_" + std::to_string(p.second);
+        if (it.second.tensor.get() == nullptr) {
+          continue;
+        }
+        const void* ptr = it.second.tensor->dptr<void>();
+        bn2ptr[bn] = ptr;
       }
-      const void* ptr = it.second.tensor->dptr<void*>();
-      std::cout << "BN Name: " << bn << " Ptr: " << ptr << std::endl;
+
+      const auto& inplace_obn2ibn = user_op_conf_.op_conf().user_conf().inplace_obn2ibn();
+      for (const auto& it : inplace_obn2ibn) {
+        std::string obn = it.first;
+        std::string ibn = it.second;
+        CHECK(bn2ptr[obn] == bn2ptr[ibn]) << "NOT Inplace op: " << user_op_conf_.op_conf().name();
+      }
     }
   }
 
@@ -687,7 +696,7 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
   }
 #endif  // WITH_CUDA_GRAPHS
 
-  ctx_->check_tensor_pointers();
+  ctx_->check_inplace_op_pointers();
   kernel_->Compute(ctx_.get(), opkernel_state, opkernel_cache_.get());
 
 #ifdef WITH_CUDA_GRAPHS

@@ -925,7 +925,6 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   // Disable boxing if the computation is inplace.
   for (int i = 0; i < op_expr.output_size(); ++i) {
     const auto& output = outputs->at(i);
-    if (!output) { std::cout << "OUTPUT NULL" << std::endl; }
     if (output) {
       const std::string& lbn = TensorNameScope::Global()->Lookup(output);
       CHECK_OR_RETURN(!lbn.empty()) << "The output which index is " << i
