@@ -32,12 +32,6 @@ namespace oneflow {
   const auto& like_num_axes =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
   const bool keep_dims = (num_axes == like_num_axes);
-  if (!keep_dims) {
-    CHECK_EQ_OR_RETURN(conf_axes.size(), num_axes - like_num_axes)
-        << Error::RuntimeError()
-        << "The size of axis list must be equal to the difference of the dimension "
-        << "between x tensor and like tensor";
-  }
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);
   int64_t num_reduced_axes = 0;
   FOR_RANGE(int64_t, i, 0, num_axes) {
