@@ -40,7 +40,6 @@ class EpRecordEventInstructionPolicy final : public InstructionPolicy {
     ForEachMut2Dependence([&](auto* dep) { output_dependences_.emplace_back(dep); });
   }
 
-
   ~EpRecordEventInstructionPolicy() override = default;
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }
@@ -97,42 +96,51 @@ class EpRecordEventInstructionPolicy final : public InstructionPolicy {
 
 struct GetRecordEventInstructionPolicy : public StreamRoleVisitor<GetRecordEventInstructionPolicy> {
   template<typename... Args>
-  static std::unique_ptr<vm::InstructionPolicy> VisitCompute(DeviceType device_type, Args&&... args) {
+  static std::unique_ptr<vm::InstructionPolicy> VisitCompute(DeviceType device_type,
+                                                             Args&&... args) {
     return std::make_unique<vm::EpRecordEventInstructionPolicy>(std::forward<Args>(args)...);
   }
   template<typename... Args>
-  static std::unique_ptr<vm::InstructionPolicy> VisitHost2Device(DeviceType device_type, Args&&... args) {
+  static std::unique_ptr<vm::InstructionPolicy> VisitHost2Device(DeviceType device_type,
+                                                                 Args&&... args) {
     return std::make_unique<vm::EpRecordEventInstructionPolicy>(std::forward<Args>(args)...);
   }
   template<typename... Args>
-  static std::unique_ptr<vm::InstructionPolicy> VisitDevice2Host(DeviceType device_type, Args&&... args) {
+  static std::unique_ptr<vm::InstructionPolicy> VisitDevice2Host(DeviceType device_type,
+                                                                 Args&&... args) {
     return std::make_unique<vm::EpRecordEventInstructionPolicy>(std::forward<Args>(args)...);
   }
   template<typename... Args>
-  static std::unique_ptr<vm::InstructionPolicy> VisitSyncedLaunchedCommNet(DeviceType device_type, Args&&... args) {
+  static std::unique_ptr<vm::InstructionPolicy> VisitSyncedLaunchedCommNet(DeviceType device_type,
+                                                                           Args&&... args) {
     return std::make_unique<vm::EpRecordEventInstructionPolicy>(std::forward<Args>(args)...);
   }
   template<typename... Args>
-  static std::unique_ptr<vm::InstructionPolicy> VisitAsyncedLaunchedCommNet(DeviceType device_type, Args&&... args) {
+  static std::unique_ptr<vm::InstructionPolicy> VisitAsyncedLaunchedCommNet(DeviceType device_type,
+                                                                            Args&&... args) {
     return std::make_unique<vm::EpRecordEventInstructionPolicy>(std::forward<Args>(args)...);
   }
   template<typename... Args>
-  static std::unique_ptr<vm::InstructionPolicy> VisitBarrier(DeviceType device_type, Args&&... args) {
+  static std::unique_ptr<vm::InstructionPolicy> VisitBarrier(DeviceType device_type,
+                                                             Args&&... args) {
     PRINT_BUG_PROMPT_AND_ABORT();
     return std::unique_ptr<vm::EpRecordEventInstructionPolicy>();
   }
   template<typename... Args>
-  static std::unique_ptr<vm::InstructionPolicy> VisitCriticalSection(DeviceType device_type, Args&&... args) {
+  static std::unique_ptr<vm::InstructionPolicy> VisitCriticalSection(DeviceType device_type,
+                                                                     Args&&... args) {
     PRINT_BUG_PROMPT_AND_ABORT();
     return std::unique_ptr<vm::EpRecordEventInstructionPolicy>();
   }
   template<typename... Args>
-  static std::unique_ptr<vm::InstructionPolicy> VisitLazyJobLauncher(DeviceType device_type, Args&&... args) {
+  static std::unique_ptr<vm::InstructionPolicy> VisitLazyJobLauncher(DeviceType device_type,
+                                                                     Args&&... args) {
     PRINT_BUG_PROMPT_AND_ABORT();
-   return std::unique_ptr<vm::EpRecordEventInstructionPolicy>();
+    return std::unique_ptr<vm::EpRecordEventInstructionPolicy>();
   }
   template<typename... Args>
-  static std::unique_ptr<vm::InstructionPolicy> VisitPinnedCompute(DeviceType device_type, Args&&... args) {
+  static std::unique_ptr<vm::InstructionPolicy> VisitPinnedCompute(DeviceType device_type,
+                                                                   Args&&... args) {
     return std::make_unique<vm::EpRecordEventInstructionPolicy>(std::forward<Args>(args)...);
   }
 };

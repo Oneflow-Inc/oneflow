@@ -526,7 +526,8 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
   StreamRole stream_role = last_used_stream->stream_role();
   auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(last_used_stream)),
-      GetRecordEventInstructionPolicy::Visit(stream_role, device_type, std::move(compute_local_dep_objects), modifier));
+      GetRecordEventInstructionPolicy::Visit(stream_role, device_type,
+                                             std::move(compute_local_dep_objects), modifier));
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
