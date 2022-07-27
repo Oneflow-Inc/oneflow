@@ -25,13 +25,14 @@ struct SparseSoftmaxCrossEntropyMsCaptureState : public AutoGradCaptureState {
   int64_t depth;
 };
 
-class SparseSoftmaxCrossEntropyMs : public OpExprGradFunction<SparseSoftmaxCrossEntropyMsCaptureState> {
+class SparseSoftmaxCrossEntropyMs
+    : public OpExprGradFunction<SparseSoftmaxCrossEntropyMsCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(SparseSoftmaxCrossEntropyMsCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const SparseSoftmaxCrossEntropyMsCaptureState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override;
+  Maybe<void> Apply(const SparseSoftmaxCrossEntropyMsCaptureState* ctx,
+                    const TensorTuple& out_grads, TensorTuple* in_grads) const override;
 
  private:
   AttrMap base_attrs_;
@@ -45,9 +46,9 @@ Maybe<void> SparseSoftmaxCrossEntropyMs::Init(const OpExpr& op) {
 }
 
 Maybe<void> SparseSoftmaxCrossEntropyMs::Capture(SparseSoftmaxCrossEntropyMsCaptureState* ctx,
-                                               const TensorTuple& inputs,
-                                               const TensorTuple& outputs,
-                                               const AttrMap& attrs) const {
+                                                 const TensorTuple& inputs,
+                                                 const TensorTuple& outputs,
+                                                 const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->depth = JUST(composed_attrs.GetAttr<int64_t>("depth"));
   CHECK_EQ_OR_RETURN(inputs.size(), 2);       // NOLINT(maybe-need-error-msg)
@@ -58,8 +59,8 @@ Maybe<void> SparseSoftmaxCrossEntropyMs::Capture(SparseSoftmaxCrossEntropyMsCapt
 }
 
 Maybe<void> SparseSoftmaxCrossEntropyMs::Apply(const SparseSoftmaxCrossEntropyMsCaptureState* ctx,
-                                             const TensorTuple& out_grads,
-                                             TensorTuple* in_grads) const {
+                                               const TensorTuple& out_grads,
+                                               TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // NOLINT(maybe-need-error-msg)
   const auto& dy = out_grads.at(1);
   const auto& prob = ctx->SavedTensors().at(0);
