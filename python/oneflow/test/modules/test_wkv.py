@@ -15,10 +15,10 @@ limitations under the License.
 """
 import unittest
 import random
-import os
 
 import oneflow as flow
-from oneflow.test_utils.test_util import GenArgList
+import oneflow.unittest
+
 
 class WKV:
     def forward(B, T, C):
@@ -47,6 +47,7 @@ class WKV:
         flow._C.wkv_backward(B, T, C, w, u, k, v, gy.contiguous(), gw, gu, gk, gv)
         return (None, None, None, gw, gu, gk, gv)
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestWkv(unittest.TestCase):
     def test_wkv(test_case):
@@ -56,6 +57,7 @@ class TestWkv(unittest.TestCase):
 
         WKV.forward(B, T, C)
         WKV.backward(B, T, C)
+
 
 if __name__ == "__main__":
     unittest.main()
