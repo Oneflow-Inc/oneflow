@@ -65,8 +65,6 @@ class WKV:
         gk = torch.zeros((B, T, C), device="cuda")
         gv = torch.zeros((B, T, C), device="cuda")
         wkv_cuda.wkv_backward(B, T, C, w, u, k, v, gy.contiguous(), gw, gu, gk, gv)
-        gw = torch.sum(gw, dim=0)
-        gu = torch.sum(gu, dim=0)
         return (None, None, None, gw, gu, gk, gv)
 
 
@@ -75,7 +73,7 @@ def CHECK_CUDA():
     T = 768
     C = 768
 
-    WKV.forward(B, T, C)
+    # y = WKV.forward(B, T, C)
     WKV.backward(B, T, C)
 
 

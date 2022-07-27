@@ -33,6 +33,7 @@ class WkvForwardFunctor {
                          .Input("k")
                          .Input("v")
                          .Input("y")
+                         .Output("y_")
                          .Build());
   }
   Maybe<void> operator()(const int64_t B, const int64_t T, const int64_t C,
@@ -57,7 +58,7 @@ class WkvForwardFunctor {
 class WkvBackwardFunctor {
  public:
   WkvBackwardFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("wkv_forward")
+    op_ = CHECK_JUST(one::OpBuilder("wkv_backward")
                          .Input("w")
                          .Input("u")
                          .Input("k")
@@ -67,6 +68,7 @@ class WkvBackwardFunctor {
                          .Input("gu")
                          .Input("gk")
                          .Input("gv")
+                         .Output("y")
                          .Build());
   }
   Maybe<void> operator()(
