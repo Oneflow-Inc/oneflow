@@ -13,13 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EAGER_OP_CALL_PHY_INSTR_OPERAND_H_
-#define ONEFLOW_CORE_EAGER_OP_CALL_PHY_INSTR_OPERAND_H_
+#ifndef ONEFLOW_CORE_VM_OP_CALL_INSTRUCTION_POLICY_H_
+#define ONEFLOW_CORE_VM_OP_CALL_INSTRUCTION_POLICY_H_
 
-#include "oneflow/core/vm/phy_instr_operand.h"
+#include <memory>
 #include "oneflow/core/eager/call_context.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
+#include "oneflow/core/vm/instruction_policy.h"
+#include "oneflow/core/vm/stream.h"
+#include "oneflow/user/kernels/stateful_opkernel.h"
 
 namespace oneflow {
 
@@ -31,26 +34,23 @@ class OpKernel;
 
 namespace vm {
 
-class Stream;
-
-struct OpCallInstructionUtil;
-
-class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
+class OpCallInstructionPolicy final : public InstructionPolicy {
  public:
-  OpCallPhyInstrOperand(const OpCallPhyInstrOperand&) = delete;
-  OpCallPhyInstrOperand(OpCallPhyInstrOperand&&) = delete;
-  ~OpCallPhyInstrOperand() override = default;
+  OpCallInstructionPolicy(const OpCallInstructionPolicy&) = delete;
+  OpCallInstructionPolicy(OpCallInstructionPolicy&&) = delete;
 
-  template<typename... Args>
-  static Maybe<OpCallPhyInstrOperand> New(Args&&... args) {
-    auto* ptr = new OpCallPhyInstrOperand(std::forward<Args>(args)...);
-    JUST(ptr->Init());
-    return std::shared_ptr<OpCallPhyInstrOperand>(ptr);
-  }
+  OpCallInstructionPolicy(
+      Stream* vm_stream, const std::shared_ptr<one::StatefulOpKernel>& opkernel,
+      EagerBlobObjectList&& inputs, EagerBlobObjectList&& outputs,
+      const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
+      const one::OpExprInterpContext& op_interp_ctx,
+      const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode);
+
+  ~OpCallInstructionPolicy() override = default;
 
   const one::StatefulOpKernel& opkernel() const { return *opkernel_; }
-  const vm::EagerBlobObjectList& inputs() const { return call_ctx_.inputs(); }
-  const vm::EagerBlobObjectList& outputs() const { return call_ctx_.outputs(); }
+  const EagerBlobObjectList& inputs() const { return call_ctx_.inputs(); }
+  const EagerBlobObjectList& outputs() const { return call_ctx_.outputs(); }
   const AttrMap& attrs() const { return call_ctx_.op_interp_ctx().attrs; }
   const one::OpExprInterpContext& op_interp_ctx() const { return call_ctx_.op_interp_ctx(); }
   const one::DevVmDepObjectConsumeMode& dev_vm_dep_object_consume_mode() const {
@@ -89,23 +89,24 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
 
   eager::CallContext* mut_call_ctx() { return &call_ctx_; }
 
+  Stream* vm_stream() const { return vm_stream_; }
+
   void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
     for (const auto& eager_blob_object : call_ctx_.inputs()) { DoEach(eager_blob_object.get()); }
   }
 
- private:
-  friend struct OpCallInstructionUtil;
-  OpCallPhyInstrOperand(
-      vm::Stream* vm_stream, const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-      vm::EagerBlobObjectList&& inputs, vm::EagerBlobObjectList&& outputs,
-      const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
-      const one::OpExprInterpContext& op_interp_ctx,
-      const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode);
+  InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPosition; }
 
+  std::string DebugName(const vm::Instruction& instruction) const override;
+
+ private:
   Maybe<void> Init();
   void InitStreamSequentialDependence();
+  Maybe<void> Prepare(Instruction* instruction) override;
+  void Compute(Instruction* instruction) override;
+  Maybe<void> MaybeCompute(vm::Instruction* instruction) const;
 
-  vm::Stream* vm_stream_;
+  Stream* vm_stream_;
   eager::CallContext call_ctx_;
   std::shared_ptr<one::StatefulOpKernel> opkernel_;
   const user_op::OpKernel* user_opkernel_;
@@ -120,4 +121,4 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EAGER_OP_CALL_PHY_INSTR_OPERAND_H_
+#endif  // ONEFLOW_CORE_VM_OP_CALL_INSTRUCTION_POLICY_H_

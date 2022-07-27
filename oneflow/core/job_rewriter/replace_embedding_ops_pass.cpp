@@ -178,6 +178,7 @@ void BuildEmbeddingShuffle(JobBuilder* job_builder, const std::string& embedding
                            const std::string& num_unique_matrix_lbn,
                            const std::string& embedding_lbn, std::vector<OperatorConf>* add_ops,
                            std::string* new_embeddings_lbn) {
+  const bool is_train_job = job_builder->job().job_conf().has_train_conf();
   user_op::UserOpConfWrapperBuilder embedding_shuffle_op_builder(
       embedding_op.op_name() + "_embedding_shuffle" + NewUniqueId());
   user_op::UserOpConfWrapper embedding_shuffle_op =
@@ -188,6 +189,7 @@ void BuildEmbeddingShuffle(JobBuilder* job_builder, const std::string& embedding
           .Input("num_unique_matrix", num_unique_matrix_lbn)
           .Attr<std::string>("embedding_name", embedding_name)
           .Attr<int64_t>("embedding_size", embedding_size)
+          .Attr<bool>("is_train", is_train_job)
           .Output("embeddings")
           .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
           .Build();
@@ -1008,6 +1010,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_user_conf()) { return; }
     if (!(op_conf.user_conf().op_type_name() == "embedding_lookup_placeholder")) { return; }
+    std::vector<OperatorConf> add_ops;
+    std::vector<std::string> delete_op_names;
     const user_op::UserOpConfWrapper embedding_op(op_node->op().op_conf());
     const OpNode* shadow_producer =
         op_graph.OpNode4OpName(GenLogicalBlobId(embedding_op.input("shadow", 0)).op_name());
@@ -1021,6 +1025,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
           op_graph.OpNode4OpName(GenLogicalBlobId(shadow_cast_op.input("in", 0)).op_name());
       CHECK(cast_producer->op().op_conf().has_variable_conf()) << cast_producer->op().op_name();
       shadow_op_name = cast_producer->op().op_name();
+      delete_op_names.push_back(shadow_cast_op.op_name());
     } else {
       UNIMPLEMENTED() << "shadow must be variable or variable and cast";
     }
@@ -1035,8 +1040,6 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     const bool use_system_gather =
         (parallel_num == 1 && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_USE_SYSTEM_GATHER", false)
          && !embedding::UseDynamicMemoryAllocation());
-    std::vector<OperatorConf> add_ops;
-    std::vector<std::string> delete_op_names;
     std::string new_embeddings_lbn;
 
     std::string inner_inverse_unique_partition_indices_lbn;
