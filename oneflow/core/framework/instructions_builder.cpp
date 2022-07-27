@@ -35,7 +35,9 @@ limitations under the License.
 #include "oneflow/core/vm/global_sync_instruction_policy.h"
 #include "oneflow/core/vm/touch_tensors_instruction_type.h"
 #include "oneflow/core/eager/blob_instruction_type.h"
-#include "oneflow/core/eager/op_call_instruction_type.h"
+#include "oneflow/core/vm/op_call_instruction_policy.h"
+#include "oneflow/core/vm/touch_tensors_instruction_type.h"
+#include "oneflow/core/eager/blob_instruction_type.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/naive_instruction_policy.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -383,13 +385,11 @@ Maybe<void> InstructionsBuilder::Call(
     output->set_last_used_stream(stream);
   }
   auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
-  auto phy_instr_operand = JUST(vm::OpCallPhyInstrOperand::New(
-      vm_stream, opkernel, std::move(input_eager_blob_objects),
-      std::move(output_eager_blob_objects), global_tensor_infer_result, ctx,
-      *one::CurrentDevVmDepObjectConsumeMode()));
   auto instruction = intrusive::make_shared<vm::Instruction>(
-      vm_stream, std::make_unique<vm::NaiveInstructionPolicy>(
-                     SingletonPtr<vm::OpCallInstructionType>(), phy_instr_operand));
+      vm_stream, std::make_unique<vm::OpCallInstructionPolicy>(
+                     vm_stream, opkernel, std::move(input_eager_blob_objects),
+                     std::move(output_eager_blob_objects), global_tensor_infer_result, ctx,
+                     *one::CurrentDevVmDepObjectConsumeMode()));
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
