@@ -13,24 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_BARRIER_PHY_INSTR_OPERAND_H_
-#define ONEFLOW_CORE_VM_BARRIER_PHY_INSTR_OPERAND_H_
+#ifndef ONEFLOW_CORE_VM_BARRIER_INSTRUCTION_POLICY_H_
+#define ONEFLOW_CORE_VM_BARRIER_INSTRUCTION_POLICY_H_
 
-#include <functional>
-#include "oneflow/core/vm/phy_instr_operand.h"
-
+#include "oneflow/core/vm/instruction_policy.h"
 namespace oneflow {
 namespace vm {
 
-// no arg callback physical instruction operand
-class BarrierPhyInstrOperand : public PhyInstrOperand {
+class BarrierInstructionPolicy final : public InstructionPolicy {
  public:
-  BarrierPhyInstrOperand(const std::function<void()>& callback) : callback_(callback) {
+  BarrierInstructionPolicy(const std::function<void()>& callback) : callback_(callback) {
     stream_sequential_dependence_ = nullptr;
   }
-  ~BarrierPhyInstrOperand() {}
-
-  void callback() const { return callback_(); }
+  ~BarrierInstructionPolicy() override = default;
 
   const DependenceVector& input_dependences() const override {
     static DependenceVector dependences{};
@@ -43,6 +38,12 @@ class BarrierPhyInstrOperand : public PhyInstrOperand {
 
   void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {}
 
+  bool IsBarrier() const override { return true; }
+
+  std::string DebugName(const vm::Instruction& instruction) const override { return "Barrier"; }
+  Maybe<void> Prepare(Instruction* instruction) override { return Maybe<void>::Ok(); }
+  void Compute(Instruction* instruction) override { return callback_(); }
+
  private:
   std::function<void()> callback_;
 };
@@ -50,4 +51,4 @@ class BarrierPhyInstrOperand : public PhyInstrOperand {
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_BARRIER_PHY_INSTR_OPERAND_H_
+#endif  // ONEFLOW_CORE_VM_BARRIER_INSTRUCTION_POLICY_H_
