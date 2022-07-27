@@ -140,4 +140,46 @@ REGISTER_USER_OP_GRAD("binary_cross_entropy_with_logits_reduce_mean")
       return Maybe<void>::Ok();
     });
 
+/* static */ Maybe<void> FusedBCEReduceMeanFwBwOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  const auto& input_desc = ctx->InputTensorDesc("input", 0);
+  const auto& target_desc = ctx->InputTensorDesc("target", 0);
+  CHECK_EQ_OR_RETURN(input_desc.shape(), target_desc.shape())
+      << "Input shape should be equal to Target shape. ";
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
+  *out_desc->mut_is_dynamic() = false;
+  *out_desc->mut_shape() = Shape({});
+  user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
+  *dx_desc->mut_is_dynamic() = false;
+  *dx_desc->mut_shape() = input_desc.shape();
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> FusedBCEReduceMeanFwBwOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> FusedBCEReduceMeanFwBwOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("input", 0), 0)
+      .Split(user_op::OpArg("target", 0), 0)
+      .PartialSum(user_op::OpArg("out", 0))
+      .Split(user_op::OpArg("dx", 0), 0)
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> FusedBCEReduceMeanFwBwOp::InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
+  const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
+  CHECK_EQ_OR_RETURN(input_desc.data_type(), target_desc.data_type())
+      << "Input datatype should be equal to Target datatype. ";
+  DataType out_dtype = ctx->Attr<DataType>("out_dtype");
+  if (out_dtype == DataType::kInvalidDataType) { out_dtype = input_desc.data_type(); }
+  *ctx->MutOutputDType("out", 0) = out_dtype;
+  *ctx->MutOutputDType("dx", 0) = input_desc.data_type();
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow
