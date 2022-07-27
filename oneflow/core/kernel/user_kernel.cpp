@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/user_kernel.h"
+#include <string>
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/op_kernel_infer_cache.h"
@@ -572,6 +573,20 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
+  void check_tensor_pointers() {
+    std::cout << "check pointers" << std::endl;
+    for (const auto& it : arg2bn_tensor_pair_) {
+      const auto& p = it.first;
+      std::string bn = p.first + "_" + std::to_string(p.second);
+      if (it.second.tensor.get() == nullptr) {
+        std::cout << "BN: " << bn << " is null" << std::endl;
+        continue;
+      }
+      const void* ptr = it.second.tensor->dptr<void*>();
+      std::cout << "BN Name: " << bn << " Ptr: " << ptr << std::endl;
+    }
+  }
+
  private:
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
@@ -671,14 +686,8 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
     }
   }
 #endif  // WITH_CUDA_GRAPHS
-  // const user_op::Tensor* in = ctx_->Tensor4ArgNameAndIndex("in", 0);
-  // user_op::Tensor* out = ctx_->Tensor4ArgNameAndIndex("out", 0);
-  // const void* in_ptr = in->dptr<void*>();
-  // void* out_ptr = out->mut_dptr<void*>();
 
-  // std::cout << "in ptr: " << in_ptr << std::endl;
-  // std::cout << "out_ptr: " << out_ptr << std::endl;
-
+  ctx_->check_tensor_pointers();
   kernel_->Compute(ctx_.get(), opkernel_state, opkernel_cache_.get());
 
 #ifdef WITH_CUDA_GRAPHS

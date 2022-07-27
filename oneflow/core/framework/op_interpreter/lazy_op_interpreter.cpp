@@ -955,7 +955,6 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
           << "Inplaced operation output tensor must also be an input of the operation "
           << new_op_name;
       (*op_conf->mutable_user_conf()->mutable_inplace_obn2ibn())[obn] = ibn;
-      
     }
   }
 
