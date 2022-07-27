@@ -46,7 +46,7 @@ class CudaAllReduce final : public AllReduce {
   ~CudaAllReduce() = default;
 
   void Launch(ep::Stream* stream, const void* in, void* out, size_t elem_cnt,
-              std::shared_ptr<Communicator> communicator) const override {
+              const std::shared_ptr<Communicator>& communicator) const override {
     const auto& cuda_communicator = std::dynamic_pointer_cast<CudaCommunicator>(communicator);
     CHECK(cuda_communicator);
     OF_NCCL_CHECK(ncclAllReduce(in, out, elem_cnt, GetNcclDataType(datatype_),

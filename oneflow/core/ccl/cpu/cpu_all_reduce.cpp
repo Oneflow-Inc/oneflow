@@ -171,7 +171,7 @@ class CpuAllReduce final : public AllReduce {
   ~CpuAllReduce() = default;
 
   void Launch(ep::Stream* stream, const void* in, void* out, size_t elem_cnt,
-              std::shared_ptr<Communicator> communicator) const override {
+              const std::shared_ptr<Communicator>& communicator) const override {
     const auto& cpu_communicator = std::dynamic_pointer_cast<CpuCommunicator>(communicator);
     CHECK(cpu_communicator);
     CHECK_JUST(SwitchDtypeAllReduce(SwitchCase(datatype_, reduce_type_), in, out, elem_cnt,

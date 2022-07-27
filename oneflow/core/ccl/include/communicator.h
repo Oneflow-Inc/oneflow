@@ -31,10 +31,18 @@ class Communicator {
   virtual void Init(Symbol<ParallelDesc>) = 0;
 };
 
-std::shared_ptr<Communicator> NewCommunicator(DeviceType device_type,
-                                              Symbol<ParallelDesc> parallel_desc);
+inline std::shared_ptr<Communicator> NewCommunicator(DeviceType device_type,
+                                                     Symbol<ParallelDesc> parallel_desc) {
+  CHECK_EQ(device_type, parallel_desc->device_type());
+  std::shared_ptr<Communicator> communicator =
+      NewObjSharedPtr<DeviceType, Communicator>(device_type);
+  communicator->Init(parallel_desc);
+  return communicator;
+}
 
-bool IsCommunicatorRegistered(DeviceType device_type);
+inline bool IsCommunicatorRegistered(DeviceType device_type) {
+  return IsClassRegistered<DeviceType, Communicator>(device_type);
+}
 
 #define REGISTER_COMMUNICATOR(device, Derived) \
   REGISTER_CLASS(DeviceType, device, Communicator, Derived)

@@ -31,7 +31,7 @@ class AllReduce : public CollectiveCommunication {
   ~AllReduce() override = default;
 
   virtual void Launch(ep::Stream* stream, const void* in, void* out, size_t elem_cnt,
-                      std::shared_ptr<Communicator> communicator) const = 0;
+                      const std::shared_ptr<Communicator>& communicator) const = 0;
 };
 
 class AllReduceFactory : public CollectiveCommunicationFactory<AllReduce> {
