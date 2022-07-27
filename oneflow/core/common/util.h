@@ -174,10 +174,6 @@ inline uint32_t NewRandomSeed() {
 #define FOR_RANGE(type, i, begin, end) for (type i = (begin), __end = (end); i < __end; ++i)
 #define FOR_EACH(it, container) for (auto it = container.begin(); it != container.end(); ++it)
 
-inline double GetCurTime() {
-  return std::chrono::high_resolution_clock::now().time_since_epoch().count();
-}
-
 const size_t kHostAlignSize = 64;
 const size_t kCudaAlignSize = 512;
 const size_t kCudaMemAllocAlignSize = 512;

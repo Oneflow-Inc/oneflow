@@ -13,9 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <sstream>
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/time_util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -185,13 +187,14 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
 Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) {
   const JobDesc& job_desc = GlobalJobDesc();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    double start = GetCurTime();
+    auto tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
     if (need_job_complete) { JUST(JobCompleter().Complete(job)); }
     Compiler().Compile(job, plan);
     PlanUtil::GenMemBlockAndChunk4Plan(plan);
-
-    LOG(INFO) << "\njob_id: " << job_desc.job_id() << " , job_name: " << job_desc.job_name()
-              << " , compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.\n";
+    std::ostringstream oss;
+    oss << "\njob_id: " << job_desc.job_id() << " , job_name: " << job_desc.job_name()
+        << " , compile";
+    tc->Count(oss.str(), 0);
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create(StrCat("subplan_job_", job_desc.job_id()))->Write(*plan);
     }
@@ -962,7 +965,7 @@ Maybe<void> CompileJobsAndPushMergedPlan(const PbRpf<Job>& job_confs) {
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     Plan plan;
     JUST(CompileJobsAndMergePlans(job_confs, plan));
-    double start = GetCurTime();
+    auto tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
     // push op_attribute_info
     OpAttributeInfo op_attribute_info;
     *op_attribute_info.mutable_job_id2op_attribute_ref_table() =
@@ -970,7 +973,7 @@ Maybe<void> CompileJobsAndPushMergedPlan(const PbRpf<Job>& job_confs) {
     Singleton<CtrlClient>::Get()->PushKV("op_attribute_info", op_attribute_info);
     // push plan
     PushPlan("merged_plan", std::move(plan));
-    LOG(INFO) << " PushPlan merged_plan time: " << (GetCurTime() - start) / 1e9 << " seconds.\n";
+    tc->Count("PushPlan merged_plan", 0);
   }
   OF_SESSION_BARRIER();
   return Maybe<void>::Ok();
@@ -984,9 +987,9 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
   OF_PROFILER_RANGE_PUSH("CompileJobsAndPushMergedPlan");
   JUST(CompileJobsAndPushMergedPlan(job_set.job()));
   OF_PROFILER_RANGE_POP();  // CompileJobsAndPushMergedPlan
-  double start = GetCurTime();
+  auto tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
   PullPlan("merged_plan", &plan_);
-  LOG(INFO) << " PullPlan merged_plan time: " << (GetCurTime() - start) / 1e9 << " seconds.\n";
+  tc->Count("PullPlan merged_plan", 0);
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     runtime_buffers_scope_.reset(new RuntimeBuffersScope(plan_.job_confs()));
   }

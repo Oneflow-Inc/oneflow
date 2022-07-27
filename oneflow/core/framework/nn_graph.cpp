@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/time_util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -280,13 +281,12 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   JUST(JobCompleter().Complete(&job_));
 
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    double start = GetCurTime();
+    auto tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
     // TODO(chengcheng): new memory reused by chunk
     Compiler().Compile(&job_, &plan_);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
+    tc->Count("Graph name: " + name_ + " compile", 1);
 
-    VLOG(1) << "Graph name: " << name_ << " compile time: " << (GetCurTime() - start) / 1000000000.0
-            << " seconds.";
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
       PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");

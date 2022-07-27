@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/time_util.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/to_string.h"
@@ -1001,7 +1002,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
       LogJob("pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name + cnt_str + "-before");
       FLAGS_v = 3;
     }
+    auto tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
     JUST(JobPass4Name(pass_name)(mut_job(), &job_pass_ctx));
+    tc->Count(pass_name, 1);
     if (unlikely(NeedLogJob(pass_name))) {
       FLAGS_v = prev_v;
       std::string cnt_str = cnt > 0 ? std::to_string(cnt) : "";
@@ -1023,6 +1026,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     Singleton<OpGraph>::Delete();
   }
 
+  auto pass_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
   if (GlobalJobDesc().Bool("__is_user_function__")) {
     JUST(DoPass("ModelUpdateConfCompatiblePass"));
     JUST(DoPass("AddInputOutputOpsPass"));
@@ -1068,6 +1072,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   }
   JUST(DoPass("DumpBlobParallelConfPass"));
   JUST(CheckJob());
+  pass_tc->Count("Graph " + job_name + " Compile Pass", 1);
   return Maybe<void>::Ok();
 }
 
