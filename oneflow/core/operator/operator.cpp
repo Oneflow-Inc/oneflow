@@ -605,11 +605,6 @@ Maybe<void> Operator::InferSbpSignature(
 
     if (op_parallel_desc_->parallel_num() == 1) {
       auto* bn2sbp = infered_sbp_signature->mutable_bn_in_op2sbp_parallel();
-      for (const auto& ibn : input_bns()) {
-        if ((*bn2sbp)[ibn].parallel_type_case() == SbpParallel::PARALLEL_TYPE_NOT_SET) {
-          (*bn2sbp)[ibn].mutable_broadcast_parallel();
-        }
-      }
       for (const auto& obn : output_bns()) {
         if ((*bn2sbp)[obn].parallel_type_case() == SbpParallel::PARALLEL_TYPE_NOT_SET) {
           (*bn2sbp)[obn].mutable_broadcast_parallel();
@@ -808,12 +803,6 @@ Maybe<void> Operator::InferSbpSignature(
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   // get op sbp signatures
-  std::cout << "+++++++++++++++++++++++++++++++++++++++++" << std::endl;
-  std::cout << "op_name :" << op_name() << " input_bns: " << input_bns().size()
-            << " output_bns: " << output_bns().size() << std::endl;
-  std::cout << "<sbp_sig_conf> \n" << sbp_sig_conf.DebugString() << std::endl;
-  std::cout << "-----------------------------------------" << std::endl;
-
   auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc&> {
     const SbpInferHint* sbp_infer_hint = JUST(SbpInferHint4Ibn(ibn));
     return Maybe<const BlobDesc&>(sbp_infer_hint->logical_blob_desc());

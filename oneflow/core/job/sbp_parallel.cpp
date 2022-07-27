@@ -106,7 +106,6 @@ bool IsSbpSignatureContaining(const SbpSignature& bigger, const SbpSignature& sm
   for (const auto& pair : smaller.bn_in_op2sbp_parallel()) {
     if (pair.second.parallel_type_case() == SbpParallel::PARALLEL_TYPE_NOT_SET) { continue; }
     if (bn2sbp.find(pair.first) == bn2sbp.end()) { return false; }
-    // CHECK(bn2sbp.find(pair.first) != bn2sbp.end()) << pair.first;
     if (bn2sbp.at(pair.first) != pair.second) { return false; }
   }
   return true;
