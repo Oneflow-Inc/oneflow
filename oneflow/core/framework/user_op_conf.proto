@@ -15,5 +15,5 @@ message UserOpConf {
   //   UserOpBuilder.
   repeated string input_order = 5;
   repeated string output_order = 6;
-  optional bool is_inplace = 7 [default = false];
+  map<string, string> inplace_obn2ibn = 7; // inplace mapping from output blob name to input blob name
 }

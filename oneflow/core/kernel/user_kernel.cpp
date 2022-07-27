@@ -671,6 +671,13 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
     }
   }
 #endif  // WITH_CUDA_GRAPHS
+  // const user_op::Tensor* in = ctx_->Tensor4ArgNameAndIndex("in", 0);
+  // user_op::Tensor* out = ctx_->Tensor4ArgNameAndIndex("out", 0);
+  // const void* in_ptr = in->dptr<void*>();
+  // void* out_ptr = out->mut_dptr<void*>();
+
+  // std::cout << "in ptr: " << in_ptr << std::endl;
+  // std::cout << "out_ptr: " << out_ptr << std::endl;
 
   kernel_->Compute(ctx_.get(), opkernel_state, opkernel_cache_.get());
 

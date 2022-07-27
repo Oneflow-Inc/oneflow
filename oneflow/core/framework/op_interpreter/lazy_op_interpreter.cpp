@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <glog/logging.h>
 #include <memory>
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/maybe.h"
@@ -924,6 +925,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   // Disable boxing if the computation is inplace.
   for (int i = 0; i < op_expr.output_size(); ++i) {
     const auto& output = outputs->at(i);
+    if (!output) { std::cout << "OUTPUT NULL" << std::endl; }
     if (output) {
       const std::string& lbn = TensorNameScope::Global()->Lookup(output);
       CHECK_OR_RETURN(!lbn.empty()) << "The output which index is " << i
@@ -934,9 +936,27 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
     }
   }
 
-  // Set UserOpConf's inplace flag
-  if (op_expr.input_size() == 1 && op_expr.output_size() == 1) {  // one input and one output
-    if ((*outputs)[0] != nullptr) { op_conf->mutable_user_conf()->set_is_inplace(true); }
+  // Set the inplace info for inplace operations
+  for (int i = 0; i < op_expr.output_size(); ++i) {
+    const auto& output_tensor = outputs->at(i);
+    if (output_tensor) {  // inplace output
+      const std::string& obn = op_expr.indexed_obns().at(i);
+      std::string ibn;
+      // find the corr input tensor == output tensor
+      for (int j = 0; j < op_expr.input_size(); ++j) {
+        const auto& input_tensor = inputs[j];
+        if (input_tensor == output_tensor) {
+          ibn = op_expr.indexed_ibns().at(j);
+          break;
+        }
+      }
+
+      CHECK(!ibn.empty())
+          << "Inplaced operation output tensor must also be an input of the operation "
+          << new_op_name;
+      (*op_conf->mutable_user_conf()->mutable_inplace_obn2ibn())[obn] = ibn;
+      
+    }
   }
 
   VLOG(2) << "Lazy nn.Graph name " << graph_name << " try to add op: \n"

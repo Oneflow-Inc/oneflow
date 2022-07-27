@@ -52,9 +52,6 @@ class ScalarMathKernel final : public user_op::OpKernel {
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
 
-    std::cout << "in_ptr: " << in_ptr << std::endl;
-    std::cout << "out_ptr: " << out_ptr << std::endl;
-
     int64_t elem_cnt = out->shape_view().elem_cnt();
     if (elem_cnt != 0) {
       ScalarMathFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand, in_ptr,

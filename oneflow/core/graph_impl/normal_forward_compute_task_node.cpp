@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include <glog/logging.h>
+#include <iterator>
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/framework/framework.h"
@@ -89,18 +91,25 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
 }
 
 void NormalForwardCompTaskNode::HandleInplaceRegsts() {
-  if (IsInplaceOpTask()) {
-    const auto& _op = op();
-    CHECK(_op->output_bns().size() == 1);
-    const std::string& obn = _op->output_bns()[0];
-    std::string out_regst_name = GetOutRegstNameByObn(obn);
-    std::shared_ptr<RegstDesc> out_regst = GetProducedRegst(out_regst_name);
-    CHECK(in_edges().size() == 1);
-    TaskEdge* task_edge = *in_edges().begin();
-    CHECK(task_edge->GetRegsts().size() == 1);
-    std::shared_ptr<RegstDesc> in_regst = task_edge->GetRegsts()[0];
-    in_regst->set_enable_reuse_mem(true);
-    out_regst->set_hint_inplace_consumed_regst_desc_id(in_regst->regst_desc_id());
+  const auto& _op = op();
+  if (_op->op_conf().has_user_conf()) {
+    const auto& inplace_obn2ibn = _op->op_conf().user_conf().inplace_obn2ibn();
+    for (const auto& it : inplace_obn2ibn) {
+      const std::string& obn = it.first;
+      const std::string& ibn = it.second;
+      const std::string out_regst_name = GetOutRegstNameByObn(obn);
+      std::shared_ptr<RegstDesc> out_regst = GetProducedRegst(out_regst_name);
+
+      int32_t input_index = CHECK_JUST(_op->GetInputIndex(ibn));
+      const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
+      auto front = in_regsts.begin();
+      CHECK_LT(input_index, in_regsts.size());
+      std::advance(front, input_index);
+      std::shared_ptr<RegstDesc> in_regst = *front;
+
+      in_regst->set_enable_reuse_mem(true);
+      out_regst->set_hint_inplace_consumed_regst_desc_id(in_regst->regst_desc_id());
+    }
   }
 }
 
@@ -137,7 +146,8 @@ void NormalForwardCompTaskNode::BuildTmp7BufRegsts() {
 }
 
 bool NormalForwardCompTaskNode::IsInplaceOpTask() {
-  if (op()->op_conf().has_user_conf() && op()->op_conf().user_conf().is_inplace()) { return true; }
+  // if (op()->op_conf().has_user_conf() && op()->op_conf().user_conf().is_inplace()) { return true;
+  // }
   return false;
 }
 
