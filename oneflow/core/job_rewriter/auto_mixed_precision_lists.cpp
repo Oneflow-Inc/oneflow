@@ -95,8 +95,6 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "normalization_add_relu_grad",
                               "sparse_softmax_cross_entropy",
                               "sparse_softmax_cross_entropy_grad",
-                              "sparse_softmax_cross_entropy_ms",
-                              "sparse_softmax_cross_entropy_ms_grad",
                               "nll",
                               "nll_grad",
                               "fused_tril_scale_softmax_mask_scale",
