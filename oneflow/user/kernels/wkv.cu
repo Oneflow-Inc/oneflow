@@ -26,9 +26,6 @@ namespace oneflow {
 
 namespace {
 
-#define MIN_VALUE (-1e38)
-#define Tmax (1024)
-
 template<typename F>
 __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C,
                                const F* __restrict__ const _w, const F* __restrict__ const _u,
@@ -45,7 +42,7 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
   const F* __restrict__ const v = _v + _offset;
   F* __restrict__ const y = _y + _offset;
 
-  F p = 0, q = 0, o = MIN_VALUE;
+  F p = 0, q = 0, o = -65500;
   // p and q are running sums divided by exp(o) (to avoid overflows)
   for (int i = 0; i < T; i++) {
     const int ii = i * C;
@@ -85,12 +82,12 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   F* __restrict__ const gk = _gk + _offset;
   F* __restrict__ const gv = _gv + _offset;
 
-  F y[Tmax], z[Tmax], zexp[Tmax];
+  F y[1024], z[1024], zexp[1024];
 
   F gw = 0, gu = 0;
   F p = 0, q = 0;
   F dpdw = 0, dqdw = 0;
-  F o = MIN_VALUE;
+  F o = -65500;
   for (int i = 0; i < T; i++) {
     const int ii = i * C;
     F no = max(o, k[ii] + u);
@@ -118,7 +115,7 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   }
 
   F gp = 0, gq = 0;
-  o = MIN_VALUE;
+  o = -65500;
   for (int i = T - 1; i >= 0; i--) {
     const int ii = i * C;
     F A = gy[ii] * z[i] * exp(zexp[i]);
