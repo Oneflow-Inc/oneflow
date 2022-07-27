@@ -15,6 +15,9 @@ limitations under the License.
 */
 
 #include <iterator>
+#include <vector>
+#include "nlohmann/json.hpp"
+#include "oneflow/core/profiler/util.h"
 #ifdef WITH_CUDA
 
 #include "oneflow/core/common/env_var/dtr.h"
@@ -490,10 +493,17 @@ void DtrCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
       if (EnvBool<ONEFLOW_DTR_DISPLAY_IN_FIRST_TIME>()) { DisplayAllPieces(); }
       first_time = false;
     }
+    const auto started_at = profiler::GetTimeNow();
     if (EnvBool<ONEFLOW_DTR_MEGENGINE_STYLE>()) {
       piece = EvictAndFindPieceMegEngineStyle(aligned_size);
     } else {
       piece = EvictAndFindPieceOnce(aligned_size);
+    }
+    const auto duration = profiler::GetTimeNow() - started_at;
+    if (search_free_mem_cost_.find(size) != search_free_mem_cost_.end()) {
+      search_free_mem_cost_[size] = (search_free_mem_cost_[size] + duration) / 2;
+    } else {
+      search_free_mem_cost_[size] = duration;
     }
     if (EnvBool<ONEFLOW_DTR_RECORD_MEM_FRAG_RATE>()) {
       size_t free_mem = 0;
@@ -575,6 +585,23 @@ void DtrCudaAllocator::Deallocate(char* mem_ptr, std::size_t size) {
 size_t DtrCudaAllocator::allocated_memory() {
   CHECK_GE(total_allocate_bytes_, total_deallocate_bytes_);
   return total_allocate_bytes_ - total_deallocate_bytes_;
+}
+
+nlohmann::json DtrCudaAllocator::DumpSearchFreeMemCost() {
+  std::vector<size_t> sizes;
+  std::vector<int64_t> costs;
+  for (const auto& x : search_free_mem_cost_) {
+    sizes.emplace_back(x.first);
+    costs.emplace_back(x.second);
+  }
+  return nlohmann::json{{
+                            "mem_size",
+                            sizes,
+                        },
+                        {
+                            "search_cost",
+                            costs,
+                        }};
 }
 
 }  // namespace vm

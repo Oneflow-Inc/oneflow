@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
 #include "oneflow/core/framework/tensor_pool.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/core/vm/dtr_cuda_allocator.h"
 #include "nlohmann/json.hpp"
 
 namespace oneflow {
@@ -66,6 +67,7 @@ TensorPool::~TensorPool() {
       fs >> full_json;
     }
     full_json.merge_patch(cpp_summary);
+    full_json.merge_patch(Global<vm::DtrCudaAllocator>::Get()->DumpSearchFreeMemCost());
     {
       std::ofstream fs(std::string(prefix) + ".json");
       fs << full_json;
