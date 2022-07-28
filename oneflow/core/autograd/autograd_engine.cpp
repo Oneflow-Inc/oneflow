@@ -197,7 +197,7 @@ Maybe<void> FunctionNode::AccGrad4LeafTensor(bool create_graph) {
         const auto& nd_sbp = JUST(tensor_info.sbp());
         JUST(out->set_acc_grad(
             JUST(functional::ToGlobal(acc_grad, placement, *JUST(GetSbpList(nd_sbp)),
-                                      GetNoneSbpList(), /* check_meta */ false))));
+                                      GetNoneSbpList(), /* check_meta */ false, /*copy=*/false))));
       }
     }
   }
