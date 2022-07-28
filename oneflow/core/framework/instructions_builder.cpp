@@ -32,7 +32,6 @@ limitations under the License.
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/consume_local_dep_object_phy_instr_operand.h"
 #include "oneflow/core/vm/release_tensor_instruction_policy.h"
-#include "oneflow/core/eager/release_tensor_instruction_type.h"
 #include "oneflow/core/vm/global_sync_instruction_policy.h"
 #include "oneflow/core/vm/touch_tensors_instruction_type.h"
 #include "oneflow/core/eager/blob_instruction_type.h"
