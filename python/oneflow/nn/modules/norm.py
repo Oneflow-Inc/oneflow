@@ -18,9 +18,9 @@ import oneflow as flow
 
 def norm(input, p="fro", dim=None, keepdim=False, dtype=None):
     """
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.norm.html.
-
     Returns the matrix norm or vector norm of a given tensor.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.norm.html.
 
     .. warning::
 

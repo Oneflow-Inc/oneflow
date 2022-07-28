@@ -533,7 +533,7 @@ jobs:
         working-directory: ${{ env.ONEFLOW_SRC }}
         run: |
           docker run -d --rm --privileged --shm-size=8g \
-            --pids-limit 1000 \
+            --pids-limit 2000 \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
             --runtime=nvidia \
             -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \

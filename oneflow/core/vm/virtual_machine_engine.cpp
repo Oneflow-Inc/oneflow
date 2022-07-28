@@ -14,11 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/virtual_machine_engine.h"
+#include "oneflow/core/common/env_var/vm.h"
 #include "oneflow/core/vm/caching_allocator.h"
+#include "oneflow/core/vm/fuse_instruction_policy.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/fuse_instruction_type.h"
-#include "oneflow/core/vm/fuse_phy_instr_operand.h"
-#include "oneflow/core/vm/barrier_phy_instr_operand.h"
+#include "oneflow/core/vm/naive_instruction_policy.h"
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/balanced_splitter.h"
@@ -65,10 +65,10 @@ void VirtualMachineEngine::HandleLocalPending() {
   InstructionList pending_instructions;
   FetchAndTryFusePendingInstructions(&pending_instructions);
   INTRUSIVE_FOR_EACH_PTR(instruction, &pending_instructions) {
-    const auto& instruction_type = instruction->instruction_type();
+    const auto& instruction_policy = instruction->instruction_policy();
     instruction->InitStatus();
     LivelyInstructionListPushBack(instruction);
-    if (unlikely(instruction_type.IsBarrier())) {
+    if (unlikely(instruction_policy.IsBarrier())) {
       mut_barrier_instruction_list()->PushBack(instruction);
     } else {
       ConsumeDependences(instruction);
@@ -83,16 +83,16 @@ namespace {
 
 bool FusableBetween(InstructionFuseType fuse_type, Instruction* instruction,
                     Instruction* prev_instruction) {
-  if (unlikely(instruction->instruction_type().fuse_type() != fuse_type)) { return false; }
+  if (unlikely(instruction->instruction_policy().fuse_type() != fuse_type)) { return false; }
   auto* stream = instruction->mut_stream();
   if (unlikely(stream == nullptr)) { return false; }
-  auto* sequential_dep = instruction->phy_instr_operand()->stream_sequential_dependence();
+  auto* sequential_dep = instruction->instruction_policy().stream_sequential_dependence();
   if (unlikely(sequential_dep == nullptr)) { return false; }
 
   if (unlikely(prev_instruction == nullptr)) { return true; }
   if (unlikely(stream != prev_instruction->mut_stream())) { return false; }
   if (unlikely(sequential_dep
-               != prev_instruction->phy_instr_operand()->stream_sequential_dependence())) {
+               != prev_instruction->instruction_policy().stream_sequential_dependence())) {
     return false;
   }
   return true;
@@ -108,16 +108,15 @@ void VirtualMachineEngine::MakeAndAppendFusedInstruction(
     return;
   }
   auto* begin = fused_instruction_list.Begin();
-  auto phy_instr_operand = std::make_shared<FusePhyInstrOperand>(std::move(fused_instruction_list));
   auto instruction = intrusive::make_shared<Instruction>(
-      begin->mut_stream(), SingletonPtr<FuseInstructionType>(), phy_instr_operand);
+      begin->mut_stream(),
+      std::make_unique<FuseInstructionPolicy>(std::move(fused_instruction_list)));
   pending_instructions->EmplaceBack(std::move(instruction));
 }
 
-constexpr static int kPendingHandleWindow = 10;
 void VirtualMachineEngine::FetchAndTryFusePendingInstructions(
     InstructionList* /*out*/ pending_instructions) {
-  size_t window_size = kPendingHandleWindow;
+  size_t window_size = ThreadLocalEnvInteger<ONEFLOW_VM_PENDING_HANDLE_WINDOW_SIZE>();
   InstructionList fused_instruction_list;
   INTRUSIVE_FOR_EACH_PTR(instruction, mut_local_pending_instruction_list()) {
     if (window_size-- <= 0) { break; }
@@ -238,17 +237,17 @@ void VirtualMachineEngine::ConnectInstructionsByRead(DependenceAccess* dst_acces
 }
 
 void VirtualMachineEngine::ConsumeDependences(Instruction* instruction) {
-  const auto& phy_instr_operand = CHECK_NOTNULL(instruction->phy_instr_operand());
-  auto* stream_sequential_dep = phy_instr_operand->stream_sequential_dependence();
+  const auto& instruction_policy = instruction->instruction_policy();
+  auto* stream_sequential_dep = instruction_policy.stream_sequential_dependence();
   if (likely(stream_sequential_dep != nullptr)) {
     ConnectInstructionsByWrite(
         AccessDependence(kMutableOperandAccess, stream_sequential_dep, instruction));
   }
   // Connect instructions by write before connecting by read.
-  for (auto* dependence : phy_instr_operand->output_dependences()) {
+  for (auto* dependence : instruction_policy.output_dependences()) {
     ConnectInstructionsByWrite(AccessDependence(kMutableOperandAccess, dependence, instruction));
   }
-  for (auto* dependence : phy_instr_operand->input_dependences()) {
+  for (auto* dependence : instruction_policy.input_dependences()) {
     ConnectInstructionsByRead(AccessDependence(kConstOperandAccess, dependence, instruction));
   }
 }
@@ -410,7 +409,7 @@ bool VirtualMachineEngine::OnSchedulerThread(const Stream& stream) {
 // instructions are scarcely received by vm, there is no need for vm to run
 // VirtualMachineEngine::TryRunBarrierInstruction every time VirtualMachineEngine::Schedule run. On
 // the other hand, `barrier_instruction_hook_.size() == 0` is more lightweight than
-// `lively_instruction_list_.Begin()?->instruction_type().IsBarrier()`
+// `lively_instruction_list_.Begin()?->instruction_policy().IsBarrier()`
 //
 void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_ctx) {
   auto* sequnential_instruction = mut_barrier_instruction_list()->Begin();
@@ -419,8 +418,8 @@ void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_
   // All instructions before `sequnential_instruction` are handled now, it's time to handle
   // `sequnential_instruction`.
   OF_PROFILER_RANGE_GUARD("TryRunBarrierInstruction");
-  const auto& instruction_type = sequnential_instruction->instruction_type();
-  CHECK(instruction_type.IsBarrier());
+  const auto& instruction_policy = sequnential_instruction->instruction_policy();
+  CHECK(instruction_policy.IsBarrier());
   CHECK(OnSchedulerThread(sequnential_instruction->stream()));
   const StreamPolicy& stream_policy = sequnential_instruction->stream().stream_policy();
   stream_policy.Run(sequnential_instruction);

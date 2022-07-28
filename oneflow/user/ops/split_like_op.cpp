@@ -76,7 +76,7 @@ namespace oneflow {
       << ") should be less than the dimension of like (" << like_num_axes << ")";
   FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
     const user_op::TensorDesc& like_i_desc = ctx->InputTensorDesc("like", i);
-    user_op::TensorDesc* out_i_desc = ctx->OutputTensorDesc("out", i);
+    user_op::TensorDesc* out_i_desc = ctx->MutOutputTensorDesc("out", i);
     CHECK_EQ_OR_RETURN(like_i_desc.shape().NumAxes(), like_num_axes)
         << Error::RuntimeError() << "The dimension of like_i (" << like_i_desc.shape().NumAxes()
         << ") must match the dimension of the first like (" << like_num_axes << ")";
@@ -120,7 +120,7 @@ namespace oneflow {
 /*static*/ Maybe<void> SplitLikeOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
-    user_op::TensorDesc* out_i_desc = ctx->OutputTensorDesc("out", i);
+    user_op::TensorDesc* out_i_desc = ctx->MutOutputTensorDesc("out", i);
     *out_i_desc->mut_data_type() = in_desc.data_type();
   }
   return Maybe<void>::Ok();

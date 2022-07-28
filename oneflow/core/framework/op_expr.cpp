@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/dispatch_frame.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/framework/local_tensor_infer_cache.h"
 #include "oneflow/core/framework/global_tensor_infer_cache.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/user/kernels/stateful_opkernel.h"
@@ -190,14 +191,18 @@ class UserOpExprInferContext : public user_op::InferContext {
 
   const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
                                              int32_t index) const override {
-    return *const_cast<UserOpExprInferContext*>(this)->TensorDesc4ArgNameAndIndex(arg_name, index);
+    return *TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
+  const user_op::TensorDesc& OutputTensorDesc(const std::string& arg_name,
+                                              int32_t index) const override {
+    return *TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
+  user_op::TensorDesc* MutOutputTensorDesc(const std::string& name, int32_t index) override {
+    return MutTensorDesc4ArgNameAndIndex(name, index);
   }
 
-  user_op::TensorDesc* OutputTensorDesc(const std::string& name, int32_t index) override {
-    return TensorDesc4ArgNameAndIndex(name, index);
-  }
-
-  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& name, int32_t index) {
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& name,
+                                                        int32_t index) const {
     {
       const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
       int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
@@ -206,10 +211,31 @@ class UserOpExprInferContext : public user_op::InferContext {
     {
       const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
       int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+      if (tuple_index >= 0) { return tensor_meta4input_index_(tuple_index); }
+    }
+    return nullptr;
+  }
+
+  user_op::TensorDesc* MutTensorDesc4ArgNameAndIndex(const std::string& name, int32_t index) {
+    {
+      const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
+      int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
       if (tuple_index >= 0) {
-        return const_cast<TensorMeta*>(tensor_meta4input_index_(tuple_index));
+        TensorMeta* tensor_meta_ptr = tensor_meta4output_index_(tuple_index);
+        CHECK_NOTNULL(dynamic_cast<MutTensorMeta*>(tensor_meta_ptr));
+        return tensor_meta_ptr;
       }
     }
+    {
+      const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
+      int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+      if (tuple_index >= 0) {
+        const TensorMeta* tensor_meta_ptr = tensor_meta4input_index_(tuple_index);
+        CHECK_NOTNULL(dynamic_cast<const MutTensorMeta*>(tensor_meta_ptr));
+        return const_cast<TensorMeta*>(tensor_meta_ptr);
+      }
+    }
+    PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
 
@@ -220,15 +246,28 @@ class UserOpExprInferContext : public user_op::InferContext {
     return tensor_meta4input_index_(tuple_index)->shape();
   }
 
-  Shape* OutputShape(const std::string& name, int32_t index) override {
+  const Shape& OutputShape(const std::string& name, int32_t index) const override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
-    return tensor_meta4output_index_(tuple_index)->mut_shape();
+    return tensor_meta4input_index_(tuple_index)->shape();
   }
 
-  Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
+  Shape* MutOutputShape(const std::string& name, int32_t index) override {
+    const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+    CHECK_GE(tuple_index, 0);
+    TensorMeta* tensor_meta_ptr = tensor_meta4output_index_(tuple_index);
+    CHECK_NOTNULL(dynamic_cast<MutTensorMeta*>(tensor_meta_ptr));
+    return tensor_meta_ptr->mut_shape();
+  }
+
+  const Shape& Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->shape();
+  }
+
+  Shape* MutShape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
 
   const Stride& InputStride(const std::string& name, int32_t index) const override {
@@ -238,34 +277,59 @@ class UserOpExprInferContext : public user_op::InferContext {
     return tensor_meta4input_index_(tuple_index)->stride();
   }
 
-  Stride* OutputStride(const std::string& name, int32_t index) override {
+  const Stride& OutputStride(const std::string& name, int32_t index) const override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
-    return tensor_meta4output_index_(tuple_index)->mut_stride();
+    return tensor_meta4output_index_(tuple_index)->stride();
   }
 
-  Stride* Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_stride();
+  Stride* MutOutputStride(const std::string& name, int32_t index) override {
+    const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+    CHECK_GE(tuple_index, 0);
+    TensorMeta* tensor_meta_ptr = tensor_meta4output_index_(tuple_index);
+    CHECK_NOTNULL(dynamic_cast<MutTensorMeta*>(tensor_meta_ptr));
+    return tensor_meta_ptr->mut_stride();
   }
 
-  const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
-    return *const_cast<UserOpExprInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
+  const Stride& Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->stride();
   }
-  DataType* OutputDType(const std::string& arg_name, int32_t index) override {
+
+  Stride* MutStride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_stride();
+  }
+
+  DataType InputDType(const std::string& arg_name, int32_t index) const override {
     return Dtype4ArgNameAndIndex(arg_name, index);
   }
-  DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
+  DataType OutputDType(const std::string& arg_name, int32_t index) const override {
+    return Dtype4ArgNameAndIndex(arg_name, index);
+  }
+  DataType* MutOutputDType(const std::string& arg_name, int32_t index) override {
+    return MutDtype4ArgNameAndIndex(arg_name, index);
+  }
+  DataType Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->data_type();
+  }
+  DataType* MutDtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
   }
   bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
-    return *const_cast<UserOpExprInferContext*>(this)->IsDynamic4ArgNameAndIndex(arg_name, index);
-  }
-  bool* OutputIsDynamic(const std::string& arg_name, int32_t index) override {
     return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
-  bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
+  bool OutputIsDynamic(const std::string& arg_name, int32_t index) const override {
+    return IsDynamic4ArgNameAndIndex(arg_name, index);
+  }
+  bool* MutOutputIsDynamic(const std::string& arg_name, int32_t index) override {
+    return MutIsDynamic4ArgNameAndIndex(arg_name, index);
+  }
+  bool IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->is_dynamic();
+  }
+  bool* MutIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return MutTensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
   }
   const std::string& input(const std::string& arg_name, int32_t index) const override {
     const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
@@ -320,7 +384,7 @@ class UserOpExprPhysicalInferContext final : public UserOpExprInferContext {
 
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& name,
                                                                int32_t index) const override {
-    UNIMPLEMENTED();
+    PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
 
@@ -364,24 +428,23 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
 
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& name,
                                                                int32_t index) const override {
-    UNIMPLEMENTED();
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return nullptr;
   }
 
   const ParallelContext& parallel_ctx() const override { return parallel_ctx_; }
   const ParallelDesc& parallel_desc() const override { return *parallel_desc_; }
   const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& name,
                                                  int32_t index) const override {
-    auto* tensor_meta = dynamic_cast<GlobalTensorMeta*>(
-        const_cast<UserOpExprLogicalInferContext*>(this)->TensorDesc4ArgNameAndIndex(name, index));
-    CHECK_NOTNULL(tensor_meta);
+    const GlobalTensorMeta* tensor_meta =
+        dynamic_cast<const GlobalTensorMeta*>(TensorDesc4ArgNameAndIndex(name, index));
     Symbol<NdSbp> nd_sbp = tensor_meta->nd_sbp();
     CHECK_EQ(nd_sbp->sbp_parallel_size(), 1);
     return nd_sbp->sbp_parallel(0);
   }
   const NdSbp& NdSbp4ArgNameAndIndex(const std::string& name, int32_t index) const override {
-    auto* tensor_meta = dynamic_cast<GlobalTensorMeta*>(
-        const_cast<UserOpExprLogicalInferContext*>(this)->TensorDesc4ArgNameAndIndex(name, index));
-    CHECK_NOTNULL(tensor_meta);
+    const GlobalTensorMeta* tensor_meta =
+        dynamic_cast<const GlobalTensorMeta*>(TensorDesc4ArgNameAndIndex(name, index));
     return *tensor_meta->nd_sbp();
   }
   int64_t parallel_num() const override { return parallel_desc_->parallel_num(); }
@@ -457,6 +520,7 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   if (registry->device_and_stream_infer_fn) {
     device_and_stream_infer_fn_ = registry->device_and_stream_infer_fn;
   }
+  local_tensor_infer_cache_.reset(new LocalTensorInferCache(self));
   global_tensor_infer_cache_.reset(new GlobalTensorInferCache(self));
   return Maybe<void>::Ok();
 }

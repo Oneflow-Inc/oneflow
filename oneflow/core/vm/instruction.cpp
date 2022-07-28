@@ -28,25 +28,24 @@ namespace oneflow {
 namespace vm {
 
 std::string Instruction::DebugName() const {
-  std::string instr_name = instruction_type().DebugName(*this);
+  std::string instr_name = instruction_policy().DebugName(*this);
   return instr_name + ":" + GetStreamRoleName::Visit(stream().stream_role());
 }
 
-void Instruction::__Init__(Stream* stream, const InstructionType* instruction_type,
-                           const std::shared_ptr<PhyInstrOperand>& phy_instr_operand) {
+void Instruction::__Init__(Stream* stream,
+                           std::unique_ptr<InstructionPolicy>&& instruction_policy) {
   stream_ = stream;
-  instruction_type_ = instruction_type;
-  phy_instr_operand_ = phy_instr_operand;
+  instruction_policy_ = std::move(instruction_policy);
 }
 
-void Instruction::InitStatus() { instruction_type().InitInstructionStatusIf(this); }
+void Instruction::InitStatus() { instruction_policy_->InitInstructionStatusIf(this); }
 
-Maybe<void> Instruction::Prepare() { return instruction_type().PrepareIf(this); }
-void Instruction::Compute() { return instruction_type().ComputeIf(this); }
+Maybe<void> Instruction::Prepare() { return instruction_policy_->PrepareIf(this); }
+void Instruction::Compute() { return instruction_policy_->ComputeIf(this); }
 
 void Instruction::DeleteStatusAndClearEdges() {
   OF_PROFILER_RANGE_GUARD("Instruction::DeleteStatusAndClearEdges");
-  instruction_type().DeleteInstructionStatusIf(this);
+  instruction_policy_->DeleteInstructionStatusIf(this);
   mut_in_edges()->Clear();
   mut_out_edges()->Clear();
 }

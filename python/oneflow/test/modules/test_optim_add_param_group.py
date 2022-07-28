@@ -30,12 +30,14 @@ def _test_sgd_add_param_group(test_case):
     test_case.assertTrue(o.param_groups[0]["weight_decay"] == 0.0)
     test_case.assertTrue(o.param_groups[0]["nesterov"] == False)
     test_case.assertTrue(o.param_groups[0]["maximize"] == False)
+    o.step()
     o.add_param_group({"params": w2})
     test_case.assertTrue(o.param_groups[1]["lr"] == 0.001)
     test_case.assertTrue(o.param_groups[1]["momentum"] == 0.0)
     test_case.assertTrue(o.param_groups[1]["weight_decay"] == 0.0)
     test_case.assertTrue(o.param_groups[1]["nesterov"] == False)
     test_case.assertTrue(o.param_groups[1]["maximize"] == False)
+    o.step()
 
 
 class TestAddParamGroup(flow.unittest.TestCase):

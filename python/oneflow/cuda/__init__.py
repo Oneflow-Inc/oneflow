@@ -39,10 +39,11 @@ def current_device() -> int:
 
 
 def manual_seed_all(seed) -> None:
-    r"""The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.cuda.manual_seed_all.html.
+    r"""Sets the seed for generating random numbers on all GPUs.
     
-    Sets the seed for generating random numbers on all GPUs.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.cuda.manual_seed_all.html.
+
     It's safe to call this function if CUDA is not available; in that
     case, it is silently ignored.
 
@@ -54,10 +55,11 @@ def manual_seed_all(seed) -> None:
 
 
 def manual_seed(seed: int) -> None:
-    r"""The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.cuda.manual_seed.html.
+    r"""Sets the seed for generating random numbers for the current GPU.
     
-    Sets the seed for generating random numbers for the current GPU.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.cuda.manual_seed.html.
+
     It's safe to call this function if CUDA is not available; in that
     case, it is silently ignored.
 
@@ -74,10 +76,11 @@ def manual_seed(seed: int) -> None:
 
 
 def set_device(device: Union[flow.device, str, int]) -> None:
-    r"""The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.cuda.set_device.html.
+    r"""Sets the current device.
     
-    Sets the current device.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.cuda.set_device.html.
+
     Usage of this function is discouraged in favor of :attr:`device`. In most
     cases it's better to use ``CUDA_VISIBLE_DEVICES`` environmental variable.
 

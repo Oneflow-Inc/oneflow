@@ -36,8 +36,7 @@ void ChunkMgr::GetChunkProtosByMemZoneUniqueId(int64_t mem_zone_uid,
 }
 
 void ChunkMgr::AddChunkProto(const ChunkProto& chunk) {
-  const int64_t mem_zone_uid =
-      MemoryCaseUtil::GenMemZoneUniqueId(chunk.machine_id(), chunk.mem_case());
+  const int64_t mem_zone_uid = memory::GetUniqueMemCaseId(chunk.machine_id(), chunk.mem_case());
   CHECK(
       chunk_id2chunk_proto_.emplace(chunk.chunk_id(), std::make_unique<ChunkProto>(chunk)).second);
   auto chunk_ids_it = mzuid2chunk_ids_.find(mem_zone_uid);

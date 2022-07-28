@@ -27,7 +27,7 @@ class Instruction;
 
 class TouchTensorsPhyInstrOperand final : public PhyInstrOperand {
  public:
-  TouchTensorsPhyInstrOperand(const one::EagerBlobObjectList& eager_blob_objects);
+  TouchTensorsPhyInstrOperand(const vm::EagerBlobObjectList& eager_blob_objects);
 
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override {
@@ -40,7 +40,7 @@ class TouchTensorsPhyInstrOperand final : public PhyInstrOperand {
   }
 
  private:
-  one::EagerBlobObjectList eager_blob_objects_;
+  vm::EagerBlobObjectList eager_blob_objects_;
   DependenceVector input_dependences_;
 };
 

@@ -27,6 +27,74 @@ struct UnaryGradGradState : public AutoGradCaptureState {
   bool grad_requires_grad = false;
 };
 
+class SinGradGrad : public OpExprGradFunction<UnaryGradGradState> {
+  // sin_grad = cos(x) * grad
+  // So: out_grad_grad = cos(x) * gradgrad
+  //     x_grad_grad = -sin(x) * grad * gradgrad
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+
+  Maybe<void> Capture(UnaryGradGradState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 2) << "SinGradGrad op have 2 inputs";
+    CHECK_EQ_OR_RETURN(outputs.size(), 1) << "SinGradGrad op have 1 output";
+    ctx->x_requires_grad = inputs[0]->requires_grad();
+    ctx->grad_requires_grad = inputs[1]->requires_grad();
+    ctx->SaveTensorForBackward(inputs[0]);
+    if (ctx->x_requires_grad) { ctx->SaveTensorForBackward(inputs[1]); }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const UnaryGradGradState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    in_grads->resize(2);
+    const auto& x = ctx->SavedTensors()[0];
+    if (ctx->x_requires_grad) {
+      const auto& grad = ctx->SavedTensors()[1];
+      (*in_grads)[0] =
+          JUST(functional::sequence_function(functional::SinGradGrad)
+                   .then(std::bind(functional::Mul, out_grads[0], std::placeholders::_1))
+                   .call(x, grad));
+    }
+    if (ctx->grad_requires_grad) { (*in_grads)[1] = JUST(functional::SinGrad(x, out_grads[0])); }
+    return Maybe<void>::Ok();
+  }
+};
+REGISTER_OP_EXPR_GRAD_FUNCTION("sin_grad", SinGradGrad);
+
+class CosGradGrad : public OpExprGradFunction<UnaryGradGradState> {
+  // sin_grad = -sin(x) * grad
+  // So: out_grad_grad = -sin(x) * gradgrad
+  //     x_grad_grad = -cos(x) * grad * gradgrad
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+
+  Maybe<void> Capture(UnaryGradGradState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 2) << "CosGradGrad op have 2 inputs";
+    CHECK_EQ_OR_RETURN(outputs.size(), 1) << "CosGradGrad op have 1 output";
+    ctx->x_requires_grad = inputs[0]->requires_grad();
+    ctx->grad_requires_grad = inputs[1]->requires_grad();
+    ctx->SaveTensorForBackward(inputs[0]);
+    if (ctx->x_requires_grad) { ctx->SaveTensorForBackward(inputs[1]); }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const UnaryGradGradState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    in_grads->resize(2);
+    const auto& x = ctx->SavedTensors()[0];
+    if (ctx->x_requires_grad) {
+      const auto& grad = ctx->SavedTensors()[1];
+      (*in_grads)[0] =
+          JUST(functional::sequence_function(functional::CosGradGrad)
+                   .then(std::bind(functional::Mul, out_grads[0], std::placeholders::_1))
+                   .call(x, grad));
+    }
+    if (ctx->grad_requires_grad) { (*in_grads)[1] = JUST(functional::CosGrad(x, out_grads[0])); }
+    return Maybe<void>::Ok();
+  }
+};
+REGISTER_OP_EXPR_GRAD_FUNCTION("cos_grad", CosGradGrad);
+
 class NegativeGradGrad : public OpExprGradFunction<UnaryGradGradState> {
   // neg_grad = -1 * grad
   // So: out_grad_grad = -1 * gradgrad
