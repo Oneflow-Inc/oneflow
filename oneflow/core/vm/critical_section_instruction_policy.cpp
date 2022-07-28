@@ -25,14 +25,14 @@ namespace oneflow {
 namespace vm {
 
 void CriticalSectionBeginInstructionPolicy::ForEachDependence(
-    const std::function<void(Dependence* compute)>& DoEach) const {
+    const std::function<void(Dependence*)>& DoEach) const {
   for (const auto& eager_blob_object : *eager_blob_objects_) {
     DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
   }
 }
 
 void CriticalSectionBeginInstructionPolicy::ForEachMutDependence(
-    const std::function<void(Dependence* compute)>& DoEach) const {
+    const std::function<void(Dependence*)>& DoEach) const {
   DoEach(vm_stream_->schedule_local_dep_object().get());
 }
 
@@ -100,12 +100,12 @@ void OutputCriticalSectionBeginInstructionPolicy::AccessBlobByOpName(uint64_t of
 }
 
 void CriticalSectionEndInstructionPolicy::ForEachDependence(
-    const std::function<void(vm::Dependence* compute)>& DoEach) const {
+    const std::function<void(vm::Dependence*)>& DoEach) const {
   DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object()));
 }
 
 void CriticalSectionEndInstructionPolicy::ForEachMutDependence(
-    const std::function<void(vm::Dependence* compute)>& DoEach) const {
+    const std::function<void(vm::Dependence*)>& DoEach) const {
   DoEach(vm_stream_->schedule_local_dep_object().get());
 }
 
