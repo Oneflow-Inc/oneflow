@@ -81,7 +81,7 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
                 return out
 
         linear_t_g = LinearTrainGraphWithZeRO()
-        linear_t_g.debug(0)
+        linear_t_g.debug(1)
         linear_e_g = LinearEvalGraphWithZeRO()
         linear_e_g.debug(1)
 
