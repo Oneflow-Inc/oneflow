@@ -528,6 +528,10 @@
   signature: "Tensor (Tensor x, Int32List[1] dim=None, Bool unbiased=None, Bool keepdim=None) => Variance"
   bind_python: True
 
+- name: "rms_layer_norm"
+  signature: "Tensor (Tensor hidden_states, Tensor weight, Float variance_epsilon) => RMSLayerNormalization"
+  bind_python: True
+
 - name: "relu"
   signature: "Tensor (Tensor x, Bool inplace=False) => Relu"
   bind_python: True
@@ -1899,15 +1903,15 @@
   bind_python: False
 
 - name: "local_to_global"
-  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, Shape shape, DataType dtype, Bool sync_data) => LocalToGlobal"
+  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, Shape shape, DataType dtype, Bool sync_data, Bool copy=False) => LocalToGlobal"
   bind_python: False
 
 - name: "to_global"
-  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp, Bool check_meta) => ToGlobal"
+  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp, Bool check_meta, Bool copy=False) => ToGlobal"
   bind_python: True
 
 - name: "to_local"
-  signature: "Tensor (Tensor x) => GlobalToLocal"
+  signature: "Tensor (Tensor x, Bool copy=False) => GlobalToLocal"
   bind_python: True
 
 - name: "stream_touch"
