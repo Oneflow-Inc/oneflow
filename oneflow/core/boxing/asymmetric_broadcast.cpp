@@ -126,7 +126,7 @@ Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tenso
   }
   return one::functional::LocalToGlobal(local_tensor, out_placement,
                                         *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
-                                        tensor->dtype(), /* sync_data */ false);
+                                        tensor->dtype(), /* sync_data */ false, /*copy=*/false);
 }
 
 COMMAND(RegisterBoxingFunction("asymmetric-broadcast", CheckAsymmetricBroadcast,
