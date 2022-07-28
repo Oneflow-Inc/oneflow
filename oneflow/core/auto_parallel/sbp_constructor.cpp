@@ -188,7 +188,7 @@ Maybe<void> SbpConstructor::FillSbpSignatureForOpNode(const OpGraph& op_graph, c
     // Get all valid sbp_signatures
     SbpNode<NdSbpSignature>* sbp_node = op_name2sbp_node_[op_node->op().op_name()];
     JUST(op_node->op().GetValidNdSbpSignatureList(LogicalBlobDesc4Ibn, op_node->parallel_desc(),
-                                                  &sbp_node->sbp_sig_obj_list_));
+                                                  &sbp_node->sbp_sig_obj_list_, true));
     sbp_node->InitializeSbp();
     return Maybe<void>::Ok();
   }));

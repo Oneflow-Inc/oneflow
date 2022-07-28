@@ -182,7 +182,8 @@ class Operator {
       const ParallelDesc& parallel_desc) const;
   Maybe<void> GetValidNdSbpSignatureList(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const;
+      const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list,
+      bool with_output) const;
 
   void ForEachBnInOp(const std::function<void(const std::string&)>&) const;
 
@@ -297,7 +298,8 @@ class Operator {
   // TODO(wyg): 1d and nd sbp use this function to filter and check
   Maybe<void> FilterNdSbpSignatureListByLogicalShape(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const;
+      const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list,
+      bool with_output) const;
   Maybe<void> GreedilyFindMinCopyCostNdSbp(
       NdSbpSignature* nd_sbp_signature,
       const std::function<Maybe<const NdSbpInferHint*>(const std::string&)>& NdSbpInferHint4Ibn,
