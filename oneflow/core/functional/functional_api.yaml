@@ -528,6 +528,10 @@
   signature: "Tensor (Tensor x, Int32List[1] dim=None, Bool unbiased=None, Bool keepdim=None) => Variance"
   bind_python: True
 
+- name: "rms_layer_norm"
+  signature: "Tensor (Tensor hidden_states, Tensor weight, Float variance_epsilon) => RMSLayerNormalization"
+  bind_python: True
+
 - name: "relu"
   signature: "Tensor (Tensor x, Bool inplace=False) => Relu"
   bind_python: True
