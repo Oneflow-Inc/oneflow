@@ -17,6 +17,7 @@ limitations under the License.
 #include <glog/logging.h>
 #include <iterator>
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/framework/framework.h"
@@ -91,6 +92,11 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
 }
 
 void NormalForwardCompTaskNode::HandleInplaceRegsts() {
+
+  if (!Singleton<JobDesc>::Get()->enable_reuse_mem() || !Singleton<JobDesc>::Get()->enable_inplace()) {
+    return;
+  }
+
   const auto& _op = op();
   if (_op->op_conf().has_user_conf()) {
     const auto& inplace_obn2ibn = _op->op_conf().user_conf().inplace_obn2ibn();
@@ -99,6 +105,11 @@ void NormalForwardCompTaskNode::HandleInplaceRegsts() {
       const std::string& ibn = it.second;
       const std::string out_regst_name = GetOutRegstNameByObn(obn);
       std::shared_ptr<RegstDesc> out_regst = GetProducedRegst(out_regst_name);
+
+      for (const auto& in_edge : in_edges()) {
+        if (in_edge->src_node()->GetProducedRegst())
+      }
+
 
       int32_t input_index = CHECK_JUST(_op->GetInputIndex(ibn));
       const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");

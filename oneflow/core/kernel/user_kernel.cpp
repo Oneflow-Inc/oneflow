@@ -580,9 +580,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
       for (const auto& it : arg2bn_tensor_pair_) {
         const auto& p = it.first;
         std::string bn = p.first + "_" + std::to_string(p.second);
-        if (it.second.tensor.get() == nullptr) {
-          continue;
-        }
+        if (it.second.tensor.get() == nullptr) { continue; }
         const void* ptr = it.second.tensor->dptr<void>();
         bn2ptr[bn] = ptr;
       }
