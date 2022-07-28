@@ -165,7 +165,8 @@ class GlobalConstantFunctor {
     if (has_partial_parallel) {
       const auto& fixed_sbp_tuple = JUST(NdSbpReplacePartialByBroadcast(sbp_tuple));
       const auto& tensor = JUST(dispatch_constant(*fixed_sbp_tuple));
-      return functional::ToGlobal(tensor, placement, sbp_tuple, {}, /* check_meta */ false);
+      return functional::ToGlobal(tensor, placement, sbp_tuple, {}, /* check_meta */ false,
+                                  /*copy*/ false);
     } else {
       return dispatch_constant(sbp_tuple);
     }
