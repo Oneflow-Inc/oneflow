@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/scalar.h"
@@ -1073,11 +1074,73 @@ class GlobalArangeFunctor {
 
 class GlobalArange2Functor {
  public:
-  Maybe<Tensor> operator()(const Scalar& limit, const Symbol<DType>& dtype,
+  Maybe<Tensor> operator()(const Scalar& limit, const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
     return GlobalArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
+  }
+};
+
+class HannWindowFunctor {
+ public:
+  Maybe<Tensor> operator()(const int64_t window_length, const bool& periodic,
+                           const Optional<Symbol<Device>>& device,
+                           const Optional<Symbol<DType>>& dtype, const bool& requires_grad) const {
+    autograd::AutoGradMode mode(false);
+    if (dtype.has_value() && !IsFloatingDataType(JUST(dtype)->data_type())) {
+      return Error::RuntimeError()
+             << "hann_window expects floating point dtypes, got: " << JUST(dtype)->name();
+    }
+    // TODO: speedup
+    auto result = JUST(Arange(1, 2, 1, dtype, device));
+    if (window_length != 1) {
+      if (periodic) {
+        const auto indice = JUST(Arange(window_length + 1, dtype, device));
+        const auto div_result = JUST(ScalarDiv(JUST(ScalarMul(2 * M_PI, indice)), window_length));
+        result = JUST(Slice(JUST(ScalarDiv(JUST(ScalarSub(1, JUST(Cos(div_result)), 1)), 2)), {0},
+                            {window_length}, {1}, /*enable_view_slice=*/false));
+      } else {
+        const auto indice = JUST(Arange(window_length, dtype, device));
+        const auto div_result =
+            JUST(ScalarDiv(JUST(ScalarMul(2 * M_PI, indice)), window_length - 1));
+        result = JUST(ScalarDiv(JUST(ScalarSub(1, JUST(Cos(div_result)), 1)), 2));
+      }
+    }
+    JUST(result->set_requires_grad(requires_grad));
+    return result;
+  }
+};
+
+class GlobalHannWindowFunctor {
+ public:
+  Maybe<Tensor> operator()(const int64_t window_length, const bool& periodic,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<SbpParallel>>& sbp,
+                           const Optional<Symbol<DType>>& dtype, const bool& requires_grad) const {
+    autograd::AutoGradMode mode(false);
+    JUST(CheckDeviceIdsIsValid(placement));
+    if (dtype.has_value() && !IsFloatingDataType(JUST(dtype)->data_type())) {
+      return Error::RuntimeError()
+             << "hann_window expects floating point dtypes, got: " << JUST(dtype)->name();
+    }
+    auto result = JUST(GlobalArange(1, 1 + window_length, 1, dtype, placement, sbp));
+    if (window_length != 1) {
+      if (periodic) {
+        const auto indice = JUST(GlobalArange(window_length + 8, dtype, placement, sbp));
+        const auto div_result = JUST(ScalarDiv(JUST(ScalarMul(2 * M_PI, indice)), window_length));
+        result = JUST(Slice(JUST(ScalarDiv(JUST(ScalarSub(1, JUST(Cos(div_result)), 1)), 2)), {0},
+                            {window_length}, {1}, /*enable_view_slice=*/false));
+      } else {
+        const auto indice = JUST(GlobalArange(window_length, dtype, placement, sbp));
+        const auto div_result =
+            JUST(ScalarDiv(JUST(ScalarMul(2 * M_PI, indice)), window_length - 1));
+        result = JUST(ScalarDiv(JUST(ScalarSub(1, JUST(Cos(div_result)), 1)), 2));
+      }
+    }
+    result = JUST(ToGlobal(result, placement, sbp, {}, true));
+    JUST(result->set_requires_grad(requires_grad));
+    return result;
   }
 };
 
@@ -2276,6 +2339,25 @@ class ErfinvInplaceFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class GeluWithApproximateFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::string& approximate) const {
+    if (approximate == "tanh") {
+      return JUST(
+          Mul(JUST(ScalarAdd(JUST(Tanh(JUST(ScalarMul(
+                                 JUST(Add(x,
+                                          JUST(ScalarMul(JUST(ScalarPow(x, Scalar(3.0), false)),
+                                                         Scalar(0.044715), false)),
+                                          1.0, false)),
+                                 Scalar(sqrt(2.0 / M_PI)), false)))),
+                             Scalar(1.0), 1.0, false)),
+              JUST(ScalarMul(x, 0.5, false))));
+    }
+    return Gelu(x);
+  }
+};
+
 class CumBaseFunctor {
  public:
   explicit CumBaseFunctor(std::string op_name) {
@@ -2907,6 +2989,30 @@ class EinSumFunctor {
   }
 };
 
+class AddCDivFunctor {
+ public:
+  AddCDivFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& tensor1,
+                           const std::shared_ptr<one::Tensor>& tensor2, const Scalar& value) const {
+    return JUST(Add(input, JUST(ScalarMul(JUST(Div(tensor1, tensor2)), value, false)), 1, false));
+  }
+};
+
+class InplaceAddCDivFunctor {
+ public:
+  InplaceAddCDivFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& tensor1,
+                           const std::shared_ptr<one::Tensor>& tensor2, const Scalar& value) const {
+    JUST(CheckInplaceValid(input));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    JUST(VectorAt(*outputs, 0)) = input;
+    JUST(Add(input, JUST(ScalarMul(JUST(Div(tensor1, tensor2)), value, false)), 1, true));
+    return JUST(VectorAt(*outputs, 0));
+  }
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -2917,6 +3023,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarSubFunctor, ScalarSub2Functor>("ScalarSub");
   m.add_functor<ScalarMulFunctor, ScalarMul2Functor>("ScalarMul");
   m.add_functor<InplaceScalarMulFunctor>("InplaceScalarMul");
+  m.add_functor<AddCDivFunctor>("AddCDiv");
+  m.add_functor<InplaceAddCDivFunctor>("InplaceAddCDiv");
   m.add_functor<ScalarDivFunctor, ScalarDiv2Functor>("ScalarDiv");
   m.add_functor<InplaceScalarDivFunctor>("InplaceScalarDiv");
   m.add_functor<ScalarPowFunctor>("ScalarPow");
@@ -2958,6 +3066,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<Transpose2dimFunctor>("Swapdims");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<GlobalArangeFunctor, GlobalArange2Functor>("GlobalArange");
+  m.add_functor<HannWindowFunctor>("HannWindow");
+  m.add_functor<GlobalHannWindowFunctor>("GlobalHannWindow");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampInplaceFunctor>("ClampInplace");
@@ -3006,6 +3116,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CumProdFunctor>("Cumprod");
   m.add_functor<CumProdGradFunctor>("CumprodGrad");
   m.add_functor<EinSumFunctor>("EinSum");
+  m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
 };
 
 }  // namespace functional

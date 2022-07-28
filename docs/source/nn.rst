@@ -12,6 +12,13 @@ These are the basic building blocks for graphs:
     :class: this-will-duplicate-information-and-it-is-still-useful-here
     :backlinks: top
 
+.. currentmodule:: oneflow.nn
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: 
+
+    Parameter
 
 Containers
 ----------------------------------
@@ -20,7 +27,7 @@ Containers
 .. autosummary::
     :toctree: generated
     :nosignatures:
-    :template: 
+    :template: classtemplate.rst
 
     Module
     Sequential
@@ -35,6 +42,7 @@ Convolution Layers
 .. autosummary::
     :toctree: generated
     :nosignatures:
+    :template: classtemplate.rst
 
     nn.Conv1d 
     nn.Conv2d 
@@ -51,6 +59,7 @@ Pooling Layers
 .. autosummary::
     :toctree: generated
     :nosignatures:
+    :template: classtemplate.rst
 
     nn.MaxPool1d 
     nn.MaxPool2d 
@@ -68,11 +77,14 @@ Padding Layers
 .. autosummary::
     :toctree: generated
     :nosignatures:
+    :template: classtemplate.rst
 
     nn.ConstantPad1d 
     nn.ConstantPad2d 
     nn.ConstantPad3d
+    nn.ReflectionPad1d
     nn.ReflectionPad2d
+    nn.ReplicationPad1d
     nn.ReplicationPad2d
     nn.ZeroPad2d
 
@@ -113,6 +125,7 @@ Non-linear Activations (other)
 .. autosummary::
     :toctree: generated
     :nosignatures:
+    :template: classtemplate.rst
 
     nn.Softmax
     nn.LogSoftmax
@@ -123,6 +136,7 @@ Normalization Layers
 .. autosummary::
     :toctree: generated
     :nosignatures:
+    :template: classtemplate.rst
 
     nn.BatchNorm1d 
     nn.BatchNorm2d 
@@ -142,7 +156,7 @@ Recurrent Layers
 .. autosummary::
     :toctree: generated
     :nosignatures:
-    :template:
+    :template: classtemplate.rst
 
     nn.RNN
     nn.LSTM
@@ -157,7 +171,8 @@ Linear Layers
 .. autosummary::
     :toctree: generated
     :nosignatures:
-    
+    :template: classtemplate.rst
+
     nn.Identity
     nn.Linear
 
@@ -167,6 +182,7 @@ Dropout Layers
 .. autosummary::
     :toctree: generated
     :nosignatures:
+    :template: classtemplate.rst
 
     nn.Dropout
 
@@ -176,6 +192,7 @@ Sparse Layers
 .. autosummary::
     :toctree: generated
     :nosignatures:
+    :template: classtemplate.rst
 
     nn.Embedding
 
@@ -185,7 +202,7 @@ Distance Functions
 .. autosummary::
     :toctree: generated
     :nosignatures:
-    :template:
+    :template: classtemplate.rst
 
     nn.CosineSimilarity
 
@@ -195,6 +212,7 @@ Loss Functions
 .. autosummary::
     :toctree: generated
     :nosignatures:
+    :template: classtemplate.rst
 
     nn.BCELoss 
     nn.BCEWithLogitsLoss 
@@ -215,6 +233,7 @@ Vision Layers
 .. autosummary::
     :toctree: generated
     :nosignatures:
+    :template: classtemplate.rst
 
     nn.PixelShuffle 
     nn.Upsample 
@@ -228,8 +247,41 @@ DataParallel Layers (multi-GPU, distributed)
 .. autosummary::
     :toctree: generated
     :nosignatures:
+    :template: classtemplate.rst
     
     nn.parallel.DistributedDataParallel
+
+
+Data loading and preprocessing Layers
+----------------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    nn.COCOReader
+    nn.CoinFlip
+    nn.CropMirrorNormalize
+    nn.OFRecordBytesDecoder
+    nn.OFRecordImageDecoder
+    nn.OFRecordImageDecoderRandomCrop
+    nn.OFRecordRawDecoder
+    nn.OFRecordReader
+
+Quantization Aware Training
+--------------------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    
+    nn.MinMaxObserver
+    nn.MovingAverageMinMaxObserver
+    nn.FakeQuantization
+    nn.QatConv1d
+    nn.QatConv2d
+    nn.QatConv3d
 
 Utilities
 ---------
@@ -240,6 +292,7 @@ From the ``oneflow.nn.utils`` module
 .. autosummary::
     :toctree: generated
     :nosignatures:
+    :template: classtemplate.rst
 
     clip_grad_norm_
     clip_grad_value_
@@ -252,6 +305,7 @@ Utility functions in other modules
 .. autosummary::
     :toctree: generated
     :nosignatures:
+    :template: classtemplate.rst
 
     nn.utils.rnn.PackedSequence
     nn.utils.rnn.pack_padded_sequence
@@ -262,6 +316,22 @@ Utility functions in other modules
 .. autosummary::
     :toctree: generated
     :nosignatures:
-    :template:
+    :template: classtemplate.rst
 
     nn.Flatten
+
+Quantized Functions
+--------------------
+
+Quantization refers to techniques for performing computations and 
+storing tensors at lower bitwidths than floating point precision.
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template:
+
+    nn.FakeQuantization
+    nn.MinMaxObserver
+    nn.MovingAverageMinMaxObserver
+    nn.Quantization

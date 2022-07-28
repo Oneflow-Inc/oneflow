@@ -14,14 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/virtual_machine_engine.h"
-#include <glog/logging.h>
+#include "oneflow/core/common/env_var/vm.h"
 #include "oneflow/core/vm/caching_allocator.h"
+#include "oneflow/core/vm/fuse_instruction_policy.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/naive_instruction_policy.h"
-#include "oneflow/core/vm/fuse_instruction_type.h"
 #include "oneflow/core/vm/release_tensor_instruction_policy.h"
-#include "oneflow/core/vm/fuse_phy_instr_operand.h"
-#include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/vm/naive_stream_policy.h"
 #include "oneflow/core/common/util.h"
@@ -112,17 +110,15 @@ void VirtualMachineEngine::MakeAndAppendFusedInstruction(
     return;
   }
   auto* begin = fused_instruction_list.Begin();
-  auto phy_instr_operand = std::make_shared<FusePhyInstrOperand>(std::move(fused_instruction_list));
   auto instruction = intrusive::make_shared<Instruction>(
-      begin->mut_stream(), std::make_unique<NaiveInstructionPolicy>(
-                               SingletonPtr<FuseInstructionType>(), phy_instr_operand));
+      begin->mut_stream(),
+      std::make_unique<FuseInstructionPolicy>(std::move(fused_instruction_list)));
   pending_instructions->EmplaceBack(std::move(instruction));
 }
 
-constexpr static int kPendingHandleWindow = 10;
 void VirtualMachineEngine::FetchAndTryFusePendingInstructions(
     InstructionList* /*out*/ pending_instructions) {
-  size_t window_size = kPendingHandleWindow;
+  size_t window_size = ThreadLocalEnvInteger<ONEFLOW_VM_PENDING_HANDLE_WINDOW_SIZE>();
   InstructionList fused_instruction_list;
   INTRUSIVE_FOR_EACH_PTR(instruction, mut_local_pending_instruction_list()) {
     if (window_size-- <= 0) { break; }

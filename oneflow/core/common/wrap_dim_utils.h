@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <bitset>
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
@@ -37,4 +38,23 @@ static inline Maybe<int64_t> maybe_wrap_dim(int64_t dim, int64_t dim_post_expr,
   if (dim < 0) dim += dim_post_expr;
   return dim;
 }
+
+// align with pytorch: `aten/src/ATen/WrapDimUtilsMulti.h`
+constexpr size_t dim_bitset_size = 64;
+
+static inline Maybe<std::bitset<dim_bitset_size>> dim_list_to_bitset(
+    const std::vector<int32_t>& dims, int64_t ndims) {
+  CHECK_LE_OR_RETURN(ndims, (int64_t)dim_bitset_size)
+      << Error::RuntimeError() << "Only tensors with up to " << dim_bitset_size
+      << " dims are supported";
+  std::bitset<dim_bitset_size> seen;
+  for (int32_t i = 0; i < dims.size(); i++) {
+    size_t dim = JUST(maybe_wrap_dim(dims[i], ndims));
+    CHECK_OR_RETURN(!seen[dim]) << Error::RuntimeError() << "The dim " << dim
+                                << " appears multiple times in the list of dims";
+    seen[dim] = true;
+  }
+  return seen;
+}
+
 }  // namespace oneflow

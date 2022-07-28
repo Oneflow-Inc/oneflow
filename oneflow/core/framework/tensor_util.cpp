@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/blocking_then_busy.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/register/ofblob.h"
 
 namespace oneflow {
 namespace one {
@@ -29,6 +30,24 @@ Maybe<void> SyncAccessTensorWithTimeOut(const std::shared_ptr<Tensor>& tensor,
   auto local_tensor = JUST(tensor->AsLocalTensor());
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, modifier);
+  }));
+  JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CopyLocalTensorDataTo(const std::shared_ptr<Tensor>& input, void* mem_ptr,
+                                  size_t size) {
+  CHECK_OR_RETURN(input->is_local());  // NOLINT
+  CHECK_OR_RETURN(input->is_contiguous()) << Error::RuntimeError() << kOfBugIssueUploadPrompt;
+  CHECK_EQ_OR_RETURN(input->shape()->elem_cnt() * JUST(input->dtype()->bytes()), size)
+      << Error::RuntimeError() << kOfBugIssueUploadPrompt;
+  std::shared_ptr<one::LocalTensor> local_tensor = JUST(input->AsLocalTensor());
+  const auto& Callback = [&](uint64_t ofblob_ptr) {
+    reinterpret_cast<const OfBlob*>(ofblob_ptr)->AutoMemCopyTo(mem_ptr, size);
+  };
+  auto btb = std::make_shared<BlockingThenBusy>(1);
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, "const");
   }));
   JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
   return Maybe<void>::Ok();
