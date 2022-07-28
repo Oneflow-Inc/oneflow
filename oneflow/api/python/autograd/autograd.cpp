@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/autograd/autograd_engine.h"
@@ -85,6 +86,7 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
 
 Maybe<one::TensorTuple> Backward(const one::TensorTuple& outputs, const one::TensorTuple& out_grads,
                                  bool retain_graph, bool create_graph) {
+  BackwardPassScopeGuard scope_guard;
   if (create_graph) { retain_graph = true; }
   std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
   JUST(one::GetThreadLocalAutogradEngine()->RunBackwardAndSaveGrads4LeafTensorIf(
@@ -95,6 +97,7 @@ Maybe<one::TensorTuple> Backward(const one::TensorTuple& outputs, const one::Ten
 Maybe<one::TensorTuple> Grad(const one::TensorTuple& outputs, const one::TensorTuple& inputs,
                              const one::TensorTuple& out_grads, bool retain_graph,
                              bool create_graph) {
+  BackwardPassScopeGuard scope_guard;
   if (create_graph) { retain_graph = true; }
   if (inputs.empty()) { return Backward(outputs, out_grads, retain_graph, create_graph); }
   CHECK_OR_RETURN(std::all_of(

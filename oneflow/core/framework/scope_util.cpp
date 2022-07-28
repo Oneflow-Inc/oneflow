@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/job/job_conf.pb.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
@@ -96,13 +97,26 @@ Maybe<void> ThreadLocalScopeStackPop() {
   return Maybe<void>::Ok();
 }
 
-ThreadLocalScopeGuard::ThreadLocalScopeGuard(const std::shared_ptr<Scope>& scope) {
-  ThreadLocalScopeStackPush(scope);
+BackwardPassScopeGuard::BackwardPassScopeGuard() {
+  if (LazyMode::is_enabled()) {
+    const auto& scope = CHECK_JUST(GetCurrentScope());
+    if (scope) {
+      backward_pass_scope_ = CHECK_JUST(FindOrCreateBackwardPassScope(scope));
+      ThreadLocalScopeStackPush(backward_pass_scope_);
+    }
+  }
 }
 
-ThreadLocalScopeGuard::~ThreadLocalScopeGuard() { ThreadLocalScopeStackPop(); }
+BackwardPassScopeGuard::BackwardPassScopeGuard(const std::shared_ptr<Scope>& scope) {
+  if (scope && LazyMode::is_enabled()) {
+    backward_pass_scope_ = CHECK_JUST(FindOrCreateBackwardPassScope(scope));
+    ThreadLocalScopeStackPush(backward_pass_scope_);
+  }
+}
 
-extern const std::string kBackwardPass;
+BackwardPassScopeGuard::~BackwardPassScopeGuard() {
+  if (backward_pass_scope_) { ThreadLocalScopeStackPop(); }
+}
 
 class BackwardPassScopeStorage {
  public:
@@ -118,6 +132,7 @@ class BackwardPassScopeStorage {
   HashMap<int64_t, std::shared_ptr<Scope>> scopes_;
 };
 
+extern const std::string kBackwardPass;
 Maybe<Scope> FindOrCreateBackwardPassScope(const std::shared_ptr<Scope>& scope) {
   auto* storage = BackwardPassScopeStorage::Global();
   auto& scopes = storage->get();

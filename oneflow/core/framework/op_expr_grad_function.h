@@ -193,18 +193,12 @@ class OpExprGradClosure {
 
   Maybe<void> Capture(const TensorTuple& inputs, const TensorTuple& outputs,
                       const OpExprInterpContext& interp_ctx) const {
-    if (LazyMode::is_enabled()) {
-      const auto& forward_scope = JUST(GetCurrentScope());
-      if (forward_scope) { scope_ = JUST(FindOrCreateBackwardPassScope(forward_scope)); }
-    }
+    if (LazyMode::is_enabled()) { scope_ = JUST(GetCurrentScope()); }
     return impl_->CaptureIf(state_.get(), inputs, outputs, interp_ctx);
   }
 
   Maybe<void> Apply(const TensorTuple& out_grads, TensorTuple* in_grads) const {
-    if (scope_) {
-      ThreadLocalScopeGuard scope_guard(scope_);
-      return impl_->ApplyIf(state_.get(), out_grads, in_grads);
-    }
+    BackwardPassScopeGuard scope_guard(scope_);
     return impl_->ApplyIf(state_.get(), out_grads, in_grads);
   }
 

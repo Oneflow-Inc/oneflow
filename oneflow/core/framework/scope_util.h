@@ -34,10 +34,14 @@ Maybe<void> ThreadLocalScopeStackPush(const std::shared_ptr<Scope>& scope);
 
 Maybe<void> ThreadLocalScopeStackPop();
 
-class ThreadLocalScopeGuard {
+class BackwardPassScopeGuard {
  public:
-  explicit ThreadLocalScopeGuard(const std::shared_ptr<Scope>& scope);
-  ~ThreadLocalScopeGuard();
+  BackwardPassScopeGuard();
+  explicit BackwardPassScopeGuard(const std::shared_ptr<Scope>& scope);
+  ~BackwardPassScopeGuard();
+
+ private:
+  std::shared_ptr<Scope> backward_pass_scope_;
 };
 
 Maybe<Scope> FindOrCreateBackwardPassScope(const std::shared_ptr<Scope>& scope);
