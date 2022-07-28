@@ -537,7 +537,7 @@ Maybe<void> Operator::InferSbpSignatureIf(
   SbpSignature signature;
 
   JUST(InferSbpSignature(&signature, sbp_sig_conf, CalcOrderValue4SbpSig,
-                         std::move(SbpInferHint4Ibn), parallel_desc));
+                         SbpInferHint4Ibn, parallel_desc));
 
   JUST(FillSbpSignature(signature));
   return Maybe<void>::Ok();
