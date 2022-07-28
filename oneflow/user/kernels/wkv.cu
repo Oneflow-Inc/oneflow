@@ -131,24 +131,6 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   _gu[_offsetBC] += gu;
 }
 
-template<typename F>
-void cuda_forward(const int64_t B, const int64_t T, const int64_t C, const F* w, const F* u,
-                  const F* k, const F* v, F* y) {
-  dim3 threadsPerBlock(min((int)C, 1024));
-  assert(B * C % threadsPerBlock.x == 0);
-  dim3 numBlocks(B * C / threadsPerBlock.x);
-  kernel_forward<<<numBlocks, threadsPerBlock>>>(B, T, C, w, u, k, v, y);
-}
-
-template<typename F>
-void cuda_backward(const int64_t B, const int64_t T, const int64_t C, const F* w, const F* u,
-                   const F* k, const F* v, const F* gy, F* gw, F* gu, F* gk, F* gv) {
-  dim3 threadsPerBlock(min((int)C, 1024));
-  assert(B * C % threadsPerBlock.x == 0);
-  dim3 numBlocks(B * C / threadsPerBlock.x);
-  kernel_backward<<<numBlocks, threadsPerBlock>>>(B, T, C, w, u, k, v, gy, gw, gu, gk, gv);
-}
-
 }  // namespace
 
 template<typename F>
@@ -169,7 +151,11 @@ class WkvForwordGPUKernel final : public user_op::OpKernel {
     const int64_t T = ctx->Attr<int64_t>("T");
     const int64_t C = ctx->Attr<int64_t>("C");
 
-    cuda_forward(B, T, C, w->dptr<F>(), u->dptr<F>(), k->dptr<F>(), v->dptr<F>(), y->mut_dptr<F>());
+    dim3 threadsPerBlock(min((int)C, 1024));
+    assert(B * C % threadsPerBlock.x == 0);
+    dim3 numBlocks(B * C / threadsPerBlock.x);
+    kernel_forward<<<numBlocks, threadsPerBlock>>>(B, T, C, w->dptr<F>(), u->dptr<F>(),
+                                                   k->dptr<F>(), v->dptr<F>(), y->mut_dptr<F>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -205,8 +191,12 @@ class WkvBackwardGPUKernel final : public user_op::OpKernel {
     const int64_t T = ctx->Attr<int64_t>("T");
     const int64_t C = ctx->Attr<int64_t>("C");
 
-    cuda_backward(B, T, C, w->dptr<F>(), u->dptr<F>(), k->dptr<F>(), v->dptr<F>(), gy->dptr<F>(),
-                  gw->mut_dptr<F>(), gu->mut_dptr<F>(), gk->mut_dptr<F>(), gv->mut_dptr<F>());
+    dim3 threadsPerBlock(min((int)C, 1024));
+    assert(B * C % threadsPerBlock.x == 0);
+    dim3 numBlocks(B * C / threadsPerBlock.x);
+    kernel_backward<<<numBlocks, threadsPerBlock>>>(
+        B, T, C, w->dptr<F>(), u->dptr<F>(), k->dptr<F>(), v->dptr<F>(), gy->dptr<F>(),
+        gw->mut_dptr<F>(), gu->mut_dptr<F>(), gk->mut_dptr<F>(), gv->mut_dptr<F>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
