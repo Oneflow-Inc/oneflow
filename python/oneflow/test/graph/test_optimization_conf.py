@@ -17,6 +17,7 @@ import os
 import unittest
 import oneflow.framework.session_context as session_ctx
 import oneflow as flow
+import oneflow.unittest
 import oneflow.framework.config_util as config_util
 import oneflow.framework.attr_util as attr_util
 import random
