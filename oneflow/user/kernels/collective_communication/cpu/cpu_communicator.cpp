@@ -22,7 +22,7 @@ namespace ccl {
 
 void CpuCommunicator::Init(Symbol<ParallelDesc> parallel_desc) { parallel_desc_ = parallel_desc; }
 
-REGISTER_COMMUNICATOR(DeviceType::kCPU, CpuCommunicator);
+REGISTER_COLLECTIVE_COMMUNICATION_COMMUNICATOR(DeviceType::kCPU, CpuCommunicator);
 
 }  // namespace ccl
 

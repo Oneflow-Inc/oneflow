@@ -32,7 +32,7 @@ void CudaCommunicator::Init(Symbol<ParallelDesc> parallel_desc) {
   nccl_comm_ = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
 }
 
-REGISTER_COMMUNICATOR(DeviceType::kCUDA, CudaCommunicator);
+REGISTER_COLLECTIVE_COMMUNICATION_COMMUNICATOR(DeviceType::kCUDA, CudaCommunicator);
 
 }  // namespace ccl
 

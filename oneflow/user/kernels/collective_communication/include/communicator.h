@@ -44,7 +44,7 @@ inline bool IsCommunicatorRegistered(DeviceType device_type) {
   return IsClassRegistered<DeviceType, Communicator>(device_type);
 }
 
-#define REGISTER_COMMUNICATOR(device, Derived) \
+#define REGISTER_COLLECTIVE_COMMUNICATION_COMMUNICATOR(device, Derived) \
   REGISTER_CLASS(DeviceType, device, Communicator, Derived)
 
 }  // namespace ccl
