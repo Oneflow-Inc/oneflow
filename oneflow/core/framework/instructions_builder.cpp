@@ -35,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/vm/barrier_instruction_policy.h"
 #include "oneflow/core/eager/release_tensor_instruction_type.h"
 #include "oneflow/core/vm/critical_section_instruction_policy.h"
+#include "oneflow/core/vm/lazy_job_instruction_policy.h"
 #include "oneflow/core/vm/global_sync_instruction_policy.h"
 #include "oneflow/core/vm/op_call_instruction_policy.h"
 #include "oneflow/core/vm/touch_tensors_instruction_type.h"
@@ -43,7 +44,6 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/framework/global_tensor_infer_cache.h"
 #include "oneflow/core/eager/local_dep_object.h"
-#include "oneflow/core/eager/lazy_job_instruction_type.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
@@ -155,13 +155,10 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const vm::EagerBlobObjectListPtr&
       instruction_list_->EmplaceBack(std::move(instruction));
     }
     {
-      const auto& phy_instr_operand =
-          std::make_shared<vm::LaunchLazyJobPhyInstrOperand>(nn_graph, parameters);
       auto stream = JUST(GetLazyJobLauncherStream());
       auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
       auto instruction = intrusive::make_shared<vm::Instruction>(
-          vm_stream, std::make_unique<vm::NaiveInstructionPolicy>(
-                         SingletonPtr<vm::LaunchLazyJobInstructionType>(), phy_instr_operand));
+          vm_stream, std::make_unique<vm::LaunchLazyJobInstructionPolicy>(nn_graph, parameters));
       instruction_list_->EmplaceBack(std::move(instruction));
     }
     auto stream = JUST(GetCriticalSectionStream());
