@@ -184,10 +184,6 @@ def _test_image_resize_with_cv(
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestImageResize(flow.unittest.TestCase):
     def test_image_resize_to_fixed_size(test_case):
         (image_files, _) = image_test_util.random_sample_images_from_coco()

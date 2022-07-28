@@ -474,10 +474,6 @@ class TestTensor(flow.unittest.TestCase):
         y = x.nonzero()
         return y
 
-    @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
-    )
     def test_tensor_fmod(test_case):
         x = flow.Tensor(np.random.uniform(-100, 100, (5, 5)))
         x.requires_grad = True
@@ -491,10 +487,6 @@ class TestTensor(flow.unittest.TestCase):
             np.allclose(x.grad.numpy(), np.ones((5, 5)), 0.0001, 0.0001)
         )
 
-    @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
-    )
     def test_magic_fmod(test_case):
         x = flow.Tensor(np.random.uniform(-100, 100, (5, 5)))
         x.requires_grad = True

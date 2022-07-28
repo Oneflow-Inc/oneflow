@@ -15,7 +15,6 @@ limitations under the License.
 """
 from oneflow.framework.unittest import (
     device_num,
-    eager_execution_enabled,
     has_node_list,
     has_world_size,
     node_list,
