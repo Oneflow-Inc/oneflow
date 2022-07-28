@@ -98,11 +98,17 @@ class FastReleaseTensorInstructionPolicy final : public ReleaseTensorInstruction
   Maybe<void> Prepare(vm::Instruction* instruction) override {
     DataType data_type = eager_blob_object()->data_type();
     CHECK_OR_RETURN(IsPODDataType(data_type));
-    Release(eager_blob_object());
+    if (eager_blob_object()->tensor_storage()->is_allocated_in_vm()) {
+      Release(eager_blob_object());
+    }
     return Maybe<void>::Ok();
   }
 
-  void Compute(vm::Instruction* instruction) override {}
+  void Compute(vm::Instruction* instruction) override {
+    if (!eager_blob_object()->tensor_storage()->is_allocated_in_vm()) {
+      Release(eager_blob_object());
+    }
+  }
 };
 
 class SlowReleaseTensorInstructionPolicy final : public ReleaseTensorInstructionPolicy {

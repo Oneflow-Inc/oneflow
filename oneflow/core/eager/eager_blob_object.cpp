@@ -125,7 +125,7 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(vm::Allocator* allocator)
       allocator->Deallocate(dptr, required_body_bytes);
     };
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
-                                   required_body_bytes);
+                                   required_body_bytes, /*is_allocated_in_vm*/ true);
     InitMemPtrForAllocationComputationPipelining();
   }
   InitOrCheckMemPtrForAllocationComputationPipelining();
