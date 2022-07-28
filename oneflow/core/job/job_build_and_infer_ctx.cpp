@@ -1002,6 +1002,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
 #ifdef WITH_MLIR
     JUST(DoPass("IRRoundTripBeforeAD"));
 #endif  // WITH_MLIR
+    JUST(DoPass("FuseConsecutiveAddPass"));
     JUST(DoPass("GenerateOptimizerOpConfs"));
     JUST(DoPass("PrunePinnedIdentityOpPass"));
     JUST(DoPass("ReplaceEmbeddingOps"));
