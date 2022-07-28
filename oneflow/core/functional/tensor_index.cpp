@@ -66,7 +66,7 @@ Maybe<TensorTuple> ExpandMaskIndex(const std::shared_ptr<Tensor>& index) {
   }
   if (size_tensor->is_global()) {
     // TODO(): check size_tensor sbp is broadcast.
-    size_tensor = JUST(functional::GlobalToLocal(size_tensor));
+    size_tensor = JUST(functional::GlobalToLocal(size_tensor, /*copy=*/false));
   }
   int64_t size = 0;
   const auto& callback = [&](uint64_t of_blob_ptr) {
@@ -346,7 +346,7 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
     std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
     packed_indices =
         JUST(ToGlobal(packed_indices, placement, std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
-                      grad_sbp_tuple, /* check_meta */ false));
+                      grad_sbp_tuple, /* check_meta */ false, /*copy=*/false));
   } else {
     Symbol<Device> device = JUST(transposed_input->device());
     if (JUST(packed_indices->device()) != device) {

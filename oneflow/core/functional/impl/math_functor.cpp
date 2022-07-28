@@ -1344,7 +1344,7 @@ class GlobalHannWindowFunctor {
         result = JUST(ScalarDiv(JUST(ScalarSub(1, JUST(Cos(div_result)), 1)), 2));
       }
     }
-    result = JUST(ToGlobal(result, placement, sbp, {}, true));
+    result = JUST(ToGlobal(result, placement, sbp, {}, true, /*copy=*/false));
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
@@ -2375,6 +2375,29 @@ class VarianceFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class RMSLayerNormalizationFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& hidden_states,
+                           const std::shared_ptr<Tensor>& weight,
+                           const float& variance_epsilon) const {
+    std::shared_ptr<Tensor> cast_hidden_states = hidden_states;
+    if (hidden_states->dtype() != DType::Float()) {
+      cast_hidden_states =
+          JUST(functional::Cast(hidden_states, DType::Float(), /*pin_memory=*/false));
+    }
+    std::shared_ptr<Tensor> normalized_hidden_states = JUST(functional::Mul(
+        cast_hidden_states, JUST(functional::Rsqrt(JUST(functional::ScalarAdd(
+                                JUST(functional::ReduceMean(JUST(Square(hidden_states)),
+                                                            std::vector<int32_t>{-1}, true)),
+                                Scalar(variance_epsilon), 1.0, false))))));
+    if (weight->dtype() == DType::Float16()) {
+      normalized_hidden_states =
+          JUST(functional::Cast(normalized_hidden_states, weight->dtype(), /*pin_memory=*/false));
+    }
+    return JUST(functional::Mul(normalized_hidden_states, weight));
+  }
+};
+
 class DotFunctor {
  public:
   DotFunctor() {
@@ -3387,6 +3410,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarLogicalXorFunctor, ScalarLogicalXor2Functor>("ScalarLogicalXor");
   m.add_functor<StandardDeviationFunctor>("StandardDeviation");
   m.add_functor<VarianceFunctor>("Variance");
+  m.add_functor<RMSLayerNormalizationFunctor>("RMSLayerNormalization");
   m.add_functor<DotFunctor>("Dot");
   m.add_functor<MovedimVecFunctor>("MovedimVec");
   m.add_functor<MovedimIntFunctor>("MovedimInt");

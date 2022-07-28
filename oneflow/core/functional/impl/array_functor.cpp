@@ -1503,7 +1503,7 @@ class ReshapeFunctor {
   };
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    Shape infered_shape = *JUST(InferShape(x, shape));
+    Shape infered_shape = *JUST(InferShapeUnspecifiedDim(x->shape()->Count(0), shape));
 
     if (view::IsViewApplicable(x)) {
       Optional<Stride> infered_stride =
@@ -1533,7 +1533,7 @@ class ViewFunctor {
   };
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    Shape infered_shape = *JUST(InferShape(x, shape));
+    Shape infered_shape = *JUST(InferShapeUnspecifiedDim(x->shape()->Count(0), shape));
     if (view::IsViewApplicable(x)) {
       Optional<Stride> infered_stride =
           ComputeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
@@ -3332,12 +3332,12 @@ Maybe<Tensor> GlobalTensorTo(const std::shared_ptr<Tensor>& x, const std::string
     auto nd_sbp = JUST(x->nd_sbp());
     std::vector<Symbol<SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
     for (int i = 0; i < sbp_tuple.size(); ++i) { sbp_tuple[i] = nd_sbp->sbp_parallel().Get(i); }
-    tensor = JUST(GlobalToLocal(x));
+    tensor = JUST(GlobalToLocal(x, /*copy=*/false));
     Symbol<Device> device = JUST(Device::New(device_type));
     tensor = JUST(LocalTensorTo(tensor, device->type(), device->device_id(), dtype, copy));
     JUST(tensor->set_requires_grad(x->requires_grad()));
     return JUST(LocalToGlobal(tensor, placement, sbp_tuple, *(x->shape()), dtype,
-                              /* sync_data */ true));
+                              /* sync_data */ true, /*copy=*/false));
   }
 }
 

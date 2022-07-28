@@ -1713,10 +1713,10 @@ class SparseSoftmaxCrossEntropyFunctor {
       s0s1_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(1));
       max_global_stage_input0 = JUST(functional::ToGlobal(
           (*max_device_stage)[0], JUST((*max_device_stage)[0]->parallel_desc()), new_sbp_parallels,
-          s0s1_sbp_parallels, /* check_meta */ false));
+          s0s1_sbp_parallels, /* check_meta */ false, /*copy=*/false));
       max_global_stage_input1 = JUST(functional::ToGlobal(
           (*max_device_stage)[2], JUST((*max_device_stage)[0]->parallel_desc()), new_sbp_parallels,
-          s0s1_sbp_parallels, /* check_meta */ false));
+          s0s1_sbp_parallels, /* check_meta */ false, /*copy=*/false));
     }
     // op_reduce_max_global_stage_
     struct ReduceMaxGlobal {
@@ -1734,9 +1734,9 @@ class SparseSoftmaxCrossEntropyFunctor {
         *op_reduce_max_global_stage_, {max_global_stage_input0, max_global_stage_input1}, attrs));
     auto& broadcast_sub_input = max_global_stage->at(0);
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
-      broadcast_sub_input = JUST(
-          functional::ToGlobal(broadcast_sub_input, JUST((*max_device_stage)[0]->parallel_desc()),
-                               new_sbp_parallels, new_sbp_parallels, /* check_meta */ false));
+      broadcast_sub_input = JUST(functional::ToGlobal(
+          broadcast_sub_input, JUST((*max_device_stage)[0]->parallel_desc()), new_sbp_parallels,
+          new_sbp_parallels, /* check_meta */ false, /*copy=*/false));
     }
     // op_broadcast_sub_
     attrs = AttrMap{};
@@ -1764,7 +1764,7 @@ class SparseSoftmaxCrossEntropyFunctor {
       std::vector<Symbol<SbpParallel>> empty_grad_sbp_parallels;
       broadcast_div_input1 = JUST(functional::ToGlobal(
           (*output_reduce_sum)[0], JUST((*output_reduce_sum)[0]->parallel_desc()),
-          new_sbp_parallels, new_sbp_parallels, /* check_meta */ false));
+          new_sbp_parallels, new_sbp_parallels, /* check_meta */ false, /*copy=*/false));
     }
     // op_broadcast_div_
     attrs = AttrMap{};

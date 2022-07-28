@@ -62,7 +62,7 @@ class CastToGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
       Symbol<ParallelDesc> parallel_desc_constraint = ctx->parallel_desc;
       out_grad = JUST(functional::ToGlobal(out_grad, parallel_desc_constraint,
                                            *JUST(GetSbpList(nd_sbp_constraint)), GetNoneSbpList(),
-                                           /* check_meta */ false));
+                                           /* check_meta */ false, /*copy=*/false));
     }
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grad}));
     return Maybe<void>::Ok();
