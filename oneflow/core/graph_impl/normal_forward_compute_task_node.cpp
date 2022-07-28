@@ -92,12 +92,13 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
 }
 
 void NormalForwardCompTaskNode::HandleInplaceRegsts() {
+  const auto& _op = op();
 
-  if (!Singleton<JobDesc>::Get()->enable_reuse_mem() || !Singleton<JobDesc>::Get()->enable_inplace()) {
+  if (!Singleton<JobDesc>::Get()->enable_reuse_mem()
+      || !Singleton<JobDesc>::Get()->enable_inplace()) {
     return;
   }
 
-  const auto& _op = op();
   if (_op->op_conf().has_user_conf()) {
     const auto& inplace_obn2ibn = _op->op_conf().user_conf().inplace_obn2ibn();
     for (const auto& it : inplace_obn2ibn) {
@@ -106,18 +107,12 @@ void NormalForwardCompTaskNode::HandleInplaceRegsts() {
       const std::string out_regst_name = GetOutRegstNameByObn(obn);
       std::shared_ptr<RegstDesc> out_regst = GetProducedRegst(out_regst_name);
 
-      for (const auto& in_edge : in_edges()) {
-        if (in_edge->src_node()->GetProducedRegst())
-      }
-
-
       int32_t input_index = CHECK_JUST(_op->GetInputIndex(ibn));
       const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
       auto front = in_regsts.begin();
       CHECK_LT(input_index, in_regsts.size());
       std::advance(front, input_index);
       std::shared_ptr<RegstDesc> in_regst = *front;
-
       in_regst->set_enable_reuse_mem(true);
       out_regst->set_hint_inplace_consumed_regst_desc_id(in_regst->regst_desc_id());
     }

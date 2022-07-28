@@ -41,6 +41,7 @@ limitations under the License.
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/framework/variable_op_output_tensor_scope.h"
 namespace oneflow {
 
 namespace one {
@@ -576,6 +577,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   auto origin_var = JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true,
                                      /* is_local */ input_tensor->is_local()));
 
+  VariableOpOutputTensorScope::Global()->Add(origin_var);
+
   // NOTE(chengcheng): Record variable op output LazyTenosr
   TensorNameScope::Global()->Record(origin_var, GenLogicalBlobName(op_conf.name(), obn));
   // NOTE(chengcheng): Record EagerTensor as variable tensor name
@@ -939,6 +942,11 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   for (int i = 0; i < op_expr.output_size(); ++i) {
     const auto& output_tensor = outputs->at(i);
     if (output_tensor) {  // inplace output
+      if (VariableOpOutputTensorScope::Global()->Has(output_tensor)) {
+        std::cout << "var op output tensor" << std::endl;
+        continue;
+      }
+
       const std::string& obn = op_expr.indexed_obns().at(i);
       std::string ibn;
       // find the corr input tensor == output tensor
@@ -953,6 +961,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
       CHECK(!ibn.empty())
           << "Inplaced operation output tensor must also be an input of the operation "
           << new_op_name;
+
       (*op_conf->mutable_user_conf()->mutable_inplace_obn2ibn())[obn] = ibn;
     }
   }

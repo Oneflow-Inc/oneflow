@@ -575,6 +575,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
   void check_inplace_op_pointers() {
+    std::cout << "Check op pointers" << std::endl;
     if (user_op_conf_.op_conf().user_conf().inplace_obn2ibn().size() > 0) {
       std::unordered_map<std::string, const void*> bn2ptr;
       for (const auto& it : arg2bn_tensor_pair_) {
