@@ -66,6 +66,8 @@ namespace oneflow_api {
 
 namespace of = oneflow;
 
+#ifdef __linux__
+
 namespace {
 
 class CompileScope {
@@ -465,5 +467,7 @@ of::Maybe<void> Graph::GraphImpl::RegisterTensors(const std::vector<Tensor>& inp
 }
 
 Graph::GraphImpl::~GraphImpl() { of::vm::ClusterSync().GetOrThrow(); }
+
+#endif // __linux__
 
 }  // namespace oneflow_api
