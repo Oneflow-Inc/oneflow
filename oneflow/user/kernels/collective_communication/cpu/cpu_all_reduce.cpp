@@ -156,8 +156,9 @@ struct DtypeAllReduce final {
 
 #define MAKE_ALL_REDUCE_ENTRY(func_name, T, reduce_type) func_name<T, reduce_type>::Call
 
-DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, DtypeAllReduce, MAKE_ALL_REDUCE_ENTRY,
-                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ), REDUCE_TYPE_CTRV_SEQ);
+DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, DtypeAllReduce, MAKE_ALL_REDUCE_ENTRY,  // NOLINT
+                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ),          // NOLINT
+                          REDUCE_TYPE_CTRV_SEQ);                               // NOLINT
 
 #undef MAKE_ALL_REDUCE_ENTRY
 
