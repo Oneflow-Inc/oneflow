@@ -318,6 +318,49 @@ class LayerNorm(Module):
         )
 
 
+class RMSLayerNorm(Module):
+    """
+    Construct a layernorm module in the T5 style. No bias and no subtraction of mean.
+    
+    T5 uses a layer_norm which only scales and doesn't shift, which is also known as Root Mean
+    
+    Square Layer Normalization https://arxiv.org/abs/1910.07467 thus varience is calculated
+    
+    w/o mean and there is no bias. Additionally we want to make sure that the accumulation for
+    
+    half-precision inputs is done in fp32.
+
+    Args:
+        hidden_size (int): number of features in the hidden state
+        eps: a value added to the denominator for numerical stability. Default: 1e-6
+
+    Shape:
+        - Input: :math:`(N, *)`
+        - Output: :math:`(N, *)` (same shape as input)
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> x = flow.randn(2, 4, 3)
+        >>> m = flow.nn.RMSLayerNorm(3)
+        >>> y = m(x)
+        >>> y.size()
+        oneflow.Size([2, 4, 3])
+
+    """
+
+    def __init__(self, hidden_size, eps=1e-6):
+        super().__init__()
+        self.weight = flow.nn.Parameter(flow.ones(hidden_size))
+        self.variance_epsilon = eps
+
+    def forward(self, hidden_states):
+        return flow._C.rms_layer_norm(hidden_states, self.weight, self.variance_epsilon)
+
+
 if __name__ == "__main__":
     import doctest
 
