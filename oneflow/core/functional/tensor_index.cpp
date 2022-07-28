@@ -68,8 +68,10 @@ Maybe<TensorTuple> ExpandMaskIndex(const std::shared_ptr<Tensor>& index) {
     size_tensor = JUST(functional::GlobalToLocal(size_tensor, /*copy=*/false));
   }
   int64_t size = 0;
-  const auto& callback = [&](ep::Stream* stream, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
-    AutoMemcpy(stream, &size, eager_blob_object->dptr(), sizeof(size), memory::MakeHostMemCase(), eager_blob_object->mem_case());
+  const auto& callback = [&](ep::Stream* stream,
+                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+    AutoMemcpy(stream, &size, eager_blob_object->dptr(), sizeof(size), memory::MakeHostMemCase(),
+               eager_blob_object->mem_case());
   };
   JUST(SyncAccessTensorWithTimeOut(size_tensor, callback, "const"));
 

@@ -1319,8 +1319,9 @@ class PackPaddedSequenceFunctor {
     lengths_vec.resize(lengths->nelement());
     const auto& callback = [&](ep::Stream* stream,
                                const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
-          SyncAutoMemcpy(stream, lengths_vec.data(), eager_blob_object->dptr(), lengths_vec.size() * sizeof(int64_t),
-                         memory::MakeHostMemCase(), eager_blob_object->mem_case());
+      SyncAutoMemcpy(stream, lengths_vec.data(), eager_blob_object->dptr(),
+                     lengths_vec.size() * sizeof(int64_t), memory::MakeHostMemCase(),
+                     eager_blob_object->mem_case());
     };
     JUST(SyncAccessTensorWithTimeOut(lengths, callback, "const"));
 
@@ -1400,8 +1401,8 @@ class PackPaddedSequenceFunctor {
         JUST(functional::Empty(ls, lengths->dtype(), JUST(lengths->device()), false));
     const auto& callback2 = [&](ep::Stream* stream,
                                 const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
-      SyncAutoMemcpy(stream, eager_blob_object->mut_dptr(), batch_sizes.data(), batch_sizes.size() * sizeof(int64_t),
-                     eager_blob_object->mem_case(),
+      SyncAutoMemcpy(stream, eager_blob_object->mut_dptr(), batch_sizes.data(),
+                     batch_sizes.size() * sizeof(int64_t), eager_blob_object->mem_case(),
                      memory::MakeHostMemCase());  // copy 1 scalar(int64_t) tensor's value to max
     };
     JUST(SyncAccessTensorWithTimeOut(batch_sizes_t, callback2, "const"));

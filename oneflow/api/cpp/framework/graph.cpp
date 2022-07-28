@@ -376,9 +376,12 @@ of::Maybe<void> Graph::GraphImpl::LoadCheckpoint() {
       ss << variable_file.rdbuf();
       return ss.str();
     }();
-    const auto& callback = [&](of::ep::Stream* stream, const std::shared_ptr<of::vm::EagerBlobObject>& eager_blob_object) {
-      of::AutoMemcpy(stream, eager_blob_object->mut_dptr(), buffer.data(), variable_tensor->shape()->elem_cnt()
-              * of::GetSizeOfDataType(variable_tensor->dtype()->data_type()), eager_blob_object->mem_case(), of::memory::MakeHostMemCase());
+    const auto& callback = [&](of::ep::Stream* stream,
+                               const std::shared_ptr<of::vm::EagerBlobObject>& eager_blob_object) {
+      of::AutoMemcpy(stream, eager_blob_object->mut_dptr(), buffer.data(),
+                     variable_tensor->shape()->elem_cnt()
+                         * of::GetSizeOfDataType(variable_tensor->dtype()->data_type()),
+                     eager_blob_object->mem_case(), of::memory::MakeHostMemCase());
     };
     JUST(of::one::SyncAccessTensorWithTimeOut(variable_tensor, callback, "mut"));
   }

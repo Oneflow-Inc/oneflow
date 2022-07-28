@@ -46,7 +46,7 @@ Maybe<void> CopyLocalTensorDataTo(const std::shared_ptr<Tensor>& input, void* me
   const auto& Callback = [&](ep::Stream* stream,
                              const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
     SyncAutoMemcpy(stream, mem_ptr, eager_blob_object->dptr(), size, memory::MakeHostMemCase(),
-               eager_blob_object->mem_case());
+                   eager_blob_object->mem_case());
   };
   auto btb = std::make_shared<BlockingThenBusy>(1);
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
