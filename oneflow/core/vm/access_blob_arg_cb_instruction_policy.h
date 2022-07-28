@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <functional>
 #include <memory>
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_policy.h"
 #include "oneflow/core/vm/instruction_policy_util.h"

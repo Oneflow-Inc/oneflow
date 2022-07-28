@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/functional/functional.h"

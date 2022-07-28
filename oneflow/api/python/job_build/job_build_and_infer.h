@@ -87,15 +87,6 @@ inline Maybe<std::string> CurJobBuildAndInferCtx_AddAndInferGlobalOp(
   return PbMessage2TxtString(*op_attribute);
 }
 
-inline Maybe<void> CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(
-    const std::string& lbi_uuid_pair_str) {
-  auto* ctx = JUST(GetCurInferCtx());
-  LbiAndDiffWatcherUuidPair lbi_uuid_pair;
-  CHECK_OR_RETURN(TxtString2PbMessage(lbi_uuid_pair_str, &lbi_uuid_pair))
-      << "LbiAndDiffWatcherUuidPair parse failed";
-  return ctx->AddLbiAndDiffWatcherUuidPair(lbi_uuid_pair);
-}
-
 inline Maybe<std::string> JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(
     const std::string& job_name, const std::string& lbn) {
   auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));

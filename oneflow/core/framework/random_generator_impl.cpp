@@ -17,12 +17,12 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cpp_attribute.h"
+#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/vm/virtual_machine.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
 #ifdef WITH_CUDA

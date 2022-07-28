@@ -34,8 +34,8 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/distributions/common.h"
 #include "oneflow/core/framework/nd_sbp.h"
 

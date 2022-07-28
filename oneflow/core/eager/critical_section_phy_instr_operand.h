@@ -63,7 +63,7 @@ class CriticalSectionBeginPhyInstrOperand : public PhyInstrOperand {
       const std::string& job_name) const = 0;
   virtual std::string GetInterfaceCriticalSectionWaitBufferName(
       const std::string& job_name) const = 0;
-  virtual void AccessBlobByOpName(uint64_t of_blob_ptr, const std::string& op_name) = 0;
+  virtual void AccessBlobByOpName(ep::Stream* stream, Blob* blob, const std::string& op_name) = 0;
 
   void FinishInvalidInterfaceEventRecords();
   void Finish();
@@ -130,7 +130,7 @@ class InputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBeg
       const std::string& job_name) const override {
     return GetInputCriticalSectionWaitBufferName(job_name);
   }
-  void AccessBlobByOpName(uint64_t of_blob_ptr, const std::string& op_name) override;
+  void AccessBlobByOpName(ep::Stream* stream, Blob* blob, const std::string& op_name) override;
   void ForEachMut2Dependence(const std::function<void(vm::Dependence* compute)>&) const {}
 
  private:
@@ -189,7 +189,7 @@ class OutputCriticalSectionBeginPhyInstrOperand final : public CriticalSectionBe
       const std::string& job_name) const override {
     return GetOutputCriticalSectionWaitBufferName(job_name);
   }
-  void AccessBlobByOpName(uint64_t of_blob_ptr, const std::string& op_name) override;
+  void AccessBlobByOpName(ep::Stream* stream, Blob* blob, const std::string& op_name) override;
 
  private:
   DependenceVector input_dependences_;

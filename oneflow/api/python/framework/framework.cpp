@@ -25,21 +25,8 @@ namespace py = pybind11;
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("RegisterGlobalWatcher", &RegisterGlobalWatcher);
-  m.def("LaunchJob", &LaunchJob, py::call_guard<py::gil_scoped_release>());
-
-  m.def("GetSerializedInterUserJobInfo",
-        []() -> Maybe<py::bytes> { return py::bytes(*JUST(GetSerializedInterUserJobInfo())); });
-  m.def("GetSerializedJobSet",
-        []() -> Maybe<py::bytes> { return py::bytes(*JUST(GetSerializedJobSet())); });
-  m.def("GetSerializedStructureGraph", &GetSerializedStructureGraph /* a prototxt saved to file*/);
-  m.def("GetSerializedCurrentJob",
-        []() -> Maybe<py::bytes> { return py::bytes(*JUST(GetSerializedCurrentJob())); });
-
   m.def("GetFunctionConfigDef", &GetFunctionConfigDef);
   m.def("GetScopeConfigDef", &GetScopeConfigDef);
-  m.def("GetMachine2DeviceIdListOFRecordFromParallelConf",
-        &GetSerializedMachineId2DeviceIdListOFRecord);
 
   m.def("LoadLibrary", &LoadLibrary);
 }

@@ -55,13 +55,6 @@ def InitLazyGlobalSession(config_proto):
     oneflow._oneflow_internal.InitLazyGlobalSession(config_proto_str)
 
 
-def GetInterUserJobInfo():
-    inter_user_job_info = oneflow._oneflow_internal.GetSerializedInterUserJobInfo()
-    ret = InterUserJobInfo()
-    ret.ParseFromString(inter_user_job_info)
-    return ret
-
-
 def JobBuildAndInferCtx_Open(job_name):
     job_name = str(job_name)
     oneflow._oneflow_internal.JobBuildAndInferCtx_Open(job_name)
@@ -126,13 +119,6 @@ def CurJobBuildAndInferCtx_AddAndInferLocalOp(op_conf_proto):
 def CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn):
     lbn = str(lbn)
     oneflow._oneflow_internal.CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn)
-
-
-def CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid):
-    serialized = str(text_format.MessageToString(lbi_and_uuid))
-    oneflow._oneflow_internal.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(
-        serialized
-    )
 
 
 def JobBuildAndInferCtx_IsLocalBlob(job_name, lbn):
@@ -214,14 +200,6 @@ def JobBuildAndInferCtx_GetParallelConfFromProducerView(job_name, lbn):
     return parallel_conf
 
 
-def GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf):
-    serialized_parallel_conf = str(parallel_conf)
-    ofrecord = oneflow._oneflow_internal.GetMachine2DeviceIdListOFRecordFromParallelConf(
-        serialized_parallel_conf
-    )
-    return text_format.Parse(ofrecord, record_util.OFRecord())
-
-
 def GetFunctionConfigDef():
     func_config_def = oneflow._oneflow_internal.GetFunctionConfigDef()
     return text_format.Parse(func_config_def, ConfigDef())
@@ -230,18 +208,6 @@ def GetFunctionConfigDef():
 def GetScopeConfigDef():
     scope_config_def = oneflow._oneflow_internal.GetScopeConfigDef()
     return text_format.Parse(scope_config_def, ConfigDef())
-
-
-def GetInterfaceOpAttributes():
-    op_attributes = oneflow._oneflow_internal.GetSerializedInterfaceOpAttributes()
-    return text_format.Parse(op_attributes, op_attribute_pb.OpAttributeList())
-
-
-def GetJobSet():
-    job_set = oneflow._oneflow_internal.GetSerializedJobSet()
-    ret = job_set_pb.JobSet()
-    ret.ParseFromString(job_set)
-    return ret
 
 
 def GetCurrentJob():
