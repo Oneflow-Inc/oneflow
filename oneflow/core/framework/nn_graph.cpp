@@ -284,8 +284,9 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     auto tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
     // TODO(chengcheng): new memory reused by chunk
     Compiler().Compile(&job_, &plan_);
+    tc->Count("Graph name: " + name_ + " Compile plan", 1);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
-    tc->Count("Graph name: " + name_ + " compile", 1);
+    tc->Count("Graph name: " + name_ + " Generate MemBlock and Chunk", 1);
 
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);

@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/user/summary/summary_converter.h"
 
 #include <google/protobuf/text_format.h>
+#include <chrono>
 #include "nlohmann/json.hpp"
 
 namespace oneflow {
@@ -1002,7 +1003,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
       LogJob("pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name + cnt_str + "-before");
       FLAGS_v = 3;
     }
-    auto tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
+    auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
     JUST(JobPass4Name(pass_name)(mut_job(), &job_pass_ctx));
     tc->Count(pass_name, 1);
     if (unlikely(NeedLogJob(pass_name))) {

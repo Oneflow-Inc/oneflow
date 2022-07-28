@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/compiler.h"
+#include <chrono>
+#include <string>
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
 #include "oneflow/core/job/plan_util.h"
@@ -22,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/common/time_util.h"
 
 namespace oneflow {
 
@@ -46,6 +49,8 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
 }
 
 void Compiler::Compile(Job* job, Plan* plan) const {
+  const std::string& job_name = job->job_conf().job_name();
+  auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
   // Step1: new Singleton<OpGraph> and set log configs.
   Singleton<OpGraph>::New(*job);
   const JobDesc& job_desc = GlobalJobDesc();
@@ -55,6 +60,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
     Singleton<OpGraph>::Get()->ToDotWithFilePath(
         "optimized_dlnet_" + std::to_string(job_desc.job_id()) + "_op_graph.dot");
   }
+  tc->Count("Graph name: " + job_name + " save optimized job", 1);
 
   // Step2: build task_gph.
   // TODO(levi): we can rewrite this part of code in visitor pattern.
@@ -62,15 +68,24 @@ void Compiler::Compile(Job* job, Plan* plan) const {
       std::make_unique<TaskGraph>(job->job_conf().enable_straighten_algorithm_in_task_graph());
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
+  tc->Count("Graph name: " + job_name + " ProduceAllRegstsAndBindEdges", 1);
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
+  tc->Count("Graph name: " + job_name + " ConsumeAllRegsts", 1);
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
+  tc->Count("Graph name: " + job_name + " PinConsumedRegst", 1);
   task_gph->TopoForEachNode(&TaskNode::Build);
+  tc->Count("Graph name: " + job_name + " TaskNode::Build", 1);
   task_gph->RemoveEmptyRegsts();
+  tc->Count("Graph name: " + job_name + " RemoveEmptyRegsts", 1);
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
+  tc->Count("Graph name: " + job_name + " MergeChainAndAddOrderingCtrlEdgeInSameChain", 1);
   auto IsReachable = Singleton<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
   if (job_desc.enable_inplace()) { task_gph->EnableInplaceMemSharing(IsReachable); }
+  tc->Count("Graph name: " + job_name + " EnableInplaceMemSharing", 1);
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
+  tc->Count("Graph name: " + job_name + " InferTimeShapeIfMeaningful", 1);
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
+  tc->Count("Graph name: " + job_name + " CheckRegstLbiValid", 1);
 
   // Step3: put infomation from task_gph into plan.
   const int64_t node_num = task_gph->node_num();
@@ -97,6 +112,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
     } /* thread_pool.AddWork */);
   } /* task_gph->ForEachNode */);
   counter.WaitForeverUntilCntEqualZero();
+  tc->Count("Graph name: " + job_name + " Add task into plan", 1);
   // NOTE(levi): release task_gph here to decrise memory peak.
   task_gph.reset();
 
@@ -105,7 +121,9 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
   // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
   IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
+  tc->Count("Graph name: " + job_name + " InferMemBlockId4MemReusedRegst", 1);
   PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
+  tc->Count("Graph name: " + job_name + " SetUniqueMemBlockId4UnreusedMemRegst", 1);
   Singleton<OpGraph>::Delete();
 }
 
