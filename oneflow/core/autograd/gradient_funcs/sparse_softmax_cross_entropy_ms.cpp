@@ -23,7 +23,7 @@ namespace oneflow {
 namespace one {
 
 struct SparseSoftmaxCrossEntropyMsCaptureState : public AutoGradCaptureState {
-  int64_t depth;
+  int64_t depth = 0;
 };
 
 class SparseSoftmaxCrossEntropyMs
