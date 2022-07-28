@@ -19,11 +19,11 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-
+from oneflow.test_utils.test_util import GenArgList
+from oneflow.test_utils.automated_test_util import *
 
 def _test_cast_float2int(test_case, device, shape):
     np_arr = np.random.randn(*shape).astype(np.float32)
@@ -51,8 +51,7 @@ def _test_cast_with_non_contiguous_input(test_case, device, shape):
     output = flow.cast(input, flow.float32)
     np_out = np_arr.astype(np.float32).transpose(permute_dims)
     test_case.assertTrue(np.array_equal(output.numpy(), np_out))
-    # TODO:when cast kernel support stride
-    # test_case.assertTrue(input.stride() == output.stride())
+    test_case.assertTrue(input.stride() == output.stride())
 
 
 def _test_cast_backward(test_case, device, shape):
@@ -92,6 +91,13 @@ class TestCast(flow.unittest.TestCase):
         arg_dict["shape"] = [(2, 3, 0, 5)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+    
+    @autotest(n=5)
+    def test_cast_with_stride_input(test_case):
+        device = random_device()
+        input = random_tensor().to(device)
+        output = input.to(dtype=torch.int)
+        return output
 
 
 if __name__ == "__main__":

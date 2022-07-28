@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/tensor_meta.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/cast.h"
@@ -39,17 +40,17 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
-    const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
-    Tensor* output_tenor = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t elem_cnt = input_tensor->shape_view().elem_cnt();
-    CHECK_EQ(output_tenor->shape_view().elem_cnt(), elem_cnt);
-    if (input_tensor->data_type() == output_tenor->data_type()
-        && input_tensor->dptr() == output_tenor->dptr()) {
-      return;
-    }
+    const Tensor* input = ctx->Tensor4ArgNameAndIndex("in", 0);
+    Tensor* output = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const int64_t elem_cnt = input->shape_view().elem_cnt();
+    CHECK_EQ(output->shape_view().elem_cnt(), elem_cnt);
+    if (input->data_type() == output->data_type() && input->dptr() == output->dptr()) { return; }
+    const int32_t ndim = input->shape_view().NumAxes();
+    const bool contiguous = oneflow::one::IsContiguous(input->shape_view(), input->stride());
+
     auto primitive = NewCastPrimitive(ctx);
     CHECK(primitive);
-    primitive->Launch(ctx->stream(), input_tensor->dptr(), output_tenor->mut_dptr(), elem_cnt);
+    primitive->Launch(ctx->stream(), input->dptr(), output->mut_dptr(), elem_cnt);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
