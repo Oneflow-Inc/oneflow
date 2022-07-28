@@ -351,20 +351,28 @@ def load(
 def save_one_embedding_info(state_dict: Any, path: Union[str, Path]) -> None:
     path: Path = Path(path)
 
+    _embedding_num = 0
+    dir_name = path / f"one_embedding"
+    os.makedirs(dir_name, exist_ok=True)
+
+    print(state_dict["module"].keys())
+
     for module_key in state_dict["module"].keys():
-        if (
-            "OneEmbeddingSnapshot" in module_key
-            or "OneEmbeddingKeyValueOptions" in module_key
-        ):
-            dir_name = path / f"{module_key}"
-            data_path = ""
-            if "OneEmbeddingSnapshot" in module_key:
-                data_path = os.path.join(dir_name, "Snapshot")
-            else:
-                data_path = os.path.join(dir_name, "KeyValueOptions")
-            os.makedirs(dir_name, exist_ok=True)
-            with open(data_path, "w") as f:
-                f.write(state_dict["module"][module_key])
+        if "OneEmbeddingKeyValueOptions" in module_key:
+            module_key_prefix = module_key.rstrip("OneEmbeddingKeyValueOptions")
+            embedding_dir_name = dir_name / f"embedding_{_embedding_num}"
+            os.makedirs(embedding_dir_name, exist_ok=True)
+            with open(os.path.join(embedding_dir_name, "KeyValueOptions"), "w") as f:
+                f.write(
+                    state_dict["module"][
+                        module_key_prefix + "OneEmbeddingKeyValueOptions"
+                    ]
+                )
+            with open(os.path.join(embedding_dir_name, "Snapshot"), "w") as f:
+                f.write(
+                    state_dict["module"][module_key_prefix + "OneEmbeddingSnapshot"]
+                )
+            _embedding_num += 1
 
 
 def save(
