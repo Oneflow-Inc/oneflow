@@ -665,8 +665,9 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
         << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(sbp_obj)));
     sbp = functional::PyUnpackSbpParallelSequence(sbp_obj);
   }
-  return PyTensor_New(ASSERT_PTR(functional::ToGlobal(
-      tensor, functional::PyUnpackParallelDesc(placement_obj), sbp, {}, check_meta)));
+  return PyTensor_New(
+      ASSERT_PTR(functional::ToGlobal(tensor, functional::PyUnpackParallelDesc(placement_obj), sbp,
+                                      {}, check_meta, /*copy=*/false)));
   END_HANDLE_ERRORS
 }
 
@@ -722,8 +723,8 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
   } else if (functional::PySbpParallelSequenceCheck(grad_sbp_obj)) {
     grad_sbp = functional::PyUnpackSbpParallelSequence(grad_sbp_obj);
   }
-  return PyTensor_New(
-      ASSERT_PTR(functional::ToGlobal(tensor, placement, sbp, grad_sbp, check_meta)));
+  return PyTensor_New(ASSERT_PTR(
+      functional::ToGlobal(tensor, placement, sbp, grad_sbp, check_meta, /*copy=*/false)));
   END_HANDLE_ERRORS
 }
 
@@ -747,7 +748,7 @@ static PyObject* PyTensorObject_to_local(PyObject* self, PyObject* unused) {
   auto tensor = PyTensor_Unpack(self);
   CHECK_OR_THROW(tensor->is_global())
       << Error::RuntimeError() << "Expected global tensor for to_local but got local tensor!";
-  return PyTensor_New(ASSERT_PTR(functional::GlobalToLocal(tensor)));
+  return PyTensor_New(ASSERT_PTR(functional::GlobalToLocal(tensor, /*copy=*/false)));
   END_HANDLE_ERRORS
 }
 
@@ -776,7 +777,8 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
       CHECK_OR_THROW(value_tensor->is_global())
           << Error::RuntimeError()
           << "tensor_setitem(): value must be a global tensor when self is global";
-      value_tensor = ASSERT_PTR(functional::ToGlobal(value_tensor, placement, sbp, {}, true));
+      value_tensor =
+          ASSERT_PTR(functional::ToGlobal(value_tensor, placement, sbp, {}, true, /*copy=*/false));
     }
   } else {
     if (functional::PyScalarCheck(value)) {
