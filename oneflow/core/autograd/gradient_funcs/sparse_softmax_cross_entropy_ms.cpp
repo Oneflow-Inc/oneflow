@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -53,8 +54,8 @@ Maybe<void> SparseSoftmaxCrossEntropyMs::Capture(SparseSoftmaxCrossEntropyMsCapt
   ctx->depth = JUST(composed_attrs.GetAttr<int64_t>("depth"));
   CHECK_EQ_OR_RETURN(inputs.size(), 2);       // NOLINT(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(outputs.size(), 2);      // NOLINT(maybe-need-error-msg)
-  ctx->SaveTensorForBackward(outputs.at(0));  // prob
-  ctx->SaveTensorForBackward(inputs.at(1));   // label
+  ctx->SaveTensorForBackward(JUST(VectorAt(outputs, 0)));  // prob
+  ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 1)));   // label
   return Maybe<void>::Ok();
 }
 
@@ -62,13 +63,13 @@ Maybe<void> SparseSoftmaxCrossEntropyMs::Apply(const SparseSoftmaxCrossEntropyMs
                                                const TensorTuple& out_grads,
                                                TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // NOLINT(maybe-need-error-msg)
-  const auto& dy = out_grads.at(1);
-  const auto& prob = ctx->SavedTensors().at(0);
-  const auto& label = ctx->SavedTensors().at(1);
+  const auto& dy = JUST(VectorAt(out_grads, 1));
+  const auto& prob = JUST(VectorAt(ctx->SavedTensors(), 0));
+  const auto& label = JUST(VectorAt(ctx->SavedTensors(), 1));
   // SparseSoftmaxCrossEntropy has 2 inputs (prediction and label), and the second input does not
   // require gradient.
   in_grads->resize(2);
-  in_grads->at(0) = JUST(functional::SparseSoftmaxCrossEntropyMsGrad(dy, prob, label, ctx->depth));
+  JUST(VectorAt(*in_grads, 0)) = JUST(functional::SparseSoftmaxCrossEntropyMsGrad(dy, prob, label, ctx->depth));
   return Maybe<void>::Ok();
 }
 
