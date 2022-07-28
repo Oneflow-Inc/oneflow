@@ -536,8 +536,8 @@ Maybe<void> Operator::InferSbpSignatureIf(
     const ParallelDesc& parallel_desc) {
   SbpSignature signature;
 
-  JUST(InferSbpSignature(&signature, sbp_sig_conf, CalcOrderValue4SbpSig,
-                         SbpInferHint4Ibn, parallel_desc));
+  JUST(InferSbpSignature(&signature, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
+                         parallel_desc));
 
   JUST(FillSbpSignature(signature));
   return Maybe<void>::Ok();
