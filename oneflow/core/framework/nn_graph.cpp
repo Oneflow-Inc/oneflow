@@ -276,12 +276,13 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   if (Singleton<JobDesc>::Get() != nullptr) { Singleton<JobDesc>::Delete(); }
 
   auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id_);
+  auto tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
 
   // NOTE(chengcheng): do job compeleter for each rank.
   JUST(JobCompleter().Complete(&job_));
+  tc->Count("Graph name: " + name_ + " Complete job", 1);
 
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    auto tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
     // TODO(chengcheng): new memory reused by chunk
     Compiler().Compile(&job_, &plan_);
     tc->Count("Graph name: " + name_ + " Compile plan", 1);
@@ -293,14 +294,18 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
     }
     PlanUtil::GenRegisterHint(&plan_);
+    tc->Count("Graph name: " + name_ + " GenRegisterHint", 1);
     // TODO(chengcheng): test collective boxing for multi-job.
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
+    tc->Count("Graph name: " + name_ + " GenCollectiveBoxingPlan", 1);
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
+    tc->Count("Graph name: " + name_ + " DumpCtrlRegstInfoToPlan", 1);
     PlanUtil::PlanMemoryLog(&plan_, name_);
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       PlanUtil::GenLightPlan(&plan_, name_);
     }
+    tc->Count("Graph name: " + name_ + " Memory and Plan Log", 1);
   }
   if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name = "plan:" + job_name();
@@ -310,6 +315,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     } else {
       Singleton<CtrlClient>::Get()->PullKV(plan_name, &plan_);
     }
+    tc->Count("Graph name: " + name_ + " Push or Pull plan", 1);
     OF_SESSION_BARRIER();
     // NOTE(zwx): After barrier plan is synchronized between all ranks,
     //     then it can be cleared for saving mem.
@@ -319,17 +325,26 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   }
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
+  tc->Count("Graph name: " + name_ + " PopulateOpAttribute", 1);
 
   NewRuntimeBuffers();
+  tc->Count("Graph name: " + name_ + " NewRuntimeBuffers", 1);
 
+  // There maybe some difference of logical graph between difference rank.
+  // After plan synchronization, all ranks get the same plan.
+  // Then the plan can be used to create new variable.
   JUST(GetVariableRealBlobAfterSyncPlan());
+  tc->Count("Graph name: " + name_ + " GetVariableRealBlobAfterSyncPlan", 1);
 
   // NOTE(strint): Do memory shrink to free cached memory in eager VM before graph runtime init.
   JUST(vm::CurrentRankSync());
   auto* vm = JUST(SingletonMaybe<VirtualMachine>());
   JUST(vm->ShrinkAllMem());
+  tc->Count("Graph name: " + name_ + " VM::ShrinkAllMem", 1);
 
+  // Start graph runtime.
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
+  tc->Count("Graph name: " + name_ + " Runtime Init", 1);
   runtime_inited_ = true;
   return Maybe<void>::Ok();
 }
