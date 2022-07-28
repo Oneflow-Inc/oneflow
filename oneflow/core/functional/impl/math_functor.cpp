@@ -1138,7 +1138,7 @@ class GlobalHannWindowFunctor {
         result = JUST(ScalarDiv(JUST(ScalarSub(1, JUST(Cos(div_result)), 1)), 2));
       }
     }
-    result = JUST(ToGlobal(result, placement, sbp, {}, true));
+    result = JUST(ToGlobal(result, placement, sbp, {}, true, /*copy=*/false));
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
