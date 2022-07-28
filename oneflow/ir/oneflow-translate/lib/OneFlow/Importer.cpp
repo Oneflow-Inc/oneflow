@@ -953,7 +953,6 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
       var_op_conf->add_nd_sbp(sbp);
     }
   }
-  LOG(ERROR) << var_op_conf->DebugString();
   // all operands are ctrl_inputs
   for (const auto& operand : op->getOperands()) {
     op_conf->add_ctrl_in_op_name(
