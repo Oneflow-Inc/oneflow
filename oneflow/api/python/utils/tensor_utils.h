@@ -92,8 +92,7 @@ inline static Maybe<PyObject*> EagerLocalTensorToNumpy(PyObject* py_tensor) {
 template<typename T>
 inline Maybe<void> CopyBetweenLocalTensorAndNumpy(
     const std::shared_ptr<Tensor>& t, PyObject* array,
-    void (*Copy)(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&,
-                        const NumPyArrayPtr&),
+    void (*Copy)(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&, const NumPyArrayPtr&),
     const std::string& modifier, bool block_host_until_done) {
   auto tensor = JUST(t->AsLocalTensor());
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only.";

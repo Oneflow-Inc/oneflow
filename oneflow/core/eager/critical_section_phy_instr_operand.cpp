@@ -77,8 +77,8 @@ void InputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(ep::Stream* st
     {
       const size_t body_bytes = blob->ByteSizeOfBlobBody();
       CHECK_EQ(eager_blob_object->ByteSizeOfBlobBody(), body_bytes);
-      AutoMemcpy(stream, blob->mut_dptr(), eager_blob_object->dptr(),
-                 body_bytes, blob->mem_case(), eager_blob_object->mem_case());
+      AutoMemcpy(stream, blob->mut_dptr(), eager_blob_object->dptr(), body_bytes, blob->mem_case(),
+                 eager_blob_object->mem_case());
     }
     end_event_record->Init(EpBasedEventRecord::MakeEventRecord(stream));
   }
@@ -97,8 +97,8 @@ void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(ep::Stream* s
     {
       const size_t body_bytes = blob->ByteSizeOfBlobBody();
       CHECK_EQ(eager_blob_object->ByteSizeOfBlobBody(), body_bytes);
-      AutoMemcpy(stream, eager_blob_object->mut_dptr(), blob->dptr(),
-                 body_bytes, eager_blob_object->mem_case(), blob->mem_case());
+      AutoMemcpy(stream, eager_blob_object->mut_dptr(), blob->dptr(), body_bytes,
+                 eager_blob_object->mem_case(), blob->mem_case());
     }
     end_event_record->Init(EpBasedEventRecord::MakeEventRecord(stream));
   }

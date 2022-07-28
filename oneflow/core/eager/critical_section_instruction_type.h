@@ -91,7 +91,8 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
 
     const std::string& job_name() const override { return job_name_; }
 
-    void AccessBlobByOpName(ep::Stream* stream, Blob* blob, const std::string& op_name) const override {
+    void AccessBlobByOpName(ep::Stream* stream, Blob* blob,
+                            const std::string& op_name) const override {
       phy_instr_operand_->AccessBlobByOpName(stream, blob, op_name);
     }
     void Finish() const override { phy_instr_operand_->Finish(); }

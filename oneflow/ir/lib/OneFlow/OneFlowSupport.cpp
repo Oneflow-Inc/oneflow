@@ -79,9 +79,13 @@ mlir::DenseElementsAttr __TensorToDenseElementsAttr(
   auto shape = tensor_->shape();
   std::vector<int64_t> shape_vec(shape->dim_vec().begin(), shape->dim_vec().end());
   std::vector<T> data(shape->elem_cnt());
-  const auto& callback = [&](::oneflow::ep::Stream* stream, const std::shared_ptr<::oneflow::vm::EagerBlobObject>& eager_blob_object) {
-      ::oneflow::AutoMemcpy(stream, data.data(), eager_blob_object->dptr(), data.size() * sizeof(T), ::oneflow::memory::MakeHostMemCase(), eager_blob_object->mem_case());
-  };
+  const auto& callback =
+      [&](::oneflow::ep::Stream* stream,
+          const std::shared_ptr<::oneflow::vm::EagerBlobObject>& eager_blob_object) {
+        ::oneflow::AutoMemcpy(stream, data.data(), eager_blob_object->dptr(),
+                              data.size() * sizeof(T), ::oneflow::memory::MakeHostMemCase(),
+                              eager_blob_object->mem_case());
+      };
   ::oneflow::one::SyncAccessTensorWithTimeOut(tensor_, callback, "const").GetOrThrow();
   return mlir::DenseElementsAttr::get(mlir::RankedTensorType::get(shape_vec, mlir_type),
                                       llvm::makeArrayRef(data));
@@ -103,9 +107,13 @@ std::shared_ptr<::oneflow::one::Tensor> __DenseElementsAttrToTensor(
           .GetPtrOrThrow();
 
   std::vector<T> data(dense_attr.getValues<T>().begin(), dense_attr.getValues<T>().end());
-  const auto& callback = [&](::oneflow::ep::Stream* stream, const std::shared_ptr<::oneflow::vm::EagerBlobObject>& eager_blob_object) {
-      ::oneflow::AutoMemcpy(stream, eager_blob_object->mut_dptr(), data.data(), tensor->shape()->elem_cnt() * sizeof(T), eager_blob_object->mem_case(), ::oneflow::memory::MakeHostMemCase());
-  };
+  const auto& callback =
+      [&](::oneflow::ep::Stream* stream,
+          const std::shared_ptr<::oneflow::vm::EagerBlobObject>& eager_blob_object) {
+        ::oneflow::AutoMemcpy(stream, eager_blob_object->mut_dptr(), data.data(),
+                              tensor->shape()->elem_cnt() * sizeof(T),
+                              eager_blob_object->mem_case(), ::oneflow::memory::MakeHostMemCase());
+      };
   ::oneflow::one::SyncAccessTensorWithTimeOut(tensor, callback, "mut").GetOrThrow();
   return tensor;
 }

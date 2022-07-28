@@ -3022,8 +3022,11 @@ class RepeatInterLeaveTensorFunctor {
 
     std::vector<int64_t> repeats_value(repeats_shape->elem_cnt());
     if (!output_size.has_value()) {
-      const auto& callback = [&](ep::Stream* stream, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
-        SyncAutoMemcpy(stream, repeats_value.data(), eager_blob_object->dptr(), repeats_value.size() * sizeof(int64_t), memory::MakeHostMemCase(), eager_blob_object->mem_case());
+      const auto& callback = [&](ep::Stream* stream,
+                                 const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+        SyncAutoMemcpy(stream, repeats_value.data(), eager_blob_object->dptr(),
+                       repeats_value.size() * sizeof(int64_t), memory::MakeHostMemCase(),
+                       eager_blob_object->mem_case());
       };
       SyncAccessTensorWithTimeOut(repeats, callback, "const").GetOrThrow();
       for (const auto x : repeats_value) {
