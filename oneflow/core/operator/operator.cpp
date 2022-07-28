@@ -535,16 +535,10 @@ Maybe<void> Operator::InferSbpSignatureIf(
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) {
   SbpSignature signature;
-  if (parallel_desc.parallel_num() == 1) {
-    auto* bn2sbp = signature.mutable_bn_in_op2sbp_parallel();
-    for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn].mutable_broadcast_parallel(); }
-    for (const auto& obn : output_bns()) { (*bn2sbp)[obn].mutable_broadcast_parallel(); }
-  } else if (parallel_desc.parallel_num() > 1) {
-    JUST(InferSbpSignature(&signature, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
-                           parallel_desc));
-  } else {
-    UNIMPLEMENTED();
-  }
+
+  JUST(InferSbpSignature(&signature, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
+                         parallel_desc));
+
   JUST(FillSbpSignature(signature));
   return Maybe<void>::Ok();
 }
