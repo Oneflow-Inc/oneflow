@@ -990,6 +990,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
 #endif
+    JUST(DoPass("PruneDanglingConstantPass"));
     JUST(DoPass("PruneAmpWhiteIdentityOpPass"));
     JUST(DoPass("OptimizerPlacementOptimizationPass"));
     JUST(DoPass("DynamicLossScaleSchedulePass"));
