@@ -91,6 +91,7 @@ class CastImpl : public Cast {
         reinterpret_cast<const From*>(from), cuda_stream->cuda_stream())));
   }
 
+  // Launch with stride
   void Launch(Stream* stream, const void* from, void* to, const StrideParam& from_stride,
               const StrideParam& to_stride, size_t count) override {
     auto* cuda_stream = stream->As<CudaStream>();

@@ -211,9 +211,9 @@ cudaError_t LaunchKernel(FactoryT factory, int64_t n, R* r, const IN*... in, cud
 }
 
 template<typename FactoryT, typename R, typename... IN>
-cudaError_t LaunchStridedKernel(FactoryT factory, int64_t n, const StrideParam& in_stride,
-                                const StrideParam& out_stride, R* r, const IN*... in,
-                                cudaStream_t stream) {
+cudaError_t LaunchKernel(FactoryT factory, int64_t n, const StrideParam& in_stride,
+                         const StrideParam& out_stride, R* r, const IN*... in,
+                         cudaStream_t stream) {
   int num_blocks = 1;
   {
     cudaError_t err = GetNumBlocks(n, &num_blocks);
@@ -239,8 +239,7 @@ struct GenericLauncher {
   static cudaError_t Launch(FactoryT factory, int64_t n, const StrideParam& in_stride,
                             const StrideParam& out_stride, R* r, const IN*... in,
                             cudaStream_t stream) {
-    return LaunchStridedKernel<FactoryT, R, IN...>(factory, n, in_stride, out_stride, r, in...,
-                                                   stream);
+    return LaunchKernel<FactoryT, R, IN...>(factory, n, in_stride, out_stride, r, in..., stream);
   }
 };
 

@@ -49,6 +49,7 @@ class CastImpl : public Cast {
     CastCpu(reinterpret_cast<const From*>(from), reinterpret_cast<To*>(to), count);
   }
 
+  // Launch with stride
   void Launch(Stream* stream, const void* from, void* to, const StrideParam& from_stride,
               const StrideParam& to_stride, size_t count) override {
     CastCpu(reinterpret_cast<const From*>(from), reinterpret_cast<To*>(to), from_stride, to_stride,
