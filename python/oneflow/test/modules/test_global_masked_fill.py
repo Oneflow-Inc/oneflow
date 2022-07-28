@@ -43,7 +43,6 @@ def _test_masked_fill_with_0dim_data(test_case, placement, sbp):
 def _test_masked_fill_with_broadcast_way(test_case, placement, sbp):
     k1 = random().to(int).value() * 8
     k2 = random().to(int).value() * 8
-    device = random_device()
     input = random_tensor(ndim=2, dim0=k1, dim1=k2, dim2=1, dim3=k2).to_global(
         placement, sbp
     )

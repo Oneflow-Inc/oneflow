@@ -19,13 +19,13 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> OFRecordReaderOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   *out_tensor->mut_shape() = Shape({ctx->Attr<int32_t>("batch_size")});
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> OFRecordReaderOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
   int32_t batch_size = ctx->Attr<int32_t>("batch_size");
   int64_t parallel_num = ctx->parallel_ctx().parallel_num();
   if (parallel_num > 1) {
