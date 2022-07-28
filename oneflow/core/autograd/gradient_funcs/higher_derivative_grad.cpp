@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 
 namespace oneflow {
@@ -59,7 +60,6 @@ class SinGradGrad : public OpExprGradFunction<UnaryGradGradState> {
     return Maybe<void>::Ok();
   }
 };
-REGISTER_OP_EXPR_GRAD_FUNCTION("sin_grad", SinGradGrad);
 
 class CosGradGrad : public OpExprGradFunction<UnaryGradGradState> {
   // sin_grad = -sin(x) * grad
@@ -93,7 +93,6 @@ class CosGradGrad : public OpExprGradFunction<UnaryGradGradState> {
     return Maybe<void>::Ok();
   }
 };
-REGISTER_OP_EXPR_GRAD_FUNCTION("cos_grad", CosGradGrad);
 
 class NegativeGradGrad : public OpExprGradFunction<UnaryGradGradState> {
   // neg_grad = -1 * grad
@@ -119,7 +118,6 @@ class NegativeGradGrad : public OpExprGradFunction<UnaryGradGradState> {
     return Maybe<void>::Ok();
   }
 };
-REGISTER_OP_EXPR_GRAD_FUNCTION("negative_grad", NegativeGradGrad);
 
 struct LeakyReluGradGradCaptureState : public AutoGradCaptureState {
   bool x_requires_grad = false;
@@ -165,7 +163,50 @@ class LeakyReluGradGrad : public OpExprGradFunction<LeakyReluGradGradCaptureStat
  private:
   AttrMap base_attrs_;
 };
+
+struct SliceGradGradCaptureState : public AutoGradCaptureState {
+  std::vector<int64_t> start;
+  std::vector<int64_t> stop;
+  std::vector<int64_t> step;
+};
+
+class SliceGradGrad : public OpExprGradFunction<SliceGradGradCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Capture(SliceGradGradCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    ctx->start = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("start"));
+    ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
+    ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const SliceGradGradCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    in_grads->resize(1);
+    in_grads->at(0) = JUST(functional::Slice(out_grads.at(0), ctx->start, ctx->stop, ctx->step,
+                                             /*enable_view_slice=*/false));
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  AttrMap base_attrs_;
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("sin_grad", SinGradGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("cos_grad", CosGradGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("negative_grad", NegativeGradGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("leaky_relu_grad", LeakyReluGradGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("slice_grad", SliceGradGrad);
 
 }  // namespace one
 }  // namespace oneflow
