@@ -67,7 +67,7 @@ Maybe<void> RawCheckCclKernelRegistered(const std::string& op_type_name, DeviceT
   EagerBoxingKernelRegContext reg_ctx(device_type, all_reduce_op);
   const auto* kernel_reg_val =
       JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, reg_ctx));
-  CHECK_NOTNULL_OR_RETURN(kernel_reg_val);
+  CHECK_NOTNULL_OR_RETURN(kernel_reg_val);  // NOLINT
   return Maybe<void>::Ok();
 }
 
