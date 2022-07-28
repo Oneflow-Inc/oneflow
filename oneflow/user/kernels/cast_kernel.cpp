@@ -47,10 +47,15 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
     if (input->data_type() == output->data_type() && input->dptr() == output->dptr()) { return; }
     const int32_t ndim = input->shape_view().NumAxes();
     const bool contiguous = oneflow::one::IsContiguous(input->shape_view(), input->stride());
-
+    StrideParam in_stride(input->stride().data(), ndim), out_stride(output->stride().data(), ndim);
     auto primitive = NewCastPrimitive(ctx);
     CHECK(primitive);
-    primitive->Launch(ctx->stream(), input->dptr(), output->mut_dptr(), elem_cnt);
+    if (contiguous) {
+      primitive->Launch(ctx->stream(), input->dptr(), output->mut_dptr(), elem_cnt);
+    } else {
+      primitive->Launch(ctx->stream(), input->dptr(), output->mut_dptr(), in_stride, out_stride,
+                        elem_cnt);
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
