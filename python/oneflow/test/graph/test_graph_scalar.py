@@ -15,6 +15,7 @@ limitations under the License.
 """
 import os
 import unittest
+import copy
 
 import numpy as np
 import oneflow as flow
@@ -141,8 +142,7 @@ def _test_scalar_global_train_graph(test_case, placement):
         x = flow.tensor(i * 1.0, requires_grad=False)
         x = x.to_global(placement=placement, sbp=sbp_b)
         of_lazy_out = scalar_g(x)
-        lazy_out_list.append(of_lazy_out)
-
+        lazy_out_list.append(copy.deepcopy(of_lazy_out))
     for i in range(3):
         test_case.assertTrue(
             np.array_equal(

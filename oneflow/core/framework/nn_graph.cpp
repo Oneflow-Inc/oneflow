@@ -394,7 +394,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
         // To consistent from a local or global tensor.
         bool check_meta = load_tensor_iter->second->is_global() ? false : true;
         tensor = JUST(one::functional::ToGlobal(load_tensor_iter->second, placement, *sbp_tuple,
-                                                grad_sbp_tuple, check_meta));
+                                                grad_sbp_tuple, check_meta, /*copy=*/false));
         JUST(vm::CurrentRankSync());
         VLOG(2) << "Lazy nn.Graph name " << name_ << " op: " << op_attribute.op_conf().name()
                 << " created in JobPass, nn.Graph has loaded the tensor from state dict for this "
@@ -427,9 +427,9 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
         }
         {
           auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
-          const auto& new_tensor =
-              JUST(one::functional::ToGlobal(tensor, JUST(tensor->parallel_desc()),
-                                             optimized_sbp_parallels, {}, /* check_meta */ false));
+          const auto& new_tensor = JUST(one::functional::ToGlobal(
+              tensor, JUST(tensor->parallel_desc()), optimized_sbp_parallels, {},
+              /* check_meta */ false, /*copy=*/false));
           JUST(vm::CurrentRankSync());
           // Use tensor.set_data inferface and make new TensorImpl instead of the old one.
           JUST(tensor->set_data(new_tensor));
