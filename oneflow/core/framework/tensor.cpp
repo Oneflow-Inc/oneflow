@@ -129,15 +129,10 @@ std::shared_ptr<Tensor> GlobalTensor::pin_memory() const {
 }
 
 Maybe<Tensor> GlobalTensor::clone() const {
-  const auto& local_tensor = JUST(cur_rank_phy_tensor());
-  const auto& device_type = JUST(local_tensor->device())->type();
-  int64_t device_id = JUST(local_tensor->device())->device_id();
-  const auto& cloned_local_tensor =
-      JUST(functional::Copy(local_tensor, device_type, device_id, /*pin_memory=*/false));
+  std::shared_ptr<Tensor> input = std::const_pointer_cast<Tensor>(shared_from_this());
   DisableCheckGlobalTensorMetaScope disable_meta_check{};
-  return functional::LocalToGlobal(cloned_local_tensor, JUST(parallel_desc()),
-                                   *JUST(GetSbpList(JUST(nd_sbp()))), *shape(), dtype(),
-                                   /* sync_data */ true);
+  return JUST(functional::ToGlobal(input, JUST(parallel_desc()), *JUST(GetSbpList(JUST(nd_sbp()))),
+                                   /*grad_sbp_parallels=*/{}, /* sync_data */ true, /*copy=*/true));
 }
 
 Maybe<GlobalTensor> GlobalTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
