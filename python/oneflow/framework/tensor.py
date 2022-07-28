@@ -214,7 +214,7 @@ def _mv(self, vec):
     return flow._C.matrix_vector_product(self, vec)
 
 
-def _argsort(self, dim=-1, descending=None):
+def _argsort(self, dim=None, descending=None):
     return flow.argsort(self, dim=dim, descending=descending)
 
 
@@ -308,6 +308,7 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
                 not other.is_global
             ), "Only local tensor can be assigned to local tensor."
             if self.device == other.device:
+                other = flow._C.broadcast_like(other, self)
                 flow._C.assign_local_tensor(self, other)
                 return
 
