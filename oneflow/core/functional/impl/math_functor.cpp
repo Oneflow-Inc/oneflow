@@ -1138,7 +1138,7 @@ class GlobalHannWindowFunctor {
         result = JUST(ScalarDiv(JUST(ScalarSub(1, JUST(Cos(div_result)), 1)), 2));
       }
     }
-    result = JUST(ToGlobal(result, placement, sbp, {}, true));
+    result = JUST(ToGlobal(result, placement, sbp, {}, true, /*copy=*/false));
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
@@ -2105,6 +2105,29 @@ class VarianceFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class RMSLayerNormalizationFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& hidden_states,
+                           const std::shared_ptr<Tensor>& weight,
+                           const float& variance_epsilon) const {
+    std::shared_ptr<Tensor> cast_hidden_states = hidden_states;
+    if (hidden_states->dtype() != DType::Float()) {
+      cast_hidden_states =
+          JUST(functional::Cast(hidden_states, DType::Float(), /*pin_memory=*/false));
+    }
+    std::shared_ptr<Tensor> normalized_hidden_states = JUST(functional::Mul(
+        cast_hidden_states, JUST(functional::Rsqrt(JUST(functional::ScalarAdd(
+                                JUST(functional::ReduceMean(JUST(Square(hidden_states)),
+                                                            std::vector<int32_t>{-1}, true)),
+                                Scalar(variance_epsilon), 1.0, false))))));
+    if (weight->dtype() == DType::Float16()) {
+      normalized_hidden_states =
+          JUST(functional::Cast(normalized_hidden_states, weight->dtype(), /*pin_memory=*/false));
+    }
+    return JUST(functional::Mul(normalized_hidden_states, weight));
+  }
+};
+
 class DotFunctor {
  public:
   DotFunctor() {
@@ -2989,6 +3012,30 @@ class EinSumFunctor {
   }
 };
 
+class AddCDivFunctor {
+ public:
+  AddCDivFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& tensor1,
+                           const std::shared_ptr<one::Tensor>& tensor2, const Scalar& value) const {
+    return JUST(Add(input, JUST(ScalarMul(JUST(Div(tensor1, tensor2)), value, false)), 1, false));
+  }
+};
+
+class InplaceAddCDivFunctor {
+ public:
+  InplaceAddCDivFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& tensor1,
+                           const std::shared_ptr<one::Tensor>& tensor2, const Scalar& value) const {
+    JUST(CheckInplaceValid(input));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    JUST(VectorAt(*outputs, 0)) = input;
+    JUST(Add(input, JUST(ScalarMul(JUST(Div(tensor1, tensor2)), value, false)), 1, true));
+    return JUST(VectorAt(*outputs, 0));
+  }
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -2999,6 +3046,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarSubFunctor, ScalarSub2Functor>("ScalarSub");
   m.add_functor<ScalarMulFunctor, ScalarMul2Functor>("ScalarMul");
   m.add_functor<InplaceScalarMulFunctor>("InplaceScalarMul");
+  m.add_functor<AddCDivFunctor>("AddCDiv");
+  m.add_functor<InplaceAddCDivFunctor>("InplaceAddCDiv");
   m.add_functor<ScalarDivFunctor, ScalarDiv2Functor>("ScalarDiv");
   m.add_functor<InplaceScalarDivFunctor>("InplaceScalarDiv");
   m.add_functor<ScalarPowFunctor>("ScalarPow");
@@ -3075,6 +3124,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarLogicalXorFunctor, ScalarLogicalXor2Functor>("ScalarLogicalXor");
   m.add_functor<StandardDeviationFunctor>("StandardDeviation");
   m.add_functor<VarianceFunctor>("Variance");
+  m.add_functor<RMSLayerNormalizationFunctor>("RMSLayerNormalization");
   m.add_functor<DotFunctor>("Dot");
   m.add_functor<MovedimVecFunctor>("MovedimVec");
   m.add_functor<MovedimIntFunctor>("MovedimInt");
