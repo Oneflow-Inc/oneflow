@@ -757,37 +757,40 @@ __global__ void MemsetGpu(int64_t parallel_num, int64_t vector_size, const uint3
 template<typename T, size_t pack>
 typename std::enable_if<(pack != 0), void>::type LaunchPackMemsetGpu(cudaStream_t stream,
                                                                      const uint32_t* num_valid,
-                                                                     T* ptr, size_t count,
+                                                                     T* ptr, size_t sm_count,
                                                                      int64_t vector_size,
                                                                      int64_t parallel_num) {
-  MemsetGpu<T, pack><<<BlocksNum4ThreadsNum(count / pack), kCudaThreadsNumPerBlock, 0, stream>>>(
-      parallel_num, vector_size, num_valid, ptr);
+  MemsetGpu<T, pack><<<2 * sm_count, 1024, 0, stream>>>(parallel_num, vector_size, num_valid, ptr);
 }
 
 template<typename T, size_t pack>
 typename std::enable_if<(pack == 0), void>::type LaunchPackMemsetGpu(cudaStream_t stream,
                                                                      const uint32_t* num_valid,
-                                                                     T* ptr, size_t count,
+                                                                     T* ptr, size_t sm_count,
                                                                      int64_t vector_size,
                                                                      int64_t parallel_num) {
   LOG(FATAL) << "wrong alignment";
 }
 
 template<typename T>
-void LaunchMemset(cudaStream_t stream, size_t count, int64_t vector_size, int64_t parallel_num,
+void LaunchMemset(cudaStream_t stream, size_t sm_count, int64_t vector_size, int64_t parallel_num,
                   const uint32_t* num_valid, T* ptr) {
   auto uintptr = reinterpret_cast<std::uintptr_t>(ptr);
   if (uintptr % 16 == 0) {
-    LaunchPackMemsetGpu<T, 16 / sizeof(T)>(stream, num_valid, ptr, count, vector_size,
+    LaunchPackMemsetGpu<T, 16 / sizeof(T)>(stream, num_valid, ptr, sm_count, vector_size,
                                            parallel_num);
   } else if (uintptr % 8 == 0) {
-    LaunchPackMemsetGpu<T, 8 / sizeof(T)>(stream, num_valid, ptr, count, vector_size, parallel_num);
+    LaunchPackMemsetGpu<T, 8 / sizeof(T)>(stream, num_valid, ptr, sm_count, vector_size,
+                                          parallel_num);
   } else if (uintptr % 4 == 0) {
-    LaunchPackMemsetGpu<T, 4 / sizeof(T)>(stream, num_valid, ptr, count, vector_size, parallel_num);
+    LaunchPackMemsetGpu<T, 4 / sizeof(T)>(stream, num_valid, ptr, sm_count, vector_size,
+                                          parallel_num);
   } else if (uintptr % 2 == 0) {
-    LaunchPackMemsetGpu<T, 2 / sizeof(T)>(stream, num_valid, ptr, count, vector_size, parallel_num);
+    LaunchPackMemsetGpu<T, 2 / sizeof(T)>(stream, num_valid, ptr, sm_count, vector_size,
+                                          parallel_num);
   } else {
-    LaunchPackMemsetGpu<T, 1 / sizeof(T)>(stream, num_valid, ptr, count, vector_size, parallel_num);
+    LaunchPackMemsetGpu<T, 1 / sizeof(T)>(stream, num_valid, ptr, sm_count, vector_size,
+                                          parallel_num);
   }
 }
 
@@ -891,7 +894,7 @@ bool DispatchFeatureInteractionDotBackwardPackSize(user_op::KernelComputeContext
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
     CHECK_EQ(num_valid_sparse_feature->data_type(), DataType::kUInt32);
     LaunchMemset<T>(ctx->stream()->As<ep::CudaStream>()->cuda_stream(),
-                    ctx->Tensor4ArgNameAndIndex("sparse_feature_grad", 0)->shape_view().elem_cnt(),
+                    ctx->stream()->As<ep::CudaStream>()->device_properties().multiProcessorCount,
                     vector_size, parallel_num,
                     reinterpret_cast<const uint32_t*>(num_valid_sparse_feature->dptr())
                         + parallel_id * parallel_num,
@@ -1174,7 +1177,8 @@ bool TryLaunchTensorCoreDotBackwardKernel(user_op::KernelComputeContext* ctx) {
   }
 }
 template<typename T>
-class FusedDotFeatureInteractionKernel final : public user_op::OpKernel {
+class FusedDotFeatureInteractionKernel final : public user_op::OpKernel,
+                                               public user_op::CudaGraphSupport {
  public:
   FusedDotFeatureInteractionKernel() = default;
   ~FusedDotFeatureInteractionKernel() override = default;
@@ -1281,7 +1285,8 @@ REGISTER_FUSED_DOT_FEATURE_INTERACTION_KERNEL(float)
 REGISTER_FUSED_DOT_FEATURE_INTERACTION_KERNEL(half)
 
 template<typename T>
-class FusedDotFeatureInteractionGradKernel final : public user_op::OpKernel {
+class FusedDotFeatureInteractionGradKernel final : public user_op::OpKernel,
+                                                   public user_op::CudaGraphSupport {
  public:
   FusedDotFeatureInteractionGradKernel() = default;
   ~FusedDotFeatureInteractionGradKernel() override = default;

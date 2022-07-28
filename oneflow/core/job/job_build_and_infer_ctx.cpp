@@ -955,7 +955,6 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   auto pass_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
   if (GlobalJobDesc().Bool("__is_user_function__")) {
     JUST(DoPass("ModelUpdateConfCompatiblePass"));
-    JUST(DoPass("AddInputOutputOpsPass"));
     JUST(DoPass("NormalizationExponentialAverageAutoTickPass"));
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
@@ -972,6 +971,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
     JUST(DoPass("ReplaceEmbeddingOps"));
     JUST(DoPass("FuseEmbeddingShuffleInteractionPass"));
+    JUST(DoPass("FuseBCEReduceMeanFwBwPass"));
     JUST(DoPass("AddSspVariableProxy"));
     JUST(DoPass("CheckpointingPass"));
     JUST(DoPass("CudnnFusedNormalizationAddReluPass"));

@@ -31,7 +31,6 @@ limitations under the License.
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/load_library.h"
-#include "oneflow/core/serving/saved_model.pb.h"
 
 namespace oneflow {
 
