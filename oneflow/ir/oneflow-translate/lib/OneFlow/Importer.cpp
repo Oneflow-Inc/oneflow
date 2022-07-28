@@ -480,6 +480,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   state.addAttributes(named_attributes);
   state.addOperands(operands);
   state.addTypes(out_types);
+  SetOpStateLoc(op, state);
   created_op = GetBuilder().create(state);
 
   if (created_op == nullptr) {
@@ -900,6 +901,12 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::Operat
     for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }
   }
   return success();
+}
+
+void Importer::SetOpStateLoc(const ::oneflow::OperatorConf& op_conf, OperationState& state) {
+  if (op_conf.has_loc()) {
+    state.location = (FileLineColLoc::get(GetMLIRContext(), op_conf.loc(), 0, 0));
+  }
 }
 
 LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_conf) {

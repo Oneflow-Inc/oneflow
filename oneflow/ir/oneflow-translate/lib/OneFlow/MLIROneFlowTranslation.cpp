@@ -332,6 +332,7 @@ LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_c
   out_types.push_back(GetTensorTypeOfLbn(output_lbn));
   if (failed(AppendCtrlOutType(out_types))) { return failure(); }
   state.addTypes(out_types);
+  SetOpStateLoc(op_conf, state);
   // create op
   auto op = GetBuilder().create(state);
   if (!op) {
