@@ -96,7 +96,7 @@ class TestCast(flow.unittest.TestCase):
     def test_cast_with_stride_input(test_case):
         device = random_device()
         input = random_tensor().to(device)
-        output = input.to(dtype=torch.int)
+        output = input.to(dtype=torch.float64, device=device)
         return output
 
 
