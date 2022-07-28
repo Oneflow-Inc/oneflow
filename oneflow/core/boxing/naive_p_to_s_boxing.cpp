@@ -75,7 +75,7 @@ Maybe<one::Tensor> NaivePToS(const std::shared_ptr<one::Tensor>& tensor, Symbol<
 
   return JUST(one::functional::LocalToGlobal(local_tensor, out->placement(), *sbp_list,
                                              *tensor->shape(), tensor->dtype(),
-                                             /* sync_data */ true));
+                                             /* sync_data */ true, /*copy=*/false));
 }
 
 static constexpr auto* NaivePToSWithAutoConvert =

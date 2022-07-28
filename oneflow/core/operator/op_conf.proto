@@ -13,6 +13,7 @@ import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/graph/boxing/collective_boxing.proto";
 import "oneflow/core/job/initializer_conf.proto";
 import "oneflow/core/job/regularizer_conf.proto";
+import "oneflow/core/job/placement.proto";
 import "oneflow/core/job/learning_rate_schedule_conf.proto";
 import "oneflow/core/operator/interface_blob_conf.proto";
 import "oneflow/core/register/blob_desc.proto";
@@ -401,6 +402,19 @@ message BoxingZerosOpConf {
   required DataType data_type = 3;
 }
 
+message NcclSendRecvBoxingOpConf {
+  required LogicalBlobId lbi = 1;
+  required NdSbp src_nd_sbp = 2;
+  required NdSbp dst_nd_sbp = 3;
+  required ParallelConf parallel_conf = 4;
+  required ParallelConf src_parallel_conf = 5;
+  required ParallelConf dst_parallel_conf = 6;
+  required ShapeProto logical_shape = 7;
+  required DataType data_type = 8;
+  required bool has_input = 9;
+  required bool has_output = 10;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string device_tag = 4 [default = "invalid_device"];
@@ -446,6 +460,7 @@ message OperatorConf {
     CollectiveBoxingPackOpConf collective_boxing_pack_conf = 174;
     CollectiveBoxingUnpackOpConf collective_boxing_unpack_conf = 175;
     BoxingZerosOpConf boxing_zeros_conf = 176;
+    NcclSendRecvBoxingOpConf nccl_send_recv_boxing_conf = 177;
     UserOpConf user_conf = 199;
 
     // domain op

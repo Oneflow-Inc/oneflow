@@ -751,6 +751,10 @@
   signature: "TensorTuple (Tensor x, DataType dtype=kInt32) => ArgWhere"
   bind_python: True
 
+- name: "nonzero"
+  signature: "TensorTuple (Tensor x, Bool as_tuple=False) => NonZero"
+  bind_python: True
+
 - name: "broadcast_like"
   signature: "Tensor (Tensor x, Tensor like, Int32List broadcast_axes=[]) => BroadcastLike"
   bind_python: True
@@ -1895,15 +1899,15 @@
   bind_python: False
 
 - name: "local_to_global"
-  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, Shape shape, DataType dtype, Bool sync_data) => LocalToGlobal"
+  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, Shape shape, DataType dtype, Bool sync_data, Bool copy=False) => LocalToGlobal"
   bind_python: False
 
 - name: "to_global"
-  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp, Bool check_meta) => ToGlobal"
+  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp, Bool check_meta, Bool copy=False) => ToGlobal"
   bind_python: True
 
 - name: "to_local"
-  signature: "Tensor (Tensor x) => GlobalToLocal"
+  signature: "Tensor (Tensor x, Bool copy=False) => GlobalToLocal"
   bind_python: True
 
 - name: "stream_touch"
