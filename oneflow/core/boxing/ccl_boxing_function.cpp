@@ -58,17 +58,15 @@ class EagerBoxingKernelRegContext final : public user_op::KernelRegContext {
   std::vector<std::pair<std::string, int32_t>> arg_vec_;  // this vector has no element
 };
 
-Maybe<void> RawCheckCclKernelRegistered(const std::string& op_type_name, DeviceType device_type) {
+Maybe<bool> RawCheckCclKernelRegistered(const std::string& op_type_name, DeviceType device_type) {
   auto all_reduce_op = user_op::UserOpConfWrapperBuilder(*JUST(UniqueStr(op_type_name)))
                            .Op(op_type_name)
                            .Input("in", "")
                            .Output("out")
                            .Build();
   EagerBoxingKernelRegContext reg_ctx(device_type, all_reduce_op);
-  const auto* kernel_reg_val =
-      JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, reg_ctx));
-  CHECK_NOTNULL_OR_RETURN(kernel_reg_val);  // NOLINT
-  return Maybe<void>::Ok();
+  return TRY(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, reg_ctx))
+      .IsOk();
 }
 
 static constexpr auto* CheckCclKernelRegistered =
@@ -84,7 +82,8 @@ Maybe<void> RawCheckCclP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   CHECK_OR_RETURN(NdSbpIsAllBroadcast(*out->nd_sbp()));
 
   CHECK_OR_RETURN(in->placement() == out->placement());
-  JUST(CheckCclKernelRegistered("eager_ccl_all_reduce", in->placement()->device_type()));
+  CHECK_OR_RETURN(
+      JUST(CheckCclKernelRegistered("eager_ccl_all_reduce", in->placement()->device_type())));
   // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
