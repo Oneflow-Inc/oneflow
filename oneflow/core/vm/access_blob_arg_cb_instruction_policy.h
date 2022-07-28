@@ -34,9 +34,10 @@ namespace vm {
 
 class AccessBlobArgCbInstructionPolicy final : public InstructionPolicy {
  public:
-  AccessBlobArgCbInstructionPolicy(const std::shared_ptr<EagerBlobObject>& eager_blob_object,
-                                   const std::function<void(uint64_t)>& callback,
-                                   const std::string& modifier)
+  AccessBlobArgCbInstructionPolicy(
+      const std::shared_ptr<EagerBlobObject>& eager_blob_object,
+      const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& callback,
+      const std::string& modifier)
       : eager_blob_object_(eager_blob_object),
         callback_(callback),
         modifier_(modifier),
@@ -78,13 +79,12 @@ class AccessBlobArgCbInstructionPolicy final : public InstructionPolicy {
   Maybe<void> Prepare(Instruction* instruction) override { return Maybe<void>::Ok(); }
   void Compute(Instruction* instruction) override {
     StreamPolicy* stream_policy = instruction->mut_stream_policy();
-    OfBlob ofblob(stream_policy->stream(), eager_blob_object()->blob());
-    return callback_(reinterpret_cast<uint64_t>(&ofblob));
+    return callback_(stream_policy->stream(), eager_blob_object());
   }
 
  private:
   std::shared_ptr<EagerBlobObject> eager_blob_object_;
-  std::function<void(uint64_t)> callback_;
+  std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)> callback_;
   const std::string modifier_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;

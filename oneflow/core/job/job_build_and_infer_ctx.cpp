@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/scope_util.h"
-#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job/local_sig_infer_hint.h"
 #include "oneflow/core/job/scope.h"
@@ -57,22 +56,6 @@ Maybe<void> GetOpNames(const Job& job, HashSet<std::string>* op_names) {
   for (const auto& op_conf : job.net().op()) {
     CHECK_OR_RETURN(op_names->insert(op_conf.name()).second);
   }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> EagerRunOps(const Job& job, HashSet<std::string>* op_names,
-                        void (ForeignCallback::*interpret)(const OpAttribute& op_attribute,
-                                                           const ParallelConf& parallel_conf)
-                            const) {
-  const auto& op_graph = JUST(OpGraph::New(job));
-  const auto* foreign_callback = JUST(SingletonMaybe<std::shared_ptr<ForeignCallback>>());
-  JUST(op_graph->ForEachOpNode([&](const OpNode& op_node) -> Maybe<void> {
-    if (!op_names->insert(op_node.op().op_name()).second) { return Maybe<void>::Ok(); }
-    const auto& op_attribute = op_node.op().GetOpAttributeWithoutOpNameAndLbn();
-    const auto& parallel_conf = op_node.parallel_desc().parallel_conf();
-    (foreign_callback->get()->*interpret)(*op_attribute, parallel_conf);
-    return Maybe<void>::Ok();
-  }));
   return Maybe<void>::Ok();
 }
 
@@ -465,18 +448,6 @@ Maybe<void> LazyJobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(const Ope
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerJobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(
-    const Operator& op, int32_t parallel_num) const {
-  for (const auto& ibn : op.input_bns()) {
-    const auto& lbi = op.BnInOp2Lbi(ibn);
-    int32_t ibn_parallel_num = JUST(ParallelDesc4Lbi(lbi))->parallel_num();
-    CHECK_EQ_OR_RETURN(ibn_parallel_num, parallel_num)
-        << "the parallel_num of input lbn: " << GenLogicalBlobName(lbi)
-        << "is not equals to op' parallel_num";
-  }
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> JobBuildAndInferCtx::AddLbiAndDiffWatcherUuidPair(
     const LbiAndDiffWatcherUuidPair& lbi_uuid_pair) {
   const auto& job_name = job_->job_conf().job_name();
@@ -856,19 +827,9 @@ std::string LazyJobBuildAndInferCtx::GetLocalOpName(const std::string& op_name,
   return op_name + "_" + std::to_string(parallel_id);
 }
 
-std::string EagerJobBuildAndInferCtx::GetLocalOpName(const std::string& op_name,
-                                                     int64_t parallel_id) const {
-  return op_name;
-}
-
 ParallelConf LazyJobBuildAndInferCtx::GetLocalOpParallelConf(const ParallelDesc& parallel_desc,
                                                              int64_t parallel_id) const {
   return parallel_desc.GetParallelIdOnlyParallelConf(parallel_id);
-}
-
-ParallelConf EagerJobBuildAndInferCtx::GetLocalOpParallelConf(const ParallelDesc& parallel_desc,
-                                                              int64_t parallel_id) const {
-  return parallel_desc.parallel_conf();
 }
 
 Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatibleGlobalBlob(
@@ -926,41 +887,6 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatible
     const auto* job_desc = JUST(scope.job_desc());
     JUST(AddAndInferOp(op_conf, parallel_desc.parallel_conf(), job_desc, false));
   }
-  return local_lbi;
-}
-
-Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatibleGlobalBlob(
-    int64_t scope_symbol_id, const LogicalBlobId& lbi) {
-  const std::string& lbn = GenLogicalBlobName(lbi);
-  const auto& sbn_it = mut_global_lbi2local_lbi()->find(lbi);
-  if (sbn_it != mut_global_lbi2local_lbi()->end()) { return sbn_it->second; }
-  const SbpParallel& sbp = *JUST(SbpParallel4Lbi(lbi));
-  CHECK_OR_RETURN(!sbp.has_partial_sum_parallel())
-      << "`P' global blob is not compatible to local blob";
-  const ParallelDesc& parallel_desc = *JUST(ParallelDesc4Lbi(lbi));
-  OperatorConf op_conf;
-  {
-    // inherit scope_symbol_id from producer
-    const auto& producer_op_conf = JUST(Op4OpName(lbi.op_name()))->op_conf();
-    CHECK_OR_RETURN(producer_op_conf.has_scope_symbol_id());
-    op_conf.set_scope_symbol_id(producer_op_conf.scope_symbol_id());
-  }
-  op_conf.set_scope_symbol_id(scope_symbol_id);
-  op_conf.set_device_tag(*JUST(DeviceTag4DeviceType(parallel_desc.device_type())));
-  op_conf.set_name(kAutoLocalBlobNamePrefix + "-CastToLocal-" + NewUniqueId());
-  auto* cast_to_local_conf = op_conf.mutable_cast_to_local_conf();
-  cast_to_local_conf->set_in(lbn);
-  cast_to_local_conf->set_out("out");
-  *cast_to_local_conf->mutable_sbp_parallel() = sbp;
-  LogicalBlobId local_lbi;
-  local_lbi.set_op_name(op_conf.name());
-  local_lbi.set_blob_name("out");
-  (*mut_global_lbi2local_lbi())[lbi] = local_lbi;
-  (*mut_local_lbi2sub_lbis())[local_lbi].emplace_back(local_lbi);
-  const auto& parallel_conf = parallel_desc.parallel_conf();
-  const auto& op_attribute = JUST(AddAndInferGlobalOp(op_conf));
-  (*JUST(SingletonMaybe<std::shared_ptr<ForeignCallback>>()))
-      ->EagerLocalCast(*op_attribute, parallel_conf);
   return local_lbi;
 }
 
@@ -1068,23 +994,6 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   }
   JUST(DoPass("DumpBlobParallelConfPass"));
   JUST(CheckJob());
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> EagerJobBuildAndInferCtx::Complete() {
-  CHECK_NOTNULL(Singleton<JobDesc>::Get());
-  Singleton<JobDesc>::Delete();
-  JUST(GetOpNames(job(), &executed_op_names_));
-  auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
-  JobPassCtx job_pass_ctx(GlobalJobDesc());
-  auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
-    return JobPass4Name(pass_name)(mut_job(), &job_pass_ctx);
-  };
-  JUST(DoPass("AutoTrainStep"));
-  JUST(DoPass("AutoLearningRate"));
-  JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
-  JUST(DoPass("AddLbiDiffWatcherOpConfs"));
-  JUST(EagerRunOps(job(), &executed_op_names_, &ForeignCallback::EagerInterpretCompletedOp));
   return Maybe<void>::Ok();
 }
 

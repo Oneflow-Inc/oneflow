@@ -140,7 +140,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     auto btb = std::make_shared<BlockingThenBusy>(1);
     JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
       return builder->SyncAccessBlobByCallback(
-          tensor_impl, btb, [](uint64_t) {}, "const");
+          tensor_impl, btb, [](ep::Stream* stream, const std::shared_ptr<vm::EagerBlobObject>&) {}, "const");
     }));
     JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
     const auto& mut_tensor_meta = const_cast<EagerLocalTensorImpl*>(tensor_impl)->mut_tensor_meta();

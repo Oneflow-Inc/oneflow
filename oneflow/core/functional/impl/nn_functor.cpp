@@ -2543,9 +2543,8 @@ class OneHotFunctor {
       auto tensor_max = JUST(functional::ReduceMax(input, axis, false));
 
       int64_t max = 0;
-      const auto& callback = [&](uint64_t of_blob_ptr) {
-        auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-        of_blob->AutoMemCopyTo<int64_t>(&max, 1);  // copy 1 scalar(int64_t) tensor's value to max
+      const auto& callback = [&](ep::Stream* stream, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+        SyncAutoMemcpy(stream, &max, eager_blob_object->dptr(), sizeof(max), memory::MakeHostMemCase(), eager_blob_object->mem_case());
       };
       JUST(SyncAccessTensorWithTimeOut(tensor_max, callback, "const"));
       JUST(attrs.SetAttr<int64_t>("depth", max + 1));

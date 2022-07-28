@@ -66,21 +66,6 @@ class LazyJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
   JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const override;
 };
 
-class EagerJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(EagerJobBuildAndInferCtxMgr);
-  EagerJobBuildAndInferCtxMgr() : JobBuildAndInferCtxMgr() {}
-  ~EagerJobBuildAndInferCtxMgr() override = default;
-
- private:
-  friend class Singleton<EagerJobBuildAndInferCtxMgr>;
-
-  Maybe<void> VirtualCloseJob() override;
-  JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const override;
-};
-
-bool EagerExecutionEnabled();
-
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr();
 Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name);
 Maybe<JobBuildAndInferCtx*> GetCurInferCtx();

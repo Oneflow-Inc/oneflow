@@ -29,7 +29,6 @@ limitations under the License.
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/naive_stream_policy.h"
 #include "oneflow/core/vm/thread_ctx.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -46,17 +45,6 @@ class LazyJobInstance final : public JobInstance {
 
   std::string job_name() const override { return job_name_; }
   void Finish() const override { finish_cb_(); }
-
-  std::string sole_input_op_name_in_user_job() const override {
-    UNIMPLEMENTED();
-    return std::string();
-  }
-  std::string sole_output_op_name_in_user_job() const override {
-    UNIMPLEMENTED();
-    return std::string();
-  }
-  void PushBlob(uint64_t ofblob_ptr) const override { UNIMPLEMENTED(); }
-  void PullBlob(uint64_t ofblob_ptr) const override { UNIMPLEMENTED(); }
 
  private:
   const std::string job_name_;
