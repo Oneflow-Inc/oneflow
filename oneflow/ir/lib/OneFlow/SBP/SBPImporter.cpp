@@ -22,15 +22,15 @@ namespace mlir {
 namespace oneflow {
 
 mlir::LogicalResult SBPTranslation::PrintSbpAttrToString(mlir::Attribute sbp_attr,
-                                                         std::string* sbp) {
+                                                         std::string& sbp) {
   if (auto sbp_s_attr = sbp_attr.dyn_cast<mlir::sbp::SplitAttr>()) {
-    *sbp = "S(" + std::to_string(sbp_s_attr.getAxis()) + ")";
+    sbp = "S(" + std::to_string(sbp_s_attr.getAxis()) + ")";
   } else if (auto sbp_b_attr = sbp_attr.dyn_cast<mlir::sbp::BroadcastAttr>()) {
-    *sbp = "B";
+    sbp = "B";
   } else if (auto sbp_p_attr = sbp_attr.dyn_cast<mlir::sbp::PartialSumAttr>()) {
-    *sbp = "P";
+    sbp = "P";
   } else if (auto sbp_p_attr = sbp_attr.dyn_cast<mlir::sbp::AnyAttr>()) {
-    *sbp = "";
+    sbp = "";
   } else {
     return mlir::failure();
   }
@@ -43,12 +43,12 @@ mlir::Attribute SBPTranslation::ConvertSBPToString(mlir::Builder& builder,
     if (auto nd_outputs = output.dyn_cast<mlir::ArrayAttr>()) {
       for (auto nd_output : nd_outputs) {
         std::string sbp;
-        if (failed(SBPTranslation::PrintSbpAttrToString(nd_output, &sbp))) return {};
+        if (failed(SBPTranslation::PrintSbpAttrToString(nd_output, sbp))) return {};
         list.push_back(sbp);
       }
     } else {
       std::string sbp;
-      if (failed(SBPTranslation::PrintSbpAttrToString(output, &sbp))) return {};
+      if (failed(SBPTranslation::PrintSbpAttrToString(output, sbp))) return {};
       list.push_back(sbp);
     }
   }

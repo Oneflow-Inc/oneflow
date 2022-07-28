@@ -945,12 +945,12 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
       if (auto nd_outputs = output.dyn_cast<ArrayAttr>()) {
         for (auto nd_output : nd_outputs) {
           std::string sbp;
-          if (failed(SBPTranslation::PrintSbpAttrToString(nd_output, &sbp))) return failure();
+          if (failed(SBPTranslation::PrintSbpAttrToString(nd_output, sbp))) return failure();
           var_op_conf->add_nd_sbp(sbp);
         }
       } else {
         std::string sbp;
-        if (failed(SBPTranslation::PrintSbpAttrToString(output, &sbp))) return failure();
+        if (failed(SBPTranslation::PrintSbpAttrToString(output, sbp))) return failure();
         var_op_conf->add_nd_sbp(sbp);
       }
     }

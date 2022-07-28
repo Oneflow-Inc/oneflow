@@ -32,7 +32,7 @@ namespace oneflow {
 
 class SBPTranslation {
  public:
-  static mlir::LogicalResult PrintSbpAttrToString(mlir::Attribute sbp_attr, std::string* sbp);
+  static mlir::LogicalResult PrintSbpAttrToString(mlir::Attribute sbp_attr, std::string& sbp);
   static mlir::Attribute ConvertSBPToString(mlir::Builder& builder,
                                             mlir::sbp::ParallelSignatureAttr& parallel);
   static mlir::Attribute ConvertNdSbpToPsig(mlir::Builder& builder,
