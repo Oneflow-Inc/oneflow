@@ -25,6 +25,8 @@ namespace py = pybind11;
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
+  m.def("GetSerializedCurrentJob",
+       []() -> Maybe<py::bytes> { return py::bytes(*JUST(GetSerializedCurrentJob())); });
   m.def("GetFunctionConfigDef", &GetFunctionConfigDef);
   m.def("GetScopeConfigDef", &GetScopeConfigDef);
 
