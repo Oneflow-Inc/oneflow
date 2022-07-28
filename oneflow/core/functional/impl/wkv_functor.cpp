@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/functional/function_library.h"
@@ -59,26 +60,31 @@ class WkvGradFunctor {
                          .Input("k")
                          .Input("v")
                          .Input("gy")
-                         .Input("gw")
-                         .Input("gu")
-                         .Input("gk")
-                         .Input("gv")
-                         .Output("y")
+                         .Output("gw")
+                         .Output("gu")
+                         .Output("gk")
+                         .Output("gv")
                          .Build());
   }
-  Maybe<void> operator()(
-      const int64_t B, const int64_t T, const int64_t C, const std::shared_ptr<one::Tensor>& w,
-      const std::shared_ptr<one::Tensor>& u, const std::shared_ptr<one::Tensor>& k,
-      const std::shared_ptr<one::Tensor>& v, const std::shared_ptr<one::Tensor>& gy,
-      const std::shared_ptr<one::Tensor>& gw, const std::shared_ptr<one::Tensor>& gu,
-      const std::shared_ptr<one::Tensor>& gk, const std::shared_ptr<one::Tensor>& gv) const {
+  Maybe<TensorTuple> operator()(const int64_t B, const int64_t T, const int64_t C,
+                                const std::shared_ptr<one::Tensor>& w,
+                                const std::shared_ptr<one::Tensor>& u,
+                                const std::shared_ptr<one::Tensor>& k,
+                                const std::shared_ptr<one::Tensor>& v,
+                                const std::shared_ptr<one::Tensor>& gy) const {
     MutableAttrMap attrs;
-    attrs.SetAttr<int64_t>("B", B);
-    attrs.SetAttr<int64_t>("T", T);
-    attrs.SetAttr<int64_t>("C", C);
+    JUST(attrs.SetAttr<int64_t>("B", B));
+    JUST(attrs.SetAttr<int64_t>("T", T));
+    JUST(attrs.SetAttr<int64_t>("C", C));
     OpExprInterpContext ctx(attrs);
-    OpInterpUtil::Dispatch<Tensor>(*op_, {w, u, k, v, gy, gw, gu, gk, gv}, ctx);
-    return Maybe<void>::Ok();
+    const auto _w = JUST(ScalarMul(-1, JUST(Exp(w))));
+    std::shared_ptr<TensorTuple> outputs =
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {_w, u, k, v, gy}, ctx));
+    std::vector<int32_t> reduce_axes_vec;
+    reduce_axes_vec.emplace_back(0);
+    outputs->at(0) = JUST(ReduceSum(outputs->at(0), reduce_axes_vec, /*keepdim=*/false));
+    outputs->at(1) = JUST(ReduceSum(outputs->at(1), reduce_axes_vec, /*keepdim=*/false));
+    return outputs;
   }
 
  private:

@@ -10152,14 +10152,13 @@ def OneFlow_WkvGradOp : OneFlow_BaseOp<"wkv_grad", [NoSideEffect, NoGrad, Declar
     OneFlow_Tensor:$u,
     OneFlow_Tensor:$k,
     OneFlow_Tensor:$v,
-    OneFlow_Tensor:$gy,
+    OneFlow_Tensor:$gy
+  );
+  let output = (outs
     OneFlow_Tensor:$gw,
     OneFlow_Tensor:$gu,
     OneFlow_Tensor:$gk,
     OneFlow_Tensor:$gv
-  );
-  let output = (outs
-    OneFlow_Tensor:$y
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$B,

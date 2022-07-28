@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
@@ -39,8 +40,13 @@ namespace oneflow {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }
 /*static*/ Maybe<void> WkvGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const int64_t B = ctx->Attr<int64_t>("B");
+  const int64_t C = ctx->Attr<int64_t>("C");
   const Shape& gy_shape = ctx->InputShape("gy", 0);
-  *ctx->MutOutputShape("y", 0) = gy_shape;
+  *ctx->MutOutputShape("gw", 0) = Shape({B, C});
+  *ctx->MutOutputShape("gu", 0) = Shape({B, C});
+  *ctx->MutOutputShape("gk", 0) = gy_shape;
+  *ctx->MutOutputShape("gv", 0) = gy_shape;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> WkvGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -48,8 +54,50 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> WkvGradOp::InferDataType(user_op::InferContext* ctx) {
   DataType gy_dtype = ctx->InputDType("gy", 0);
-  *ctx->MutOutputDType("y", 0) = gy_dtype;
+  *ctx->MutOutputDType("gw", 0) = gy_dtype;
+  *ctx->MutOutputDType("gu", 0) = gy_dtype;
+  *ctx->MutOutputDType("gk", 0) = gy_dtype;
+  *ctx->MutOutputDType("gv", 0) = gy_dtype;
   return Maybe<void>::Ok();
 }
+
+namespace {
+
+Maybe<void> WkvGraphGradOp(user_op::BackwardOpConfContext* ctx) {
+  const std::string wkv_grad_op_name = ctx->FwOp().op_name() + "_grad";
+  ctx->DefineOp(wkv_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("wkv_grad")
+        .InputBind("w", ctx->FwOp().input("w", 0))
+        .InputBind("u", ctx->FwOp().input("u", 0))
+        .InputBind("k", ctx->FwOp().input("k", 0))
+        .InputBind("v", ctx->FwOp().input("v", 0))
+        .InputBind("gy", ctx->FwOp().output_grad("y", 0))
+        .Attr("B", ctx->FwOp().attr<std::vector<int64_t>>("B"))
+        .Attr("T", ctx->FwOp().attr<std::vector<int64_t>>("T"))
+        .Attr("C", ctx->FwOp().attr<std::vector<int64_t>>("C"))
+        .Output("gw")
+        .Output("gu")
+        .Output("gk")
+        .Output("gv")
+        .Build();
+  });
+  ctx->FwOp().InputGradBind(user_op::OpArg("w", 0), [&]() -> const std::string& {
+    return ctx->GetOp(wkv_grad_op_name).output("gw", 0);
+  });
+  ctx->FwOp().InputGradBind(user_op::OpArg("u", 0), [&]() -> const std::string& {
+    return ctx->GetOp(wkv_grad_op_name).output("gu", 0);
+  });
+  ctx->FwOp().InputGradBind(user_op::OpArg("k", 0), [&]() -> const std::string& {
+    return ctx->GetOp(wkv_grad_op_name).output("gk", 0);
+  });
+  ctx->FwOp().InputGradBind(user_op::OpArg("v", 0), [&]() -> const std::string& {
+    return ctx->GetOp(wkv_grad_op_name).output("gv", 0);
+  });
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
+REGISTER_USER_OP_GRAD("wkc").SetBackwardOpConfGenFn(WkvGraphGradOp);
 
 }  // namespace oneflow
