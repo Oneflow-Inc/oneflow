@@ -13,10 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/common/tensor_meta.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/core/ep/include/primitive/cast.h"
+#include "oneflow/core/ep/include/primitive/broadcast_elementwise_unary.h"
 #include "oneflow/user/kernels/op_kernel_wrapper.h"
 
 namespace oneflow {
@@ -26,11 +27,13 @@ namespace user_op {
 namespace {
 
 template<typename Context>
-std::unique_ptr<ep::primitive::Cast> NewCastPrimitive(Context* ctx) {
+std::unique_ptr<ep::primitive::BroadcastElementwiseUnary> NewBroadcastElementwiseUnaryPrimitive(
+    Context* ctx) {
   const DataType in_data_type = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
   const DataType out_data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
-  return ep::primitive::NewPrimitive<ep::primitive::CastFactory>(ctx->device_type(), in_data_type,
-                                                                 out_data_type);
+  size_t max_dim = 20;
+  return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseUnaryFactory>(
+      ctx->device_type(), ep::primitive::UnaryOp::kCast, in_data_type, out_data_type, max_dim);
 }
 
 class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
@@ -45,30 +48,32 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
     const int64_t elem_cnt = input->shape_view().elem_cnt();
     CHECK_EQ(output->shape_view().elem_cnt(), elem_cnt);
     if (input->data_type() == output->data_type() && input->dptr() == output->dptr()) { return; }
-    const int32_t ndim = input->shape_view().NumAxes();
+    const size_t ndim = input->shape_view().NumAxes();
     const bool contiguous = oneflow::one::IsContiguous(input->shape_view(), input->stride());
-    StrideParam in_stride(input->stride().data(), ndim), out_stride(output->stride().data(), ndim);
-    auto primitive = NewCastPrimitive(ctx);
+    auto primitive = NewBroadcastElementwiseUnaryPrimitive(ctx);
     CHECK(primitive);
     if (contiguous) {
-      primitive->Launch(ctx->stream(), input->dptr(), output->mut_dptr(), elem_cnt);
+      primitive->Launch(ctx->stream(), ndim, input->shape_view().ptr(), input->dptr(), ndim,
+                        output->shape_view().ptr(), output->mut_dptr());
     } else {
-      primitive->Launch(ctx->stream(), input->dptr(), output->mut_dptr(), in_stride, out_stride,
-                        elem_cnt);
+      primitive->Launch(ctx->stream(), ndim, input->shape_view().ptr(), input->stride().data(),
+                        input->dptr(), ndim, output->shape_view().ptr(), output->stride().data(),
+                        output->mut_dptr());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-auto CastPrimitiveExists() {
-  return hob::make_custom("CastPrimitiveExists", [](const user_op::KernelRegContext& ctx) -> bool {
-    return NewCastPrimitive(&ctx).operator bool();
-  });
+auto BroadcastElementwiseUnaryPrimitiveExists() {
+  return hob::make_custom("BroadcastElementwiseUnaryPrimitiveExists",
+                          [](const user_op::KernelRegContext& ctx) -> bool {
+                            return NewBroadcastElementwiseUnaryPrimitive(&ctx).operator bool();
+                          });
 }
 
 REGISTER_USER_KERNEL("cast")
     .SetCreateFn<CastKernel>()
-    .SetIsMatchedHob(CastPrimitiveExists() == true)
+    .SetIsMatchedHob(BroadcastElementwiseUnaryPrimitiveExists() == true)
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.InputDType("in", 0) == ctx.Attr<DataType>("dtype")) {
@@ -79,7 +84,7 @@ REGISTER_USER_KERNEL("cast")
 
 REGISTER_USER_KERNEL("cast_like")
     .SetCreateFn<CastKernel>()
-    .SetIsMatchedHob(CastPrimitiveExists() == true)
+    .SetIsMatchedHob(BroadcastElementwiseUnaryPrimitiveExists() == true)
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.InputDType("in", 0) == ctx.InputDType("like", 0)) {
