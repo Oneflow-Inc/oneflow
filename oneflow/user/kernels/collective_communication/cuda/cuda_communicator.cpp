@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/ccl/cuda/cuda_communicator.h"
+#include "oneflow/user/kernels/collective_communication/cuda/cuda_communicator.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 
 #ifdef WITH_CUDA

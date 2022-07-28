@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_CCL_INCLUDE_COMMUNICATOR_H_
-#define ONEFLOW_CORE_CCL_INCLUDE_COMMUNICATOR_H_
+#ifndef ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COMMUNICATOR_H_
+#define ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COMMUNICATOR_H_
 
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/auto_registration_factory.h"
@@ -51,4 +51,4 @@ inline bool IsCommunicatorRegistered(DeviceType device_type) {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_CCL_INCLUDE_COMMUNICATOR_H_
+#endif  // ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COMMUNICATOR_H_

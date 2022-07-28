@@ -17,9 +17,9 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/framework/transport_util.h"
-#include "oneflow/core/ccl/cpu/cpu_communicator.h"
+#include "oneflow/user/kernels/collective_communication/cpu/cpu_communicator.h"
 #include "oneflow/core/thread/thread_manager.h"
-#include "oneflow/core/ccl/include/all_reduce.h"
+#include "oneflow/user/kernels/collective_communication/include/all_reduce.h"
 
 namespace oneflow {
 

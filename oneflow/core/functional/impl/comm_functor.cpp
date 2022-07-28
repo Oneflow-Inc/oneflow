@@ -32,8 +32,6 @@ limitations under the License.
 #include "oneflow/core/job/rank_group_scope.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/common/flat_shape.h"
-#include "oneflow/core/ccl/include/communicator.h"
-#include "oneflow/core/ccl/include/all_reduce.h"
 
 namespace oneflow {
 namespace one {
@@ -168,8 +166,6 @@ class LocalAllReduceFunctor {
     CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank());
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
     DeviceType device_type = device->enum_type();
-    CHECK_OR_RETURN(ccl::IsCommunicatorRegistered(device_type)
-                    && ccl::collective_communication::IsAllReduceRegistered(device_type));
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedRankGroupAndDeviceType2AllReduceOpExpr(rank_group, device_type));
     auto op_input = x;

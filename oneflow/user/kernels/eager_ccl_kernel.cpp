@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/ccl/include/communicator.h"
-#include "oneflow/core/ccl/include/all_reduce.h"
+#include "oneflow/user/kernels/collective_communication/include/communicator.h"
+#include "oneflow/user/kernels/collective_communication/include/all_reduce.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {

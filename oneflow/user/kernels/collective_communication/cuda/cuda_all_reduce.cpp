@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #ifdef WITH_CUDA
-#include "oneflow/core/ccl/include/all_reduce.h"
-#include "oneflow/core/ccl/cuda/cuda_communicator.h"
+#include "oneflow/user/kernels/collective_communication/include/all_reduce.h"
+#include "oneflow/user/kernels/collective_communication/cuda/cuda_communicator.h"
 #include "oneflow/core/device/nccl_util.h"
 
 namespace oneflow {
