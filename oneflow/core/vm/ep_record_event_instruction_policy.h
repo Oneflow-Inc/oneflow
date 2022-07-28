@@ -143,6 +143,11 @@ struct GetRecordEventInstructionPolicy : public StreamRoleVisitor<GetRecordEvent
                                                                    Args&&... args) {
     return std::make_unique<vm::EpRecordEventInstructionPolicy>(std::forward<Args>(args)...);
   }
+  template<typename... Args>
+  static std::unique_ptr<vm::InstructionPolicy> VisitTmpCompute(DeviceType device_type,
+                                                                Args&&... args) {
+    return std::make_unique<vm::EpRecordEventInstructionPolicy>(std::forward<Args>(args)...);
+  }
 };
 
 }  // namespace oneflow
