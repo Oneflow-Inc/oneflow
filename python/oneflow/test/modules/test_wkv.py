@@ -44,7 +44,7 @@ class WKV:
         gu = flow.zeros((B, C), device="cuda")
         gk = flow.zeros((B, T, C), device="cuda")
         gv = flow.zeros((B, T, C), device="cuda")
-        flow._C.wkv_backward(B, T, C, w, u, k, v, gy.contiguous(), gw, gu, gk, gv)
+        flow._C.wkv_grad(B, T, C, w, u, k, v, gy.contiguous(), gw, gu, gk, gv)
         return (None, None, None, gw, gu, gk, gv)
 
 

@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 
 namespace oneflow {
 namespace one {
@@ -24,41 +25,35 @@ namespace functional {
 
 namespace impl {
 
-class WkvForwardFunctor {
+class WkvFunctor {
  public:
-  WkvForwardFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("wkv_forward")
-                         .Input("w")
-                         .Input("u")
-                         .Input("k")
-                         .Input("v")
-                         .Input("y")
-                         .Output("y_")
-                         .Build());
+  WkvFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("wkv").Input("w").Input("u").Input("k").Input("v").Output("y").Build());
   }
-  Maybe<void> operator()(const int64_t B, const int64_t T, const int64_t C,
-                         const std::shared_ptr<one::Tensor>& w,
-                         const std::shared_ptr<one::Tensor>& u,
-                         const std::shared_ptr<one::Tensor>& k,
-                         const std::shared_ptr<one::Tensor>& v,
-                         const std::shared_ptr<one::Tensor>& y) const {
+  Maybe<Tensor> operator()(const int64_t B, const int64_t T, const int64_t C,
+                           const std::shared_ptr<one::Tensor>& w,
+                           const std::shared_ptr<one::Tensor>& u,
+                           const std::shared_ptr<one::Tensor>& k,
+                           const std::shared_ptr<one::Tensor>& v) const {
     MutableAttrMap attrs;
-    attrs.SetAttr<int64_t>("B", B);
-    attrs.SetAttr<int64_t>("T", T);
-    attrs.SetAttr<int64_t>("C", C);
+    JUST(attrs.SetAttr<int64_t>("B", B));
+    JUST(attrs.SetAttr<int64_t>("T", T));
+    JUST(attrs.SetAttr<int64_t>("C", C));
     OpExprInterpContext ctx(attrs);
-    OpInterpUtil::Dispatch<Tensor>(*op_, {w, u, k, v, y}, ctx);
-    return Maybe<void>::Ok();
+    const auto _w = JUST(ScalarMul(-1, JUST(Exp(w))));
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {_w, u, k, v}, ctx);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
 };
 
-class WkvBackwardFunctor {
+class WkvGradFunctor {
  public:
-  WkvBackwardFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("wkv_backward")
+  WkvGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("wkv_grad")
                          .Input("w")
                          .Input("u")
                          .Input("k")
@@ -95,8 +90,8 @@ class WkvBackwardFunctor {
 using namespace impl;
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<WkvForwardFunctor>("WkvForward");
-  m.add_functor<WkvBackwardFunctor>("WkvBackward");
+  m.add_functor<WkvFunctor>("Wkv");
+  m.add_functor<WkvGradFunctor>("WkvGrad");
 };
 
 }  // namespace functional

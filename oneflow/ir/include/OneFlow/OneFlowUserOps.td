@@ -10125,16 +10125,15 @@ def OneFlow_FusedGruCellGradOp : OneFlow_BaseOp<"fused_gru_cell_grad", [NoSideEf
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_WkvForwardOp : OneFlow_BaseOp<"wkv_forward", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_WkvOp : OneFlow_BaseOp<"wkv", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$w,
     OneFlow_Tensor:$u,
     OneFlow_Tensor:$k,
-    OneFlow_Tensor:$v,
-    OneFlow_Tensor:$y
+    OneFlow_Tensor:$v
   );
   let output = (outs
-    OneFlow_Tensor:$y_
+    OneFlow_Tensor:$y
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$B,
@@ -10147,7 +10146,7 @@ def OneFlow_WkvForwardOp : OneFlow_BaseOp<"wkv_forward", [NoSideEffect, NoGrad, 
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_WkvBackwardOp : OneFlow_BaseOp<"wkv_backward", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_WkvGradOp : OneFlow_BaseOp<"wkv_grad", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$w,
     OneFlow_Tensor:$u,

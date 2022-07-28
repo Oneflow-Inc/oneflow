@@ -134,10 +134,10 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
 }  // namespace
 
 template<typename F>
-class WkvForwordGPUKernel final : public user_op::OpKernel {
+class WkvGPUKernel final : public user_op::OpKernel {
  public:
-  WkvForwordGPUKernel() = default;
-  ~WkvForwordGPUKernel() = default;
+  WkvGPUKernel() = default;
+  ~WkvGPUKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -160,20 +160,19 @@ class WkvForwordGPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_WKVFORWORD_CUDA_KERNEL(dtype)                         \
-  REGISTER_USER_KERNEL("wkv_forward")                                  \
-      .SetCreateFn<WkvForwordGPUKernel<dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("w", 0) == GetDataType<dtype>::value));
+#define REGISTER_WKV_CUDA_KERNEL(dtype)                                           \
+  REGISTER_USER_KERNEL("wkv").SetCreateFn<WkvGPUKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kCUDA)                             \
+      && (user_op::HobDataType("w", 0) == GetDataType<dtype>::value));
 
-REGISTER_WKVFORWORD_CUDA_KERNEL(float)
-REGISTER_WKVFORWORD_CUDA_KERNEL(double)
+REGISTER_WKV_CUDA_KERNEL(float)
+REGISTER_WKV_CUDA_KERNEL(double)
 
 template<typename F>
-class WkvBackwardGPUKernel final : public user_op::OpKernel {
+class WkvGradGPUKernel final : public user_op::OpKernel {
  public:
-  WkvBackwardGPUKernel() = default;
-  ~WkvBackwardGPUKernel() = default;
+  WkvGradGPUKernel() = default;
+  ~WkvGradGPUKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -201,13 +200,13 @@ class WkvBackwardGPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_WKVBACKWARD_CUDA_KERNEL(dtype)                        \
-  REGISTER_USER_KERNEL("wkv_backward")                                 \
-      .SetCreateFn<WkvBackwardGPUKernel<dtype>>()                      \
+#define REGISTER_WKVGRAD_CUDA_KERNEL(dtype)                            \
+  REGISTER_USER_KERNEL("wkv_grad")                                     \
+      .SetCreateFn<WkvGradGPUKernel<dtype>>()                          \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("w", 0) == GetDataType<dtype>::value));
 
-REGISTER_WKVBACKWARD_CUDA_KERNEL(float)
-REGISTER_WKVBACKWARD_CUDA_KERNEL(double)
+REGISTER_WKVGRAD_CUDA_KERNEL(float)
+REGISTER_WKVGRAD_CUDA_KERNEL(double)
 
 }  // namespace oneflow
