@@ -940,21 +940,20 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
 
   if (op->hasAttr("trainable")) { var_op_conf->set_trainable(op.trainable()); }
 
-  if (op->hasAttr(OpTrait::TensorSource<void>::getNdSbpAttrName())) {
-    for (auto output : op.parallel()->getOutputs()) {
-      if (auto nd_outputs = output.dyn_cast<ArrayAttr>()) {
-        for (auto nd_output : nd_outputs) {
-          std::string sbp;
-          if (failed(SBPTranslation::PrintSbpAttrToString(nd_output, sbp))) return failure();
-          var_op_conf->add_nd_sbp(sbp);
-        }
-      } else {
-        std::string sbp;
-        if (failed(SBPTranslation::PrintSbpAttrToString(output, sbp))) return failure();
+  for (auto output : op.parallel()->getOutputs()) {
+    if (auto nd_outputs = output.dyn_cast<ArrayAttr>()) {
+      for (auto nd_output : nd_outputs) {
+        std::string sbp{};
+        if (failed(SBPTranslation::PrintSbpAttrToString(nd_output, sbp))) return failure();
         var_op_conf->add_nd_sbp(sbp);
       }
+    } else {
+      std::string sbp{};
+      if (failed(SBPTranslation::PrintSbpAttrToString(output, sbp))) return failure();
+      var_op_conf->add_nd_sbp(sbp);
     }
   }
+  if (var_op_conf->nd_sbp().empty()) { var_op_conf->add_nd_sbp(""); }
 
   // all operands are ctrl_inputs
   for (const auto& operand : op->getOperands()) {
