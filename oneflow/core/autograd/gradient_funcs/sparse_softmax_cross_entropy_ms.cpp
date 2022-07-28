@@ -52,8 +52,8 @@ Maybe<void> SparseSoftmaxCrossEntropyMs::Capture(SparseSoftmaxCrossEntropyMsCapt
                                                  const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->depth = JUST(composed_attrs.GetAttr<int64_t>("depth"));
-  CHECK_EQ_OR_RETURN(inputs.size(), 2);       // NOLINT(maybe-need-error-msg)
-  CHECK_EQ_OR_RETURN(outputs.size(), 2);      // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(inputs.size(), 2);                    // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(outputs.size(), 2);                   // NOLINT(maybe-need-error-msg)
   ctx->SaveTensorForBackward(JUST(VectorAt(outputs, 0)));  // prob
   ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 1)));   // label
   return Maybe<void>::Ok();
@@ -69,7 +69,8 @@ Maybe<void> SparseSoftmaxCrossEntropyMs::Apply(const SparseSoftmaxCrossEntropyMs
   // SparseSoftmaxCrossEntropy has 2 inputs (prediction and label), and the second input does not
   // require gradient.
   in_grads->resize(2);
-  JUST(VectorAt(*in_grads, 0)) = JUST(functional::SparseSoftmaxCrossEntropyMsGrad(dy, prob, label, ctx->depth));
+  JUST(VectorAt(*in_grads, 0)) =
+      JUST(functional::SparseSoftmaxCrossEntropyMsGrad(dy, prob, label, ctx->depth));
   return Maybe<void>::Ok();
 }
 
