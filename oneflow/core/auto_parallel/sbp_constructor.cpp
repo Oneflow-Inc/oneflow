@@ -34,7 +34,7 @@ Maybe<void> SbpConstructor::Init(const OpGraph& op_graph, Job* job /*Maybe not u
 }
 
 Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job) {
-  // TODO: process mirrored node
+  // TODO: process local node
   JUST(GenerateNodeAndEdge(op_graph, job));
   JUST(FillSbpSignatureForOpNode(op_graph, job));
   JUST(InitComputationCost(op_graph));
@@ -113,14 +113,14 @@ Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph, const J
   // Collect op_node
   std::vector<OpNode*> op_node_list;
   op_graph.ForEachNode([&](OpNode* op_node) {
-    // TODO: support mirror op
-    bool is_mirrored_conf = false;
+    // TODO: support local op
+    bool is_local_conf = false;
     {
-      const auto& op_name2is_mirrored = job_parallel_view_conf.op_name2is_mirrored_parallel_view();
-      const auto& iter = op_name2is_mirrored.find(op_node->op().op_name());
-      if (iter != op_name2is_mirrored.end()) { is_mirrored_conf = iter->second; }
+      const auto& op_name2is_local = job_parallel_view_conf.op_name2is_local_parallel_view();
+      const auto& iter = op_name2is_local.find(op_node->op().op_name());
+      if (iter != op_name2is_local.end()) { is_local_conf = iter->second; }
     }
-    CHECK(is_mirrored_conf == false) << "Haven't deal with mirror operators.";
+    CHECK(is_local_conf == false) << "Haven't deal with local operators.";
     op_node_list.push_back(op_node);
   });
 
@@ -179,9 +179,9 @@ Maybe<void> SbpConstructor::FillSbpSignatureForOpNode(const OpGraph& op_graph, c
     auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc&> {
       auto it = ibn2blob_desc.find(ibn);
       if (it == ibn2blob_desc.end()) {
-        return Error::InvalidValueError(
-            "Cannot find corresponding blob description for input_blob_name : " + ibn + " in "
-            + op_node->op().op_name());
+        return Error::InvalidValueError()
+               << "Cannot find corresponding blob description for input_blob_name : " + ibn + " in "
+                      + op_node->op().op_name();
       }
       return *(it->second);
     };

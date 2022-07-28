@@ -25,7 +25,7 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/sbp_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
-#include "oneflow/core/job/mirrored_sig_infer_hint.h"
+#include "oneflow/core/job/local_sig_infer_hint.h"
 #include "oneflow/core/job/job_builder.h"
 // #include "sbp_constructor.h"
 #define DEBUG_COLLECTOR_
