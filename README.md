@@ -1,6 +1,6 @@
 # OneFlow
 
-OneFlow is an **easy to program, scale, and deploy** deep learning framework that **accelerates the innovation of next-generation AI**. In OneFlow, it's easy to:
+OneFlow is a deep learning framework designed to be **easy to program, scale, and deploy**, which **accelerates the innovation of next-generation AI**. In OneFlow, it's easy to:
 - program a model with **PyTorch-like API**
 - scale a model to n-dimensional-parallel/distributed exectuion with the **Global View API**
 - accelerate/deploy a model with the **Static Graph Compiler**.
