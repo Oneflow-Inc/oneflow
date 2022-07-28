@@ -2411,4 +2411,4 @@
 
 - name: "wkv_grad"
   signature: "TensorTuple (Int64 B, Int64 T, Int64 C, Tensor w, Tensor u, Tensor k, Tensor v, Tensor gy) => WkvGrad"
-  bind_python: True
+  bind_python: False

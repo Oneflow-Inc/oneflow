@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
@@ -23,34 +22,34 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct WkvCaptureState : public AutoGradCaptureState {
+struct WkvGradCaptureState : public AutoGradCaptureState {
   bool requires_grad = false;
   int64_t B;
   int64_t T;
   int64_t C;
 };
 
-class Wkv : public OpExprGradFunction<WkvCaptureState> {
+class WkvGrad : public OpExprGradFunction<WkvGradCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(WkvCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrMap& attrs) const override;
-  Maybe<void> Apply(const WkvCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Capture(WkvGradCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override;
+  Maybe<void> Apply(const WkvGradCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
   AttrMap base_attrs_;
 };
 
-Maybe<void> Wkv::Init(const OpExpr& op) {
+Maybe<void> WkvGrad::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Wkv::Capture(WkvCaptureState* ctx, const TensorTuple& inputs,
-                         const TensorTuple& outputs, const AttrMap& attrs) const {
+Maybe<void> WkvGrad::Capture(WkvGradCaptureState* ctx, const TensorTuple& inputs,
+                             const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs[0]->requires_grad();
   ctx->B = JUST(attrs.GetAttr<int64_t>("B"));
   ctx->T = JUST(attrs.GetAttr<int64_t>("T"));
@@ -62,8 +61,8 @@ Maybe<void> Wkv::Capture(WkvCaptureState* ctx, const TensorTuple& inputs,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> Wkv::Apply(const WkvCaptureState* ctx, const TensorTuple& out_grads,
-                       TensorTuple* in_grads) const {
+Maybe<void> WkvGrad::Apply(const WkvGradCaptureState* ctx, const TensorTuple& out_grads,
+                           TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1) << "out_grads.size() must be equal to 1.";
   in_grads->resize(4);
   if (ctx->requires_grad) {
@@ -71,17 +70,17 @@ Maybe<void> Wkv::Apply(const WkvCaptureState* ctx, const TensorTuple& out_grads,
     const std::shared_ptr<oneflow::one::Tensor>& u = ctx->SavedTensors().at(1);
     const std::shared_ptr<oneflow::one::Tensor>& k = ctx->SavedTensors().at(2);
     const std::shared_ptr<oneflow::one::Tensor>& v = ctx->SavedTensors().at(3);
-    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(4);
-    outputs->at(0) = (*in_grads)[0];
-    outputs->at(1) = (*in_grads)[1];
-    outputs->at(2) = (*in_grads)[2];
-    outputs->at(3) = (*in_grads)[3];
-    outputs = JUST(functional::WkvGrad(ctx->B, ctx->T, ctx->C, w, u, k, v, out_grads[0]));
+    const auto& outputs =
+        JUST(functional::WkvGrad(ctx->B, ctx->T, ctx->C, w, u, k, v, out_grads[0]));
+    (*in_grads)[0] = (*outputs)[0];
+    (*in_grads)[1] = (*outputs)[1];
+    (*in_grads)[2] = (*outputs)[2];
+    (*in_grads)[3] = (*outputs)[3];
   }
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("wkv", Wkv);
+REGISTER_OP_EXPR_GRAD_FUNCTION("wkv", WkvGrad);
 
 }  // namespace one
 }  // namespace oneflow
