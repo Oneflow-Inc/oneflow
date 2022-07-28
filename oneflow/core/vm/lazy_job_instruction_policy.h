@@ -13,11 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EAGER_LAZY_JOB_INSTRUCTION_TYPE_H_
-#define ONEFLOW_CORE_EAGER_LAZY_JOB_INSTRUCTION_TYPE_H_
+#ifndef ONEFLOW_CORE_VM_LAZY_JOB_INSTRUCTION_POLICY_H_
+#define ONEFLOW_CORE_VM_LAZY_JOB_INSTRUCTION_POLICY_H_
 
+#include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/vm/instruction_policy.h"
+#include "oneflow/core/vm/instruction_policy_util.h"
 #include "oneflow/core/vm/lazy_job_device_context.h"
-#include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/of_unused.h"
@@ -33,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/vm/virtual_machine.h"
 
 namespace oneflow {
 
@@ -65,23 +68,51 @@ class LazyJobInstance final : public JobInstance {
 
 namespace vm {
 
-class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
+class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {
  public:
-  LaunchLazyJobInstructionType(const LaunchLazyJobInstructionType&) = delete;
-  LaunchLazyJobInstructionType(LaunchLazyJobInstructionType&&) = delete;
-  LaunchLazyJobInstructionType() = default;
-  ~LaunchLazyJobInstructionType() = default;
+  LaunchLazyJobInstructionPolicy(const LaunchLazyJobInstructionPolicy&) = delete;
+  LaunchLazyJobInstructionPolicy(LaunchLazyJobInstructionPolicy&&) = delete;
+  LaunchLazyJobInstructionPolicy(const std::shared_ptr<NNGraphIf>& nn_graph,
+                                 const EagerBlobObjectListPtr& param_blob_objects)
+      : nn_graph_(nn_graph),
+        param_blob_objects_(param_blob_objects),
+        input_dependences_(),
+        output_dependences_() {
+    ForEachConstDependence(InstructionPolicyUtil::SetInserter(&input_dependences_));
+    ForEachMutDependence(InstructionPolicyUtil::SetInserter(&output_dependences_));
+    ForEachMut2Dependence(InstructionPolicyUtil::SetInserter(&output_dependences_));
+  }
+  ~LaunchLazyJobInstructionPolicy() = default;
+  const std::shared_ptr<NNGraphIf>& nn_graph() const { return nn_graph_; }
 
-  std::string DebugName(const vm::Instruction&) const override { return "LaunchLazyJob"; }
-  Maybe<void> Prepare(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }
-  void Compute(vm::Instruction* instruction) const override {
-    const auto& cur_nn_graph = GetCurNNGraph(instruction);
+  const DependenceVector& input_dependences() const override { return input_dependences_; }
+  const DependenceVector& output_dependences() const override { return output_dependences_; }
+
+  void ForEachConstDependence(const std::function<void(vm::Dependence* compute)>&) const {}
+
+  void ForEachMutDependence(const std::function<void(vm::Dependence* compute)>& DoEach) const {
+    for (const auto& eager_blob_object : *param_blob_objects_) {
+      DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
+    }
+    DoEach(CHECK_JUST(SingletonMaybe<VirtualMachine>())
+               ->FindOrCreateTransportLocalDepObject()
+               .Mutable());
+  }
+
+  void ForEachMut2Dependence(const std::function<void(vm::Dependence* compute)>&) const {}
+
+  void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const override {
+    for (const auto& eager_blob_object : *param_blob_objects_) { DoEach(eager_blob_object.get()); }
+  }
+  std::string DebugName(const Instruction&) const override { return "LaunchLazyJob"; }
+  Maybe<void> Prepare(Instruction* instruction) override { return Maybe<void>::Ok(); }
+  void Compute(Instruction* instruction) override {
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);
 
     static thread_local int64_t run_id = 0;
     {
       OF_PROFILER_RANGE_GUARD("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
-      device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(cur_nn_graph);
+      device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(nn_graph_);
     }
     {
       OF_PROFILER_RANGE_GUARD("Send all buffers to BufferMgr");
@@ -93,7 +124,7 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
     }
     OF_UNUSED(run_id);  // disable compiler warning.
     OF_PROFILER_RANGE_GUARD("EnqueueNNGraph");
-    device_ctx->EnqueueNNGraph(cur_nn_graph);
+    device_ctx->EnqueueNNGraph(nn_graph_);
   }
 
  private:
@@ -105,28 +136,22 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
     CHECK_NOTNULL(device_ctx);
     return device_ctx;
   }
-  std::shared_ptr<NNGraphIf> GetCurNNGraph(Instruction* instruction) const {
-    const auto* ptr = instruction->phy_instr_operand().get();
-    const auto* phy_instr_operand = dynamic_cast<const LaunchLazyJobPhyInstrOperand*>(ptr);
-    CHECK_NOTNULL(phy_instr_operand);
-    return phy_instr_operand->nn_graph();
-  }
 
   std::shared_ptr<LazyJobInstance> MakeJobInstance(Instruction* instruction) const {
-    const auto* ptr = instruction->phy_instr_operand().get();
-    const auto* phy_instr_operand = dynamic_cast<const LaunchLazyJobPhyInstrOperand*>(ptr);
-    CHECK_NOTNULL(phy_instr_operand);
-    const auto& nn_graph = phy_instr_operand->nn_graph();
     const auto& FinishCb = [this, instruction]() {
       auto* device_ctx = GetLazyJobDeviceCtx(instruction);
       device_ctx->DequeueNNGraph();
       auto* status_buffer = instruction->mut_status_buffer();
       NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer())->set_done();
     };
-    return std::make_shared<LazyJobInstance>(nn_graph->job_name(), FinishCb);
+    return std::make_shared<LazyJobInstance>(nn_graph_->job_name(), FinishCb);
   }
+  std::shared_ptr<NNGraphIf> nn_graph_;
+  vm::EagerBlobObjectListPtr param_blob_objects_;
+  DependenceVector input_dependences_;
+  DependenceVector output_dependences_;
 };
 
 }  // namespace vm
 }  // namespace oneflow
-#endif  // ONEFLOW_CORE_EAGER_LAZY_JOB_INSTRUCTION_TYPE_H_
+#endif  // ONEFLOW_CORE_VM_LAZY_JOB_INSTRUCTION_POLICY_H_
