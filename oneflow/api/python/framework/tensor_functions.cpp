@@ -952,15 +952,15 @@ static PyObject* PyTensorObject_to_global(PyObject* self, PyObject* args, PyObje
   HANDLE_ERRORS
   const auto& tensor = PyTensor_Unpack(self);
   PyObject* result = NULL;
-  if (tensor->is_global())
-    result = PyTensorObject_global_to_global(self, args, kwargs);
-  } else {
-    result = PyTensorObject_local_to_global(self, args, kwargs);
-  }
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
+  if (tensor->is_global()) result = PyTensorObject_global_to_global(self, args, kwargs);
+}
+else {
+  result = PyTensorObject_local_to_global(self, args, kwargs);
+}
+if (PyErr_Occurred()) { throw py::error_already_set(); }
+return result;
 
-  END_HANDLE_ERRORS
+END_HANDLE_ERRORS
 }
 
 static PyObject* PyTensorObject_to_local(PyObject* self, PyObject* unused) {
