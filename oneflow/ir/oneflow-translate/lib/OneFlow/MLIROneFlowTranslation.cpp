@@ -311,12 +311,15 @@ LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_c
           GetBuilder().getNamedAttr("integer_initializer", const_initialize_attr));
     }
   }
-  // attr nd_sbp
-  const std::vector<StringRef> nd_sbp_str_vec{op_conf.variable_conf().nd_sbp().begin(),
-                                              op_conf.variable_conf().nd_sbp().end()};
-  auto nd_sbp_attr = GetBuilder().getStrArrayAttr(makeArrayRef(nd_sbp_str_vec));
+  // attr parallel
+  auto conf = this->job_wrapper_.ParallelConf4OpName(op_conf.name());
+
+  auto nd_size = conf.hierarchy().dim().size();
+  auto nd_sbp = op_conf.variable_conf().nd_sbp();
+  auto parallel = mlir::oneflow::SBPTranslation::ConvertNdSbpToPsig(
+      GetBuilder(), std::vector<std::string>(nd_sbp.begin(), nd_sbp.end()), nd_size);
   attr_vec.emplace_back(
-      GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getNdSbpAttrName(), nd_sbp_attr));
+      GetBuilder().getNamedAttr(OpTrait::TensorSource<void>::getSbpAttrName(), parallel));
   // add attrs
   state.addAttributes(attr_vec);
   // operands
@@ -329,6 +332,7 @@ LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_c
   out_types.push_back(GetTensorTypeOfLbn(output_lbn));
   if (failed(AppendCtrlOutType(out_types))) { return failure(); }
   state.addTypes(out_types);
+  SetOpStateLoc(op_conf, state);
   // create op
   auto op = GetBuilder().create(state);
   if (!op) {
@@ -875,6 +879,34 @@ std::string ConvertJobToTosaIR(RoundTripOneFlowJobWrapperInterface& job_wrapper)
   } else {
     const auto& job_name = job->job_conf().job_name();
     llvm::errs() << "fail to convert job to IR, job_name: " << job_name << "\n";
+    exit(EXIT_FAILURE);
+  }
+}
+
+std::string ConvertJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper) {
+  const ::oneflow::Job* job = job_wrapper.job();
+  mlir::MLIRContext context;
+  context.getOrLoadDialect<oneflow::OneFlowDialect>();
+  context.loadDialect<mlir::func::FuncDialect>();
+
+  OwningOpRef<ModuleOp> module(
+      ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
+  JobImporter imp(job_wrapper, &context, module.get());
+  if (succeeded(imp.ProcessJob())) {
+    mlir::PassManager pm(&context);
+    pm.addPass(createCanonicalizerPass());
+    if (mlir::failed(pm.run(*module))) {
+      module->emitError("Failed to run canonicalizer pass");
+      exit(EXIT_FAILURE);
+    }
+
+    std::string mlir;
+    llvm::raw_string_ostream os_mlir(mlir);
+    module->print(os_mlir);
+    return mlir;
+  } else {
+    const auto& job_name = job->job_conf().job_name();
+    llvm::errs() << "Failed to convert Job to IR, job_name: " << job_name << "\n";
     exit(EXIT_FAILURE);
   }
 }
