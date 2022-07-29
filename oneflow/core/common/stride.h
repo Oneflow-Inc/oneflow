@@ -40,17 +40,6 @@ class Stride final : public DimVector {
   void ToProto(Int64ListProto*) const;
 };
 
-struct StrideParam {
-  int64_t stride[SHAPE_MAX_AXIS_SIZE]{};
-  size_t ndim;
-  StrideParam(const int64_t* stride_vec, const size_t ndims) : ndim(ndims) {
-    for (size_t i = 0; i < ndim; ++i) { stride[i] = stride_vec[i]; }
-  }
-};
-
-int64_t ComputeOffset(const int64_t& out_offset, const StrideParam& in_stride,
-                      const StrideParam& out_stride);
-
 }  // namespace oneflow
 
 namespace std {
