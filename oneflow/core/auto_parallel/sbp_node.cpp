@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_AUTO_PARALLEL_SBP_NODE_H_
-#define ONEFLOW_CORE_AUTO_PARALLEL_SBP_NODE_H_
 
 #include <cstdlib>
 #include <functional>
@@ -26,8 +24,8 @@ limitations under the License.
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/auto_parallel/algorithm_util.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
-#include "oneflow/core/auto_parallel/sbp_edge.h"
 #include "oneflow/core/auto_parallel/sbp_node.h"
+#include "oneflow/core/auto_parallel/sbp_edge.h"
 #include "oneflow/core/auto_parallel/sbp_graph.h"
 
 namespace oneflow {
@@ -134,6 +132,15 @@ SbpNode::SbpNode(SbpNode* first, SbpNode* second) {
       RemoveFrom<SbpEdge*>(edges_out_, k);
     }
   }
+}
+
+SbpNode::~SbpNode() {
+  for (auto& edge_out : edges_out_) { delete edge_out; }
+  for (auto& child_node : children_) {
+    if (child_node->edges_in_.size()) { delete child_node->edges_in_[0]; }
+    delete child_node;
+  }
+  for (auto& half_node : half_node_) { delete half_node; }
 }
 
 void SbpNode::InitializeSbp() {
@@ -679,5 +686,3 @@ NdSbpSignature* SbpNode::FinalSbpSignature() const {
 
 }  // namespace auto_parallel
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_AUTO_PARALLEL_SBP_NODE_H_

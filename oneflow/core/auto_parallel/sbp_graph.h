@@ -26,16 +26,13 @@ limitations under the License.
 namespace oneflow {
 namespace auto_parallel {
 
-class SbpGraph {
+class SbpGraph final {
  public:
   // Constructor
   SbpGraph();
 
   // Deconstructor
-  ~SbpGraph() {
-    for (auto this_node : node_list_) { delete this_node; }
-    node_list_.clear();
-  }
+  ~SbpGraph();
 
   // Randomly assign a SbpSignature strategy
   void RandomSbpSignature(bool use_sbp_collector) const;

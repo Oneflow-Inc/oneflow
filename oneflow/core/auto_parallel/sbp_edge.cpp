@@ -13,13 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_AUTO_PARALLEL_SBP_EDGE_H_
-#define ONEFLOW_CORE_AUTO_PARALLEL_SBP_EDGE_H_
 
 #include <assert.h>
 #include <algorithm>
 #include <unordered_set>
-
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
@@ -306,5 +303,3 @@ double SbpEdge::FindCutRatio(int32_t threshold) const {
 
 }  // namespace auto_parallel
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_AUTO_PARALLEL_SBP_EDGE_H_

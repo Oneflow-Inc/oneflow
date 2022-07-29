@@ -13,15 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_AUTO_PARALLEL_SBP_GRAPH_H_
-#define ONEFLOW_CORE_AUTO_PARALLEL_SBP_GRAPH_H_
 
 #include <algorithm>
 #include <unordered_map>
 #include "oneflow/core/auto_parallel/binary_set.h"
+#include "oneflow/core/auto_parallel/sbp_graph.h"
 #include "oneflow/core/auto_parallel/sbp_edge.h"
 #include "oneflow/core/auto_parallel/sbp_node.h"
-#include "oneflow/core/auto_parallel/sbp_graph.h"
 #include "oneflow/core/auto_parallel/algorithm_util.h"
 
 namespace oneflow {
@@ -47,6 +45,11 @@ void SbpGraph::RemoveFromNodeList(SbpNode* this_node) {
 }
 
 SbpGraph::SbpGraph() {}
+
+SbpGraph::~SbpGraph() {
+  for (auto this_node : node_list_) { delete this_node; }
+  node_list_.clear();
+}
 
 void SbpGraph::RandomSbpSignature(bool use_sbp_collector) const {
   for (const auto& this_node : node_list_) {
@@ -825,5 +828,3 @@ void SbpGraph::SetTransferCost(double transfer_cost) { transfer_cost_ = transfer
 
 }  // namespace auto_parallel
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_AUTO_PARALLEL_SBP_GRAPH_H_

@@ -32,9 +32,7 @@ namespace auto_parallel {
 
 class SbpEdge;
 
-class SbpGraph;
-
-class SbpNode {
+class SbpNode final {
  public:
   // default constructor
   SbpNode() : final_sbp_sig_id_(0) {}
@@ -42,14 +40,7 @@ class SbpNode {
   // This constructor is to merge two node into one
   SbpNode(SbpNode* first, SbpNode* second);
 
-  ~SbpNode() {
-    for (auto& edge_out : edges_out_) { delete edge_out; }
-    for (auto& child_node : children_) {
-      if (child_node->edges_in_.size()) { delete child_node->edges_in_[0]; }
-      delete child_node;
-    }
-    for (auto& half_node : half_node_) { delete half_node; }
-  }
+  ~SbpNode();
 
   // another node point to this node
   void PointFrom(SbpNode* start_node);
