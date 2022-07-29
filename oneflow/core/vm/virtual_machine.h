@@ -96,6 +96,8 @@ class VirtualMachine final {
 
   std::thread schedule_thread_;
   Notifier pending_notifier_;
+  std::atomic<bool> has_last_error_;
+  std::shared_ptr<StackedError> last_error_;
 };
 
 }  // namespace oneflow

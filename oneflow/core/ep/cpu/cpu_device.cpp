@@ -45,7 +45,10 @@ Maybe<void> CpuDevice::Alloc(const AllocationOptions& options, void** ptr, size_
     JUST(device->AllocPinned(options, ptr, size));
   } else {
     *ptr = aligned_alloc(kMaxAlignmentRequirement, RoundUp(size, kMaxAlignmentRequirement));
-    if (*ptr == nullptr) { return Error::RuntimeError() << "allocate failed"; }
+    if (*ptr == nullptr) {
+      return Error::RuntimeError()
+             << "can't allocate memory: you tried to allocate " << size << " bytes.";
+    }
   }
   memset(*ptr, 0, size);
   return Maybe<void>::Ok();

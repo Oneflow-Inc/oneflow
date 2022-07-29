@@ -269,7 +269,8 @@ bool VirtualMachineEngine::Dispatchable(Instruction* instruction) const {
 }
 
 // Dispatch ready instructions and put prescheduled instructions onto ready_instruction_list_.
-void VirtualMachineEngine::DispatchAndPrescheduleInstructions(const ScheduleCtx& schedule_ctx) {
+Maybe<void> VirtualMachineEngine::DispatchAndPrescheduleInstructions(
+    const ScheduleCtx& schedule_ctx) {
   OF_PROFILER_RANGE_GUARD("DispatchAndPrescheduleInstructions");
   ReadyInstructionList tmp_ready_instruction_list;
   mut_ready_instruction_list()->MoveTo(&tmp_ready_instruction_list);
@@ -278,8 +279,8 @@ void VirtualMachineEngine::DispatchAndPrescheduleInstructions(const ScheduleCtx&
     // `instruction.dispatched_instruction_hook_` are used in DispatchInstruction.
     tmp_ready_instruction_list.Erase(instruction.Mutable());
     OF_PROFILER_RANGE_GUARD("D:" + instruction->DebugName());
-    DispatchInstruction<&VirtualMachineEngine::BusyWaitInstructionsDoneThenShrink>(
-        instruction.Mutable(), schedule_ctx);
+    JUST(DispatchInstruction<&VirtualMachineEngine::BusyWaitInstructionsDoneThenShrink>(
+        instruction.Mutable(), schedule_ctx));
     // preschedule instructions
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_out_edges()) {
       auto* out_instruction = edge->mut_dst_instruction();
@@ -289,6 +290,7 @@ void VirtualMachineEngine::DispatchAndPrescheduleInstructions(const ScheduleCtx&
       }
     }
   }
+  return Maybe<void>::Ok();
 }
 
 namespace {
@@ -350,8 +352,8 @@ void VirtualMachineEngine::ForEachStreamOnDevice(Symbol<Device> device,
   }
 }
 
-void VirtualMachineEngine::BusyWaitInstructionsDoneThenShrink(vm::Stream* stream,
-                                                              const ScheduleCtx& schedule_ctx) {
+Maybe<void> VirtualMachineEngine::BusyWaitInstructionsDoneThenShrink(
+    vm::Stream* stream, const ScheduleCtx& schedule_ctx) {
   {
     // Dispatch ReleaseTensor instructions as mush as possiable.
     ReadyInstructionList ready_release_tensor_instruction_list;
@@ -360,33 +362,35 @@ void VirtualMachineEngine::BusyWaitInstructionsDoneThenShrink(vm::Stream* stream
     });
     INTRUSIVE_FOR_EACH(instruction, &ready_release_tensor_instruction_list) {
       ready_release_tensor_instruction_list.Erase(instruction.Mutable());
-      DispatchInstruction<&VirtualMachineEngine::AbortOnOOM>(instruction.Mutable(), schedule_ctx);
+      JUST(DispatchInstruction<&VirtualMachineEngine::AbortOnOOM>(instruction.Mutable(),
+                                                                  schedule_ctx));
     }
   }
   // Buzy loop to make sure running instructions all done.
   ForEachStreamOnDevice(stream->device(), &BusyWaitAllInstructionsDone);
   // Shrink memory.
   ForEachStreamOnDevice(stream->device(), &ShrinkMemory);
+  return Maybe<void>::Ok();
 }
 
-void VirtualMachineEngine::AbortOnOOM(vm::Stream* stream, const ScheduleCtx& schedule_ctx) {
-  LOG(FATAL) << "Out of Memory.";
+Maybe<void> VirtualMachineEngine::AbortOnOOM(vm::Stream* stream, const ScheduleCtx& schedule_ctx) {
+  return Error::OutOfMemoryError() << "Out of Memory.";
 }
 
-template<void (VirtualMachineEngine::*OOMHandler)(vm::Stream*, const ScheduleCtx&)>
-void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
-                                               const ScheduleCtx& schedule_ctx) {
+template<Maybe<void> (VirtualMachineEngine::*OOMHandler)(vm::Stream*, const ScheduleCtx&)>
+Maybe<void> VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
+                                                      const ScheduleCtx& schedule_ctx) {
   auto* stream = instruction->mut_stream();
   // Prepare
   {
     const auto& ret = TRY(instruction->Prepare());
     if (unlikely(!ret.IsOk())) {
       if (ret.error()->has_out_of_memory_error()) {
-        (this->*OOMHandler)(stream, schedule_ctx);
+        JUST((this->*OOMHandler)(stream, schedule_ctx));
         // Infers the instruction again.
-        CHECK_JUST_MSG(instruction->Prepare(), std::stringstream() << DebugDeviceReset(stream));
+        JUST_MSG(instruction->Prepare(), std::stringstream() << DebugDeviceReset(stream));
       } else {
-        CHECK_JUST(ret);
+        JUST(ret);
       }
     }
   }
@@ -399,6 +403,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
     stream->mut_thread_ctx()->mut_worker_pending_instruction_list()->PushBack(instruction);
     schedule_ctx.OnWorkerLoadPending(stream->mut_thread_ctx());
   }
+  return Maybe<void>::Ok();
 }
 
 // Returns true if old scheduler_pending_instruction_list is empty
@@ -494,7 +499,7 @@ void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_
   LivelyInstructionListErase(sequnential_instruction);
 }
 
-void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
+Maybe<void> VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
   // Release finished instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_active_stream_list()->size())) { ReleaseFinishedInstructions(schedule_ctx); }
   // Try run the first barrier instruction.
@@ -517,7 +522,7 @@ void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
   }
   // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_ready_instruction_list()->size())) {
-    DispatchAndPrescheduleInstructions(schedule_ctx);
+    JUST(DispatchAndPrescheduleInstructions(schedule_ctx));
   }
   // handle scheduler probes
   if (unlikely(local_probe_list_.size())) {
@@ -526,6 +531,7 @@ void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
     probe_list_.MoveTo(&local_probe_list_);
     if (local_probe_list_.size()) { HandleLocalProbe(); }
   }
+  return Maybe<void>::Ok();
 }
 
 bool VirtualMachineEngine::SchedulerThreadUnsafeEmpty() const {

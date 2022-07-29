@@ -81,12 +81,12 @@ Maybe<void> EagerLocalTensorImpl::UpdateTensorStorage() {
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_storage());
   tensor_storage_->set_releaser_hook(
       [eager_blob_object](const std::shared_ptr<vm::TensorStorage>&) {
-        CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+        PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
           if (eager_blob_object->producer_stream().has_value()) {
             JUST(builder->ReleaseTensor(eager_blob_object));
           }
           return Maybe<void>::Ok();
-        }));
+        }).GetOrThrow();
       });
   return Maybe<void>::Ok();
 }

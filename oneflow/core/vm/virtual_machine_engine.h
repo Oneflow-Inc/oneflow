@@ -86,7 +86,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   InstructionList* mut_local_pending_instruction_list() { return &local_pending_instruction_list_; }
   // Returns true if old scheduler_pending_instruction_list is empty
   Maybe<bool> Receive(InstructionList* instr_list);
-  void Schedule(const ScheduleCtx& schedule_ctx);
+  Maybe<void> Schedule(const ScheduleCtx& schedule_ctx);
   bool SchedulerThreadUnsafeEmpty() const;
   bool SchedulerEmpty() const;
   std::string GetLivelyInstructionListDebugString(int64_t debug_cnt);
@@ -104,7 +104,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   void MakeAndAppendFusedInstruction(InstructionList&& fused_instruction_list,
                                      InstructionList* /*out*/ pending_instructions);
   void TryRunBarrierInstruction(const ScheduleCtx& schedule_ctx);
-  void DispatchAndPrescheduleInstructions(const ScheduleCtx& schedule_ctx);
+  Maybe<void> DispatchAndPrescheduleInstructions(const ScheduleCtx& schedule_ctx);
   bool OnSchedulerThread(const vm::Stream& stream);
 
   void ReleaseInstruction(Instruction* instruction);
@@ -115,13 +115,14 @@ class VirtualMachineEngine final : public intrusive::Base {
   DependenceAccess* AccessDependence(OperandAccessType access_type, Dependence* dependence,
                                      Instruction* instrution);
   void ConsumeDependences(Instruction* instruction);
-  template<void (VirtualMachineEngine::*OOMHandler)(vm::Stream*, const ScheduleCtx&)>
-  void DispatchInstruction(Instruction* instruction, const ScheduleCtx& schedule_ctx);
+  template<Maybe<void> (VirtualMachineEngine::*OOMHandler)(vm::Stream*, const ScheduleCtx&)>
+  Maybe<void> DispatchInstruction(Instruction* instruction, const ScheduleCtx& schedule_ctx);
 
   bool EdgeDispatchable(const Instruction* src, const Instruction* dst) const;
   bool Dispatchable(Instruction* instruction) const;
-  void BusyWaitInstructionsDoneThenShrink(vm::Stream* stream, const ScheduleCtx& schedule_ctx);
-  void AbortOnOOM(vm::Stream* stream, const ScheduleCtx& schedule_ctx);
+  Maybe<void> BusyWaitInstructionsDoneThenShrink(vm::Stream* stream,
+                                                 const ScheduleCtx& schedule_ctx);
+  Maybe<void> AbortOnOOM(vm::Stream* stream, const ScheduleCtx& schedule_ctx);
 
   void TryDispatchReadyInstructions();
 

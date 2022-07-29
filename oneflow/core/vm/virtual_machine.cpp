@@ -77,7 +77,8 @@ void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCt
 
 }  // namespace
 
-VirtualMachine::VirtualMachine() : disable_vm_threads_(false), scheduler_stopped_(false) {
+VirtualMachine::VirtualMachine()
+    : disable_vm_threads_(false), scheduler_stopped_(false), has_last_error_(false), last_error_() {
   // Class VirtualMachineEngine only cares the basic logical of vm, while class VirtualMachine
   // manages threads and condition variables.
   // In order to notify threads in VirtualMachineEngine, a notify callback lambda should be take as
@@ -146,8 +147,10 @@ class SingleThreadScheduleCtx : public vm::ScheduleCtx {
   }
 };
 
-void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& schedule_ctx) {
-  do { vm->Schedule(schedule_ctx); } while (!(vm->SchedulerEmpty()));
+Maybe<void> ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm,
+                                 const vm::ScheduleCtx& schedule_ctx) {
+  do { JUST(vm->Schedule(schedule_ctx)); } while (!(vm->SchedulerEmpty()));
+  return Maybe<void>::Ok();
 }
 
 }  // namespace
@@ -162,7 +165,7 @@ Maybe<void> VirtualMachine::BlockingRunProbeFunc(
       return true;
     });
     if (disable_vm_threads_) {
-      ScheduleUntilVMEmpty(engine_.Mutable(), SingleThreadScheduleCtx());
+      JUST(ScheduleUntilVMEmpty(engine_.Mutable(), SingleThreadScheduleCtx()));
     } else {
       pending_notifier_.Notify();
     }
@@ -222,6 +225,12 @@ std::string VirtualMachine::GetBlockingDebugString() {
 }
 
 Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
+  if (unlikely(has_last_error_.load(std::memory_order_acquire))) {
+    auto last_error = last_error_;
+    last_error_.reset();
+    has_last_error_ = false;
+    return last_error;
+  }
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
     INTRUSIVE_FOR_EACH_PTR(instruction, instruction_list) {
       const auto& device = instruction->stream().device();
@@ -258,7 +267,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
 
 Maybe<void> VirtualMachine::NotifyOrRunScheduler() {
   if (unlikely(pthread_fork::IsForkedSubProcess() || disable_vm_threads_)) {
-    ScheduleUntilVMEmpty(engine_.Mutable(), SingleThreadScheduleCtx());
+    JUST(ScheduleUntilVMEmpty(engine_.Mutable(), SingleThreadScheduleCtx()));
   } else {
     pending_notifier_.Notify();
   }
@@ -269,7 +278,7 @@ Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionList* instr_list) 
   CHECK_OR_RETURN(engine_->SchedulerEmpty())
       << "vm scheduler not empty. May be a fatal error occured";
   JUST(engine_->Receive(instr_list));
-  ScheduleUntilVMEmpty(engine_.Mutable(), SingleThreadScheduleCtx());
+  JUST(ScheduleUntilVMEmpty(engine_.Mutable(), SingleThreadScheduleCtx()));
   return Maybe<void>::Ok();
 }
 
@@ -316,11 +325,17 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
         //  `engine_->SchedulerEmpty()`
         // used
         //  here, because VirtualMachine::ScheduleLoop is more likely to get the mutex lock.
-        do { engine_->Schedule(schedule_ctx); } while (!engine_->SchedulerThreadUnsafeEmpty());
+        do {
+          Maybe<void> status = TRY(engine_->Schedule(schedule_ctx));
+          if (!status.IsOk() && !has_last_error_.load(std::memory_order_acquire)) {
+            last_error_ = status.stacked_error();
+            has_last_error_ = true;
+          }
+        } while (!engine_->SchedulerThreadUnsafeEmpty());
       } while (++i < kNumSchedulingPerTimoutTest);
     } while (MicrosecondsFrom(start) < kWorkingMicroseconds);
   }
-  ScheduleUntilVMEmpty(engine_.Mutable(), schedule_ctx);
+  CHECK_JUST(ScheduleUntilVMEmpty(engine_.Mutable(), schedule_ctx));
   CHECK_JUST(ForEachThreadCtx(engine_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
     thread_ctx->mut_notifier()->Close();
     return Maybe<void>::Ok();
