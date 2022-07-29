@@ -13,19 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_JOB_IR_H_
-#define ONEFLOW_CORE_JOB_JOB_IR_H_
+#ifndef ONEFLOW_IR_INCLUDE_SBP_SBPDIALECT_H_
+#define ONEFLOW_IR_INCLUDE_SBP_SBPDIALECT_H_
 
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/job/job.pb.h"
+#include "mlir/IR/Dialect.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 
-namespace oneflow {
+#include "OneFlow/SBPDialect.h.inc"
 
-Maybe<std::string> ConvertJobToTosaIR(Job* job);
-Maybe<std::string> ConvertJobToIR(Job* job);
-Maybe<void> SaveJobToIR(Job* job, const std::string& path);
-Maybe<void> LoadJobFromIR(Job* job, const std::string& path);
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_JOB_JOB_IR_H_
+#endif  // ONEFLOW_IR_INCLUDE_SBP_SBPDIALECT_H_
