@@ -23,7 +23,7 @@ namespace oneflow {
 
 class ParallelDesc;
 
-namespace ccl {
+namespace collective_communication {
 
 class CpuCommunicator : public Communicator {
  public:
@@ -38,7 +38,7 @@ class CpuCommunicator : public Communicator {
   Symbol<ParallelDesc> parallel_desc_;
 };
 
-}  // namespace ccl
+}  // namespace collective_communication
 
 }  // namespace oneflow
 

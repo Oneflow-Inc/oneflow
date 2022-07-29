@@ -18,12 +18,12 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace ccl {
+namespace collective_communication {
 
 void CpuCommunicator::Init(Symbol<ParallelDesc> parallel_desc) { parallel_desc_ = parallel_desc; }
 
 REGISTER_COLLECTIVE_COMMUNICATION_COMMUNICATOR(DeviceType::kCPU, CpuCommunicator);
 
-}  // namespace ccl
+}  // namespace collective_communication
 
 }  // namespace oneflow

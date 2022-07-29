@@ -20,8 +20,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace ccl {
-
 namespace collective_communication {
 
 class AllReduce : public CollectiveCommunication {
@@ -48,8 +46,6 @@ inline bool IsAllReduceRegistered(DeviceType device_type) {
 }
 
 }  // namespace collective_communication
-
-}  // namespace ccl
 
 }  // namespace oneflow
 

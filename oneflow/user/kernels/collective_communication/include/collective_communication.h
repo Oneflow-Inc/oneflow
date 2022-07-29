@@ -23,8 +23,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace ccl {
-
 namespace collective_communication {
 
 #define REDUCE_TYPE_SEQ      \
@@ -72,8 +70,6 @@ NewCollectiveCommunication(DeviceType device_type, Args&&... args) {
   REGISTER_CLASS(DeviceType, device, Base, Derived)
 
 }  // namespace collective_communication
-
-}  // namespace ccl
 
 }  // namespace oneflow
 

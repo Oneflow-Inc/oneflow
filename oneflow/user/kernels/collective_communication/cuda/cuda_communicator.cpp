@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace ccl {
+namespace collective_communication {
 
 void CudaCommunicator::Init(Symbol<ParallelDesc> parallel_desc) {
   std::set<std::pair<int64_t, int64_t>> device_set;
@@ -34,7 +34,7 @@ void CudaCommunicator::Init(Symbol<ParallelDesc> parallel_desc) {
 
 REGISTER_COLLECTIVE_COMMUNICATION_COMMUNICATOR(DeviceType::kCUDA, CudaCommunicator);
 
-}  // namespace ccl
+}  // namespace collective_communication
 
 }  // namespace oneflow
 

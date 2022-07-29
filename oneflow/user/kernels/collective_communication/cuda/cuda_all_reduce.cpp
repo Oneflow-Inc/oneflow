@@ -20,8 +20,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace ccl {
-
 namespace collective_communication {
 
 namespace {
@@ -74,8 +72,6 @@ REGISTER_COLLECTIVE_COMMUNICATION_FACTORY(DeviceType::kCUDA, AllReduceFactory,
                                           CudaAllReduceFactory);
 
 }  // namespace collective_communication
-
-}  // namespace ccl
 
 }  // namespace oneflow
 

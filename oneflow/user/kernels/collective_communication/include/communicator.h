@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace ccl {
+namespace collective_communication {
 
 class Communicator {
  public:
@@ -50,7 +50,7 @@ inline bool IsCommunicatorRegistered(DeviceType device_type) {
 #define REGISTER_COLLECTIVE_COMMUNICATION_COMMUNICATOR(device, Derived) \
   REGISTER_CLASS(DeviceType, device, Communicator, Derived)
 
-}  // namespace ccl
+}  // namespace collective_communication
 
 }  // namespace oneflow
 

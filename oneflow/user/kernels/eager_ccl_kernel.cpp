@@ -22,12 +22,12 @@ namespace oneflow {
 namespace {
 
 auto AllReduceCollectiveCommunicationExists() {
-  return hob::make_custom(
-      "AllReduceCollectiveCommunicationExists", [=](const user_op::KernelRegContext& ctx) {
-        DeviceType device_type = ctx.device_type();
-        return ccl::IsCommunicatorRegistered(device_type)
-               && ccl::collective_communication::IsAllReduceRegistered(device_type);
-      });
+  return hob::make_custom("AllReduceCollectiveCommunicationExists",
+                          [=](const user_op::KernelRegContext& ctx) {
+                            DeviceType device_type = ctx.device_type();
+                            return collective_communication::IsCommunicatorRegistered(device_type)
+                                   && collective_communication::IsAllReduceRegistered(device_type);
+                          });
 }
 
 class EagerCclOpKernelCache final : public user_op::OpKernelCache {
@@ -35,7 +35,9 @@ class EagerCclOpKernelCache final : public user_op::OpKernelCache {
   explicit EagerCclOpKernelCache(user_op::KernelCacheContext* ctx) { Init(ctx); }
   ~EagerCclOpKernelCache() override = default;
 
-  const std::shared_ptr<ccl::Communicator>& communicator() const { return communicator_; }
+  const std::shared_ptr<collective_communication::Communicator>& communicator() const {
+    return communicator_;
+  }
 
  private:
   void Init(user_op::KernelCacheContext* ctx) {
@@ -43,10 +45,11 @@ class EagerCclOpKernelCache final : public user_op::OpKernelCache {
     ParallelConf parallel_conf;
     CHECK(TxtString2PbMessage(parallel_conf_txt, &parallel_conf));
     Symbol<ParallelDesc> parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
-    communicator_ = oneflow::ccl::NewCommunicator(parallel_desc->device_type(), parallel_desc);
+    communicator_ =
+        collective_communication::NewCommunicator(parallel_desc->device_type(), parallel_desc);
   }
 
-  std::shared_ptr<ccl::Communicator> communicator_;
+  std::shared_ptr<collective_communication::Communicator> communicator_;
 };
 
 void InitEagerCclOpKernelCache(user_op::KernelCacheContext* ctx,
@@ -79,13 +82,13 @@ class EagerCclAllReduceKernel final : public user_op::OpKernel {
     CHECK_EQ(in->shape_view(), out->shape_view()) << kOfBugIssueUploadPrompt;
     CHECK_EQ(in->data_type(), out->data_type()) << kOfBugIssueUploadPrompt;
 
-    ccl::collective_communication::ReduceType reduce_type = ccl::collective_communication::kSum;
-    if (in->data_type() == kBool) { reduce_type = ccl::collective_communication::kMax; }
+    collective_communication::ReduceType reduce_type = collective_communication::kSum;
+    if (in->data_type() == kBool) { reduce_type = collective_communication::kMax; }
 
-    std::unique_ptr<ccl::collective_communication::AllReduce> all_reduce =
-        ccl::collective_communication::NewCollectiveCommunication<
-            ccl::collective_communication::AllReduceFactory>(ctx->device_type(), in->data_type(),
-                                                             reduce_type);
+    std::unique_ptr<collective_communication::AllReduce> all_reduce =
+        collective_communication::NewCollectiveCommunication<
+            collective_communication::AllReduceFactory>(ctx->device_type(), in->data_type(),
+                                                        reduce_type);
     all_reduce->Launch(ctx->stream(), in->dptr(), out->mut_dptr(), out->shape_view().elem_cnt(),
                        kernel_cache->communicator());
   }

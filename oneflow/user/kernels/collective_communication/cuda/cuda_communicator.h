@@ -26,7 +26,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace ccl {
+namespace collective_communication {
 
 class CudaCommunicator : public Communicator {
  public:
@@ -41,7 +41,7 @@ class CudaCommunicator : public Communicator {
   ncclComm_t nccl_comm_;
 };
 
-}  // namespace ccl
+}  // namespace collective_communication
 
 }  // namespace oneflow
 
