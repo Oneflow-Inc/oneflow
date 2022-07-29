@@ -65,24 +65,17 @@ class SbpEdge final {
   // graph should be fully eliminated.
   double GreedyStrategy();
 
-  // a set of ids of logical blobs carried/transferred on this sbp edge
-  std::unordered_set<LogicalBlobId> carry_lbis;
-
   // load a logical blob
-  void LoadLbi(const LogicalBlobId& lbi) { carry_lbis.insert(lbi); }
+  void LoadLbi(const LogicalBlobId& lbi);
 
   // check the existence of a logical blob
-  bool SearchLbi(const LogicalBlobId& lbi) const {
-    return carry_lbis.find(lbi) != carry_lbis.end();
-  }
+  bool SearchLbi(const LogicalBlobId& lbi) const;
 
   // unload a logical blob
-  void UnloadLbi(const LogicalBlobId& lbi) {
-    if (carry_lbis.erase(lbi) == 0) { std::cout << "Unload an empty lbi!" << std::endl; }
-  }
+  void UnloadLbi(const LogicalBlobId& lbi);
 
   // Not carrying any blob
-  bool EmptyLbi() const { return carry_lbis.empty(); }
+  bool EmptyLbi() const;
 
   // Get the minimum element in Cost
   double GetMinCost();
@@ -127,6 +120,9 @@ class SbpEdge final {
   std::vector<SbpEdge*> edge_list_;
   // Time waiting for other gpus. pthread_cond_wait
   double wait_time_ = -1.0;
+
+  // a set of ids of logical blobs carried/transferred on this sbp edge
+  std::unordered_set<LogicalBlobId> carry_lbis_;
 
   // Minimum and maximum cost would not be changed by eliminations, which will generate new edges.
   // Also would not be changed by node merging, which will only perform cost copy for the expanding
