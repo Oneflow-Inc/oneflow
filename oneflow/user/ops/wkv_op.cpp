@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/functional/impl/common.h"
 
 namespace oneflow {
 
@@ -81,11 +82,31 @@ Maybe<void> WkvGraphGradOp(user_op::BackwardOpConfContext* ctx) {
         .Output("gv")
         .Build();
   });
+  const std::string reduce_sum_w_op = ctx->FwOp().op_name() + "_grad_reduce_sum_w";
+  std::vector<int32_t> reduce_axes_vec;
+  reduce_axes_vec.emplace_back(0);
+  ctx->DefineOp(reduce_sum_w_op, [&](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("reduce_sum")
+        .InputBind("input_tensor", ctx->GetOp(wkv_grad_op).output("gw", 0))
+        .Attr("axis", reduce_axes_vec)
+        .Attr("keepdims", false)
+        .Output("output_tensor")
+        .Build();
+  });
+  const std::string reduce_sum_u_op = ctx->FwOp().op_name() + "_grad_reduce_sum_u";
+  ctx->DefineOp(reduce_sum_u_op, [&](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("reduce_sum")
+        .InputBind("input_tensor", ctx->GetOp(wkv_grad_op).output("gu", 0))
+        .Attr("axis", reduce_axes_vec)
+        .Attr("keepdims", false)
+        .Output("output_tensor")
+        .Build();
+  });
   ctx->FwOp().InputGradBind(user_op::OpArg("w", 0), [&]() -> const std::string& {
-    return ctx->GetOp(wkv_grad_op).output("gw", 0);
+    return ctx->GetOp(reduce_sum_w_op).output("output_tensor", 0);
   });
   ctx->FwOp().InputGradBind(user_op::OpArg("u", 0), [&]() -> const std::string& {
-    return ctx->GetOp(wkv_grad_op).output("gu", 0);
+    return ctx->GetOp(reduce_sum_u_op).output("output_tensor", 0);
   });
   ctx->FwOp().InputGradBind(user_op::OpArg("k", 0), [&]() -> const std::string& {
     return ctx->GetOp(wkv_grad_op).output("gk", 0);
