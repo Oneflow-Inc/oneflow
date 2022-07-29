@@ -26,8 +26,8 @@ class ForeignCallback {
   ForeignCallback() = default;
   virtual ~ForeignCallback() = default;
 
-  virtual void EagerMirroredCast(const OpAttribute& op_attribute,
-                                 const ParallelConf& parallel_conf) const {
+  virtual void EagerLocalCast(const OpAttribute& op_attribute,
+                              const ParallelConf& parallel_conf) const {
     UNIMPLEMENTED();
   }
   virtual void EagerInterpretCompletedOp(const OpAttribute& op_attribute,

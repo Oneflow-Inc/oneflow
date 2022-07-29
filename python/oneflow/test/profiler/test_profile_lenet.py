@@ -14,13 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
-from tkinter import TRUE
 import unittest
 import oneflow.unittest
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.nn.functional as F
 import oneflow.profiler
+from oneflow.profiler.events import CustomEvent, KernelEvent
 
 
 class LeNet(nn.Module):
@@ -46,8 +46,12 @@ class LeNet(nn.Module):
 
 def get_event(events, name: str, input_shapes: str = "-"):
     for item in events:
-        if item.name == name and item.input_shapes == input_shapes:
-            return item
+        if isinstance(item, CustomEvent):
+            if item.name == name:
+                return item
+        if isinstance(item, KernelEvent):
+            if item.name == name and item.input_shapes == input_shapes:
+                return item
     return None
 
 
@@ -61,7 +65,7 @@ def _test_lenet(
     lenet = LeNet()
     if on_cuda:
         x = x.to("cuda")
-        lenet = lenet.to("cuda")
+        lenet.to("cuda")
     activities = [oneflow.profiler.ProfilerActivity.CPU]
     if on_cuda:
         activities.append(oneflow.profiler.ProfilerActivity.CUDA)
@@ -75,19 +79,18 @@ def _test_lenet(
                 eager_res = lenet(x)
         with oneflow.profiler.record_function("lenet_backward_total_time") as f:
             eager_res.sum().backward()
-    events = prof.key_averages()
+    events = prof.key_averages(group_by_input_shape=True)
 
     conv_event = get_event(
         events, "conv2d", "[(2,3,32,32), (6,3,5,5)]" if record_shapes else "-"
     )
     test_case.assertIsNotNone(conv_event)
-    test_case.assertEqual(conv_event.on_gpu, True if on_cuda else False)
 
     if on_cuda:
         test_case.assertGreater(conv_event.cpu_time, 0.0)
         test_case.assertGreater(conv_event.cpu_time_total, 0.0)
-        test_case.assertGreater(conv_event.gpu_time, 0.0)
-        test_case.assertGreater(conv_event.gpu_time_total, 0.0)
+        test_case.assertGreater(conv_event.cuda_time, 0.0)
+        test_case.assertGreater(conv_event.cuda_time_total, 0.0)
     else:
         test_case.assertGreater(conv_event.cpu_time, 0.0)
         test_case.assertGreater(conv_event.cpu_time_total, 0.0)
@@ -100,13 +103,11 @@ def _test_lenet(
         events, "relu_grad", "[(2,6,28,28), (2,6,28,28)]" if record_shapes else "-"
     )
     test_case.assertIsNotNone(relu_grad_event)
-    test_case.assertEqual(conv_event.on_gpu, True if on_cuda else False)
-
     if on_cuda:
         test_case.assertGreater(relu_grad_event.cpu_time, 0.0)
         test_case.assertGreater(relu_grad_event.cpu_time_total, 0.0)
-        test_case.assertGreater(relu_grad_event.gpu_time, 0.0)
-        test_case.assertGreater(relu_grad_event.gpu_time_total, 0.0)
+        test_case.assertGreater(relu_grad_event.cuda_time, 0.0)
+        test_case.assertGreater(relu_grad_event.cuda_time_total, 0.0)
     else:
         test_case.assertGreater(relu_grad_event.cpu_time, 0.0)
         test_case.assertGreater(relu_grad_event.cpu_time_total, 0.0)

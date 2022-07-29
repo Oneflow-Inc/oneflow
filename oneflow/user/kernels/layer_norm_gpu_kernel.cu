@@ -307,14 +307,14 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
     user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
     const double epsilon = ctx->Attr<double>("epsilon");
     CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
-    const int64_t num_instances = mean->shape().elem_cnt();
-    const int64_t norm_size = x->shape().elem_cnt() / num_instances;
+    const int64_t num_instances = mean->shape_view().elem_cnt();
+    const int64_t norm_size = x->shape_view().elem_cnt() / num_instances;
     const T* gamma_ptr = nullptr;
     const T* beta_ptr = nullptr;
     if (ctx->has_input("gamma", 0)) {
       const user_op::Tensor* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
       gamma_ptr = gamma->dptr<T>();
-      CHECK_EQ(gamma->shape().elem_cnt(), norm_size);
+      CHECK_EQ(gamma->shape_view().elem_cnt(), norm_size);
     }
     if (ctx->has_input("beta", 0)) { beta_ptr = ctx->Tensor4ArgNameAndIndex("beta", 0)->dptr<T>(); }
     DispatchLayerNormForwardGpu<T>(ctx->stream(), num_instances, norm_size, epsilon, x->dptr<T>(),
@@ -347,8 +347,8 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
     const user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
     const user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const int64_t num_instances = mean->shape().elem_cnt();
-    const int64_t norm_size = x->shape().elem_cnt() / num_instances;
+    const int64_t num_instances = mean->shape_view().elem_cnt();
+    const int64_t norm_size = x->shape_view().elem_cnt() / num_instances;
     const T* gamma_ptr = nullptr;
     if (ctx->has_input("gamma", 0)) {
       gamma_ptr = ctx->Tensor4ArgNameAndIndex("gamma", 0)->dptr<T>();
@@ -357,7 +357,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), dx->data_type());
-      CHECK_EQ(add_to_output->shape(), dx->shape());
+      CHECK_EQ(add_to_output->shape_view(), dx->shape_view());
       add_to_output_ptr = add_to_output->dptr<T>();
     }
     LaunchLayerNormBackward<T>(ctx->stream(), num_instances, norm_size, dy->dptr<T>(), x->dptr<T>(),
@@ -398,8 +398,8 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
     const user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
-    const int64_t num_instances = mean->shape().elem_cnt();
-    const int64_t norm_size = x->shape().elem_cnt() / num_instances;
+    const int64_t num_instances = mean->shape_view().elem_cnt();
+    const int64_t norm_size = x->shape_view().elem_cnt() / num_instances;
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const DataType data_type = dy->data_type();
     const int grid_dim_x = (norm_size + tile_size - 1) / tile_size;

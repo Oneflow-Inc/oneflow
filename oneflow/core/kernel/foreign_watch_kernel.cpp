@@ -36,7 +36,7 @@ class ForeignWatchKernel final : public Kernel {
 template<DeviceType device_type>
 void ForeignWatchKernel<device_type>::ForwardDataContent(KernelContext* ctx) const {
   OfBlob of_blob(ctx->stream(), ctx->BnInOp2Blob("in"));
-  (*Global<std::shared_ptr<ForeignWatcher>>::Get())
+  (*Singleton<std::shared_ptr<ForeignWatcher>>::Get())
       ->Call(this->op_conf().foreign_watch_conf().handler_uuid(),
              reinterpret_cast<int64_t>(&of_blob));
 }

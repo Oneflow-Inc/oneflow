@@ -29,9 +29,9 @@ Shape GetFlatShape(const ShapeView& shape, int64_t axis) {
 template<DeviceType device_type, typename T, typename K>
 void GatherForward(ep::Stream* stream, const Blob* indices, const Blob* in, int64_t axis, Blob* out,
                    const int64_t offset) {
-  const Shape& flat_in_shape = GetFlatShape(in->shape(), axis);
+  const Shape& flat_in_shape = GetFlatShape(in->shape_view(), axis);
   GatherKernelUtilImpl<device_type, T, K>::Forward(stream, indices->dptr<K>(),
-                                                   indices->shape().elem_cnt(), in->dptr<T>(),
+                                                   indices->shape_view().elem_cnt(), in->dptr<T>(),
                                                    flat_in_shape, out->mut_dptr<T>(), offset);
 }
 

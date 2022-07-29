@@ -53,7 +53,7 @@ int64_t RingIncrease(int64_t n, int64_t size) { return (n + 1 + size) % size; }
 
 template<typename T>
 void VecAdd(size_t size, T* out, const T* in0, const T* in1) {
-  size_t thread_num = Global<ThreadPool>::Get()->thread_num();
+  size_t thread_num = Singleton<ThreadPool>::Get()->thread_num();
   BalancedSplitter bs(size, thread_num);
   MultiThreadLoop(thread_num, [&](size_t thread_idx) {
     size_t end = bs.At(thread_idx).end();
@@ -487,7 +487,7 @@ std::pair<ncclComm_t, int64_t> RawGetNcclCommAndPeerNcclRank(int64_t peer_proces
   const int64_t peer_nccl_rank = (peer_process_id > rank) ? 1 : 0;
   device_set.emplace(rank, GlobalProcessCtx::LocalRank());
   device_set.emplace(peer_process_id, GlobalProcessCtx::LocalRank(peer_process_id));
-  return {CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set),
+  return {CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set),
           peer_nccl_rank};
 }
 auto* GetNcclCommAndPeerNcclRank = DECORATE(&RawGetNcclCommAndPeerNcclRank, ThreadLocal);

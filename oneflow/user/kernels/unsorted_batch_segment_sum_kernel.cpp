@@ -44,13 +44,14 @@ class UnsortedBatchSegmentSumKernel final : public user_op::OpKernel,
     const user_op::Tensor* data = ctx->Tensor4ArgNameAndIndex("data", 0);
     const user_op::Tensor* segment_ids = ctx->Tensor4ArgNameAndIndex("segment_ids", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t axis = segment_ids->shape().NumAxes() - 1;
-    const Shape& flat_data_shape = GetFlatShape(data->shape(), axis);
+    const int64_t axis = segment_ids->shape_view().NumAxes() - 1;
+    const Shape& flat_data_shape = GetFlatShape(data->shape_view(), axis);
 
-    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0, out->shape().elem_cnt() * sizeof(T));
+    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
+                        out->shape_view().elem_cnt() * sizeof(T));
     BatchGatherKernelUtilImpl<device_type, T, K>::Backward(
         ctx->stream(), data->dptr<T>(), segment_ids->dptr<K>(), flat_data_shape,
-        out->shape().At(axis), out->mut_dptr<T>());
+        out->shape_view().At(axis), out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

@@ -45,7 +45,7 @@ class Upsample : public OpExprGradFunction<UpsampleCaptureState> {
 
 Maybe<void> Upsample::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -67,7 +67,7 @@ Maybe<void> Upsample::Capture(UpsampleCaptureState* ctx, const TensorTuple& inpu
 Maybe<void> Upsample::Apply(const UpsampleCaptureState* ctx, const TensorTuple& out_grads,
                             TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
 
   const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
   in_grads->resize(1);
@@ -93,8 +93,8 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureStat
 
   Maybe<void> Capture(UpsampleNearest2DCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -111,7 +111,7 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureStat
   Maybe<void> Apply(const UpsampleNearest2DCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     MutableAttrMap attrs;
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
@@ -143,8 +143,8 @@ class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DCaptureSt
 
   Maybe<void> Capture(UpsampleBilinear2DCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -162,7 +162,7 @@ class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DCaptureSt
   Maybe<void> Apply(const UpsampleBilinear2DCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     MutableAttrMap attrs;
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
@@ -193,8 +193,8 @@ class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DCaptureState>
 
   Maybe<void> Capture(UpsampleLinear1DCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -211,7 +211,7 @@ class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DCaptureState>
   Maybe<void> Apply(const UpsampleLinear1DCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     MutableAttrMap attrs;
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
@@ -241,8 +241,8 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DCaptureStat
 
   Maybe<void> Capture(UpsampleNearest1DCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -258,7 +258,7 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DCaptureStat
   Maybe<void> Apply(const UpsampleNearest1DCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     MutableAttrMap attrs;
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
@@ -290,8 +290,8 @@ class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DCaptureStat
 
   Maybe<void> Capture(UpsampleBicubic2DCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -309,7 +309,7 @@ class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DCaptureStat
   Maybe<void> Apply(const UpsampleBicubic2DCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     MutableAttrMap attrs;
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
@@ -340,8 +340,8 @@ class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DCaptureStat
 
   Maybe<void> Capture(UpsampleNearest3DCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -359,7 +359,7 @@ class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DCaptureStat
   Maybe<void> Apply(const UpsampleNearest3DCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     MutableAttrMap attrs;
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
@@ -392,8 +392,8 @@ class UpsampleTrilinear3D : public OpExprGradFunction<UpsampleTrilinear3DCapture
 
   Maybe<void> Capture(UpsampleTrilinear3DCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -412,7 +412,7 @@ class UpsampleTrilinear3D : public OpExprGradFunction<UpsampleTrilinear3DCapture
   Maybe<void> Apply(const UpsampleTrilinear3DCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     MutableAttrMap attrs;
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);

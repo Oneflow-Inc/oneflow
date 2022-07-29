@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/functional/packed_functor.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/framework/tensor_methods.h"
+#include "oneflow/core/common/throw.h"
 
 namespace oneflow {
 namespace one {
@@ -72,7 +73,7 @@ class FunctionLibrary {
     auto* functors = PackedFuncCreatorMap<typename PackedFunctorMaker<R(Args...)>::FType>::Get();
     const auto& it = functors->find(func_name);
     CHECK_OR_RETURN(it != functors->end())
-        << "Functor was not found for \"" << func_name
+        << Error::RuntimeError() << "Functor was not found for \"" << func_name
         << "\", please check whether the functor has been registered correctly or not.";
     return it->second();
   }
@@ -89,8 +90,9 @@ class FunctionLibrary {
   void add_functor_creator(const std::string& func_name, Creator creator) {
     using func_type = typename function_traits<Func>::func_type;
     auto* functors = PackedFuncCreatorMap<typename PackedFunctorMaker<func_type>::FType>::Get();
-    CHECK_EQ(functors->count(func_name), 0)
-        << "The functor with name " << func_name << " has been registered more than once.";
+    CHECK_OR_THROW(functors->count(func_name) == 0)
+        << Error::RuntimeError() << "The functor with name " << func_name
+        << " has been registered more than once.";
     functors->emplace(func_name, creator);
   }
 };

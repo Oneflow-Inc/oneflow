@@ -64,27 +64,25 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
                         const Stride& target_stride, int64_t storage_offset) {
   // TODO(): Check shape compatible.
   auto device = JUST(input->device());
-  auto tensor_meta = std::make_shared<MirroredTensorMeta>(
-      std::make_shared<Shape>(target_shape), std::make_shared<Stride>(target_stride),
-      input->dtype()->data_type(), device, storage_offset);
+  auto tensor_meta = SymbolOf(LocalTensorMeta(std::make_shared<Shape>(target_shape),
+                                              std::make_shared<Stride>(target_stride),
+                                              input->dtype()->data_type(), device, storage_offset));
 
   CHECK_OR_RETURN(JUST(input->has_eager_blob_object()));
   // new output tensor
   const auto& blob_object = JUST(input->eager_blob_object());
   bool requires_grad = (autograd::GradMode::is_enabled() && input->requires_grad());
-  auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
-      tensor_meta, JUST(input->tensor_storage()), requires_grad,
-      /*is_leaf=*/!requires_grad);
-  const bool pin_memory = JUST(JUST(input->AsMirroredTensor())->eager_blob_object())->pin_memory();
-  JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()),
-                                        /*pin_memory=*/pin_memory));
+  auto tensor_impl =
+      std::make_shared<EagerLocalTensorImpl>(JUST(input->tensor_storage()), requires_grad,
+                                             /*is_leaf=*/!requires_grad);
+  JUST(
+      tensor_impl->InitEagerBlobObject(tensor_meta, JUST(blob_object->compute_local_dep_object())));
 
-  auto view_tensor = std::make_shared<MirroredTensor>(tensor_impl);
+  auto view_tensor = std::make_shared<LocalTensor>(tensor_impl);
 
   const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object =
       JUST(view_tensor->eager_blob_object());
   view_eager_blob_object->set_storage_offset(JUST(view_tensor->storage_offset()));
-  view_eager_blob_object->set_is_shape_synced(true);
   return std::static_pointer_cast<Tensor>(view_tensor);
 }
 
@@ -95,7 +93,7 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_
 
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                       const Stride& target_stride) {
-  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
+  int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
   std::shared_ptr<Tensor> output =
       JUST(BasicView(input, target_shape, target_stride, storage_offset));
 
@@ -135,7 +133,7 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
 
   DimVector target_dims(ndim);
   Stride target_strides(ndim);
-  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
+  int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
   for (int i = 0; i < ndim; ++i) {
     int64_t step = std::min(steps[i], shape->At(i));
     CHECK_OR_RETURN(step >= 0) << Error::RuntimeError() << "Step must be greater than zero.";
@@ -153,14 +151,14 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
 
   auto output = JUST(BasicView(input, Shape(target_dims), target_strides, storage_offset));
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
+    const Shape in_shape = *input->shape();
     auto backward_fn = std::make_shared<BackwardFunction>();
     backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                             bool create_graph) -> Maybe<void> {
       autograd::AutoGradMode mode(create_graph);
       CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
       in_grads->resize(1);
-      (*in_grads)[0] = JUST(functional::SliceGrad(
-          JUST(VectorAt(out_grads, 0)), Shape(input->shape()->dim_vec()), starts, ends, steps));
+      (*in_grads)[0] = JUST(functional::SliceGrad(out_grads[0], in_shape, starts, ends, steps));
       return Maybe<void>::Ok();
     };
     backward_fn->status = []() { return true; };
@@ -191,7 +189,7 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& exp
     target_stride_vec[expand_dim] = expand_dim < ndim ? strides->at(expand_dim) : 1;
   }
 
-  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
+  int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
   std::shared_ptr<Tensor> output =
       JUST(BasicView(input, Shape(target_dim_vec), target_stride_vec, storage_offset));
 
@@ -235,7 +233,7 @@ Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
     }
   }
 
-  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
+  int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
   std::shared_ptr<Tensor> output =
       JUST(BasicView(input, Shape(target_dim_vec), target_stride_vec, storage_offset));
 
@@ -298,7 +296,7 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int
     }
   }
 
-  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
+  int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
   std::shared_ptr<Tensor> output =
       JUST(BasicView(input, Shape(target_dim_vec), target_stride_vec, storage_offset));
 
@@ -331,7 +329,7 @@ Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, c
   dim_vec.insert(dim_vec.end(), length);
   dim_vec.insert(dim_vec.end(), shape->dim_vec().cbegin() + dim + 1, shape->dim_vec().end());
 
-  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
+  int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
   Shape target_shape(dim_vec);
 
   Stride stride(ndim);
@@ -395,7 +393,7 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
   const int64_t ndim = shape->NumAxes();
-  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
+  int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
 
   CHECK_EQ_OR_RETURN(permute.size(), ndim)
       << "permute size should be equal to input tensor's ndim, but got " << permute.size();
@@ -437,7 +435,7 @@ Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const int32_t& 
   const auto& shape = input->shape();
   const auto& stride = JUST(input->stride());
   const int64_t ndim = shape->NumAxes();
-  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
+  int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
 
   CHECK_GE_OR_RETURN(dimension, 0) << "attibute dimension should be >= 0, but got " << dimension;
   CHECK_LE_OR_RETURN(dimension, ndim)
@@ -491,7 +489,7 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offse
   const auto& shape = input->shape();
   const auto& stride = JUST(input->stride());
   const int64_t ndim = shape->NumAxes();
-  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
+  int64_t storage_offset = JUST(JUST(input->AsLocalTensor())->storage_offset());
 
   // infer output storage_offset
   int64_t diag_size = 0;

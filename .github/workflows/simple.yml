@@ -245,7 +245,7 @@ jobs:
           repository: Oneflow-Inc/conda-env
           ref: 30a7f00eb48ee9009d85a848e720823e5054c66b
           path: conda-env
-      - uses: Oneflow-Inc/get-oneflow@support-cuda-1106
+      - uses: Oneflow-Inc/get-oneflow@support-iree-ci
         name: Build with gcc7
         if: ${{ matrix.build-type == 'gcc7'}}
         with:
@@ -254,7 +254,7 @@ jobs:
           oneflow-build-env: conda
           conda-env-file: conda-env/dev/gcc7/environment-v2.yml
           conda-env-name: oneflow-dev-gcc7-v2
-      - uses: Oneflow-Inc/get-oneflow@support-cuda-1106
+      - uses: Oneflow-Inc/get-oneflow@support-iree-ci
         name: Build with clang10
         if: ${{ matrix.build-type == 'clang10'}}
         with:

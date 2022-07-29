@@ -52,7 +52,7 @@ class ScalarMathKernel final : public user_op::OpKernel {
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
 
-    int64_t elem_cnt = out->shape().elem_cnt();
+    int64_t elem_cnt = out->shape_view().elem_cnt();
     if (elem_cnt != 0) {
       ScalarMathFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand, in_ptr,
                                                   out_ptr);
@@ -85,7 +85,7 @@ class ScalarReverseMathKernel final : public user_op::OpKernel {
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
 
-    int64_t elem_cnt = out->shape().elem_cnt();
+    int64_t elem_cnt = out->shape_view().elem_cnt();
     if (elem_cnt != 0) {
       ScalarReverseMathFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand,
                                                          in_ptr, out_ptr);
@@ -169,7 +169,7 @@ class CpuScalarPowGradKernel final : public user_op::OpKernel {
       UNIMPLEMENTED();
     }
 
-    const int32_t elem_cnt = x_tensor->shape().elem_cnt();
+    const int32_t elem_cnt = x_tensor->shape_view().elem_cnt();
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
       dx_ptr[i] =
           scalar_operand * (std::pow(x_ptr[i], scalar_operand - static_cast<T>(1))) * dy_ptr[i];
@@ -210,7 +210,7 @@ class CpuScalarReversePowGradKernel final : public user_op::OpKernel {
       UNIMPLEMENTED();
     }
 
-    const int32_t elem_cnt = x_tensor->shape().elem_cnt();
+    const int32_t elem_cnt = x_tensor->shape_view().elem_cnt();
     // NOTE: y = a^x    ==>>   dy/dx = a^x * lna
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
       dx_ptr[i] = std::pow(scalar_operand, x_ptr[i]) * std::log(scalar_operand) * dy_ptr[i];

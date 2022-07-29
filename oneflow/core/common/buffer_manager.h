@@ -37,7 +37,7 @@ class BufferMgr final {
   }
 
  private:
-  friend class Global<BufferMgr>;
+  friend class Singleton<BufferMgr>;
   BufferMgr() = default;
 
   HashMap<std::string, std::unique_ptr<Buffer<T>>> name2buffer_;

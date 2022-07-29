@@ -111,7 +111,7 @@ class GraphConfig(object):
         Args:
             mode (bool): if set to true, optimizer states of Data Parallel will be sharded across devices.
             stage (int): optimization stage, range from 1 to 3. 
-            shard_min_size (int): min size of a shard of an optimizer state.
+            shard_min_size (int): min size (element count) of a shard of an optimizer state.
             shard_restore_level (int): level to restore sharded parameter to whole parameter for consumer operators, level 0 is no restore, level 1 is soft restore, level 2 is hard restore. Note that this paremeter is at pre-alpha stage.
         """
         if not mode:
@@ -278,15 +278,14 @@ class GraphConfig(object):
         """
         self.proto.cudnn_conv_heuristic_search_algo = mode
 
-    def disable_straighten_algorithm(self, mode: bool = False):
-        r""" Whether we disable the straighten algorithm.
+    def enable_straighten_algorithm(self, mode: bool = True):
+        r""" Whether enable the straighten algorithm.
 
         If using nccl compute stream, turning it on might not speed up the training.
         If not using nccl compute stream, turning it on might slow down data parallelism by 0.6% and slow down model parallelism by 6%.
-
-        The switch is off by default (i.e. use the straighten algorithm by default).
+        Considering memory, enabling the straighten algorithm is forbidden with one machine/device only, and not recommended under pipeline parallelism. 
         """
-        self.proto.disable_straighten_algorithm_in_task_graph = mode
+        self.proto.enable_straighten_algorithm_in_task_graph = mode
 
     def _generate_optimizer_and_variable_configs(
         self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,

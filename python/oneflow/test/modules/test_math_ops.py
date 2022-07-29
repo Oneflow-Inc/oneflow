@@ -31,7 +31,7 @@ from oneflow.test_utils.test_util import (
 
 @flow.unittest.skip_unless_1n1d()
 class TestSinh(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_flow_sinh_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -41,7 +41,7 @@ class TestSinh(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSin(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_flow_sin_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -51,7 +51,7 @@ class TestSin(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestInplaceSin(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_flow_inplace_sin_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -96,7 +96,7 @@ class TestCos(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestLogModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_log_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -105,14 +105,14 @@ class TestLogModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSqrt(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_sqrt_flow_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
         z = torch.sqrt(x)
         return z
 
-    @autotest()
+    @autotest(n=5)
     def test_sqrt_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -122,7 +122,7 @@ class TestSqrt(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestExp(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_flow_exp_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -132,7 +132,7 @@ class TestExp(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestRsqrt(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_rsqrt_flow_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -142,14 +142,14 @@ class TestRsqrt(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSquare(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_square_flow_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
         z = torch.square(x)
         return z
 
-    @autotest()
+    @autotest(n=5)
     def test_square_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -159,7 +159,7 @@ class TestSquare(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestPow(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_pow_float_scalar_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -186,21 +186,21 @@ class TestPow(flow.unittest.TestCase):
         y = random().to(int)
         return y ** x
 
-    @autotest()
+    @autotest(n=5)
     def test_pow_elementwise_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=2, dim1=2).to(device)
         y = random_tensor(ndim=2, dim1=2).to(device)
         return torch.pow(x, y)
 
-    @autotest()
+    @autotest(n=5)
     def test_pow_broadcast_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=2, dim1=2).to(device)
         y = random_tensor(ndim=2, dim1=1).to(device)
         return torch.pow(x, y)
 
-    @autotest()
+    @autotest(n=5)
     def test_pow_broadcast_with_random_data_reverse(test_case):
         device = random_device()
         x = random_tensor(ndim=2, dim1=1).to(device)
@@ -210,14 +210,14 @@ class TestPow(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestAsin(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_flow_asin_with_random_data(test_case):
         device = random_device()
         x = random_tensor(low=-0.5, high=0.5).to(device)
         y = torch.asin(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_flow_arcsin_with_random_data(test_case):
         device = random_device()
         x = random_tensor(low=-0.5, high=0.5).to(device)
@@ -227,14 +227,14 @@ class TestAsin(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestAsinh(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_flow_asinh_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
         y = torch.asinh(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_flow_arcsinh_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -244,7 +244,7 @@ class TestAsinh(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestTan(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_flow_tan_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -254,21 +254,21 @@ class TestTan(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestAtan(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_flow_atan_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
         y = torch.atan(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_flow_arctan_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
         y = torch.arctan(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_flow_atan2_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=2, dim1=3).to(device)
@@ -276,14 +276,14 @@ class TestAtan(flow.unittest.TestCase):
         z = torch.atan2(x, y)
         return z
 
-    @autotest()
+    @autotest(n=5)
     def test_flow_atanh_with_random_data(test_case):
         device = random_device()
         x = random_tensor(low=-0.5, high=0.5).to(device)
         y = torch.atanh(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_flow_arctanh_with_random_data(test_case):
         device = random_device()
         x = random_tensor(low=-0.5, high=0.5).to(device)
@@ -309,14 +309,14 @@ class TestTopk(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestPow(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_pow_scalar_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
         y = random().to(float)
         return torch.pow(x, y)
 
-    @autotest()
+    @autotest(n=5)
     def test_pow_elementwise_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=2, dim1=2).to(device)
@@ -324,7 +324,7 @@ class TestPow(flow.unittest.TestCase):
         return torch.pow(x, y)
 
     @unittest.skip("not support for broadcast currently")
-    @autotest()
+    @autotest(n=5)
     def test_pow_broadcast_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=2, dim1=2).to(device)
@@ -334,7 +334,7 @@ class TestPow(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestArccos(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_arccos_flow_with_random_data(test_case):
         device = random_device()
         x = random_tensor(low=-1, high=1).to(device)
@@ -344,7 +344,7 @@ class TestArccos(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestAcos(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_acos_flow_with_random_data(test_case):
         device = random_device()
         x = random_tensor(low=-1, high=1).to(device)
@@ -354,7 +354,7 @@ class TestAcos(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestArccosh(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_arccosh_flow_with_random_data(test_case):
         device = random_device()
         x = random_tensor(low=2, high=3).to(device)
@@ -364,7 +364,7 @@ class TestArccosh(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestAcosh(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_acosh_flow_with_random_data(test_case):
         device = random_device()
         x = random_tensor(low=2, high=3).to(device)
@@ -374,7 +374,7 @@ class TestAcosh(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestAtan2(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_flow_atan2_with_random_data(test_case):
         device = random_device()
         x1 = random_tensor(ndim=1, dim0=1).to(device)
@@ -385,7 +385,7 @@ class TestAtan2(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestMinimum(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_flow_elementwise_minimum_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -393,7 +393,7 @@ class TestMinimum(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim0=k1, dim1=k2)
         return torch.minimum(x, y)
 
-    @autotest()
+    @autotest(n=5)
     def test_flow_broadcast_minimum_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -405,7 +405,7 @@ class TestMinimum(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestMaximum(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_flow_elementwise_mximum_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
@@ -413,7 +413,7 @@ class TestMaximum(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim0=k1, dim1=k2)
         return torch.maximum(x, y)
 
-    @autotest()
+    @autotest(n=5)
     def test_flow_broadcast_maximum_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)

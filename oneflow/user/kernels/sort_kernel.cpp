@@ -30,9 +30,9 @@ class CpuSortKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     Memcpy<DeviceType::kCPU>(ctx->stream(), out->mut_dptr<T>(), in->dptr<T>(),
-                             in->shape().elem_cnt() * sizeof(T));
-    const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
-    const int32_t instance_num = in->shape().elem_cnt() / instance_size;
+                             in->shape_view().elem_cnt() * sizeof(T));
+    const int32_t instance_size = in->shape_view().At(in->shape_view().NumAxes() - 1);
+    const int32_t instance_num = in->shape_view().elem_cnt() / instance_size;
     const std::string& direction = ctx->Attr<std::string>("direction");
     const bool is_ascending = direction == "ASCENDING";
     const bool is_descending = direction == "DESCENDING";

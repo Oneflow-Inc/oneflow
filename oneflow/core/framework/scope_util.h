@@ -24,7 +24,7 @@ namespace oneflow {
 Maybe<Scope> MakeScope(const JobConfigProto& config_proto, const Device& device);
 
 Maybe<Scope> MakeInitialScope(const JobConfigProto& job_conf, Symbol<ParallelDesc> placement,
-                              bool is_mirrored);
+                              bool is_local);
 
 Maybe<Scope> GetCurrentScope();
 

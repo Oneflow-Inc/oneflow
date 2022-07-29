@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_SLICE_UTIL_H_
 #define ONEFLOW_USER_KERNELS_SLICE_UTIL_H_
 
+#include <sstream>
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ep/include/stream.h"
@@ -60,6 +61,15 @@ struct SliceParams {
     if (size[dim] != dims[dim]) { return false; }
     return true;
   }
+
+  std::string ToString() {
+    std::stringstream ss("SliceParams:");
+    for (int i = 0; i < ndim; ++i) {
+      ss << "\n\tdim: " << i << ", start: " << start[i] << ", step: " << step[i]
+         << ", size: " << size[i] << ", dims: " << dims[i];
+    }
+    return ss.str();
+  }
 };
 
 SliceParams FoldContiguousFullSliceDimensions(const SliceParams& params);
@@ -87,6 +97,8 @@ OF_DEVICE_FUNC int64_t SliceOffsetToEntireOffset(int64_t offset, const SlicePara
 template<DeviceType device_type, typename T>
 struct SliceKernelUtil {
   static void Forward(ep::Stream* stream, const SliceParams& params, const T* entire, T* sliced);
+  static void Forward(ep::Stream* stream, const SliceParams& entire_params,
+                      const SliceParams& sliced_params, const T* entire, T* sliced);
   static void Backward(ep::Stream* stream, const SliceParams& params, const T* sliced, T* entire);
 };
 

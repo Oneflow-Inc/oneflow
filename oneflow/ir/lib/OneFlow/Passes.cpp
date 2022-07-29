@@ -37,7 +37,7 @@ limitations under the License.
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/Passes.h"
+#include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/Transforms/Passes.h"
@@ -62,7 +62,7 @@ limitations under the License.
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
-#include "mlir/Dialect/GPU/Passes.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
 #endif  // WITH_MLIR_CUDA_CODEGEN
 
@@ -485,10 +485,11 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
     if (!op) return failure();
     NamedAttrList attrs;
     if (op.op_name().str().find("FreeEagerTensor") != std::string::npos) { return failure(); }
-    attrs.set(StringAttr::get(getContext(), "value"),
-              support::TensorToDenseElementsAttr(
-                  ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()->Get(op.op_name().str()),
-                  rewriter.getContext()));
+    attrs.set(
+        StringAttr::get(getContext(), "value"),
+        support::TensorToDenseElementsAttr(
+            ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Get(op.op_name().str()),
+            rewriter.getContext()));
     attrs.set(op.op_nameAttrName(), op.op_nameAttr());
     attrs.set(op.device_tagAttrName(), op.device_tagAttr());
     attrs.set(op.device_nameAttrName(), op.device_nameAttr());
@@ -532,7 +533,7 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
                                                        ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
     const std::string tensor_name = op.op_nameAttr().str();
-    ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()->Set(
+    ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Set(
         tensor_name,  // tensor_name can't be replaced by op.op_nameAttr().str() directly when
                       // compiling with gcc and I has no idea why.
                       // But it works when compiling with clang.
@@ -769,9 +770,10 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   AddLowerToLinalgMemRefPasses(pm);
   pm.addNestedPass<func::FuncOp>(
       createConvertLinalgToParallelLoopsPass());  // convert-linalg-to-parallel-loops
-  pm.addPass(createMapSCFToGPUPass());            // gpu-greedy-parallel-loop-mapping
-  pm.addPass(createParallelLoopToGpuPass());      // convert-parallel-loops-to-gpu
-  pm.addPass(createGpuKernelOutliningPass());     // gpu-kernel-outlining
+  pm.addNestedPass<func::FuncOp>(createGpuMapParallelLoopsPass());  // gpu-map-parallel-loops
+  pm.addPass(createParallelLoopToGpuPass());                        // convert-parallel-loops-to-gpu
+  pm.addPass(createGpuLauchSinkIndexComputationsPass());
+  pm.addPass(createGpuKernelOutliningPass());                      // gpu-kernel-outlining
   pm.addNestedPass<func::FuncOp>(createBufferHostRegisterPass());  // buffer-host-register
   pm.addPass(createCanonicalizerPass());                           // canonicalize
   // -pass-pipeline='gpu.module([PASS1][PASS2]...)'
@@ -781,6 +783,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addNestedPass<gpu::GPUModuleOp>(createSerializeToCubinPass());      // out-of-tree-gpu-to-cubin
   pm.addNestedPass<func::FuncOp>(createGpuCopyArgPass());                // buffer-host-register
   pm.addPass(createGpuToLLVMConversionPass());
+  pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
   if (enable_ir_printing) pm.enableIRPrinting();
   return pm.run(module);
 }

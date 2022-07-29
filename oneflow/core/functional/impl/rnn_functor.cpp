@@ -81,7 +81,7 @@ Maybe<void> check_rnn_cell_forward_hidden(const std::shared_ptr<one::Tensor>& in
 Maybe<void> check_attributes(const std::shared_ptr<one::Tensor>& input, const TensorTuple& params,
                              const TensorTuple& hiddens, bool check_dtype = false) {
   DeviceType input_device{};
-  if (input->is_consistent()) {
+  if (input->is_global()) {
     input_device = JUST(input->parallel_desc())->device_type();
   } else {
     input_device = JUST(input->device())->enum_type();
@@ -92,7 +92,7 @@ Maybe<void> check_attributes(const std::shared_ptr<one::Tensor>& input, const Te
   auto check_tensors = [&](const std::string& name,
                            const std::shared_ptr<one::Tensor>& t) -> Maybe<void> {
     DeviceType t_device{};
-    if (t->is_consistent()) {
+    if (t->is_global()) {
       t_device = JUST(t->parallel_desc())->device_type();
     } else {
       t_device = JUST(t->device())->enum_type();
@@ -225,7 +225,7 @@ struct GRUCell {
                            const std::shared_ptr<one::Tensor>& hidden, const cell_params& params,
                            bool pre_compute_input = false) const {
     DeviceType input_device{};
-    if (input->is_consistent()) {
+    if (input->is_global()) {
       input_device = JUST(input->parallel_desc())->device_type();
     } else {
       input_device = JUST(input->device())->enum_type();
@@ -278,7 +278,7 @@ struct LSTMCell {
     const std::shared_ptr<Tensor>& cx = hidden[1];
 
     DeviceType input_device{};
-    if (input->is_consistent()) {
+    if (input->is_global()) {
       input_device = JUST(input->parallel_desc())->device_type();
     } else {
       input_device = JUST(input->device())->enum_type();

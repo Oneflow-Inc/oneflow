@@ -63,8 +63,8 @@ class OpInterpCtx {
   std::shared_ptr<OpBase> op_;
 
   Optional<Symbol<Device>> device;               // for local op
-  Optional<Symbol<ParallelDesc>> parallel_desc;  // for consistent op
-  Optional<Symbol<NdSbp>> sbp;                   // for consistent op
+  Optional<Symbol<ParallelDesc>> parallel_desc;  // for global op
+  Optional<Symbol<NdSbp>> sbp;                   // for global op
   Optional<user_op::OpKernelState> state;
 };
 

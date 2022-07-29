@@ -104,6 +104,7 @@ bool IsTransferNode(TaskType task_type) {
   switch (task_type) {
     // We mark the number of occurrences in bert
     case TaskType::kCollectiveBoxingGeneric:        // 76
+    case TaskType::kNcclSendRecvBoxing:             // ?
     case TaskType::kCopyHd:                         // 27
     case TaskType::kSliceBoxing:                    // 16
     case TaskType::kCopyCommNet:                    // 12
@@ -331,9 +332,9 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   struct comp {
     bool operator()(const TopoStruct* a, const TopoStruct* b) const {
       // NOTE: Leave these code for debugging in the future
-      // static std::vector<int64_t> decide_parameters({ParseIntegerFromEnv("Parameter0", 0),
-      //                                                ParseIntegerFromEnv("Parameter1", 1),
-      //                                                ParseIntegerFromEnv("Parameter2", 2)});
+      // static std::vector<int64_t> decide_parameters({ParseIntegerFromEnv("Parameter0", 5),
+      //                                                ParseIntegerFromEnv("Parameter1", 3),
+      //                                                ParseIntegerFromEnv("Parameter2", 5)});
       // The best parameter set is {5, 3}
       static std::vector<int64_t> decide_parameters({5, 3});
       for (int32_t decide_parameter : decide_parameters) {

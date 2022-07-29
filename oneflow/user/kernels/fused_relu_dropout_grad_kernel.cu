@@ -120,9 +120,9 @@ class FusedReluDropoutGradKernel final : public user_op::OpKernel,
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const float scale = ctx->Attr<float>("scale");
 
-    const int64_t cols = dy->shape().At(1);
-    const int64_t aux_ld = mask->shape().At(1) * 32;
-    const int64_t elem_cnt = dy->shape().elem_cnt();
+    const int64_t cols = dy->shape_view().At(1);
+    const int64_t aux_ld = mask->shape_view().At(1) * 32;
+    const int64_t elem_cnt = dy->shape_view().elem_cnt();
     LaunchVectorizedReluDropoutBackwardKernel<T>(
         ctx->stream(), elem_cnt, cols, aux_ld, scale, reinterpret_cast<const T*>(dy->dptr()),
         mask->dptr<int32_t>(), reinterpret_cast<T*>(dx->mut_dptr()));

@@ -17,7 +17,7 @@ limitations under the License.
 
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 
 namespace py = pybind11;
 
@@ -46,8 +46,8 @@ class GILForeignLockHelper final : public ForeignLockHelper {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("RegisterGILForeignLockHelper", []() {
-    Global<ForeignLockHelper>::Delete();
-    Global<ForeignLockHelper>::SetAllocated(new GILForeignLockHelper());
+    Singleton<ForeignLockHelper>::Delete();
+    Singleton<ForeignLockHelper>::SetAllocated(new GILForeignLockHelper());
   });
 }
 

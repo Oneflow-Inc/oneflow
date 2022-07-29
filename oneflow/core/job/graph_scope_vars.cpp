@@ -33,6 +33,11 @@ bool* GetGraphDebugModeFlag() {
   static thread_local bool graph_debug_mode_flag = false;
   return &graph_debug_mode_flag;
 }
+
+bool* GetGraphDebugOnlyUserPyStackFlag() {
+  static thread_local bool graph_debug_only_user_py_stack = true;
+  return &graph_debug_only_user_py_stack;
+}
 }  // namespace
 
 bool IsOpenGraphVerboseStepLr() {
@@ -51,4 +56,7 @@ int32_t GetGraphDebugMaxPyStackDepth() { return *GetGraphDebugMaxPyStackDepthVar
 
 void SetGraphDebugMode(bool mode) { *GetGraphDebugModeFlag() = mode; }
 bool GetGraphDebugMode() { return *GetGraphDebugModeFlag(); }
+
+void SetGraphDebugOnlyUserPyStack(bool flag) { *GetGraphDebugOnlyUserPyStackFlag() = flag; }
+bool GetGraphDebugOnlyUserPyStack() { return *GetGraphDebugOnlyUserPyStackFlag(); }
 }  // namespace oneflow

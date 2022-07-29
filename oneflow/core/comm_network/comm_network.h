@@ -59,7 +59,7 @@ class CommNet {
   Channel<std::function<void()>> ready_cbs_;
 
  private:
-  friend class Global<CommNet>;
+  friend class Singleton<CommNet>;
   void AddWorkToStream(void* actor_read_id, const std::function<void()>& cb, bool is_read);
   struct ActorReadContext;
   struct ReadContext {

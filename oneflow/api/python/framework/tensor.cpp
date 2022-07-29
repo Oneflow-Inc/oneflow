@@ -180,6 +180,12 @@ static PyObject* PyTensorObject_pin_memory(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_is_pinned(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  return functional::CastToPyObject(CHECK_JUST(PyTensor_Unpack(self)->is_pinned()));
+  END_HANDLE_ERRORS
+}
+
 static PyObject* PyTensorObject_requires_grad_(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   int requires_grad = 1;
@@ -220,7 +226,7 @@ static PyObject* PyTensorObject_clone(PyObject* self, PyObject* unused) {
 
 static PyObject* PyTensorObject_zero_(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
-  ASSERT(EagerMirroredTensorZeros(PyTensor_Unpack(self)));
+  ASSERT(EagerLocalTensorZeros(PyTensor_Unpack(self)));
   Py_XINCREF(self);
   return self;
   END_HANDLE_ERRORS
@@ -263,9 +269,9 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
   DataType data_type = t->dtype()->data_type();
   switch (data_type) {
 #define SWITCH_EAGER_TENSOR_TO_NUMPY(cpp_type, of_type) \
-  case of_type: return ASSERT(EagerMirroredTensorToNumpy<cpp_type>(self));
+  case of_type: return ASSERT(EagerLocalTensorToNumpy<cpp_type>(self));
     OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY, POD_DATA_TYPE_SEQ)
-    case DataType::kFloat16: return ASSERT(EagerMirroredTensorToNumpy<float16>(self));
+    case DataType::kFloat16: return ASSERT(EagerLocalTensorToNumpy<float16>(self));
     default: {
       return PyErr_Format(PyExc_RuntimeError, "Invalid datatype");
     }
@@ -293,6 +299,10 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
         PyTensorType_FromDTypeAndDeviceType(tensor->dtype(), ASSERT(tensor->device())->enum_type());
     return PyUnicode_FromString(((PyTensorType*)tensor_type)->name);
   }
+  if (PyTensorMetaClass_CheckExact(tensor_type)) {
+    Optional<std::string> device = "cpu";
+    return PyTensor_New(ASSERT_PTR(functional::To(tensor, device, DType::Float(), /*copy=*/false)));
+  }
   if (PyUnicode_Check(tensor_type)) {
     tensor_type = PyTensorType_FromString(PyUnicode_AsUTF8(tensor_type));
   }
@@ -316,18 +326,18 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
 #define DEFINE_TENSOR_METHOD(T, type_proto)                                               \
   static PyObject* PyTensorObject__copy_to_numpy_##T(PyObject* self, PyObject* array) {   \
     HANDLE_ERRORS                                                                         \
-    ASSERT(CopyBetweenMirroredTensorAndNumpy<T>(PyTensor_Unpack(self), array,             \
-                                                BlobNumpyCopyUtil<T>::To, "const",        \
-                                                /*block_host_until_done=*/true));         \
+    ASSERT(CopyBetweenLocalTensorAndNumpy<T>(PyTensor_Unpack(self), array,                \
+                                             BlobNumpyCopyUtil<T>::To, "const",           \
+                                             /*block_host_until_done=*/true));            \
     Py_RETURN_NONE;                                                                       \
     END_HANDLE_ERRORS                                                                     \
   }                                                                                       \
   static PyObject* PyTensorObject__copy_from_numpy_##T(PyObject* self, PyObject* array) { \
     HANDLE_ERRORS                                                                         \
     auto* copied = PyArray_NewCopy((PyArrayObject*)array, NPY_CORDER);                    \
-    ASSERT(CopyBetweenMirroredTensorAndNumpy<T>(PyTensor_Unpack(self), copied,            \
-                                                BlobNumpyCopyUtil<T>::From, "mut",        \
-                                                /*block_host_until_done=*/false));        \
+    ASSERT(CopyBetweenLocalTensorAndNumpy<T>(PyTensor_Unpack(self), copied,               \
+                                             BlobNumpyCopyUtil<T>::From, "mut",           \
+                                             /*block_host_until_done=*/false));           \
     Py_DECREF(copied);                                                                    \
     Py_RETURN_NONE;                                                                       \
     END_HANDLE_ERRORS                                                                     \
@@ -335,19 +345,19 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
 OF_PP_FOR_EACH_TUPLE(DEFINE_TENSOR_METHOD, POD_DATA_TYPE_SEQ)
 #undef DEFINE_TENSOR_METHOD
 
-static PyObject* PyTensorObject__get_copy_mirrored_tensor_to_numpy_func_name(PyObject* self,
-                                                                             PyObject* unused) {
+static PyObject* PyTensorObject__get_copy_local_tensor_to_numpy_func_name(PyObject* self,
+                                                                          PyObject* unused) {
   HANDLE_ERRORS
   return functional::CastToPyObject(
-      GetCopyMirroredTensorToNumpyFuncName(PyTensor_Unpack(self)->dtype()->data_type()));
+      GetCopyLocalTensorToNumpyFuncName(PyTensor_Unpack(self)->dtype()->data_type()));
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject__get_copy_mirrored_tensor_from_numpy_func_name(PyObject* self,
-                                                                               PyObject* unused) {
+static PyObject* PyTensorObject__get_copy_local_tensor_from_numpy_func_name(PyObject* self,
+                                                                            PyObject* unused) {
   HANDLE_ERRORS
   return functional::CastToPyObject(
-      GetCopyMirroredTensorFromNumpyFuncName(PyTensor_Unpack(self)->dtype()->data_type()));
+      GetCopyLocalTensorFromNumpyFuncName(PyTensor_Unpack(self)->dtype()->data_type()));
   END_HANDLE_ERRORS
 }
 
@@ -381,6 +391,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"contiguous", PyTensorObject_contiguous, METH_NOARGS, NULL},
     {"contiguous_", PyTensorObject_contiguous_, METH_NOARGS, NULL},
     {"pin_memory", PyTensorObject_pin_memory, METH_NOARGS, NULL},
+    {"is_pinned", PyTensorObject_is_pinned, METH_NOARGS, NULL},
     {"requires_grad_", (PyCFunction)PyTensorObject_requires_grad_, METH_VARARGS | METH_KEYWORDS,
      NULL},
     {"retain_grad", PyTensorObject_retain_grad, METH_NOARGS, NULL},
@@ -399,10 +410,10 @@ static PyMethodDef PyTensorObject_methods[] = {
       {"_copy_from_numpy_" #T, PyTensorObject__copy_from_numpy_##T, METH_O, NULL},
     OF_PP_FOR_EACH_TUPLE(DEFINE_TENSOR_METHOD, POD_DATA_TYPE_SEQ)
 #undef DEFINE_TENSOR_METHOD
-        {"_get_copy_mirrored_tensor_to_numpy_func_name",
-         PyTensorObject__get_copy_mirrored_tensor_to_numpy_func_name, METH_NOARGS, NULL},
-    {"_get_copy_mirrored_tensor_from_numpy_func_name",
-     PyTensorObject__get_copy_mirrored_tensor_from_numpy_func_name, METH_NOARGS, NULL},
+        {"_get_copy_local_tensor_to_numpy_func_name",
+         PyTensorObject__get_copy_local_tensor_to_numpy_func_name, METH_NOARGS, NULL},
+    {"_get_copy_local_tensor_from_numpy_func_name",
+     PyTensorObject__get_copy_local_tensor_from_numpy_func_name, METH_NOARGS, NULL},
     {"_register_storage_delete_hook", PyTensorObject__register_storage_delete_hook, METH_O, NULL},
     {NULL}};
 
@@ -502,7 +513,7 @@ static PyObject* PyTensorObject_is_eager(PyObject* self, void* unused) {
 }
 
 static PyObject* PyTensorObject_is_global(PyObject* self, void* unused) {
-  return functional::CastToPyObject(PyTensor_Unpack(self)->is_consistent());
+  return functional::CastToPyObject(PyTensor_Unpack(self)->is_global());
 }
 
 static PyObject* PyTensorObject_is_local(PyObject* self, void* unused) {

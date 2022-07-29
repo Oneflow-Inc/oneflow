@@ -177,14 +177,15 @@ void ConcatSplitDataContent(ep::Stream* stream,
   CHECK_EQ(in_desc.OneElemSize(), out_desc.OneElemSize());
   static const size_t min_byte_one_part = 128;
   int32_t part_num = in_desc.TotalElemNum() * in_desc.OneElemSize() / min_byte_one_part;
-  part_num = std::min(part_num, Global<ThreadPool>::Get()->thread_num());
+  part_num = std::min(part_num, Singleton<ThreadPool>::Get()->thread_num());
   if (part_num >= 2) {
     BlockingCounter bc(part_num);
     FOR_RANGE(int32_t, part_id, 0, part_num) {
-      Global<ThreadPool>::Get()->AddWork([stream, &in_desc, &out_desc, part_id, &part_num, &bc]() {
-        ConcatSplitPartDataContent(stream, in_desc, out_desc, part_id, part_num);
-        bc.Decrease();
-      });
+      Singleton<ThreadPool>::Get()->AddWork(
+          [stream, &in_desc, &out_desc, part_id, &part_num, &bc]() {
+            ConcatSplitPartDataContent(stream, in_desc, out_desc, part_id, part_num);
+            bc.Decrease();
+          });
     }
     bc.WaitForeverUntilCntEqualZero();
   } else {

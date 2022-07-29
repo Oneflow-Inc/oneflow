@@ -19,44 +19,47 @@ limitations under the License.
 #include <functional>
 #include <array>
 #include "oneflow/core/common/preprocessor.h"
+#include "glog/logging.h"
 
 namespace oneflow {
 
-#define STREAM_ROLE_SEQ                         \
-  OF_PP_MAKE_TUPLE_SEQ(kCompute)                \
-  OF_PP_MAKE_TUPLE_SEQ(kHost2Device)            \
-  OF_PP_MAKE_TUPLE_SEQ(kDevice2Host)            \
-  OF_PP_MAKE_TUPLE_SEQ(kSyncedLaunchedCommNet)  \
-  OF_PP_MAKE_TUPLE_SEQ(kAsyncedLaunchedCommNet) \
-  OF_PP_MAKE_TUPLE_SEQ(kCriticalSection)
-
 enum class StreamRole {
   kInvalid = 0,
-#define DECLARE_STREAM_ROLE(stream_role) stream_role,
-  OF_PP_FOR_EACH_TUPLE(DECLARE_STREAM_ROLE, STREAM_ROLE_SEQ)
-#undef DECLARE_STREAM_ROLE
+  kCompute,
+  kHost2Device,
+  kDevice2Host,
+  kSyncedLaunchedCommNet,
+  kAsyncedLaunchedCommNet,
+  kBarrier,
+  kCriticalSection,
+  kLazyJobLauncher,
+  kPinnedCompute
 };
 
-static constexpr int kStreamRoleSize = 1 + OF_PP_SEQ_SIZE(STREAM_ROLE_SEQ);
-
-// Act as a class for overloading functions
-template<StreamRole stream_role>
-struct StreamRoleCase {};
-
-template<typename Functor, typename... Args>
-auto StreamRoleSwitch(StreamRole stream_role, Args&&... args)
-    -> decltype(Functor::Case(StreamRoleCase<StreamRole::kInvalid>(),
-                              std::forward<Args>(args)...)) {
-  switch (stream_role) {
-#define MAKE_ENTRY(stream_role) \
-  case StreamRole::stream_role: \
-    return Functor::Case(StreamRoleCase<StreamRole::stream_role>(), std::forward<Args>(args)...);
-    OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, STREAM_ROLE_SEQ)
-#undef MAKE_ENTRY
-    default:
-      return Functor::Case(StreamRoleCase<StreamRole::kInvalid>(), std::forward<Args>(args)...);
+template<typename DerivedT>
+struct StreamRoleVisitor {
+  template<typename... Args>
+  static auto Visit(StreamRole stream_role, Args&&... args) {
+    switch (stream_role) {
+      case StreamRole::kInvalid: LOG(FATAL) << "invalid stream role";
+      case StreamRole::kCompute: return DerivedT::VisitCompute(std::forward<Args>(args)...);
+      case StreamRole::kHost2Device: return DerivedT::VisitHost2Device(std::forward<Args>(args)...);
+      case StreamRole::kDevice2Host: return DerivedT::VisitDevice2Host(std::forward<Args>(args)...);
+      case StreamRole::kSyncedLaunchedCommNet:
+        return DerivedT::VisitSyncedLaunchedCommNet(std::forward<Args>(args)...);
+      case StreamRole::kAsyncedLaunchedCommNet:
+        return DerivedT::VisitAsyncedLaunchedCommNet(std::forward<Args>(args)...);
+      case StreamRole::kBarrier: return DerivedT::VisitBarrier(std::forward<Args>(args)...);
+      case StreamRole::kCriticalSection:
+        return DerivedT::VisitCriticalSection(std::forward<Args>(args)...);
+      case StreamRole::kLazyJobLauncher:
+        return DerivedT::VisitLazyJobLauncher(std::forward<Args>(args)...);
+      case StreamRole::kPinnedCompute:
+        return DerivedT::VisitPinnedCompute(std::forward<Args>(args)...);
+    }
+    LOG(FATAL) << "invalid stream role";
   }
-}
+};
 
 }  // namespace oneflow
 

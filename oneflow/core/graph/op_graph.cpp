@@ -16,7 +16,7 @@ limitations under the License.
 #include <string>
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
-#include "oneflow/core/job/mirrored_sig_infer_hint.h"
+#include "oneflow/core/job/local_sig_infer_hint.h"
 #include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
@@ -322,27 +322,25 @@ void OpGraph::InferOpNodeNdSbpSignature(OpNode* op_node,
   op_node->InitLbi2NdSbp();
 }
 
-Maybe<void> OpGraph::InferOpNodeMirroredSignature(OpNode* op_node, bool is_mirrored_conf) const {
-  HashMap<std::string, MirroredSigInferHint> ibn2mirrored_sig_infer_hint;
+Maybe<void> OpGraph::InferOpNodeLocalSignature(OpNode* op_node, bool is_local_conf) const {
+  HashMap<std::string, LocalSigInferHint> ibn2local_sig_infer_hint;
   for (const std::string& ibn : op_node->op().input_bns()) {
     const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
     const auto* producer = op_node->MutSrcNode4Ibn(ibn);
     const ParallelDesc* parallel_desc = &producer->parallel_desc();
     const auto& producer_obn = *JUST(producer->op().obn4lbi(lbi));
-    const auto& opt_mirrored_parallel =
-        *JUST(producer->op().OptMirroredParallel4BnInOp(producer_obn));
-    MirroredSigInferHint infer_ctx(parallel_desc, opt_mirrored_parallel.has_mirrored_parallel());
-    ibn2mirrored_sig_infer_hint.emplace(ibn, infer_ctx);
+    const auto& opt_local_parallel = *JUST(producer->op().OptLocalParallel4BnInOp(producer_obn));
+    LocalSigInferHint infer_ctx(parallel_desc, opt_local_parallel.has_local_parallel());
+    ibn2local_sig_infer_hint.emplace(ibn, infer_ctx);
   }
-  const auto& MirroredSigInferHint4Ibn =
-      [&](const std::string& ibn) -> Maybe<const MirroredSigInferHint*> {
-    const auto& iter = ibn2mirrored_sig_infer_hint.find(ibn);
-    CHECK_OR_RETURN(iter != ibn2mirrored_sig_infer_hint.end())
-        << "input blob not found. ibn: " << ibn;
+  const auto& LocalSigInferHint4Ibn =
+      [&](const std::string& ibn) -> Maybe<const LocalSigInferHint*> {
+    const auto& iter = ibn2local_sig_infer_hint.find(ibn);
+    CHECK_OR_RETURN(iter != ibn2local_sig_infer_hint.end()) << "input blob not found. ibn: " << ibn;
     return &iter->second;
   };
-  JUST(op_node->mut_op()->InferMirroredSignatureIf(MirroredSigInferHint4Ibn, is_mirrored_conf,
-                                                   op_node->parallel_desc()));
+  JUST(op_node->mut_op()->InferLocalSignatureIf(LocalSigInferHint4Ibn, is_local_conf,
+                                                op_node->parallel_desc()));
   return Maybe<void>::Ok();
 }
 
@@ -363,14 +361,14 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
     JUST(op_node->mut_op()->FillLogicalInBlobDesc(LogicalBlobDesc4InputIndex));
     // Infer ParallelSignature
     JUST(op_node->mut_op()->InferParallelSignatureIf());
-    // Infer mirrored_signature
-    bool is_mirrored_conf = false;
+    // Infer local_signature
+    bool is_local_conf = false;
     {
-      const auto& op_name2is_mirrored = job_parallel_view_conf.op_name2is_mirrored_parallel_view();
-      const auto& iter = op_name2is_mirrored.find(op_node->op().op_name());
-      if (iter != op_name2is_mirrored.end()) { is_mirrored_conf = iter->second; }
+      const auto& op_name2is_local = job_parallel_view_conf.op_name2is_local_parallel_view();
+      const auto& iter = op_name2is_local.find(op_node->op().op_name());
+      if (iter != op_name2is_local.end()) { is_local_conf = iter->second; }
     }
-    JUST(InferOpNodeMirroredSignature(op_node, is_mirrored_conf));
+    JUST(InferOpNodeLocalSignature(op_node, is_local_conf));
     NdSbpSignature nd_sbp_sig_conf;
     {
       const auto& op_name2nd_sbp_sig_conf = job_parallel_view_conf.op_name2nd_sbp_signature_conf();

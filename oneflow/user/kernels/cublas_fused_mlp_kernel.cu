@@ -68,7 +68,7 @@ class CublasFusedMLPKernel final : public user_op::OpKernel, public user_op::Cud
 
     // Currently only support 2D matmul.
     DimVector in_shape(2);
-    x->shape().ToDimVector(&in_shape);
+    x->shape_view().ToDimVector(&in_shape);
 
     DimVector weight_shape(2);
 
@@ -78,8 +78,8 @@ class CublasFusedMLPKernel final : public user_op::OpKernel, public user_op::Cud
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("biases", idx);
       user_op::Tensor* cublas_aux = ctx->Tensor4ArgNameAndIndex("cublas_aux", idx);
 
-      int64_t out_feature = weight->shape().At(0);
-      weight->shape().ToDimVector(&weight_shape);
+      int64_t out_feature = weight->shape_view().At(0);
+      weight->shape_view().ToDimVector(&weight_shape);
 
       InferMatmulCublasMNK(in_shape, weight_shape,
                            /*transpose_a=*/ep::primitive::BlasTransposeType::N,

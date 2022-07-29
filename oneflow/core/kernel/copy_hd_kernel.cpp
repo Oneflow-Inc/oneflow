@@ -44,7 +44,7 @@ void CopyHdKernel::VirtualKernelInit(KernelContext* ctx) {
     UNIMPLEMENTED();
   }
   primitive_ =
-      ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(this->op_conf().device_tag(), kind);
+      ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(ctx->stream()->device_type(), kind);
   CHECK(primitive_);
 }
 

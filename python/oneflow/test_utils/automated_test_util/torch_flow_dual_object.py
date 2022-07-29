@@ -23,7 +23,7 @@ import gc
 
 import numpy as np
 import oneflow as flow
-import oneflow.test_utils.automated_test_util.profiler as auto_profiler
+from oneflow.test_utils.automated_test_util import profiler as auto_profiler
 
 flow.backends.cudnn.deterministic = True
 
@@ -251,6 +251,8 @@ def check_eager_graph_tensor(eager_res, graph_res):
             equal_nan=True,
         )
         return equality_res
+    else:
+        return True
 
 
 # NOTE(lixiang): Deepcopy the input parameters in order to correctly test the inplace version of the op.
@@ -288,6 +290,15 @@ def get_fake_program_more_detail(oneflow, mode, func, args=None, kwargs=None):
     print(f"\033[1;33mLeave {func} function\033[1;33m")
     print(f"\033[1;37m\033[1;37m")
     print("\n\n")
+
+
+# NOTE(lixiang): When the graph global test is executed, the func is used to get the device type.
+#   There is no oneflow_kwargs["device"] case for graph global test.
+def get_global_test_device(oneflow_args):
+    if isinstance(oneflow_args[0], flow.Tensor):
+        return oneflow_args[0].placement.type
+    else:
+        return oneflow_args[0][0].placement.type
 
 
 # NOTE(lixiang): When oneflow is of type nn.Module, build the following Graph for testing.
@@ -380,6 +391,9 @@ def get_functional_graph_res(
         elif oneflow.__name__ == "Parameter":
             # nn.Graph donot deal with Parameter creation.
             test_g_res = oneflow_res
+        # When doing the global op test, get_global_test_device() will be executed, and temporarily skipping the graph autotest on cpu device.
+        elif is_global() and (get_global_test_device(oneflow_args) == "cpu"):
+            test_g_res = oneflow_res
         else:
             test_g = TestGraphOfFunctional()
             test_g_res = test_g()
@@ -420,16 +434,20 @@ def get_tensor_graph_res(
             return graph_tensor_oneflow(*tensor_graph_args, **tensor_graph_kwargs)
 
     try:
-        test_g = TestGraphOfTensorMethod()
-        test_g_res = test_g()
+        # Set test_g_res = None, check_eager_graph_tensor will return True, the purpose is to temporarily skip the Graph global test on cpu.
+        if is_global() and (get_global_test_device((oneflow,)) == "cpu"):
+            test_g_res = None
+        else:
+            test_g = TestGraphOfTensorMethod()
+            test_g_res = test_g()
     except Exception as e:
         if not verbose:
             get_fake_program_more_detail(
                 oneflow,
                 "nn.Graph",
                 "get_tensor_graph_res",
-                oneflow_args,
-                oneflow_kwargs,
+                tensor_graph_args,
+                tensor_graph_kwargs,
             )
         raise OneFlowGraphBuildOrRunError(e)
     return test_g_res
@@ -477,8 +495,12 @@ def oneflow_eager_run_with_graph_check(
             test_g = get_module_graph_test(
                 graph_train_oneflow, oneflow, verbose, oneflow_args, *args
             )
-            # When testing module methods, kwargs are not considered.
-            test_g_res = test_g(*graph_args)
+            # When doing the global op test, get_global_test_device() will be executed, and temporarily skipping the graph autotest on cpu device.
+            if is_global() and (get_global_test_device(oneflow_args) == "cpu"):
+                test_g_res = oneflow_res
+            else:
+                # When testing module methods, kwargs are not considered.
+                test_g_res = test_g(*graph_args)
         elif oneflow.__name__ in ignore_apis_list:
             find_check_module_func = False
         # 1. "oneflow.nn.modules" not in oneflow.__module__: For avoid run nn.Module branch graph test, like fold op call Fold Module actually.
@@ -509,17 +531,6 @@ def oneflow_eager_run_with_graph_check(
             if isinstance(test_g_res, tuple):
                 for _, g_res in enumerate(test_g_res):
                     if not check_eager_graph_tensor(oneflow_res, g_res):
-                        if verbose:
-                            get_fake_program_more_detail(
-                                oneflow,
-                                "Eager + nn.Graph",
-                                "oneflow_eager_run_with_graph_check",
-                                oneflow_args,
-                                oneflow_kwargs,
-                            )
-            else:
-                if not check_eager_graph_tensor(oneflow_res, test_g_res):
-                    if verbose:
                         get_fake_program_more_detail(
                             oneflow,
                             "Eager + nn.Graph",
@@ -527,6 +538,15 @@ def oneflow_eager_run_with_graph_check(
                             oneflow_args,
                             oneflow_kwargs,
                         )
+            else:
+                if not check_eager_graph_tensor(oneflow_res, test_g_res):
+                    get_fake_program_more_detail(
+                        oneflow,
+                        "Eager + nn.Graph",
+                        "oneflow_eager_run_with_graph_check",
+                        oneflow_args,
+                        oneflow_kwargs,
+                    )
     return oneflow_res
 
 
@@ -1058,6 +1078,12 @@ def check_tensor_equality(
             torch_grad, flow_grad, rtol=rtol, atol=atol, equal_nan=True,
         ):
             print_note_fake_program(detail=True)
+            print("---------Grad Shape--------")
+            print(torch_grad.shape)
+            print(flow_grad.shape)
+            print(
+                f"Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}"
+            )
             return False
     torch_numpy = torch_tensor.detach().cpu().numpy()
     oneflow_numpy = flow_tensor.numpy()
@@ -1131,8 +1157,8 @@ def autotest(
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
-    if check_graph == "ValidatedFlase":
-        # check graph is intentionally closed and threre is a validated reason.
+    if check_graph == "ValidatedFalse":
+        # check graph is intentionally closed and there is a validated reason.
         check_graph = False
 
     def deco(f):

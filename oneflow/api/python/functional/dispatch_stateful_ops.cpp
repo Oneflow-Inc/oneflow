@@ -464,13 +464,17 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor(
       "DispatchMomentumUpdate",
       [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs, float learning_rate,
-         double scale, float l1, float l2, float beta, float weight_decay) -> Maybe<void> {
+         double scale, float l1, float l2, float beta, float dampening, bool nesterov,
+         bool maximize, float weight_decay) -> Maybe<void> {
         MutableAttrMap attrs;
         JUST(attrs.SetAttr("learning_rate_val", learning_rate));
         JUST(attrs.SetAttr("scale", scale));
         JUST(attrs.SetAttr("l1", l1));
         JUST(attrs.SetAttr("l2", l2));
         JUST(attrs.SetAttr("beta", beta));
+        JUST(attrs.SetAttr("dampening", dampening));
+        JUST(attrs.SetAttr("nesterov", nesterov));
+        JUST(attrs.SetAttr("maximize", maximize));
         JUST(attrs.SetAttr("weight_decay", weight_decay));
         JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
         return Maybe<void>::Ok();
