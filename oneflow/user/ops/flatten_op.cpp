@@ -80,7 +80,6 @@ namespace oneflow {
         .Build();
   }
 
-  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
 
