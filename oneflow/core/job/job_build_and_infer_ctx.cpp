@@ -480,7 +480,7 @@ Maybe<void> EagerJobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(
 
 Maybe<void> JobBuildAndInferCtx::AddLbiAndDiffWatcherUuidPair(
     const LbiAndDiffWatcherUuidPair& lbi_uuid_pair) {
-  const auto& job_name = job_->job_conf().job_name();
+  const auto job_name = job_->job_conf().job_name();
   auto* job_helper = job_->mutable_helper();
   auto* job_name2pairs =
       job_helper->mutable_lbi_diff_watcher_info()->mutable_job_name2lbi_and_watcher_uuids();
@@ -972,7 +972,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   Singleton<JobDesc>::Delete();
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   JobPassCtx job_pass_ctx(GlobalJobDesc());
-  const auto& job_name = job().job_conf().job_name();
+  const auto job_name = job().job_conf().job_name();
   auto LogJob = [&](const std::string& name_suffix) -> void {
     std::string full_log_name =
         job_name + "-job_id_" + std::to_string(job_id()) + "-" + name_suffix;

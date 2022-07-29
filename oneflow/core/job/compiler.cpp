@@ -47,7 +47,7 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
 }
 
 void Compiler::Compile(Job* job, Plan* plan) const {
-  const std::string& job_name = job->job_conf().job_name();
+  const std::string job_name = job->job_conf().job_name();
   auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
   // Step1: new Singleton<OpGraph> and set log configs.
   Singleton<OpGraph>::New(*job);
