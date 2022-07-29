@@ -17,6 +17,7 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/Passes.h"
+#include "OneFlow/SBP/SBPAttributes.h"
 #include "llvm/ADT/StringRef.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
