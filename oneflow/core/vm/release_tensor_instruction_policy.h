@@ -181,9 +181,11 @@ struct MakeReleaseTensorInstructionPolicy
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     if (IsPODDataType(data_type)) {
-      return std::shared_ptr<vm::InstructionPolicy>(new vm::FastReleaseTensorInstructionPolicy(eager_blob_object, stream));
+      return std::shared_ptr<vm::InstructionPolicy>(
+          new vm::FastReleaseTensorInstructionPolicy(eager_blob_object, stream));
     } else {
-      return std::shared_ptr<vm::InstructionPolicy>(new vm::SlowReleaseTensorInstructionPolicy(eager_blob_object, stream));
+      return std::shared_ptr<vm::InstructionPolicy>(
+          new vm::SlowReleaseTensorInstructionPolicy(eager_blob_object, stream));
     }
   }
 };

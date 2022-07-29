@@ -404,7 +404,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(producer_stream)),
       JUST(vm::MakeReleaseTensorInstructionPolicy::Visit(stream_role, data_type, eager_blob_object,
-                                                    vm_stream)));
+                                                         vm_stream)));
   instruction_list_->EmplaceBack(std::move(instruction));
 
   return Maybe<void>::Ok();
