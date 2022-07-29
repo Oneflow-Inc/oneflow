@@ -30,19 +30,6 @@ namespace broadcast_elementwise_unary {
 
 namespace {
 
-#define CPU_PRIMITIVE_CAST_TYPE_SEQ \
-  CPU_PRIMITIVE_BOOL_TYPE_SEQ       \
-  CPU_PRIMITIVE_CHAR_TYPE_SEQ       \
-  CPU_PRIMITIVE_INT8_TYPE_SEQ       \
-  CPU_PRIMITIVE_UINT8_TYPE_SEQ      \
-  CPU_PRIMITIVE_INT32_TYPE_SEQ      \
-  CPU_PRIMITIVE_UINT32_TYPE_SEQ     \
-  CPU_PRIMITIVE_INT64_TYPE_SEQ      \
-  CPU_PRIMITIVE_UINT64_TYPE_SEQ     \
-  CPU_PRIMITIVE_FLOAT_TYPE_SEQ      \
-  CPU_PRIMITIVE_DOUBLE_TYPE_SEQ     \
-  CPU_PRIMITIVE_FLOAT16_TYPE_SEQ
-
 bool IsContiguous(size_t num_dims, const int64_t* dims, const int64_t* strides) {
   for (int i = num_dims - 1; i >= 0; i--) {
     if ((i == num_dims - 1 && strides[i] != 1)
@@ -229,8 +216,8 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
             // For Cast OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFF_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
                                              BROADCAST_ELEMENTWISE_UNARY_OP_SEQ,
-                                             CPU_PRIMITIVE_CAST_TYPE_SEQ,
-                                             CPU_PRIMITIVE_CAST_TYPE_SEQ)};
+                                             CPU_PRIMITIVE_ALL_TYPE_SEQ,
+                                             CPU_PRIMITIVE_ALL_TYPE_SEQ)};
 
 #undef MAKE_NEW_DIFF_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 #undef MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
