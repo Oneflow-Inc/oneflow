@@ -21,7 +21,9 @@ import collections
 import oneflow._oneflow_internal
 
 oneflow_python_base_dir = os.path.dirname(os.path.realpath(__file__))
-oneflow._oneflow_internal.InitPythonPathsToBeKeptAndFilteredForDebugging(oneflow_python_base_dir)
+oneflow._oneflow_internal.InitPythonPathsToBeKeptAndFilteredForDebugging(
+    oneflow_python_base_dir
+)
 oneflow._oneflow_internal.InitNumpyCAPI()
 oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 Size = oneflow._oneflow_internal.Size
