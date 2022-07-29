@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
-#include "oneflow/core/job/lbi_diff_watcher_info.pb.h"
 
 namespace oneflow {
 

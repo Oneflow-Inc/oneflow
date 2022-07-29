@@ -27,7 +27,6 @@ limitations under the License.
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/ref_cnt_instruction_status_querier.h"
 #include "oneflow/core/profiler/profiler.h"
 
@@ -92,8 +91,9 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
 
     const std::string& job_name() const override { return job_name_; }
 
-    void AccessBlobByOpName(uint64_t ofblob_ptr, const std::string& op_name) const override {
-      phy_instr_operand_->AccessBlobByOpName(ofblob_ptr, op_name);
+    void AccessBlobByOpName(ep::Stream* stream, Blob* blob,
+                            const std::string& op_name) const override {
+      phy_instr_operand_->AccessBlobByOpName(stream, blob, op_name);
     }
     void Finish() const override { phy_instr_operand_->Finish(); }
 

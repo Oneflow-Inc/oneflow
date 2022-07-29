@@ -41,17 +41,6 @@ class LazyJobInstance final : public JobInstance {
   std::string job_name() const override { return job_name_; }
   void Finish() const override { finish_cb_(); }
 
-  std::string sole_input_op_name_in_user_job() const override {
-    UNIMPLEMENTED();
-    return std::string();
-  }
-  std::string sole_output_op_name_in_user_job() const override {
-    UNIMPLEMENTED();
-    return std::string();
-  }
-  void PushBlob(uint64_t ofblob_ptr) const override { UNIMPLEMENTED(); }
-  void PullBlob(uint64_t ofblob_ptr) const override { UNIMPLEMENTED(); }
-
  private:
   const std::string job_name_;
   const std::function<void()> finish_cb_;

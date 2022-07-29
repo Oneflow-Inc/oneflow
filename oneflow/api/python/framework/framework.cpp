@@ -25,20 +25,10 @@ namespace py = pybind11;
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("GetSerializedJobSet",
-        []() -> Maybe<py::bytes> { return py::bytes(*JUST(GetSerializedJobSet())); });
   m.def("GetSerializedCurrentJob",
         []() -> Maybe<py::bytes> { return py::bytes(*JUST(GetSerializedCurrentJob())); });
-
   m.def("GetFunctionConfigDef", &GetFunctionConfigDef);
   m.def("GetScopeConfigDef", &GetScopeConfigDef);
-  m.def("GetMachine2DeviceIdListOFRecordFromParallelConf",
-        &GetSerializedMachineId2DeviceIdListOFRecord);
-
-  m.def("LoadSavedModel",
-        [](const std::string& saved_model_meta_file, bool is_prototxt_file) -> Maybe<py::bytes> {
-          return py::bytes(*JUST(LoadSavedModel(saved_model_meta_file, is_prototxt_file)));
-        });
 
   m.def("LoadLibrary", &LoadLibrary);
 }
