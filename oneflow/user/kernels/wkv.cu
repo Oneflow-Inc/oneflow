@@ -30,7 +30,7 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
   const int _offset = _b * T * C + _c;
 
   F u = _u[_c];
-  F w = _w[_c];
+  const F w = -1 * exp(_w[_c]);
   const F* __restrict__ const k = _k + _offset;
   const F* __restrict__ const v = _v + _offset;
   F* __restrict__ const y = _y + _offset;
@@ -67,7 +67,7 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   const int _offset = _b * T * C + _c;
 
   F u = _u[_c];
-  F w = _w[_c];
+  const F w = -1 * exp(_w[_c]);
   const F* __restrict__ const k = _k + _offset;
   const F* __restrict__ const v = _v + _offset;
   const F* __restrict__ const gy = _gy + _offset;
@@ -127,7 +127,7 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   // Multiply by w because the w -> -exp(w) preprocessing is halfway in the backwards pass, even
   // though it's not in the forward pass
   const int _offsetBC = _b * C + _c;
-  _gw[_offsetBC] += gw * _w[_c];
+  _gw[_offsetBC] += gw * w;
   _gu[_offsetBC] += gu;
 }
 
