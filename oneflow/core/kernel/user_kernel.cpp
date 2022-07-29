@@ -14,8 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/user_kernel.h"
+#include <glog/logging.h>
+#include <cstdint>
 #include <string>
 #include <unordered_map>
+#include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/op_kernel_infer_cache.h"
@@ -575,27 +579,25 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
-  void check_inplace_op_pointers() {
-    std::cout << "Check op pointers" << std::endl;
-    if (user_op_conf_.op_conf().user_conf().inplace_output_blob_name2input_logical_blob_id_size()
-        > 0) {
-      std::unordered_map<std::string, const void*> bn2ptr;
-      for (const auto& it : arg2bn_tensor_pair_) {
-        const auto& p = it.first;
-        std::string bn = p.first + "_" + std::to_string(p.second);
-        if (it.second.tensor.get() == nullptr) { continue; }
-        const void* ptr = it.second.tensor->dptr<void>();
-        bn2ptr[bn] = ptr;
-      }
+  void check_inplace_operation_data_pointers() {
+    if (stream_->device_type() == kCPU) {  // inplace is not currently supported for cpu device
+      return;
+    }
 
-      const auto& inplace_obn2ibn =
-          user_op_conf_.op_conf().user_conf().inplace_output_blob_name2input_logical_blob_id();
-      for (const auto& it : inplace_obn2ibn) {
-        std::string obn = it.first;
-        LogicalBlobId input_lbi = it.second;
-        CHECK(bn2ptr[obn] == bn2ptr[input_lbi.blob_name()])
-            << "NOT Inplace op: " << user_op_conf_.op_conf().name();
-      }
+    auto get_pair = [](const std::string& bn) -> std::pair<std::string, int32_t> {
+      int32_t index = 0;
+      const size_t pos = bn.rfind('_');
+      if (pos != std::string::npos) { index = std::stoi(bn.substr(pos + 1)); }
+      return std::make_pair(bn.substr(0, pos), index);
+    };
+
+    for (const auto& it : user_op_conf_.op_conf().user_conf().inplace_operation_info()) {
+      const std::string& obn = it.first;
+      const std::string& ibn = it.second.ibn();
+      CHECK_EQ(arg2bn_tensor_pair_[get_pair(obn)].tensor->raw_dptr(),
+               arg2bn_tensor_pair_[get_pair(ibn)].tensor->raw_dptr())
+          << "Inplace operation: " << user_op_conf_.op_name() << " does not have input: " << ibn
+          << " and output: " << obn << " as the same pointer! ";
     }
   }
 
@@ -699,7 +701,7 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
   }
 #endif  // WITH_CUDA_GRAPHS
 
-  ctx_->check_inplace_op_pointers();
+  ctx_->check_inplace_operation_data_pointers();
   kernel_->Compute(ctx_.get(), opkernel_state, opkernel_cache_.get());
 
 #ifdef WITH_CUDA_GRAPHS

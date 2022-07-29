@@ -71,7 +71,8 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   if (job_desc.enable_inplace()) { task_gph->EnableInplaceMemSharing(IsReachable); }
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
-  task_gph->ForEachNode(std::bind(&TaskNode::HandleInplaceRegsts, _1));
+  if (job_desc.enable_inplace())
+    task_gph->ForEachNode(std::bind(&TaskNode::HandleInplaceRegsts, _1));
 
   // Step3: put infomation from task_gph into plan.
   const int64_t node_num = task_gph->node_num();

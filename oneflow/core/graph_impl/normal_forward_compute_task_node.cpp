@@ -92,22 +92,16 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
   });
 }
 
+
 void NormalForwardCompTaskNode::HandleInplaceRegsts() {
   const auto& _op = op();
-
-  if (!Singleton<JobDesc>::Get()->enable_reuse_mem()
-      || !Singleton<JobDesc>::Get()->enable_inplace()) {
-    return;
-  }
-
+  
   if (_op->op_conf().has_user_conf()) {
-    const auto& inplace_output_blob_name2input_logical_blob_id =
-        _op->op_conf().user_conf().inplace_output_blob_name2input_logical_blob_id();
+    const auto& inplace_operation_info = _op->op_conf().user_conf().inplace_operation_info();
 
-    for (const auto& it : inplace_output_blob_name2input_logical_blob_id) {
+    for (const auto& it : inplace_operation_info) {
       const std::string& obn = it.first;
-      const LogicalBlobId& lbi = it.second;
-      std::cout << "LBI: " << lbi.op_name() << " " << lbi.blob_name() << std::endl;
+      const LogicalBlobId& lbi = it.second.lbi();
 
       const std::string out_regst_name = GetOutRegstNameByObn(obn);
       std::shared_ptr<RegstDesc> out_regst = GetProducedRegst(out_regst_name);
@@ -162,12 +156,6 @@ void NormalForwardCompTaskNode::BuildTmp7BufRegsts() {
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     node->AddBnToRegstAndBindIt(&Operator::tmp_bns, GetProducedRegst("tmp"));
   });
-}
-
-bool NormalForwardCompTaskNode::IsInplaceOpTask() {
-  // if (op()->op_conf().has_user_conf() && op()->op_conf().user_conf().is_inplace()) { return true;
-  // }
-  return false;
 }
 
 REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kNormalForward);

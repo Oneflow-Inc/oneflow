@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -940,26 +941,40 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   }
 
   // Set the inplace info for inplace operations
-  for (int i = 0; i < op_expr.output_size(); ++i) {
-    const auto& output_tensor = outputs->at(i);
-    if (output_tensor) {  // inplace output
-      if (VariableOpOutputTensorScope::Global()->Has(
-              output_tensor)) {  // we do not handle inplace var op tensors for now
-        continue;
+  if (Singleton<JobDesc>::Get()->enable_inplace()) {
+    for (int i = 0; i < op_expr.output_size(); ++i) {
+      const auto& output_tensor = outputs->at(i);
+      if (output_tensor) {  // inplace output
+        if (VariableOpOutputTensorScope::Global()->Has(
+                output_tensor)) {  // we do not handle inplace var op tensors for now
+          continue;
+        }
+
+        const std::string& obn = op_expr.indexed_obns().at(i);
+        const std::string& output_tensor_lbn = TensorNameScope::Global()->Lookup(output_tensor);
+        CHECK(!output_tensor_lbn.empty())
+            << "Should have recorded output tensor before for inplace operation: " << new_op_name;
+
+        LogicalBlobId input_lbi = GenLogicalBlobId(output_tensor_lbn);
+
+        std::string ibn;
+        for (int j = 0; j < inputs.size(); j++) {
+          if (inputs[j] == output_tensor) {
+            ibn = op_expr.indexed_ibns()[j];
+            break;
+          }
+        }
+
+        CHECK(!ibn.empty()) << "Inplace output should use the same tensor in input!";
+
+        (*op_conf->mutable_user_conf()->mutable_inplace_operation_info())[obn].set_ibn(ibn);
+        (*op_conf->mutable_user_conf()->mutable_inplace_operation_info())[obn]
+            .mutable_lbi()
+            ->set_blob_name(input_lbi.blob_name());
+        (*op_conf->mutable_user_conf()->mutable_inplace_operation_info())[obn]
+            .mutable_lbi()
+            ->set_op_name(input_lbi.op_name());
       }
-
-      const std::string& obn = op_expr.indexed_obns().at(i);
-      const std::string& output_lbn = TensorNameScope::Global()->Lookup(output_tensor);
-      CHECK(!output_lbn.empty())
-          << "Should have recorded output tensor before for inplace operation: " << new_op_name;
-
-      LogicalBlobId input_lbi = GenLogicalBlobId(output_lbn);
-
-      std::cout << "New inplace: " << new_op_name << " obn: " << obn << " lbn: " << output_lbn
-                << " lbi: " << input_lbi.op_name() << " " << input_lbi.blob_name() << std::endl;
-      ;
-      (*op_conf->mutable_user_conf()
-            ->mutable_inplace_output_blob_name2input_logical_blob_id())[obn] = input_lbi;
     }
   }
 

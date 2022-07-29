@@ -48,13 +48,13 @@ class Tensor {
 
   template<typename T = void>
   const T* dptr() const {
-    // CheckDataType<T>();
+    CheckDataType<T>();
     return reinterpret_cast<const T*>(raw_dptr());
   }
 
   template<typename T = void>
   T* mut_dptr() {
-    // CheckDataType<T>();
+    CheckDataType<T>();
     return reinterpret_cast<T*>(mut_raw_dptr());
   }
 

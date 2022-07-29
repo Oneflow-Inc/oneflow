@@ -30,7 +30,6 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
   void HandleInplaceRegsts() override;
 
   void ConsumeAllRegsts() override;
-  bool IsInplaceOpTask() override;
   TaskType GetTaskType() const override { return TaskType::kNormalForward; }
 
  private:

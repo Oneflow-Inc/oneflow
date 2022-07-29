@@ -91,7 +91,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void UnbindBnWithEmptyRegst();
 
   // Others
-  virtual bool IsInplaceOpTask() { return false; }
   virtual TaskType GetTaskType() const { return TaskType::kInvalid; }
   std::string VisualStr() const override;
   virtual bool IsMeaningLess();

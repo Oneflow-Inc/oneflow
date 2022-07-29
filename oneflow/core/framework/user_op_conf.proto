@@ -16,5 +16,11 @@ message UserOpConf {
   //   UserOpBuilder.
   repeated string input_order = 5;
   repeated string output_order = 6;
-  map<string, LogicalBlobId> inplace_output_blob_name2input_logical_blob_id = 7; 
+
+  message Ibn2LBiPair {
+    required string ibn = 1;
+    required LogicalBlobId lbi = 2;
+  }
+
+  map<string, Ibn2LBiPair> inplace_operation_info = 7; 
 }
