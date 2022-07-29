@@ -43,7 +43,6 @@ class StreamWaitInstructionPolicy final : public vm::InstructionPolicy {
 
   bool Prescheduleable(const Stream* src, const Stream* dst) const override;
   void InitInstructionStatus(Instruction* instruction) override;
-  void DeleteInstructionStatus(Instruction* instruction) override;
   Maybe<void> Prepare(vm::Instruction* instruction) override { return Maybe<void>::Ok(); }
   void Compute(vm::Instruction* instruction) override;
 
