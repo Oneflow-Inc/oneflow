@@ -29,21 +29,20 @@ limitations under the License.
 #include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/access_blob_arg_cb_instruction_policy.h"
-#include "oneflow/core/eager/release_tensor_instruction_type.h"
 #include "oneflow/core/vm/ep_record_event_instruction_policy.h"
 #include "oneflow/core/vm/op_call_instruction_policy.h"
 #include "oneflow/core/vm/barrier_instruction_policy.h"
-#include "oneflow/core/eager/release_tensor_instruction_type.h"
+#include "oneflow/core/vm/release_tensor_instruction_policy.h"
+#include "oneflow/core/vm/lazy_job_instruction_policy.h"
 #include "oneflow/core/vm/global_sync_instruction_policy.h"
 #include "oneflow/core/vm/op_call_instruction_policy.h"
-#include "oneflow/core/vm/touch_tensors_instruction_type.h"
+#include "oneflow/core/vm/touch_tensors_instruction_policy.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/naive_instruction_policy.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/framework/global_tensor_infer_cache.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/eager/critical_section_instruction_type.h"
-#include "oneflow/core/eager/lazy_job_instruction_type.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
@@ -175,13 +174,10 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const vm::EagerBlobObjectListPtr&
       JUST(MakeCriticalSectionBegin(vm_stream, phy_instr_operand));
     }
     {
-      const auto& phy_instr_operand =
-          std::make_shared<vm::LaunchLazyJobPhyInstrOperand>(nn_graph, parameters);
       auto stream = JUST(GetLazyJobLauncherStream());
       auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
       auto instruction = intrusive::make_shared<vm::Instruction>(
-          vm_stream, std::make_unique<vm::NaiveInstructionPolicy>(
-                         SingletonPtr<vm::LaunchLazyJobInstructionType>(), phy_instr_operand));
+          vm_stream, std::make_unique<vm::LaunchLazyJobInstructionPolicy>(nn_graph, parameters));
       instruction_list_->EmplaceBack(std::move(instruction));
     }
     auto stream = JUST(GetCriticalSectionStream());
@@ -421,15 +417,14 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   auto vm_stream = stream.map([](Symbol<Stream> stream) -> vm::Stream* {
     return CHECK_JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
   });
-  const auto& phy_instr_operand =
-      std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(eager_blob_object, vm_stream);
   StreamRole stream_role = producer_stream->stream_role();
   DataType data_type = eager_blob_object->data_type();
   auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(producer_stream)),
-      std::make_unique<vm::NaiveInstructionPolicy>(
-          JUST(GetReleaseInstructionType::Visit(stream_role, data_type)), phy_instr_operand));
+      vm::MakeReleaseTensorInstructionPolicy::Visit(stream_role, data_type, eager_blob_object,
+                                                    vm_stream));
   instruction_list_->EmplaceBack(std::move(instruction));
+
   return Maybe<void>::Ok();
 }
 
@@ -443,12 +438,9 @@ Maybe<void> InstructionsBuilder::TouchTensors(
 Maybe<void> InstructionsBuilder::TouchTensors(const vm::EagerBlobObjectListPtr& eager_blob_objects,
                                               Symbol<Stream> stream) {
   JUST(SoftSyncStream(*eager_blob_objects, stream));
-  const auto& phy_instr_operand =
-      std::make_shared<vm::TouchTensorsPhyInstrOperand>(*eager_blob_objects);
   auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream)),
-      std::make_unique<vm::NaiveInstructionPolicy>(SingletonPtr<vm::TouchTensorsInstructionType>(),
-                                                   phy_instr_operand));
+      std::make_unique<vm::TouchTensorsInstructionPolicy>(*eager_blob_objects));
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
