@@ -25,8 +25,6 @@ class DeviceCtx;
 
 namespace vm {
 
-class EpDeviceCtx;
-
 class EpOptionalEventRecordStatusQuerier {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EpOptionalEventRecordStatusQuerier);
