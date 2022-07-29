@@ -44,7 +44,7 @@ class EpStreamPolicyBase : public StreamPolicy {
 
   ep::Stream* stream() override { return GetOrCreateEpStream(); }
 
-  Allocator* mut_allocator() override { return ep_allocator_.get(); }
+  vm::Allocator* mut_allocator() override { return ep_allocator_.get(); }
 
   DeviceType device_type() const override { return device_->enum_type(); }
 
