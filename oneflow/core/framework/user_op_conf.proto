@@ -2,6 +2,7 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/framework/user_op_attr.proto";
+import "oneflow/core/register/logical_blob_id.proto";
 
 message UserOpConf {
   message ListString {
@@ -15,5 +16,5 @@ message UserOpConf {
   //   UserOpBuilder.
   repeated string input_order = 5;
   repeated string output_order = 6;
-  map<string, string> inplace_obn2ibn = 7; // inplace mapping from output blob name to input blob name
+  map<string, LogicalBlobId> inplace_output_blob_name2input_logical_blob_id = 7; 
 }

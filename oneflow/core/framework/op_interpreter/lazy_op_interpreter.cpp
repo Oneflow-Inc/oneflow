@@ -39,6 +39,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/register/logical_blob_id.pb.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/variable_op_output_tensor_scope.h"
@@ -942,27 +943,23 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   for (int i = 0; i < op_expr.output_size(); ++i) {
     const auto& output_tensor = outputs->at(i);
     if (output_tensor) {  // inplace output
-      if (VariableOpOutputTensorScope::Global()->Has(output_tensor)) {
-        std::cout << "var op output tensor" << std::endl;
+      if (VariableOpOutputTensorScope::Global()->Has(
+              output_tensor)) {  // we do not handle inplace var op tensors for now
         continue;
       }
 
       const std::string& obn = op_expr.indexed_obns().at(i);
-      std::string ibn;
-      // find the corr input tensor == output tensor
-      for (int j = 0; j < op_expr.input_size(); ++j) {
-        const auto& input_tensor = inputs[j];
-        if (input_tensor == output_tensor) {
-          ibn = op_expr.indexed_ibns().at(j);
-          break;
-        }
-      }
+      const std::string& output_lbn = TensorNameScope::Global()->Lookup(output_tensor);
+      CHECK(!output_lbn.empty())
+          << "Should have recorded output tensor before for inplace operation: " << new_op_name;
 
-      CHECK(!ibn.empty())
-          << "Inplaced operation output tensor must also be an input of the operation "
-          << new_op_name;
+      LogicalBlobId input_lbi = GenLogicalBlobId(output_lbn);
 
-      (*op_conf->mutable_user_conf()->mutable_inplace_obn2ibn())[obn] = ibn;
+      std::cout << "New inplace: " << new_op_name << " obn: " << obn << " lbn: " << output_lbn
+                << " lbi: " << input_lbi.op_name() << " " << input_lbi.blob_name() << std::endl;
+      ;
+      (*op_conf->mutable_user_conf()
+            ->mutable_inplace_output_blob_name2input_logical_blob_id())[obn] = input_lbi;
     }
   }
 

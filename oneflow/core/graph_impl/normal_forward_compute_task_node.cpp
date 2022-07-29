@@ -18,6 +18,7 @@ limitations under the License.
 #include <iterator>
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/singleton.h"
+#include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/framework/framework.h"
@@ -100,19 +101,31 @@ void NormalForwardCompTaskNode::HandleInplaceRegsts() {
   }
 
   if (_op->op_conf().has_user_conf()) {
-    const auto& inplace_obn2ibn = _op->op_conf().user_conf().inplace_obn2ibn();
-    for (const auto& it : inplace_obn2ibn) {
+    const auto& inplace_output_blob_name2input_logical_blob_id =
+        _op->op_conf().user_conf().inplace_output_blob_name2input_logical_blob_id();
+
+    for (const auto& it : inplace_output_blob_name2input_logical_blob_id) {
       const std::string& obn = it.first;
-      const std::string& ibn = it.second;
+      const LogicalBlobId& lbi = it.second;
+      std::cout << "LBI: " << lbi.op_name() << " " << lbi.blob_name() << std::endl;
+
       const std::string out_regst_name = GetOutRegstNameByObn(obn);
       std::shared_ptr<RegstDesc> out_regst = GetProducedRegst(out_regst_name);
 
-      int32_t input_index = CHECK_JUST(_op->GetInputIndex(ibn));
-      const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
-      auto front = in_regsts.begin();
-      CHECK_LT(input_index, in_regsts.size());
-      std::advance(front, input_index);
-      std::shared_ptr<RegstDesc> in_regst = *front;
+      std::shared_ptr<RegstDesc> in_regst = nullptr;
+      for (TaskEdge* in_edge : in_edges()) {
+        CompTaskNode* comp_task_node = dynamic_cast<CompTaskNode*>(in_edge->src_node());
+        if (!comp_task_node) continue;
+
+        if (comp_task_node->op()->op_conf().has_user_conf()
+            && comp_task_node->op()->op_name() == lbi.op_name()) {
+          in_regst = comp_task_node->GetProducedRegst(GetOutRegstNameByObn(lbi.blob_name()));
+          break;
+        }
+      }
+
+      CHECK(in_regst != nullptr) << "Must have found in_regst at this point!";
+
       in_regst->set_enable_reuse_mem(true);
       out_regst->set_hint_inplace_consumed_regst_desc_id(in_regst->regst_desc_id());
     }

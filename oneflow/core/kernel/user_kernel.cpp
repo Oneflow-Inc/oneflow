@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/register/logical_blob_id.pb.h"
 
 namespace oneflow {
 
@@ -576,7 +577,8 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
 
   void check_inplace_op_pointers() {
     std::cout << "Check op pointers" << std::endl;
-    if (user_op_conf_.op_conf().user_conf().inplace_obn2ibn().size() > 0) {
+    if (user_op_conf_.op_conf().user_conf().inplace_output_blob_name2input_logical_blob_id_size()
+        > 0) {
       std::unordered_map<std::string, const void*> bn2ptr;
       for (const auto& it : arg2bn_tensor_pair_) {
         const auto& p = it.first;
@@ -586,11 +588,13 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
         bn2ptr[bn] = ptr;
       }
 
-      const auto& inplace_obn2ibn = user_op_conf_.op_conf().user_conf().inplace_obn2ibn();
+      const auto& inplace_obn2ibn =
+          user_op_conf_.op_conf().user_conf().inplace_output_blob_name2input_logical_blob_id();
       for (const auto& it : inplace_obn2ibn) {
         std::string obn = it.first;
-        std::string ibn = it.second;
-        CHECK(bn2ptr[obn] == bn2ptr[ibn]) << "NOT Inplace op: " << user_op_conf_.op_conf().name();
+        LogicalBlobId input_lbi = it.second;
+        CHECK(bn2ptr[obn] == bn2ptr[input_lbi.blob_name()])
+            << "NOT Inplace op: " << user_op_conf_.op_conf().name();
       }
     }
   }
