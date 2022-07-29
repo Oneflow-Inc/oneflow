@@ -92,21 +92,29 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
                     [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
   }
 
+  const bool inplace = ctx.inplace.value_or(false);
 // NOTE: if this op not support stride, then need to tensor->contiguous()
-#define HANDLE_NON_CONTIGUOUS_INPUT(tensor_tuple_ptr)                                       \
-  TensorTuple tmp_inputs;                                                                   \
-  if (!LazyMode::is_enabled() && !JUST(op_expr.SupportNonContiguous())) {                   \
-    tmp_inputs.resize(inputs.size());                                                       \
-    for (size_t i = 0; i < inputs.size(); i++) { tmp_inputs[i] = inputs[i]->contiguous(); } \
-    tensor_tuple_ptr = &tmp_inputs;                                                         \
+#define HANDLE_NON_CONTIGUOUS_INPUT(tensor_tuple_ptr, is_inplace)                             \
+  const bool support_non_contiguou = JUST(op_expr.SupportNonContiguous());                    \
+  if (!support_non_contiguou) {                                                               \
+    if (is_inplace) {                                                                         \
+      OF_UNIMPLEMENTED()                                                                      \
+          << "The op: " << op_expr.op_type_name()                                             \
+          << " need inplace operation but not support non-contiguous input for now!";         \
+    }                                                                                         \
+    TensorTuple tmp_inputs;                                                                   \
+    if (!LazyMode::is_enabled()) {                                                            \
+      tmp_inputs.resize(inputs.size());                                                       \
+      for (size_t i = 0; i < inputs.size(); i++) { tmp_inputs[i] = inputs[i]->contiguous(); } \
+      tensor_tuple_ptr = &tmp_inputs;                                                         \
+    }                                                                                         \
   }
 
   const TensorTuple* inputs_ptr = &inputs;
-  HANDLE_NON_CONTIGUOUS_INPUT(inputs_ptr);
+  HANDLE_NON_CONTIGUOUS_INPUT(inputs_ptr, inplace);
 
   {
     autograd::AutoGradMode mode(false);
-    const bool inplace = ctx.inplace.value_or(false);
     if (inplace) { *outputs = *inputs_ptr; }
     JUST(internal_->Apply(op_expr, *inputs_ptr, outputs, ctx));
   }
