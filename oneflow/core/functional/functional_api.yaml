@@ -528,6 +528,10 @@
   signature: "Tensor (Tensor x, Int32List[1] dim=None, Bool unbiased=None, Bool keepdim=None) => Variance"
   bind_python: True
 
+- name: "rms_layer_norm"
+  signature: "Tensor (Tensor hidden_states, Tensor weight, Float variance_epsilon) => RMSLayerNormalization"
+  bind_python: True
+
 - name: "relu"
   signature: "Tensor (Tensor x, Bool inplace=False) => Relu"
   bind_python: True
@@ -1154,6 +1158,10 @@
 - name: "sparse_softmax_cross_entropy_grad"
   signature: "Tensor (Tensor dy, Tensor prob, Tensor label, Int64 depth) => SparseSoftmaxCrossEntropyGrad"
   bind_python: False
+  
+- name: "sparse_softmax_cross_entropy_ms_grad"
+  signature: "Tensor (Tensor dy, Tensor prob, Tensor label, Int64 depth) => SparseSoftmaxCrossEntropyMsGrad"
+  bind_python: False
 
 - name: "softmax_cross_entropy"
   signature: "Tensor (Tensor logits, Tensor label) => SoftmaxCrossEntropy"
@@ -1760,6 +1768,18 @@
 
 - name: "dropout_grad"
   signature: "Tensor (Tensor dy, Tensor mask, Float scale) => DropoutGrad"
+  bind_python: False
+
+- name: "constant_pad"
+  signature: 'Tensor (Tensor x, Int64List pad, Scalar value=0) => ConstantPad'
+  bind_python: False
+
+- name: "reflection_pad"
+  signature: 'Tensor (Tensor x, Int64List pad) => ReflectionPad'
+  bind_python: False
+
+- name: "replication_pad"
+  signature: 'Tensor (Tensor x, Int64List pad) => ReplicationPad'
   bind_python: False
 
 - name: "pad"

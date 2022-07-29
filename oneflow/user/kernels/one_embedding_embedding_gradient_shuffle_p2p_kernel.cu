@@ -33,9 +33,8 @@ struct alignas(sizeof(T) * pack_size) Pack {
   T elem[pack_size];
 };
 
-template<typename T, typename ComputeType, int32_t pack_size>
-__device__ __inline__ void AtomicAdd(Pack<T, pack_size>* address,
-                                     Pack<ComputeType, pack_size> val) {
+template<typename T, int32_t pack_size>
+__device__ __inline__ void AtomicAdd(Pack<T, pack_size>* address, Pack<T, pack_size> val) {
 #pragma unroll
   for (int i = 0; i < pack_size; ++i) {
     cuda::atomic::Add(reinterpret_cast<T*>(address) + i, static_cast<T>(val.elem[i]));
@@ -43,7 +42,7 @@ __device__ __inline__ void AtomicAdd(Pack<T, pack_size>* address,
 }
 
 template<>
-__device__ __inline__ void AtomicAdd<half, float, 2>(Pack<half, 2>* address, Pack<float, 2> val) {
+__device__ __inline__ void AtomicAdd<half, 2>(Pack<half, 2>* address, Pack<half, 2> val) {
   half2 h2_val;
   h2_val.x = static_cast<half>(val.elem[0]);
   h2_val.y = static_cast<half>(val.elem[1]);
@@ -60,9 +59,9 @@ struct Param {
 };
 
 template<typename T, typename IDX, int pack_size, int N>
-__global__ void EmbeddingGraidientShuffleCudaKernel(int64_t parallel_id, int64_t parallel_num,
-                                                    int64_t embedding_num_pack,
-                                                    Param<T, IDX, pack_size, N> param) {
+__global__ void EmbeddingGradientShuffleCudaKernel(int64_t parallel_id, int64_t parallel_num,
+                                                   int64_t embedding_num_pack,
+                                                   Param<T, IDX, pack_size, N> param) {
 #pragma unroll 1
   for (int i = 0; i < parallel_num; ++i) {
     int rank_id = (parallel_id + i) % parallel_num;
@@ -337,7 +336,7 @@ class EmbeddingGraidientShuffleP2PKernel final : public user_op::OpKernel,
     BarrierKernel<<<1, parallel_num, 0, cuda_stream>>>(parallel_id, parallel_num, param);
     const int num_blocks =
         2 * ctx->stream()->As<ep::CudaStream>()->device_properties().multiProcessorCount;
-    EmbeddingGraidientShuffleCudaKernel<<<num_blocks, 1024, 0, cuda_stream>>>(
+    EmbeddingGradientShuffleCudaKernel<<<num_blocks, 1024, 0, cuda_stream>>>(
         parallel_id, parallel_num, embedding_num_pack, param);
     current_iter_++;
   }
