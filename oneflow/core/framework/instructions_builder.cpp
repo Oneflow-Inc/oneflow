@@ -38,7 +38,7 @@ limitations under the License.
 #include "oneflow/core/vm/lazy_job_instruction_policy.h"
 #include "oneflow/core/vm/global_sync_instruction_policy.h"
 #include "oneflow/core/vm/op_call_instruction_policy.h"
-#include "oneflow/core/vm/touch_tensors_instruction_type.h"
+#include "oneflow/core/vm/touch_tensors_instruction_policy.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/naive_instruction_policy.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -413,14 +413,11 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
 }
 
 Maybe<void> InstructionsBuilder::TouchTensors(const vm::EagerBlobObjectListPtr& eager_blob_object) {
-  const auto& phy_instr_operand =
-      std::make_shared<vm::TouchTensorsPhyInstrOperand>(*eager_blob_object);
   Symbol<Device> device = JUST(Device::New("cpu"));
   Symbol<Stream> stream = JUST(GetDefaultStreamByDevice(device));
   auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream)),
-      std::make_unique<vm::NaiveInstructionPolicy>(SingletonPtr<vm::TouchTensorsInstructionType>(),
-                                                   phy_instr_operand));
+      std::make_unique<vm::TouchTensorsInstructionPolicy>(*eager_blob_object));
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
