@@ -87,16 +87,21 @@ class TestCast(flow.unittest.TestCase):
             _test_cast_float2int,
             _test_cast_int2float,
         ]
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["device"] = [
+            "cpu", 
+            "cuda"
+        ]
         arg_dict["shape"] = [(2, 3, 0, 5)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
     
-    @autotest(n=5)
+    @autotest(n=10)
     def test_cast_with_stride_input(test_case):
         device = random_device()
+        device = gpu_device()
         input = random_tensor().to(device)
-        output = input.to(dtype=torch.float64, device=device)
+        output = input.to(dtype=torch.float32, device=device)
+        output = output.to(dtype=torch.float64, device=device)
         return output
 
 

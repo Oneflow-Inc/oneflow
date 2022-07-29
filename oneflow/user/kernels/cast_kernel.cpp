@@ -27,13 +27,11 @@ namespace user_op {
 namespace {
 
 template<typename Context>
-std::unique_ptr<ep::primitive::BroadcastElementwiseUnary> NewBroadcastElementwiseUnaryPrimitive(
-    Context* ctx) {
+std::unique_ptr<ep::primitive::BroadcastElementwiseUnary> NewPrimitive(Context* ctx) {
   const DataType in_data_type = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
   const DataType out_data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
-  size_t max_dim = 20;
   return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseUnaryFactory>(
-      ctx->device_type(), ep::primitive::UnaryOp::kCast, in_data_type, out_data_type, max_dim);
+      ctx->device_type(), ep::primitive::UnaryOp::kCast, in_data_type, out_data_type, 8);
 }
 
 class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
@@ -46,34 +44,36 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
     const Tensor* input = ctx->Tensor4ArgNameAndIndex("in", 0);
     Tensor* output = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t elem_cnt = input->shape_view().elem_cnt();
+    // 0-size tensor
+    if (elem_cnt == 0) { return; }
     CHECK_EQ(output->shape_view().elem_cnt(), elem_cnt);
     if (input->data_type() == output->data_type() && input->dptr() == output->dptr()) { return; }
     const size_t ndim = input->shape_view().NumAxes();
     const bool contiguous = oneflow::one::IsContiguous(input->shape_view(), input->stride());
-    auto primitive = NewBroadcastElementwiseUnaryPrimitive(ctx);
+    auto primitive = NewPrimitive(ctx);
     CHECK(primitive);
     if (contiguous) {
-      primitive->Launch(ctx->stream(), ndim, input->shape_view().ptr(), input->dptr(), ndim,
-                        output->shape_view().ptr(), output->mut_dptr());
+      primitive->Launch(ctx->stream(), ndim, input->shape_view().data(), input->dptr(), ndim,
+                        output->shape_view().data(), output->mut_dptr());
     } else {
-      primitive->Launch(ctx->stream(), ndim, input->shape_view().ptr(), input->stride().data(),
-                        input->dptr(), ndim, output->shape_view().ptr(), output->stride().data(),
+      primitive->Launch(ctx->stream(), ndim, input->shape_view().data(), input->stride().data(),
+                        input->dptr(), ndim, output->shape_view().data(), output->stride().data(),
                         output->mut_dptr());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-auto BroadcastElementwiseUnaryPrimitiveExists() {
+auto PrimitiveExists() {
   return hob::make_custom("BroadcastElementwiseUnaryPrimitiveExists",
                           [](const user_op::KernelRegContext& ctx) -> bool {
-                            return NewBroadcastElementwiseUnaryPrimitive(&ctx).operator bool();
+                            return NewPrimitive(&ctx).operator bool();
                           });
 }
 
 REGISTER_USER_KERNEL("cast")
     .SetCreateFn<CastKernel>()
-    .SetIsMatchedHob(BroadcastElementwiseUnaryPrimitiveExists() == true)
+    .SetIsMatchedHob(PrimitiveExists() == true)
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.InputDType("in", 0) == ctx.Attr<DataType>("dtype")) {
@@ -84,7 +84,7 @@ REGISTER_USER_KERNEL("cast")
 
 REGISTER_USER_KERNEL("cast_like")
     .SetCreateFn<CastKernel>()
-    .SetIsMatchedHob(BroadcastElementwiseUnaryPrimitiveExists() == true)
+    .SetIsMatchedHob(PrimitiveExists() == true)
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.InputDType("in", 0) == ctx.InputDType("like", 0)) {
