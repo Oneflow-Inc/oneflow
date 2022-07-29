@@ -64,17 +64,17 @@ namespace oneflow {
 namespace {
 
 Maybe<void> WkvGraphGradOp(user_op::BackwardOpConfContext* ctx) {
-  const std::string wkv_grad_op_name = ctx->FwOp().op_name() + "_grad";
-  ctx->DefineOp(wkv_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
+  const std::string wkv_grad_op = ctx->FwOp().op_name() + "_grad";
+  ctx->DefineOp(wkv_grad_op, [&](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("wkv_grad")
         .InputBind("w", ctx->FwOp().input("w", 0))
         .InputBind("u", ctx->FwOp().input("u", 0))
         .InputBind("k", ctx->FwOp().input("k", 0))
         .InputBind("v", ctx->FwOp().input("v", 0))
-        .InputBind("gy", ctx->FwOp().output_grad("y", 0))
-        .Attr("B", ctx->FwOp().attr<std::vector<int64_t>>("B"))
-        .Attr("T", ctx->FwOp().attr<std::vector<int64_t>>("T"))
-        .Attr("C", ctx->FwOp().attr<std::vector<int64_t>>("C"))
+        .InputBind("gy", ctx->FwOp().GetGradTensorWithOpOutput("y", 0))
+        .Attr("B", ctx->FwOp().attr<int64_t>("B"))
+        .Attr("T", ctx->FwOp().attr<int64_t>("T"))
+        .Attr("C", ctx->FwOp().attr<int64_t>("C"))
         .Output("gw")
         .Output("gu")
         .Output("gk")
@@ -82,22 +82,22 @@ Maybe<void> WkvGraphGradOp(user_op::BackwardOpConfContext* ctx) {
         .Build();
   });
   ctx->FwOp().InputGradBind(user_op::OpArg("w", 0), [&]() -> const std::string& {
-    return ctx->GetOp(wkv_grad_op_name).output("gw", 0);
+    return ctx->GetOp(wkv_grad_op).output("gw", 0);
   });
   ctx->FwOp().InputGradBind(user_op::OpArg("u", 0), [&]() -> const std::string& {
-    return ctx->GetOp(wkv_grad_op_name).output("gu", 0);
+    return ctx->GetOp(wkv_grad_op).output("gu", 0);
   });
   ctx->FwOp().InputGradBind(user_op::OpArg("k", 0), [&]() -> const std::string& {
-    return ctx->GetOp(wkv_grad_op_name).output("gk", 0);
+    return ctx->GetOp(wkv_grad_op).output("gk", 0);
   });
   ctx->FwOp().InputGradBind(user_op::OpArg("v", 0), [&]() -> const std::string& {
-    return ctx->GetOp(wkv_grad_op_name).output("gv", 0);
+    return ctx->GetOp(wkv_grad_op).output("gv", 0);
   });
   return Maybe<void>::Ok();
 }
 
 }  // namespace
 
-REGISTER_USER_OP_GRAD("wkc").SetBackwardOpConfGenFn(WkvGraphGradOp);
+REGISTER_USER_OP_GRAD("wkv").SetBackwardOpConfGenFn(WkvGraphGradOp);
 
 }  // namespace oneflow
