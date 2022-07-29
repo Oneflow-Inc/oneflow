@@ -302,20 +302,20 @@ double SbpEdge::FindCutRatio(int32_t threshold) const {
 }
 
 // load a logical blob
-inline void SbpEdge::LoadLbi(const LogicalBlobId& lbi) { carry_lbis_.insert(lbi); }
+void SbpEdge::LoadLbi(const LogicalBlobId& lbi) { carry_lbis_.insert(lbi); }
 
 // check the existence of a logical blob
-inline bool SbpEdge::SearchLbi(const LogicalBlobId& lbi) const {
+bool SbpEdge::SearchLbi(const LogicalBlobId& lbi) const {
   return carry_lbis_.find(lbi) != carry_lbis_.end();
 }
 
 // unload a logical blob
-inline void SbpEdge::UnloadLbi(const LogicalBlobId& lbi) {
+void SbpEdge::UnloadLbi(const LogicalBlobId& lbi) {
   if (carry_lbis_.erase(lbi) == 0) { std::cout << "Unload an empty lbi!" << std::endl; }
 }
 
 // Not carrying any blob
-inline bool SbpEdge::EmptyLbi() const { return carry_lbis_.empty(); }
+bool SbpEdge::EmptyLbi() const { return carry_lbis_.empty(); }
 
 }  // namespace auto_parallel
 }  // namespace oneflow
