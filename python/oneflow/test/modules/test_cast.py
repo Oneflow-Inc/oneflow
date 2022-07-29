@@ -25,6 +25,7 @@ import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgList
 from oneflow.test_utils.automated_test_util import *
 
+
 def _test_cast_float2int(test_case, device, shape):
     np_arr = np.random.randn(*shape).astype(np.float32)
     input = flow.tensor(np_arr, dtype=flow.float32, device=flow.device(device))
@@ -87,14 +88,11 @@ class TestCast(flow.unittest.TestCase):
             _test_cast_float2int,
             _test_cast_int2float,
         ]
-        arg_dict["device"] = [
-            "cpu", 
-            "cuda"
-        ]
+        arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [(2, 3, 0, 5)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    
+
     @autotest(n=10)
     def test_cast_with_stride_input(test_case):
         device = random_device()
