@@ -153,5 +153,5 @@
   bind_python: True
 
 - name: "dispatch_eager_ccl_all_reduce"
-  signature: "Tensor (OpExpr op, Tensor input, String parallel_conf, Bool async_launch=False) => DispatchEagerNcclAllReduce"
+  signature: "Tensor (OpExpr op, Tensor input, String parallel_conf, Bool async_launch=False) => DispatchEagerCclAllReduce"
   bind_python: True

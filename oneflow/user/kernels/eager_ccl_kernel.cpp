@@ -76,8 +76,8 @@ class EagerCclAllReduceKernel final : public user_op::OpKernel {
     CHECK(kernel_cache != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(in->shape_view(), out->shape_view());
-    CHECK_EQ(in->data_type(), out->data_type());
+    CHECK_EQ(in->shape_view(), out->shape_view()) << kOfBugIssueUploadPrompt;
+    CHECK_EQ(in->data_type(), out->data_type()) << kOfBugIssueUploadPrompt;
 
     ccl::collective_communication::ReduceType reduce_type = ccl::collective_communication::kSum;
     if (in->data_type() == kBool) { reduce_type = ccl::collective_communication::kMax; }

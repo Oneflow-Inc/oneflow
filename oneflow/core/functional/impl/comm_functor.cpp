@@ -42,6 +42,11 @@ namespace impl {
 
 namespace {
 
+#define OF_KERNEL_NOT_SUPPORT_ERROR(op_type, device_type)                                          \
+  Error::RuntimeError() << op_type << " not suport for the device ("                               \
+                        << DeviceType_Name(device_type) << ") because eager kernel of " << op_type \
+                        << " is not registered"
+
 class EagerCclKernelRegContext final : public user_op::KernelRegContext {
  public:
   explicit EagerCclKernelRegContext(DeviceType device_type,
@@ -89,11 +94,10 @@ static constexpr auto* CheckCclKernelRegistered =
 
 bool IsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_split_parallel(); }
 
-Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc) {
+Maybe<one::UserOpExpr> EagerCclAllReduce(Symbol<ParallelDesc> parallel_desc) {
   CHECK_OR_RETURN(
       JUST(CheckCclKernelRegistered("eager_ccl_all_reduce", parallel_desc->device_type())))
-      << Error::RuntimeError()
-      << "AllReduce not suport for the device: " << DeviceType_Name(parallel_desc->device_type());
+      << OF_KERNEL_NOT_SUPPORT_ERROR("AllReduce", parallel_desc->device_type());
   return one::OpBuilder("eager_ccl_all_reduce", *JUST(UniqueStr("eager_ccl_all_reduce")))
       .Input("in")
       .Output("out")
@@ -101,14 +105,13 @@ Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc) {
       .Build();
 }
 
-static constexpr auto* CachedEagerNcclAllReduceOpExpr = DECORATE(&EagerNcclAllReduce, ThreadLocal);
+static constexpr auto* CachedEagerCclAllReduceOpExpr = DECORATE(&EagerCclAllReduce, ThreadLocal);
 
 Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc,
                                               const std::string& op_type) {
   CHECK_OR_RETURN(
       JUST(CheckCclKernelRegistered("eager_nccl_reduce_scatter", parallel_desc->device_type())))
-      << Error::RuntimeError() << "ReduceScatter not suport for the device: "
-      << DeviceType_Name(parallel_desc->device_type());
+      << OF_KERNEL_NOT_SUPPORT_ERROR("ReduceScatter", parallel_desc->device_type());
   return one::OpBuilder("eager_nccl_reduce_scatter", *JUST(UniqueStr("eager_nccl_reduce_scatter")))
       .Input("in")
       .Output("out")
@@ -122,8 +125,7 @@ static constexpr auto* CachedNcclReduceScatterOpExpr =
 Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
   CHECK_OR_RETURN(
       JUST(CheckCclKernelRegistered("eager_nccl_all_gather", parallel_desc->device_type())))
-      << Error::RuntimeError()
-      << "AllGather not suport for the device: " << DeviceType_Name(parallel_desc->device_type());
+      << OF_KERNEL_NOT_SUPPORT_ERROR("AllGather", parallel_desc->device_type());
   return one::OpBuilder("eager_nccl_all_gather", *JUST(UniqueStr("eager_nccl_all_gather")))
       .Input("in")
       .Output("out")
@@ -148,8 +150,7 @@ auto* CachedEagerNcclS2SOpExpr = DECORATE(&EagerNcclS2S, ThreadLocal);
 
 Maybe<one::UserOpExpr> EagerNcclReduce(Symbol<ParallelDesc> parallel_desc, int64_t root) {
   CHECK_OR_RETURN(JUST(CheckCclKernelRegistered("eager_nccl_reduce", parallel_desc->device_type())))
-      << Error::RuntimeError()
-      << "Reduce not suport for the device: " << DeviceType_Name(parallel_desc->device_type());
+      << OF_KERNEL_NOT_SUPPORT_ERROR("Reduce", parallel_desc->device_type());
   return one::OpBuilder("eager_nccl_reduce", *JUST(UniqueStr("eager_nccl_reduce")))
       .Input("in")
       .Output("out")
@@ -163,8 +164,7 @@ auto* CachedEagerNcclReduceOpExpr = DECORATE(&EagerNcclReduce, ThreadLocal);
 Maybe<one::UserOpExpr> RankGroupAndDeviceType2AllReduceOpExpr(Symbol<RankGroup> rank_group,
                                                               DeviceType device_type) {
   CHECK_OR_RETURN(JUST(CheckCclKernelRegistered("eager_ccl_all_reduce", device_type)))
-      << Error::RuntimeError()
-      << "AllReduce not suport for the device: " << DeviceType_Name(device_type);
+      << OF_KERNEL_NOT_SUPPORT_ERROR("AllReduce", device_type);
   const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
   return one::OpBuilder("eager_ccl_all_reduce")
       .Input("in")
@@ -176,6 +176,8 @@ Maybe<one::UserOpExpr> RankGroupAndDeviceType2AllReduceOpExpr(Symbol<RankGroup> 
 
 auto* CachedRankGroupAndDeviceType2AllReduceOpExpr =
     DECORATE(&RankGroupAndDeviceType2AllReduceOpExpr, ThreadLocal);
+
+#undef OF_KERNEL_NOT_SUPPORT_ERROR
 
 }  // namespace
 
@@ -252,8 +254,7 @@ class GlobalAllReduceFunctor {
       CHECK_OR_RETURN(NdSbpIsAllPartialSum(*JUST(x->nd_sbp())))
           << "Tensor's sbp must be partial_sum";
     }
-    std::shared_ptr<OpExpr> op_expr =
-        JUST(CachedEagerNcclAllReduceOpExpr(JUST(x->parallel_desc())));
+    std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerCclAllReduceOpExpr(JUST(x->parallel_desc())));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
 };

@@ -2009,7 +2009,7 @@ def OneFlow_EagerNcclAllGatherOp : OneFlow_BaseOp<"eager_nccl_all_gather", [NoSi
   let has_nd_sbp_infer_fn = 1;
 }
 
-def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_ccl_all_reduce", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EagerCclAllReduceOp : OneFlow_BaseOp<"eager_ccl_all_reduce", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in
   );

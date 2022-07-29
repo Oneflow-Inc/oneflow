@@ -33,7 +33,10 @@ class Communicator {
 
 inline std::shared_ptr<Communicator> NewCommunicator(DeviceType device_type,
                                                      Symbol<ParallelDesc> parallel_desc) {
-  CHECK_EQ(device_type, parallel_desc->device_type());
+  CHECK_EQ(device_type, parallel_desc->device_type())
+      << "device_type not match placement (" << DeviceType_Name(device_type) << " vs. "
+      << DeviceType_Name(parallel_desc->device_type()) << ". " << kOfBugIssueUploadPrompt;
+  ;
   std::shared_ptr<Communicator> communicator =
       NewObjSharedPtr<DeviceType, Communicator>(device_type);
   communicator->Init(parallel_desc);
