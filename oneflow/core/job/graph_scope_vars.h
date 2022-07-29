@@ -31,7 +31,7 @@ void SetGraphDebugMode(bool mode);
 bool GetGraphDebugMode();
 void SetGraphDebugOnlyUserPyStack(bool flag);
 bool GetGraphDebugOnlyUserPyStack();
-void SetOneFlowPythonBaseDir(const std::string& dir);
+void InitPythonPathsToBeKeptAndFilteredForDebugging(const std::string& python_base_dir);
 const std::vector<std::string>& GetPythonPathsToBeFilteredForDebugging();
 const std::vector<std::string>& GetPythonPathsToBeKeptForDebugging();
 
