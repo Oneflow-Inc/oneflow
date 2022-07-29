@@ -36,7 +36,7 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-void DfsSetNdSbp(const std::vector<::oneflow::SbpParallel>& id2sbp_parallel, int32_t depth,
+void DfsSetNdSbp(const std::vector<SbpParallel>& id2sbp_parallel, int32_t depth,
                  int32_t max_depth, NdSbp& nd_sbp, std::vector<NdSbp>& nd_sbp_lists,
                  std::unordered_map<NdSbp, int32_t>& nd_sbp_universe) {
   if (depth == max_depth) {
