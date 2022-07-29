@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_EP_PRIMITIVE_CAST_H_
 
 #include "oneflow/core/ep/include/primitive/primitive.h"
-#include "oneflow/core/common/stride.h"
 
 namespace oneflow {
 
@@ -31,8 +30,6 @@ class Cast : public Primitive {
   ~Cast() override = default;
 
   virtual void Launch(Stream* stream, const void* from, void* to, size_t count) = 0;
-  virtual void Launch(Stream* stream, const void* from, void* to, const StrideParam& from_stride,
-                      const StrideParam& to_stride, size_t count) = 0;
 };
 
 class CastFactory : public Factory<Cast> {

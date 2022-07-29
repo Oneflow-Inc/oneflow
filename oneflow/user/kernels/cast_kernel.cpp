@@ -64,7 +64,7 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-auto PrimitiveExists() {
+auto CastPrimitiveExists() {
   return hob::make_custom("BroadcastElementwiseUnaryPrimitiveExists",
                           [](const user_op::KernelRegContext& ctx) -> bool {
                             return NewPrimitive(&ctx).operator bool();
@@ -73,7 +73,7 @@ auto PrimitiveExists() {
 
 REGISTER_USER_KERNEL("cast")
     .SetCreateFn<CastKernel>()
-    .SetIsMatchedHob(PrimitiveExists() == true)
+    .SetIsMatchedHob(CastPrimitiveExists() == true)
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.InputDType("in", 0) == ctx.Attr<DataType>("dtype")) {
@@ -84,7 +84,7 @@ REGISTER_USER_KERNEL("cast")
 
 REGISTER_USER_KERNEL("cast_like")
     .SetCreateFn<CastKernel>()
-    .SetIsMatchedHob(PrimitiveExists() == true)
+    .SetIsMatchedHob(CastPrimitiveExists() == true)
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.InputDType("in", 0) == ctx.InputDType("like", 0)) {
