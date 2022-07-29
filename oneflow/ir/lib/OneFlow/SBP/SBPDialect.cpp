@@ -13,19 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_JOB_IR_H_
-#define ONEFLOW_CORE_JOB_JOB_IR_H_
+#include "OneFlow/SBP/SBPDialect.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "OneFlow/SBPDialect.cpp.inc"
+#include "mlir/IR/Dialect.h"
+#include "mlir/IR/TypeRange.h"
 
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/job/job.pb.h"
+namespace mlir {
 
-namespace oneflow {
+namespace sbp {
 
-Maybe<std::string> ConvertJobToTosaIR(Job* job);
-Maybe<std::string> ConvertJobToIR(Job* job);
-Maybe<void> SaveJobToIR(Job* job, const std::string& path);
-Maybe<void> LoadJobFromIR(Job* job, const std::string& path);
+void SBPDialect::initialize() { registerAttributes(); }
 
-}  // namespace oneflow
+}  // namespace sbp
 
-#endif  // ONEFLOW_CORE_JOB_JOB_IR_H_
+}  // namespace mlir
