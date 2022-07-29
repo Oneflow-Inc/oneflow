@@ -29,9 +29,7 @@ namespace {
 
 class EagerBoxingKernelRegContext final : public user_op::KernelRegContext {
  public:
-  explicit EagerBoxingKernelRegContext(DeviceType device_type,
-                                       const user_op::UserOpConfWrapper& user_op_conf)
-      : device_type_(device_type), user_op_conf_(user_op_conf) {}
+  explicit EagerBoxingKernelRegContext(DeviceType device_type) : device_type_(device_type) {}
   ~EagerBoxingKernelRegContext() = default;
 
   DeviceType device_type() const override { return device_type_; }
@@ -40,10 +38,14 @@ class EagerBoxingKernelRegContext final : public user_op::KernelRegContext {
                                                         int32_t index) const override {
     PRINT_BUG_PROMPT_AND_ABORT();
   }
-  const std::vector<std::pair<std::string, int32_t>>& inputs() const override { return arg_vec_; }
-  const std::vector<std::pair<std::string, int32_t>>& outputs() const override { return arg_vec_; }
+  const std::vector<std::pair<std::string, int32_t>>& inputs() const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+  }
+  const std::vector<std::pair<std::string, int32_t>>& outputs() const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+  }
 
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+  const user_op::UserOpConfWrapper& user_op_conf() const override { PRINT_BUG_PROMPT_AND_ABORT(); }
 
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
@@ -52,21 +54,11 @@ class EagerBoxingKernelRegContext final : public user_op::KernelRegContext {
 
  private:
   DeviceType device_type_;
-  // user_op_conf_ and arg_vec_ are just to accommodate GetErrorMsgOfSearchedOp and have no real
-  // meaning
-  const user_op::UserOpConfWrapper& user_op_conf_;
-  std::vector<std::pair<std::string, int32_t>> arg_vec_;  // this vector has no element
 };
 
 Maybe<bool> RawCheckCclKernelRegistered(const std::string& op_type_name, DeviceType device_type) {
-  auto all_reduce_op = user_op::UserOpConfWrapperBuilder(*JUST(UniqueStr(op_type_name)))
-                           .Op(op_type_name)
-                           .Input("in", "")
-                           .Output("out")
-                           .Build();
-  EagerBoxingKernelRegContext reg_ctx(device_type, all_reduce_op);
-  return TRY(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, reg_ctx))
-      .IsOk();
+  EagerBoxingKernelRegContext reg_ctx(device_type);
+  return user_op::UserOpRegistryMgr::Get().IsOpKernelRegistered(op_type_name, reg_ctx);
 }
 
 static constexpr auto* CheckCclKernelRegistered =
