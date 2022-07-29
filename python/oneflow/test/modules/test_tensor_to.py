@@ -37,7 +37,7 @@ class Test2DeviceGlobalTensorTo(flow.unittest.TestCase):
             cloned_local = cloned.to_local()
             cloned_local[0] = 0
             test_case.assertEqual(cloned_local[0].numpy().item(), 0)
-            test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
+            test_case.assertEqual(x.to_local()[0].numpy().item(), 0)
 
     def test_global_tensor_clone(test_case):
         placement = flow.placement("cuda", range(2))
@@ -48,7 +48,7 @@ class Test2DeviceGlobalTensorTo(flow.unittest.TestCase):
         cloned_local = cloned.to_local()
         cloned_local[0] = 0
         test_case.assertEqual(cloned_local[0].numpy().item(), 0)
-        test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
+        test_case.assertEqual(x.to_local()[0].numpy().item(), 0)
 
     def test_global_tensor_to(test_case):
         placement = flow.placement("cuda", range(2))
@@ -59,7 +59,7 @@ class Test2DeviceGlobalTensorTo(flow.unittest.TestCase):
         cloned_local = cloned.to_local()
         cloned_local[0] = 0
         test_case.assertEqual(cloned_local[0].numpy().item(), 0)
-        test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
+        test_case.assertEqual(x.to_local()[0].numpy().item(), 0)
 
     def test_tensor_to_h2d1(test_case):
         input = flow.tensor(np.random.randn(2, 3, 4, 5), dtype=flow.int64)
@@ -84,7 +84,7 @@ class TestTo(flow.unittest.TestCase):
         cloned_local = cloned.to_local()
         cloned_local[0] = 0
         test_case.assertEqual(cloned_local[0].numpy().item(), 0)
-        test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
+        test_case.assertEqual(x.to_local()[0].numpy().item(), 0)
 
     def test_global_tensor_to(test_case):
         x = flow.ones(
@@ -96,7 +96,7 @@ class TestTo(flow.unittest.TestCase):
         cloned_local = cloned.to_local()
         cloned_local[0] = 0
         test_case.assertEqual(cloned_local[0].numpy().item(), 0)
-        test_case.assertEqual(x.to_local()[0].numpy().item(), 1)
+        test_case.assertEqual(x.to_local()[0].numpy().item(), 0)
 
     def test_empty_global_tensor_to(test_case):
         x = flow.ones(
