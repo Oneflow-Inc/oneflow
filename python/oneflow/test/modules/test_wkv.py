@@ -32,6 +32,7 @@ class TestWkv(unittest.TestCase):
         v = flow.zeros(B, T, C, requires_grad=True, device='cuda').uniform_(-1, 1)
         y = flow._C.wkv(B, T, C, w, u, k, v)
         y.sum().backward()
+        return y
     
     def test_graph_wkv(test_case):
         B = random.randint(1, 10)
