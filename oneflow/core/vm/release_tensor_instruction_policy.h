@@ -72,7 +72,6 @@ class ReleaseTensorInstructionPolicy : public InstructionPolicy {
   void Release(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) const {
     CHECK_JUST(eager_blob_object->DeallocateBlobDataPtr());
   }
-  Dependence* stream_sequential_dependence_;
 
  private:
   void InitInstructionStatus(Instruction* instruction) override {
