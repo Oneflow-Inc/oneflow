@@ -283,9 +283,9 @@ use_mirror(VARIABLE FMT_URL URL ${FMT_URL})
 set(FMT_MD5 f126df4cffec775e118837db0c64b920)
 
 set(KINETO_URL
-    https://github.com/pytorch/kineto/archive/97211ee2a8878fc3c090e25ca0c2fe9ab67e9e89.zip)
+    https://github.com/pytorch/kineto/archive/066696ef46f17709606d02a824658a1b4430e3ad.zip)
 use_mirror(VARIABLE KINETO_URL URL ${KINETO_URL})
-set(KINETO_MD5 f57679f15d156dce6e7336735c1406cc)
+set(KINETO_MD5 e86582f4c6a64b37b63d905dbe7c6228)
 
 include(cuda)
 add_subdirectory(external)
