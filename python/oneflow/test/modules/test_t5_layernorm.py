@@ -53,24 +53,23 @@ class TorchT5LayerNorm(torch.nn.Module):
 
 
 def _test_t5_layer_norm(test_case, device):
-    for i in range(1000):
-        torch_t5_layernrom = TorchT5LayerNorm(3)
-        oneflow_t5_layernorm = flow.nn.RMSLayerNorm(3)
-        torch_t5_layernrom.to(device)
-        oneflow_t5_layernorm.to(device)
-        x = np.random.randn(2, 4, 3)
-        torch_x = torch.tensor(x, requires_grad=True, device=torch.device(device))
-        oneflow_x = flow.tensor(x, requires_grad=True, device=flow.device(device))
-        torch_y = torch_t5_layernrom(torch_x)
-        oneflow_y = oneflow_t5_layernorm(oneflow_x)
-        test_case.assertTrue(np.allclose(torch_y.detach().cpu().numpy(), oneflow_y.numpy()))
-        torch_y_sum = torch_y.sum()
-        torch_y_sum.backward()
-        oneflow_y_sum = oneflow_y.sum()
-        oneflow_y_sum.backward()
-        test_case.assertTrue(
-            np.allclose(torch_x.grad.cpu().numpy(), oneflow_x.grad.numpy(), rtol=1e-5, atol=1e-5)
-        )
+    torch_t5_layernrom = TorchT5LayerNorm(3)
+    oneflow_t5_layernorm = flow.nn.RMSLayerNorm(3)
+    torch_t5_layernrom.to(device)
+    oneflow_t5_layernorm.to(device)
+    x = np.random.randn(2, 4, 3)
+    torch_x = torch.tensor(x, requires_grad=True, device=torch.device(device))
+    oneflow_x = flow.tensor(x, requires_grad=True, device=flow.device(device))
+    torch_y = torch_t5_layernrom(torch_x)
+    oneflow_y = oneflow_t5_layernorm(oneflow_x)
+    test_case.assertTrue(np.allclose(torch_y.detach().cpu().numpy(), oneflow_y.numpy()))
+    torch_y_sum = torch_y.sum()
+    torch_y_sum.backward()
+    oneflow_y_sum = oneflow_y.sum()
+    oneflow_y_sum.backward()
+    test_case.assertTrue(
+        np.allclose(torch_x.grad.cpu().numpy(), oneflow_x.grad.numpy(), rtol=1e-5, atol=1e-5)
+    )
 
 @flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
