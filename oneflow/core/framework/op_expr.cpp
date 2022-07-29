@@ -605,7 +605,7 @@ template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<FeedInputOpConf>::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
     op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("identity"));
-    CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
+    CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());  // NOLINT
     JUST(op_grad_func_->Init(*this));
   }
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
@@ -624,7 +624,7 @@ template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<FeedVariableOpConf>::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
     op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("identity"));
-    CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
+    CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());  // NOLINT
     JUST(op_grad_func_->Init(*this));
   }
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
@@ -644,7 +644,7 @@ template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<FetchOutputOpConf>::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
     op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("identity"));
-    CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
+    CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());  // NOLINT
     JUST(op_grad_func_->Init(*this));
   }
   return std::make_shared<OpExprGradClosure>(op_grad_func_);

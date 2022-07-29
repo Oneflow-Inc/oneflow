@@ -711,11 +711,12 @@ Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder*
   return Maybe<void>::Ok();
 }
 
-void ScaleInitialDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
-                                 HashMap<LogicalBlobId, LogicalBlobId>* loss_lbi2initial_diff_lbi) {
+Maybe<void> ScaleInitialDiffByLossScale(
+    JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
+    HashMap<LogicalBlobId, LogicalBlobId>* loss_lbi2initial_diff_lbi) {
   const TrainConf& train_conf = ctx->job_desc().job_conf().train_conf();
   if (!train_conf.has_dynamic_loss_scale_policy() && !train_conf.has_loss_scale_factor()) {
-    return;
+    return Maybe<void>::Ok();
   }
   for (auto& it : *loss_lbi2initial_diff_lbi) {
     const auto& loss_lbi = it.first;
@@ -727,7 +728,7 @@ void ScaleInitialDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBu
     std::string loss_scale_val_lbn;
     if (train_conf.has_dynamic_loss_scale_policy()) {
       const auto& dynamic_loss_scale_state =
-          CHECK_JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
+          JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
       loss_scale_val_lbn = dynamic_loss_scale_state.loss_scale_val_lbn();
     } else if (train_conf.has_loss_scale_factor()) {
       OperatorConf constant_like_op{};
@@ -755,7 +756,7 @@ void ScaleInitialDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBu
       loss_scale_val_lbn = cast_op.output("out", 0);
     }
     const int64_t time_shape_elem_cnt =
-        CHECK_JUST(initial_diff_node->op().GetInputBlobFastestTimeShape())->elem_cnt();
+        JUST(initial_diff_node->op().GetInputBlobFastestTimeShape())->elem_cnt();
     if (time_shape_elem_cnt != 1) {
       const auto repeat_op =
           user_op::UserOpConfWrapperBuilder(loss_lbi.op_name() + "_" + loss_lbi.blob_name()
@@ -798,7 +799,8 @@ void ScaleInitialDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBu
     // update initial diff lbi
     it.second = scaled_initial_diff_lbi;
   }
-  job_builder->MutOpTransactionCommit();
+  JUST(job_builder->MutOpTransactionCommit());
+  return Maybe<void>::Ok();
 }
 
 void ScaleModelDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,

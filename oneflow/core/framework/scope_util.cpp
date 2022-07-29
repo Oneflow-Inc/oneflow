@@ -102,7 +102,7 @@ BackwardPassScopeGuard::BackwardPassScopeGuard() {
     const auto& scope = CHECK_JUST(GetCurrentScope());
     if (scope) {
       backward_pass_scope_ = CHECK_JUST(FindOrCreateBackwardPassScope(scope));
-      ThreadLocalScopeStackPush(backward_pass_scope_);
+      CHECK_JUST(ThreadLocalScopeStackPush(backward_pass_scope_));
     }
   }
 }
@@ -110,12 +110,12 @@ BackwardPassScopeGuard::BackwardPassScopeGuard() {
 BackwardPassScopeGuard::BackwardPassScopeGuard(const std::shared_ptr<Scope>& scope) {
   if (scope && LazyMode::is_enabled()) {
     backward_pass_scope_ = CHECK_JUST(FindOrCreateBackwardPassScope(scope));
-    ThreadLocalScopeStackPush(backward_pass_scope_);
+    CHECK_JUST(ThreadLocalScopeStackPush(backward_pass_scope_));
   }
 }
 
 BackwardPassScopeGuard::~BackwardPassScopeGuard() {
-  if (backward_pass_scope_) { ThreadLocalScopeStackPop(); }
+  if (backward_pass_scope_) { CHECK_JUST(ThreadLocalScopeStackPop()); }
 }
 
 class BackwardPassScopeStorage {

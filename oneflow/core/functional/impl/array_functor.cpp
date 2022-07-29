@@ -149,7 +149,7 @@ class GlobalConstantFunctor {
         std::vector<std::string> nd_sbp(sbp_tuple.size());
         {
           for (int i = 0; i < sbp_tuple.size(); ++i) {
-            nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
+            nd_sbp[i] = SbpParallelToString(*sbp_tuple[i]);
           }
         }
         JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));

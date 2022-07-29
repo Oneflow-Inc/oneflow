@@ -38,8 +38,9 @@ Maybe<void> MakeGetterLossOpNode4OpName(
 Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
                                             HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 
-void ScaleInitialDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
-                                 HashMap<LogicalBlobId, LogicalBlobId>* loss_lbi2initial_diff_lbi);
+Maybe<void> ScaleInitialDiffByLossScale(
+    JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
+    HashMap<LogicalBlobId, LogicalBlobId>* loss_lbi2initial_diff_lbi);
 
 void ScaleModelDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                                HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);

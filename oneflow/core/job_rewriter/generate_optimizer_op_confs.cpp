@@ -127,7 +127,7 @@ Maybe<void> GenerateOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx) const {
     AddDiffStaticShapeCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     AddDiffParallelCast(op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     JUST(ScaleModelDiffByLossInstanceNum(op_graph, job_builder.get(), &model_lbi2model_diff_lbi));
-    ScaleInitialDiffByLossScale(ctx, op_graph, job_builder.get(), &loss_lbi2initial_diff_lbi);
+    JUST(ScaleInitialDiffByLossScale(ctx, op_graph, job_builder.get(), &loss_lbi2initial_diff_lbi));
     ScaleModelDiffByLossScale(ctx, op_graph, job_builder.get(), &model_lbi2model_diff_lbi);
     JUST(CountNotFiniteIfNeeded(ctx, op_graph, job_builder.get(), model_lbi2model_diff_lbi));
     for (const auto& optimizer_conf : job->job_conf().train_conf().optimizer_conf()) {
