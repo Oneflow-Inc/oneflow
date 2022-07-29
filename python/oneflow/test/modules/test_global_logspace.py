@@ -38,7 +38,6 @@ def _test_graph_logspace(test_case, start, end, steps, placement, sbp):
 
         def build(self):
             x = flow.logspace(start, end, steps, placement=placement, sbp=sbp)
-            print(start, end, steps, x)
             return x
 
     model = GlobalLogspaceGraph()
