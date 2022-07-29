@@ -301,6 +301,7 @@ std::string DebugDeviceReset(vm::Stream* stream) {
 void CollectReadyDownstreamReleaseTensors(Stream* stream,
                                           ReadyInstructionList* ready_instruction_list) {
   const auto& IsDispatchableReleaseTensorInstructionOnSameDevice = [&](auto* instruction) {
+    if (unlikely(!instruction->dispatched_instruction_hook().empty())) { return false; }
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_in_edges()) {
       if (!edge->src_instruction().Done()) { return false; }
     }
