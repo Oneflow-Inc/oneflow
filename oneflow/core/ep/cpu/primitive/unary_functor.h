@@ -66,6 +66,27 @@ struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kIsNan, bool, double> {
   OF_DEVICE_FUNC bool operator()(double src) const { return std::isnan(src); }
 };
 
+template<typename Dst>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kCast, float16, Dst> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(float16 src) const { return static_cast<Dst>(src); }
+};
+
+template<typename Src>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kCast, Src, float16> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC float16 operator()(Src src) const { return static_cast<float16>(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kCast, float16, float16> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC float16 operator()(float16 src) const { return src; }
+};
+
 }  // namespace primitive
 }  // namespace ep
 }  // namespace oneflow

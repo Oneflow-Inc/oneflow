@@ -93,7 +93,7 @@ class TestCast(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=10)
+    @autotest(n=5)
     def test_cast_with_stride_input(test_case):
         device = random_device()
         x = random_tensor()
