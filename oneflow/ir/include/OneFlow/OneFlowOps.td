@@ -14,6 +14,9 @@ include "mlir/Pass/PassBase.td"
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
+
+include "OneFlow/SBP/SBPOps.td"
+
 def OneFlow_NormalizationAddReluOp : OneFlow_NormalizationAddReluBaseOp {
   let builders = [
     OpBuilder<(ins
@@ -159,7 +162,7 @@ def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", [OneFlow_TensorSou
     DefaultValuedAttr<BoolAttr, "true">:$trainable,
     OptionalAttr<F32Attr>:$float_initializer,
     OptionalAttr<SI64Attr>:$integer_initializer,
-    StrArrayAttr:$nd_sbp
+    OptionalAttr<SBP_ParallelSignatureAttr>:$parallel
   );
 }
 
