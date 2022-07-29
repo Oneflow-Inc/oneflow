@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter.h"
+#include <algorithm>
 
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_mode.h"
@@ -92,7 +93,13 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
                     [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
   }
 
-  const bool inplace = ctx.inplace.value_or(false);
+  bool inplace = ctx.inplace.value_or(false);
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    if (inputs.at(i) == outputs->at(i)) {
+      inplace = true;
+      break;
+    }
+  }
 // NOTE: if this op not support stride, then need to tensor->contiguous()
 #define HANDLE_NON_CONTIGUOUS_INPUT(tensor_tuple_ptr, is_inplace)                             \
   const bool support_non_contiguou = JUST(op_expr.SupportNonContiguous());                    \
