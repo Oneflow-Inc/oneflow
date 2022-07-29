@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
+#include "oneflow/core/vm/ep_backend_host_allocator.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/profiler/profiler.h"
@@ -49,18 +50,6 @@ void EpStreamPolicyBase::Run(Instruction* instruction) const {
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer();
   EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(
       stream->mut_stream_policy()->stream());
-}
-
-std::unique_ptr<BinAllocator<ThreadSafeLock>> GetBackendAllocator(Symbol<Device> device) {
-  DeviceType device_type = device->enum_type();
-  size_t device_index = device->device_id();
-  auto ep_device =
-      Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
-  ep::AllocationOptions options{};
-  options.SetPinnedDevice(device_type, device_index);
-  auto ep_backend_allocator = std::make_unique<EpBackendHostAllocator>(ep_device, options);
-  return std::make_unique<BinAllocator<ThreadSafeLock>>(ep::kMaxAlignmentRequirement,
-                                                        std::move(ep_backend_allocator));
 }
 
 }  // namespace vm

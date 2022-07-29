@@ -23,8 +23,7 @@ namespace vm {
 
 class PinnedEpStreamPolicy final : public EpStreamPolicyBase {
  public:
-  PinnedEpStreamPolicy(Symbol<Device> device)
-      : EpStreamPolicyBase(device, GetBackendAllocator(device)) {}
+  PinnedEpStreamPolicy(Symbol<Device> device);
   ~PinnedEpStreamPolicy() override = default;
 
   void InitInstructionStatus(const Stream& stream,

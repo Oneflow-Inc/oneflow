@@ -23,7 +23,7 @@ namespace vm {
 
 class EpStreamPolicy final : public EpStreamPolicyBase {
  public:
-  EpStreamPolicy(Symbol<Device> device) : EpStreamPolicyBase(device, GetBackendAllocator(device)) {}
+  EpStreamPolicy(Symbol<Device> device);
   ~EpStreamPolicy() override = default;
 
   void InitInstructionStatus(const Stream& stream,

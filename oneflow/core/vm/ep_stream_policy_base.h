@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/vm/ep_event.h"
 #include "oneflow/core/vm/bin_allocator.h"
-#include "oneflow/core/vm/ep_backend_host_allocator.h"
 #include "oneflow/core/vm/thread_safe_guard.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 
@@ -89,8 +88,6 @@ class EpStreamPolicyBase : public StreamPolicy {
   mutable ep::Stream* ep_stream_;
   std::unique_ptr<BinAllocator<ThreadSafeLock>> ep_allocator_;
 };
-
-std::unique_ptr<BinAllocator<ThreadSafeLock>> GetBackendAllocator(Symbol<Device> device);
 
 }  // namespace vm
 }  // namespace oneflow

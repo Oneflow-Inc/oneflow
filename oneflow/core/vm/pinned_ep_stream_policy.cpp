@@ -20,10 +20,26 @@ limitations under the License.
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
+#include "oneflow/core/vm/ep_backend_host_allocator.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 namespace vm {
+
+PinnedEpStreamPolicy::PinnedEpStreamPolicy(Symbol<Device> device)
+    : EpStreamPolicyBase(
+        device, [](Symbol<Device> device) -> std::unique_ptr<BinAllocator<ThreadSafeLock>> {
+          // TODO:(zhaoluyang) empty/cast/copy op support pin_memory_device
+          DeviceType device_type = device->enum_type();
+          size_t device_index = device->device_id();
+          auto ep_device =
+              Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
+          ep::AllocationOptions options{};
+          options.SetPinnedDevice(device_type, device_index);
+          auto ep_backend_allocator = std::make_unique<EpBackendHostAllocator>(ep_device, options);
+          return std::make_unique<BinAllocator<ThreadSafeLock>>(ep::kMaxAlignmentRequirement,
+                                                                std::move(ep_backend_allocator));
+        }(device)) {}
 
 void PinnedEpStreamPolicy::InitInstructionStatus(const Stream& stream,
                                                  InstructionStatusBuffer* status_buffer) const {

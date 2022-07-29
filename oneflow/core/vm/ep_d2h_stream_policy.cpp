@@ -19,10 +19,24 @@ limitations under the License.
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
+#include "oneflow/core/vm/ep_backend_host_allocator.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 namespace vm {
+
+EpD2HStreamPolicy::EpD2HStreamPolicy(Symbol<Device> device)
+    : EpStreamPolicyBase(
+        device, [](Symbol<Device> device) -> std::unique_ptr<BinAllocator<ThreadSafeLock>> {
+          DeviceType device_type = device->enum_type();
+          size_t device_index = device->device_id();
+          auto ep_device =
+              Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
+          auto ep_backend_allocator =
+              std::make_unique<EpBackendHostAllocator>(ep_device, ep::AllocationOptions{});
+          return std::make_unique<BinAllocator<ThreadSafeLock>>(ep::kMaxAlignmentRequirement,
+                                                                std::move(ep_backend_allocator));
+        }(device)) {}
 
 void EpD2HStreamPolicy::InitInstructionStatus(const Stream& stream,
                                               InstructionStatusBuffer* status_buffer) const {

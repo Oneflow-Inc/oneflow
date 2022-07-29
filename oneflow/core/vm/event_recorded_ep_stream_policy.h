@@ -23,8 +23,7 @@ namespace vm {
 
 class EventRecordedEpStreamPolicy final : public EpStreamPolicyBase {
  public:
-  EventRecordedEpStreamPolicy(Symbol<Device> device)
-      : EpStreamPolicyBase(device, GetBackendAllocator(device)) {}
+  EventRecordedEpStreamPolicy(Symbol<Device> device);
   ~EventRecordedEpStreamPolicy() override = default;
 
   void InitInstructionStatus(const Stream& stream,
