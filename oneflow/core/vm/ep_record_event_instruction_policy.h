@@ -128,11 +128,13 @@ struct GetRecordEventInstructionPolicy : public StreamRoleVisitor<GetRecordEvent
   }
   template<typename... Args>
   static Maybe<vm::InstructionPolicy> VisitCriticalSection(DeviceType device_type, Args&&... args) {
-    UNIMPLEMENTED_THEN_RETURN() << "EpRecordEvent instruction not supported in CriticalSection stream";
+    UNIMPLEMENTED_THEN_RETURN()
+        << "EpRecordEvent instruction not supported in CriticalSection stream";
   }
   template<typename... Args>
   static Maybe<vm::InstructionPolicy> VisitLazyJobLauncher(DeviceType device_type, Args&&... args) {
-    UNIMPLEMENTED_THEN_RETURN() << "EpRecordEvent instruction not supported in LaunchLazyJob stream";
+    UNIMPLEMENTED_THEN_RETURN()
+        << "EpRecordEvent instruction not supported in LaunchLazyJob stream";
   }
   template<typename... Args>
   static Maybe<vm::InstructionPolicy> VisitPinnedCompute(DeviceType device_type, Args&&... args) {
