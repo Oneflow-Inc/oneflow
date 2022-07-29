@@ -1041,6 +1041,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
     JUST(DoPass("ReplaceEmbeddingOps"));
     JUST(DoPass("FuseEmbeddingShuffleInteractionPass"));
+    JUST(DoPass("FuseBCEReduceMeanFwBwPass"));
     JUST(DoPass("AddSspVariableProxy"));
     JUST(DoPass("CheckpointingPass"));
     JUST(DoPass("CudnnFusedNormalizationAddReluPass"));
