@@ -74,13 +74,13 @@ class SbpGraph final {
   void ClipEdge(SbpEdge* this_edge) const;
 
   // Compute the minimum and maximum layer of each node in the graph
-  int32_t ComputeLayer(oneflow::HashMap<std::string, SbpNode*>& op_name2sbp_node,
-                       const oneflow::HashMap<const OpNode*, oneflow::HashSet<std::string>>&
+  int32_t ComputeLayer(HashMap<std::string, SbpNode*>& op_name2sbp_node,
+                       const HashMap<const OpNode*, HashSet<std::string>>&
                            op_node2mutable_op_ctrl_deps) const;
 
   // Find the trunk of the sbp graph, then reduce the wait time for tributaries
   void FindTrunk(int32_t max_min_layer,
-                 oneflow::HashMap<std::string, SbpNode*>& op_name2sbp_node) const;
+                 HashMap<std::string, SbpNode*>& op_name2sbp_node) const;
 
   // Set wait time
   void SetWaitTime(double wait_time);

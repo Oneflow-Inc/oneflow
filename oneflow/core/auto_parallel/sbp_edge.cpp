@@ -223,24 +223,24 @@ void SbpEdge::InitializeCopyCost(const std::string& ibn, bool compute_cost,
                                  bool use_sbp_collector) {
   // In this part, we assemble the cost from nodes to nodes.
   if (start_node_->op_node_ && end_node_->op_node_) {
-    oneflow::OpNode* consumer = end_node_->op_node_;
+    OpNode* consumer = end_node_->op_node_;
 
     // Add copy cost for each blob
-    const oneflow::LogicalBlobId& lbi = consumer->op().BnInOp2Lbi(ibn);
+    const LogicalBlobId& lbi = consumer->op().BnInOp2Lbi(ibn);
 
     // Check whether lbi is transferred by this edge
     if (use_sbp_collector && compute_cost && !SearchLbi(lbi)) { return; }
 
-    oneflow::OpNode* producer = start_node_->op_node_;
+    OpNode* producer = start_node_->op_node_;
     const std::string& producer_lbn = *CHECK_JUST(producer->op().obn4lbi(lbi));
-    const oneflow::ParallelDesc& producer_parallel_desc =
+    const ParallelDesc& producer_parallel_desc =
         *CHECK_JUST(producer->op().GetParallelDesc4BnInOp(producer_lbn));
-    const oneflow::ParallelDesc& consumer_parallel_desc =
+    const ParallelDesc& consumer_parallel_desc =
         *CHECK_JUST(consumer->op().GetParallelDesc4BnInOp(ibn));
 
     // Need to be careful, the logical blob description should be independent to current
     // SbpParallel. Use producer or op_node?
-    const oneflow::BlobDesc& logical_blob_desc = producer->LogicalBlobDesc4Lbi(lbi);
+    const BlobDesc& logical_blob_desc = producer->LogicalBlobDesc4Lbi(lbi);
     const std::string& obn = *CHECK_JUST(producer->op().obn4lbi(lbi));
     // If we are deciding whether we need the wait time, then make is_same_sbp true.
     // B->S cause cudaEventSynchronize in current implementation.

@@ -80,19 +80,19 @@ class SbpNode final {
                          std::vector<bool>& node_tags) const;
 
   // Get or compute the minimum layer of this node
-  int32_t GetMinLayer(const oneflow::HashMap<std::string, SbpNode*>& op_name2sbp_node,
-                      const oneflow::HashMap<const OpNode*, oneflow::HashSet<std::string>>&
+  int32_t GetMinLayer(const HashMap<std::string, SbpNode*>& op_name2sbp_node,
+                      const HashMap<const OpNode*, HashSet<std::string>>&
                           op_node2mutable_op_ctrl_deps);
   // Spread the minimum layer to compute the maximum layer of producers
-  void SpreadMaxLayer(const oneflow::HashMap<std::string, SbpNode*>& op_name2sbp_node,
-                      const oneflow::HashMap<const OpNode*, oneflow::HashSet<std::string>>&
+  void SpreadMaxLayer(const HashMap<std::string, SbpNode*>& op_name2sbp_node,
+                      const HashMap<const OpNode*, HashSet<std::string>>&
                           op_node2mutable_op_ctrl_deps);
   // Set max_layer_ = min_layer_ if this node does not have any consumer
   void LiftMaxLayer();
   // Set max_layer_ = upper_bound if this node does not have any consumer
   void LiftMaxLayer(int32_t upper_bound);
   // Compute maximum layer for tributaries
-  void SpreadTributaryLayer(const oneflow::HashMap<std::string, SbpNode*>& op_name2sbp_node);
+  void SpreadTributaryLayer(const HashMap<std::string, SbpNode*>& op_name2sbp_node);
   // Drop down the tributary layer
   void DropTributaryLayer(int32_t upper_bound);
 
@@ -103,14 +103,14 @@ class SbpNode final {
 
   // Judge if this node is on the trunk
   // If so, judge it for its producer/upstream nodes
-  void SpreadTrunk(const oneflow::HashMap<std::string, SbpNode*>& op_name2sbp_node);
+  void SpreadTrunk(const HashMap<std::string, SbpNode*>& op_name2sbp_node);
   // Count consumers and any downstream nodes defined by control edges
   // for producers or upstream nodes
-  void RaiseConsumerNum(const oneflow::HashMap<std::string, SbpNode*>& op_name2sbp_node);
+  void RaiseConsumerNum(const HashMap<std::string, SbpNode*>& op_name2sbp_node);
   // Compute the minimal available wait time for producers or upstream nodes
   void SpreadAvailWaitTime(const std::vector<double>& trunk_cost,
                            const std::vector<double>& acc_trunk_cost,
-                           const oneflow::HashMap<std::string, SbpNode*>& op_name2sbp_node,
+                           const HashMap<std::string, SbpNode*>& op_name2sbp_node,
                            double wait_time, double transfer_cost);
   // Reduce and set the wait time for op in the trunk
   void SetTrunkWaitTime(double trunk_wait_time);
@@ -158,7 +158,7 @@ class SbpNode final {
 
   std::vector<BinarySet> parallel_candidates_;
 
-  oneflow::OpNode* op_node_ = nullptr;
+  OpNode* op_node_ = nullptr;
 
   // We divide the sbp graph into multiple layers.
   // min_layer_ is the minimum layer number to run this op as soon as possible.

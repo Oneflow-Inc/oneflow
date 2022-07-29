@@ -66,18 +66,18 @@ class SbpEdge final {
   double GreedyStrategy();
 
   // a set of ids of logical blobs carried/transferred on this sbp edge
-  std::unordered_set<oneflow::LogicalBlobId> carry_lbis;
+  std::unordered_set<LogicalBlobId> carry_lbis;
 
   // load a logical blob
-  void LoadLbi(const oneflow::LogicalBlobId& lbi) { carry_lbis.insert(lbi); }
+  void LoadLbi(const LogicalBlobId& lbi) { carry_lbis.insert(lbi); }
 
   // check the existence of a logical blob
-  bool SearchLbi(const oneflow::LogicalBlobId& lbi) const {
+  bool SearchLbi(const LogicalBlobId& lbi) const {
     return carry_lbis.find(lbi) != carry_lbis.end();
   }
 
   // unload a logical blob
-  void UnloadLbi(const oneflow::LogicalBlobId& lbi) {
+  void UnloadLbi(const LogicalBlobId& lbi) {
     if (carry_lbis.erase(lbi) == 0) { std::cout << "Unload an empty lbi!" << std::endl; }
   }
 

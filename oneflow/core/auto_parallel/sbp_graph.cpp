@@ -686,8 +686,8 @@ void SbpGraph::ClipEdge(SbpEdge* this_edge) const {
 
 // Compute the minimum and maximum layer of each node in the graph
 
-int32_t SbpGraph::ComputeLayer(oneflow::HashMap<std::string, SbpNode*>& op_name2sbp_node,
-                               const oneflow::HashMap<const OpNode*, oneflow::HashSet<std::string>>&
+int32_t SbpGraph::ComputeLayer(HashMap<std::string, SbpNode*>& op_name2sbp_node,
+                               const HashMap<const OpNode*, HashSet<std::string>>&
                                    op_node2mutable_op_ctrl_deps) const {
   // Compute minimum layer
   for (SbpNode* this_node : node_list_) {
@@ -709,7 +709,7 @@ int32_t SbpGraph::ComputeLayer(oneflow::HashMap<std::string, SbpNode*>& op_name2
 // Find the trunk of the sbp graph, then reduce the wait time for tributaries
 
 void SbpGraph::FindTrunk(int32_t max_min_layer,
-                         oneflow::HashMap<std::string, SbpNode*>& op_name2sbp_node) const {
+                         HashMap<std::string, SbpNode*>& op_name2sbp_node) const {
   // Summarize cost for each layer, on the trunk or tributaries
   std::vector<double> trunk_cost(max_min_layer + 1, 0);
   for (SbpNode* this_node : node_list_) {

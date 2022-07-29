@@ -390,8 +390,8 @@ void SbpNode::NRingNeighborhood(int32_t n, std::vector<int32_t>& nbh_n_ring,
 
 // Get or compute the minimum layer of this node
 
-int32_t SbpNode::GetMinLayer(const oneflow::HashMap<std::string, SbpNode*>& op_name2sbp_node,
-                             const oneflow::HashMap<const OpNode*, oneflow::HashSet<std::string>>&
+int32_t SbpNode::GetMinLayer(const HashMap<std::string, SbpNode*>& op_name2sbp_node,
+                             const HashMap<const OpNode*, HashSet<std::string>>&
                                  op_node2mutable_op_ctrl_deps) {
   if (min_layer_ >= 0) { return min_layer_; }
   if (!op_node_) { return min_layer_; }
@@ -423,8 +423,8 @@ int32_t SbpNode::GetMinLayer(const oneflow::HashMap<std::string, SbpNode*>& op_n
 
 // Spread the minimum layer to compute the maximum layer of producers
 
-void SbpNode::SpreadMaxLayer(const oneflow::HashMap<std::string, SbpNode*>& op_name2sbp_node,
-                             const oneflow::HashMap<const OpNode*, oneflow::HashSet<std::string>>&
+void SbpNode::SpreadMaxLayer(const HashMap<std::string, SbpNode*>& op_name2sbp_node,
+                             const HashMap<const OpNode*, HashSet<std::string>>&
                                  op_node2mutable_op_ctrl_deps) {
   if (min_layer_ <= 0) { return; }
   int32_t producer_max_lay = min_layer_ - 1;
@@ -480,7 +480,7 @@ double SbpNode::GetCutRatio() const {
 // Judge if this node is on the trunk
 // If so, judge it for its producer/upstream nodes
 
-void SbpNode::SpreadTrunk(const oneflow::HashMap<std::string, SbpNode*>& op_name2sbp_node) {
+void SbpNode::SpreadTrunk(const HashMap<std::string, SbpNode*>& op_name2sbp_node) {
   // Skip it if this node is already judged.
   if (on_trunk_) { return; }
   // Skip sbp proxy. This is before we have proxy.
@@ -503,7 +503,7 @@ void SbpNode::SpreadTrunk(const oneflow::HashMap<std::string, SbpNode*>& op_name
 
 // Count consumers and any downstream nodes defined by control edges
 
-void SbpNode::RaiseConsumerNum(const oneflow::HashMap<std::string, SbpNode*>& op_name2sbp_node) {
+void SbpNode::RaiseConsumerNum(const HashMap<std::string, SbpNode*>& op_name2sbp_node) {
   // Should clear it before running.
   // skip the proxy nodes and the sources
   if (min_layer_ <= 0) { return; }
@@ -518,7 +518,7 @@ void SbpNode::RaiseConsumerNum(const oneflow::HashMap<std::string, SbpNode*>& op
 
 void SbpNode::SpreadAvailWaitTime(const std::vector<double>& trunk_cost,
                                   const std::vector<double>& acc_trunk_cost,
-                                  const oneflow::HashMap<std::string, SbpNode*>& op_name2sbp_node,
+                                  const HashMap<std::string, SbpNode*>& op_name2sbp_node,
                                   double wait_time, double transfer_cost) {
   // skip the proxy nodes and the sources
   if (min_layer_ <= 0) { return; }
@@ -604,7 +604,7 @@ void SbpNode::DropAvailWaitTime(double curr_trunk_cost) {
 void SbpNode::InitializeCopyCost(bool compute_cost, bool use_sbp_collector) {
   for (SbpEdge* this_edge : edges_in_) {
     const auto* sbp_node_producer = this_edge->start_node_;
-    oneflow::OpNode* producer = sbp_node_producer->op_node_;
+    OpNode* producer = sbp_node_producer->op_node_;
 
     // skip it if proxy
     if (use_sbp_collector && !producer) { continue; }
@@ -642,7 +642,7 @@ void SbpNode::DropTributaryLayer(int32_t upper_bound) {
 // Compute maximum layer for tributaries
 
 void SbpNode::SpreadTributaryLayer(
-    const oneflow::HashMap<std::string, SbpNode*>& op_name2sbp_node) {
+    const HashMap<std::string, SbpNode*>& op_name2sbp_node) {
   if (counter_ || min_layer_ <= 0) { return; }
   int32_t producer_max_lay = 0;
   if (on_trunk_) {
