@@ -29,12 +29,13 @@ namespace vm {
 
 StreamWaitInstructionPolicy::StreamWaitInstructionPolicy(
     small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
-    vm::Stream* from_vm_stream)
+    vm::Stream* from_vm_stream, vm::Stream* to_vm_stream)
     : dependences_(std::move(dependences)),
       input_dependences_(),
       output_dependences_(),
       from_vm_stream_(from_vm_stream) {
   for (const auto& dep : dependences_) { output_dependences_.push_back(dep.get()); }
+  stream_sequential_dependence_ = to_vm_stream->schedule_local_dep_object().get();
 }
 
 bool StreamWaitInstructionPolicy::Prescheduleable(const Stream* src, const Stream* dst) const {
@@ -42,11 +43,29 @@ bool StreamWaitInstructionPolicy::Prescheduleable(const Stream* src, const Strea
 }
 
 void StreamWaitInstructionPolicy::InitInstructionStatus(Instruction* instruction) {
-  auto* status_buffer = instruction->mut_status_buffer();
-  auto* stream = instruction->mut_stream();
-  instruction->stream_policy().InitInstructionStatus(*stream, status_buffer);
-  auto* data_ptr = status_buffer->mut_buffer();
-  EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_ep_event(nullptr);
+  {
+    auto* stream = mut_from_vm_stream();
+    NaiveStreamPolicy* naive_stream_policy =
+        CHECK_NOTNULL(dynamic_cast<NaiveStreamPolicy*>(instruction->mut_stream_policy()));
+    naive_stream_policy->InitInstructionStatus(*stream, instruction->mut_status_buffer());
+    auto* ep_device_ctx = dynamic_cast<EpDeviceCtx*>(naive_stream_policy->device_ctx().get());
+    auto* ep_event_provider = ep_device_ctx->ep_event_provider();
+    const auto& ep_event = CHECK_NOTNULL(ep_event_provider)->GetReusedEpEvent();
+    mut_ep_event() = ep_event;
+  }
+  {
+    auto* status_buffer = instruction->mut_status_buffer();
+    auto* stream = instruction->mut_stream();
+    instruction->stream_policy().InitInstructionStatus(*stream, status_buffer);
+    auto* data_ptr = status_buffer->mut_buffer();
+    EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_ep_event(nullptr);
+  }
+}
+
+void StreamWaitInstructionPolicy::DeleteInstructionStatus(Instruction* instruction) {
+  auto* stream = mut_from_vm_stream();
+  instruction->stream_policy().DeleteInstructionStatus(*stream, instruction->mut_status_buffer());
+  mut_ep_event().reset();
 }
 
 void StreamWaitInstructionPolicy::Compute(vm::Instruction* instruction) {

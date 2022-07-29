@@ -543,8 +543,8 @@ Maybe<void> InstructionsBuilder::StreamWait(
   auto* from_vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(from_stream));
   auto* to_vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(to_stream));
   auto instruction = intrusive::make_shared<vm::Instruction>(
-      to_vm_stream,
-      std::make_unique<vm::StreamWaitInstructionPolicy>(std::move(dependences), from_vm_stream));
+      to_vm_stream, std::make_unique<vm::StreamWaitInstructionPolicy>(
+                        std::move(dependences), from_vm_stream, to_vm_stream));
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }

@@ -34,15 +34,14 @@ class StreamWaitInstructionPolicy final : public vm::InstructionPolicy {
  public:
   StreamWaitInstructionPolicy(
       small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
-      vm::Stream* from_vm_stream);
+      vm::Stream* from_vm_stream, vm::Stream* to_vm_stream);
   ~StreamWaitInstructionPolicy() = default;
-
-  Dependence* stream_sequential_dependence() const override { return nullptr; }
 
   std::string DebugName(const vm::Instruction&) const override { return "StreamWait"; }
 
   bool Prescheduleable(const Stream* src, const Stream* dst) const override;
   void InitInstructionStatus(Instruction* instruction) override;
+  void DeleteInstructionStatus(Instruction* instruction) override;
   Maybe<void> Prepare(vm::Instruction* instruction) override { return Maybe<void>::Ok(); }
   void Compute(vm::Instruction* instruction) override;
 
