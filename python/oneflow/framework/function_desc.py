@@ -15,9 +15,7 @@ limitations under the License.
 """
 import oneflow._oneflow_internal
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
-import oneflow.framework.hob as hob
 import oneflow.framework.session_context as session_ctx
-import oneflow.support.enable_if as enable_if
 
 
 class FunctionAttribute(object):
