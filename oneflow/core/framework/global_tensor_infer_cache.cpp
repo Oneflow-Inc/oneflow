@@ -105,22 +105,6 @@ Maybe<void> GlobalTensorMetaInferArgs::MakeInputBlobDescs(const UserOpExpr& user
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GlobalTensorMetaInferArgs::MakeNdSbpInferHints(
-    const UserOpExpr& user_op_expr, const std::vector<BlobDesc>& blob_descs,
-    std::vector<NdSbpInferHint>* hints) const {
-  CHECK_OR_RETURN(hints->empty());
-  const auto& input_arg_tuple = *user_op_expr.input_arg_tuple();
-  hints->reserve(input_arg_tuple.size());
-  for (int i = 0; i < input_arg_tuple.size(); ++i) {
-    const auto& tensor_meta = *input_global_tensor_metas_[i].tensor_meta();
-    const auto* parallel_desc = &*tensor_meta.parallel_desc();
-    const auto* blob_desc = &blob_descs.at(i);
-    const auto* nd_sbp = &*tensor_meta.nd_sbp();
-    hints->emplace_back(parallel_desc, blob_desc, nd_sbp);
-  }
-  return Maybe<void>::Ok();
-}
-
 Maybe<GlobalTensorMetaInferArgs> GlobalTensorMetaInferArgs::New(const AttrMap& attrs,
                                                                 const TensorTuple& input_tensors) {
   std::shared_ptr<GlobalTensorMetaInferArgs> infer_args(new GlobalTensorMetaInferArgs());
@@ -275,19 +259,40 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
     // Infer parallel distribution.
     NdSbpSignature nd_sbp_constraints;
     JUST(infer_args.MakeNdSbpConstraints(user_op_expr, &nd_sbp_constraints));
-    std::vector<BlobDesc> blob_descs;
-    JUST(infer_args.MakeInputBlobDescs(user_op_expr, &blob_descs));
-    std::vector<NdSbpInferHint> pd_infer_hints;
-    JUST(infer_args.MakeNdSbpInferHints(user_op_expr, blob_descs, &pd_infer_hints));
-    const auto& input_arg_tuple = *user_op_expr.input_arg_tuple();
-    const auto& NdSbpInferHint4Ibn = [&](const std::string& ibn) -> Maybe<const NdSbpInferHint*> {
-      int32_t input_index = input_arg_tuple.bn_in_op2tensor_tuple_index().at(ibn);
-      CHECK_GE_OR_RETURN(input_index, 0);
-      CHECK_LT_OR_RETURN(input_index, pd_infer_hints.size());
-      return &pd_infer_hints.at(input_index);
+    std::vector<BlobDesc> input_blob_descs;
+    JUST(infer_args.MakeInputBlobDescs(user_op_expr, &input_blob_descs));
+    std::vector<BlobDesc> output_blob_descs;
+    output_blob_descs.reserve(user_op_expr.output_size());
+    HashMap<std::string, NdSbpInferHint> bn2infer_hints;
+    {
+      bn2infer_hints.reserve(op->input_output_bns().size());
+      for (int32_t i = 0; i < op->input_bns().size(); ++i) {
+        const std::string bn = op->input_bns()[i];
+        const auto& input_tensor_meta = infer_args.input_global_tensor_metas()[i].tensor_meta();
+        const ParallelDesc* parallel_desc = &(*input_tensor_meta->parallel_desc());
+        const BlobDesc* blob_desc = &input_blob_descs[i];
+        const NdSbp& nd_sbp = *input_tensor_meta->nd_sbp();
+        bn2infer_hints.emplace(bn, NdSbpInferHint(parallel_desc, blob_desc, &nd_sbp));
+      }
+      for (int32_t i = 0; i < op->output_bns().size(); ++i) {
+        const std::string bn = op->output_bns()[i];
+        const auto& output_tensor_meta = output_mut_metas[i].tensor_meta();
+        const ParallelDesc* parallel_desc = JUST(op->GetParallelDesc4BnInOp(bn)).get();
+        output_blob_descs.emplace_back(BlobDesc(
+            output_tensor_meta.shape(), output_tensor_meta.stride(), output_tensor_meta.dtype()));
+        const NdSbp no_set_nd_sbp;
+        bn2infer_hints.emplace(
+            bn, NdSbpInferHint(parallel_desc, &output_blob_descs[i], &no_set_nd_sbp));
+      }
+    }
+    const auto& NdSbpInferHint4Bn = [&](const std::string& bn) -> Maybe<const NdSbpInferHint*> {
+      auto it = bn2infer_hints.find(bn);
+      CHECK_OR_RETURN(it != bn2infer_hints.end())
+          << "bn: " << bn << " not found in " << user_op_expr.op_type_name();
+      return &it->second;
     };
     // The inferred results can be retrieved by op->NdSbp4BnInOp(obn).
-    JUST(op->InferNdSbpSignatureIf(nd_sbp_constraints, *parallel_desc, NdSbpInferHint4Ibn));
+    JUST(op->InferNdSbpSignatureIf(nd_sbp_constraints, *parallel_desc, NdSbpInferHint4Bn));
   }
   auto result = std::make_unique<GlobalTensorInferResult>(user_op_expr.input_size(),
                                                           user_op_expr.output_size());

@@ -303,7 +303,7 @@ void OpGraph::InferTimeShape() const {
 
 void OpGraph::InferOpNodeNdSbpSignature(OpNode* op_node,
                                         const NdSbpSignature& nd_sbp_sig_conf) const {
-  HashMap<std::string, NdSbpInferHint> ibn2nd_sbp_infer_hint;
+  HashMap<std::string, NdSbpInferHint> bn2nd_sbp_infer_hint;
   for (const std::string& ibn : op_node->op().input_bns()) {
     const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
     OpNode* producer = op_node->MutSrcNode4Ibn(ibn);
@@ -312,11 +312,19 @@ void OpGraph::InferOpNodeNdSbpSignature(OpNode* op_node,
         CHECK_JUST(producer->op().GetParallelDesc4BnInOp(producer_lbn)).get();
     const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
     const NdSbp* nd_sbp = &producer->NdSbp4Lbi(lbi);
-    ibn2nd_sbp_infer_hint.emplace(ibn, NdSbpInferHint(parallel_desc, logical_blob_desc, nd_sbp));
+    bn2nd_sbp_infer_hint.emplace(ibn, NdSbpInferHint(parallel_desc, logical_blob_desc, nd_sbp));
+  }
+  for (const std::string& obn : op_node->op().output_bns()) {
+    NdSbp no_set_nd_sbp;
+    const BlobDesc& logical_blob_desc = *CHECK_JUST(op_node->op().GetLogicalBlobDesc4Obn(obn));
+    const ParallelDesc& parallel_desc = *CHECK_JUST(op_node->op().GetParallelDesc4BnInOp(obn));
+    bn2nd_sbp_infer_hint.emplace(
+        obn, NdSbpInferHint(&parallel_desc, &logical_blob_desc, &no_set_nd_sbp));
   }
   const auto NdSbpInferHint4Ibn = [&](const std::string& bn) -> Maybe<const NdSbpInferHint*> {
-    auto it = ibn2nd_sbp_infer_hint.find(bn);
-    CHECK_OR_RETURN(it != ibn2nd_sbp_infer_hint.end());
+    auto it = bn2nd_sbp_infer_hint.find(bn);
+    CHECK_OR_RETURN(it != bn2nd_sbp_infer_hint.end())
+        << "bn: " << bn << " not found in " << op_node->op().op_name();
     return Maybe<const NdSbpInferHint*>(&it->second);
   };
   CHECK_JUST(op_node->mut_op()->InferNdSbpSignatureIf(nd_sbp_sig_conf, op_node->parallel_desc(),
@@ -361,6 +369,7 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
       return producer_info.first->op().GetLogicalBlobDesc4OutputIndex(producer_info.second);
     };
     JUST(op_node->mut_op()->FillLogicalInBlobDesc(LogicalBlobDesc4InputIndex));
+    JUST(op_node->mut_op()->InferLogicalOutBlobDescsIf());
     // Infer ParallelSignature
     JUST(op_node->mut_op()->InferParallelSignatureIf());
     // Infer local_signature
@@ -390,7 +399,6 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
       }
     }
     InferOpNodeNdSbpSignature(op_node, nd_sbp_sig_conf);
-    JUST(op_node->mut_op()->InferLogicalOutBlobDescsIf());
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();

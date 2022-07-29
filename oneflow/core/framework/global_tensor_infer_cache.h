@@ -85,10 +85,6 @@ class GlobalTensorMetaInferArgs final {
   Maybe<void> MakeInputBlobDescs(const UserOpExpr& user_op_expr,
                                  std::vector<BlobDesc>* blob_descs) const;
 
-  Maybe<void> MakeNdSbpInferHints(const UserOpExpr& user_op_expr,
-                                  const std::vector<BlobDesc>& blob_descs,
-                                  std::vector<NdSbpInferHint>* hints) const;
-
   static Maybe<GlobalTensorMetaInferArgs> New(const AttrMap& attrs,
                                               const TensorTuple& input_tensors);
 

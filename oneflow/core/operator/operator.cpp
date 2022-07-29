@@ -685,10 +685,11 @@ Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
     return false;
   };
   // Go down from the tail to the head, since we might drop the tail.
-  for (int32_t sbp_id = nd_sbp_sig_list->size() - 1; sbp_id >= 0; sbp_id--) {
-    if (JUST(FilterSbp4Blobs(input_bns(), JUST(VectorAt(*nd_sbp_sig_list, sbp_id))))) {
+  for (int32_t sbp_id = nd_sbp_sig_list->size() - 1; sbp_id >= 0; --sbp_id) {
+    if (JUST(FilterSbp4Blobs(input_bns(), JUST(VectorAt(*nd_sbp_sig_list, sbp_id))))
+        || JUST(FilterSbp4Blobs(output_bns(), JUST(VectorAt(*nd_sbp_sig_list, sbp_id))))) {
       // Remove the Nd SBP candidate
-      (*nd_sbp_sig_list)[sbp_id] = JUST(VectorAt(*nd_sbp_sig_list, nd_sbp_sig_list->size() - 1));
+      (*nd_sbp_sig_list)[sbp_id] = nd_sbp_sig_list->back();
       nd_sbp_sig_list->pop_back();
     }
   }
