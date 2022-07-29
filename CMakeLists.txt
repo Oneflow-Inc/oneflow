@@ -139,7 +139,6 @@ endif()
 
 message(STATUS "USE_CXX11_ABI: ${USE_CXX11_ABI}")
 
-add_definitions(-DONEFLOW_PYTHON_BASE_DIR=\"${PROJECT_SOURCE_DIR}/python\")
 if(WITH_MLIR)
   add_definitions(-DWITH_MLIR)
 
