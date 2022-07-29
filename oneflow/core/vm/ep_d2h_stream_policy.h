@@ -13,23 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_EVENT_RECORDED_EP_STREAM_TYPE_H_
-#define ONEFLOW_CORE_VM_EVENT_RECORDED_EP_STREAM_TYPE_H_
+#ifndef ONEFLOW_CORE_VM_EP_D2H_STREAM_POLICY_H_
+#define ONEFLOW_CORE_VM_EP_D2H_STREAM_POLICY_H_
 
-#include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/vm/ep_stream_policy_base.h"
 #include "oneflow/core/vm/instruction.h"
-#include "oneflow/core/device/device_context.h"
-#include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
 namespace vm {
 
-class EventRecordedEpStreamType final : public StreamType {
+class EpD2HStreamPolicy final : public EpStreamPolicyBase {
  public:
-  EventRecordedEpStreamType() = default;
-  ~EventRecordedEpStreamType() override = default;
-
-  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Symbol<Device> device) const override;
+  EpD2HStreamPolicy(Symbol<Device> device) : EpStreamPolicyBase(device) {}
+  ~EpD2HStreamPolicy() override = default;
 
   void InitInstructionStatus(const Stream& stream,
                              InstructionStatusBuffer* status_buffer) const override;
@@ -44,4 +40,4 @@ class EventRecordedEpStreamType final : public StreamType {
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_EVENT_RECORDED_EP_STREAM_TYPE_H_
+#endif  // ONEFLOW_CORE_VM_EP_D2H_STREAM_POLICY_H_
