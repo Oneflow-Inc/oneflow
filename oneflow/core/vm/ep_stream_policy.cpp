@@ -26,18 +26,24 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
+namespace {
+
+std::unique_ptr<BinAllocator<ThreadSafeLock>> CreateEpBackendDeviceAllocator(
+    Symbol<Device> device) {
+  DeviceType device_type = device->enum_type();
+  size_t device_index = device->device_id();
+  auto ep_device =
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
+  auto ep_backend_allocator =
+      std::make_unique<EpBackendAllocator>(ep_device, ep::AllocationOptions{});
+  return std::make_unique<BinAllocator<ThreadSafeLock>>(ep::kMaxAlignmentRequirement,
+                                                        std::move(ep_backend_allocator));
+}
+
+}  // namespace
+
 EpStreamPolicy::EpStreamPolicy(Symbol<Device> device)
-    : EpStreamPolicyBase(
-        device, [](Symbol<Device> device) -> std::unique_ptr<BinAllocator<ThreadSafeLock>> {
-          DeviceType device_type = device->enum_type();
-          size_t device_index = device->device_id();
-          auto ep_device =
-              Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
-          auto ep_backend_allocator =
-              std::make_unique<EpBackendAllocator>(ep_device, ep::AllocationOptions{});
-          return std::make_unique<BinAllocator<ThreadSafeLock>>(ep::kMaxAlignmentRequirement,
-                                                                std::move(ep_backend_allocator));
-        }(device)) {}
+    : EpStreamPolicyBase(device, CreateEpBackendDeviceAllocator(device)) {}
 
 void EpStreamPolicy::InitInstructionStatus(const Stream& stream,
                                            InstructionStatusBuffer* status_buffer) const {

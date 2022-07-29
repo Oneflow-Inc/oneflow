@@ -26,20 +26,26 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
+namespace {
+
+std::unique_ptr<BinAllocator<ThreadSafeLock>> CreatePinedEpBackendHostAllocator(
+    Symbol<Device> device) {
+  // TODO:(zhaoluyang) empty/cast/copy op support pin_memory_device
+  DeviceType device_type = device->enum_type();
+  size_t device_index = device->device_id();
+  auto ep_device =
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
+  ep::AllocationOptions options{};
+  options.SetPinnedDevice(device_type, device_index);
+  auto ep_backend_allocator = std::make_unique<EpBackendHostAllocator>(ep_device, options);
+  return std::make_unique<BinAllocator<ThreadSafeLock>>(ep::kMaxAlignmentRequirement,
+                                                        std::move(ep_backend_allocator));
+}
+
+}  // namespace
+
 PinnedEpStreamPolicy::PinnedEpStreamPolicy(Symbol<Device> device)
-    : EpStreamPolicyBase(
-        device, [](Symbol<Device> device) -> std::unique_ptr<BinAllocator<ThreadSafeLock>> {
-          // TODO:(zhaoluyang) empty/cast/copy op support pin_memory_device
-          DeviceType device_type = device->enum_type();
-          size_t device_index = device->device_id();
-          auto ep_device =
-              Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
-          ep::AllocationOptions options{};
-          options.SetPinnedDevice(device_type, device_index);
-          auto ep_backend_allocator = std::make_unique<EpBackendHostAllocator>(ep_device, options);
-          return std::make_unique<BinAllocator<ThreadSafeLock>>(ep::kMaxAlignmentRequirement,
-                                                                std::move(ep_backend_allocator));
-        }(device)) {}
+    : EpStreamPolicyBase(device, CreatePinedEpBackendHostAllocator(device)) {}
 
 void PinnedEpStreamPolicy::InitInstructionStatus(const Stream& stream,
                                                  InstructionStatusBuffer* status_buffer) const {
