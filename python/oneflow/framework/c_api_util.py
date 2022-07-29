@@ -237,13 +237,6 @@ def GetInterfaceOpAttributes():
     return text_format.Parse(op_attributes, op_attribute_pb.OpAttributeList())
 
 
-def GetJobSet():
-    job_set = oneflow._oneflow_internal.GetSerializedJobSet()
-    ret = job_set_pb.JobSet()
-    ret.ParseFromString(job_set)
-    return ret
-
-
 def GetCurrentJob():
     serialized_job = oneflow._oneflow_internal.GetSerializedCurrentJob()
     ret = job_pb.Job()
