@@ -80,13 +80,13 @@ class SbpNode final {
                          std::vector<bool>& node_tags) const;
 
   // Get or compute the minimum layer of this node
-  int32_t GetMinLayer(const HashMap<std::string, SbpNode*>& op_name2sbp_node,
-                      const HashMap<const OpNode*, HashSet<std::string>>&
-                          op_node2mutable_op_ctrl_deps);
+  int32_t GetMinLayer(
+      const HashMap<std::string, SbpNode*>& op_name2sbp_node,
+      const HashMap<const OpNode*, HashSet<std::string>>& op_node2mutable_op_ctrl_deps);
   // Spread the minimum layer to compute the maximum layer of producers
-  void SpreadMaxLayer(const HashMap<std::string, SbpNode*>& op_name2sbp_node,
-                      const HashMap<const OpNode*, HashSet<std::string>>&
-                          op_node2mutable_op_ctrl_deps);
+  void SpreadMaxLayer(
+      const HashMap<std::string, SbpNode*>& op_name2sbp_node,
+      const HashMap<const OpNode*, HashSet<std::string>>& op_node2mutable_op_ctrl_deps);
   // Set max_layer_ = min_layer_ if this node does not have any consumer
   void LiftMaxLayer();
   // Set max_layer_ = upper_bound if this node does not have any consumer
@@ -110,8 +110,8 @@ class SbpNode final {
   // Compute the minimal available wait time for producers or upstream nodes
   void SpreadAvailWaitTime(const std::vector<double>& trunk_cost,
                            const std::vector<double>& acc_trunk_cost,
-                           const HashMap<std::string, SbpNode*>& op_name2sbp_node,
-                           double wait_time, double transfer_cost);
+                           const HashMap<std::string, SbpNode*>& op_name2sbp_node, double wait_time,
+                           double transfer_cost);
   // Reduce and set the wait time for op in the trunk
   void SetTrunkWaitTime(double trunk_wait_time);
 

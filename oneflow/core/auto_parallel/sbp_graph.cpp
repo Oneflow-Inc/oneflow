@@ -686,9 +686,9 @@ void SbpGraph::ClipEdge(SbpEdge* this_edge) const {
 
 // Compute the minimum and maximum layer of each node in the graph
 
-int32_t SbpGraph::ComputeLayer(HashMap<std::string, SbpNode*>& op_name2sbp_node,
-                               const HashMap<const OpNode*, HashSet<std::string>>&
-                                   op_node2mutable_op_ctrl_deps) const {
+int32_t SbpGraph::ComputeLayer(
+    HashMap<std::string, SbpNode*>& op_name2sbp_node,
+    const HashMap<const OpNode*, HashSet<std::string>>& op_node2mutable_op_ctrl_deps) const {
   // Compute minimum layer
   for (SbpNode* this_node : node_list_) {
     this_node->GetMinLayer(op_name2sbp_node, op_node2mutable_op_ctrl_deps);

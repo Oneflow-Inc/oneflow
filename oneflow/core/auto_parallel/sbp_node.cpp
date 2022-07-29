@@ -390,9 +390,9 @@ void SbpNode::NRingNeighborhood(int32_t n, std::vector<int32_t>& nbh_n_ring,
 
 // Get or compute the minimum layer of this node
 
-int32_t SbpNode::GetMinLayer(const HashMap<std::string, SbpNode*>& op_name2sbp_node,
-                             const HashMap<const OpNode*, HashSet<std::string>>&
-                                 op_node2mutable_op_ctrl_deps) {
+int32_t SbpNode::GetMinLayer(
+    const HashMap<std::string, SbpNode*>& op_name2sbp_node,
+    const HashMap<const OpNode*, HashSet<std::string>>& op_node2mutable_op_ctrl_deps) {
   if (min_layer_ >= 0) { return min_layer_; }
   if (!op_node_) { return min_layer_; }
   for (SbpEdge* this_edge : edges_in_) {
@@ -423,9 +423,9 @@ int32_t SbpNode::GetMinLayer(const HashMap<std::string, SbpNode*>& op_name2sbp_n
 
 // Spread the minimum layer to compute the maximum layer of producers
 
-void SbpNode::SpreadMaxLayer(const HashMap<std::string, SbpNode*>& op_name2sbp_node,
-                             const HashMap<const OpNode*, HashSet<std::string>>&
-                                 op_node2mutable_op_ctrl_deps) {
+void SbpNode::SpreadMaxLayer(
+    const HashMap<std::string, SbpNode*>& op_name2sbp_node,
+    const HashMap<const OpNode*, HashSet<std::string>>& op_node2mutable_op_ctrl_deps) {
   if (min_layer_ <= 0) { return; }
   int32_t producer_max_lay = min_layer_ - 1;
   for (SbpEdge* this_edge : edges_in_) { this_edge->start_node_->DropMaxLayer(producer_max_lay); }
@@ -641,8 +641,7 @@ void SbpNode::DropTributaryLayer(int32_t upper_bound) {
 
 // Compute maximum layer for tributaries
 
-void SbpNode::SpreadTributaryLayer(
-    const HashMap<std::string, SbpNode*>& op_name2sbp_node) {
+void SbpNode::SpreadTributaryLayer(const HashMap<std::string, SbpNode*>& op_name2sbp_node) {
   if (counter_ || min_layer_ <= 0) { return; }
   int32_t producer_max_lay = 0;
   if (on_trunk_) {
