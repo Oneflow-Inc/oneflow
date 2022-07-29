@@ -158,17 +158,17 @@ struct MakeReleaseTensorInstructionPolicy
   static Maybe<vm::InstructionPolicy> VisitBarrier(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN() << "ReleaseTensor instruction not supported in Barrier stream";
   }
   static Maybe<vm::InstructionPolicy> VisitCriticalSection(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN() << "ReleaseTensor instruction not supported in CriticalSection stream";
   }
   static Maybe<vm::InstructionPolicy> VisitLazyJobLauncher(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN() << "ReleaseTensor instruction not supported in LaunchLazyJob stream";
   }
   static Maybe<vm::InstructionPolicy> VisitPinnedCompute(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
