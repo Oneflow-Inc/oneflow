@@ -62,7 +62,11 @@ def _test_t5_layer_norm(test_case, device):
     oneflow_x = flow.tensor(x, requires_grad=True, device=flow.device(device))
     torch_y = torch_t5_layernrom(torch_x)
     oneflow_y = oneflow_t5_layernorm(oneflow_x)
-    test_case.assertTrue(np.allclose(torch_y.detach().cpu().numpy(), oneflow_y.numpy()))
+    test_case.assertTrue(
+        np.allclose(
+            torch_y.detach().cpu().numpy(), oneflow_y.numpy(), rtol=1e-4, atol=1e-4
+        )
+    )
     torch_y_sum = torch_y.sum()
     torch_y_sum.backward()
     oneflow_y_sum = oneflow_y.sum()
