@@ -41,7 +41,6 @@ namespace {
   CPU_PRIMITIVE_UINT64_TYPE_SEQ     \
   CPU_PRIMITIVE_FLOAT_TYPE_SEQ      \
   CPU_PRIMITIVE_DOUBLE_TYPE_SEQ
-// CPU_PRIMITIVE_FLOAT16_TYPE_SEQ
 
 bool IsContiguous(size_t num_dims, const int64_t* dims, const int64_t* strides) {
   for (int i = num_dims - 1; i >= 0; i--) {
