@@ -20,43 +20,38 @@ import oneflow as flow
 import oneflow.unittest
 
 
-class WKV:
-    def forward(B, T, C):
-        w = flow.zeros(C, requires_grad=True, device="cuda").uniform_(-1, 1)
-        u = flow.zeros(C, requires_grad=True, device="cuda").uniform_(-1, 1)
-        k = flow.zeros(B, T, C, requires_grad=True, device="cuda").uniform_(-1, 1)
-        v = flow.zeros(B, T, C, requires_grad=True, device="cuda").uniform_(-1, 1)
-        w = -flow.exp(w.contiguous())
-        u = u.contiguous()
-        k = k.contiguous()
-        v = v.contiguous()
-        y = flow.empty((B, T, C), device="cuda")
-        flow._C.wkv_forward(B, T, C, w, u, k, v, y)
-        return y
-
-    def backward(B, T, C):
-        w = flow.zeros(C, requires_grad=True, device="cuda").uniform_(-1, 1)
-        u = flow.zeros(C, requires_grad=True, device="cuda").uniform_(-1, 1)
-        k = flow.zeros(B, T, C, requires_grad=True, device="cuda").uniform_(-1, 1)
-        v = flow.zeros(B, T, C, requires_grad=True, device="cuda").uniform_(-1, 1)
-        gy = flow.zeros(B, T, C, requires_grad=True, device="cuda").uniform_(-1, 1)
-        gw = flow.zeros((B, C), device="cuda")
-        gu = flow.zeros((B, C), device="cuda")
-        gk = flow.zeros((B, T, C), device="cuda")
-        gv = flow.zeros((B, T, C), device="cuda")
-        flow._C.wkv_grad(B, T, C, w, u, k, v, gy.contiguous(), gw, gu, gk, gv)
-        return (None, None, None, gw, gu, gk, gv)
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestWkv(unittest.TestCase):
     def test_wkv(test_case):
         B = random.randint(1, 10)
         T = random.randint(1, 10)
         C = random.randint(1, 10)
+        w = flow.zeros(C, requires_grad=True, device='cuda').uniform_(-1, 1)
+        u = flow.zeros(C, requires_grad=True, device='cuda').uniform_(-1, 1)
+        k = flow.zeros(B, T, C, requires_grad=True, device='cuda').uniform_(-1, 1)
+        v = flow.zeros(B, T, C, requires_grad=True, device='cuda').uniform_(-1, 1)
+        y = flow._C.wkv(B, T, C, w, u, k, v)
+        y.sum().backward()
+    
+    def test_graph_wkv(test_case):
+        B = random.randint(1, 10)
+        T = random.randint(1, 10)
+        C = random.randint(1, 10)
+        w = flow.zeros(C, requires_grad=True, device='cuda').uniform_(-1, 1)
+        u = flow.zeros(C, requires_grad=True, device='cuda').uniform_(-1, 1)
+        k = flow.zeros(B, T, C, requires_grad=True, device='cuda').uniform_(-1, 1)
+        v = flow.zeros(B, T, C, requires_grad=True, device='cuda').uniform_(-1, 1)
 
-        WKV.forward(B, T, C)
-        WKV.backward(B, T, C)
+        class WkvGraph(flow.nn.Graph):
+            def __init__(self,):
+                super().__init__()
+
+            def build(self, w, u, k, v):
+                y = flow._C.wkv(B, T, C, w, u, k, v)
+                return y
+
+        model = WkvGraph()
+        return model(w, u, k, v)
 
 
 if __name__ == "__main__":
