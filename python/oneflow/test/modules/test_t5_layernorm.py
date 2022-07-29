@@ -68,7 +68,9 @@ def _test_t5_layer_norm(test_case, device):
     oneflow_y_sum = oneflow_y.sum()
     oneflow_y_sum.backward()
     test_case.assertTrue(
-        np.allclose(torch_x.grad.cpu().numpy(), oneflow_x.grad.numpy())
+        np.allclose(
+            torch_x.grad.cpu().numpy(), oneflow_x.grad.numpy(), rtol=1e-5, atol=1e-5
+        )
     )
 
 
