@@ -98,11 +98,13 @@ class TestCast(flow.unittest.TestCase):
     @autotest(n=10)
     def test_cast_with_stride_input(test_case):
         device = random_device()
-        device = gpu_device()
-        input = random_tensor().to(device)
-        output = input.to(dtype=torch.float32, device=device)
-        output = output.to(dtype=torch.float64, device=device)
-        return output
+        x = random_tensor()
+        x = x.to(dtype=torch.float32, device=device)
+        perm_list = [0, 1, 2, 3]
+        shuffle(perm_list)
+        x = x.permute(perm_list)
+        y = x.to(dtype=torch.float64, device=device)
+        return y
 
 
 if __name__ == "__main__":
