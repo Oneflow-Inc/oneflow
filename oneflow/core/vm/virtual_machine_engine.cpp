@@ -110,7 +110,7 @@ void VirtualMachineEngine::MakeAndAppendFusedInstruction(
   auto* begin = fused_instruction_list.Begin();
   auto instruction = intrusive::make_shared<Instruction>(
       begin->mut_stream(),
-      std::make_unique<FuseInstructionPolicy>(std::move(fused_instruction_list)));
+      std::make_shared<FuseInstructionPolicy>(std::move(fused_instruction_list)));
   pending_instructions->EmplaceBack(std::move(instruction));
 }
 

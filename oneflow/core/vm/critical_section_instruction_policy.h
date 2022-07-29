@@ -31,7 +31,9 @@ namespace oneflow {
 
 namespace vm {
 
-class CriticalSectionBeginInstructionPolicy : public InstructionPolicy {
+class CriticalSectionBeginInstructionPolicy
+    : public InstructionPolicy,
+      public std::enable_shared_from_this<CriticalSectionBeginInstructionPolicy> {
  public:
   CriticalSectionBeginInstructionPolicy(const CriticalSectionBeginInstructionPolicy&) = delete;
   CriticalSectionBeginInstructionPolicy(CriticalSectionBeginInstructionPolicy&&) = delete;
@@ -113,9 +115,9 @@ class CriticalSectionBeginInstructionPolicy : public InstructionPolicy {
  private:
   class NaiveCriticalSectionInstance final : public CriticalSectionInstance {
    public:
-    NaiveCriticalSectionInstance(
-        CriticalSectionBeginInstructionPolicy* critical_section_begin_instruction_policy,
-        const std::string& job_name)
+    NaiveCriticalSectionInstance(const std::shared_ptr<CriticalSectionBeginInstructionPolicy>&
+                                     critical_section_begin_instruction_policy,
+                                 const std::string& job_name)
         : CriticalSectionInstance(),
           critical_section_begin_instruction_policy_(critical_section_begin_instruction_policy),
           job_name_(job_name) {}
@@ -130,12 +132,14 @@ class CriticalSectionBeginInstructionPolicy : public InstructionPolicy {
     void Finish() const override { critical_section_begin_instruction_policy_->Finish(); }
 
    private:
-    CriticalSectionBeginInstructionPolicy* critical_section_begin_instruction_policy_;
+    std::shared_ptr<CriticalSectionBeginInstructionPolicy>
+        critical_section_begin_instruction_policy_;
     std::string job_name_;
   };
 
   std::shared_ptr<CriticalSectionInstance> MakeCriticalSectionInstance() {
-    return std::make_shared<NaiveCriticalSectionInstance>(this, nn_graph_->job_name());
+    return std::make_shared<NaiveCriticalSectionInstance>(this->shared_from_this(),
+                                                          nn_graph_->job_name());
   }
 };
 
