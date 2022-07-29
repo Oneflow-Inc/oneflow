@@ -119,94 +119,9 @@ class NegativeGradGrad : public OpExprGradFunction<UnaryGradGradState> {
   }
 };
 
-struct LeakyReluGradGradCaptureState : public AutoGradCaptureState {
-  bool x_requires_grad = false;
-  bool grad_requires_grad = false;
-  float alpha = 0.01;
-};
-
-class LeakyReluGradGrad : public OpExprGradFunction<LeakyReluGradGradCaptureState> {
-  // leaky_relu_grad = (x > 0 ? 1 : alpha) * grad
-  // So: out_grad_grad = (x > 0 ? 1 : alpha) * gradgrad
-  //     x_grad_grad = 0 * gradgrad = 0
- public:
-  Maybe<void> Init(const OpExpr& op) override {
-    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
-    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Capture(LeakyReluGradGradCaptureState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
-    ctx->x_requires_grad = inputs.at(0)->requires_grad();
-    ctx->grad_requires_grad = inputs.at(1)->requires_grad();
-    ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->alpha = JUST(composed_attrs.GetAttr<float>("alpha"));
-    if (ctx->grad_requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Apply(const LeakyReluGradGradCaptureState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override {
-    in_grads->resize(2);
-    if (ctx->x_requires_grad) { in_grads->at(0) = JUST(functional::ZerosLike(out_grads.at(0))); }
-    if (ctx->grad_requires_grad) {
-      const auto& x = ctx->SavedTensors().at(0);
-      in_grads->at(1) = JUST(functional::LeakyReluGrad(x, out_grads.at(0), ctx->alpha));
-    }
-    return Maybe<void>::Ok();
-  }
-
- private:
-  AttrMap base_attrs_;
-};
-
-struct SliceGradGradCaptureState : public AutoGradCaptureState {
-  std::vector<int64_t> start;
-  std::vector<int64_t> stop;
-  std::vector<int64_t> step;
-};
-
-class SliceGradGrad : public OpExprGradFunction<SliceGradGradCaptureState> {
- public:
-  Maybe<void> Init(const OpExpr& op) override {
-    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
-    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Capture(SliceGradGradCaptureState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);   // NOLINT(maybe-need-error-msg)
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
-    ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->start = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("start"));
-    ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
-    ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Apply(const SliceGradGradCaptureState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override {
-    in_grads->resize(1);
-    in_grads->at(0) = JUST(functional::Slice(out_grads.at(0), ctx->start, ctx->stop, ctx->step,
-                                             /*enable_view_slice=*/false));
-    return Maybe<void>::Ok();
-  }
-
- private:
-  AttrMap base_attrs_;
-};
-
 REGISTER_OP_EXPR_GRAD_FUNCTION("sin_grad", SinGradGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("cos_grad", CosGradGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("negative_grad", NegativeGradGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("leaky_relu_grad", LeakyReluGradGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("slice_grad", SliceGradGrad);
 
 }  // namespace one
 }  // namespace oneflow
