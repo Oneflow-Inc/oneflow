@@ -536,7 +536,7 @@ bool SupportingStreamWait(Symbol<Stream> from_stream, Symbol<Stream> to_stream) 
 Maybe<void> InstructionsBuilder::SoftSyncStreamBetween(
     small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
     Symbol<Stream> from_stream, Symbol<Stream> to_stream) {
-  CHECK(from_stream != to_stream) << "synchronization is unecessary";
+  CHECK(from_stream != to_stream) << "synchronization is unnecessary";
   if (SupportingStreamWait(from_stream, to_stream)) {
     JUST(StreamWait(std::move(dependences), from_stream, to_stream));
   } else {
