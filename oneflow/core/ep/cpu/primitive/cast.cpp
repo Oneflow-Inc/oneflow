@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/ep/include/primitive/cast.h"
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
-#include "oneflow/core/common/tensor_meta.h"
 
 namespace oneflow {
 
@@ -30,15 +29,6 @@ void CastCpu(const From* from, To* to, size_t count) {
 }
 
 template<typename From, typename To>
-void CastCpu(const From* from, To* to, const StrideParam& from_stride, const StrideParam& to_stride,
-             size_t count) {
-  for (size_t i = 0; i < count; ++i) {
-    const int64_t in_offset = ComputeOffset(i, from_stride, to_stride);
-    to[i] = static_cast<To>(from[in_offset]);
-  }
-}
-
-template<typename From, typename To>
 class CastImpl : public Cast {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CastImpl);
@@ -47,13 +37,6 @@ class CastImpl : public Cast {
 
   void Launch(Stream* stream, const void* from, void* to, size_t count) override {
     CastCpu(reinterpret_cast<const From*>(from), reinterpret_cast<To*>(to), count);
-  }
-
-  // Launch with stride
-  void Launch(Stream* stream, const void* from, void* to, const StrideParam& from_stride,
-              const StrideParam& to_stride, size_t count) override {
-    CastCpu(reinterpret_cast<const From*>(from), reinterpret_cast<To*>(to), from_stride, to_stride,
-            count);
   }
 };
 

@@ -90,15 +90,6 @@ class CastImpl : public Cast {
         CastFunctor<To, From>(), count, reinterpret_cast<To*>(to),
         reinterpret_cast<const From*>(from), cuda_stream->cuda_stream())));
   }
-
-  // Launch with stride
-  void Launch(Stream* stream, const void* from, void* to, const StrideParam& from_stride,
-              const StrideParam& to_stride, size_t count) override {
-    auto* cuda_stream = stream->As<CudaStream>();
-    OF_CUDA_CHECK((cuda::elementwise::Unary<CastFunctor<To, From>, To, From>(
-        CastFunctor<To, From>(), count, from_stride, to_stride, reinterpret_cast<To*>(to),
-        reinterpret_cast<const From*>(from), cuda_stream->cuda_stream())));
-  }
 };
 
 template<typename From, typename To>
