@@ -93,7 +93,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   }
 
   bool inplace = ctx.inplace.value_or(false);
-  for (size_t i = 0; i < inputs.size(); ++i) {
+  for (size_t i = 0; i < std::min(inputs.size(), outputs->size()); ++i) {
     if (outputs->at(i) && inputs.at(i) == outputs->at(i)) {
       inplace = true;
       break;
