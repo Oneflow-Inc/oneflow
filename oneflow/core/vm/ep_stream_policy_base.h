@@ -29,18 +29,12 @@ namespace vm {
 
 class EpStreamPolicyBase : public StreamPolicy {
  public:
-  EpStreamPolicyBase(Symbol<Device> device)
-      : device_(device), ep_event_provier_(), ep_stream_(nullptr), ep_allocator_() {
-    DeviceType device_type = device_->enum_type();
-    size_t device_index = device_->device_id();
-    auto ep_device =
-        Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
-    ep::AllocationOptions options{};
-    options.SetPinnedDevice(device_type, device_index);
-    auto ep_backend_allocator = std::make_unique<EpBackendHostAllocator>(ep_device, options);
-    ep_allocator_ = std::make_unique<BinAllocator<ThreadSafeLock>>(ep::kMaxAlignmentRequirement,
-                                                                   std::move(ep_backend_allocator));
-  }
+  EpStreamPolicyBase(Symbol<Device> device,
+                     std::unique_ptr<BinAllocator<ThreadSafeLock>>&& backend_allocator)
+      : device_(device),
+        ep_event_provier_(),
+        ep_stream_(nullptr),
+        ep_allocator_(std::move(backend_allocator)) {}
   virtual ~EpStreamPolicyBase() override {
     if (ep_stream_ != nullptr) {
       CHECK(ep_device_);
@@ -50,7 +44,7 @@ class EpStreamPolicyBase : public StreamPolicy {
 
   ep::Stream* stream() override { return GetOrCreateEpStream(); }
 
-  vm::Allocator* mut_allocator() override { return ep_allocator_.get(); }
+  Allocator* mut_allocator() override { return ep_allocator_.get(); }
 
   DeviceType device_type() const override { return device_->enum_type(); }
 
@@ -70,6 +64,16 @@ class EpStreamPolicyBase : public StreamPolicy {
     return ep_device_.get();
   }
 
+  bool SupportingTransportInstructions() const override { return true; }
+
+  void DeleteInstructionStatus(const Stream& stream,
+                               InstructionStatusBuffer* status_buffer) const override;
+
+  bool QueryInstructionStatusDone(const Stream& stream,
+                                  const InstructionStatusBuffer& status_buffer) const override;
+
+  void Run(Instruction* instruction) const override;
+
  private:
   ep::Stream* GetOrCreateEpStream() const {
     if (unlikely(ep_stream_ == nullptr)) {
@@ -85,6 +89,8 @@ class EpStreamPolicyBase : public StreamPolicy {
   mutable ep::Stream* ep_stream_;
   std::unique_ptr<BinAllocator<ThreadSafeLock>> ep_allocator_;
 };
+
+std::unique_ptr<BinAllocator<ThreadSafeLock>> GetBackendAllocator(Symbol<Device> device);
 
 }  // namespace vm
 }  // namespace oneflow

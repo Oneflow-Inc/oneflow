@@ -17,24 +17,18 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_EVENT_RECORDED_EP_STREAM_POLICY_H_
 
 #include "oneflow/core/vm/ep_stream_policy_base.h"
-#include "oneflow/core/vm/instruction.h"
 
 namespace oneflow {
 namespace vm {
 
 class EventRecordedEpStreamPolicy final : public EpStreamPolicyBase {
  public:
-  EventRecordedEpStreamPolicy(Symbol<Device> device) : EpStreamPolicyBase(device) {}
+  EventRecordedEpStreamPolicy(Symbol<Device> device)
+      : EpStreamPolicyBase(device, GetBackendAllocator(device)) {}
   ~EventRecordedEpStreamPolicy() override = default;
 
   void InitInstructionStatus(const Stream& stream,
                              InstructionStatusBuffer* status_buffer) const override;
-  void DeleteInstructionStatus(const Stream& stream,
-                               InstructionStatusBuffer* status_buffer) const override;
-  bool QueryInstructionStatusDone(const Stream& stream,
-                                  const InstructionStatusBuffer& status_buffer) const override;
-  void Run(Instruction* instruction) const override;
-  bool SupportingTransportInstructions() const override { return true; }
 };
 
 }  // namespace vm

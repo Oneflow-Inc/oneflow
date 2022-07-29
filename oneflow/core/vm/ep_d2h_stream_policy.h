@@ -17,24 +17,18 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_EP_D2H_STREAM_POLICY_H_
 
 #include "oneflow/core/vm/ep_stream_policy_base.h"
-#include "oneflow/core/vm/instruction.h"
 
 namespace oneflow {
 namespace vm {
 
 class EpD2HStreamPolicy final : public EpStreamPolicyBase {
  public:
-  EpD2HStreamPolicy(Symbol<Device> device) : EpStreamPolicyBase(device) {}
+  EpD2HStreamPolicy(Symbol<Device> device)
+      : EpStreamPolicyBase(device, GetBackendAllocator(device)) {}
   ~EpD2HStreamPolicy() override = default;
 
   void InitInstructionStatus(const Stream& stream,
                              InstructionStatusBuffer* status_buffer) const override;
-  void DeleteInstructionStatus(const Stream& stream,
-                               InstructionStatusBuffer* status_buffer) const override;
-  bool QueryInstructionStatusDone(const Stream& stream,
-                                  const InstructionStatusBuffer& status_buffer) const override;
-  void Run(Instruction* instruction) const override;
-  bool SupportingTransportInstructions() const override { return true; }
 };
 
 }  // namespace vm
