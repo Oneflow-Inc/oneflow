@@ -41,7 +41,12 @@ class EpStreamPolicyBase : public StreamPolicy {
     ep_allocator_ = std::make_unique<BinAllocator<ThreadSafeLock>>(ep::kMaxAlignmentRequirement,
                                                                    std::move(ep_backend_allocator));
   }
-  ~EpStreamPolicyBase() override = default;
+  virtual ~EpStreamPolicyBase() override {
+    if (ep_stream_ != nullptr) {
+      CHECK(ep_device_);
+      ep_device_->DestroyStream(ep_stream_);
+    }
+  }
 
   ep::Stream* stream() override { return GetOrCreateEpStream(); }
 
