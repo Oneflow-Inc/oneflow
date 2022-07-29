@@ -41,12 +41,12 @@ class SbpCollector {
   ~SbpCollector() {}
 
   // Collect all the possible Sbp Parallel from a SbpGraph
-  void CollectUniverse(const SbpGraph<NdSbpSignature>& sbp_graph);
+  void CollectUniverse(const SbpGraph& sbp_graph);
 
   // Export list of possible combination of Sbp Parallels
   void ProxySbpCandidate(const OpGraph& op_graph,
-                         const HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node,
-                         SbpGraph<NdSbpSignature>& sbp_graph);
+                         const HashMap<std::string, SbpNode*>& op_name2sbp_node,
+                         SbpGraph& sbp_graph);
 
  private:
   // Stores all the possible NdSbp.
@@ -61,17 +61,16 @@ class SbpCollector {
   // Collect all the possible Sbp Parallel from a NdSbpSignature
   void CollectUniverse(const NdSbpSignature& nd_sbp_sig);
   // Collect all the possible Sbp Parallel from a SbpNode
-  void CollectUniverse(const SbpNode<NdSbpSignature>* sbp_node);
+  void CollectUniverse(const SbpNode* sbp_node);
 
   // Initialize copy cost from producer to proxy of producer
-  void InitializeCopyCostFromNode2Proxy(const SbpNode<NdSbpSignature>* sbp_proxy,
-                                        const LogicalBlobId& lbi) const;
+  void InitializeCopyCostFromNode2Proxy(const SbpNode* sbp_proxy, const LogicalBlobId& lbi) const;
 
   // Initialize copy cost from proxy of producer to consumers
   void InitializeCopyCostFromProxy2Consumer(
-      SbpNode<NdSbpSignature>* sbp_proxy,
+      SbpNode* sbp_proxy,
       const HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
-      const HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node) const;
+      const HashMap<std::string, SbpNode*>& op_name2sbp_node) const;
 
   // Maximum number of possible sbp in the proxy
   const unsigned long max_num_sbp_proxy_ = 3;
