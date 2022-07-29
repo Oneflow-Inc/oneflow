@@ -275,7 +275,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
         bn2infer_hints.emplace(bn, NdSbpInferHint(parallel_desc, blob_desc, &nd_sbp));
       }
       for (int32_t i = 0; i < op->output_bns().size(); ++i) {
-        const std::string bn = op->output_bns()[i];
+        const std::string& bn = op->output_bns()[i];
         const auto& output_tensor_meta = output_mut_metas[i].tensor_meta();
         const ParallelDesc* parallel_desc = JUST(op->GetParallelDesc4BnInOp(bn)).get();
         output_blob_descs.emplace_back(BlobDesc(
