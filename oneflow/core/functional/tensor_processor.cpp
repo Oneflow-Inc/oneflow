@@ -116,6 +116,7 @@ Maybe<void> TensorLayoutProcessor::Apply() {
       size_t len = std::min(inputs_.size(), outputs_->size());
       for (int i = 0; i < len; ++i) {
         CHECK_OR_RETURN((*outputs_)[i] != inputs_[i])
+            << Error::RuntimeError()
             << "inplace operation is not allowed if input is non-contiguous and non-contiguous is "
                "not supported for this operation";
       }
