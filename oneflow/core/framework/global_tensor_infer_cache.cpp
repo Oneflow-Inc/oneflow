@@ -267,7 +267,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
     {
       bn2infer_hints.reserve(op->input_output_bns().size());
       for (int32_t i = 0; i < op->input_bns().size(); ++i) {
-        const std::string bn = op->input_bns()[i];
+        const std::string& bn = op->input_bns()[i];
         const auto& input_tensor_meta = infer_args.input_global_tensor_metas()[i].tensor_meta();
         const ParallelDesc* parallel_desc = &(*input_tensor_meta->parallel_desc());
         const BlobDesc* blob_desc = &input_blob_descs[i];
