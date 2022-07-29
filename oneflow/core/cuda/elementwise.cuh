@@ -52,9 +52,9 @@ inline cudaError_t GetNumBlocks(int64_t n, int* num_blocks) {
   return cudaSuccess;
 }
 
-__device__ __forceinline__ int64_t cuda_compute_offset(int64_t out_offset,
-                                                       const StrideParam& in_stride,
-                                                       const StrideParam& out_stride) {
+__device__ __forceinline__ int64_t CudaComputeOffset(int64_t out_offset,
+                                                     const StrideParam& in_stride,
+                                                     const StrideParam& out_stride) {
   int64_t in_offset = 0;
   int64_t remaining = out_offset;
 
@@ -166,7 +166,7 @@ __global__ void __launch_bounds__(kBlockSize)
   auto functor = factory();
   const int global_tid = blockIdx.x * kBlockSize + threadIdx.x;
   for (int64_t i = global_tid; i < count; i += blockDim.x * gridDim.x) {
-    int64_t in_offset = cuda_compute_offset(i, in_stride, out_stride);
+    int64_t in_offset = CudaComputeOffset(i, in_stride, out_stride);
     r[i] = functor((in[in_offset])...);
   }
 }

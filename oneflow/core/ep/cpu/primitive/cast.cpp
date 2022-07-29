@@ -33,7 +33,7 @@ template<typename From, typename To>
 void CastCpu(const From* from, To* to, const StrideParam& from_stride, const StrideParam& to_stride,
              size_t count) {
   for (size_t i = 0; i < count; ++i) {
-    const int64_t in_offset = compute_offset(i, from_stride, to_stride);
+    const int64_t in_offset = ComputeOffset(i, from_stride, to_stride);
     to[i] = static_cast<To>(from[in_offset]);
   }
 }

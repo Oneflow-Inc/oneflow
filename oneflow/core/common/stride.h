@@ -48,8 +48,8 @@ struct StrideParam {
   }
 };
 
-int64_t compute_offset(const int64_t& out_offset, const StrideParam& in_stride,
-                       const StrideParam& out_stride);
+int64_t ComputeOffset(const int64_t& out_offset, const StrideParam& in_stride,
+                      const StrideParam& out_stride);
 
 }  // namespace oneflow
 

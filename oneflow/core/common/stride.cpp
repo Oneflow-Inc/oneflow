@@ -65,8 +65,8 @@ void Stride::ToProto(Int64ListProto* ret) const {
   *(ret->mutable_dim()) = PbRf<int64_t>(begin(), end());
 }
 
-int64_t compute_offset(const int64_t& out_offset, const StrideParam& in_stride,
-                       const StrideParam& out_stride) {
+int64_t ComputeOffset(const int64_t& out_offset, const StrideParam& in_stride,
+                      const StrideParam& out_stride) {
   int64_t in_offset = 0;
   int64_t remaining = out_offset;
   for (size_t i = 0; i < in_stride.ndim; ++i) {
