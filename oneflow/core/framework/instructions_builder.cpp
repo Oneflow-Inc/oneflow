@@ -516,7 +516,7 @@ bool SupportingStreamWait(Symbol<Stream> from_stream, Symbol<Stream> to_stream) 
   DeviceType from_device_type = from_stream->device()->enum_type();
   DeviceType to_device_type = from_stream->device()->enum_type();
   return from_stream->device() == to_stream->device()
-         && from_stream->device()->enum_type() == DeviceType::kCUDA
+         && from_device_type == DeviceType::kCUDA
          && StreamSupportStreamWait::Visit(from_stream->stream_role(), from_device_type)
          && StreamSupportStreamWait::Visit(to_stream->stream_role(), to_device_type)
          && !StreamOnIndependentThread::Visit(from_stream->stream_role())
