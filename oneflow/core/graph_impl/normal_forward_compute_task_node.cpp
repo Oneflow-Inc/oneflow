@@ -14,9 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
-#include <glog/logging.h>
 #include <iterator>
-#include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/graph/task_node.h"

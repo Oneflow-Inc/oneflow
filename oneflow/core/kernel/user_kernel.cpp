@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/user_kernel.h"
-#include <glog/logging.h>
 #include <cstdint>
 #include <string>
 #include <unordered_map>
