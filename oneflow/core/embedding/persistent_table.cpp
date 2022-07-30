@@ -611,18 +611,18 @@ void PersistentTableImpl<Key, Engine>::Put(uint32_t num_keys, const void* keys,
 
 template<typename Key, typename Engine>
 std::string PersistentTableImpl<Key, Engine>::KeyFilePath(uint64_t chunk_id) const {
-  return fs::path(keys_dir_) / kKeyFileNamePrefix + GetChunkName(chunk_id);
+  return fs::path(keys_dir_) / (kKeyFileNamePrefix + GetChunkName(chunk_id));
 }
 
 template<typename Key, typename Engine>
 std::string PersistentTableImpl<Key, Engine>::ValueFilePath(uint64_t chunk_id) const {
-  return fs::path(values_dir_) / kValueFileNamePrefix + GetChunkName(chunk_id);
+  return fs::path(values_dir_) / (kValueFileNamePrefix + GetChunkName(chunk_id));
 }
 
 template<typename Key, typename Engine>
 std::string PersistentTableImpl<Key, Engine>::IndexFilePath(const std::string& name,
                                                             uint64_t chunk_id) const {
-  return fs::path(SnapshotDirPath(name)) / kIndexFileNamePrefix + GetChunkName(chunk_id);
+  return fs::path(SnapshotDirPath(name)) / (kIndexFileNamePrefix + GetChunkName(chunk_id));
 }
 
 template<typename Key, typename Engine>
