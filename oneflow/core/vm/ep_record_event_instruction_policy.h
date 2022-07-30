@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/vm/instruction_policy.h"
 #include "oneflow/core/eager/local_dep_object.h"
-#include "oneflow/core/vm/naive_stream_policy.h"
+#include "oneflow/core/vm/ep_stream_policy_base.h"
 #include "oneflow/core/vm/stream.h"
 
 namespace oneflow {
@@ -71,11 +71,10 @@ class EpRecordEventInstructionPolicy final : public InstructionPolicy {
     auto* status_buffer = instruction->mut_status_buffer();
     auto* stream = instruction->mut_stream();
     instruction->stream_policy().InitInstructionStatus(*stream, status_buffer);
-    NaiveStreamPolicy* naive_stream_policy =
-        dynamic_cast<NaiveStreamPolicy*>(instruction->mut_stream()->mut_stream_policy());
-    CHECK_NOTNULL(naive_stream_policy);
-    auto* ep_device_ctx = dynamic_cast<EpDeviceCtx*>(naive_stream_policy->device_ctx().get());
-    auto* ep_event_provider = ep_device_ctx->ep_event_provider();
+    EpStreamPolicyBase* ep_stream_policy_base =
+        dynamic_cast<EpStreamPolicyBase*>(stream->mut_stream_policy());
+    CHECK_NOTNULL(ep_stream_policy_base);
+    auto* ep_event_provider = ep_stream_policy_base->ep_event_provider();
     const auto& ep_event = CHECK_NOTNULL(ep_event_provider)->GetReusedEpEvent();
     auto* data_ptr = status_buffer->mut_buffer();
     EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_ep_event(ep_event);

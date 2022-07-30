@@ -13,43 +13,33 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_EP_DEVICE_CONTEXT_H_
-#define ONEFLOW_CORE_VM_EP_DEVICE_CONTEXT_H_
+#ifndef ONEFLOW_CORE_VM_EP_STREAM_POLICY_BASE_H_
+#define ONEFLOW_CORE_VM_EP_STREAM_POLICY_BASE_H_
 
-#include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/vm/stream_policy.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/vm/ep_event.h"
 #include "oneflow/core/vm/bin_allocator.h"
 #include "oneflow/core/vm/thread_safe_guard.h"
-#include "oneflow/core/common/single_thread_obj_pool.h"
-#include "oneflow/core/ep/include/stream.h"
-#include "oneflow/core/ep/include/device.h"
-#include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
-#include "oneflow/core/framework/device.h"
 
 namespace oneflow {
 namespace vm {
 
-class EpDeviceCtx : public DeviceCtx {
+class EpStreamPolicyBase : public StreamPolicy {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(EpDeviceCtx);
-  EpDeviceCtx() = delete;
-  ~EpDeviceCtx() override {
+  EpStreamPolicyBase(Symbol<Device> device,
+                     std::unique_ptr<BinAllocator<ThreadSafeLock>>&& backend_allocator)
+      : device_(device),
+        ep_event_provier_(),
+        ep_stream_(nullptr),
+        ep_allocator_(std::move(backend_allocator)) {}
+  virtual ~EpStreamPolicyBase() override {
     if (ep_stream_ != nullptr) {
       CHECK(ep_device_);
       ep_device_->DestroyStream(ep_stream_);
     }
   }
-
-  EpDeviceCtx(Symbol<Device> device,
-              std::unique_ptr<BinAllocator<ThreadSafeLock>>&& backend_allocator)
-      : DeviceCtx(),
-        device_(device),
-        ep_event_provier_(),
-        ep_stream_(nullptr),
-        ep_allocator_(std::move(backend_allocator)) {}
 
   ep::Stream* stream() override { return GetOrCreateEpStream(); }
 
@@ -73,6 +63,16 @@ class EpDeviceCtx : public DeviceCtx {
     return ep_device_.get();
   }
 
+  bool SupportingTransportInstructions() const override { return true; }
+
+  void DeleteInstructionStatus(const Stream& stream,
+                               InstructionStatusBuffer* status_buffer) const override;
+
+  bool QueryInstructionStatusDone(const Stream& stream,
+                                  const InstructionStatusBuffer& status_buffer) const override;
+
+  void Run(Instruction* instruction) const override;
+
  private:
   ep::Stream* GetOrCreateEpStream() const {
     if (unlikely(ep_stream_ == nullptr)) {
@@ -82,7 +82,6 @@ class EpDeviceCtx : public DeviceCtx {
     return ep_stream_;
   }
 
- protected:
   Symbol<Device> device_;
   std::unique_ptr<EpEventProvider> ep_event_provier_;
   mutable std::shared_ptr<ep::Device> ep_device_;
@@ -93,4 +92,4 @@ class EpDeviceCtx : public DeviceCtx {
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_EP_DEVICE_CONTEXT_H_
+#endif  // ONEFLOW_CORE_VM_EP_STREAM_POLICY_BASE_H_

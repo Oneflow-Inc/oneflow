@@ -119,25 +119,23 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
       OpNode* dst_node = edge->dst_node();
       LogicalBlobId cur_lbi = edge->lbis().front();
       CHECK_EQ(lbn, GenLogicalBlobName(cur_lbi));
-      CHECK_EQ(1, edge->lbi2ibns().at(cur_lbi).size());
-      const std::string& dst_ibn = edge->lbi2ibns().at(cur_lbi).front();
-
-      if (dst_node->op().op_conf().has_user_conf()) {
-        const std::string& op_type = dst_node->op().op_conf().user_conf().op_type_name();
-        const auto& op_arg = GenUnRepeatedBn(dst_ibn);
-        if (FindInNoCastRegisry(op_type, op_arg)) { continue; }
+      const auto& dst_ibns = edge->lbi2ibns().at(cur_lbi);
+      for (const auto& dst_ibn : dst_ibns) {
+        if (dst_node->op().op_conf().has_user_conf()) {
+          const std::string& op_type = dst_node->op().op_conf().user_conf().op_type_name();
+          const auto& op_arg = GenUnRepeatedBn(dst_ibn);
+          if (FindInNoCastRegisry(op_type, op_arg)) { continue; }
+        }
+        cast_is_consumed = true;
+        const std::string& dst_op_name = dst_node->op().op_name();
+        if (!IsKeyFound(dst_op_name2dst_op_confs, dst_op_name)) {
+          INSERT_CHECK(dst_op_name2dst_op_confs.insert(
+              std::make_pair(dst_op_name, dst_node->op().op_conf())));
+        }
+        OperatorConf& dst_op_conf = dst_op_name2dst_op_confs.at(dst_op_name);
+        std::string new_lbn = cast_op.op_name() + "/out_0";
+        CHECK_EQ(lbn, ReplaceInputLbnInOpCustomizedConf(&dst_op_conf, dst_ibn, new_lbn));
       }
-
-      cast_is_consumed = true;
-
-      const std::string& dst_op_name = dst_node->op().op_name();
-      if (!IsKeyFound(dst_op_name2dst_op_confs, dst_op_name)) {
-        INSERT_CHECK(
-            dst_op_name2dst_op_confs.insert(std::make_pair(dst_op_name, dst_node->op().op_conf())));
-      }
-      OperatorConf& dst_op_conf = dst_op_name2dst_op_confs.at(dst_op_name);
-      std::string new_lbn = cast_op.op_name() + "/out_0";
-      CHECK_EQ(lbn, ReplaceInputLbnInOpCustomizedConf(&dst_op_conf, dst_ibn, new_lbn));
     }
 
     if (cast_is_consumed) {
