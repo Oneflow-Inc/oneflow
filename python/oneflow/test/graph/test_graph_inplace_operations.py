@@ -285,7 +285,7 @@ class TestGraphInplaceOperations(flow.unittest.TestCase):
         def _test(device):
             class Graph(nn.Graph):
                 def build(self):
-                    x = flow.randn(4,4, device=device)
+                    x = flow.randn(4, 4, device=device)
                     flow._C.broadcast(x, inplace=True)
                     return x
 
@@ -299,7 +299,7 @@ class TestGraphInplaceOperations(flow.unittest.TestCase):
         def _test(device):
             class Graph(nn.Graph):
                 def build(self):
-                    x = flow.randn(4,4, device=device)
+                    x = flow.randn(4, 4, device=device)
                     flow._C.local_all_reduce(x, inplace=True)
                     return x
 
