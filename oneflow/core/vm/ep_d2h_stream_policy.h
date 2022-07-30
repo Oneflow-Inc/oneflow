@@ -13,21 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
+#ifndef ONEFLOW_CORE_VM_EP_D2H_STREAM_POLICY_H_
+#define ONEFLOW_CORE_VM_EP_D2H_STREAM_POLICY_H_
+
+#include "oneflow/core/vm/ep_stream_policy_base.h"
 
 namespace oneflow {
 namespace vm {
 
-void EpOptionalEventRecordStatusQuerier::SetLaunched(ep::Stream* stream) {
-  CHECK(!launched_);
-  if (ep_event_) {
-    ep_event_->mut_device()->SetAsActiveDevice();
-    stream->RecordEvent(ep_event_->mut_event());
-  }
-  launched_ = true;
-}
+class EpD2HStreamPolicy final : public EpStreamPolicyBase {
+ public:
+  EpD2HStreamPolicy(Symbol<Device> device);
+  ~EpD2HStreamPolicy() override = default;
 
-EpOptionalEventRecordStatusQuerier::~EpOptionalEventRecordStatusQuerier() {}
+  void InitInstructionStatus(const Stream& stream,
+                             InstructionStatusBuffer* status_buffer) const override;
+};
 
 }  // namespace vm
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_VM_EP_D2H_STREAM_POLICY_H_
