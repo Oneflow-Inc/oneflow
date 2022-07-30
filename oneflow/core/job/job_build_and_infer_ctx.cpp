@@ -985,26 +985,34 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   }
 
   if (GlobalJobDesc().Bool("__is_user_function__")) {
+    // insert pinned identity to prevent the loss, loss initial gradient and
+    // variable gradient from being eliminated by IRRoundTripBeforeAD pass
     JUST(DoPass("InsertPinnedIdentityOpPass"));
+    // prune the dangling constant which are the 0 gradients initialized by
+    // the autograd engine for those tensors that have no gradients
+    JUST(DoPass("PruneDanglingConstantPass"));
     JUST(DoPass("NormalizationExponentialAverageAutoTickPass"));
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
 #endif
-    JUST(DoPass("PruneDanglingConstantPass"));
     JUST(DoPass("PruneAmpWhiteIdentityOpPass"));
     JUST(DoPass("OptimizerPlacementOptimizationPass"));
-    JUST(DoPass("DynamicLossScaleSchedulePass"));
-    JUST(DoPass("AutoTrainStep"));
-    JUST(DoPass("AutoLearningRate"));
-    JUST(DoPass("QuantAwareTraining"));
-    // run FuseAddToOutputPass before IRRoundTripBeforeAD pass since add_2 maybe fused as add_n in
-    // IRRoundTripBeforeAD pass
+    // run FuseAddToOutputPass before IRRoundTripBeforeAD since add_2 maybe
+    // fused as add_n in IRRoundTripBeforeAD pass
     JUST(DoPass("FuseAddToOutputPass"));
 #ifdef WITH_MLIR
     JUST(DoPass("IRRoundTripBeforeAD"));
 #endif  // WITH_MLIR
-    JUST(DoPass("FuseConsecutiveAddPass"));
+    // run DynamicLossScaleSchedulePass, AutoTrainStep and AutoLearningRate
+    // after IRRoundTripBeforeAD since IRRoundTripBeforeAD will do DCE
+    // optimization which could eliminate the nodes inserted by them
+    JUST(DoPass("DynamicLossScaleSchedulePass"));
+    JUST(DoPass("AutoTrainStep"));
+    JUST(DoPass("AutoLearningRate"));
+    JUST(DoPass("QuantAwareTraining"));
     JUST(DoPass("GenerateOptimizerOpConfs"));
+    // pinned identity can be pruned since GenerateOptimizerOpConfs pass has
+    // already construct a complete computational graph
     JUST(DoPass("PrunePinnedIdentityOpPass"));
     JUST(DoPass("ReplaceEmbeddingOps"));
     JUST(DoPass("FuseEmbeddingShuffleInteractionPass"));
@@ -1019,6 +1027,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     // run this pass again to fuse ops created in the first run.
     // TODO(guoran): loop multiple times inside the pass
     JUST(DoPass("FuseAddToOutputPass", 1));
+    JUST(DoPass("FuseConsecutiveAddPass"));
     JUST(DoPass("IndexedSlicesOptimizerRewritePass"));
     JUST(DoPass("SplitSparseSoftmaxCrossEntropyOpPass"));
     JUST(DoPass("DoParallelCastBeforeWideningTypeCast"));
