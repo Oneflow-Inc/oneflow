@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/embedding/persistent_table.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/embedding/hash_functions.cuh"
+#include <ghc/filesystem.hpp>
 
 #ifdef __linux__
 
@@ -34,6 +35,8 @@ limitations under the License.
 #endif  // WITH_LIBURING
 
 #endif  // __linux__
+
+namespace fs = ghc::filesystem;
 
 namespace oneflow {
 
@@ -73,7 +76,7 @@ void MemcpyOffset(void* dst, size_t dst_off, const void* src, size_t src_off, si
 }
 
 void InitOrCheckMetaValue(const std::string& pathname, int64_t expected, bool init) {
-  bool exists = PosixFile::FileExists(pathname);
+  bool exists = fs::exists(pathname);
   if (init) {
     CHECK(!exists) << pathname;
     std::ofstream ofs(pathname);
@@ -108,16 +111,14 @@ uint64_t GetChunkId(const std::string& filename, const std::string& prefix) {
 
 void ListChunkFiles(const std::string& base, const std::string& prefix,
                     std::unordered_map<uint64_t, std::string>* chunks) {
-  DIR* dir = opendir(base.c_str());
-  PCHECK(dir != nullptr);
-  struct dirent* ent = nullptr;
-  while ((ent = readdir(dir)) != nullptr) {
-    if (strlen(ent->d_name) != prefix.size() + kChunkNameSuffixLength) { continue; }
-    if (strncmp(ent->d_name, prefix.c_str(), prefix.size()) != 0) { continue; }
-    const uint64_t chunk_id = GetChunkId(ent->d_name + prefix.size());
-    CHECK(chunks->emplace(chunk_id, PosixFile::JoinPath(base, ent->d_name)).second);
+  const fs::path base_path(base);
+  for (const auto& dir_entry : fs::directory_iterator(base_path)) {
+    const std::string entry_path_str = dir_entry.path().filename().string();
+    if (entry_path_str.size() != prefix.size() + kChunkNameSuffixLength) { continue; }
+    if (entry_path_str.substr(0, prefix.size()) != prefix) { continue; }
+    const uint64_t chunk_id = GetChunkId(entry_path_str.substr(prefix.size()));
+    CHECK(chunks->emplace(chunk_id, dir_entry.path()).second);
   }
-  PCHECK(closedir(dir) == 0);
 }
 
 uint32_t GetLogicalBlockSize(uint32_t physical_block_size, uint32_t value_size) {
@@ -409,27 +410,35 @@ PersistentTableImpl<Key, Engine>::PersistentTableImpl(const PersistentTableOptio
   const uint64_t capacity_hint = ParseIntegerFromEnv(
       "ONEFLOW_ONE_EMBEDDING_PERSISTENT_TABLE_CAPACITY_HINT", options.capacity_hint);
   if (capacity_hint > 0) { row_id_mapping_.reserve(capacity_hint); }
-  PosixFile::RecursiveCreateDirectory(options.path, 0755);
-  const std::string lock_filename = PosixFile::JoinPath(options.path, kLockFileName);
-  const bool init = !PosixFile::FileExists(lock_filename);
+  const auto options_path = fs::path(options.path);
+
+  const auto recursive_create_directory_0755 = [](const std::string& dir_path) {
+    fs::create_directories(dir_path);
+    fs::permissions(dir_path, fs::perms::owner_all | fs::perms::group_read | fs::perms::group_write
+                                  | fs::perms::others_read | fs::perms::others_write);
+  };
+
+  recursive_create_directory_0755(options.path);
+  const std::string lock_filename = options_path / kLockFileName;
+  const bool init = !fs::exists(lock_filename);
   lock_ = PosixFileLockGuard(PosixFile(lock_filename, O_CREAT | O_RDWR, 0644));
   const uint64_t target_chunk_size = options.target_chunk_size_mb * 1024 * 1024;
   CHECK_GE(target_chunk_size, logical_block_size_);
   num_logical_blocks_per_chunk_ = target_chunk_size / logical_block_size_,
   num_values_per_block_ = logical_block_size_ / value_size_;
   num_values_per_chunk_ = num_values_per_block_ * num_logical_blocks_per_chunk_;
-  InitOrCheckMetaValue(PosixFile::JoinPath(options.path, kKeySizeFileName), key_size_, init);
-  InitOrCheckMetaValue(PosixFile::JoinPath(options.path, kValueSizeFileName), value_size_, init);
-  InitOrCheckMetaValue(PosixFile::JoinPath(options.path, kPhysicalBlockSizeFileName),
-                       options.physical_block_size, init);
-  InitOrCheckMetaValue(PosixFile::JoinPath(options.path, kNumLogicalBlocksPerChunkFileName),
+  InitOrCheckMetaValue(options_path / kKeySizeFileName, key_size_, init);
+  InitOrCheckMetaValue(options_path / kValueSizeFileName, value_size_, init);
+  InitOrCheckMetaValue(options_path / kPhysicalBlockSizeFileName, options.physical_block_size,
+                       init);
+  InitOrCheckMetaValue(options_path / kNumLogicalBlocksPerChunkFileName,
                        num_logical_blocks_per_chunk_, init);
-  keys_dir_ = PosixFile::JoinPath(options.path, kKeysDirName);
-  values_dir_ = PosixFile::JoinPath(options.path, kValuesDirName);
-  snapshots_dir_ = PosixFile::JoinPath(options.path, kSnapshotsDirName);
+  keys_dir_ = options_path / kKeysDirName;
+  values_dir_ = options_path / kValuesDirName;
+  snapshots_dir_ = options_path / kSnapshotsDirName;
   if (init) {
-    PosixFile::RecursiveCreateDirectory(keys_dir_, 0755);
-    PosixFile::RecursiveCreateDirectory(values_dir_, 0755);
+    recursive_create_directory_0755(keys_dir_);
+    recursive_create_directory_0755(values_dir_);
   }
   const uint32_t num_workers = ParseIntegerFromEnv(
       "ONEFLOW_ONE_EMBEDDING_PERSISTENT_TABLE_NUM_WORKERS", kDefaultNumWorkerThreads);
@@ -602,28 +611,28 @@ void PersistentTableImpl<Key, Engine>::Put(uint32_t num_keys, const void* keys,
 
 template<typename Key, typename Engine>
 std::string PersistentTableImpl<Key, Engine>::KeyFilePath(uint64_t chunk_id) const {
-  return PosixFile::JoinPath(keys_dir_, kKeyFileNamePrefix + GetChunkName(chunk_id));
+  return fs::path(keys_dir_) / kKeyFileNamePrefix + GetChunkName(chunk_id);
 }
 
 template<typename Key, typename Engine>
 std::string PersistentTableImpl<Key, Engine>::ValueFilePath(uint64_t chunk_id) const {
-  return PosixFile::JoinPath(values_dir_, kValueFileNamePrefix + GetChunkName(chunk_id));
+  return fs::path(values_dir_) / kValueFileNamePrefix + GetChunkName(chunk_id);
 }
 
 template<typename Key, typename Engine>
 std::string PersistentTableImpl<Key, Engine>::IndexFilePath(const std::string& name,
                                                             uint64_t chunk_id) const {
-  return PosixFile::JoinPath(SnapshotDirPath(name), kIndexFileNamePrefix + GetChunkName(chunk_id));
+  return fs::path(SnapshotDirPath(name)) / kIndexFileNamePrefix + GetChunkName(chunk_id);
 }
 
 template<typename Key, typename Engine>
 std::string PersistentTableImpl<Key, Engine>::SnapshotDirPath(const std::string& name) const {
-  return PosixFile::JoinPath(snapshots_dir_, name);
+  return fs::path(snapshots_dir_) / name;
 }
 
 template<typename Key, typename Engine>
 std::string PersistentTableImpl<Key, Engine>::SnapshotListFilePath(const std::string& name) const {
-  return PosixFile::JoinPath(SnapshotDirPath(name), kSnapshotListFileName);
+  return fs::path(SnapshotDirPath(name)) / kSnapshotListFileName;
 }
 
 template<typename Key, typename Engine>
@@ -636,7 +645,7 @@ void PersistentTableImpl<Key, Engine>::LoadSnapshotImpl(const std::string& name)
   std::string index_filename;
   while (std::getline(list_if, index_filename)) {
     const uint64_t chunk_id = GetChunkId(index_filename, kIndexFileNamePrefix);
-    PosixFile index_file(PosixFile::JoinPath(snapshot_base, index_filename), O_RDONLY, 0644);
+    PosixFile index_file(fs::path(snapshot_base) / index_filename, O_RDONLY, 0644);
     const size_t index_file_size = index_file.Size();
     CHECK_EQ(index_file_size % sizeof(uint64_t), 0);
     if (index_file_size == 0) { return; }
@@ -657,7 +666,10 @@ void PersistentTableImpl<Key, Engine>::LoadSnapshotImpl(const std::string& name)
 template<typename Key, typename Engine>
 void PersistentTableImpl<Key, Engine>::SaveSnapshotImpl(const std::string& name) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
-  PosixFile::RecursiveCreateDirectory(SnapshotDirPath(name), 0755);
+  fs::create_directories(SnapshotDirPath(name));
+  fs::permissions(SnapshotDirPath(name), fs::perms::owner_all | fs::perms::group_read
+                                             | fs::perms::group_write | fs::perms::others_read
+                                             | fs::perms::others_write);
   std::ofstream list_ofs(SnapshotListFilePath(name));
   if (row_id_mapping_.empty()) { return; }
   std::vector<PosixMappedFile> index_files(value_files_.size());
@@ -692,7 +704,7 @@ void PersistentTableImpl<Key, Engine>::SaveSnapshotImpl(const std::string& name)
 template<typename Key, typename Engine>
 bool PersistentTableImpl<Key, Engine>::SnapshotExists(const std::string& name) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
-  return PosixFile::FileExists(SnapshotListFilePath(name));
+  return fs::exists(SnapshotListFilePath(name));
 }
 
 template<typename Key, typename Engine>
@@ -716,7 +728,7 @@ void PersistentTableImpl<Key, Engine>::LoadSnapshot(
   std::string index_filename;
   while (std::getline(list_if, index_filename)) {
     const uint64_t chunk_id = GetChunkId(index_filename, kIndexFileNamePrefix);
-    PosixFile index_file(PosixFile::JoinPath(snapshot_base, index_filename), O_RDONLY, 0644);
+    PosixFile index_file(fs::path(snapshot_base) / index_filename, O_RDONLY, 0644);
     const size_t index_file_size = index_file.Size();
     CHECK_EQ(index_file_size % sizeof(uint64_t), 0);
     if (index_file_size == 0) { return; }
@@ -801,8 +813,8 @@ class SnapshotIteratorImpl : public PersistentTable::Iterator {
       if (!chunk_iterator_) {
         const std::string snapshot_base = table_->SnapshotDirPath(snapshot_name_);
         const uint64_t chunk_id = GetChunkId(indices_names_[current_chunk_], kIndexFileNamePrefix);
-        PosixFile index_file(PosixFile::JoinPath(snapshot_base, indices_names_[current_chunk_]),
-                             O_RDONLY, 0644);
+        PosixFile index_file(fs::path(snapshot_base) / indices_names_[current_chunk_], O_RDONLY,
+                             0644);
         const size_t index_file_size = index_file.Size();
         CHECK_EQ(index_file_size % sizeof(uint64_t), 0);
         if (index_file_size == 0) {

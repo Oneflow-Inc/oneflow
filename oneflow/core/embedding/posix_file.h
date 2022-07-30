@@ -79,60 +79,6 @@ class PosixFile final {
     size_ = new_size;
   }
 
-  static bool FileExists(const std::string& pathname) {
-    return access(pathname.c_str(), F_OK) == 0;
-  }
-
-  static std::string JoinPath(const std::string& a, const std::string& b) { return a + "/" + b; }
-
-  static void RecursiveCreateDirectory(const std::string& pathname, mode_t mode) {
-    while (true) {
-      struct stat sb {};
-      if (stat(pathname.c_str(), &sb) == 0) {
-        CHECK(S_ISDIR(sb.st_mode)) << "Could not create directory: '" << pathname
-                                   << "' already exists and is not a directory.";
-        return;
-      } else {
-        PCHECK(errno == ENOENT) << "Could not create directory '" << pathname << "'.";
-        if (lstat(pathname.c_str(), &sb) == 0) {
-          LOG(FATAL) << "Could not create directory: '" << pathname << "' is a broken link.";
-        } else {
-          PCHECK(errno == ENOENT) << "Could not create directory '" << pathname << "'.";
-        }
-        std::vector<char> dirname_input(pathname.size() + 1);
-        std::memcpy(dirname_input.data(), pathname.c_str(), pathname.size() + 1);
-        const std::string parent = dirname(dirname_input.data());
-        RecursiveCreateDirectory(parent, mode);
-        if (mkdir(pathname.c_str(), mode) == 0) {
-          return;
-        } else {
-          PCHECK(errno == EEXIST) << "Could not create directory '" << pathname << "'.";
-        }
-      }
-    }
-  }
-
-  static void RecursiveDelete(const std::string& pathname) {
-    struct stat sb {};
-    if (stat(pathname.c_str(), &sb) == 0) {
-      if (S_ISDIR(sb.st_mode)) {
-        DIR* dir = opendir(pathname.c_str());
-        PCHECK(dir != nullptr);
-        struct dirent* ent = nullptr;
-        while ((ent = readdir(dir)) != nullptr) {
-          if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0) { continue; }
-          RecursiveDelete(pathname + "/" + ent->d_name);
-        }
-        PCHECK(closedir(dir) == 0);
-        PCHECK(rmdir(pathname.c_str()) == 0);
-      } else {
-        PCHECK(unlink(pathname.c_str()) == 0);
-      }
-    } else {
-      PCHECK(errno == ENOENT);
-    }
-  }
-
  private:
   int fd_;
   size_t size_;

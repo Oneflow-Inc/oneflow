@@ -18,9 +18,12 @@ limitations under the License.
 #include "oneflow/core/embedding/mock_key_value_store.h"
 #include "oneflow/core/embedding/cache.h"
 #include "oneflow/core/device/cuda_util.h"
-#include <gtest/gtest.h>
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/embedding/posix_file.h"
+#include <gtest/gtest.h>
+#include <ghc/filesystem.hpp>
+
+namespace fs = ghc::filesystem;
 
 namespace oneflow {
 
@@ -187,7 +190,7 @@ TEST(PersistentTableKeyValueStore, PersistentTableKeyValueStore) {
   store->ReserveQueryLength(128);
   TestKeyValueStore(store.get(), 1024, 1024, value_length);
   store.reset();
-  PosixFile::RecursiveDelete(path);
+  fs::remove_all(path);
   Singleton<ep::DeviceManagerRegistry>::Delete();
 }
 
@@ -214,7 +217,7 @@ TEST(CachedKeyValueStore, LRU) {
   cached_store->ReserveQueryLength(128);
   TestKeyValueStore(cached_store.get(), 1024, 1024, value_length);
   cached_store.reset();
-  PosixFile::RecursiveDelete(path);
+  fs::remove_all(path);
   Singleton<ep::DeviceManagerRegistry>::Delete();
 }
 
@@ -241,7 +244,7 @@ TEST(CachedKeyValueStore, Full) {
   cached_store->ReserveQueryLength(128);
   TestKeyValueStore(cached_store.get(), 1024, 1024, value_length);
   cached_store.reset();
-  PosixFile::RecursiveDelete(path);
+  fs::remove_all(path);
   Singleton<ep::DeviceManagerRegistry>::Delete();
 }
 
@@ -257,7 +260,7 @@ TEST(MockKeyValueStore, Mock) {
   store->ReserveQueryLength(128);
   TestKeyValueStore(store.get(), 1024, 1024, value_length);
   store.reset();
-  PosixFile::RecursiveDelete(path);
+  fs::remove_all(path);
   Singleton<ep::DeviceManagerRegistry>::Delete();
 }
 

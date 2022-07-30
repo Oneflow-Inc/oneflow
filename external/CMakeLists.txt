@@ -14,5 +14,8 @@ list(APPEND EXTERNAL_TARGETS fmt)
 add_subdirectory(kineto)
 list(APPEND EXTERNAL_TARGETS kineto)
 
+add_subdirectory(filesystem)
+list(APPEND EXTERNAL_TARGETS ghc_filesystem)
+
 mark_targets_as_system(${EXTERNAL_TARGETS})
 set_property(GLOBAL PROPERTY EXTERNAL_TARGETS ${EXTERNAL_TARGETS})

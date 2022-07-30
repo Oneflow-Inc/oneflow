@@ -287,6 +287,11 @@ set(KINETO_URL
 use_mirror(VARIABLE KINETO_URL URL ${KINETO_URL})
 set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
 
+set(FILESYSTEM_URL
+    https://github.com/gulrak/filesystem/archive/cd6805e94dd5d6346be1b75a54cdc27787319dd2.zip)
+use_mirror(VARIABLE FILESYSTEM_URL URL ${FILESYSTEM_URL})
+set(FILESYSTEM_MD5 c2d2fa4f5267f439b2d8fe0614c74b86)
+
 include(cuda)
 add_subdirectory(external)
 include(third_party)
