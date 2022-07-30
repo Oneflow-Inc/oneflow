@@ -244,7 +244,7 @@ class TestGraphInplaceOperations(flow.unittest.TestCase):
                     )
                     flow.slice_update(
                         x, update, slice_tup_list=[[1, 4, 1]]
-                    ) # slice_update_op is inplace by default 
+                    )  # slice_update_op is inplace by default
                     return x
 
             graph = Graph()
