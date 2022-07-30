@@ -211,6 +211,10 @@ class Optimizer(object):
 
         self.param_groups.append(ParamGroup(param_group, self._default_options))
 
+        for param in param_group["params"]:
+            assert param.is_leaf, "parameters must be leaf tensor"
+            self._state[param] = dict()
+
     def load_state_dict(self, state_dict) -> None:
         r"""
         Load the state of the optimizer which is created by `state_dict` function.

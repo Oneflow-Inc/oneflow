@@ -21,11 +21,11 @@ namespace oneflow {
 /* static */ Maybe<void> ImageTargetResizeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   CHECK_OR_RETURN(in_desc.shape().NumAxes() == 1 && in_desc.shape().At(0) >= 1);
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_shape() = in_desc.shape();
-  user_op::TensorDesc* size_desc = ctx->OutputTensorDesc("size", 0);
+  user_op::TensorDesc* size_desc = ctx->MutOutputTensorDesc("size", 0);
   *size_desc->mut_shape() = Shape({in_desc.shape().elem_cnt(), 2});
-  user_op::TensorDesc* scale_desc = ctx->OutputTensorDesc("scale", 0);
+  user_op::TensorDesc* scale_desc = ctx->MutOutputTensorDesc("scale", 0);
   *scale_desc->mut_shape() = Shape({in_desc.shape().elem_cnt(), 2});
   return Maybe<void>::Ok();
 }
@@ -61,11 +61,11 @@ namespace oneflow {
 /* static */ Maybe<void> ImageTargetResizeOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   CHECK_OR_RETURN(in_desc.data_type() == DataType::kTensorBuffer);
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_data_type() = DataType::kTensorBuffer;
-  user_op::TensorDesc* size_desc = ctx->OutputTensorDesc("size", 0);
+  user_op::TensorDesc* size_desc = ctx->MutOutputTensorDesc("size", 0);
   *size_desc->mut_data_type() = DataType::kInt32;
-  user_op::TensorDesc* scale_desc = ctx->OutputTensorDesc("scale", 0);
+  user_op::TensorDesc* scale_desc = ctx->MutOutputTensorDesc("scale", 0);
   *scale_desc->mut_data_type() = DataType::kFloat;
   return Maybe<void>::Ok();
 }

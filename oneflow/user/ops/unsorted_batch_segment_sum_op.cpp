@@ -46,7 +46,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(segment_ids.is_dynamic(), data.is_dynamic());
   const int64_t num_segments = ctx->Attr<int64_t>("num_segments");
   CHECK_GE_OR_RETURN(num_segments, 1);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
 
   FOR_RANGE(int64_t, i, 0, segment_ids.shape().NumAxes() - 1) {
     CHECK_EQ_OR_RETURN(segment_ids.shape().At(i), data.shape().At(i));
@@ -64,7 +64,7 @@ namespace oneflow {
 /*static*/ Maybe<void> UnsortedBatchSegmentSumOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& data = ctx->InputTensorDesc("data", 0);
   const user_op::TensorDesc& segment_ids = ctx->InputTensorDesc("segment_ids", 0);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
   CHECK_OR_RETURN(IsIndexDataType(segment_ids.data_type()));
   *out->mut_data_type() = data.data_type();
   return Maybe<void>::Ok();
