@@ -18,6 +18,7 @@ limitations under the License.
 #include <cstdint>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/framework/arg_tuple.h"
@@ -604,10 +605,13 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
 
     for (const auto& it : user_op_conf_.op_conf().user_conf().inplace_operation_info()) {
       const std::string& obn = it.first;
-      const std::string& ibn = it.second.ibn();
+      const auto& input_arg_index_pair = it.second;
       CHECK_EQ(arg2bn_tensor_pair_[GetPair(obn)].tensor->raw_dptr(),
-               arg2bn_tensor_pair_[GetPair(ibn)].tensor->raw_dptr())
-          << "Inplace operation: " << user_op_conf_.op_name() << " does not have input: " << ibn
+               arg2bn_tensor_pair_[std::make_pair(input_arg_index_pair.arg(),
+                                                  input_arg_index_pair.index())]
+                   .tensor->raw_dptr())
+          << "Inplace operation: " << user_op_conf_.op_name() << " does not have input: "
+          << GenRepeatedBn(input_arg_index_pair.arg(), input_arg_index_pair.index())
           << " and output: " << obn << " as the same pointer! ";
     }
   }

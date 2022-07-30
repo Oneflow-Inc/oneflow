@@ -15,11 +15,13 @@ limitations under the License.
 */
 #include <glog/logging.h>
 #include <memory>
+#include <utility>
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/singleton.h"
+#include "oneflow/core/framework/arg_tuple.h"
 #include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -951,30 +953,24 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
         if (VariableOpOutputTensorScope::Global()->Has(output_tensor)) { continue; }
 
         const std::string& obn = op_expr.indexed_obns().at(i);
-        const std::string& output_tensor_lbn = TensorNameScope::Global()->Lookup(output_tensor);
-        CHECK(!output_tensor_lbn.empty())
-            << "Should have recorded output tensor before for inplace operation: " << new_op_name;
 
-        LogicalBlobId input_lbi = GenLogicalBlobId(output_tensor_lbn);
-
-        std::string ibn;
+        std::pair<std::string, int32_t> input_arg_index_pair = std::make_pair("", -1);
         for (int j = 0; j < inputs.size(); j++) {
           if (inputs[j] == output_tensor) {
-            ibn = op_expr.indexed_ibns()[j];
+            input_arg_index_pair = op_expr.indexed_input_pairs()[j];
             break;
           }
         }
 
-        CHECK(!ibn.empty()) << "Inplace output should use the same tensor in input!";
+        CHECK(!input_arg_index_pair.first.empty())
+            << "Inplace output tensor should correspond to a tensor in input! But no such tensor "
+               "is found!";
 
-        // store the inplace attributes for later use
-        (*op_conf->mutable_user_conf()->mutable_inplace_operation_info())[obn].set_ibn(ibn);
-        (*op_conf->mutable_user_conf()->mutable_inplace_operation_info())[obn]
-            .mutable_lbi()
-            ->set_blob_name(input_lbi.blob_name());
-        (*op_conf->mutable_user_conf()->mutable_inplace_operation_info())[obn]
-            .mutable_lbi()
-            ->set_op_name(input_lbi.op_name());
+        // store the inplace info for later use
+        (*op_conf->mutable_user_conf()->mutable_inplace_operation_info())[obn].set_arg(
+            input_arg_index_pair.first);
+        (*op_conf->mutable_user_conf()->mutable_inplace_operation_info())[obn].set_index(
+            input_arg_index_pair.second);
       }
     }
   }
