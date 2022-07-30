@@ -408,7 +408,7 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
     std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
     packed_indices =
         JUST(ToGlobal(packed_indices, placement, std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
-                      grad_sbp_tuple, /*check_meta=*/false));
+                      grad_sbp_tuple, /*check_meta=*/false, /*copy=*/false));
   } else {
     Symbol<Device> device = JUST(transposed_input->device());
     if (JUST(packed_indices->device()) != device) {
