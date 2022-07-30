@@ -13,17 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/collective_communication/cpu/cpu_communicator.h"
+#include "oneflow/user/kernels/collective_communication/cpu/cpu_communication_context.h"
 #include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 
-namespace collective_communication {
+namespace ccl {
 
-void CpuCommunicator::Init(Symbol<ParallelDesc> parallel_desc) { parallel_desc_ = parallel_desc; }
+void CpuCommunicationContext::Init(Symbol<ParallelDesc> parallel_desc) {
+  parallel_desc_ = parallel_desc;
+}
 
-REGISTER_COLLECTIVE_COMMUNICATION_COMMUNICATOR(DeviceType::kCPU, CpuCommunicator);
+REGISTER_COLLECTIVE_COMMUNICATION_COMMUNICATOR(DeviceType::kCPU, CpuCommunicationContext);
 
-}  // namespace collective_communication
+}  // namespace ccl
 
 }  // namespace oneflow

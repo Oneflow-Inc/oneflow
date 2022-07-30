@@ -18,12 +18,12 @@ limitations under the License.
 
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/common/switch_func.h"
-#include "oneflow/user/kernels/collective_communication/include/communicator.h"
+#include "oneflow/user/kernels/collective_communication/include/communication_context.h"
 #include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
-namespace collective_communication {
+namespace ccl {
 
 #define REDUCE_TYPE_SEQ      \
   OF_PP_MAKE_TUPLE_SEQ(kSum) \
@@ -69,7 +69,7 @@ NewCollectiveCommunication(DeviceType device_type, Args&&... args) {
 #define REGISTER_COLLECTIVE_COMMUNICATION_FACTORY(device, Base, Derived) \
   REGISTER_CLASS(DeviceType, device, Base, Derived)
 
-}  // namespace collective_communication
+}  // namespace ccl
 
 }  // namespace oneflow
 

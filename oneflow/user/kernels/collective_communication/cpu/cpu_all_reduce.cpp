@@ -17,13 +17,13 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/framework/transport_util.h"
-#include "oneflow/user/kernels/collective_communication/cpu/cpu_communicator.h"
+#include "oneflow/user/kernels/collective_communication/cpu/cpu_communication_context.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/user/kernels/collective_communication/include/all_reduce.h"
 
 namespace oneflow {
 
-namespace collective_communication {
+namespace ccl {
 
 namespace {
 
@@ -170,11 +170,12 @@ class CpuAllReduce final : public AllReduce {
   ~CpuAllReduce() = default;
 
   void Launch(ep::Stream* stream, const void* in, void* out, size_t elem_cnt,
-              const std::shared_ptr<Communicator>& communicator) const override {
-    const auto& cpu_communicator = std::dynamic_pointer_cast<CpuCommunicator>(communicator);
-    CHECK(cpu_communicator);
+              const std::shared_ptr<CommunicationContext>& communication_ctx) const override {
+    const auto& cpu_communication_ctx =
+        std::dynamic_pointer_cast<CpuCommunicationContext>(communication_ctx);
+    CHECK(cpu_communication_ctx);
     CHECK_JUST(SwitchDtypeAllReduce(SwitchCase(datatype_, reduce_type_), in, out, elem_cnt,
-                                    cpu_communicator->parallel_desc()));
+                                    cpu_communication_ctx->parallel_desc()));
   }
 
  private:
@@ -195,6 +196,6 @@ class CpuAllReduceFactory : public AllReduceFactory {
 
 REGISTER_COLLECTIVE_COMMUNICATION_FACTORY(DeviceType::kCPU, AllReduceFactory, CpuAllReduceFactory);
 
-}  // namespace collective_communication
+}  // namespace ccl
 
 }  // namespace oneflow

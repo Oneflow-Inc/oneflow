@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace collective_communication {
+namespace ccl {
 
 class AllReduce : public CollectiveCommunication {
  public:
@@ -29,7 +29,7 @@ class AllReduce : public CollectiveCommunication {
   ~AllReduce() override = default;
 
   virtual void Launch(ep::Stream* stream, const void* in, void* out, size_t elem_cnt,
-                      const std::shared_ptr<Communicator>& communicator) const = 0;
+                      const std::shared_ptr<CommunicationContext>& communicator) const = 0;
 };
 
 class AllReduceFactory : public CollectiveCommunicationFactory<AllReduce> {
@@ -45,7 +45,7 @@ inline bool IsAllReduceRegistered(DeviceType device_type) {
   return IsClassRegistered<DeviceType, AllReduceFactory>(device_type);
 }
 
-}  // namespace collective_communication
+}  // namespace ccl
 
 }  // namespace oneflow
 

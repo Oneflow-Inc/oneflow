@@ -13,10 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_CUDA_CUDA_COMMUNICATOR_H_
-#define ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_CUDA_CUDA_COMMUNICATOR_H_
+#ifndef ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_CUDA_CUDA_COMMUNICATION_CONTEXT_H_
+#define ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_CUDA_CUDA_COMMUNICATION_CONTEXT_H_
 
-#include "oneflow/user/kernels/collective_communication/include/communicator.h"
+#include "oneflow/user/kernels/collective_communication/include/communication_context.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/parallel_desc.h"
 
@@ -26,12 +26,12 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace collective_communication {
+namespace ccl {
 
-class CudaCommunicator : public Communicator {
+class CudaCommunicationContext : public CommunicationContext {
  public:
-  explicit CudaCommunicator() = default;
-  ~CudaCommunicator() override = default;
+  explicit CudaCommunicationContext() = default;
+  ~CudaCommunicationContext() override = default;
 
   void Init(Symbol<ParallelDesc>) override;
 
@@ -41,10 +41,10 @@ class CudaCommunicator : public Communicator {
   ncclComm_t nccl_comm_;
 };
 
-}  // namespace collective_communication
+}  // namespace ccl
 
 }  // namespace oneflow
 
 #endif  // WITH_CUDA
 
-#endif  // ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_CUDA_CUDA_COMMUNICATOR_H_
+#endif  // ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_CUDA_CUDA_COMMUNICATION_CONTEXT_H_

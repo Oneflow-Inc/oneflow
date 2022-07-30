@@ -13,16 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/collective_communication/cuda/cuda_communicator.h"
+#include "oneflow/user/kernels/collective_communication/cuda/cuda_communication_context.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 
 #ifdef WITH_CUDA
 
 namespace oneflow {
 
-namespace collective_communication {
+namespace ccl {
 
-void CudaCommunicator::Init(Symbol<ParallelDesc> parallel_desc) {
+void CudaCommunicationContext::Init(Symbol<ParallelDesc> parallel_desc) {
   std::set<std::pair<int64_t, int64_t>> device_set;
   FOR_RANGE(int64_t, parallel_id, 0, parallel_desc->parallel_num()) {
     int64_t machine_id = CHECK_JUST(parallel_desc->MachineId4ParallelId(parallel_id));
@@ -32,9 +32,9 @@ void CudaCommunicator::Init(Symbol<ParallelDesc> parallel_desc) {
   nccl_comm_ = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
 }
 
-REGISTER_COLLECTIVE_COMMUNICATION_COMMUNICATOR(DeviceType::kCUDA, CudaCommunicator);
+REGISTER_COLLECTIVE_COMMUNICATION_COMMUNICATOR(DeviceType::kCUDA, CudaCommunicationContext);
 
-}  // namespace collective_communication
+}  // namespace ccl
 
 }  // namespace oneflow
 

@@ -19,8 +19,6 @@ limitations under the License.
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/user/kernels/collective_communication/include/communicator.h"
-#include "oneflow/user/kernels/collective_communication/include/all_reduce.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 
 namespace oneflow {

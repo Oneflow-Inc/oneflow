@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/collective_communication/include/communicator.h"
+#include "oneflow/user/kernels/collective_communication/include/communication_context.h"
 #include "oneflow/user/kernels/collective_communication/include/all_reduce.h"
 #include "oneflow/core/framework/framework.h"
 
@@ -25,8 +25,8 @@ auto AllReduceCollectiveCommunicationExists() {
   return hob::make_custom("AllReduceCollectiveCommunicationExists",
                           [=](const user_op::KernelRegContext& ctx) {
                             DeviceType device_type = ctx.device_type();
-                            return collective_communication::IsCommunicatorRegistered(device_type)
-                                   && collective_communication::IsAllReduceRegistered(device_type);
+                            return ccl::IsCommunicationContextRegistered(device_type)
+                                   && ccl::IsAllReduceRegistered(device_type);
                           });
 }
 
@@ -35,8 +35,8 @@ class EagerCclOpKernelCache final : public user_op::OpKernelCache {
   explicit EagerCclOpKernelCache(user_op::KernelCacheContext* ctx) { Init(ctx); }
   ~EagerCclOpKernelCache() override = default;
 
-  const std::shared_ptr<collective_communication::Communicator>& communicator() const {
-    return communicator_;
+  const std::shared_ptr<ccl::CommunicationContext>& communication_ctx() const {
+    return communication_ctx_;
   }
 
  private:
@@ -45,11 +45,10 @@ class EagerCclOpKernelCache final : public user_op::OpKernelCache {
     ParallelConf parallel_conf;
     CHECK(TxtString2PbMessage(parallel_conf_txt, &parallel_conf));
     Symbol<ParallelDesc> parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
-    communicator_ =
-        collective_communication::NewCommunicator(parallel_desc->device_type(), parallel_desc);
+    communication_ctx_ = ccl::NewCommunicationContext(parallel_desc->device_type(), parallel_desc);
   }
 
-  std::shared_ptr<collective_communication::Communicator> communicator_;
+  std::shared_ptr<ccl::CommunicationContext> communication_ctx_;
 };
 
 void InitEagerCclOpKernelCache(user_op::KernelCacheContext* ctx,
@@ -82,15 +81,14 @@ class EagerCclAllReduceKernel final : public user_op::OpKernel {
     CHECK_EQ(in->shape_view(), out->shape_view()) << kOfBugIssueUploadPrompt;
     CHECK_EQ(in->data_type(), out->data_type()) << kOfBugIssueUploadPrompt;
 
-    collective_communication::ReduceType reduce_type = collective_communication::kSum;
-    if (in->data_type() == kBool) { reduce_type = collective_communication::kMax; }
+    ccl::ReduceType reduce_type = ccl::kSum;
+    if (in->data_type() == kBool) { reduce_type = ccl::kMax; }
 
-    std::unique_ptr<collective_communication::AllReduce> all_reduce =
-        collective_communication::NewCollectiveCommunication<
-            collective_communication::AllReduceFactory>(ctx->device_type(), in->data_type(),
-                                                        reduce_type);
+    std::unique_ptr<ccl::AllReduce> all_reduce =
+        ccl::NewCollectiveCommunication<ccl::AllReduceFactory>(ctx->device_type(), in->data_type(),
+                                                               reduce_type);
     all_reduce->Launch(ctx->stream(), in->dptr(), out->mut_dptr(), out->shape_view().elem_cnt(),
-                       kernel_cache->communicator());
+                       kernel_cache->communication_ctx());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

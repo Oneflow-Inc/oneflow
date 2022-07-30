@@ -13,45 +13,45 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COMMUNICATOR_H_
-#define ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COMMUNICATOR_H_
+#ifndef ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COMMUNICATION_CONTEXT_H_
+#define ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COMMUNICATION_CONTEXT_H_
 
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 
 namespace oneflow {
 
-namespace collective_communication {
+namespace ccl {
 
-class Communicator {
+class CommunicationContext {
  public:
-  Communicator() = default;
-  virtual ~Communicator() = default;
+  CommunicationContext() = default;
+  virtual ~CommunicationContext() = default;
 
   virtual void Init(Symbol<ParallelDesc>) = 0;
 };
 
-inline std::shared_ptr<Communicator> NewCommunicator(DeviceType device_type,
-                                                     Symbol<ParallelDesc> parallel_desc) {
+inline std::shared_ptr<CommunicationContext> NewCommunicationContext(
+    DeviceType device_type, Symbol<ParallelDesc> parallel_desc) {
   CHECK_EQ(device_type, parallel_desc->device_type())
       << "device_type not match placement (" << DeviceType_Name(device_type) << " vs. "
       << DeviceType_Name(parallel_desc->device_type()) << ". " << kOfBugIssueUploadPrompt;
   ;
-  std::shared_ptr<Communicator> communicator =
-      NewObjSharedPtr<DeviceType, Communicator>(device_type);
-  communicator->Init(parallel_desc);
-  return communicator;
+  std::shared_ptr<CommunicationContext> communication_ctx =
+      NewObjSharedPtr<DeviceType, CommunicationContext>(device_type);
+  communication_ctx->Init(parallel_desc);
+  return communication_ctx;
 }
 
-inline bool IsCommunicatorRegistered(DeviceType device_type) {
-  return IsClassRegistered<DeviceType, Communicator>(device_type);
+inline bool IsCommunicationContextRegistered(DeviceType device_type) {
+  return IsClassRegistered<DeviceType, CommunicationContext>(device_type);
 }
 
 #define REGISTER_COLLECTIVE_COMMUNICATION_COMMUNICATOR(device, Derived) \
-  REGISTER_CLASS(DeviceType, device, Communicator, Derived)
+  REGISTER_CLASS(DeviceType, device, CommunicationContext, Derived)
 
-}  // namespace collective_communication
+}  // namespace ccl
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COMMUNICATOR_H_
+#endif  // ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COMMUNICATION_CONTEXT_H_

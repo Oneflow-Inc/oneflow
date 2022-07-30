@@ -13,22 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_CPU_CPU_COMMUNICATOR_H_
-#define ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_CPU_CPU_COMMUNICATOR_H_
+#ifndef ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_CPU_CPU_COMMUNICATION_CONTEXT_H_
+#define ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_CPU_CPU_COMMUNICATION_CONTEXT_H_
 
-#include "oneflow/user/kernels/collective_communication/include/communicator.h"
+#include "oneflow/user/kernels/collective_communication/include/communication_context.h"
 #include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
 
 class ParallelDesc;
 
-namespace collective_communication {
+namespace ccl {
 
-class CpuCommunicator : public Communicator {
+class CpuCommunicationContext : public CommunicationContext {
  public:
-  explicit CpuCommunicator() = default;
-  ~CpuCommunicator() override = default;
+  explicit CpuCommunicationContext() = default;
+  ~CpuCommunicationContext() override = default;
 
   void Init(Symbol<ParallelDesc>) override;
 
@@ -38,8 +38,8 @@ class CpuCommunicator : public Communicator {
   Symbol<ParallelDesc> parallel_desc_;
 };
 
-}  // namespace collective_communication
+}  // namespace ccl
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_CPU_CPU_COMMUNICATOR_H_
+#endif  // ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_CPU_CPU_COMMUNICATION_CONTEXT_H_

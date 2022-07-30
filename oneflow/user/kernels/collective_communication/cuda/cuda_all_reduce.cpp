@@ -15,12 +15,12 @@ limitations under the License.
 */
 #ifdef WITH_CUDA
 #include "oneflow/user/kernels/collective_communication/include/all_reduce.h"
-#include "oneflow/user/kernels/collective_communication/cuda/cuda_communicator.h"
+#include "oneflow/user/kernels/collective_communication/cuda/cuda_communication_context.h"
 #include "oneflow/core/device/nccl_util.h"
 
 namespace oneflow {
 
-namespace collective_communication {
+namespace ccl {
 
 namespace {
 
@@ -44,12 +44,13 @@ class CudaAllReduce final : public AllReduce {
   ~CudaAllReduce() = default;
 
   void Launch(ep::Stream* stream, const void* in, void* out, size_t elem_cnt,
-              const std::shared_ptr<Communicator>& communicator) const override {
-    const auto& cuda_communicator = std::dynamic_pointer_cast<CudaCommunicator>(communicator);
-    CHECK(cuda_communicator);
-    OF_NCCL_CHECK(ncclAllReduce(in, out, elem_cnt, GetNcclDataType(datatype_),
-                                GetNcclReduceType(reduce_type_), cuda_communicator->nccl_comm(),
-                                stream->As<ep::CudaStream>()->cuda_stream()));
+              const std::shared_ptr<CommunicationContext>& communication_ctx) const override {
+    const auto& cuda_communication_ctx =
+        std::dynamic_pointer_cast<CudaCommunicationContext>(communication_ctx);
+    CHECK(cuda_communication_ctx);
+    OF_NCCL_CHECK(ncclAllReduce(
+        in, out, elem_cnt, GetNcclDataType(datatype_), GetNcclReduceType(reduce_type_),
+        cuda_communication_ctx->nccl_comm(), stream->As<ep::CudaStream>()->cuda_stream()));
   }
 
  private:
@@ -71,7 +72,7 @@ class CudaAllReduceFactory : public AllReduceFactory {
 REGISTER_COLLECTIVE_COMMUNICATION_FACTORY(DeviceType::kCUDA, AllReduceFactory,
                                           CudaAllReduceFactory);
 
-}  // namespace collective_communication
+}  // namespace ccl
 
 }  // namespace oneflow
 
