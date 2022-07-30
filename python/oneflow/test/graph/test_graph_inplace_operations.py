@@ -281,33 +281,33 @@ class TestGraphInplaceOperations(flow.unittest.TestCase):
         _test("cpu")
         _test("cuda")
 
-    # def test_inplace_broadcast(test_case):
-    #     def _test(device):
-    #         class Graph(nn.Graph):
-    #             def build(self):
-    #                 x = flow.randn(4,4, device=device)
-    #                 flow._C.broadcast(x, inplace=True)
-    #                 return x
+    def test_inplace_broadcast(test_case):
+        def _test(device):
+            class Graph(nn.Graph):
+                def build(self):
+                    x = flow.randn(4,4, device=device)
+                    flow._C.broadcast(x, inplace=True)
+                    return x
 
-    #         graph = Graph()
-    #         graph()
+            graph = Graph()
+            graph()
 
-    #     _test("cpu")
-    #     _test("cuda")
+        _test("cpu")
+        _test("cuda")
 
-    # def test_inplace_local_all_reduce(test_case):
-    #     def _test(device):
-    #         class Graph(nn.Graph):
-    #             def build(self):
-    #                 x = flow.randn(4,4, device=device)
-    #                 flow._C.local_all_reduce(x, inplace=True)
-    #                 return x
+    def test_inplace_local_all_reduce(test_case):
+        def _test(device):
+            class Graph(nn.Graph):
+                def build(self):
+                    x = flow.randn(4,4, device=device)
+                    flow._C.local_all_reduce(x, inplace=True)
+                    return x
 
-    #         graph = Graph()
-    #         graph()
+            graph = Graph()
+            graph()
 
-    #     _test("cpu")
-    #     _test("cuda")
+        _test("cpu")
+        _test("cuda")
 
     # def test_inplace_local_reduce(test_case):
     #     def _test(device):
