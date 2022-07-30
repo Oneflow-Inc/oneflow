@@ -86,7 +86,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> IsFiniteOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kBool;
+  *ctx->MutOutputDType("out", 0) = DataType::kBool;
   return Maybe<void>::Ok();
 }
 
