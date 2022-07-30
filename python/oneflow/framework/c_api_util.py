@@ -129,13 +129,6 @@ def CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn):
     oneflow._oneflow_internal.CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn)
 
 
-def CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid):
-    serialized = str(text_format.MessageToString(lbi_and_uuid))
-    oneflow._oneflow_internal.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(
-        serialized
-    )
-
-
 def JobBuildAndInferCtx_IsLocalBlob(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)

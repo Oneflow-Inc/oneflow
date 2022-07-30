@@ -41,8 +41,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         py::call_guard<py::gil_scoped_release>());
 
   m.def("CurJobBuildAndInferCtx_AddAndInferGlobalOp", &CurJobBuildAndInferCtx_AddAndInferGlobalOp);
-  m.def("CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair",
-        &CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair);
 
   m.def("JobBuildAndInferCtx_GetSerializedIdListAsStaticShape",
         &JobBuildAndInferCtx_GetSerializedIdListAsStaticShape);

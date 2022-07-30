@@ -35,7 +35,6 @@ class JobBuildAndInferCtx {
   virtual ~JobBuildAndInferCtx() = default;
 
   Maybe<void> SetJobConf(const JobConfigProto& job_conf);
-  Maybe<void> AddLbiAndDiffWatcherUuidPair(const LbiAndDiffWatcherUuidPair& lbi_uuid_pair);
   Maybe<OpAttribute> AddAndInferGlobalOp(const OperatorConf& op_conf);
   Maybe<OpAttribute> AddAndInferLocalOp(const OperatorConf& op_conf);
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
