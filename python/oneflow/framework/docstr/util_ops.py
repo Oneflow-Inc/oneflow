@@ -86,7 +86,7 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> flow.isfinite(flow.tensor([1, float('inf'), 2, float('-inf'), float('nan')]))
-        tensor([True,  False, True,  False, False], dtype=oneflow.bool)
+        tensor([ True, False,  True, False, False], dtype=oneflow.bool)
 
     """,
 )
