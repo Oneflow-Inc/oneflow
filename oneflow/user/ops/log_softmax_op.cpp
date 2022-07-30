@@ -39,7 +39,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> LogSoftmaxOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("prob", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("prob", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -70,7 +70,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> LogSoftmaxGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("prob", 0), ctx->InputDType("dy", 0));
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("prob", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("prob", 0);
   return Maybe<void>::Ok();
 }
 

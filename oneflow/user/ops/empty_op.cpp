@@ -66,7 +66,7 @@ Maybe<Symbol<Stream>> MakeEmptyStream(const Symbol<Device>& out_device, const bo
 }
 
 /* static */ Maybe<void> EmptyOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
+  *ctx->MutOutputDType("out", 0) = ctx->Attr<DataType>("dtype");
   return Maybe<void>::Ok();
 }
 

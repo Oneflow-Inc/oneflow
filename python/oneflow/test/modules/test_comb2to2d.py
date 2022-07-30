@@ -24,6 +24,12 @@ import numpy as np
 import oneflow.unittest
 
 
+os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "0"
+os.environ["ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION"] = "0"
+
+flow.boxing.nccl.enable_use_compute_stream(False)
+
+
 class _TestModuleDiffHierarchy(nn.Module):
     def forward(self, x):
         sbp_1ds = [
