@@ -41,6 +41,21 @@ Maybe<std::string> InsertPinnedIdentityOp(JobBuilder* job_builder, const OpGraph
           .Build();
   const auto& parallel_conf = node->parallel_desc().parallel_conf();
   job_builder->AddOps(parallel_conf, {pinned_identity_op.op_conf()});
+
+  node->ForEachNodeOnOutEdge([&](const OpNode* out_node) {
+    for (const std::string& ibn : out_node->op().input_bns()) {
+      if (out_node->op().BnInOp2Lbi(ibn) == lbi) {
+        if (!CHECK_JUST(job_builder->IsInMutOpTransaction(out_node->op().op_name()))) {
+          CHECK_JUST(job_builder->MutOpTransactionMut(out_node->op().op_conf()));
+        }
+        OperatorConf& mut_consumer_op =
+            CHECK_JUST(job_builder->MutOpTransactionGet(out_node->op().op_name()));
+        const auto& old_lbn = ReplaceInputLbnInOpCustomizedConf(
+            &mut_consumer_op, ibn, pinned_identity_op.output("out", 0));
+        CHECK_EQ(old_lbn, GenLogicalBlobName(lbi));
+      }
+    }
+  });
   return pinned_identity_op.output("out", 0);
 }
 
@@ -87,6 +102,7 @@ Maybe<void> InsertPinnedIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const {
       optimizer_conf->set_variable_grad_lbns(j, it->second);
     }
   }
+  JUST(job_builder.MutOpTransactionCommit());
   return Maybe<void>::Ok();
 }
 
