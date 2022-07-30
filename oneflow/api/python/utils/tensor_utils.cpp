@@ -247,13 +247,14 @@ Maybe<Tensor> MakeGlobalTensorFromData(PyObject* data, const Optional<Symbol<DTy
   size_t sbp_dims = sbp_tuple.size();
   Symbol<NdSbp> broadcast_nd_sbp = JUST(CachedGetAllBroadcastNdSbp(sbp_dims));
 
-  std::shared_ptr<Tensor> broadcast_tensor =
-      JUST(functional::LocalToGlobal(local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)),
-                                     shape, local_tensor->dtype(), /* sync_data */ true));
+  std::shared_ptr<Tensor> broadcast_tensor = JUST(
+      functional::LocalToGlobal(local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)), shape,
+                                local_tensor->dtype(), /* sync_data */ true, /*copy=*/false));
 
   std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-  auto global_tensor = JUST(functional::ToGlobal(broadcast_tensor, placement, sbp_tuple,
-                                                 grad_sbp_tuple, /* check_meta */ false));
+  auto global_tensor =
+      JUST(functional::ToGlobal(broadcast_tensor, placement, sbp_tuple, grad_sbp_tuple,
+                                /* check_meta */ false, /*copy=*/false));
   JUST(global_tensor->set_requires_grad(requires_grad));
   return global_tensor;
 }
@@ -269,7 +270,7 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
     std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
     // TODO:(zhaoluyang) global case support pin_memory
     return functional::ToGlobal(other, JUST(other->parallel_desc()), sbp_tuple, grad_sbp_tuple,
-                                /* check_meta */ false);
+                                /* check_meta */ false, /*copy=*/false);
   }
 }
 
@@ -285,7 +286,7 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
     tensor = JUST(functional::Copy(other, device_->type(), device_->device_id(),
                                    pin_memory && !dtype.has_value()));
   } else {
-    tensor = JUST(functional::GlobalToLocal(other));
+    tensor = JUST(functional::GlobalToLocal(other, /*copy=*/false));
     if (!device) { device_ = JUST(Device::New("cpu")); }
     tensor = JUST(functional::Copy(tensor, device_->type(), device_->device_id(),
                                    pin_memory && !dtype.has_value()));
@@ -305,8 +306,8 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const bool requires_grad) {
   std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
   bool check_meta = other->is_global() ? false : true;
-  std::shared_ptr<Tensor> tensor =
-      JUST(functional::ToGlobal(other, placement, sbp_tuple, grad_sbp_tuple, check_meta));
+  std::shared_ptr<Tensor> tensor = JUST(functional::ToGlobal(
+      other, placement, sbp_tuple, grad_sbp_tuple, check_meta, /*copy=*/false));
   if (dtype) {
     const Symbol<DType>& dtype_ = JUST(dtype);
     if (tensor->dtype() != dtype_) {

@@ -51,7 +51,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
  public:
   UserOpExprDeviceAndStreamInferContext(const UserOpExpr* user_op_expr,
                                         const LocalTensorMetaInferArgs& infer_args,
-                                        OpArgsVector<LocalTensorMeta>* output_tensor_metas)
+                                        OpArgsVector<MutLocalTensorMeta>* output_tensor_metas)
       : user_op_expr_(user_op_expr),
         composed_attrs_(infer_args.attrs(), user_op_expr->base_attrs()),
         infer_args_(infer_args),
@@ -91,13 +91,13 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
   const UserOpExpr* user_op_expr_;
   const ComposedAttrMap composed_attrs_;
   const LocalTensorMetaInferArgs& infer_args_;
-  OpArgsVector<LocalTensorMeta>* output_tensor_metas_;
+  OpArgsVector<MutLocalTensorMeta>* output_tensor_metas_;
 };
 
 Maybe<Symbol<Stream>> InferDeviceAndStream(const UserOpExpr& user_op_expr,
                                            const Symbol<Device>& default_device,
                                            const LocalTensorMetaInferArgs& infer_args,
-                                           OpArgsVector<LocalTensorMeta>* output_tensor_metas) {
+                                           OpArgsVector<MutLocalTensorMeta>* output_tensor_metas) {
   Symbol<Stream> stream;
   if (!user_op_expr.has_device_and_stream_infer_fn()) {
     stream = JUST(GetDefaultStreamByDevice(default_device));
@@ -146,10 +146,7 @@ Maybe<void> LocalTensorMetaInferArgs::Init(const AttrMap& attrs, Symbol<Device> 
 
 Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTuple& input_tensors) {
   for (int i = 0; i < input_tensors.size(); ++i) {
-    LocalTensorMeta* local_tensor_meta =
-        dynamic_cast<LocalTensorMeta*>(input_tensors.at(i)->mut_tensor_meta());
-    CHECK_NOTNULL_OR_RETURN(local_tensor_meta);  // NOLINT
-    input_local_tensor_metas_.at(i) = SymbolOf(*local_tensor_meta);
+    input_local_tensor_metas_.at(i) = JUST(input_tensors.at(i)->local_tensor_meta());
   }
   return Maybe<void>::Ok();
 }
@@ -162,7 +159,7 @@ Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTupl
 
   auto result = std::make_unique<LocalTensorInferResult>(user_op_expr.output_size());
 
-  OpArgsVector<LocalTensorMeta> output_mut_metas(user_op_expr.output_size());
+  OpArgsVector<MutLocalTensorMeta> output_mut_metas(user_op_expr.output_size());
   // Infer devices
   Symbol<Stream> stream =
       JUST(InferDeviceAndStream(user_op_expr, default_device, infer_args, &output_mut_metas));
@@ -183,7 +180,10 @@ Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTupl
       std::shared_ptr<Stride> stride(new Stride(output_mut_metas.at(i).shape()));
       output_mut_metas.at(i).set_stride(stride);
     }
-    mut_output_tensor_metas->at(i) = SymbolOf(output_mut_metas.at(i));
+    mut_output_tensor_metas->at(i) = SymbolOf(
+        LocalTensorMeta(output_mut_metas.at(i).shape_ptr(), output_mut_metas.at(i).stride_ptr(),
+                        output_mut_metas.at(i).data_type(), output_mut_metas.at(i).device(),
+                        output_mut_metas.at(i).storage_offset()));
   }
   return std::shared_ptr<const LocalTensorInferResult>(std::move(result));
 }

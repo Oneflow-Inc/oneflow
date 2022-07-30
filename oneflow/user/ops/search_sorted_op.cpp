@@ -46,9 +46,9 @@ namespace oneflow {
 /* static */ Maybe<void> SearchSortedOp::InferDataType(user_op::InferContext* ctx) {
   const bool& out_int32 = ctx->Attr<bool>("out_int32");
   if (out_int32) {
-    *ctx->OutputDType("out", 0) = DataType::kInt32;
+    *ctx->MutOutputDType("out", 0) = DataType::kInt32;
   } else {
-    *ctx->OutputDType("out", 0) = DataType::kInt64;
+    *ctx->MutOutputDType("out", 0) = DataType::kInt64;
   }
   return Maybe<void>::Ok();
 }
@@ -74,9 +74,9 @@ namespace oneflow {
 /* static */ Maybe<void> SearchSortedScalarOp::InferDataType(user_op::InferContext* ctx) {
   const bool& out_int32 = ctx->Attr<bool>("out_int32");
   if (out_int32) {
-    *ctx->OutputDType("out", 0) = DataType::kInt32;
+    *ctx->MutOutputDType("out", 0) = DataType::kInt32;
   } else {
-    *ctx->OutputDType("out", 0) = DataType::kInt64;
+    *ctx->MutOutputDType("out", 0) = DataType::kInt64;
   }
   return Maybe<void>::Ok();
 }

@@ -43,12 +43,12 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("output_tensor", 0) = ctx->InputDType("input_tensor", 0);
+  *ctx->MutOutputDType("output_tensor", 0) = ctx->InputDType("input_tensor", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferLogicalDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("output_tensor", 0) = DataType::kBool;
+  *ctx->MutOutputDType("output_tensor", 0) = DataType::kBool;
   return Maybe<void>::Ok();
 }
 

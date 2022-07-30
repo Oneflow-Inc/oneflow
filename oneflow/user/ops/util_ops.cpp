@@ -38,7 +38,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> IsNanOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kBool;
+  *ctx->MutOutputDType("out", 0) = DataType::kBool;
   return Maybe<void>::Ok();
 }
 
@@ -62,7 +62,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> IsInfOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kBool;
+  *ctx->MutOutputDType("out", 0) = DataType::kBool;
   return Maybe<void>::Ok();
 }
 
