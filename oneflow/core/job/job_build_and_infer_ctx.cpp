@@ -1032,13 +1032,16 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
 #endif
     JUST(DoPass("PruneAmpWhiteIdentityOpPass"));
     JUST(DoPass("OptimizerPlacementOptimizationPass"));
+#ifdef WITH_MLIR
+    JUST(DoPass("IRRoundTripBeforeAD"));
+#endif  // WITH_MLIR
+    // run DynamicLossScaleSchedulePass, AutoTrainStep and AutoLearningRate
+    // after IRRoundTripBeforeAD since IRRoundTripBeforeAD will do DCE
+    // optimization which could eliminate the nodes inserted by them
     JUST(DoPass("DynamicLossScaleSchedulePass"));
     JUST(DoPass("AutoTrainStep"));
     JUST(DoPass("AutoLearningRate"));
     JUST(DoPass("QuantAwareTraining"));
-#ifdef WITH_MLIR
-    JUST(DoPass("IRRoundTripBeforeAD"));
-#endif  // WITH_MLIR
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
     JUST(DoPass("ReplaceEmbeddingOps"));
     JUST(DoPass("FuseEmbeddingShuffleInteractionPass"));
