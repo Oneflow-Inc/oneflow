@@ -52,7 +52,6 @@ def _run_test_moving_average_min_max_observer(
         np_activation = of_activation.numpy()
 
         moving_average_min_max_observer = flow.nn.MovingAverageMinMaxObserver(
-            training=True,
             quantization_formula=quantization_formula,
             stop_update_after_iters=1,
             quantization_bit=quantization_bit,

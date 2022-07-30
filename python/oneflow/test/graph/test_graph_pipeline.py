@@ -17,6 +17,7 @@ import os
 import sys
 import unittest
 import numpy as np
+import copy
 
 import oneflow as flow
 import oneflow.unittest
@@ -184,8 +185,8 @@ def _train_with_graph(iter_num=3):
     for i in range(iter_num):
         out = one_iter(i)
         if rank == 3:
-            check_list.append(out[0])
-            data_list.append((out[1], out[2]))
+            check_list.append(copy.deepcopy(out[0]))
+            data_list.append((copy.deepcopy(out[1]), copy.deepcopy(out[2])))
     return check_list, data_list
 
 

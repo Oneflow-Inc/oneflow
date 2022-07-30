@@ -44,7 +44,7 @@ Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
 /* static */ Maybe<void> CopyOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
   *ctx->MutOutputStride("out", 0) = ctx->InputStride("in", 0);
-  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -65,7 +65,7 @@ Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
 }
 
 /* static */ Maybe<void> CopyOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 

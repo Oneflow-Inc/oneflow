@@ -42,7 +42,7 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(NDims, strides.size());
     CHECK_EQ_OR_RETURN(NDims, output_padding.size());
 
-    user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+    user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
     DimVector out_shape(NDims + 2);
     out_shape.at(0) = in.shape().At(0);
     const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
@@ -85,7 +85,7 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferDataType_(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 

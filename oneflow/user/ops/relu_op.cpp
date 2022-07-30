@@ -35,7 +35,7 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ReluOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -63,10 +63,10 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> ReluGradOp::InferDataType(user_op::InferContext* ctx) {
-  const DataType& data_type = ctx->InputDType("y", 0);
+  DataType data_type = ctx->InputDType("y", 0);
   CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), data_type)
       << Error::TypeError() << "Tensors dy and y must have the same type";
-  *ctx->OutputDType("dx", 0) = data_type;
+  *ctx->MutOutputDType("dx", 0) = data_type;
   return Maybe<void>::Ok();
 }
 
