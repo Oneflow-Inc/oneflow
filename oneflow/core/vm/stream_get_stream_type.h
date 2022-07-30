@@ -20,11 +20,11 @@ limitations under the License.
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/vm/control_stream_policy.h"
-#include "oneflow/core/vm/event_recorded_ep_stream_type.h"
+#include "oneflow/core/vm/event_recorded_ep_stream_policy.h"
 #include "oneflow/core/vm/critical_section_stream_type.h"
-#include "oneflow/core/vm/ep_d2h_stream_type.h"
-#include "oneflow/core/vm/ep_stream_type.h"
-#include "oneflow/core/vm/pinned_ep_stream_type.h"
+#include "oneflow/core/vm/ep_d2h_stream_policy.h"
+#include "oneflow/core/vm/ep_stream_policy.h"
+#include "oneflow/core/vm/pinned_ep_stream_policy.h"
 #include "oneflow/core/vm/lazy_job_stream_type.h"
 #include "oneflow/core/vm/naive_stream_policy.h"
 #include "oneflow/core/device/device_context.h"
@@ -35,24 +35,19 @@ class Device;
 
 struct CreateStreamPolicy final : public StreamRoleVisitor<CreateStreamPolicy> {
   static Maybe<vm::StreamPolicy> VisitCompute(Symbol<Device> device) {
-    const auto* stream_type = SingletonPtr<vm::EpStreamType>();
-    return Create(stream_type, device);
+    return std::shared_ptr<vm::StreamPolicy>(new vm::EpStreamPolicy(device));
   }
   static Maybe<vm::StreamPolicy> VisitHost2Device(Symbol<Device> device) {
-    const auto* stream_type = SingletonPtr<vm::EventRecordedEpStreamType>();
-    return Create(stream_type, device);
+    return std::shared_ptr<vm::StreamPolicy>(new vm::EventRecordedEpStreamPolicy(device));
   }
   static Maybe<vm::StreamPolicy> VisitDevice2Host(Symbol<Device> device) {
-    const auto* stream_type = SingletonPtr<vm::EpD2HStreamType>();
-    return Create(stream_type, device);
+    return std::shared_ptr<vm::StreamPolicy>(new vm::EpD2HStreamPolicy(device));
   }
   static Maybe<vm::StreamPolicy> VisitSyncedLaunchedCommNet(Symbol<Device> device) {
-    const auto* stream_type = SingletonPtr<vm::EventRecordedEpStreamType>();
-    return Create(stream_type, device);
+    return std::shared_ptr<vm::StreamPolicy>(new vm::EventRecordedEpStreamPolicy(device));
   }
   static Maybe<vm::StreamPolicy> VisitAsyncedLaunchedCommNet(Symbol<Device> device) {
-    const auto* stream_type = SingletonPtr<vm::EventRecordedEpStreamType>();
-    return Create(stream_type, device);
+    return std::shared_ptr<vm::StreamPolicy>(new vm::EventRecordedEpStreamPolicy(device));
   }
   static Maybe<vm::StreamPolicy> VisitBarrier(Symbol<Device> device) {
     return std::shared_ptr<vm::StreamPolicy>(new vm::ControlStreamPolicy());
@@ -66,8 +61,7 @@ struct CreateStreamPolicy final : public StreamRoleVisitor<CreateStreamPolicy> {
     return Create(stream_type, device);
   }
   static Maybe<vm::StreamPolicy> VisitPinnedCompute(Symbol<Device> device) {
-    const auto* stream_type = SingletonPtr<vm::PinnedEpStreamType>();
-    return Create(stream_type, device);
+    return std::shared_ptr<vm::StreamPolicy>(new vm::PinnedEpStreamPolicy(device));
   }
 
  private:
