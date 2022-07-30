@@ -21,13 +21,6 @@ namespace oneflow {
 
 namespace {
 
-std::pair<std::string, int> GetPair(const std::string& bn) {
-  int32_t index = 0;
-  const size_t pos = bn.rfind('_');
-  if (pos != std::string::npos) { index = std::stoi(bn.substr(pos + 1)); }
-  return std::make_pair(bn.substr(0, pos), index);
-}
-
 void InitArgName2BnIndex2TensorTupleIndex(
     const std::vector<std::pair<std::string, int32_t>>& indexed_arg_pairs,
     std::unordered_map<std::string, std::vector<int32_t>>* arg_name2bn_index2tensor_tuple_index) {
@@ -43,6 +36,13 @@ void InitArgName2BnIndex2TensorTupleIndex(
 }
 
 }  // namespace
+
+std::pair<std::string, int> GetPair(const std::string& bn) {
+  int32_t index = 0;
+  const size_t pos = bn.rfind('_');
+  if (pos != std::string::npos) { index = std::stoi(bn.substr(pos + 1)); }
+  return std::make_pair(bn.substr(0, pos), index);
+}
 
 ArgTuple::ArgTuple(const std::vector<std::string>& indexed_bns) : indexed_bns_(indexed_bns) {
   indexed_arg_name_and_index_.reserve(indexed_bns.size());

@@ -92,10 +92,8 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
   });
 }
 
-
 void NormalForwardCompTaskNode::HandleInplaceRegsts() {
   const auto& _op = op();
-  
   if (_op->op_conf().has_user_conf()) {
     const auto& inplace_operation_info = _op->op_conf().user_conf().inplace_operation_info();
 
@@ -110,15 +108,17 @@ void NormalForwardCompTaskNode::HandleInplaceRegsts() {
       for (TaskEdge* in_edge : in_edges()) {
         CompTaskNode* comp_task_node = dynamic_cast<CompTaskNode*>(in_edge->src_node());
         if (!comp_task_node) continue;
-
-        if (comp_task_node->op()->op_conf().has_user_conf()
-            && comp_task_node->op()->op_name() == lbi.op_name()) {
+        if (comp_task_node->op()->op_name() == lbi.op_name()) {  // TODO: rewriter
           in_regst = comp_task_node->GetProducedRegst(GetOutRegstNameByObn(lbi.blob_name()));
           break;
         }
       }
 
-      CHECK(in_regst != nullptr) << "Must have found in_regst at this point!";
+      CHECK(in_regst != nullptr) << "Must have found in_regst at this point! But operation: "
+                                 << _op->op_name() << " of obn: " << obn
+                                 << " does not have an associated in_regst!"
+                                 << " The asscociated in_regst is with lbn: " << lbi.op_name()
+                                 << "/" << lbi.blob_name();
 
       in_regst->set_enable_reuse_mem(true);
       out_regst->set_hint_inplace_consumed_regst_desc_id(in_regst->regst_desc_id());

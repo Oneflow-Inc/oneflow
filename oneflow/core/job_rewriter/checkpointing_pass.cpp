@@ -227,6 +227,15 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
       }
       if (input_num == 0) { source_node_in_fake_subgraph.insert(fake_op_name); }
 
+      // update the inplace info for input lbi
+      for (auto& it : *user_conf->mutable_inplace_operation_info()) {
+        auto& lbi = *it.second.mutable_lbi();
+        std::string old_input_op_name = lbi.op_name();
+        if (subgraph_op_name2op_node.find(old_input_op_name) != subgraph_op_name2op_node.end()) {
+          lbi.set_op_name(kCheckpointingFakeOpNamePrefix + old_input_op_name);
+        }
+      }
+
       fake_op_name2conf.emplace(fake_op_name, fake_op_conf);
     }
 
@@ -258,6 +267,15 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
           if (subgraph_op_name2op_node.find(old_input_op_name) != subgraph_op_name2op_node.end()) {
             list_s.set_s(i, kCheckpointingFakeOpNamePrefix + old_lbn);
           }
+        }
+      }
+
+      // update the input lbi in the inplace info
+      for (auto& it : *user_conf->mutable_inplace_operation_info()) {
+        auto& lbi = *it.second.mutable_lbi();
+        std::string old_input_op_name = lbi.op_name();
+        if (subgraph_op_name2op_node.find(old_input_op_name) != subgraph_op_name2op_node.end()) {
+          lbi.set_op_name(kCheckpointingFakeOpNamePrefix + old_input_op_name);
         }
       }
 

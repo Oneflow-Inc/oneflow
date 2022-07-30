@@ -20,6 +20,7 @@ limitations under the License.
 #include <unordered_map>
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/singleton.h"
+#include "oneflow/core/framework/arg_tuple.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/op_kernel_infer_cache.h"
@@ -584,18 +585,11 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
       return;
     }
 
-    auto get_pair = [](const std::string& bn) -> std::pair<std::string, int32_t> {
-      int32_t index = 0;
-      const size_t pos = bn.rfind('_');
-      if (pos != std::string::npos) { index = std::stoi(bn.substr(pos + 1)); }
-      return std::make_pair(bn.substr(0, pos), index);
-    };
-
     for (const auto& it : user_op_conf_.op_conf().user_conf().inplace_operation_info()) {
       const std::string& obn = it.first;
       const std::string& ibn = it.second.ibn();
-      CHECK_EQ(arg2bn_tensor_pair_[get_pair(obn)].tensor->raw_dptr(),
-               arg2bn_tensor_pair_[get_pair(ibn)].tensor->raw_dptr())
+      CHECK_EQ(arg2bn_tensor_pair_[GetPair(obn)].tensor->raw_dptr(),
+               arg2bn_tensor_pair_[GetPair(ibn)].tensor->raw_dptr())
           << "Inplace operation: " << user_op_conf_.op_name() << " does not have input: " << ibn
           << " and output: " << obn << " as the same pointer! ";
     }

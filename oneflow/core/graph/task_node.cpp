@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/memory/memory_case_util.h"
 

@@ -22,6 +22,8 @@ limitations under the License.
 
 namespace oneflow {
 
+std::pair<std::string, int> GetPair(const std::string& bn);
+
 class ArgTuple final {
  public:
   explicit ArgTuple(const std::vector<std::string>& indexed_bns);

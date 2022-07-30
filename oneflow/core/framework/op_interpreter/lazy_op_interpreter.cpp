@@ -426,6 +426,7 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
   const std::string& empty_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   CHECK_OR_RETURN(empty_lbn.empty());
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
+  VariableOpOutputTensorScope::Global()->Add(input_tensor);
   OperatorConf op_conf;
   op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
   op_conf.set_device_tag(JUST(GetDeviceTagOfTensor(input_tensor)));
@@ -945,10 +946,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
     for (int i = 0; i < op_expr.output_size(); ++i) {
       const auto& output_tensor = outputs->at(i);
       if (output_tensor) {  // inplace output
-        if (VariableOpOutputTensorScope::Global()->Has(
-                output_tensor)) {  // we do not handle inplace var op tensors for now
-          continue;
-        }
+        // we do not handle inplace var op tensors for now
+        // TODO: deal with var op in the future
+        if (VariableOpOutputTensorScope::Global()->Has(output_tensor)) { continue; }
 
         const std::string& obn = op_expr.indexed_obns().at(i);
         const std::string& output_tensor_lbn = TensorNameScope::Global()->Lookup(output_tensor);
@@ -967,6 +967,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
 
         CHECK(!ibn.empty()) << "Inplace output should use the same tensor in input!";
 
+        // store the inplace attributes for later use
         (*op_conf->mutable_user_conf()->mutable_inplace_operation_info())[obn].set_ibn(ibn);
         (*op_conf->mutable_user_conf()->mutable_inplace_operation_info())[obn]
             .mutable_lbi()
