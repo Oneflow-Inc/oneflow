@@ -124,7 +124,9 @@ class LinearBottleneck(nn.Module):
         out = self.out(x)
 
         if self.use_shortcut:
-            out[:, 0 : self.in_channels] += x
+            # inplace is not allowed since non-contiguous is not supported for add operation
+            # out[:, 0 : self.in_channels] += x
+            out[:, 0 : self.in_channels] = out[:, 0 : self.in_channels] + x
         return out
 
 
