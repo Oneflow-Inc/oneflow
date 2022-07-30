@@ -19,15 +19,15 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow._C.cosine_similarity,
     r"""
-    cosine_similarity(x1, x2, dim=1, eps=1e-8) -> Tensor
-
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.cosine_similarity.html
+    cosine_similarity(x1: Tensor, x2: Tensor, dim: int=1, eps: float=1e-8) -> Tensor
 
     Returns cosine similarity between ``x1`` and ``x2``, computed along dim. ``x1`` and ``x2`` must be broadcastable
     to a common shape. ``dim`` refers to the dimension in this common shape. Dimension ``dim`` of the output is
     squeezed (see :func:`oneflow.squeeze`), resulting in the
     output tensor having 1 fewer dimension.
 
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.cosine_similarity.html
+    
     .. math ::
         \text{similarity} = \dfrac{x_1 \cdot x_2}{\max(\Vert x_1 \Vert _2 \cdot \Vert x_2 \Vert _2, \epsilon)}
     

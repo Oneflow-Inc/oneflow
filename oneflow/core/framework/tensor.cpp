@@ -65,12 +65,14 @@ std::shared_ptr<Tensor> Parameter::pin_memory() const {
                                                         const Symbol<Device>& device, bool is_lazy,
                                                         bool requires_grad, bool is_leaf) {
   const auto& tensor_meta =
-      std::make_shared<LocalTensorMeta>(std::make_shared<Shape>(*shape), dtype, device);
+      SymbolOf(LocalTensorMeta(std::make_shared<Shape>(*shape), dtype, device));
   if (is_lazy) {
     const auto& impl = std::make_shared<LazyLocalTensorImpl>(tensor_meta, requires_grad, is_leaf);
     return std::make_shared<LocalTensor>(impl);
   } else {
-    const auto& impl = std::make_shared<EagerLocalTensorImpl>(tensor_meta, requires_grad, is_leaf);
+    const auto& impl = std::make_shared<EagerLocalTensorImpl>(requires_grad, is_leaf);
+    const auto& dep_object = NewLocalDepObject();
+    JUST(impl->InitEagerBlobObject(tensor_meta, dep_object));
     return std::make_shared<LocalTensor>(impl);
   }
 }
@@ -127,15 +129,10 @@ std::shared_ptr<Tensor> GlobalTensor::pin_memory() const {
 }
 
 Maybe<Tensor> GlobalTensor::clone() const {
-  const auto& local_tensor = JUST(cur_rank_phy_tensor());
-  const auto& device_type = JUST(local_tensor->device())->type();
-  int64_t device_id = JUST(local_tensor->device())->device_id();
-  const auto& cloned_local_tensor =
-      JUST(functional::Copy(local_tensor, device_type, device_id, /*pin_memory=*/false));
+  std::shared_ptr<Tensor> input = std::const_pointer_cast<Tensor>(shared_from_this());
   DisableCheckGlobalTensorMetaScope disable_meta_check{};
-  return functional::LocalToGlobal(cloned_local_tensor, JUST(parallel_desc()),
-                                   *JUST(GetSbpList(JUST(nd_sbp()))), *shape(), dtype(),
-                                   /* sync_data */ true);
+  return JUST(functional::ToGlobal(input, JUST(parallel_desc()), *JUST(GetSbpList(JUST(nd_sbp()))),
+                                   /*grad_sbp_parallels=*/{}, /* sync_data */ true, /*copy=*/true));
 }
 
 Maybe<GlobalTensor> GlobalTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,

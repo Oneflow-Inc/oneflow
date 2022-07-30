@@ -65,12 +65,12 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
     // Set Middle result shape.
     long cublas_aligned_aux_ld = AlignReluAuxLd(cublas_aux_ld);
     int64_t aux_size = cublas_aligned_aux_ld / 32;  // Cause we use int32_t as dtype
-    *ctx->OutputShape("cublas_aux", idx) = Shape({m, aux_size});
-    *ctx->OutputShape("hidden", idx) = Shape({m, n});
+    *ctx->MutOutputShape("cublas_aux", idx) = Shape({m, aux_size});
+    *ctx->MutOutputShape("hidden", idx) = Shape({m, n});
     // Set for next layer.
     k = n;
   }
-  *ctx->OutputShape("out", 0) = {m, n};
+  *ctx->MutOutputShape("out", 0) = {m, n};
   return Maybe<void>::Ok();
 }
 
@@ -83,16 +83,16 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(in_desc.data_type(), first_in_desc.data_type());
   }
 
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_data_type() = first_in_desc.data_type();
 
   for (int32_t i = 0; i < ctx->output_size("hidden"); i++) {
-    user_op::TensorDesc* hidden_desc = ctx->OutputTensorDesc("hidden", i);
+    user_op::TensorDesc* hidden_desc = ctx->MutOutputTensorDesc("hidden", i);
     *hidden_desc->mut_data_type() = first_in_desc.data_type();
   }
 
   for (int32_t i = 0; i < ctx->output_size("cublas_aux"); i++) {
-    user_op::TensorDesc* aux_desc = ctx->OutputTensorDesc("cublas_aux", i);
+    user_op::TensorDesc* aux_desc = ctx->MutOutputTensorDesc("cublas_aux", i);
     *aux_desc->mut_data_type() = DataType::kInt32;
   }
 
@@ -157,6 +157,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
       std::string cublas_dy = last_bias_grad;
 
       if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_ASYNC_GRAD", false)) {
+        const std::vector<float> alpha_list(weight_num - 1, 1.0);
         // Use Fully Fused MLP Backward.
         user_op::UserOpConfWrapperBuilder fused_mlp_grad_builder(op.op_name() + "_fused_mlp_grad");
         fused_mlp_grad_builder.Op("cublas_fused_mlp_grad")
@@ -164,7 +165,8 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
             .Input("x", op.input("x", 0))
             .Output("d_x")
             .Output("d_biases", weight_num)
-            .Output("d_weights", weight_num);
+            .Output("d_weights", weight_num)
+            .Attr<std::vector<float>>("alpha_list", alpha_list);
 
         for (int32_t hidden_layer_idx = 0; hidden_layer_idx < weight_num; hidden_layer_idx++) {
           fused_mlp_grad_builder.Input("weights", op.input("weights", hidden_layer_idx))

@@ -176,6 +176,49 @@ class TestModule(flow.unittest.TestCase):
         test_case.assertEqual(module_num, 2)
 
     @flow.unittest.skip_unless_1n1d()
+    def test_load_map_location(test_case):
+        x = flow.ones(1, 2, 3)
+        y = flow.ones(2, 3, 4)
+        with tempfile.TemporaryDirectory() as save_dir:
+            flow.save({"x": x, "y": y}, save_dir)
+            loaded = flow.load(save_dir, map_location="cuda")
+        assert np.array_equal(loaded["x"].numpy(), x.numpy())
+        assert loaded["x"].device == flow.device("cuda")
+        assert np.array_equal(loaded["y"].numpy(), y.numpy())
+        assert loaded["y"].device == flow.device("cuda")
+
+        with tempfile.TemporaryDirectory() as save_dir:
+            flow.save({"x": x, "y": y}, save_dir)
+            loaded = flow.load(save_dir, map_location="cpu")
+        assert np.array_equal(loaded["x"].numpy(), x.numpy())
+        assert loaded["x"].device == flow.device("cpu")
+        assert np.array_equal(loaded["y"].numpy(), y.numpy())
+        assert loaded["y"].device == flow.device("cpu")
+
+        x = x.to_global(sbp=flow.sbp.broadcast, placement=flow.placement("cuda", [0]))
+        y = y.to_global(sbp=flow.sbp.broadcast, placement=flow.placement("cuda", [0]))
+
+        with tempfile.TemporaryDirectory() as save_dir:
+            flow.save({"x": x, "y": y}, save_dir, global_dst_rank=0)
+            loaded = flow.load(
+                save_dir, global_src_rank=0, map_location=flow.placement("cuda", [0])
+            )
+        assert np.array_equal(loaded["x"].numpy(), x.numpy())
+        assert loaded["x"].placement == flow.placement("cuda", [0])
+        assert np.array_equal(loaded["y"].numpy(), y.numpy())
+        assert loaded["y"].placement == flow.placement("cuda", [0])
+
+        with tempfile.TemporaryDirectory() as save_dir:
+            flow.save({"x": x, "y": y}, save_dir, global_dst_rank=0)
+            loaded = flow.load(
+                save_dir, global_src_rank=0, map_location=flow.placement("cpu", [0])
+            )
+        assert np.array_equal(loaded["x"].numpy(), x.numpy())
+        assert loaded["y"].placement == flow.placement("cpu", [0])
+        assert np.array_equal(loaded["y"].numpy(), y.numpy())
+        assert loaded["y"].placement == flow.placement("cpu", [0])
+
+    @flow.unittest.skip_unless_1n1d()
     def test_save_state_dict(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
