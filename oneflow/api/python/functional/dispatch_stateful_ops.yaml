@@ -155,3 +155,10 @@
 - name: "dispatch_eager_nccl_all_reduce"
   signature: "Tensor (OpExpr op, Tensor input, String parallel_conf, Bool async_launch=False) => DispatchEagerNcclAllReduce"
   bind_python: True
+
+- name: "dispatch_raw_reader"
+  signature: [
+    "Tensor (OpExpr op, StringList files, Shape shape, DataType data_type, Int64 batch_size, Bool random_shuffle,  Int64 shuffle_block_size,  Int64 random_seed=-1,  Device device=None) => DispatchRawReader",
+    "Tensor (OpExpr op, StringList files, Shape shape, DataType data_type, Int64 batch_size, Bool random_shuffle,  Int64 shuffle_block_size, Int64 random_seed=-1, Placement placement, SbpList sbp) => DispatchRawReader",
+  ]
+  bind_python: True
