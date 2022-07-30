@@ -48,22 +48,14 @@ class CollectiveCommunication {
   virtual ~CollectiveCommunication() = default;
 };
 
-template<typename CollectiveCommunicationT>
-class CollectiveCommunicationFactory {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CollectiveCommunicationFactory);
-  CollectiveCommunicationFactory() = default;
-  virtual ~CollectiveCommunicationFactory() = default;
-
-  using CollectiveCommunicationType = CollectiveCommunicationT;
-};
-
-template<typename FactoryType, typename... Args>
-static std::unique_ptr<typename FactoryType::CollectiveCommunicationType>
-NewCollectiveCommunication(DeviceType device_type, Args&&... args) {
-  std::unique_ptr<FactoryType> factory = NewObjUniquePtr<DeviceType, FactoryType>(device_type);
-  if (!factory) { return nullptr; }
-  return factory->New(std::forward<Args>(args)...);
+template<typename CollectiveCommunicationType, typename... Args>
+static std::unique_ptr<CollectiveCommunicationType> NewCollectiveCommunication(
+    DeviceType device_type, Args&&... args) {
+  std::unique_ptr<CollectiveCommunicationType> collective_communication_entry =
+      NewObjUniquePtr<DeviceType, CollectiveCommunicationType>(device_type);
+  if (!collective_communication_entry) { return nullptr; }
+  collective_communication_entry->Init(std::forward<Args>(args)...);
+  return collective_communication_entry;
 }
 
 #define REGISTER_COLLECTIVE_COMMUNICATION_FACTORY(device, Base, Derived) \

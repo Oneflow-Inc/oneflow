@@ -28,21 +28,14 @@ class AllReduce : public CollectiveCommunication {
   AllReduce() = default;
   ~AllReduce() override = default;
 
+  virtual void Init(DataType dtype, ReduceType reduce_type) = 0;
+
   virtual void Launch(ep::Stream* stream, const void* in, void* out, size_t elem_cnt,
                       const std::shared_ptr<CommunicationContext>& communicator) const = 0;
 };
 
-class AllReduceFactory : public CollectiveCommunicationFactory<AllReduce> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(AllReduceFactory);
-  AllReduceFactory() = default;
-  ~AllReduceFactory() override = default;
-
-  virtual std::unique_ptr<AllReduce> New(DataType dtype, ReduceType reduce_type) = 0;
-};
-
 inline bool IsAllReduceRegistered(DeviceType device_type) {
-  return IsClassRegistered<DeviceType, AllReduceFactory>(device_type);
+  return IsClassRegistered<DeviceType, AllReduce>(device_type);
 }
 
 }  // namespace ccl

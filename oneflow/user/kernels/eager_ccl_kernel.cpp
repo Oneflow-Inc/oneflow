@@ -84,9 +84,8 @@ class EagerCclAllReduceKernel final : public user_op::OpKernel {
     ccl::ReduceType reduce_type = ccl::kSum;
     if (in->data_type() == kBool) { reduce_type = ccl::kMax; }
 
-    std::unique_ptr<ccl::AllReduce> all_reduce =
-        ccl::NewCollectiveCommunication<ccl::AllReduceFactory>(ctx->device_type(), in->data_type(),
-                                                               reduce_type);
+    std::unique_ptr<ccl::AllReduce> all_reduce = ccl::NewCollectiveCommunication<ccl::AllReduce>(
+        ctx->device_type(), in->data_type(), reduce_type);
     all_reduce->Launch(ctx->stream(), in->dptr(), out->mut_dptr(), out->shape_view().elem_cnt(),
                        kernel_cache->communication_ctx());
   }

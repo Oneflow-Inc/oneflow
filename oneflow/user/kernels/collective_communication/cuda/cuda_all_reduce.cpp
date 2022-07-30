@@ -39,9 +39,13 @@ inline ncclRedOp_t GetNcclReduceType(ReduceType reduce_type) {
 class CudaAllReduce final : public AllReduce {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaAllReduce);
-  CudaAllReduce(DataType datatype, ReduceType reduce_type)
-      : datatype_(datatype), reduce_type_(reduce_type) {}
+  CudaAllReduce() = default;
   ~CudaAllReduce() = default;
+
+  void Init(DataType datatype, ReduceType reduce_type) override {
+    this->datatype_ = datatype;
+    this->reduce_type_ = reduce_type;
+  }
 
   void Launch(ep::Stream* stream, const void* in, void* out, size_t elem_cnt,
               const std::shared_ptr<CommunicationContext>& communication_ctx) const override {
@@ -58,19 +62,7 @@ class CudaAllReduce final : public AllReduce {
   ReduceType reduce_type_;
 };
 
-class CudaAllReduceFactory : public AllReduceFactory {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CudaAllReduceFactory);
-  CudaAllReduceFactory() = default;
-  ~CudaAllReduceFactory() override = default;
-
-  std::unique_ptr<AllReduce> New(DataType datatype, ReduceType reduce_type) override {
-    return std::make_unique<CudaAllReduce>(datatype, reduce_type);
-  }
-};
-
-REGISTER_COLLECTIVE_COMMUNICATION_FACTORY(DeviceType::kCUDA, AllReduceFactory,
-                                          CudaAllReduceFactory);
+REGISTER_COLLECTIVE_COMMUNICATION_FACTORY(DeviceType::kCUDA, AllReduce, CudaAllReduce);
 
 }  // namespace ccl
 

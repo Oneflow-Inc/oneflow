@@ -165,9 +165,13 @@ DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, DtypeAllReduce, MAKE_ALL_REDUCE_ENTRY,  /
 class CpuAllReduce final : public AllReduce {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuAllReduce);
-  CpuAllReduce(DataType datatype, ReduceType reduce_type)
-      : datatype_(datatype), reduce_type_(reduce_type) {}
+  CpuAllReduce() = default;
   ~CpuAllReduce() = default;
+
+  void Init(DataType datatype, ReduceType reduce_type) override {
+    this->datatype_ = datatype;
+    this->reduce_type_ = reduce_type;
+  }
 
   void Launch(ep::Stream* stream, const void* in, void* out, size_t elem_cnt,
               const std::shared_ptr<CommunicationContext>& communication_ctx) const override {
@@ -183,18 +187,7 @@ class CpuAllReduce final : public AllReduce {
   ReduceType reduce_type_;
 };
 
-class CpuAllReduceFactory : public AllReduceFactory {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CpuAllReduceFactory);
-  CpuAllReduceFactory() = default;
-  ~CpuAllReduceFactory() override = default;
-
-  std::unique_ptr<AllReduce> New(DataType datatype, ReduceType reduce_type) override {
-    return std::make_unique<CpuAllReduce>(datatype, reduce_type);
-  }
-};
-
-REGISTER_COLLECTIVE_COMMUNICATION_FACTORY(DeviceType::kCPU, AllReduceFactory, CpuAllReduceFactory);
+REGISTER_COLLECTIVE_COMMUNICATION_FACTORY(DeviceType::kCPU, AllReduce, CpuAllReduce);
 
 }  // namespace ccl
 
