@@ -687,6 +687,7 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
       && reduced_in_nd_sbp == reduced_out_nd_sbp) {
     return 0.0;
   }
+  if (requires_same_sbp) { return kUnsupportedBoxing; }
 #ifdef WITH_CUDA
   static const bool enable_general_basic_communication =
       ParseBooleanFromEnv("ONEFLOW_BOXING_ENABLE_GENERAL_BASIC_COMMUNICATION", false);
