@@ -245,14 +245,13 @@ class TestSliceUpdate(flow.unittest.TestCase):
         value_grad = np.array([1.0, 1.0, 1.0]).astype(np.float32)
         test_case.assertTrue(np.array_equal(-test_m.value_grad, value_grad))
 
-    @unittest.skip("TODO:(zhaoluyang) test when slice_update support stride")
     def test_slice_update_with_stride(test_case, device):
         arr = np.arange(24).reshape(2, 2, 2, 3).astype(np.float32)
         np_in = arr
         np_out = np_in.transpose(1, 0, 2, 3)
         np_out[0:1, 1:2, :, 1:2] = 3.1415
 
-        input = flow.tensor(arr, device=flow.device(device))
+        input = flow.tensor(arr)
         output = input.permute(1, 0, 2, 3)
         output[0:1, 1:2, :, 1:2] = 3.1415
 
