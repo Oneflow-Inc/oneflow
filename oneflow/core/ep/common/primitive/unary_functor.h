@@ -254,7 +254,7 @@ template<DeviceType device, typename Src>
 struct UnaryFunctor<device, UnaryOp::kIsFinite, bool, Src> {
   UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC bool operator()(Src src) const { return false; }
+  OF_DEVICE_FUNC bool operator()(Src src) const { return true; }
 };
 
 }  // namespace primitive
