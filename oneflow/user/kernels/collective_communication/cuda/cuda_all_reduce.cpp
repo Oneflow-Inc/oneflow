@@ -43,8 +43,8 @@ class CudaAllReduce final : public AllReduce {
   ~CudaAllReduce() = default;
 
   void Init(DataType datatype, ReduceType reduce_type) override {
-    this->datatype_ = datatype;
-    this->reduce_type_ = reduce_type;
+    this->nccl_datatype_ = GetNcclDataType(datatype);
+    this->nccl_reduce_op_ = GetNcclReduceType(reduce_type);
   }
 
   void Launch(ep::Stream* stream, const void* in, void* out, size_t elem_cnt,
@@ -52,14 +52,14 @@ class CudaAllReduce final : public AllReduce {
     const auto& cuda_communication_ctx =
         std::dynamic_pointer_cast<CudaCommunicationContext>(communication_ctx);
     CHECK(cuda_communication_ctx);
-    OF_NCCL_CHECK(ncclAllReduce(
-        in, out, elem_cnt, GetNcclDataType(datatype_), GetNcclReduceType(reduce_type_),
-        cuda_communication_ctx->nccl_comm(), stream->As<ep::CudaStream>()->cuda_stream()));
+    OF_NCCL_CHECK(ncclAllReduce(in, out, elem_cnt, nccl_datatype_, nccl_reduce_op_,
+                                cuda_communication_ctx->nccl_comm(),
+                                stream->As<ep::CudaStream>()->cuda_stream()));
   }
 
  private:
-  DataType datatype_;
-  ReduceType reduce_type_;
+  ncclDataType_t nccl_datatype_;
+  ncclRedOp_t nccl_reduce_op_;
 };
 
 REGISTER_COLLECTIVE_COMMUNICATION_FACTORY(DeviceType::kCUDA, AllReduce, CudaAllReduce);
