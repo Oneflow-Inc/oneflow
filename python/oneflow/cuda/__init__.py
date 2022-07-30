@@ -94,7 +94,9 @@ def set_device(device: Union[flow.device, str, int]) -> None:
     if flow.env.get_world_size() > 0:
         if device_idx == flow.env.get_local_rank():
             return
-        raise ValueError("Setting cuda device to a device whose index does not equal to the local rank is not supported.")
+        raise ValueError(
+            "Setting cuda device to a device whose index does not equal to the local rank is not supported."
+        )
     flow._oneflow_internal.SetCudaDeviceIndex(device_idx)
 
 

@@ -2146,7 +2146,7 @@ class TensorSetItemFunctor {
     if (tensor_indices.empty()) {
       Shape slice_shape(slice_dims);
       if (slice_shape != *(value_tensor->shape())) {
-        value_tensor = JUST(Reshape(value_tensor, slice_shape));
+        value_tensor = JUST(Expand(value_tensor, slice_shape));
       }
       JUST(SliceUpdate(expand_input, value_tensor, start, end, step, /*inplace=*/true));
     } else {
