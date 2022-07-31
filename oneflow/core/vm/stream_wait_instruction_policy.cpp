@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #ifdef WITH_CUDA
-#include <cuda_runtime_api.h>
+#include <cuda_runtime.h>
 #endif  // WITH_CUDA
 #include "oneflow/core/vm/stream_wait_instruction_policy.h"
 #include "oneflow/core/vm/ep_event.h"
