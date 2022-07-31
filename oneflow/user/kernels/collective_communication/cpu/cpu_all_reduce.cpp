@@ -165,7 +165,7 @@ DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, DtypeAllReduce, MAKE_ALL_REDUCE_ENTRY,  /
 class CpuAllReduce final : public AllReduce {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuAllReduce);
-  CpuAllReduce() = default;
+  CpuAllReduce() : datatype_(kInvalidDataType), reduce_type_(kInvalidReduceFunctorType) {}
   ~CpuAllReduce() = default;
 
   void Init(DataType datatype, ReduceType reduce_type) override {

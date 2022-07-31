@@ -39,7 +39,7 @@ inline ncclRedOp_t GetNcclReduceType(ReduceType reduce_type) {
 class CudaAllReduce final : public AllReduce {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaAllReduce);
-  CudaAllReduce() = default;
+  CudaAllReduce() : nccl_datatype_(), nccl_reduce_op_() {}
   ~CudaAllReduce() = default;
 
   void Init(DataType datatype, ReduceType reduce_type) override {

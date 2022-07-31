@@ -38,7 +38,7 @@ inline std::shared_ptr<CommunicationContext> NewCommunicationContext(
       << DeviceType_Name(parallel_desc->device_type()) << ". " << kOfBugIssueUploadPrompt;
   ;
   std::shared_ptr<CommunicationContext> communication_ctx =
-      NewObjSharedPtr<DeviceType, CommunicationContext>(device_type);
+      std::shared_ptr<CommunicationContext>(NewObj<DeviceType, CommunicationContext>(device_type));
   communication_ctx->Init(parallel_desc);
   return communication_ctx;
 }
