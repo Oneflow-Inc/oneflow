@@ -372,7 +372,9 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   CHECK_EQ_OR_RETURN(result->ndim(), required_ndim)
       << Error::RuntimeError() << "The indexing result dimension is " << result->ndim()
       << ", but shoule be " << required_ndim;
-  if (is_continuous_subspace) { result = JUST(AdjustSubspace(result, indices, index_ndim, /*reverse*/false)); }
+  if (is_continuous_subspace) {
+    result = JUST(AdjustSubspace(result, indices, index_ndim, /*reverse*/ false));
+  }
   return result;
 }
 
@@ -426,15 +428,13 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
 
   Shape expand_shape = *(valid_indices[0]->shape());
   for (int i = 0; i < indices.size(); ++i) {
-    if (!indices[i]) {
-      expand_shape.emplace_back(input->shape()->At(i));
-    }
+    if (!indices[i]) { expand_shape.emplace_back(input->shape()->At(i)); }
   }
   std::shared_ptr<Tensor> expand_value = JUST(Expand(value, expand_shape));
   // reverse adjust value if index subspace is continuous but transposed since the start
   // dimension cannot be specified for `scatter_nd`
   if (is_continuous_subspace) {
-    expand_value = JUST(AdjustSubspace(expand_value, indices, index_ndim, /*reverse*/true));
+    expand_value = JUST(AdjustSubspace(expand_value, indices, index_ndim, /*reverse*/ true));
   }
   JUST(TensorScatterNdUpdate(transposed_input, packed_indices, expand_value, /*inplace=*/true));
   return Maybe<void>::Ok();
