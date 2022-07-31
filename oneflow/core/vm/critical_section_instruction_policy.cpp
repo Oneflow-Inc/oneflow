@@ -13,38 +13,30 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/eager/critical_section_phy_instr_operand.h"
-#include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/stream.h"
-#include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/common/decorator.h"
-#include "oneflow/core/device/device_context.h"
+
+#include "oneflow/core/vm/critical_section_instruction_policy.h"
+#include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/device/ep_based_event_record.h"
 #include "oneflow/core/register/ofblob.h"
-#include "oneflow/core/common/container_util.h"
-#include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/vm_object.h"
 
 namespace oneflow {
 namespace vm {
 
-void CriticalSectionBeginPhyInstrOperand::ForEachDependence(
-    const std::function<void(vm::Dependence* compute)>& DoEach) const {
+void CriticalSectionBeginInstructionPolicy::ForEachDependence(
+    const std::function<void(Dependence*)>& DoEach) const {
   for (const auto& eager_blob_object : *eager_blob_objects_) {
     DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
   }
 }
 
-void CriticalSectionEndPhyInstrOperand::ForEachDependence(
-    const std::function<void(vm::Dependence* compute)>& DoEach) const {
-  DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object()));
-}
-
-void CriticalSectionBeginPhyInstrOperand::ForEachMutDependence(
-    const std::function<void(vm::Dependence* compute)>& DoEach) const {
+void CriticalSectionBeginInstructionPolicy::ForEachMutDependence(
+    const std::function<void(Dependence*)>& DoEach) const {
   DoEach(vm_stream_->schedule_local_dep_object().get());
 }
 
-void CriticalSectionBeginPhyInstrOperand::FinishInvalidInterfaceEventRecords() {
+void CriticalSectionBeginInstructionPolicy::FinishInvalidInterfaceEventRecords() {
   for (const auto& op_name : interfaces_op_names()) {
     size_t index = CHECK_JUST(MapAt(op_name2interface_index_, op_name));
     if (!interfaces_valid().at(index)) {
@@ -55,14 +47,14 @@ void CriticalSectionBeginPhyInstrOperand::FinishInvalidInterfaceEventRecords() {
   }
 }
 
-void CriticalSectionBeginPhyInstrOperand::Finish() {
+void CriticalSectionBeginInstructionPolicy::Finish() {
   for (const auto& pair : *op_name2end_event_record_) {
     pair.second->TryInit(std::make_shared<NaiveEventRecord>());
   }
 }
 
-void InputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_blob_ptr,
-                                                                  const std::string& op_name) {
+void InputCriticalSectionBeginInstructionPolicy::AccessBlobByOpName(uint64_t of_blob_ptr,
+                                                                    const std::string& op_name) {
   int64_t i = CHECK_JUST(MapAt(op_name2interface_index_, op_name));
   CHECK(interfaces_valid().at(i));
   OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
@@ -86,8 +78,8 @@ void InputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_bl
   }
 }
 
-void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_blob_ptr,
-                                                                   const std::string& op_name) {
+void OutputCriticalSectionBeginInstructionPolicy::AccessBlobByOpName(uint64_t of_blob_ptr,
+                                                                     const std::string& op_name) {
   int64_t i = CHECK_JUST(MapAt(op_name2interface_index_, op_name));
   CHECK(interfaces_valid().at(i));
   OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
@@ -107,8 +99,13 @@ void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_b
   }
 }
 
-void CriticalSectionEndPhyInstrOperand::ForEachMutDependence(
-    const std::function<void(vm::Dependence* compute)>& DoEach) const {
+void CriticalSectionEndInstructionPolicy::ForEachDependence(
+    const std::function<void(vm::Dependence*)>& DoEach) const {
+  DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object()));
+}
+
+void CriticalSectionEndInstructionPolicy::ForEachMutDependence(
+    const std::function<void(vm::Dependence*)>& DoEach) const {
   DoEach(vm_stream_->schedule_local_dep_object().get());
 }
 
