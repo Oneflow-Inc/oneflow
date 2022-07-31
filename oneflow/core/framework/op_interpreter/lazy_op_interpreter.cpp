@@ -951,7 +951,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
         // TODO: deal with var op in the future
         if (VariableOpOutputTensorScope::Global()->Has(output_tensor)) { continue; }
 
-        const std::string& obn = op_expr.indexed_obns().at(i);
+        const std::string& obn = JUST(VectorAt(op_expr.indexed_obns(), i));
 
         std::pair<std::string, int32_t> input_arg_index_pair = std::make_pair("", -1);
         for (int j = 0; j < inputs.size(); j++) {
@@ -961,7 +961,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
           }
         }
 
-        CHECK(!input_arg_index_pair.first.empty())
+        CHECK_OR_RETURN(!input_arg_index_pair.first.empty())
             << "Inplace output tensor should correspond to a tensor in input! But no such tensor "
                "is found!";
 
