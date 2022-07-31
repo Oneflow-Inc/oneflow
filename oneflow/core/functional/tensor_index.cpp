@@ -177,7 +177,7 @@ Maybe<void> TransposeFront(const std::shared_ptr<Tensor>& input, const TensorTup
 }
 
 Maybe<Tensor> AdjustSubspace(const std::shared_ptr<Tensor>& input, const TensorTuple& indices,
-                             const int& index_ndim) {
+                             const int& index_ndim, bool reverse = false) {
   int index_subspace_pos = -1;
   for (int i = 0; i < indices.size(); ++i) {
     if (indices.at(i)) {
@@ -192,8 +192,13 @@ Maybe<Tensor> AdjustSubspace(const std::shared_ptr<Tensor>& input, const TensorT
       << "Failed to adjust subspace since the index is out of bounds for tensor dimension " << ndim;
   std::vector<int> permute;
   permute.reserve(ndim);
-  for (int i = 0; i < index_subspace_pos; ++i) { permute.emplace_back(i + index_ndim); }
-  for (int i = 0; i < index_ndim; ++i) { permute.emplace_back(i); }
+  if (reverse) {
+    for (int i = 0; i < index_ndim; ++i) { permute.emplace_back(index_subspace_pos + i); }
+    for (int i = 0; i < index_subspace_pos; ++i) { permute.emplace_back(i); }
+  } else {
+    for (int i = 0; i < index_subspace_pos; ++i) { permute.emplace_back(i + index_ndim); }
+    for (int i = 0; i < index_ndim; ++i) { permute.emplace_back(i); }
+  }
   for (int i = permute.size(); i < ndim; ++i) { permute.emplace_back(i); }
   return Transpose(input, permute);
 }
@@ -367,7 +372,7 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   CHECK_EQ_OR_RETURN(result->ndim(), required_ndim)
       << Error::RuntimeError() << "The indexing result dimension is " << result->ndim()
       << ", but shoule be " << required_ndim;
-  if (is_continuous_subspace) { result = JUST(AdjustSubspace(result, indices, index_ndim)); }
+  if (is_continuous_subspace) { result = JUST(AdjustSubspace(result, indices, index_ndim, /*reverse*/false)); }
   return result;
 }
 
@@ -377,6 +382,7 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
   CHECK_GE_OR_RETURN(input->ndim(), indices.size())
       << Error::IndexError() << "Too many indices for tensor of dimension " << input->ndim();
   const auto& expanded_indices = JUST(ExpandIndices(indices));
+  bool is_continuous_subspace = JUST(IsContinuousSubspace(indices));
 
   // Since the start dimension cannot be specified for `scatter_nd`, so we should
   // transpose the input as long as the first index is null.
@@ -392,6 +398,7 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
     CHECK_EQ_OR_RETURN(value->nelement(), 0) << Error::IndexError() << "invalid indices";
     return Maybe<void>::Ok();
   }
+  int index_ndim = valid_indices[0]->ndim();
   auto packed_indices = JUST(Stack(valid_indices, 0));
   int packed_ndim = packed_indices->ndim();
   CHECK_GT_OR_RETURN(packed_ndim, 0)
@@ -417,18 +424,17 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
     }
   }
 
-  // expand the value when the value is a scalar.
-  std::shared_ptr<Tensor> expand_value = value;
-  if (value->shape()->elem_cnt() == 1) {
-    DimVector dims;
-    const Shape& packed_indices_shape = *packed_indices->shape();
-    // insert the number of slice tensors
-    dims.emplace_back(packed_indices_shape.Count(0, packed_ndim - 1));
-    // insert the shape of each slice tensor
-    int64_t slice_dims = packed_indices_shape.At(packed_ndim - 1);
-    dims.insert(dims.end(), transposed_input->shape()->begin() + slice_dims,
-                transposed_input->shape()->end());
-    expand_value = JUST(Expand(value, Shape(dims)));
+  Shape expand_shape = *(valid_indices[0]->shape());
+  for (int i = 0; i < indices.size(); ++i) {
+    if (indices[i]) {
+      expand_shape.emplace_back(input->shape()->At(i));
+    }
+  }
+  std::shared_ptr<Tensor> expand_value = JUST(Expand(value, expand_shape));
+  // reverse adjust value if index subspace is continuous but transposed since the start
+  // dimension cannot be specified for `scatter_nd`
+  if (is_continuous_subspace) {
+    expand_value = JUST(AdjustSubspace(expand_value, indices, index_ndim, /*reverse*/true));
   }
   JUST(TensorScatterNdUpdate(transposed_input, packed_indices, expand_value, /*inplace=*/true));
   return Maybe<void>::Ok();
