@@ -426,9 +426,25 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
     }
   }
 
-  Shape expand_shape = *(valid_indices[0]->shape());
-  for (int i = 0; i < indices.size(); ++i) {
-    if (!indices[i]) { expand_shape.emplace_back(input->shape()->At(i)); }
+  Shape expand_shape;
+  if (is_continuous_subspace) {
+    bool index_subspace_begin = true;
+    for (int i = 0; i < indices.size(); ++i) {
+      // if the index is the first not-null index
+      if (indices[i] && index_subspace_begin) {
+        for (int j = 0; j < index_ndim; ++j) {
+          expand_shape.emplace_back(valid_indices[0]->shape()->At(j));
+        }
+        index_subspace_begin = false;
+      } else {
+        expand_shape.emplace_back(input->shape()->At(i));
+      }
+    }
+  } else {
+    expand_shape = *(valid_indices[0]->shape());
+    for (int i = 0; i < indices.size(); ++i) {
+      if (!indices[i]) { expand_shape.emplace_back(input->shape()->At(i)); }
+    }
   }
   std::shared_ptr<Tensor> expand_value = JUST(Expand(value, expand_shape));
   // reverse adjust value if index subspace is continuous but transposed since the start
