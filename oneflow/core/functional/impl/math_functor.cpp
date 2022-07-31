@@ -1003,12 +1003,7 @@ class ArangeFunctor {
         JUST(attrs.SetAttr<DataType>("dtype", DType::Float()->data_type()));
       }
     }
-    OpExprInterpContext ctx(attrs);
-    if (device.has_value()) {
-      ctx.device = JUST(device);
-    } else {
-      ctx.device = JUST(Device::New("cpu"));
-    }
+    OpExprInterpContext ctx(attrs, device.value_or(JUST(Device::New("cpu"))));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }
 

@@ -88,13 +88,7 @@ class RandFunctor {
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-
-    OpExprInterpContext ctx(attrs, distribution_state);
-    if (device.has_value()) {
-      ctx.device = JUST(device);
-    } else {
-      ctx.device = JUST(Device::New("cpu"));
-    }
+    OpExprInterpContext ctx(attrs, device.value_or(JUST(Device::New("cpu"))), distribution_state);
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
@@ -167,13 +161,7 @@ class RandNFunctor {
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-
-    OpExprInterpContext ctx(attrs, distribution_state);
-    if (device.has_value()) {
-      ctx.device = JUST(device);
-    } else {
-      ctx.device = JUST(Device::New("cpu"));
-    }
+    OpExprInterpContext ctx(attrs, device.value_or(JUST(Device::New("cpu"))), distribution_state);
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
@@ -243,14 +231,7 @@ class RandIntFunctor {
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-
-    OpExprInterpContext ctx(attrs, distribution_state);
-    if (device.has_value()) {
-      ctx.device = JUST(device);
-    } else {
-      ctx.device = JUST(Device::New("cpu"));
-    }
-
+    OpExprInterpContext ctx(attrs, device.value_or(JUST(Device::New("cpu"))), distribution_state);
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
@@ -385,15 +366,7 @@ class RandPermFunctor {
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-
-    OpExprInterpContext ctx(attrs, distribution_state);
-
-    if (device.has_value()) {
-      ctx.device = JUST(device);
-    } else {
-      ctx.device = JUST(Device::New("cpu"));
-    }
-
+    OpExprInterpContext ctx(attrs, device.value_or(JUST(Device::New("cpu"))), distribution_state);
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return functional::Cast(result, dtype, /*pin_memory=*/false);

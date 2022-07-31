@@ -50,12 +50,7 @@ class EyeDevcieFunctor {
     JUST(attrs.SetAttr<int64_t>("rows", rows.As<int64_t>()));
     JUST(attrs.SetAttr<int64_t>("cols", cols.value_or(rows).As<int64_t>()));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    OpExprInterpContext ctx(attrs);
-    if (device.has_value()) {
-      ctx.device = JUST(device);
-    } else {
-      ctx.device = JUST(Device::New("cpu"));
-    }
+    OpExprInterpContext ctx(attrs, device.value_or(JUST(Device::New("cpu"))));
     auto res = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(res->set_requires_grad(requires_grad));
     return res;
