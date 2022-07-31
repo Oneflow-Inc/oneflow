@@ -250,7 +250,9 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
   }
 
   SliceParams large_slice_param;
+  std::copy(large->stride().begin(), large->stride().end(), large_slice_param.stride);
   SliceParams small_slice_param;
+  std::copy(small->stride().begin(), small->stride().end(), small_slice_param.stride);
   ConstructSliceParamsLarge(slice_ctx, positive_start_vec, positive_stop_vec, step_attr,
                             large->shape_view(), &large_slice_param);
   ConstructSliceParamsSmall(slice_ctx, positive_start_vec, positive_stop_vec, step_attr,

@@ -77,21 +77,28 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
     CHECK_EQ(entire_params.ndim, NDIM);
     CHECK_EQ(sliced_params.ndim, NDIM);
     int64_t elem_cnt = entire_params.elem_cnt();
-    SliceIndexHelper<NDIM> entire_splitted_large_idx_cvtr(entire_params.dims);
+    std::cout << "elem_cnt: " << elem_cnt << std::endl;
+    SliceIndexHelper<NDIM> entire_splitted_large_idx_cvtr =
+        NdIndexStrideOffsetHelper<int64_t, NDIM>(entire_params.stride);
     SliceIndexHelper<NDIM> sliced_splitted_large_idx_cvtr(entire_params.size);
-    SliceIndexHelper<NDIM> entire_full_small_idx_cvtr(sliced_params.dims);
+    SliceIndexHelper<NDIM> entire_full_small_idx_cvtr =
+        NdIndexStrideOffsetHelper<int64_t, NDIM>(sliced_params.stride);
     SliceIndexHelper<NDIM> sliced_full_small_idx_cvtr(sliced_params.size);
     // Calculate the length of continuous part
     int cnt = 1;
-    for (int i = NDIM - 1; i >= 0; i--) {
-      if (entire_params.step[i] == 1) { cnt *= entire_params.size[i]; }
-      if (!entire_params.IsFullSlice(i) || !sliced_params.IsFullSlice(i)) { break; }
-    }
+    // for (int i = NDIM - 1; i >= 0; i--) {
+    //   if (entire_params.step[i] == 1) { cnt *= entire_params.size[i]; }
+    //   if (!entire_params.IsFullSlice(i) || !sliced_params.IsFullSlice(i)) { break; }
+    // }
     for (int i = 0; i < elem_cnt; i += cnt) {
       const int64_t entire_offset = SliceOffsetToEntireOffset<NDIM>(
           i, entire_params, entire_splitted_large_idx_cvtr, sliced_splitted_large_idx_cvtr);
       const int64_t sliced_offset = SliceOffsetToEntireOffset<NDIM>(
           i, sliced_params, entire_full_small_idx_cvtr, sliced_full_small_idx_cvtr);
+      std::cout << "entire_offset: " << entire_offset << std::endl;
+      std::cout << "sliced_offset: " << sliced_offset << std::endl;
+      std::cout << "entire[entire_offset]: " << entire[entire_offset] << std::endl;
+      std::cout << "sliced[sliced_offset]: " << sliced[sliced_offset] << std::endl << std::endl;
       std::copy(entire + entire_offset, entire + entire_offset + cnt, sliced + sliced_offset);
     }
   }

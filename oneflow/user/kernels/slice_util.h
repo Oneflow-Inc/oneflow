@@ -42,6 +42,7 @@ constexpr size_t kSliceMaxDims = 8;
 struct SliceParams {
   int64_t ndim = 0;
   int64_t dims[kSliceMaxDims]{0};
+  int64_t stride[kSliceMaxDims]{0};
   int64_t start[kSliceMaxDims]{0};
   int64_t step[kSliceMaxDims]{0};
   int64_t size[kSliceMaxDims]{0};
