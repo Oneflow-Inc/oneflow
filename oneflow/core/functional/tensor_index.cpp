@@ -426,7 +426,7 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
 
   Shape expand_shape = *(valid_indices[0]->shape());
   for (int i = 0; i < indices.size(); ++i) {
-    if (indices[i]) {
+    if (!indices[i]) {
       expand_shape.emplace_back(input->shape()->At(i));
     }
   }
