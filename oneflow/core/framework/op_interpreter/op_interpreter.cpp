@@ -91,6 +91,11 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
         std::any_of(inputs.begin(), inputs.end(),
                     [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
   }
+  if (requires_grad) {
+    for (const auto& tensor : *outputs) {
+      if (tensor && (!tensor->requires_grad())) { return Error::RuntimeError(); }
+    }
+  }
   {
     autograd::AutoGradMode mode(false);
     JUST(internal_->Apply(op_expr, inputs, outputs, ctx));
