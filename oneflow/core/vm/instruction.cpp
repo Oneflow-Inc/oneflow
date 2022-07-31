@@ -33,9 +33,9 @@ std::string Instruction::DebugName() const {
 }
 
 void Instruction::__Init__(Stream* stream,
-                           std::unique_ptr<InstructionPolicy>&& instruction_policy) {
+                           std::shared_ptr<InstructionPolicy>&& instruction_policy) {
   stream_ = stream;
-  instruction_policy_ = std::move(instruction_policy);
+  instruction_policy_ = instruction_policy;
 }
 
 void Instruction::InitStatus() { instruction_policy_->InitInstructionStatusIf(this); }
