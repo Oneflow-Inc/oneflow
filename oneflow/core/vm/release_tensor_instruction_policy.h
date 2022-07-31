@@ -130,60 +130,64 @@ class SlowReleaseTensorInstructionPolicy final : public ReleaseTensorInstruction
 
 struct MakeReleaseTensorInstructionPolicy
     : public StreamRoleVisitor<MakeReleaseTensorInstructionPolicy> {
-  static std::unique_ptr<vm::InstructionPolicy> VisitCompute(
+  static Maybe<vm::InstructionPolicy> VisitCompute(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     return Make(data_type, eager_blob_object, stream);
   }
-  static std::unique_ptr<vm::InstructionPolicy> VisitHost2Device(
+  static Maybe<vm::InstructionPolicy> VisitHost2Device(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     return Make(data_type, eager_blob_object, stream);
   }
-  static std::unique_ptr<vm::InstructionPolicy> VisitDevice2Host(
+  static Maybe<vm::InstructionPolicy> VisitDevice2Host(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     return Make(data_type, eager_blob_object, stream);
   }
-  static std::unique_ptr<vm::InstructionPolicy> VisitSyncedLaunchedCommNet(
+  static Maybe<vm::InstructionPolicy> VisitSyncedLaunchedCommNet(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     return Make(data_type, eager_blob_object, stream);
   }
-  static std::unique_ptr<vm::InstructionPolicy> VisitAsyncedLaunchedCommNet(
+  static Maybe<vm::InstructionPolicy> VisitAsyncedLaunchedCommNet(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     return Make(data_type, eager_blob_object, stream);
   }
-  static std::unique_ptr<vm::InstructionPolicy> VisitBarrier(
+  static Maybe<vm::InstructionPolicy> VisitBarrier(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN() << "ReleaseTensor instruction not supported in Barrier stream";
   }
-  static std::unique_ptr<vm::InstructionPolicy> VisitCriticalSection(
+  static Maybe<vm::InstructionPolicy> VisitCriticalSection(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN()
+        << "ReleaseTensor instruction not supported in CriticalSection stream";
   }
-  static std::unique_ptr<vm::InstructionPolicy> VisitLazyJobLauncher(
+  static Maybe<vm::InstructionPolicy> VisitLazyJobLauncher(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED_THEN_RETURN()
+        << "ReleaseTensor instruction not supported in LaunchLazyJob stream";
   }
-  static std::unique_ptr<vm::InstructionPolicy> VisitPinnedCompute(
+  static Maybe<vm::InstructionPolicy> VisitPinnedCompute(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     return VisitCompute(data_type, eager_blob_object, stream);
   }
 
  private:
-  static std::unique_ptr<vm::InstructionPolicy> Make(
+  static Maybe<vm::InstructionPolicy> Make(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     if (IsPODDataType(data_type)) {
-      return std::make_unique<vm::FastReleaseTensorInstructionPolicy>(eager_blob_object, stream);
+      return std::shared_ptr<vm::InstructionPolicy>(
+          new vm::FastReleaseTensorInstructionPolicy(eager_blob_object, stream));
     } else {
-      return std::make_unique<vm::SlowReleaseTensorInstructionPolicy>(eager_blob_object, stream);
+      return std::shared_ptr<vm::InstructionPolicy>(
+          new vm::SlowReleaseTensorInstructionPolicy(eager_blob_object, stream));
     }
   }
 };

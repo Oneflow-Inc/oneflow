@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/vm/caching_allocator.h"
 #include "oneflow/core/vm/fuse_instruction_policy.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/naive_instruction_policy.h"
 #include "oneflow/core/vm/release_tensor_instruction_policy.h"
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/vm/naive_stream_policy.h"
@@ -112,7 +111,7 @@ void VirtualMachineEngine::MakeAndAppendFusedInstruction(
   auto* begin = fused_instruction_list.Begin();
   auto instruction = intrusive::make_shared<Instruction>(
       begin->mut_stream(),
-      std::make_unique<FuseInstructionPolicy>(std::move(fused_instruction_list)));
+      std::make_shared<FuseInstructionPolicy>(std::move(fused_instruction_list)));
   pending_instructions->EmplaceBack(std::move(instruction));
 }
 
