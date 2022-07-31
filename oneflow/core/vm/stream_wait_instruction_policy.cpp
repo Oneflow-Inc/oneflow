@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_CUDA
+#include <cuda_runtime_api.h>
+#endif  // WITH_CUDA
 #include "oneflow/core/vm/stream_wait_instruction_policy.h"
 #include "oneflow/core/vm/ep_event.h"
 #include "oneflow/core/vm/instruction.h"
