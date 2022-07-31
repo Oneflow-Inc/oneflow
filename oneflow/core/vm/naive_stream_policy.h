@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/vm/stream_policy.h"
 #include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/ep_device_context.h"
 #include "oneflow/core/vm/lazy_job_device_context.h"
 
 namespace oneflow {

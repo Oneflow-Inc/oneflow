@@ -1507,7 +1507,7 @@ def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", [NoSideEffect, DeclareOpI
 #endif // GET_ONEFLOW_CUDA_OP_DEFINITIONS
 
 // Group: DATASET
-// COCOReader, OFRecordReader, OneRecReader, ctc_greedy_decoder, megatron_gpt_mmap_data_loader, ofrecord_bytes_decoder, ofrecord_image_classification_reader, ofrecord_image_decoder, ofrecord_image_decoder_random_crop, ofrecord_raw_decoder, onerec_decoder
+// COCOReader, OFRecordReader, OneRecReader, ctc_greedy_decoder, megatron_gpt_mmap_data_loader, ofrecord_bytes_decoder, ofrecord_image_classification_reader, ofrecord_image_decoder, ofrecord_image_decoder_random_crop, ofrecord_raw_decoder, onerec_decoder, raw_reader
 // Total: 11
 
 #ifdef GET_ONEFLOW_DATASET_OP_DEFINITIONS
@@ -1762,6 +1762,27 @@ def OneFlow_OnerecDecoderOp : OneFlow_BaseOp<"onerec_decoder", [NoSideEffect, No
   let has_data_type_infer_fn = 1;
   let has_input_arg_modify_fn = 1;
   let has_output_arg_modify_fn = 1;
+}
+
+def OneFlow_RawReaderOp : OneFlow_BaseOp<"raw_reader", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    StrArrayAttr:$files,
+    OneFlow_DataType:$data_type,
+    ShapeAttr:$shape,
+    SI64Attr:$batch_size,
+    SI64Attr:$shuffle_block_size,
+    DefaultValuedAttr<BoolAttr, "true">:$random_shuffle,
+    DefaultValuedAttr<SI64Attr, "0">:$seed,
+    StrArrayAttr:$nd_sbp
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_nd_sbp_infer_fn = 1;
 }
 
 #endif // GET_ONEFLOW_DATASET_OP_DEFINITIONS
@@ -3683,7 +3704,7 @@ def OneFlow_CtcLossGradOp : OneFlow_BaseOp<"ctc_loss_grad", [NoSideEffect, Decla
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_DynamicLossScaleScheduleOp : OneFlow_BaseOp<"dynamic_loss_scale_schedule", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_DynamicLossScaleScheduleOp : OneFlow_BaseOp<"dynamic_loss_scale_schedule", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$count_not_finite,
     OneFlow_Tensor:$loss_scale,
