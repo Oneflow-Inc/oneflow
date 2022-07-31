@@ -72,8 +72,9 @@ Maybe<void> RawCheckCclP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   CHECK_OR_RETURN(NdSbpIsAllBroadcast(*out->nd_sbp()));
 
   CHECK_OR_RETURN(in->placement() == out->placement());
-  CHECK_OR_RETURN(
-      JUST(CheckCclKernelRegistered("eager_ccl_all_reduce", in->placement()->device_type())));
+  CHECK_OR_RETURN(                                                      // NOLINT
+      JUST(CheckCclKernelRegistered("eager_ccl_all_reduce",             // NOLINT
+                                    in->placement()->device_type())));  // NOLINT
   // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
@@ -92,8 +93,9 @@ Maybe<void> RawCheckCclP2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   CHECK_OR_RETURN(logical_shape.At(0) % in->placement()->parallel_num() == 0);
 
   CHECK_OR_RETURN(in->placement() == out->placement());
-  CHECK_OR_RETURN(
-      JUST(CheckCclKernelRegistered("eager_nccl_reduce_scatter", in->placement()->device_type())));
+  CHECK_OR_RETURN(                                                      // NOLINT
+      JUST(CheckCclKernelRegistered("eager_nccl_reduce_scatter",        // NOLINT
+                                    in->placement()->device_type())));  // NOLINT
   // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
@@ -113,8 +115,9 @@ Maybe<void> RawCheckCclS2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   CHECK_OR_RETURN(logical_shape.At(0) % in->placement()->parallel_num() == 0);
 
   CHECK_OR_RETURN(in->placement() == out->placement());
-  CHECK_OR_RETURN(
-      JUST(CheckCclKernelRegistered("eager_nccl_all_gather", in->placement()->device_type())));
+  CHECK_OR_RETURN(                                                      // NOLINT
+      JUST(CheckCclKernelRegistered("eager_nccl_all_gather",            // NOLINT
+                                    in->placement()->device_type())));  // NOLINT
   // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
