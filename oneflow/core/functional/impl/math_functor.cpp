@@ -1005,9 +1005,9 @@ class ArangeFunctor {
     }
     OpExprInterpContext ctx(attrs);
     if (device.has_value()) {
-	    ctx.device = JUST(device);
+      ctx.device = JUST(device);
     } else {
-	    ctx.device = JUST(Device::New("cpu"));
+      ctx.device = JUST(Device::New("cpu"));
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx);
   }

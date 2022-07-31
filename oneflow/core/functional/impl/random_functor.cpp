@@ -91,9 +91,9 @@ class RandFunctor {
 
     OpExprInterpContext ctx(attrs, distribution_state);
     if (device.has_value()) {
-	    ctx.device = JUST(device);
+      ctx.device = JUST(device);
     } else {
-	    ctx.device = JUST(Device::New("cpu"));
+      ctx.device = JUST(Device::New("cpu"));
     }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
@@ -246,11 +246,10 @@ class RandIntFunctor {
 
     OpExprInterpContext ctx(attrs, distribution_state);
     if (device.has_value()) {
-	    ctx.device = JUST(device);
+      ctx.device = JUST(device);
     } else {
-	    ctx.device = JUST(Device::New("cpu"));
+      ctx.device = JUST(Device::New("cpu"));
     }
-
 
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
@@ -388,11 +387,11 @@ class RandPermFunctor {
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     OpExprInterpContext ctx(attrs, distribution_state);
-    
+
     if (device.has_value()) {
-	    ctx.device = JUST(device);
+      ctx.device = JUST(device);
     } else {
-	    ctx.device = JUST(Device::New("cpu"));
+      ctx.device = JUST(Device::New("cpu"));
     }
 
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*randperm_op_, {}, ctx));

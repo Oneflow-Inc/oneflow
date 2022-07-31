@@ -52,9 +52,9 @@ class EyeDevcieFunctor {
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     OpExprInterpContext ctx(attrs);
     if (device.has_value()) {
-	    ctx.device = JUST(device);
+      ctx.device = JUST(device);
     } else {
-	    ctx.device = JUST(Device::New("cpu"));
+      ctx.device = JUST(Device::New("cpu"));
     }
     auto res = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(res->set_requires_grad(requires_grad));
