@@ -537,7 +537,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
                   return Maybe<void>::Ok();
                 });
-  m.add_functor("DispatchEagerNcclAllReduce",
+  m.add_functor("DispatchEagerCclAllReduce",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const std::string& parallel_conf, bool async_launch) -> Maybe<Tensor> {
                   MutableAttrMap attrs;
