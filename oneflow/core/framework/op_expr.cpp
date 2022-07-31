@@ -604,7 +604,7 @@ Maybe<void> BuiltinOpExprImpl<FeedInputOpConf>::BuildOpConf(OperatorConf* op_con
 template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<FeedInputOpConf>::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("identity"));
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("graph_feed_and_fetch"));
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());  // NOLINT
     JUST(op_grad_func_->Init(*this));
   }
@@ -623,7 +623,7 @@ Maybe<void> BuiltinOpExprImpl<FeedVariableOpConf>::BuildOpConf(OperatorConf* op_
 template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<FeedVariableOpConf>::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("identity"));
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("graph_feed_and_fetch"));
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());  // NOLINT
     JUST(op_grad_func_->Init(*this));
   }
@@ -643,7 +643,7 @@ Maybe<void> BuiltinOpExprImpl<FetchOutputOpConf>::BuildOpConf(OperatorConf* op_c
 template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<FetchOutputOpConf>::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("identity"));
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("graph_feed_and_fetch"));
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());  // NOLINT
     JUST(op_grad_func_->Init(*this));
   }
