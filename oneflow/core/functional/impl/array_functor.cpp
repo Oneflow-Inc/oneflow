@@ -2107,7 +2107,7 @@ class TensorSetItemFunctor {
       CHECK_OR_RETURN(view::IsViewApplicable(x)) << "expand dims must enable view, "
                                                     "please try to set ONEFLOW_DISABLE_VIEW=0";
       for (int i = 0; i < expand_dims.size(); ++i) {
-        int64_t dim = expand_dims.at(i);
+        int64_t dim = expand_dims[i];
         expand_input = JUST(functional::ExpandDims(expand_input, dim + i));
       }
     }
@@ -2137,7 +2137,7 @@ class TensorSetItemFunctor {
     DimVector slice_dims(ndims);
     std::vector<int64_t> start(ndims), end(ndims), step(ndims);
     for (int i = 0; i < ndims; ++i) {
-      const auto& slice = slice_indices.at(i);
+      const auto& slice = slice_indices[i];
       start[i] = slice.start();
       end[i] = slice.end();
       step[i] = slice.step();
