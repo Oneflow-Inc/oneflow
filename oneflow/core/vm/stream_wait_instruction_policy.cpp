@@ -13,9 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef WITH_CUDA
-#include <cuda_runtime.h>
-#endif  // WITH_CUDA
 #include "oneflow/core/vm/stream_wait_instruction_policy.h"
 #include "oneflow/core/vm/ep_event.h"
 #include "oneflow/core/vm/instruction.h"
@@ -94,8 +91,7 @@ void StreamWaitInstructionPolicy::Compute(vm::Instruction* instruction) {
     auto* ep_cuda_event = CHECK_NOTNULL(dynamic_cast<ep::CudaEvent*>(ep_event->mut_event()));
     auto* ep_cuda_stream = CHECK_NOTNULL(dynamic_cast<ep::CudaStream*>(to_ep_stream));
 
-    OF_CUDA_CHECK(cudaStreamWaitEvent(ep_cuda_stream->cuda_stream(), ep_cuda_event->cuda_event(),
-                                      cudaEventWaitDefault));
+    OF_CUDA_CHECK(cudaStreamWaitEvent(ep_cuda_stream->cuda_stream(), ep_cuda_event->cuda_event()));
 #else
     UNIMPLEMENTED();
 #endif  // WITH_CUDA
