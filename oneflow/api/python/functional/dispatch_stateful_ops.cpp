@@ -856,7 +856,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, *attrs));
                   return Maybe<void>::Ok();
                 });
-  struct DispatchEagerNcclAllReduce {
+  struct DispatchEagerCclAllReduce {
     Maybe<AttrMap> operator()(const std::string& parallel_conf, bool async_launch) {
       MutableAttrMap attrs;
       JUST(attrs.SetAttr("parallel_conf", parallel_conf));
@@ -864,12 +864,74 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       return AttrMap(attrs);
     }
   };
-  m.add_functor("DispatchEagerNcclAllReduce",
+  m.add_functor("DispatchEagerCclAllReduce",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const std::string& parallel_conf, bool async_launch) -> Maybe<Tensor> {
-                  constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(DispatchEagerNcclAllReduce);
+                  constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(DispatchEagerCclAllReduce);
                   const auto& attrs = JUST(GetAttrs(parallel_conf, async_launch));
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, *attrs);
+                });
+  struct DispatchRawReader {
+    Maybe<AttrMap> operator()(const std::vector<std::string>& files, const Shape& shape,
+                              const Symbol<DType>& data_type, const int64_t batch_size,
+                              const bool random_shuffle, const int64_t shuffle_block_size,
+                              int64_t random_seed) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::vector<std::string>>("files", files));
+      JUST(attrs.SetAttr<Shape>("shape", shape));
+      JUST(attrs.SetAttr<DataType>("data_type", data_type->data_type()));
+      JUST(attrs.SetAttr<int64_t>("batch_size", batch_size));
+      JUST(attrs.SetAttr<bool>("random_shuffle", random_shuffle));
+      JUST(attrs.SetAttr<int64_t>("shuffle_block_size", shuffle_block_size));
+      JUST(attrs.SetAttr<int64_t>("seed", random_seed));
+      JUST(attrs.SetAttr("nd_sbp", std::vector<std::string>()));
+      return AttrMap(attrs);
+    }
+  };
+
+  m.add_functor(
+      "DispatchRawReader",
+      [](const std::shared_ptr<OpExpr>& op, const std::vector<std::string>& files,
+         const Shape& shape, const Symbol<DType>& data_type, const int64_t batch_size,
+         const bool random_shuffle, const int64_t shuffle_block_size, int64_t random_seed,
+         const Optional<Symbol<Device>>& device) -> Maybe<Tensor> {
+        constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(DispatchRawReader);
+        const auto attrs = *JUST(GetAttrs(files, shape, data_type, batch_size, random_shuffle,
+                                          shuffle_block_size, random_seed));
+        return OpInterpUtil::Dispatch<Tensor>(*op, {}, OpExprInterpContext(attrs, JUST(device)));
+      });
+  struct DispatchGlobalRawReader {
+    Maybe<AttrMap> operator()(const std::vector<std::string>& files, const Shape& shape,
+                              const Symbol<DType>& data_type, const int64_t batch_size,
+                              const bool random_shuffle, const int64_t shuffle_block_size,
+                              int64_t random_seed, const Symbol<ParallelDesc>& placement,
+                              const std::vector<Symbol<SbpParallel>>& sbp_tuple) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::vector<std::string>>("files", files));
+      JUST(attrs.SetAttr<Shape>("shape", shape));
+      JUST(attrs.SetAttr<DataType>("data_type", data_type->data_type()));
+      JUST(attrs.SetAttr<int64_t>("batch_size", batch_size));
+      JUST(attrs.SetAttr<bool>("random_shuffle", random_shuffle));
+      JUST(attrs.SetAttr<int64_t>("shuffle_block_size", shuffle_block_size));
+      JUST(attrs.SetAttr<int64_t>("seed", random_seed));
+      JUST(attrs.SetAttr("nd_sbp", *JUST(GetNdSbpStrList(sbp_tuple))));
+      return AttrMap(attrs);
+    }
+  };
+
+  m.add_functor("DispatchRawReader",
+                [](const std::shared_ptr<OpExpr>& op, const std::vector<std::string>& files,
+                   const Shape& shape, const Symbol<DType>& data_type, const int64_t batch_size,
+                   const bool random_shuffle, const int64_t shuffle_block_size, int64_t random_seed,
+                   const Symbol<ParallelDesc>& placement,
+                   const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
+                  constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(DispatchGlobalRawReader);
+                  const auto attrs =
+                      *JUST(GetAttrs(files, shape, data_type, batch_size, random_shuffle,
+                                     shuffle_block_size, random_seed, placement, sbp_tuple));
+                  auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
+                  return OpInterpUtil::Dispatch<Tensor>(
+                      *op, {}, OpExprInterpContext(attrs, placement, nd_sbp));
                 });
 }
 
