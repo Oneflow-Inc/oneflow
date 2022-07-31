@@ -66,6 +66,9 @@ int GetNpuDeviceCount();
 
 void InitNpuContextOnce(int device_id);
 
+void NpuSynchronize(int device_id);
+
+
 }  // namespace oneflow
 
 #endif  // WITH_CUDA

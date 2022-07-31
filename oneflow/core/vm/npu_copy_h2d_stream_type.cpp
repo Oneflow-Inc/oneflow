@@ -68,6 +68,7 @@ intrusive::shared_ptr<StreamDesc> NpuCopyH2DStreamType::MakeStreamDesc(
   ret->set_stream_type(StaticGlobalStreamType<NpuCopyH2DStreamType>());
   ret->set_num_streams_per_machine(device_num);
   ret->set_num_streams_per_thread(device_num);
+  std::cout<<" resource.gpu_device_num() "<< resource.npu_device_num()<<std::endl;
   std::cout<<"NpuCopyH2DStreamType::MakeStreamDesc ret "<<ret.get()<<std::endl;
   return ret;
 }

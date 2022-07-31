@@ -36,6 +36,7 @@ message CudnnConfig {
 
 message Resource {
   optional int32 machine_num = 1 [default = 0];
+  optional int32 npu_device_num = 3 [default = 0];
   optional int32 gpu_device_num = 4 [default = 0];
   optional int32 cpu_device_num = 5 [default = 0];
   optional int32 comm_net_worker_num = 6 [default = 4];

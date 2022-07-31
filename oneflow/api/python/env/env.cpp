@@ -16,6 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/env/env.h"
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/device/npu_util.h"
 
 namespace py = pybind11;
 
@@ -37,6 +38,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetNodeSize", &GetNodeSize);
   m.def("GetLocalRank", &GetLocalRank);
   m.def("CudaGetDeviceCount", &CudaGetDeviceCount);
+  m.def("NpuGetDeviceCount", &NpuGetDeviceCount);
+  #ifdef WITH_NPU
+  m.def("NpuSynchronize",&NpuSynchronize);
+   m.def("GetNpuDeviceIndex", &GetNpuDeviceIndex);
+  #endif
   m.def("SetFLAGS_alsologtostderr", &SetFLAGS_alsologtostderr);
   m.def("GetFLAGS_alsologtostderr", &GetFLAGS_alsologtostderr);
   m.def("SetFLAGS_v", &SetFLAGS_v);

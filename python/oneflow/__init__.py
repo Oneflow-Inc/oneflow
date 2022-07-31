@@ -401,6 +401,7 @@ import oneflow.utils.data
 import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
+import oneflow.npu
 import oneflow.multiprocessing
 import oneflow.one_embedding
 

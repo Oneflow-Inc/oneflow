@@ -134,6 +134,11 @@ void InitNpuContextOnce(int device_id ) {
   });
 }
 
+
+void NpuSynchronize(int device_id) {
+  NpuCurrentDeviceGuard dev_guard(device_id);
+  OF_NPU_CHECK(aclrtSynchronizeDevice());
+}
 } // namespace oneflow
 
 #endif  // WITH_NPU

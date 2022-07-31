@@ -39,6 +39,7 @@ class ResourceDesc final {
   size_t CommNetWorkerNum() const { return resource_.comm_net_worker_num(); }
   int32_t CpuDeviceNum() const { return resource_.cpu_device_num(); }
   int32_t GpuDeviceNum() const { return resource_.gpu_device_num(); }
+  int32_t NpuDeviceNum() const { return resource_.npu_device_num(); }
   int32_t MemZoneNum() const { return GpuDeviceNum() + 1; }
   int32_t MaxMdSaveWorkerNum() const { return resource_.max_mdsave_worker_num(); }
   size_t reserved_host_mem_byte() const { return resource_.reserved_host_mem_mbyte() * kMB; }
