@@ -20,7 +20,7 @@ namespace oneflow {
 namespace one {
 
 struct GraphFeedAndFetchCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
+  bool requires_grad = false;
 };
 
 class GraphFeedAndFetch : public OpExprGradFunction<GraphFeedAndFetchCaptureState> {
