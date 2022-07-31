@@ -306,6 +306,7 @@ elseif(UNIX)
     ${oneflow_third_party_libs}
     ${EXTERNAL_TARGETS}
     -Wl,--no-whole-archive
+    -Wl,--as-needed
     -ldl
     -lrt)
   if(BUILD_CUDA)
