@@ -20,14 +20,16 @@ limitations under the License.
 #include "mlir/IR/BuiltinTypes.h"
 
 #include "mlir/IR/MLIRContext.h"
-#include "oneflow/api/common/ofblob.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/just.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/memory/memory_case_util.h"
 
 namespace mlir {
 
@@ -77,9 +79,13 @@ mlir::DenseElementsAttr __TensorToDenseElementsAttr(
   auto shape = tensor_->shape();
   std::vector<int64_t> shape_vec(shape->dim_vec().begin(), shape->dim_vec().end());
   std::vector<T> data(shape->elem_cnt());
-  const auto& callback = [&](uint64_t ofblob_ptr) {
-    CHECK_JUST(::oneflow::BlobBufferCopyUtil<T>::To(ofblob_ptr, data.data(), data.size()));
-  };
+  const auto& callback =
+      [&](::oneflow::ep::Stream* stream,
+          const std::shared_ptr<::oneflow::vm::EagerBlobObject>& eager_blob_object) {
+        ::oneflow::AutoMemcpy(stream, data.data(), eager_blob_object->dptr(),
+                              data.size() * sizeof(T), ::oneflow::memory::MakeHostMemCase(),
+                              eager_blob_object->mem_case());
+      };
   ::oneflow::one::SyncAccessTensorWithTimeOut(tensor_, callback, "const").GetOrThrow();
   return mlir::DenseElementsAttr::get(mlir::RankedTensorType::get(shape_vec, mlir_type),
                                       llvm::makeArrayRef(data));
@@ -101,10 +107,13 @@ std::shared_ptr<::oneflow::one::Tensor> __DenseElementsAttrToTensor(
           .GetPtrOrThrow();
 
   std::vector<T> data(dense_attr.getValues<T>().begin(), dense_attr.getValues<T>().end());
-  const auto& callback = [&](uint64_t of_blob_ptr) {
-    ::oneflow::BlobBufferCopyUtil<T>::From(of_blob_ptr, data.data(), tensor->shape()->elem_cnt())
-        .GetOrThrow();
-  };
+  const auto& callback =
+      [&](::oneflow::ep::Stream* stream,
+          const std::shared_ptr<::oneflow::vm::EagerBlobObject>& eager_blob_object) {
+        ::oneflow::AutoMemcpy(stream, eager_blob_object->mut_dptr(), data.data(),
+                              tensor->shape()->elem_cnt() * sizeof(T),
+                              eager_blob_object->mem_case(), ::oneflow::memory::MakeHostMemCase());
+      };
   ::oneflow::one::SyncAccessTensorWithTimeOut(tensor, callback, "mut").GetOrThrow();
   return tensor;
 }
