@@ -76,7 +76,10 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object);
 
-  Maybe<void> TouchTensors(const vm::EagerBlobObjectListPtr& eager_blob_object);
+  Maybe<void> TouchTensors(const vm::EagerBlobObjectListPtr& eager_blob_objects);
+
+  Maybe<void> TouchTensors(const vm::EagerBlobObjectListPtr& eager_blob_objects,
+                           Symbol<Stream> stream);
 
   template<typename T>
   Maybe<void> SyncAccessBlobByCallback(
