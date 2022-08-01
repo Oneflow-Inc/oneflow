@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "OneFlow/SBP/SBPDialect.h"
 
 #include "OneFlow/OneFlowOpsDialect.h.inc"
 

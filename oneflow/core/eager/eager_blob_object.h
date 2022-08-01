@@ -45,7 +45,8 @@ class TensorStorage {
   TensorStorage()
       : non_pod_allocator_(std::make_unique<MemoryAllocator>()),
         producer_stream_(NullOpt),
-        last_used_stream_(NullOpt) {}
+        last_used_stream_(NullOpt),
+        is_allocated_in_vm_(false) {}
 
   ~TensorStorage() {
     for (const auto& hook : storage_delete_hooks_) { hook(); }
@@ -54,12 +55,15 @@ class TensorStorage {
   size_t blob_bytes() const { return blob_bytes_; }
 
   char* blob_dptr() { return blob_dptr_.get(); }
+  bool is_allocated_in_vm() { return is_allocated_in_vm_; }
 
   MemoryAllocator* non_pod_allocator() { return non_pod_allocator_.get(); }
 
-  void set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>&& blob_dptr, size_t bytes) {
+  void set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>&& blob_dptr, size_t bytes,
+                     bool is_allocated_in_vm) {
     blob_dptr_ = std::move(blob_dptr);
     blob_bytes_ = bytes;
+    is_allocated_in_vm_ = is_allocated_in_vm;
   }
 
   const Optional<Symbol<::oneflow::Stream>>& producer_stream() const { return producer_stream_; }
@@ -90,6 +94,7 @@ class TensorStorage {
   Optional<Symbol<::oneflow::Stream>> producer_stream_;
   Optional<Symbol<::oneflow::Stream>> last_used_stream_;
   std::vector<std::function<void()>> storage_delete_hooks_;
+  bool is_allocated_in_vm_;
 };
 
 class EagerBlobObject final : public user_op::Tensor,
