@@ -157,20 +157,35 @@ bool IRRoundTrip<ir_pass_type>::IsEnabled(const JobPassCtx& ctx) const {
   return ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_ROUND_TRIP", false);
 }
 
+void SortJob(Job& job) {
+  auto* ops = job.mutable_net()->mutable_op();
+  std::sort(ops->begin(), ops->end(),
+            [](const oneflow::OperatorConf& l, const oneflow::OperatorConf& r) {
+              return l.name() < r.name();
+            });
+}
+
 template<IRPassType ir_pass_type>
 Maybe<void> IRRoundTrip<ir_pass_type>::Apply(Job* job, JobPassCtx* ctx) const {
   if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
   const OpGraph op_graph(*job);
+  Job job_before{};
+  job_before.CopyFrom(*job);
   RoundTripOneFlowJobWrapper<ir_pass_type> w(job);
+  SortJob(job_before);
+
   TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_before_ir_round_trip.prototxt"))
-      ->Write(*job);
+      ->Write(job_before);
   mlir::oneflow::RoundTripOneFlowJob(w, [](::oneflow::Job* job, std::string& reason) {
     // TODO: It is not clear how to define if extra boxing is introduced
     TODO();
     return true;
   });
+  Job job_after{};
+  job_after.CopyFrom(*job);
+  SortJob(job_after);
   TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_after_ir_round_trip.prototxt"))
-      ->Write(*job);
+      ->Write(job_after);
   return Maybe<void>::Ok();
 }
 
@@ -188,6 +203,12 @@ Maybe<void> SaveJobToIR(Job* job, const std::string& path) {
   RoundTripOneFlowJobWrapper<kBeforeAD> job_wrapper(job);
   ::mlir::oneflow::SaveJobToIR(job_wrapper, path);
   return Maybe<void>::Ok();
+}
+
+Maybe<std::string> ConvertJobToIR(Job* job) {
+  if (IsInDebugMode()) { TeePersistentLogStream::Create("saved_job")->Write(*job); }
+  RoundTripOneFlowJobWrapper<kBeforeAD> job_wrapper(job);
+  return ::mlir::oneflow::ConvertJobToIR(job_wrapper);
 }
 
 Maybe<void> LoadJobFromIR(Job* job, const std::string& path) {

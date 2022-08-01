@@ -39,8 +39,8 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SspVariableProxyOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("ref", 0) = ctx->InputDType("var", 0);
-  *ctx->OutputDType("value", 0) = ctx->InputDType("var", 0);
+  *ctx->MutOutputDType("ref", 0) = ctx->InputDType("var", 0);
+  *ctx->MutOutputDType("value", 0) = ctx->InputDType("var", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SspVariableProxyOp::ModifyOutputArg(

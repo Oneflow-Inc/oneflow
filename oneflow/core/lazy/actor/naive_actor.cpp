@@ -34,6 +34,7 @@ REGISTER_ACTOR(TaskType::kSliceBoxing, NaiveActor);
 REGISTER_ACTOR(TaskType::kBoxingIdentity, NaiveActor);
 REGISTER_ACTOR(TaskType::kCollectiveBoxingPack, NaiveActor);
 REGISTER_ACTOR(TaskType::kCollectiveBoxingUnpack, NaiveActor);
+REGISTER_ACTOR(TaskType::kNcclSendRecvBoxing, NaiveActor);
 REGISTER_ACTOR(TaskType::kDecodeH2D, NaiveActor);
 REGISTER_ACTOR(TaskType::kCriticalSectionWaitTick, NaiveActor);
 REGISTER_ACTOR(TaskType::kCopyHd, NaiveActor);

@@ -43,14 +43,14 @@ Maybe<void> GetSbp4ScalarMul(user_op::SbpContext* ctx) {
   /*static*/ Maybe<void> op_name##Op::GetSbp(user_op::SbpContext* ctx) { return get_sbp_fn(ctx); } \
   /*static*/ Maybe<void> op_name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {         \
     *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);                                     \
-    *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);                                \
+    *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);                             \
     return Maybe<void>::Ok();                                                                      \
   }                                                                                                \
   /*static*/ Maybe<void> op_name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) {        \
     return InferLogicalTensorDesc(ctx);                                                            \
   }                                                                                                \
   /*static*/ Maybe<void> op_name##Op::InferDataType(user_op::InferContext* ctx) {                  \
-    *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);                                        \
+    *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);                                     \
     return Maybe<void>::Ok();                                                                      \
   }
 
@@ -80,7 +80,7 @@ IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarReversePow, GetSbp4ScalarMath)
 /*static*/ Maybe<void> ScalarPowGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0))
       << Error::TypeError() << "Tensors dy and x must have same type";
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -101,7 +101,7 @@ IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarReversePow, GetSbp4ScalarMath)
 /*static*/ Maybe<void> ScalarReversePowGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0))
       << Error::TypeError() << "Tensors dy and x must have same type";
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 

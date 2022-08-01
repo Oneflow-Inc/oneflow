@@ -63,10 +63,10 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FusedLstmCellOp::InferDataType(user_op::InferContext* ctx) {
-  const oneflow::DataType& in_types = ctx->InputDType("cx", 0);
-  *ctx->OutputDType("hy", 0) = in_types;
-  *ctx->OutputDType("cy", 0) = in_types;
-  *ctx->OutputDType("workspace", 0) = in_types;
+  DataType in_types = ctx->InputDType("cx", 0);
+  *ctx->MutOutputDType("hy", 0) = in_types;
+  *ctx->MutOutputDType("cy", 0) = in_types;
+  *ctx->MutOutputDType("workspace", 0) = in_types;
   return Maybe<void>::Ok();
 }
 
@@ -119,10 +119,10 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FusedLstmCellGradOp::InferDataType(user_op::InferContext* ctx) {
-  const oneflow::DataType& in_types = ctx->InputDType("grad_hy", 0);
-  *ctx->OutputDType("grad_gates", 0) = in_types;
-  if (ctx->has_output("grad_cx", 0)) { *ctx->OutputDType("grad_cx", 0) = in_types; }
-  if (ctx->has_output("grad_bias", 0)) { *ctx->OutputDType("grad_bias", 0) = in_types; }
+  DataType in_types = ctx->InputDType("grad_hy", 0);
+  *ctx->MutOutputDType("grad_gates", 0) = in_types;
+  if (ctx->has_output("grad_cx", 0)) { *ctx->MutOutputDType("grad_cx", 0) = in_types; }
+  if (ctx->has_output("grad_bias", 0)) { *ctx->MutOutputDType("grad_bias", 0) = in_types; }
   return Maybe<void>::Ok();
 }
 

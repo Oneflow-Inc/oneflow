@@ -43,9 +43,9 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
 
 /* static */ Maybe<void> LayerNormOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
-  user_op::TensorDesc* mean = ctx->OutputTensorDesc("mean", 0);
-  user_op::TensorDesc* inv_variance = ctx->OutputTensorDesc("inv_variance", 0);
+  user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
+  user_op::TensorDesc* mean = ctx->MutOutputTensorDesc("mean", 0);
+  user_op::TensorDesc* inv_variance = ctx->MutOutputTensorDesc("inv_variance", 0);
   const bool center = ctx->Attr<bool>("center");
   const bool scale = ctx->Attr<bool>("scale");
   const int64_t begin_params_axis =
@@ -99,7 +99,7 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
 /* static */ Maybe<void> LayerNormOp::InferDataType(user_op::InferContext* ctx) {
   const bool center = ctx->Attr<bool>("center");
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
   *y->mut_data_type() = x.data_type();
   if (center) {
     const user_op::TensorDesc& beta = ctx->InputTensorDesc("beta", 0);
@@ -110,8 +110,8 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
     const user_op::TensorDesc& gamma = ctx->InputTensorDesc("gamma", 0);
     CHECK_EQ_OR_RETURN(gamma.data_type(), x.data_type());
   }
-  user_op::TensorDesc* mean = ctx->OutputTensorDesc("mean", 0);
-  user_op::TensorDesc* inv_variance = ctx->OutputTensorDesc("inv_variance", 0);
+  user_op::TensorDesc* mean = ctx->MutOutputTensorDesc("mean", 0);
+  user_op::TensorDesc* inv_variance = ctx->MutOutputTensorDesc("inv_variance", 0);
   *mean->mut_data_type() = InferBnParamDataType(x.data_type());
   *inv_variance->mut_data_type() = mean->data_type();
   return Maybe<void>::Ok();
@@ -122,7 +122,7 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
   const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
-  user_op::TensorDesc* dx = ctx->OutputTensorDesc("dx", 0);
+  user_op::TensorDesc* dx = ctx->MutOutputTensorDesc("dx", 0);
   CHECK_EQ_OR_RETURN(dy.shape(), x.shape());
   const int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
   CHECK_GT_OR_RETURN(begin_norm_axis, 0);
@@ -164,10 +164,10 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   CHECK_EQ_OR_RETURN(dy.data_type(), x.data_type());
   const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
   const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
-  const DataType& bn_param_data_type = InferBnParamDataType(x.data_type());
+  DataType bn_param_data_type = InferBnParamDataType(x.data_type());
   CHECK_EQ_OR_RETURN(mean.data_type(), bn_param_data_type);
   CHECK_EQ_OR_RETURN(inv_variance.data_type(), bn_param_data_type);
-  user_op::TensorDesc* dx = ctx->OutputTensorDesc("dx", 0);
+  user_op::TensorDesc* dx = ctx->MutOutputTensorDesc("dx", 0);
   *dx->mut_data_type() = dy.data_type();
   if (ctx->has_input("_add_to_output", 0)) {
     const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
@@ -200,11 +200,11 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
                              dy.shape().dim_vec().cend());
   const Shape param_shape(param_shape_dim_vec);
   if (has_beta_diff) {
-    user_op::TensorDesc* beta_diff = ctx->OutputTensorDesc("beta_diff", 0);
+    user_op::TensorDesc* beta_diff = ctx->MutOutputTensorDesc("beta_diff", 0);
     *beta_diff->mut_shape() = param_shape;
   }
   if (has_gamma_diff) {
-    user_op::TensorDesc* gamma_diff = ctx->OutputTensorDesc("gamma_diff", 0);
+    user_op::TensorDesc* gamma_diff = ctx->MutOutputTensorDesc("gamma_diff", 0);
     *gamma_diff->mut_shape() = param_shape;
   }
   return Maybe<void>::Ok();
@@ -237,11 +237,11 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const bool has_gamma_diff = has_tensor("gamma_diff");
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
   if (has_beta_diff) {
-    user_op::TensorDesc* beta_diff = ctx->OutputTensorDesc("beta_diff", 0);
+    user_op::TensorDesc* beta_diff = ctx->MutOutputTensorDesc("beta_diff", 0);
     *beta_diff->mut_data_type() = dy.data_type();
   }
   if (has_gamma_diff) {
-    user_op::TensorDesc* gamma_diff = ctx->OutputTensorDesc("gamma_diff", 0);
+    user_op::TensorDesc* gamma_diff = ctx->MutOutputTensorDesc("gamma_diff", 0);
     *gamma_diff->mut_data_type() = dy.data_type();
   }
   return Maybe<void>::Ok();
