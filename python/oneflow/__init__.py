@@ -236,14 +236,6 @@ session_ctx.NewDefaultSession(__oneflow_global_unique_env)
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultGlobalTransportTokenScope()
 
-oneflow._oneflow_internal.EnableEagerEnvironment(True)
-from oneflow.framework import python_callback
-
-oneflow._oneflow_internal.RegisterGlobalForeignCallback(
-    python_callback.global_python_callback
-)
-del python_callback
-
 
 class ExitHook:
     def __init__(self):

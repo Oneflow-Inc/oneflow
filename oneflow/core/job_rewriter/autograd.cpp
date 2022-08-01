@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/job/job_builder.h"
-#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job_rewriter/clone_grad.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/register/op_blob_arg.pb.h"
