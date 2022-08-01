@@ -29,9 +29,11 @@ def random_index(dim):
     step = np.random.randint(1, dim)
     return f"{start}:{stop}:{step}"
 
+
 def random_slice(dim_vec):
     slice_index = ", ".join(random_index(dim) for dim in dim_vec)
     return slice_index
+
 
 def _test_slice_grad_grad_impl(test_case):
     ndim = np.random.randint(2, 5)
@@ -41,9 +43,7 @@ def _test_slice_grad_grad_impl(test_case):
     slice_index = random_slice(x_shape)
     y = eval(f"x[{slice_index}]")
 
-    init_grad = random_tensor(
-        len(y.oneflow.shape), *y.oneflow.shape
-    ).requires_grad_()
+    init_grad = random_tensor(len(y.oneflow.shape), *y.oneflow.shape).requires_grad_()
     x_grad = torch.autograd.grad(y, x, init_grad, create_graph=True)[0]
     test_case.assertTrue(
         np.allclose(
@@ -54,14 +54,15 @@ def _test_slice_grad_grad_impl(test_case):
     init_grad_grad = random_tensor(
         len(x_grad.oneflow.shape), *x_grad.oneflow.shape
     ).requires_grad_()
-    dgrad = torch.autograd.grad(
-        x_grad, init_grad, init_grad_grad, create_graph=False
-    )[0]
+    dgrad = torch.autograd.grad(x_grad, init_grad, init_grad_grad, create_graph=False)[
+        0
+    ]
     test_case.assertTrue(
         np.allclose(
             dgrad.pytorch.detach().cpu().numpy(), dgrad.oneflow.detach().numpy(),
         )
     )
+
 
 class TestSliceHigherDerivative(flow.unittest.TestCase):
     def test_slice_grad_grad(test_case):
