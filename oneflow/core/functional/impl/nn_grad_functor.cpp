@@ -316,6 +316,29 @@ class SparseSoftmaxCrossEntropyGrad {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SparseSoftmaxCrossEntropyMsGrad {
+ public:
+  SparseSoftmaxCrossEntropyMsGrad() {
+    op_ = CHECK_JUST(one::OpBuilder("sparse_softmax_cross_entropy_ms_grad")
+                         .Input("prob")
+                         .Input("label")
+                         .Input("dy")
+                         .Output("prediction_diff")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& prob,
+                           const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {prob, label, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SmoothL1LossGradFunctor {
  public:
   SmoothL1LossGradFunctor() {
@@ -633,23 +656,37 @@ class CtcLossGradFunctor {
 class PadGradFunctor {
  public:
   PadGradFunctor() {
-    reflect_pad_grad_ =
+    reflect_pad1d_grad_ =
+        CHECK_JUST(one::OpBuilder("reflection_pad1d_grad").Input("dy").Output("dx").Build());
+    reflect_pad2d_grad_ =
         CHECK_JUST(one::OpBuilder("reflection_pad2d_grad").Input("dy").Output("dx").Build());
-    replicate_pad_grad_ =
+    replicate_pad1d_grad_ =
+        CHECK_JUST(one::OpBuilder("replication_pad1d_grad").Input("dy").Output("dx").Build());
+    replicate_pad2d_grad_ =
         CHECK_JUST(one::OpBuilder("replication_pad2d_grad").Input("dy").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, const std::vector<int64_t>& pad,
                            const std::string& mode, const Scalar& value) const {
     const int64_t ndim = dy->shape()->NumAxes();
-    size_t padding_size = 2 * ndim;
-    CHECK_LE_OR_RETURN(pad.size(), padding_size)
-        << Error::RuntimeError() << "Pad size should less than or equal to input axes * 2.";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
     if (mode == "reflect") {
-      return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_grad_, {dy}, attrs);
+      if (ndim == 3) {
+        return OpInterpUtil::Dispatch<Tensor>(*reflect_pad1d_grad_, {dy}, attrs);
+      } else if (ndim == 4) {
+        return OpInterpUtil::Dispatch<Tensor>(*reflect_pad2d_grad_, {dy}, attrs);
+      } else {
+        UNIMPLEMENTED_THEN_RETURN() << "only 3D/4D reflect padding are supported for now";
+      }
+
     } else if (mode == "replicate") {
-      return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_grad_, {dy}, attrs);
+      if (ndim == 3) {
+        return OpInterpUtil::Dispatch<Tensor>(*replicate_pad1d_grad_, {dy}, attrs);
+      } else if (ndim == 4) {
+        return OpInterpUtil::Dispatch<Tensor>(*replicate_pad2d_grad_, {dy}, attrs);
+      } else {
+        UNIMPLEMENTED_THEN_RETURN() << "only 3D/4D replicate padding are supported for now";
+      }
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode
                                   << ", but only constant, reflect and replicate are valid.";
@@ -657,8 +694,10 @@ class PadGradFunctor {
   }
 
  private:
-  std::shared_ptr<OpExpr> reflect_pad_grad_;
-  std::shared_ptr<OpExpr> replicate_pad_grad_;
+  std::shared_ptr<OpExpr> reflect_pad1d_grad_;
+  std::shared_ptr<OpExpr> reflect_pad2d_grad_;
+  std::shared_ptr<OpExpr> replicate_pad1d_grad_;
+  std::shared_ptr<OpExpr> replicate_pad2d_grad_;
 };
 
 class AvgPoolNdGradFunctor {
@@ -1211,8 +1250,13 @@ class FusedMLPGradFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
                                 const std::shared_ptr<one::Tensor>& x, const TensorTuple& weights,
-                                const TensorTuple& cublas_aux, const TensorTuple& hidden) const {
+                                const TensorTuple& cublas_aux, const TensorTuple& hidden,
+                                const std::vector<float>& alpha_list) const {
+    MutableAttrMap attrs;
     const int64_t weight_size = weights.size();
+    CHECK_EQ_OR_RETURN(alpha_list.size(), weight_size - 1)
+        << "Alpha list size should be equal to weight_size - 1. ";
+    JUST(attrs.SetAttr<std::vector<float>>("alpha_list", alpha_list));
     TensorTuple input(2 + 3 * weight_size);
     input[0] = dy;
     input[1] = x;
@@ -1220,7 +1264,7 @@ class FusedMLPGradFunctor {
     std::copy(cublas_aux.begin(), cublas_aux.end(), input.begin() + 2 + weight_size);
     std::copy(hidden.begin(), hidden.end(), input.begin() + 2 + 2 * weight_size);
 #if CUDA_VERSION >= 11060
-    return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_[weight_size], input);
+    return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_[weight_size], input, attrs);
 #endif
     UNIMPLEMENTED_THEN_RETURN() << "Only Support in CUDA_VERSION >= 11060";
   }
@@ -1248,6 +1292,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SparseCrossEntropyGradFunctor>("SparseCrossEntropyGrad");
   m.add_functor<impl::SparseCrossEntropyMsGradFunctor>("SparseCrossEntropyMsGrad");
   m.add_functor<impl::SparseSoftmaxCrossEntropyGrad>("SparseSoftmaxCrossEntropyGrad");
+  m.add_functor<impl::SparseSoftmaxCrossEntropyMsGrad>("SparseSoftmaxCrossEntropyMsGrad");
   m.add_functor<impl::SmoothL1LossGradFunctor>("SmoothL1LossGrad");
   m.add_functor<impl::CombinedMarginLossGradFunctor>("CombinedMarginLossGrad");
   m.add_functor<impl::AffineGridGradFunctor>("AffineGridGrad");

@@ -132,8 +132,8 @@ class NmsGpuKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("out", 0) == DataType::kInt8)           \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                               \
-        Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                          \
-        int64_t num_boxes = in_shape->At(0);                                            \
+        const Shape& in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                    \
+        int64_t num_boxes = in_shape.At(0);                                             \
         int64_t blocks = CeilDiv<int64_t>(num_boxes, kBlockSize);                       \
         return num_boxes * blocks * sizeof(int64_t);                                    \
       });

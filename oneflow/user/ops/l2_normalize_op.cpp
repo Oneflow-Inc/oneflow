@@ -20,8 +20,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> L2NormalizeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
-  Shape* y_shape = ctx->OutputShape("y", 0);
-  Shape* square_x_sum_shape = ctx->OutputShape("square_x_sum", 0);
+  Shape* y_shape = ctx->MutOutputShape("y", 0);
+  Shape* square_x_sum_shape = ctx->MutOutputShape("square_x_sum", 0);
   const int32_t axis = ctx->Attr<int32_t>("axis");
   const float epsilon = ctx->Attr<float>("epsilon");
   CHECK_GE_OR_RETURN(axis, 0);
@@ -53,8 +53,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> L2NormalizeOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("square_x_sum", 0) = ctx->InputDType("x", 0);
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("square_x_sum", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -62,7 +62,7 @@ namespace oneflow {
   const Shape& dy_shape = ctx->InputShape("dy", 0);
   const Shape& y_shape = ctx->InputShape("y", 0);
   const Shape& square_x_sum_shape = ctx->InputShape("square_x_sum", 0);
-  Shape* dx_shape = ctx->OutputShape("dx", 0);
+  Shape* dx_shape = ctx->MutOutputShape("dx", 0);
   const int32_t axis = ctx->Attr<int32_t>("axis");
   const float epsilon = ctx->Attr<float>("epsilon");
   CHECK_EQ_OR_RETURN(dy_shape, y_shape);
@@ -103,7 +103,7 @@ namespace oneflow {
 /* static */ Maybe<void> L2NormalizeGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("dy", 0));
   CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("square_x_sum", 0));
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
   return Maybe<void>::Ok();
 }
 

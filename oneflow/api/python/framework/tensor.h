@@ -31,6 +31,10 @@ typedef struct {
 extern PyTypeObject* PyTensorObject_Type;
 extern PyTypeObject* PyParameterObject_Type;
 
+inline bool PyTensorMetaClass_CheckExact(PyObject* obj) {
+  return obj == (PyObject*)PyTensorObject_Type;
+}
+
 inline bool PyTensor_Check(PyObject* op) { return PyObject_TypeCheck(op, PyTensorObject_Type); }
 
 inline bool PyTensor_CheckExact(PyObject* op) {

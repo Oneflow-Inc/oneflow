@@ -127,9 +127,9 @@ template<typename T>
 user_op::InferTmpSizeFn GenDeviceStageGradInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
     const Shape& out_diff_shape = ctx->InputShape("out_diff", 0);
-    const Shape* in_diff_shape = ctx->OutputShape("in_diff", 0);
+    const Shape& in_diff_shape = ctx->OutputShape("in_diff", 0);
     const size_t tmp_bytes = GetCudaAlignedSize(out_diff_shape.elem_cnt() * sizeof(T));
-    const size_t broadcasted_tmp_bytes = GetCudaAlignedSize(in_diff_shape->elem_cnt() * sizeof(T));
+    const size_t broadcasted_tmp_bytes = GetCudaAlignedSize(in_diff_shape.elem_cnt() * sizeof(T));
     return tmp_bytes + broadcasted_tmp_bytes;
   };
 }
@@ -259,7 +259,7 @@ user_op::InferTmpSizeFn GenGlobalStageGradInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
     const Shape& device_count_shape = ctx->InputShape("device_count", 0);
     const Shape& out_diff_shape = ctx->InputShape("out_diff", 0);
-    const Shape* in_diff_shape = ctx->OutputShape("in_diff", 0);
+    const Shape& in_diff_shape = ctx->OutputShape("in_diff", 0);
     const size_t device_count_with_mask_bytes =
         GetCudaAlignedSize(device_count_shape.elem_cnt() * sizeof(int32_t));
     const size_t global_count_bytes =
@@ -268,7 +268,7 @@ user_op::InferTmpSizeFn GenGlobalStageGradInferTmpSizeFn() {
         GetCudaAlignedSize(device_count_shape.elem_cnt() * sizeof(int32_t));
     const size_t divided_buf_bytes = GetCudaAlignedSize(out_diff_shape.elem_cnt() * sizeof(T));
     const size_t broadcasted_divided_buf_bytes =
-        GetCudaAlignedSize(in_diff_shape->elem_cnt() * sizeof(T));
+        GetCudaAlignedSize(in_diff_shape.elem_cnt() * sizeof(T));
     const size_t total_bytes = device_count_with_mask_bytes + global_count_bytes
                                + reduce_sum_tmp_bytes + divided_buf_bytes
                                + broadcasted_divided_buf_bytes;

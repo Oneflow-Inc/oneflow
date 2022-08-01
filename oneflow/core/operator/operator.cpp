@@ -777,7 +777,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
         const auto& ibn = input_bns().at(ibn_id);
         const NdSbp& nd_sbp = JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp();
         err << " " << ibn << ": " << NdSbpToString(nd_sbp);
-        if (!requires_same_sbp[ibn_id]) { err << " [ transfer disabled ]"; }
+        if (requires_same_sbp[ibn_id]) { err << " [ transfer disabled ]"; }
         err << ";";
       }
 

@@ -24,6 +24,8 @@ Convolution functions
     conv_transpose1d
     conv_transpose2d
     conv_transpose3d
+    fold
+    unfold
 
 Pooling functions
 ----------------------------------
@@ -125,6 +127,8 @@ Loss functions
     cross_entropy
     smooth_l1_loss
     triplet_margin_loss
+    binary_cross_entropy
+    binary_cross_entropy_with_logits
 
 Vision functions
 ----------------
@@ -135,5 +139,16 @@ Vision functions
 
     pad
     interpolate
+    upsample
     grid_sample
     affine_grid
+
+Greedy decoder
+----------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    ctc_greedy_decoder
+

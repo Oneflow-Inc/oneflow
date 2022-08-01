@@ -42,12 +42,12 @@ Maybe<void> InferScatterNdTensorDesc(user_op::InferContext* ctx) {
   const Shape& updates_shape = ctx->InputShape("updates", 0);
   const Shape& params_shape = ctx->Attr<Shape>("shape");
   JUST(CheckScatterNdShape(params_shape, indices_shape, updates_shape));
-  *ctx->OutputShape("out", 0) = params_shape;
+  *ctx->MutOutputShape("out", 0) = params_shape;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferScatterNdDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("updates", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("updates", 0);
   return Maybe<void>::Ok();
 }
 
@@ -56,12 +56,12 @@ Maybe<void> InferScatterNdLikeTensorDesc(user_op::InferContext* ctx) {
   const Shape& updates_shape = ctx->InputShape("updates", 0);
   const Shape& like_shape = ctx->InputShape("like", 0);
   JUST(CheckScatterNdShape(like_shape, indices_shape, updates_shape));
-  *ctx->OutputShape("out", 0) = like_shape;
+  *ctx->MutOutputShape("out", 0) = like_shape;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferScatterNdLikeDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("updates", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("updates", 0);
   return Maybe<void>::Ok();
 }
 
@@ -70,12 +70,12 @@ Maybe<void> InferTensorScatterNdOptTensorDesc(user_op::InferContext* ctx) {
   const Shape& updates_shape = ctx->InputShape("updates", 0);
   const Shape& indices_shape = ctx->InputShape("indices", 0);
   JUST(CheckScatterNdShape(params_shape, indices_shape, updates_shape));
-  *ctx->OutputShape("out", 0) = params_shape;
+  *ctx->MutOutputShape("out", 0) = params_shape;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferTensorScatterNdOptDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("params", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("params", 0);
   return Maybe<void>::Ok();
 }
 
@@ -122,7 +122,7 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
   FOR_RANGE(int64_t, i, index_ndims, params_shape.NumAxes()) {
     out_shape_vec.emplace_back(params_shape.At(i));
   }
-  *ctx->OutputShape("out", 0) = Shape(out_shape_vec);
+  *ctx->MutOutputShape("out", 0) = Shape(out_shape_vec);
   return Maybe<void>::Ok();
 }
 
@@ -168,7 +168,7 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
 }
 
 /* static */ Maybe<void> GatherNdOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("params", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("params", 0);
   return Maybe<void>::Ok();
 }
 
