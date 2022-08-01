@@ -61,11 +61,13 @@ class ScalarMathKernel final : public user_op::OpKernel {
     T* out_ptr = out->mut_dptr<T>();
 
     const int64_t elem_cnt = out->shape_view().elem_cnt();
-    const int32_t ndim = in->shape_view().NumAxes();
+    const size_t ndim = in->shape_view().NumAxes();
     const bool contiguous = oneflow::one::IsContiguous(in->shape_view(), in->stride());
     StrideParam in_stride(in->stride().data(), ndim), out_stride(out->stride().data(), ndim);
-
-    if (elem_cnt != 0) {
+    if (elem_cnt == 0) {
+      // for 0-shape tensor
+      return;
+    } else {
       if (contiguous) {
         ScalarMathFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand, in_ptr,
                                                     out_ptr);
@@ -73,9 +75,6 @@ class ScalarMathKernel final : public user_op::OpKernel {
         StridedScalarMathFunctor<device_type, BIN_OP, T>()(
             ctx->stream(), elem_cnt, in_stride, out_stride, scalar_operand, in_ptr, out_ptr);
       }
-    } else {
-      // For 0-shape Tensor
-      return;
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

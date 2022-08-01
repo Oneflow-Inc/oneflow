@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/ndarray/binary_func.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/framework/tensor_meta.h"
+#include "oneflow/core/common/tensor_meta.h"
 
 namespace oneflow {
 
@@ -69,7 +69,7 @@ OF_DEVICE_FUNC void DoStridedScalarMath(const int64_t elem_cnt, const StridePara
                                         const StrideParam& out_stride, const T scalar, const T* in,
                                         T* out) {
   XPU_1D_KERNEL_LOOP(i, elem_cnt) {
-    const int64_t in_offset = compute_offset(i, in_stride, out_stride);
+    const int64_t in_offset = ComputeOffset(i, in_stride, out_stride);
     out[i] = UnaryFunctor<T>::Invoke(in[in_offset], scalar);
   }
 }
