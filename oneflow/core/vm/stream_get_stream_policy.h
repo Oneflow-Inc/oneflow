@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_STREAM_GET_STREAM_POLICY_H_
 
 #include "oneflow/core/common/symbol.h"
-#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/stream_type.h"
 #include "oneflow/core/vm/control_stream_policy.h"
 #include "oneflow/core/vm/event_recorded_ep_stream_policy.h"
 #include "oneflow/core/vm/critical_section_stream_policy.h"
@@ -30,7 +30,7 @@ namespace oneflow {
 
 class Device;
 
-struct CreateStreamPolicy final : public StreamRoleVisitor<CreateStreamPolicy> {
+struct CreateStreamPolicy final : public StreamTypeVisitor<CreateStreamPolicy> {
   static Maybe<vm::StreamPolicy> VisitCompute(Symbol<Device> device) {
     return std::shared_ptr<vm::StreamPolicy>(new vm::EpStreamPolicy(device));
   }

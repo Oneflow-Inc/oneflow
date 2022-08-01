@@ -56,14 +56,14 @@ namespace oneflow {
 namespace {
 
 Maybe<Symbol<Stream>> RawGetCriticalSectionStream() {
-  return Stream::New(JUST(Device::New("cpu")), StreamRole::kCriticalSection);
+  return Stream::New(JUST(Device::New("cpu")), StreamType::kCriticalSection);
 }
 
 static constexpr auto* GetCriticalSectionStream =
     DECORATE(&RawGetCriticalSectionStream, ThreadLocal);
 
 Maybe<Symbol<Stream>> RawGetLazyJobLauncherStream() {
-  return Stream::New(JUST(Device::New("cpu")), StreamRole::kLazyJobLauncher);
+  return Stream::New(JUST(Device::New("cpu")), StreamType::kLazyJobLauncher);
 }
 
 static constexpr auto* GetLazyJobLauncherStream =
@@ -385,11 +385,11 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   Optional<Symbol<Stream>> stream{};
   if (*one::CurrentDevVmDepObjectConsumeMode() == one::DevVmDepObjectConsumeMode::NONE) {
     stream = Optional<Symbol<Stream>>(NullOpt);
-  } else if (IsCommNetStream::Visit(last_used_stream->stream_role())) {
+  } else if (IsCommNetStream::Visit(last_used_stream->stream_type())) {
     // Disable inter-device instruction sequential for tensor used by communicative stream.
     // It's not acceptable for us that cuda compute stream is blocked by cuda nccl stream.
     stream = Optional<Symbol<Stream>>(NullOpt);
-  } else if (IsCommNetStream::Visit(producer_stream->stream_role())) {
+  } else if (IsCommNetStream::Visit(producer_stream->stream_type())) {
     // Disable inter-device instruction sequential for tensor produced by communicative stream.
     stream = Optional<Symbol<Stream>>(NullOpt);
   } else {
@@ -398,11 +398,11 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   auto vm_stream = stream.map([](Symbol<Stream> stream) -> vm::Stream* {
     return CHECK_JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
   });
-  StreamRole stream_role = producer_stream->stream_role();
+  StreamType stream_type = producer_stream->stream_type();
   DataType data_type = eager_blob_object->data_type();
   auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(producer_stream)),
-      JUST(vm::MakeReleaseTensorInstructionPolicy::Visit(stream_role, data_type, eager_blob_object,
+      JUST(vm::MakeReleaseTensorInstructionPolicy::Visit(stream_type, data_type, eager_blob_object,
                                                          vm_stream)));
   instruction_list_->EmplaceBack(std::move(instruction));
 
@@ -492,14 +492,14 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
         compute_local_dep_objects,
     const std::string& modifier, Symbol<Stream> last_used_stream) {
   DeviceType device_type = last_used_stream->device()->enum_type();
-  if (!NeedSoftSync::Visit(last_used_stream->stream_role(), device_type)) {
+  if (!NeedSoftSync::Visit(last_used_stream->stream_type(), device_type)) {
     return Maybe<void>::Ok();
   }
   OF_PROFILER_RANGE_GUARD("SoftStream");
-  StreamRole stream_role = last_used_stream->stream_role();
+  StreamType stream_type = last_used_stream->stream_type();
   auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(last_used_stream)),
-      JUST(GetRecordEventInstructionPolicy::Visit(stream_role, device_type,
+      JUST(GetRecordEventInstructionPolicy::Visit(stream_type, device_type,
                                                   std::move(compute_local_dep_objects), modifier)));
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
@@ -607,7 +607,7 @@ namespace {
 
 Maybe<Symbol<Stream>> GetBarrierStream() {
   auto device = JUST(Device::New("cpu"));
-  return Stream::New(device, StreamRole::kBarrier);
+  return Stream::New(device, StreamType::kBarrier);
 }
 
 }  // namespace

@@ -17,11 +17,11 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_STREAM_ALLOCATOR_IS_PINNED_H_
 
 #include <glog/logging.h>
-#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/stream_type.h"
 
 namespace oneflow {
 
-struct IsStreamAllocatorPinned : public StreamRoleVisitor<IsStreamAllocatorPinned> {
+struct IsStreamAllocatorPinned : public StreamTypeVisitor<IsStreamAllocatorPinned> {
   static bool VisitCompute() { return false; }
   static bool VisitHost2Device() { return false; }
   static bool VisitDevice2Host() { return false; }

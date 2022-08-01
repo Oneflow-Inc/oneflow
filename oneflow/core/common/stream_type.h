@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_STREAM_ROLE_H_
-#define ONEFLOW_CORE_COMMON_STREAM_ROLE_H_
+#ifndef ONEFLOW_CORE_COMMON_STREAM_TYPE_H_
+#define ONEFLOW_CORE_COMMON_STREAM_TYPE_H_
 
 #include <functional>
 #include <array>
@@ -74,4 +74,4 @@ struct hash<oneflow::StreamType> final {
 
 }  // namespace std
 
-#endif  // ONEFLOW_CORE_COMMON_STREAM_ROLE_H_
+#endif  // ONEFLOW_CORE_COMMON_STREAM_TYPE_H_

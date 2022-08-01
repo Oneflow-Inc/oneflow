@@ -93,7 +93,7 @@ class EpRecordEventInstructionPolicy final : public InstructionPolicy {
 
 }  // namespace vm
 
-struct GetRecordEventInstructionPolicy : public StreamRoleVisitor<GetRecordEventInstructionPolicy> {
+struct GetRecordEventInstructionPolicy : public StreamTypeVisitor<GetRecordEventInstructionPolicy> {
   template<typename... Args>
   static Maybe<vm::InstructionPolicy> VisitCompute(DeviceType device_type, Args&&... args) {
     return std::shared_ptr<vm::InstructionPolicy>(

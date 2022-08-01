@@ -18,13 +18,13 @@ limitations under the License.
 
 #include <glog/logging.h>
 #include <string>
-#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/stream_type.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
 
-struct GetStreamRoleName : public StreamRoleVisitor<GetStreamRoleName> {
+struct GetStreamTypeName : public StreamTypeVisitor<GetStreamTypeName> {
   static const char* VisitCompute() { return "compute"; }
   static const char* VisitHost2Device() { return "h2d"; }
   static const char* VisitDevice2Host() { return "d2h"; }

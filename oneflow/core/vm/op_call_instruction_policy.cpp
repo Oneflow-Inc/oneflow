@@ -159,7 +159,7 @@ void OpCallInstructionPolicy::ForEachConstDependence(const DoEachT& DoEach) cons
 
 void OpCallInstructionPolicy::InitStreamSequentialDependence() {
   auto* device_schedule_dep_object = vm_stream_->schedule_local_dep_object().get();
-  if (IsCommNetStream::Visit(vm_stream_->stream_role())) {
+  if (IsCommNetStream::Visit(vm_stream_->stream_type())) {
     // Sequantialize nccl instructions to avoid deadlock
     stream_sequential_dependence_ = device_schedule_dep_object;
   } else {

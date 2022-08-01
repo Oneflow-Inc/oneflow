@@ -129,7 +129,7 @@ class SlowReleaseTensorInstructionPolicy final : public ReleaseTensorInstruction
 };
 
 struct MakeReleaseTensorInstructionPolicy
-    : public StreamRoleVisitor<MakeReleaseTensorInstructionPolicy> {
+    : public StreamTypeVisitor<MakeReleaseTensorInstructionPolicy> {
   static Maybe<vm::InstructionPolicy> VisitCompute(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
