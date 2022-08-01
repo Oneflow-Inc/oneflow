@@ -228,7 +228,7 @@ class AssignLocalTensorFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-static std::vector<int64_t> np_shape_to_oneflow(size_t ndim, npy_intp* values) {
+static std::vector<int64_t> get_shape_or_stride_from_numpy(size_t ndim, npy_intp* values) {
   auto result = std::vector<int64_t>(ndim);
   for (size_t i = 0; i < ndim; ++i) { result[i] = static_cast<int64_t>(values[i]); }
   return result;
@@ -242,12 +242,13 @@ class LocalTensorSharedNumpyDataFunctor {
       return Error::TypeError() << "expected np.ndarray, but got " << Py_TYPE(obj)->tp_name;
     }
     auto* array = reinterpret_cast<PyArrayObject*>(obj);
-    size_t ndim = PyArray_NDIM(array);
-    std::vector<int64_t> sizes = np_shape_to_oneflow(ndim, PyArray_DIMS(array));
-    std::vector<int64_t> strides = np_shape_to_oneflow(ndim, PyArray_STRIDES(array));
+    const size_t ndim = PyArray_NDIM(array);
+    std::vector<int64_t> sizes = get_shape_or_stride_from_numpy(ndim, PyArray_DIMS(array));
+    std::vector<int64_t> strides = get_shape_or_stride_from_numpy(ndim, PyArray_STRIDES(array));
     // NumPy strides use bytes. OneFlow strides use element counts.
-    // These checks are consistent with pytorch(v1.10.0)
-    auto element_size_in_bytes = PyArray_ITEMSIZE(array);
+    // These checks are consistent with pytorch(v1.10.0):
+    // https://github.com/pytorch/pytorch/blob/v1.10.0/torch/csrc/utils/tensor_numpy.cpp#L171
+    const auto element_size_in_bytes = PyArray_ITEMSIZE(array);
     for (auto& stride : strides) {
       if (stride % element_size_in_bytes != 0) {
         return Error::InvalidValueError()
@@ -289,7 +290,7 @@ class LocalTensorSharedNumpyDataFunctor {
       }));
     };
 
-    auto array_size_in_bytes = PyArray_NBYTES(array);
+    const auto array_size_in_bytes = PyArray_NBYTES(array);
     auto tensor_data = std::make_shared<vm::TensorStorage>();
     tensor_data->set_blob_dptr(
         std::unique_ptr<char, std::function<void(char*)>>(static_cast<char*>(data_ptr), Free),
