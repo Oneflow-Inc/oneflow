@@ -27,7 +27,7 @@ namespace user_op {
 namespace {
 
 template<typename Context>
-std::unique_ptr<ep::primitive::BroadcastElementwiseUnary> NewPrimitive(Context* ctx) {
+std::unique_ptr<ep::primitive::BroadcastElementwiseUnary> NewBroadCastPrimitive(Context* ctx) {
   const DataType in_data_type = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
   const DataType out_data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
   return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseUnaryFactory>(
@@ -50,7 +50,7 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
     if (input->data_type() == output->data_type() && input->dptr() == output->dptr()) { return; }
     const size_t ndim = input->shape_view().NumAxes();
     const bool contiguous = oneflow::one::IsContiguous(input->shape_view(), input->stride());
-    auto primitive = NewPrimitive(ctx);
+    auto primitive = NewBroadCastPrimitive(ctx);
     CHECK(primitive);
     if (contiguous) {
       primitive->Launch(ctx->stream(), ndim, input->shape_view().data(), input->dptr(), ndim,
@@ -67,7 +67,7 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
 auto CastPrimitiveExists() {
   return hob::make_custom("BroadcastElementwiseUnaryPrimitiveExists",
                           [](const user_op::KernelRegContext& ctx) -> bool {
-                            return NewPrimitive(&ctx).operator bool();
+                            return NewBroadCastPrimitive(&ctx).operator bool();
                           });
 }
 
