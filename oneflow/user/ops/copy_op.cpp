@@ -23,9 +23,11 @@ namespace oneflow {
 namespace {
 
 Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
-                                     const Symbol<Device>& out_device, const bool pin_memory) {
+                                     const Symbol<Device>& out_device, const bool pin_memory,
+                                     const bool asynced_copy) {
   if (in_device->type() != "cpu" && out_device->type() == "cpu") {
-    return Stream::New(in_device, StreamRole::kDevice2Host);
+    return Stream::New(in_device,
+                       (asynced_copy ? StreamRole::kAsyncedDevice2Host : StreamRole::kDevice2Host));
   } else if (in_device->type() == "cpu" && out_device->type() != "cpu") {
     const auto device = JUST(Device::New(out_device->type(), out_device->device_id()));
     return Stream::New(device, StreamRole::kHost2Device);
@@ -76,7 +78,8 @@ Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
   *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = out_device;
   const Symbol<Device>& in_device = ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
   const bool pin_memory = ctx->Attr<bool>("pin_memory");
-  return MakeCopyStream(in_device, out_device, pin_memory);
+  const bool asynced_copy = ctx->Attr<bool>("asynced_copy");
+  return MakeCopyStream(in_device, out_device, pin_memory, asynced_copy);
 }
 
 }  // namespace oneflow
