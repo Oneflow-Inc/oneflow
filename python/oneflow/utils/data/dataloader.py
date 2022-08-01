@@ -95,13 +95,13 @@ class DataLoader(Generic[T_co]):
     Data loader. Combines a dataset and a sampler, and provides an iterable over
     the given dataset.
 
-    The :class:`~flow.utils.data.DataLoader` supports both map-style and
+    The :class:`~oneflow.utils.data.DataLoader` supports both map-style and
     iterable-style datasets with single- or multi-process loading, customizing
     loading order and optional automatic batching (collation) and memory pinning.
 
-    See :py:mod:`flow.utils.data` documentation page for more details.
+    See :py:mod:`oneflow.utils.data` documentation page for more details.
 
-    In consideration of compatibility, the design of our dataloader is consistent with pytorch, ref:https://github.com/pytorch/pytorch/tree/v1.7.0
+    In consideration of compatibility, the design of our dataloader is consistent with pytorch, ref: https://github.com/pytorch/pytorch/tree/v1.7.0
 
     Args:
         dataset (Dataset): dataset from which to load the data.
@@ -1207,9 +1207,15 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         # Called when shutting down this `_MultiProcessingDataLoaderIter`.
         # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on
         # the logic of this function.
-        python_exit_status = _utils.python_exit_status
+
+        # See (2) of the note. If Python is shutting down, do no-op.
+        try:
+            python_exit_status = _utils.python_exit_status
+        except AttributeError:
+            # Python is shutting down and `_utils` has been freed
+            assert _utils is None
+            return
         if python_exit_status is True or python_exit_status is None:
-            # See (2) of the note. If Python is shutting down, do no-op.
             return
         # Normal exit when last reference is gone / iterator is depleted.
         # See (1) and the second half of the note.

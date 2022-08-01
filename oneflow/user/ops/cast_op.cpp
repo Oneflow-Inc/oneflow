@@ -38,7 +38,7 @@ Maybe<Symbol<Stream>> MakeCastStream(const Symbol<Device>& in_device,
 
 /* static */ Maybe<void> CastOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_tensor_desc = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* output_tensor_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* output_tensor_desc = ctx->MutOutputTensorDesc("out", 0);
   *output_tensor_desc->mut_shape() = input_tensor_desc.shape();
   *output_tensor_desc->mut_stride() =
       input_tensor_desc.stride();  // output's stride should consistent with input's
@@ -60,7 +60,7 @@ Maybe<Symbol<Stream>> MakeCastStream(const Symbol<Device>& in_device,
 }
 
 /* static */ Maybe<void> CastOp::InferDataType(user_op::InferContext* ctx) {
-  user_op::TensorDesc* output_tensor_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* output_tensor_desc = ctx->MutOutputTensorDesc("out", 0);
   DataType* dtype = output_tensor_desc->mut_data_type();
   *dtype = ctx->Attr<DataType>("dtype");
   return Maybe<void>::Ok();
@@ -79,7 +79,7 @@ REGISTER_USER_OP_GRAD("cast").SetGenBackwardOpConfFn([](const user_op::UserOpWra
                                                         user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    const DataType& dtype = op.TensorDesc4ArgNameAndIndex("in", 0).data_type();
+    DataType dtype = op.TensorDesc4ArgNameAndIndex("in", 0).data_type();
     user_op::UserOpConfWrapper cast_grad_op =
         builder.Op("cast")
             .Input("in", op.GetGradTensorWithOpOutput("out", 0))
