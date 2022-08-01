@@ -215,7 +215,8 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
 
 Maybe<TensorTuple> Broadcast(const TensorTuple& inputs, int64_t src_rank,
                              Symbol<ParallelDesc> parallel_desc, bool inplace) {
-  CHECK_OR_RETURN(parallel_desc->containing_current_rank());
+  CHECK_OR_RETURN(parallel_desc->containing_current_rank())
+      << "Current rank are not contained in the placement arguement";
   if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return inputs; }
   std::shared_ptr<UserOpExpr> op_expr =
       JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank, inputs.size()));
