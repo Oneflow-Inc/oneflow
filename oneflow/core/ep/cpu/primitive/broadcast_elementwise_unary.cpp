@@ -167,6 +167,8 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
   Scalar attr0, attr1;
 };
 
+#define BROADCAST_ELEMENTWISE_CAST_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kCast)
+
 template<UnaryOp unary_op, typename Src, typename Dst>
 std::unique_ptr<BroadcastElementwiseUnary> NewBroadcastElementwiseUnary(Scalar attr0,
                                                                         Scalar attr1) {
@@ -215,7 +217,7 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
 
             // For Cast OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFF_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
-                                             BROADCAST_ELEMENTWISE_DIFF_DTYPE_UNARY_OP_SEQ,
+                                             BROADCAST_ELEMENTWISE_CAST_OP_SEQ,
                                              CPU_PRIMITIVE_ALL_TYPE_SEQ,
                                              CPU_PRIMITIVE_ALL_TYPE_SEQ)};
 

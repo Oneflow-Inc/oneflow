@@ -27,11 +27,13 @@ namespace user_op {
 namespace {
 
 template<typename Context>
-std::unique_ptr<ep::primitive::BroadcastElementwiseUnary> NewBroadCastPrimitive(Context* ctx) {
+std::unique_ptr<ep::primitive::BroadcastElementwiseUnary> NewBroadcastPrimitive(Context* ctx) {
   const DataType in_data_type = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
   const DataType out_data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
+  const size_t max_ndim = std::max(ctx->TensorDesc4ArgNameAndIndex("in", 0)->shape().NumAxes(),
+                                   ctx->TensorDesc4ArgNameAndIndex("out", 0)->shape().NumAxes());
   return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseUnaryFactory>(
-      ctx->device_type(), ep::primitive::UnaryOp::kCast, in_data_type, out_data_type, 8);
+      ctx->device_type(), ep::primitive::UnaryOp::kCast, in_data_type, out_data_type, max_ndim);
 }
 
 class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
@@ -50,17 +52,11 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
         << "The number of cast op's input and output elements should be equal.";
     if (input->data_type() == output->data_type() && input->dptr() == output->dptr()) { return; }
     const size_t ndim = input->shape_view().NumAxes();
-    const bool contiguous = oneflow::one::IsContiguous(input->shape_view(), input->stride());
-    auto primitive = NewBroadCastPrimitive(ctx);
+    auto primitive = NewBroadcastPrimitive(ctx);
     CHECK(primitive);
-    if (contiguous) {
-      primitive->Launch(ctx->stream(), ndim, input->shape_view().data(), input->dptr(), ndim,
-                        output->shape_view().data(), output->mut_dptr());
-    } else {
-      primitive->Launch(ctx->stream(), ndim, input->shape_view().data(), input->stride().data(),
-                        input->dptr(), ndim, output->shape_view().data(), output->stride().data(),
-                        output->mut_dptr());
-    }
+    primitive->Launch(ctx->stream(), ndim, input->shape_view().data(), input->stride().data(),
+                      input->dptr(), ndim, output->shape_view().data(), output->stride().data(),
+                      output->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -68,7 +64,7 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
 auto CastPrimitiveExists() {
   return hob::make_custom("BroadcastElementwiseUnaryPrimitiveExists",
                           [](const user_op::KernelRegContext& ctx) -> bool {
-                            return NewBroadCastPrimitive(&ctx).operator bool();
+                            return NewBroadcastPrimitive(&ctx).operator bool();
                           });
 }
 
