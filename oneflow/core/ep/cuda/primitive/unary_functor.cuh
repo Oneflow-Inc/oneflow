@@ -95,7 +95,7 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsNan, bool, double> {
   OF_DEVICE_FUNC bool operator()(double src) const { return isnan(src); }
 };
 
-/*********half support*********/
+/*********half dtype support*********/
 template<typename Dst>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, half, Dst> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
