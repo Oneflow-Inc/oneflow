@@ -13,50 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EP_PRIMITIVE_UNARY_OP_H_
-#define ONEFLOW_CORE_EP_PRIMITIVE_UNARY_OP_H_
+#include "oneflow/user/kernels/collective_communication/cpu/cpu_communication_context.h"
+#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 
-namespace ep {
-namespace primitive {
+namespace ccl {
 
-enum class UnaryOp {
-  kIdentity,
-  // activation op
-  kElu,
-  kCelu,
-  kRelu,
-  kGelu,
-  kHardSwish,
-  kHardSigmoid,
-  kHardShrink,
-  kHardTanh,
-  kLeakyRelu,
-  kMish,
-  kSelu,
-  kSilu,
-  kSoftShrink,
-  kSoftSign,
-  kSoftPlus,
-  kTanh,
-  kThreshold,
-
-  // logical op
-  kLogicalNot,
-
-  // cast op
-  kCast,
-
-  // utils op
-  kIsInf,
-  kIsNan,
-  kIsFinite,
-};
-
+void CpuCommunicationContext::Init(Symbol<ParallelDesc> parallel_desc) {
+  parallel_desc_ = parallel_desc;
 }
-}  // namespace ep
+
+REGISTER_COLLECTIVE_COMMUNICATION_COMMUNICATOR(DeviceType::kCPU, CpuCommunicationContext);
+
+}  // namespace ccl
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_EP_PRIMITIVE_UNARY_OP_H_

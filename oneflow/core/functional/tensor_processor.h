@@ -43,6 +43,33 @@ class TensorProcessor final {
   bool promote_inputs_to_common_dtype_;
 };
 
+class TensorLayoutProcessor final {
+ public:
+  TensorLayoutProcessor(const TensorTuple& inputs, bool non_contiguous_enabled)
+      : TensorLayoutProcessor(inputs, nullptr, non_contiguous_enabled) {}
+  TensorLayoutProcessor(const TensorTuple& inputs, TensorTuple* outputs,
+                        bool non_contiguous_enabled)
+      : inputs_(inputs),
+        outputs_(outputs),
+        non_contiguous_enabled_(non_contiguous_enabled),
+        converted_(false) {}
+
+  Maybe<void> Apply();
+
+  const TensorTuple& inputs() const {
+    if (converted_) { return contiguous_inputs_; }
+    return inputs_;
+  }
+  TensorTuple* outputs() const { return outputs_; }
+
+ private:
+  const TensorTuple& inputs_;
+  TensorTuple* outputs_;
+  bool non_contiguous_enabled_;
+  bool converted_;
+  TensorTuple contiguous_inputs_;
+};
+
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
