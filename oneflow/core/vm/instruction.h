@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_VPU_INSTRUCTION__H_
 
 #include <cstring>
+#include <memory>
 #include <mutex>
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/intrusive/intrusive.h"
@@ -106,7 +107,7 @@ class Instruction final : public intrusive::Base {
   using DependenceAccessList =
       intrusive::List<INTRUSIVE_FIELD(DependenceAccess, instruction_access_hook_)>;
 
-  void __Init__(Stream* stream, std::unique_ptr<InstructionPolicy>&& instruction_policy);
+  void __Init__(Stream* stream, std::shared_ptr<InstructionPolicy>&& instruction_policy);
 
   // Getters
   const Stream& stream() const { return *stream_; }
@@ -203,7 +204,7 @@ class Instruction final : public intrusive::Base {
   // fields
   intrusive::Ref intrusive_ref_;
   Stream* stream_;
-  std::unique_ptr<InstructionPolicy> instruction_policy_;
+  std::shared_ptr<InstructionPolicy> instruction_policy_;
   InstructionStatusBuffer status_buffer_;
 };
 

@@ -126,6 +126,7 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
 };
 
 class StatefulOpKernel;
+class LocalTensorInferCache;
 class GlobalTensorInferCache;
 
 class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
@@ -159,6 +160,9 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
   Maybe<Symbol<Stream>> InferDeviceAndStream(const AttrMap& attrs, const TensorTuple& inputs,
                                              TensorTuple* outputs) const;
+  LocalTensorInferCache* mut_local_tensor_infer_cache() const {
+    return local_tensor_infer_cache_.get();
+  }
   GlobalTensorInferCache* mut_global_tensor_infer_cache() const {
     return global_tensor_infer_cache_.get();
   }
@@ -173,6 +177,7 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   user_op::DataTypeInferFn dtype_infer_fn_;
   user_op::DeviceAndStreamInferFn device_and_stream_infer_fn_;
   mutable HashMap<Symbol<Stream>, std::shared_ptr<StatefulOpKernel>> stream2kernel_;
+  std::shared_ptr<LocalTensorInferCache> local_tensor_infer_cache_;
   std::shared_ptr<GlobalTensorInferCache> global_tensor_infer_cache_;
 };
 

@@ -21,6 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_VM_COMPUTE_ON_WORKER_THREAD, true);
+DEFINE_THREAD_LOCAL_ENV_INTEGER(ONEFLOW_VM_PENDING_HANDLE_WINDOW_SIZE, 10)
 
-}
+}  // namespace oneflow
 #endif  // ONEFLOW_CORE_COMMON_ENV_VAR_VM_H_

@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/job/rank_group_scope.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/common/flat_shape.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 
 namespace oneflow {
 namespace one {
@@ -41,20 +42,68 @@ namespace impl {
 
 namespace {
 
+#define OF_KERNEL_NOT_SUPPORT_ERROR(op_type, device_type)                                          \
+  Error::RuntimeError() << op_type << " not suport for the device ("                               \
+                        << DeviceType_Name(device_type) << ") because eager kernel of " << op_type \
+                        << " is not registered"
+
+class EagerCclKernelRegContext final : public user_op::KernelRegContext {
+ public:
+  explicit EagerCclKernelRegContext(DeviceType device_type) : device_type_(device_type) {}
+  ~EagerCclKernelRegContext() = default;
+
+  DeviceType device_type() const override { return device_type_; }
+  const ParallelContext& parallel_ctx() const override { PRINT_BUG_PROMPT_AND_ABORT(); }
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+  }
+  const std::vector<std::pair<std::string, int32_t>>& inputs() const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+  }
+  const std::vector<std::pair<std::string, int32_t>>& outputs() const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+  }
+
+  const user_op::UserOpConfWrapper& user_op_conf() const override { PRINT_BUG_PROMPT_AND_ABORT(); }
+
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
+      const std::string& attr_name) const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+  }
+
+ private:
+  DeviceType device_type_;
+};
+
+Maybe<bool> RawCheckCclKernelRegistered(const std::string& op_type_name, DeviceType device_type) {
+  EagerCclKernelRegContext reg_ctx(device_type);
+  return user_op::UserOpRegistryMgr::Get().IsOpKernelRegistered(op_type_name, reg_ctx);
+}
+
+static constexpr auto* CheckCclKernelRegistered =
+    DECORATE(&RawCheckCclKernelRegistered, ThreadLocalCachedCopiable);
+
 bool IsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_split_parallel(); }
 
-Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc) {
-  return one::OpBuilder("eager_nccl_all_reduce", *JUST(UniqueStr("eager_nccl_all_reduce")))
+Maybe<one::UserOpExpr> EagerCclAllReduce(Symbol<ParallelDesc> parallel_desc) {
+  CHECK_OR_RETURN(
+      JUST(CheckCclKernelRegistered("eager_ccl_all_reduce", parallel_desc->device_type())))
+      << OF_KERNEL_NOT_SUPPORT_ERROR("AllReduce", parallel_desc->device_type());
+  return one::OpBuilder("eager_ccl_all_reduce", *JUST(UniqueStr("eager_ccl_all_reduce")))
       .Input("in")
       .Output("out")
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
       .Build();
 }
 
-static constexpr auto* CachedEagerNcclAllReduceOpExpr = DECORATE(&EagerNcclAllReduce, ThreadLocal);
+static constexpr auto* CachedEagerCclAllReduceOpExpr = DECORATE(&EagerCclAllReduce, ThreadLocal);
 
 Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc,
                                               const std::string& op_type) {
+  CHECK_OR_RETURN(
+      JUST(CheckCclKernelRegistered("eager_nccl_reduce_scatter", parallel_desc->device_type())))
+      << OF_KERNEL_NOT_SUPPORT_ERROR("ReduceScatter", parallel_desc->device_type());
   return one::OpBuilder("eager_nccl_reduce_scatter", *JUST(UniqueStr("eager_nccl_reduce_scatter")))
       .Input("in")
       .Output("out")
@@ -66,6 +115,9 @@ static constexpr auto* CachedNcclReduceScatterOpExpr =
     DECORATE(&EagerNcclReduceScatter, ThreadLocalCopiable);
 
 Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
+  CHECK_OR_RETURN(
+      JUST(CheckCclKernelRegistered("eager_nccl_all_gather", parallel_desc->device_type())))
+      << OF_KERNEL_NOT_SUPPORT_ERROR("AllGather", parallel_desc->device_type());
   return one::OpBuilder("eager_nccl_all_gather", *JUST(UniqueStr("eager_nccl_all_gather")))
       .Input("in")
       .Output("out")
@@ -89,6 +141,8 @@ Maybe<one::UserOpExpr> EagerNcclS2S(Symbol<ParallelDesc> parallel_desc, Symbol<S
 auto* CachedEagerNcclS2SOpExpr = DECORATE(&EagerNcclS2S, ThreadLocal);
 
 Maybe<one::UserOpExpr> EagerNcclReduce(Symbol<ParallelDesc> parallel_desc, int64_t root) {
+  CHECK_OR_RETURN(JUST(CheckCclKernelRegistered("eager_nccl_reduce", parallel_desc->device_type())))
+      << OF_KERNEL_NOT_SUPPORT_ERROR("Reduce", parallel_desc->device_type());
   return one::OpBuilder("eager_nccl_reduce", *JUST(UniqueStr("eager_nccl_reduce")))
       .Input("in")
       .Output("out")
@@ -98,6 +152,24 @@ Maybe<one::UserOpExpr> EagerNcclReduce(Symbol<ParallelDesc> parallel_desc, int64
 }
 
 auto* CachedEagerNcclReduceOpExpr = DECORATE(&EagerNcclReduce, ThreadLocal);
+
+Maybe<one::UserOpExpr> RankGroupAndDeviceType2AllReduceOpExpr(Symbol<RankGroup> rank_group,
+                                                              DeviceType device_type) {
+  CHECK_OR_RETURN(JUST(CheckCclKernelRegistered("eager_ccl_all_reduce", device_type)))
+      << OF_KERNEL_NOT_SUPPORT_ERROR("AllReduce", device_type);
+  const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
+  return one::OpBuilder("eager_ccl_all_reduce")
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Attr<bool>("async_launch", true)
+      .Build();
+}
+
+auto* CachedRankGroupAndDeviceType2AllReduceOpExpr =
+    DECORATE(&RankGroupAndDeviceType2AllReduceOpExpr, ThreadLocal);
+
+#undef OF_KERNEL_NOT_SUPPORT_ERROR
 
 }  // namespace
 
@@ -140,24 +212,6 @@ class StreamTouchFunctor {
   }
 };
 
-namespace {
-
-Maybe<one::UserOpExpr> RankGroupAndDeviceType2AllReduceOpExpr(Symbol<RankGroup> rank_group,
-                                                              DeviceType device_type) {
-  const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
-  return one::OpBuilder("eager_nccl_all_reduce")
-      .Input("in")
-      .Output("out")
-      .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
-      .Attr<bool>("async_launch", true)
-      .Build();
-}
-
-auto* CachedRankGroupAndDeviceType2AllReduceOpExpr =
-    DECORATE(&RankGroupAndDeviceType2AllReduceOpExpr, ThreadLocal);
-
-}  // namespace
-
 class LocalAllReduceFunctor {
  public:
   LocalAllReduceFunctor() = default;
@@ -165,9 +219,7 @@ class LocalAllReduceFunctor {
     const auto& device = JUST(x->device());
     CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank());
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
-    const std::string& device_type_str = device->type();
-    CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu");
-    DeviceType device_type = device_type_str == "cuda" ? DeviceType::kCUDA : DeviceType::kCPU;
+    DeviceType device_type = device->enum_type();
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedRankGroupAndDeviceType2AllReduceOpExpr(rank_group, device_type));
     auto op_input = x;
@@ -194,8 +246,7 @@ class GlobalAllReduceFunctor {
       CHECK_OR_RETURN(NdSbpIsAllPartialSum(*JUST(x->nd_sbp())))
           << "Tensor's sbp must be partial_sum";
     }
-    std::shared_ptr<OpExpr> op_expr =
-        JUST(CachedEagerNcclAllReduceOpExpr(JUST(x->parallel_desc())));
+    std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerCclAllReduceOpExpr(JUST(x->parallel_desc())));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
 };

@@ -928,6 +928,20 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.addcdiv,
+    """
+    See :func:`oneflow.addcdiv`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.addcdiv_,
+    """
+    In-place version of :func:`oneflow.Tensor.addcdiv`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.dim,
     """
     Tensor.dim() → int
@@ -1040,13 +1054,6 @@ add_docstr(
     oneflow.Tensor.ge,
     """
     See :func:`oneflow.ge`
-    """,
-)
-
-add_docstr(
-    oneflow.Tensor.gelu,
-    """
-    See :func:`oneflow.gelu`
     """,
 )
 
@@ -2175,8 +2182,12 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.type,
-    r"""Returns the type if dtype is not provided, else casts this object to the specified type.
-        If this is already of the correct type, no copy is performed and the original object is returned.
+    r"""
+    type(dtype=None, non_blocking=False, **kwargs) -> str or Tensor
+
+    Returns the type if dtype is not provided, else casts this object to the specified type.
+
+    If this is already of the correct type, no copy is performed and the original object is returned.
 
     Args:
         dtype (oneflow.dtype or oneflow.tensortype or string, optional): The desired type.

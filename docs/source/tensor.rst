@@ -169,6 +169,8 @@ Tensor class reference
     Tensor.acosh
     Tensor.add
     Tensor.add_
+    Tensor.addcdiv
+    Tensor.addcdiv_
     Tensor.addcmul
     Tensor.addcmul_
     Tensor.addmm
@@ -242,7 +244,6 @@ Tensor class reference
     Tensor.fmod
     Tensor.gather
     Tensor.ge
-    Tensor.gelu
     Tensor.get_device
     
     Tensor.grad_fn
@@ -260,6 +261,7 @@ Tensor class reference
     Tensor.item
     Tensor.le
     Tensor.log
+    Tensor.log1p
     Tensor.log2
     Tensor.logical_and
     Tensor.logical_or
