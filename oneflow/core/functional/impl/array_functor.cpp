@@ -1478,11 +1478,21 @@ class CopyFunctor {
     JUST(attrs.SetAttr<std::string>("device_type", device_type));
     JUST(attrs.SetAttr<int64_t>("device_id", device_id));
     JUST(attrs.SetAttr<bool>("pin_memory", pin_memory));
+    JUST(attrs.SetAttr<bool>("asynced_copy", JUST(GetAsyncedCopy(*x))));
 
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
 #endif
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+  Maybe<bool> GetAsyncedCopy(const one::Tensor& x) const {
+    if (!x.is_eager()) { return false; }
+    if (!x.is_local()) { return false; }
+    const auto& eager_blob_object = JUST(x.eager_blob_object());
+    const auto& opt_stream = eager_blob_object->last_used_stream();
+    if (!opt_stream.has_value()) { return false; }
+    return JUST(opt_stream)->stream_role() == StreamRole::kTmpCompute;
   }
 
  private:
