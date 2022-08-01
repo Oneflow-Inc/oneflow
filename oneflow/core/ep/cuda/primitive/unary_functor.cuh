@@ -117,7 +117,7 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, half, half> {
   OF_DEVICE_FUNC half operator()(half src) const { return src; }
 };
 
-/*********nv_bfloat16 support*********/
+/*********nv_bfloat16 dtype support*********/
 #if CUDA_VERSION >= 11000
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, half, nv_bfloat16> {
