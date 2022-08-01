@@ -88,11 +88,16 @@ def set_device(device: Union[flow.device, str, int]) -> None:
         device (flow.device or int): selected device. This function is a no-op
             if this argument is negative.
     """
-    if flow.env.get_world_size() > 0:
-        raise ValueError("set_device() function is disabled in multi-device setting")
     device_idx = _get_device_index(device)
-    if device_idx >= 0:
-        flow._oneflow_internal.SetCudaDeviceIndex(device_idx)
+    if device_idx < 0:
+        return
+    if flow.env.get_world_size() > 0:
+        if device_idx == flow.env.get_local_rank():
+            return
+        raise ValueError(
+            "Setting cuda device to a device whose index does not equal to the local rank is not supported."
+        )
+    flow._oneflow_internal.SetCudaDeviceIndex(device_idx)
 
 
 def synchronize(device: Union[flow.device, str, int, None] = None) -> None:
