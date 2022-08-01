@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/naive_instruction_policy.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/common/blocking_counter.h"
@@ -104,14 +103,14 @@ void MakeBarrierInstructions(vm::InstructionList* list,
   {
     auto stream = CHECK_JUST(GetBarrierStream());
     auto instruction = intrusive::make_shared<vm::Instruction>(
-        CHECK_JUST(vm->GetVmStream(stream)), std::make_unique<vm::GlobalSyncInstructionPolicy>());
+        CHECK_JUST(vm->GetVmStream(stream)), std::make_shared<vm::GlobalSyncInstructionPolicy>());
     list->EmplaceBack(std::move(instruction));
   }
   {
     auto stream = CHECK_JUST(GetBarrierStream());
     auto instruction = intrusive::make_shared<vm::Instruction>(
         CHECK_JUST(vm->GetVmStream(stream)),
-        std::make_unique<vm::BarrierInstructionPolicy>(BarrierCallback));
+        std::make_shared<vm::BarrierInstructionPolicy>(BarrierCallback));
     list->EmplaceBack(std::move(instruction));
   }
 }
