@@ -14,8 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/vm/critical_section_stream_type.h"
-#include "oneflow/core/vm/instruction_type.h"
+#include "oneflow/core/vm/critical_section_stream_policy.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/critical_section_status_querier.h"
@@ -24,29 +23,24 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void CriticalSectionStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
-                                              Symbol<Device> device) const {
-  device_ctx->reset();
-}
-
-void CriticalSectionStreamType::InitInstructionStatus(
+void CriticalSectionStreamPolicy::InitInstructionStatus(
     const Stream& stream, InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(CriticalSectionStatusQuerier) < kInstructionStatusBufferBytes, "");
   CriticalSectionStatusQuerier::PlacementNew(status_buffer->mut_buffer());
 }
 
-void CriticalSectionStreamType::DeleteInstructionStatus(
+void CriticalSectionStreamPolicy::DeleteInstructionStatus(
     const Stream& stream, InstructionStatusBuffer* status_buffer) const {
   auto* ptr = CriticalSectionStatusQuerier::MutCast(status_buffer->mut_buffer());
   ptr->~CriticalSectionStatusQuerier();
 }
 
-bool CriticalSectionStreamType::QueryInstructionStatusDone(
+bool CriticalSectionStreamPolicy::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   return CriticalSectionStatusQuerier::Cast(status_buffer.buffer())->QueryDone();
 }
 
-void CriticalSectionStreamType::Run(Instruction* instruction) const { instruction->Compute(); }
+void CriticalSectionStreamPolicy::Run(Instruction* instruction) const { instruction->Compute(); }
 
 }  // namespace vm
 }  // namespace oneflow
