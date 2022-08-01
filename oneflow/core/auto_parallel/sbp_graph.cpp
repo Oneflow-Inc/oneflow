@@ -44,8 +44,6 @@ void SbpGraph::RemoveFromNodeList(SbpNode* this_node) {
   this_node->node_list_id_ = -1;
 }
 
-SbpGraph::SbpGraph() {}
-
 SbpGraph::~SbpGraph() {
   for (auto this_node : node_list_) { delete this_node; }
   node_list_.clear();
