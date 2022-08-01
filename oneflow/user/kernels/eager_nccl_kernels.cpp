@@ -171,38 +171,6 @@ REGISTER_USER_KERNEL("eager_nccl_reduce")
     .SetCreateFn<EagerCclReduceKernel>()
     .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU);
 
-class EagerCclAllReduceKernel final : public user_op::OpKernel {
- public:
-  EagerCclAllReduceKernel() = default;
-  ~EagerCclAllReduceKernel() override = default;
-
-  void InitOpKernelCacheWithFlags(
-      user_op::KernelCacheContext* ctx, int8_t flag,
-      std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
-    InitEagerCclOpKernelCache(ctx, cache_ptr);
-  }
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
-               const user_op::OpKernelCache* cache) const override {
-    auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
-    CHECK(kernel_cache != nullptr);
-    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(in->shape_view(), out->shape_view());
-    CHECK_EQ(in->data_type(), out->data_type());
-
-    CHECK_JUST(ccl::AllReduce<DeviceType::kCPU>(
-        in->dptr(), out->mut_dptr(), out->shape_view().elem_cnt(), out->data_type(), ccl::kSum,
-        kernel_cache->parallel_desc(), ctx->stream()));
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-REGISTER_USER_KERNEL("eager_nccl_all_reduce")
-    .SetCreateFn<EagerCclAllReduceKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU);
-
 class EagerCclReduceScatterKernel final : public user_op::OpKernel {
  public:
   EagerCclReduceScatterKernel() = default;

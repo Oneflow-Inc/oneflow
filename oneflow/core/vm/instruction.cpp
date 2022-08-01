@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/instruction.h"
-#include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
@@ -33,9 +32,9 @@ std::string Instruction::DebugName() const {
 }
 
 void Instruction::__Init__(Stream* stream,
-                           std::unique_ptr<InstructionPolicy>&& instruction_policy) {
+                           std::shared_ptr<InstructionPolicy>&& instruction_policy) {
   stream_ = stream;
-  instruction_policy_ = std::move(instruction_policy);
+  instruction_policy_ = instruction_policy;
 }
 
 void Instruction::InitStatus() { instruction_policy_->InitInstructionStatusIf(this); }
