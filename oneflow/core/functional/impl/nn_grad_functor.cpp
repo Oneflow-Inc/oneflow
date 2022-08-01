@@ -316,6 +316,29 @@ class SparseSoftmaxCrossEntropyGrad {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SparseSoftmaxCrossEntropyMsGrad {
+ public:
+  SparseSoftmaxCrossEntropyMsGrad() {
+    op_ = CHECK_JUST(one::OpBuilder("sparse_softmax_cross_entropy_ms_grad")
+                         .Input("prob")
+                         .Input("label")
+                         .Input("dy")
+                         .Output("prediction_diff")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& prob,
+                           const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {prob, label, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SmoothL1LossGradFunctor {
  public:
   SmoothL1LossGradFunctor() {
@@ -1269,6 +1292,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SparseCrossEntropyGradFunctor>("SparseCrossEntropyGrad");
   m.add_functor<impl::SparseCrossEntropyMsGradFunctor>("SparseCrossEntropyMsGrad");
   m.add_functor<impl::SparseSoftmaxCrossEntropyGrad>("SparseSoftmaxCrossEntropyGrad");
+  m.add_functor<impl::SparseSoftmaxCrossEntropyMsGrad>("SparseSoftmaxCrossEntropyMsGrad");
   m.add_functor<impl::SmoothL1LossGradFunctor>("SmoothL1LossGrad");
   m.add_functor<impl::CombinedMarginLossGradFunctor>("CombinedMarginLossGrad");
   m.add_functor<impl::AffineGridGradFunctor>("AffineGridGrad");

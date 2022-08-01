@@ -14,10 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/graph_scope_vars.h"
+#include <vector>
 
 namespace oneflow {
 
 namespace {
+
+std::vector<std::string>* GetPythonPathsToBeFilteredForDebuggingVar() {
+  static thread_local std::vector<std::string> filtered_paths;
+  return &filtered_paths;
+}
+
+std::vector<std::string>* GetPythonPathsToBeKeptForDebuggingVar() {
+  static thread_local std::vector<std::string> kept_paths;
+  return &kept_paths;
+}
 
 bool* GetGraphVerboseStepLr() {
   static thread_local bool graph_verbose_step_lr = false;
@@ -49,6 +60,24 @@ bool IsOpenGraphVerboseStepLr() {
 void SetGraphVerboseStepLr(bool verbose) {
   auto* graph_verbose_step_lr = GetGraphVerboseStepLr();
   *graph_verbose_step_lr = verbose;
+}
+
+void InitPythonPathsToBeKeptAndFilteredForDebugging(const std::string& python_base_dir) {
+  std::vector<std::string>* kept_paths = GetPythonPathsToBeKeptForDebuggingVar();
+  kept_paths->clear();
+  kept_paths->push_back(python_base_dir + "/oneflow/test");
+  kept_paths->push_back(python_base_dir + "/oneflow/nn/modules");
+
+  std::vector<std::string>* filtered_paths = GetPythonPathsToBeFilteredForDebuggingVar();
+  filtered_paths->clear();
+  filtered_paths->push_back(python_base_dir);
+}
+
+const std::vector<std::string>& GetPythonPathsToBeFilteredForDebugging() {
+  return *GetPythonPathsToBeFilteredForDebuggingVar();
+}
+const std::vector<std::string>& GetPythonPathsToBeKeptForDebugging() {
+  return *GetPythonPathsToBeKeptForDebuggingVar();
 }
 
 void SetGraphDebugMaxPyStackDepth(int32_t depth) { *GetGraphDebugMaxPyStackDepthVar() = depth; }
