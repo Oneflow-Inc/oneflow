@@ -38,14 +38,8 @@ class Copy : public OpExprGradFunction<CopyCaptureState> {
 
   Maybe<void> Capture(CopyCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override {
-    if (inputs.at(0)->is_local()) {
-      ctx->device_type = JUST(inputs.at(0)->device())->type();
-      ctx->device_id = JUST(inputs.at(0)->device())->device_id();
-    } else {
-      auto local_tensor = JUST(functional::GlobalToLocal(inputs.at(0), /*copy=*/false));
-      ctx->device_type = JUST(local_tensor->device())->type();
-      ctx->device_id = JUST(local_tensor->device())->device_id();
-    }
+    ctx->device_type = JUST(inputs.at(0)->device())->type();
+    ctx->device_id = JUST(inputs.at(0)->device())->device_id();
     return Maybe<void>::Ok();
   }
 
