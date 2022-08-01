@@ -276,8 +276,6 @@ class LocalTensorSharedNumpyDataFunctor {
     // Build TensorMeta
     const auto shape = std::make_shared<Shape>(DimVector(sizes.begin(), sizes.end()));
     const auto stride = std::make_shared<Stride>(strides.begin(), strides.end());
-    // printf("\n oneflow shape:%s; stride:%s", shape->ToString().c_str(),
-    // stride->ToString().c_str());
     DataType data_type = JUST(numpy::GetOFDataTypeFromNpArray(array));
     Symbol<Device> device = JUST(Device::New("cpu"));
 
