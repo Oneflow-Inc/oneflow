@@ -23,6 +23,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestFromNumpy(flow.unittest.TestCase):
     def test_same_data(test_case):
@@ -57,14 +58,16 @@ class TestFromNumpy(flow.unittest.TestCase):
             # TODO(wyg): oneflow.float16 do not support to copy from tensor to numpy
             if tensor.dtype not in [flow.float16]:
                 test_case.assertTrue(np.array_equal(np_arr, tensor.numpy()))
-    
+
     def test_non_contiguous_input(test_case):
         np_arr = np.random.randn(2, 3, 4, 5).transpose(2, 0, 3, 1)
         flow_tensor = flow.from_numpy(np_arr)
         torch_tensor = torch.from_numpy(np_arr)
         test_case.assertTrue(flow_tensor.shape == torch_tensor.shape)
         test_case.assertTrue(flow_tensor.stride() == torch_tensor.stride())
-        test_case.assertTrue(flow_tensor.is_contiguous()==torch_tensor.is_contiguous())
+        test_case.assertTrue(
+            flow_tensor.is_contiguous() == torch_tensor.is_contiguous()
+        )
         test_case.assertTrue(np.array_equal(flow_tensor.numpy(), torch_tensor.numpy()))
 
 
