@@ -29,7 +29,7 @@ namespace auto_parallel {
 class SbpGraph final {
  public:
   // Constructor
-  SbpGraph();
+  SbpGraph() = default;
 
   // Deconstructor
   ~SbpGraph();
