@@ -110,6 +110,11 @@ struct GetRecordEventInstructionPolicy : public StreamRoleVisitor<GetRecordEvent
         new vm::EpRecordEventInstructionPolicy(std::forward<Args>(args)...));
   }
   template<typename... Args>
+  static Maybe<vm::InstructionPolicy> VisitAsyncedDevice2Host(DeviceType device_type,
+                                                              Args&&... args) {
+    return VisitDevice2Host(device_type, std::forward<Args>(args)...);
+  }
+  template<typename... Args>
   static Maybe<vm::InstructionPolicy> VisitSyncedLaunchedCommNet(DeviceType device_type,
                                                                  Args&&... args) {
     return std::shared_ptr<vm::InstructionPolicy>(

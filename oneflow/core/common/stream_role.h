@@ -28,6 +28,7 @@ enum class StreamRole {
   kCompute,
   kHost2Device,
   kDevice2Host,
+  kAsyncedDevice2Host,
   kSyncedLaunchedCommNet,
   kAsyncedLaunchedCommNet,
   kBarrier,
@@ -46,6 +47,8 @@ struct StreamRoleVisitor {
       case StreamRole::kCompute: return DerivedT::VisitCompute(std::forward<Args>(args)...);
       case StreamRole::kHost2Device: return DerivedT::VisitHost2Device(std::forward<Args>(args)...);
       case StreamRole::kDevice2Host: return DerivedT::VisitDevice2Host(std::forward<Args>(args)...);
+      case StreamRole::kAsyncedDevice2Host:
+        return DerivedT::VisitAsyncedDevice2Host(std::forward<Args>(args)...);
       case StreamRole::kSyncedLaunchedCommNet:
         return DerivedT::VisitSyncedLaunchedCommNet(std::forward<Args>(args)...);
       case StreamRole::kAsyncedLaunchedCommNet:

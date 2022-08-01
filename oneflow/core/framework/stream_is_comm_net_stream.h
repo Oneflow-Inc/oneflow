@@ -25,6 +25,7 @@ struct IsCommNetStream final : public StreamRoleVisitor<IsCommNetStream> {
   static bool VisitCompute() { return false; }
   static bool VisitHost2Device() { return false; }
   static bool VisitDevice2Host() { return false; }
+  static bool VisitAsyncedDevice2Host() { return VisitDevice2Host(); }
   static bool VisitSyncedLaunchedCommNet() { return true; }
   static bool VisitAsyncedLaunchedCommNet() { return true; }
   static bool VisitBarrier() { return false; }
