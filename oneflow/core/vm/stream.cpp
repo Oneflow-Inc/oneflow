@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/vm/stream_get_stream_type.h"
+#include "oneflow/core/vm/stream_get_stream_policy.h"
 #include "oneflow/core/framework/stream_on_independent_thread.h"
 
 namespace oneflow {
