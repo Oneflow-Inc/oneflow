@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/common/wrap_dim_utils.h"

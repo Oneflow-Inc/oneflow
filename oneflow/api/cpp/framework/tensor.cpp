@@ -21,9 +21,8 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
-#include "oneflow/core/register/ofblob.h"
-#include "oneflow/api/common/ofblob.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/vm/virtual_machine.h"
 
@@ -72,9 +71,10 @@ void Tensor::zeros_() {
   of::PhysicalRun([&](of::InstructionsBuilder* builder) -> of::Maybe<void> {
     JUST(builder->AccessBlobByCallback(
         local_tensor,
-        [](uint64_t of_blob_ptr) {
-          auto* of_blob = reinterpret_cast<of::OfBlob*>(of_blob_ptr);
-          of_blob->AsyncAutoMemset(0);
+        [](of::ep::Stream* stream,
+           const std::shared_ptr<of::vm::EagerBlobObject>& eager_blob_object) {
+          of::AutoMemset(stream, eager_blob_object->mut_dptr(), 0,
+                         eager_blob_object->ByteSizeOfBlobBody(), eager_blob_object->mem_case());
         },
         "mut"));
     return of::Maybe<void>::Ok();
@@ -89,9 +89,11 @@ Tensor Tensor::from_buffer(const void* buffer, const Shape& shape, const Device&
   of::PhysicalRun([&](of::InstructionsBuilder* builder) -> of::Maybe<void> {
     return builder->AccessBlobByCallback(
         local_tensor,
-        [buffer, shape, dtype](uint64_t ofblob_ptr) {
-          CHECK_JUST(of::BlobBufferCopyUtil<void>::From(ofblob_ptr, buffer,
-                                                        shape.Count(0) * GetDTypeSize(dtype)));
+        [buffer, shape, dtype](of::ep::Stream* stream,
+                               const std::shared_ptr<of::vm::EagerBlobObject>& eager_blob_object) {
+          of::AutoMemcpy(stream, eager_blob_object->mut_dptr(), buffer,
+                         shape.Count(0) * GetDTypeSize(dtype), eager_blob_object->mem_case(),
+                         of::memory::MakeHostMemCase());
         },
         "mut");
   }).GetOrThrow();
@@ -103,8 +105,11 @@ void Tensor::copy_to(T* buffer) const {
   std::shared_ptr<of::one::LocalTensor> local_tensor = tensor_->AsLocalTensor().GetPtrOrThrow();
   const auto shape = this->shape();
 
-  const auto& Callback = [buffer, shape](uint64_t ofblob_ptr) {
-    CHECK_JUST(of::BlobBufferCopyUtil<T>::To(ofblob_ptr, buffer, shape.Count(0)));
+  const auto& Callback = [buffer, shape](
+                             of::ep::Stream* stream,
+                             const std::shared_ptr<of::vm::EagerBlobObject>& eager_blob_object) {
+    of::AutoMemcpy(stream, buffer, eager_blob_object->mut_dptr(), shape.Count(0) * sizeof(T),
+                   of::memory::MakeHostMemCase(), eager_blob_object->mem_case());
   };
   auto btb = std::make_shared<of::BlockingThenBusy>(1);
   CHECK_JUST(of::PhysicalRun([&](of::InstructionsBuilder* builder) -> of::Maybe<void> {

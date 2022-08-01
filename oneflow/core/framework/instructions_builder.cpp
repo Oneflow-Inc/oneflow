@@ -515,7 +515,8 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
 template<typename T>
 Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
     const T tensor, const std::shared_ptr<BlockingThenBusy>& btb,
-    const std::function<void(uint64_t)>& Callback, const std::string& modifier) {
+    const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& Callback,
+    const std::string& modifier) {
   // We want balance the cpu overhead and notification latency.
   //
   // balanced timeline here:
@@ -548,9 +549,11 @@ Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
   //                 |                                             |                |
   //   main thread:  |<---------------------------- S ----------------------------->|
 
-  const auto& CallbackWrapper = [btb, Callback](uint64_t ofblob_ptr) {
+  const auto& CallbackWrapper = [btb, Callback](
+                                    ep::Stream* stream,
+                                    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
     btb->mut_blocking_counter()->Decrease();
-    Callback(ofblob_ptr);
+    Callback(stream, eager_blob_object);
     btb->mut_spin_counter()->Decrease();
   };
   return AccessBlobByCallback(tensor, CallbackWrapper, modifier);
@@ -558,11 +561,13 @@ Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
 
 template Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
     const std::shared_ptr<one::LocalTensor> tensor, const std::shared_ptr<BlockingThenBusy>& btb,
-    const std::function<void(uint64_t)>& Callback, const std::string& modifier);
+    const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& Callback,
+    const std::string& modifier);
 
 template Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
     const one::EagerLocalTensorImpl* tensor, const std::shared_ptr<BlockingThenBusy>& btb,
-    const std::function<void(uint64_t)>& Callback, const std::string& modifier);
+    const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& Callback,
+    const std::string& modifier);
 
 namespace {
 
@@ -577,9 +582,10 @@ Maybe<Symbol<Device>> GetDevice(const one::EagerLocalTensorImpl* tensor) {
 }  // namespace
 
 template<typename T>
-Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
-                                                      const std::function<void(uint64_t)>& callback,
-                                                      const std::string& modifier) {
+Maybe<void> InstructionsBuilder::AccessBlobByCallback(
+    const T tensor,
+    const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& callback,
+    const std::string& modifier) {
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
   Symbol<Device> device = JUST(GetDevice(tensor));
   Symbol<Stream> stream = JUST(GetDefaultStreamByDevice(device));
@@ -603,11 +609,13 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
 }
 
 template Maybe<void> InstructionsBuilder::AccessBlobByCallback(
-    const std::shared_ptr<one::LocalTensor> tensor, const std::function<void(uint64_t)>& callback,
+    const std::shared_ptr<one::LocalTensor> tensor,
+    const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& callback,
     const std::string& modifier);
 
 template Maybe<void> InstructionsBuilder::AccessBlobByCallback(
-    const one::EagerLocalTensorImpl* tensor, const std::function<void(uint64_t)>& callback,
+    const one::EagerLocalTensorImpl* tensor,
+    const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& callback,
     const std::string& modifier);
 
 namespace {

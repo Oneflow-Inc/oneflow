@@ -31,7 +31,6 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/control/global_process_ctx.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/framework/stream_allocator_is_pinned.h"
 
 namespace oneflow {
