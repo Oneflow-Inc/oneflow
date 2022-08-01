@@ -395,7 +395,7 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
 
             // For Cast OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFF_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY,
-                                             BROADCAST_ELEMENTWISE_UNARY_OP_SEQ,
+                                             BROADCAST_ELEMENTWISE_DIFF_DTYPE_UNARY_OP_SEQ,
                                              CUDA_PRIMITIVE_ALL_TYPE_SEQ,
                                              CUDA_PRIMITIVE_ALL_TYPE_SEQ)};
 
