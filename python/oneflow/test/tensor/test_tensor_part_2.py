@@ -466,7 +466,7 @@ class TestTensor(flow.unittest.TestCase):
     # Not check graph because of one reason:
     # Reason 1, lazy tensor cannot call .numpy(). tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor.
     # Please refer to File "python/oneflow/nn/modules/nonzero.py", line 29, in nonzero_op.
-    @autotest(n=5, auto_backward=False, check_graph="ValidatedFlase")
+    @autotest(n=5, auto_backward=False, check_graph="ValidatedFalse")
     def test_tensor_nonzero_with_random_data(test_case):
         device = random_device()
         ndim = random(2, 6).to(int)
@@ -791,7 +791,7 @@ class TestTensor(flow.unittest.TestCase):
         return y
 
     @flow.unittest.skip_unless_1n4d()
-    def test_construct_consistent_tensor_by_numpy(test_case):
+    def test_construct_global_tensor_by_numpy(test_case):
         x = np.ones((4, 4), dtype=np.int32)
         placement = flow.placement("cuda", [0, 1, 2, 3])
         y = flow.tensor(

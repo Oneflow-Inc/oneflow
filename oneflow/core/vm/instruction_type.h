@@ -20,18 +20,12 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/vm/instruction_fuse_type.h"
 
 namespace oneflow {
 namespace vm {
 
 class Instruction;
-
-enum InstructionFuseType {
-  kInvalidInstructionFuseType = 0,
-  kDisableInstructionFuse,
-  kEnableInstructionFuseAtAnyPosition,
-  kEnableInstructionFuseAsTailOnly,
-};
 
 class InstructionType {
  public:

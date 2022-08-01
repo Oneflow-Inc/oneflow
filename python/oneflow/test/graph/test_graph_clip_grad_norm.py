@@ -16,6 +16,7 @@ limitations under the License.
 import os
 import unittest
 import numpy as np
+import copy
 
 import oneflow as flow
 import oneflow.unittest
@@ -171,10 +172,10 @@ class TensorGenerator(object):
         return self.target.to_local()
 
     def local_param1(self):
-        return self.param1.clone().to_local()
+        return copy.deepcopy(self.param1).to_local()
 
     def local_param2(self):
-        return self.param2.clone().to_local()
+        return copy.deepcopy(self.param2).to_local()
 
     def global_input(self):
         if self.input_sbp is None and self.placement1 is None:
@@ -190,13 +191,13 @@ class TensorGenerator(object):
 
     def global_param1(self):
         if self.param1_sbp is None and self.placement1 is None:
-            return self.param1.clone()
+            return copy.deepcopy(self.param1)
 
         return self.param1.to_global(placement=self.placement1, sbp=self.param1_sbp)
 
     def global_param2(self):
         if self.param2_sbp is None and self.placement2 is None:
-            return self.param2.clone()
+            return copy.deepcopy(self.param2)
 
         return self.param2.to_global(placement=self.placement2, sbp=self.param2_sbp)
 

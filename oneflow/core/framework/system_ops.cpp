@@ -19,17 +19,17 @@ limitations under the License.
 namespace oneflow {
 namespace schema {
 
-Maybe<AttrVal> CastToConsistentOp::GetAttr(const std::string& attr_name) const {
+Maybe<AttrVal> CastToGlobalOp::GetAttr(const std::string& attr_name) const {
   if (attr_name == "shape") {
     return CastAttrValue(&shape);
   } else if (attr_name == "dtype") {
     return CastAttrValue(&dtype);
   } else {
-    return Error::RuntimeError() << "CastToConsistent op has no attribute named " << attr_name;
+    return Error::RuntimeError() << "CastToGlobal op has no attribute named " << attr_name;
   }
 }
 
-const HashSet<std::string>& CastToConsistentOp::AttrNames() const {
+const HashSet<std::string>& CastToGlobalOp::AttrNames() const {
   static HashSet<std::string> attr_names{"shape", "dtype"};
   return attr_names;
 }

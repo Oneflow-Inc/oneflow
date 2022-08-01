@@ -306,7 +306,7 @@ of::Maybe<void> Graph::GraphImpl::AddOp(of::OperatorConf op_conf) {
         0, batch_size_);
   }
   auto* ctx = JUST(of::GetCurInferCtx());
-  JUST(ctx->AddAndInferConsistentOp(op_conf));
+  JUST(ctx->AddAndInferGlobalOp(op_conf));
   return of::Maybe<void>::Ok();
 }
 

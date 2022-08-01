@@ -178,7 +178,7 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
 
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->AccessBlobByCallback(
-        JUST(tensor->AsMirroredTensor()),
+        JUST(tensor->AsLocalTensor()),
         [handle](uint64_t ofblob_ptr) {
           auto* of_blob = reinterpret_cast<OfBlob*>(ofblob_ptr);
           CHECK_JUST(Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {

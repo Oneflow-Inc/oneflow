@@ -22,8 +22,11 @@ limitations under the License.
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
+
+class Device;
 
 namespace vm {
 
@@ -36,7 +39,8 @@ class StreamType {
  public:
   virtual ~StreamType() = default;
 
-  virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const = 0;
+  virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
+                             Symbol<Device> device) const = 0;
 
   virtual void InitInstructionStatus(const Stream& stream,
                                      InstructionStatusBuffer* status_buffer) const = 0;

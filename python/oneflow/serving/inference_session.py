@@ -68,7 +68,7 @@ class SessionOption(object):
     def __init__(self):
         self.device_tag = "cuda"
         self.device_num = 1
-        self.is_mirrored_view = False
+        self.is_local_view = False
 
 
 class InferenceSession(object):
@@ -83,7 +83,7 @@ class InferenceSession(object):
         else:
             assert isinstance(option, SessionOption)
             self.option_ = option
-        self.is_mirrored_ = self.option_.is_mirrored_view
+        self.is_local_ = self.option_.is_local_view
         self.checkpoint_path_ = None
         self.config_proto_ = None
         self.job_name2job_conf_ = {}
@@ -201,7 +201,7 @@ class InferenceSession(object):
         assert type(job_conf) is job_conf_proto.JobConfigProto, type(job_conf)
         serialized_job_conf_str = text_format.MessageToString(job_conf)
         scope = oneflow._oneflow_internal.MakeInitialScope(
-            serialized_job_conf_str, flow.placement("cpu", [0]), self.is_mirrored_
+            serialized_job_conf_str, flow.placement("cpu", [0]), self.is_local_
         )
         with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):
             with scope_util.ScopeContext(scope):

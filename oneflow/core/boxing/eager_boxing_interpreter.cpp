@@ -38,7 +38,7 @@ Maybe<one::Tensor> EagerBoxingInterpreter::Interpret(const std::shared_ptr<one::
                                                      Symbol<ParallelDesc> in_parallel_desc,
                                                      Symbol<ParallelDesc> out_parallel_desc) const {
   JUST(CheckEagerBoxingDataType(input->dtype()->data_type()));
-  DisableCheckConsistentTensorMetaScope disable_meta_check;
+  DisableCheckGlobalTensorMetaScope disable_meta_check;
   const auto& tensor =
       JUST(InterpretImpl(input, in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());

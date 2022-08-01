@@ -47,6 +47,9 @@ limitations under the License.
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/api/common/ofblob.h"
 #include "oneflow/core/framework/tensor_util.h"
+#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/framework/tensor_util.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 
 namespace oneflow {
 namespace one {
@@ -122,11 +125,9 @@ class ArgMinFunctor {
         .call(input);
   }
 };
-class ConsistentConstantFunctor {
+class GlobalConstantFunctor {
  public:
-  ConsistentConstantFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build());
-  }
+  GlobalConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
@@ -204,9 +205,9 @@ class EmptyFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ConsistentEmptyFunctor {
+class GlobalEmptyFunctor {
  public:
-  ConsistentEmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
+  GlobalEmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
@@ -416,6 +417,48 @@ class ArgWhereFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class NonZeroFunctor {
+ public:
+  NonZeroFunctor() {}
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, bool as_tuple) const {
+    std::shared_ptr<one::Tensor> input = x;
+    if (as_tuple && input->ndim() == 0) { input = JUST(functional::Unsqueeze(input, 0)); }
+    int64_t ndim = input->ndim();
+    const auto& output_tuple =
+        JUST(functional::ArgWhere(input, JUST(DType::Get(DataType::kInt64))));
+    const std::shared_ptr<one::Tensor>& size = JUST(VectorAt(*output_tuple, 1));
+    CHECK_EQ_OR_RETURN(size->shape()->elem_cnt(), 1)
+        << Error::RuntimeError() << kOfBugIssueUploadPrompt;
+    CHECK_OR_RETURN(size->dtype() == JUST(DType::Get(DataType::kInt64)))
+        << Error::RuntimeError() << kOfBugIssueUploadPrompt;
+    int64_t size_val = -1;
+    {
+      if (size->is_global()) {
+        CHECK_OR_RETURN(JUST(size->parallel_desc())->parallel_num() == 1  // NOLINT
+                        || NdSbpIsAllBroadcast(*JUST(size->nd_sbp())));   // NOLINT
+      }
+      JUST(CopyLocalTensorDataTo(size->is_local() ? size : JUST(size->cur_rank_phy_tensor()),
+                                 (void*)(&size_val), GetSizeOfDataType(DataType::kInt64)));
+    }
+    std::vector<int64_t> start{0, 0};
+    std::vector<int64_t> stop{size_val, ndim};
+    std::vector<int64_t> step{1, 1};
+    const auto& output = JUST(
+        functional::Slice(output_tuple->at(0), start, stop, step, /*enable_view_slice=*/false));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>();
+    if (as_tuple) {
+      const auto& transposed_output = JUST(functional::Transpose2dim(output, 1, 0));
+      for (int64_t i = 0; i < ndim; ++i) {
+        outputs->emplace_back(
+            JUST(functional::TensorGetItem(transposed_output, {functional::detail::IndexItem(i)})));
+      }
+    } else {
+      outputs->emplace_back(output);
+    }
+    return outputs;
+  }
 };
 
 class BroadcastLikeFunctor {
@@ -680,6 +723,45 @@ class ExpandDimsFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class UnsqueezeMultipleFunctor {
+ public:
+  UnsqueezeMultipleFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& dim,
+                           const int32_t& n_dims) const {
+    if (dim.size() == 0 || x->ndim() == n_dims) {
+      return x;
+    } else if (dim.size() == 1) {
+      return JUST(functional::Unsqueeze(x, JUST(VectorAt(dim, 0))));
+    } else {
+      std::shared_ptr<Tensor> tensor = x;
+      const auto& dims_to_unsqueeze = JUST(dim_list_to_bitset(dim, n_dims));
+
+      // Unsqueeze is called several times to extend the dimension when the View mechanism is
+      // enabled. Otherwise, calculate the target shape and call reshape.
+      if (view::IsViewApplicable(tensor)) {
+        for (int32_t i = 0; i < n_dims; i++) {
+          if ((*dims_to_unsqueeze)[i]) { tensor = JUST(view::Unsqueeze(tensor, i)); }
+        }
+      } else {
+        std::vector<int64_t> target_dims(n_dims, 0);
+        int32_t tensor_index = 0;
+        for (int32_t i = 0; i < n_dims; i++) {
+          if ((*dims_to_unsqueeze)[i]) {
+            target_dims[i] = 1;
+          } else {
+            CHECK_LT_OR_RETURN(tensor_index, tensor->ndim());  // NOLINT(maybe-need-error-msg)
+            target_dims[i] = tensor->shape()->at(tensor_index);
+            tensor_index++;
+          }
+        }
+        Shape infered_shape(DimVector(target_dims.begin(), target_dims.end()));
+        tensor = JUST(functional::Reshape(tensor, infered_shape));
+      }
+      return tensor;
+    }
+  }
 };
 
 class SqueezeFunctor {
@@ -1146,7 +1228,7 @@ class ReshapeFunctor {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    Shape infered_shape = *JUST(InferShape(x, shape));
+    Shape infered_shape = *JUST(InferShapeUnspecifiedDim(x->shape()->Count(0), shape));
 
     if (view::IsViewApplicable(x)) {
       Optional<Stride> infered_stride =
@@ -1168,14 +1250,14 @@ class ViewFunctor {
  public:
   ViewFunctor() { op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    Shape infered_shape = *JUST(InferShape(x, shape));
+    Shape infered_shape = *JUST(InferShapeUnspecifiedDim(x->shape()->Count(0), shape));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 
     if (view::IsViewApplicable(x)) {
       Optional<Stride> infered_stride =
           ComputeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
-      CHECK_OR_RETURN(infered_stride.has_value())
+      CHECK_OR_RETURN_ERROR(infered_stride.has_value())
           << Error::RuntimeError()
           << "view size is not compatible with input tensor's size and stride (at least one "
              "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
@@ -1195,7 +1277,7 @@ class ToContiguousFunctor {
     op_ = CHECK_JUST(one::OpBuilder("to_contiguous").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
-    if (input->is_consistent() || input->is_lazy()) { return input; }
+    if (input->is_global() || input->is_lazy()) { return input; }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input});
   }
 
@@ -1217,11 +1299,21 @@ class InplaceToContiguousFunctor {
         << "Both ref and value must be local tensor.";
     std::shared_ptr<Stride> stride(new Stride(*input->shape()));
     // update stride
-    JUST(input->mut_eager_mirrored_tensor_impl())->mut_tensor_meta()->set_stride(stride);
     const auto& blob_object = JUST(input->eager_blob_object());
-    // update eager_blob_object
-    JUST(JUST(input->mut_eager_mirrored_tensor_impl())
-             ->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object())));
+    Symbol<LocalTensorMeta> old_tensor_meta = JUST(input->local_tensor_meta());
+
+    Symbol<LocalTensorMeta> new_tensor_meta = SymbolOf(LocalTensorMeta(
+        std::make_shared<Shape>(old_tensor_meta->shape()), stride, old_tensor_meta->dtype(),
+        old_tensor_meta->device(), old_tensor_meta->storage_offset()));
+
+    std::shared_ptr<EagerLocalTensorImpl> final_tensor_impl =
+        std::make_shared<EagerLocalTensorImpl>(JUST(input->tensor_storage()),
+                                               input->requires_grad(), input->is_leaf());
+    JUST(final_tensor_impl->set_retain_grad(input->retain_grad()));
+    JUST(final_tensor_impl->InitEagerBlobObject(new_tensor_meta,
+                                                JUST(blob_object->compute_local_dep_object())));
+    JUST(JUST(input->AsLocalTensor())->set_impl(final_tensor_impl));
+
     // assign contiguous tensor data
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*assign_op_, {input, contiguous_tensor}));
     return input;
@@ -2595,8 +2687,8 @@ Maybe<Tensor> LocalTensorTo(const std::shared_ptr<Tensor>& x, const std::string&
   return tensor;
 }
 
-Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::string& device_type,
-                                 const Symbol<DType>& dtype, const bool& copy) {
+Maybe<Tensor> GlobalTensorTo(const std::shared_ptr<Tensor>& x, const std::string& device_type,
+                             const Symbol<DType>& dtype, const bool& copy) {
   std::shared_ptr<Tensor> tensor;
   auto input_placement = JUST(x->parallel_desc());
   std::string input_device_tag = input_placement->device_tag();
@@ -2620,11 +2712,12 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
     auto nd_sbp = JUST(x->nd_sbp());
     std::vector<Symbol<SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
     for (int i = 0; i < sbp_tuple.size(); ++i) { sbp_tuple[i] = nd_sbp->sbp_parallel().Get(i); }
-    tensor = JUST(ConsistentToLocal(x));
+    tensor = JUST(GlobalToLocal(x, /*copy=*/false));
     Symbol<Device> device = JUST(Device::New(device_type));
     tensor = JUST(LocalTensorTo(tensor, device->type(), device->device_id(), dtype, copy));
     JUST(tensor->set_requires_grad(x->requires_grad()));
-    return JUST(LocalToConsistent(tensor, placement, sbp_tuple, *(x->shape()), dtype));
+    return JUST(LocalToGlobal(tensor, placement, sbp_tuple, *(x->shape()), dtype,
+                              /* sync_data */ true, /*copy=*/false));
   }
 }
 
@@ -2636,14 +2729,14 @@ class ToFunctor {
                            const Optional<std::string>& device_,
                            const Optional<Symbol<DType>>& dtype_, bool copy) const {
     Symbol<DType> dtype = dtype_.value_or(input->dtype());
-    if (input->is_consistent()) {
+    if (input->is_global()) {
       std::string device_type = device_.value_or(JUST(input->parallel_desc())->device_tag());
       CHECK_OR_RETURN(ep::DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(device_type)
                       != DeviceType::kInvalidDevice)
           << Error::RuntimeError()
           << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
-          << "for consistent tensor, but got " << device_.value_or("");
-      return JUST(ConsistentTensorTo(input, device_type, dtype, copy));
+          << "for global tensor, but got " << device_.value_or("");
+      return JUST(GlobalTensorTo(input, device_type, dtype, copy));
     } else {
       std::string device_name = "";
       int device_id = 0;
@@ -2665,13 +2758,13 @@ class To2Functor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<Symbol<Device>>& device_,
                            const Optional<Symbol<DType>>& dtype_, bool copy) const {
-    CHECK_OR_RETURN(!(input->is_consistent() && device_.has_value()))
+    CHECK_OR_RETURN(!(input->is_global() && device_.has_value()))
         << Error::RuntimeError()
         << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
-        << "for consistent tensor, but got " << device_.value_or(Symbol<Device>())->ToRepr();
-    if (input->is_consistent()) {
+        << "for global tensor, but got " << device_.value_or(Symbol<Device>())->ToRepr();
+    if (input->is_global()) {
       std::string device_type = JUST(input->parallel_desc())->device_tag();
-      return JUST(ConsistentTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
+      return JUST(GlobalTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
     } else {
       auto dtype = dtype_.value_or(input->dtype());
       auto device =
@@ -2686,8 +2779,8 @@ class To3Functor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<Symbol<DType>>& dtype_, bool copy) const {
     Symbol<DType> dtype = dtype_.value_or(input->dtype());
-    if (input->is_consistent()) {
-      return ConsistentTensorTo(input, JUST(input->parallel_desc())->device_tag(), dtype, copy);
+    if (input->is_global()) {
+      return GlobalTensorTo(input, JUST(input->parallel_desc())->device_tag(), dtype, copy);
     } else {
       auto device = JUST(input->device());
       return LocalTensorTo(input, device->type(), device->device_id(), dtype, copy);
@@ -2699,7 +2792,7 @@ class To4Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const std::shared_ptr<Tensor>& other, bool copy) const {
-    CHECK_OR_RETURN(!input->is_consistent() && !other->is_consistent())
+    CHECK_OR_RETURN(!input->is_global() && !other->is_global())
         << Error::RuntimeError()
         << "tensor.to(other) can only be called when tensor and other are local tensors";
     Symbol<DType> dtype = other->dtype();
@@ -2834,8 +2927,14 @@ class RepeatFunctor {
           }
         } else {
           input_reshape_vec.insert(input_reshape_vec.begin(), input_shape_val);
-          expand_shape_vec.insert(expand_shape_vec.begin(), input_shape_val);
-          output_reshape_vec.insert(output_reshape_vec.begin(), input_shape_val);
+          // For 0-size tensor, align with PyTorch.
+          if (repeat_shape_val == 0) {
+            expand_shape_vec.insert(expand_shape_vec.begin(), 0);
+            output_reshape_vec.insert(output_reshape_vec.begin(), 0);
+          } else {
+            expand_shape_vec.insert(expand_shape_vec.begin(), input_shape_val);
+            output_reshape_vec.insert(output_reshape_vec.begin(), input_shape_val);
+          }
         }
       } else {
         expand_shape_vec.insert(expand_shape_vec.begin(), repeat_shape.At(i));
@@ -2848,7 +2947,7 @@ class RepeatFunctor {
     std::shared_ptr<one::Tensor> reshaped_tensor = JUST(Reshape(input, input_reshape));
     std::shared_ptr<one::Tensor> expanded_tensor = JUST(Expand(reshaped_tensor, expand_shape));
     std::shared_ptr<one::Tensor> result = JUST(Reshape(expanded_tensor, output_reshape));
-    return result;
+    return result->contiguous();
   }
 };
 
@@ -3014,11 +3113,11 @@ class PinMemoryFunctor {
         CHECK_JUST(one::OpBuilder("slice_update").Input("ref").Input("value").Output("y").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
-    // TODO:(zhaoluyang) support consistent tensor.pin_memory()
+    // TODO:(zhaoluyang) support global tensor.pin_memory()
     CHECK_OR_RETURN(input->is_local() && !(LazyMode::is_enabled()))
         << Error::RuntimeError() << "Tensor.pin_memory() only support local tensor for now!";
     // if tensor already pinned, then just return
-    if (JUST(JUST(input->AsMirroredTensor())->is_pinned())) { return input; }
+    if (JUST(JUST(input->AsLocalTensor())->is_pinned())) { return input; }
     auto shape = input->shape();
     auto device = JUST(input->device());
     const bool requires_grad = input->requires_grad();
@@ -3113,9 +3212,9 @@ class FillTensorFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ArgMaxFunctor>("ArgMax");
   m.add_functor<impl::ArgMinFunctor>("ArgMin");
-  m.add_functor<impl::ConsistentConstantFunctor>("ConsistentConstant");
+  m.add_functor<impl::GlobalConstantFunctor>("GlobalConstant");
   m.add_functor<impl::ConstantFunctor>("Constant");
-  m.add_functor<impl::ConsistentEmptyFunctor>("ConsistentEmpty");
+  m.add_functor<impl::GlobalEmptyFunctor>("GlobalEmpty");
   m.add_functor<impl::EmptyFunctor>("Empty");
   m.add_functor<impl::ZerosLikeFunctor>("ZerosLike");
   m.add_functor<impl::OnesLikeFunctor>("OnesLike");
@@ -3127,6 +3226,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::WhereScalarYFunctor>("WhereScalarY");
   m.add_functor<impl::WhereScalarXYFunctor>("WhereScalarXY");
   m.add_functor<impl::ArgWhereFunctor>("ArgWhere");
+  m.add_functor<impl::NonZeroFunctor>("NonZero");
   m.add_functor<impl::BroadcastLikeFunctor>("BroadcastLike");
   m.add_functor<impl::ConcatFunctor>("Concat");
   m.add_functor<impl::StackFunctor>("Stack");
@@ -3135,6 +3235,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ExpandGradFunctor>("ExpandGrad");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::ExpandDimsFunctor>("Unsqueeze");
+  m.add_functor<impl::UnsqueezeMultipleFunctor>("UnsqueezeMultiple");
   m.add_functor<impl::SqueezeFunctor>("Squeeze");
   m.add_functor<impl::RollFunctor>("Roll");
   m.add_functor<impl::GatherFunctor>("Gather");

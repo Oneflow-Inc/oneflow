@@ -95,12 +95,12 @@ def get_padding(padding, kernel_size, dilation, stride):
 
 
 class Conv1d(Module):
-    """The interface is consistent with PyTorch.    
+    """Applies a 1D convolution over an input signal composed of several input
+    planes.
+    
+    The interface is consistent with PyTorch.    
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Conv1d.html.
     
-    Applies a 1D convolution over an input signal composed of several input
-    planes.
-
     In the simplest case, the output value of the layer with input size
     :math:`(N, C_{\\text{in}}, L)` and output :math:`(N, C_{\\text{out}}, L_{\\text{out}})` can be
     precisely described as:
@@ -230,17 +230,20 @@ class Conv1d(Module):
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
 
-    def forward(self, x):
+    def _conv_forward(self, x, weight, bias):
         return flow._C.conv1d(
             x,
-            self.weight,
-            self.bias,
+            weight,
+            bias,
             stride=self.stride,
             padding=self.padding,
             dilation=self.dilation,
             groups=self.groups,
             channel_pos=self.channel_pos,
         )
+
+    def forward(self, x):
+        return self._conv_forward(x, self.weight, self.bias)
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
@@ -258,11 +261,10 @@ class Conv1d(Module):
 
 
 class Conv2d(Module):
-    """The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Conv2d.html.
-    
-    Applies a 2D convolution over an input signal composed of several input
+    """Applies a 2D convolution over an input signal composed of several input
     planes.
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Conv2d.html.
 
     In the simplest case, the output value of the layer with input size
     :math:`(N, C_{\\text{in}}, H, W)` and output :math:`(N, C_{\\text{out}}, H_{\\text{out}}, W_{\\text{out}})`
@@ -430,7 +432,7 @@ class Conv2d(Module):
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
 
-    def forward(self, x):
+    def _conv_forward(self, x, weight, bias):
         if self.channel_pos == "channels_first":
             in_channel_axis = 1
         else:
@@ -441,14 +443,17 @@ class Conv2d(Module):
             )
         return flow._C.conv2d(
             x,
-            self.weight,
-            self.bias,
+            weight,
+            bias,
             stride=self.stride,
             padding=self.padding,
             dilation=self.dilation,
             groups=self.groups,
             channel_pos=self.channel_pos,
         )
+
+    def forward(self, x):
+        return self._conv_forward(x, self.weight, self.bias)
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
@@ -466,11 +471,11 @@ class Conv2d(Module):
 
 
 class Conv3d(Module):
-    r"""The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Conv3d.html.
-    
-    Applies a 3D convolution over an input signal composed of several input
+    r"""Applies a 3D convolution over an input signal composed of several input
     planes.
+    
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Conv3d.html.
 
     In the simplest case, the output value of the layer with input size :math:`(N, C_{in}, D, H, W)`
     and output :math:`(N, C_{out}, D_{out}, H_{out}, W_{out})` can be precisely described as:
@@ -606,19 +611,22 @@ class Conv3d(Module):
             bound = 1 / math.sqrt(fan_in)
             init.uniform_(self.bias, -bound, bound)
 
-    def forward(self, x):
+    def _conv_forward(self, x, weight, bias):
         if x.shape[1] != self.in_channels:
             raise ValueError("The input channels should be equal to self.in_channels")
         return flow._C.conv3d(
             x,
-            self.weight,
-            self.bias,
+            weight,
+            bias,
             stride=self.stride,
             padding=self.padding,
             dilation=self.dilation,
             groups=self.groups,
             channel_pos=self.channel_pos,
         )
+
+    def forward(self, x):
+        return self._conv_forward(x, self.weight, self.bias)
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"

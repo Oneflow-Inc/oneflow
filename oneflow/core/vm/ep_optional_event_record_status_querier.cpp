@@ -13,17 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/ep_device_context.h"
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 
 namespace oneflow {
 namespace vm {
 
-void EpOptionalEventRecordStatusQuerier::SetLaunched(EpDeviceCtx* device_ctx) {
+void EpOptionalEventRecordStatusQuerier::SetLaunched(ep::Stream* stream) {
   CHECK(!launched_);
   if (ep_event_) {
     ep_event_->mut_device()->SetAsActiveDevice();
-    device_ctx->stream()->RecordEvent(ep_event_->mut_event());
+    stream->RecordEvent(ep_event_->mut_event());
   }
   launched_ = true;
 }
