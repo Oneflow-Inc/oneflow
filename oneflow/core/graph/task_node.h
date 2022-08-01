@@ -77,7 +77,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   // Build
   virtual void ProduceAllRegstsAndBindEdges() = 0;
   virtual void ConsumeAllRegsts() = 0;
-  virtual void HandleInplaceRegsts(){};
+  virtual void HandleInplaceOperationRegsts(){};
   void PinConsumedRegst();
   void InferTimeShapeIfMeaningful();
   void ForEachProducedDataRegst(const std::function<void(const std::string&, RegstDesc*)>& Handler);

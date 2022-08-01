@@ -92,7 +92,7 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
   });
 }
 
-void NormalForwardCompTaskNode::HandleInplaceRegsts() {
+void NormalForwardCompTaskNode::HandleInplaceOperationRegsts() {
   const auto& _op = op();
   if (_op->op_conf().has_user_conf()) {
     const auto& inplace_operation_info = _op->op_conf().user_conf().inplace_operation_info();
