@@ -58,7 +58,6 @@ class InstructionPolicy {
 
   void DeleteInstructionStatusIf(Instruction* instruction) { DeleteInstructionStatus(instruction); }
 
-
  protected:
   InstructionPolicy() : stream_sequential_dependence_(nullptr) {}
 

@@ -32,7 +32,6 @@ class Stream;
 
 namespace vm {
 
-
 static const int kInstructionStatusBufferBytes = 64;
 
 class InstructionStatusBuffer final {
