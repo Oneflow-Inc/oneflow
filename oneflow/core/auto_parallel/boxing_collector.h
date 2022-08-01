@@ -139,9 +139,9 @@ class BoxingCollector final {
                                   const BlobDesc& logical_blob_desc,
                                   std::vector<NdSbp>& middle_sbps);
   // Stores all the possible SbpParallel.
-  HashMap<::oneflow::SbpParallel, int32_t> sbp_parallel_universe_;
+  HashMap<SbpParallel, int32_t> sbp_parallel_universe_;
   // Relationship between id and Sbp Parallel
-  std::vector<::oneflow::SbpParallel> id2sbp_parallel_;
+  std::vector<SbpParallel> id2sbp_parallel_;
   // minimum cost
   // minimum_copy_cost[producer][consumer]
   std::vector<std::vector<double>> minimum_copy_cost_;

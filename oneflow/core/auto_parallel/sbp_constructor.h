@@ -69,9 +69,9 @@ class SbpConstructor final {
   double cost_ratio_;
   bool enable_trunk_algo_;
   bool use_sbp_collector_;
-  SbpGraph<NdSbpSignature> sbp_graph_;
+  SbpGraph sbp_graph_;
   const OpGraph* op_graph_;
-  HashMap<std::string, SbpNode<NdSbpSignature>*> op_name2sbp_node_;
+  HashMap<std::string, SbpNode*> op_name2sbp_node_;
 };
 
 }  // namespace auto_parallel
