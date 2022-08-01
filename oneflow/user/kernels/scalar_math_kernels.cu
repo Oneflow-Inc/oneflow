@@ -71,9 +71,9 @@ template<template<typename> class BIN_OP, typename T>
 struct StridedScalarMathFunctor<DeviceType::kCUDA, BIN_OP, T> final {
   void operator()(ep::Stream* stream, const int64_t elem_cnt, const StrideParam& in_stride,
                   const StrideParam& out_stride, const T scalar, const T* in, T* out) {
-    OF_CUDA_CHECK(cuda::elementwise::StridedUnary(UnaryByScalarFunctor<BIN_OP, T>(scalar), elem_cnt,
-                                                  in_stride, out_stride, out, in,
-                                                  stream->As<ep::CudaStream>()->cuda_stream()));
+    OF_CUDA_CHECK(cuda::elementwise::Unary(UnaryByScalarFunctor<BIN_OP, T>(scalar), elem_cnt,
+                                           in_stride, out_stride, out, in,
+                                           stream->As<ep::CudaStream>()->cuda_stream()));
   }
 };
 
@@ -81,7 +81,7 @@ template<template<typename> class BIN_OP>
 struct StridedScalarMathFunctor<DeviceType::kCUDA, BIN_OP, float16> final {
   void operator()(ep::Stream* stream, const int64_t elem_cnt, const StrideParam& in_stride,
                   const StrideParam& out_stride, float16 scalar, const float16* in, float16* out) {
-    OF_CUDA_CHECK(cuda::elementwise::StridedUnary(
+    OF_CUDA_CHECK(cuda::elementwise::Unary(
         UnaryByScalarFunctor<BIN_OP, float16>(float16_2half(scalar)), elem_cnt, in_stride,
         out_stride, reinterpret_cast<half*>(out), reinterpret_cast<const half*>(in),
         stream->As<ep::CudaStream>()->cuda_stream()));
