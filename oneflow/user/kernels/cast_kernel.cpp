@@ -46,7 +46,8 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
     const int64_t elem_cnt = input->shape_view().elem_cnt();
     // 0-size tensor
     if (elem_cnt == 0) { return; }
-    CHECK_EQ(output->shape_view().elem_cnt(), elem_cnt);
+    CHECK_EQ(output->shape_view().elem_cnt(), elem_cnt)
+        << "The number of cast op's input and output elements should be equal.";
     if (input->data_type() == output->data_type() && input->dptr() == output->dptr()) { return; }
     const size_t ndim = input->shape_view().NumAxes();
     const bool contiguous = oneflow::one::IsContiguous(input->shape_view(), input->stride());
