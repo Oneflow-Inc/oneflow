@@ -817,82 +817,6 @@ void FinishGlobalCriticalSectionDesc(const Plan& plan, int64_t job_size) {
   critical_section_desc->Done();
 }
 
-void MakePullJob(const std::string& job_name, const std::string& op_name,
-                 const ParallelBlobConf& parallel_blob_conf, Job* job) {
-  auto* flag_name2flag_value = job->mutable_job_conf()->mutable_flag_name2flag_value();
-  (*flag_name2flag_value)["__is_user_function__"].set_at_bool(false);
-  auto* op_name2job_name =
-      Singleton<InterUserJobInfo>::Get()->mutable_output_or_var_op_name2pull_job_name();
-  CHECK(op_name2job_name->find(op_name) == op_name2job_name->end());
-  (*op_name2job_name)[op_name] = job_name;
-  DataType data_type;
-  JobBuilder job_builder(job);
-  OperatorConf input_op_conf;
-  {
-    input_op_conf.set_name(op_name);
-    auto* input_conf = input_op_conf.mutable_input_conf();
-    input_conf->set_out("out");
-    auto* blob_conf = input_conf->mutable_blob_conf();
-    CHECK_JUST(InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf));
-    data_type = blob_conf->data_type();
-    job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf});
-  }
-  OperatorConf foreign_output_op_conf;
-  {
-    foreign_output_op_conf.set_name(std::string("System-Pull-ForeignOutput_") + NewUniqueId());
-    auto* foreign_output_conf = foreign_output_op_conf.mutable_foreign_output_conf();
-    foreign_output_conf->set_in(input_op_conf.name() + "/out");
-    foreign_output_conf->set_ofblob_buffer_name(GetForeignOutputBufferName(job_name));
-    ParallelConf parallel_conf;
-    parallel_conf.set_device_tag("cpu");
-    parallel_conf.add_device_name("0:0");
-    job_builder.AddOps(parallel_conf, {foreign_output_op_conf});
-  }
-  auto* job_conf = job->mutable_job_conf();
-  job_conf->set_job_name(job_name);
-  job_conf->mutable_predict_conf();
-  job_conf->set_default_data_type(data_type);
-}
-
-void MakePushJob(const std::string& job_name, const std::string& op_name,
-                 const ParallelBlobConf& parallel_blob_conf, Job* job) {
-  auto* flag_name2flag_value = job->mutable_job_conf()->mutable_flag_name2flag_value();
-  (*flag_name2flag_value)["__is_user_function__"].set_at_bool(false);
-  auto* op_name2job_name =
-      Singleton<InterUserJobInfo>::Get()->mutable_input_or_var_op_name2push_job_name();
-  CHECK(op_name2job_name->find(op_name) == op_name2job_name->end());
-  (*op_name2job_name)[op_name] = job_name;
-  DataType data_type;
-  JobBuilder job_builder(job);
-  OperatorConf foreign_input_op_conf;
-  {
-    foreign_input_op_conf.set_name(std::string("System-Push-ForeignInput_") + NewUniqueId());
-    auto* foreign_input_conf = foreign_input_op_conf.mutable_foreign_input_conf();
-    foreign_input_conf->set_out("out");
-    foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
-    auto* blob_conf = foreign_input_conf->mutable_blob_conf();
-    CHECK_JUST(InterfaceOpUtil::InitBlobConf(blob_conf, parallel_blob_conf));
-    data_type = blob_conf->data_type();
-    ParallelConf parallel_conf;
-    parallel_conf.set_device_tag("cpu");
-    parallel_conf.add_device_name("0:0");
-    job_builder.AddOps(parallel_conf, {foreign_input_op_conf});
-  }
-  OperatorConf output_op_conf;
-  {
-    output_op_conf.set_name(op_name);
-    auto* output_conf = output_op_conf.mutable_output_conf();
-    output_conf->set_in(foreign_input_op_conf.name() + "/out");
-    output_conf->set_out("out");
-    CHECK_JUST(InterfaceOpUtil::InitBlobConf(output_conf->mutable_blob_conf(), parallel_blob_conf));
-    job_builder.AddOps(parallel_blob_conf.parallel_conf(), {output_op_conf});
-  }
-  auto* job_conf = job->mutable_job_conf();
-  job_conf->set_job_name(job_name);
-  job_conf->mutable_predict_conf();
-  job_conf->set_default_data_type(data_type);
-}
-
 REGISTER_FUNCTION_CONFIG_DEF().Bool("__is_user_function__", true, "is user defined function");
 
 Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
@@ -909,22 +833,6 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
   FOR_RANGE(int, i, 0, jobs.size()) {
     JobDesc job_desc(jobs.at(i)->job_conf(), i);
     if (job_desc.Bool("__is_user_function__")) { function_jobs.emplace_back(jobs.at(i)); }
-  }
-  HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
-  FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, function_jobs,
-                                &push_op_name2parallel_blob_conf);
-  HashMap<std::string, ParallelBlobConf> pull_op_name2parallel_blob_conf;
-  FilterOpName2ParallelBlobConf({OperatorConf::kReturnConf}, function_jobs,
-                                &pull_op_name2parallel_blob_conf);
-  for (const auto& pair : push_op_name2parallel_blob_conf) {
-    auto push_job = std::make_shared<Job>();
-    MakePushJob(std::string("System-Push-") + pair.first, pair.first, pair.second, push_job.get());
-    jobs.emplace_back(push_job);
-  }
-  for (const auto& pair : pull_op_name2parallel_blob_conf) {
-    auto pull_job = std::make_shared<Job>();
-    MakePullJob(std::string("System-Pull-") + pair.first, pair.first, pair.second, pull_job.get());
-    jobs.emplace_back(pull_job);
   }
 
   std::vector<Plan> sub_plans(jobs.size());

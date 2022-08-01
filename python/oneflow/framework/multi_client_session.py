@@ -87,9 +87,6 @@ class MultiClientSession(object):
     def is_running(self):
         return self.status_ == self.Status.INITED
 
-    def AnyGlobalFunctionDefined(self):
-        return False
-
     def _check_status(self, *status):
         check_success = False
         for stat in status:
