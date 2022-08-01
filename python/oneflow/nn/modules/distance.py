@@ -21,13 +21,14 @@ from typing import Optional
 
 
 class CosineSimilarity(Module):
-    r"""The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.CosineSimilarity.html#torch.nn.CosineSimilarity
-    
+    r"""    
     Returns cosine similarity between :math:`x_1` and :math:`x_2`, computed along `dim`.
 
     .. math ::
         \text{similarity} = \dfrac{x_1 \cdot x_2}{\max(\Vert x_1 \Vert _2 \cdot \Vert x_2 \Vert _2, \epsilon)}.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.CosineSimilarity.html#torch.nn.CosineSimilarity
 
     Args:
         dim (int, optional): Dimension where cosine similarity is computed. Default: 1

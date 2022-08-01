@@ -159,7 +159,7 @@ Maybe<void> FunctionNode::AccGrad4LeafTensor(bool create_graph) {
         const auto& nd_sbp = JUST(tensor_info.sbp());
         JUST(out->set_acc_grad(
             JUST(functional::ToGlobal(acc_grad, placement, *JUST(GetSbpList(nd_sbp)),
-                                      GetNoneSbpList(), /* check_meta */ false))));
+                                      GetNoneSbpList(), /* check_meta */ false, /*copy=*/false))));
       }
     }
   }
@@ -192,12 +192,18 @@ Maybe<bool> FunctionNode::Apply(bool create_graph) {
   JUST(backward_fn_->body(output_grads, &input_grads, create_graph));
   for (int i = 0; i < input_meta_data_.size(); ++i) {
     if (JUST(VectorAt(input_grads, i))) {
-      CHECK_NOTNULL_OR_RETURN(input_meta_data_.at(i))
+      CHECK_NOTNULL_OR_RETURN(input_meta_data_[i])
           << name_
           << " calculate grad for tensor which requires_grad is False. Please submit an issue in "
              "`https://github.com/Oneflow-Inc/oneflow/issues` and we will fix it as soon as "
              "possible";
-      JUST(input_meta_data_.at(i)->current_grad()->PushPartialTensor(input_grads.at(i)));
+      JUST(input_meta_data_[i]->current_grad()->PushPartialTensor(JUST(VectorAt(input_grads, i))));
+    } else {
+      CHECK_OR_RETURN(!input_meta_data_[i])
+          << name() << "'s input[" << i
+          << "] need calculate grad but got nullptr. Please submit an issue in "
+             "`https://github.com/Oneflow-Inc/oneflow/issues` and we will fix it as soon as "
+             "possible;";
     }
   }
   return true;

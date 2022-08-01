@@ -15,71 +15,102 @@ limitations under the License.
 */
 #include "oneflow/core/memory/memory_case_util.h"
 
+#include <google/protobuf/util/message_differencer.h>
+
 namespace oneflow {
 
-bool MemoryCaseUtil::GetCommonMemoryCase(const MemoryCase& a, const MemoryCase& b,
-                                         MemoryCase* common) {
-  if (a.has_device_cuda_mem() && b.has_device_cuda_mem()) {
-    if (a.device_cuda_mem().device_id() == b.device_cuda_mem().device_id()) {
-      *common = a;
-      return true;
-    } else {
-      return false;
-    }
-  } else if (a.has_host_mem() && b.has_host_mem()) {
-    *common = a;
-    if (b.host_mem().has_cuda_pinned_mem()) {
-      *common->mutable_host_mem()->mutable_cuda_pinned_mem() = b.host_mem().cuda_pinned_mem();
-    }
-    return true;
-  } else {
-    return false;
+namespace memory {
+
+bool EqualsIgnorePinnedDevice(const MemoryCase& a, const MemoryCase& b) {
+  if (a.device_type() != b.device_type()) { return false; }
+  if (a.device_id() != b.device_id()) { return false; }
+  return true;
+}
+
+void GetPinnedHostMemoryCase(const MemoryCase& mem_case, MemoryCase* ret) {
+  ret->set_device_type(DeviceType::kCPU);
+  ret->set_device_id(0);
+  if (!IsHostMem(mem_case)) {
+    ret->set_pinned_device_type(mem_case.device_type());
+    ret->set_pinned_device_id(mem_case.device_id());
   }
 }
 
-MemoryCase MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(const MemoryCase& mem_case) {
+MemoryCase GetPinnedHostMemoryCase(const MemoryCase& mem_case) {
   MemoryCase ret;
-  ret.mutable_host_mem();
-  if (mem_case.has_device_cuda_mem()) {
-    ret.mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
-        mem_case.device_cuda_mem().device_id());
-  }
+  GetPinnedHostMemoryCase(mem_case, &ret);
   return ret;
 }
 
-int64_t MemoryCaseUtil::GenMemZoneId(const MemoryCase& mem_case) {
-  // [0, 127] = GPU device mem
-  // [128] = CPU host mem
-  // [129, 256] = CPU host mem used by CUDA with device id
-  // [257, ...] Other Device
-  if (mem_case.has_device_cuda_mem()) {
-    return mem_case.device_cuda_mem().device_id();  // GPU device mem
+// clang-format off
+// MemCaseId encoding (bits)
+// | reserved | node_index | device_type | device_index | reserved | pinned_device_type | pinned_device_index |
+// | --- 1 -- | --- 19 --- | ---- 5 ---- | ----- 7 ---- | -- 20 -- | ------- 5 -------- | ------- 7 --------- |
+// | ---------------------- 32 ------------------------ | ---------------------- 32 ------------------------- |
+// clang-format on
+
+namespace {
+
+constexpr size_t kDeviceIndexBits = 7;
+constexpr size_t kDeviceTypeBits = 5;
+constexpr size_t kDeviceTypeShift = kDeviceIndexBits;
+constexpr size_t kNodeIndexShift = kDeviceTypeShift + kDeviceTypeBits;
+constexpr size_t kPinnedDeviceShift = 32;
+
+}  // namespace
+
+int64_t GetMemCaseId(const MemoryCase& mem_case) {
+  uint32_t high = 0;
+  high |= static_cast<uint32_t>(mem_case.device_id());
+  high |= static_cast<uint32_t>(mem_case.device_type()) << kDeviceTypeShift;
+  uint32_t low = 0;
+  if (mem_case.has_pinned_device_id()) {
+    low |= static_cast<uint32_t>(mem_case.pinned_device_id());
   }
-  if (mem_case.has_host_mem()) {
-    if (mem_case.host_mem().has_cuda_pinned_mem()) {
-      return 129 + mem_case.host_mem().cuda_pinned_mem().device_id();  // Host mem used by GPU
-    }
-    return 128;  // CPU host mem
+  if (mem_case.has_pinned_device_type()) {
+    low |= static_cast<uint32_t>(mem_case.pinned_device_type()) << kDeviceTypeShift;
   }
-  UNIMPLEMENTED();
-  return -1;
+  int64_t id = 0;
+  id |= static_cast<int64_t>(high) << kPinnedDeviceShift;
+  id |= static_cast<int64_t>(low);
+  return id;
 }
 
-int64_t MemoryCaseUtil::GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case) {
-  return (machine_id << 32) | (MemoryCaseUtil::GenMemZoneId(mem_case));
+int64_t GetUniqueMemCaseId(int64_t machine_id, const MemoryCase& mem_case) {
+  int64_t id = 0;
+  id |= (machine_id << kNodeIndexShift << kPinnedDeviceShift);
+  id |= GetMemCaseId(mem_case);
+  return id;
 }
 
-std::shared_ptr<MemoryCase> MemoryCaseUtil::MakeMemCase(const DeviceType device_type,
-                                                        const int64_t device_id) {
-  const auto& mem_case = std::make_shared<MemoryCase>();
+std::shared_ptr<MemoryCase> MakeMemCaseShared(const DeviceType device_type,
+                                              const int64_t device_id) {
+  auto mem_case_ptr = std::make_shared<MemoryCase>();
+  mem_case_ptr->set_device_type(device_type);
+  // We consider that there is only one cpu physical device.
+  // As non-cpu devices, a logical device map to a physical device,
+  // however as cpu devices, all logical devices map to a single physical device.
   if (device_type == DeviceType::kCPU) {
-    mem_case->mutable_host_mem();
-  } else if (device_type == DeviceType::kCUDA) {
-    mem_case->mutable_device_cuda_mem()->set_device_id(device_id);
+    mem_case_ptr->set_device_id(0);
   } else {
-    UNIMPLEMENTED();
+    mem_case_ptr->set_device_id(device_id);
   }
+  return mem_case_ptr;
+}
+
+MemoryCase MakeHostMemCase() {
+  MemoryCase mem_case;
+  mem_case.set_device_type(DeviceType::kCPU);
+  mem_case.set_device_id(0);
   return mem_case;
+}
+
+bool IsHostMem(const MemoryCase& mem_case) { return mem_case.device_type() == DeviceType::kCPU; }
+
+}  // namespace memory
+
+bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
+  return google::protobuf::util::MessageDifferencer::Equals(lhs, rhs);
 }
 
 }  // namespace oneflow

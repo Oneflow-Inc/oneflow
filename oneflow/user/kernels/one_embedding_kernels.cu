@@ -561,13 +561,69 @@ user_op::InferTmpSizeFn GenEmbeddingInferTmpSizeFn() {
     size_t value_buffer_size;
     if (is_prefetch) {
       size_t value_byte_size = ctx->Attr<int64_t>("line_size") * sizeof(T);
-      value_buffer_size = num_ids * value_byte_size;
+      value_buffer_size = GetCudaAlignedSize(num_ids * value_byte_size);
     } else {
       value_buffer_size = 0;
     }
     total_buffer_size = num_missing_size + missing_indices_size + value_buffer_size;
     return total_buffer_size;
   };
+}
+
+class IdShuffleCopyOutKernelState final : public user_op::OpKernelState {
+ public:
+  explicit IdShuffleCopyOutKernelState(user_op::KernelInitContext* ctx) {
+    const std::string& embedding_name = ctx->Attr<std::string>("embedding_name");
+    const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+    embedding_state_ = Singleton<embedding::EmbeddingManager>::Get()->GetEmbeddingState(
+        embedding_name, parallel_id);
+  }
+  ~IdShuffleCopyOutKernelState() override = default;
+
+  embedding::EmbeddingState* EmbeddingState() { return embedding_state_; }
+
+ private:
+  embedding::EmbeddingState* embedding_state_;
+};
+
+template<typename K, typename U, typename IDX>
+struct IdShuffleCopyOutParam {
+  uint32_t final_num_unique_ids;
+  const K* cur_rank_unique_ids;
+  K* out_cur_rank_unique_ids;
+  const U* cur_rank_unique_table_ids;
+  U* out_cur_rank_unique_table_ids;
+  uint32_t cur_rank_num_ids;
+  const IDX* cur_rank_inverse_indices;
+  IDX* out_cur_rank_inverse_indices;
+  uint32_t num_ids;
+  const IDX* inverse_unique_partition_indices;
+  IDX* out_inverse_unique_partition_indices;
+  uint32_t num_unique_matrix_cnt;
+  const IDX* num_unique_matrix;
+  IDX* out_num_unique_matrix;
+  const IDX* cur_rank_num_unique;
+  IDX* out_cur_rank_num_unique;
+};
+
+template<typename K, typename U, typename IDX>
+__global__ void CopyGpu(IdShuffleCopyOutParam<K, U, IDX> param) {
+  CUDA_1D_KERNEL_LOOP_T(uint32_t, i, param.final_num_unique_ids) {
+    param.out_cur_rank_unique_ids[i] = param.cur_rank_unique_ids[i];
+    param.out_cur_rank_unique_table_ids[i] = param.cur_rank_unique_table_ids[i];
+  }
+  CUDA_1D_KERNEL_LOOP_T(uint32_t, i, param.cur_rank_num_ids) {
+    param.out_cur_rank_inverse_indices[i] = param.cur_rank_inverse_indices[i];
+  }
+  CUDA_1D_KERNEL_LOOP_T(uint32_t, i, param.num_ids) {
+    param.out_inverse_unique_partition_indices[i] = param.inverse_unique_partition_indices[i];
+  }
+  CUDA_1D_KERNEL_LOOP_T(uint32_t, i, param.num_unique_matrix_cnt) {
+    param.out_num_unique_matrix[i] = param.num_unique_matrix[i];
+  }
+  if (blockIdx.x * blockDim.x + threadIdx.x == 0) {
+    *param.out_cur_rank_num_unique = *param.cur_rank_num_unique;
+  }
 }
 
 }  // namespace
@@ -590,7 +646,8 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     auto* kernel_state = dynamic_cast<EmbeddingKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
     embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
-    embedding_state->OnEmbeddingPrefetchStart(ctx, current_iter_);
+    std::unique_ptr<embedding::TmpBufferAllocator> allocator =
+        embedding_state->NewTmpBufferAllocator(ctx);
     uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
@@ -599,21 +656,17 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
 
     void* num_missing_ptr;
-    embedding_state->AllocPrefetchTmpBuffer(ctx, &num_missing_ptr,
-                                            GetCudaAlignedSize(sizeof(uint32_t)));
+    allocator->Allocate(&num_missing_ptr, sizeof(uint32_t));
     void* missing_indices_ptr;
-    embedding_state->AllocPrefetchTmpBuffer(ctx, &missing_indices_ptr,
-                                            GetCudaAlignedSize(num_unique * sizeof(uint32_t)));
+    allocator->Allocate(&missing_indices_ptr, num_unique * sizeof(uint32_t));
     void* values_ptr;
-    embedding_state->AllocPrefetchTmpBuffer(ctx, &values_ptr,
-                                            GetCudaAlignedSize(num_unique * line_size * sizeof(T)));
+    allocator->Allocate(&values_ptr, num_unique * line_size * sizeof(T));
     LookupAndInitMissing<T, U, IDX>(ctx->stream(), kernel_state, num_unique, embedding_size,
                                     line_size, true, unique_ids->dptr(), table_ids->dptr(),
                                     num_missing_ptr, missing_indices_ptr, values_ptr);
-    embedding_state->FreePrefetchTmpBuffer(ctx, num_missing_ptr);
-    embedding_state->FreePrefetchTmpBuffer(ctx, missing_indices_ptr);
-    embedding_state->FreePrefetchTmpBuffer(ctx, values_ptr);
-    embedding_state->OnEmbeddingPrefetchEnd(ctx, current_iter_);
+    allocator->Free(num_missing_ptr);
+    allocator->Free(missing_indices_ptr);
+    allocator->Free(values_ptr);
     current_iter_++;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -666,6 +719,8 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     auto* kernel_state = dynamic_cast<EmbeddingKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
     embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
+    std::unique_ptr<embedding::TmpBufferAllocator> allocator =
+        embedding_state->NewTmpBufferAllocator(ctx);
     embedding_state->OnEmbeddingLookupStart(ctx, current_iter_);
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
@@ -680,25 +735,23 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
       void* embeddings_ptr = embedding_state->LookupEmbeddings(current_iter_);
       user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
       void* lookup_mask_ptr;
-      embedding_state->AllocTmpBuffer(ctx, &lookup_mask_ptr,
-                                      GetCudaAlignedSize(num_unique * sizeof(uint8_t)));
+      allocator->Allocate(&lookup_mask_ptr, num_unique * sizeof(uint8_t));
       LookupAndFusedInitMissingSliceCast<T, U, IDX>(
           ctx->stream(), kernel_state, num_unique, embedding_size, line_size,
           unique_values->data_type(), embeddings->data_type(), unique_ids->dptr(),
           table_ids->dptr(), reinterpret_cast<uint8_t*>(lookup_mask_ptr), values_ptr,
           embeddings_ptr);
-      embedding_state->FreeTmpBuffer(ctx, lookup_mask_ptr);
+      allocator->Free(lookup_mask_ptr);
     } else {
       void* num_missing_ptr;
-      embedding_state->AllocTmpBuffer(ctx, &num_missing_ptr, GetCudaAlignedSize(sizeof(uint32_t)));
+      allocator->Allocate(&num_missing_ptr, sizeof(uint32_t));
       void* missing_indices_ptr;
-      embedding_state->AllocTmpBuffer(ctx, &missing_indices_ptr,
-                                      GetCudaAlignedSize(num_unique * sizeof(uint32_t)));
+      allocator->Allocate(&missing_indices_ptr, num_unique * sizeof(uint32_t));
       LookupAndInitMissing<T, U, IDX>(ctx->stream(), kernel_state, num_unique, embedding_size,
                                       line_size, false, unique_ids->dptr(), table_ids->dptr(),
                                       num_missing_ptr, missing_indices_ptr, values_ptr);
-      embedding_state->FreeTmpBuffer(ctx, num_missing_ptr);
-      embedding_state->FreeTmpBuffer(ctx, missing_indices_ptr);
+      allocator->Free(num_missing_ptr);
+      allocator->Free(missing_indices_ptr);
       if (has_output_embeddings) {
         void* embeddings_ptr = embedding_state->LookupEmbeddings(current_iter_);
         user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
@@ -816,5 +869,93 @@ class FusedSgdEmbeddingUpdatePutKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("embedding_grad", 0) == DataType::kFloat16));
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_CUDA_FUSED_SGD_EMBEDDING_UPDATE_PUT_KERNEL, IDX_DATA_TYPE_SEQ)
+
+template<typename K, typename U, typename IDX>
+class IdShuffleCopyOutKernel final : public user_op::OpKernel {
+ public:
+  IdShuffleCopyOutKernel() : current_iter_(0){};
+  ~IdShuffleCopyOutKernel() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<IdShuffleCopyOutKernelState>(ctx);
+  }
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
+    auto* kernel_state = dynamic_cast<IdShuffleCopyOutKernelState*>(state);
+    CHECK(kernel_state != nullptr);
+    const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+    const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+    embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
+    const uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
+    const std::vector<uint32_t>& num_unique_matrix_vec =
+        embedding_state->GetIdNumUniqueMatrix(current_iter_);
+    uint32_t cur_rank_num_ids = 0;
+    for (int64_t i = 0; i < parallel_num; ++i) {
+      cur_rank_num_ids += num_unique_matrix_vec.at(i * parallel_num + parallel_id);
+    }
+    IdShuffleCopyOutParam<K, U, IDX> param;
+    param.final_num_unique_ids = num_unique;
+    param.cur_rank_unique_ids =
+        reinterpret_cast<const K*>(ctx->Tensor4ArgNameAndIndex("cur_rank_unique_ids", 0)->dptr());
+    param.out_cur_rank_unique_ids =
+        reinterpret_cast<K*>(ctx->Tensor4ArgNameAndIndex("out_cur_rank_unique_ids", 0)->mut_dptr());
+    param.cur_rank_unique_table_ids = reinterpret_cast<const U*>(
+        ctx->Tensor4ArgNameAndIndex("cur_rank_unique_table_ids", 0)->dptr());
+    param.out_cur_rank_unique_table_ids = reinterpret_cast<U*>(
+        ctx->Tensor4ArgNameAndIndex("out_cur_rank_unique_table_ids", 0)->mut_dptr());
+    param.cur_rank_num_ids = cur_rank_num_ids;
+    param.cur_rank_inverse_indices = reinterpret_cast<const IDX*>(
+        ctx->Tensor4ArgNameAndIndex("cur_rank_inverse_indices", 0)->dptr());
+    param.out_cur_rank_inverse_indices = reinterpret_cast<IDX*>(
+        ctx->Tensor4ArgNameAndIndex("out_cur_rank_inverse_indices", 0)->mut_dptr());
+    param.num_ids =
+        ctx->Tensor4ArgNameAndIndex("inverse_unique_partition_indices", 0)->shape_view().elem_cnt();
+    param.inverse_unique_partition_indices = reinterpret_cast<const IDX*>(
+        ctx->Tensor4ArgNameAndIndex("inverse_unique_partition_indices", 0)->dptr());
+    param.out_inverse_unique_partition_indices = reinterpret_cast<IDX*>(
+        ctx->Tensor4ArgNameAndIndex("out_inverse_unique_partition_indices", 0)->mut_dptr());
+    param.num_unique_matrix_cnt = parallel_num * parallel_num;
+    param.num_unique_matrix =
+        reinterpret_cast<const IDX*>(ctx->Tensor4ArgNameAndIndex("num_unique_matrix", 0)->dptr());
+    param.out_num_unique_matrix =
+        reinterpret_cast<IDX*>(ctx->Tensor4ArgNameAndIndex("out_num_unique_matrix", 0)->mut_dptr());
+    param.cur_rank_num_unique =
+        reinterpret_cast<const IDX*>(ctx->Tensor4ArgNameAndIndex("cur_rank_num_unique", 0)->dptr());
+    param.out_cur_rank_num_unique = reinterpret_cast<IDX*>(
+        ctx->Tensor4ArgNameAndIndex("out_cur_rank_num_unique", 0)->mut_dptr());
+
+    CopyGpu<K, U, IDX><<<BlocksNum4ThreadsNum(param.num_ids), kCudaThreadsNumPerBlock, 0,
+                         ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(param);
+    current_iter_++;
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  mutable int64_t current_iter_;
+};
+
+#define ID_DATA_TYPE_SEQ                            \
+  OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32) \
+  OF_PP_MAKE_TUPLE_SEQ(uint64_t, DataType::kUInt64) \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)   \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
+
+#define REGISTER_CUDA_ID_SHUFFLE_COPY_OUT_KERNEL(k_dtype_pair, table_id_dtype_pair,              \
+                                                 idx_dtype_pair)                                 \
+  REGISTER_USER_KERNEL("id_shuffle_copy_out")                                                    \
+      .SetCreateFn<IdShuffleCopyOutKernel<OF_PP_PAIR_FIRST(k_dtype_pair),                        \
+                                          OF_PP_PAIR_FIRST(table_id_dtype_pair),                 \
+                                          OF_PP_PAIR_FIRST(idx_dtype_pair)>>()                   \
+      .SetIsMatchedHob(                                                                          \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                        \
+          && (user_op::HobDataType("cur_rank_unique_ids", 0) == OF_PP_PAIR_SECOND(k_dtype_pair)) \
+          && (user_op::HobDataType("cur_rank_unique_table_ids", 0)                               \
+              == OF_PP_PAIR_SECOND(table_id_dtype_pair))                                         \
+          && (user_op::HobDataType("num_unique_matrix", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair)));
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ID_SHUFFLE_COPY_OUT_KERNEL, ID_DATA_TYPE_SEQ,
+                                 TABLE_ID_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

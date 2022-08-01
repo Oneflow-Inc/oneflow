@@ -14,11 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/virtual_machine_engine.h"
+#include "oneflow/core/common/env_var/vm.h"
 #include "oneflow/core/vm/caching_allocator.h"
+#include "oneflow/core/vm/fuse_instruction_policy.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/fuse_instruction_type.h"
-#include "oneflow/core/vm/fuse_phy_instr_operand.h"
-#include "oneflow/core/vm/barrier_phy_instr_operand.h"
+#include "oneflow/core/vm/release_tensor_instruction_policy.h"
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/balanced_splitter.h"
@@ -65,10 +65,10 @@ void VirtualMachineEngine::HandleLocalPending() {
   InstructionList pending_instructions;
   FetchAndTryFusePendingInstructions(&pending_instructions);
   INTRUSIVE_FOR_EACH_PTR(instruction, &pending_instructions) {
-    const auto& instruction_type = instruction->instruction_type();
+    const auto& instruction_policy = instruction->instruction_policy();
     instruction->InitStatus();
     LivelyInstructionListPushBack(instruction);
-    if (unlikely(instruction_type.IsBarrier())) {
+    if (unlikely(instruction_policy.IsBarrier())) {
       mut_barrier_instruction_list()->PushBack(instruction);
     } else {
       ConsumeDependences(instruction);
@@ -83,16 +83,16 @@ namespace {
 
 bool FusableBetween(InstructionFuseType fuse_type, Instruction* instruction,
                     Instruction* prev_instruction) {
-  if (unlikely(instruction->instruction_type().fuse_type() != fuse_type)) { return false; }
+  if (unlikely(instruction->instruction_policy().fuse_type() != fuse_type)) { return false; }
   auto* stream = instruction->mut_stream();
   if (unlikely(stream == nullptr)) { return false; }
-  auto* sequential_dep = instruction->phy_instr_operand()->stream_sequential_dependence();
+  auto* sequential_dep = instruction->instruction_policy().stream_sequential_dependence();
   if (unlikely(sequential_dep == nullptr)) { return false; }
 
   if (unlikely(prev_instruction == nullptr)) { return true; }
   if (unlikely(stream != prev_instruction->mut_stream())) { return false; }
   if (unlikely(sequential_dep
-               != prev_instruction->phy_instr_operand()->stream_sequential_dependence())) {
+               != prev_instruction->instruction_policy().stream_sequential_dependence())) {
     return false;
   }
   return true;
@@ -108,16 +108,15 @@ void VirtualMachineEngine::MakeAndAppendFusedInstruction(
     return;
   }
   auto* begin = fused_instruction_list.Begin();
-  auto phy_instr_operand = std::make_shared<FusePhyInstrOperand>(std::move(fused_instruction_list));
   auto instruction = intrusive::make_shared<Instruction>(
-      begin->mut_stream(), SingletonPtr<FuseInstructionType>(), phy_instr_operand);
+      begin->mut_stream(),
+      std::make_shared<FuseInstructionPolicy>(std::move(fused_instruction_list)));
   pending_instructions->EmplaceBack(std::move(instruction));
 }
 
-constexpr static int kPendingHandleWindow = 10;
 void VirtualMachineEngine::FetchAndTryFusePendingInstructions(
     InstructionList* /*out*/ pending_instructions) {
-  size_t window_size = kPendingHandleWindow;
+  size_t window_size = ThreadLocalEnvInteger<ONEFLOW_VM_PENDING_HANDLE_WINDOW_SIZE>();
   InstructionList fused_instruction_list;
   INTRUSIVE_FOR_EACH_PTR(instruction, mut_local_pending_instruction_list()) {
     if (window_size-- <= 0) { break; }
@@ -238,17 +237,17 @@ void VirtualMachineEngine::ConnectInstructionsByRead(DependenceAccess* dst_acces
 }
 
 void VirtualMachineEngine::ConsumeDependences(Instruction* instruction) {
-  const auto& phy_instr_operand = CHECK_NOTNULL(instruction->phy_instr_operand());
-  auto* stream_sequential_dep = phy_instr_operand->stream_sequential_dependence();
+  const auto& instruction_policy = instruction->instruction_policy();
+  auto* stream_sequential_dep = instruction_policy.stream_sequential_dependence();
   if (likely(stream_sequential_dep != nullptr)) {
     ConnectInstructionsByWrite(
         AccessDependence(kMutableOperandAccess, stream_sequential_dep, instruction));
   }
   // Connect instructions by write before connecting by read.
-  for (auto* dependence : phy_instr_operand->output_dependences()) {
+  for (auto* dependence : instruction_policy.output_dependences()) {
     ConnectInstructionsByWrite(AccessDependence(kMutableOperandAccess, dependence, instruction));
   }
-  for (auto* dependence : phy_instr_operand->input_dependences()) {
+  for (auto* dependence : instruction_policy.input_dependences()) {
     ConnectInstructionsByRead(AccessDependence(kConstOperandAccess, dependence, instruction));
   }
 }
@@ -277,7 +276,8 @@ void VirtualMachineEngine::DispatchAndPrescheduleInstructions(const ScheduleCtx&
     // `instruction.dispatched_instruction_hook_` are used in DispatchInstruction.
     tmp_ready_instruction_list.Erase(instruction.Mutable());
     OF_PROFILER_RANGE_GUARD("D:" + instruction->DebugName());
-    DispatchInstruction(instruction.Mutable(), schedule_ctx);
+    DispatchInstruction<&VirtualMachineEngine::BusyWaitInstructionsDoneThenShrink>(
+        instruction.Mutable(), schedule_ctx);
     // preschedule instructions
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_out_edges()) {
       auto* out_instruction = edge->mut_dst_instruction();
@@ -291,41 +291,94 @@ void VirtualMachineEngine::DispatchAndPrescheduleInstructions(const ScheduleCtx&
 
 namespace {
 
-void StreamWaitPreviousInstructionsDone(vm::Stream* stream, vm::Instruction* instruction) {
-  auto* running_list = stream->mut_running_instruction_list();
-  CHECK_GE(running_list->size(), 1);
-  CHECK_EQ(running_list->Last(), instruction);
-  if (running_list->size() == 1) { return; }
-  auto* prev = running_list->Prev(instruction);
-  // busy wait the previous instruction done.
-  while (!prev->Done()) {}
-}
-
 std::string DebugDeviceReset(vm::Stream* stream) {
   stream->mut_stream_policy()->mut_allocator()->DeviceReset();
   return "reset device";
 }
 
+void CollectReadyDownstreamReleaseTensors(Stream* stream,
+                                          ReadyInstructionList* ready_instruction_list) {
+  const auto& IsDispatchableReleaseTensorInstructionOnSameDevice = [&](auto* instruction) {
+    if (unlikely(!instruction->dispatched_instruction_hook().empty())) { return false; }
+    INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_in_edges()) {
+      if (!edge->src_instruction().Done()) { return false; }
+    }
+    if (instruction->stream().device() != stream->device()) { return false; }
+    const auto* instruction_policy = &instruction->instruction_policy();
+    return dynamic_cast<const ReleaseTensorInstructionPolicy*>(instruction_policy) != nullptr;
+  };
+  INTRUSIVE_FOR_EACH_PTR(instruction, stream->mut_running_instruction_list()) {
+    while (!instruction->Done()) {}  // busy wait done.
+    auto* out_edges = instruction->mut_out_edges();
+    INTRUSIVE_FOR_EACH_PTR(out_edge, out_edges) {
+      Instruction* out_instruction = out_edge->mut_dst_instruction();
+      if (IsDispatchableReleaseTensorInstructionOnSameDevice(out_instruction)) {
+        out_edges->Erase(out_edge);
+        out_instruction->mut_in_edges()->Erase(out_edge);
+        ready_instruction_list->PushBack(out_instruction);
+      }
+    }
+  }
+}
+
+void BusyWaitAllInstructionsDone(Stream* stream) {
+  INTRUSIVE_FOR_EACH_PTR(instruction, stream->mut_running_instruction_list()) {
+    while (!instruction->Done()) {}  // busy wait done.
+  }
+}
+
+void ShrinkMemory(Stream* stream) {
+  auto* allocator = stream->mut_stream_policy()->mut_allocator();
+  if (allocator == nullptr) { return; }
+  auto* shrinkable_cache = dynamic_cast<CachingAllocator*>(allocator);
+  CHECK_NOTNULL(shrinkable_cache)->Shrink();
+}
+
 }  // namespace
 
+template<typename DoEachStreamT>
+void VirtualMachineEngine::ForEachStreamOnDevice(Symbol<Device> device,
+                                                 const DoEachStreamT& DoEachStream) {
+  INTRUSIVE_FOR_EACH_PTR(thread_ctx, mut_thread_ctx_list()) {
+    INTRUSIVE_FOR_EACH_PTR(current_stream, thread_ctx->mut_stream_list()) {
+      if (current_stream->device() == device) { DoEachStream(current_stream); }
+    }
+  }
+}
+
+void VirtualMachineEngine::BusyWaitInstructionsDoneThenShrink(vm::Stream* stream,
+                                                              const ScheduleCtx& schedule_ctx) {
+  {
+    // Dispatch ReleaseTensor instructions as mush as possiable.
+    ReadyInstructionList ready_release_tensor_instruction_list;
+    ForEachStreamOnDevice(stream->device(), [&](vm::Stream* current_stream) {
+      CollectReadyDownstreamReleaseTensors(current_stream, &ready_release_tensor_instruction_list);
+    });
+    INTRUSIVE_FOR_EACH(instruction, &ready_release_tensor_instruction_list) {
+      ready_release_tensor_instruction_list.Erase(instruction.Mutable());
+      DispatchInstruction<&VirtualMachineEngine::AbortOnOOM>(instruction.Mutable(), schedule_ctx);
+    }
+  }
+  // Buzy loop to make sure running instructions all done.
+  ForEachStreamOnDevice(stream->device(), &BusyWaitAllInstructionsDone);
+  // Shrink memory.
+  ForEachStreamOnDevice(stream->device(), &ShrinkMemory);
+}
+
+void VirtualMachineEngine::AbortOnOOM(vm::Stream* stream, const ScheduleCtx& schedule_ctx) {
+  LOG(FATAL) << "Out of Memory.";
+}
+
+template<void (VirtualMachineEngine::*OOMHandler)(vm::Stream*, const ScheduleCtx&)>
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
                                                const ScheduleCtx& schedule_ctx) {
   auto* stream = instruction->mut_stream();
-  stream->mut_running_instruction_list()->PushBack(instruction);
-  if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
   // Prepare
   {
     const auto& ret = TRY(instruction->Prepare());
     if (unlikely(!ret.IsOk())) {
       if (ret.error()->has_out_of_memory_error()) {
-        // Waits previous instructions done before shrinking memory..
-        StreamWaitPreviousInstructionsDone(stream, instruction);
-        // Shrinks allocator to reduce fragmentation of memory.
-        {
-          auto* allocator = stream->mut_stream_policy()->mut_allocator();
-          auto* shrinkable_cache = dynamic_cast<CachingAllocator*>(allocator);
-          if (shrinkable_cache != nullptr) { shrinkable_cache->Shrink(); }
-        }
+        (this->*OOMHandler)(stream, schedule_ctx);
         // Infers the instruction again.
         CHECK_JUST_MSG(instruction->Prepare(), std::stringstream() << DebugDeviceReset(stream));
       } else {
@@ -333,6 +386,8 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
       }
     }
   }
+  stream->mut_running_instruction_list()->PushBack(instruction);
+  if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
   // Compute
   if (OnSchedulerThread(*stream)) {
     stream->stream_policy().Run(instruction);
@@ -344,6 +399,13 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
 
 // Returns true if old scheduler_pending_instruction_list is empty
 Maybe<bool> VirtualMachineEngine::Receive(InstructionList* compute_instruction_list) {
+  OF_PROFILER_RANGE_GUARD("vm:Receive");
+#ifdef OF_ENABLE_PROFILER
+  INTRUSIVE_UNSAFE_FOR_EACH_PTR(compute_instruction, compute_instruction_list) {
+    OF_PROFILER_RANGE_GUARD(compute_instruction->DebugName());
+  }
+#endif
+
   bool old_list_empty = mut_pending_instruction_list()->MoveFrom(compute_instruction_list);
   return old_list_empty;
 }
@@ -410,7 +472,7 @@ bool VirtualMachineEngine::OnSchedulerThread(const Stream& stream) {
 // instructions are scarcely received by vm, there is no need for vm to run
 // VirtualMachineEngine::TryRunBarrierInstruction every time VirtualMachineEngine::Schedule run. On
 // the other hand, `barrier_instruction_hook_.size() == 0` is more lightweight than
-// `lively_instruction_list_.Begin()?->instruction_type().IsBarrier()`
+// `lively_instruction_list_.Begin()?->instruction_policy().IsBarrier()`
 //
 void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_ctx) {
   auto* sequnential_instruction = mut_barrier_instruction_list()->Begin();
@@ -419,8 +481,8 @@ void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_
   // All instructions before `sequnential_instruction` are handled now, it's time to handle
   // `sequnential_instruction`.
   OF_PROFILER_RANGE_GUARD("TryRunBarrierInstruction");
-  const auto& instruction_type = sequnential_instruction->instruction_type();
-  CHECK(instruction_type.IsBarrier());
+  const auto& instruction_policy = sequnential_instruction->instruction_policy();
+  CHECK(instruction_policy.IsBarrier());
   CHECK(OnSchedulerThread(sequnential_instruction->stream()));
   const StreamPolicy& stream_policy = sequnential_instruction->stream().stream_policy();
   stream_policy.Run(sequnential_instruction);

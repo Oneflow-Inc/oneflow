@@ -159,6 +159,7 @@ std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
 
 ParallelConf GenParallelConfOfCpuZeroOnMaster();
 ParallelConf GenParallelConfOfCpuZeroOnAllMachines();
+ParallelConf GenParallelConfOfCpuOnAllRanks();
 
 namespace private_details {
 

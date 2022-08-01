@@ -41,12 +41,28 @@ class TestModule(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim0=k).to(device)
         return x.matmul(y)
 
-    @autotest(check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_flow_tensor_broadcast_matmul_with_random_data(test_case):
         device = random_device()
         k = random(1, 6)
         x = random_tensor(ndim=4, dim3=k).to(device)
         y = random_tensor(ndim=2, dim0=k).to(device)
+        return x.matmul(y)
+
+    @autotest(n=5, check_graph=True)
+    def test_flow_tensor_x_broadcast_y_matmul(test_case):
+        device = random_device()
+        k = random(1, 6).to(int)
+        x = random_tensor(ndim=2, dim1=k).to(device)
+        y = random_tensor(ndim=4, dim2=k).to(device)
+        return x.matmul(y)
+
+    @autotest(n=5, check_graph=True)
+    def test_flow_tensor_broadcast_matmul_with_same_dims(test_case):
+        device = random_device()
+        k = random(1, 6).to(int)
+        x = random_tensor(ndim=4, dim1=1, dim3=k).to(device)
+        y = random_tensor(ndim=4, dim0=1, dim2=k).to(device)
         return x.matmul(y)
 
     @autotest(check_graph=True)
@@ -58,6 +74,7 @@ class TestModule(flow.unittest.TestCase):
         z = torch.mm(x, y)
         return z
 
+    @autotest(n=5, check_graph=True)
     def test_flow_mv_with_random_data(test_case):
         device = random_device()
         k = random(1, 6)
@@ -69,6 +86,15 @@ class TestModule(flow.unittest.TestCase):
     @profile(torch.mv)
     def profile_mv(test_case):
         torch.mv(torch.ones(32, 64), torch.ones(64))
+
+    @autotest(n=5, check_graph=True)
+    def test_flow_vector_matrix_product_with_random_data(test_case):
+        device = random_device()
+        k = random(1, 6)
+        x = random_tensor(ndim=1, dim0=k).to(device)
+        y = random_tensor(ndim=2, dim0=k).to(device)
+        z = torch.matmul(x, y)
+        return z
 
 
 if __name__ == "__main__":

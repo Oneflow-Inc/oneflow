@@ -197,6 +197,29 @@ def _test_bce_loss(dim=int, with_logits: bool = False):
     return y
 
 
+def _test_nn_functional_binary_cross_entropy(dim=int):
+    (x, target, weight, pos_weight, device) = generate_necessity_for_bce_loss(dim)
+    y = torch.nn.functional.binary_cross_entropy(
+        x,
+        target,
+        weight=oneof(weight, nothing()),
+        reduction=oneof("none", "sum", "mean", nothing()),
+        pos_weight=oneof(pos_weight, nothing()),
+    )
+    return y
+
+
+def _test_nn_functional_binary_cross_entropy_with_logits(dim=int):
+    (x, target, weight, pos_weight, device) = generate_necessity_for_bce_loss(dim)
+    y = torch.nn.functional.binary_cross_entropy_with_logits(
+        x,
+        target,
+        weight=oneof(weight, nothing()),
+        reduction=oneof("none", "sum", "mean", nothing()),
+    )
+    return y
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestBCELossModule(flow.unittest.TestCase):
     @autotest(n=5)
@@ -214,6 +237,11 @@ class TestBCELossModule(flow.unittest.TestCase):
     @autotest(n=5)
     def test_bce_loss_with_random_data_dim_5(test_case):
         return _test_bce_loss(5)
+
+    @autotest(n=5)
+    def test_nn_functional_binary_cross_entropy(test_case):
+        dim = random(2, 6).to(int).value()
+        return _test_nn_functional_binary_cross_entropy(dim)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -233,6 +261,11 @@ class TestBCEWithLogitsLossModule(flow.unittest.TestCase):
     @autotest(n=5)
     def test_bce_with_logits_loss_with_random_data_dim_5(test_case):
         return _test_bce_loss(5, True)
+
+    @autotest(n=5)
+    def test_nn_functional_binary_cross_entropy_with_logits(test_case):
+        dim = random(2, 6).to(int).value()
+        return _test_nn_functional_binary_cross_entropy_with_logits(dim)
 
 
 @flow.unittest.skip_unless_1n1d()

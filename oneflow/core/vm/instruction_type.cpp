@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/instruction_type.h"
+#include "oneflow/core/vm/phy_instr_operand.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/common/util.h"

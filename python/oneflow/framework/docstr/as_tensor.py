@@ -20,8 +20,6 @@ add_docstr(
     oneflow.as_tensor,
     r"""
     as_tensor(data, dtype=None, device=None) -> Tensor
-
-    The interface is consistent with PyTorch.
     
     Converts data into a tensor, sharing data and preserving autograd history if possible.
 
@@ -29,6 +27,8 @@ add_docstr(
 
     If data is a NumPy array (an ndarray) with the same dtype and device then a tensor is constructed using oneflow.from_numpy.
     
+    The interface is consistent with PyTorch.
+
     Args:
         data (array_like): Initial data for the tensor. Can be a list, tuple, NumPy ``ndarray``, scalar, and other types.
         dtype (oneflow.dtype, optional): the desired data type of returned tensor. Default: if ``None``, infers data type from data.

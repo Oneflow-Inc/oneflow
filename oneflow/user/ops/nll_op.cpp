@@ -22,15 +22,15 @@ namespace oneflow {
   CHECK_OR_RETURN(IsIndexDataType(ctx->InputDType("target", 0)))
       << ctx->op_name() << ": expected target being integer type";
 
-  auto input_dtype = ctx->InputDType("input", 0);
+  DataType input_dtype = ctx->InputDType("input", 0);
   if (ctx->has_input("weight", 0)) {
-    auto weight_dtype = ctx->InputDType("weight", 0);
+    DataType weight_dtype = ctx->InputDType("weight", 0);
     CHECK_EQ_OR_RETURN(weight_dtype, input_dtype) << ctx->op_name() << ": expected weight dtype "
                                                   << input_dtype << ", but got " << weight_dtype;
   }
 
-  *ctx->OutputDType("output", 0) = input_dtype;
-  *ctx->OutputDType("out_weight", 0) = input_dtype;
+  *ctx->MutOutputDType("output", 0) = input_dtype;
+  *ctx->MutOutputDType("out_weight", 0) = input_dtype;
 
   return Maybe<void>::Ok();
 }
@@ -61,11 +61,11 @@ namespace oneflow {
         << weight_desc.shape().ToString();
   }
 
-  user_op::TensorDesc* output_desc = ctx->OutputTensorDesc("output", 0);
+  user_op::TensorDesc* output_desc = ctx->MutOutputTensorDesc("output", 0);
   *output_desc->mut_is_dynamic() = is_dynamic;
   *output_desc->mut_shape() = Shape({N});
 
-  user_op::TensorDesc* out_weight_desc = ctx->OutputTensorDesc("out_weight", 0);
+  user_op::TensorDesc* out_weight_desc = ctx->MutOutputTensorDesc("out_weight", 0);
   *out_weight_desc->mut_is_dynamic() = is_dynamic;
   *out_weight_desc->mut_shape() = Shape({N});
 
@@ -115,7 +115,7 @@ namespace oneflow {
   CHECK_OR_RETURN(IsIndexDataType(ctx->InputDType("target", 0)))
       << ctx->op_name() << ": expected target being integer type";
 
-  auto input_dtype = ctx->InputDType("input", 0);
+  DataType input_dtype = ctx->InputDType("input", 0);
   CHECK_EQ_OR_RETURN(ctx->InputDType("out_grad", 0), input_dtype)
       << ctx->op_name() << ": expected out_grad dtype " << input_dtype << ", got "
       << ctx->InputDType("out_grad", 0);
@@ -126,7 +126,7 @@ namespace oneflow {
         << ctx->InputDType("weight", 0);
   }
 
-  *ctx->OutputDType("in_grad", 0) = input_dtype;
+  *ctx->MutOutputDType("in_grad", 0) = input_dtype;
 
   return Maybe<void>::Ok();
 }
@@ -159,7 +159,7 @@ namespace oneflow {
         << weight_desc.shape().ToString();
   }
 
-  user_op::TensorDesc* in_grad_desc = ctx->OutputTensorDesc("in_grad", 0);
+  user_op::TensorDesc* in_grad_desc = ctx->MutOutputTensorDesc("in_grad", 0);
   *in_grad_desc->mut_is_dynamic() = is_dynamic;
   *in_grad_desc->mut_shape() = input_desc.shape();
 
