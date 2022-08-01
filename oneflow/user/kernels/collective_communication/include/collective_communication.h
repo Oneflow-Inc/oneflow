@@ -58,7 +58,7 @@ static std::unique_ptr<CollectiveCommunicationType> NewCollectiveCommunication(
   return collective_communication_entry;
 }
 
-#define REGISTER_COLLECTIVE_COMMUNICATION_FACTORY(device, Base, Derived) \
+#define REGISTER_COLLECTIVE_COMMUNICATION(device, Base, Derived) \
   REGISTER_CLASS(DeviceType, device, Base, Derived)
 
 }  // namespace ccl

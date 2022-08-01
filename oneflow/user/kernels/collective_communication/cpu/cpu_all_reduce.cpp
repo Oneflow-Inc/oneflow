@@ -187,7 +187,7 @@ class CpuAllReduce final : public AllReduce {
   ReduceType reduce_type_;
 };
 
-REGISTER_COLLECTIVE_COMMUNICATION_FACTORY(DeviceType::kCPU, AllReduce, CpuAllReduce);
+REGISTER_COLLECTIVE_COMMUNICATION(DeviceType::kCPU, AllReduce, CpuAllReduce);
 
 }  // namespace ccl
 
