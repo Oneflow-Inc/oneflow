@@ -10177,6 +10177,14 @@ def OneFlow_FusedGruCellGradOp : OneFlow_BaseOp<"fused_gru_cell_grad", [NoSideEf
   let has_data_type_infer_fn = 1;
 }
 
+#endif // GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS
+
+// Group: System
+// copy_h2d, copy_d2h
+// Total: 2
+
+#ifdef GET_ONEFLOW_SYSTEM_OP_DEFINITIONS
+
 def OneFlow_CopyH2DOp : OneFlow_BaseOp<"copy_h2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
       OneFlow_Tensor:$in
@@ -10194,4 +10202,5 @@ def OneFlow_CopyD2HOp : OneFlow_BaseOp<"copy_d2h", [NoSideEffect, DeclareOpInter
       OneFlow_Tensor:$out
   );
 }
-#endif // GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS
+
+#endif // GET_ONEFLOW_SYSTEM_OP_DEFINITIONS
