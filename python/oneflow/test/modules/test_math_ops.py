@@ -387,19 +387,21 @@ class TestAtan2(flow.unittest.TestCase):
 class TestMinimum(flow.unittest.TestCase):
     @autotest(n=5)
     def test_flow_elementwise_minimum_with_random_data(test_case):
+        device = random_device()
         k1 = random(2, 6)
         k2 = random(2, 6)
-        x = random_tensor(ndim=2, dim0=k1, dim1=k2)
-        y = random_tensor(ndim=2, dim0=k1, dim1=k2)
+        x = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        y = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         return torch.minimum(x, y)
 
     @autotest(n=5)
     def test_flow_broadcast_minimum_with_random_data(test_case):
+        device = random_device()
         k1 = random(2, 6)
         k2 = random(2, 6)
         k3 = random(2, 6)
-        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1)
-        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3)
+        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1).to(device)
+        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3).to(device)
         return torch.minimum(x, y)
 
 
@@ -407,19 +409,21 @@ class TestMinimum(flow.unittest.TestCase):
 class TestMaximum(flow.unittest.TestCase):
     @autotest(n=5)
     def test_flow_elementwise_mximum_with_random_data(test_case):
+        device = random_device()
         k1 = random(2, 6)
         k2 = random(2, 6)
-        x = random_tensor(ndim=2, dim0=k1, dim1=k2)
-        y = random_tensor(ndim=2, dim0=k1, dim1=k2)
+        x = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        y = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         return torch.maximum(x, y)
 
     @autotest(n=5)
     def test_flow_broadcast_maximum_with_random_data(test_case):
+        device = random_device()
         k1 = random(2, 6)
         k2 = random(2, 6)
         k3 = random(2, 6)
-        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1)
-        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3)
+        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1).to(device)
+        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3).to(device)
         return torch.maximum(x, y)
 
 
@@ -453,11 +457,12 @@ class TestFmod(flow.unittest.TestCase):
 
     @autotest(n=5, auto_backward=False)
     def test_flow_broadcast_fmod_with_random_data(test_case):
+        device = random_device()
         k1 = random(2, 6)
         k2 = random(2, 6)
         k3 = random(2, 6)
-        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1)
-        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3)
+        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1).to(device)
+        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3).to(device)
         return torch.fmod(x, y)
 
     @autotest(auto_backward=False)
@@ -480,11 +485,12 @@ class TestPow(flow.unittest.TestCase):
 
     @autotest(n=5)
     def test_flow_broadcast_pow_with_random_data(test_case):
+        device = random_device()
         k1 = random(2, 6)
         k2 = random(2, 6)
         k3 = random(2, 6)
-        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1)
-        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3)
+        x = random_tensor(ndim=3, dim0=k1, dim1=1, dim2=1).to(device)
+        y = random_tensor(ndim=3, dim0=1, dim1=k2, dim2=k3).to(device)
         return torch.pow(x, y)
 
     @autotest(auto_backward=False)
