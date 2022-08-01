@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_STREAM_GET_STREAM_ROLE_NAME_H_
-#define ONEFLOW_CORE_FRAMEWORK_STREAM_GET_STREAM_ROLE_NAME_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_STREAM_GET_STREAM_TYPE_NAME_H_
+#define ONEFLOW_CORE_FRAMEWORK_STREAM_GET_STREAM_TYPE_NAME_H_
 
 #include <glog/logging.h>
 #include <string>
@@ -38,4 +38,4 @@ struct GetStreamTypeName : public StreamTypeVisitor<GetStreamTypeName> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_STREAM_GET_STREAM_ROLE_NAME_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_STREAM_GET_STREAM_TYPE_NAME_H_
