@@ -131,13 +131,6 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, Src, half> {
   OF_DEVICE_FUNC half operator()(Src src) const { return __float2half(static_cast<float>(src)); }
 };
 
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, half, half> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC half operator()(half src) const { return src; }
-};
-
 /*********nv_bfloat16 dtype support*********/
 #if CUDA_VERSION >= 11000
 template<>
@@ -165,13 +158,6 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, Src, nv_bfloat16> {
   OF_DEVICE_FUNC nv_bfloat16 operator()(Src src) const {
     return __float2bfloat16(static_cast<float>(src));
   }
-};
-
-template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kCast, nv_bfloat16, nv_bfloat16> {
-  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC nv_bfloat16 operator()(nv_bfloat16 src) const { return src; }
 };
 
 template<>
