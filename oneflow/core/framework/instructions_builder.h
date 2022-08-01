@@ -142,14 +142,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                              const std::string& modifier, Symbol<Stream> stream);
 
  private:
-  template<typename PhyInstrOperandT>
-  Maybe<void> MakeCriticalSectionBegin(vm::Stream* vm_stream,
-                                       const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);
-
-  template<typename PhyInstrOperandT>
-  Maybe<void> MakeCriticalSectionEnd(vm::Stream* vm_stream,
-                                     const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);
-
   vm::InstructionList* instruction_list_;
 };
 
