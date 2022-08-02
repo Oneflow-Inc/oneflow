@@ -70,10 +70,13 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   OperatorConf conf;
   conf.set_name("copy_hd_" + NewUniqueId());
   conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(device_type())));
-  conf.mutable_copy_hd_conf()->set_type(copy_type_);
+  auto copy_type_name =
+      copy_type_ == CopyHdOpConf::Type::CopyHdOpConf_Type_D2H ? "copy_d2h" : "copy_h2d";
+  *conf.mutable_user_conf()->mutable_op_type_name() = copy_type_name;
   auto in_regst = GetSoleConsumedRegst("copy_in");
   CHECK_EQ(in_regst->NumOfLbi(), 1);
   in_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+    // TODO: how to convert logical blob id to in/out tensor
     *conf.mutable_copy_hd_conf()->mutable_lbi() = lbi;
     CHECK(lbi == this->lbi());
   });
