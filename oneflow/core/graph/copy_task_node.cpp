@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/graph/task_stream_id.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 
 namespace oneflow {
 
@@ -76,9 +77,7 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   auto in_regst = GetSoleConsumedRegst("copy_in");
   CHECK_EQ(in_regst->NumOfLbi(), 1);
   in_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
-    // TODO: how to convert logical blob id to in/out tensor
-    *conf.mutable_copy_hd_conf()->mutable_lbi() = lbi;
-    CHECK(lbi == this->lbi());
+    (*conf.mutable_user_conf()->mutable_input())["in"].add_s(lbi.blob_name());
   });
   return conf;
 }
