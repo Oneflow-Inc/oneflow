@@ -293,7 +293,7 @@ class TestBCEWithLogitsLossModule(flow.unittest.TestCase):
         return _test_nn_functional_binary_cross_entropy_with_logits(dim)
 
 @flow.unittest.skip_unless_1n1d()
-class TestBCEWithLogitsLossWithPosWeightBroadcastModule(flow.unittest.TestCase):
+class TestBCEWithLogitsLossWithPosWeightBroadCastModule(flow.unittest.TestCase):
     @autotest(n=1)
     def test_bce_with_logits_loss_with_pos_weight_broadcast_random_data_dim_2(test_case):
         return _test_bce_loss_with_pos_weight_broadcast(2)
