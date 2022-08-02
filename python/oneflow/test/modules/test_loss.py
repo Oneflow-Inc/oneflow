@@ -184,32 +184,15 @@ def _test_bce_loss(dim=int, with_logits: bool = False):
         weight=oneof(weight, nothing()),
         reduction=oneof("none", "sum", "mean", nothing()),
     )
+    pos_weight_for_test_broadcast = random_tensor(
+        1, 1, low=1, high=3, requires_grad=False,
+    ).to(device)
     if with_logits:
         m = torch.nn.BCEWithLogitsLoss(
             weight=oneof(weight, nothing()),
-            pos_weight=oneof(pos_weight, nothing()),
+            pos_weight=oneof(pos_weight, pos_weight_for_test_broadcast, nothing()),
             reduction=oneof("none", "sum", "mean", nothing()),
         )
-    m.train(random())
-    m.to(device)
-
-    y = m(x, target)
-    return y
-
-
-def _test_bce_loss_with_pos_weight_broadcast(dim=int):
-    x, target, weight, pos_weight, device = generate_necessity_for_bce_loss(dim)
-
-    m = torch.nn.BCELoss(
-        weight=oneof(weight, nothing()),
-        reduction=oneof("none", "sum", "mean", nothing()),
-    )
-    pos_weight = random_tensor(1, 1, low=1, high=3, requires_grad=False,).to(device)
-    m = torch.nn.BCEWithLogitsLoss(
-        weight=oneof(weight, nothing()),
-        pos_weight=pos_weight,
-        reduction=oneof("none", "sum", "mean", nothing()),
-    )
     m.train(random())
     m.to(device)
 
@@ -286,33 +269,6 @@ class TestBCEWithLogitsLossModule(flow.unittest.TestCase):
     def test_nn_functional_binary_cross_entropy_with_logits(test_case):
         dim = random(2, 6).to(int).value()
         return _test_nn_functional_binary_cross_entropy_with_logits(dim)
-
-
-@flow.unittest.skip_unless_1n1d()
-class TestBCEWithLogitsLossWithPosWeightBroadcastModule(flow.unittest.TestCase):
-    @autotest(n=1)
-    def test_bce_with_logits_loss_with_pos_weight_broadcast_random_data_dim_2(
-        test_case,
-    ):
-        return _test_bce_loss_with_pos_weight_broadcast(2)
-
-    @autotest(n=1)
-    def test_bce_with_logits_loss_with_pos_weight_broadcast_random_data_dim_3(
-        test_case,
-    ):
-        return _test_bce_loss_with_pos_weight_broadcast(3)
-
-    @autotest(n=1)
-    def test_bce_with_logits_loss_with_pos_weight_broadcast_random_data_dim_4(
-        test_case,
-    ):
-        return _test_bce_loss_with_pos_weight_broadcast(4)
-
-    @autotest(n=1)
-    def test_bce_with_logits_loss_with_pos_weight_broadcast_random_data_dim_5(
-        test_case,
-    ):
-        return _test_bce_loss_with_pos_weight_broadcast(5)
 
 
 @flow.unittest.skip_unless_1n1d()
