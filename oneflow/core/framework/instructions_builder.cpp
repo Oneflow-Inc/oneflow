@@ -32,17 +32,16 @@ limitations under the License.
 #include "oneflow/core/vm/ep_record_event_instruction_policy.h"
 #include "oneflow/core/vm/op_call_instruction_policy.h"
 #include "oneflow/core/vm/barrier_instruction_policy.h"
+#include "oneflow/core/vm/critical_section_instruction_policy.h"
 #include "oneflow/core/vm/release_tensor_instruction_policy.h"
 #include "oneflow/core/vm/lazy_job_instruction_policy.h"
 #include "oneflow/core/vm/global_sync_instruction_policy.h"
 #include "oneflow/core/vm/op_call_instruction_policy.h"
 #include "oneflow/core/vm/touch_tensors_instruction_policy.h"
 #include "oneflow/core/vm/virtual_machine.h"
-#include "oneflow/core/vm/naive_instruction_policy.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/framework/global_tensor_infer_cache.h"
 #include "oneflow/core/eager/local_dep_object.h"
-#include "oneflow/core/eager/critical_section_instruction_type.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
@@ -71,26 +70,6 @@ static constexpr auto* GetLazyJobLauncherStream =
     DECORATE(&RawGetLazyJobLauncherStream, ThreadLocal);
 
 }  // namespace
-
-template<typename PhyInstrOperandT>
-Maybe<void> InstructionsBuilder::MakeCriticalSectionBegin(
-    vm::Stream* vm_stream, const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand) {
-  auto instruction = intrusive::make_shared<vm::Instruction>(
-      vm_stream, std::make_unique<vm::NaiveInstructionPolicy>(
-                     SingletonPtr<vm::CriticalSectionBeginInstructionType>(), phy_instr_operand));
-  instruction_list_->EmplaceBack(std::move(instruction));
-  return Maybe<void>::Ok();
-}
-
-template<typename PhyInstrOperandT>
-Maybe<void> InstructionsBuilder::MakeCriticalSectionEnd(
-    vm::Stream* vm_stream, const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand) {
-  auto instruction = intrusive::make_shared<vm::Instruction>(
-      vm_stream, std::make_unique<vm::NaiveInstructionPolicy>(
-                     SingletonPtr<vm::CriticalSectionEndInstructionType>(), phy_instr_operand));
-  instruction_list_->EmplaceBack(std::move(instruction));
-  return Maybe<void>::Ok();
-}
 
 // clang-format off
 // Job e.g.:
@@ -154,10 +133,10 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const vm::EagerBlobObjectListPtr&
 
       auto stream = JUST(GetCriticalSectionStream());
       auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
-      const auto& phy_instr_operand =
-          std::make_shared<vm::InputCriticalSectionBeginPhyInstrOperand>(
-              nn_graph, inputs, input_op_name2end_event_record, vm_stream);
-      JUST(MakeCriticalSectionBegin(vm_stream, phy_instr_operand));
+      auto instruction = intrusive::make_shared<vm::Instruction>(
+          vm_stream, std::make_shared<vm::InputCriticalSectionBeginInstructionPolicy>(
+                         nn_graph, inputs, input_op_name2end_event_record, vm_stream));
+      instruction_list_->EmplaceBack(std::move(instruction));
     }
     const auto& output_op_name2end_event_record =
         std::make_shared<HashMap<std::string, std::shared_ptr<SharedEventRecord>>>();
@@ -168,16 +147,16 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const vm::EagerBlobObjectListPtr&
       }
       auto stream = JUST(GetCriticalSectionStream());
       auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
-      const auto& phy_instr_operand =
-          std::make_shared<vm::OutputCriticalSectionBeginPhyInstrOperand>(
-              nn_graph, outputs, output_op_name2end_event_record, vm_stream);
-      JUST(MakeCriticalSectionBegin(vm_stream, phy_instr_operand));
+      auto instruction = intrusive::make_shared<vm::Instruction>(
+          vm_stream, std::make_shared<vm::OutputCriticalSectionBeginInstructionPolicy>(
+                         nn_graph, outputs, output_op_name2end_event_record, vm_stream));
+      instruction_list_->EmplaceBack(std::move(instruction));
     }
     {
       auto stream = JUST(GetLazyJobLauncherStream());
       auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
       auto instruction = intrusive::make_shared<vm::Instruction>(
-          vm_stream, std::make_unique<vm::LaunchLazyJobInstructionPolicy>(nn_graph, parameters));
+          vm_stream, std::make_shared<vm::LaunchLazyJobInstructionPolicy>(nn_graph, parameters));
       instruction_list_->EmplaceBack(std::move(instruction));
     }
     auto stream = JUST(GetCriticalSectionStream());
@@ -186,17 +165,19 @@ Maybe<void> InstructionsBuilder::LaunchLazyJob(const vm::EagerBlobObjectListPtr&
       const auto& eager_blob_object = inputs->at(i);
       const auto& op_name = nn_graph->inputs_op_names().at(i);
       const auto& event_record = JUST(MapAt(*input_op_name2end_event_record, op_name));
-      const auto& phy_instr_operand = std::make_shared<vm::InputCriticalSecondEndPhyInstrOperand>(
-          eager_blob_object, event_record, vm_stream);
-      JUST(MakeCriticalSectionEnd(vm_stream, phy_instr_operand));
+      auto instruction = intrusive::make_shared<vm::Instruction>(
+          vm_stream, std::make_shared<vm::InputCriticalSectionEndInstructionPolicy>(
+                         eager_blob_object, event_record, vm_stream));
+      instruction_list_->EmplaceBack(std::move(instruction));
     }
     for (int i = 0; i < nn_graph->outputs_op_names().size(); ++i) {
       const auto& eager_blob_object = outputs->at(i);
       const auto& op_name = nn_graph->outputs_op_names().at(i);
       const auto& event_record = JUST(MapAt(*output_op_name2end_event_record, op_name));
-      const auto& phy_instr_operand = std::make_shared<vm::OutputCriticalSecondEndPhyInstrOperand>(
-          eager_blob_object, event_record, vm_stream);
-      JUST(MakeCriticalSectionEnd(vm_stream, phy_instr_operand));
+      auto instruction = intrusive::make_shared<vm::Instruction>(
+          vm_stream, std::make_shared<vm::OutputCriticalSectionEndInstructionPolicy>(
+                         eager_blob_object, event_record, vm_stream));
+      instruction_list_->EmplaceBack(std::move(instruction));
     }
   }
   return Maybe<void>::Ok();
@@ -381,7 +362,7 @@ Maybe<void> InstructionsBuilder::Call(
   }
   auto* vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream));
   auto instruction = intrusive::make_shared<vm::Instruction>(
-      vm_stream, std::make_unique<vm::OpCallInstructionPolicy>(
+      vm_stream, std::make_shared<vm::OpCallInstructionPolicy>(
                      vm_stream, opkernel, std::move(input_eager_blob_objects),
                      std::move(output_eager_blob_objects), global_tensor_infer_result, ctx,
                      *one::CurrentDevVmDepObjectConsumeMode()));
@@ -421,19 +402,26 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   DataType data_type = eager_blob_object->data_type();
   auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(producer_stream)),
-      vm::MakeReleaseTensorInstructionPolicy::Visit(stream_role, data_type, eager_blob_object,
-                                                    vm_stream));
+      JUST(vm::MakeReleaseTensorInstructionPolicy::Visit(stream_role, data_type, eager_blob_object,
+                                                         vm_stream)));
   instruction_list_->EmplaceBack(std::move(instruction));
 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::TouchTensors(const vm::EagerBlobObjectListPtr& eager_blob_object) {
+Maybe<void> InstructionsBuilder::TouchTensors(
+    const vm::EagerBlobObjectListPtr& eager_blob_objects) {
   Symbol<Device> device = JUST(Device::New("cpu"));
   Symbol<Stream> stream = JUST(GetDefaultStreamByDevice(device));
+  return TouchTensors(eager_blob_objects, stream);
+}
+
+Maybe<void> InstructionsBuilder::TouchTensors(const vm::EagerBlobObjectListPtr& eager_blob_objects,
+                                              Symbol<Stream> stream) {
+  JUST(SoftSyncStream(*eager_blob_objects, stream));
   auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream)),
-      std::make_unique<vm::TouchTensorsInstructionPolicy>(*eager_blob_object));
+      std::make_unique<vm::TouchTensorsInstructionPolicy>(*eager_blob_objects));
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
@@ -518,8 +506,8 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
   StreamRole stream_role = last_used_stream->stream_role();
   auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(last_used_stream)),
-      GetRecordEventInstructionPolicy::Visit(stream_role, device_type,
-                                             std::move(compute_local_dep_objects), modifier));
+      JUST(GetRecordEventInstructionPolicy::Visit(stream_role, device_type,
+                                                  std::move(compute_local_dep_objects), modifier)));
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
@@ -527,7 +515,8 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
 template<typename T>
 Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
     const T tensor, const std::shared_ptr<BlockingThenBusy>& btb,
-    const std::function<void(uint64_t)>& Callback, const std::string& modifier) {
+    const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& Callback,
+    const std::string& modifier) {
   // We want balance the cpu overhead and notification latency.
   //
   // balanced timeline here:
@@ -560,9 +549,11 @@ Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
   //                 |                                             |                |
   //   main thread:  |<---------------------------- S ----------------------------->|
 
-  const auto& CallbackWrapper = [btb, Callback](uint64_t ofblob_ptr) {
+  const auto& CallbackWrapper = [btb, Callback](
+                                    ep::Stream* stream,
+                                    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
     btb->mut_blocking_counter()->Decrease();
-    Callback(ofblob_ptr);
+    Callback(stream, eager_blob_object);
     btb->mut_spin_counter()->Decrease();
   };
   return AccessBlobByCallback(tensor, CallbackWrapper, modifier);
@@ -570,11 +561,13 @@ Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
 
 template Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
     const std::shared_ptr<one::LocalTensor> tensor, const std::shared_ptr<BlockingThenBusy>& btb,
-    const std::function<void(uint64_t)>& Callback, const std::string& modifier);
+    const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& Callback,
+    const std::string& modifier);
 
 template Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
     const one::EagerLocalTensorImpl* tensor, const std::shared_ptr<BlockingThenBusy>& btb,
-    const std::function<void(uint64_t)>& Callback, const std::string& modifier);
+    const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& Callback,
+    const std::string& modifier);
 
 namespace {
 
@@ -589,9 +582,10 @@ Maybe<Symbol<Device>> GetDevice(const one::EagerLocalTensorImpl* tensor) {
 }  // namespace
 
 template<typename T>
-Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
-                                                      const std::function<void(uint64_t)>& callback,
-                                                      const std::string& modifier) {
+Maybe<void> InstructionsBuilder::AccessBlobByCallback(
+    const T tensor,
+    const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& callback,
+    const std::string& modifier) {
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
   Symbol<Device> device = JUST(GetDevice(tensor));
   Symbol<Stream> stream = JUST(GetDefaultStreamByDevice(device));
@@ -608,18 +602,20 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
   auto instruction = intrusive::make_shared<vm::Instruction>(
       // Never replace `stream` with producer_stream or last_used_stream.
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream)),
-      std::make_unique<vm::AccessBlobArgCbInstructionPolicy>(eager_blob_object, callback,
+      std::make_shared<vm::AccessBlobArgCbInstructionPolicy>(eager_blob_object, callback,
                                                              modifier));
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
 
 template Maybe<void> InstructionsBuilder::AccessBlobByCallback(
-    const std::shared_ptr<one::LocalTensor> tensor, const std::function<void(uint64_t)>& callback,
+    const std::shared_ptr<one::LocalTensor> tensor,
+    const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& callback,
     const std::string& modifier);
 
 template Maybe<void> InstructionsBuilder::AccessBlobByCallback(
-    const one::EagerLocalTensorImpl* tensor, const std::function<void(uint64_t)>& callback,
+    const one::EagerLocalTensorImpl* tensor,
+    const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& callback,
     const std::string& modifier);
 
 namespace {
@@ -635,7 +631,7 @@ Maybe<void> InstructionsBuilder::GlobalSync() {
   auto stream = JUST(GetBarrierStream());
   auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream)),
-      std::make_unique<vm::GlobalSyncInstructionPolicy>());
+      std::make_shared<vm::GlobalSyncInstructionPolicy>());
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
@@ -644,7 +640,7 @@ Maybe<void> InstructionsBuilder::Barrier(const std::function<void()>& Callback) 
   auto stream = JUST(GetBarrierStream());
   auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream)),
-      std::make_unique<vm::BarrierInstructionPolicy>(Callback));
+      std::make_shared<vm::BarrierInstructionPolicy>(Callback));
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }

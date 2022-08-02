@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/scope_util.h"
-#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job/local_sig_infer_hint.h"
 #include "oneflow/core/job/scope.h"
@@ -446,25 +445,6 @@ Maybe<void> LazyJobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(const Ope
         << "the parallel_num of input lbn: " << GenLogicalBlobName(lbi)
         << " is not equals to op' parallel_num";
   }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> JobBuildAndInferCtx::AddLbiAndDiffWatcherUuidPair(
-    const LbiAndDiffWatcherUuidPair& lbi_uuid_pair) {
-  const auto& job_name = job_->job_conf().job_name();
-  auto* job_helper = job_->mutable_helper();
-  auto* job_name2pairs =
-      job_helper->mutable_lbi_diff_watcher_info()->mutable_job_name2lbi_and_watcher_uuids();
-  LbiAndDiffWatcherUuidPairList* pairs = &(*job_name2pairs)[job_name];
-  auto PairFoundCond = [&](const LbiAndDiffWatcherUuidPair& x) {
-    return x.lbi() == lbi_uuid_pair.lbi() && x.watcher_uuid() == lbi_uuid_pair.watcher_uuid();
-  };
-  auto found_iter = std::find_if(pairs->lbi_and_uuid_pair().begin(),
-                                 pairs->lbi_and_uuid_pair().end(), PairFoundCond);
-  CHECK_OR_RETURN(found_iter == pairs->lbi_and_uuid_pair().end())
-      << "diff blob has been watched. (logical_blob_name: "
-      << GenLogicalBlobName(lbi_uuid_pair.lbi()) << ", job_name: " << job_name << ")";
-  *pairs->mutable_lbi_and_uuid_pair()->Add() = lbi_uuid_pair;
   return Maybe<void>::Ok();
 }
 
@@ -1031,7 +1011,6 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("IndexedSlicesOptimizerRewritePass"));
     JUST(DoPass("SplitSparseSoftmaxCrossEntropyOpPass"));
     JUST(DoPass("DoParallelCastBeforeWideningTypeCast"));
-    JUST(DoPass("AddLbiDiffWatcherOpConfs"));
     JUST(DoPass("FuseCastScalePass"));
     JUST(DoPass("PruneParallelCastOpsPass"));
     JUST(DoPass("FuseUpdateOpsPass"));

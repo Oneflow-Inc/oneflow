@@ -35,7 +35,6 @@ class JobBuildAndInferCtx {
   virtual ~JobBuildAndInferCtx() = default;
 
   Maybe<void> SetJobConf(const JobConfigProto& job_conf);
-  Maybe<void> AddLbiAndDiffWatcherUuidPair(const LbiAndDiffWatcherUuidPair& lbi_uuid_pair);
   Maybe<OpAttribute> AddAndInferGlobalOp(const OperatorConf& op_conf);
   Maybe<OpAttribute> AddAndInferLocalOp(const OperatorConf& op_conf);
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
@@ -174,6 +173,7 @@ class LazyJobBuildAndInferCtx : public JobBuildAndInferCtx {
   Maybe<LogicalBlobId> FindOrCreateLocalLbiFromCompatibleGlobalBlob(
       int64_t scope_symbol_id, const LogicalBlobId& lbn) override;
 };
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_JOB_BUILD_AND_INFER_CTX_H_

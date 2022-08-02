@@ -85,8 +85,6 @@ Maybe<void> LazyJobBuildAndInferCtxMgr::VirtualCloseJob() {
   return Maybe<void>::Ok();
 }
 
-bool EagerExecutionEnabled() { return *Singleton<bool, EagerExecution>::Get(); }
-
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
   return JUST(SingletonMaybe<LazyJobBuildAndInferCtxMgr>());
 }
