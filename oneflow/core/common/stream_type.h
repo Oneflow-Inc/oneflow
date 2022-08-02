@@ -41,8 +41,8 @@ enum class StreamType {
 template<typename DerivedT>
 struct StreamTypeVisitor {
   template<typename... Args>
-  static auto Visit(StreamType stream_role, Args&&... args) {
-    switch (stream_role) {
+  static auto Visit(StreamType stream_type, Args&&... args) {
+    switch (stream_type) {
       case StreamType::kInvalid: LOG(FATAL) << "invalid stream type";
       case StreamType::kCompute: return DerivedT::VisitCompute(std::forward<Args>(args)...);
       case StreamType::kHost2Device: return DerivedT::VisitHost2Device(std::forward<Args>(args)...);
