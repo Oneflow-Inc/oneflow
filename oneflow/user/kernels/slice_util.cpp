@@ -96,8 +96,8 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
       entire_offset_vec[i] = entire_offset;
       sliced_offset_vec[i] = sliced_offset;
       if (IsContinuous && i > 0
-          && (entire_offset_vec[i] - 1 != entire_offset_vec[i]
-              || sliced_offset_vec[i] - 1 != sliced_offset_vec[i])) {
+          && (entire_offset_vec[i] - 1 != entire_offset_vec[i - 1]
+              || sliced_offset_vec[i] - 1 != sliced_offset_vec[i - 1])) {
         IsContinuous = false;
       }
     }
