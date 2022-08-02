@@ -42,9 +42,6 @@ Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inp
   APPLY_IF(GlobalToGlobalOp);
   APPLY_IF(FunctionOp);
   APPLY_IF(ImageDecoderRandomCropResizeOp);
-  // if (const auto* op = dynamic_cast<const FunctionOpExpr*>(&op_expr)) {
-  //   return OpExprInterpreter::ApplyImpl(*op, inputs, outputs, ctx);
-  // }
 #undef APPLY_IF
 
   OF_UNIMPLEMENTED() << "The type " << op_expr.op_type_name()
@@ -72,9 +69,6 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
   APPLY_IF(FunctionOp);
   APPLY_IF(SelectTopNOp)
 #undef APPLY_IF
-  // if (const auto* op = dynamic_cast<const FunctionOpExpr*>(&op_expr)) {
-  //   return OpExprInterpreter::ApplyImpl(*op, inputs, outputs, ctx);
-  // }
 
   OF_UNIMPLEMENTED() << "The type " << op_expr.op_type_name()
                      << " has not been supported in EagerInterpreter::Apply.";
@@ -82,15 +76,6 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
 
 Maybe<void> OpExprInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const TensorTuple& inputs,
                                          TensorTuple* outputs, const OpExprInterpContext&) const {
-  // Must reset ctx in each forward
-  op_expr.reset_state();
-  std::shared_ptr<FunctionAutoGradCaptureState> ctx = op_expr.state();
-  *outputs = *(op_expr.forward()(ctx, inputs));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> EagerInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const TensorTuple& inputs,
-                                        TensorTuple* outputs, const OpExprInterpContext&) const {
   // Must reset ctx in each forward
   op_expr.reset_state();
   std::shared_ptr<FunctionAutoGradCaptureState> ctx = op_expr.state();

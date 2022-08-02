@@ -118,11 +118,11 @@ class LazyInterpreter : public OpExprInterpreter {
                     const OpExprInterpContext& ctx) const override;
 
  private:
+  using OpExprInterpreter::ApplyImpl;
   DECLARE_NORMAL_APPLY_FUNC(UserOp);
   DECLARE_NORMAL_APPLY_FUNC(FeedInputOp);
   DECLARE_NORMAL_APPLY_FUNC(FeedVariableOp);
   DECLARE_NORMAL_APPLY_FUNC(FetchOutputOp);
-  DECLARE_NORMAL_APPLY_FUNC(FunctionOp) override;
   DECLARE_NORMAL_APPLY_FUNC(GlobalToGlobalOp);
   DECLARE_NORMAL_APPLY_FUNC(ImageDecoderRandomCropResizeOp);
 };
@@ -141,8 +141,8 @@ class EagerInterpreter : public OpExprInterpreter {
                     const OpExprInterpContext& ctx) const override;
 
  private:
+  using OpExprInterpreter::ApplyImpl;
   FOR_EACH_BUILTIN_OPS(DECLARE_PURE_VIRTUAL_APPLY_FUNC);
-  DECLARE_NORMAL_APPLY_FUNC(FunctionOp) override;
 };
 
 class EagerGlobalInterpreter : public EagerInterpreter {

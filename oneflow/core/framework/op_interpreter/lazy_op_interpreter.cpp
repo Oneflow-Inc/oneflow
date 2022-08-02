@@ -958,16 +958,16 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LazyInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const TensorTuple& inputs,
-                                       TensorTuple* outputs, const OpExprInterpContext&) const {
-  // TODO(hjchen2)
-  // OF_UNIMPLEMENTED() << "The type " << op_expr.op_type_name()
-  //                    << " has not been supported in LazyInterpreter::Apply.";
-  op_expr.reset_state();
-  std::shared_ptr<FunctionAutoGradCaptureState> ctx = op_expr.state();
-  *outputs = *(op_expr.forward()(ctx, inputs));
-  return Maybe<void>::Ok();
-}
+// Maybe<void> LazyInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const TensorTuple& inputs,
+//                                        TensorTuple* outputs, const OpExprInterpContext&) const {
+//   // TODO(hjchen2)
+//   // OF_UNIMPLEMENTED() << "The type " << op_expr.op_type_name()
+//   //                    << " has not been supported in LazyInterpreter::Apply.";
+//   op_expr.reset_state();
+//   std::shared_ptr<FunctionAutoGradCaptureState> ctx = op_expr.state();
+//   *outputs = *(op_expr.forward()(ctx, inputs));
+//   return Maybe<void>::Ok();
+// }
 
 Maybe<void> LazyInterpreter::ApplyImpl(const GlobalToGlobalOpExpr& op_expr,
                                        const TensorTuple& inputs, TensorTuple* outputs,
