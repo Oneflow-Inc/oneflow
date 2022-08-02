@@ -410,7 +410,7 @@ class NormalizationTrainKernel final : public user_op::OpKernel, public user_op:
       desc_helper.CheckParamTensor(moving_variance);
     }
 
-    const void* sp_alpha = CudnnSPZeroPtr(data_type);
+    const void* sp_alpha = CudnnSPOnePtr(data_type);
     const void* sp_beta;
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
@@ -419,7 +419,7 @@ class NormalizationTrainKernel final : public user_op::OpKernel, public user_op:
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), y->mut_dptr<void>(), add_to_output->dptr<void>(),
           add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
-      sp_beta = CudnnSPZeroPtr(data_type);
+      sp_beta = CudnnSPOnePtr(data_type);
     } else {
       sp_beta = CudnnSPZeroPtr(data_type);
     }
@@ -583,8 +583,8 @@ class NormalizationGradUserKernel final : public user_op::OpKernel,
     if (reserve_space_size == 0 && workspace_size <= bn_workspace_size) {
       OF_CUDNN_CHECK(cudnnBatchNormalizationBackwardEx(
           ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
-          CUDNN_BATCHNORM_OPS_BN, CudnnSPZeroPtr(data_type), CudnnSPZeroPtr(data_type),
-          CudnnSPZeroPtr(data_type), CudnnSPZeroPtr(data_type), desc_helper.xy_desc(), x->dptr(),
+          CUDNN_BATCHNORM_OPS_BN, CudnnSPOnePtr(data_type), CudnnSPZeroPtr(data_type),
+          CudnnSPOnePtr(data_type), CudnnSPZeroPtr(data_type), desc_helper.xy_desc(), x->dptr(),
           nullptr, nullptr, desc_helper.xy_desc(), bn_dy_ptr, nullptr, nullptr,
           desc_helper.xy_desc(), dx->mut_dptr(), desc_helper.param_desc(), gamma->dptr(), nullptr,
           gamma_diff->mut_dptr(), beta_diff->mut_dptr(), epsilon, mean->dptr(),
@@ -592,7 +592,7 @@ class NormalizationGradUserKernel final : public user_op::OpKernel,
     } else {
       OF_CUDNN_CHECK(cudnnBatchNormalizationBackward(
           ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
-          CudnnSPZeroPtr(data_type), CudnnSPZeroPtr(data_type), CudnnSPZeroPtr(data_type),
+          CudnnSPOnePtr(data_type), CudnnSPZeroPtr(data_type), CudnnSPOnePtr(data_type),
           CudnnSPZeroPtr(data_type), desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(),
           bn_dy_ptr, desc_helper.xy_desc(), dx->mut_dptr(), desc_helper.param_desc(), gamma->dptr(),
           gamma_diff->mut_dptr(), beta_diff->mut_dptr(), epsilon, mean->dptr(),
@@ -601,7 +601,7 @@ class NormalizationGradUserKernel final : public user_op::OpKernel,
 #else
     OF_CUDNN_CHECK(cudnnBatchNormalizationBackward(
         ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
-        CudnnSPZeroPtr(data_type), CudnnSPZeroPtr(data_type), CudnnSPZeroPtr(data_type),
+        CudnnSPOnePtr(data_type), CudnnSPZeroPtr(data_type), CudnnSPOnePtr(data_type),
         CudnnSPZeroPtr(data_type), desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(),
         bn_dy_ptr, desc_helper.xy_desc(), dx->mut_dptr(), desc_helper.param_desc(), gamma->dptr(),
         gamma_diff->mut_dptr(), beta_diff->mut_dptr(), epsilon, mean->dptr(),
@@ -740,7 +740,7 @@ class FusedNormalizationAddReluKernel final : public user_op::OpKernel,
 
     OF_CUDNN_CHECK(cudnnBatchNormalizationForwardTrainingEx(
         ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
-        ops, CudnnSPZeroPtr(data_type), CudnnSPZeroPtr(data_type), desc_helper.xy_desc(), x->dptr(),
+        ops, CudnnSPOnePtr(data_type), CudnnSPZeroPtr(data_type), desc_helper.xy_desc(), x->dptr(),
         z_desc, z_ptr, desc_helper.xy_desc(), y->mut_dptr(), desc_helper.param_desc(),
         gamma->dptr(), beta->dptr(), 1.0 - momentum, moving_mean->mut_dptr(),
         moving_variance->mut_dptr(), epsilon, mean->mut_dptr(), inv_variance->mut_dptr(),
@@ -827,7 +827,7 @@ class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel,
     CHECK_GE(reserve_space_size, min_reserve_space_size);
     OF_CUDNN_CHECK(cudnnBatchNormalizationBackwardEx(
         ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
-        ops, CudnnSPZeroPtr(data_type), CudnnSPZeroPtr(data_type), CudnnSPZeroPtr(data_type),
+        ops, CudnnSPOnePtr(data_type), CudnnSPZeroPtr(data_type), CudnnSPOnePtr(data_type),
         CudnnSPZeroPtr(data_type), desc_helper.xy_desc(), x->dptr(), desc_helper.xy_desc(),
         y->dptr(), desc_helper.xy_desc(), dy->dptr(), dz_desc, dz_ptr, desc_helper.xy_desc(),
         dx->mut_dptr(), desc_helper.param_desc(), gamma->dptr(), beta->dptr(),
