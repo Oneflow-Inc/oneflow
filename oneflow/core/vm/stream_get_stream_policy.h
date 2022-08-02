@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_STREAM_GET_STREAM_POLICY_H_
 
 #include "oneflow/core/common/symbol.h"
-#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/stream_type.h"
 #include "oneflow/core/vm/control_stream_policy.h"
 #include "oneflow/core/vm/event_recorded_ep_stream_policy.h"
 #include "oneflow/core/vm/critical_section_stream_policy.h"
@@ -30,7 +30,7 @@ namespace oneflow {
 
 class Device;
 
-struct CreateStreamPolicy final : public StreamRoleVisitor<CreateStreamPolicy> {
+struct CreateStreamPolicy final : public StreamTypeVisitor<CreateStreamPolicy> {
   static Maybe<vm::StreamPolicy> VisitCompute(Symbol<Device> device) {
     return std::shared_ptr<vm::StreamPolicy>(new vm::EpStreamPolicy(device));
   }
@@ -39,6 +39,9 @@ struct CreateStreamPolicy final : public StreamRoleVisitor<CreateStreamPolicy> {
   }
   static Maybe<vm::StreamPolicy> VisitDevice2Host(Symbol<Device> device) {
     return std::shared_ptr<vm::StreamPolicy>(new vm::EpD2HStreamPolicy(device));
+  }
+  static Maybe<vm::StreamPolicy> VisitAsyncedDevice2Host(Symbol<Device> device) {
+    return VisitDevice2Host(device);
   }
   static Maybe<vm::StreamPolicy> VisitSyncedLaunchedCommNet(Symbol<Device> device) {
     return std::shared_ptr<vm::StreamPolicy>(new vm::EventRecordedEpStreamPolicy(device));
@@ -57,6 +60,9 @@ struct CreateStreamPolicy final : public StreamRoleVisitor<CreateStreamPolicy> {
   }
   static Maybe<vm::StreamPolicy> VisitPinnedCompute(Symbol<Device> device) {
     return std::shared_ptr<vm::StreamPolicy>(new vm::PinnedEpStreamPolicy(device));
+  }
+  static Maybe<vm::StreamPolicy> VisitTmpCompute(Symbol<Device> device) {
+    return std::shared_ptr<vm::StreamPolicy>(new vm::EventRecordedEpStreamPolicy(device));
   }
 };
 
