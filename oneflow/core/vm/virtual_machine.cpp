@@ -222,6 +222,7 @@ std::string VirtualMachine::GetBlockingDebugString() {
 }
 
 Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
+  SyncVmModeGuard guard(true);
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
     INTRUSIVE_FOR_EACH_PTR(instruction, instruction_list) {
       const auto& device = instruction->stream().device();
