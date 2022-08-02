@@ -97,6 +97,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       // NOTE: if op support stride(non-contiguous input), then output tensor's stride
       // should be inferred in InferLogicalTensorDesc.
       // otherwise, it will be set here(according to shape).
+      std::cout << "" << output_tensor_metas.at(i)->stride().ToString() << std::endl;
       std::shared_ptr<MutLocalTensorMeta> mut_tensor_meta;
       {
         if (kernel->output_is_mut2_type(i)) {

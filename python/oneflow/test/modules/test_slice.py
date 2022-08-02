@@ -25,6 +25,7 @@ import oneflow as flow
 import oneflow.unittest
 import torch
 
+
 def _test_slice(test_case, device):
     np_arr = np.random.randn(3, 6, 9).astype(np.float32)
     x = flow.tensor(np_arr, device=flow.device(device))
@@ -51,15 +52,13 @@ def _test_slice_1_dim(test_case, device):
     x = flow.tensor(np_arr, device=flow.device(device))
     test_case.assertTrue(np.allclose(x[1].numpy(), np_arr[1], 1e-05, 1e-05))
     test_case.assertTrue(np.allclose(x[99].numpy(), np_arr[99], 1e-05, 1e-05))
-    test_case.assertTrue(np.allclose(
-        x[0:2].numpy(), np_arr[0:2], 1e-05, 1e-05))
+    test_case.assertTrue(np.allclose(x[0:2].numpy(), np_arr[0:2], 1e-05, 1e-05))
 
 
 def _test_slice_3_dim(test_case, device):
     np_arr = np.random.randn(2, 3, 4).astype(np.float32)
     x = flow.tensor(np_arr, device=flow.device(device))
-    test_case.assertTrue(np.allclose(
-        x[:, 0].numpy(), np_arr[:, 0], 1e-05, 1e-05))
+    test_case.assertTrue(np.allclose(x[:, 0].numpy(), np_arr[:, 0], 1e-05, 1e-05))
 
 
 def _test_slice_4_dim(test_case, device):
@@ -98,14 +97,10 @@ def _test_slice_with_int_index(test_case, device):
 def _test_slice_negative_index(test_case, device):
     np_arr = np.random.randn(4, 5, 6)
     x = flow.tensor(np_arr, dtype=flow.float32, device=flow.device(device))
-    test_case.assertTrue(np.allclose(
-        x[-1].numpy(), np_arr[-1], 0.0001, 0.0001))
-    test_case.assertTrue(np.allclose(
-        x[-2].numpy(), np_arr[-2], 0.0001, 0.0001))
-    test_case.assertTrue(np.allclose(
-        x[-3].numpy(), np_arr[-3], 0.0001, 0.0001))
-    test_case.assertTrue(np.allclose(
-        x[-4].numpy(), np_arr[-4], 0.0001, 0.0001))
+    test_case.assertTrue(np.allclose(x[-1].numpy(), np_arr[-1], 0.0001, 0.0001))
+    test_case.assertTrue(np.allclose(x[-2].numpy(), np_arr[-2], 0.0001, 0.0001))
+    test_case.assertTrue(np.allclose(x[-3].numpy(), np_arr[-3], 0.0001, 0.0001))
+    test_case.assertTrue(np.allclose(x[-4].numpy(), np_arr[-4], 0.0001, 0.0001))
 
 
 def _test_slice_ellipsis_type(test_case, device):
@@ -210,8 +205,7 @@ class TestSliceUpdate(flow.unittest.TestCase):
     def test_slice_update_grad_graph(test_case):
         x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
         input = flow.tensor(x, requires_grad=True)
-        update = flow.tensor(np.array([2, 3, 4]).astype(
-            np.float32), requires_grad=True)
+        update = flow.tensor(np.array([2, 3, 4]).astype(np.float32), requires_grad=True)
         output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
 
         class TestModule(flow.nn.Module):
@@ -223,7 +217,7 @@ class TestSliceUpdate(flow.unittest.TestCase):
             def forward(self, ref, value):
                 x = ref + self.ref_grad
                 y = value + self.value_grad
-                return flow._C.slice_update(x, y, [1, ], [4, ], [1, ])
+                return flow._C.slice_update(x, y, [1,], [4,], [1,])
 
         test_m = TestModule()
         of_sgd = flow.optim.SGD(test_m.parameters(), lr=1.0, momentum=0.0)
@@ -265,44 +259,39 @@ class TestSliceUpdate(flow.unittest.TestCase):
 
         test_case.assertTrue(np.array_equal(output.numpy(), np_out))
     
-    def test_slice_update_with_2_dim_tensor_random(test_case):
-        dim_list=flow.randperm(2).tolist()
+    
+    def test_slice_update_with_2_dim_non_contiguous_tensor(test_case):
+        dim_list = flow.randperm(2).tolist()
         x_torch = torch.arange(2).to(torch.float32).view(1, 2).permute(dim_list)
-        y_torch=torch.ones(1)
-        x_torch[-1:,-1]=y_torch
+        y_torch = torch.ones(1)
+        x_torch[-1:, -1] = y_torch
         x_flow = flow.arange(2).to(flow.float32).view(1, 2).permute(dim_list)
-        y_flow=flow.ones(1)
-        x_flow[-1:,-1]=y_flow
-        test_case.assertTrue((x_torch.numpy() == x_flow.numpy()).all())    
-    
-    
-    def test_slice_update_with_3_dim_tensor_random(test_case):
-        dim_list=flow.randperm(3).tolist()
-        x_torch = torch.arange(8).to(torch.float32).view(4, 1, 2).permute(dim_list)
-        y_torch=torch.ones(1)
-        x_torch[-1:,-1:,-1]=y_torch
-        x_flow = flow.arange(8).to(flow.float32).view(4, 1, 2).permute(dim_list)
-        y_flow=flow.ones(1)
-        x_flow[-1:,-1:,-1]=y_flow
-        test_case.assertTrue((x_torch.numpy() == x_flow.numpy()).all())    
-    
-    
-    def test_slice_update_with_4_dim_tensor_random(test_case):
-        dim_list=flow.randperm(4).tolist()
-        x_torch = torch.arange(32).to(torch.float32).view(4, 1, 4, 2).permute(dim_list)
-        y_torch=torch.ones(1)
-        x_torch[-1:,-1:,-1:,-1:]=y_torch
-        x_flow = flow.arange(32).to(flow.float32).view(4, 1, 4, 2).permute(dim_list)
-        y_flow=flow.ones(1)
-        x_flow[-1:,-1:,-1:,-1:]=y_flow
-        test_case.assertTrue((x_torch.numpy() == x_flow.numpy()).all())    
+        y_flow = flow.ones(1)
+        x_flow[-1:, -1] = y_flow
+        test_case.assertTrue((x_torch.numpy() == x_flow.numpy()).all())
 
+    def test_slice_update_with_3_dim_tensor_non_contiguous_tensor(test_case):
+        dim_list = flow.randperm(3).tolist()
+        x_torch = torch.arange(8).to(torch.float32).view(2, 2, 2).permute(dim_list)
+        y_torch = torch.ones(2).reshape(1,2).T
+        x_torch[:, :, 1:2] = y_torch
+        x_flow = flow.arange(8).to(flow.float32).view(2, 2, 2).permute(dim_list)
+        y_flow = flow.ones(2).reshape(1,2).T
+        x_flow[:, :, 1:2] = y_flow
+        test_case.assertTrue((x_torch.numpy() == x_flow.numpy()).all())
 
+    def test_slice_update_with_4_dim_non_contiguous_tensor(test_case):
+        dim_list = flow.randperm(4).tolist()
+        x_torch = torch.arange(81).to(torch.float32).view(3, 3, 3, 3).permute(dim_list)
+        y_torch = torch.ones(9).reshape(1,3,3).T
+        x_torch[:, :, :, 1:2] = y_torch
+        x_flow = flow.arange(81).to(flow.float32).view(3, 3, 3, 3).permute(dim_list)
+        y_flow = flow.ones(9).reshape(1,3,3).T
+        x_flow[:, :, :, 1:2] = y_flow
+        test_case.assertTrue((x_torch.numpy() == x_flow.numpy()).all())
+        
     def test_slice_update_about_inplace(test_case):
-        np_tensor = flow.tensor([[0., 4.],
-                                 [2., 6.],
-                                 [2., 6.],
-                                 [3., 7.]])
+        np_tensor = flow.tensor([[0.0, 4.0], [2.0, 6.0], [2.0, 6.0], [3.0, 7.0]])
         x_flow = flow.arange(8).to(flow.float32).view(2, 4).T
         x_flow[1:2, :2] = x_flow[2:3, :2]
         test_case.assertTrue(np.array_equal(np_tensor.numpy(), x_flow.numpy()))

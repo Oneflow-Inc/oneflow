@@ -179,6 +179,7 @@ Maybe<void> LocalTensorMetaInferArgs::InitInputLocalTensorMetas(const TensorTupl
     if (!JUST(user_op_expr.SupportNonContiguous())) {
       std::shared_ptr<Stride> stride(new Stride(output_mut_metas.at(i).shape()));
       output_mut_metas.at(i).set_stride(stride);
+      std::cout << "local_tensor:" << stride->ToString() << std::endl;
     }
     mut_output_tensor_metas->at(i) = SymbolOf(
         LocalTensorMeta(output_mut_metas.at(i).shape_ptr(), output_mut_metas.at(i).stride_ptr(),
