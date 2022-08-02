@@ -149,10 +149,6 @@ class EagerBlobObject final : public user_op::Tensor,
 
   void set_storage_offset(const int64_t offset);
 
-  [[deprecated("\"Blob\" will be removed in eager. Please avoid to use this method whenever "
-               "possible. Almost all methods of `Blob` are also in `EagerBlobObject`.")]] Blob*
-  blob();
-
   Maybe<void> TryAllocateBlobBodyMemory(vm::Allocator* allocator);
   Maybe<void> DeallocateBlobDataPtr() {
     tensor_storage_->Release();
@@ -235,9 +231,6 @@ class EagerBlobObject final : public user_op::Tensor,
   bool pin_memory_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
 
-  // NOTE: Will be removed soon. Avoid to use it whenever possible.
-  BlobDesc blob_desc_;
-  std::unique_ptr<Blob> blob_;
   Symbol<one::LocalTensorMeta> static_local_tensor_meta_;
   std::shared_ptr<const one::MutLocalTensorMeta> dynamic_local_tensor_meta_;
 };
