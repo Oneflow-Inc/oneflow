@@ -140,7 +140,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     auto btb = std::make_shared<BlockingThenBusy>(1);
     JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
       return builder->SyncAccessBlobByCallback(
-          tensor_impl, btb, [](uint64_t) {}, "const");
+          tensor_impl, btb, [](ep::Stream* stream, const std::shared_ptr<vm::EagerBlobObject>&) {},
+          "const");
     }));
     JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
     const auto& mut_tensor_meta = const_cast<EagerLocalTensorImpl*>(tensor_impl)->mut_tensor_meta();
@@ -180,10 +181,11 @@ static Maybe<void> BuildAndRunLocalCastInstruction(const BuiltinOpExpr& op_expr,
 
 namespace {
 
-Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root) {
+Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root,
+                                          size_t size) {
   return one::OpBuilder("eager_nccl_broadcast", *JUST(UniqueStr("eager_nccl_broadcast")))
-      .Input("in")
-      .Output("out")
+      .Input("in", size)
+      .Output("out", size)
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
       .Attr<int64_t>("root", root)
       .Build();
@@ -198,7 +200,7 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
   CHECK_OR_RETURN(parallel_desc->containing_current_rank());
   if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
   std::shared_ptr<UserOpExpr> op_expr =
-      JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank));
+      JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank, 1));
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<int64_t>("root", src_rank));
   if (src_rank == GlobalProcessCtx::Rank() || inplace) {
@@ -209,6 +211,26 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
   } else {
     return JUST(OpInterpUtil::Dispatch<one::Tensor>(
         *op_expr, {tensor}, one::OpExprInterpContext(attrs, parallel_desc)));
+  }
+}
+
+Maybe<TensorTuple> Broadcast(const TensorTuple& inputs, int64_t src_rank,
+                             Symbol<ParallelDesc> parallel_desc, bool inplace) {
+  CHECK_OR_RETURN(parallel_desc->containing_current_rank())
+      << "Current rank are not contained in the placement arguement";
+  if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return inputs; }
+  std::shared_ptr<UserOpExpr> op_expr =
+      JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank, inputs.size()));
+  MutableAttrMap attrs;
+  JUST(attrs.SetAttr<int64_t>("root", src_rank));
+  if (src_rank == GlobalProcessCtx::Rank() || inplace) {
+    auto outputs = std::make_shared<TensorTuple>(inputs);
+    JUST(OpInterpUtil::Dispatch(*op_expr, inputs, outputs.get(),
+                                one::OpExprInterpContext(attrs, parallel_desc)));
+    return outputs;
+  } else {
+    return JUST(OpInterpUtil::Dispatch<one::TensorTuple>(
+        *op_expr, inputs, one::OpExprInterpContext(attrs, parallel_desc)));
   }
 }
 

@@ -22,13 +22,23 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
+
+namespace ep {
+class Stream;
+}
+
+namespace vm {
+class EagerBlobObject;
+}
+
 namespace one {
 
 class Tensor;
 
-Maybe<void> SyncAccessTensorWithTimeOut(const std::shared_ptr<Tensor>& tensor,
-                                        const std::function<void(uint64_t)>& callback,
-                                        const std::string& modifier);
+Maybe<void> SyncAccessTensorWithTimeOut(
+    const std::shared_ptr<Tensor>& tensor,
+    const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& callback,
+    const std::string& modifier);
 
 Maybe<void> CopyLocalTensorDataTo(const std::shared_ptr<Tensor>& input, void* mem_ptr, size_t size);
 

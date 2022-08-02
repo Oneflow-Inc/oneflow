@@ -1207,9 +1207,15 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         # Called when shutting down this `_MultiProcessingDataLoaderIter`.
         # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on
         # the logic of this function.
-        python_exit_status = _utils.python_exit_status
+
+        # See (2) of the note. If Python is shutting down, do no-op.
+        try:
+            python_exit_status = _utils.python_exit_status
+        except AttributeError:
+            # Python is shutting down and `_utils` has been freed
+            assert _utils is None
+            return
         if python_exit_status is True or python_exit_status is None:
-            # See (2) of the note. If Python is shutting down, do no-op.
             return
         # Normal exit when last reference is gone / iterator is depleted.
         # See (1) and the second half of the note.
