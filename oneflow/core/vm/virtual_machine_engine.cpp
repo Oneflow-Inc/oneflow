@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/common/env_var/vm.h"
+#include "oneflow/core/common/frame_getter.h"
 #include "oneflow/core/vm/caching_allocator.h"
 #include "oneflow/core/vm/fuse_instruction_policy.h"
 #include "oneflow/core/vm/release_tensor_instruction_policy.h"
@@ -371,6 +372,7 @@ void VirtualMachineEngine::AbortOnOOM(vm::Stream* stream, const ScheduleCtx& sch
 template<void (VirtualMachineEngine::*OOMHandler)(vm::Stream*, const ScheduleCtx&)>
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
                                                const ScheduleCtx& schedule_ctx) {
+  SetCurrentInstructionIdThisThread(instruction->id());
   auto* stream = instruction->mut_stream();
   // Prepare
   {
@@ -389,6 +391,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
   if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
   // Compute
   if (OnSchedulerThread(*stream)) {
+    std::cout << "instruction id: " << instruction->id() << std::endl;
     stream->stream_policy().Run(instruction);
   } else {
     stream->mut_thread_ctx()->mut_worker_pending_instruction_list()->PushBack(instruction);

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/common/frame_getter.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
@@ -33,7 +34,12 @@ std::string Instruction::DebugName() const {
 void Instruction::__Init__(Stream* stream,
                            std::shared_ptr<InstructionPolicy>&& instruction_policy) {
   stream_ = stream;
-  instruction_policy_ = instruction_policy;
+  instruction_policy_ = std::move(instruction_policy);
+  id_ = GetNextInstructionId();
+  SetCurrentInstructionIdThisThread(id_);
+  if (auto* frame_getter = Singleton<FrameGetter>::Get()) {
+    frame_getter->RecordCurrentFrame(id_);
+  }
 }
 
 void Instruction::InitStatus() { instruction_policy_->InitInstructionStatusIf(this); }

@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/error_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
+#include "oneflow/core/common/frame_getter.h"
 
 namespace oneflow {
 
@@ -321,6 +322,9 @@ std::string GetErrorString(const std::shared_ptr<StackedError>& error) {
 }
 
 void ThrowError(const std::shared_ptr<StackedError>& error) {
+  if (auto* frame_getter = Singleton<FrameGetter>::Get()) {
+    frame_getter->Print(GetCurrentInstructionIdThisThread());
+  }
   *MutThreadLocalError() = error;
   if ((*error)->has_runtime_error()) { throw RuntimeException(GetErrorString(error)); }
   if ((*error)->has_type_error()) { throw TypeException(GetErrorString(error)); }

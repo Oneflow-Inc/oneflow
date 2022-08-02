@@ -32,7 +32,7 @@ struct Throw final {
 
 #define THROW(err_type)                                                                           \
   oneflow::details::Throw() = oneflow::Error::err_type().AddStackFrame([](const char* function) { \
-    thread_local static auto frame = SymbolOf(ErrorStackFrame(__FILE__, __LINE__, function));     \
+    thread_local static auto frame = oneflow::SymbolOf(oneflow::ErrorStackFrame(__FILE__, __LINE__, function));     \
     return frame;                                                                                 \
   }(__FUNCTION__))
 
@@ -40,7 +40,7 @@ struct Throw final {
   if (!(expr))                                                                                    \
   oneflow::details::Throw() =                                                                     \
       oneflow::Error::CheckFailedError().AddStackFrame([](const char* function) {                 \
-        thread_local static auto frame = SymbolOf(ErrorStackFrame(__FILE__, __LINE__, function)); \
+        thread_local static auto frame = oneflow::SymbolOf(oneflow::ErrorStackFrame(__FILE__, __LINE__, function)); \
         return frame;                                                                             \
       }(__FUNCTION__))                                                                            \
       << "Check failed: " << OF_PP_STRINGIZE(expr) << ": "
@@ -73,14 +73,14 @@ struct Throw final {
 
 #define TODO_THEN_THROW()                                                                          \
   oneflow::details::Throw() = oneflow::Error::TodoError().AddStackFrame([](const char* function) { \
-    thread_local static auto frame = SymbolOf(ErrorStackFrame(__FILE__, __LINE__, function));      \
+    thread_local static auto frame = oneflow::SymbolOf(oneflow::ErrorStackFrame(__FILE__, __LINE__, function));      \
     return frame;                                                                                  \
   }(__FUNCTION__))
 
 #define UNIMPLEMENTED_THEN_THROW()                                                                \
   oneflow::details::Throw() =                                                                     \
       oneflow::Error::UnimplementedError().AddStackFrame([](const char* function) {               \
-        thread_local static auto frame = SymbolOf(ErrorStackFrame(__FILE__, __LINE__, function)); \
+        thread_local static auto frame = oneflow::SymbolOf(oneflow::ErrorStackFrame(__FILE__, __LINE__, function)); \
         return frame;                                                                             \
       }(__FUNCTION__))
 

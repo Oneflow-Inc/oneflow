@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/thread_ctx.h"
+#include "oneflow/core/common/frame_getter.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -24,6 +25,7 @@ size_t ThreadCtx::TryReceiveAndRun() {
   mut_worker_pending_instruction_list()->MoveTo(&tmp_list);
   size_t size = tmp_list.size();
   INTRUSIVE_FOR_EACH(instruction, &tmp_list) {
+    SetCurrentInstructionIdThisThread(instruction->id());
     tmp_list.Erase(instruction.Mutable());
     const StreamPolicy& stream_policy = instruction->stream().stream_policy();
     stream_policy.Run(instruction.Mutable());

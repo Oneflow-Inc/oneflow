@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/user/kernels/max_pool_kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/common/throw.h"
 #include <cuda_fp16.h>
 
 namespace oneflow {

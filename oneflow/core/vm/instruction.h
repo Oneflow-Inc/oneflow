@@ -142,6 +142,7 @@ class Instruction final : public intrusive::Base {
   bool Done() const;
   StreamPolicy* mut_stream_policy();
   const StreamPolicy& stream_policy() const;
+  int64_t id() const { return id_; }
 
   intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }
 
@@ -200,6 +201,7 @@ class Instruction final : public intrusive::Base {
   Stream* stream_;
   std::shared_ptr<InstructionPolicy> instruction_policy_;
   InstructionStatusBuffer status_buffer_;
+  int64_t id_;
 };
 
 using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, main_instruction_hook_)>;
