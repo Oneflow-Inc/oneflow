@@ -20,7 +20,9 @@ import sys
 import numpy as np
 import oneflow.nn as nn
 import oneflow as flow
+from oneflow.ops.array_ops import parse_slice_tuple_list
 import oneflow.unittest
+import random
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -28,301 +30,403 @@ import oneflow.unittest
 class TestGraphInplaceOperations(flow.unittest.TestCase):
     def test_inplace_scalar_add(test_case):
         def _test(device):
-            class Graph(nn.Graph):
+            
+            add_value = random.randint(1,100)
+            class InplaceGraph(nn.Graph):
                 def build(self, input):
-                    input += 1
-                    x = flow.randn(4, 4, device=device)
-                    x += 3
-                    flow.add(x, 7, inplace=True)
-                    return x
+                    flow.add(input, add_value, inplace=True)
+                    return input
 
-            graph = Graph()
-            graph(flow.randn(4, 4, device=device))
+            class NotInplaceGraph(nn.Graph):
+                def build(self, input):
+                    return flow.add(input, add_value)
+
+            input = flow.randn(4,4,4, device = device)
+            inplace_graph = InplaceGraph()
+            not_inplace_graph = NotInplaceGraph()
+            eq = flow.all(not_inplace_graph(input)==inplace_graph(input))
+            test_case.assertTrue(eq)
 
         _test("cpu")
         _test("cuda")
 
     def test_inplace_scalar_sub(test_case):
         def _test(device):
-            class Graph(nn.Graph):
+            sub_value = random.randint(1,100)
+            class InplaceGraph(nn.Graph):
                 def build(self, input):
-                    input -= 3
-                    x = flow.randn(4, 4, device=device)
-                    x -= 1
-                    flow.sub(x, 2, inplace=True)
-                    return x
+                    flow.sub(input, sub_value, inplace=True)
+                    return input
 
-            graph = Graph()
-            graph(flow.randn(4, 4, device=device))
+            class NotInplaceGraph(nn.Graph):
+                def build(self, input):
+                    return flow.sub(input, sub_value)
+
+            inplace_graph = InplaceGraph()
+            not_inplace_graph = NotInplaceGraph()
+            input = flow.randn(4, 4, 4, device=device)
+            eq = flow.all(not_inplace_graph(input)==inplace_graph(input))
+            test_case.assertTrue(eq)
 
         _test("cpu")
         _test("cuda")
 
     def test_inplace_scalar_mul(test_case):
         def _test(device):
-            class Graph(nn.Graph):
+            mul_value = random.randint(1,100)
+            class InplaceGraph(nn.Graph):
                 def build(self, input):
-                    input *= 10
-                    x = flow.randn(4, 4, device=device)
-                    x *= 5
-                    flow.mul(x, 8, inplace=True)
-                    return x
+                    flow.mul(input, mul_value, inplace=True)
+                    return input
 
-            graph = Graph()
-            graph(flow.randn(4, 4, device=device))
+            class NotInplaceGraph(nn.Graph):
+                def build(self, input):
+                    return flow.mul(input, mul_value)
+
+            inplace_graph = InplaceGraph()
+            not_inplace_graph = NotInplaceGraph()
+            input = flow.randn(4, 4, 4, device=device)
+            eq = flow.all(not_inplace_graph(input)==inplace_graph(input))
+            test_case.assertTrue(eq)
 
         _test("cpu")
         _test("cuda")
 
     def test_inplace_add(test_case):
         def _test(device):
-            class Graph(nn.Graph):
-                def build(self):
-                    x = flow.randn(4, 4, device=device)
-                    y = flow.randn(4, 4, device=device)
-                    x += y
-                    flow.add(x, y, inplace=True)
-                    flow.add([x, y], inplace=True)
-                    return x
+            class InplaceGraph(nn.Graph):
+                def build(self, input1, input2):
+                    flow.add(input1, input2, inplace=True)
+                    return input1
 
-            graph = Graph()
-            graph()
+            class NotInplaceGraph(nn.Graph):
+                def build(self, input1, input2):
+                    return flow.add(input1, input2)
+
+            inplace_graph = InplaceGraph()
+            not_inplace_graph = NotInplaceGraph()
+            input1 = flow.randn(4, 4, 4, device=device)
+            input2 = flow.randn(4, 4, 4, device=device)
+            eq = flow.all(not_inplace_graph(input1,input2) == inplace_graph(input1, input2))
+            test_case.assertTrue(eq)
 
         _test("cpu")
         _test("cuda")
 
     def test_inplace_sub(test_case):
         def _test(device):
-            class Graph(nn.Graph):
-                def build(self):
-                    x = flow.randn(4, 4, device=device)
-                    y = flow.randn(4, 4, device=device)
-                    x -= y
-                    flow.sub(x, y, inplace=True)
-                    return x
+            class InplaceGraph(nn.Graph):
+                def build(self, input1, input2):
+                    flow.sub(input1, input2, inplace=True)
+                    return input1
 
-            graph = Graph()
-            graph()
+            class NotInplaceGraph(nn.Graph):
+                def build(self, input1, input2):
+                    return flow.sub(input1, input2)
+
+            inplace_graph = InplaceGraph()
+            not_inplace_graph = NotInplaceGraph()
+            input1 = flow.randn(4, 4, 4, device=device)
+            input2 = flow.randn(4, 4, 4, device=device)
+            eq = flow.all(not_inplace_graph(input1,input2) == inplace_graph(input1, input2))
+            test_case.assertTrue(eq)
+            
 
         _test("cpu")
         _test("cuda")
 
     def test_inplace_pow(test_case):
         def _test(device):
-            class Graph(nn.Graph):
-                def build(self):
-                    x = flow.randn(4, 4, device=device)
-                    flow.pow(x, 2, inplace=True)
-                    return x
+            exp = random.randint(1,5)
+            class InplaceGraph(nn.Graph):
+                def build(self, input):
+                    flow.pow(input, exp, inplace=True)
+                    return input
+            
+            class NotInplaceGraph(nn.Graph):
+                def build(self, input):
+                    return flow.pow(input, exp)
 
-            graph = Graph()
-            graph()
+            inplace_graph = InplaceGraph()
+            not_inplace_graph = NotInplaceGraph()
+            input = flow.randn(4, 4, 4, device=device)
+            eq = flow.all(not_inplace_graph(input) == inplace_graph(input))
+            test_case.assertTrue(eq)
 
         _test("cpu")
         _test("cuda")
 
     def test_inplace_floor_divide(test_case):
         def _test(device):
-            class Graph(nn.Graph):
-                def build(self):
-                    x = flow.randn(4, 4, device=device)
-                    flow.floor_divide(x, 2, inplace=True)
-                    return x
+            div_value = random.randint(1,10)
+            class InplaceGraph(nn.Graph):
+                def build(self, input):
+                    flow.floor_divide(input, div_value, inplace=True)
+                    return input
 
-            graph = Graph()
-            graph()
+            class NotInplaceGraph(nn.Graph):
+                def build(self, input):
+                    return flow.floor_divide(input, div_value)
+
+            inplace_graph = InplaceGraph()
+            not_inplace_graph = NotInplaceGraph()
+            input = flow.randn(4, 4, 4, device=device)
+            eq = flow.all(not_inplace_graph(input) == inplace_graph(input))
+            test_case.assertTrue(eq)
 
         _test("cpu")
         _test("cuda")
 
     def test_inplace_fmod(test_case):
         def _test(device):
-            class Graph(nn.Graph):
-                def build(self):
-                    x = flow.randn(4, 4, device=device)
-                    flow.fmod(x, 2, inplace=True)
-                    return x
+            mod_value = random.randint(1,10)
+            class InplaceGraph(nn.Graph):
+                def build(self, input):
+                    flow.fmod(input, mod_value, inplace=True)
+                    return input
+            
+            class NotInplaceGraph(nn.Graph):
+                def build(self, input):
+                    return flow.fmod(input, mod_value)
 
-            graph = Graph()
-            graph()
+            inplace_graph = InplaceGraph()
+            not_inplace_graph = NotInplaceGraph()
+            input = flow.randn(4, 4, 4, device=device)
+            eq = flow.all(not_inplace_graph(input) == inplace_graph(input))
+            test_case.assertTrue(eq)
 
         _test("cpu")
         _test("cuda")
 
     def test_inplace_relu(test_case):
         def _test(device):
-            class Graph(nn.Graph):
-                def build(self):
-                    x = flow.randn(4, 4, device=device)
-                    flow.relu(x, inplace=True)
-                    return x
+            class InplaceGraph(nn.Graph):
+                def build(self, input):
+                    flow.nn.functional.relu(input, inplace=True)
+                    return input
 
-            graph = Graph()
-            graph()
+            class NotInplaceGraph(nn.Graph):
+                def build(self, input):
+                    return flow.nn.functional.relu(input)
+
+            inplace_graph = InplaceGraph()
+            not_inplace_graph = NotInplaceGraph()
+            input = flow.randn(4, 4, 4, device=device)
+            eq = flow.all(not_inplace_graph(input) == inplace_graph(input))
+            test_case.assertTrue(eq)
 
         _test("cpu")
         _test("cuda")
 
     def test_inplace_celu(test_case):
         def _test(device):
-            class Graph(nn.Graph):
-                def build(self):
-                    x = flow.randn(4, 4, device=device)
-                    flow.nn.functional.celu(x, inplace=True)
-                    return x
+            class InplaceGraph(nn.Graph):
+                def build(self, input):
+                    flow.nn.functional.celu(input, inplace=True)
+                    return input
 
-            graph = Graph()
-            graph()
+            class NotInplaceGraph(nn.Graph):
+                def build(self, input):
+                    return flow.nn.functional.celu(input)
+
+            inplace_graph = InplaceGraph()
+            not_inplace_graph = NotInplaceGraph()
+            input = flow.randn(4, 4, 4, device=device)
+            eq = flow.all(not_inplace_graph(input) == inplace_graph(input))
+            test_case.assertTrue(eq)
 
         _test("cpu")
         _test("cuda")
 
     def test_inplace_hardsigmoid(test_case):
         def _test(device):
-            class Graph(nn.Graph):
-                def build(self):
-                    x = flow.randn(4, 4, device=device)
-                    flow.nn.functional.hardsigmoid(x, inplace=True)
-                    return x
+            class InplaceGraph(nn.Graph):
+                def build(self, input):
+                    flow.nn.functional.hardsigmoid(input, inplace=True)
+                    return input
 
-            graph = Graph()
-            graph()
+            class NotInplaceGraph(nn.Graph):
+                def build(self, input):
+                    return flow.nn.functional.hardsigmoid(input)
+
+            inplace_graph = InplaceGraph()
+            not_inplace_graph = NotInplaceGraph()
+            input = flow.randn(4, 4, 4, device=device)
+            eq = flow.all(not_inplace_graph(input) == inplace_graph(input))
+            test_case.assertTrue(eq)
 
     def test_inplace_hardshrink(test_case):
         def _test(device):
-            class Graph(nn.Graph):
-                def build(self):
-                    x = flow.randn(4, 4, device=device)
-                    flow.nn.functional.hardshrink(x, inplace=True)
-                    return x
+            class InplaceGraph(nn.Graph):
+                def build(self, input):
+                    flow.nn.functional.hardsigmoid(input, inplace=True)
+                    return input
 
-            graph = Graph()
-            graph()
+            class NotInplaceGraph(nn.Graph):
+                def build(self, input):
+                    return flow.nn.functional.hardsigmoid(input)
+
+            inplace_graph = InplaceGraph()
+            not_inplace_graph = NotInplaceGraph()
+            input = flow.randn(4, 4, 4, device=device)
+            eq = flow.all(not_inplace_graph(input) == inplace_graph(input))
+            test_case.assertTrue(eq)
 
         _test("cpu")
         _test("cuda")
 
     def test_inplace_leaky_relu(test_case):
         def _test(device):
-            class Graph(nn.Graph):
-                def build(self):
-                    x = flow.randn(4, 4, device=device)
-                    flow.nn.functional.leaky_relu(x, 1.0, inplace=True)
-                    return x
+            class InplaceGraph(nn.Graph):
+                def build(self, input):
+                    flow.nn.functional.leaky_relu(input, 1.0, inplace=True)
+                    return input
 
-            graph = Graph()
-            graph()
+            class NotInplaceGraph(nn.Graph):
+                def build(self, input):
+                    return flow.nn.functional.leaky_relu(input, 1.0)
+
+            inplace_graph = InplaceGraph()
+            not_inplace_graph = NotInplaceGraph()
+            input = flow.randn(4, 4, 4, device=device)
+            eq = flow.all(not_inplace_graph(input) == inplace_graph(input))
+            test_case.assertTrue(eq)
 
         _test("cpu")
         _test("cuda")
 
     def test_inplace_tensor_scatter_nd_update(test_case):
         def _test(device):
-            class Graph(nn.Graph):
-                def build(self):
-                    x = flow.arange(8, device=device)
+            class InplaceGraph(nn.Graph):
+                def build(self, input,indices, updates):
                     indices = flow.tensor([[1], [3], [5]], device=device)
                     updates = flow.tensor([-1, -2, -3], device=device)
-                    flow._C.tensor_scatter_nd_update(x, indices, updates, inplace=True)
-                    return x
+                    flow._C.tensor_scatter_nd_update(input, indices, updates, inplace=True)
+                    return input
 
-            graph = Graph()
-            graph()
+            class NotInplaceGraph(nn.Graph):
+                def build(self, input, indices, updates):
+                  
+                    return flow._C.tensor_scatter_nd_update(input, indices, updates)
+
+            inplace_graph = InplaceGraph()
+            not_inplace_graph = NotInplaceGraph()
+            input = flow.arange(8, device=device)
+            indices = flow.tensor([[1], [3], [5]], device=device)
+            updates = flow.tensor([-1, -2, -3], device=device)
+            eq = flow.all(not_inplace_graph(input, indices, updates) == inplace_graph(input, indices, updates))
+            test_case.assertTrue(eq)
 
         _test("cpu")
         _test("cuda")
 
     def test_inplace_slice_update(test_case):
         def _test(device):
-            class Graph(nn.Graph):
-                def build(self):
-                    x = flow.Tensor(
+            slice_tup_list=[[1, 4, 1]]
+            input = flow.Tensor(
                         np.array([1, 1, 1, 1, 1]).astype(np.float32), device=device
                     )
-                    update = flow.Tensor(
+            update = flow.Tensor(
                         np.array([2, 3, 4]).astype(np.float32), device=device
                     )
-                    flow.slice_update(
-                        x, update, slice_tup_list=[[1, 4, 1]]
-                    )  # slice_update_op is inplace by default
-                    return x
+            (start, stop, step) = parse_slice_tuple_list(slice_tup_list, input.shape)
+            class InplaceGraph(nn.Graph):
+                def build(self, input, update):
+                    flow._C.slice_update(input, update, start, stop, step, inplace=True)
+                    return input
 
-            graph = Graph()
-            graph()
+            class NotInplaceGraph(nn.Graph):
+                def build(self, input, update):
+                    return flow._C.slice_update(input, update, start, stop, step)
+            
+            inplace_graph = InplaceGraph()
+            not_inplace_graph = NotInplaceGraph()
+            eq = flow.all(not_inplace_graph(input, update) == inplace_graph(input, update))
+            test_case.assertTrue(eq)
 
         _test("cpu")
         _test("cuda")
 
     def test_inplace_softshrink(test_case):
         def _test(device):
-            class Graph(nn.Graph):
-                def build(self):
-                    x = flow.randn(4, 4, device=device)
-                    flow.nn.functional.softshrink(x, inplace=True)
-                    return x
+            class InplaceGraph(nn.Graph):
+                def build(self, input):
+                    flow.nn.functional.softshrink(input, inplace=True)
+                    return input
 
-            graph = Graph()
-            graph()
+            class NotInplaceGraph(nn.Graph):
+                def build(self, input):
+                    return flow.nn.functional.softshrink(input)
+
+            inplace_graph = InplaceGraph()
+            not_inplace_graph = NotInplaceGraph()
+            input = flow.randn(4, 4, 4, device=device)
+            eq = flow.all(not_inplace_graph(input) == inplace_graph(input))
+            test_case.assertTrue(eq)
 
         _test("cpu")
         _test("cuda")
 
     def test_inplace_dropout(test_case):
         def _test(device):
-            class Graph(nn.Graph):
-                def build(self):
-                    x = flow.randn(4, 4, device=device)
-                    flow.nn.functional.dropout(x, inplace=True)
-                    return x
+            class InplaceGraph(nn.Graph):
+                def build(self, input):
+                    flow.nn.functional.dropout(input, inplace=True)
+                    return input
 
-            graph = Graph()
-            graph()
+            class NotInplaceGraph(nn.Graph):
+                def build(self, input):
+                    return flow.nn.functional.dropout(input)
+
+            inplace_graph = InplaceGraph()
+            not_inplace_graph = NotInplaceGraph()
+            input = flow.randn(4, 4, 4, device=device)
+            eq = flow.all(not_inplace_graph(input) == inplace_graph(input))
+            test_case.assertTrue(eq)
 
         _test("cpu")
         _test("cuda")
 
     def test_inplace_broadcast(test_case):
         def _test(device):
-            class Graph(nn.Graph):
-                def build(self):
-                    x = flow.randn(4, 4, device=device)
-                    flow._C.broadcast(x, inplace=True)
-                    return x
+            class InplaceGraph(nn.Graph):
+                def build(self, input):
+                    flow._C.broadcast(input, inplace=True)
+                    return input
 
-            graph = Graph()
-            graph()
+            class NotInplaceGraph(nn.Graph):
+                def build(self, input):
+                    return flow._C.broadcast(input)
+
+            inplace_graph = InplaceGraph()
+            not_inplace_graph = NotInplaceGraph()
+            input = flow.randn(4, 4, 4, device=device)
+            eq = flow.all(not_inplace_graph(input) == inplace_graph(input))
+            test_case.assertTrue(eq)
 
         _test("cpu")
         _test("cuda")
 
     def test_inplace_local_all_reduce(test_case):
         def _test(device):
-            class Graph(nn.Graph):
-                def build(self):
-                    x = flow.randn(4, 4, device=device)
-                    flow._C.local_all_reduce(x, inplace=True)
-                    return x
+            class InplaceGraph(nn.Graph):
+                def build(self, input):
+                    flow._C.local_all_reduce(input, inplace=True)
+                    return input
 
-            graph = Graph()
-            graph()
+            class NotInplaceGraph(nn.Graph):
+                def build(self, input):
+                    return flow._C.local_all_reduce(input)
+
+            inplace_graph = InplaceGraph()
+            not_inplace_graph = NotInplaceGraph()
+            input = flow.randn(4, 4, 4, device=device)
+            eq = flow.all(not_inplace_graph(input) == inplace_graph(input))
+            test_case.assertTrue(eq)
+
 
         _test("cpu")
         _test("cuda")
-
-    # def test_inplace_local_reduce(test_case):
-    #     def _test(device):
-    #         class Graph(nn.Graph):
-    #             def build(self):
-    #                 x = flow.randn(4,4, device=device)
-    #                 flow._C.local_reduce(x, inplace=True, dst=0)
-    #                 return x
-
-    #         graph = Graph()
-    #         graph()
-
-    #     _test("cpu")
-    #     _test("cuda")
-
 
 if __name__ == "__main__":
     unittest.main()
