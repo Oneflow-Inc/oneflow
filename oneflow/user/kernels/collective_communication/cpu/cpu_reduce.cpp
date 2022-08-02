@@ -28,9 +28,9 @@ namespace ccl {
 
 namespace {
 
-int64_t RingDecrease(int64_t n, int64_t size) { return (n - 1 + size) % size; }
+inline int64_t RingDecrease(int64_t n, int64_t size) { return (n - 1 + size) % size; }
 
-int64_t RingIncrease(int64_t n, int64_t size) { return (n + 1 + size) % size; }
+inline int64_t RingIncrease(int64_t n, int64_t size) { return (n + 1 + size) % size; }
 
 template<typename T, ReduceType reduce_type>
 struct ReduceFunctor;
