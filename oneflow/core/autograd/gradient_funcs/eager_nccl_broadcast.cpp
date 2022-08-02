@@ -25,8 +25,8 @@ namespace one {
 
 namespace {
 
-Maybe<one::UserOpExpr> EagerNcclReduce(Symbol<ParallelDesc> parallel_desc, int64_t root) {
-  return one::OpBuilder("eager_nccl_reduce", *JUST(UniqueStr("eager_nccl_reduce")))
+Maybe<one::UserOpExpr> EagerCclReduce(Symbol<ParallelDesc> parallel_desc, int64_t root) {
+  return one::OpBuilder("eager_ccl_reduce", *JUST(UniqueStr("eager_ccl_reduce")))
       .Input("in")
       .Output("out")
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
@@ -34,14 +34,14 @@ Maybe<one::UserOpExpr> EagerNcclReduce(Symbol<ParallelDesc> parallel_desc, int64
       .Build();
 }
 
-Maybe<one::UserOpExpr> FindOrCreatEagerNcclReduceOpExpr(Symbol<ParallelDesc> parallel_desc,
-                                                        int64_t root) {
+Maybe<one::UserOpExpr> FindOrCreatEagerCclReduceOpExpr(Symbol<ParallelDesc> parallel_desc,
+                                                       int64_t root) {
   thread_local HashMap<std::pair<Symbol<ParallelDesc>, int64_t>, std::shared_ptr<one::UserOpExpr>>
       parallel_desc_and_root_device2eager_nccl_reduce;
   const auto& key = std::make_pair(parallel_desc, root);
   auto iter = parallel_desc_and_root_device2eager_nccl_reduce.find(key);
   if (iter == parallel_desc_and_root_device2eager_nccl_reduce.end()) {
-    std::shared_ptr<UserOpExpr> op_expr = JUST(EagerNcclReduce(parallel_desc, root));
+    std::shared_ptr<UserOpExpr> op_expr = JUST(EagerCclReduce(parallel_desc, root));
     iter = parallel_desc_and_root_device2eager_nccl_reduce.emplace(key, op_expr).first;
   }
   return iter->second;
@@ -72,7 +72,7 @@ class EagerNcclBroadcast : public OpExprGradFunction<EagerNcclBroadcastCaptureSt
 
   Maybe<void> Apply(const EagerNcclBroadcastCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    const auto& grad_op = JUST(FindOrCreatEagerNcclReduceOpExpr(ctx->parallel_desc, ctx->root));
+    const auto& grad_op = JUST(FindOrCreatEagerCclReduceOpExpr(ctx->parallel_desc, ctx->root));
     in_grads->resize(1);
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op, {out_grads.at(0)}));
     return Maybe<void>::Ok();

@@ -13,10 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/user/kernels/collective_communication/include/communication_context.h"
 #include "oneflow/user/kernels/collective_communication/include/all_reduce.h"
 #include "oneflow/user/kernels/collective_communication/include/reduce_scatter.h"
 #include "oneflow/user/kernels/collective_communication/include/all_gather.h"
+#include "oneflow/user/kernels/collective_communication/include/reduce.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -47,6 +49,15 @@ auto AllGatherCollectiveCommunicationExists() {
                             DeviceType device_type = ctx.device_type();
                             return ccl::IsCommunicationContextRegistered(device_type)
                                    && ccl::IsAllGatherRegistered(device_type);
+                          });
+}
+
+auto ReduceCollectiveCommunicationExists() {
+  return hob::make_custom("ReduceCollectiveCommunicationExists",
+                          [=](const user_op::KernelRegContext& ctx) {
+                            DeviceType device_type = ctx.device_type();
+                            return ccl::IsCommunicationContextRegistered(device_type)
+                                   && ccl::IsReduceRegistered(device_type);
                           });
 }
 
@@ -184,5 +195,47 @@ class EagerCclAllGatherKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("eager_ccl_all_gather")
     .SetCreateFn<EagerCclAllGatherKernel>()
     .SetIsMatchedHob(AllGatherCollectiveCommunicationExists());
+
+class EagerCclReduceKernel final : public user_op::OpKernel {
+ public:
+  EagerCclReduceKernel() = default;
+  ~EagerCclReduceKernel() override = default;
+
+  void InitOpKernelCacheWithFlags(
+      user_op::KernelCacheContext* ctx, int8_t flag,
+      std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    InitEagerCclOpKernelCache(ctx, cache_ptr);
+  }
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
+    CHECK(kernel_cache != nullptr);
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    int64_t root = ctx->Attr<int64_t>("root");
+    void* out_ptr = nullptr;
+    if (GlobalProcessCtx::Rank() == root) {
+      CHECK_EQ(in->shape_view(), out->shape_view());
+      CHECK_EQ(in->data_type(), out->data_type());
+      out_ptr = out->mut_dptr();
+    }
+
+    ccl::ReduceType reduce_type = ccl::kSum;
+    if (in->data_type() == kBool) { reduce_type = ccl::kMax; }
+
+    std::unique_ptr<ccl::Reduce> reduce = ccl::NewCollectiveCommunication<ccl::Reduce>(
+        ctx->device_type(), in->data_type(), reduce_type);
+    reduce->Launch(ctx->stream(), in->dptr(), out_ptr, in->shape_view().elem_cnt(), root,
+                   kernel_cache->communication_ctx());
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("eager_ccl_reduce")
+    .SetCreateFn<EagerCclReduceKernel>()
+    .SetIsMatchedHob(ReduceCollectiveCommunicationExists());
 
 }  // namespace oneflow

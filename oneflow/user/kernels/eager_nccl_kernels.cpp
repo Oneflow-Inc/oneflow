@@ -134,43 +134,6 @@ REGISTER_USER_KERNEL("eager_nccl_touch")
     .SetCreateFn<EagerCclTouchKernel>()
     .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU);
 
-class EagerCclReduceKernel final : public user_op::OpKernel {
- public:
-  EagerCclReduceKernel() = default;
-  ~EagerCclReduceKernel() override = default;
-
-  void InitOpKernelCacheWithFlags(
-      user_op::KernelCacheContext* ctx, int8_t flag,
-      std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
-    InitEagerCclOpKernelCache(ctx, cache_ptr);
-  }
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
-               const user_op::OpKernelCache* cache) const override {
-    auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
-    CHECK(kernel_cache != nullptr);
-    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t root = ctx->Attr<int64_t>("root");
-    void* out_ptr = nullptr;
-    if (GlobalProcessCtx::Rank() == root) {
-      CHECK_EQ(in->shape_view(), out->shape_view());
-      CHECK_EQ(in->data_type(), out->data_type());
-      out_ptr = out->mut_dptr();
-    }
-    CHECK_JUST(ccl::Reduce<DeviceType::kCPU>(in->dptr(), out_ptr, in->shape_view().elem_cnt(),
-                                             in->data_type(), ccl::kSum, root,
-                                             kernel_cache->parallel_desc(), ctx->stream()));
-  };
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-REGISTER_USER_KERNEL("eager_nccl_reduce")
-    .SetCreateFn<EagerCclReduceKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCPU);
-
 template<typename T>
 class EagerCclS2SKernel final : public user_op::OpKernel {
  public:

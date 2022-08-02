@@ -54,11 +54,6 @@ template<DeviceType device_type>
 Maybe<void> Broadcast(const void* in, void* out, size_t elem_cnt, DataType dtype, int64_t root,
                       Symbol<ParallelDesc> parallel_desc, ep::Stream* stream);
 
-template<DeviceType device_type>
-Maybe<void> Reduce(const void* in, void* out, size_t elem_cnt, DataType dtype,
-                   ReduceType reduce_type, int64_t root, Symbol<ParallelDesc> parallel_desc,
-                   ep::Stream* stream);
-
 Maybe<void> CpuBroadcast(const void* in, void* out, size_t buffer_size, int64_t root,
                          Symbol<ParallelDesc> parallel_desc, const TransportToken& transport_token);
 

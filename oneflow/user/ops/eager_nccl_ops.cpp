@@ -101,25 +101,25 @@ namespace oneflow {
   return DeviceAndStreamInferFn<&IsAsyncLaunched>(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclReduceOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> EagerCclReduceOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EagerNcclReduceOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> EagerCclReduceOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclReduceOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> EagerCclReduceOp::GetSbp(user_op::SbpContext* ctx) {
   UNIMPLEMENTED_THEN_RETURN() << "global tensor are not supported";
 }
 
-/* static */ Maybe<void> EagerNcclReduceOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> EagerCclReduceOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Stream>> EagerNcclReduceOp::InferDeviceAndStream(
+/* static */ Maybe<Symbol<Stream>> EagerCclReduceOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
   return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
 }
