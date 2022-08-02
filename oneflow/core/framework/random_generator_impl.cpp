@@ -17,12 +17,12 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cpp_attribute.h"
+#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/vm/virtual_machine.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
 #ifdef WITH_CUDA
@@ -78,9 +78,9 @@ Maybe<Tensor> CPUGeneratorImpl::GetState() const {
   }
   state.seed = current_seed();
 
-  const auto& callback = [&](uint64_t of_blob_ptr) {
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    memcpy(of_blob->mut_blob()->mut_dptr<uint8_t>(), &state, sizeof(state));
+  const auto& callback = [&](ep::Stream*,
+                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+    memcpy(eager_blob_object->mut_dptr(), &state, sizeof(state));
   };
   JUST(SyncAccessTensorWithTimeOut(tensor_state, callback, "mut"));
   return tensor_state;
@@ -101,9 +101,9 @@ Maybe<void> CPUGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_sta
                                  << sizeof(state) << ", but got "
                                  << tensor_state->shape()->elem_cnt();
   }
-  const auto& callback = [&](uint64_t of_blob_ptr) {
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    memcpy(reinterpret_cast<void*>(&state), of_blob->blob().dptr<uint8_t>(), sizeof(state));
+  const auto& callback = [&](ep::Stream*,
+                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+    memcpy(reinterpret_cast<void*>(&state), eager_blob_object->dptr(), sizeof(state));
   };
   JUST(SyncAccessTensorWithTimeOut(tensor_state, callback, "const"));
 
@@ -185,11 +185,12 @@ Maybe<Tensor> CUDAGeneratorImpl::GetState() const {
   const auto& tensor_state =
       JUST(functional::Empty(Shape{total_size}, DType::UInt8(), device, /*pin_memory=*/false));
 
-  const auto& callback = [&](uint64_t of_blob_ptr) {
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    OF_CUDA_CHECK(cudaMemcpy(of_blob->mut_blob()->mut_dptr<uint8_t>(), curand_states_, state_size,
-                             cudaMemcpyDefault));
-    memcpy(of_blob->mut_blob()->mut_dptr<uint8_t>() + state_size, &seed_, sizeof(int64_t));
+  const auto& callback = [&](ep::Stream*,
+                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+    OF_CUDA_CHECK(
+        cudaMemcpy(eager_blob_object->mut_dptr(), curand_states_, state_size, cudaMemcpyDefault));
+    memcpy(static_cast<uint8_t*>(eager_blob_object->mut_dptr()) + state_size, &seed_,
+           sizeof(int64_t));
   };
   JUST(SyncAccessTensorWithTimeOut(tensor_state, callback, "mut"));
   return tensor_state;
@@ -212,9 +213,9 @@ Maybe<void> CUDAGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
 
   CudaCurrentDeviceGuard dev_guard(this->device_index());
   JUST(CUDASynchronize());
-  const auto& callback = [&](uint64_t of_blob_ptr) {
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    const uint8_t* data = of_blob->blob().dptr<uint8_t>();
+  const auto& callback = [&](ep::Stream*,
+                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+    const uint8_t* data = static_cast<const uint8_t*>(eager_blob_object->dptr());
     // Do not use set_current_seed() since synchronization will lead to deadlock.
     seed_ = *((uint64_t*)(data + state_size));
     OF_CUDA_CHECK(cudaMemcpy(curand_states_, data, state_size, cudaMemcpyDefault));
@@ -286,9 +287,10 @@ Maybe<Tensor> AutoGeneratorImpl::GetState() const {
     data += state.device_tag_length;
     for (int i = 0; i < tensor_states.size(); ++i) {
       const auto& tensor = tensor_states.at(i);
-      const auto& callback = [&data, &state_sizes, i](uint64_t of_blob_ptr) {
-        auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-        memcpy(data, of_blob->blob().dptr<uint8_t>(), state_sizes.at(i));
+      const auto& callback = [&data, &state_sizes, i](
+                                 ep::Stream*,
+                                 const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+        memcpy(data, eager_blob_object->dptr(), state_sizes.at(i));
       };
       JUST(SyncAccessTensorWithTimeOut(tensor, callback, "const"));
       data += state_sizes.at(i);
@@ -297,9 +299,10 @@ Maybe<Tensor> AutoGeneratorImpl::GetState() const {
   const auto& device = JUST(Device::New("cpu"));
   const auto& tensor_state =
       JUST(functional::Empty(Shape{total_size}, DType::UInt8(), device, /*pin_memory=*/false));
-  const auto& callback = [&buffer, &total_size](uint64_t of_blob_ptr) {
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    memcpy(of_blob->mut_blob()->mut_dptr<uint8_t>(), buffer.data(), total_size);
+  const auto& callback = [&buffer, &total_size](
+                             ep::Stream*,
+                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+    memcpy(eager_blob_object->mut_dptr(), buffer.data(), total_size);
   };
   JUST(SyncAccessTensorWithTimeOut(tensor_state, callback, "mut"));
   return tensor_state;
@@ -316,9 +319,10 @@ Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
   AutoGeneratorState state;
   int64_t total_size = tensor_state->shape()->elem_cnt();
   std::vector<uint8_t> buffer(total_size);
-  const auto& callback = [&buffer, &total_size](uint64_t of_blob_ptr) {
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    memcpy(buffer.data(), of_blob->blob().dptr<uint8_t>(), total_size);
+  const auto& callback = [&buffer, &total_size](
+                             ep::Stream*,
+                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+    memcpy(buffer.data(), eager_blob_object->dptr(), total_size);
   };
   JUST(SyncAccessTensorWithTimeOut(tensor_state, callback, "const"));
 
@@ -342,9 +346,10 @@ Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
     int64_t state_size = state_sizes.at(i);
     tensor_states[i] =
         JUST(functional::Empty(Shape{state_size}, DType::UInt8(), device, /*pin_memory=*/false));
-    const auto& callback = [&data, &state_size](uint64_t of_blob_ptr) {
-      auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-      memcpy(of_blob->mut_blob()->mut_dptr<uint8_t>(), data, state_size);
+    const auto& callback = [&data, &state_size](
+                               ep::Stream*,
+                               const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+      memcpy(eager_blob_object->mut_dptr(), data, state_size);
     };
     JUST(SyncAccessTensorWithTimeOut(tensor_states[i], callback, "mut"));
     data += state_size;

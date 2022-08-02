@@ -28,12 +28,14 @@ enum class StreamRole {
   kCompute,
   kHost2Device,
   kDevice2Host,
+  kAsyncedDevice2Host,
   kSyncedLaunchedCommNet,
   kAsyncedLaunchedCommNet,
   kBarrier,
   kCriticalSection,
   kLazyJobLauncher,
-  kPinnedCompute
+  kPinnedCompute,
+  kTmpCompute
 };
 
 template<typename DerivedT>
@@ -45,6 +47,8 @@ struct StreamRoleVisitor {
       case StreamRole::kCompute: return DerivedT::VisitCompute(std::forward<Args>(args)...);
       case StreamRole::kHost2Device: return DerivedT::VisitHost2Device(std::forward<Args>(args)...);
       case StreamRole::kDevice2Host: return DerivedT::VisitDevice2Host(std::forward<Args>(args)...);
+      case StreamRole::kAsyncedDevice2Host:
+        return DerivedT::VisitAsyncedDevice2Host(std::forward<Args>(args)...);
       case StreamRole::kSyncedLaunchedCommNet:
         return DerivedT::VisitSyncedLaunchedCommNet(std::forward<Args>(args)...);
       case StreamRole::kAsyncedLaunchedCommNet:
@@ -56,6 +60,7 @@ struct StreamRoleVisitor {
         return DerivedT::VisitLazyJobLauncher(std::forward<Args>(args)...);
       case StreamRole::kPinnedCompute:
         return DerivedT::VisitPinnedCompute(std::forward<Args>(args)...);
+      case StreamRole::kTmpCompute: return DerivedT::VisitTmpCompute(std::forward<Args>(args)...);
     }
     LOG(FATAL) << "invalid stream role";
   }
