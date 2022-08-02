@@ -1938,6 +1938,10 @@
   signature: "Tensor (Tensor x, *, Int64 src_rank=0, Bool inplace=True) => Broadcast"
   bind_python: True
 
+- name: "broadcast"
+  signature: "TensorTuple (TensorTuple inputs, *, Int64 src_rank=0, Bool inplace=True) => BroadcastTensors"
+  bind_python: True
+
 - name: "local_all_reduce"
   signature: "Tensor (Tensor x, Bool inplace=False) => LocalAllReduce"
   bind_python: True
