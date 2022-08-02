@@ -288,7 +288,8 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
     const auto& NdSbpInferHint4Bn = [&](const std::string& bn) -> Maybe<const NdSbpInferHint*> {
       auto it = bn2infer_hints.find(bn);
       CHECK_OR_RETURN(it != bn2infer_hints.end())
-          << "bn: " << bn << " not found in " << user_op_expr.op_type_name();
+          << Error::LogicalBlobNameNotExistError() << "bn: " << bn << " not found in "
+          << user_op_expr.op_type_name();
       return &it->second;
     };
     // The inferred results can be retrieved by op->NdSbp4BnInOp(obn).

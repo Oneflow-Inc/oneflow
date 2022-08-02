@@ -324,7 +324,8 @@ void OpGraph::InferOpNodeNdSbpSignature(OpNode* op_node,
   const auto NdSbpInferHint4Ibn = [&](const std::string& bn) -> Maybe<const NdSbpInferHint*> {
     auto it = bn2nd_sbp_infer_hint.find(bn);
     CHECK_OR_RETURN(it != bn2nd_sbp_infer_hint.end())
-        << "bn: " << bn << " not found in " << op_node->op().op_name();
+        << Error::LogicalBlobNameNotExistError() << "bn: " << bn << " not found in "
+        << op_node->op().op_name();
     return Maybe<const NdSbpInferHint*>(&it->second);
   };
   CHECK_JUST(op_node->mut_op()->InferNdSbpSignatureIf(nd_sbp_sig_conf, op_node->parallel_desc(),
