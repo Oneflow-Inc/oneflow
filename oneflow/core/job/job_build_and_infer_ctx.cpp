@@ -231,7 +231,7 @@ Maybe<void> JobBuildAndInferCtx::InferLocalSignature(Operator* op, bool is_local
 Maybe<void> JobBuildAndInferCtx::InferOpOutNdSbp(Operator* op,
                                                  const NdSbpSignature& nd_sbp_sig_conf,
                                                  const ParallelDesc& parallel_desc) {
-  HashMap<std::string, NdSbpInferHint> ibn2nd_sbp_infer_hint;
+  HashMap<std::string, NdSbpInferHint> bn2nd_sbp_infer_hint;
   for (const std::string& ibn : op->input_bns()) {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
     auto logical_blob_desc_it = lbi2logical_blob_desc_.find(lbi);
@@ -247,11 +247,19 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutNdSbp(Operator* op,
         << " consumed op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
         << " not infer parallel distribution";
     const NdSbp* nd_sbp = &nd_sbp_it->second;
-    ibn2nd_sbp_infer_hint.emplace(ibn, NdSbpInferHint(pd, logical_blob_desc, nd_sbp));
+    bn2nd_sbp_infer_hint.emplace(ibn, NdSbpInferHint(pd, logical_blob_desc, nd_sbp));
+  }
+
+  for (const std::string& obn : op->output_bns()) {
+    const BlobDesc& logical_blob_desc = *CHECK_JUST(op->GetLogicalBlobDesc4Obn(obn));
+    const ParallelDesc& parallel_desc = *CHECK_JUST(op->GetParallelDesc4BnInOp(obn));
+    const NdSbp no_set_nd_sbp;
+    bn2nd_sbp_infer_hint.emplace(
+        obn, NdSbpInferHint(&parallel_desc, &logical_blob_desc, &no_set_nd_sbp));
   }
 
   const auto NdSbpInferHint4Ibn = [&](const std::string& bn) -> Maybe<const NdSbpInferHint*> {
-    return &ibn2nd_sbp_infer_hint.at(bn);
+    return &bn2nd_sbp_infer_hint.at(bn);
   };
 
   JUST(op->InferNdSbpSignatureIf(nd_sbp_sig_conf, parallel_desc, NdSbpInferHint4Ibn));
@@ -604,11 +612,13 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   }
   AddOpAndUpdateJobParallelViewConf(*new_op_conf, parallel_desc, nd_sbp_sig_conf,
                                     is_local_parallel_view);
-  JUST(InferOpOutNdSbp(op, nd_sbp_sig_conf, parallel_desc));
 
   // infer logical blob desc
   JUST(GenOpProducedEmptyLogicalBlobDesc(op));
   JUST(op->InferLogicalOutBlobDescsIf());
+
+  JUST(InferOpOutNdSbp(op, nd_sbp_sig_conf, parallel_desc));
+
   for (const auto& bn : op->output_bns()) {
     *lbi2logical_blob_desc_.at(op->BnInOp2Lbi(bn)) = *JUST(op->GetLogicalBlobDesc4Obn(bn));
   }
