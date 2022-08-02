@@ -49,17 +49,6 @@ Maybe<void> InitBroadcastRankHeap(std::vector<int64_t>* ranks, const ParallelDes
 
 }  // namespace
 
-template<>
-Maybe<void> Broadcast<DeviceType::kCPU>(const void* in, void* out, size_t elem_cnt, DataType dtype,
-                                        int64_t root, Symbol<ParallelDesc> parallel_desc,
-                                        ep::Stream* stream) {
-  CHECK_EQ_OR_RETURN(parallel_desc->device_type(), DeviceType::kCPU);
-  CHECK_OR_RETURN(IsPODDataType(dtype));
-  size_t buffer_size = elem_cnt * GetSizeOfDataType(dtype);
-  const auto& transport_token = JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
-  return CpuBroadcast(in, out, buffer_size, root, parallel_desc, transport_token);
-}
-
 Maybe<void> CpuBroadcast(const void* in, void* out, size_t buffer_size, int64_t root,
                          Symbol<ParallelDesc> parallel_desc,
                          const TransportToken& transport_token) {

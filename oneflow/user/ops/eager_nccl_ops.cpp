@@ -47,7 +47,7 @@ namespace oneflow {
   return DeviceAndStreamInferFn<&IsAsyncLaunched>(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclBroadcastOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> EagerCclBroadcastOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   size_t size = ctx->input_size("in");
   CHECK_EQ_OR_RETURN(size, ctx->output_size("out"))
       << "the size of input tensor tuple should equal the size of output tensor tuple.";
@@ -55,18 +55,18 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EagerNcclBroadcastOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> EagerCclBroadcastOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclBroadcastOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> EagerCclBroadcastOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().PartialSum(ctx->inputs()).Broadcast(ctx->outputs()).Build();
   ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
   ctx->NewBuilder().Split(ctx->inputs(), 0).Broadcast(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EagerNcclBroadcastOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> EagerCclBroadcastOp::InferDataType(user_op::InferContext* ctx) {
   size_t size = ctx->input_size("in");
   CHECK_EQ_OR_RETURN(size, ctx->output_size("out"))
       << "the size of input tensor tuple should equal the size of output tensor tuple.";
@@ -74,7 +74,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Stream>> EagerNcclBroadcastOp::InferDeviceAndStream(
+/* static */ Maybe<Symbol<Stream>> EagerCclBroadcastOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
   return DeviceAndStreamInferFn<&IsAsyncLaunched>(ctx);
 }
