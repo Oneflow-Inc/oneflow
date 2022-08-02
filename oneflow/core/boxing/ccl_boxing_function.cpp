@@ -13,15 +13,54 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 
 namespace oneflow {
 
 namespace {
+
+class EagerBoxingKernelRegContext final : public user_op::KernelRegContext {
+ public:
+  explicit EagerBoxingKernelRegContext(DeviceType device_type) : device_type_(device_type) {}
+  ~EagerBoxingKernelRegContext() = default;
+
+  DeviceType device_type() const override { return device_type_; }
+  const ParallelContext& parallel_ctx() const override { PRINT_BUG_PROMPT_AND_ABORT(); }
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                        int32_t index) const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+  }
+  const std::vector<std::pair<std::string, int32_t>>& inputs() const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+  }
+  const std::vector<std::pair<std::string, int32_t>>& outputs() const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+  }
+
+  const user_op::UserOpConfWrapper& user_op_conf() const override { PRINT_BUG_PROMPT_AND_ABORT(); }
+
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
+      const std::string& attr_name) const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+  }
+
+ private:
+  DeviceType device_type_;
+};
+
+Maybe<bool> RawCheckCclKernelRegistered(const std::string& op_type_name, DeviceType device_type) {
+  EagerBoxingKernelRegContext reg_ctx(device_type);
+  return user_op::UserOpRegistryMgr::Get().IsOpKernelRegistered(op_type_name, reg_ctx);
+}
+
+static constexpr auto* CheckCclKernelRegistered =
+    DECORATE(&RawCheckCclKernelRegistered, ThreadLocalCachedCopiable);
 
 Maybe<void> RawCheckCclP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                            const Shape& logical_shape) {
@@ -33,8 +72,9 @@ Maybe<void> RawCheckCclP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   CHECK_OR_RETURN(NdSbpIsAllBroadcast(*out->nd_sbp()));
 
   CHECK_OR_RETURN(in->placement() == out->placement());
-  CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kCPU
-                  || in->placement()->device_type() == DeviceType::kCUDA);
+  CHECK_OR_RETURN(                                                      // NOLINT
+      JUST(CheckCclKernelRegistered("eager_ccl_all_reduce",             // NOLINT
+                                    in->placement()->device_type())));  // NOLINT
   // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
@@ -53,8 +93,9 @@ Maybe<void> RawCheckCclP2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   CHECK_OR_RETURN(logical_shape.At(0) % in->placement()->parallel_num() == 0);
 
   CHECK_OR_RETURN(in->placement() == out->placement());
-  CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kCPU
-                  || in->placement()->device_type() == DeviceType::kCUDA);
+  CHECK_OR_RETURN(                                                      // NOLINT
+      JUST(CheckCclKernelRegistered("eager_nccl_reduce_scatter",        // NOLINT
+                                    in->placement()->device_type())));  // NOLINT
   // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
@@ -74,8 +115,9 @@ Maybe<void> RawCheckCclS2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   CHECK_OR_RETURN(logical_shape.At(0) % in->placement()->parallel_num() == 0);
 
   CHECK_OR_RETURN(in->placement() == out->placement());
-  CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kCPU
-                  || in->placement()->device_type() == DeviceType::kCUDA);
+  CHECK_OR_RETURN(                                                      // NOLINT
+      JUST(CheckCclKernelRegistered("eager_nccl_all_gather",            // NOLINT
+                                    in->placement()->device_type())));  // NOLINT
   // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
