@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_STREAM_ROLE_H_
-#define ONEFLOW_CORE_COMMON_STREAM_ROLE_H_
+#ifndef ONEFLOW_CORE_COMMON_STREAM_TYPE_H_
+#define ONEFLOW_CORE_COMMON_STREAM_TYPE_H_
 
 #include <functional>
 #include <array>
@@ -23,41 +23,46 @@ limitations under the License.
 
 namespace oneflow {
 
-enum class StreamRole {
+enum class StreamType {
   kInvalid = 0,
   kCompute,
   kHost2Device,
   kDevice2Host,
+  kAsyncedDevice2Host,
   kSyncedLaunchedCommNet,
   kAsyncedLaunchedCommNet,
   kBarrier,
   kCriticalSection,
   kLazyJobLauncher,
-  kPinnedCompute
+  kPinnedCompute,
+  kTmpCompute
 };
 
 template<typename DerivedT>
-struct StreamRoleVisitor {
+struct StreamTypeVisitor {
   template<typename... Args>
-  static auto Visit(StreamRole stream_role, Args&&... args) {
-    switch (stream_role) {
-      case StreamRole::kInvalid: LOG(FATAL) << "invalid stream role";
-      case StreamRole::kCompute: return DerivedT::VisitCompute(std::forward<Args>(args)...);
-      case StreamRole::kHost2Device: return DerivedT::VisitHost2Device(std::forward<Args>(args)...);
-      case StreamRole::kDevice2Host: return DerivedT::VisitDevice2Host(std::forward<Args>(args)...);
-      case StreamRole::kSyncedLaunchedCommNet:
+  static auto Visit(StreamType stream_type, Args&&... args) {
+    switch (stream_type) {
+      case StreamType::kInvalid: LOG(FATAL) << "invalid stream type";
+      case StreamType::kCompute: return DerivedT::VisitCompute(std::forward<Args>(args)...);
+      case StreamType::kHost2Device: return DerivedT::VisitHost2Device(std::forward<Args>(args)...);
+      case StreamType::kDevice2Host: return DerivedT::VisitDevice2Host(std::forward<Args>(args)...);
+      case StreamType::kAsyncedDevice2Host:
+        return DerivedT::VisitAsyncedDevice2Host(std::forward<Args>(args)...);
+      case StreamType::kSyncedLaunchedCommNet:
         return DerivedT::VisitSyncedLaunchedCommNet(std::forward<Args>(args)...);
-      case StreamRole::kAsyncedLaunchedCommNet:
+      case StreamType::kAsyncedLaunchedCommNet:
         return DerivedT::VisitAsyncedLaunchedCommNet(std::forward<Args>(args)...);
-      case StreamRole::kBarrier: return DerivedT::VisitBarrier(std::forward<Args>(args)...);
-      case StreamRole::kCriticalSection:
+      case StreamType::kBarrier: return DerivedT::VisitBarrier(std::forward<Args>(args)...);
+      case StreamType::kCriticalSection:
         return DerivedT::VisitCriticalSection(std::forward<Args>(args)...);
-      case StreamRole::kLazyJobLauncher:
+      case StreamType::kLazyJobLauncher:
         return DerivedT::VisitLazyJobLauncher(std::forward<Args>(args)...);
-      case StreamRole::kPinnedCompute:
+      case StreamType::kPinnedCompute:
         return DerivedT::VisitPinnedCompute(std::forward<Args>(args)...);
+      case StreamType::kTmpCompute: return DerivedT::VisitTmpCompute(std::forward<Args>(args)...);
     }
-    LOG(FATAL) << "invalid stream role";
+    LOG(FATAL) << "invalid stream type";
   }
 };
 
@@ -66,12 +71,12 @@ struct StreamRoleVisitor {
 namespace std {
 
 template<>
-struct hash<oneflow::StreamRole> final {
-  size_t operator()(const oneflow::StreamRole& stream_role) const {
-    return static_cast<int>(stream_role);
+struct hash<oneflow::StreamType> final {
+  size_t operator()(const oneflow::StreamType& stream_type) const {
+    return static_cast<int>(stream_type);
   }
 };
 
 }  // namespace std
 
-#endif  // ONEFLOW_CORE_COMMON_STREAM_ROLE_H_
+#endif  // ONEFLOW_CORE_COMMON_STREAM_TYPE_H_

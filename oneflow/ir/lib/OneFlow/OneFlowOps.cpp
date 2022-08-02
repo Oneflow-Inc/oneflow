@@ -30,7 +30,6 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
-#include "oneflow/api/common/ofblob.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/job/lazy_mode.h"
