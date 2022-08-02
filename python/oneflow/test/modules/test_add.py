@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+from random import shuffle
 from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
@@ -253,6 +254,17 @@ class TestAddModule(flow.unittest.TestCase):
         z2 = torch.add(x2, s, alpha=alpha)
         z3 = torch.add(s, x3, alpha=alpha)
         return z1, z2, z3
+
+    @autotest(n=10, check_graph=True)
+    def test_scalar_add_with_strided_random_data(test_case):
+        device = random_device()
+        input = random_tensor(ndim=4).to(device)
+        permute_list = list(range(4))
+        shuffle(permute_list)
+        x = input.permute(permute_list)
+        scalar = random_tensor(1, 10, requires_grad=False).to(device)
+        x += scalar.mean()
+        return x
 
 
 if __name__ == "__main__":

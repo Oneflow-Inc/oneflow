@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <memory>
 #include "oneflow/core/common/tensor_desc.h"
+#include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
@@ -31,6 +32,7 @@ class ParallelDesc;
 namespace one {
 
 bool IsContiguous(const Shape& shape, const Stride& stride);
+bool IsContiguous(const ShapeView& shape_view, const Stride& stride);
 
 class TensorMeta : public user_op::TensorDesc {
  public:

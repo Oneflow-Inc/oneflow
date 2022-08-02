@@ -25,6 +25,14 @@ struct ScalarMathFunctor<DeviceType::kCPU, BIN_OP, T> final {
 };
 
 template<template<typename> class BIN_OP, typename T>
+struct StridedScalarMathFunctor<DeviceType::kCPU, BIN_OP, T> final {
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, const StrideParam& in_stride,
+                  const StrideParam& out_stride, const T scalar, const T* in, T* out) {
+    DoStridedScalarMath<BIN_OP, T>(elem_cnt, in_stride, out_stride, scalar, in, out);
+  }
+};
+
+template<template<typename> class BIN_OP, typename T>
 struct ScalarReverseMathFunctor<DeviceType::kCPU, BIN_OP, T> final {
   void operator()(ep::Stream* stream, const int64_t elem_cnt, const T scalar, const T* in, T* out) {
     DoScalarReverseMath<BIN_OP, T>(elem_cnt, scalar, in, out);
@@ -52,13 +60,21 @@ class ScalarMathKernel final : public user_op::OpKernel {
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
 
-    int64_t elem_cnt = out->shape_view().elem_cnt();
-    if (elem_cnt != 0) {
-      ScalarMathFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand, in_ptr,
-                                                  out_ptr);
-    } else {
-      // For 0-d Tensor
+    const int64_t elem_cnt = out->shape_view().elem_cnt();
+    const size_t ndim = in->shape_view().NumAxes();
+    const bool contiguous = oneflow::one::IsContiguous(in->shape_view(), in->stride());
+    StrideParam in_stride(in->stride().data(), ndim), out_stride(out->stride().data(), ndim);
+    if (elem_cnt == 0) {
+      // for 0-shape tensor
       return;
+    } else {
+      if (contiguous) {
+        ScalarMathFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand, in_ptr,
+                                                    out_ptr);
+      } else {
+        StridedScalarMathFunctor<device_type, BIN_OP, T>()(
+            ctx->stream(), elem_cnt, in_stride, out_stride, scalar_operand, in_ptr, out_ptr);
+      }
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
