@@ -45,8 +45,8 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
-#include "oneflow/api/common/ofblob.h"
 #include "oneflow/core/framework/tensor_util.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
@@ -1228,7 +1228,7 @@ class ReshapeFunctor {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    Shape infered_shape = *JUST(InferShape(x, shape));
+    Shape infered_shape = *JUST(InferShapeUnspecifiedDim(x->shape()->Count(0), shape));
 
     if (view::IsViewApplicable(x)) {
       Optional<Stride> infered_stride =
@@ -1250,7 +1250,7 @@ class ViewFunctor {
  public:
   ViewFunctor() { op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    Shape infered_shape = *JUST(InferShape(x, shape));
+    Shape infered_shape = *JUST(InferShapeUnspecifiedDim(x->shape()->Count(0), shape));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 
@@ -1478,11 +1478,21 @@ class CopyFunctor {
     JUST(attrs.SetAttr<std::string>("device_type", device_type));
     JUST(attrs.SetAttr<int64_t>("device_id", device_id));
     JUST(attrs.SetAttr<bool>("pin_memory", pin_memory));
+    JUST(attrs.SetAttr<bool>("asynced_copy", JUST(GetAsyncedCopy(*x))));
 
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
 #endif
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+  Maybe<bool> GetAsyncedCopy(const one::Tensor& x) const {
+    if (!x.is_eager()) { return false; }
+    if (!x.is_local()) { return false; }
+    const auto& eager_blob_object = JUST(x.eager_blob_object());
+    const auto& opt_stream = eager_blob_object->last_used_stream();
+    if (!opt_stream.has_value()) { return false; }
+    return JUST(opt_stream)->stream_role() == StreamRole::kTmpCompute;
   }
 
  private:
@@ -2712,12 +2722,12 @@ Maybe<Tensor> GlobalTensorTo(const std::shared_ptr<Tensor>& x, const std::string
     auto nd_sbp = JUST(x->nd_sbp());
     std::vector<Symbol<SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
     for (int i = 0; i < sbp_tuple.size(); ++i) { sbp_tuple[i] = nd_sbp->sbp_parallel().Get(i); }
-    tensor = JUST(GlobalToLocal(x));
+    tensor = JUST(GlobalToLocal(x, /*copy=*/false));
     Symbol<Device> device = JUST(Device::New(device_type));
     tensor = JUST(LocalTensorTo(tensor, device->type(), device->device_id(), dtype, copy));
     JUST(tensor->set_requires_grad(x->requires_grad()));
     return JUST(LocalToGlobal(tensor, placement, sbp_tuple, *(x->shape()), dtype,
-                              /* sync_data */ true));
+                              /* sync_data */ true, /*copy=*/false));
   }
 }
 
@@ -3022,9 +3032,11 @@ class RepeatInterLeaveTensorFunctor {
 
     std::vector<int64_t> repeats_value(repeats_shape->elem_cnt());
     if (!output_size.has_value()) {
-      const auto& callback = [&](uint64_t ofblob_ptr) {
-        CHECK_JUST(BlobBufferCopyUtil<int64_t>::To(ofblob_ptr, repeats_value.data(),
-                                                   repeats_value.size()));
+      const auto& callback = [&](ep::Stream* stream,
+                                 const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+        SyncAutoMemcpy(stream, repeats_value.data(), eager_blob_object->dptr(),
+                       repeats_value.size() * sizeof(int64_t), memory::MakeHostMemCase(),
+                       eager_blob_object->mem_case());
       };
       SyncAccessTensorWithTimeOut(repeats, callback, "const").GetOrThrow();
       for (const auto x : repeats_value) {
