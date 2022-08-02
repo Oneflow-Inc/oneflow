@@ -178,7 +178,6 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Singleton<embedding::EmbeddingManager>::New();
 #endif
   Singleton<vm::VirtualMachineScope>::New(Singleton<ResourceDesc, ForSession>::Get()->resource());
-  Singleton<EagerJobBuildAndInferCtxMgr>::New();
   if (!Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
     Singleton<EpollCommNet>::New();
@@ -224,7 +223,6 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
     Singleton<EpollCommNet>::Delete();
 #endif  // __linux__
   }
-  Singleton<EagerJobBuildAndInferCtxMgr>::Delete();
   Singleton<vm::VirtualMachineScope>::Delete();
 #ifdef WITH_CUDA
   Singleton<embedding::EmbeddingManager>::Delete();

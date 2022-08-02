@@ -395,8 +395,9 @@ Maybe<Tensor> GlobalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDe
   } else {
     op = JUST(GetGlobalToGlobalOpExpr(grad_sbp_parallels));
   }
-  if (!copy && !LazyMode::is_enabled() && JUST(x->nd_sbp()) == nd_sbp
+  if (!LazyMode::is_enabled() && JUST(x->nd_sbp()) == nd_sbp
       && JUST(x->parallel_desc()) == parallel_desc && grad_sbp_parallels.size() == 0) {
+    if (copy) { return functional::Identity(x); }
     return x;
   }
   const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
