@@ -17,11 +17,11 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_STREAM_SUPPORT_STREAM_WAIT_H_
 
 #include <glog/logging.h>
-#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/stream_type.h"
 
 namespace oneflow {
 
-struct StreamSupportStreamWait : public StreamRoleVisitor<StreamSupportStreamWait> {
+struct StreamSupportStreamWait : public StreamTypeVisitor<StreamSupportStreamWait> {
   static bool VisitCompute(DeviceType device_type) { return Supported(device_type); }
   static bool VisitHost2Device(DeviceType device_type) { return false; }
   static bool VisitDevice2Host(DeviceType device_type) { return false; }
