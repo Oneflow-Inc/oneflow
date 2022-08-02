@@ -141,7 +141,6 @@ class EyeInplaceFunctor {
     OpExprInterpContext ctx(attrs);
     ctx.device = JUST(x->device());
     JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), ctx));
-    JUST(outputs->at(0)->set_requires_grad(x->requires_grad()));
     return outputs->at(0);
   }
 

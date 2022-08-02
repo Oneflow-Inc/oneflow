@@ -277,7 +277,6 @@ def eye_(tensor):
     if tensor.ndimension() != 2:
         raise ValueError("Only tensors with 2 dimensions are supported")
     with flow.no_grad():
-        print(tensor.shape)
         tensor = flow._C.eye_(tensor)
         return tensor
 
