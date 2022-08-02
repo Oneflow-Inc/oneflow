@@ -33,8 +33,8 @@ class Test_Copy_module(flow.unittest.TestCase):
         torch_x_grid = ori_torch.ones(2)
         flow_x_grid = flow.ones(2)
         torch_base_grid[..., 0].copy_(torch_x_grid)
-        #TODO: copy op not support non-contiguous
-        flow_base_grid[..., 0].copy_(flow_x_grid)
+        #TODO: copy op not support non-contiguous input tensor
+        flow_base_grid[..., 0].contiguous().copy_(flow_x_grid)
         test_case.assertTrue(np.allclose(torch_base_grid.size(), flow_base_grid.size()))
 
 
