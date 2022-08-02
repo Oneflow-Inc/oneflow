@@ -47,20 +47,6 @@ Maybe<void> InitBroadcastRankHeap(std::vector<int64_t>* ranks, const ParallelDes
   return Maybe<void>::Ok();
 }
 
-int64_t RingDecrease(int64_t n, int64_t size) { return (n - 1 + size) % size; }
-
-int64_t RingIncrease(int64_t n, int64_t size) { return (n + 1 + size) % size; }
-
-template<typename T>
-void VecAdd(size_t size, T* out, const T* in0, const T* in1) {
-  size_t thread_num = Singleton<ThreadPool>::Get()->thread_num();
-  BalancedSplitter bs(size, thread_num);
-  MultiThreadLoop(thread_num, [&](size_t thread_idx) {
-    size_t end = bs.At(thread_idx).end();
-    for (size_t i = bs.At(thread_idx).begin(); i < end; ++i) { out[i] = in0[i] + in1[i]; }
-  });
-}
-
 }  // namespace
 
 template<>
