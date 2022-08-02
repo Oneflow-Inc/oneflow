@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
-#include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -1129,12 +1128,12 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
                            const std::string& reduction) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("has_pos_weight", pos_weight.has_value()));
-    std::shared_ptr<Tensor> new_pos_weight;
+    std::shared_ptr<Tensor> broadcast_pos_weight;
     const int64_t last_dim = input->shape()->NumAxes() - 1;
     if (pos_weight) {
-      new_pos_weight = JUST(pos_weight);
-      if (new_pos_weight->shape()->At(0) == 1 && input->shape()->At(last_dim) > 1) {
-          new_pos_weight = JUST(Expand(new_pos_weight, Shape({input->shape()->At(last_dim)})));
+      broadcast_pos_weight = JUST(pos_weight);
+      if (broadcast_pos_weight->shape()->At(0) == 1 && input->shape()->At(last_dim) > 1) {
+          broadcast_pos_weight = JUST(Expand(broadcast_pos_weight, Shape({input->shape()->At(last_dim)})));
         }
     }
 
@@ -1142,7 +1141,7 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
     if (weight) {
       if (pos_weight) {
         out = JUST(OpInterpUtil::Dispatch<Tensor>(
-            *op_weight_pos_, {input, target, JUST(weight), new_pos_weight}, attrs));
+            *op_weight_pos_, {input, target, JUST(weight), broadcast_pos_weight}, attrs));
       } else {
         out =
             JUST(OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight)}, attrs));
@@ -1150,7 +1149,7 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
     } else {
       if (pos_weight) {
         out = JUST(
-            OpInterpUtil::Dispatch<Tensor>(*op_pos_, {input, target, new_pos_weight}, attrs));
+            OpInterpUtil::Dispatch<Tensor>(*op_pos_, {input, target, broadcast_pos_weight}, attrs));
       } else {
         if (reduction == "mean") {
           return OpInterpUtil::Dispatch<Tensor>(*op_reduce_mean_, {input, target});
