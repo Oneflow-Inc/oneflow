@@ -840,6 +840,7 @@ def _test_index_getitem_copy_bools_slices(test_case, device):
         #  test_case.assertEqual(a.data_ptr(), a[None].data_ptr())
         #  test_case.assertEqual(a.data_ptr(), a[...].data_ptr())
 
+
 def _test_setitem_scalars(test_case, device):
     zero = flow.tensor(0, dtype=flow.int64)
 
@@ -866,6 +867,7 @@ def _test_setitem_scalars(test_case, device):
     # r[...] = 9.9
     # test_case.assertEqual(9.9, r)
 
+
 def _test_basic_advanced_combined(test_case, device):
     x = flow.arange(0, 12, device=device).view(4, 3)
     _assert_tensor_equal(test_case, x[1:2, 1:3], x[1:2, [1, 2]])
@@ -881,15 +883,12 @@ def _test_basic_advanced_combined(test_case, device):
     x[1:2, [1, 2]] = 0
     test_case.assertFalse(np.array_equal(x.numpy(), unmodified.numpy()))
 
+
 def _test_ellipsis_tensor(test_case, device):
     x = flow.arange(0, 9, device=device).view(3, 3)
     idx = flow.tensor([0, 2], device=device)
-    test_case.assertEqual(x[..., idx].tolist(), [[0, 2],
-                                            [3, 5],
-                                            [6, 8]])
-    test_case.assertEqual(x[idx, ...].tolist(), [[0, 1, 2],
-                                            [6, 7, 8]])
-
+    test_case.assertEqual(x[..., idx].tolist(), [[0, 2], [3, 5], [6, 8]])
+    test_case.assertEqual(x[idx, ...].tolist(), [[0, 1, 2], [6, 7, 8]])
 
 
 @flow.unittest.skip_unless_1n1d()
