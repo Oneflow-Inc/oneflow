@@ -27,9 +27,9 @@ namespace ccl {
 
 namespace {
 
-int64_t RingDecrease(int64_t n, int64_t size) { return (n - 1 + size) % size; }
+inline int64_t RingDecrease(int64_t n, int64_t size) { return (n - 1 + size) % size; }
 
-int64_t RingIncrease(int64_t n, int64_t size) { return (n + 1 + size) % size; }
+inline int64_t RingIncrease(int64_t n, int64_t size) { return (n + 1 + size) % size; }
 
 template<typename T, ReduceType reduce_type>
 struct ReduceFunctor;
@@ -177,7 +177,7 @@ class CpuAllReduce final : public AllReduce {
               const std::shared_ptr<CommunicationContext>& communication_ctx) const override {
     const auto& cpu_communication_ctx =
         std::dynamic_pointer_cast<CpuCommunicationContext>(communication_ctx);
-    CHECK(cpu_communication_ctx);
+    CHECK(cpu_communication_ctx) << kOfBugIssueUploadPrompt;
     CHECK_JUST(SwitchDtypeAllReduce(SwitchCase(datatype_, reduce_type_), in, out, elem_cnt,
                                     cpu_communication_ctx->parallel_desc()));
   }

@@ -132,12 +132,12 @@ class EagerCclReduceScatterKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
-    CHECK(kernel_cache != nullptr);
+    CHECK(kernel_cache != nullptr) << kOfBugIssueUploadPrompt;
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type()) << kOfBugIssueUploadPrompt;
     const auto& op_type = ctx->Attr<std::string>("op_type");
-    CHECK_EQ(op_type, "sum");
+    CHECK_EQ(op_type, "sum") << kOfBugIssueUploadPrompt;
     ccl::ReduceType reduce_type = ccl::kSum;
     if (in->data_type() == kBool) { reduce_type = ccl::kMax; }
     std::unique_ptr<ccl::ReduceScatter> reduce_scatter =
@@ -169,7 +169,7 @@ class EagerCclAllGatherKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
-    CHECK(kernel_cache != nullptr);
+    CHECK(kernel_cache != nullptr) << kOfBugIssueUploadPrompt;
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type()) << kOfBugIssueUploadPrompt;

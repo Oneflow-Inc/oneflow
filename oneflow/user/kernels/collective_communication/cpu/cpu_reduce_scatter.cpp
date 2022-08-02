@@ -27,7 +27,7 @@ namespace ccl {
 
 namespace {
 
-int64_t RingDecrease(int64_t n, int64_t size) { return (n - 1 + size) % size; }
+inline int64_t RingDecrease(int64_t n, int64_t size) { return (n - 1 + size) % size; }
 
 template<typename T, ReduceType reduce_type>
 struct ReduceFunctor;
@@ -73,7 +73,7 @@ struct DtypeReduceScatter final {
 
     BalancedSplitter bs(elem_cnt * parallel_num, parallel_num);
     const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
-    CHECK_OR_RETURN(opt_parallel_id->has_value());
+    CHECK_OR_RETURN(opt_parallel_id->has_value()) << kOfBugIssueUploadPrompt;
     int64_t parallel_id = JUST(*opt_parallel_id);
 
     auto recv_buffer = std::make_unique<T[]>(bs.At(0).size());
@@ -147,7 +147,7 @@ class CpuReduceScatter final : public ReduceScatter {
               const std::shared_ptr<CommunicationContext>& communication_ctx) const override {
     const auto& cpu_communication_ctx =
         std::dynamic_pointer_cast<CpuCommunicationContext>(communication_ctx);
-    CHECK(cpu_communication_ctx);
+    CHECK(cpu_communication_ctx) << kOfBugIssueUploadPrompt;
     CHECK_JUST(SwitchDtypeReduceScatter(SwitchCase(datatype_, reduce_type_), in, out, elem_cnt,
                                         cpu_communication_ctx->parallel_desc()));
   }
