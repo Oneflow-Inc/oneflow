@@ -23,7 +23,7 @@ from oneflow.test_utils.automated_test_util import util
 
 import oneflow as flow
 import oneflow.unittest
-
+import torch
 
 def _test_slice(test_case, device):
     np_arr = np.random.randn(3, 6, 9).astype(np.float32)
@@ -264,34 +264,39 @@ class TestSliceUpdate(flow.unittest.TestCase):
         output[0:1, 1:2, :, 1:2] = 3.1415
 
         test_case.assertTrue(np.array_equal(output.numpy(), np_out))
+    
+    def test_slice_update_with_2_dim_tensor_random(test_case):
+        dim_list=flow.randperm(2).tolist()
+        x_torch = torch.arange(2).to(torch.float32).view(1, 2).permute(dim_list)
+        y_torch=torch.ones(1)
+        x_torch[-1:,-1]=y_torch
+        x_flow = flow.arange(2).to(flow.float32).view(1, 2).permute(dim_list)
+        y_flow=flow.ones(1)
+        x_flow[-1:,-1]=y_flow
+        test_case.assertTrue((x_torch.numpy() == x_flow.numpy()).all())    
+    
+    
+    def test_slice_update_with_3_dim_tensor_random(test_case):
+        dim_list=flow.randperm(3).tolist()
+        x_torch = torch.arange(8).to(torch.float32).view(4, 1, 2).permute(dim_list)
+        y_torch=torch.ones(1)
+        x_torch[-1:,-1:,-1]=y_torch
+        x_flow = flow.arange(8).to(flow.float32).view(4, 1, 2).permute(dim_list)
+        y_flow=flow.ones(1)
+        x_flow[-1:,-1:,-1]=y_flow
+        test_case.assertTrue((x_torch.numpy() == x_flow.numpy()).all())    
+    
+    
+    def test_slice_update_with_4_dim_tensor_random(test_case):
+        dim_list=flow.randperm(4).tolist()
+        x_torch = torch.arange(32).to(torch.float32).view(4, 1, 4, 2).permute(dim_list)
+        y_torch=torch.ones(1)
+        x_torch[-1:,-1:,-1:,-1:]=y_torch
+        x_flow = flow.arange(32).to(flow.float32).view(4, 1, 4, 2).permute(dim_list)
+        y_flow=flow.ones(1)
+        x_flow[-1:,-1:,-1:,-1:]=y_flow
+        test_case.assertTrue((x_torch.numpy() == x_flow.numpy()).all())    
 
-    def test_slice_update_2_dim_tensor(test_case):
-        np_tensor = flow.tensor([[1, 1, 1], [0, 1, 2]])
-        x_flow = flow.ones(6).to(flow.float32).view(3, 2).T
-        y_flow = flow.arange(3).reshape(3, 1).to(flow.float32).T
-        x_flow[1:, :3] = y_flow
-        test_case.assertTrue(np.array_equal(np_tensor.numpy(), x_flow.numpy()))
-
-    def test_slice_update_with_3_dim_tensor(test_case):
-        np_tensor = flow.tensor([[[1., 1.], [1., 1.]], [[1., 0.], [1., 0.]]])
-        x_flow = flow.ones(8).to(flow.float32).view(2, 2, 2).T
-        y_flow = flow.zeros(2).to(flow.float32).reshape(1, 2, 1)
-        x_flow[1:, :2, 1:] = y_flow
-        test_case.assertTrue(np.array_equal(np_tensor.numpy(), x_flow.numpy()))
-
-    def test_slice_update_with_4_dim_tensor(test_case):
-        np_tensor = flow.tensor([[[[0.,  8., 16., 24.]],
-                                  [[0.,  0., 18., 26.]],
-                                  [[0.,  0., 20., 28.]],
-                                  [[0.,  0., 22., 30.]]],
-                                 [[[1.,  9., 17., 25.]],
-                                  [[3., 11., 19., 27.]],
-                                  [[5., 13., 21., 29.]],
-                                  [[7., 15., 23., 31.]]]])
-        x_flow = flow.arange(32).to(flow.float32).view(4, 1, 4, 2).T
-        y_flow = flow.zeros(6).reshape(1, 3, 1, 2)
-        x_flow[:1, 1:, :, :2] = y_flow
-        test_case.assertTrue(np.array_equal(np_tensor.numpy(), x_flow.numpy()))
 
     def test_slice_update_about_inplace(test_case):
         np_tensor = flow.tensor([[0., 4.],
