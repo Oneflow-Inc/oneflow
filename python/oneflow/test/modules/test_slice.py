@@ -51,13 +51,15 @@ def _test_slice_1_dim(test_case, device):
     x = flow.tensor(np_arr, device=flow.device(device))
     test_case.assertTrue(np.allclose(x[1].numpy(), np_arr[1], 1e-05, 1e-05))
     test_case.assertTrue(np.allclose(x[99].numpy(), np_arr[99], 1e-05, 1e-05))
-    test_case.assertTrue(np.allclose(x[0:2].numpy(), np_arr[0:2], 1e-05, 1e-05))
+    test_case.assertTrue(np.allclose(
+        x[0:2].numpy(), np_arr[0:2], 1e-05, 1e-05))
 
 
 def _test_slice_3_dim(test_case, device):
     np_arr = np.random.randn(2, 3, 4).astype(np.float32)
     x = flow.tensor(np_arr, device=flow.device(device))
-    test_case.assertTrue(np.allclose(x[:, 0].numpy(), np_arr[:, 0], 1e-05, 1e-05))
+    test_case.assertTrue(np.allclose(
+        x[:, 0].numpy(), np_arr[:, 0], 1e-05, 1e-05))
 
 
 def _test_slice_4_dim(test_case, device):
@@ -96,10 +98,14 @@ def _test_slice_with_int_index(test_case, device):
 def _test_slice_negative_index(test_case, device):
     np_arr = np.random.randn(4, 5, 6)
     x = flow.tensor(np_arr, dtype=flow.float32, device=flow.device(device))
-    test_case.assertTrue(np.allclose(x[-1].numpy(), np_arr[-1], 0.0001, 0.0001))
-    test_case.assertTrue(np.allclose(x[-2].numpy(), np_arr[-2], 0.0001, 0.0001))
-    test_case.assertTrue(np.allclose(x[-3].numpy(), np_arr[-3], 0.0001, 0.0001))
-    test_case.assertTrue(np.allclose(x[-4].numpy(), np_arr[-4], 0.0001, 0.0001))
+    test_case.assertTrue(np.allclose(
+        x[-1].numpy(), np_arr[-1], 0.0001, 0.0001))
+    test_case.assertTrue(np.allclose(
+        x[-2].numpy(), np_arr[-2], 0.0001, 0.0001))
+    test_case.assertTrue(np.allclose(
+        x[-3].numpy(), np_arr[-3], 0.0001, 0.0001))
+    test_case.assertTrue(np.allclose(
+        x[-4].numpy(), np_arr[-4], 0.0001, 0.0001))
 
 
 def _test_slice_ellipsis_type(test_case, device):
@@ -204,7 +210,8 @@ class TestSliceUpdate(flow.unittest.TestCase):
     def test_slice_update_grad_graph(test_case):
         x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
         input = flow.tensor(x, requires_grad=True)
-        update = flow.tensor(np.array([2, 3, 4]).astype(np.float32), requires_grad=True)
+        update = flow.tensor(np.array([2, 3, 4]).astype(
+            np.float32), requires_grad=True)
         output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
 
         class TestModule(flow.nn.Module):
@@ -216,7 +223,7 @@ class TestSliceUpdate(flow.unittest.TestCase):
             def forward(self, ref, value):
                 x = ref + self.ref_grad
                 y = value + self.value_grad
-                return flow._C.slice_update(x, y, [1,], [4,], [1,])
+                return flow._C.slice_update(x, y, [1, ], [4, ], [1, ])
 
         test_m = TestModule()
         of_sgd = flow.optim.SGD(test_m.parameters(), lr=1.0, momentum=0.0)
@@ -245,18 +252,55 @@ class TestSliceUpdate(flow.unittest.TestCase):
         value_grad = np.array([1.0, 1.0, 1.0]).astype(np.float32)
         test_case.assertTrue(np.array_equal(-test_m.value_grad, value_grad))
 
-    @unittest.skip("TODO:(zhaoluyang) test when slice_update support stride")
-    def test_slice_update_with_stride(test_case, device):
+    # slice_update support stride
+    def test_slice_update_with_stride(test_case):
         arr = np.arange(24).reshape(2, 2, 2, 3).astype(np.float32)
         np_in = arr
         np_out = np_in.transpose(1, 0, 2, 3)
         np_out[0:1, 1:2, :, 1:2] = 3.1415
 
-        input = flow.tensor(arr, device=flow.device(device))
+        input = flow.tensor(arr)
         output = input.permute(1, 0, 2, 3)
         output[0:1, 1:2, :, 1:2] = 3.1415
 
         test_case.assertTrue(np.array_equal(output.numpy(), np_out))
+
+    def test_slice_update_2_dim_tensor(test_case):
+        np_tensor = flow.tensor([[1, 1, 1], [0, 1, 2]])
+        x_flow = flow.ones(6).to(flow.float32).view(3, 2).T
+        y_flow = flow.arange(3).reshape(3, 1).to(flow.float32).T
+        x_flow[1:, :3] = y_flow
+        test_case.assertTrue(np.array_equal(np_tensor.numpy(), x_flow.numpy()))
+
+    def test_slice_update_with_3_dim_tensor(test_case):
+        np_tensor = flow.tensor([[[1., 1.], [1., 1.]], [[1., 0.], [1., 0.]]])
+        x_flow = flow.ones(8).to(flow.float32).view(2, 2, 2).T
+        y_flow = flow.zeros(2).to(flow.float32).reshape(1, 2, 1)
+        x_flow[1:, :2, 1:] = y_flow
+        test_case.assertTrue(np.array_equal(np_tensor.numpy(), x_flow.numpy()))
+
+    def test_slice_update_with_4_dim_tensor(test_case):
+        np_tensor = flow.tensor([[[[0.,  8., 16., 24.]],
+                                  [[0.,  0., 18., 26.]],
+                                  [[0.,  0., 20., 28.]],
+                                  [[0.,  0., 22., 30.]]],
+                                 [[[1.,  9., 17., 25.]],
+                                  [[3., 11., 19., 27.]],
+                                  [[5., 13., 21., 29.]],
+                                  [[7., 15., 23., 31.]]]])
+        x_flow = flow.arange(32).to(flow.float32).view(4, 1, 4, 2).T
+        y_flow = flow.zeros(6).reshape(1, 3, 1, 2)
+        x_flow[:1, 1:, :, :2] = y_flow
+        test_case.assertTrue(np.array_equal(np_tensor.numpy(), x_flow.numpy()))
+
+    def test_slice_update_about_inplace(test_case):
+        np_tensor = flow.tensor([[0., 4.],
+                                 [2., 6.],
+                                 [2., 6.],
+                                 [3., 7.]])
+        x_flow = flow.arange(8).to(flow.float32).view(2, 4).T
+        x_flow[1:2, :2] = x_flow[2:3, :2]
+        test_case.assertTrue(np.array_equal(np_tensor.numpy(), x_flow.numpy()))
 
 
 if __name__ == "__main__":
