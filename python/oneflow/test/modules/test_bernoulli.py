@@ -25,18 +25,15 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_bernoulli(test_case, shape):
+def _test_bernoulli(test_case, shape, p, dtype):
     input_arr = np.ones(shape)
     x = flow.tensor(input_arr, dtype=flow.float32, device=flow.device("cpu"))
-    y = flow.bernoulli(x)
-    test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
-
-
-def _test_bernoulli_prob(test_case, shape, p):
-    input_arr = np.ones(shape) if p == 1 else np.zeros(shape)
-    x = flow.tensor(input_arr, dtype=flow.float32, device=flow.device("cpu"))
-    y = flow.bernoulli(x, p)
-    test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
+    y = flow.bernoulli(x, p=p, dtype=dtype)
+    test_case.assertTrue(y.dtype == dtype)
+    if p == 1 or p is None:
+        test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
+    elif p == 0:
+        test_case.assertTrue(np.allclose(y.numpy(), np.zeros(shape)))
 
 
 def _test_bernoulli_with_generator(test_case, shape):
@@ -57,14 +54,8 @@ class TestBernoulli(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_functions"] = [_test_bernoulli]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
-    def test_bernoulli_prob(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_functions"] = [_test_bernoulli_prob]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        arg_dict["p"] = [0, 1]
+        arg_dict["p"] = [None, 0, 1]
+        arg_dict["dtype"] = [flow.float32, flow.int64]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
