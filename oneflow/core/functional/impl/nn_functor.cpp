@@ -1139,7 +1139,7 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
 
       CHECK_OR_RETURN(is_pos_weight_shape_valid)
           << Error::RuntimeError()
-          << "pos_weight be a vector with length equal to the number of classes.";
+          << "pos_weight must be a vector with length equal to the number of classes.";
     }
 
     std::shared_ptr<Tensor> out;
