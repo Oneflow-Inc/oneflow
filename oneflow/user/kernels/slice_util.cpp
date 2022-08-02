@@ -83,33 +83,27 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
     SliceIndexHelper<NDIM> entire_full_small_idx_cvtr =
         NdIndexStrideOffsetHelper<int64_t, NDIM>(sliced_params.stride);
     SliceIndexHelper<NDIM> sliced_full_small_idx_cvtr(sliced_params.size);
+    int cnt = 1;
+    int entire_target_stride = 1;
+    int sliced_target_stride = 1;
     // Calculate the length of continuous part
+    for (int i = NDIM - 1; i >= 0; i--) {
+      if (entire_params.stride[i] != entire_target_stride
+          || sliced_params.stride[i] != sliced_target_stride) {
+        break;
+      }
+      entire_target_stride *= entire_params.size[i];
+      sliced_target_stride *= sliced_params.size[i];
+      if (entire_params.step[i] == 1) { cnt *= entire_params.size[i]; }
+      if (!entire_params.IsFullSlice(i) || !sliced_params.IsFullSlice(i)) { break; }
+    }
 
-    bool IsContinuous = true;
-    std::vector<int32_t> entire_offset_vec(elem_cnt, 0);
-    std::vector<int32_t> sliced_offset_vec(elem_cnt, 0);
-    for (int i = 0; i < elem_cnt; i++) {
+    for (int i = 0; i < elem_cnt; i += cnt) {
       const int64_t entire_offset = SliceOffsetToEntireOffset<NDIM>(
           i, entire_params, entire_splitted_large_idx_cvtr, sliced_splitted_large_idx_cvtr);
       const int64_t sliced_offset = SliceOffsetToEntireOffset<NDIM>(
           i, sliced_params, entire_full_small_idx_cvtr, sliced_full_small_idx_cvtr);
-      entire_offset_vec[i] = entire_offset;
-      sliced_offset_vec[i] = sliced_offset;
-      if (IsContinuous && i > 0
-          && (entire_offset_vec[i] - 1 != entire_offset_vec[i - 1]
-              || sliced_offset_vec[i] - 1 != sliced_offset_vec[i - 1])) {
-        IsContinuous = false;
-      }
-    }
-    if (IsContinuous) {
-      std::copy(entire + entire_offset_vec[0],
-                entire + entire_offset_vec[0] + entire_offset_vec.size(),
-                sliced + sliced_offset_vec[0]);
-    } else {
-      for (int i = 0; i < elem_cnt; i++) {
-        std::copy(entire + entire_offset_vec[i], entire + entire_offset_vec[i] + 1,
-                  sliced + sliced_offset_vec[i]);
-      }
+      std::copy(entire + entire_offset, entire + entire_offset + cnt, sliced + sliced_offset);
     }
   }
 
