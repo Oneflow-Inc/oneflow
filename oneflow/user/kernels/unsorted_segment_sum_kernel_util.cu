@@ -34,6 +34,15 @@ __device__ __forceinline__ bool IsZero<half>(half v) {
   return v == static_cast<half>(0);
 }
 
+#if CUDA_VERSION >= 11000
+
+template<>
+__device__ __forceinline__ bool IsZero<nv_bfloat16>(nv_bfloat16 v) {
+  return v == static_cast<nv_bfloat16>(0);
+}
+
+#endif
+
 template<>
 __device__ __forceinline__ bool IsZero<half2>(half2 v) {
   return v.x == static_cast<half>(0) && v.y == static_cast<half>(0);
@@ -199,6 +208,12 @@ struct UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, float, K, float16> final 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_CUDA,
                                  UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ,
                                  UNSORTED_SEGMENT_SUM_INDEX_TYPE_SEQ);
+#if CUDA_VERSION >= 11000
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_CUDA,
+                                 OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16),
+                                 UNSORTED_SEGMENT_SUM_INDEX_TYPE_SEQ);
+#endif
+
 #undef INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_CUDA
 
 #define INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_HALF_CUDA(in_type_pair, index_type_pair,             \

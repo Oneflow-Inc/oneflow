@@ -227,5 +227,8 @@ struct SliceKernelUtil<DeviceType::kCUDA, T> {
 
 INSTANTIATE_SLICE_KERNEL_UTIL_WITH_DEVICE(DeviceType::kCUDA)
 INSTANTIATE_SLICE_KERNEL_UTIL(DeviceType::kCUDA, float16)
+#if CUDA_VERSION >= 11000
+INSTANTIATE_SLICE_KERNEL_UTIL(DeviceType::kCUDA, nv_bfloat16)
+#endif
 
 }  // namespace oneflow

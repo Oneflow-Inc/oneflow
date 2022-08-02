@@ -20,6 +20,7 @@ from collections import OrderedDict
 import oneflow.boxing.nccl as nccl_config
 from oneflow.nn.graph.optimizer import OptDict
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
+import oneflow as flow
 
 
 class GraphConfig(object):
@@ -71,6 +72,11 @@ class GraphConfig(object):
         """
         assert type(mode) is bool
         self.proto.enable_auto_mixed_precision = mode
+
+    def amp_data_type(self, dtype: flow.float16):
+        self.proto.mixed_precision_data_type = flow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
+            dtype
+        )
 
     def set_zero_redundancy_optimizer_mode(self, mode: str = "distributed_split"):
         raise RuntimeError(

@@ -138,6 +138,18 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_KERNEL_CASE, DEVI
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_LIKE_KERNEL_CASE, DEVICE_TYPE_SEQ,
                                  UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
+#if CUDA_VERSION >= 11000
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_KERNEL_CASE,
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
+                                 OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16),
+                                 INDEX_DATA_TYPE_SEQ)
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_LIKE_KERNEL_CASE,
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
+                                 OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16),
+                                 INDEX_DATA_TYPE_SEQ)
+#endif
+
 #ifdef WITH_CUDA
 template<typename K>
 class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {

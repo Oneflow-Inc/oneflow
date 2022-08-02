@@ -331,6 +331,9 @@ class LayerNormGpuKernel final : public user_op::OpKernel, public user_op::CudaG
 REGISTER_LAYER_NORM_CUDA_KERNEL(float)
 REGISTER_LAYER_NORM_CUDA_KERNEL(double)
 REGISTER_LAYER_NORM_CUDA_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_LAYER_NORM_CUDA_KERNEL(nv_bfloat16)
+#endif
 
 template<typename T>
 class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -382,6 +385,9 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel, public user_op::C
 REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(float)
 REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(double)
 REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_LAYER_NORM_GRAD_CUDA_KERNEL(nv_bfloat16)
+#endif
 
 template<typename T>
 class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
@@ -460,5 +466,8 @@ class LayerNormParamGradGpuKernel final : public user_op::OpKernel,
 REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(float)
 REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(double)
 REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_LAYER_NORM_PARAM_GRAD_GPU_KERNEL(nv_bfloat16)
+#endif
 
 }  // namespace oneflow

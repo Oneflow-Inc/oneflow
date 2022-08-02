@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 
 namespace oneflow {
 
@@ -440,6 +441,9 @@ REGISTER_SLICE_KERNEL_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_SLICE_KERNEL_WITH_DEVICE(DeviceType::kCUDA)
 REGISTER_SLICE_KERNEL(DeviceType::kCUDA, float16)
+#if CUDA_VERSION >= 11000
+#endif
+REGISTER_SLICE_KERNEL(DeviceType::kCUDA, nv_bfloat16)
 #endif
 
 }  // namespace oneflow
