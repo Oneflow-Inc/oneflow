@@ -262,6 +262,24 @@ def zeros_(tensor):
     with flow.no_grad():
         return tensor.fill_(0)
 
+def eye_(tensor):
+    r"""Fills the 2-dimensional input `Tensor` with the identity
+    matrix. Preserves the identity of the inputs in `Linear` layers, where as
+    many inputs are preserved as possible.
+
+    Args:
+        tensor: a 2-dimensional `torch.Tensor`
+
+    Examples:
+        >>> w = torch.empty(3, 5)
+        >>> nn.init.eye_(w)
+    """
+    if tensor.ndimension() != 2:
+        raise ValueError("Only tensors with 2 dimensions are supported")
+    with flow.no_grad():
+        print(tensor.shape)
+        tensor = flow._C.eye_(tensor)
+        return tensor
 
 def _calculate_fan_in_and_fan_out(tensor):
     dimensions = tensor.ndimension()
