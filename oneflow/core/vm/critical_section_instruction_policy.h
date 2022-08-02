@@ -95,7 +95,7 @@ class CriticalSectionBeginInstructionPolicy
       const std::string& job_name) const = 0;
   virtual std::string GetInterfaceCriticalSectionWaitBufferName(
       const std::string& job_name) const = 0;
-  virtual void AccessBlobByOpName(uint64_t of_blob_ptr, const std::string& op_name) = 0;
+  virtual void AccessBlobByOpName(ep::Stream* stream, Blob* blob, const std::string& op_name) = 0;
 
   void FinishInvalidInterfaceEventRecords();
   void Finish();
@@ -126,8 +126,9 @@ class CriticalSectionBeginInstructionPolicy
 
     const std::string& job_name() const override { return job_name_; }
 
-    void AccessBlobByOpName(uint64_t ofblob_ptr, const std::string& op_name) const override {
-      critical_section_begin_instruction_policy_->AccessBlobByOpName(ofblob_ptr, op_name);
+    void AccessBlobByOpName(ep::Stream* stream, Blob* blob,
+                            const std::string& op_name) const override {
+      critical_section_begin_instruction_policy_->AccessBlobByOpName(stream, blob, op_name);
     }
     void Finish() const override { critical_section_begin_instruction_policy_->Finish(); }
 
@@ -192,7 +193,7 @@ class InputCriticalSectionBeginInstructionPolicy final
       const std::string& job_name) const override {
     return GetInputCriticalSectionWaitBufferName(job_name);
   }
-  void AccessBlobByOpName(uint64_t of_blob_ptr, const std::string& op_name) override;
+  void AccessBlobByOpName(ep::Stream* stream, Blob* blob, const std::string& op_name) override;
   void ForEachMut2Dependence(const std::function<void(Dependence* compute)>&) const {}
 
  private:
@@ -251,7 +252,7 @@ class OutputCriticalSectionBeginInstructionPolicy final
       const std::string& job_name) const override {
     return GetOutputCriticalSectionWaitBufferName(job_name);
   }
-  void AccessBlobByOpName(uint64_t of_blob_ptr, const std::string& op_name) override;
+  void AccessBlobByOpName(ep::Stream* stream, Blob* blob, const std::string& op_name) override;
 
  private:
   DependenceVector input_dependences_;

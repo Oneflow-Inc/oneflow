@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/vm/global_sync_instruction_policy.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/instruction.h"
-#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/common/blocking_counter.h"
@@ -93,7 +92,7 @@ namespace {
 
 Maybe<Symbol<Stream>> GetBarrierStream() {
   auto device = JUST(Device::New("cpu"));
-  return Stream::New(device, StreamRole::kBarrier);
+  return Stream::New(device, StreamType::kBarrier);
 }
 
 void MakeBarrierInstructions(vm::InstructionList* list,
@@ -332,10 +331,10 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
 }
 
 intrusive::shared_ptr<vm::Dependence> VirtualMachine::FindOrCreateScheduleLocalDepObject(
-    Symbol<Device> device, StreamRole stream_role) {
+    Symbol<Device> device, StreamType stream_type) {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
-  auto key = std::make_pair(device, stream_role);
-  intrusive::shared_ptr<vm::Dependence>* ptr = &device_stream_role2local_dep_object_[key];
+  auto key = std::make_pair(device, stream_type);
+  intrusive::shared_ptr<vm::Dependence>* ptr = &device_stream_type2local_dep_object_[key];
   if (!*ptr) { *ptr = intrusive::make_shared<vm::Dependence>(); }
   return *ptr;
 }
@@ -348,10 +347,10 @@ intrusive::shared_ptr<vm::Dependence> VirtualMachine::FindOrCreateTransportLocal
   return transport_local_dep_object_;
 }
 
-Maybe<vm::Stream*> VirtualMachine::CreateStream(Symbol<Device> device, StreamRole stream_role) {
+Maybe<vm::Stream*> VirtualMachine::CreateStream(Symbol<Device> device, StreamType stream_type) {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
-  vm::ThreadCtx* thread_ctx = JUST(FindOrCreateThreadCtx(device, stream_role));
-  return JUST(CreateStream(thread_ctx, device, stream_role));
+  vm::ThreadCtx* thread_ctx = JUST(FindOrCreateThreadCtx(device, stream_type));
+  return JUST(CreateStream(thread_ctx, device, stream_type));
 }
 
 Maybe<vm::Stream*> VirtualMachine::GetVmStream(Symbol<Stream> stream) {
@@ -365,7 +364,7 @@ Maybe<vm::Stream*> VirtualMachine::GetVmStream(Symbol<Stream> stream) {
             << "invalid Stream::unique_stream_id()";
         unique_stream_id2vm_stream_.SetOrAdd(
             cur_stream->unique_stream_id(),
-            JUST(CreateStream(cur_stream->device(), cur_stream->stream_role())));
+            JUST(CreateStream(cur_stream->device(), cur_stream->stream_type())));
       }
     }
   }
@@ -373,21 +372,21 @@ Maybe<vm::Stream*> VirtualMachine::GetVmStream(Symbol<Stream> stream) {
 }
 
 Maybe<vm::ThreadCtx*> VirtualMachine::FindOrCreateThreadCtx(Symbol<Device> device,
-                                                            StreamRole stream_role) {
+                                                            StreamType stream_type) {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
   vm::ThreadCtx** thread_ctx_ptr = nullptr;
-  if (StreamOnIndependentThread::Visit(stream_role)) {
-    auto key = std::make_pair(device->enum_type(), stream_role);
-    thread_ctx_ptr = &devcie_type_stream_role_2independent_thread_ctx_[key];
+  if (StreamOnIndependentThread::Visit(stream_type)) {
+    auto key = std::make_pair(device->enum_type(), stream_type);
+    thread_ctx_ptr = &devcie_type_stream_type_2independent_thread_ctx_[key];
   } else {
     thread_ctx_ptr = &devcie_type2non_independent_thread_ctx_[device->enum_type()];
   }
-  if (*thread_ctx_ptr == nullptr) { *thread_ctx_ptr = JUST(CreateThreadCtx(device, stream_role)); }
+  if (*thread_ctx_ptr == nullptr) { *thread_ctx_ptr = JUST(CreateThreadCtx(device, stream_type)); }
   return *thread_ctx_ptr;
 }
 
 Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device,
-                                                      StreamRole stream_role) {
+                                                      StreamType stream_type) {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
   // thread_ctx_ptr may be used after timout.
   auto thread_ctx_ptr = std::make_shared<vm::ThreadCtx*>(nullptr);
@@ -405,11 +404,11 @@ Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device,
   }
   auto* thread_ctx = *thread_ctx_ptr;
   {
-    const auto& WorkerInitializer = [device, stream_role](vm::ThreadCtx* thread_ctx) {
+    const auto& WorkerInitializer = [device, stream_type](vm::ThreadCtx* thread_ctx) {
       int device_type_value = static_cast<int>(device->enum_type());
       CHECK_GT(device_type_value, 0);
       std::string device_tag = *CHECK_JUST(DeviceTag4DeviceType(device->enum_type()));
-      if (!StreamOnIndependentThread::Visit(stream_role)) {
+      if (!StreamOnIndependentThread::Visit(stream_type)) {
         CHECK_JUST(
             InitThisThreadGlobalId(device_type_value + kThreadGlobalIdScheduler, device_tag));
       }
@@ -425,21 +424,21 @@ Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device,
 }
 
 Maybe<vm::Stream*> VirtualMachine::CreateStream(vm::ThreadCtx* thread_ctx, Symbol<Device> device,
-                                                StreamRole stream_role) {
+                                                StreamType stream_type) {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
   // stream_ptr may be used after timout.
   auto stream_ptr = std::make_shared<vm::Stream*>(nullptr);
   auto bc = std::make_shared<BlockingCounter>(1);
   intrusive::shared_ptr<vm::Dependence> schedule_local_dep_object =
-      FindOrCreateScheduleLocalDepObject(device, stream_role);
+      FindOrCreateScheduleLocalDepObject(device, stream_type);
   Optional<intrusive::shared_ptr<vm::Dependence>> transport_local_dep_object;
-  if (IsCommNetStream::Visit(stream_role)) {
+  if (IsCommNetStream::Visit(stream_type)) {
     transport_local_dep_object = FindOrCreateTransportLocalDepObject();
   }
-  engine_->InsertProbe([stream_ptr, thread_ctx, device, stream_role, bc, schedule_local_dep_object,
+  engine_->InsertProbe([stream_ptr, thread_ctx, device, stream_type, bc, schedule_local_dep_object,
                         transport_local_dep_object](vm::VirtualMachineEngine* engine) {
     auto stream = intrusive::make_shared<vm::Stream>(
-        thread_ctx, device, stream_role, schedule_local_dep_object, transport_local_dep_object);
+        thread_ctx, device, stream_type, schedule_local_dep_object, transport_local_dep_object);
     thread_ctx->mut_stream_list()->PushBack(stream.Mutable());
     *stream_ptr = stream.Mutable();
     bc->Decrease();

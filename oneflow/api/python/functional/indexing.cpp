@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/functional/functional.h"
@@ -126,16 +125,18 @@ void RecursiveParseAndAssign(PyObject* object, char* data, const int& ndims, con
   }
 }
 
-void ParseArrayToBlob(PyObject* object, Blob* blob) {
-  const DataType dtype = blob->data_type();
-  const int ndims = blob->shape().NumAxes();
+void ParseArrayToTensor(PyObject* object,
+                        const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+  const DataType dtype = eager_blob_object->data_type();
+  const int ndims = eager_blob_object->shape().NumAxes();
   DimVector strides(ndims);
   int64_t size = 1;
   for (int i = ndims - 1; i >= 0; --i) {
     strides[i] = size;
-    size *= blob->shape().At(i);
+    size *= eager_blob_object->shape().At(i);
   }
-  RecursiveParseAndAssign(object, blob->mut_dptr<char>(), ndims, 0, blob->shape(), strides, dtype);
+  RecursiveParseAndAssign(object, eager_blob_object->mut_dptr<char>(), ndims, 0,
+                          eager_blob_object->shape(), strides, dtype);
 }
 
 Shape InferArraySizes(PyObject* object) {
@@ -179,10 +180,10 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->AccessBlobByCallback(
         JUST(tensor->AsLocalTensor()),
-        [handle](uint64_t ofblob_ptr) {
-          auto* of_blob = reinterpret_cast<OfBlob*>(ofblob_ptr);
+        [handle](ep::Stream* stream,
+                 const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
           CHECK_JUST(Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
-            ParseArrayToBlob(handle.get(), of_blob->mut_blob());
+            ParseArrayToTensor(handle.get(), eager_blob_object);
             return Maybe<void>::Ok();
           }));
         },

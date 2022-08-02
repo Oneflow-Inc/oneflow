@@ -19,8 +19,10 @@ limitations under the License.
 #include <queue>
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_meta.h"
+#include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_arg.h"
+#include "oneflow/core/framework/tensor_methods.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/autograd/autograd_mode.h"
@@ -29,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/framework/global_param_grad_sync_mode.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/common/env_var/autograd.h"
 
 namespace oneflow {
 namespace one {
@@ -114,6 +117,32 @@ Maybe<void> CheckGlobalTensorsMeta(const TensorTuple& tensor_tuple) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> TouchInTmpComputeStream(const TensorTuple& inputs) {
+  for (auto input : inputs) {
+    if (input->is_global()) { input = JUST(input->cur_rank_phy_tensor()); }
+    if (input) {
+      Symbol<Device> device = JUST(input->device());
+      auto stream = JUST(Stream::New(device, StreamType::kTmpCompute));
+      JUST(Touch(input, stream));
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+constexpr static int kSmallTensorThreshold = 1024;
+
+Maybe<TensorTuple> TryCopyForSmallTensor(const TensorTuple& inputs) {
+  auto outputs = std::make_shared<TensorTuple>();
+  outputs->reserve(inputs.size());
+  for (auto input : inputs) {
+    if (input->shape()->elem_cnt() <= kSmallTensorThreshold) {
+      input = JUST(functional::Identity(input));
+    }
+    outputs->push_back(input);
+  }
+  return outputs;
+}
+
 }  // namespace
 
 Maybe<void> AutogradEngine::RunBackwardAndSaveGrads4LeafTensorIf(const TensorTuple& outputs,
@@ -123,7 +152,16 @@ Maybe<void> AutogradEngine::RunBackwardAndSaveGrads4LeafTensorIf(const TensorTup
   JUST(CheckGlobalTensorsMeta(outputs));
   JUST(CheckGlobalTensorsMeta(out_grads));
   DisableCheckGlobalTensorMetaScope disable_meta_check;
-  return RunBackwardAndSaveGrads4LeafTensor(outputs, out_grads, retain_graph, create_graph);
+  if (ThreadLocalEnvBool<ONEFLOW_AD_PUT_LOSS_ON_TMP_COMPUTE_STREAM>()) {
+    // Put outputs into kTmpCompute stream for reducing blocking time of outputs[i].numpy() in main
+    // thread.
+    auto copied_outputs = JUST(TryCopyForSmallTensor(outputs));
+    JUST(TouchInTmpComputeStream(outputs));
+    return RunBackwardAndSaveGrads4LeafTensor(*copied_outputs, out_grads, retain_graph,
+                                              create_graph);
+  } else {
+    return RunBackwardAndSaveGrads4LeafTensor(outputs, out_grads, retain_graph, create_graph);
+  }
 }
 
 Maybe<TensorTuple> AutogradEngine::RunBackwardAndReturnInputsTensorGradIf(
