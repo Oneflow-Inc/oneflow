@@ -258,7 +258,7 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutNdSbp(Operator* op,
         obn, NdSbpInferHint(&parallel_desc, &logical_blob_desc, &no_set_nd_sbp));
   }
 
-  const auto NdSbpInferHint4bn = [&](const std::string& bn) -> Maybe<const NdSbpInferHint*> {
+  const auto NdSbpInferHint4Bn = [&](const std::string& bn) -> Maybe<const NdSbpInferHint*> {
     auto it = bn2nd_sbp_infer_hint.find(bn);
     CHECK_OR_RETURN(it != bn2nd_sbp_infer_hint.end())
         << Error::LogicalBlobNameNotExistError() << "bn: " << bn << " not found in "
@@ -266,7 +266,7 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutNdSbp(Operator* op,
     return Maybe<const NdSbpInferHint*>(&it->second);
   };
 
-  JUST(op->InferNdSbpSignatureIf(nd_sbp_sig_conf, parallel_desc, NdSbpInferHint4bn));
+  JUST(op->InferNdSbpSignatureIf(nd_sbp_sig_conf, parallel_desc, NdSbpInferHint4Bn));
 
   const auto& bn2nd_sbp = JUST(op->nd_sbp_signature())->bn_in_op2nd_sbp();
   for (const auto& obn : op->output_bns()) {
