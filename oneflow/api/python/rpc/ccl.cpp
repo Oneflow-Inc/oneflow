@@ -43,7 +43,8 @@ Maybe<py::bytes> CpuBroadcast(py::bytes* in, int64_t root) {
   const auto& data_transport_token =
       JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
   if (GlobalProcessCtx::Rank() == root) {
-    JUST(ccl::CpuBroadcast(buffer, buffer, length, root, parallel_desc, data_transport_token));
+    JUST(ccl::CpuBroadcast(buffer, buffer, length, root, parallel_desc,  // NOLINT
+                           data_transport_token));                       // NOLINT
     return *in;
   } else {
     // https://github.com/pybind/pybind11/issues/1236#issuecomment-527730864

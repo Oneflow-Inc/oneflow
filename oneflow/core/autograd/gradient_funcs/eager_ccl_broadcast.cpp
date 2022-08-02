@@ -49,7 +49,7 @@ Maybe<one::UserOpExpr> FindOrCreatEagerCclReduceOpExpr(Symbol<ParallelDesc> para
 
 }  // namespace
 
-struct EagerCclBroadcastCaptureState : public AutoGradCaptureState {
+struct EagerCclBroadcastCaptureState : public AutoGradCaptureState {  // NOLINT
   Symbol<ParallelDesc> parallel_desc;
   int64_t root;
 };

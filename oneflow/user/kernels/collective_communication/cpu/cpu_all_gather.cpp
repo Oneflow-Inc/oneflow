@@ -40,7 +40,7 @@ Maybe<void> AllGatherImpl(const void* in, void* out, size_t elem_cnt, DataType d
   size_t chunk_size = elem_cnt * GetSizeOfDataType(dtype);
   BalancedSplitter bs(chunk_size * parallel_num, parallel_num);
   const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
-  CHECK_OR_RETURN(opt_parallel_id->has_value());
+  CHECK_OR_RETURN(opt_parallel_id->has_value());  // NOLINT
   const auto& rank_group = JUST(RankGroup::New(parallel_desc));
   TransportToken transport_token = JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
   int64_t parallel_id = JUST(*opt_parallel_id);
