@@ -61,7 +61,7 @@ class ControlStreamPolicy final : public StreamPolicy {
     NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer())->set_done();
   }
 
-  bool OnSchedulerThread(StreamRole) const override { return true; }
+  bool OnSchedulerThread(StreamType) const override { return true; }
   bool SupportingTransportInstructions() const override { return false; }
 };
 
