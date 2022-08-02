@@ -14,23 +14,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_VM_LAZY_JOB_STREAM_TYPE_H_
-#define ONEFLOW_CORE_VM_LAZY_JOB_STREAM_TYPE_H_
+#ifndef ONEFLOW_CORE_VM_CRITICAL_SECTION_STREAM_POLICY_H_
+#define ONEFLOW_CORE_VM_CRITICAL_SECTION_STREAM_POLICY_H_
 
-#include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/vm/stream_policy.h"
 #include "oneflow/core/vm/instruction.h"
-#include "oneflow/core/device/device_context.h"
-#include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
 namespace vm {
 
-class LazyJobStreamType final : public StreamType {
+class CriticalSectionStreamPolicy final : public StreamPolicy {
  public:
-  LazyJobStreamType() = default;
-  virtual ~LazyJobStreamType() = default;
+  CriticalSectionStreamPolicy() = default;
+  virtual ~CriticalSectionStreamPolicy() = default;
 
-  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Symbol<Device> device) const override;
+  vm::Allocator* mut_allocator() override { return (vm::Allocator*)nullptr; }
+
+  DeviceType device_type() const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return DeviceType::kInvalidDevice;
+  }
+
+  ep::Stream* stream() override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return nullptr;
+  }
 
   void InitInstructionStatus(const Stream& stream,
                              InstructionStatusBuffer* status_buffer) const override;
@@ -45,4 +53,4 @@ class LazyJobStreamType final : public StreamType {
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_LAZY_JOB_STREAM_TYPE_H_
+#endif  // ONEFLOW_CORE_VM_CRITICAL_SECTION_STREAM_POLICY_H_
