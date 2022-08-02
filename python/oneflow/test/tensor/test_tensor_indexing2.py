@@ -642,6 +642,137 @@ def _test_combined_indexing(test_case, device, dtype):
         if device != "cpu":
             assert_backward_eq(reference, indexer)
 
+def _test_single_int(test_case, device):
+    v = flow.randn(5, 7, 3, device=device)
+    test_case.assertEqual(v[4].shape, (7, 3))
+
+
+def _test_multiple_int(test_case, device):
+    v = flow.randn(5, 7, 3, device=device)
+    test_case.assertEqual(v[4].shape, (7, 3))
+    test_case.assertEqual(v[4, :, 1].shape, (7,))
+
+
+def _test_none(test_case, device):
+    v = flow.randn(5, 7, 3, device=device)
+    test_case.assertEqual(v[None].shape, (1, 5, 7, 3))
+    test_case.assertEqual(v[:, None].shape, (5, 1, 7, 3))
+    test_case.assertEqual(v[:, None, None].shape, (5, 1, 1, 7, 3))
+    test_case.assertEqual(v[..., None].shape, (5, 7, 3, 1))
+
+def _test_step(test_case, device):
+    v = flow.arange(10, device=device)
+    _assert_tensor_equal(test_case, v[::1], v)
+    test_case.assertEqual(v[::2].tolist(), [0, 2, 4, 6, 8])
+    test_case.assertEqual(v[::3].tolist(), [0, 3, 6, 9])
+    test_case.assertEqual(v[::11].tolist(), [0])
+    test_case.assertEqual(v[1:6:2].tolist(), [1, 3, 5])
+
+def _test_step_assignment(test_case, device):
+    v = flow.zeros(4, 4, device=device)
+    v[0, 1::2] = flow.tensor([3., 4.], device=device)
+    # BUG(wyg): step assignment has a bug
+    #  test_case.assertEqual(v[0].tolist(), [0., 3., 0., 4.])
+    test_case.assertEqual(v[1:].sum(), 0)
+
+def _test_bool_indices(test_case, device):
+    v = flow.randn(5, 7, 3, device=device)
+    boolIndices = flow.tensor([True, False, True, True, False], dtype=flow.bool, device=device)
+    test_case.assertEqual(v[boolIndices].shape, (3, 7, 3))
+    _assert_tensor_equal(test_case, v[boolIndices], flow.stack([v[0], v[2], v[3]]))
+
+    v = flow.tensor([True, False, True], dtype=flow.bool, device=device)
+    boolIndices = flow.tensor([True, False, False], dtype=flow.bool, device=device)
+    uint8Indices = flow.tensor([1, 0, 0], dtype=flow.uint8, device=device)
+    test_case.assertEqual(v[boolIndices].shape, v[uint8Indices].shape)
+    test_case.assertEqual(v[boolIndices], v[uint8Indices])
+    test_case.assertEqual(v[boolIndices], flow.tensor([True], dtype=flow.bool, device=device))
+
+def _test_multiple_bool_indices(test_case, device):
+    v = flow.randn(5, 7, 3, device=device)
+    # NOTE: these broadcast together and are transposed to the first dim
+    mask1 = flow.tensor([1, 0, 1, 1, 0], dtype=flow.bool, device=device)
+    mask2 = flow.tensor([1, 1, 1], dtype=flow.bool, device=device)
+    test_case.assertEqual(v[mask1, :, mask2].shape, (3, 7))
+
+def _test_int_indices(test_case, device):
+    v = flow.randn(5, 7, 3, device=device)
+    test_case.assertEqual(v[[0, 4, 2]].shape, (3, 7, 3))
+    test_case.assertEqual(v[:, [0, 4, 2]].shape, (5, 3, 3))
+    test_case.assertEqual(v[:, [[0, 1], [4, 3]]].shape, (5, 2, 2, 3))
+
+def _test_int_indices2d(test_case, device):
+    x = flow.arange(0, 12, device=device).view(4, 3)
+    rows = flow.tensor([[0, 0], [3, 3]], device=device)
+    columns = flow.tensor([[0, 2], [0, 2]], device=device)
+    test_case.assertEqual(x[rows, columns].tolist(), [[0, 2], [9, 11]])
+
+def _test_int_indices_broadcast(test_case, device):
+    x = flow.arange(0, 12, device=device).view(4, 3)
+    rows = flow.tensor([0, 3], device=device)
+    columns = flow.tensor([0, 2], device=device)
+    result = x[rows[:, None], columns]
+    test_case.assertEqual(result.tolist(), [[0, 2], [9, 11]])
+
+def _test_empty_index(test_case, device):
+    x = flow.arange(0, 12, device=device).view(4, 3)
+    idx = flow.tensor([], dtype=flow.long, device=device)
+    test_case.assertEqual(x[idx].numel(), 0)
+
+    # empty assignment should have no effect but not throw an exception
+    y = x.clone()
+    y[idx] = -1
+    _assert_tensor_equal(test_case, x, y)
+
+    mask = flow.zeros(4, 3, device=device).to(flow.bool)
+    y[mask] = -1
+    _assert_tensor_equal(test_case, x, y)
+
+def _test_empty_ndim_index(test_case, device):
+    x = flow.randn(5, device=device)
+    _assert_tensor_equal(test_case, flow.empty(0, 2, device=device), x[flow.empty(0, 2, dtype=flow.int64, device=device)])
+
+    x = flow.randn(2, 3, 4, 5, device=device)
+    _assert_tensor_equal(test_case, flow.empty(2, 0, 6, 4, 5, device=device),
+                     x[:, flow.empty(0, 6, dtype=flow.int64, device=device)])
+
+    x = flow.empty(10, 0, device=device)
+    test_case.assertEqual(x[[1, 2]].shape, (2, 0))
+    # TODO: support empty ndim getitem
+    #  test_case.assertEqual(x[[], []].shape, (0,))
+    # TODO(wyg): catch exception for dimension with size 0
+    #  with test_case.assertRaisesRegex(IndexError, 'for dimension with size 0'):
+    #      x[:, [0, 1]]
+
+def _test_empty_ndim_index_bool(test_case, device):
+    x = flow.randn(5, device=device)
+    test_case.assertRaises(IndexError, lambda: x[flow.empty(0, 2, dtype=flow.uint8, device=device)])
+
+def _test_empty_slice(test_case, device):
+    x = flow.randn(2, 3, 4, 5, device=device)
+    y = x[:, :, :, 1]
+    z = y[:, 1:1, :]
+    test_case.assertEqual((2, 0, 4), z.shape)
+    # this isn't technically necessary, but matches NumPy stride calculations.
+    test_case.assertEqual((60, 20, 5), z.stride())
+    test_case.assertTrue(z.is_contiguous())
+
+def _test_index_getitem_copy_bools_slices(test_case, device):
+    true = flow.tensor(1, dtype=flow.uint8, device=device)
+    false = flow.tensor(0, dtype=flow.uint8, device=device)
+
+    tensors = [flow.randn(2, 3, device=device), flow.tensor([1.0], device=device)]
+
+    # TODO: compare tensor_storage after exporting the inferface
+    for a in tensors:
+        print(a.shape)
+        #  test_case.assertNotEqual(a.data_ptr(), a[True].data_ptr())
+        _assert_tensor_equal(test_case, flow.empty(0, *a.shape), a[False])
+        #  test_case.assertNotEqual(a.data_ptr(), a[true].data_ptr())
+        _assert_tensor_equal(test_case, flow.empty(0, *a.shape), a[false])
+        #  test_case.assertEqual(a.data_ptr(), a[None].data_ptr())
+        #  test_case.assertEqual(a.data_ptr(), a[...].data_ptr())
+
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -653,6 +784,21 @@ class TestIndexing(flow.unittest.TestCase):
             _test_basic_slice(test_case, **arg)
             _test_advanced_indexing(test_case, **arg, dtype=flow.float32)
             _test_combined_indexing(test_case, **arg, dtype=flow.float32)
+            _test_single_int(test_case, **arg)
+            _test_multiple_int(test_case, **arg)
+            _test_none(test_case, **arg)
+            _test_step(test_case, **arg)
+            _test_step_assignment(test_case, **arg)
+            _test_bool_indices(test_case, **arg)
+            _test_multiple_bool_indices(test_case, **arg)
+            _test_int_indices(test_case, **arg)
+            _test_int_indices2d(test_case, **arg)
+            _test_int_indices_broadcast(test_case, **arg)
+            _test_empty_index(test_case, **arg)
+            _test_empty_ndim_index(test_case, **arg)
+            _test_empty_ndim_index_bool(test_case, **arg)
+            _test_empty_slice(test_case, **arg)
+            _test_index_getitem_copy_bools_slices(test_case, **arg)
 
 
 if __name__ == "__main__":
