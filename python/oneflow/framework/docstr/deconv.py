@@ -21,9 +21,9 @@ add_docstr(
     r"""
     conv_transpose1d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1) -> Tensor
 
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.conv_transpose1d.html
-
     Applies a 1D transposed convolution operator over an input signal composed of several input planes, sometimes also called “deconvolution”.
+    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.conv_transpose1d.html
 
     See :class:`~oneflow.nn.ConvTranspose1d` for details and output shape.
 
@@ -57,9 +57,9 @@ add_docstr(
     r"""
     conv_transpose2d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1) -> Tensor
 
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.conv_transpose3d.html
-
     Applies a 2D transposed convolution operator over an input image composed of several input planes, sometimes also called “deconvolution”.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.conv_transpose3d.html
 
     See :class:`~oneflow.nn.ConvTranspose2d` for details and output shape.
 
@@ -93,9 +93,9 @@ add_docstr(
     r"""
     conv_transpose3d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1) -> Tensor
 
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.conv_transpose3d.html
-
     Applies a 3D transposed convolution operator over an input image composed of several input planes, sometimes also called “deconvolution”.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.conv_transpose3d.html
 
     See :class:`~oneflow.nn.ConvTranspose3d` for details and output shape.
 

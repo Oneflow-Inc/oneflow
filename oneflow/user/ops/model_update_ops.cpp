@@ -782,7 +782,7 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
 
 /* static */ Maybe<void> AdamBiasCorrectionFactorOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = ctx->InputShape("train_step", 0);
+  *ctx->MutOutputShape("out", 0) = ctx->InputShape("train_step", 0);
   return Maybe<void>::Ok();
 }
 
@@ -796,7 +796,7 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> AdamBiasCorrectionFactorOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kFloat;
+  *ctx->MutOutputDType("out", 0) = DataType::kFloat;
   return Maybe<void>::Ok();
 }
 

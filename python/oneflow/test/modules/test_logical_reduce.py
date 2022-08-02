@@ -136,6 +136,24 @@ class TestLogicalReduce(flow.unittest.TestCase):
         )
         return torch.all(x, dim)
 
+    @autotest(auto_backward=False, check_graph=False)
+    def test_max_bool_input_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(
+            device, dtype=torch.bool
+        )
+        return torch.max(x, dim)
+
+    @autotest(auto_backward=False, check_graph=False)
+    def test_min_bool_input_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(
+            device, dtype=torch.bool
+        )
+        return torch.min(x, dim)
+
     @autotest(n=5, auto_backward=False)
     def test_any_bool_input_with_random_data(test_case):
         device = random_device()

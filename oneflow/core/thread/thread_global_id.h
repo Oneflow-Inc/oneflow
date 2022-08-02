@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_THREAD_CONSISTENT_UNIQUE_ID_H_
-#define ONEFLOW_CORE_THREAD_CONSISTENT_UNIQUE_ID_H_
+#ifndef ONEFLOW_CORE_THREAD_GLOBAL_UNIQUE_ID_H_
+#define ONEFLOW_CORE_THREAD_GLOBAL_UNIQUE_ID_H_
 
 #include <string>
 #include "oneflow/core/common/maybe.h"
@@ -34,4 +34,4 @@ Maybe<void> ResetThisThreadUniqueGlobalId();
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_THREAD_CONSISTENT_UNIQUE_ID_H_
+#endif  // ONEFLOW_CORE_THREAD_GLOBAL_UNIQUE_ID_H_

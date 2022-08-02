@@ -35,7 +35,6 @@ class JobBuildAndInferCtx {
   virtual ~JobBuildAndInferCtx() = default;
 
   Maybe<void> SetJobConf(const JobConfigProto& job_conf);
-  Maybe<void> AddLbiAndDiffWatcherUuidPair(const LbiAndDiffWatcherUuidPair& lbi_uuid_pair);
   Maybe<OpAttribute> AddAndInferGlobalOp(const OperatorConf& op_conf);
   Maybe<OpAttribute> AddAndInferLocalOp(const OperatorConf& op_conf);
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
@@ -172,26 +171,6 @@ class LazyJobBuildAndInferCtx : public JobBuildAndInferCtx {
   bool GetIsLocalParallelView() const override { return false; }
   Maybe<LogicalBlobId> FindOrCreateLocalLbiFromCompatibleGlobalBlob(
       int64_t scope_symbol_id, const LogicalBlobId& lbn) override;
-};
-
-class EagerJobBuildAndInferCtx : public JobBuildAndInferCtx {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(EagerJobBuildAndInferCtx);
-  EagerJobBuildAndInferCtx(Job* job, int64_t job_id) : JobBuildAndInferCtx(job, job_id) {}
-  virtual ~EagerJobBuildAndInferCtx() = default;
-
- private:
-  Maybe<void> Complete() override;
-  Maybe<void> CheckAllInputsWithSameParallelNum(const Operator& op,
-                                                int32_t parallel_num) const override;
-  std::string GetLocalOpName(const std::string& op_name, int64_t parallel_id) const override;
-  int64_t SizeOfSubGlobalOpList(int64_t parallel_num) const override { return 1; }
-  ParallelConf GetLocalOpParallelConf(const ParallelDesc&, int64_t parallel_id) const override;
-  bool GetIsLocalParallelView() const override { return true; }
-  Maybe<LogicalBlobId> FindOrCreateLocalLbiFromCompatibleGlobalBlob(
-      int64_t scope_symbol_id, const LogicalBlobId& lbn) override;
-
-  HashSet<std::string> executed_op_names_;
 };
 
 }  // namespace oneflow

@@ -30,16 +30,16 @@ Maybe<Symbol<Stream>> MakeEmptyStream(const Symbol<Device>& out_device, const bo
         << "empty op only support pin_memory in cpu device but got " << out_device->type();
     // TODO:(zhaoluyang) Parsing pin-memory-device from python
     auto pin_device = JUST(Device::New("cuda"));
-    return Stream::New(pin_device, StreamRole::kPinnedCompute);
+    return Stream::New(pin_device, StreamType::kPinnedCompute);
   }
-  return Stream::New(out_device, StreamRole::kCompute);
+  return Stream::New(out_device, StreamType::kCompute);
 }
 
 }  // namespace
 
 /* static */ Maybe<void> EmptyOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("out", 0) = Shape(ctx->Attr<Shape>("shape").dim_vec());
-  *ctx->OutputStride("out", 0) = Stride(Shape(ctx->Attr<Shape>("shape").dim_vec()));
+  *ctx->MutOutputShape("out", 0) = Shape(ctx->Attr<Shape>("shape").dim_vec());
+  *ctx->MutOutputStride("out", 0) = Stride(Shape(ctx->Attr<Shape>("shape").dim_vec()));
   return Maybe<void>::Ok();
 }
 
@@ -52,8 +52,8 @@ Maybe<Symbol<Stream>> MakeEmptyStream(const Symbol<Device>& out_device, const bo
       GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id);
   const Shape& physical_shape = tensor_slice_view.shape();
 
-  *ctx->OutputShape("out", 0) = physical_shape;
-  *ctx->OutputStride("out", 0) = Stride(physical_shape);
+  *ctx->MutOutputShape("out", 0) = physical_shape;
+  *ctx->MutOutputStride("out", 0) = Stride(physical_shape);
   return Maybe<void>::Ok();
 }
 
@@ -66,7 +66,7 @@ Maybe<Symbol<Stream>> MakeEmptyStream(const Symbol<Device>& out_device, const bo
 }
 
 /* static */ Maybe<void> EmptyOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
+  *ctx->MutOutputDType("out", 0) = ctx->Attr<DataType>("dtype");
   return Maybe<void>::Ok();
 }
 

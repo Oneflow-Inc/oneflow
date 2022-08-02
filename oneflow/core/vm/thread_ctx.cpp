@@ -25,8 +25,8 @@ size_t ThreadCtx::TryReceiveAndRun() {
   size_t size = tmp_list.size();
   INTRUSIVE_FOR_EACH(instruction, &tmp_list) {
     tmp_list.Erase(instruction.Mutable());
-    const StreamType& stream_type = instruction->stream().stream_type();
-    stream_type.Run(instruction.Mutable());
+    const StreamPolicy& stream_policy = instruction->stream().stream_policy();
+    stream_policy.Run(instruction.Mutable());
   }
   return size;
 }
