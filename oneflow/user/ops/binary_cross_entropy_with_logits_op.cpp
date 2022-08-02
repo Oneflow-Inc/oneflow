@@ -33,8 +33,6 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   if (ctx->Attr<bool>("has_pos_weight")) {
     const auto& pos_weight_desc = ctx->InputTensorDesc("pos_weight", 0);
     CHECK_EQ_OR_RETURN(pos_weight_desc.is_dynamic(), input_desc.is_dynamic());
-    CHECK_EQ_OR_RETURN(pos_weight_desc.shape(),
-                       Shape({input_desc.shape().At(input_desc.shape().NumAxes() - 1)}));
   }
   user_op::TensorDesc* out_desc = ctx->MutOutputTensorDesc("out", 0);
   *out_desc->mut_is_dynamic() = input_desc.is_dynamic();

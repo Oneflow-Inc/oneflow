@@ -1128,20 +1128,25 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
                            const std::string& reduction) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("has_pos_weight", pos_weight.has_value()));
-    std::shared_ptr<Tensor> broadcast_pos_weight;
-    const int64_t last_dim = input->shape()->NumAxes() - 1;
+
     if (pos_weight) {
-      broadcast_pos_weight = JUST(pos_weight);
-      if (broadcast_pos_weight->shape()->At(0) == 1 && input->shape()->At(last_dim) > 1) {
-          broadcast_pos_weight = JUST(Expand(broadcast_pos_weight, Shape({input->shape()->At(last_dim)})));
-        }
+      const auto pos_weight_shape = JUST(pos_weight)->shape();
+      // pos weight shape = (), (1,), (1,1)... or (input/target.shape[-1],)
+      const bool is_pos_weight_shape_valid =
+          (pos_weight_shape->elem_cnt() == 1)
+          || (pos_weight_shape->NumAxes() == 1
+              && pos_weight_shape->At(0) == target->shape()->back());
+
+      CHECK_OR_RETURN(is_pos_weight_shape_valid)
+          << Error::RuntimeError()
+          << "pos_weight be a vector with length equal to the number of classes.";
     }
 
     std::shared_ptr<Tensor> out;
     if (weight) {
       if (pos_weight) {
         out = JUST(OpInterpUtil::Dispatch<Tensor>(
-            *op_weight_pos_, {input, target, JUST(weight), broadcast_pos_weight}, attrs));
+            *op_weight_pos_, {input, target, JUST(weight), JUST(pos_weight)}, attrs));
       } else {
         out =
             JUST(OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight)}, attrs));
@@ -1149,7 +1154,7 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
     } else {
       if (pos_weight) {
         out = JUST(
-            OpInterpUtil::Dispatch<Tensor>(*op_pos_, {input, target, broadcast_pos_weight}, attrs));
+            OpInterpUtil::Dispatch<Tensor>(*op_pos_, {input, target, JUST(pos_weight)}, attrs));
       } else {
         if (reduction == "mean") {
           return OpInterpUtil::Dispatch<Tensor>(*op_reduce_mean_, {input, target});
