@@ -41,6 +41,9 @@ class ScheduleCtx {
   virtual void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const = 0;
 };
 
+using ReadyInstructionList =
+    intrusive::List<INTRUSIVE_FIELD(Instruction, dispatched_instruction_hook_)>;
+
 class VirtualMachineEngine final : public intrusive::Base {
  public:
   // types
@@ -90,8 +93,8 @@ class VirtualMachineEngine final : public intrusive::Base {
   void MoveToGarbageListAndNotifyGC(const ScheduleCtx& schedule_ctx);
 
  private:
-  using ReadyInstructionList =
-      intrusive::List<INTRUSIVE_FIELD(Instruction, dispatched_instruction_hook_)>;
+  template<typename DoEachStreamT>
+  void ForEachStreamOnDevice(Symbol<Device> device, const DoEachStreamT& DoEachStream);
 
   ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
 
@@ -112,10 +115,14 @@ class VirtualMachineEngine final : public intrusive::Base {
   DependenceAccess* AccessDependence(OperandAccessType access_type, Dependence* dependence,
                                      Instruction* instrution);
   void ConsumeDependences(Instruction* instruction);
+  template<void (VirtualMachineEngine::*OOMHandler)(vm::Stream*, const ScheduleCtx&)>
   void DispatchInstruction(Instruction* instruction, const ScheduleCtx& schedule_ctx);
 
   bool EdgeDispatchable(const Instruction* src, const Instruction* dst) const;
   bool Dispatchable(Instruction* instruction) const;
+  void BusyWaitInstructionsDoneThenShrink(vm::Stream* stream, const ScheduleCtx& schedule_ctx);
+  void AbortOnOOM(vm::Stream* stream, const ScheduleCtx& schedule_ctx);
+
   void TryDispatchReadyInstructions();
 
   void LivelyInstructionListPushBack(Instruction* instruction);

@@ -256,6 +256,8 @@ DIRECT_PASS_FUNC(PyTensorObject_amin, functional::amin)
 DIRECT_PASS_FUNC(PyTensorObject_amax, functional::amax)
 DIRECT_PASS_FUNC(PyTensorObject_addcmul, functional::addcmul)
 DIRECT_PASS_FUNC(PyTensorObject_addcmul_, functional::addcmul_)
+DIRECT_PASS_FUNC(PyTensorObject_addcdiv, functional::addcdiv)
+DIRECT_PASS_FUNC(PyTensorObject_addcdiv_, functional::addcdiv_)
 DIRECT_PASS_FUNC(PyTensorObject_clip, functional::clip)
 DIRECT_PASS_FUNC(PyTensorObject_clip_, functional::clip_)
 DIRECT_PASS_FUNC(PyTensorObject_clamp, functional::clamp)
@@ -647,8 +649,9 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
     return NULL;
   };
 
-  CHECK_OR_THROW(placement_obj != Py_None && sbp_obj != Py_None) << Error::InvalidValueError(
-      "Converting a local tensor to global tensor must have placement and sbp parameters.");
+  CHECK_OR_THROW(placement_obj != Py_None && sbp_obj != Py_None)
+      << Error::InvalidValueError()
+      << "Converting a local tensor to global tensor must have placement and sbp parameters.";
   CHECK_OR_THROW(functional::PyParallelDescCheck(placement_obj))
       << Error::TypeError() << "Invalid parameter placement with type "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(placement_obj)));
@@ -662,8 +665,9 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
         << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(sbp_obj)));
     sbp = functional::PyUnpackSbpParallelSequence(sbp_obj);
   }
-  return PyTensor_New(ASSERT_PTR(functional::ToGlobal(
-      tensor, functional::PyUnpackParallelDesc(placement_obj), sbp, {}, check_meta)));
+  return PyTensor_New(
+      ASSERT_PTR(functional::ToGlobal(tensor, functional::PyUnpackParallelDesc(placement_obj), sbp,
+                                      {}, check_meta, /*copy=*/false)));
   END_HANDLE_ERRORS
 }
 
@@ -719,8 +723,8 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
   } else if (functional::PySbpParallelSequenceCheck(grad_sbp_obj)) {
     grad_sbp = functional::PyUnpackSbpParallelSequence(grad_sbp_obj);
   }
-  return PyTensor_New(
-      ASSERT_PTR(functional::ToGlobal(tensor, placement, sbp, grad_sbp, check_meta)));
+  return PyTensor_New(ASSERT_PTR(
+      functional::ToGlobal(tensor, placement, sbp, grad_sbp, check_meta, /*copy=*/false)));
   END_HANDLE_ERRORS
 }
 
@@ -744,7 +748,7 @@ static PyObject* PyTensorObject_to_local(PyObject* self, PyObject* unused) {
   auto tensor = PyTensor_Unpack(self);
   CHECK_OR_THROW(tensor->is_global())
       << Error::RuntimeError() << "Expected global tensor for to_local but got local tensor!";
-  return PyTensor_New(ASSERT_PTR(functional::GlobalToLocal(tensor)));
+  return PyTensor_New(ASSERT_PTR(functional::GlobalToLocal(tensor, /*copy=*/false)));
   END_HANDLE_ERRORS
 }
 
@@ -773,7 +777,8 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
       CHECK_OR_THROW(value_tensor->is_global())
           << Error::RuntimeError()
           << "tensor_setitem(): value must be a global tensor when self is global";
-      value_tensor = ASSERT_PTR(functional::ToGlobal(value_tensor, placement, sbp, {}, true));
+      value_tensor =
+          ASSERT_PTR(functional::ToGlobal(value_tensor, placement, sbp, {}, true, /*copy=*/false));
     }
   } else {
     if (functional::PyScalarCheck(value)) {
@@ -811,6 +816,8 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"diagonal", (PyCFunction)PyTensorObject_diagonal, METH_VARARGS | METH_KEYWORDS, NULL},
     {"addcmul", (PyCFunction)PyTensorObject_addcmul, METH_VARARGS | METH_KEYWORDS, NULL},
     {"addcmul_", (PyCFunction)PyTensorObject_addcmul_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"addcdiv", (PyCFunction)PyTensorObject_addcdiv, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"addcdiv_", (PyCFunction)PyTensorObject_addcdiv_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"matmul", (PyCFunction)PyTensorObject_matmul, METH_VARARGS | METH_KEYWORDS, NULL},
     {"int", PyTensorObject_int, METH_NOARGS, NULL},
     {"long", PyTensorObject_long, METH_NOARGS, NULL},

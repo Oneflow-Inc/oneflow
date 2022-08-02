@@ -19,12 +19,14 @@ limitations under the License.
 #include "oneflow/core/profiler/kineto_shim.h"
 #include "oneflow/core/profiler/event_recorder.h"
 #include "oneflow/core/vm/vm_util.h"
+#ifdef WITH_CUDA
+#include "oneflow/core/device/cuda_util.h"
+#endif  // WITH_CUDA
 #ifdef OF_ENABLE_PROFILER
 #include <nvtx3/nvToolsExt.h>
 #include <sys/syscall.h>
 #include <iostream>
 #include <cuda_profiler_api.h>
-#include "oneflow/core/device/cuda_util.h"
 #endif  // OF_ENABLE_PROFILER
 
 namespace oneflow {

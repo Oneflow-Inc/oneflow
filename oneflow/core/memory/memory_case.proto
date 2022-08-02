@@ -1,21 +1,11 @@
 syntax = "proto2";
 package oneflow;
 
-message CudaPinnedMemory {
-  required int64 device_id = 1;
-}
-
-message HostMemory {
-  optional CudaPinnedMemory cuda_pinned_mem = 1;
-}
-
-message DeviceCudaMemory {
-  required int64 device_id = 1;
-}
+import "oneflow/core/common/device_type.proto";
 
 message MemoryCase {
-  oneof case {
-    HostMemory host_mem = 1;
-    DeviceCudaMemory device_cuda_mem = 2;
-  }
+  required DeviceType device_type = 1;
+  required int64 device_id = 2;
+  optional DeviceType pinned_device_type = 3;
+  optional int64 pinned_device_id = 4;
 }

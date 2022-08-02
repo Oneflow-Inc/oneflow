@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/scalar_math_kernels.h"
+#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 #include "oneflow/core/common/scalar.h"
 
@@ -136,6 +136,7 @@ class ScalarReverseMathKernel final : public user_op::OpKernel {
 #define SCALAR_MATH_SEQ                                                       \
   OF_PP_MAKE_TUPLE_SEQ("scalar_add", ep::primitive::BinaryOp::kAdd)           \
   OF_PP_MAKE_TUPLE_SEQ("scalar_mul", ep::primitive::BinaryOp::kMul)           \
+  OF_PP_MAKE_TUPLE_SEQ("scalar_div", ep::primitive::BinaryOp::kDiv)           \
   OF_PP_MAKE_TUPLE_SEQ("scalar_floordiv", ep::primitive::BinaryOp::kFloorDiv) \
   OF_PP_MAKE_TUPLE_SEQ("scalar_fmod", ep::primitive::BinaryOp::kFmod)         \
   OF_PP_MAKE_TUPLE_SEQ("scalar_pow", ep::primitive::BinaryOp::kPow)
@@ -189,46 +190,5 @@ REGISTER_BINARY_MATH_WITH_ATTR_ELEMWISE_USER_KERNEL("scalar_pow_grad",
                                                     ep::primitive::BinaryOp::kScalarBasePowerGrad);
 REGISTER_BINARY_MATH_WITH_ATTR_ELEMWISE_USER_KERNEL("scalar_reverse_pow_grad",
                                                     ep::primitive::BinaryOp::kScalarExpPowerGrad);
-
-// template<DeviceType device_type, typename T>
-// class CpuScalarReversePowGradKernel final : public user_op::OpKernel {
-//  public:
-//   CpuScalarReversePowGradKernel() = default;
-//   ~CpuScalarReversePowGradKernel() = default;
-
-//  private:
-//   void Compute(user_op::KernelComputeContext* ctx) const override {
-//     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
-//     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
-//     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
-//     const T* x_ptr = x_tensor->dptr<T>();
-//     const T* dy_ptr = dy_tensor->dptr<T>();
-//     T* dx_ptr = dx_tensor->mut_dptr<T>();
-//     T scalar_operand = static_cast<T>(0);
-//     if (ctx->Attr<bool>("has_int_operand")) {
-//       scalar_operand = static_cast<T>(ctx->Attr<int64_t>("int_operand"));
-//     } else if (ctx->Attr<bool>("has_float_operand")) {
-//       scalar_operand = static_cast<T>(ctx->Attr<double>("float_operand"));
-//     } else {
-//       UNIMPLEMENTED();
-//     }
-
-//     const int32_t elem_cnt = x_tensor->shape_view().elem_cnt();
-//     // NOTE: y = a^x    ==>>   dy/dx = a^x * lna
-//     FOR_RANGE(int32_t, i, 0, elem_cnt) {
-//       dx_ptr[i] = std::pow(scalar_operand, x_ptr[i]) * std::log(scalar_operand) * dy_ptr[i];
-//     }
-//   }
-//   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-// };
-
-// #define REGISTER_CPU_SCALAR_REVERSE_POW_GRAD_KERNEL(device, dtype) \
-//   REGISTER_USER_KERNEL("scalar_reverse_pow_grad")                  \
-//       .SetCreateFn<CpuScalarReversePowGradKernel<device, dtype>>() \
-//       .SetIsMatchedHob((user_op::HobDeviceType() == device)        \
-//                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
-
-// REGISTER_CPU_SCALAR_REVERSE_POW_GRAD_KERNEL(DeviceType::kCPU, float);
-// REGISTER_CPU_SCALAR_REVERSE_POW_GRAD_KERNEL(DeviceType::kCPU, double);
 
 }  // namespace oneflow

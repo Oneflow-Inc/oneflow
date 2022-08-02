@@ -1,6 +1,9 @@
 # OneFlow
 
-**OneFlow is a performance-centered and open-source deep learning framework.**
+OneFlow is a deep learning framework designed to be **user-friendly, scalable and efficient**. With OneFlow, it is easy to:
+- program a model with **PyTorch-like API**
+- scale a model to n-dimensional-parallel/distributed exectuion with the **Global View API**
+- accelerate/deploy a model with the **Static Graph Compiler**.
 
 [![Simple CI](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml/badge.svg)](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml)
 [![Nightly Docker Image](https://github.com/Oneflow-Inc/docker-images/actions/workflows/oneflow-nightly.yml/badge.svg)](https://github.com/Oneflow-Inc/docker-images/actions/workflows/oneflow-nightly.yml)

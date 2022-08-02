@@ -22,8 +22,10 @@ from oneflow.test_utils.automated_test_util import *
 from oneflow.nn.common_types import _size_2_t
 
 
-@autotest(n=3, auto_backward=True, check_graph=False)
+@autotest(n=1, check_graph=False)
 def _test_unfold_with_random_data(test_case, placement, sbp):
+    ndim = 4
+    dims = [random(1, 4).to(int).value() * 8 for i in range(ndim)]
     m = torch.nn.Unfold(
         kernel_size=random(1, 3).to(_size_2_t),
         dilation=random(1, 2).to(_size_2_t),
@@ -31,17 +33,24 @@ def _test_unfold_with_random_data(test_case, placement, sbp):
         stride=random(1, 2).to(_size_2_t),
     )
     m.train(random())
-    m.to_global(placement, sbp)
-    x = random_tensor(ndim=4, dim0=8, dim1=2, dim2=4, dim3=2,).to_global(placement, sbp)
+
+    x = random_tensor(ndim, *dims).to_global(placement, sbp)
     y = m(x)
-    return y
+    func_y = torch.nn.functional.unfold(
+        x,
+        kernel_size=random(1, 3).to(_size_2_t),
+        dilation=random(1, 2).to(_size_2_t),
+        padding=random(0, 1).to(_size_2_t),
+        stride=random(1, 2).to(_size_2_t),
+    )
+    return y, func_y
 
 
 class TestUnfold(flow.unittest.TestCase):
     @globaltest
     def test_unfold_with_random_data(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=1):
+            for sbp in all_sbp(placement, max_dim=4):
                 _test_unfold_with_random_data(test_case, placement, sbp)
 
 

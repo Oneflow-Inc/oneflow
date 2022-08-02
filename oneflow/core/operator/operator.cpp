@@ -29,7 +29,6 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/job/nd_sbp_infer_hint.h"
-#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
@@ -777,7 +776,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
         const auto& ibn = input_bns().at(ibn_id);
         const NdSbp& nd_sbp = JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp();
         err << " " << ibn << ": " << NdSbpToString(nd_sbp);
-        if (!requires_same_sbp[ibn_id]) { err << " [ transfer disabled ]"; }
+        if (requires_same_sbp[ibn_id]) { err << " [ transfer disabled ]"; }
         err << ";";
       }
 
@@ -1322,7 +1321,7 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
         } else {
           ParallelConf parallel_conf = pair.second->parallel_conf();
           const auto MakeParallelDescSymbol = [&parallel_conf]() -> Maybe<int64_t> {
-            int64_t symbol_id;
+            int64_t symbol_id = 0;
             const auto BuildInstruction =
                 [&symbol_id, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
               symbol_id = JUST(JUST(builder->GetParallelDescSymbol(parallel_conf))->symbol_id());

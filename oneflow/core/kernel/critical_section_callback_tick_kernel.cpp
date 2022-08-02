@@ -36,11 +36,10 @@ void CriticalSectionCallbackTickKernel::ForwardDataContent(KernelContext* ctx) c
   auto* buffer_mgr = Singleton<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
   CHECK(op_conf().has_critical_section_callback_tick_conf());
   const std::string& buffer_name = op_conf().critical_section_callback_tick_conf().buffer_name();
-  std::shared_ptr<CriticalSectionInstance> foreign_critical_section_instance;
-  BufferStatus buffer_status =
-      buffer_mgr->Get(buffer_name)->TryReceive(&foreign_critical_section_instance);
+  std::shared_ptr<CriticalSectionInstance> critical_section_instance;
+  BufferStatus buffer_status = buffer_mgr->Get(buffer_name)->TryReceive(&critical_section_instance);
   CHECK_EQ(buffer_status, kBufferStatusSuccess);
-  foreign_critical_section_instance->Finish();
+  critical_section_instance->Finish();
 }
 
 REGISTER_KERNEL(OperatorConf::kCriticalSectionCallbackTickConf, CriticalSectionCallbackTickKernel);
