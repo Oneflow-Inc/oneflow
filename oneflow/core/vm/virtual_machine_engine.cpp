@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/common/env_var/vm.h"
 #include "oneflow/core/vm/caching_allocator.h"
 #include "oneflow/core/vm/fuse_instruction_policy.h"
-#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/release_tensor_instruction_policy.h"
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/common/util.h"

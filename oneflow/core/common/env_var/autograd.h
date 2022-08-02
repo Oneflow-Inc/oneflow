@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,30 +12,16 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-from contextlib import contextmanager
+*/
+#ifndef ONEFLOW_CORE_COMMON_ENV_VAR_AUTOGRAD_H_
+#define ONEFLOW_CORE_COMMON_ENV_VAR_AUTOGRAD_H_
 
-NORMAL_MODE = "NORMAL_MODE"
-GLOBAL_MODE = "GLOBAL_MODE"
-DEVICE_MODE = "DEVICE_MODE"
+#include "oneflow/core/common/env_var/env_var.h"
 
+namespace oneflow {
 
-def CurrentMode():
-    return mode_statck[0]
+DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_AD_PUT_LOSS_ON_TMP_COMPUTE_STREAM, true);
 
+}
 
-def IsValidMode(mode):
-    return mode == NORMAL_MODE or mode == GLOBAL_MODE or mode == DEVICE_MODE
-
-
-@contextmanager
-def ModeScope(mode):
-    global mode_statck
-    mode_statck.insert(0, mode)
-    try:
-        yield
-    finally:
-        mode_statck.pop(0)
-
-
-mode_statck = [NORMAL_MODE]
+#endif  // ONEFLOW_CORE_COMMON_ENV_VAR_AUTOGRAD_H_

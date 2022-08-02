@@ -29,7 +29,6 @@ namespace oneflow {
 namespace vm {
 
 class EagerBlobObject;
-class PhyInstrOperand;
 class Stream;
 
 class InstructionPolicy {
@@ -64,12 +63,6 @@ class InstructionPolicy {
   void InitInstructionStatusIf(Instruction* instruction) { InitInstructionStatus(instruction); }
 
   void DeleteInstructionStatusIf(Instruction* instruction) { DeleteInstructionStatus(instruction); }
-
-  [[deprecated("\"PhyInstrOperand\" will be removed soon. Please avoid to use this method whenever "
-               "possible.")]] virtual const std::shared_ptr<PhyInstrOperand>&
-  phy_instr_operand() const {
-    UNIMPLEMENTED();
-  }
 
  protected:
   InstructionPolicy() : stream_sequential_dependence_(nullptr) {}
