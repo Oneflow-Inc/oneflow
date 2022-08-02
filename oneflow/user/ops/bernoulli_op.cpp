@@ -43,4 +43,29 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
+/* static */ Maybe<void> BernoulliProbOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
+  const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
+  *out_tensor->mut_shape() = in_tensor.shape();
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> BernoulliProbOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> BernoulliProbOp::GetSbp(user_op::SbpContext* ctx) {
+  const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  for (int i = 0; i < in_tensor.shape().NumAxes(); ++i) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> BernoulliProbOp::InferDataType(user_op::InferContext* ctx) {
+  user_op::TensorDesc* out_tensor = ctx->MutOutputTensorDesc("out", 0);
+  *out_tensor->mut_data_type() = ctx->Attr<DataType>("dtype");
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow
