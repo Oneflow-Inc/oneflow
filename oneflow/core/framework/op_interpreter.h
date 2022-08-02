@@ -75,6 +75,9 @@ class OpExprInterpreter {
 
   virtual Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs,
                             const OpExprInterpContext& ctx) const = 0;
+
+  virtual Maybe<void> ApplyImpl(const FunctionOpExpr& op_expr, const TensorTuple& inputs,
+                        TensorTuple* outputs, const OpExprInterpContext&) const;
 };
 
 #define FOR_EACH_BUILTIN_OPS(_macro) \
@@ -119,7 +122,7 @@ class LazyInterpreter : public OpExprInterpreter {
   DECLARE_NORMAL_APPLY_FUNC(FeedInputOp);
   DECLARE_NORMAL_APPLY_FUNC(FeedVariableOp);
   DECLARE_NORMAL_APPLY_FUNC(FetchOutputOp);
-  DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
+  DECLARE_NORMAL_APPLY_FUNC(FunctionOp) override;
   DECLARE_NORMAL_APPLY_FUNC(GlobalToGlobalOp);
   DECLARE_NORMAL_APPLY_FUNC(ImageDecoderRandomCropResizeOp);
 };
@@ -139,7 +142,7 @@ class EagerInterpreter : public OpExprInterpreter {
 
  private:
   FOR_EACH_BUILTIN_OPS(DECLARE_PURE_VIRTUAL_APPLY_FUNC);
-  DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
+  DECLARE_NORMAL_APPLY_FUNC(FunctionOp) override;
 };
 
 class EagerGlobalInterpreter : public EagerInterpreter {
