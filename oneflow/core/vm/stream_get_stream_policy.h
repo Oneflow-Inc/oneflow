@@ -13,21 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_STREAM_GET_STREAM_TYPE_H_
-#define ONEFLOW_CORE_VM_STREAM_GET_STREAM_TYPE_H_
+#ifndef ONEFLOW_CORE_VM_STREAM_GET_STREAM_POLICY_H_
+#define ONEFLOW_CORE_VM_STREAM_GET_STREAM_POLICY_H_
 
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/stream_role.h"
-#include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/vm/control_stream_policy.h"
 #include "oneflow/core/vm/event_recorded_ep_stream_policy.h"
-#include "oneflow/core/vm/critical_section_stream_type.h"
+#include "oneflow/core/vm/critical_section_stream_policy.h"
 #include "oneflow/core/vm/ep_d2h_stream_policy.h"
 #include "oneflow/core/vm/ep_stream_policy.h"
 #include "oneflow/core/vm/pinned_ep_stream_policy.h"
-#include "oneflow/core/vm/lazy_job_stream_type.h"
-#include "oneflow/core/vm/naive_stream_policy.h"
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/vm/lazy_job_stream_policy.h"
 
 namespace oneflow {
 
@@ -53,26 +50,16 @@ struct CreateStreamPolicy final : public StreamRoleVisitor<CreateStreamPolicy> {
     return std::shared_ptr<vm::StreamPolicy>(new vm::ControlStreamPolicy());
   }
   static Maybe<vm::StreamPolicy> VisitCriticalSection(Symbol<Device> device) {
-    const auto* stream_type = SingletonPtr<vm::CriticalSectionStreamType>();
-    return Create(stream_type, device);
+    return std::shared_ptr<vm::StreamPolicy>(new vm::CriticalSectionStreamPolicy());
   }
   static Maybe<vm::StreamPolicy> VisitLazyJobLauncher(Symbol<Device> device) {
-    const auto* stream_type = SingletonPtr<vm::LazyJobStreamType>();
-    return Create(stream_type, device);
+    return std::shared_ptr<vm::StreamPolicy>(new vm::LazyJobStreamPolicy());
   }
   static Maybe<vm::StreamPolicy> VisitPinnedCompute(Symbol<Device> device) {
     return std::shared_ptr<vm::StreamPolicy>(new vm::PinnedEpStreamPolicy(device));
-  }
-
- private:
-  static Maybe<vm::StreamPolicy> Create(const vm::StreamType* stream_type, Symbol<Device> device) {
-    std::unique_ptr<DeviceCtx> device_ctx{};
-    stream_type->InitDeviceCtx(&device_ctx, device);
-    return std::shared_ptr<vm::StreamPolicy>(
-        new vm::NaiveStreamPolicy(stream_type, std::move(device_ctx)));
   }
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_STREAM_GET_STREAM_TYPE_H_
+#endif  // ONEFLOW_CORE_VM_STREAM_GET_STREAM_POLICY_H_
