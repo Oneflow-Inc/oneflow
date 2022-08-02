@@ -153,7 +153,7 @@ Maybe<void> AutogradEngine::RunBackwardAndSaveGrads4LeafTensorIf(const TensorTup
   JUST(CheckGlobalTensorsMeta(outputs));
   JUST(CheckGlobalTensorsMeta(out_grads));
   DisableCheckGlobalTensorMetaScope disable_meta_check;
-  if (ThreadLocalEnvBool<ONEFLOW_AD_PUT_LOSS_ON_TMP_COMPUTE_STREAM>()) {
+  if (!LazyMode::is_enabled() && ThreadLocalEnvBool<ONEFLOW_AD_PUT_LOSS_ON_TMP_COMPUTE_STREAM>()) {
     // Put outputs into kTmpCompute stream for reducing blocking time of outputs[i].numpy() in main
     // thread.
     auto copied_outputs = JUST(TryCopyForSmallTensor(outputs));
