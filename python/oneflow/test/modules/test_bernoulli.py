@@ -28,7 +28,10 @@ import oneflow.unittest
 def _test_bernoulli(test_case, shape, p, dtype):
     input_arr = np.ones(shape)
     x = flow.tensor(input_arr, dtype=flow.float32, device=flow.device("cpu"))
-    y = flow.bernoulli(x, p=p, dtype=dtype)
+    if p is None:
+        y = flow.bernoulli(x, dtype=dtype)
+    else:
+        y = flow.bernoulli(x, p=p, dtype=dtype)
     test_case.assertTrue(y.dtype == dtype)
     if p == 1 or p is None:
         test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
