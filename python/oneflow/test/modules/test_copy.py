@@ -28,12 +28,12 @@ from oneflow.test_utils.automated_test_util import *
 @flow.unittest.skip_unless_1n1d()
 class Test_Copy_module(flow.unittest.TestCase):
     def test_copy_broadcast_tensor(test_case):
-        torch_base_grid = ori_torch.zeros(1, 2, 2, 3)  
+        torch_base_grid = ori_torch.zeros(1, 2, 2, 3)
         flow_base_grid = flow.zeros(1, 2, 2, 3)
         torch_x_grid = ori_torch.ones(2)
         flow_x_grid = flow.ones(2)
         torch_base_grid[..., 0].copy_(torch_x_grid)
-        #TODO: copy op not support non-contiguous input tensor
+        # TODO: copy op not support non-contiguous input tensor
         flow_base_grid[..., 0].contiguous().copy_(flow_x_grid)
         test_case.assertTrue(np.allclose(torch_base_grid.size(), flow_base_grid.size()))
 

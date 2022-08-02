@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_
 #define ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_
 
-#include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/vm/instruction.h"
@@ -76,16 +76,22 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object);
 
-  Maybe<void> TouchTensors(const vm::EagerBlobObjectListPtr& eager_blob_object);
+  Maybe<void> TouchTensors(const vm::EagerBlobObjectListPtr& eager_blob_objects);
+
+  Maybe<void> TouchTensors(const vm::EagerBlobObjectListPtr& eager_blob_objects,
+                           Symbol<Stream> stream);
 
   template<typename T>
-  Maybe<void> SyncAccessBlobByCallback(const T tensor, const std::shared_ptr<BlockingThenBusy>& btb,
-                                       const std::function<void(uint64_t)>& Callback,
-                                       const std::string& modifier);
+  Maybe<void> SyncAccessBlobByCallback(
+      const T tensor, const std::shared_ptr<BlockingThenBusy>& btb,
+      const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& Callback,
+      const std::string& modifier);
 
   template<typename T>
-  Maybe<void> AccessBlobByCallback(const T tensor, const std::function<void(uint64_t)>& callback,
-                                   const std::string& modifier);
+  Maybe<void> AccessBlobByCallback(
+      const T tensor,
+      const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& callback,
+      const std::string& modifier);
 
   Maybe<void> GlobalSync();
   Maybe<void> Barrier(const std::function<void()>& callback);
@@ -139,14 +145,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                              const std::string& modifier, Symbol<Stream> stream);
 
  private:
-  template<typename PhyInstrOperandT>
-  Maybe<void> MakeCriticalSectionBegin(vm::Stream* vm_stream,
-                                       const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);
-
-  template<typename PhyInstrOperandT>
-  Maybe<void> MakeCriticalSectionEnd(vm::Stream* vm_stream,
-                                     const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);
-
   vm::InstructionList* instruction_list_;
 };
 

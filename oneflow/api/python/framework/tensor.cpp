@@ -25,7 +25,6 @@ limitations under the License.
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
 #include "oneflow/api/python/functional/tensor_api.yaml.pybind.h"
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/api/python/utils/tensor_utils.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/framework/tensor.h"
@@ -36,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/tensor_index.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace py = pybind11;
 
@@ -323,24 +323,40 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
   END_HANDLE_ERRORS
 }
 
-#define DEFINE_TENSOR_METHOD(T, type_proto)                                               \
-  static PyObject* PyTensorObject__copy_to_numpy_##T(PyObject* self, PyObject* array) {   \
-    HANDLE_ERRORS                                                                         \
-    ASSERT(CopyBetweenLocalTensorAndNumpy<T>(PyTensor_Unpack(self), array,                \
-                                             BlobNumpyCopyUtil<T>::To, "const",           \
-                                             /*block_host_until_done=*/true));            \
-    Py_RETURN_NONE;                                                                       \
-    END_HANDLE_ERRORS                                                                     \
-  }                                                                                       \
-  static PyObject* PyTensorObject__copy_from_numpy_##T(PyObject* self, PyObject* array) { \
-    HANDLE_ERRORS                                                                         \
-    auto* copied = PyArray_NewCopy((PyArrayObject*)array, NPY_CORDER);                    \
-    ASSERT(CopyBetweenLocalTensorAndNumpy<T>(PyTensor_Unpack(self), copied,               \
-                                             BlobNumpyCopyUtil<T>::From, "mut",           \
-                                             /*block_host_until_done=*/false));           \
-    Py_DECREF(copied);                                                                    \
-    Py_RETURN_NONE;                                                                       \
-    END_HANDLE_ERRORS                                                                     \
+namespace {
+void CopyFromNumpyArray(ep::Stream* stream,
+                        const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+                        const NumPyArrayPtr& array_ptr) {
+  SyncAutoMemcpy(stream, eager_blob_object->mut_dptr(), array_ptr.data(),
+                 eager_blob_object->ByteSizeOfBlobBody(), eager_blob_object->mem_case(),
+                 memory::MakeHostMemCase());
+}
+
+void CopyToNumpyArray(ep::Stream* stream,
+                      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+                      const NumPyArrayPtr& array_ptr) {
+  SyncAutoMemcpy(stream, array_ptr.data(), eager_blob_object->dptr(),
+                 eager_blob_object->ByteSizeOfBlobBody(), memory::MakeHostMemCase(),
+                 eager_blob_object->mem_case());
+}
+}  // namespace
+   //
+#define DEFINE_TENSOR_METHOD(T, type_proto)                                                     \
+  static PyObject* PyTensorObject__copy_to_numpy_##T(PyObject* self, PyObject* array) {         \
+    HANDLE_ERRORS                                                                               \
+    ASSERT(CopyBetweenLocalTensorAndNumpy<T>(PyTensor_Unpack(self), array, CopyToNumpyArray,    \
+                                             "const", /*block_host_until_done=*/true));         \
+    Py_RETURN_NONE;                                                                             \
+    END_HANDLE_ERRORS                                                                           \
+  }                                                                                             \
+  static PyObject* PyTensorObject__copy_from_numpy_##T(PyObject* self, PyObject* array) {       \
+    HANDLE_ERRORS                                                                               \
+    auto* copied = PyArray_NewCopy((PyArrayObject*)array, NPY_CORDER);                          \
+    ASSERT(CopyBetweenLocalTensorAndNumpy<T>(PyTensor_Unpack(self), copied, CopyFromNumpyArray, \
+                                             "mut", /*block_host_until_done=*/false));          \
+    Py_DECREF(copied);                                                                          \
+    Py_RETURN_NONE;                                                                             \
+    END_HANDLE_ERRORS                                                                           \
   }
 OF_PP_FOR_EACH_TUPLE(DEFINE_TENSOR_METHOD, POD_DATA_TYPE_SEQ)
 #undef DEFINE_TENSOR_METHOD
