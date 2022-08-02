@@ -17,10 +17,8 @@ limitations under the License.
 #include "oneflow/core/common/env_var/vm.h"
 #include "oneflow/core/vm/caching_allocator.h"
 #include "oneflow/core/vm/fuse_instruction_policy.h"
-#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/release_tensor_instruction_policy.h"
 #include "oneflow/core/vm/allocator.h"
-#include "oneflow/core/vm/naive_stream_policy.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/cpp_attribute.h"
@@ -329,10 +327,8 @@ void BusyWaitAllInstructionsDone(Stream* stream) {
 }
 
 void ShrinkMemory(Stream* stream) {
-  auto* stream_policy = stream->mut_stream_policy();
-  auto* naive_stream_policy = CHECK_NOTNULL(dynamic_cast<NaiveStreamPolicy*>(stream_policy));
-  if (naive_stream_policy->device_ctx() == nullptr) { return; }
-  auto* allocator = naive_stream_policy->mut_allocator();
+  auto* allocator = stream->mut_stream_policy()->mut_allocator();
+  if (allocator == nullptr) { return; }
   auto* shrinkable_cache = dynamic_cast<CachingAllocator*>(allocator);
   CHECK_NOTNULL(shrinkable_cache)->Shrink();
 }

@@ -129,7 +129,7 @@ class SlowReleaseTensorInstructionPolicy final : public ReleaseTensorInstruction
 };
 
 struct MakeReleaseTensorInstructionPolicy
-    : public StreamRoleVisitor<MakeReleaseTensorInstructionPolicy> {
+    : public StreamTypeVisitor<MakeReleaseTensorInstructionPolicy> {
   static Maybe<vm::InstructionPolicy> VisitCompute(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
@@ -144,6 +144,11 @@ struct MakeReleaseTensorInstructionPolicy
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     return Make(data_type, eager_blob_object, stream);
+  }
+  static Maybe<vm::InstructionPolicy> VisitAsyncedDevice2Host(
+      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const Optional<vm::Stream*>& stream) {
+    return VisitDevice2Host(data_type, eager_blob_object, stream);
   }
   static Maybe<vm::InstructionPolicy> VisitSyncedLaunchedCommNet(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
@@ -173,6 +178,12 @@ struct MakeReleaseTensorInstructionPolicy
         << "ReleaseTensor instruction not supported in LaunchLazyJob stream";
   }
   static Maybe<vm::InstructionPolicy> VisitPinnedCompute(
+      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const Optional<vm::Stream*>& stream) {
+    return VisitCompute(data_type, eager_blob_object, stream);
+  }
+
+  static Maybe<vm::InstructionPolicy> VisitTmpCompute(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     return VisitCompute(data_type, eager_blob_object, stream);

@@ -111,8 +111,6 @@ bool IsTransferNode(TaskType task_type) {
     case TaskType::kCollectiveBoxingPack:           // 8
     case TaskType::kCollectiveBoxingUnpack:         // 8
     case TaskType::kBoxingZeros:                    // 3
-    case TaskType::kForeignInput:                   // 0
-    case TaskType::kForeignOutput:                  // 0
     case TaskType::kDistributeConcat:               // 0
     case TaskType::kDistributeSplit:                // 0
     case TaskType::kBoxingIdentity:                 // 0

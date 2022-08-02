@@ -42,7 +42,6 @@ Maybe<void> SwitchToShuttingDownPhase(EnvGlobalObjectsScope* env, bool is_normal
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurrentResource", &CurrentResource);
   m.def("EnvResource", &EnvResource);
-  m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
 
   py::class_<oneflow::EnvGlobalObjectsScope, std::shared_ptr<oneflow::EnvGlobalObjectsScope>>(
       m, "EnvContext")

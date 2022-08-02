@@ -31,10 +31,7 @@ struct OpCallInstructionUtil final {
     JUST(AllocateOutputBlobsMemory(op_call_instruction_policy, allocator));
     if (unlikely(op_call_instruction_policy->need_temp_storage())) {
       InferTempStorageSize(op_call_instruction_policy);
-      JUST(TryAllocateTempStorage(op_call_instruction_policy, allocator));
-      // Since memory block is cached in allocator, it's safe to deallocate tmp buffer before
-      // kernel executed.
-      DeallocateTempStorage(op_call_instruction_policy, allocator);
+      JUST(TryAllocateTempStorageThenDeallocate(op_call_instruction_policy, allocator));
     }
     return Maybe<void>::Ok();
   }
@@ -87,16 +84,21 @@ struct OpCallInstructionUtil final {
     return Maybe<void>::Ok();
   }
 
-  static inline Maybe<void> TryAllocateTempStorage(
+  // Since memory block is cached in allocator, it's safe to deallocate tmp buffer before
+  // kernel executed.
+  static inline Maybe<void> TryAllocateTempStorageThenDeallocate(
       OpCallInstructionPolicy* op_call_instruction_policy, Allocator* allocator) {
-    OF_PROFILER_RANGE_GUARD("TryAllocateTempStorage");
+    OF_PROFILER_RANGE_GUARD("TryAllocateTempStorageThenDeallocate");
     auto* tmp_tensor = op_call_instruction_policy->mut_call_ctx()->mut_tmp_tensor();
     size_t byte_size = tmp_tensor->tmp_buffer_size();
     if (byte_size > 0) {
       char* mem_ptr = nullptr;
       JUST(allocator->Allocate(&mem_ptr, byte_size));
-      tmp_tensor->init_tmp_buffer_ptr(mem_ptr);
+      // tmp_buffer_ptr may be set twice, but it's safe, beacuse the memory of tmp_buffer_ptr set at
+      // the first time is deallocated soon in this function.
+      tmp_tensor->set_tmp_buffer_ptr(mem_ptr);
     }
+    allocator->Deallocate(tmp_tensor->mut_tmp_buffer_ptr(), tmp_tensor->tmp_buffer_size());
     return Maybe<void>::Ok();
   }
 
@@ -106,13 +108,6 @@ struct OpCallInstructionUtil final {
     auto* user_kernel = op_call_instruction_policy->user_opkernel();
     op_call_instruction_policy->mut_opkernel()->Compute(op_call_instruction_policy->mut_call_ctx(),
                                                         stream, user_kernel, state, cache);
-  }
-
-  static inline void DeallocateTempStorage(OpCallInstructionPolicy* op_call_instruction_policy,
-                                           Allocator* allocator) {
-    OF_PROFILER_RANGE_GUARD("DeallocateTempStorage");
-    auto* tmp_tensor = op_call_instruction_policy->mut_call_ctx()->mut_tmp_tensor();
-    allocator->Deallocate(tmp_tensor->mut_tmp_buffer_ptr(), tmp_tensor->tmp_buffer_size());
   }
 };
 
@@ -159,7 +154,7 @@ void OpCallInstructionPolicy::ForEachConstDependence(const DoEachT& DoEach) cons
 
 void OpCallInstructionPolicy::InitStreamSequentialDependence() {
   auto* device_schedule_dep_object = vm_stream_->schedule_local_dep_object().get();
-  if (IsCommNetStream::Visit(vm_stream_->stream_role())) {
+  if (IsCommNetStream::Visit(vm_stream_->stream_type())) {
     // Sequantialize nccl instructions to avoid deadlock
     stream_sequential_dependence_ = device_schedule_dep_object;
   } else {
