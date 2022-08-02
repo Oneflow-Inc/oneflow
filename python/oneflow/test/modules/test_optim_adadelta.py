@@ -27,16 +27,16 @@ import oneflow as flow
 from oneflow.nn.parameter import Parameter
 
 
-def compare_with_numpy_adagrad(
+def compare_with_numpy_adadelta(
     test_case,
     device,
     x_shape,
     learning_rate,
     train_iters,
-    lr_decay,
-    weight_decay,
-    initial_accumulator_value,
+    rho,
     eps,
+    maximize,
+    weight_decay,
     reload_state_step,
     save_load_by_pickle,
 ):
@@ -47,17 +47,11 @@ def compare_with_numpy_adagrad(
 
     def train_by_oneflow():
         x = Parameter(flow.Tensor(init_value, device=flow.device(device)))
-        adagrad = flow.optim.Adagrad(
-            [
-                {
-                    "params": [x],
-                    "lr": learning_rate,
-                    "eps": eps,
-                    "weight_decay": weight_decay,
-                }
-            ],
-            lr_decay=lr_decay,
-            initial_accumulator_value=initial_accumulator_value,
+        adadelta = flow.optim.Adadelta(
+            [{"params": [x], "lr": learning_rate, "weight_decay": weight_decay,}],
+            rho=rho,
+            eps=eps,
+            maximize=maximize,
         )
 
         def train_one_iter(grad):
@@ -66,54 +60,58 @@ def compare_with_numpy_adagrad(
             )
             loss = flow.sum(x * grad_tensor)
             loss.backward()
-            adagrad.step()
-            adagrad.zero_grad()
+            adadelta.step()
+            adadelta.zero_grad()
 
         for i in range(train_iters):
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
-                state_dict = adagrad.state_dict()
-                adagrad = flow.optim.Adagrad([x])
+                state_dict = adadelta.state_dict()
+                adadelta = flow.optim.Adadelta([x])
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
                         state_dict = flow.load(save_dir)
-                adagrad.load_state_dict(state_dict)
+                adadelta.load_state_dict(state_dict)
         return x
 
     def train_by_numpy():
         x = init_value
-        st = np.ones_like(x) * initial_accumulator_value
+        square_avgs = np.zeros_like(x)
+        acc_deltas = np.zeros_like(x)
 
-        def train_one_iter(iter, grad):
+        def train_one_iter(grad):
+            grad = grad if not maximize else -grad
             grad = grad + weight_decay * x
-            lr = learning_rate / (1 + (iter - 1) * lr_decay)
-            s = st + grad * grad
-            param = x - lr / (np.sqrt(s) + eps) * grad
-            return (param, s)
+            new_square_avgs = square_avgs * rho + (1.0 - rho) * grad * grad
+            std = np.sqrt(new_square_avgs + eps)
+            delta = np.sqrt(acc_deltas + eps) / std * grad
+            new_acc_deltas = acc_deltas * rho + delta * delta * (1 - rho)
+            param = x - learning_rate * delta
+            return (param, new_square_avgs, new_acc_deltas)
 
         for i in range(1, train_iters + 1):
-            (x, st) = train_one_iter(i, random_grad_seq[i - 1])
+            (x, square_avgs, acc_deltas) = train_one_iter(random_grad_seq[i - 1])
         return x
 
     oneflow_res = train_by_oneflow().numpy()
     numpy_res = train_by_numpy()
 
     test_case.assertTrue(
-        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3)
+        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-4, atol=1e-4)
     )
 
 
-def compare_with_numpy_adagrad_clip_grad(
+def compare_with_numpy_adadelta_clip_grad(
     test_case,
     device,
     x_shape,
     learning_rate,
     train_iters,
-    lr_decay,
-    weight_decay,
-    initial_accumulator_value,
+    rho,
     eps,
+    maximize,
+    weight_decay,
     clip_grad_max_norm,
     clip_grad_norm_type,
     reload_state_step,
@@ -126,19 +124,19 @@ def compare_with_numpy_adagrad_clip_grad(
 
     def train_by_oneflow():
         x = Parameter(flow.Tensor(init_value, device=flow.device(device)))
-        adagrad = flow.optim.Adagrad(
+        adadelta = flow.optim.Adadelta(
             [
                 {
                     "params": [x],
                     "lr": learning_rate,
-                    "eps": eps,
                     "weight_decay": weight_decay,
                     "clip_grad_max_norm": clip_grad_max_norm,
                     "clip_grad_norm_type": clip_grad_norm_type,
                 }
             ],
-            lr_decay=lr_decay,
-            initial_accumulator_value=initial_accumulator_value,
+            rho=rho,
+            eps=eps,
+            maximize=maximize,
         )
 
         def train_one_iter(grad):
@@ -147,40 +145,42 @@ def compare_with_numpy_adagrad_clip_grad(
             )
             loss = flow.sum(x * grad_tensor)
             loss.backward()
-            adagrad.clip_grad()
-            adagrad.step()
-            adagrad.zero_grad()
+            adadelta.clip_grad()
+            adadelta.step()
+            adadelta.zero_grad()
 
         for i in range(train_iters):
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
-                state_dict = adagrad.state_dict()
-                adagrad = flow.optim.Adagrad([x])
+                state_dict = adadelta.state_dict()
+                adadelta = flow.optim.Adadelta([x])
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
                         state_dict = flow.load(save_dir)
-                adagrad.load_state_dict(state_dict)
+                adadelta.load_state_dict(state_dict)
         return x
 
     def train_by_numpy():
         x = init_value
-        st = np.ones_like(x) * initial_accumulator_value
+        square_avgs = np.zeros_like(x)
+        acc_deltas = np.zeros_like(x)
 
-        def train_one_iter(iter, grad):
+        def train_one_iter(grad):
             total_norm, grad = clip_grad_norm_np(
                 grad, clip_grad_max_norm, clip_grad_norm_type
             )
+            grad = grad if not maximize else -grad
             grad = grad + weight_decay * x
-
-            lr = learning_rate / (1 + (iter - 1) * lr_decay)
-            s = st + grad * grad
-            param = x - lr / (np.sqrt(s) + eps) * grad
-
-            return (param, s)
+            new_square_avgs = square_avgs * rho + (1.0 - rho) * grad * grad
+            std = np.sqrt(new_square_avgs + eps)
+            delta = np.sqrt(acc_deltas + eps) / std * grad
+            new_acc_deltas = acc_deltas * rho + delta * delta * (1 - rho)
+            param = x - learning_rate * delta
+            return (param, new_square_avgs, new_acc_deltas)
 
         for i in range(1, train_iters + 1):
-            (x, st) = train_one_iter(i, random_grad_seq[i - 1])
+            (x, square_avgs, acc_deltas) = train_one_iter(random_grad_seq[i - 1])
 
         return x
 
@@ -188,47 +188,47 @@ def compare_with_numpy_adagrad_clip_grad(
     numpy_res = train_by_numpy()
 
     test_case.assertTrue(
-        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3)
+        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-4, atol=1e-4)
     )
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestAdagrad(flow.unittest.TestCase):
-    def test_adagrad(test_case):
+class TestAdadelta(flow.unittest.TestCase):
+    def test_adadelta(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["x_shape"] = [(10,)]
         arg_dict["learning_rate"] = [1, 1e-3]
         arg_dict["train_iters"] = [10]
-        arg_dict["lr_decay"] = [0.9, 0.75]
+        arg_dict["rho"] = [0.9, 0.6]
+        arg_dict["eps"] = [1e-6, 1e-4]
+        arg_dict["maximize"] = [False]
         arg_dict["weight_decay"] = [0.0, 0.1]
-        arg_dict["initial_accumulator_value"] = [1.0, 2.1]
-        arg_dict["eps"] = [1e-08, 1e-07]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
 
         for arg in GenArgList(arg_dict):
-            compare_with_numpy_adagrad(test_case, *arg)
+            compare_with_numpy_adadelta(test_case, *arg)
 
-    def test_adagrad_clip_grad(test_case):
+    def test_adadelta_clip_grad(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cuda"]
         if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
             arg_dict["device"] = ["cpu"]
         arg_dict["x_shape"] = [(10,)]
-        arg_dict["learning_rate"] = [1, 1e-3]
+        arg_dict["learning_rate"] = [1e-3]
         arg_dict["train_iters"] = [10]
-        arg_dict["lr_decay"] = [0.9, 0.75]
+        arg_dict["rho"] = [0.9, 0.6]
+        arg_dict["eps"] = [1e-6, 1e-4]
+        arg_dict["maximize"] = [False]
         arg_dict["weight_decay"] = [0.0, 0.1]
-        arg_dict["initial_accumulator_value"] = [2.1]
-        arg_dict["eps"] = [1e-07]
         arg_dict["clip_grad_max_norm"] = [0, 0.5, 1.0]
         arg_dict["clip_grad_norm_type"] = ["inf", "-inf", 0.0, 1.0, 2.0, 3.5]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
         arg_dict["save_load_by_pickle"] = [False, True]
 
         for arg in GenArgList(arg_dict):
-            compare_with_numpy_adagrad_clip_grad(test_case, *arg)
+            compare_with_numpy_adadelta_clip_grad(test_case, *arg)
 
 
 if __name__ == "__main__":
