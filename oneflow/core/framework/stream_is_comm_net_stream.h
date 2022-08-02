@@ -17,11 +17,11 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_STREAM_IS_COMM_NET_STREAM_H_
 
 #include <glog/logging.h>
-#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/stream_type.h"
 
 namespace oneflow {
 
-struct IsCommNetStream final : public StreamRoleVisitor<IsCommNetStream> {
+struct IsCommNetStream final : public StreamTypeVisitor<IsCommNetStream> {
   static bool VisitCompute() { return false; }
   static bool VisitHost2Device() { return false; }
   static bool VisitDevice2Host() { return false; }
