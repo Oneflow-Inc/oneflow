@@ -116,23 +116,23 @@ def _test_nn_functional_cross_entropy_loss(dim=int):
 
 @flow.unittest.skip_unless_1n1d()
 class TestCrossEntropyLossModule(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_cross_entropy_loss_with_random_data_dim_2(test_case):
         return _test_cross_entropy_loss(2)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_cross_entropy_loss_with_random_data_dim_3(test_case):
         return _test_cross_entropy_loss(3)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_cross_entropy_loss_with_random_data_dim_4(test_case):
         return _test_cross_entropy_loss(4)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_cross_entropy_loss_with_random_data_dim_5(test_case):
         return _test_cross_entropy_loss(5)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_nn_functional_cross_entropy_with_random_data_dim(test_case):
         dim = random(2, 6).to(int).value()
         return _test_nn_functional_cross_entropy_loss(dim)
@@ -160,19 +160,19 @@ def _test_nll_loss(dim=int):
 
 @flow.unittest.skip_unless_1n1d()
 class TestNLLLossModule(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_nll_loss_with_random_data_dim_2(test_case):
         return _test_nll_loss(2)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_nll_loss_with_random_data_dim_3(test_case):
         return _test_nll_loss(3)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_nll_loss_with_random_data_dim_4(test_case):
         return _test_nll_loss(4)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_nll_loss_with_random_data_dim_5(test_case):
         return _test_nll_loss(5)
 
@@ -197,47 +197,80 @@ def _test_bce_loss(dim=int, with_logits: bool = False):
     return y
 
 
+def _test_nn_functional_binary_cross_entropy(dim=int):
+    (x, target, weight, pos_weight, device) = generate_necessity_for_bce_loss(dim)
+    y = torch.nn.functional.binary_cross_entropy(
+        x,
+        target,
+        weight=oneof(weight, nothing()),
+        reduction=oneof("none", "sum", "mean", nothing()),
+        pos_weight=oneof(pos_weight, nothing()),
+    )
+    return y
+
+
+def _test_nn_functional_binary_cross_entropy_with_logits(dim=int):
+    (x, target, weight, pos_weight, device) = generate_necessity_for_bce_loss(dim)
+    y = torch.nn.functional.binary_cross_entropy_with_logits(
+        x,
+        target,
+        weight=oneof(weight, nothing()),
+        reduction=oneof("none", "sum", "mean", nothing()),
+    )
+    return y
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestBCELossModule(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_bce_loss_with_random_data_dim_2(test_case):
         return _test_bce_loss(2)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_bce_loss_with_random_data_dim_3(test_case):
         return _test_bce_loss(3)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_bce_loss_with_random_data_dim_4(test_case):
         return _test_bce_loss(4)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_bce_loss_with_random_data_dim_5(test_case):
         return _test_bce_loss(5)
+
+    @autotest(n=5)
+    def test_nn_functional_binary_cross_entropy(test_case):
+        dim = random(2, 6).to(int).value()
+        return _test_nn_functional_binary_cross_entropy(dim)
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestBCEWithLogitsLossModule(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_bce_with_logits_loss_with_random_data_dim_2(test_case):
         return _test_bce_loss(2, True)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_bce_with_logits_loss_with_random_data_dim_3(test_case):
         return _test_bce_loss(3, True)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_bce_with_logits_loss_with_random_data_dim_4(test_case):
         return _test_bce_loss(4, True)
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_bce_with_logits_loss_with_random_data_dim_5(test_case):
         return _test_bce_loss(5, True)
+
+    @autotest(n=5)
+    def test_nn_functional_binary_cross_entropy_with_logits(test_case):
+        dim = random(2, 6).to(int).value()
+        return _test_nn_functional_binary_cross_entropy_with_logits(dim)
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestL1LossModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_l1_loss_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().oneflow.shape
@@ -255,7 +288,7 @@ class TestL1LossModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSmoothL1LossModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_smooth_l1_loss_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().oneflow.shape
@@ -275,7 +308,7 @@ class TestSmoothL1LossModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestMSELossModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_mse_loss_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().oneflow.shape
@@ -293,7 +326,7 @@ class TestMSELossModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestKLDivLossModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_kldiv_loss_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().oneflow.shape
@@ -314,7 +347,7 @@ class TestKLDivLossModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestMarginRankingLossModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_margin_ranking_loss_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().oneflow.shape

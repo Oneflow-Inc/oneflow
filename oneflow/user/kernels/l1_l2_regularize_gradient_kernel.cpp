@@ -34,7 +34,7 @@ class L1L2RegularizeGradientKernel final : public user_op::OpKernel {
     const auto l1 = ctx->Attr<float>("l1");
     const auto l2 = ctx->Attr<float>("l2");
     L1L2RegularizeGradientKernelUtil<device_type, T>::RegularizeGradient(
-        ctx->stream(), out->shape().elem_cnt(), model->dptr<T>(), model_diff->dptr<T>(),
+        ctx->stream(), out->shape_view().elem_cnt(), model->dptr<T>(), model_diff->dptr<T>(),
         out->mut_dptr<T>(), l1, l2);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

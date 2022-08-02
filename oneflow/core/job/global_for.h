@@ -16,14 +16,12 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_GLOBAL_FOR_H_
 #define ONEFLOW_CORE_JOB_GLOBAL_FOR_H_
 
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 
 namespace oneflow {
 
 class ForSession {};
 class ForEnv {};
-
-class EagerExecution {};
 
 class MultiClient {};
 

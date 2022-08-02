@@ -49,11 +49,17 @@ class AddFunctor {
       return Error::RuntimeError()
              << "For integral input tensors, argument alpha must not be a floating point number.";
     }
+
     bool input_static_zeros = IsStaticZerosTensor(input);
     if (input_static_zeros || IsStaticZerosTensor(other)) {
-      CHECK_OR_RETURN(JUST(input->device()) == JUST(other->device()));
-      CHECK_OR_RETURN(*input->shape() == *other->shape());
-      CHECK_OR_RETURN(input->dtype() == other->dtype());
+      CHECK_OR_RETURN(JUST(input->device()) == JUST(other->device()))
+          << Error::RuntimeError()
+          << "Expected all tensors to be on the same device, but found at least two devices, "
+          << JUST(input->device())->ToString() << " and " << JUST(other->device())->ToString()
+          << "!";
+      CHECK_OR_RETURN(*input->shape() == *other->shape())
+          << Error::RuntimeError() << "The size of tensor a " << input->shape()->ToString()
+          << " must match the size of tensor b " << other->shape();
       if (input_static_zeros) {
         if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
             || (alpha.IsFloatingPoint()
@@ -91,7 +97,7 @@ class AddFunctor {
     if (inplace) {
       JUST(CheckInplaceCastValid(input, input_cast));
       JUST(CheckInplaceValid(input));
-      JUST(CheckShapeCanExpandTo(*other_cast->shape(), *input_cast->shape()));
+      JUST(CheckInplaceShapeCanExpandTo(*other_cast->shape(), *input_cast->shape()));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = input_cast;
       JUST(OpInterpUtil::Dispatch(*op, input_vec, outputs.get()));
@@ -139,7 +145,6 @@ class SubFunctor : public InplaceableBinaryFunctor {
 class MulFunctor {
  public:
   MulFunctor() {
-    mul_op_ = CHECK_JUST(one::OpBuilder("multiply").Input("x").Input("y").Output("out").Build());
     broadcast_mul_op_ =
         CHECK_JUST(one::OpBuilder("broadcast_mul").Input("x").Input("y").Output("z").Build());
   }
@@ -149,19 +154,16 @@ class MulFunctor {
     JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
 
-    if (*x->shape() == *y->shape()) { return OpInterpUtil::Dispatch<Tensor>(*mul_op_, input_vec); }
     return OpInterpUtil::Dispatch<Tensor>(*broadcast_mul_op_, input_vec);
   }
 
  private:
-  std::shared_ptr<OpExpr> mul_op_;
   std::shared_ptr<OpExpr> broadcast_mul_op_;
 };
 
 class InplaceMulFunctor {
  public:
   InplaceMulFunctor() {
-    mul_op_ = CHECK_JUST(one::OpBuilder("multiply").Input("x").Input("y").Output("out").Build());
     broadcast_mul_op_ =
         CHECK_JUST(one::OpBuilder("broadcast_mul").Input("x").Input("y").Output("z").Build());
   }
@@ -180,19 +182,14 @@ class InplaceMulFunctor {
     const std::shared_ptr<one::Tensor>& y_cast = input_vec.at(1);
     JUST(CheckInplaceValid(x));
     JUST(CheckInplaceCastValid(x, x_cast));
-    JUST(CheckShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
+    JUST(CheckInplaceShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = x;
-    if (*x_cast->shape() == *y_cast->shape()) {
-      JUST(OpInterpUtil::Dispatch(*mul_op_, input_vec, outputs.get()));
-    } else {
-      JUST(OpInterpUtil::Dispatch(*broadcast_mul_op_, input_vec, outputs.get()));
-    }
+    JUST(OpInterpUtil::Dispatch(*broadcast_mul_op_, input_vec, outputs.get()));
     return outputs->at(0);
   }
 
  private:
-  std::shared_ptr<OpExpr> mul_op_;
   std::shared_ptr<OpExpr> broadcast_mul_op_;
 };
 
@@ -258,7 +255,7 @@ class InplaceDivFunctor {
     const std::shared_ptr<one::Tensor>& y_cast = input_vec.at(1);
     JUST(CheckInplaceValid(x));
     JUST(CheckInplaceCastValid(x, x_cast));
-    JUST(CheckShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
+    JUST(CheckInplaceShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = x;
     JUST(OpInterpUtil::Dispatch(*broadcast_div_op_, input_vec, outputs.get()));

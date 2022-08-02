@@ -27,10 +27,11 @@ from oneflow.test_utils.test_util import GenArgList
 
 def _test_rand(test_case, device, shape):
     y1 = flow.rand(*shape, device=flow.device(device))
-    y2 = flow.rand(*shape, device=flow.device(device))
+    y2 = flow.rand(size=shape, device=flow.device(device))
 
     test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
     test_case.assertTrue(shape == y1.shape)
+    test_case.assertTrue(shape == y2.shape)
 
 
 def _test_rand_tuple_shape(test_case, device, shape):

@@ -19,6 +19,9 @@ from collections import OrderedDict
 import tempfile
 
 import os
+
+# dynamic memory allocation can't be tested in unittest
+os.environ["ONEFLOW_ONE_EMBEDDING_USE_DYNAMIC_MEMORY_ALLOCATION"] = "0"
 import numpy as np
 from oneflow.test_utils.test_util import GenArgDict
 from optimizer_test_util import clip_grad_norm_np
@@ -48,20 +51,24 @@ def compare_with_numpy_adagrad(
     down_scale_by = 10
     epsilon = 1e-5
 
-    def adagrad_by_oneflow():
-        unique_embeddings_tensor = flow.tensor(init_value, requires_grad=False).to(
-            "cuda"
-        )
-        lr_tensor = flow.tensor(
-            np.array(learning_rate).reshape(1,).astype(np.float32)
-        ).to("cuda")
-        down_scale_by_tensor = flow.tensor(
-            np.array(down_scale_by).astype(np.float32)
-        ).to("cuda")
+    class TestGraph(flow.nn.Graph):
+        def __init__(self):
+            super().__init__()
 
-        def train_one_iter(
-            num_valid, unique_embeddings, embedding_grad, skip_if, train_step
+        def build(
+            self,
+            ids,
+            unique_embeddings,
+            embedding_grad,
+            lr_tensor,
+            down_scale_by_tensor,
+            skip_if,
+            train_step,
         ):
+            # add id shuffle to set num_unique in op, and use it in update
+            (_, _, num_valid, _, _, _,) = flow._C.one_embedding_id_shuffle(
+                ids, table_ids=None, num_tables=1, embedding_name=""
+            )
             return flow._C.one_embedding_adagrad_update(
                 num_valid,
                 unique_embeddings,
@@ -74,12 +81,39 @@ def compare_with_numpy_adagrad(
                 weight_decay,
                 lr_decay,
                 epsilon,
+                line_size,
+                embedding_size,
+            )
+
+    graph = TestGraph()
+
+    def adagrad_by_oneflow():
+        unique_embeddings_tensor = flow.tensor(init_value, requires_grad=False).to(
+            "cuda"
+        )
+        lr_tensor = flow.tensor(
+            np.array(learning_rate).reshape(1,).astype(np.float32)
+        ).to("cuda")
+        down_scale_by_tensor = flow.tensor(
+            np.array(down_scale_by).astype(np.float32)
+        ).to("cuda")
+
+        def train_one_iter(ids, unique_embeddings, embedding_grad, skip_if, train_step):
+            return graph(
+                ids,
+                unique_embeddings,
+                embedding_grad,
+                lr_tensor,
+                down_scale_by_tensor,
+                skip_if,
+                train_step,
             )
 
         for i in range(1, train_iters):
-            num_valid_tensor = flow.tensor(
-                np.array(num_valid_seq[i]).reshape(1,).astype(np.int32)
-            ).to("cuda")
+            np_ids = np.zeros(num_rows)
+            np_ids[0 : num_valid_seq[i]] = np.arange(num_valid_seq[i])
+            # add ids of num_valid unique to use id_shuffle out_put num_unique as grad input
+            ids = flow.tensor(np_ids.astype(np.int32)).to("cuda")
             grad_tensor = flow.tensor(random_grad_seq[i]).to("cuda")
             skip_if_tensor = flow.tensor(
                 np.array(skip_if_seq[i]).reshape(1,).astype(np.int64)
@@ -88,11 +122,7 @@ def compare_with_numpy_adagrad(
                 "cuda"
             )
             updated_tensor = train_one_iter(
-                num_valid_tensor,
-                unique_embeddings_tensor,
-                grad_tensor,
-                skip_if_tensor,
-                step_tensor,
+                ids, unique_embeddings_tensor, grad_tensor, skip_if_tensor, step_tensor,
             )
             unique_embeddings_tensor[0 : num_valid_seq[i]] = updated_tensor[
                 0 : num_valid_seq[i]

@@ -17,16 +17,40 @@ import json
 import unittest
 import oneflow.unittest
 import oneflow as flow
-from oneflow.profiler.events import Event, Events
+from oneflow.profiler.events import *
 
 
 class TestEventAndEvents(flow.unittest.TestCase):
     def test_event(test_case):
-        event = Event("test", 1234, 1234, 1, "-", 0)
-        event_json = {"name": "test", "cpu_time": 1234, "input_shapes": "-", "type": 0}
-        test_case.assertEqual(event, Event.from_dict(event_json))
+        classes = [CustomEvent, KernelEvent]
+        custom_event = CustomEvent("custom", 1234, CustomEventType.Default)
+        custom_event_json = {
+            "name": "custom",
+            "time": 1234,
+            "custom_type": 0,
+            "type": 0,
+        }
+        test_case.assertEqual(
+            custom_event,
+            classes[custom_event_json.get("type")].from_dict(custom_event_json),
+        )
 
-        event1 = Event("test", 3346, 3346, 1, "-", 0)
+        kernel_event = KernelEvent("kernel", 1234, 1024, "-")
+        kernel_event_json = {
+            "name": "kernel",
+            "time": 1234,
+            "memory_size": 1024,
+            "type": 1,
+            "input_shapes": "-",
+        }
+        test_case.assertEqual(
+            kernel_event,
+            classes[kernel_event_json.get("type")].from_dict(kernel_event_json),
+        )
+
+    def test_event_update(test_case):
+        event = CustomEvent("custom", 1234, CustomEventType.Default)
+        event1 = CustomEvent("custom", 3346, CustomEventType.Default)
         event.update(event1)
         test_case.assertEqual(event.count, 2)
         test_case.assertEqual(event.cpu_time, 2290)
@@ -35,15 +59,16 @@ class TestEventAndEvents(flow.unittest.TestCase):
     def test_events(test_case):
         events_json = json.dumps(
             [
-                {"name": "test", "cpu_time": 1234, "input_shapes": "-", "type": 0},
-                {"name": "test", "cpu_time": 3346, "input_shapes": "-", "type": 0},
+                {"name": "custom", "time": 1234, "custom_type": 0, "type": 0},
+                {"name": "custom", "time": 3346, "custom_type": 0, "type": 0},
             ]
         )
         events = [
-            Event("test", 1234, 1234, 1, "-", 0),
-            Event("test", 3346, 3346, 1, "-", 0),
+            CustomEvent("custom", 1234, CustomEventType.Default),
+            CustomEvent("custom", 3346, CustomEventType.Default),
         ]
-        events_avg = [Event("test", 2290, 4580, 2, "-", 0)]
+        events_avg = [CustomEvent("custom", 4580, CustomEventType.Default)]
+        events_avg[0].count = 2
         test_case.assertEqual(Events(events_json), events)
         test_case.assertEqual(Events(events_json).key_averages(), events_avg)
 

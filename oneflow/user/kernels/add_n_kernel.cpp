@@ -44,13 +44,13 @@ class AddNKernel : public OpKernel, public CudaGraphSupport {
     CHECK(primitive);
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const DataType data_type = out->data_type();
-    const size_t count = out->shape().elem_cnt();
+    const size_t count = out->shape_view().elem_cnt();
     if (count == 0) { return; }
     size_t in_num = ctx->inputs().size();
     std::vector<const void*> srcs(in_num);
     for (size_t i = 0; i < in_num; ++i) {
       const Tensor* in_i = ctx->Tensor4ArgNameAndIndex("in", i);
-      CHECK_EQ(in_i->shape().elem_cnt(), count);
+      CHECK_EQ(in_i->shape_view().elem_cnt(), count);
       CHECK_EQ(in_i->data_type(), data_type);
       srcs[i] = in_i->template dptr();
     }

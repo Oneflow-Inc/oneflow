@@ -28,14 +28,14 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> MedianOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& ones_shape = {1};
-  *ctx->OutputShape("output", 0) = ones_shape.RemoveOnes({0});
+  *ctx->MutOutputShape("output", 0) = ones_shape.RemoveOnes({0});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> MedianOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> MedianOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("output", 0) = ctx->InputDType("input", 0);
+  *ctx->MutOutputDType("output", 0) = ctx->InputDType("input", 0);
   return Maybe<void>::Ok();
 }
 
@@ -104,13 +104,13 @@ Maybe<void> GenerateBackwardOpConf4Median(const user_op::UserOpWrapper& op,
 
     user_op::UserOpConfWrapperBuilder multiply_mask_builder(op.op_name() + "_grad_multiply_mask");
     user_op::UserOpConfWrapper multiply_mask_op =
-        multiply_mask_builder.Op("multiply")
+        multiply_mask_builder.Op("broadcast_mul")
             .Input("x", broadcast_divided_dy_op.output("y", 0))
             .Input("y", cast_mask_op.output("out", 0))
-            .Output("out")
+            .Output("z")
             .Build();
     AddOp(multiply_mask_op);
-    op.BindGradTensorWithOpInput(multiply_mask_op.output("out", 0), "input", 0);
+    op.BindGradTensorWithOpInput(multiply_mask_op.output("z", 0), "input", 0);
   }
   return Maybe<void>::Ok();
 }

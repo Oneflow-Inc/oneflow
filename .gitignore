@@ -2,6 +2,7 @@
 /build-*
 /docs/build/
 /docs/build-cn/
+/docs/source/generated
 /cmake-build-*
 /dist
 /third_party/
@@ -44,3 +45,5 @@ unittest-log-*
 /target
 saved_model
 /devcontainer-cache
+
+op_prof.csv

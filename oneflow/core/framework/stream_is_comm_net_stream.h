@@ -21,16 +21,18 @@ limitations under the License.
 
 namespace oneflow {
 
-struct IsCommNetStream {
-  static bool Case(StreamRoleCase<StreamRole::kInvalid>) {  // NOLINT
-    LOG(FATAL);
-  }
-  static bool Case(StreamRoleCase<StreamRole::kCompute>) { return false; }
-  static bool Case(StreamRoleCase<StreamRole::kHost2Device>) { return false; }
-  static bool Case(StreamRoleCase<StreamRole::kDevice2Host>) { return false; }
-  static bool Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>) { return true; }
-  static bool Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>) { return true; }
-  static bool Case(StreamRoleCase<StreamRole::kCriticalSection>) { return false; }
+struct IsCommNetStream final : public StreamRoleVisitor<IsCommNetStream> {
+  static bool VisitCompute() { return false; }
+  static bool VisitHost2Device() { return false; }
+  static bool VisitDevice2Host() { return false; }
+  static bool VisitAsyncedDevice2Host() { return VisitDevice2Host(); }
+  static bool VisitSyncedLaunchedCommNet() { return true; }
+  static bool VisitAsyncedLaunchedCommNet() { return true; }
+  static bool VisitBarrier() { return false; }
+  static bool VisitCriticalSection() { return false; }
+  static bool VisitLazyJobLauncher() { return false; }
+  static bool VisitPinnedCompute() { return VisitCompute(); }
+  static bool VisitTmpCompute() { return VisitCompute(); }
 };
 
 }  // namespace oneflow

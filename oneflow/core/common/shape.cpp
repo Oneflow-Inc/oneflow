@@ -14,13 +14,94 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/shape.h"
-#include "oneflow/core/common/shape.cfg.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
-Shape CreateReducedShape(const ShapeView& shape, const AxisVector& axis_vec) {
+template<class T>
+int64_t ConstShapeMixIn<T>::elem_cnt() const {
+  return std::accumulate(tp()->begin(), tp()->end(), int64_t(1), std::multiplies<>());
+}
+
+template<class T>
+int64_t ConstShapeMixIn<T>::At(int64_t index) const {
+  CHECK_GE(index, 0);
+  CHECK_LT(index, tp()->NumAxes()) << " Shape: " << tp()->DebugStr() << " visit index: " << index
+                                   << " > num_axes: " << tp()->NumAxes();
+  return (*tp())[index];
+}
+
+template<class T>
+int64_t ConstShapeMixIn<T>::Count(int64_t begin_axis, int64_t end_axis) const {
+  CHECK(0 <= begin_axis && begin_axis <= end_axis && end_axis <= tp()->NumAxes())
+      << begin_axis << " " << end_axis;
+  int64_t cnt = 1;
+  for (int64_t i = begin_axis; i < end_axis; ++i) { cnt *= At(i); }
+  return cnt;
+}
+template<class T>
+int64_t ConstShapeMixIn<T>::Count(int64_t begin_axis) const {
+  return Count(begin_axis, tp()->NumAxes());
+}
+
+template<class T>
+bool ConstShapeMixIn<T>::Containing(ShapeView small_shape) const {
+  if (tp()->NumAxes() < small_shape.NumAxes()) { return false; }
+  FOR_RANGE(int, i, 0, small_shape.NumAxes()) {
+    if (tp()->At(i) != small_shape.At(i)) { return false; }
+  }
+  return true;
+}
+
+template<class T>
+bool ConstShapeMixIn<T>::MatchBeforeLastDim(ShapeView next_shape) const {
+  if (tp()->NumAxes() != next_shape.NumAxes()) { return false; }
+  for (int64_t i = 0; i < tp()->NumAxes() - 1; ++i) {
+    if (next_shape.At(i) != tp()->At(i)) { return false; }
+  }
+  return true;
+}
+
+template<class T>
+std::string ConstShapeMixIn<T>::ToString() const {
+  std::stringstream ss;
+  int32_t idx = 0;
+  ss << "(";
+  for (int64_t dim : *tp()) {
+    ss << dim;
+    if (++idx != tp()->size() || tp()->size() == 1) { ss << ","; }
+  }
+  ss << ")";
+  return ss.str();
+}
+
+template<class T>
+std::string ConstShapeMixIn<T>::DebugStr() const {
+  return ToString();
+}
+
+template<class T>
+void ConstShapeMixIn<T>::ToProto(ShapeProto* ret) const {
+  *(ret->mutable_dim()) = PbRf<int64_t>(tp()->begin(), tp()->end());
+}
+
+template<class T>
+bool ConstShapeMixIn<T>::operator==(const T& rhs) const {
+  if (this->NumAxes() != rhs.NumAxes()) { return false; }
+  FOR_RANGE(int, i, 0, this->NumAxes()) {
+    if (this->At(i) != rhs.At(i)) { return false; }
+  }
+  return true;
+}
+
+template struct ConstShapeMixIn<Shape>;
+template struct MutShapeMixIn<Shape>;
+template struct ConstShapeMixIn<ShapeView>;
+template struct ConstShapeMixIn<MutShapeView>;
+template struct MutShapeMixIn<MutShapeView>;
+
+Shape CreateReducedShape(ShapeView shape, const AxisVector& axis_vec) {
   // For 0-dim Tensor
   if (axis_vec.empty()) { return Shape({}); }
   DimVector dim_vec;
@@ -29,7 +110,7 @@ Shape CreateReducedShape(const ShapeView& shape, const AxisVector& axis_vec) {
   return Shape(std::move(dim_vec));
 }
 
-Shape CreateLeftExtendedShape(const ShapeView& shape, int ndims_left_extend_to) {
+Shape CreateLeftExtendedShape(ShapeView shape, int ndims_left_extend_to) {
   CHECK_GE(ndims_left_extend_to, shape.NumAxes());
   DimVector dim_vec(ndims_left_extend_to);
   const size_t left_ones_num = ndims_left_extend_to - shape.NumAxes();
@@ -39,16 +120,17 @@ Shape CreateLeftExtendedShape(const ShapeView& shape, int ndims_left_extend_to) 
   return Shape(std::move(dim_vec));
 }
 
-Shape ZeroDimCompatiableShape(const Shape& shape) {
-  if (shape.NumAxes() == 0 && shape.elem_cnt() == 1) {
-    DimVector dim_vec;
-    dim_vec.emplace_back(1);
-    return Shape(dim_vec);
-  }
+Shape ExpandDimIf0D(const Shape& shape) {
+  if (shape.NumAxes() == 0) { return {1}; }
   return shape;
 }
 
-Shape CreateReducedShapeOrOnesShape(const ShapeView& shape, const AxisVector& axis_vec) {
+Shape ExpandDimIf0D(ShapeView shape) {
+  if (shape.NumAxes() == 0) { return {1}; }
+  return Shape(shape);
+}
+
+Shape CreateReducedShapeOrOnesShape(ShapeView shape, const AxisVector& axis_vec) {
   if (axis_vec.empty()) { return Shape::Ones(shape.NumAxes()); }
   return CreateReducedShape(shape, axis_vec);
 }
@@ -60,86 +142,26 @@ int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes) {
   return axis;
 }
 
-Shape::Shape(const std::initializer_list<int64_t>& dim_vec)
-    : dim_vec_(dim_vec), is_initialized_(true) {}
-Shape::Shape(const DimVector& dim_vec) : dim_vec_(dim_vec), is_initialized_(true) {}
-Shape::Shape(DimVector&& dim_vec) : dim_vec_(std::move(dim_vec)), is_initialized_(true) {}
-Shape::Shape(const ShapeProto& shape_proto) : is_initialized_(true) {
-  dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
-}
-Shape::Shape(const cfg::ShapeProto& shape_proto) : is_initialized_(true) {
-  dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
-}
+Shape::Shape(const DimVector& dim_vec) : DimVector(dim_vec), is_initialized_(true) {}
+Shape::Shape(DimVector&& dim_vec) : DimVector(std::move(dim_vec)), is_initialized_(true) {}
+Shape::Shape(const ShapeProto& shape_proto)
+    : DimVector(shape_proto.dim().begin(), shape_proto.dim().end()), is_initialized_(true) {}
+Shape::Shape(ShapeView shape_view)
+    : DimVector(shape_view.begin(), shape_view.end()), is_initialized_(true) {}
 
-Shape& Shape::operator=(const Shape& shape) {
-  dim_vec_ = shape.dim_vec_;
-  is_initialized_ = shape.is_initialized_;
-  return *this;
-}
-
-Shape& Shape::assign(const DimVector& dim_vec) {
-  dim_vec_ = dim_vec;
-  return *this;
-}
-
-Shape& Shape::CheckNumAxesIdenticalAndAssign(const ShapeView& shape_view) {
+Shape& Shape::CheckNumAxesIdenticalAndAssign(ShapeView shape_view) {
   CHECK_EQ(NumAxes(), shape_view.NumAxes());
-  std::copy(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes(), dim_vec_.data());
+  std::copy(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes(), data());
   return *this;
 }
 
-Shape& Shape::LeftOnesExtendedAssign(const ShapeView& shape_view) {
+Shape& Shape::LeftOnesExtendedAssign(ShapeView shape_view) {
   CHECK_GE(NumAxes(), shape_view.NumAxes());
   size_t left_ones_size = NumAxes() - shape_view.NumAxes();
-  FOR_RANGE(int, i, 0, left_ones_size) { dim_vec_.at(i) = 1LL; }
-  std::copy(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes(),
-            dim_vec_.data() + left_ones_size);
+  FOR_RANGE(int, i, 0, left_ones_size) { (*this)[i] = 1LL; }
+  std::copy(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes(), data() + left_ones_size);
   return *this;
 }
-
-bool Shape::operator==(const Shape& rhs) const { return dim_vec_ == rhs.dim_vec_; }
-
-std::string Shape::ToString() const {
-  std::stringstream ss;
-  int32_t idx = 0;
-  ss << "(";
-  for (int64_t dim : dim_vec_) {
-    ss << dim;
-    if (++idx != dim_vec_.size() || dim_vec_.size() == 1) { ss << ","; }
-  }
-  ss << ")";
-  return ss.str();
-}
-
-std::string Shape::DebugStr() const { return ToString(); }
-
-void Shape::ToProto(ShapeProto* ret) const {
-  *(ret->mutable_dim()) = PbRf<int64_t>(dim_vec_.begin(), dim_vec_.end());
-}
-
-int64_t Shape::At(int64_t index) const {
-  CHECK_GE(index, 0);
-  CHECK_LT(index, this->NumAxes()) << " Shape: " << DebugStr() << " visit index: " << index
-                                   << " > num_axes: " << this->NumAxes();
-  return dim_vec_.at(index);
-}
-
-void Shape::Set(int64_t index, int64_t val) {
-  CHECK_GE(index, 0);
-  CHECK_LT(index, this->NumAxes()) << " Shape: " << DebugStr() << " visit index: " << index
-                                   << " > num_axes: " << this->NumAxes();
-  dim_vec_.at(index) = val;
-}
-
-int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
-  CHECK(0 <= begin_axis && begin_axis <= end_axis && end_axis <= NumAxes())
-      << begin_axis << " " << end_axis;
-  int64_t cnt = 1;
-  for (int64_t i = begin_axis; i < end_axis; ++i) { cnt *= At(i); }
-  return cnt;
-}
-
-int64_t Shape::Count(int64_t begin_axis) const { return Count(begin_axis, NumAxes()); }
 
 std::ostream& operator<<(std::ostream& out, const Shape& shape) {
   out << shape.DebugStr();
@@ -174,34 +196,18 @@ Shape Shape::Ones(const int64_t num_axes) {
   return Shape(dim_vec);
 }
 
-AxisVector Shape::Axes4BroadcastTo(const Shape& broadcast_shape) const {
+AxisVector Shape::Axes4BroadcastTo(ShapeView broadcast_shape) const {
   AxisVector broadcast_axis_vec;
   CHECK_EQ(broadcast_shape.NumAxes(), NumAxes());
   for (int64_t i = 0; i < NumAxes(); i++) {
-    if (this->dim_vec().at(i) != broadcast_shape.dim_vec().at(i) && this->dim_vec().at(i) == 1) {
+    if (this->dim_vec().at(i) != broadcast_shape[i] && this->dim_vec().at(i) == 1) {
       broadcast_axis_vec.emplace_back(i);
     } else {
-      CHECK_EQ(this->dim_vec().at(i), broadcast_shape.dim_vec().at(i));
+      CHECK_EQ(this->dim_vec().at(i), broadcast_shape[i]);
     }
   }
   CHECK(!broadcast_axis_vec.empty());
   return broadcast_axis_vec;
-}
-
-bool Shape::Containing(const Shape& small_shape) const {
-  if (this->NumAxes() < small_shape.NumAxes()) { return false; }
-  FOR_RANGE(int, i, 0, small_shape.NumAxes()) {
-    if (this->At(i) != small_shape.At(i)) { return false; }
-  }
-  return true;
-}
-
-bool Shape::MatchBeforeLastDim(const Shape& next_shape) const {
-  if (this->NumAxes() != next_shape.NumAxes()) { return false; }
-  for (int64_t i = 0; i < this->NumAxes() - 1; ++i) {
-    if (next_shape.At(i) != this->At(i)) { return false; }
-  }
-  return true;
 }
 
 Maybe<Shape> Shape::Slice(int64_t start_dim, int64_t end_dim) const {
@@ -209,9 +215,9 @@ Maybe<Shape> Shape::Slice(int64_t start_dim, int64_t end_dim) const {
   int64_t ndims = this->NumAxes();
   if (start_dim > ndims) { start_dim = ndims; }
   if (end_dim > ndims) { end_dim = ndims; }
-  DimVector dim_vec;
-  for (int64_t i = start_dim; i < end_dim && i < ndims; ++i) { dim_vec.emplace_back(this->At(i)); }
-  return std::make_shared<Shape>(dim_vec);
+  std::shared_ptr<Shape> shape = std::make_shared<Shape>();
+  for (int64_t i = start_dim; i < end_dim && i < ndims; ++i) { shape->emplace_back(this->At(i)); }
+  return shape;
 }
 
 }  // namespace oneflow

@@ -55,13 +55,6 @@ def InitLazyGlobalSession(config_proto):
     oneflow._oneflow_internal.InitLazyGlobalSession(config_proto_str)
 
 
-def GetInterUserJobInfo():
-    inter_user_job_info = oneflow._oneflow_internal.GetSerializedInterUserJobInfo()
-    ret = InterUserJobInfo()
-    ret.ParseFromString(inter_user_job_info)
-    return ret
-
-
 def JobBuildAndInferCtx_Open(job_name):
     job_name = str(job_name)
     oneflow._oneflow_internal.JobBuildAndInferCtx_Open(job_name)
@@ -71,12 +64,6 @@ def CurJobBuildAndInferCtx_SetJobConf(job_config_proto):
     assert type(job_config_proto) is job_conf_pb.JobConfigProto, type(job_config_proto)
     job_config_proto_str = text_format.MessageToString(job_config_proto)
     oneflow._oneflow_internal.CurJobBuildAndInferCtx_SetJobConf(job_config_proto_str)
-
-
-def CurJobBuildAndInferCtx_SetTrainConf(train_config):
-    assert type(train_config) is job_conf_pb.TrainConf
-    train_config_str = text_format.MessageToString(train_config)
-    oneflow._oneflow_internal.CurJobBuildAndInferCtx_SetTrainConf(train_config_str)
 
 
 def InferOpConf(op_conf_proto, upstream_signature):
@@ -109,123 +96,6 @@ def CheckAndCompleteUserOpConf(op_conf_proto):
     return text_format.Parse(new_op_conf, op_conf_util.OperatorConf())
 
 
-def CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf_proto):
-    serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    add_and_infer = (
-        oneflow._oneflow_internal.CurJobBuildAndInferCtx_AddAndInferConsistentOp
-    )
-    op_attribute_str = add_and_infer(serialized_op_conf)
-    return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
-
-
-def CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf_proto):
-    serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    add_and_infer = (
-        oneflow._oneflow_internal.CurJobBuildAndInferCtx_AddAndInferMirroredOp
-    )
-    op_attribute_str = add_and_infer(serialized_op_conf)
-    return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
-
-
-def CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn):
-    lbn = str(lbn)
-    oneflow._oneflow_internal.CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn)
-
-
-def CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid):
-    serialized = str(text_format.MessageToString(lbi_and_uuid))
-    oneflow._oneflow_internal.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(
-        serialized
-    )
-
-
-def JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    return oneflow._oneflow_internal.JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn)
-
-
-def JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(job_name, lbn):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    return oneflow._oneflow_internal.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(
-        job_name, lbn
-    )
-
-
-def JobBuildAndInferCtx_MirroredBlobGetSubLbi(job_name, lbn, index):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    ret = oneflow._oneflow_internal.JobBuildAndInferCtx_MirroredBlobGetSerializedSubLbi(
-        job_name, lbn, index
-    )
-    return text_format.Parse(ret, logical_blob_id_util.LogicalBlobId())
-
-
-def JobBuildAndInferCtx_GetStaticShape(job_name, lbn):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    axis_str = oneflow._oneflow_internal.JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(
-        job_name, lbn
-    )
-    int_list = text_format.Parse(axis_str, record_util.Int64List())
-    return tuple(map(int, int_list.value))
-
-
-def JobBuildAndInferCtx_GetDataType(job_name, lbn):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    dtype = oneflow._oneflow_internal.JobBuildAndInferCtx_GetDataType(job_name, lbn)
-    return int(dtype)
-
-
-def JobBuildAndInferCtx_IsDynamic(job_name, lbn):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    ret = oneflow._oneflow_internal.JobBuildAndInferCtx_IsDynamic(job_name, lbn)
-    return ret
-
-
-def JobBuildAndInferCtx_DisableBoxing(job_name, lbn):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    ret = oneflow._oneflow_internal.JobBuildAndInferCtx_DisableBoxing(job_name, lbn)
-    return ret
-
-
-def JobBuildAndInferCtx_GetSplitAxisFromProducerView(job_name, lbn):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    split_axis_str = oneflow._oneflow_internal.JobBuildAndInferCtx_GetSplitAxisFromProducerView(
-        job_name, lbn
-    )
-    split_axis = text_format.Parse(split_axis_str, dtype_util.OptInt64())
-    if split_axis.HasField("value"):
-        return split_axis.value
-    return None
-
-
-def JobBuildAndInferCtx_GetParallelConfFromProducerView(job_name, lbn):
-    job_name = str(job_name)
-    lbn = str(lbn)
-    GetParallelConf = (
-        oneflow._oneflow_internal.JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView
-    )
-    serialized_parallel_conf = GetParallelConf(job_name, lbn)
-    parallel_conf = text_format.Parse(
-        serialized_parallel_conf, placement_pb.ParallelConf()
-    )
-    return parallel_conf
-
-
-def GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf):
-    serialized_parallel_conf = str(parallel_conf)
-    ofrecord = oneflow._oneflow_internal.GetMachine2DeviceIdListOFRecordFromParallelConf(
-        serialized_parallel_conf
-    )
-    return text_format.Parse(ofrecord, record_util.OFRecord())
-
-
 def GetFunctionConfigDef():
     func_config_def = oneflow._oneflow_internal.GetFunctionConfigDef()
     return text_format.Parse(func_config_def, ConfigDef())
@@ -234,18 +104,6 @@ def GetFunctionConfigDef():
 def GetScopeConfigDef():
     scope_config_def = oneflow._oneflow_internal.GetScopeConfigDef()
     return text_format.Parse(scope_config_def, ConfigDef())
-
-
-def GetInterfaceOpAttributes():
-    op_attributes = oneflow._oneflow_internal.GetSerializedInterfaceOpAttributes()
-    return text_format.Parse(op_attributes, op_attribute_pb.OpAttributeList())
-
-
-def GetJobSet():
-    job_set = oneflow._oneflow_internal.GetSerializedJobSet()
-    ret = job_set_pb.JobSet()
-    ret.ParseFromString(job_set)
-    return ret
 
 
 def GetCurrentJob():

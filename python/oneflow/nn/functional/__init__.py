@@ -45,7 +45,7 @@ from oneflow._C import selu
 from oneflow._C import sigmoid
 from oneflow._C import softshrink
 from oneflow._C import prelu
-from oneflow._C import gelu
+from oneflow._C import gelu_with_approximate as gelu
 from oneflow._C import glu
 from oneflow._C import logsigmoid
 from oneflow._C import log_softmax
@@ -59,13 +59,19 @@ from oneflow._C import mish
 from oneflow.nn.modules.normalization import layer_norm
 from oneflow._C import dropout
 from oneflow._C import smooth_l1_loss
-from oneflow._C import pad
-from oneflow._C import upsample
+from .functional_pad import pad
 from oneflow._C import triplet_margin_loss
 from oneflow._C import ctc_greedy_decoder
 from oneflow._C import one_hot
 from oneflow._C import normalize
 from oneflow._C import cross_entropy
+from oneflow._C import binary_cross_entropy_loss as binary_cross_entropy
+from oneflow._C import (
+    binary_cross_entropy_with_logits_loss as binary_cross_entropy_with_logits,
+)
 from oneflow.nn.modules.sparse import embedding
 from oneflow.nn.modules.linear import linear
 from oneflow.nn.modules.activation import relu6
+from oneflow.nn.modules.upsampling import Upsample as upsample
+from oneflow._C import unfold
+from oneflow._C import fold

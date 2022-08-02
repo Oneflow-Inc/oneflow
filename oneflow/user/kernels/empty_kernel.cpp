@@ -33,7 +33,7 @@ class EmptyKernel final : public OpKernel {
 
     // None POD type need check
     if (!IsPODAndHalfDataType(dtype)) {
-      CHECK(out->shape().NumAxes() > 0 && out->shape().elem_cnt() == 0)
+      CHECK(out->shape_view().NumAxes() > 0 && out->shape_view().elem_cnt() == 0)
           << "None POD Tensor created by empty op must be 0-Size tensor.";
     }
   }

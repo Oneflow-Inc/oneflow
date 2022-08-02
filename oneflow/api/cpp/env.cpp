@@ -18,18 +18,18 @@ limitations under the License.
 #include "oneflow/api/cpp/env.h"
 #include "oneflow/api/cpp/env_impl.h"
 #include "oneflow/core/framework/shut_down_util.h"
-#include "oneflow/core/thread/thread_consistent_id.h"
+#include "oneflow/core/thread/thread_global_id.h"
 
 namespace oneflow_api {
 void initialize() {
-  if (of::Global<OneFlowEnv>::Get() == nullptr) { of::Global<OneFlowEnv>::New(); }
+  if (of::Singleton<OneFlowEnv>::Get() == nullptr) { of::Singleton<OneFlowEnv>::New(); }
   of::SetShuttingDown(false);
 }
 
 void release() {
-  if (of::Global<OneFlowEnv>::Get() != nullptr) { of::Global<OneFlowEnv>::Delete(); }
+  if (of::Singleton<OneFlowEnv>::Get() != nullptr) { of::Singleton<OneFlowEnv>::Delete(); }
   of::SetShuttingDown();
-  of::ResetThisThreadUniqueConsistentId().GetOrThrow();
+  of::ResetThisThreadUniqueGlobalId().GetOrThrow();
 }
 
 }  // namespace oneflow_api

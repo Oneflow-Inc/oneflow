@@ -16,6 +16,8 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/add.h"
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
+#include "oneflow/core/ep/common/primitive/util.h"
+#include "oneflow/core/ep/common/onednn.h"
 
 namespace oneflow {
 
@@ -75,48 +77,54 @@ class AddDefaultImpl : public Add {
 };
 
 #ifdef WITH_ONEDNN
-
 class AddOneDnnImpl : public Add {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AddOneDnnImpl);
-  AddOneDnnImpl(dnnl::memory::data_type type) : type_onednn_(type){};
+  explicit AddOneDnnImpl(dnnl::memory::data_type type) : type_onednn_(type){};
   ~AddOneDnnImpl() override = default;
 
   using Add::Launch;
   void Launch(Stream* stream, const void* const* srcs, size_t arity, void* dst,
               size_t count) override {
-    for (int i = 1; i < arity; i++) {
-      if (srcs[i] == dst) { LOG(FATAL) << "Only the first parameter can be operated inplace"; }
-    }
-    CpuStream* cpu_stream = stream->As<CpuStream>();
-    size_t num_threads = cpu_stream->device()->GetNumThreads();
-    CpuNumThreadsGuard guard(num_threads);
-
-    dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
-    dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
-
-    dnnl::memory::dims src_dims = {static_cast<dnnl::memory::dim>(count)};
-    std::vector<dnnl::memory::desc> src_md;
-    std::vector<dnnl::memory> src_mem;
-    src_md.reserve(arity);
-    src_mem.reserve(arity);
-
-    for (int i = 0; i < arity; i++) {
-      auto md = dnnl::memory::desc(src_dims, type_onednn_, dnnl::memory::format_tag::x);
-      auto mem = dnnl::memory(md, *onednn_engine, (void*)(srcs)[i]);
-      src_md.emplace_back(md);
-      src_mem.emplace_back(mem);
+    if (arity < 2) {
+      // TODO: arity 0 and 1
+      UNIMPLEMENTED() << "Addn only supports summation of 2 or more tensors";
+    } else if (arity == 2) {
+      if (srcs[1] == dst && srcs[0] != dst) {
+        LOG(FATAL) << "Only the first parameter can be operated inplace";
+      }
+    } else {
+      for (int i = 2; i < arity; i++) {
+        if (srcs[i] == dst) { LOG(FATAL) << "Only the first parameter can be operated inplace"; }
+      }
     }
 
-    std::vector<float> scales(arity, 1.0);
-    auto sum_pd = dnnl::sum::primitive_desc(scales, src_md, *onednn_engine);
-    auto sum_prim = dnnl::sum(sum_pd);
-    auto dst_mem = dnnl::memory(sum_pd.dst_desc(), *onednn_engine, dst);
-    std::unordered_map<int, dnnl::memory> sum_args{{DNNL_ARG_DST, dst_mem}};
-    for (int i = 0; i < arity; ++i) { sum_args.insert({DNNL_ARG_MULTIPLE_SRC + i, src_mem[i]}); }
+    stream->As<CpuStream>()->onednn_executor()->Launch(
+        [&](dnnl::engine* onednn_engine, dnnl::stream* onednn_stream) {
+          dnnl::memory::dims src_dims = {static_cast<dnnl::memory::dim>(count)};
+          std::vector<dnnl::memory::desc> src_md;
+          std::vector<dnnl::memory> src_mem;
+          src_md.reserve(arity);
+          src_mem.reserve(arity);
 
-    sum_prim.execute(*onednn_stream, sum_args);
-    onednn_stream->wait();
+          for (int i = 0; i < arity; i++) {
+            auto md = dnnl::memory::desc(src_dims, type_onednn_, dnnl::memory::format_tag::x);
+            auto mem = dnnl::memory(md, *onednn_engine, (void*)(srcs)[i]);
+            src_md.emplace_back(md);
+            src_mem.emplace_back(mem);
+          }
+
+          std::vector<float> scales(arity, 1.0);
+          auto sum_pd = dnnl::sum::primitive_desc(scales, src_md, *onednn_engine);
+          auto sum_prim = dnnl::sum(sum_pd);
+          auto dst_mem = dnnl::memory(sum_pd.dst_desc(), *onednn_engine, dst);
+          std::unordered_map<int, dnnl::memory> sum_args{{DNNL_ARG_DST, dst_mem}};
+          for (int i = 0; i < arity; ++i) {
+            sum_args.insert({DNNL_ARG_MULTIPLE_SRC + i, src_mem[i]});
+          }
+
+          sum_prim.execute(*onednn_stream, sum_args);
+        });
   }
 
  private:
@@ -162,24 +170,26 @@ class AddFactoryImpl : public AddFactory {
   std::unique_ptr<Add> New(DataType data_type) override {
 #define MAKE_NEW_ADD_ENTRY(type_cpp, type_proto) {type_proto, NewAdd<type_cpp>},
 
-#ifdef WITH_ONEDNN
-#define MAKE_NEW_ONEDNN_ADD_ENTRY(type_onednn, type_proto) {type_proto, NewOneDnnAdd<type_onednn>},
-
-    static const std::map<DataType, std::function<std::unique_ptr<Add>()>> new_add_handle{
-        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_ONEDNN_ADD_ENTRY, CPU_PRIMITIVE_ADD_ONEDNN_TYPE_SEQ)
-            OF_PP_FOR_EACH_TUPLE(MAKE_NEW_ADD_ENTRY, CPU_PRIMITIVE_ADD_DEFAULT_TYPE_SEQ)};
-#else
     static const std::map<DataType, std::function<std::unique_ptr<Add>()>> new_add_handle{
         OF_PP_FOR_EACH_TUPLE(MAKE_NEW_ADD_ENTRY, CPU_PRIMITIVE_ALL_TYPE_SEQ)};
-#endif
-#undef MAKE_NEW_ONEDNN_ADD_ENTRY
+
 #undef MAKE_NEW_ADD_ENTRY
-    const auto it = new_add_handle.find(data_type);
-    if (it != new_add_handle.end()) {
-      return it->second();
-    } else {
-      return nullptr;
+#ifdef WITH_ONEDNN
+
+#define MAKE_NEW_ONEDNN_ADD_ENTRY(type_onednn, type_proto) {type_proto, NewOneDnnAdd<type_onednn>},
+
+    static const std::map<DataType, std::function<std::unique_ptr<Add>()>> new_add_onednn_handle{
+        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_ONEDNN_ADD_ENTRY, CPU_PRIMITIVE_ADD_ONEDNN_TYPE_SEQ)};
+
+#undef MAKE_NEW_ONEDNN_ADD_ENTRY
+
+    if (OneDnnIsEnabled()) {
+      auto add_primitive = NewPrimitiveFromHandlers(new_add_onednn_handle, data_type);
+      if (add_primitive) { return add_primitive; }
     }
+
+#endif
+    return NewPrimitiveFromHandlers(new_add_handle, data_type);
   }
 };
 

@@ -97,9 +97,9 @@ class CountNotFiniteGpuKernel final : public user_op::OpKernel, public user_op::
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const int64_t elem_cnt = x->shape().elem_cnt();
+    const int64_t elem_cnt = x->shape_view().elem_cnt();
     Memset<DeviceType::kCUDA>(ctx->stream(), y->mut_dptr<int64_t>(), 0,
-                              y->shape().elem_cnt() * sizeof(int64_t));
+                              y->shape_view().elem_cnt() * sizeof(int64_t));
     CountNotFiniteGpu<T><<<GetCountNotFiniteNumBlocks(elem_cnt), kCudaThreadsNumPerBlock, 0,
                            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, x->dptr<T>(), y->mut_dptr<int64_t>());
@@ -130,7 +130,7 @@ class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel,
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     Param<T, 128> para;
     Memset<DeviceType::kCUDA>(ctx->stream(), y->mut_dptr<int64_t>(), 0,
-                              y->shape().elem_cnt() * sizeof(int64_t));
+                              y->shape_view().elem_cnt() * sizeof(int64_t));
     para.y = y->mut_dptr<int64_t>();
 
     int64_t remain_size = ctx->inputs().size();
@@ -148,8 +148,8 @@ class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel,
         const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", input_id);
         input_id++;
         para.x[i] = x->dptr<T>();
-        para.x_elem_cnt[i] = x->shape().elem_cnt();
-        max_elem_cnt = std::max(max_elem_cnt, x->shape().elem_cnt());
+        para.x_elem_cnt[i] = x->shape_view().elem_cnt();
+        max_elem_cnt = std::max(max_elem_cnt, x->shape_view().elem_cnt());
       }
       MultiCountNotFiniteGpu<T, 128>
           <<<GetCountNotFiniteNumBlocks(max_elem_cnt), kCudaThreadsNumPerBlock, 0,

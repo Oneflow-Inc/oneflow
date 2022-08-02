@@ -134,7 +134,8 @@ template<typename perf_t>
 perf_t CudnnConvAlgoGetOrInfer(const CudnnConvParams& params,
                                const std::function<perf_t(const CudnnConvParams&)>& InferFn,
                                CudnnConvAlgoCache::Store<perf_t>* store, std::mutex* mutex) {
-  const size_t cache_size = Global<ResourceDesc, ForSession>::Get()->thread_local_cache_max_size();
+  const size_t cache_size =
+      Singleton<ResourceDesc, ForSession>::Get()->thread_local_cache_max_size();
   auto InferWithCache = [&](const CudnnConvParams& p) -> perf_t {
     CudnnConvParams params_without_ws = p;
     params_without_ws.max_ws_size = 0;
@@ -539,7 +540,7 @@ perf_t FindCudnnConvAlgorithmWithResource(CudnnConvArgs* args, CudnnConvResource
     }
     return GetBestAlgorithm<perf_t>(*args, res, perf_vec);
   };
-  return Global<CudnnConvAlgoCache>::Get()->Remember<perf_t>(args->params, Infer);
+  return Singleton<CudnnConvAlgoCache>::Get()->Remember<perf_t>(args->params, Infer);
 }
 
 template<typename perf_t, typename algo_t>

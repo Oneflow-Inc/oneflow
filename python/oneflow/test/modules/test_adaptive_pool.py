@@ -45,7 +45,7 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_adaptive_avgpool2d(test_case):
         m = torch.nn.AdaptiveAvgPool2d(output_size=random().to(_size_2_opt_t_not_none))
         m.train(random())
@@ -59,7 +59,7 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
         version.parse(torch_original.__version__) < version.parse("1.10.0"),
         "GPU version 'nn.AdaptiveAvgPool3d' has a bug in PyTorch before '1.10.0'",
     )
-    @autotest()
+    @autotest(n=5)
     def test_adaptive_avgpool3d(test_case):
         m = torch.nn.AdaptiveAvgPool3d(output_size=random().to(_size_3_opt_t_not_none))
         m.train(random())
@@ -72,13 +72,13 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestAdaptiveAvgPoolFunctional(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_adaptive_avgpool1d_functional(test_case):
         device = random_device()
         x = random_tensor(ndim=3).to(device)
         return torch.nn.functional.adaptive_avg_pool1d(x, output_size=random().to(int))
 
-    @autotest()
+    @autotest(n=5)
     def test_adaptive_avgpool2d_functional(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device)
@@ -88,7 +88,7 @@ class TestAdaptiveAvgPoolFunctional(flow.unittest.TestCase):
         version.parse(torch_original.__version__) <= version.parse("1.10.0"),
         "GPU version 'nn.AdaptiveAvgPool3d' has a bug in PyTorch before '1.10.0'",
     )
-    @autotest()
+    @autotest(n=5)
     def test_adaptive_avgpool3d_functional(test_case):
         device = random_device()
         x = random_tensor(ndim=5).to(device)

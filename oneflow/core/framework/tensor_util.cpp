@@ -16,19 +16,41 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_util.h"
 
 #include "oneflow/core/common/blocking_then_busy.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/instructions_builder.h"
 
 namespace oneflow {
 namespace one {
 
-Maybe<void> SyncAccessTensorWithTimeOut(const std::shared_ptr<Tensor>& tensor,
-                                        const std::function<void(uint64_t)>& Callback,
-                                        const std::string& modifier) {
+Maybe<void> SyncAccessTensorWithTimeOut(
+    const std::shared_ptr<Tensor>& tensor,
+    const std::function<void(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&)>& Callback,
+    const std::string& modifier) {
   auto btb = std::make_shared<BlockingThenBusy>(1);
-  auto local_tensor = JUST(tensor->AsMirroredTensor());
+  auto local_tensor = JUST(tensor->AsLocalTensor());
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, modifier);
+  }));
+  JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CopyLocalTensorDataTo(const std::shared_ptr<Tensor>& input, void* mem_ptr,
+                                  size_t size) {
+  CHECK_OR_RETURN(input->is_local());  // NOLINT
+  CHECK_OR_RETURN(input->is_contiguous()) << Error::RuntimeError() << kOfBugIssueUploadPrompt;
+  CHECK_EQ_OR_RETURN(input->shape()->elem_cnt() * JUST(input->dtype()->bytes()), size)
+      << Error::RuntimeError() << kOfBugIssueUploadPrompt;
+  std::shared_ptr<one::LocalTensor> local_tensor = JUST(input->AsLocalTensor());
+  const auto& Callback = [&](ep::Stream* stream,
+                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+    SyncAutoMemcpy(stream, mem_ptr, eager_blob_object->dptr(), size, memory::MakeHostMemCase(),
+                   eager_blob_object->mem_case());
+  };
+  auto btb = std::make_shared<BlockingThenBusy>(1);
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, "const");
   }));
   JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
   return Maybe<void>::Ok();

@@ -56,12 +56,12 @@ template<typename T>
 void CpuTopK(ep::Stream* /*stream*/, const T* in_ptr, int64_t* indices_ptr, int64_t instance_num,
              int64_t instance_size, int64_t k, bool sorted, int64_t* out_ptr) {
   const int64_t num_thread =
-      std::min(instance_num, static_cast<int64_t>(Global<ThreadPool>::Get()->thread_num()));
+      std::min(instance_num, static_cast<int64_t>(Singleton<ThreadPool>::Get()->thread_num()));
   const BalancedSplitter bs(instance_num, num_thread);
   BlockingCounter bc(num_thread);
   FOR_RANGE(int64_t, thread_id, 0, num_thread) {
     const Range range = bs.At(thread_id);
-    Global<ThreadPool>::Get()->AddWork([=, &bc]() {
+    Singleton<ThreadPool>::Get()->AddWork([=, &bc]() {
       if (k == 1) {
         ComputeTopOne(in_ptr, range, instance_size, out_ptr);
       } else {
@@ -84,12 +84,12 @@ class TopKCpuKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    if (in->shape().elem_cnt() == 0) { return; }
+    if (in->shape_view().elem_cnt() == 0) { return; }
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    const int64_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
-    const int64_t instance_num = in->shape().elem_cnt() / instance_size;
+    const int64_t instance_size = in->shape_view().At(in->shape_view().NumAxes() - 1);
+    const int64_t instance_num = in->shape_view().elem_cnt() / instance_size;
     const int64_t k = std::min(static_cast<int64_t>(ctx->Attr<int32_t>("k")), instance_size);
     int64_t* indices_ptr = tmp_buffer ? tmp_buffer->mut_dptr<int64_t>() : nullptr;
     CpuTopK(ctx->stream(), in->dptr<T>(), indices_ptr, instance_num, instance_size, k,

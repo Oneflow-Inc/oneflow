@@ -34,7 +34,8 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 
   // check index.numaxes == src.num_axes == input/like.numaxes
   int64_t src_num_axes = src.shape().NumAxes();
-  CHECK_GT_OR_RETURN(src_num_axes, 0);
+  // For 0-dim Tensor
+  CHECK_GE_OR_RETURN(src_num_axes, 0);  // NOLINT
   CHECK_LE_OR_RETURN(src_num_axes, user_op::kDimGatherMaxDimCount);
   int64_t index_num_axes = index.shape().NumAxes();
   CHECK_EQ_OR_RETURN(src_num_axes, index_num_axes);
@@ -47,7 +48,14 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   } else {
     OF_UNIMPLEMENTED() << "Input tensor and like tensor cannot be empty simultaneously.";
   }
-  CHECK_EQ_OR_RETURN(output_num_axes, index_num_axes);
+  // For 0-dim Tensor
+  if (output_num_axes != 0 && index_num_axes != 0) {
+    CHECK_EQ_OR_RETURN(output_num_axes, index_num_axes);  // NOLINT
+  } else if (output_num_axes != 0) {
+    CHECK_LE_OR_RETURN(output_num_axes, 1);  // NOLINT
+  } else {
+    CHECK_LE_OR_RETURN(index_num_axes, 1);  // NOLINT
+  }
 
   // check index.shape(i) <= input/like.shape(i)
   FOR_RANGE(int64_t, i, 0, index_num_axes) {
@@ -65,7 +73,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
     CHECK_LE_OR_RETURN(index.shape().At(i), src.shape().At(i));
   }
 
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("output", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("output", 0);
   *out->mut_shape() = input ? input->shape() : like->shape();
   return Maybe<void>::Ok();
 }
@@ -79,7 +87,8 @@ Maybe<void> InferScalarTensorDesc(user_op::InferContext* ctx) {
   // check index.numaxes == src.num_axes == input/like.numaxes
   int64_t output_num_axes = input.shape().NumAxes();
   int64_t index_num_axes = index.shape().NumAxes();
-  CHECK_EQ_OR_RETURN(output_num_axes, index_num_axes);
+  // For 0-dim tensor
+  CHECK_GE_OR_RETURN(output_num_axes, index_num_axes);  // NOLINT
 
   // check index.shape(i) <= input/like.shape(i)
   FOR_RANGE(int64_t, i, 0, index_num_axes) {
@@ -87,7 +96,7 @@ Maybe<void> InferScalarTensorDesc(user_op::InferContext* ctx) {
     CHECK_LE_OR_RETURN(index.shape().At(i), input.shape().At(i));
   }
 
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("output", 0);
+  user_op::TensorDesc* out = ctx->MutOutputTensorDesc("output", 0);
   *out->mut_shape() = input.shape();
   return Maybe<void>::Ok();
 }
@@ -176,14 +185,14 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
   } else {
     CHECK_EQ_OR_RETURN(ctx->InputDType("like", 0), ctx->InputDType("src", 0));
   }
-  *ctx->OutputDType("output", 0) = ctx->InputDType("src", 0);
+  *ctx->MutOutputDType("output", 0) = ctx->InputDType("src", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferScalarDtype(user_op::InferContext* ctx) {
   const user_op::TensorDesc& index = ctx->InputTensorDesc("index", 0);
   CHECK_OR_RETURN(IsIndexDataType(index.data_type()));
-  *ctx->OutputDType("output", 0) = ctx->InputDType("input", 0);
+  *ctx->MutOutputDType("output", 0) = ctx->InputDType("input", 0);
   return Maybe<void>::Ok();
 }
 

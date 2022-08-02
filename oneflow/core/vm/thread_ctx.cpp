@@ -20,13 +20,13 @@ namespace oneflow {
 namespace vm {
 
 size_t ThreadCtx::TryReceiveAndRun() {
-  const StreamType& stream_type = stream_rt_desc().stream_type();
-  intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)> tmp_list;
-  mut_pending_instruction_list()->MoveTo(&tmp_list);
+  intrusive::List<INTRUSIVE_FIELD(Instruction, worker_pending_instruction_hook_)> tmp_list;
+  mut_worker_pending_instruction_list()->MoveTo(&tmp_list);
   size_t size = tmp_list.size();
   INTRUSIVE_FOR_EACH(instruction, &tmp_list) {
     tmp_list.Erase(instruction.Mutable());
-    stream_type.Run(instruction.Mutable());
+    const StreamPolicy& stream_policy = instruction->stream().stream_policy();
+    stream_policy.Run(instruction.Mutable());
   }
   return size;
 }

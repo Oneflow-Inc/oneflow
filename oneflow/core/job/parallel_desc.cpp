@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include <algorithm>
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cpp_attribute.h"
@@ -33,7 +32,7 @@ namespace oneflow {
 namespace {
 
 int64_t GetDeviceCount(DeviceType device_type) {
-  return Global<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(device_type);
+  return Singleton<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(device_type);
 }
 
 using MachineId2DeviceIdList =
@@ -94,7 +93,7 @@ Maybe<ParallelDesc> ParallelDesc::New(const std::string& device_tag,
   const auto parallel_conf = JUST(MakeParallelConf(device_tag, machine_device_ids, hierarchy));
   std::shared_ptr<ParallelDesc> parallel_desc;
   JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-    parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
+    parallel_desc = JUST(builder->GetParallelDescSymbol(*parallel_conf));
     return Maybe<void>::Ok();
   }));
   return parallel_desc;
@@ -274,7 +273,6 @@ void ParallelDesc::ClearUp() {
       parallel_id += 1;
     }
   }
-  cfg_parallel_conf_.reset(new cfg::ParallelConf(parallel_conf_));
 }
 
 void ParallelDesc::set_device_type(DeviceType device_type) {
@@ -381,8 +379,19 @@ ParallelConf GenParallelConfOfCpuZeroOnMaster() {
 ParallelConf GenParallelConfOfCpuZeroOnAllMachines() {
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
-  for (int64_t i : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
+  for (int64_t i : Singleton<ResourceDesc, ForSession>::Get()->process_ranks()) {
     parallel_conf.add_device_name(std::string("@") + std::to_string(i) + ":0");
+  }
+  return parallel_conf;
+}
+
+ParallelConf GenParallelConfOfCpuOnAllRanks() {
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag("cpu");
+  int64_t node_size = GlobalProcessCtx::NodeSize();
+  int64_t device_num = GlobalProcessCtx::NumOfProcessPerNode();
+  for (int64_t node_id = 0; node_id < node_size; ++node_id) {
+    parallel_conf.add_device_name(std::to_string(node_id) + ":0-" + std::to_string(device_num - 1));
   }
   return parallel_conf;
 }

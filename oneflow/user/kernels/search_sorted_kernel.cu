@@ -62,11 +62,13 @@ class GpuSearchSortedKernel final : public user_op::OpKernel {
     const T* values_ptr = values->dptr<T>();
     const T* sequence_ptr = sorted_sequence->dptr<T>();
     K* out_ptr = out->mut_dptr<K>();
-    const int32_t instance_num = values->shape().elem_cnt();
-    bool is_values_scalar = (values->shape().elem_cnt() == 1 && values->shape().NumAxes() == 0);
-    bool is_sequence_1d = (sorted_sequence->shape().NumAxes() == 1);
-    K values_shape_last = is_values_scalar ? 1 : values->shape().At(values->shape().NumAxes() - 1);
-    K sequence_shape_last = sorted_sequence->shape().At(sorted_sequence->shape().NumAxes() - 1);
+    const int32_t instance_num = values->shape_view().elem_cnt();
+    bool is_values_scalar = values->shape_view().NumAxes() == 0;
+    bool is_sequence_1d = (sorted_sequence->shape_view().NumAxes() == 1);
+    K values_shape_last =
+        is_values_scalar ? 1 : values->shape_view().At(values->shape_view().NumAxes() - 1);
+    K sequence_shape_last =
+        sorted_sequence->shape_view().At(sorted_sequence->shape_view().NumAxes() - 1);
     RUN_CUDA_KERNEL((DoSearchSortedLogical<T, K>), ctx->stream(), instance_num, instance_num,
                     is_sequence_1d, values_shape_last, sequence_shape_last, right, values_ptr,
                     sequence_ptr, out_ptr);
@@ -104,7 +106,7 @@ class GpuSearchSortedScalarKernel final : public user_op::OpKernel {
 
     const T* sequence_ptr = sorted_sequence->dptr<T>();
     K* out_ptr = out->mut_dptr<K>();
-    K sequence_shape_last = sorted_sequence->shape().At(0);
+    K sequence_shape_last = sorted_sequence->shape_view().At(0);
     RUN_CUDA_KERNEL((DoSearchSortedScalarLogical<T, K>), ctx->stream(), 1, sequence_shape_last,
                     right, values, sequence_ptr, out_ptr);
   }

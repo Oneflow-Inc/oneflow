@@ -124,8 +124,8 @@ class GpuExpandKernel final : public user_op::OpKernel {
       return;
     }
     std::vector<int32_t> in_shape;
-    in_shape.resize(in->shape().NumAxes());
-    for (int i = 0; i < in->shape().NumAxes(); ++i) { in_shape[i] = in->shape().At(i); }
+    in_shape.resize(in->shape_view().NumAxes());
+    for (int i = 0; i < in->shape_view().NumAxes(); ++i) { in_shape[i] = in->shape_view().At(i); }
 
     std::vector<int32_t> out_shape;
     std::vector<int32_t> stride;
@@ -133,8 +133,8 @@ class GpuExpandKernel final : public user_op::OpKernel {
 
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
-    const int32_t out_dims = out->shape().NumAxes();
-    const int32_t out_size = out->shape().elem_cnt();
+    const int32_t out_dims = out->shape_view().NumAxes();
+    const int32_t out_size = out->shape_view().elem_cnt();
 
     STRIDES expand_stride;
     for (int i = 0; i < out_dims; ++i) { expand_stride.val[i] = stride[i]; }
@@ -178,8 +178,8 @@ class GpuExpandGradKernel final : public user_op::OpKernel {
         ctx->Attr<std::vector<int32_t>>("logical_expand_shape");
 
     std::vector<int32_t> in_shape;
-    in_shape.resize(in->shape().NumAxes());
-    for (int i = 0; i < in->shape().NumAxes(); ++i) { in_shape[i] = in->shape().At(i); }
+    in_shape.resize(in->shape_view().NumAxes());
+    for (int i = 0; i < in->shape_view().NumAxes(); ++i) { in_shape[i] = in->shape_view().At(i); }
     std::vector<int32_t> out_shape;
     std::vector<int32_t> stride;
     CHECK_JUST(getOutShapeAndStrideForBp(logical_out_shape, logical_expand_shape, in_shape,
@@ -188,9 +188,9 @@ class GpuExpandGradKernel final : public user_op::OpKernel {
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
 
-    const int32_t in_dims = in->shape().NumAxes();
-    const int32_t in_size = in->shape().elem_cnt();
-    const int32_t out_size = out->shape().elem_cnt();
+    const int32_t in_dims = in->shape_view().NumAxes();
+    const int32_t in_size = in->shape_view().elem_cnt();
+    const int32_t out_size = out->shape_view().elem_cnt();
 
     STRIDES expand_stride;
     for (int i = 0; i < in_dims; ++i) { expand_stride.val[i] = stride[i]; }

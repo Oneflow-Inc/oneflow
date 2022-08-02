@@ -18,34 +18,19 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/api/python/framework/framework.h"
+#include "oneflow/core/framework/load_library.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("RegisterGlobalForeignCallback", &RegisterGlobalForeignCallback);
-  m.def("DestroyGlobalForeignCallback", &DestroyGlobalForeignCallback);
-  m.def("RegisterGlobalWatcher", &RegisterGlobalWatcher);
-  m.def("LaunchJob", &LaunchJob, py::call_guard<py::gil_scoped_release>());
-
-  m.def("GetSerializedInterUserJobInfo",
-        []() -> Maybe<py::bytes> { return py::bytes(*JUST(GetSerializedInterUserJobInfo())); });
-  m.def("GetSerializedJobSet",
-        []() -> Maybe<py::bytes> { return py::bytes(*JUST(GetSerializedJobSet())); });
-  m.def("GetSerializedStructureGraph", &GetSerializedStructureGraph /* a prototxt saved to file*/);
   m.def("GetSerializedCurrentJob",
         []() -> Maybe<py::bytes> { return py::bytes(*JUST(GetSerializedCurrentJob())); });
-
   m.def("GetFunctionConfigDef", &GetFunctionConfigDef);
   m.def("GetScopeConfigDef", &GetScopeConfigDef);
-  m.def("GetMachine2DeviceIdListOFRecordFromParallelConf",
-        &GetSerializedMachineId2DeviceIdListOFRecord);
 
-  m.def("LoadSavedModel", &LoadSavedModel);
-
-  m.def("EagerExecutionEnabled", EagerExecutionEnabled);
-  m.def("LoadLibraryNow", &LoadLibraryNow);
+  m.def("LoadLibrary", &LoadLibrary);
 }
 
 }  // namespace oneflow

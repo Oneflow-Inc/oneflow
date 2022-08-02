@@ -13,12 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import unittest
 import oneflow.unittest
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.nn.functional as F
 import oneflow.profiler
+from oneflow.profiler.events import CustomEvent, KernelEvent
 
 
 class LeNet(nn.Module):
@@ -44,41 +46,102 @@ class LeNet(nn.Module):
 
 def get_event(events, name: str, input_shapes: str = "-"):
     for item in events:
-        if item.name == name and item.input_shapes == input_shapes:
-            return item
+        if isinstance(item, CustomEvent):
+            if item.name == name:
+                return item
+        if isinstance(item, KernelEvent):
+            if item.name == name and item.input_shapes == input_shapes:
+                return item
     return None
 
 
+def _test_lenet(
+    test_case,
+    on_cuda: bool,
+    record_shapes: bool,
+    record_bandwidth_for_cuda: bool = False,
+):
+    x = flow.randn(2, 3, 32, 32)
+    lenet = LeNet()
+    if on_cuda:
+        x = x.to("cuda")
+        lenet.to("cuda")
+    activities = [oneflow.profiler.ProfilerActivity.CPU]
+    if on_cuda:
+        activities.append(oneflow.profiler.ProfilerActivity.CUDA)
+    with oneflow.profiler.profile(
+        activities=activities,
+        record_shapes=record_shapes,
+        record_bandwidth_for_cuda=record_bandwidth_for_cuda,
+    ) as prof:
+        with oneflow.profiler.record_function("lenet_forward_total_time") as f:
+            for _ in range(2):
+                eager_res = lenet(x)
+        with oneflow.profiler.record_function("lenet_backward_total_time") as f:
+            eager_res.sum().backward()
+    events = prof.key_averages(group_by_input_shape=True)
+
+    conv_event = get_event(
+        events, "conv2d", "[(2,3,32,32), (6,3,5,5)]" if record_shapes else "-"
+    )
+    test_case.assertIsNotNone(conv_event)
+
+    if on_cuda:
+        test_case.assertGreater(conv_event.cpu_time, 0.0)
+        test_case.assertGreater(conv_event.cpu_time_total, 0.0)
+        test_case.assertGreater(conv_event.cuda_time, 0.0)
+        test_case.assertGreater(conv_event.cuda_time_total, 0.0)
+    else:
+        test_case.assertGreater(conv_event.cpu_time, 0.0)
+        test_case.assertGreater(conv_event.cpu_time_total, 0.0)
+
+    test_case.assertEqual(conv_event.count, 2 if record_shapes else 4)
+    if record_bandwidth_for_cuda and on_cuda:
+        test_case.assertNotEqual(conv_event.bandwidth, -1)
+
+    relu_grad_event = get_event(
+        events, "relu_grad", "[(2,6,28,28), (2,6,28,28)]" if record_shapes else "-"
+    )
+    test_case.assertIsNotNone(relu_grad_event)
+    if on_cuda:
+        test_case.assertGreater(relu_grad_event.cpu_time, 0.0)
+        test_case.assertGreater(relu_grad_event.cpu_time_total, 0.0)
+        test_case.assertGreater(relu_grad_event.cuda_time, 0.0)
+        test_case.assertGreater(relu_grad_event.cuda_time_total, 0.0)
+    else:
+        test_case.assertGreater(relu_grad_event.cpu_time, 0.0)
+        test_case.assertGreater(relu_grad_event.cpu_time_total, 0.0)
+
+    test_case.assertEqual(relu_grad_event.count, 1 if record_shapes else 4)
+    if record_bandwidth_for_cuda and on_cuda:
+        test_case.assertNotEqual(relu_grad_event.bandwidth, -1)
+
+    test_case.assertIsNotNone(get_event(events, "lenet_forward_total_time"))
+    test_case.assertIsNotNone(get_event(events, "lenet_backward_total_time"))
+
+
 class TestProfileLenet(flow.unittest.TestCase):
-    def test_lenet(test_case):
-        x = flow.randn(2, 3, 32, 32)
-        lenet = LeNet()
-        # warm up
-        for _ in range(10):
-            res = lenet(x)
-        with oneflow.profiler.profile() as prof:
-            with oneflow.profiler.record_function("lenet_forward_total_time") as f:
-                for _ in range(2):
-                    eager_res = lenet(x)
-            with oneflow.profiler.record_function("lenet_backward_total_time") as f:
-                eager_res.sum().backward()
+    def test_lenet_cpu(test_case):
+        _test_lenet(test_case, on_cuda=False, record_shapes=True)
+        _test_lenet(test_case, on_cuda=False, record_shapes=False)
 
-        events = prof.key_averages()
-
-        conv_event = get_event(events, "conv2d", "[(2,3,32,32), (6,3,5,5)]")
-        test_case.assertIsNotNone(conv_event)
-        test_case.assertGreater(conv_event.cpu_time, 0)
-        test_case.assertGreater(conv_event.cpu_time_total, 0)
-        test_case.assertEqual(conv_event.count, 2)
-
-        relu_grad_event = get_event(events, "relu_grad", "[(2,6,28,28), (2,6,28,28)]")
-        test_case.assertIsNotNone(relu_grad_event)
-        test_case.assertGreater(relu_grad_event.cpu_time, 0)
-        test_case.assertGreater(relu_grad_event.cpu_time_total, 0)
-        test_case.assertEqual(relu_grad_event.count, 1)
-
-        test_case.assertIsNotNone(get_event(events, "lenet_forward_total_time"))
-        test_case.assertIsNotNone(get_event(events, "lenet_backward_total_time"))
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_lenet_cuda(test_case):
+        _test_lenet(
+            test_case, on_cuda=True, record_shapes=True, record_bandwidth_for_cuda=False
+        )
+        _test_lenet(
+            test_case,
+            on_cuda=True,
+            record_shapes=False,
+            record_bandwidth_for_cuda=False,
+        )
+        _test_lenet(
+            test_case, on_cuda=True, record_shapes=True, record_bandwidth_for_cuda=True
+        )
+        _test_lenet(
+            test_case, on_cuda=True, record_shapes=False, record_bandwidth_for_cuda=True
+        )
 
 
 if __name__ == "__main__":
