@@ -27,8 +27,6 @@ RuntimeBuffersScope::RuntimeBuffersScope(const JobConfs& job_confs) {
   for (const auto& pair : job_confs.job_id2job_conf()) {
     const auto& job_name = pair.second.job_name();
     CHECK_EQ(pair.first, Singleton<JobName2JobId>::Get()->at(job_name));
-    buffer_mgr->NewBuffer(GetForeignInputBufferName(job_name), 2);
-    buffer_mgr->NewBuffer(GetForeignOutputBufferName(job_name), 2);
     size_t concurrency_width = pair.second.concurrency_width();
     buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(job_name), concurrency_width);
   }
@@ -39,8 +37,6 @@ RuntimeBuffersScope::~RuntimeBuffersScope() {
   for (const auto& pair : *Singleton<JobName2JobId>::Get()) {
     const auto& job_name = pair.first;
     buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Close();
-    buffer_mgr->Get(GetForeignOutputBufferName(job_name))->Close();
-    buffer_mgr->Get(GetForeignInputBufferName(job_name))->Close();
   }
   Singleton<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Close();
 }
