@@ -167,7 +167,7 @@ struct VariableOpLowering final : public OpConversionPattern<VariableOp> {
   using OpConversionPattern<VariableOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(VariableOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    const auto mgr = ::oneflow::Global<::oneflow::VariableTensorMgr>::Get();
+    const auto mgr = ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get();
     if (!mgr) { return op->emitError("global variable tensor manager miss"); }
 
     const auto tensor = mgr->Get(op.op_name().str());
@@ -583,7 +583,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   typeConverter.addConversion([](Type type) { return type; });
   RewritePatternSet patterns(context);
 
-  const auto mgr = ::oneflow::Global<::oneflow::VariableTensorMgr>::Get();
+  const auto mgr = ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get();
   // judge whether the pass is trigger by python through the existence of variable tensor manger
   if (mgr) {
     patterns.add<VariableOpLowering>(typeConverter, context);

@@ -208,7 +208,7 @@ void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
   CHECK_GE(wr_id->outstanding_sge_cnt, 1);
   wr_id->outstanding_sge_cnt -= 1;
   if (wr_id->outstanding_sge_cnt == 0) {
-    Global<CommNet>::Get()->ReadDone(wr_id->read_id);
+    Singleton<CommNet>::Get()->ReadDone(wr_id->read_id);
     DeleteWorkRequestId(wr_id);
   }
   PostPendingSendWR();
@@ -224,7 +224,7 @@ void IBVerbsQP::SendDone(WorkRequestId* wr_id) {
 }
 
 void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
-  auto* ibv_comm_net = dynamic_cast<IBVerbsCommNet*>(Global<CommNet>::Get());
+  auto* ibv_comm_net = dynamic_cast<IBVerbsCommNet*>(Singleton<CommNet>::Get());
   CHECK(ibv_comm_net != nullptr);
   ibv_comm_net->RecvActorMsg(wr_id->msg_mr->msg());
   PostRecvRequest(wr_id->msg_mr);

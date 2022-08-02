@@ -39,12 +39,12 @@ class CpuMedianWithIndicesKernel final : public user_op::OpKernel {
     Memcpy<DeviceType::kCPU>(ctx->stream(), tmp_buffer->mut_dptr<void>(), in->dptr<void>(),
                              size * sizeof(T));
     const int64_t thread_num =
-        std::min(instance_num, (int64_t)Global<ThreadPool>::Get()->thread_num());
+        std::min(instance_num, (int64_t)Singleton<ThreadPool>::Get()->thread_num());
     const BalancedSplitter bs(instance_num, thread_num);
     BlockingCounter bc(thread_num);
     FOR_RANGE(int64_t, thread_id, 0, thread_num) {
       const Range range = bs.At(thread_id);
-      Global<ThreadPool>::Get()->AddWork([=, &bc]() {
+      Singleton<ThreadPool>::Get()->AddWork([=, &bc]() {
         FOR_RANGE(int64_t, i, range.begin(), range.end()) {
           T* in_ptr = tmp_buffer->mut_dptr<T>() + i * stride;
           T* val_ptr = values->mut_dptr<T>() + i;

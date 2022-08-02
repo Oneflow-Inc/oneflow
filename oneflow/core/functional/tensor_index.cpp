@@ -23,10 +23,10 @@ limitations under the License.
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/job/sbp_parallel.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 namespace one {
@@ -63,14 +63,15 @@ Maybe<TensorTuple> ExpandMaskIndex(const std::shared_ptr<Tensor>& index) {
     return Error::RuntimeError()
            << "Advanced indexing by boolean(mask) tensor only valid in eager mode.";
   }
-  if (size_tensor->is_consistent()) {
+  if (size_tensor->is_global()) {
     // TODO(): check size_tensor sbp is broadcast.
-    size_tensor = JUST(functional::ConsistentToLocal(size_tensor));
+    size_tensor = JUST(functional::GlobalToLocal(size_tensor, /*copy=*/false));
   }
   int64_t size = 0;
-  const auto& callback = [&](uint64_t of_blob_ptr) {
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    of_blob->AutoMemCopyTo<int64_t>(&size, 1);
+  const auto& callback = [&](ep::Stream* stream,
+                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+    AutoMemcpy(stream, &size, eager_blob_object->dptr(), sizeof(size), memory::MakeHostMemCase(),
+               eager_blob_object->mem_case());
   };
   JUST(SyncAccessTensorWithTimeOut(size_tensor, callback, "const"));
 
@@ -338,14 +339,14 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   std::iota(permute.begin(), permute.end() - 1, 1);
   packed_indices = JUST(Transpose(packed_indices, permute))->contiguous();
 
-  if (transposed_input->is_consistent()) {
+  if (transposed_input->is_global()) {
     const auto& placement = JUST(transposed_input->parallel_desc());
     const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
     int n = JUST(input->nd_sbp())->sbp_parallel_size();
     std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-    packed_indices = JUST(ToConsistent(packed_indices, placement,
-                                       std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
-                                       grad_sbp_tuple, /* check_meta */ false));
+    packed_indices =
+        JUST(ToGlobal(packed_indices, placement, std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
+                      grad_sbp_tuple, /* check_meta */ false, /*copy=*/false));
   } else {
     Symbol<Device> device = JUST(transposed_input->device());
     if (JUST(packed_indices->device()) != device) {
@@ -396,12 +397,12 @@ Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
 
 Maybe<void> UnifyLocalTensorAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
                                                TensorTuple& tensor_indices) {
-  if (!x->is_consistent()) {
+  if (!x->is_global()) {
     const auto x_device = JUST(x->device());
     for (int64_t i = 0; i < tensor_indices.size(); ++i) {
       const auto tensor_index = tensor_indices[i];
       if (tensor_index == nullptr) { continue; }
-      if (tensor_index->is_consistent()) { return Maybe<void>::Ok(); }
+      if (tensor_index->is_global()) { return Maybe<void>::Ok(); }
       const auto tensor_index_device = JUST(tensor_index->device());
       if ((tensor_index_device->type() != x_device->type())
           || (tensor_index_device->device_id() != x_device->device_id())) {

@@ -41,7 +41,7 @@ class EagerNcclCommMgr final {
   void SetAsyncLaunchNcclLogicalKernel(bool val) { async_launch_nccl_logical_kernel_ = val; }
 
  private:
-  friend class Global<EagerNcclCommMgr>;
+  friend class Singleton<EagerNcclCommMgr>;
   // NOTE(chengcheng): default async launch nccl logical kernel is true for better performence.
   EagerNcclCommMgr() : async_launch_nccl_logical_kernel_(true) {}
 
@@ -83,11 +83,18 @@ class UserKernelUnifiedNcclCommInitRegistry final {
   std::set<std::string> reg_set_;
 };
 
+static const std::string kSystemOpPrefix = "sys_op_";
+
 }  // namespace oneflow
 
 #define REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT(op_type_name) \
   static auto OF_PP_CAT(g_nccl_comm_reg_, __COUNTER__) =          \
       ::oneflow::UserKernelUnifiedNcclCommInitRegistry::Trigger(op_type_name)
+
+#define REGISTER_SYSTEM_OP_KERNEL_UNIFIED_NCCL_COMM_INIT(op_type_case)                     \
+  static auto OF_PP_CAT(g_nccl_comm_reg_, __COUNTER__) =                                   \
+      ::oneflow::UserKernelUnifiedNcclCommInitRegistry::Trigger(::oneflow::kSystemOpPrefix \
+                                                                + std::to_string(op_type_case))
 
 #endif  // WITH_CUDA
 

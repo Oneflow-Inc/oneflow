@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/scope.pb.h"
-#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/instructions_builder.h"
 
@@ -84,7 +83,7 @@ Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* jo
   // using a new JobBuilder to avoid bugs caused by MutOnlyOnce
   auto new_job_builder = std::make_shared<JobBuilder>(job);
   HashMap<int64_t, std::vector<const OperatorConf*>> scope_id2op_names;
-  const auto& scope_storage = *Global<symbol::Storage<Scope>>::Get();
+  const auto& scope_storage = *Singleton<symbol::Storage<Scope>>::Get();
   for (const auto& op_conf : job->net().op()) {
     if (exists_op_names.count(op_conf.name()) > 0) { continue; }
     CHECK_OR_RETURN(op_conf.has_scope_symbol_id());

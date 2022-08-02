@@ -66,7 +66,7 @@ struct SliceParams {
     std::stringstream ss("SliceParams:");
     for (int i = 0; i < ndim; ++i) {
       ss << "\n\tdim: " << i << ", start: " << start[i] << ", step: " << step[i]
-         << ", size: " << size[i];
+         << ", size: " << size[i] << ", dims: " << dims[i];
     }
     return ss.str();
   }
@@ -97,6 +97,8 @@ OF_DEVICE_FUNC int64_t SliceOffsetToEntireOffset(int64_t offset, const SlicePara
 template<DeviceType device_type, typename T>
 struct SliceKernelUtil {
   static void Forward(ep::Stream* stream, const SliceParams& params, const T* entire, T* sliced);
+  static void Forward(ep::Stream* stream, const SliceParams& entire_params,
+                      const SliceParams& sliced_params, const T* entire, T* sliced);
   static void Backward(ep::Stream* stream, const SliceParams& params, const T* sliced, T* entire);
 };
 

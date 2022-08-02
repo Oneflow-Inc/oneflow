@@ -40,7 +40,7 @@ class PartialFCSample : public OpExprGradFunction<PartialFCSampleState> {
 
 Maybe<void> PartialFCSample::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -56,7 +56,7 @@ Maybe<void> PartialFCSample::Capture(PartialFCSampleState* ctx, const TensorTupl
 
 Maybe<void> PartialFCSample::Apply(const PartialFCSampleState* ctx, const TensorTuple& out_grads,
                                    TensorTuple* in_grads) const {
-  CHECK_EQ_OR_RETURN(out_grads.size(), 3);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 3);  // NOLINT(maybe-need-error-msg)
   in_grads->resize(2);
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   const auto& diff_sampled_weight = out_grads.at(2);  // diff of sampled_weight

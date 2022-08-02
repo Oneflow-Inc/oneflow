@@ -35,7 +35,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> SamePaddingOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-  user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
   *y_desc->mut_shape() = x_desc.shape();
   *y_desc->mut_is_dynamic() = x_desc.is_dynamic();
   const std::string& data_format = ctx->Attr<std::string>("data_format");
@@ -44,9 +44,18 @@ namespace oneflow {
   const auto& dilation_rate = ctx->Attr<std::vector<int32_t>>("dilation_rate");
   const size_t idx_offset = IdxOffset(data_format);
   const int32_t num_spatial_dims = x_desc.shape().NumAxes() - 2;
-  CHECK_EQ_OR_RETURN(num_spatial_dims, kernel_size.size());
-  CHECK_EQ_OR_RETURN(num_spatial_dims, strides.size());
-  CHECK_EQ_OR_RETURN(num_spatial_dims, dilation_rate.size());
+  CHECK_EQ_OR_RETURN(num_spatial_dims, kernel_size.size())
+      << Error::RuntimeError()
+      << "The dimension of x tensor must be equal to the size of kernel_size array plus 2, "
+      << "but got " << num_spatial_dims << " and " << kernel_size.size();
+  CHECK_EQ_OR_RETURN(num_spatial_dims, strides.size())
+      << Error::RuntimeError()
+      << "The dimension of x tensor must be equal to the size of strides array plus 2, "
+      << "but got " << num_spatial_dims << " and " << strides.size();
+  CHECK_EQ_OR_RETURN(num_spatial_dims, dilation_rate.size())
+      << Error::RuntimeError()
+      << "The dimension of x tensor must be equal to the size of dilation_rate array plus 2, "
+      << "but got " << num_spatial_dims << " and " << dilation_rate.size();
   DimVector y_dim_vec(x_desc.shape().dim_vec());
   for (int32_t i = 0; i < num_spatial_dims; ++i) {
     int32_t padding_small = 0;
@@ -62,7 +71,7 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SamePaddingOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -99,15 +108,15 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SamePaddingGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("dx", 0) = ctx->InputShape("x_like", 0);
-  *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x_like", 0);
+  *ctx->MutOutputShape("dx", 0) = ctx->InputShape("x_like", 0);
+  *ctx->MutOutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x_like", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SamePaddingGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SamePaddingGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("x_like", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("x_like", 0);
   return Maybe<void>::Ok();
 }
 

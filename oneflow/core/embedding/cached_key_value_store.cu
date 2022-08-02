@@ -173,6 +173,9 @@ void CacheKeyValueStoreImpl<Key, Elem>::Put(ep::Stream* stream, uint32_t num_key
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   synced_ = false;
   auto cuda_stream = stream->As<ep::CudaStream>();
+  if (cache_->Policy() != CacheOptions::Policy::kFull) {
+    OF_CUDA_CHECK(cudaMemsetAsync(num_buffer_, 0, sizeof(uint32_t), cuda_stream->cuda_stream()));
+  }
   cache_->Put(stream, num_keys, keys, values, num_buffer_, keys_buffer_, values_buffer_);
   if (cache_->Policy() == CacheOptions::Policy::kFull) { return; }
   OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, num_buffer_, sizeof(uint32_t), cudaMemcpyDefault,
@@ -187,6 +190,10 @@ void CacheKeyValueStoreImpl<Key, Elem>::FusedHalfUpdatePut(ep::Stream* stream, u
                                                            const void* update, const float* lr,
                                                            float scale) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
+  if (cache_->Policy() != CacheOptions::Policy::kFull) {
+    OF_CUDA_CHECK(cudaMemsetAsync(num_buffer_, 0, sizeof(uint32_t),
+                                  stream->As<ep::CudaStream>()->cuda_stream()));
+  }
   if (cache_->Policy() != CacheOptions::Policy::kFull || cache_->ValueType() != DataType::kFloat) {
     UNIMPLEMENTED();
   }
@@ -213,7 +220,7 @@ void CacheKeyValueStoreImpl<Key, Elem>::LoadSnapshot(
   CHECK_GT(max_query_length_, 0);
   cache_->Clear();
   auto device =
-      Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index_);
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index_);
   CHECK(device);
   auto* stream = device->CreateStream();
   store_->LoadSnapshot(name, [&](KVIterator* iter) {
@@ -228,10 +235,6 @@ void CacheKeyValueStoreImpl<Key, Elem>::LoadSnapshot(
         if (*host_num_buffer_ == 0) { return; }
         cache_->Put(stream, *host_num_buffer_, keys_buffer_, values_buffer_, num_buffer_, nullptr,
                     nullptr);
-        OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, num_buffer_, sizeof(uint32_t),
-                                      cudaMemcpyDefault, cuda_stream->cuda_stream()));
-        CHECK_JUST(stream->Sync());
-        CHECK_EQ(*host_num_buffer_, 0);
       }
     }
     if (Hook) {
@@ -256,7 +259,7 @@ void CacheKeyValueStoreImpl<Key, Elem>::SyncCacheToStore() {
   if (synced_) { return; }
   CudaCurrentDeviceGuard guard(device_index_);
   auto device =
-      Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index_);
+      Singleton<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index_);
   CHECK(device);
   auto* stream = device->CreateStream();
   auto* cuda_stream = stream->As<ep::CudaStream>();

@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/stream_mgr.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -56,6 +56,6 @@ Maybe<Symbol<Stream>> StreamMgr::GetStreamSymbol(size_t unique_stream_id) const 
   return JUST(VectorAt(unique_stream_id2stream_symbol_, unique_stream_id));
 }
 
-COMMAND(Global<StreamMgr>::SetAllocated(new StreamMgr()));
+COMMAND(Singleton<StreamMgr>::SetAllocated(new StreamMgr()));
 
 }  // namespace oneflow

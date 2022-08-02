@@ -56,12 +56,12 @@ template<typename T>
 void CpuTopK(ep::Stream* /*stream*/, const T* in_ptr, int64_t* indices_ptr, int64_t instance_num,
              int64_t instance_size, int64_t k, bool sorted, int64_t* out_ptr) {
   const int64_t num_thread =
-      std::min(instance_num, static_cast<int64_t>(Global<ThreadPool>::Get()->thread_num()));
+      std::min(instance_num, static_cast<int64_t>(Singleton<ThreadPool>::Get()->thread_num()));
   const BalancedSplitter bs(instance_num, num_thread);
   BlockingCounter bc(num_thread);
   FOR_RANGE(int64_t, thread_id, 0, num_thread) {
     const Range range = bs.At(thread_id);
-    Global<ThreadPool>::Get()->AddWork([=, &bc]() {
+    Singleton<ThreadPool>::Get()->AddWork([=, &bc]() {
       if (k == 1) {
         ComputeTopOne(in_ptr, range, instance_size, out_ptr);
       } else {

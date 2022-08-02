@@ -168,7 +168,7 @@ struct EventWriterHelper<DeviceType::kCPU, T> {
     e->set_step(step);
     e->set_wall_time(GetWallTime());
     *e->mutable_summary() = sum;
-    Global<EventsWriter>::Get()->AppendQueue(std::move(e));
+    Singleton<EventsWriter>::Get()->AppendQueue(std::move(e));
   }
 
   static void WriteScalarToFile(int64_t step, float value, const std::string& tag) {
@@ -176,7 +176,7 @@ struct EventWriterHelper<DeviceType::kCPU, T> {
     e->set_step(step);
     e->set_wall_time(GetWallTime());
     CHECK_JUST(FillScalarInSummary(value, tag, e->mutable_summary()));
-    Global<EventsWriter>::Get()->AppendQueue(std::move(e));
+    Singleton<EventsWriter>::Get()->AppendQueue(std::move(e));
   }
 
   static void WriteHistogramToFile(int64_t step, const user_op::Tensor& value,
@@ -185,7 +185,7 @@ struct EventWriterHelper<DeviceType::kCPU, T> {
     e->set_step(step);
     e->set_wall_time(GetWallTime());
     CHECK_JUST(FillHistogramInSummary<T>(value, tag, e->mutable_summary()));
-    Global<EventsWriter>::Get()->AppendQueue(std::move(e));
+    Singleton<EventsWriter>::Get()->AppendQueue(std::move(e));
   }
 
   static void WriteImageToFile(int64_t step, const user_op::Tensor& tensor,
@@ -194,7 +194,7 @@ struct EventWriterHelper<DeviceType::kCPU, T> {
     e->set_step(step);
     e->set_wall_time(GetWallTime());
     CHECK_JUST(FillImageInSummary(tensor, tag, e->mutable_summary()));
-    Global<EventsWriter>::Get()->AppendQueue(std::move(e));
+    Singleton<EventsWriter>::Get()->AppendQueue(std::move(e));
   }
 };
 

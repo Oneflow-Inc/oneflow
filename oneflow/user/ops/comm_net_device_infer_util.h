@@ -38,8 +38,8 @@ template<Maybe<bool> (*GetIsAsyncLaunched)(user_op::DeviceAndStreamInferContext*
              DefaultGetOutputDeivce>
 Maybe<Symbol<Stream>> DeviceAndStreamInferFn(user_op::DeviceAndStreamInferContext* ctx) {
   Symbol<Device> output_device = JUST(GetOutputDeivce(ctx));
-  if (ctx->outputs().size() > 0) {
-    *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = output_device;
+  for (const auto& pair : ctx->outputs()) {
+    *ctx->OutputTensorDevice4ArgNameAndIndex(pair.first, pair.second) = output_device;
   }
   if (output_device->type() == "cuda") {
     bool is_async_launched = JUST(GetIsAsyncLaunched(ctx));

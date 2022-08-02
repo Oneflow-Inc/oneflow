@@ -20,9 +20,9 @@ namespace oneflow {
 
 /* static */ Maybe<void> FillOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->OutputShape("out", 0);
+  Shape* out_shape = ctx->MutOutputShape("out", 0);
   *out_shape = in_shape;
-  Stride* out_stride = ctx->OutputStride("out", 0);
+  Stride* out_stride = ctx->MutOutputStride("out", 0);
   *out_stride = ctx->InputStride("in", 0);
   return Maybe<void>::Ok();
 }
@@ -40,15 +40,15 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FillOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> FillTensorOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->OutputShape("out", 0);
+  Shape* out_shape = ctx->MutOutputShape("out", 0);
   *out_shape = in_shape;
-  Stride* out_stride = ctx->OutputStride("out", 0);
+  Stride* out_stride = ctx->MutOutputStride("out", 0);
   *out_stride = ctx->InputStride("in", 0);
   return Maybe<void>::Ok();
 }
@@ -66,11 +66,16 @@ namespace oneflow {
         .Split(user_op::OpArg("out", 0), i)
         .Build();
   }
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("in", 0))
+      .PartialSum(user_op::OpArg("value", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> FillTensorOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 

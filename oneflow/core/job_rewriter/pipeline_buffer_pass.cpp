@@ -47,8 +47,8 @@ class PipelineBufferPass final : public JobPass {
 const std::string kBufferOpNamePrefix = "System-Pipeline-Buffer-Op_";
 
 const Scope& Scope4ScopeSymbolId(int64_t scope_symbol_id) {
-  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id));
-  return Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
+  CHECK(Singleton<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id));
+  return Singleton<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
 }
 
 const Scope& Scope4OpNode(const OpNode* op_node) {

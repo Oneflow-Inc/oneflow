@@ -16,34 +16,57 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/user/ops/nn_util.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/ep/include/primitive/matmul.h"
 
 namespace oneflow {
 
 namespace {
+
+ep::primitive::BlasTransposeType GetBlasTransposeType(bool transpose) {
+  return transpose ? ep::primitive::BlasTransposeType::T : ep::primitive::BlasTransposeType::N;
+}
+
+std::unique_ptr<ep::primitive::Matmul> NewMatmulPrimitive(DeviceType device_type,
+                                                          DataType data_type, bool transpose_a,
+                                                          bool transpose_b) {
+  const auto trans_a = GetBlasTransposeType(transpose_a);
+  const auto trans_b = GetBlasTransposeType(transpose_b);
+  return ep::primitive::NewPrimitive<ep::primitive::MatmulFactory>(device_type, data_type, trans_a,
+                                                                   trans_b);
+}
+
+template<typename Context>
+std::unique_ptr<ep::primitive::Matmul> NewDeconvTransATransBMatmulPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
+  return NewMatmulPrimitive(ctx->device_type(), data_type, true, true);
+}
+
+template<typename Context>
+std::unique_ptr<ep::primitive::Matmul> NewDeconvTransANoTransBMatmulPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
+  return NewMatmulPrimitive(ctx->device_type(), data_type, true, false);
+}
+
+auto DeconvTransATransBMatmulPrimitiveExists() {
+  return hob::make_custom("DeconvTransATransBMatmulPrimitiveExists",
+                          [](const user_op::KernelRegContext& ctx) {
+                            return NewDeconvTransATransBMatmulPrimitive(&ctx).operator bool();
+                          });
+}
+
+auto DeconvTransANoTransBMatmulPrimitiveExists() {
+  return hob::make_custom("DeconvTransANoTransBMatmulPrimitiveExists",
+                          [](const user_op::KernelRegContext& ctx) {
+                            return NewDeconvTransANoTransBMatmulPrimitive(&ctx).operator bool();
+                          });
+}
 
 template<typename T>
 using Col2ImFunc = void (*)(const T* col_buf, const ShapeView& in_shape,
                             const ShapeView& weight_shape, const ShapeView& out_shape,
                             const int32_t* strides, const int32_t* dilation_rate,
                             const int32_t* padding_before, T* in_diff_ptr);
-
-template<typename T>
-void Gemm4ChannelFirst(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
-                       enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
-                       const T alpha, const T* a, const T* b, const T beta, T* c) {
-  NewKernelUtil<DeviceType::kCPU>::OFGemm(stream, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
-}
-
-template<typename T>
-void Gemm4ChannelLast(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
-                      enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
-                      const T alpha, const T* a, const T* b, const T beta, T* c) {
-  trans_a = (trans_a == CblasNoTrans) ? CblasTrans : CblasNoTrans;
-  trans_b = (trans_b == CblasNoTrans) ? CblasTrans : CblasNoTrans;
-  NewKernelUtil<DeviceType::kCPU>::OFGemm(stream, trans_b, trans_a, n, m, k, alpha, b, a, beta, c);
-}
 
 template<typename T>
 T* GetImgMutDptr(user_op::Tensor* tensor, int64_t idx) {
@@ -245,7 +268,8 @@ struct DeconvOpKernelCache final : public user_op::OpKernelCache {
   std::vector<int32_t> dilation_rate_3d_;
   std::vector<int32_t> padding_before_3d_;
 
-  enum CBLAS_TRANSPOSE is_out_diff_need_trans_ = CblasNoTrans;
+  bool is_out_diff_need_trans_ = false;
+
   int32_t idx_offset_ = 0;
   bool is_dynamic_ = false;
 
@@ -275,11 +299,11 @@ std::shared_ptr<DeconvOpKernelCache<T>> CreateDeconvOpKernelCache(user_op::Kerne
   std::shared_ptr<DeconvOpKernelCache<T>> cache(new DeconvOpKernelCache<T>());
   if (data_format == "channels_first") {
     cache->col2im_func_ = DeconvKernelUtil<T>::NCDHWCol2Im;
-    cache->is_out_diff_need_trans_ = CblasNoTrans;
+    cache->is_out_diff_need_trans_ = false;
     cache->idx_offset_ = 2;
   } else {
     cache->col2im_func_ = DeconvKernelUtil<T>::NDHWCCol2Im;
-    cache->is_out_diff_need_trans_ = CblasTrans;
+    cache->is_out_diff_need_trans_ = true;
     cache->idx_offset_ = 1;
   }
 
@@ -351,17 +375,24 @@ class DeconvCpuKernel final : public user_op::OpKernel {
     Memset<DeviceType::kCPU>(ctx->stream(), out->mut_dptr<T>(), 0,
                              out->shape_view().elem_cnt() * sizeof(T));
 
+    std::unique_ptr<ep::primitive::Matmul> matmul;
+    if (deconv_cache->is_out_diff_need_trans_) {
+      matmul = NewDeconvTransATransBMatmulPrimitive(ctx);
+    } else {
+      matmul = NewDeconvTransANoTransBMatmulPrimitive(ctx);
+    }
+    CHECK(matmul);
+
     FOR_RANGE(int64_t, i, 0, in->shape_view().At(0)) {
       // channels first:  col_buf' = weight(T) * in[i]'
       // channels last :  col_buf' = weight(T) * in[i]'(T)
       // m, n, k
       int32_t idx_offset = deconv_cache->idx_offset_;
-      NewKernelUtil<DeviceType::kCPU>::OFGemm(
-          ctx->stream(), CblasTrans, deconv_cache->is_out_diff_need_trans_,
-          deconv_cache->weight_5d_shape_.Count(1),
-          deconv_cache->out_5d_shape_.Count(idx_offset, idx_offset + 3),
-          deconv_cache->weight_5d_shape_.At(0), static_cast<T>(1), weight->dptr<T>(),
-          GetImgDptr<T>(in, i), static_cast<T>(0), col_buf->mut_dptr<T>());
+
+      matmul->Launch(ctx->stream(), deconv_cache->weight_5d_shape_.Count(1),
+                     deconv_cache->out_5d_shape_.Count(idx_offset, idx_offset + 3),
+                     deconv_cache->weight_5d_shape_.At(0), static_cast<T>(1), weight->dptr<T>(),
+                     GetImgDptr<T>(in, i), static_cast<T>(0), col_buf->mut_dptr<T>());
 
       // out = col2im(col_buf')
       deconv_cache->col2im_func_(
@@ -373,21 +404,23 @@ class DeconvCpuKernel final : public user_op::OpKernel {
   }
 };
 
-#define REGISTER_DECONV_DATA_KERNEL(op_name, dtype)                                      \
-  REGISTER_USER_KERNEL(#op_name)                                                         \
-      .SetCreateFn<DeconvCpuKernel<dtype>>()                                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                    \
-                       && (user_op::HobAttr<int32_t>("groups") == 1)                     \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                      \
-        size_t tmp_buffer_size = 0;                                                      \
-        const auto& in_shape = ctx->InputTensorDesc("in", 0).shape();                    \
-        const auto& weight_shape = ctx->InputTensorDesc("weight", 0).shape();            \
-                                                                                         \
-        int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));           \
-        tmp_buffer_size +=                                                               \
-            CalcElemNumOfColBuf(in_shape, weight_shape, idx_offset) * sizeof(dtype);     \
-        return tmp_buffer_size;                                                          \
+#define REGISTER_DECONV_DATA_KERNEL(op_name, dtype)                                     \
+  REGISTER_USER_KERNEL(#op_name)                                                        \
+      .SetCreateFn<DeconvCpuKernel<dtype>>()                                            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                   \
+                       && (user_op::HobAttr<int32_t>("groups") == 1)                    \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value) \
+                       && DeconvTransATransBMatmulPrimitiveExists()                     \
+                       && DeconvTransANoTransBMatmulPrimitiveExists())                  \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                     \
+        size_t tmp_buffer_size = 0;                                                     \
+        const auto& in_shape = ctx->InputTensorDesc("in", 0).shape();                   \
+        const auto& weight_shape = ctx->InputTensorDesc("weight", 0).shape();           \
+                                                                                        \
+        int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));          \
+        tmp_buffer_size +=                                                              \
+            CalcElemNumOfColBuf(in_shape, weight_shape, idx_offset) * sizeof(dtype);    \
+        return tmp_buffer_size;                                                         \
       })
 
 REGISTER_DECONV_DATA_KERNEL(deconv1d, float);

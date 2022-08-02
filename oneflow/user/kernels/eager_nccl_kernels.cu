@@ -48,7 +48,7 @@ class EagerNcclOpKernelCache final : public user_op::OpKernelCache {
       int64_t device_id = CHECK_JUST(parallel_desc_->DeviceId4ParallelId(parallel_id));
       device_set.emplace(std::make_pair(machine_id, device_id));
     }
-    comm_ = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
+    comm_ = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
   }
 
   Symbol<ParallelDesc> parallel_desc_;
@@ -72,39 +72,6 @@ void InitEagerNcclOpKernelCache(user_op::KernelCacheContext* ctx,
 }
 }  // namespace
 
-class EagerNcclAllReduceKernel final : public user_op::OpKernel {
- public:
-  EagerNcclAllReduceKernel() = default;
-  ~EagerNcclAllReduceKernel() override = default;
-
-  void InitOpKernelCacheWithFlags(
-      user_op::KernelCacheContext* ctx, int8_t flag,
-      std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
-    InitEagerNcclOpKernelCache(ctx, cache_ptr);
-  }
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
-               const user_op::OpKernelCache* cache) const override {
-    auto* kernel_cache = dynamic_cast<const EagerNcclOpKernelCache*>(cache);
-    CHECK(kernel_cache != nullptr);
-    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(in->shape_view(), out->shape_view());
-    CHECK_EQ(in->data_type(), out->data_type());
-    ncclRedOp_t reduce_type = ncclSum;
-    if (in->data_type() == kBool) { reduce_type = ncclMax; }
-    OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
-                                GetNcclDataType(in->data_type()), reduce_type, kernel_cache->comm(),
-                                ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-  };
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-REGISTER_USER_KERNEL("eager_nccl_all_reduce")
-    .SetCreateFn<EagerNcclAllReduceKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
-
 class EagerNcclBroadcastKernel final : public user_op::OpKernel {
  public:
   EagerNcclBroadcastKernel() = default;
@@ -117,12 +84,18 @@ class EagerNcclBroadcastKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache* cache) const override {
+    size_t size = ctx->input_size("in");
+    CHECK_EQ(size, ctx->output_size("out"));
+    for (int i = 0; i < size; ++i) { ComputeForOneInput(ctx, cache, i); }
+  }
+  void ComputeForOneInput(user_op::KernelComputeContext* ctx, const user_op::OpKernelCache* cache,
+                          int index) const {
     auto* kernel_cache = dynamic_cast<const EagerNcclOpKernelCache*>(cache);
     CHECK(kernel_cache != nullptr);
-    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", index);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", index);
     int64_t root = ctx->Attr<int64_t>("root");
     int64_t dev_id = GlobalProcessCtx::LocalRank(root);
     int64_t nccl_root =

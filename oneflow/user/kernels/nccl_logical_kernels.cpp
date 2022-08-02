@@ -46,7 +46,7 @@ class NcclLogicalKernelCommState : public user_op::OpKernelState {
         int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
         device_set.emplace(std::make_pair(machine_id, device_id));
       }
-      EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+      EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
       comm_ = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
       is_init_ = true;
     }
@@ -133,7 +133,7 @@ class NcclLogicalAllReduceKernel final : public user_op::OpKernel {
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
-    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
     return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
   }
 };
@@ -168,7 +168,7 @@ class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
-    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
     return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
   }
 };
@@ -201,7 +201,7 @@ class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
-    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
     return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
   }
 };
@@ -270,15 +270,15 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
-    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
     return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
   }
 };
 
 size_t InferAllGatherNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
-  return GetCudaAlignedSize(out_tensor->shape().elem_cnt()
-                            * GetSizeOfDataType(out_tensor->data_type()));
+  const user_op::TensorDesc& out_tensor = ctx->OutputTensorDesc("out", 0);
+  return GetCudaAlignedSize(out_tensor.shape().elem_cnt()
+                            * GetSizeOfDataType(out_tensor.data_type()));
 }
 
 template<typename T>
@@ -342,15 +342,15 @@ class NcclLogicalReduceScatterNoncontinuous final : public user_op::OpKernel {
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
-    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
     return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
   }
 };
 
 size_t InferReduceScatterNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* in_tensor = ctx->OutputTensorDesc("in", 0);
-  return GetCudaAlignedSize(in_tensor->shape().elem_cnt()
-                            * GetSizeOfDataType(in_tensor->data_type()));
+  const user_op::TensorDesc& in_tensor = ctx->OutputTensorDesc("in", 0);
+  return GetCudaAlignedSize(in_tensor.shape().elem_cnt()
+                            * GetSizeOfDataType(in_tensor.data_type()));
 }
 
 template<typename T>
@@ -476,7 +476,7 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
-    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get());
     return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
   }
 };

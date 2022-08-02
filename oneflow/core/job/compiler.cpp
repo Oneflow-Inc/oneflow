@@ -46,20 +46,20 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
 }
 
 void Compiler::Compile(Job* job, Plan* plan) const {
-  // Step1: new Global<OpGraph> and set log configs.
-  Global<OpGraph>::New(*job);
+  // Step1: new Singleton<OpGraph> and set log configs.
+  Singleton<OpGraph>::New(*job);
   const JobDesc& job_desc = GlobalJobDesc();
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()
-      || Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+  if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()
+      || Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
     TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
-    Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_" + std::to_string(job_desc.job_id())
-                                              + "_op_graph.dot");
+    Singleton<OpGraph>::Get()->ToDotWithFilePath(
+        "optimized_dlnet_" + std::to_string(job_desc.job_id()) + "_op_graph.dot");
   }
 
   // Step2: build task_gph.
   // TODO(levi): we can rewrite this part of code in visitor pattern.
   auto task_gph =
-      std::make_unique<TaskGraph>(job->job_conf().disable_straighten_algorithm_in_task_graph());
+      std::make_unique<TaskGraph>(job->job_conf().enable_straighten_algorithm_in_task_graph());
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
@@ -67,7 +67,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   task_gph->TopoForEachNode(&TaskNode::Build);
   task_gph->RemoveEmptyRegsts();
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
-  auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
+  auto IsReachable = Singleton<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
   if (job_desc.enable_inplace()) { task_gph->EnableInplaceMemSharing(IsReachable); }
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
@@ -100,13 +100,13 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   // NOTE(levi): release task_gph here to decrise memory peak.
   task_gph.reset();
 
-  // Step4: post-process for plan and delete Global<OpGraph>.
+  // Step4: post-process for plan and delete Singleton<OpGraph>.
   auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
   (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
   // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
   IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
   PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
-  Global<OpGraph>::Delete();
+  Singleton<OpGraph>::Delete();
 }
 
 }  // namespace oneflow

@@ -106,15 +106,15 @@ Maybe<one::Tensor> ParallelDimReduce(const std::shared_ptr<one::Tensor>& tensor,
 
   const std::shared_ptr<one::Tensor>& local_tensor = JUST(tensor->cur_rank_phy_tensor());
 
-  std::shared_ptr<one::Tensor> reduced_in_tensor = JUST(one::functional::LocalToConsistent(
+  std::shared_ptr<one::Tensor> reduced_in_tensor = JUST(one::functional::LocalToGlobal(
       local_tensor, reduced_in->placement(), *JUST(GetSbpList(reduced_in->nd_sbp())),
-      *tensor->shape(), tensor->dtype()));
+      *tensor->shape(), tensor->dtype(), /* sync_data */ false, /*copy=*/false));
 
   const auto& boxing_interpreter =
-      JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
+      JUST(Singleton<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
           reduced_in->nd_sbp(), reduced_out->nd_sbp(), reduced_in->placement(),
           reduced_out->placement(), *tensor->shape()));
-  Global<const EagerBoxingLogger>::Get()->Log(
+  Singleton<const EagerBoxingLogger>::Get()->Log(
       *JUST(boxing_interpreter->boxing_interpreter_status()),
       /* prefix */ "\t\tInternal boxing of nd-sbp-dim-reduce, ");
   std::shared_ptr<one::Tensor> reduced_out_tensor = JUST(
@@ -124,9 +124,9 @@ Maybe<one::Tensor> ParallelDimReduce(const std::shared_ptr<one::Tensor>& tensor,
   const std::shared_ptr<one::Tensor>& reduced_out_local_tensor =
       JUST(reduced_out_tensor->cur_rank_phy_tensor());
 
-  return JUST(one::functional::LocalToConsistent(reduced_out_local_tensor, out->placement(),
-                                                 *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
-                                                 tensor->dtype()));
+  return JUST(one::functional::LocalToGlobal(
+      reduced_out_local_tensor, out->placement(), *JUST(GetSbpList(out->nd_sbp())),
+      *tensor->shape(), tensor->dtype(), /* sync_data */ false, /*copy=*/false));
 }
 
 COMMAND(RegisterBoxingFunction("nd-sbp-dim-reduce", CheckParallelDimReduce, &ParallelDimReduce));

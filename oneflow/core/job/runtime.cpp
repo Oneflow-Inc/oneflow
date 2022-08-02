@@ -38,13 +38,13 @@ namespace {
 void SendCmdMsg(const std::vector<const TaskProto*>& tasks, ActorCmd cmd) {
   for (const TaskProto* task : tasks) {
     ActorMsg msg = ActorMsg::BuildCommandMsg(task->task_id(), cmd);
-    Global<ActorMsgBus>::Get()->SendMsg(msg);
+    Singleton<ActorMsgBus>::Get()->SendMsg(msg);
   }
 }
 
 void HandoutTasks(const std::vector<const TaskProto*>& tasks) {
   for (const TaskProto* task : tasks) {
-    Global<ThreadMgr>::Get()->GetThrd(task->thrd_id())->AddTask(*task);
+    Singleton<ThreadMgr>::Get()->GetThrd(task->thrd_id())->AddTask(*task);
   }
   SendCmdMsg(tasks, ActorCmd::kConstructActor);
 }
@@ -64,14 +64,14 @@ Runtime::Runtime(
     const HashMap<std::string, vm::EagerBlobObject*>& variable_op_name2eager_blob_object) {
   DumpThreadIdsFromPlan(plan);
   {
-    // NOTE(chengcheng): All runtime Global objects AddPlan
-    Global<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob_object);
-    Global<ThreadMgr>::Get()->AddThreads(thread_ids_);
-    Global<RuntimeJobDescs>::Get()->AddPlan(plan);
+    // NOTE(chengcheng): All runtime global(singleton) objects AddPlan
+    Singleton<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob_object);
+    Singleton<ThreadMgr>::Get()->AddThreads(thread_ids_);
+    Singleton<RuntimeJobDescs>::Get()->AddPlan(plan);
     collective_boxing_scheduler_plan_token_ =
-        Global<boxing::collective::Scheduler>::Get()->AddPlan(plan);
+        Singleton<boxing::collective::Scheduler>::Get()->AddPlan(plan);
 #ifdef WITH_CUDA
-    Global<EagerNcclCommMgr>::Get()->CreateCommFromPlan(plan);
+    Singleton<EagerNcclCommMgr>::Get()->CreateCommFromPlan(plan);
 #endif  // WITH_CUDA
   }
   std::vector<const TaskProto*> source_tasks;
@@ -95,7 +95,7 @@ Runtime::Runtime(
     it->second++;
     this_machine_task_num++;
   }
-  RuntimeCtx* runtime_ctx = Global<RuntimeCtx>::Get();
+  RuntimeCtx* runtime_ctx = Singleton<RuntimeCtx>::Get();
   runtime_ctx->NewCounter("constructing_actor_cnt", this_machine_task_num);
   HandoutTasks(source_tasks);
   HandoutTasks(other_tasks);
@@ -111,11 +111,12 @@ Runtime::Runtime(
 
 Runtime::~Runtime() {
   for (auto pair : job_id2actor_size_) {
-    Global<RuntimeCtx>::Get()->WaitUntilCntEqualZero(GetRunningActorCountKeyByJobId(pair.first));
+    Singleton<RuntimeCtx>::Get()->WaitUntilCntEqualZero(GetRunningActorCountKeyByJobId(pair.first));
   }
   OF_SESSION_BARRIER();
-  Global<ThreadMgr>::Get()->DeleteThreads(independent_thread_ids_);
-  Global<boxing::collective::Scheduler>::Get()->DeletePlan(collective_boxing_scheduler_plan_token_);
+  Singleton<ThreadMgr>::Get()->DeleteThreads(independent_thread_ids_);
+  Singleton<boxing::collective::Scheduler>::Get()->DeletePlan(
+      collective_boxing_scheduler_plan_token_);
 }
 
 void Runtime::DumpThreadIdsFromPlan(const Plan& plan) {

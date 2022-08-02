@@ -22,6 +22,7 @@ import oneflow._oneflow_internal
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.env_util as env_util
+import oneflow.core.job.resource_pb2 as resource_pb
 
 
 class MultiClientSession(object):
@@ -85,9 +86,6 @@ class MultiClientSession(object):
     @property
     def is_running(self):
         return self.status_ == self.Status.INITED
-
-    def AnyGlobalFunctionDefined(self):
-        return False
 
     def _check_status(self, *status):
         check_success = False

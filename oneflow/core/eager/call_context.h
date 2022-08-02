@@ -21,17 +21,14 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/stride.h"
+#include "oneflow/core/common/small_vector.h"
 
 namespace oneflow {
 
 namespace one {
 
 class StatefulLocalOpKernel;
-class ConsistentTensorInferResult;
-
-using EagerBlobObjectList = std::vector<std::shared_ptr<vm::EagerBlobObject>>;
-using EagerBlobObjectListPtr =
-    std::shared_ptr<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>;
+class GlobalTensorInferResult;
 
 }  // namespace one
 
@@ -52,52 +49,52 @@ class TmpTensor final : public user_op::Tensor {
   }
   DataType data_type() const override { return DataType::kChar; }
   const MemoryCase& mem_case() const override { return *mem_case_; }
-  const void* raw_dptr() const override { return tmp_buffer_ptr_.get(); }
-  void* mut_raw_dptr() override { return tmp_buffer_ptr_.get(); }
+  const void* raw_dptr() const override { return tmp_buffer_ptr_; }
+  void* mut_raw_dptr() override { return tmp_buffer_ptr_; }
 
   int64_t tmp_buffer_size() const { return tmp_buffer_size_; }
   void set_tmp_buffer_size(int64_t val) { tmp_buffer_size_ = val; }
-  std::unique_ptr<char, std::function<void(char*)>>& mut_tmp_buffer_ptr() {
-    return tmp_buffer_ptr_;
-  }
+
+  char* mut_tmp_buffer_ptr() { return tmp_buffer_ptr_; }
+
+  void set_tmp_buffer_ptr(char* ptr) { tmp_buffer_ptr_ = ptr; }
 
  private:
   std::shared_ptr<MemoryCase> mem_case_;
   int64_t tmp_buffer_size_;
-  std::unique_ptr<char, std::function<void(char*)>> tmp_buffer_ptr_;
+  char* tmp_buffer_ptr_;
 };
 
 class CallContext {
  public:
-  CallContext(
-      ComposedAttrMap&& composed_attrs, const one::EagerBlobObjectListPtr& inputs,
-      const one::EagerBlobObjectListPtr& outputs,
-      const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
-      const one::OpExprInterpContext& op_interp_ctx, const std::shared_ptr<MemoryCase>& mem_case)
+  CallContext(ComposedAttrMap&& composed_attrs, vm::EagerBlobObjectList&& inputs,
+              vm::EagerBlobObjectList&& outputs,
+              const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
+              const one::OpExprInterpContext& op_interp_ctx,
+              const std::shared_ptr<MemoryCase>& mem_case)
       : composed_attrs_(std::move(composed_attrs)),
-        inputs_(inputs),
-        outputs_(outputs),
-        consistent_tensor_infer_result_(consistent_tensor_infer_result),
+        inputs_(std::move(inputs)),
+        outputs_(std::move(outputs)),
+        global_tensor_infer_result_(global_tensor_infer_result),
         op_interp_ctx_(op_interp_ctx),
         tmp_tensor_(mem_case) {}
 
   ~CallContext() = default;
 
   const ComposedAttrMap& composed_attrs() const { return composed_attrs_; }
-  const one::EagerBlobObjectListPtr& inputs() const { return inputs_; }
-  const one::EagerBlobObjectListPtr& outputs() const { return outputs_; }
-  const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result()
-      const {
-    return consistent_tensor_infer_result_;
+  const vm::EagerBlobObjectList& inputs() const { return inputs_; }
+  const vm::EagerBlobObjectList& outputs() const { return outputs_; }
+  const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result() const {
+    return global_tensor_infer_result_;
   }
   const one::OpExprInterpContext& op_interp_ctx() const { return op_interp_ctx_; }
   TmpTensor* mut_tmp_tensor() { return &tmp_tensor_; }
 
  private:
   const ComposedAttrMap composed_attrs_;
-  const one::EagerBlobObjectListPtr inputs_;
-  const one::EagerBlobObjectListPtr outputs_;
-  const std::shared_ptr<const one::ConsistentTensorInferResult> consistent_tensor_infer_result_;
+  const vm::EagerBlobObjectList inputs_;
+  const vm::EagerBlobObjectList outputs_;
+  const std::shared_ptr<const one::GlobalTensorInferResult> global_tensor_infer_result_;
   const one::OpExprInterpContext op_interp_ctx_;
   TmpTensor tmp_tensor_;
 };

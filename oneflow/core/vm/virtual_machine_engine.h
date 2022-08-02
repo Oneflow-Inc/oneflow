@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/vm_object.h"
-#include "oneflow/core/vm/vm_resource_desc.h"
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/intrusive/mutexed_list.h"
 #include "oneflow/core/intrusive/object_pool.h"
@@ -41,6 +40,9 @@ class ScheduleCtx {
 
   virtual void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const = 0;
 };
+
+using ReadyInstructionList =
+    intrusive::List<INTRUSIVE_FIELD(Instruction, dispatched_instruction_hook_)>;
 
 class VirtualMachineEngine final : public intrusive::Base {
  public:
@@ -91,8 +93,8 @@ class VirtualMachineEngine final : public intrusive::Base {
   void MoveToGarbageListAndNotifyGC(const ScheduleCtx& schedule_ctx);
 
  private:
-  using ReadyInstructionList =
-      intrusive::List<INTRUSIVE_FIELD(Instruction, dispatched_instruction_hook_)>;
+  template<typename DoEachStreamT>
+  void ForEachStreamOnDevice(Symbol<Device> device, const DoEachStreamT& DoEachStream);
 
   ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
 
@@ -103,20 +105,24 @@ class VirtualMachineEngine final : public intrusive::Base {
                                      InstructionList* /*out*/ pending_instructions);
   void TryRunBarrierInstruction(const ScheduleCtx& schedule_ctx);
   void DispatchAndPrescheduleInstructions(const ScheduleCtx& schedule_ctx);
-  bool OnSchedulerThread(const StreamType& stream_type);
+  bool OnSchedulerThread(const vm::Stream& stream);
 
   void ReleaseInstruction(Instruction* instruction);
 
   void TryConnectInstruction(Instruction* src_instruction, Instruction* dst_instruction);
   void ConnectInstructionsByWrite(DependenceAccess* dst_access);
   void ConnectInstructionsByRead(DependenceAccess* dst_access);
-  DependenceAccess* AccessMirroredObject(OperandAccessType access_type,
-                                         MirroredObject* mirrored_object, Instruction* instrution);
-  void ConsumeMirroredObjects(Instruction* instruction);
+  DependenceAccess* AccessDependence(OperandAccessType access_type, Dependence* dependence,
+                                     Instruction* instrution);
+  void ConsumeDependences(Instruction* instruction);
+  template<void (VirtualMachineEngine::*OOMHandler)(vm::Stream*, const ScheduleCtx&)>
   void DispatchInstruction(Instruction* instruction, const ScheduleCtx& schedule_ctx);
 
   bool EdgeDispatchable(const Instruction* src, const Instruction* dst) const;
   bool Dispatchable(Instruction* instruction) const;
+  void BusyWaitInstructionsDoneThenShrink(vm::Stream* stream, const ScheduleCtx& schedule_ctx);
+  void AbortOnOOM(vm::Stream* stream, const ScheduleCtx& schedule_ctx);
+
   void TryDispatchReadyInstructions();
 
   void LivelyInstructionListPushBack(Instruction* instruction);

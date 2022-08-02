@@ -14,8 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 

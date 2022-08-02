@@ -21,7 +21,6 @@ namespace oneflow {
 
 namespace {
 
-template<DeviceType device_type, typename T>
 class AccKernel final : public user_op::OpKernel {
  public:
   AccKernel() = default;
@@ -42,19 +41,7 @@ class AccKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_ACC_KERNEL(device, dtype)                       \
-  REGISTER_USER_KERNEL("acc")                                    \
-      .SetCreateFn<AccKernel<device, OF_PP_PAIR_FIRST(dtype)>>() \
-      .SetIsMatchedHob(                                          \
-          (user_op::HobDeviceType() == device)                   \
-          && (user_op::HobDataType("out", 0) == GetDataType<OF_PP_PAIR_FIRST(dtype)>::value));
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ACC_KERNEL, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)
-#ifdef WITH_CUDA
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ACC_KERNEL, OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
-                                 FLOAT16_DATA_TYPE_SEQ)
-#endif
-#undef REGISTER_ACC_KERNEL
+REGISTER_USER_KERNEL("acc").SetCreateFn<AccKernel>().SetIsMatchedHob(user_op::HobTrue());
 
 }  // namespace
 

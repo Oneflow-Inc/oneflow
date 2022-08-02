@@ -14,12 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/instruction.h"
-#include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
-#include "oneflow/core/framework/stream_get_stream_role_name.h"
+#include "oneflow/core/framework/stream_get_stream_type_name.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/profiler/profiler.h"
@@ -28,31 +26,35 @@ namespace oneflow {
 namespace vm {
 
 std::string Instruction::DebugName() const {
-  std::string instr_name = instruction_type().DebugName(*this);
-  return instr_name + ":" + GetStreamRoleName::Visit(stream().stream_role());
+  std::string instr_name = instruction_policy().DebugName(*this);
+  return instr_name + ":" + GetStreamTypeName::Visit(stream().stream_type());
 }
 
-void Instruction::__Init__(Stream* stream, const InstructionType* instruction_type,
-                           const std::shared_ptr<PhyInstrOperand>& phy_instr_operand) {
+void Instruction::__Init__(Stream* stream,
+                           std::shared_ptr<InstructionPolicy>&& instruction_policy) {
   stream_ = stream;
-  instruction_type_ = instruction_type;
-  phy_instr_operand_ = phy_instr_operand;
+  instruction_policy_ = instruction_policy;
 }
 
-void Instruction::InitStatus() { instruction_type().InitInstructionStatusIf(this); }
+void Instruction::InitStatus() { instruction_policy_->InitInstructionStatusIf(this); }
+
+Maybe<void> Instruction::Prepare() { return instruction_policy_->PrepareIf(this); }
+void Instruction::Compute() { return instruction_policy_->ComputeIf(this); }
 
 void Instruction::DeleteStatusAndClearEdges() {
   OF_PROFILER_RANGE_GUARD("Instruction::DeleteStatusAndClearEdges");
-  instruction_type().DeleteInstructionStatusIf(this);
+  instruction_policy_->DeleteInstructionStatusIf(this);
   mut_in_edges()->Clear();
   mut_out_edges()->Clear();
 }
 
 bool Instruction::Done() const {
-  return stream_type().QueryInstructionStatusDone(stream(), status_buffer());
+  return stream_policy().QueryInstructionStatusDone(stream(), status_buffer());
 }
 
-const StreamType& Instruction::stream_type() const { return stream().stream_type(); }
+StreamPolicy* Instruction::mut_stream_policy() { return mut_stream()->mut_stream_policy(); }
+
+const StreamPolicy& Instruction::stream_policy() const { return stream().stream_policy(); }
 
 }  // namespace vm
 }  // namespace oneflow

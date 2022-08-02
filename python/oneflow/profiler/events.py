@@ -15,97 +15,228 @@ limitations under the License.
 """
 import json
 import copy
-from typing import Tuple, Dict, Optional
+from enum import Enum
+from typing import Tuple, List, Dict
 from collections import OrderedDict
-from prettytable import PrettyTable
+from rich import box
+from rich.console import Console
+from rich.table import Table
 from oneflow.profiler.util import format_time
 
 
-def format_event_type(event_type, on_gpu: bool):
-    if event_type == 0:
-        return "custom"
-    if event_type == 1:
-        return "kernel" + ("@gpu" if on_gpu else "@cpu")
-    raise ValueError(f"Undefined event type {event_type}.")
+class EventType(Enum):
+    Custom = 0
+    Kernel = 1
 
 
-class Event:
-    def __init__(
-        self,
-        name: str,
-        cpu_time: float,
-        gpu_time: Optional[float],
-        bandwidth: Optional[int],
-        count: int,
-        input_shapes: str,
-        event_type: int,
-    ) -> None:
-        self.name = name
-        self.cpu_time = cpu_time
-        self.cpu_time_total = cpu_time * count
+class CustomEventType(Enum):
+    Default = 0
+    CudaKernel = 1
+    CudaRuntime = 2
 
-        self.gpu_time = gpu_time
-        self.gpu_time_total = gpu_time * count if self.on_gpu else None
-        self.bandwidth = bandwidth
-        self.bandwidth_total = bandwidth * count if self.bandwidth_is_recorded else None
 
-        self.count = count
-        self.input_shapes = input_shapes
-        self.event_type = event_type
-        if self.event_type == 0:
-            assert not self.on_gpu, "custom events are only supported on CPU."
+class EventBase:
+    MAX_NAME_LENGTH = 55
 
-    @property
-    def on_gpu(self) -> bool:
-        return self.gpu_time is not None
+    def __init__(self, name: str, time_total: float, event_type: EventType) -> None:
+        self._name: str = name
+        self._time_total: float = time_total
+        self.count: int = 1
+        self.event_type: EventType = event_type
 
-    @property
-    def bandwidth_is_recorded(self) -> bool:
-        return self.on_gpu and self.bandwidth is not None
-
-    def update(self, event):
+    def update(self, event) -> None:
         assert self.event_type == event.event_type
-        assert self.on_gpu == event.on_gpu
+        self.cpu_time_total += event.cpu_time_total
+        self.count += event.count
 
-        self.count += 1
-        self.cpu_time_total += event.cpu_time
-        self.cpu_time = self.cpu_time_total / self.count
-        if self.on_gpu:
-            self.gpu_time_total += event.gpu_time
-            self.gpu_time = self.gpu_time_total / self.count
-            if self.bandwidth_is_recorded:
-                self.bandwidth_total += event.bandwidth
-                self.bandwidth = self.bandwidth_total / self.count
+    @property
+    def name(self):
+        if len(self._name) > self.MAX_NAME_LENGTH:
+            return self._name[: self.MAX_NAME_LENGTH - 3] + "..."
+        return self._name
 
-    def __eq__(self, other):
-        if not isinstance(other, type(self)):
-            return NotImplemented
+    @property
+    def cpu_time_total(self):
+        return self._time_total
 
+    @cpu_time_total.setter
+    def cpu_time_total(self, new_time):
+        self._time_total = new_time
+
+    @property
+    def cpu_time(self):
+        return self._time_total / self.count
+
+    @property
+    def cuda_time_total(self):
+        return None
+
+    @cuda_time_total.setter
+    def cuda_time_total(self, new_time):
+        pass
+
+    @property
+    def cuda_time(self):
+        if self.cuda_time_total is None:
+            return None
+        return self.cuda_time_total / self.count
+
+    def has_cuda_time(self) -> bool:
+        return self.cuda_time_total is not None
+
+    def __eq__(self, __o: object) -> bool:
         return (
-            self.name == other.name
-            and self.on_gpu == other.on_gpu
-            and self.bandwidth_is_recorded == other.bandwidth_is_recorded
-            and self.cpu_time == other.cpu_time
-            and self.cpu_time_total == other.cpu_time_total
-            and self.gpu_time == other.gpu_time
-            and self.gpu_time_total == other.gpu_time_total
-            and self.bandwidth == other.bandwidth
-            and self.bandwidth_total == other.bandwidth_total
-            and self.count == other.count
-            and self.input_shapes == other.input_shapes
-            and self.event_type == other.event_type
+            self.name == __o.name
+            and self.count == __o.count
+            and self.cpu_time_total == __o.cpu_time_total
+            and self.cuda_time_total == __o.cuda_time_total
         )
+
+
+class CustomEvent(EventBase):
+    def __init__(
+        self, name: str, time_total: float, custom_event_type: CustomEventType
+    ) -> None:
+        super().__init__(name, time_total, EventType.Custom)
+        self.custom_event_type = custom_event_type
 
     @classmethod
     def from_dict(cls, d: dict):
-        return cls(
-            d.get("name"),
-            d.get("cpu_time"),
-            d.get("gpu_time"),
-            d.get("bandwidth"),
-            1,
-            d.get("input_shapes"),
-            d.get("type"),
+        return cls(d.get("name"), d.get("time"), CustomEventType(d.get("custom_type")))
+
+    @property
+    def key(self):
+        return self.name, self.custom_event_type
+
+    @property
+    def cuda_time_total(self):
+        if self.custom_event_type == CustomEventType.CudaKernel:
+            return self._time_total
+        return None
+
+    def to_dict(self):
+        device_prefix = "cuda" if self.has_cuda_time() else "cpu"
+        time_attrs = [f"{device_prefix}_{suffix}" for suffix in ["time", "time_total"]]
+        result = {
+            "name": self.name,
+            "count": self.count,
+        }
+        for time_attr in time_attrs:
+            result[time_attr] = format_time(getattr(self, time_attr))
+        return result
+
+    def __eq__(self, __o: object) -> bool:
+        return (
+            super().__eq__(__o)
+            and isinstance(__o, type(self))
+            and self.custom_event_type == __o.custom_event_type
+        )
+
+
+class KernelEvent(EventBase):
+    def __init__(
+        self, name: str, time_total: float, memory_size: int, input_shapes: str
+    ) -> None:
+        super().__init__(name, time_total, EventType.Kernel)
+        self.children: List[CustomEvent] = []
+        self.memory_size = memory_size
+        self.input_shapes = input_shapes
+        self._cuda_time_total = 0.0
+
+    def add_child(self, event: CustomEvent):
+        self.children.append(event)
+        if event.has_cuda_time():
+            self._cuda_time_total += event.cuda_time
+
+    @classmethod
+    def from_dict(cls, d: dict):
+        kernel_event = cls(
+            d.get("name"), d.get("time"), d.get("memory_size"), d.get("input_shapes")
+        )
+        if "children" in d.keys():
+            children_list = d.get("children")
+            if len(children_list) > 0:
+                for child_dict in children_list:
+                    kernel_event.add_child(CustomEvent.from_dict(child_dict))
+        return kernel_event
+
+    @property
+    def key(self):
+        if len(self.children) == 0:
+            return (self.name, self.input_shapes)
+        return (
+            self.name,
+            self.input_shapes,
+            ",".join([x.name for x in self.children]),
+        )
+
+    @property
+    def cuda_time_total(self):
+        if self._cuda_time_total > 0.0:
+            return self._cuda_time_total
+        return None
+
+    @cuda_time_total.setter
+    def cuda_time_total(self, new_time):
+        self._cuda_time_total = new_time
+
+    @property
+    def bandwidth(self):
+        if len(self.children) > 0 and self.has_cuda_time():
+            if self.memory_size != -1:
+                return f"{self.memory_size / (1024.0 * 1024.0 * 1024.0) / (self.cuda_time / (1000 * 1000)):.3f}GB/s"
+        return "-"
+
+    def to_dict(self):
+        result = {
+            "name": self.name,
+            "cpu_time_total": format_time(self.cpu_time_total),
+            "cpu_time": format_time(self.cpu_time),
+            "count": self.count,
+            "input_shapes": self.input_shapes,
+            "bandwidth": self.bandwidth,
+        }
+        if self.has_cuda_time():
+            result.update(
+                {
+                    "cuda_time_total": format_time(self.cuda_time_total),
+                    "cuda_time": format_time(self.cuda_time),
+                }
+            )
+
+        return result
+
+    def update(self, event):
+        assert id(self) != id(event)
+        assert isinstance(event, type(self))
+        assert len(self.children) == len(event.children)
+        assert self.has_cuda_time() == event.has_cuda_time()
+        assert self.key == event.key
+
+        super().update(event)
+        if self.has_cuda_time():
+            self.cuda_time_total += event.cuda_time_total
+
+        for i in range(len(self.children)):
+            self.children[i].update(event.children[i])
+
+    def make_children_average(self):
+        stats: Dict[Tuple[str, ...], CustomEvent] = OrderedDict()
+        for event in self.children:
+            if event.key in stats:
+                stats[event.key].update(event)
+            else:
+                stats[event.key] = copy.deepcopy(event)
+        self.children = list(stats.values())
+        self.children.sort(key=lambda x: x.name)
+
+    def __eq__(self, __o: object) -> bool:
+        return (
+            super().__eq__(__o)
+            and isinstance(__o, type(self))
+            and self.children == __o.children
+            and self.memory_size == __o.memory_size
+            and self.input_shapes == __o.input_shapes
         )
 
 
@@ -117,53 +248,80 @@ class Events(list):
 
     def __init_events(self, events: str):
         events_json = json.loads(events)
+        classes = [CustomEvent, KernelEvent]
         for event_json in events_json:
-            self.append(Event.from_dict(event_json))
+            self.append(classes[event_json.get("type")].from_dict(event_json))
 
     def __str__(self):
         return self.table()
 
-    def key_averages(self):
-        stats: Dict[Tuple[str, ...], Event] = OrderedDict()
+    def key_averages(self, group_by_input_shape=False):
+        stats: Dict[Tuple[str, ...], EventBase] = OrderedDict()
 
-        def get_key(event: Event) -> Tuple[str, ...]:
-            return event.name, event.input_shapes
+        def deal_event(e):
+            if group_by_input_shape == False and isinstance(e, KernelEvent):
+                e.input_shapes = "-"
+            key = e.key
+            if key in stats:
+                stats[key].update(e)
+            else:
+                stats[key] = copy.deepcopy(e)
 
         for event in self:
-            key = get_key(event=event)
-            if key in stats:
-                stats[key].update(event)
-            else:
-                stats[key] = copy.deepcopy(event)
+            if isinstance(event, KernelEvent) and len(event.children) != 0:
+                event.make_children_average()
+                for event_child in event.children:
+                    deal_event(event_child)
+                event.children = []
+            deal_event(event)
+
         results = Events()
         results.extend(stats.values())
         return results
 
     def table(self):
-        t = PrettyTable()
-        t.field_names = [
+        has_input_shapes = any(
+            [x.input_shapes != "-" for x in self if isinstance(x, KernelEvent)]
+        )
+        has_bandwidth = any(
+            [x.bandwidth != "-" for x in self if isinstance(x, KernelEvent)]
+        )
+        t = Table(
             "Name",
             "CPU time total",
             "CPU time",
             "GPU time total",
             "GPU time",
-            "Bandwidth",
             "Number of calls",
-            "Event type",
-            "Shapes of inputs",
+            box=box.SIMPLE,
+        )
+        field_keys = [
+            "name",
+            "cpu_time_total",
+            "cpu_time",
+            "cuda_time_total",
+            "cuda_time",
+            "count",
         ]
+        if has_input_shapes:
+            t.add_column("Input shapes")
+            field_keys.append("input_shapes")
+        if has_bandwidth:
+            t.add_column("Bandwidth")
+            field_keys.append("bandwidth")
+
+        def build_row(data: dict):
+            return tuple(str(data.get(key, "-")) for key in field_keys)
+
         for item in self:
-            t.add_row(
-                [
-                    item.name,
-                    format_time(item.cpu_time_total),
-                    format_time(item.cpu_time),
-                    format_time(item.gpu_time_total) if item.on_gpu else "-",
-                    format_time(item.gpu_time) if item.on_gpu else "-",
-                    f"{item.bandwidth:.3f}GB/s" if item.bandwidth_is_recorded else "-",
-                    item.count,
-                    format_event_type(item.event_type, item.on_gpu),
-                    item.input_shapes,
-                ]
-            )
-        return t.get_string()
+            if isinstance(item, CustomEvent):
+                t.add_row(*build_row(item.to_dict()))
+            if isinstance(item, KernelEvent):
+                t.add_row(*build_row(item.to_dict()))
+                if len(item.children) > 0:
+                    for child in item.children:
+                        t.add_row(*build_row(child.to_dict()))
+        console = Console()
+        with console.capture() as capture:
+            console.print(t)
+        return capture.get()

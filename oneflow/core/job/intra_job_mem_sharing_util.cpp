@@ -97,7 +97,8 @@ void InitMemoryChains(Plan* plan,
     const StreamId stream_id = PlanUtil::GetStreamId(*task);
     int64_t machine_id = task->machine_id();
     DeviceType device_type = stream_id.device_id().device_type();
-    if (device_type != DeviceType::kCUDA) { continue; }
+    // TODO(zwx): eliminate this special 'is cpu' determine
+    if (device_type == DeviceType::kCPU) { continue; }
     int64_t device_id = stream_id.device_id().device_index();
     int64_t device_unique_id = GenDeviceUniqueId(machine_id, device_id);
     MemoryChain* mem_chain =
@@ -105,10 +106,10 @@ void InitMemoryChains(Plan* plan,
     mem_chain->sorted_tasks.emplace_back(task);
     for (auto& pair : *(task->mutable_produced_regst_desc())) {
       RegstDescProto* regst_desc = &pair.second;
-      if (regst_desc->mem_case().has_device_cuda_mem()
-          && regst_desc->mem_case().device_cuda_mem().device_id() == device_id
-          && regst_desc->enable_reuse_mem() && regst_desc->register_num() == 1
-          && regst_desc->mem_block_id() == -1 && regst_desc->mem_block_offset() == -1
+      if (regst_desc->mem_case().device_type() == device_type
+          && regst_desc->mem_case().device_id() == device_id && regst_desc->enable_reuse_mem()
+          && regst_desc->register_num() == 1 && regst_desc->mem_block_id() == -1
+          && regst_desc->mem_block_offset() == -1
           && regst_desc->regst_desc_type().has_data_regst_desc()) {
         CHECK(mem_chain->mem_reused_regsts.insert(regst_desc).second);
         mem_chain->total_mem_reused_size += RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst();
@@ -223,7 +224,7 @@ void GenMemChainTasksAndRegsts(
   int64_t mem_chain_id = 0;
 
   bool enable_mem_chain_merge =
-      Global<ResourceDesc, ForSession>::Get()->resource().enable_mem_chain_merge();
+      Singleton<ResourceDesc, ForSession>::Get()->resource().enable_mem_chain_merge();
 
   for (auto& device_chain_pair : device2chain2mem_chain) {
     if (device_chain_pair.second.empty()) { continue; }
@@ -826,7 +827,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
       }
     }
     CHECK(best_result != nullptr);
-    int64_t mem_block_id = Global<IDMgr>::Get()->NewMemBlockId();
+    int64_t mem_block_id = Singleton<IDMgr>::Get()->NewMemBlockId();
     CHECK_EQ(mem_chain2mem_reused_regsts.at(pair.first).size(),
              (best_result->regst_desc2offset.size()
               + mem_chain2consumer2inplaced_regst.at(pair.first).size()));

@@ -31,7 +31,14 @@ class ArgWhereKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     int64_t ndims = ctx->Tensor4ArgNameAndIndex("input", 0)->shape_view().NumAxes();
-    if (ndims == 0) { return; }
+    if (ndims == 0) {
+      // 0-dim tensor, elem_cnt of input is 1
+      CHECK_EQ(ctx->Tensor4ArgNameAndIndex("input", 0)->shape_view().elem_cnt(), 1);
+      SetOutputSize<device_type, IN_T, OUT_T>(
+          ctx->stream(), ctx->Tensor4ArgNameAndIndex("input", 0)->dptr<IN_T>(),
+          ctx->Tensor4ArgNameAndIndex("output_size", 0)->mut_dptr<OUT_T>());
+      return;
+    }
     SwitchNdimCompute(SwitchCase(ndims), ctx);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -71,13 +78,12 @@ struct SwitchUtil {
 #undef SWITCH_ENTRY
 };
 
+template<DeviceType device_type>
 size_t InferTempStorageBytesSize(user_op::InferContext* ctx) {
-  const std::string& device_tag = ctx->device_tag();
-  DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(device_tag));
   const Shape& input_shape = ctx->InputShape("input", 0);
   if (input_shape.NumAxes() == 0) { return 0; }
-  const DataType& input_dtype = ctx->InputDType("input", 0);
-  DataType output_dtype = *ctx->OutputDType("output", 0);
+  DataType input_dtype = ctx->InputDType("input", 0);
+  DataType output_dtype = ctx->OutputDType("output", 0);
   return SwitchUtil::SwitchGetWorkspaceBytesSize(
       SwitchCase(device_type, input_dtype, output_dtype, input_shape.NumAxes()),
       input_shape.elem_cnt());
@@ -92,7 +98,7 @@ size_t InferTempStorageBytesSize(user_op::InferContext* ctx) {
                        && (user_op::HobDataType("input", 0) == GetDataType<itype>::value)        \
                        && (user_op::HobDataType("output", 0) == GetDataType<otype>::value)       \
                        && (user_op::HobDataType("output_size", 0) == GetDataType<otype>::value)) \
-      .SetInferTmpSizeFn(InferTempStorageBytesSize);
+      .SetInferTmpSizeFn(InferTempStorageBytesSize<device>);
 
 #define REGISTER_ARG_WHERE_KERNEL_WITH_DTYPE_PAIR(device, itype_pair, otype_pair) \
   REGISTER_ARG_WHERE_KERNEL(device, OF_PP_PAIR_FIRST(itype_pair), OF_PP_PAIR_FIRST(otype_pair))

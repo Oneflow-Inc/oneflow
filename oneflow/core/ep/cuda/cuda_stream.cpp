@@ -32,7 +32,7 @@ namespace {
 constexpr size_t kDefaultWorkspaceSizeMb = 4;  // 4M
 
 void SetAffinityByDevice(int dev_id) {
-  auto node_device_desc_mgr = Global<hardware::NodeDeviceDescriptorManager>::Get();
+  auto node_device_desc_mgr = Singleton<hardware::NodeDeviceDescriptorManager>::Get();
   if (node_device_desc_mgr == nullptr) { return; }
   auto node_device_desc = node_device_desc_mgr->GetLocalNodeDeviceDescriptor();
   auto cuda_device = std::dynamic_pointer_cast<const hardware::CudaDeviceDescriptor>(
@@ -84,7 +84,13 @@ CudaStream::CudaStream(CudaDevice* device)
     : device_index_(device->device_index()), device_(device) {
   CudaCurrentDeviceGuard guard(device_index_);
   // cuda_stream
-  OF_CUDA_CHECK(cudaStreamCreate(&cuda_stream_));
+  const char* stream_flags_env_name = "ONEFLOW_EP_CUDA_STREAM_FLAGS";
+  if (std::getenv(stream_flags_env_name) != nullptr) {
+    const unsigned int stream_flags = ParseIntegerFromEnv(stream_flags_env_name, 0);
+    OF_CUDA_CHECK(cudaStreamCreateWithFlags(&cuda_stream_, stream_flags));
+  } else {
+    OF_CUDA_CHECK(cudaStreamCreate(&cuda_stream_));
+  }
   // cublas_handle
   OF_CUBLAS_CHECK(cublasCreate(&cublas_handle_));
   OF_CUBLAS_CHECK(cublasSetStream(cublas_handle_, cuda_stream_));

@@ -17,38 +17,38 @@ limitations under the License.
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/static_global.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/stream_mgr.h"
 
 namespace oneflow {
 
-Stream::Stream(Symbol<Device> device, StreamRole stream_role)
-    : device_(device), stream_role_(stream_role), unique_stream_id_(-1) {}
+Stream::Stream(Symbol<Device> device, StreamType stream_type)
+    : device_(device), stream_type_(stream_type), unique_stream_id_(-1) {}
 
 Maybe<void> Stream::Init(size_t unique_stream_id) {
   unique_stream_id_ = unique_stream_id;
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<Symbol<Stream>> Stream::RawNew(Symbol<Device> device, StreamRole stream_role) {
-  std::shared_ptr<Stream> stream(new Stream(device, stream_role));
-  return JUST(GlobalMaybe<StreamMgr>())
+/*static*/ Maybe<Symbol<Stream>> Stream::RawNew(Symbol<Device> device, StreamType stream_type) {
+  std::shared_ptr<Stream> stream(new Stream(device, stream_type));
+  return JUST(SingletonMaybe<StreamMgr>())
       ->AddStreamSymbol(*stream, [&](size_t unique_stream_id) -> Maybe<Symbol<Stream>> {
         JUST(stream->Init(unique_stream_id));
         return SymbolOf(*stream);
       });
 }
 
-/*static*/ Maybe<Symbol<Stream>> Stream::New(Symbol<Device> device, StreamRole stream_role) {
+/*static*/ Maybe<Symbol<Stream>> Stream::New(Symbol<Device> device, StreamType stream_type) {
   constexpr auto* Make = DECORATE(&Stream::RawNew, ThreadLocal);
-  return Make(device, stream_role);
+  return Make(device, stream_type);
 }
 
 namespace {
 
 Maybe<Symbol<Stream>> RawGetDefaultStreamByDevice(Symbol<Device> device) {
-  return Stream::New(device, StreamRole::kCompute);
+  return Stream::New(device, StreamType::kCompute);
 }
 
 Maybe<Symbol<Stream>> RawGetDefaultStreamByPlacement(Symbol<ParallelDesc> parallel_desc) {

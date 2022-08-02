@@ -58,33 +58,30 @@ struct CudaDataTypeTrait<half> {
 };
 
 template<typename T>
-void CublasBatchGemm(cublasHandle_t handle, char transa, char transb, int64_t m, int64_t n,
+void CublasBatchGemm(ep::CudaStream* stream, char transa, char transb, int64_t m, int64_t n,
                      int64_t k, T alpha, const T* a, int64_t lda, int64_t stridea, const T* b,
                      int64_t ldb, int64_t strideb, T beta, T* c, int64_t ldc, int64_t stridec,
                      int64_t batch_size) {
   cublasOperation_t opa = GetCublasOp(transa);
   cublasOperation_t opb = GetCublasOp(transb);
-  if (CUDA_VERSION >= 9010 && GetCudaSmVersion() >= 500) {
+  if (CUDA_VERSION >= 9010 && stream->cuda_arch() >= 500) {
 #if CUDA_VERSION >= 9010
     cudaDataType_t data_type = CudaDataTypeTrait<T>::value;
     OF_CUBLAS_CHECK(cublasGemmStridedBatchedEx(
-        handle, opa, opb, m, n, k, reinterpret_cast<const void*>(&alpha),
+        stream->cublas_handle(), opa, opb, m, n, k, reinterpret_cast<const void*>(&alpha),
         reinterpret_cast<const void*>(a), data_type, lda, stridea, reinterpret_cast<const void*>(b),
         data_type, ldb, strideb, reinterpret_cast<const void*>(&beta), reinterpret_cast<void*>(c),
         data_type, ldc, stridec, batch_size, data_type, CUBLAS_GEMM_DEFAULT));
 #else
     UNIMPLEMENTED();
 #endif
-  } else {
-    cublas_gemmStridedBatched<T>(handle, opa, opb, m, n, k, &alpha, a, ldb, stridea, b, ldb,
-                                 strideb, &beta, c, ldc, stridec, batch_size);
   }
 }
 
 #if CUDA_VERSION >= 9010
 
 template<>
-void CublasBatchGemm<half>(cublasHandle_t handle, char transa, char transb, int64_t m, int64_t n,
+void CublasBatchGemm<half>(ep::CudaStream* stream, char transa, char transb, int64_t m, int64_t n,
                            int64_t k, half alpha, const half* a, int64_t lda, int64_t stridea,
                            const half* b, int64_t ldb, int64_t strideb, half beta, half* c,
                            int64_t ldc, int64_t stridec, int64_t batch_size) {
@@ -92,7 +89,7 @@ void CublasBatchGemm<half>(cublasHandle_t handle, char transa, char transb, int6
   cublasOperation_t opa = GetCublasOp(transa);
   cublasOperation_t opb = GetCublasOp(transb);
 
-  if (GetCudaSmVersion() >= 500) {
+  if (stream->cuda_arch() >= 500) {
     float alpha_f = static_cast<comp_t>(alpha);
     float beta_f = static_cast<comp_t>(beta);
 #if CUDA_VERSION >= 11000
@@ -103,22 +100,19 @@ void CublasBatchGemm<half>(cublasHandle_t handle, char transa, char transb, int6
     cudaDataType_t data_type = CudaDataTypeTrait<half>::value;
     cudaDataType_t comp_type = CudaDataTypeTrait<comp_t>::value;
     OF_CUBLAS_CHECK(cublasGemmStridedBatchedEx(
-        handle, opa, opb, m, n, k, &alpha_f, reinterpret_cast<const void*>(a), data_type, lda,
-        stridea, reinterpret_cast<const void*>(b), data_type, ldb, strideb, &beta_f,
+        stream->cublas_handle(), opa, opb, m, n, k, &alpha_f, reinterpret_cast<const void*>(a),
+        data_type, lda, stridea, reinterpret_cast<const void*>(b), data_type, ldb, strideb, &beta_f,
         reinterpret_cast<void*>(c), data_type, ldc, stridec, batch_size, comp_type, algo));
-  } else {
-    cublas_gemmStridedBatched<half>(handle, opa, opb, m, n, k, &alpha, a, lda, stridea, b, ldb,
-                                    strideb, &beta, c, ldc, stridec, batch_size);
   }
 }
 
 template<>
-void CublasBatchGemm<float16>(cublasHandle_t handle, char transa, char transb, int64_t m, int64_t n,
-                              int64_t k, float16 alpha, const float16* a, int64_t lda,
+void CublasBatchGemm<float16>(ep::CudaStream* stream, char transa, char transb, int64_t m,
+                              int64_t n, int64_t k, float16 alpha, const float16* a, int64_t lda,
                               int64_t stridea, const float16* b, int64_t ldb, int64_t strideb,
                               float16 beta, float16* c, int64_t ldc, int64_t stridec,
                               int64_t batch_size) {
-  CublasBatchGemm<half>(handle, transa, transb, m, n, k, static_cast<half>(alpha),
+  CublasBatchGemm<half>(stream, transa, transb, m, n, k, static_cast<half>(alpha),
                         reinterpret_cast<const half*>(a), lda, stridea,
                         reinterpret_cast<const half*>(b), ldb, strideb, static_cast<half>(beta),
                         reinterpret_cast<half*>(c), ldc, stridec, batch_size);
@@ -132,9 +126,8 @@ void BatchedGemm(ep::Stream* stream, char opa, char opb, int64_t m, int64_t n, i
                  int64_t strideb, float beta, T* c, int64_t ldc, int64_t stridec,
                  int64_t batch_size) {
   // swap m and n, a and b to convert from row-major to col-major
-  CublasBatchGemm<T>(stream->As<ep::CudaStream>()->cublas_handle(), opb, opa, n, m, k,
-                     static_cast<T>(alpha), b, ldb, strideb, a, lda, stridea, static_cast<T>(beta),
-                     c, ldc, stridec, batch_size);
+  CublasBatchGemm<T>(stream->As<ep::CudaStream>(), opb, opa, n, m, k, static_cast<T>(alpha), b, ldb,
+                     strideb, a, lda, stridea, static_cast<T>(beta), c, ldc, stridec, batch_size);
 }
 
 SliceParams ConstructSliceParams4Value(int64_t seq_len, int64_t batch_size, int64_t num_heads,
@@ -273,14 +266,14 @@ class FusedSelfAttentionQueryMulKeyAndValueGradGpuKernel final : public user_op:
 };
 
 size_t InferTmpBufferSize(user_op::InferContext* ctx) {
-  const Shape* value_shape = ctx->OutputShape("value", 0);
-  DataType value_dtype = *ctx->OutputDType("value", 0);
-  return value_shape->elem_cnt() * GetSizeOfDataType(value_dtype);
+  const Shape& value_shape = ctx->OutputShape("value", 0);
+  DataType value_dtype = ctx->OutputDType("value", 0);
+  return value_shape.elem_cnt() * GetSizeOfDataType(value_dtype);
 }
 
 size_t InferGradTmpBufferSize(user_op::InferContext* ctx) {
   const Shape& value_shape = ctx->InputShape("value_grad", 0);
-  const DataType& value_dtype = ctx->InputDType("value_grad", 0);
+  DataType value_dtype = ctx->InputDType("value_grad", 0);
   return value_shape.elem_cnt() * GetSizeOfDataType(value_dtype);
 }
 

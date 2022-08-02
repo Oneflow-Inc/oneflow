@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/api/common/ofblob.h"
 #include "oneflow/api/common/variable_tensor_mgr.h"
 #include "oneflow/api/cpp/env_impl.h"
 #include "oneflow/api/cpp/framework/device.h"
@@ -26,12 +25,13 @@ limitations under the License.
 #include "oneflow/api/common/job_build_and_infer_ctx.h"
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
 #include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
@@ -52,6 +52,8 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/session.h"
+#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/operator/interface_blob_conf.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
@@ -306,7 +308,7 @@ of::Maybe<void> Graph::GraphImpl::AddOp(of::OperatorConf op_conf) {
         0, batch_size_);
   }
   auto* ctx = JUST(of::GetCurInferCtx());
-  JUST(ctx->AddAndInferConsistentOp(op_conf));
+  JUST(ctx->AddAndInferGlobalOp(op_conf));
   return of::Maybe<void>::Ok();
 }
 
@@ -332,12 +334,12 @@ of::Maybe<void> Graph::GraphImpl::BuildGraph() {
   JUST(of::CurJobBuildAndInferCtx_Complete());
   std::shared_ptr<of::Job> complete_job = JUST(of::GetCurrentJob());
   int64_t job_id = JUST(of::JobBuildAndInferCtx_GetCurrentJobId());
-  CHECK(of::Global<OneFlowEnv>::Get() != nullptr);
+  CHECK(of::Singleton<OneFlowEnv>::Get() != nullptr);
 
   // apply custom job passes
   complete_job = JUST(ApplyJobPasses(*complete_job));
   graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name(), *complete_job, job_id,
-                                         of::Global<OneFlowEnv>::Get()->GetSessionCtx());
+                                         of::Singleton<OneFlowEnv>::Get()->GetSessionCtx());
   {
     const of::OpGraph complete_graph(*complete_job);
     complete_graph.TopoForEachNode([&](const of::OpNode* node) -> of::Maybe<void> {
@@ -374,11 +376,12 @@ of::Maybe<void> Graph::GraphImpl::LoadCheckpoint() {
       ss << variable_file.rdbuf();
       return ss.str();
     }();
-    const auto& callback = [&](uint64_t of_blob_ptr) {
-      CHECK_JUST(of::BlobBufferCopyUtil<void>::From(
-          of_blob_ptr, buffer.data(),
-          variable_tensor->shape()->elem_cnt()
-              * of::GetSizeOfDataType(variable_tensor->dtype()->data_type())));
+    const auto& callback = [&](of::ep::Stream* stream,
+                               const std::shared_ptr<of::vm::EagerBlobObject>& eager_blob_object) {
+      of::AutoMemcpy(stream, eager_blob_object->mut_dptr(), buffer.data(),
+                     variable_tensor->shape()->elem_cnt()
+                         * of::GetSizeOfDataType(variable_tensor->dtype()->data_type()),
+                     eager_blob_object->mem_case(), of::memory::MakeHostMemCase());
     };
     JUST(of::one::SyncAccessTensorWithTimeOut(variable_tensor, callback, "mut"));
   }

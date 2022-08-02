@@ -70,7 +70,7 @@ class CreateSummaryWriter final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const std::string& logdir = ctx->Attr<std::string>("logdir");
-    CHECK_JUST(Global<EventsWriter>::Get()->Init(logdir));
+    CHECK_JUST(Singleton<EventsWriter>::Get()->Init(logdir));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -86,7 +86,7 @@ class FlushSummaryWriter final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    Global<EventsWriter>::Get()->Flush();
+    Singleton<EventsWriter>::Get()->Flush();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

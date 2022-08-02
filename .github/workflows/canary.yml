@@ -73,7 +73,6 @@ jobs:
           retry-failed-build: true
           clean-ccache: true
           python-versions: |
-            3.6
             3.7
             3.8
       - name: Upload wheelhouse

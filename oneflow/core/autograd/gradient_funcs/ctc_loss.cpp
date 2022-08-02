@@ -45,7 +45,7 @@ class CTCLoss : public OpExprGradFunction<CTCLossCaptureState> {
 
 Maybe<void> CTCLoss::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -60,8 +60,8 @@ Maybe<void> CTCLoss::Capture(CTCLossCaptureState* ctx, const TensorTuple& inputs
   ctx->blank = JUST(composed_attrs.GetAttr<int32_t>("blank"));
   ctx->zero_infinity = JUST(composed_attrs.GetAttr<bool>("zero_infinity"));
 
-  CHECK_EQ_OR_RETURN(inputs.size(), 4);
-  CHECK_EQ_OR_RETURN(outputs.size(), 2);
+  CHECK_EQ_OR_RETURN(inputs.size(), 4);       // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(outputs.size(), 2);      // NOLINT(maybe-need-error-msg)
   ctx->SaveTensorForBackward(outputs.at(0));  // loss
   ctx->SaveTensorForBackward(outputs.at(1));  // alpha
   ctx->SaveTensorForBackward(inputs.at(0));   // log_probs
@@ -74,7 +74,7 @@ Maybe<void> CTCLoss::Capture(CTCLossCaptureState* ctx, const TensorTuple& inputs
 Maybe<void> CTCLoss::Apply(const CTCLossCaptureState* ctx, const TensorTuple& out_grads,
                            TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 2);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // NOLINT(maybe-need-error-msg)
 
   const auto& grad_out = out_grads.at(0);
   const auto& loss = ctx->SavedTensors().at(0);

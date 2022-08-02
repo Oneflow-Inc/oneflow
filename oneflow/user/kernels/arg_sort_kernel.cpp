@@ -49,7 +49,10 @@ class CpuArgSortKernel final : public user_op::OpKernel {
           } else if (is_descending) {
             return l > r;
           } else {
-            UNIMPLEMENTED();
+            LOG(FATAL) << "expected the input direction parameter value is \"ASCENDING\" or "
+                          "\"DESCENDING\", "
+                       << "but found the value is "
+                       << "\"" << direction << "\"";
           }
         }
       };
