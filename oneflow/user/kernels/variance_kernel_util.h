@@ -157,6 +157,23 @@ void SetGridDimAndBlockDim(const size_t total_elem_cnt, int* grid_dim, int* bloc
   }
 }
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+void SetGridDimAndBlockDim(const size_t total_elem_cnt, int* grid_dim, int* block_dim) {
+  // when total_elem_cnt > 2 * kCudaThreadsNumPerBlock, use two cuda kernel
+  if (total_elem_cnt > (kCudaThreadsNumPerBlock << 1)) {
+    *grid_dim =
+        std::min(static_cast<int32_t>(std::ceil(std::sqrt(total_elem_cnt))), kCudaMaxBlocksNum);
+    *block_dim = kCudaThreadsNumPerBlock;
+  } else {
+    *grid_dim = 1;
+    int32_t aligned_block_dim =
+        (total_elem_cnt >= kCudaThreadsNumPerBlock)
+            ? kCudaThreadsNumPerBlock
+            : (total_elem_cnt + kCudaWarpSize - 1) / kCudaWarpSize * kCudaWarpSize;
+    *block_dim = std::min(aligned_block_dim, kCudaThreadsNumPerBlock);
+  }
+}
+#endif  // WITH_ROCM
 }  // namespace
 
 template<DeviceType device_type, typename T>

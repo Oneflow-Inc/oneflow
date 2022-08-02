@@ -23,7 +23,7 @@ namespace oneflow {
 
 template<typename T>
 OF_DEVICE_FUNC T DeviceMin(T a, T b) {
-#if defined(__CUDA_ARCH__)
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
   return min(a, b);
 #else
   return std::min(a, b);
@@ -32,7 +32,7 @@ OF_DEVICE_FUNC T DeviceMin(T a, T b) {
 
 template<typename T>
 OF_DEVICE_FUNC T DeviceMax(T a, T b) {
-#if defined(__CUDA_ARCH__)
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
   return max(a, b);
 #else
   return std::max(a, b);

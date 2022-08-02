@@ -128,5 +128,8 @@ REGISTER_ARANGE_KERNELS_WITH_DEVICE(DeviceType::kCPU);
 #ifdef WITH_CUDA
 REGISTER_ARANGE_KERNELS_WITH_DEVICE(DeviceType::kCUDA);
 #endif
+#ifdef WITH_ROCM
+REGISTER_ARANGE_KERNELS_WITH_DEVICE(DeviceType::kCUDA);
+#endif
 }  // namespace user_op
 }  // namespace oneflow

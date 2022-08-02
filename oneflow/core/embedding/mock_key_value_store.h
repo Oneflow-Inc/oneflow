@@ -32,6 +32,16 @@ struct MockKeyValueStoreOptions {
 std::unique_ptr<KeyValueStore> NewMockKeyValueStore(const MockKeyValueStoreOptions& options);
 
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+
+struct MockKeyValueStoreOptions {
+  uint32_t key_size = 0;
+  uint32_t value_size = 0;
+};
+
+std::unique_ptr<KeyValueStore> NewMockKeyValueStore(const MockKeyValueStoreOptions& options);
+
+#endif  // WITH_CUDA
 
 }  // namespace embedding
 

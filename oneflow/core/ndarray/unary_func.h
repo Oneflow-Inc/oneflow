@@ -19,6 +19,9 @@ limitations under the License.
 #if defined(__CUDACC__)
 #include <cuda_fp16.hpp>
 #endif
+#if defined(__HIPCC__)
+#include <hip/hip_fp16.h>
+#endif
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/util.h"
 
@@ -56,7 +59,7 @@ SPECIALIZE_CONST_TYPE_UNARY_FUNC(UnaryFuncNegative);
 template<typename T>
 struct UnaryFuncExp final {
   static OF_DEVICE_FUNC const T Invoke(const T x) {
-#if defined(__CUDA_ARCH__)
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     if (std::is_same<T, double>::value) {
       return static_cast<T>(exp(static_cast<double>(x)));
     } else {
@@ -71,7 +74,7 @@ struct UnaryFuncExp final {
 template<>
 struct UnaryFuncExp<bool> final {
   static OF_DEVICE_FUNC bool Invoke(const bool x) {
-#if defined(__CUDA_ARCH__)
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     return static_cast<bool>(exp(static_cast<float>(x)));
 #else
     return static_cast<bool>(std::exp(static_cast<float>(x)));
@@ -83,7 +86,7 @@ SPECIALIZE_CONST_TYPE_UNARY_FUNC(UnaryFuncExp);
 template<>
 struct UnaryFuncExp<float16> final {
   static OF_DEVICE_FUNC const float16 Invoke(const float16 x) {
-#if defined(__CUDA_ARCH__)
+#if defined(__CUDA_ARCH__)  || defined(__HIP_DEVICE_COMPILE__)
     half res = static_cast<half>(exp(static_cast<float>(*reinterpret_cast<const half*>(&x))));
     return *reinterpret_cast<float16*>(&res);
 #else
@@ -107,10 +110,27 @@ struct UnaryFuncNegative<half> final {
 #endif
   }
 };
+
 template<>
 struct UnaryFuncExp<half> final {
   static __device__ __forceinline__ const half Invoke(const half x) {
     return __float2half(std::exp(__half2float(x)));
+  }
+};
+#endif
+
+#if defined(__HIPCC__)
+template<>
+struct UnaryFuncNegative<half> final {
+  static __device__ __forceinline__ const half Invoke(const half x) {
+    return __hneg(x);
+  }
+};
+
+template<>
+struct UnaryFuncExp<half> final {
+  static __device__ __forceinline__ const half Invoke(const half x) {
+    return __float2half(expf(__half2float(x)));
   }
 };
 #endif

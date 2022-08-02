@@ -141,6 +141,10 @@ REGISTER_AFFINE_GRID_KERNEL(DeviceType::kCPU, double);
 REGISTER_AFFINE_GRID_KERNEL(DeviceType::kCUDA, float);
 REGISTER_AFFINE_GRID_KERNEL(DeviceType::kCUDA, double);
 #endif
+#ifdef WITH_ROCM
+REGISTER_AFFINE_GRID_KERNEL(DeviceType::kCUDA, float);
+REGISTER_AFFINE_GRID_KERNEL(DeviceType::kCUDA, double);
+#endif
 
 template<DeviceType device_type, typename data_type>
 class AffineGridGradKernel final : public user_op::OpKernel {
@@ -211,6 +215,10 @@ class AffineGridGradKernel final : public user_op::OpKernel {
 REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kCPU, float);
 REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kCPU, double);
 #ifdef WITH_CUDA
+REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kCUDA, float);
+REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kCUDA, double);
+#endif
+#ifdef WITH_ROCM
 REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kCUDA, float);
 REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kCUDA, double);
 #endif

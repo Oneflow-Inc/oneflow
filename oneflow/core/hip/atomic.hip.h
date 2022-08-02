@@ -68,11 +68,11 @@ __device__ __forceinline__ unsigned long long int CASImpl(unsigned long long int
 
 // #if __CUDA_ARCH__ >= 700
 
-__device__ __forceinline__ unsigned short int CASImpl(unsigned short int* address,
-                                                      unsigned short int compare,
-                                                      unsigned short int val) {
-  return atomicCAS(address, compare, val);
-}
+// __device__ __forceinline__ unsigned short int CASImpl(unsigned short int* address,
+//                                                       unsigned short int compare,
+//                                                       unsigned short int val) {
+//   return atomicCAS(address, compare, val);
+// }
 
 // #endif  // __CUDA_ARCH__ >= 700
 
@@ -124,15 +124,17 @@ __device__ __forceinline__ double AddImpl(double* address, double val) {
   return atomicAdd(address, val);
 }
 
-__device__ __forceinline__ half2 AddImpl(half2* address, half2 val) {
-  return atomicAdd(address, val);
-}
+// __device__ __forceinline__ half2 AddImpl(half2* address, half2 val) {
+//   return atomicAdd(address, val);
+// }
 
 // #endif  // __CUDA_ARCH__ >= 600
 
 // #if __CUDA_ARCH__ >= 700
 
-__device__ __forceinline__ half AddImpl(half* address, half val) { return atomicAdd(address, val); }
+__device__ __forceinline__ half AddImpl(half* address, half val) { 
+  float address_value = __half2float(*address);
+  return __float2half(atomicAdd(&address_value, __half2float(val))); }
 
 // #endif  // __CUDA_ARCH__ >= 700
 
@@ -146,10 +148,13 @@ __device__ __forceinline__ half AddImpl(half* address, half val) { return atomic
 
 // #if __CUDA_ARCH__ < 530
 
-// __device__ __forceinline__ half2 AddImpl(half2* address, half2 val) {
-//   asm volatile("trap;");
-//   return val;
-// }
+__device__ __forceinline__ half2 AddImpl(half2* address, half2 val) {
+  half2 res;
+  float2 address_value = __half22float2(*address);
+  res.data.x = __float2half(atomicAdd(&address_value.x, __half2float(val.data.x)));
+  res.data.y = __float2half(atomicAdd(&address_value.y, __half2float(val.data.y)));
+  return res;
+}
 
 // #endif  // __CUDA_ARCH__ < 530
 

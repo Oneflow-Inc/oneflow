@@ -86,9 +86,12 @@ char* MemoryAllocator::Allocate(const MemoryCase& mem_case, std::size_t size) {
   if (mem_case.has_host_mem()) {
     memset(dptr, memset_val, size);
   } else if (mem_case.has_device_cuda_mem()) {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA)
     CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
     OF_CUDA_CHECK(cudaMemset(dptr, memset_val, size));
+#elif defined(WITH_ROCM)
+    CudaCurrentDeviceGuard guard(mem_case.device_cuda_mem().device_id());
+    OF_CUDA_CHECK(hipMemset(dptr, memset_val, size));
 #else
     UNIMPLEMENTED();
 #endif

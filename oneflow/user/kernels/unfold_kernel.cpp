@@ -95,6 +95,10 @@ REGISTER_UNFOLD_KERNEL(DeviceType::kCPU, double)
 REGISTER_UNFOLD_KERNEL(DeviceType::kCUDA, float)
 REGISTER_UNFOLD_KERNEL(DeviceType::kCUDA, double)
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+REGISTER_UNFOLD_KERNEL(DeviceType::kCUDA, float)
+REGISTER_UNFOLD_KERNEL(DeviceType::kCUDA, double)
+#endif  // WITH_ROCM
 
 }  // namespace user_op
 

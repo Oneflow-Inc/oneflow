@@ -80,6 +80,12 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_GATHER_KERNEL, (DeviceType::kCUDA)
                                      FLOAT16_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_GATHER_KERNEL, (DeviceType::kCUDA),
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
+                                     FLOAT16_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
+#endif  // WITH_ROCM
 
 }  // namespace user_op
 }  // namespace oneflow

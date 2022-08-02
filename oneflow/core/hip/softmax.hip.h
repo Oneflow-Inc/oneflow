@@ -275,7 +275,7 @@ __global__ void SoftmaxWarpImpl(LOAD load, STORE store, const int64_t rows, cons
           row_buf[i] -= warp_max[row_id];
           thread_sum[row_id] += Exp(row_buf[i]);
         } else {
-          asm volatile("trap;");
+          asm volatile("s_trap 0;");
         }
       }
     }
@@ -294,7 +294,7 @@ __global__ void SoftmaxWarpImpl(LOAD load, STORE store, const int64_t rows, cons
         } else if (algorithm == Algorithm::kLogSoftmax) {
           row_buf[i] -= Log(warp_sum[row_id]);
         } else {
-          asm volatile("trap;");
+          asm volatile("s_trap 0;");
         }
       }
 #pragma unroll
@@ -523,7 +523,7 @@ __global__ void SoftmaxBlockSMemImpl(LOAD load, STORE store, const int64_t rows,
         } else if (algorithm == Algorithm::kLogSoftmax) {
           pack[i] = buf[i * num_packs + pack_id] - Log(row_sum);
         } else {
-          asm volatile("trap;");
+          asm volatile("s_trap 0;");
         }
       }
       store.template store<pack_size>(pack, row, pack_id * pack_size);
@@ -667,7 +667,7 @@ __global__ void SoftmaxBlockUncachedImpl(LOAD load, STORE store, const int64_t r
         } else if (algorithm == Algorithm::kLogSoftmax) {
           pack[i] = (pack[i] - row_max) - Log(row_sum);
         } else {
-          asm volatile("trap;");
+          asm volatile("s_trap 0;");
         }
       }
       store.template store<pack_size>(pack, row, pack_id * pack_size);
@@ -810,7 +810,7 @@ __global__ void SoftmaxGradWarpImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE store,
             } else if (algorithm == Algorithm::kLogSoftmax) {
               thread_sum[row_id] += row_dy_buf[pack_offset + i];
             } else {
-              asm volatile("trap;");
+              asm volatile("s_trap 0;");
             }
           }
         }
@@ -837,7 +837,7 @@ __global__ void SoftmaxGradWarpImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE store,
             } else if (algorithm == Algorithm::kLogSoftmax) {
               row_dy_buf[pack_offset + i] -= Exp(row_y_buf[pack_offset + i]) * warp_sum[row_id];
             } else {
-              asm volatile("trap;");
+              asm volatile("s_trap 0;");
             }
           }
           store.template store<pack_size>(row_dy_buf + pack_offset, row + row_id, col);
@@ -1056,7 +1056,7 @@ __global__ void SoftmaxGradBlockSMemImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE s
         } else if (algorithm == Algorithm::kLogSoftmax) {
           thread_sum += dy_pack[i];
         } else {
-          asm volatile("trap;");
+          asm volatile("s_trap 0;");
         }
       }
     }
@@ -1070,7 +1070,7 @@ __global__ void SoftmaxGradBlockSMemImpl(LOAD_Y load_y, LOAD_DY load_dy, STORE s
         } else if (algorithm == Algorithm::kLogSoftmax) {
           pack[i] = dy_buf[i * num_packs + pack_id] - Exp(y_buf[i * num_packs + pack_id]) * row_sum;
         } else {
-          asm volatile("trap;");
+          asm volatile("s_trap 0;");
         }
       }
       store.template store<pack_size>(pack, row, pack_id * pack_size);
@@ -1219,7 +1219,7 @@ __global__ void SoftmaxGradBlockUncachedImpl(LOAD_Y load_y, LOAD_DY load_dy, STO
         } else if (algorithm == Algorithm::kLogSoftmax) {
           thread_sum += dy_pack[i];
         } else {
-          asm volatile("trap;");
+          asm volatile("s_trap 0;");
         }
       }
     }
@@ -1236,7 +1236,7 @@ __global__ void SoftmaxGradBlockUncachedImpl(LOAD_Y load_y, LOAD_DY load_dy, STO
         } else if (algorithm == Algorithm::kLogSoftmax) {
           dy_pack[i] -= Exp(y_pack[i]) * row_sum;
         } else {
-          asm volatile("trap;");
+          asm volatile("s_trap 0;");
         }
       }
       store.template store<pack_size>(dy_pack, row, pack_id * pack_size);

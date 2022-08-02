@@ -233,5 +233,8 @@ REGISTER_EAGER_S_TO_B_KERNEL(DeviceType::kCPU)
 #if defined(WITH_CUDA) && HAS_NCCL_SEND_RECV
 REGISTER_EAGER_S_TO_B_KERNEL(DeviceType::kCUDA)
 #endif
+#if defined(WITH_ROCM)
+REGISTER_EAGER_S_TO_B_KERNEL(DeviceType::kCUDA)
+#endif
 
 }  // namespace oneflow

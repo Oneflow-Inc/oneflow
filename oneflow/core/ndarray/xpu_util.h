@@ -26,6 +26,9 @@ namespace oneflow {
 #if defined(__CUDACC__)
 #define XPU_1D_KERNEL_LOOP_BEGIN(i, n) CUDA_1D_KERNEL_LOOP(i, n) {
 #define XPU_1D_KERNEL_LOOP_END() }
+#elif defined(__HIP_DEVICE_COMPILE__)
+#define XPU_1D_KERNEL_LOOP_BEGIN(i, n) CUDA_1D_KERNEL_LOOP(i, n) {
+#define XPU_1D_KERNEL_LOOP_END() }
 #else
 #define XPU_1D_KERNEL_LOOP_BEGIN(i, n) MultiThreadLoop(n, [&](size_t i) {
 #define XPU_1D_KERNEL_LOOP_END() \
@@ -33,6 +36,8 @@ namespace oneflow {
 #endif
 
 #if defined(__CUDACC__)
+#define XPU_1D_KERNEL_LOOP(i, n) CUDA_1D_KERNEL_LOOP(i, n)
+#elif defined(__HIP_DEVICE_COMPILE__)
 #define XPU_1D_KERNEL_LOOP(i, n) CUDA_1D_KERNEL_LOOP(i, n)
 #else
 #define XPU_1D_KERNEL_LOOP(i, n) FOR_RANGE(int64_t, i, 0, n)
@@ -42,13 +47,19 @@ namespace oneflow {
 #define XPU_BLOAD_THREAD_2D_KERNEL_LOOP(i, j, m, n)     \
   for (int64_t i = blockIdx.x; i < (m); i += gridDim.x) \
     for (int64_t j = threadIdx.x; j < (n); j += blockDim.x)
+#elif defined(__HIP_DEVICE_COMPILE__)
+#define XPU_BLOAD_THREAD_2D_KERNEL_LOOP(i, j, m, n)     \
+  for (int64_t i = blockIdx.x; i < (m); i += gridDim.x) \
+    for (int64_t j = threadIdx.x; j < (n); j += blockDim.x)
 #else
 #define XPU_BLOAD_THREAD_2D_KERNEL_LOOP(i, j, m, n) \
   for (int64_t i = 0; i < (m); ++i)                 \
     for (int64_t j = 0; j < (n); ++j)
 #endif
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) 
+#define OF_GLOBAL_FUNC __global__
+#elif defined(__HIP_DEVICE_COMPILE__)
 #define OF_GLOBAL_FUNC __global__
 #else
 #define OF_GLOBAL_FUNC

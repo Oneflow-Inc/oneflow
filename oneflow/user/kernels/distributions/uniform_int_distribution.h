@@ -22,6 +22,10 @@ limitations under the License.
 #include <curand.h>
 #include <curand_kernel.h>
 #endif
+#ifdef WITH_ROCM
+#include <hiprand.h>
+#include <hiprand_kernel.h>
+#endif
 
 namespace oneflow {
 
@@ -59,6 +63,23 @@ class UniformIntDistribution<DeviceType::kCUDA, T> final {
   const int64_t high_;
 };
 #endif  // WITH_CUDA
+
+#ifdef WITH_ROCM
+template<typename T>
+class UniformIntDistribution<DeviceType::kCUDA, T> final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(UniformIntDistribution);
+  UniformIntDistribution(int64_t low, int64_t high) : low_(low), high_(high) {}
+  ~UniformIntDistribution() = default;
+
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, T* dptr,
+                  const std::shared_ptr<one::Generator>& generator) const;
+
+ private:
+  const int64_t low_;
+  const int64_t high_;
+};
+#endif  // WITH_ROCM
 
 }  // namespace oneflow
 

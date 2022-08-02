@@ -53,6 +53,9 @@ REGISTER_TUPLE_IDENTITY_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_TUPLE_IDENTITY_KERNEL(DeviceType::kCUDA)
 #endif
+#ifdef WITH_ROCM
+REGISTER_TUPLE_IDENTITY_KERNEL(DeviceType::kCUDA)
+#endif
 
 }  // namespace
 

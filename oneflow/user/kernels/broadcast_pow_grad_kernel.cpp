@@ -16,7 +16,12 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
+#ifdef WITH_CUDA
 #include "oneflow/core/kernel/kernel_util.cuh"
+#endif
+#ifdef WITH_ROCM
+#include "oneflow/core/kernel/kernel_util.hip.h"
+#endif
 
 namespace oneflow {
 
@@ -121,6 +126,10 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_POW_X_GRAD_KERNEL, DEVICE_TY
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_POW_Y_GRAD_KERNEL, (DeviceType::kCPU),
                                  ARITHMETIC_DATA_TYPE_SEQ)
 #ifdef WITH_CUDA
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_POW_X_GRAD_KERNEL, (DeviceType::kCUDA),
+                                 FLOAT16_DATA_TYPE_SEQ)
+#endif
+#ifdef WITH_ROCM
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_POW_X_GRAD_KERNEL, (DeviceType::kCUDA),
                                  FLOAT16_DATA_TYPE_SEQ)
 #endif

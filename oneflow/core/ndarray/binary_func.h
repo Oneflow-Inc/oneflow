@@ -24,6 +24,9 @@ limitations under the License.
 #if defined(__CUDACC__)
 #include <cuda_fp16.h>
 #endif
+#if defined(__HIPCC__)
+#include <hip/hip_fp16.h>
+#endif
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/util.h"
 namespace oneflow {
@@ -105,7 +108,7 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncDiv);
 template<typename T>
 struct BinaryFuncFloorMod final {
   static OF_DEVICE_FUNC T Invoke(const T x, const T y) {
-#if defined(__CUDACC__)
+#if defined(__HIP_DEVICE_COMPILE__)
     T trunc_mod = x % y;
     return (trunc_mod != T(0)) && ((y < T(0)) != (trunc_mod < T(0))) ? trunc_mod + y : trunc_mod;
 #else
@@ -119,7 +122,7 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncFloorMod);
 template<>
 struct BinaryFuncFloorMod<uint8_t> final {
   static OF_DEVICE_FUNC uint8_t Invoke(const uint8_t x, const uint8_t y) {
-#if defined(__CUDACC__)
+#if defined(__HIP_DEVICE_COMPILE__)
     uint8_t trunc_mod = x % y;
     return trunc_mod;
 #else
@@ -129,10 +132,67 @@ struct BinaryFuncFloorMod<uint8_t> final {
   }
 };
 
+template<>
+struct BinaryFuncFloorMod<float> final {
+  static OF_DEVICE_FUNC float Invoke(const float x, const float y) {
+#if defined(__HIP_DEVICE_COMPILE__)
+    const float trunc_mod = fmodf(x, y);
+    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
+#else
+    const float trunc_mod = std::fmod(x, y);
+    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
+#endif
+  }
+};
+
+template<>
+struct BinaryFuncFloorMod<double> final {
+  static OF_DEVICE_FUNC double Invoke(const double x, const double y) {
+#if defined(__HIP_DEVICE_COMPILE__)
+    const double trunc_mod = fmod(x, y);
+    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
+#else
+    const double trunc_mod = std::fmod(x, y);
+    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
+#endif
+  }
+};
+
+#if defined(__HIPCC__)
+template<>
+struct BinaryFuncFloorMod<half> final {
+  static OF_DEVICE_FUNC half Invoke(const half x, const half y) {
+#if defined(__HIP_DEVICE_COMPILE__)
+    const half trunc_mod = __float2half(fmodf(__half2float(x), __half2float(y)));
+    return __hne(trunc_mod, GetZeroVal<half>())
+                   && __hlt(y, GetZeroVal<half>()) != __hlt(trunc_mod, half(0))
+               ? trunc_mod + y
+               : trunc_mod;
+#else
+    return __float2half(0.0);
+#endif
+  }
+};
+#endif
+
+template<>
+struct BinaryFuncFloorMod<float16> final {
+  static OF_DEVICE_FUNC float16 Invoke(const float16 x, const float16 y) {
+#if defined(__HIP_DEVICE_COMPILE__)
+    return static_cast<float16>(0.0);
+#else
+    const float trunc_mod = std::fmod(static_cast<float>(x), static_cast<float>(y));
+    return (trunc_mod != float(0)) && ((y < float(0)) != (trunc_mod < float(0)))
+               ? static_cast<float16>(trunc_mod + y)
+               : static_cast<float16>(trunc_mod);
+#endif
+  }
+};
+
 template<typename T>
 struct BinaryFuncFMod final {
   static OF_DEVICE_FUNC T Invoke(const T x, const T y) {
-#if defined(__CUDACC__)
+#if defined(__HIP_DEVICE_COMPILE__)
     T trunc_mod = x % y;
     return trunc_mod;
 #else
@@ -143,10 +203,86 @@ struct BinaryFuncFMod final {
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncFMod);
 
+template<>
+struct BinaryFuncFMod<float> final {
+  static OF_DEVICE_FUNC float Invoke(const float x, const float y) {
+#if defined(__HIP_DEVICE_COMPILE__)
+    const float trunc_mod = fmodf(x, y);
+    return trunc_mod;
+#else
+    const float trunc_mod = std::fmod(x, y);
+    return trunc_mod;
+#endif
+  }
+};
+
+template<>
+struct BinaryFuncFMod<double> final {
+  static OF_DEVICE_FUNC double Invoke(const double x, const double y) {
+#if defined(__HIP_DEVICE_COMPILE__)
+    const double trunc_mod = fmod(x, y);
+    return trunc_mod;
+#else
+    const double trunc_mod = std::fmod(x, y);
+    return trunc_mod;
+#endif
+  }
+};
+
+#if defined(__HIPCC__)
+template<>
+struct BinaryFuncFMod<half> final {
+  static OF_DEVICE_FUNC half Invoke(const half x, const half y) {
+#if defined(__HIP_DEVICE_COMPILE__)
+    const half trunc_mod = __float2half(fmodf(__half2float(x), __half2float(y)));
+    return trunc_mod;
+#else
+    return __float2half(0.0);
+#endif
+  }
+};
+#endif
+
+template<>
+struct BinaryFuncFMod<float16> final {
+  static OF_DEVICE_FUNC float16 Invoke(const float16 x, const float16 y) {
+#if defined(__HIP_DEVICE_COMPILE__)
+    return static_cast<float16>(0.0);
+#else
+    const float trunc_mod = std::fmod(static_cast<float>(x), static_cast<float>(y));
+    return static_cast<float16>(trunc_mod);
+#endif
+  }
+};
+
 template<typename T>
 struct BinaryFuncPow final {
   static OF_DEVICE_FUNC const T Invoke(const T x, const T y) {
-#if defined(__CUDACC__)
+#if defined(__HIP_DEVICE_COMPILE__)
+    return powf(x, y);
+#else
+    return std::pow(x, y);
+#endif
+  }
+};
+
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncPow);
+
+template<>
+struct BinaryFuncPow<bool> final {
+  static OF_DEVICE_FUNC bool Invoke(const bool x, const bool y) {
+#if defined(__HIP_DEVICE_COMPILE__)
+    return static_cast<bool>(powf(static_cast<float>(x), static_cast<float>(y)));
+#else
+    return static_cast<bool>(std::pow(static_cast<float>(x), static_cast<float>(y)));
+#endif
+  }
+};
+
+template<>
+struct BinaryFuncPow<float> final {
+  static OF_DEVICE_FUNC float Invoke(const float x, const float y) {
+#if defined(__HIP_DEVICE_COMPILE__)
     return powf(x, y);
 #else
     return std::pow(x, y);
@@ -155,57 +291,92 @@ struct BinaryFuncPow final {
 };
 
 template<>
-struct BinaryFuncPow<bool> final {
-  static OF_DEVICE_FUNC bool Invoke(const bool x, const bool y) {
-#if defined(__CUDACC__)
-    return static_cast<bool>(powf(static_cast<float>(x), static_cast<float>(y)));
+struct BinaryFuncPow<double> final {
+  static OF_DEVICE_FUNC double Invoke(const double x, const double y) { 
+#if defined(__HIP_DEVICE_COMPILE__)
+    return pow(x, y); 
 #else
-    return static_cast<bool>(std::pow(static_cast<float>(x), static_cast<float>(y)));
+    return std::pow(x, y);
+#endif
+    }
+};
+
+
+#if defined(__HIPCC__)
+template<>
+struct BinaryFuncPow<half> final {
+  static OF_DEVICE_FUNC half Invoke(const half x, const half y) {
+#if defined(__HIP_DEVICE_COMPILE__)
+    return __float2half(powf(__half2float(x), __half2float(y)));
+#else
+    return __float2half(0.0);
 #endif
   }
 };
-
-SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncPow);
+#endif
 
 template<>
 struct BinaryFuncPow<float16> final {
-  static inline const float16 Invoke(const float16 x, const float16 y) {
-    return static_cast<float16>(std::pow(static_cast<float>(x), static_cast<float>(y)));
-  }
-};
-
-#if defined(__CUDACC__)
-template<>
-struct BinaryFuncPow<double> final {
-  static OF_DEVICE_FUNC double Invoke(const double x, const double y) { return pow(x, y); }
-};
-
-template<>
-struct BinaryFuncPow<float> final {
-  static __device__ __forceinline__ float Invoke(const float x, const float y) {
-    return powf(x, y);
-  }
-};
-
-template<>
-struct BinaryFuncPow<half> final {
-  static __device__ __forceinline__ half Invoke(const half x, const half y) {
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
-    return __float2half(powf(__half2float(x), __half2float(y)));
+  static OF_DEVICE_FUNC const float16 Invoke(const float16 x, const float16 y) {
+#if defined(__HIP_DEVICE_COMPILE__)
+    return static_cast<float16>(0.0);
 #else
-    NO_HALF_UTIL_FOUND;
+    return static_cast<float16>(std::pow(static_cast<float>(x), static_cast<float>(y)));
 #endif
   }
 };
-#endif  // defined(__CUDACC__)
 
 template<typename T>
 struct BinaryFuncFloorDiv final {
   static OF_DEVICE_FUNC T Invoke(const T x, const T y) {
-#if defined(__CUDACC__)
+#if defined(__HIP_DEVICE_COMPILE__)
     return floor(fdividef(x, y));
 #else
     return std::floor(x / y);
+#endif
+  }
+};
+
+template<>
+struct BinaryFuncFloorDiv<uint8_t> final {
+  static OF_DEVICE_FUNC uint8_t Invoke(uint8_t x, uint8_t y) { return x / y; }
+};
+
+template<>
+struct BinaryFuncFloorDiv<int8_t> final {
+  static OF_DEVICE_FUNC int8_t Invoke(int8_t x, int8_t y) { return x / y; }
+};
+
+template<>
+struct BinaryFuncFloorDiv<int32_t> final {
+  static OF_DEVICE_FUNC int32_t Invoke(int32_t x, int32_t y) { return x / y; }
+};
+
+template<>
+struct BinaryFuncFloorDiv<int64_t> final {
+  static OF_DEVICE_FUNC int64_t Invoke(int64_t x, int64_t y) { return x / y; }
+};
+
+#if defined(__HIPCC__)
+template<>
+struct BinaryFuncFloorDiv<half> final {
+  static OF_DEVICE_FUNC half Invoke(const half x, const half y) {
+#if defined(__HIP_DEVICE_COMPILE__)
+    return __float2half(floor(fdividef(__half2float(x), __half2float(y))));
+#else
+    return __float2half(0.0);
+#endif
+  }
+};
+#endif
+
+template<>
+struct BinaryFuncFloorDiv<float16> final {
+  static OF_DEVICE_FUNC float16 Invoke(float16 x, float16 y) {
+#if defined(__HIP_DEVICE_COMPILE__)
+    return static_cast<float16>(0.0);
+#else
+    return static_cast<float16>(std::floor(static_cast<float>(x) / static_cast<float>(y)));
 #endif
   }
 };
@@ -284,229 +455,76 @@ struct BinaryFuncXOR final {
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncXOR);
 
-#if defined(__CUDACC__)
+#if defined(__HIPCC__)
+
 template<>
 struct BinaryFuncAdd<half> final {
-  static __device__ __forceinline__ half Invoke(const half x, const half y) { return __hadd(x, y); }
+  static OF_DEVICE_FUNC half Invoke(const half x, const half y) { 
+#if defined(__HIP_DEVICE_COMPILE__)
+    return __hadd(x, y); 
+#else
+    return __float2half(0.0);
+#endif
+    }
 };
 
 template<>
 struct BinaryFuncSub<half> final {
-  static __device__ __forceinline__ half Invoke(const half x, const half y) {
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
+  static OF_DEVICE_FUNC half Invoke(const half x, const half y) {
+#if defined(__HIP_DEVICE_COMPILE__)
     return __hsub(x, y);
 #else
-    NO_HALF_UTIL_FOUND;
+    return __float2half(0.0);
 #endif
   }
 };
 
 template<>
 struct BinaryFuncMul<half> final {
-  static __device__ __forceinline__ half Invoke(const half x, const half y) {
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
+  static OF_DEVICE_FUNC half Invoke(const half x, const half y) {
+#if defined(__HIP_DEVICE_COMPILE__)
     return __hmul(x, y);
 #else
-    NO_HALF_UTIL_FOUND;
+    return __float2half(0.0);
 #endif
   }
 };
 
 template<>
 struct BinaryFuncDiv<half> final {
-  static __device__ __forceinline__ half Invoke(const half x, const half y) {
-#if __CUDA_ARCH__ >= 530
+  static OF_DEVICE_FUNC half Invoke(const half x, const half y) {
+#if defined(__HIP_DEVICE_COMPILE__)
     return __hdiv(x, y);
 #else
-    NO_HALF_UTIL_FOUND;
+    return __float2half(0.0);
 #endif
   }
 };
 
 template<>
 struct BinaryFuncMax<half> final {
-  static __device__ __forceinline__ half Invoke(const half x, const half y) {
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
+  static OF_DEVICE_FUNC half Invoke(const half x, const half y) {
+#if defined(__HIP_DEVICE_COMPILE__)
     return __hgt(x, y) ? x : y;
 #else
-    NO_HALF_UTIL_FOUND;
+    return __float2half(0.0);
 #endif
   }
 };
 
 template<>
 struct BinaryFuncMin<half> final {
-  static __device__ __forceinline__ half Invoke(const half x, const half y) {
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
+  static OF_DEVICE_FUNC half Invoke(const half x, const half y) {
+#if defined(__HIP_DEVICE_COMPILE__)
     return __hlt(x, y) ? x : y;
 #else
-    NO_HALF_UTIL_FOUND;
+    return __float2half(0.0);
 #endif
   }
 };
 
-#endif  // defined(__CUDACC__)
+#endif  // defined(__HIPCC__)
 
-#if defined(__CUDACC__)
-
-template<>
-struct BinaryFuncFloorMod<float> final {
-  static __device__ __forceinline__ float Invoke(const float x, const float y) {
-    const float trunc_mod = fmodf(x, y);
-    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
-  }
-};
-
-template<>
-struct BinaryFuncFloorMod<double> final {
-  static __device__ __forceinline__ double Invoke(const double x, const double y) {
-    const double trunc_mod = fmod(x, y);
-    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
-  }
-};
-
-template<>
-struct BinaryFuncFloorMod<half> final {
-  static __device__ __forceinline__ half Invoke(const half x, const half y) {
-#if __CUDA_ARCH__ >= 530
-    const half trunc_mod = __float2half(fmodf(__half2float(x), __half2float(y)));
-    return __hne(trunc_mod, GetZeroVal<half>())
-                   && __hlt(y, GetZeroVal<half>()) != __hlt(trunc_mod, half(0))
-               ? trunc_mod + y
-               : trunc_mod;
-#else
-    NO_HALF_UTIL_FOUND;
-#endif
-  }
-};
-
-#else
-
-template<>
-struct BinaryFuncFloorMod<float> final {
-  static inline float Invoke(const float x, const float y) {
-    const float trunc_mod = std::fmod(x, y);
-    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
-  }
-};
-
-template<>
-struct BinaryFuncFloorMod<double> final {
-  static inline double Invoke(const double x, const double y) {
-    const double trunc_mod = std::fmod(x, y);
-    return (trunc_mod != 0) && ((y < 0) != (trunc_mod < 0)) ? trunc_mod + y : trunc_mod;
-  }
-};
-
-template<>
-struct BinaryFuncFloorMod<float16> final {
-  static inline float16 Invoke(const float16 x, const float16 y) {
-    const float trunc_mod = std::fmod(static_cast<float>(x), static_cast<float>(y));
-    return (trunc_mod != float(0)) && ((y < float(0)) != (trunc_mod < float(0)))
-               ? static_cast<float16>(trunc_mod + y)
-               : static_cast<float16>(trunc_mod);
-  }
-};
-
-#endif  // defined(__CUDACC__)
-
-#if defined(__CUDACC__)
-
-template<>
-struct BinaryFuncFMod<float> final {
-  static __device__ __forceinline__ float Invoke(const float x, const float y) {
-    const float trunc_mod = fmodf(x, y);
-    return trunc_mod;
-  }
-};
-
-template<>
-struct BinaryFuncFMod<double> final {
-  static __device__ __forceinline__ double Invoke(const double x, const double y) {
-    const double trunc_mod = fmod(x, y);
-    return trunc_mod;
-  }
-};
-
-template<>
-struct BinaryFuncFMod<half> final {
-  static __device__ __forceinline__ half Invoke(const half x, const half y) {
-#if __CUDA_ARCH__ >= 530
-    const half trunc_mod = __float2half(fmodf(__half2float(x), __half2float(y)));
-    return trunc_mod;
-#else
-    NO_HALF_UTIL_FOUND;
-#endif
-  }
-};
-#else
-template<>
-struct BinaryFuncFMod<float> final {
-  static inline float Invoke(const float x, const float y) {
-    const float trunc_mod = std::fmod(x, y);
-    return trunc_mod;
-  }
-};
-
-template<>
-struct BinaryFuncFMod<double> final {
-  static inline double Invoke(const double x, const double y) {
-    const double trunc_mod = std::fmod(x, y);
-    return trunc_mod;
-  }
-};
-
-template<>
-struct BinaryFuncFMod<float16> final {
-  static inline float16 Invoke(const float16 x, const float16 y) {
-    const float trunc_mod = std::fmod(static_cast<float>(x), static_cast<float>(y));
-    return static_cast<float16>(trunc_mod);
-  }
-};
-
-#endif  // defined(__CUDACC__)
-
-#if defined(__CUDACC__)
-
-template<>
-struct BinaryFuncFloorDiv<uint8_t> final {
-  static __device__ __forceinline__ uint8_t Invoke(uint8_t x, uint8_t y) { return x / y; }
-};
-
-template<>
-struct BinaryFuncFloorDiv<int8_t> final {
-  static __device__ __forceinline__ int8_t Invoke(int8_t x, int8_t y) { return x / y; }
-};
-
-template<>
-struct BinaryFuncFloorDiv<int32_t> final {
-  static __device__ __forceinline__ int32_t Invoke(int32_t x, int32_t y) { return x / y; }
-};
-
-template<>
-struct BinaryFuncFloorDiv<int64_t> final {
-  static __device__ __forceinline__ int64_t Invoke(int64_t x, int64_t y) { return x / y; }
-};
-
-template<>
-struct BinaryFuncFloorDiv<half> final {
-  static __device__ __forceinline__ half Invoke(const half x, const half y) {
-#if __CUDA_ARCH__ >= 530
-    return __float2half(floor(fdividef(__half2float(x), __half2float(y))));
-#else
-    NO_HALF_UTIL_FOUND;
-#endif
-  }
-};
-#else
-template<>
-struct BinaryFuncFloorDiv<float16> final {
-  static inline float16 Invoke(float16 x, float16 y) {
-    return static_cast<float16>(std::floor(static_cast<float>(x) / static_cast<float>(y)));
-  }
-};
-
-#endif  // defined(__CUDACC__)
 template<typename T, template<typename> class binary_func>
 struct UnitOfBinaryFunc;
 
@@ -528,3 +546,4 @@ SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncAll, GetOneVal);
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_NDARRAY_BINARY_FUNC_H_
+

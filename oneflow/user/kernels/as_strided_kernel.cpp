@@ -21,7 +21,12 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#ifdef WITH_CUDA
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#endif
+#ifdef WITH_ROCM
+#include "oneflow/core/ep/rocm/cuda_stream.h"
+#endif
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {

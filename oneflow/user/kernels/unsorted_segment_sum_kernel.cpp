@@ -210,6 +210,78 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE,
 
 #endif  // WITH_CUDA
 
+#ifdef WITH_ROCM
+template<typename K>
+class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
+ public:
+  UnsortedSegmentSumHalfKernel() = default;
+  ~UnsortedSegmentSumHalfKernel() override = default;
+
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateUnsortedSegmentSumOpKernelCache(ctx);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    const user_op::Tensor* data = ctx->Tensor4ArgNameAndIndex("data", 0);
+    const user_op::Tensor* segment_ids = ctx->Tensor4ArgNameAndIndex("segment_ids", 0);
+    int64_t axis = ctx->Attr<int64_t>("axis");
+    user_op::Tensor* tmp_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    int64_t outer_dim_size = out->shape_view().Count(0, axis);
+    int64_t num_segments = out->shape_view().At(axis);
+    int64_t inner_dim_size = out->shape_view().Count(axis + 1);
+    int64_t num_segment_ids = segment_ids->shape_view().elem_cnt();
+    Memset<DeviceType::kCUDA>(ctx->stream(), tmp_buf->mut_dptr(), 0,
+                              out->shape_view().elem_cnt() * sizeof(float));
+    int64_t offset = 0;
+    if (cache != nullptr) {
+      auto* sum_cache = dynamic_cast<const UnsortedSegmentSumOpKernelCache*>(cache);
+      CHECK_NOTNULL(sum_cache);
+      CHECK_EQ(out->shape_view().At(axis), sum_cache->upper() - sum_cache->lower());
+      offset = sum_cache->lower();
+    }
+
+    UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, float, K, float16>::UnsortedSegmentSum(
+        ctx->stream(), segment_ids->dptr<K>(), data->dptr<float16>(), num_segment_ids, num_segments,
+        outer_dim_size, inner_dim_size, offset, tmp_buf->mut_dptr<float>());
+
+    auto f2h = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
+        ctx->device_type(), DataType::kFloat, DataType::kFloat16);
+    CHECK(f2h);
+    f2h->Launch(ctx->stream(), tmp_buf->dptr<float>(), out->mut_dptr<float16>(),
+                out->shape_view().elem_cnt());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
+#define REGISTER_UNSORTED_SEGMENT_SUM_HALF_HALF_KERNEL(out_type, segment_ids_type, kernel_type) \
+  REGISTER_USER_KERNEL(kernel_type)                                                             \
+      .SetCreateFn<UnsortedSegmentSumHalfKernel<OF_PP_PAIR_FIRST(segment_ids_type)>>()          \
+      .SetIsMatchedHob(                                                                         \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                       \
+          && (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_type))    \
+          && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_type)))                   \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
+        const Shape* out_shape = ctx->OutputShape("out", 0);                                    \
+        return GetCudaAlignedSize(out_shape->elem_cnt() * sizeof(float));                       \
+      });
+
+#define REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE(out_type, segment_ids_type) \
+  REGISTER_UNSORTED_SEGMENT_SUM_HALF_HALF_KERNEL(out_type, segment_ids_type,       \
+                                                 ("unsorted_segment_sum"))         \
+  REGISTER_UNSORTED_SEGMENT_SUM_HALF_HALF_KERNEL(out_type, segment_ids_type,       \
+                                                 ("unsorted_segment_sum_like"))
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE,
+                                 FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+#undef REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE
+
+#endif  // WITH_ROCM
+
 }  // namespace user_op
 
 }  // namespace oneflow

@@ -69,7 +69,7 @@ struct NLLKernelUtil<DeviceType::kCUDA, T, K> {
                       const K class_start, const K ignore_index, const T* input, const K* target,
                       const T* weight, T* out, T* out_weight) {
     NLLForward<<<BlocksNum4ThreadsNum(num_samples), kCudaThreadsNumPerBlock, 0,
-                 stream->As<ep::CudaStream>()->hip_stream()>>>(num_samples, num_classes,
+                 stream->As<ep::CudaStream>()->cuda_stream()>>>(num_samples, num_classes,
                                                                 class_start, ignore_index, input,
                                                                 target, weight, out, out_weight);
   }
@@ -78,7 +78,7 @@ struct NLLKernelUtil<DeviceType::kCUDA, T, K> {
                        const K class_start, const K ignore_index, const T* out_grad,
                        const K* target, const T* weight, T* in_grad) {
     NLLBackward<<<BlocksNum4ThreadsNum(num_samples), kCudaThreadsNumPerBlock, 0,
-                  stream->As<ep::CudaStream>()->hip_stream()>>>(
+                  stream->As<ep::CudaStream>()->cuda_stream()>>>(
         num_samples, num_classes, class_start, ignore_index, out_grad, target, weight, in_grad);
   }
 };

@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include <memory>
 #include <unordered_map>
-#include "fmt/core.h"
+// #include "fmt/core.h"
 #include "nlohmann/json.hpp"
 #include "oneflow/core/profiler/kineto_shim.h"
 #include "oneflow/core/profiler/profile_manager.h"
@@ -106,7 +106,8 @@ std::string ProfileManager::GetNextEventRecorderKey(const std::string& name) {
   } else {
     event_recorders_last_id_[name]++;
   }
-  return fmt::format("{}.{}", name, event_recorders_last_id_[name]);
+  // return fmt::format("{}.{}", name, event_recorders_last_id_[name]);
+  return "yuguo";
 }
 
 }  // namespace profiler

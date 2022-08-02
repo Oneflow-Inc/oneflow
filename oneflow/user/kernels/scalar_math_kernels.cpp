@@ -146,6 +146,15 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_REVERSE_POW_KERNEL, (DeviceType
                                      FLOAT16_DATA_TYPE_SEQ)
 #endif  // WITH_CUDA
 
+#ifdef WITH_ROCM
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_MATH_KERNEL, (DeviceType::kCUDA),
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
+                                     FLOAT16_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_REVERSE_POW_KERNEL, (DeviceType::kCUDA),
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
+                                     FLOAT16_DATA_TYPE_SEQ)
+#endif  // WITH_ROCM
+
 template<DeviceType device_type, typename T>
 class CpuScalarPowGradKernel final : public user_op::OpKernel {
  public:

@@ -29,6 +29,11 @@ REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, double)
 REGISTER_UNIFORM_KERNEL(DeviceType::kCUDA, float)
 REGISTER_UNIFORM_KERNEL(DeviceType::kCUDA, double)
 #endif  // WITH_CUDA
+
+#ifdef WITH_ROCM
+REGISTER_UNIFORM_KERNEL(DeviceType::kCUDA, float)
+REGISTER_UNIFORM_KERNEL(DeviceType::kCUDA, double)
+#endif  // WITH_ROCM
 }  // namespace
 
 }  // namespace oneflow

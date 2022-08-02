@@ -352,6 +352,7 @@ struct ConvertIntInt<Out, In, false, true> {
   OF_DEVICE_FUNC static const Out ConvertSatNorm(In value) {
 #if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     return cuda_round_helper(__saturatef(value * (1.0f / GetMaxVal<In>())) * GetMaxVal<Out>());
+  }
 #else
     return value < 0 ? 0 : ConvertNorm(value);
   }

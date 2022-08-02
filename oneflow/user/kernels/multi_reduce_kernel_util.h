@@ -86,7 +86,7 @@ struct AbsPow {
 
   OF_DEVICE_FUNC T operator()(const T& x) {
     T abs_x = x < GetZeroVal<T>() ? -x : x;
-#if defined(__CUDA_ARCH__)
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     return pow(abs_x, base_);
 #else
     return std::pow(abs_x, base_);

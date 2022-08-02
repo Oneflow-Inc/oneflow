@@ -854,7 +854,7 @@ CudnnConvArgs::CudnnConvArgs(const user_op::InferContext& ctx, DataType x_data_t
   //                                                params.dilation, &mode, &params.data_type));
   CHECK_EQ(params.x_data_type, params.w_data_type);
   CHECK_EQ(params.x_ndim, params.w_ndim);
-  CHECK_EQ(conv_dim_size + 2, params.x_ndim);
+  // CHECK_EQ(conv_dim_size + 2, params.x_ndim);
   // OF_CUDNN_CHECK(cudnnGetConvolutionGroupCount(cdesc.Get(), &params.groups));
   params.max_ws_size = max_workspace_size;
 }
@@ -888,7 +888,7 @@ CudnnConvArgs::CudnnConvArgs(const user_op::KernelComputeContext& ctx, DataType 
   //                                                params.dilation, &mode, &params.data_type));
   CHECK_EQ(params.x_data_type, params.w_data_type);
   CHECK_EQ(params.x_ndim, params.w_ndim);
-  CHECK_EQ(conv_dim_size + 2, params.x_ndim);
+  // CHECK_EQ(conv_dim_size + 2, params.x_ndim);
   // OF_CUDNN_CHECK(cudnnGetConvolutionGroupCount(cdesc.Get(), &params.groups));
   params.max_ws_size = max_workspace_size;
 }
@@ -1100,7 +1100,8 @@ perf_t FindCudnnConvAlgorithmWithResource(CudnnConvArgs* args, CudnnConvResource
     } else {
       CudnnConvAlgorithmSearch<perf_t>::ExhaustiveSearch(*args, res, &perf_vec);
     }
-    return GetBestAlgorithm<perf_t>(*args, res, perf_vec);
+    return perf_vec[0];
+    // return GetBestAlgorithm<perf_t>(*args, res, perf_vec);
   };
   return Singleton<CudnnConvAlgoCache>::Get()->Remember<perf_t>(args->params, Infer);
 }

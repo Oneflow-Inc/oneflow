@@ -81,6 +81,32 @@ REGISTER_VAR_CUDA_KERNEL(float)
 REGISTER_VAR_CUDA_KERNEL(double)
 #undef REGISTER_VAR_CUDA_KERNEL
 #endif
+#ifdef WITH_ROCM
+
+size_t InferTmpBufferSize(user_op::InferContext* ctx) {
+  const TensorDesc& input = ctx->InputTensorDesc("input", 0);
+  const Shape& input_shape = input.shape();
+  const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("dim");
+  if (axis.size() == input_shape.NumAxes()) {
+    return GetCudaAlignedSize(
+        std::min(static_cast<int32_t>(std::ceil(std::sqrt(input.shape().elem_cnt()))),
+                 kCudaMaxBlocksNum)
+        * GetSizeOfDataType(input.data_type()) * 3);
+  }
+  return 0;
+}
+
+#define REGISTER_VAR_CUDA_KERNEL(dtype)                                                       \
+  REGISTER_USER_KERNEL("var")                                                                 \
+      .SetCreateFn<VarKernel<DeviceType::kCUDA, dtype>>()                                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                        \
+                       && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn(InferTmpBufferSize);
+
+REGISTER_VAR_CUDA_KERNEL(float)
+REGISTER_VAR_CUDA_KERNEL(double)
+#undef REGISTER_VAR_CUDA_KERNEL
+#endif
 
 }  // namespace user_op
 }  // namespace oneflow

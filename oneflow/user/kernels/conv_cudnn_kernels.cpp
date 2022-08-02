@@ -460,13 +460,6 @@ REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(float16);
 
 
 
-
-
-
-
-
-
-
 #ifdef WITH_ROCM
 
 #include "oneflow/core/framework/framework.h"
@@ -476,7 +469,7 @@ REGISTER_CONV_BIAS_GRAD_FLOATING_KERNEL(float16);
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/ep/rocm/cuda_stream.h"
 
 namespace oneflow {
 
@@ -508,10 +501,16 @@ struct CudnnConvArgsAndAlgo final {
                      .cudnn_conv_enable_pseudo_half()
                  || (ctx->Attr<std::string>("data_format") == "channels_last"
                      && std::is_same<PerfT, hipdnnConvolutionBwdFilterAlgoPerf_t>::value)) {
-    size_t byte_size_of_buf = buf->shape_view().elem_cnt();
+    
+    size_t workspace_size;
     AllocatedCudnnConvResource res(stream->As<ep::CudaStream>()->cudnn_handle(),
                                    const_cast<void*>(x->dptr()), const_cast<void*>(w->dptr()),
                                    const_cast<void*>(y->dptr()), buf->mut_dptr());
+    
+    OF_CUDNN_CHECK(GetCudnnConvWorkspaceSize(args, &res, algo_perf.algo, &workspace_size));
+    size_t byte_size_of_buf = workspace_size;
+    args.params.max_ws_size = workspace_size;
+
     if (has_forced_algo) {
       algo_perf = GetCudnnConvAlgorithmPerferenceWithResource<PerfT>(
           &args, &res, static_cast<AlgoT>(forced_algo));
@@ -538,6 +537,7 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
 
   const auto& cudnn_conf = Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
   size_t workspace_size = cudnn_conf.cudnn_buf_limit_mbyte() * 1024 * 1024;
+  
   if (!x->is_dynamic()) {
     CudnnConvArgs args(ctx, x->data_type(), ShapeView(x->shape()), w->data_type(),
                        ShapeView(w->shape()), y->data_type(), ShapeView(y->shape()),
@@ -551,6 +551,9 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
     if (has_forced_algo) {
       algo_perf = GetCudnnConvAlgorithmPerference<PerfT>(&args, static_cast<AlgoT>(forced_algo));
     } else {
+      ManagedCudnnConvResource res(args);
+      OF_CUDNN_CHECK(GetCudnnConvWorkspaceSize(args, &res, algo_perf.algo, &workspace_size));
+      args.params.max_ws_size = workspace_size;
       algo_perf = FindCudnnConvAlgorithm<PerfT>(&args);
     }
     CHECK_EQ(algo_perf.status, HIPDNN_STATUS_SUCCESS)
@@ -635,7 +638,7 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const auto& cudnn_conf = Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
     CudnnConvArgsAndAlgo<hipdnnConvolutionFwdAlgoPerf_t> args_and_algo(
-        in, weight, out, buf, ctx, ctx->stream(), cudnn_conf.has_cudnn_conv_force_fwd_algo(),
+        in, weight, out, buf, ctx, ctx->stream(), 0,
         cudnn_conf.cudnn_conv_force_fwd_algo());
     const CudnnConvArgs& args = args_and_algo.args;
     const hipdnnConvolutionFwdAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
@@ -679,7 +682,7 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
         const auto& cudnn_conf =                                                        \
             Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();        \
         return InferTmpSizeWithCudnn<hipdnnConvolutionFwdAlgoPerf_t>(                    \
-            &in, &weight, out, *ctx, cudnn_conf.has_cudnn_conv_force_fwd_algo(),        \
+            &in, &weight, out, *ctx, 0,        \
             cudnn_conf.cudnn_conv_force_fwd_algo());                                    \
       })
 
@@ -712,7 +715,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
     const auto& cudnn_conf = Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
 
     CudnnConvArgsAndAlgo<hipdnnConvolutionBwdDataAlgoPerf_t> args_and_algo(
-        dx, filter, dy, buf, ctx, ctx->stream(), cudnn_conf.has_cudnn_conv_force_bwd_data_algo(),
+        dx, filter, dy, buf, ctx, ctx->stream(), 0,
         cudnn_conf.cudnn_conv_force_bwd_data_algo());
     const CudnnConvArgs& args = args_and_algo.args;
     const hipdnnConvolutionBwdDataAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
@@ -759,7 +762,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
         const auto& cudnn_conf =                                                                \
             Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();                \
         return InferTmpSizeWithCudnn<hipdnnConvolutionBwdDataAlgoPerf_t>(                        \
-            dx, &filter, &dy, *ctx, cudnn_conf.has_cudnn_conv_force_bwd_data_algo(),            \
+            dx, &filter, &dy, *ctx, 0,            \
             cudnn_conf.cudnn_conv_force_bwd_data_algo());                                       \
       })                                                                                        \
       .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
@@ -798,7 +801,7 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel, public user_op::
 
     CudnnConvArgsAndAlgo<hipdnnConvolutionBwdFilterAlgoPerf_t> args_and_algo(
         x, filter_diff, dy, buf, ctx, ctx->stream(),
-        cudnn_conf.has_cudnn_conv_force_bwd_filter_algo(),
+        0,
         cudnn_conf.cudnn_conv_force_bwd_filter_algo());
     const CudnnConvArgs& args = args_and_algo.args;
     const hipdnnConvolutionBwdFilterAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
@@ -831,7 +834,7 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel, public user_op::
         const auto& cudnn_conf =                                                           \
             Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();           \
         return InferTmpSizeWithCudnn<hipdnnConvolutionBwdFilterAlgoPerf_t>(                 \
-            &x, filter_diff, &dy, *ctx, cudnn_conf.has_cudnn_conv_force_bwd_filter_algo(), \
+            &x, filter_diff, &dy, *ctx, 0, \
             cudnn_conf.cudnn_conv_force_bwd_filter_algo());                                \
       })
 

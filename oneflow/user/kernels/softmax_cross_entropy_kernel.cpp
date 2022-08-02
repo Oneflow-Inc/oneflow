@@ -14,7 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/softmax_cross_entropy_kernel.h"
+#ifdef WITH_ROCM
+#include "oneflow/core/kernel/kernel_util.hip.h"
+#else
 #include "oneflow/core/kernel/kernel_util.cuh"
+#endif
 
 namespace oneflow {
 namespace user_op {

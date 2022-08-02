@@ -108,7 +108,7 @@ TEST_F(PrimitiveTest, TestMatmul) {
   TestMatmul<DataType::kDouble, double>(&device_manager_registry_, available_device_types_);
   TestMatmul<DataType::kFloat, float>(&device_manager_registry_, available_device_types_);
 //   TestMatmul<DataType::kFloat16, Eigen::half>(&device_manager_registry_, available_device_types_);
-// }
+}
 
 }  // namespace test
 

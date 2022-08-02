@@ -24,6 +24,11 @@ limitations under the License.
 #include <curand_kernel.h>
 #endif
 
+#ifdef WITH_ROCM
+#include <hiprand.h>
+#include <hiprand_kernel.h>
+#endif
+
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
@@ -60,6 +65,23 @@ class NormalDistribution<DeviceType::kCUDA, T> final {
   const T std_;
 };
 #endif  // WITH_CUDA
+
+#ifdef WITH_ROCM
+template<typename T>
+class NormalDistribution<DeviceType::kCUDA, T> final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NormalDistribution);
+  NormalDistribution(T mean, T std) : mean_(mean), std_(std) {}
+  ~NormalDistribution() = default;
+
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, T* dptr,
+                  const std::shared_ptr<one::Generator>& generator) const;
+
+ private:
+  const T mean_;
+  const T std_;
+};
+#endif  // WITH_ROCM
 
 }  // namespace oneflow
 

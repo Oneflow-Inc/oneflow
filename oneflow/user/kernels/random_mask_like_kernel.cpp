@@ -27,6 +27,9 @@ REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kCUDA)
 #endif
+#ifdef WITH_ROCM
+REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kCUDA)
+#endif
 }  // namespace
 
 }  // namespace oneflow

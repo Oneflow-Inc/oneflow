@@ -18,6 +18,9 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include "oneflow/core/cuda/atomic.cuh"
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+#include "oneflow/core/hip/atomic.hip.h"
+#endif  // WITH_ROCM
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
@@ -55,7 +58,7 @@ OF_DEVICE_FUNC void DoDimGather(const DimOpIndexNdHelper<IDX_T>& input_nd_helper
   XPU_1D_KERNEL_LOOP(index_offset, elem_cnt) {
     IDX_T coordinate[kDimGatherMaxDimCount] = {0};
     const IDX_T x = index[index_offset];
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     assert(x < dim_length && "gather index is out of bounds");
 #else
     CHECK_LE(x, dim_length) << "RuntimeError: index " << x << " is out of bounds for dimension "
@@ -72,7 +75,7 @@ OF_DEVICE_FUNC void DoDimGather(const DimOpIndexNdHelper<IDX_T>& input_nd_helper
 template<typename T>
 struct DeviceAdd {
   OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     cuda::atomic::Add(y, *x);  // TODO:(YaoChi), refine add using float16 -> half -> float -> half
 #else
     *y += *x;

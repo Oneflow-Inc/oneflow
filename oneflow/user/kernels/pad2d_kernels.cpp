@@ -164,6 +164,10 @@ REGISTER_REFLECTION_PAD2D_WITH_DEVICE(DeviceType::kCPU)
 REGISTER_REFLECTION_PAD2D_WITH_DEVICE(DeviceType::kCUDA)
 REGISTER_REFLECTION_PAD2D_KERNELS(DeviceType::kCUDA, float16)
 #endif
+#ifdef WITH_ROCM
+REGISTER_REFLECTION_PAD2D_WITH_DEVICE(DeviceType::kCUDA)
+REGISTER_REFLECTION_PAD2D_KERNELS(DeviceType::kCUDA, float16)
+#endif
 
 template<DeviceType device_type, typename IN_T>
 class ReplicationPad2dKernel final : public OpKernel {
@@ -267,6 +271,10 @@ class ReplicationPad2dGradKernel final : public OpKernel {
 
 REGISTER_REPLICATION_PAD2D_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
+REGISTER_REPLICATION_PAD2D_WITH_DEVICE(DeviceType::kCUDA)
+REGISTER_REPLICATION_PAD2D_KERNELS(DeviceType::kCUDA, float16)
+#endif
+#ifdef WITH_ROCM
 REGISTER_REPLICATION_PAD2D_WITH_DEVICE(DeviceType::kCUDA)
 REGISTER_REPLICATION_PAD2D_KERNELS(DeviceType::kCUDA, float16)
 #endif

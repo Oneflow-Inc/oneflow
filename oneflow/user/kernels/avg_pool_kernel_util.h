@@ -20,11 +20,17 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/operator/operator_util.h"
+
+#ifdef WITH_CUDA
 #include "oneflow/core/kernel/util/numerics.cuh"
 #include "oneflow/core/kernel/util/numeric_limits.cuh"
-#ifdef WITH_CUDA
 #include "oneflow/core/cuda/atomic.cuh"
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+#include "oneflow/core/kernel/util/numerics.hip.h"
+#include "oneflow/core/kernel/util/numeric_limits.hip.h"
+#include "oneflow/core/hip/atomic.hip.h"
+#endif  // WITH_ROCM
 
 namespace oneflow {
 
@@ -43,7 +49,7 @@ OF_DEVICE_FUNC T XPU_INT_MAX(T a, T b) {
 template<typename T>
 struct XPUAdd {
   OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
-#if defined(__CUDA_ARCH__)
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     cuda::atomic::Add(y, *x);
 #else
     *y += *x;

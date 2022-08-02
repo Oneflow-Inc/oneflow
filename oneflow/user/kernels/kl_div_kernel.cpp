@@ -14,7 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#ifdef WITH_ROCM
+#include "oneflow/core/kernel/kernel_util.hip.h"
+#else
 #include "oneflow/core/kernel/kernel_util.cuh"
+#endif
 #include "oneflow/user/kernels/loss_kernel_util.h"
 
 namespace oneflow {

@@ -24,7 +24,11 @@ limitations under the License.
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
+#ifdef WITH_ROCM
+#include "oneflow/core/ep/rocm/cuda_stream.h"
+#else
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#endif
 #include "oneflow/core/common/constant.h"
 
 namespace oneflow {
@@ -493,6 +497,20 @@ std::pair<ncclComm_t, int64_t> RawGetNcclCommAndPeerNcclRank(int64_t peer_proces
 auto* GetNcclCommAndPeerNcclRank = DECORATE(&RawGetNcclCommAndPeerNcclRank, ThreadLocal);
 #endif
 
+#ifdef WITH_ROCM
+std::pair<ncclComm_t, int64_t> RawGetNcclCommAndPeerNcclRank(int64_t peer_process_id) {
+  std::set<std::pair<int64_t, int64_t>> device_set;
+  const int64_t& rank = GlobalProcessCtx::Rank();
+  const int64_t peer_nccl_rank = (peer_process_id > rank) ? 1 : 0;
+  device_set.emplace(rank, GlobalProcessCtx::LocalRank());
+  device_set.emplace(peer_process_id, GlobalProcessCtx::LocalRank(peer_process_id));
+  return {CHECK_NOTNULL(Singleton<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set),
+          peer_nccl_rank};
+}
+auto* GetNcclCommAndPeerNcclRank = DECORATE(&RawGetNcclCommAndPeerNcclRank, ThreadLocal);
+#endif
+
+
 template<>
 Maybe<void> Send<DeviceType::kCPU>(const void* in, size_t elem_cnt, DataType dtype, int64_t dst,
                                    ep::Stream* stream) {
@@ -532,6 +550,19 @@ Maybe<void> Send<DeviceType::kCUDA>(const void* in, size_t elem_cnt, DataType dt
 }
 #endif
 
+#ifdef WITH_ROCM
+template<>
+Maybe<void> Send<DeviceType::kCUDA>(const void* in, size_t elem_cnt, DataType dtype, int64_t dst,
+                                    ep::Stream* stream) {
+  CHECK_OR_RETURN(IsPODDataType(dtype));
+  const auto& comm_and_peer_rank = GetNcclCommAndPeerNcclRank(dst);
+  OF_NCCL_CHECK_OR_RETURN(ncclSend(in, elem_cnt, GetNcclDataType(dtype), comm_and_peer_rank.second,
+                                   comm_and_peer_rank.first,
+                                   stream->As<ep::CudaStream>()->cuda_stream()));
+  return Maybe<void>::Ok();
+}
+#endif
+
 template<>
 Maybe<void> Recv<DeviceType::kCPU>(void* out, size_t elem_cnt, DataType dtype, int64_t src,
                                    ep::Stream* stream) {
@@ -568,6 +599,19 @@ Maybe<void> Recv<DeviceType::kCUDA>(void* out, size_t elem_cnt, DataType dtype, 
 #else
   UNIMPLEMENTED_THEN_RETURN() << "GPU recv is only supported when nccl version >= 2.7"
 #endif
+}
+#endif
+
+#ifdef WITH_ROCM
+template<>
+Maybe<void> Recv<DeviceType::kCUDA>(void* out, size_t elem_cnt, DataType dtype, int64_t src,
+                                    ep::Stream* stream) {
+  CHECK_OR_RETURN(IsPODDataType(dtype));
+  const auto& comm_and_peer_rank = GetNcclCommAndPeerNcclRank(src);
+  OF_NCCL_CHECK_OR_RETURN(ncclRecv(out, elem_cnt, GetNcclDataType(dtype), comm_and_peer_rank.second,
+                                   comm_and_peer_rank.first,
+                                   stream->As<ep::CudaStream>()->cuda_stream()));
+  return Maybe<void>::Ok();
 }
 #endif
 

@@ -104,6 +104,11 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCATTER_SCALAR_CUDA_KERNELS,
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCATTER_SCALAR_CUDA_KERNELS,
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
+#endif  // WITH_ROCM
 
 }  // namespace user_op
 }  // namespace oneflow

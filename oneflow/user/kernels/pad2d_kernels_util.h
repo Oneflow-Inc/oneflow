@@ -18,6 +18,9 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include "oneflow/core/cuda/atomic.cuh"
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+#include "oneflow/core/hip/atomic.hip.h"
+#endif  // WITH_ROCM
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 
@@ -36,7 +39,7 @@ namespace user_op {
 template<typename T>
 struct DeviceAdd {
   OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
-#if defined(__CUDA_ARCH__)
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
     cuda::atomic::Add(y, *x);
 #else
     *y += *x;

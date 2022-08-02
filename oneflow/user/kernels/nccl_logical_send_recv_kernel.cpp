@@ -27,7 +27,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/memset.h"
 #include "oneflow/core/ep/include/primitive/add.h"
 
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+#if (defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700) || defined(WITH_ROCM)
 
 namespace oneflow {
 
@@ -161,7 +161,7 @@ void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::O
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
   user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
   ncclComm_t comm = kernel_state->comm();
-  cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+  hipStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
   const std::vector<int64_t>& send_elem_cnts = kernel_state->send_elem_cnts();
   const std::vector<int64_t>& recv_elem_cnts = kernel_state->recv_elem_cnts();
   const int64_t parallel_num = send_elem_cnts.size();

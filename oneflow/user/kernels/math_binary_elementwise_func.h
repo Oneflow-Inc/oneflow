@@ -24,7 +24,12 @@ limitations under the License.
 #if defined(__CUDACC__)
 
 #include <cuda_fp16.h>
-#define MATH_FUNC(name) name
+#define MATH_FUNC(name) 
+
+#elif defined(__HIPCC__)
+
+#include <hip/hip_fp16.h>
+#define MATH_FUNC(name) 
 
 #else
 
@@ -74,7 +79,7 @@ struct Atan2Functor {
 template<typename T>
 struct FloorDivFunctor {
   static OF_DEVICE_FUNC const T Forward(const T x, const T y) {
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIP_DEVICE_COMPILE__)
     return floor(fdividef(x, y));
 #else
     return std::floor(x / y);
@@ -132,7 +137,7 @@ struct XlogyFunctor {
   }
 };
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) || defined(__HIPCC__)
 // half version
 
 #define OF_HALF_FUNC __device__ __forceinline__

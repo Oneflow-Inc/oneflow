@@ -289,6 +289,9 @@ DEFINE_STATIC_SWITCH_FUNC(
 #if defined(WITH_CUDA)
                                 HALF_DATA_TYPE_SEQ
 #endif
+#if defined(WITH_ROCM)
+                                HALF_DATA_TYPE_SEQ
+#endif
                             ));
 #undef MAKE_WRITE_SLICE_SWITCH_ENTRY
 
@@ -434,6 +437,9 @@ REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(bool)
 #ifdef WITH_CUDA
 REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(float16)
 #endif
+#ifdef WITH_ROCM
+REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(float16)
+#endif
 
 template<DeviceType device_type, typename T>
 class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -472,6 +478,10 @@ class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGrap
 
 REGISTER_SLICE_GRAD_KERNEL_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
+REGISTER_SLICE_GRAD_KERNEL_WITH_DEVICE(DeviceType::kCUDA)
+REGISTER_SLICE_GRAD_KERNEL(DeviceType::kCUDA, float16)
+#endif
+#ifdef WITH_ROCM
 REGISTER_SLICE_GRAD_KERNEL_WITH_DEVICE(DeviceType::kCUDA)
 REGISTER_SLICE_GRAD_KERNEL(DeviceType::kCUDA, float16)
 #endif

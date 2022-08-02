@@ -73,4 +73,12 @@ template Maybe<void> Send<DeviceType::kCUDA>(const void* in, size_t elem_cnt, Da
 template Maybe<void> Recv<DeviceType::kCUDA>(void* out, size_t elem_cnt, DataType dtype,
                                              int64_t src, ep::Stream* stream);
 #endif
+
+#if defined(WITH_ROCM)
+template Maybe<void> Send<DeviceType::kCUDA>(const void* in, size_t elem_cnt, DataType dtype,
+                                             int64_t dst, ep::Stream* stream);
+
+template Maybe<void> Recv<DeviceType::kCUDA>(void* out, size_t elem_cnt, DataType dtype,
+                                             int64_t src, ep::Stream* stream);
+#endif
 }  // namespace oneflow

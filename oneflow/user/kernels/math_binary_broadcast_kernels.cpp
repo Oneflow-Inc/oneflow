@@ -157,5 +157,10 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
                                  MATH_BINARY_BROADCAST_DEFAULT_FUNC_SEQ, (DeviceType::kCUDA),
                                  FLOAT16_DATA_TYPE_SEQ)
 #endif
+#ifdef WITH_ROCM
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_BROADCAST_KERNEL,
+                                 MATH_BINARY_BROADCAST_DEFAULT_FUNC_SEQ, (DeviceType::kCUDA),
+                                 FLOAT16_DATA_TYPE_SEQ)
+#endif
 
 }  // namespace oneflow

@@ -33,6 +33,16 @@ std::unique_ptr<KeyValueStore> NewPersistentTableKeyValueStore(
     const PersistentTableKeyValueStoreOptions& options);
 
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+
+struct PersistentTableKeyValueStoreOptions {
+  PersistentTableOptions table_options{};
+};
+
+std::unique_ptr<KeyValueStore> NewPersistentTableKeyValueStore(
+    const PersistentTableKeyValueStoreOptions& options);
+
+#endif  // WITH_ROCM
 
 }  // namespace embedding
 

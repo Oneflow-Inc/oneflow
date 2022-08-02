@@ -49,6 +49,30 @@ class EmbeddingManager final {
 
 #endif  // WITH_CUDA
 
+#ifdef WITH_ROCM
+
+class EmbeddingManager final {
+ public:
+  EmbeddingManager() = default;
+  ~EmbeddingManager() = default;
+
+  void SaveSnapshot(const std::string& embedding_name, int64_t local_rank_id, int64_t rank_id,
+                    const std::string& snapshot_name);
+  void LoadSnapshot(const std::string& embedding_name, int64_t local_rank_id, int64_t rank_id,
+                    const std::string& snapshot_name);
+
+  KeyValueStore* GetKeyValueStore(const std::string& embedding_name, int64_t rank_id);
+
+  void CreateKeyValueStore(const KeyValueStoreOptions& options, int64_t local_rank_id,
+                           int64_t rank_id, int64_t world_size);
+
+ private:
+  HashMap<std::pair<std::string, int64_t>, std::unique_ptr<KeyValueStore>> key_value_store_map_;
+  std::mutex mutex_;
+};
+
+#endif  // WITH_ROCM
+
 }  // namespace embedding
 }  // namespace oneflow
 

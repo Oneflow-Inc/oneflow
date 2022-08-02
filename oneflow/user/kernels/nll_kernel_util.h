@@ -18,6 +18,10 @@ limitations under the License.
 
 #include "oneflow/core/kernel/kernel_util.h"
 
+#ifdef WITH_ROCM
+#include "oneflow/core/ep/rocm/cuda_stream.h"
+#endif
+
 namespace oneflow {
 
 template<DeviceType device_type, typename T, typename K>

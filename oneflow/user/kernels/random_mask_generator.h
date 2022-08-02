@@ -23,6 +23,10 @@ limitations under the License.
 #include <curand.h>
 #include <curand_kernel.h>
 #endif
+#ifdef WITH_ROCM
+#include <hiprand.h>
+#include <hiprand_kernel.h>
+#endif
 
 namespace oneflow {
 
@@ -46,6 +50,24 @@ class RandomMaskGenerator<DeviceType::kCPU> final {
 };
 
 #ifdef WITH_CUDA
+template<>
+class RandomMaskGenerator<DeviceType::kCUDA> final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
+  RandomMaskGenerator(const std::shared_ptr<one::Generator>& generator,
+                      const int device_index = -1) {
+    generator_ = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
+  }
+  ~RandomMaskGenerator() = default;
+
+  void Generate(ep::Stream* stream, int64_t n, float rate, bool* mask);
+
+ private:
+  std::shared_ptr<one::CUDAGeneratorImpl> generator_;
+};
+#endif
+
+#ifdef WITH_ROCM
 template<>
 class RandomMaskGenerator<DeviceType::kCUDA> final {
  public:

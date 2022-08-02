@@ -132,5 +132,8 @@ REGISTER_EAGER_SYMMETRIC_S_TO_P_KERNEL(DeviceType::kCPU)
 #if defined(WITH_CUDA)
 REGISTER_EAGER_SYMMETRIC_S_TO_P_KERNEL(DeviceType::kCUDA)
 #endif
+#if defined(WITH_ROCM)
+REGISTER_EAGER_SYMMETRIC_S_TO_P_KERNEL(DeviceType::kCUDA)
+#endif
 
 }  // namespace oneflow

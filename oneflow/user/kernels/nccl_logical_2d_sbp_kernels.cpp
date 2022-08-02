@@ -19,10 +19,15 @@ limitations under the License.
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
+#ifdef WITH_CUDA
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#endif
+#ifdef WITH_ROCM
+#include "oneflow/core/ep/rocm/cuda_stream.h"
+#endif
 #include "oneflow/user/ops/nccl_logical_util.h"
 
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+#if (defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700) || defined(WITH_ROCM) 
 
 namespace oneflow {
 

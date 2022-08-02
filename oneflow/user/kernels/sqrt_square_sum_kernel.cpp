@@ -28,6 +28,9 @@ int64_t getThreadNumBlocks(int64_t n) {
 #ifdef WITH_CUDA
   num_blocks = BlocksNum4ThreadsNum(n);
 #endif
+#ifdef WITH_ROCM
+  num_blocks = BlocksNum4ThreadsNum(n);
+#endif
   return num_blocks;
 }
 

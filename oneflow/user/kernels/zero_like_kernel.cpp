@@ -42,5 +42,8 @@ REGISTER_ZERO_LIKE_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_ZERO_LIKE_KERNEL(DeviceType::kCUDA)
 #endif
+#ifdef WITH_ROCM
+REGISTER_ZERO_LIKE_KERNEL(DeviceType::kCUDA)
+#endif
 
 }  // namespace oneflow

@@ -28,6 +28,11 @@ namespace embedding {
 std::unique_ptr<Cache> NewFullCache(const CacheOptions& options);
 
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+
+std::unique_ptr<Cache> NewFullCache(const CacheOptions& options);
+
+#endif  // WITH_ROCM
 
 }  // namespace embedding
 

@@ -99,6 +99,10 @@ REGISTER_FOLD_KERNEL(DeviceType::kCPU, double)
 REGISTER_FOLD_KERNEL(DeviceType::kCUDA, float)
 REGISTER_FOLD_KERNEL(DeviceType::kCUDA, double)
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+REGISTER_FOLD_KERNEL(DeviceType::kCUDA, float)
+REGISTER_FOLD_KERNEL(DeviceType::kCUDA, double)
+#endif  // WITH_ROCM
 
 }  // namespace user_op
 

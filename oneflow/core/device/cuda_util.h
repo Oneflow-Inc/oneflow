@@ -184,7 +184,7 @@ cudaError_t CudaDriverGetPrimaryCtxActive(int dev, int* active);
 #include <rccl.h>
 #include <hip/hip_fp16.h>
 #include "oneflow/core/device/cuda_pseudo_half.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/ep/rocm/cuda_stream.h"
 
 namespace oneflow {
 

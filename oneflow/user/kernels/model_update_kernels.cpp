@@ -164,7 +164,12 @@ REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
-#endif  // WITH_CUDA
+#endif  // 
+#ifdef WITH_ROCM
+REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_SGD_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
+#endif  // WITH_ROCM
 
 template<DeviceType device_type, typename T, typename K>
 user_op::InferTmpSizeFn GenInferTmpSizeFn() {
@@ -305,6 +310,11 @@ REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_MOMENTUM_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
+#endif  // WITH_ROCM
 
 template<DeviceType device_type, typename T, typename K>
 class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
@@ -473,6 +483,11 @@ REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
+#endif  // WITH_ROCM
 
 template<DeviceType device_type, typename T, typename G>
 class AdagradUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -539,6 +554,10 @@ REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_ADAGRAD_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
+#endif  // WITH_ROCM
 
 template<DeviceType device_type, typename T, typename K>
 class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
@@ -780,6 +799,11 @@ REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_LAMB_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
+#endif  // WITH_ROCM
 
 template<DeviceType device_type>
 class BiasCorrectionFactorKernel final : public user_op::OpKernel,
@@ -807,6 +831,9 @@ REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(DeviceType::kCUDA)
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(DeviceType::kCUDA)
+#endif  // WITH_ROCM
 
 template<DeviceType device_type, typename T, typename G>
 class RmsPropUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -873,6 +900,11 @@ REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_RMSPROP_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
+#endif  // WITH_ROCM
 
 template<DeviceType device_type, typename T>
 class LarsTmpBufferManager final {
@@ -977,6 +1009,11 @@ REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
+#endif  // WITH_ROCM
 
 template<DeviceType device_type, typename T, typename G>
 class FtrlUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -1046,6 +1083,11 @@ REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
+#ifdef WITH_ROCM
+REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
+#endif  // WITH_ROCM
 
 }  // namespace
 
