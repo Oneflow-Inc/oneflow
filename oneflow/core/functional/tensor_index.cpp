@@ -83,36 +83,39 @@ Maybe<TensorTuple> ExpandMaskIndex(const std::shared_ptr<Tensor>& index) {
   return indices;
 }
 
+// NOTE: expand each non-empty indice to same shape.
 Maybe<TensorTuple> ExpandIndices(const TensorTuple& indices) {
-  bool first = true;
   std::shared_ptr<const Shape> expanded_shape;
-  for (int i = 0; i < indices.size(); ++i) {
-    if (!indices.at(i)) { continue; }
-    if (first) {
-      expanded_shape = indices.at(i)->shape();
-      first = false;
-    } else {
-      const auto& shape = indices.at(i)->shape();
-      int ndims = std::max(shape->NumAxes(), expanded_shape->NumAxes());
-      DimVector sizes(ndims);
-      for (int j = ndims - 1; j >= 0; --j) {
-        int dim = j - (ndims - shape->NumAxes());
-        int expanded_dim = j - (ndims - expanded_shape->NumAxes());
-        if (dim < 0) {
-          sizes[j] = expanded_shape->At(expanded_dim);
-        } else if (expanded_dim < 0) {
-          sizes[j] = shape->At(dim);
-        } else {
-          int size = shape->At(dim);
-          int expanded_size = expanded_shape->At(expanded_dim);
-          CHECK_OR_RETURN(size == expanded_size || size == 1 || expanded_size == 1)
-              << Error::RuntimeError() << "The size of tensor a (" << size
-              << ") must match the size of tensor b (" << expanded_size
-              << ") at non-singleton dimension " << i;
-          sizes[j] = size == 1 ? expanded_size : size;
+  {
+    bool first = true;
+    for (int i = 0; i < indices.size(); ++i) {
+      if (!indices.at(i)) { continue; }
+      if (first) {
+        expanded_shape = indices.at(i)->shape();
+        first = false;
+      } else {
+        const auto& shape = indices.at(i)->shape();
+        int ndims = std::max(shape->NumAxes(), expanded_shape->NumAxes());
+        DimVector sizes(ndims);
+        for (int j = ndims - 1; j >= 0; --j) {
+          int dim = j - (ndims - shape->NumAxes());
+          int expanded_dim = j - (ndims - expanded_shape->NumAxes());
+          if (dim < 0) {
+            sizes[j] = expanded_shape->At(expanded_dim);
+          } else if (expanded_dim < 0) {
+            sizes[j] = shape->At(dim);
+          } else {
+            int size = shape->At(dim);
+            int expanded_size = expanded_shape->At(expanded_dim);
+            CHECK_OR_RETURN(size == expanded_size || size == 1 || expanded_size == 1)
+                << Error::RuntimeError() << "The size of tensor a (" << size
+                << ") must match the size of tensor b (" << expanded_size
+                << ") at non-singleton dimension " << i;
+            sizes[j] = size == 1 ? expanded_size : size;
+          }
         }
+        expanded_shape.reset(new Shape(sizes));
       }
-      expanded_shape.reset(new Shape(sizes));
     }
   }
   auto expanded_indices = std::make_shared<TensorTuple>(indices.size());
@@ -191,15 +194,17 @@ Maybe<Tensor> AdjustSubspace(const std::shared_ptr<Tensor>& input, const TensorT
       << Error::IndexError()
       << "Failed to adjust subspace since the index is out of bounds for tensor dimension " << ndim;
   std::vector<int> permute;
-  permute.reserve(ndim);
-  if (reverse) {
-    for (int i = 0; i < index_ndim; ++i) { permute.emplace_back(index_subspace_pos + i); }
-    for (int i = 0; i < index_subspace_pos; ++i) { permute.emplace_back(i); }
-  } else {
-    for (int i = 0; i < index_subspace_pos; ++i) { permute.emplace_back(i + index_ndim); }
-    for (int i = 0; i < index_ndim; ++i) { permute.emplace_back(i); }
+  {
+    permute.reserve(ndim);
+    if (reverse) {
+      for (int i = 0; i < index_ndim; ++i) { permute.emplace_back(index_subspace_pos + i); }
+      for (int i = 0; i < index_subspace_pos; ++i) { permute.emplace_back(i); }
+    } else {
+      for (int i = 0; i < index_subspace_pos; ++i) { permute.emplace_back(i + index_ndim); }
+      for (int i = 0; i < index_ndim; ++i) { permute.emplace_back(i); }
+    }
+    for (int i = permute.size(); i < ndim; ++i) { permute.emplace_back(i); }
   }
-  for (int i = permute.size(); i < ndim; ++i) { permute.emplace_back(i); }
   return Transpose(input, permute);
 }
 
@@ -402,13 +407,15 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
   }
   int index_ndim = valid_indices[0]->ndim();
   auto packed_indices = JUST(Stack(valid_indices, 0));
-  int packed_ndim = packed_indices->ndim();
-  CHECK_GT_OR_RETURN(packed_ndim, 0)
-      << Error::RuntimeError() << "Index array dimension should be greater than 0.";
-  std::vector<int> permute(packed_ndim);
-  permute[packed_ndim - 1] = 0;
-  std::iota(permute.begin(), permute.end() - 1, 1);
-  packed_indices = JUST(Transpose(packed_indices, permute))->contiguous();
+  {
+    int packed_ndim = packed_indices->ndim();
+    CHECK_GT_OR_RETURN(packed_ndim, 0)
+        << Error::RuntimeError() << "Index array dimension should be greater than 0.";
+    std::vector<int> permute(packed_ndim);
+    permute[packed_ndim - 1] = 0;
+    std::iota(permute.begin(), permute.end() - 1, 1);
+    packed_indices = JUST(Transpose(packed_indices, permute))->contiguous();
+  }
 
   if (transposed_input->is_global()) {
     const auto& placement = JUST(transposed_input->parallel_desc());
@@ -427,28 +434,30 @@ Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
   }
 
   Shape expand_shape;
-  if (is_continuous_subspace) {
-    bool index_subspace_begin = true;
-    for (int i = 0; i < indices.size(); ++i) {
-      // if the index is the first not-null index
-      if (indices[i]) {
-        if (!index_subspace_begin) { continue; }
-        for (int j = 0; j < index_ndim; ++j) {
-          expand_shape.emplace_back(valid_indices[0]->shape()->At(j));
+  {
+    if (is_continuous_subspace) {
+      bool index_subspace_begin = true;
+      for (int i = 0; i < indices.size(); ++i) {
+        // if the index is the first not-null index
+        if (indices[i]) {
+          if (!index_subspace_begin) { continue; }
+          for (int j = 0; j < index_ndim; ++j) {
+            expand_shape.emplace_back(valid_indices[0]->shape()->At(j));
+          }
+          index_subspace_begin = false;
+        } else {
+          expand_shape.emplace_back(input->shape()->At(i));
         }
-        index_subspace_begin = false;
-      } else {
-        expand_shape.emplace_back(input->shape()->At(i));
+      }
+    } else {
+      expand_shape = *(valid_indices[0]->shape());
+      for (int i = 0; i < indices.size(); ++i) {
+        if (!indices[i]) { expand_shape.emplace_back(input->shape()->At(i)); }
       }
     }
-  } else {
-    expand_shape = *(valid_indices[0]->shape());
-    for (int i = 0; i < indices.size(); ++i) {
-      if (!indices[i]) { expand_shape.emplace_back(input->shape()->At(i)); }
+    for (int i = indices.size(); i < input->ndim(); ++i) {
+      expand_shape.emplace_back(input->shape()->At(i));
     }
-  }
-  for (int i = indices.size(); i < input->ndim(); ++i) {
-    expand_shape.emplace_back(input->shape()->At(i));
   }
   std::shared_ptr<Tensor> expand_value = JUST(Expand(value, expand_shape));
   // reverse adjust value if index subspace is continuous but transposed since the start
