@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <typeinfo>
+#include "oneflow/core/vm/sync_vm_mode_guard.h"
 #include "oneflow/core/vm/barrier_instruction_policy.h"
 #include "oneflow/core/vm/caching_allocator.h"
 #include "oneflow/core/vm/global_sync_instruction_policy.h"
@@ -68,6 +69,7 @@ void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
 }
 
 void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCtx*)>& Initializer) {
+  SyncVmModeGuard guard(SyncVmMode::kEnable);
   Initializer(thread_ctx);
   while (thread_ctx->mut_notifier()->WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
     while (thread_ctx->TryReceiveAndRun()) {}
@@ -221,6 +223,7 @@ std::string VirtualMachine::GetBlockingDebugString() {
 }
 
 Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
+  SyncVmModeGuard guard(SyncVmMode::kEnable);
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
     INTRUSIVE_FOR_EACH_PTR(instruction, instruction_list) {
       const auto& device = instruction->stream().device();
@@ -287,6 +290,7 @@ class MultiThreadScheduleCtx : public vm::ScheduleCtx {
 }  // namespace
 
 void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
+  SyncVmModeGuard guard(SyncVmMode::kEnable);
   Initializer();
   MultiThreadScheduleCtx schedule_ctx{};
   while (pending_notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
