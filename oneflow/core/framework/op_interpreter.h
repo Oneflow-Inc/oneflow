@@ -77,7 +77,7 @@ class OpExprInterpreter {
                             const OpExprInterpContext& ctx) const = 0;
 
   virtual Maybe<void> ApplyImpl(const FunctionOpExpr& op_expr, const TensorTuple& inputs,
-                        TensorTuple* outputs, const OpExprInterpContext&) const;
+                                TensorTuple* outputs, const OpExprInterpContext&) const;
 };
 
 #define FOR_EACH_BUILTIN_OPS(_macro) \
