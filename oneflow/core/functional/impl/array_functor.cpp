@@ -1492,7 +1492,7 @@ class CopyFunctor {
     const auto& eager_blob_object = JUST(x.eager_blob_object());
     const auto& opt_stream = eager_blob_object->last_used_stream();
     if (!opt_stream.has_value()) { return false; }
-    return JUST(opt_stream)->stream_role() == StreamRole::kTmpCompute;
+    return JUST(opt_stream)->stream_type() == StreamType::kTmpCompute;
   }
 
  private:
