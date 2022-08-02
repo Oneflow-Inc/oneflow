@@ -833,13 +833,63 @@ def _test_index_getitem_copy_bools_slices(test_case, device):
 
     # TODO: compare tensor_storage after exporting the inferface
     for a in tensors:
-        print(a.shape)
         #  test_case.assertNotEqual(a.data_ptr(), a[True].data_ptr())
         _assert_tensor_equal(test_case, flow.empty(0, *a.shape), a[False])
         #  test_case.assertNotEqual(a.data_ptr(), a[true].data_ptr())
         _assert_tensor_equal(test_case, flow.empty(0, *a.shape), a[false])
         #  test_case.assertEqual(a.data_ptr(), a[None].data_ptr())
         #  test_case.assertEqual(a.data_ptr(), a[...].data_ptr())
+
+def _test_setitem_scalars(test_case, device):
+    zero = flow.tensor(0, dtype=flow.int64)
+
+    # non-scalar indexed with scalars
+    a = flow.randn(2, 3, device=device)
+    a_set_with_number = a.clone()
+    a_set_with_scalar = a.clone()
+    b = flow.randn(3, device=device)
+
+    a_set_with_number[0] = b
+    a_set_with_scalar[zero] = b
+    _assert_tensor_equal(test_case, a_set_with_number, a_set_with_scalar)
+    a[1, zero] = 7.7
+    value = a[1, 0].numpy()
+    test_case.assertEqual(np.array(7.7, dtype=value.dtype), value)
+
+    # scalar indexed with scalars
+    r = flow.randn((), device=device)
+    with test_case.assertRaises(IndexError):
+        r[:] = 8.8
+    with test_case.assertRaises(IndexError):
+        r[zero] = 8.8
+    # TODO: support scalar tensor setitem
+    # r[...] = 9.9
+    # test_case.assertEqual(9.9, r)
+
+def _test_basic_advanced_combined(test_case, device):
+    x = flow.arange(0, 12, device=device).view(4, 3)
+    _assert_tensor_equal(test_case, x[1:2, 1:3], x[1:2, [1, 2]])
+    test_case.assertEqual(x[1:2, 1:3].tolist(), [[4, 5]])
+
+    # Check that it is a copy
+    unmodified = x.clone()
+    x[1:2, [1, 2]].zero_()
+    _assert_tensor_equal(test_case, x, unmodified)
+
+    # But assignment should modify the original
+    unmodified = x.clone()
+    x[1:2, [1, 2]] = 0
+    test_case.assertFalse(np.array_equal(x.numpy(), unmodified.numpy()))
+
+def _test_ellipsis_tensor(test_case, device):
+    x = flow.arange(0, 9, device=device).view(3, 3)
+    idx = flow.tensor([0, 2], device=device)
+    test_case.assertEqual(x[..., idx].tolist(), [[0, 2],
+                                            [3, 5],
+                                            [6, 8]])
+    test_case.assertEqual(x[idx, ...].tolist(), [[0, 1, 2],
+                                            [6, 7, 8]])
+
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -866,6 +916,9 @@ class TestIndexing(flow.unittest.TestCase):
             _test_empty_ndim_index_bool(test_case, **arg)
             _test_empty_slice(test_case, **arg)
             _test_index_getitem_copy_bools_slices(test_case, **arg)
+            _test_setitem_scalars(test_case, **arg)
+            _test_basic_advanced_combined(test_case, **arg)
+            _test_ellipsis_tensor(test_case, **arg)
 
 
 if __name__ == "__main__":
