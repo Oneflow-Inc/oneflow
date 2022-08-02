@@ -46,8 +46,6 @@ class BernoulliFunctor {
  public:
   BernoulliFunctor() {
     bernoulli_op_ = CHECK_JUST(one::OpBuilder("bernoulli").Input("in").Output("out").Build());
-    // bernoulli_prob_op_ =
-    //     CHECK_JUST(one::OpBuilder("bernoulli_prob").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<double>& p,
                            const Symbol<DType>& dtype,
@@ -63,10 +61,7 @@ class BernoulliFunctor {
       CHECK_OR_THROW(prob >= 0.0 && prob <= 1.0)
           << "bernoulli expects p to be in [0, 1], but got p=" << prob;
       JUST(bernoulli_attrs.SetAttr<double>("p", prob));
-      // return OpInterpUtil::Dispatch<Tensor>(
-      //     *bernoulli_prob_op_, {x}, OpExprInterpContext(bernoulli_attrs, distribution_state));
-    }
-    else {
+    } else {
       JUST(bernoulli_attrs.SetAttr<double>("p", -1));
     }
 
@@ -76,7 +71,6 @@ class BernoulliFunctor {
 
  private:
   std::shared_ptr<OpExpr> bernoulli_op_;
-  // std::shared_ptr<OpExpr> bernoulli_prob_op_;
 };
 
 class RandFunctor {
