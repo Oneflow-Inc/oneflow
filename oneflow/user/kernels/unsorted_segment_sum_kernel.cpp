@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/ep/include/primitive/cast.h"
+#include <cuda.h>
 
 namespace oneflow {
 
@@ -138,20 +139,8 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_KERNEL_CASE, DEVI
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_LIKE_KERNEL_CASE, DEVICE_TYPE_SEQ,
                                  UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
-#if CUDA_VERSION >= 11000
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_KERNEL_CASE,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
-                                 OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16),
-                                 INDEX_DATA_TYPE_SEQ)
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_LIKE_KERNEL_CASE,
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
-                                 OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16),
-                                 INDEX_DATA_TYPE_SEQ)
-#endif
-
 #ifdef WITH_CUDA
-template<typename K>
+template<typename T, typename K>
 class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
  public:
   UnsortedSegmentSumHalfKernel() = default;
@@ -184,14 +173,14 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
       offset = sum_cache->lower();
     }
 
-    UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, float, K, float16>::UnsortedSegmentSum(
-        ctx->stream(), segment_ids->dptr<K>(), data->dptr<float16>(), num_segment_ids, num_segments,
+    UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, float, K, T>::UnsortedSegmentSum(
+        ctx->stream(), segment_ids->dptr<K>(), data->dptr<T>(), num_segment_ids, num_segments,
         outer_dim_size, inner_dim_size, offset, tmp_buf->mut_dptr<float>());
 
     auto f2h = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
-        ctx->device_type(), DataType::kFloat, DataType::kFloat16);
+        ctx->device_type(), DataType::kFloat, out->data_type());
     CHECK(f2h);
-    f2h->Launch(ctx->stream(), tmp_buf->dptr<float>(), out->mut_dptr<float16>(),
+    f2h->Launch(ctx->stream(), tmp_buf->dptr<float>(), out->mut_dptr<T>(),
                 out->shape_view().elem_cnt());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
@@ -199,7 +188,8 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
 
 #define REGISTER_UNSORTED_SEGMENT_SUM_HALF_HALF_KERNEL(out_type, segment_ids_type, kernel_type) \
   REGISTER_USER_KERNEL(kernel_type)                                                             \
-      .SetCreateFn<UnsortedSegmentSumHalfKernel<OF_PP_PAIR_FIRST(segment_ids_type)>>()          \
+      .SetCreateFn<UnsortedSegmentSumHalfKernel<OF_PP_PAIR_FIRST(out_type),                     \
+                                                OF_PP_PAIR_FIRST(segment_ids_type)>>()          \
       .SetIsMatchedHob(                                                                         \
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                       \
           && (user_op::HobDataType("segment_ids", 0) == OF_PP_PAIR_SECOND(segment_ids_type))    \
@@ -217,6 +207,12 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE,
                                  FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+
+#if CUDA_VERSION >= 11000
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE,
+                                 OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16),
+                                 INDEX_DATA_TYPE_SEQ)
+#endif
 
 #undef REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE
 

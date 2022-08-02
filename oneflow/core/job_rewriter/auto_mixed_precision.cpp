@@ -214,6 +214,8 @@ Maybe<void> AutoMixedPrecision::Apply(Job* job, JobPassCtx* ctx) const {
   VLOG(2) << "WhiteSet include: "
           << Container2Str<HashSet<OpNode*>, OpNode*>(white_set, OpName4Node);
   const DataType mixed_precision_data_type = ctx->job_desc().mixed_precision_data_type();
+  CHECK(mixed_precision_data_type == DataType::kFloat16
+        || mixed_precision_data_type == DataType::kBFloat16);
   InsertCastOp(op_graph, white_set, mixed_precision_data_type, &job_builder);
   return Maybe<void>::Ok();
 }

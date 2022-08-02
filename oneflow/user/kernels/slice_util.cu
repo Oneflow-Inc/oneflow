@@ -16,6 +16,9 @@ limitations under the License.
 #include "oneflow/user/kernels/slice_util.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#if CUDA_VERSION >= 11000
+#include <cuda_bf16.h>
+#endif  // CUDA_VERSION >= 11000
 
 namespace oneflow {
 

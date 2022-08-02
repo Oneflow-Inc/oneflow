@@ -208,12 +208,6 @@ struct UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, float, K, float16> final 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_CUDA,
                                  UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ,
                                  UNSORTED_SEGMENT_SUM_INDEX_TYPE_SEQ);
-#if CUDA_VERSION >= 11000
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_CUDA,
-                                 OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16),
-                                 UNSORTED_SEGMENT_SUM_INDEX_TYPE_SEQ);
-#endif
-
 #undef INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_CUDA
 
 #define INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_HALF_CUDA(in_type_pair, index_type_pair,             \
@@ -225,6 +219,12 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_CUDA,
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_HALF_CUDA,
                                  OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat),
                                  UNSORTED_SEGMENT_SUM_INDEX_TYPE_SEQ, FLOAT16_DATA_TYPE_SEQ);
+#if CUDA_VERSION >= 11000
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_HALF_CUDA,
+                                 OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat),
+                                 UNSORTED_SEGMENT_SUM_INDEX_TYPE_SEQ,
+                                 OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16));
+#endif
 
 #undef INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_HALF_CUDA
 

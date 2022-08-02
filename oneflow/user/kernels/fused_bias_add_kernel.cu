@@ -17,8 +17,9 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #if CUDA_VERSION >= 11000
+#include <cuda_bf16.h>
+#endif  // CUDA_VERSION >= 11000
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
-#endif
 
 namespace oneflow {
 
