@@ -18,7 +18,6 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_STREAM_WAIT_INSTRUCTION_POLICY_H_
 
 #include <functional>
-#include "oneflow/core/vm/phy_instr_operand.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/vm/instruction_policy.h"
 #include "oneflow/core/common/op_args_reserved_size.h"
