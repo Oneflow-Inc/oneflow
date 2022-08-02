@@ -23,7 +23,7 @@ ThreadPool::ThreadPool(int32_t thread_num)
   FOR_RANGE(int32_t, i, 0, thread_num) {
     Channel<std::function<void()>>* chan = &(work_chans_.at(i));
     threads_[i] = std::thread([chan]() {
-      SyncVmModeGuard guard(true);
+      SyncVmModeGuard guard(SyncVmMode::kEnable);
       std::function<void()> work;
       while (chan->Receive(&work) == kChannelStatusSuccess) { work(); }
     });
