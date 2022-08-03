@@ -10196,6 +10196,8 @@ def OneFlow_CopyH2DOp : OneFlow_BaseOp<"copy_h2d", [NoSideEffect, NoGrad, Declar
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_sbp_signature_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
 }
 
 def OneFlow_CopyD2HOp : OneFlow_BaseOp<"copy_d2h", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -10209,6 +10211,8 @@ def OneFlow_CopyD2HOp : OneFlow_BaseOp<"copy_d2h", [NoSideEffect, NoGrad, Declar
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_sbp_signature_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
 }
 
 #endif // GET_ONEFLOW_SYSTEM_OP_DEFINITIONS

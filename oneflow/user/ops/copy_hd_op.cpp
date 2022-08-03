@@ -40,10 +40,24 @@ Maybe<void> InferSbpSignature(user_op::InferSbpSignatureFnContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  // only for nchw
+  FOR_RANGE(int64_t, i, 0, std::min(2, (int)tensor.shape().NumAxes())) {
+    ctx->NewBuilder().Split(user_op::OpArg("in", 0), i).Split(user_op::OpArg("out", 0), i).Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferFWDataType(user_op::InferContext* ctx) {
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 Maybe<void> CopyD2HOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-    return InferLogicalOutBlobDescs(ctx);
+  return InferLogicalOutBlobDescs(ctx);
 }
 
 Maybe<void> CopyD2HOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -54,8 +68,12 @@ Maybe<void> CopyD2HOp::InferSbpSignature(user_op::InferSbpSignatureFnContext* ct
   return InferSbpSignature(ctx);
 }
 
+Maybe<void> CopyD2HOp::GetSbp(user_op::SbpContext* ctx) { return FwGetSbpFn(ctx); }
+
+Maybe<void> CopyD2HOp::InferDataType(user_op::InferContext* ctx) { return InferFWDataType(ctx); }
+
 Maybe<void> CopyH2DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-    return InferLogicalOutBlobDescs(ctx);
+  return InferLogicalOutBlobDescs(ctx);
 }
 
 Maybe<void> CopyH2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -65,5 +83,9 @@ Maybe<void> CopyH2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
 Maybe<void> CopyH2DOp::InferSbpSignature(user_op::InferSbpSignatureFnContext* ctx) {
   return InferSbpSignature(ctx);
 }
+
+Maybe<void> CopyH2DOp::GetSbp(user_op::SbpContext* ctx) { return FwGetSbpFn(ctx); }
+
+Maybe<void> CopyH2DOp::InferDataType(user_op::InferContext* ctx) { return InferFWDataType(ctx); }
 
 }  // namespace oneflow
