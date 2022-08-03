@@ -13,29 +13,30 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/autotick.h"
+#ifndef ONEFLOW_CORE_VM_SYNC_VM_MODE_GUARD_H_
+#define ONEFLOW_CORE_VM_SYNC_VM_MODE_GUARD_H_
+
+#include "oneflow/core/common/thread_local_guard.h"
 
 namespace oneflow {
 
-namespace {
+enum class SyncVmMode {
+  kInvalid = 0,
+  kEnable = 1,
+  kDisable = 2,
+};
 
-class MutForeignInputOpConTickInputHelper final : public MutOpConTickInputHelper {
+class SyncVmModeGuard final : public ThreadLocalGuard<SyncVmMode> {
  public:
-  MutForeignInputOpConTickInputHelper() : MutOpConTickInputHelper() {}
+  using ThreadLocalGuard<SyncVmMode>::ThreadLocalGuard;
+  ~SyncVmModeGuard() = default;
 
-  bool VirtualIsTickInputBound() const override {
-    return op_conf().foreign_input_conf().has_tick();
-  }
-
-  OperatorConf NewTickInputBoundOpConf(const std::string& lbn) const override {
-    OperatorConf ret(op_conf());
-    ret.mutable_foreign_input_conf()->set_tick(lbn);
-    return ret;
+  static bool IsCurrentSyncVmMode() {
+    const auto& opt_sync_mode = Current();
+    return opt_sync_mode.has_value() && CHECK_JUST(opt_sync_mode) == SyncVmMode::kEnable;
   }
 };
 
-}  // namespace
-
-REGISTER_AUTO_TICK(OperatorConf::kForeignInputConf, MutForeignInputOpConTickInputHelper);
-
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_VM_SYNC_VM_MODE_GUARD_H_

@@ -13,29 +13,31 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_STREAM_GET_STREAM_ROLE_NAME_H_
-#define ONEFLOW_CORE_FRAMEWORK_STREAM_GET_STREAM_ROLE_NAME_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_STREAM_GET_STREAM_TYPE_NAME_H_
+#define ONEFLOW_CORE_FRAMEWORK_STREAM_GET_STREAM_TYPE_NAME_H_
 
 #include <glog/logging.h>
 #include <string>
-#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/stream_type.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
 
-struct GetStreamRoleName : public StreamRoleVisitor<GetStreamRoleName> {
+struct GetStreamTypeName : public StreamTypeVisitor<GetStreamTypeName> {
   static const char* VisitCompute() { return "compute"; }
   static const char* VisitHost2Device() { return "h2d"; }
   static const char* VisitDevice2Host() { return "d2h"; }
+  static const char* VisitAsyncedDevice2Host() { return "asynced_d2h"; }
   static const char* VisitSyncedLaunchedCommNet() { return "synced_launched_comm_net"; }
   static const char* VisitAsyncedLaunchedCommNet() { return "asynced_launched_comm_net"; }
   static const char* VisitBarrier() { return "barrier"; }
   static const char* VisitCriticalSection() { return "critical_section"; }
   static const char* VisitLazyJobLauncher() { return "lazy_job_launcher"; }
-  static const char* VisitPinnedCompute() { return "pin_memory"; }
+  static const char* VisitPinnedCompute() { return "pinned_compute"; }
+  static const char* VisitTmpCompute() { return "tmp_compute"; }
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_STREAM_GET_STREAM_ROLE_NAME_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_STREAM_GET_STREAM_TYPE_NAME_H_
