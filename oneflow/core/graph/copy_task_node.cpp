@@ -91,7 +91,8 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   CHECK_EQ(in_regst->NumOfLbi(), 1);
   in_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
     (*conf.mutable_user_conf()->mutable_input())["in"].add_s(GenLogicalBlobName(lbi));
-    (*conf.mutable_user_conf()->mutable_output())["out"].add_s(conf.name() + "/out_0");
+    (*conf.mutable_user_conf()->mutable_output())["out"].add_s(
+        GenLogicalBlobName(conf.name(), GenRepeatedBn("out", 0)));
   });
   return conf;
 }
