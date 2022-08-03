@@ -122,7 +122,6 @@ def _test_convnd_grad_grad_impl(test_case, ndim, placement):
     )
 
 
-
 class TestGlobalConvHigherDerivative(flow.unittest.TestCase):
     @globaltest
     def test_conv1d_grad_grad(test_case):
