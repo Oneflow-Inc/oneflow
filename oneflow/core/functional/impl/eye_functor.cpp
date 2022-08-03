@@ -128,7 +128,7 @@ class GlobalEyeSbpFunctor {
 class EyeInplaceFunctor {
  public:
   EyeInplaceFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("eye").Input("x").Output("y").Build());
+    op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     JUST(CheckInplaceValid(x));
@@ -140,7 +140,7 @@ class EyeInplaceFunctor {
     JUST(attrs.SetAttr<DataType>("dtype", x->dtype()->data_type()));
     OpExprInterpContext ctx(attrs);
     ctx.device = JUST(x->device());
-    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), ctx));
+    JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
     return outputs->at(0);
   }
 
