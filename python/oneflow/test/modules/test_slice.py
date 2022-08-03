@@ -287,6 +287,7 @@ class TestSliceUpdate(flow.unittest.TestCase):
             # non-inplace update
             # NOTE: should test non-inplace first
             def slice_tuple_to_slice_list(slice_tup):
+                # NOTE: oneflow.slice_update don't support passing slice parameters.
                 slice_list = []
                 for i in range(len(slice_tup)):
                     slice_list.append(
