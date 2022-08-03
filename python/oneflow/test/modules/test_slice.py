@@ -246,17 +246,16 @@ class TestSliceUpdate(flow.unittest.TestCase):
         value_grad = np.array([1.0, 1.0, 1.0]).astype(np.float32)
         test_case.assertTrue(np.array_equal(-test_m.value_grad, value_grad))
 
-
     def test_random_nd_slice_update_in_non_contiguous_tensor(test_case):
         def get_random_slice_tuple(shape):
             slice_tup = []
             slice_size = []
             for i in range(len(shape)):
-                start = randint(0, shape[i]-1)
-                end = randint(start+1, shape[i])
-                step = randint(1, end-start+1)
+                start = randint(0, shape[i] - 1)
+                end = randint(start + 1, shape[i])
+                step = randint(1, end - start + 1)
                 slice_tup.append(slice(start, end, step))
-                slice_size.append((end-start+step-1)//step)
+                slice_size.append((end - start + step - 1) // step)
             return tuple(slice_tup), tuple(slice_size)
 
         def get_random_update_shape_and_perm(shape):
@@ -269,7 +268,9 @@ class TestSliceUpdate(flow.unittest.TestCase):
 
         def compare_result_between_oneflow_and_numpy(test_case, shape):
             # non-contiguous ref
-            ref = flow.rand(shape, dtype=flow.float32).permute(flow.randperm(len(shape)).tolist())
+            ref = flow.rand(shape, dtype=flow.float32).permute(
+                flow.randperm(len(shape)).tolist()
+            )
             ref_np = ref.numpy()
             shape = ref.shape
             # slice param
@@ -288,10 +289,14 @@ class TestSliceUpdate(flow.unittest.TestCase):
             def slice_tuple_to_slice_list(slice_tup):
                 slice_list = []
                 for i in range(len(slice_tup)):
-                    slice_list.append((slice_tup[i].start, slice_tup[i].stop, slice_tup[i].step))
+                    slice_list.append(
+                        (slice_tup[i].start, slice_tup[i].stop, slice_tup[i].step)
+                    )
                 return slice_list
 
-            of_res = flow.slice_update(ref, update, slice_tuple_to_slice_list(slice_tup))
+            of_res = flow.slice_update(
+                ref, update, slice_tuple_to_slice_list(slice_tup)
+            )
             test_case.assertTrue(np.array_equal(of_res.numpy(), ref_np))
             # inplace update
             ref[slice_tup] = update
