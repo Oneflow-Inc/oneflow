@@ -113,7 +113,7 @@ void SbpCollector::CollectUniverse(const NdSbpSignature& nd_sbp_sig) {
 }
 // Collect all the possible Sbp Parallel from a SbpNode
 void SbpCollector::CollectUniverse(const SbpNode* sbp_node) {
-  for (auto& nd_sbp_sig : sbp_node->sbp_sig_obj_list_) { CollectUniverse(nd_sbp_sig); }
+  for (auto& nd_sbp_sig : sbp_node->sbp_sig_list_) { CollectUniverse(nd_sbp_sig); }
 }
 // Collect all the possible Sbp Parallel from a SbpGraph
 void SbpCollector::CollectUniverse(const SbpGraph& sbp_graph) {
@@ -158,7 +158,7 @@ void SbpCollector::InitializeCopyCostFromNode2Proxy(const SbpNode* sbp_proxy,
        sbp_id_producer++) {
     // get sbp parallel for a logical blob in producer
     const auto producer_sbp_bn_in_op2sbp_parallel =
-        sbp_node_producer->sbp_sig_list_[sbp_id_producer]->bn_in_op2nd_sbp();
+        sbp_node_producer->sbp_sig_list_[sbp_id_producer].bn_in_op2nd_sbp();
     const NdSbp& sbp_producer = producer_sbp_bn_in_op2sbp_parallel.at(obn);
 
     // look through sbp parallel set in consumer
@@ -217,7 +217,7 @@ void SbpCollector::InitializeCopyCostFromProxy2Consumer(
       for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
         // get sbp parallel for a logical blob in consumer
         const auto consumer_sbp_bn_in_op2sbp_parallel =
-            sbp_node_consumer->sbp_sig_list_[sbp_id_consumer]->bn_in_op2nd_sbp();
+            sbp_node_consumer->sbp_sig_list_[sbp_id_consumer].bn_in_op2nd_sbp();
         const NdSbp& sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
 
         if ((!parallel_candidate.CheckExistence(nd_sbp_universe_.find(sbp_consumer)->second))) {
@@ -284,8 +284,7 @@ void SbpCollector::ProxySbpCandidate(const OpGraph& op_graph,
       nd_sbp_ids.Initialize(nd_sbp_universe_.size());
       // The union sbp set of all the consumers
       std::unordered_set<int32_t>& union_nd_sbp_ids = index2sbp_set[index];
-      // TODO: use sbp_sig_list_ instead of sbp_sig_obj_list_
-      for (auto& sbp_sig : consumer_sbp_node->sbp_sig_obj_list_) {
+      for (auto& sbp_sig : consumer_sbp_node->sbp_sig_list_) {
         const auto& map = sbp_sig.bn_in_op2nd_sbp();
         const auto& iter = map.find(ibn);
         CHECK(iter != map.end()) << "blob_name " << ibn << " not found in sbp signature";

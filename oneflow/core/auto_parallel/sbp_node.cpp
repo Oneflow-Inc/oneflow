@@ -144,11 +144,7 @@ SbpNode::~SbpNode() {
 }
 
 void SbpNode::InitializeSbp() {
-  global_sbp_sig_size_ = sbp_sig_obj_list_.size();
-  sbp_sig_list_.clear();
-  for (int32_t i = 0; i < sbp_sig_obj_list_.size(); i++) {
-    sbp_sig_list_.emplace_back(&(sbp_sig_obj_list_[i]));
-  }
+  global_sbp_sig_size_ = sbp_sig_list_.size();
   cost_.resize(sbp_sig_list_.size());
 };
 
@@ -678,8 +674,8 @@ SbpEdge* SbpNode::FindEdgeWithNode(const SbpNode* other_node) const {
 };
 
 // Decide to use this SbpSignature
-NdSbpSignature* SbpNode::FinalSbpSignature() const {
-  if (sbp_sig_list_.empty()) { return nullptr; }
+const NdSbpSignature& SbpNode::FinalSbpSignature() const {
+  CHECK(!sbp_sig_list_.empty()) << "Asking for sbp signature for an empty node";
   return sbp_sig_list_[final_sbp_sig_id_];
 };
 
