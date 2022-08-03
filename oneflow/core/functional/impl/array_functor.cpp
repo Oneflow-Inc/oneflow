@@ -209,7 +209,7 @@ class EmptyFunctor {
  public:
   EmptyFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build());
-    default_device_ = CHECK_JUST(Device::New("cpu", 0));
+    default_device_ = CHECK_JUST(Device::New("cpu"));
   }
   struct Empty {
     Maybe<AttrMap> operator()(const Shape& shape, const Symbol<DType>& dtype,

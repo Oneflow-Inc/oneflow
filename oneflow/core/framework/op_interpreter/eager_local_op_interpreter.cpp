@@ -49,7 +49,7 @@ namespace one {
 
 namespace {
 
-Maybe<Symbol<Device>> RawGetDefaultCpuDevice() { return Device::New("cpu", 0); }
+Maybe<Symbol<Device>> RawGetDefaultCpuDevice() { return Device::New("cpu"); }
 
 constexpr auto* GetDefaultCpuDevice = DECORATE(&RawGetDefaultCpuDevice, ThreadLocal);
 
