@@ -70,6 +70,12 @@ message FtrlModelUpdateConf {
   optional float beta = 5 [default = 0.0];
 }
 
+message AdadeltaModelUpdateConf {
+  required float rho = 1 [default = 0.9];
+  required float epsilon = 2 [default = 1e-6];
+  required bool maximize = 3 [default = false];
+}
+
 message ClipByGlobalNormConf {
   optional float max_norm = 1 [default = 1.0];
   optional double norm_type = 2 [default = 2.0];
@@ -110,6 +116,7 @@ message OptimizerConf {
     LambModelUpdateConf lamb_conf = 1006;
     AdagradModelUpdateConf adagrad_conf = 1007;
     FtrlModelUpdateConf ftrl_conf = 1008;
+    AdadeltaModelUpdateConf adadelta_conf = 1009; 
   }
 }
 
