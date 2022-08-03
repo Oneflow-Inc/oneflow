@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
-#include "oneflow/core/framework/stream_get_stream_role_name.h"
+#include "oneflow/core/framework/stream_get_stream_type_name.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/profiler/profiler.h"
@@ -27,7 +27,7 @@ namespace vm {
 
 std::string Instruction::DebugName() const {
   std::string instr_name = instruction_policy().DebugName(*this);
-  return instr_name + ":" + GetStreamRoleName::Visit(stream().stream_role());
+  return instr_name + ":" + GetStreamTypeName::Visit(stream().stream_type());
 }
 
 void Instruction::__Init__(Stream* stream,
