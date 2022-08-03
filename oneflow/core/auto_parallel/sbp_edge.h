@@ -54,6 +54,7 @@ class SbpEdge final {
   SbpEdge& operator=(SbpEdge&) = delete;
   SbpEdge(SbpEdge&&) = delete;
   SbpEdge& operator=(SbpEdge&&) = delete;
+  bool operator==(const SbpEdge& other) { return this == &other; }
 
   // Update copy cost for type 2 and 3
   void SummarizeCost();

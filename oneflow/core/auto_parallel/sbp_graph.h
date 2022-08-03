@@ -38,6 +38,7 @@ class SbpGraph final {
   SbpGraph& operator=(SbpGraph&) = delete;
   SbpGraph(SbpGraph&&) = delete;
   SbpGraph& operator=(SbpGraph&&) = delete;
+  bool operator==(const SbpGraph& other) { return this == &other; }
 
   // Randomly assign a SbpSignature strategy
   void RandomSbpSignature(bool use_sbp_collector) const;
