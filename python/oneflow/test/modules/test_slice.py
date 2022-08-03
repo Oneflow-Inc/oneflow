@@ -269,8 +269,10 @@ class TestSliceUpdate(flow.unittest.TestCase):
         def compare_result_between_oneflow_and_numpy(test_case, shape):
             device = random_device().value()
             # non-contiguous ref
-            ref = flow.rand(shape, dtype=flow.float32).permute(
-                flow.randperm(len(shape)).tolist()
+            ref = (
+                flow.rand(shape, dtype=flow.float32)
+                .to(device)
+                .permute(flow.randperm(len(shape)).tolist())
             )
             ref_np = ref.detach().clone().numpy()
             shape = ref.shape
