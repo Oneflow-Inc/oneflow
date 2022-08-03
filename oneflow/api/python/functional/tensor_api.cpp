@@ -228,6 +228,12 @@ class AssignLocalTensorFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+static std::vector<int64_t> get_shape_or_stride_from_numpy(size_t ndim, npy_intp* values) {
+  auto result = std::vector<int64_t>(ndim);
+  for (size_t i = 0; i < ndim; ++i) { result[i] = static_cast<int64_t>(values[i]); }
+  return result;
+}
+
 class LocalTensorSharedNumpyDataFunctor {
  public:
   LocalTensorSharedNumpyDataFunctor() {}
@@ -236,37 +242,45 @@ class LocalTensorSharedNumpyDataFunctor {
       return Error::TypeError() << "expected np.ndarray, but got " << Py_TYPE(obj)->tp_name;
     }
     auto* array = reinterpret_cast<PyArrayObject*>(obj);
-    // TODO(wyg): support non-contiguous array.
-    if (!PyArray_IS_C_CONTIGUOUS(array)) {
-      OF_LOG_ONCE(LOG(WARNING) << "OneFlow don't support non-contiguous array now, "
-                                  "and we will copy the array to a contiguous one.");
-      // PyArray_GETCONTIGUOUS will return a reference if array is already contiguous,
-      // otherwise return a (contiguous) copy of the array.
-      // Note: Increment the reference count for array occurs whether the array is continuous or not
-      array = PyArray_GETCONTIGUOUS(array);
-    } else {
-      Py_INCREF(obj);
+    const size_t ndim = PyArray_NDIM(array);
+    std::vector<int64_t> sizes = get_shape_or_stride_from_numpy(ndim, PyArray_DIMS(array));
+    std::vector<int64_t> strides = get_shape_or_stride_from_numpy(ndim, PyArray_STRIDES(array));
+    // NumPy strides use bytes. OneFlow strides use element counts.
+    // These checks are consistent with pytorch(v1.10.0):
+    // https://github.com/pytorch/pytorch/blob/v1.10.0/torch/csrc/utils/tensor_numpy.cpp#L171
+    const auto element_size_in_bytes = PyArray_ITEMSIZE(array);
+    for (auto& stride : strides) {
+      if (stride % element_size_in_bytes != 0) {
+        return Error::InvalidValueError()
+               << "given numpy array strides not a multiple of the element byte size. "
+               << "Copy the numpy array to reallocate the memory.";
+      }
+      stride /= element_size_in_bytes;
     }
+    for (size_t i = 0; i < ndim; ++i) {
+      if (strides[i] < 0) {
+        return Error::InvalidValueError()
+               << "At least one stride in the given numpy array is negative, "
+               << "and tensors with negative strides are not currently supported. "
+               << "(You can probably work around this by making a copy of your array "
+               << " with array.copy().) ";
+      }
+    }
+    void* data_ptr = PyArray_DATA(array);
+    if (!PyArray_EquivByteorders(PyArray_DESCR(array)->byteorder, NPY_NATIVE)) {
+      return Error::InvalidValueError()
+             << "given numpy array has byte order different from the native byte order. "
+             << "Conversion between byte orders is currently not supported.";
+    }
+    Py_INCREF(obj);
 
     // Build TensorMeta
-    int32_t dim = PyArray_NDIM(array);
-    const npy_intp* dims_ptr = PyArray_SHAPE(array);
-    const auto shape = std::make_shared<Shape>(DimVector(dims_ptr, dims_ptr + dim));
+    const auto shape = std::make_shared<Shape>(DimVector(sizes.begin(), sizes.end()));
+    const auto stride = std::make_shared<Stride>(strides.begin(), strides.end());
     DataType data_type = JUST(numpy::GetOFDataTypeFromNpArray(array));
     Symbol<Device> device = JUST(Device::New("cpu"));
-    const npy_intp* stride_ptr = PyArray_STRIDES(array);
-    // stride
-    auto strides = std::make_shared<Stride>(stride_ptr, stride_ptr + dim);
-    auto element_size_in_bytes = PyArray_ITEMSIZE(array);
-    // NumPy strides use bytes. OneFlow strides use element counts.
-    for (auto& stride_val : *strides) {
-      if (stride_val % element_size_in_bytes != 0) {
-        return Error::RuntimeError() << "given numpy array strides not a multiple of the element "
-                                        "byte size. Copy the numpy array to reallocate the memory.";
-      }
-      stride_val /= element_size_in_bytes;
-    }
-    auto tensor_meta = SymbolOf(LocalTensorMeta(shape, strides, data_type, device, 0));
+
+    auto tensor_meta = SymbolOf(LocalTensorMeta(shape, stride, data_type, device, 0));
 
     // Build TensorBuffer
     const auto& Free = [array](char* dptr) {
@@ -275,8 +289,8 @@ class LocalTensorSharedNumpyDataFunctor {
         return Maybe<void>::Ok();
       }));
     };
-    void* data_ptr = PyArray_DATA(array);
-    auto array_size_in_bytes = PyArray_NBYTES(array);
+
+    const auto array_size_in_bytes = PyArray_NBYTES(array);
     auto tensor_data = std::make_shared<vm::TensorStorage>();
     tensor_data->set_blob_dptr(
         std::unique_ptr<char, std::function<void(char*)>>(static_cast<char*>(data_ptr), Free),
