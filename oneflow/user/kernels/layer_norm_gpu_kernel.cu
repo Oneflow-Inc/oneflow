@@ -48,14 +48,14 @@ struct AffineStore {
           *(reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(gamma) + gamma_offset);
     } else {
 #pragma unroll
-      for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = 1; }
+      for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = static_cast<DST>(1.f); }
     }
     if (do_center) {
       beta_pack.storage =
           *(reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(beta) + gamma_offset);
     } else {
 #pragma unroll
-      for (int i = 0; i < N; ++i) { beta_pack.elem[i] = 0; }
+      for (int i = 0; i < N; ++i) { beta_pack.elem[i] = static_cast<DST>(0.f); }
     }
 #pragma unroll
     for (int i = 0; i < N; ++i) {
@@ -90,7 +90,7 @@ struct ScaleLoad {
           *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(gamma) + gamma_offset);
     } else {
 #pragma unroll
-      for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = static_cast<SRC>(1); }
+      for (int i = 0; i < N; ++i) { gamma_pack.elem[i] = static_cast<SRC>(1.f); }
     }
 #pragma unroll
     for (int i = 0; i < N; ++i) {

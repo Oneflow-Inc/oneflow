@@ -71,8 +71,7 @@ __global__ void FusedCastScaleGpu<half, float>(const int64_t n, const half scale
   }
 }
 
-#if CUDA_VERSION >= 11000
-
+#if CUDA_VERSION >= 11000 && __CUDA_ARCH__ >= 800
 template<>
 __global__ void FusedCastScaleGpu<float, nv_bfloat16>(const int64_t n, const float scale_val,
                                                       const nv_bfloat16* in,

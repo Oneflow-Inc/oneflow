@@ -59,9 +59,7 @@ struct GeluFunctor<nv_bfloat16> {
 template<typename T>
 struct MaskAndScaleFunctor {
   MaskAndScaleFunctor(const bool* mask, float scale) : mask(mask), scale(scale) {}
-  __device__ T Compute(T x, int64_t i) const {
-    return x * static_cast<T>(mask[i]) * static_cast<T>(scale);
-  }
+  __device__ T Compute(T x, int64_t i) const { return x * static_cast<T>(mask[i] * scale); }
   const bool* mask;
   float scale;
 };
@@ -90,7 +88,7 @@ struct MaskAndScaleAddFunctor {
   MaskAndScaleAddFunctor(const bool* mask, const T* addend, float scale)
       : mask(mask), addend(addend), scale(scale) {}
   __device__ T Compute(T x, int64_t i) const {
-    return x * static_cast<T>(mask[i]) * static_cast<T>(scale) + addend[i];
+    return x * static_cast<T>(mask[i] * scale) + addend[i];
   }
   const bool* mask;
   const T* addend;
