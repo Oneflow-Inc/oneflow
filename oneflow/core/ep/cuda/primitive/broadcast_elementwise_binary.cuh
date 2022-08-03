@@ -291,6 +291,8 @@ template<BinaryOp binary_op, typename Src, typename Dst>
 void DispatchLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const Src* src0,
                     size_t num_src1_dims, const int64_t* src1_dims, const Src* src1, Dst* dst,
                     Scalar attr0, Scalar attr1) {
+  CHECK_GT(num_src0_dims, 0) << "num_src0_dims must greater than 0";
+  CHECK_GT(num_src1_dims, 0) << "num_src1_dims must greater than 0";
   auto* cuda_stream = stream->As<CudaStream>();
   size_t simplified_num_dims = 0;
   int64_t simplified_src0_dims[kMaxNumDims];
