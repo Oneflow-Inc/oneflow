@@ -78,8 +78,14 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   OperatorConf conf;
   conf.set_name("copy_hd_" + NewUniqueId());
   conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(device_type())));
-  auto copy_type_name =
-      copy_type_ == CopyHdOpConf::Type::CopyHdOpConf_Type_D2H ? "copy_d2h" : "copy_h2d";
+  auto copy_type_name = "undefined";
+  if (copy_type_ == CopyHdOpConf::Type::CopyHdOpConf_Type_D2H) {
+    copy_type_name = "copy_d2h";
+  } else if (copy_type_ == CopyHdOpConf::Type::CopyHdOpConf_Type_H2D) {
+    copy_type_name = "copy_h2d";
+  } else {
+    LOG(FATAL) << "unknow copy type: " << copy_type_;
+  }
   *conf.mutable_user_conf()->mutable_op_type_name() = copy_type_name;
   auto in_regst = GetSoleConsumedRegst("copy_in");
   CHECK_EQ(in_regst->NumOfLbi(), 1);
