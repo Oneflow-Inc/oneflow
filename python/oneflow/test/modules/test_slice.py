@@ -19,11 +19,10 @@ from collections import OrderedDict
 
 import numpy as np
 from oneflow.test_utils.test_util import GenArgList
-from oneflow.test_utils.automated_test_util import util
 
 import oneflow as flow
 import oneflow.unittest
-import torch
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_slice(test_case, device):
@@ -52,13 +51,15 @@ def _test_slice_1_dim(test_case, device):
     x = flow.tensor(np_arr, device=flow.device(device))
     test_case.assertTrue(np.allclose(x[1].numpy(), np_arr[1], 1e-05, 1e-05))
     test_case.assertTrue(np.allclose(x[99].numpy(), np_arr[99], 1e-05, 1e-05))
-    test_case.assertTrue(np.allclose(x[0:2].numpy(), np_arr[0:2], 1e-05, 1e-05))
+    test_case.assertTrue(np.allclose(
+        x[0:2].numpy(), np_arr[0:2], 1e-05, 1e-05))
 
 
 def _test_slice_3_dim(test_case, device):
     np_arr = np.random.randn(2, 3, 4).astype(np.float32)
     x = flow.tensor(np_arr, device=flow.device(device))
-    test_case.assertTrue(np.allclose(x[:, 0].numpy(), np_arr[:, 0], 1e-05, 1e-05))
+    test_case.assertTrue(np.allclose(
+        x[:, 0].numpy(), np_arr[:, 0], 1e-05, 1e-05))
 
 
 def _test_slice_4_dim(test_case, device):
@@ -97,10 +98,14 @@ def _test_slice_with_int_index(test_case, device):
 def _test_slice_negative_index(test_case, device):
     np_arr = np.random.randn(4, 5, 6)
     x = flow.tensor(np_arr, dtype=flow.float32, device=flow.device(device))
-    test_case.assertTrue(np.allclose(x[-1].numpy(), np_arr[-1], 0.0001, 0.0001))
-    test_case.assertTrue(np.allclose(x[-2].numpy(), np_arr[-2], 0.0001, 0.0001))
-    test_case.assertTrue(np.allclose(x[-3].numpy(), np_arr[-3], 0.0001, 0.0001))
-    test_case.assertTrue(np.allclose(x[-4].numpy(), np_arr[-4], 0.0001, 0.0001))
+    test_case.assertTrue(np.allclose(
+        x[-1].numpy(), np_arr[-1], 0.0001, 0.0001))
+    test_case.assertTrue(np.allclose(
+        x[-2].numpy(), np_arr[-2], 0.0001, 0.0001))
+    test_case.assertTrue(np.allclose(
+        x[-3].numpy(), np_arr[-3], 0.0001, 0.0001))
+    test_case.assertTrue(np.allclose(
+        x[-4].numpy(), np_arr[-4], 0.0001, 0.0001))
 
 
 def _test_slice_ellipsis_type(test_case, device):
@@ -205,7 +210,8 @@ class TestSliceUpdate(flow.unittest.TestCase):
     def test_slice_update_grad_graph(test_case):
         x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
         input = flow.tensor(x, requires_grad=True)
-        update = flow.tensor(np.array([2, 3, 4]).astype(np.float32), requires_grad=True)
+        update = flow.tensor(np.array([2, 3, 4]).astype(
+            np.float32), requires_grad=True)
         output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
 
         class TestModule(flow.nn.Module):
@@ -217,7 +223,7 @@ class TestSliceUpdate(flow.unittest.TestCase):
             def forward(self, ref, value):
                 x = ref + self.ref_grad
                 y = value + self.value_grad
-                return flow._C.slice_update(x, y, [1,], [4,], [1,])
+                return flow._C.slice_update(x, y, [1, ], [4, ], [1, ])
 
         test_m = TestModule()
         of_sgd = flow.optim.SGD(test_m.parameters(), lr=1.0, momentum=0.0)
@@ -258,40 +264,94 @@ class TestSliceUpdate(flow.unittest.TestCase):
         output[0:1, 1:2, :, 1:2] = 3.1415
 
         test_case.assertTrue(np.array_equal(output.numpy(), np_out))
-    
-    
+
     def test_slice_update_with_2_dim_non_contiguous_tensor(test_case):
         dim_list = flow.randperm(2).tolist()
-        x_torch = torch.arange(2).to(torch.float32).view(1, 2).permute(dim_list)
-        y_torch = torch.ones(1)
-        x_torch[-1:, -1] = y_torch
-        x_flow = flow.arange(2).to(flow.float32).view(1, 2).permute(dim_list)
-        y_flow = flow.ones(1)
-        x_flow[-1:, -1] = y_flow
-        test_case.assertTrue((x_torch.numpy() == x_flow.numpy()).all())
+        x_np = np.arange(15).astype(np.float32).reshape(
+            3, 5).transpose(dim_list)
+        tup_list = []
+        for i in range(2):
+            dimsize = list(x_np.shape)[i]
+            start_dim = random(0, dimsize-1).to(int)
+            end_dim = random(start_dim+1, dimsize).to(int)
+            step = random(1, end_dim-start_dim+1).to(int)
+            each_list = [start_dim.value(), end_dim.value(), step.value()]
+            tup_list.append(each_list)
+
+        np_update = x_np[tup_list[0][0]:tup_list[0][1]:tup_list[0]
+                         [2], tup_list[1][0]:tup_list[1][1]:tup_list[1][2]]
+        np_update = np.ones(np_update.size).reshape(list(np_update.shape))
+        random_list = flow.randperm(len(list(np_update.shape))).tolist()
+        np_update.transpose(random_list)
+        x_np[tup_list[0][0]:tup_list[0][1]:tup_list[0][2],
+             tup_list[1][0]:tup_list[1][1]:tup_list[1][2]] = np_update
+
+        x_flow = flow.tensor(x_np)
+        flow_update = flow.slice(x_flow, tup_list)
+        flow_update = flow.ones(flow_update.numel()).reshape(
+            list(flow_update.shape))
+        flow_update.permute(random_list)
+        flow_result = flow.slice_update(x_flow, flow_update, tup_list)
+        test_case.assertTrue((x_np == flow_result.numpy()).all())
 
     def test_slice_update_with_3_dim_tensor_non_contiguous_tensor(test_case):
+        
         dim_list = flow.randperm(3).tolist()
-        x_torch = torch.arange(8).to(torch.float32).view(2, 2, 2).permute(dim_list)
-        y_torch = torch.ones(2).reshape(1,2).T
-        x_torch[:, :, 1:2] = y_torch
-        x_flow = flow.arange(8).to(flow.float32).view(2, 2, 2).permute(dim_list)
-        y_flow = flow.ones(2).reshape(1,2).T
-        x_flow[:, :, 1:2] = y_flow
-        test_case.assertTrue((x_torch.numpy() == x_flow.numpy()).all())
+        x_np = np.arange(64).astype(np.float32).reshape(2, 8, 4).transpose(dim_list)
+        tup_list = []
+        for i in range(3):
+            dimsize = list(x_np.shape)[i]
+            start_dim = random(0, dimsize-1).to(int)
+            end_dim = random(start_dim+1, dimsize).to(int)
+            step = random(1, end_dim-start_dim+1).to(int)
+            each_list = [start_dim.value(), end_dim.value(), step.value()]
+            tup_list.append(each_list)
+
+        np_update = x_np[tup_list[0][0]:tup_list[0][1]:tup_list[0][2], tup_list[1][0]:tup_list[1][1]:tup_list[1][2], tup_list[2][0]:tup_list[2][1]:tup_list[2][2]]
+        np_update = np.ones(np_update.size).reshape(list(np_update.shape))
+        random_list = flow.randperm(len(list(np_update.shape))).tolist()
+        np_update.transpose(random_list)
+        x_np[tup_list[0][0]:tup_list[0][1]:tup_list[0][2], tup_list[1][0]:tup_list[1]
+        [1]:tup_list[1][2], tup_list[2][0]:tup_list[2][1]:tup_list[2][2]] = np_update
+
+        x_flow=flow.tensor(x_np)
+        flow_update = flow.slice(x_flow, tup_list)
+        flow_update = flow.ones(flow_update.numel()).reshape(list(flow_update.shape))
+        flow_update.permute(random_list)
+        flow_result = flow.slice_update(x_flow, flow_update, tup_list)
+        test_case.assertTrue((x_np == flow_result.numpy()).all())
 
     def test_slice_update_with_4_dim_non_contiguous_tensor(test_case):
         dim_list = flow.randperm(4).tolist()
-        x_torch = torch.arange(81).to(torch.float32).view(3, 3, 3, 3).permute(dim_list)
-        y_torch = torch.ones(9).reshape(1,3,3).T
-        x_torch[:, :, :, 1:2] = y_torch
-        x_flow = flow.arange(81).to(flow.float32).view(3, 3, 3, 3).permute(dim_list)
-        y_flow = flow.ones(9).reshape(1,3,3).T
-        x_flow[:, :, :, 1:2] = y_flow
-        test_case.assertTrue((x_torch.numpy() == x_flow.numpy()).all())
-        
+        x_np = np.arange(64).astype(np.float32).reshape(2, 2, 4, 4).transpose(dim_list)
+        tup_list = []
+        for i in range(4):
+            dimsize = list(x_np.shape)[i]
+            start_dim = random(0, dimsize-1).to(int)
+            end_dim = random(start_dim+1, dimsize).to(int)
+            step = random(1, end_dim-start_dim+1).to(int)
+            each_list = [start_dim.value(), end_dim.value(), step.value()]
+            tup_list.append(each_list)
+
+        np_update = x_np[tup_list[0][0]:tup_list[0][1]:tup_list[0][2], tup_list[1][0]:tup_list[1][1]:tup_list[1]
+                 [2], tup_list[2][0]:tup_list[2][1]:tup_list[2][2], tup_list[3][0]:tup_list[3][1]:tup_list[3][2]]
+        np_update = np.ones(np_update.size).reshape(list(np_update.shape))
+        random_list = flow.randperm(len(list(np_update.shape))).tolist()
+        np_update.transpose(random_list)
+        x_np[tup_list[0][0]:tup_list[0][1]:tup_list[0][2], tup_list[1][0]:tup_list[1][1]:tup_list[1][2],
+        tup_list[2][0]:tup_list[2][1]:tup_list[2][2], tup_list[3][0]:tup_list[3][1]:tup_list[3][2]] = np_update
+
+        x_flow = flow.tensor(x_np)
+        flow_update = flow.slice(x_flow, tup_list)
+        flow_update = flow.ones(flow_update.numel()).reshape(list(flow_update.shape))
+        flow_update.permute(random_list)
+        flow_result = flow.slice_update(x_flow, flow_update, tup_list)
+        test_case.assertTrue((x_np == flow_result.numpy()).all())
+
+
     def test_slice_update_about_inplace(test_case):
-        np_tensor = flow.tensor([[0.0, 4.0], [2.0, 6.0], [2.0, 6.0], [3.0, 7.0]])
+        np_tensor = flow.tensor(
+            [[0.0, 4.0], [2.0, 6.0], [2.0, 6.0], [3.0, 7.0]])
         x_flow = flow.arange(8).to(flow.float32).view(2, 4).T
         x_flow[1:2, :2] = x_flow[2:3, :2]
         test_case.assertTrue(np.array_equal(np_tensor.numpy(), x_flow.numpy()))
