@@ -21,8 +21,8 @@ from .lr_scheduler import LRScheduler
 
 class MultiStepLR(LRScheduler):
     """
-    Decays the learning rate of each parameter group by gamma once the number of step 
-    reaches one of the milestones. Notice that such decay can happen simultaneously with 
+    Decays the learning rate of each parameter group by gamma once the number of step
+    reaches one of the milestones. Notice that such decay can happen simultaneously with
     other changes to the learning rate from outside this scheduler.When last_step=-1, sets initial lr as lr.
 
     Args:

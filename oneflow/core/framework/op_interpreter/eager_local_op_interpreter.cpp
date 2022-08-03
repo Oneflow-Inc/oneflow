@@ -48,7 +48,7 @@ namespace one {
 
 namespace {
 
-Maybe<Symbol<Device>> RawGetDefaultCpuDevice() { return Device::New("cpu", 0); }
+Maybe<Symbol<Device>> RawGetDefaultCpuDevice() { return Device::New("cpu"); }
 
 constexpr auto* GetDefaultCpuDevice = DECORATE(&RawGetDefaultCpuDevice, ThreadLocal);
 
@@ -90,25 +90,32 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   const auto& output_tensor_metas = result->output_tensor_metas();
   vm::EagerBlobObjectList output_eager_blob_objects(outputs->size());
 
+  const auto& kernel = JUST(user_op_expr.MutKernel4Stream(result->stream()));
+
   for (int i = 0; i < outputs->size(); i++) {
     if (!outputs->at(i)) {
       // NOTE: if op support stride(non-contiguous input), then output tensor's stride
       // should be inferred in InferLogicalTensorDesc.
       // otherwise, it will be set here(according to shape).
-      // Note: symbol.shared_from_symbol() cannot be used here because set_stride happens in the
-      // next step.
-      std::shared_ptr<EagerLocalTensorImpl> tensor_impl = std::make_shared<EagerLocalTensorImpl>(
-          std::make_shared<LocalTensorMeta>(*output_tensor_metas.at(i)), false, false);
-      if (!JUST(user_op_expr.SupportNonContiguous())) {
-        std::shared_ptr<Stride> stride(new Stride(*tensor_impl->shape()));
-        tensor_impl->mut_tensor_meta()->set_stride(stride);
+      std::shared_ptr<MutLocalTensorMeta> mut_tensor_meta;
+      {
+        if (kernel->output_is_mut2_type(i)) {
+          mut_tensor_meta = std::make_shared<MutLocalTensorMeta>(
+              std::make_shared<Shape>(output_tensor_metas.at(i)->shape()),
+              std::make_shared<Stride>(output_tensor_metas.at(i)->stride()),
+              output_tensor_metas.at(i)->dtype(), output_tensor_metas.at(i)->device(),
+              output_tensor_metas.at(i)->storage_offset());
+        }
       }
+      std::shared_ptr<EagerLocalTensorImpl> tensor_impl =
+          std::make_shared<EagerLocalTensorImpl>(false, false);
       const auto& dep_object = NewLocalDepObject();
-      JUST(tensor_impl->InitEagerBlobObject(dep_object));
+      JUST(
+          tensor_impl->InitEagerBlobObject(output_tensor_metas.at(i), mut_tensor_meta, dep_object));
       output_eager_blob_objects.at(i) = JUST(tensor_impl->eager_blob_object());
       (*outputs)[i] = std::make_shared<LocalTensor>(tensor_impl);
     } else {
-      auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
+      const auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
       // output i is inplaced.
       // check TensorMeta of infer result and TensorMeta of output i.
       CHECK_OR_RETURN(tensor_impl->tensor_meta()->shape()      // NOLINT
@@ -124,8 +131,6 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
   }
 
-  const auto& kernel = JUST(user_op_expr.MutKernel4Stream(result->stream()));
-
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->Call(kernel, std::move(input_eager_blob_objects),
                          std::move(output_eager_blob_objects), ctx, result->stream());
@@ -135,9 +140,21 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     auto btb = std::make_shared<BlockingThenBusy>(1);
     JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
       return builder->SyncAccessBlobByCallback(
-          tensor_impl, btb, [](uint64_t) {}, "const");
+          tensor_impl, btb, [](ep::Stream* stream, const std::shared_ptr<vm::EagerBlobObject>&) {},
+          "const");
     }));
     JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+    const auto& mut_tensor_meta = const_cast<EagerLocalTensorImpl*>(tensor_impl)->mut_tensor_meta();
+    Symbol<LocalTensorMeta> new_tensor_meta = SymbolOf(LocalTensorMeta(
+        std::make_shared<Shape>(mut_tensor_meta->shape()),
+        std::make_shared<Stride>(mut_tensor_meta->stride()), mut_tensor_meta->dtype(),
+        mut_tensor_meta->device(), mut_tensor_meta->storage_offset()));
+    std::shared_ptr<EagerLocalTensorImpl> final_tensor_impl =
+        std::make_shared<EagerLocalTensorImpl>(JUST(tensor_impl->tensor_storage()), false, false);
+    JUST(final_tensor_impl->InitEagerBlobObject(
+        new_tensor_meta,
+        JUST(JUST(outputs->at(index)->eager_blob_object())->compute_local_dep_object())));
+    JUST(JUST(outputs->at(index)->AsLocalTensor())->set_impl(final_tensor_impl));
   }
 
   return Maybe<void>::Ok();
@@ -164,10 +181,11 @@ static Maybe<void> BuildAndRunLocalCastInstruction(const BuiltinOpExpr& op_expr,
 
 namespace {
 
-Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root) {
+Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root,
+                                          size_t size) {
   return one::OpBuilder("eager_nccl_broadcast", *JUST(UniqueStr("eager_nccl_broadcast")))
-      .Input("in")
-      .Output("out")
+      .Input("in", size)
+      .Output("out", size)
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
       .Attr<int64_t>("root", root)
       .Build();
@@ -182,7 +200,7 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
   CHECK_OR_RETURN(parallel_desc->containing_current_rank());
   if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
   std::shared_ptr<UserOpExpr> op_expr =
-      JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank));
+      JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank, 1));
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<int64_t>("root", src_rank));
   if (src_rank == GlobalProcessCtx::Rank() || inplace) {
@@ -193,6 +211,26 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
   } else {
     return JUST(OpInterpUtil::Dispatch<one::Tensor>(
         *op_expr, {tensor}, one::OpExprInterpContext(attrs, parallel_desc)));
+  }
+}
+
+Maybe<TensorTuple> Broadcast(const TensorTuple& inputs, int64_t src_rank,
+                             Symbol<ParallelDesc> parallel_desc, bool inplace) {
+  CHECK_OR_RETURN(parallel_desc->containing_current_rank())
+      << "Current rank are not contained in the placement arguement";
+  if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return inputs; }
+  std::shared_ptr<UserOpExpr> op_expr =
+      JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank, inputs.size()));
+  MutableAttrMap attrs;
+  JUST(attrs.SetAttr<int64_t>("root", src_rank));
+  if (src_rank == GlobalProcessCtx::Rank() || inplace) {
+    auto outputs = std::make_shared<TensorTuple>(inputs);
+    JUST(OpInterpUtil::Dispatch(*op_expr, inputs, outputs.get(),
+                                one::OpExprInterpContext(attrs, parallel_desc)));
+    return outputs;
+  } else {
+    return JUST(OpInterpUtil::Dispatch<one::TensorTuple>(
+        *op_expr, inputs, one::OpExprInterpContext(attrs, parallel_desc)));
   }
 }
 

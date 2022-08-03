@@ -29,7 +29,6 @@ namespace oneflow {
 namespace vm {
 
 class EagerBlobObject;
-class PhyInstrOperand;
 
 class InstructionPolicy {
  public:
@@ -37,7 +36,7 @@ class InstructionPolicy {
 
   virtual const DependenceVector& input_dependences() const = 0;
   virtual const DependenceVector& output_dependences() const = 0;
-  virtual Dependence* stream_sequential_dependence() const = 0;
+  virtual Dependence* stream_sequential_dependence() const { return stream_sequential_dependence_; }
   virtual void ForEachInputEagerBlobObjects(void (*DoEach)(EagerBlobObject*)) const = 0;
 
   virtual bool IsBarrier() const { return false; }
@@ -59,14 +58,10 @@ class InstructionPolicy {
 
   void DeleteInstructionStatusIf(Instruction* instruction) { DeleteInstructionStatus(instruction); }
 
-  [[deprecated("\"PhyInstrOperand\" will be removed soon. Please avoid to use this method whenever "
-               "possible.")]] virtual const std::shared_ptr<PhyInstrOperand>&
-  phy_instr_operand() const {
-    UNIMPLEMENTED();
-  }
-
  protected:
-  InstructionPolicy() = default;
+  InstructionPolicy() : stream_sequential_dependence_(nullptr) {}
+
+  Dependence* stream_sequential_dependence_;
 
  private:
   // Usually for Allocating and deallocating tensors.

@@ -201,8 +201,19 @@ def tensor_setstate(self, pickle_dict):
         assert isinstance(save_load_path, Path)
         rel_dir_name = pickle_dict["path"]
         abs_dir_name = save_load_path / rel_dir_name
-        self.__init__(_LoadSingleVariable(str(abs_dir_name), global_src_dsk_rank))
+        tmp_tensor = _LoadSingleVariable(str(abs_dir_name), global_src_dsk_rank)
+        if map_location is not None:
+            if isinstance(map_location, flow.device):
+                tmp_tensor = tmp_tensor.to(map_location)
+            elif isinstance(map_location, flow.placement):
+                tmp_tensor = tmp_tensor.to_global(map_location)
+            else:
+                raise ValueError(
+                    f"Unsupported 'map_location' type {type(map_location)}."
+                )
+        self.__init__(tmp_tensor)
     else:
+        assert map_location is None
         if "placement" in pickle_dict:
             return self.__init__(
                 flow.tensor(
@@ -267,29 +278,38 @@ def legacy_load(
 
 
 @contextmanager
-def tensor_pickling_context(path: Path, global_src_dst_rank: Optional[int]):
+def tensor_pickling_context(path: Path, global_src_dst_rank: Optional[int], mp):
     global save_load_path
     global global_src_dsk_rank
+    global map_location
     global_src_dsk_rank = global_src_dst_rank
     save_load_path = path
+    map_location = mp
     try:
         yield
     finally:
         global_src_dsk_rank = None
         save_load_path = None
+        map_location = None
 
 
-def load(path: str, global_src_rank: Optional[int] = None,) -> Any:
+def load(
+    path: str,
+    global_src_rank: Optional[int] = None,
+    map_location: Optional[Union[str, flow.device, flow.placement]] = None,
+) -> Any:
     r"""Loads an object saved with oneflow.save() from a directory.
 
     Args:
         path (str): The directory containing the object
-        global_src_rank (int, optional): The source rank for 
-            loading global tensors. When specified, only the 
+        global_src_rank (int, optional): The source rank for
+            loading global tensors. When specified, only the
             process whose rank == global_src_rank will really
             read the files in `path`, and tensors in the loaded
-            object will be consistent with placement = 
+            object will be consistent with placement =
             `flow.placement('cuda', [global_src_rank])`
+        map_location (str, flow.device or flow.placement, optional):
+            indicates the location where all tensors should be loaded.
 
     Returns:
         The loaded object
@@ -316,7 +336,13 @@ def load(path: str, global_src_rank: Optional[int] = None,) -> Any:
     else:
         pickle_bytes = pickle_path.read_bytes()
 
-    with tensor_pickling_context(path, global_src_rank):
+    if map_location is not None:
+        if isinstance(map_location, str):
+            map_location: flow.device = flow.device(map_location)
+        assert isinstance(
+            map_location, (flow.device, flow.placement)
+        ), "'map_location' only supports str, device or placement."
+    with tensor_pickling_context(path, global_src_rank, map_location):
         res = pickle.loads(pickle_bytes)
     assert res["protocol_version"] == PROTOCOL_VERSION
     return res["data"]
@@ -325,20 +351,29 @@ def load(path: str, global_src_rank: Optional[int] = None,) -> Any:
 def save_one_embedding_info(state_dict: Any, path: Union[str, Path]) -> None:
     path: Path = Path(path)
 
-    for module_key in state_dict["module"].keys():
-        if (
-            "OneEmbeddingSnapshot" in module_key
-            or "OneEmbeddingKeyValueOptions" in module_key
-        ):
-            dir_name = path / f"{module_key}"
-            os.makedirs(dir_name, exist_ok=True)
-            data_path = ""
-            if "OneEmbeddingSnapshot" in module_key:
-                data_path = os.path.join(dir_name, "Snapshot")
-            else:
-                data_path = os.path.join(dir_name, "KeyValueOptions")
-            with open(data_path, "w") as f:
-                f.write(state_dict["module"][module_key])
+    _embedding_num = 0
+    dir_name = path / f"one_embedding"
+    os.makedirs(dir_name, exist_ok=True)
+
+    for module in state_dict.keys():
+        for module_key in state_dict[module].keys():
+            if "OneEmbeddingKeyValueOptions" in module_key:
+                module_key_prefix = module_key.rstrip("OneEmbeddingKeyValueOptions")
+                embedding_dir_name = dir_name / f"embedding_{_embedding_num}"
+                os.makedirs(embedding_dir_name, exist_ok=True)
+                with open(
+                    os.path.join(embedding_dir_name, "KeyValueOptions"), "w"
+                ) as f:
+                    f.write(
+                        state_dict["module"][
+                            module_key_prefix + "OneEmbeddingKeyValueOptions"
+                        ]
+                    )
+                with open(os.path.join(embedding_dir_name, "Snapshot"), "w") as f:
+                    f.write(
+                        state_dict["module"][module_key_prefix + "OneEmbeddingSnapshot"]
+                    )
+                _embedding_num += 1
 
 
 def save(
@@ -349,9 +384,9 @@ def save(
     Args:
         obj: The object to be saved
         path (str): The directory in which the object is saved
-        global_dst_rank (int, optional): The destination rank for 
+        global_dst_rank (int, optional): The destination rank for
             saving global tensors. When specified, whole tensors
-            will be saved by the process whose rank == 
+            will be saved by the process whose rank ==
             global_src_rank, while other processes will not do any
             disk I/O.
     """
@@ -364,7 +399,7 @@ def save(
 
         path.mkdir(exist_ok=True)
 
-        serialized_job = str(text_format.MessageToString(graph._forward_job_proto))
+        serialized_job = graph._forward_job_proto.SerializeToString()
         oneflow._oneflow_internal.nn.graph.SaveJobToIR(serialized_job, str(path))
 
         for x in graph._state():
@@ -373,7 +408,7 @@ def save(
         return
 
     obj = {"protocol_version": PROTOCOL_VERSION, "data": obj}
-    with tensor_pickling_context(path, global_dst_rank):
+    with tensor_pickling_context(path, global_dst_rank, None):
         pickled_bytes = pickle.dumps(obj)
 
     def write_to_path(path):
@@ -397,3 +432,4 @@ def save(
 
 save_load_path = None
 global_src_dsk_rank = None
+map_location = None

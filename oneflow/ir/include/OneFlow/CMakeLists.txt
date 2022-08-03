@@ -45,11 +45,19 @@ set(LLVM_TABLEGEN_FLAGS "${FULL_LLVM_TABLEGEN_FLAGS}")
 mlir_tablegen(OneFlow.gen_ops.h.inc -gen-op-decls)
 add_public_tablegen_target(MLIROneFlowOpGroupDeclsIncGen)
 
+set(LLVM_TARGET_DEFINITIONS SBP/SBPOps.td)
+mlir_tablegen(SBPDialect.h.inc -gen-dialect-decls)
+mlir_tablegen(SBPDialect.cpp.inc -gen-dialect-defs)
+mlir_tablegen(SBPAttributes.h.inc -gen-attrdef-decls)
+mlir_tablegen(SBPAttributes.cpp.inc -gen-attrdef-defs)
+add_public_tablegen_target(MLIRSBPIncGen)
+
 set(LLVM_TABLEGEN_FLAGS "")
 add_mlir_dialect(
   OneFlowOps
   oneflow
   DEPENDS
+  MLIRSBPIncGen
   MLIROneFlowEnumsIncGen
   MLIROneFlowPatternsIncGen
   MLIROneFlowPassIncGen

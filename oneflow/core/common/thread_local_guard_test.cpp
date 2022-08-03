@@ -21,39 +21,41 @@ namespace oneflow {
 namespace test {
 
 template<typename T>
-void AssertCurrentValue(const T& value) {
-  ThreadLocalGuard<T> guard(value);
-  ASSERT_TRUE(ThreadLocalGuard<T>::HasCurrentValue());
-  ASSERT_EQ(ThreadLocalGuard<T>::CurrentValue(), value);
-}
-
-template<typename T>
 void Assert(const T& value0, const T& value1) {
-  ASSERT_FALSE(ThreadLocalGuard<T>::HasCurrentValue());
+  ASSERT_FALSE(ThreadLocalGuard<T>::Current().has_value());
   {
     ThreadLocalGuard<T> guard(value0);
-    ASSERT_TRUE(ThreadLocalGuard<T>::HasCurrentValue());
+    ASSERT_TRUE(ThreadLocalGuard<T>::Current().has_value());
   }
   {
     ThreadLocalGuard<T> guard(value0);
-    ASSERT_TRUE(ThreadLocalGuard<T>::HasCurrentValue());
-    ASSERT_EQ(ThreadLocalGuard<T>::CurrentValue(), value0);
+    ASSERT_TRUE(ThreadLocalGuard<T>::Current().has_value());
+    T value = CHECK_JUST(ThreadLocalGuard<T>::Current());
+    ASSERT_EQ(value, value0);
   }
   {
     ThreadLocalGuard<T> guard(value1);
-    ASSERT_TRUE(ThreadLocalGuard<T>::HasCurrentValue());
-    ASSERT_EQ(ThreadLocalGuard<T>::CurrentValue(), value1);
+    ASSERT_TRUE(ThreadLocalGuard<T>::Current().has_value());
+    const auto& value = CHECK_JUST(ThreadLocalGuard<T>::Current());
+    ASSERT_EQ(value, value1);
   }
   {
     ThreadLocalGuard<T> guard(value0);
-    ASSERT_TRUE(ThreadLocalGuard<T>::HasCurrentValue());
-    ASSERT_EQ(ThreadLocalGuard<T>::CurrentValue(), value0);
+    ASSERT_TRUE(ThreadLocalGuard<T>::Current().has_value());
+    {
+      const auto& value = CHECK_JUST(ThreadLocalGuard<T>::Current());
+      ASSERT_EQ(value, value0);
+    }
     {
       ThreadLocalGuard<T> nested_guard(value1);
-      ASSERT_TRUE(ThreadLocalGuard<T>::HasCurrentValue());
-      ASSERT_EQ(ThreadLocalGuard<T>::CurrentValue(), value1);
+      ASSERT_TRUE(ThreadLocalGuard<T>::Current().has_value());
+      const auto& value = CHECK_JUST(ThreadLocalGuard<T>::Current());
+      ASSERT_EQ(value, value1);
     }
-    ASSERT_EQ(ThreadLocalGuard<T>::CurrentValue(), value0);
+    {
+      const auto& value = CHECK_JUST(ThreadLocalGuard<T>::Current());
+      ASSERT_EQ(value, value0);
+    }
   }
 }
 

@@ -146,11 +146,11 @@ class DeConvGpuKernel final : public user_op::OpKernel {
         const auto& in = ctx->InputTensorDesc("in", 0);                                 \
         if (in.shape().elem_cnt() == 0) return 0;                                       \
         const auto& weight = ctx->InputTensorDesc("weight", 0);                         \
-        const auto* out = ctx->OutputTensorDesc("out", 0);                              \
+        const auto& out = ctx->OutputTensorDesc("out", 0);                              \
         const auto& cudnn_conf =                                                        \
             Singleton<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();        \
         return InferTmpSizeWithCudnn<cudnnConvolutionBwdDataAlgoPerf_t>(                \
-            out, &weight, &in, *ctx, cudnn_conf.has_cudnn_conv_force_bwd_data_algo(),   \
+            &out, &weight, &in, *ctx, cudnn_conf.has_cudnn_conv_force_bwd_data_algo(),  \
             cudnn_conf.cudnn_conv_force_bwd_data_algo());                               \
       })
 

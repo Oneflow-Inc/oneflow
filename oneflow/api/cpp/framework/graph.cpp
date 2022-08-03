@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "nlohmann/json.hpp"
-#include "oneflow/api/common/ofblob.h"
 #include "oneflow/api/common/variable_tensor_mgr.h"
 #include "oneflow/api/cpp/env_impl.h"
 #include "oneflow/api/cpp/framework/device.h"
@@ -34,6 +33,7 @@ limitations under the License.
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/embedding/posix_file.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
@@ -54,6 +54,8 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/session.h"
+#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/operator/interface_blob_conf.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
@@ -62,6 +64,8 @@ limitations under the License.
 namespace oneflow_api {
 
 namespace of = oneflow;
+
+#ifdef __linux__
 
 namespace {
 
@@ -210,28 +214,52 @@ Graph Graph::Load(const std::string& model_path, const Device& device) {
 
 Graph Graph::LoadOneEmbedding(const std::string& model_path, const Device& device,
                               const std::string& persistent_table_path) {
-  const std::string kv_options_path =
-      model_path + "/embedding_layer.one_embedding.OneEmbeddingKeyValueOptions/KeyValueOptions";
-  const std::string snapshot_path =
-      model_path + "/embedding_layer.one_embedding.OneEmbeddingSnapshot/Snapshot";
-  CHECK((oneflow::embedding::PosixFile::FileExists(kv_options_path)
-         && oneflow::embedding::PosixFile::FileExists(snapshot_path)))
-      << "Not a valid one-embedding model.";
-  std::ifstream kv_options_file(kv_options_path);
-  auto kv_options_json = nlohmann::json::parse(kv_options_file);
-  if (persistent_table_path != "") {
-    kv_options_json["kv_store"]["persistent_table"]["path"] = persistent_table_path;
+  /*
+  OneEmbedding save format:
+  model_path
+    | one_embedding
+      | embedding_0
+        | KeyValueOption
+        | Snapshot
+      | embedding_1
+        | KeyValueOption
+        | Snapshot
+      | ...
+  */
+  const std::string one_embedding_dir_prefix("one_embedding");
+  const std::string one_embedding_save_path(
+      oneflow::JoinPath(model_path, one_embedding_dir_prefix));
+  DIR* dir = opendir(one_embedding_save_path.c_str());
+  const std::string embedding_dir_prefix("embedding");
+
+  struct dirent* ent = nullptr;
+  while ((ent = readdir(dir)) != NULL) {
+    const std::string embedding_dir_name = ent->d_name;  // embedding_0, embedding_1, ...
+    if (embedding_dir_name.find(embedding_dir_prefix) != 0) { continue; }
+
+    const std::string one_embedding_info_save_path(
+        oneflow::JoinPath(one_embedding_save_path, embedding_dir_name));
+    const std::string kv_options_path = one_embedding_info_save_path + "/KeyValueOptions";
+    const std::string snapshot_path = one_embedding_info_save_path + "/Snapshot";
+    CHECK((oneflow::embedding::PosixFile::FileExists(kv_options_path)
+           && oneflow::embedding::PosixFile::FileExists(snapshot_path)))
+        << "Not a valid one-embedding model.";
+    std::ifstream kv_options_file(kv_options_path);
+    auto kv_options_json = nlohmann::json::parse(kv_options_file);
+    if (persistent_table_path != "") {
+      kv_options_json["kv_store"]["persistent_table"]["path"] = persistent_table_path;
+    }
+    std::string embedding_name = embedding::CreateKeyValueStore(kv_options_json.dump());
+    const std::string snapshot = [&]() {
+      std::ifstream snapshot_file(snapshot_path);
+      CHECK(snapshot_file.is_open());
+      std::string snapshot;
+      snapshot_file >> snapshot;
+      snapshot_file.close();
+      return snapshot;
+    }();
+    embedding::LoadSnapshot(snapshot, embedding_name);
   }
-  std::string embedding_name = embedding::CreateKeyValueStore(kv_options_json.dump());
-  const std::string snapshot = [&]() {
-    std::ifstream snapshot_file(snapshot_path);
-    CHECK(snapshot_file.is_open());
-    std::string snapshot;
-    snapshot_file >> snapshot;
-    snapshot_file.close();
-    return snapshot;
-  }();
-  embedding::LoadSnapshot(snapshot, embedding_name);
   Graph graph(model_path, device);
   return graph;
 }
@@ -404,11 +432,12 @@ of::Maybe<void> Graph::GraphImpl::LoadCheckpoint() {
       ss << variable_file.rdbuf();
       return ss.str();
     }();
-    const auto& callback = [&](uint64_t of_blob_ptr) {
-      CHECK_JUST(of::BlobBufferCopyUtil<void>::From(
-          of_blob_ptr, buffer.data(),
-          variable_tensor->shape()->elem_cnt()
-              * of::GetSizeOfDataType(variable_tensor->dtype()->data_type())));
+    const auto& callback = [&](of::ep::Stream* stream,
+                               const std::shared_ptr<of::vm::EagerBlobObject>& eager_blob_object) {
+      of::AutoMemcpy(stream, eager_blob_object->mut_dptr(), buffer.data(),
+                     variable_tensor->shape()->elem_cnt()
+                         * of::GetSizeOfDataType(variable_tensor->dtype()->data_type()),
+                     eager_blob_object->mem_case(), of::memory::MakeHostMemCase());
     };
     JUST(of::one::SyncAccessTensorWithTimeOut(variable_tensor, callback, "mut"));
   }
@@ -446,5 +475,7 @@ of::Maybe<void> Graph::GraphImpl::RegisterTensors(const std::vector<Tensor>& inp
 }
 
 Graph::GraphImpl::~GraphImpl() { of::vm::ClusterSync().GetOrThrow(); }
+
+#endif  // __linux__
 
 }  // namespace oneflow_api

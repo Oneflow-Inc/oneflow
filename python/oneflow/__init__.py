@@ -20,6 +20,10 @@ import collections
 
 import oneflow._oneflow_internal
 
+oneflow_python_base_dir = os.path.dirname(os.path.realpath(__file__))
+oneflow._oneflow_internal.InitPythonPathsToBeKeptAndFilteredForDebugging(
+    oneflow_python_base_dir
+)
 oneflow._oneflow_internal.InitNumpyCAPI()
 oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 Size = oneflow._oneflow_internal.Size
@@ -104,6 +108,7 @@ from oneflow._C import cast
 from oneflow._C import diag
 from oneflow._C import log1p
 from oneflow._C import add
+from oneflow._C import addcdiv
 from oneflow._C import div, div_
 from oneflow._C import addcmul
 from oneflow._C import floor, floor_
@@ -176,6 +181,7 @@ from oneflow._C import permute
 from oneflow._C import select
 from oneflow._C import unbind
 from oneflow._C import tensor_split
+from oneflow._C import hann_window
 from oneflow._C import hsplit
 from oneflow._C import vsplit
 from oneflow._C import concat
@@ -205,6 +211,7 @@ from oneflow._C import searchsorted
 from oneflow._C import index_select
 from oneflow._C import isnan
 from oneflow._C import isinf
+from oneflow._C import isfinite
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
@@ -228,14 +235,6 @@ session_ctx.NewDefaultSession(__oneflow_global_unique_env)
 
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultGlobalTransportTokenScope()
-
-oneflow._oneflow_internal.EnableEagerEnvironment(True)
-from oneflow.framework import python_callback
-
-oneflow._oneflow_internal.RegisterGlobalForeignCallback(
-    python_callback.global_python_callback
-)
-del python_callback
 
 
 class ExitHook:
@@ -325,6 +324,7 @@ from oneflow.nn.modules.einsum import einsum_op as einsum
 from oneflow.nn.modules.is_tensor import is_tensor_op as is_tensor
 from oneflow.nn.modules.arange import arange_op as arange
 from oneflow.nn.modules.linspace import linspace_op as linspace
+from oneflow.nn.modules.logspace import logspace_op as logspace
 from oneflow.nn.modules.argsort import argsort_op as argsort
 from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.constant import ones_op as ones

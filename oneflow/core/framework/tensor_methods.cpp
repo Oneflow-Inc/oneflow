@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/common/wrap_dim_utils.h"
@@ -64,18 +63,19 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
                         const Stride& target_stride, int64_t storage_offset) {
   // TODO(): Check shape compatible.
   auto device = JUST(input->device());
-  auto tensor_meta = std::make_shared<LocalTensorMeta>(
-      std::make_shared<Shape>(target_shape), std::make_shared<Stride>(target_stride),
-      input->dtype()->data_type(), device, storage_offset);
+  auto tensor_meta = SymbolOf(LocalTensorMeta(std::make_shared<Shape>(target_shape),
+                                              std::make_shared<Stride>(target_stride),
+                                              input->dtype()->data_type(), device, storage_offset));
 
   CHECK_OR_RETURN(JUST(input->has_eager_blob_object()));
   // new output tensor
   const auto& blob_object = JUST(input->eager_blob_object());
   bool requires_grad = (autograd::GradMode::is_enabled() && input->requires_grad());
-  auto tensor_impl = std::make_shared<EagerLocalTensorImpl>(
-      tensor_meta, JUST(input->tensor_storage()), requires_grad,
-      /*is_leaf=*/!requires_grad);
-  JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object())));
+  auto tensor_impl =
+      std::make_shared<EagerLocalTensorImpl>(JUST(input->tensor_storage()), requires_grad,
+                                             /*is_leaf=*/!requires_grad);
+  JUST(
+      tensor_impl->InitEagerBlobObject(tensor_meta, JUST(blob_object->compute_local_dep_object())));
 
   auto view_tensor = std::make_shared<LocalTensor>(tensor_impl);
 
@@ -546,5 +546,16 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offse
 }
 
 }  // namespace view
+
+Maybe<void> Touch(std::shared_ptr<Tensor> input, Symbol<Stream> stream) {
+  auto eager_blob_objects = std::make_shared<vm::EagerBlobObjectList>();
+  if (input->is_global()) { input = JUST(input->cur_rank_phy_tensor()); }
+  if (input) { eager_blob_objects->push_back(JUST(input->eager_blob_object())); }
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    return builder->TouchTensors(eager_blob_objects, stream);
+  }));
+  return Maybe<void>::Ok();
+}
+
 }  // namespace one
 }  // namespace oneflow
