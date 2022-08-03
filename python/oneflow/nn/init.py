@@ -339,6 +339,7 @@ def zeros_(tensor):
     with flow.no_grad():
         return tensor.fill_(0)
 
+
 def eye_(tensor):
     r"""
     
@@ -361,6 +362,7 @@ def eye_(tensor):
     with flow.no_grad():
         tensor = flow._C.eye_(tensor)
         return tensor
+
 
 def _calculate_fan_in_and_fan_out(tensor):
     dimensions = tensor.ndimension()
