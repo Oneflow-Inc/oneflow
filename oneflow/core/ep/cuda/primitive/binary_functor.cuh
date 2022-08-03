@@ -29,20 +29,56 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, Src, Dst> {
 };
 
 template<>
-struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, bool, bool> {
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kFmod, float, float> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC bool operator()(bool src0, bool src1) const {
-    return static_cast<bool>(pow(static_cast<double>(src0), static_cast<double>(src1)));
+  OF_DEVICE_FUNC float operator()(float src0, float src1) const { return fmod(src0, src1); }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kFmod, double, double> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC double operator()(double src0, double src1) const { return fmod(src0, src1); }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kFloorDiv, float, float> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC float operator()(float src0, float src1) const { return floor(src0 / src1); }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kFloorDiv, double, double> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC double operator()(double src0, double src1) const { return floor(src0 / src1); }
+};
+
+template<>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kFloorMod, float, float> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC float operator()(float src0, float src1) const {
+    float trunc_mod = fmod(src0, src1);
+    return (trunc_mod != static_cast<float>(0))
+                   && ((src1 < static_cast<float>(0)) != (trunc_mod < static_cast<float>(0)))
+               ? trunc_mod + src1
+               : trunc_mod;
   }
 };
 
 template<>
-struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, half, half> {
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kFloorMod, double, double> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC half operator()(half src0, half src1) const {
-    return static_cast<half>(pow(static_cast<float>(src0), static_cast<float>(src1)));
+  OF_DEVICE_FUNC double operator()(double src0, double src1) const {
+    double trunc_mod = fmod(src0, src1);
+    return (trunc_mod != static_cast<double>(0))
+                   && ((src1 < static_cast<double>(0)) != (trunc_mod < static_cast<double>(0)))
+               ? trunc_mod + src1
+               : trunc_mod;
   }
 };
 
@@ -79,15 +115,6 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTanhBackwardWithDyX, Src, Dst
 
 #if CUDA_VERSION >= 11000
 
-template<>
-struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, nv_bfloat16, nv_bfloat16> {
-  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC nv_bfloat16 operator()(nv_bfloat16 src0, nv_bfloat16 src1) const {
-    return static_cast<nv_bfloat16>(pow(static_cast<float>(src0), static_cast<float>(src1)));
-  }
-};
-
 #define SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(op)                                     \
   template<>                                                                                  \
   struct BinaryFunctor<DeviceType::kCUDA, op, nv_bfloat16, nv_bfloat16> {                     \
@@ -99,6 +126,10 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, nv_bfloat16, nv_bfloat16
     }                                                                                         \
   };
 
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kPow);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kFmod);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kFloorDiv);
+SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kFloorMod);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kEluBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kCeluBackwardWithDyX);
 SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kGeluBackwardWithDyX);
@@ -129,6 +160,10 @@ SPECIALIZATION_PSEUDO_BFLOAT16_BINARY_FUNCTOR(BinaryOp::kThresholdBackwardWithDy
     }                                                                                         \
   };
 
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kPow);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kFmod);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kFloorDiv);
+SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kFloorMod);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kEluBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kCeluBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kGeluBackwardWithDyX);
@@ -142,6 +177,26 @@ SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSoftsignBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kSoftshrinkBackwardWithDyY);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kThresholdBackwardWithDyX);
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kTanhBackwardWithDyX);
+
+#define SPECIALIZATION_GPU_BINARY_FUNCTOR(op, type)                                          \
+  template<>                                                                                 \
+  struct BinaryFunctor<DeviceType::kCUDA, op, type, type> {                                  \
+    OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : int_functor(attr0, attr1) {}  \
+                                                                                             \
+    BinaryFunctor<DeviceType::kCUDA, op, int, int> int_functor;                              \
+    OF_DEVICE_FUNC type operator()(type src0, type src1) const {                             \
+      return static_cast<type>(int_functor(static_cast<int>(src0), static_cast<int>(src1))); \
+    }                                                                                        \
+  };
+
+SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kPow, bool);
+SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kFmod, bool);
+SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kFloorDiv, bool);
+SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kFloorMod, bool);
+SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kPow, char);
+SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kFmod, char);
+SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kFloorDiv, char);
+SPECIALIZATION_GPU_BINARY_FUNCTOR(BinaryOp::kFloorMod, char);
 
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive

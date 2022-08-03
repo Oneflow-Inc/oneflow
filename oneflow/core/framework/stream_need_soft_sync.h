@@ -18,20 +18,24 @@ limitations under the License.
 
 #include <glog/logging.h>
 #include "oneflow/core/common/device_type.h"
-#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/stream_type.h"
 
 namespace oneflow {
 
-struct NeedSoftSync : public StreamRoleVisitor<NeedSoftSync> {
+struct NeedSoftSync : public StreamTypeVisitor<NeedSoftSync> {
   static bool VisitCompute(DeviceType device_type) { return device_type != kCPU; }
   static bool VisitHost2Device(DeviceType) { return false; }
   static bool VisitDevice2Host(DeviceType) { return false; }
+  static bool VisitAsyncedDevice2Host(DeviceType device_type) {
+    return VisitDevice2Host(device_type);
+  }
   static bool VisitSyncedLaunchedCommNet(DeviceType device_type) { return false; }
   static bool VisitAsyncedLaunchedCommNet(DeviceType) { return false; }
   static bool VisitBarrier(DeviceType) { return false; }
   static bool VisitCriticalSection(DeviceType) { return false; }
   static bool VisitLazyJobLauncher(DeviceType) { return false; }
   static bool VisitPinnedCompute(DeviceType device_type) { return VisitCompute(device_type); }
+  static bool VisitTmpCompute(DeviceType device_type) { return false; }
 };
 
 }  // namespace oneflow

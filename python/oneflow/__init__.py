@@ -20,6 +20,10 @@ import collections
 
 import oneflow._oneflow_internal
 
+oneflow_python_base_dir = os.path.dirname(os.path.realpath(__file__))
+oneflow._oneflow_internal.InitPythonPathsToBeKeptAndFilteredForDebugging(
+    oneflow_python_base_dir
+)
 oneflow._oneflow_internal.InitNumpyCAPI()
 oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 Size = oneflow._oneflow_internal.Size
@@ -207,6 +211,7 @@ from oneflow._C import searchsorted
 from oneflow._C import index_select
 from oneflow._C import isnan
 from oneflow._C import isinf
+from oneflow._C import isfinite
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
@@ -230,14 +235,6 @@ session_ctx.NewDefaultSession(__oneflow_global_unique_env)
 
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultGlobalTransportTokenScope()
-
-oneflow._oneflow_internal.EnableEagerEnvironment(True)
-from oneflow.framework import python_callback
-
-oneflow._oneflow_internal.RegisterGlobalForeignCallback(
-    python_callback.global_python_callback
-)
-del python_callback
 
 
 class ExitHook:
