@@ -883,7 +883,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
                   return Maybe<void>::Ok();
                 });
-  struct DispatchEagerCclAllReduce {
+  struct DispatchGlobalEagerCclAllReduce {
     Maybe<AttrMap> operator()(const std::string& parallel_conf, bool async_launch) {
       MutableAttrMap attrs;
       JUST(attrs.SetAttr("parallel_conf", parallel_conf));
@@ -891,10 +891,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       return AttrMap(attrs);
     }
   };
-  m.add_functor("DispatchEagerCclAllReduce",
+  m.add_functor("DispatchGlobalEagerCclAllReduce",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const std::string& parallel_conf, bool async_launch) -> Maybe<Tensor> {
-                  constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(DispatchEagerCclAllReduce);
+                  constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(DispatchGlobalEagerCclAllReduce);
                   const auto& attrs = JUST(GetAttrs(parallel_conf, async_launch));
                   return OpInterpUtil::Dispatch<Tensor>(*op, {input}, *attrs);
                 });
