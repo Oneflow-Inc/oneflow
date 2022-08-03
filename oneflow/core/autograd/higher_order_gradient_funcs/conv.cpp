@@ -85,12 +85,17 @@ Maybe<void> ConvDataGradGrad::Apply(const ConvDataGradGradCaptureState* ctx,
   in_grads->resize(3);
   size_t num_spatial_dims = ctx->kernel_size.size();
 
-  // x_grad       = grad * w            (y.shape * w.shape -> x.shape)  call ConvDataGrad
-  // x_grad_grad  = grad * out_grads_w  (y.shape * w.shape -> x.shape)  call ConvDataGrad
-  // grad_grad_x  = out_grads_x * w     (x.shape * w.shape -> y.shape)  call ConvND
-  // w_grad       = x * grad            (x.shape * y.shape -> w.shape)  call ConvFilterGrad
-  // w_grad_grad  = out_grads_x * grad  (x.shape * y.shape -> w.shape)  call ConvFilterGrad
-  // grad_grad_w  = x * out_grads_w     (x.shape * w.shape -> y.shape)  call ConvND
+  // 一阶前向: ConvND
+  // x * w = y ( * => 卷积)
+  // 一阶反向:
+  // x_grad = y_grad * w.rot180           (y.shape * w.shape -> x.shape)  call ConvDataGrad
+  // w_grad = x * y_grad                  (x.shape * y.shape -> w.shape)  call ConvFilterGrad
+
+  // 二阶前向(一阶反向): ConvDataGrad
+  // y_grad * w.rot180 = x_grad
+  // 二阶反向:
+  // w_grad_grad = out_grads_x * y_grad   (x.shape * y.shape -> w.shape)  call ConvFilterGrad
+  // grad_for_y_grad = out_grads_x * w    (x.shape * w.shape -> y.shape)  call ConvND
 
   // w_grad_grad
   if (ctx->w_requires_grad) {
@@ -100,7 +105,7 @@ Maybe<void> ConvDataGradGrad::Apply(const ConvDataGradGradCaptureState* ctx,
         ctx->padding_before, ctx->dilation_rate, ctx->groups, ctx->data_format));
   }
 
-  // grad_grad_x
+  // grad_for_y_grad
   if (ctx->grad_requires_grad) {
     const auto& w = ctx->SavedTensors().at(ctx->w_index);
     const int32_t ndims = ctx->kernel_size.size();
@@ -179,12 +184,17 @@ Maybe<void> ConvFilterGradGrad::Apply(const ConvFilterGradGradCaptureState* ctx,
   in_grads->resize(2);
   size_t num_spatial_dims = ctx->kernel_size.size();
 
-  // x_grad       = grad * w            (y.shape * w.shape -> x.shape)  call ConvDataGrad
-  // x_grad_grad  = grad * out_grads_w  (y.shape * w.shape -> x.shape)  call ConvDataGrad
-  // grad_grad_x  = out_grads_x * w     (x.shape * w.shape -> y.shape)  call ConvND
-  // w_grad       = x * grad            (x.shape * y.shape -> w.shape)  call ConvFilterGrad
-  // w_grad_grad  = out_grads_x * grad  (x.shape * y.shape -> w.shape)  call ConvFilterGrad
-  // grad_grad_w  = x * out_grads_w     (x.shape * w.shape -> y.shape)  call ConvND
+  // 一阶前向: ConvND
+  // x * w = y ( * => 卷积)
+  // 一阶反向:
+  // x_grad = y_grad * w.rot180           (y.shape * w.shape -> x.shape)  call ConvDataGrad
+  // w_grad = x * y_grad                  (x.shape * y.shape -> w.shape)  call ConvFilterGrad
+
+  // 二阶前向(一阶反向): ConvFilterGrad
+  // x * y_grad = w_grad
+  // 二阶反向:
+  // x_grad_grad = out_grads_w * y_grad.rot180    (y.shape * w.shape -> x.shape)  call ConvDataGrad
+  // grad_for_y_grad = x * out_grads_w            (x.shape * w.shape -> y.shape)  call ConvND
 
   // x_grad_grad
   if (ctx->x_requires_grad) {
@@ -195,7 +205,7 @@ Maybe<void> ConvFilterGradGrad::Apply(const ConvFilterGradGradCaptureState* ctx,
         ctx->padding_before, ctx->dilation_rate, ctx->groups, ctx->data_format));
   }
 
-  // grad_grad_w
+  // grad_for_y_grad
   if (ctx->grad_requires_grad) {
     const auto& x = ctx->SavedTensors().at(ctx->x_index);
     const int32_t ndims = ctx->kernel_size.size();
