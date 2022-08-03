@@ -27,15 +27,15 @@ struct ConvDataGradGradCaptureState : public AutoGradCaptureState {
   bool w_requires_grad = false;
   bool grad_requires_grad = false;
 
-  size_t w_index;
-  size_t grad_index;
+  size_t w_index = 0;
+  size_t grad_index = 0;
 
   std::string data_format;
   std::vector<int32_t> padding_before;
   std::vector<int32_t> kernel_size;
   std::vector<int32_t> strides;
   std::vector<int32_t> dilation_rate;
-  int32_t groups;
+  int32_t groups = 0;
 };
 
 class ConvDataGradGrad : public OpExprGradFunction<ConvDataGradGradCaptureState> {
@@ -125,15 +125,15 @@ struct ConvFilterGradGradCaptureState : public AutoGradCaptureState {
   bool x_requires_grad = false;
   bool grad_requires_grad = false;
 
-  size_t x_index;
-  size_t grad_index;
+  size_t x_index = 0;
+  size_t grad_index = 0;
 
   std::string data_format;
   std::vector<int32_t> padding_before;
   std::vector<int32_t> kernel_size;
   std::vector<int32_t> strides;
   std::vector<int32_t> dilation_rate;
-  int32_t groups;
+  int32_t groups = 0;
 };
 
 class ConvFilterGradGrad : public OpExprGradFunction<ConvFilterGradGradCaptureState> {
