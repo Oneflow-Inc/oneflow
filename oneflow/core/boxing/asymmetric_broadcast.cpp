@@ -107,13 +107,6 @@ Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tenso
   if (out->placement()->Bigger(*in->placement())) {
     const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_placement));
     if (out_parallel_id->has_value()) {
-      const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_placement));
-      if (!in_parallel_id->has_value()) {
-        const std::string& device_type = in_placement->device_tag();
-        local_tensor =
-            JUST(one::functional::Empty(*tensor->shape(), tensor->dtype(),
-                                        JUST(Device::New(device_type)), /*pin_memory=*/false));
-      }
       const auto& broadcast_group = JUST(GetBroadcastGroup(in_placement, out_placement));
 
       Symbol<ParallelDesc> broadcast_placement_cur_rank =
