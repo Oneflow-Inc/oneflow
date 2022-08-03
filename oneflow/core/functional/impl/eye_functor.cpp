@@ -127,9 +127,7 @@ class GlobalEyeSbpFunctor {
 
 class EyeInplaceFunctor {
  public:
-  EyeInplaceFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build());
-  }
+  EyeInplaceFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     JUST(CheckInplaceValid(x));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
