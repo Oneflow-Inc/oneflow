@@ -859,4 +859,63 @@ template struct FtrlUpdateKernelUtil<DeviceType::kCUDA, float, float>;
 template struct FtrlUpdateKernelUtil<DeviceType::kCUDA, double, double>;
 template struct FtrlUpdateKernelUtil<DeviceType::kCUDA, float, float16>;
 
+template<typename T, typename G>
+__global__ void AdadeltaUpdateGpu(int64_t n, T scale, float l1, float l2, float rho, float epsilon,
+                                  bool maximize, float weight_decay, float learning_rate_val,
+                                  const float* learning_rate, const T* scale_by_ptr,
+                                  const int64_t* skip_if, const G* model_diff, T* model,
+                                  T* square_avgs, T* acc_deltas) {
+  if (skip_if != nullptr && *skip_if != 0) { return; }
+  if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
+  if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    AdadeltaUpdateFunctor<T, G>()(model_diff + i, model + i, square_avgs + i, acc_deltas + i, scale,
+                                  l1, l2, rho, epsilon, maximize, weight_decay, learning_rate_val);
+  }
+}
+
+template<typename T, typename G>
+struct AdadeltaUpdateKernelUtil<DeviceType::kCUDA, T, G> {
+  static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float rho,
+                     float epsilon, bool maximize, float weight_decay, float learning_rate_val,
+                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
+                     const G* model_diff, T* model, T* square_avgs, T* acc_deltas);
+};
+
+template<typename T, typename G>
+void AdadeltaUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
+    ep::Stream* stream, int64_t n, T scale, float l1, float l2, float rho, float epsilon,
+    bool maximize, float weight_decay, float learning_rate_val, const float* learning_rate,
+    const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model, T* square_avgs,
+    T* acc_deltas) {
+  AdadeltaUpdateGpu<T, G><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                            stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      n, scale, l1, l2, rho, epsilon, maximize, weight_decay, learning_rate_val, learning_rate,
+      scale_by_ptr, skip_if, model_diff, model, square_avgs, acc_deltas);
+}
+
+template<typename T>
+struct AdadeltaUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
+  static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float rho,
+                     float epsilon, bool maximize, float weight_decay, float learning_rate_val,
+                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
+                     const float16* model_diff, T* model, T* square_avgs, T* acc_deltas);
+};
+
+template<typename T>
+void AdadeltaUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
+    ep::Stream* stream, int64_t n, T scale, float l1, float l2, float rho, float epsilon,
+    bool maximize, float weight_decay, float learning_rate_val, const float* learning_rate,
+    const T* scale_by_ptr, const int64_t* skip_if, const float16* model_diff, T* model,
+    T* square_avgs, T* acc_deltas) {
+  AdadeltaUpdateKernelUtil<DeviceType::kCUDA, T, half>::Update(
+      stream, n, scale, l1, l2, rho, epsilon, maximize, weight_decay, learning_rate_val,
+      learning_rate, scale_by_ptr, skip_if, reinterpret_cast<const half*>(model_diff), model,
+      square_avgs, acc_deltas);
+}
+
+template struct AdadeltaUpdateKernelUtil<DeviceType::kCUDA, float, float>;
+template struct AdadeltaUpdateKernelUtil<DeviceType::kCUDA, double, double>;
+template struct AdadeltaUpdateKernelUtil<DeviceType::kCUDA, float, float16>;
+
 }  // namespace oneflow

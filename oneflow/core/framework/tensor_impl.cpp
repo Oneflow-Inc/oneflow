@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include <type_traits>
 #include "oneflow/core/common/blocking_then_busy.h"
-#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/stream_type.h"
 #include "oneflow/core/common/tensor_meta.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -125,7 +125,7 @@ Maybe<void> EagerLocalTensorImpl::InitEagerBlobObject(
 
 Maybe<bool> EagerLocalTensorImpl::is_pinned() const {
   if (!eager_blob_object_) { return false; }
-  return IsStreamAllocatorPinned::Visit(JUST(eager_blob_object_->producer_stream())->stream_role());
+  return IsStreamAllocatorPinned::Visit(JUST(eager_blob_object_->producer_stream())->stream_type());
 }
 
 Maybe<void> EagerLocalTensorImpl::set_eager_blob_object(
