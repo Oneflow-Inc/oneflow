@@ -44,7 +44,8 @@ class TensorNameScope {
 
   std::string default_tensor_name_;
   // uint64_t(Tensor*) -> the name of the tensor.
-  std::unordered_map<uint64_t, std::string> tensor_names_;
+  std::unordered_map<uint64_t, std::string> lazy_tensor_names_;
+  std::unordered_map<uint64_t, std::string> eager_tensor_names_;
 };
 
 }  // namespace one
