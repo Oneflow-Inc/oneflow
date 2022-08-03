@@ -95,7 +95,7 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
       }
       entire_target_stride *= entire_params.size[i];
       sliced_target_stride *= sliced_params.size[i];
-      if (entire_params.step[i] == 1) { cnt *= entire_params.size[i]; }
+      if (sliced_params.step[i] == 1) { cnt *= sliced_params.size[i]; }
       if (!entire_params.IsFullSlice(i) || !sliced_params.IsFullSlice(i)) { break; }
     }
     for (int i = 0; i < elem_cnt; i += cnt) {

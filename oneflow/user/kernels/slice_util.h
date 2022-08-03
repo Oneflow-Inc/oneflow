@@ -63,11 +63,11 @@ struct SliceParams {
     return true;
   }
 
-  std::string ToString() {
+  std::string ToString() const {
     std::stringstream ss("SliceParams:");
     for (int i = 0; i < ndim; ++i) {
       ss << "\n\tdim: " << i << ", start: " << start[i] << ", step: " << step[i]
-         << ", size: " << size[i] << ", dims: " << dims[i];
+         << ", stride: " << stride[i] << ", size: " << size[i] << ", dims: " << dims[i];
     }
     return ss.str();
   }

@@ -278,7 +278,9 @@ class TestSliceUpdate(flow.unittest.TestCase):
             slice_tup, slice_size = get_random_slice_tuple(shape)
             # non-contiguous update
             no_perm_shape, perm = get_random_update_shape_and_perm(slice_size)
-            update = flow.rand(no_perm_shape, dtype=flow.float32).to(device).permute(perm)
+            update = (
+                flow.rand(no_perm_shape, dtype=flow.float32).to(device).permute(perm)
+            )
             update_np = update.detach().clone().numpy()
 
             ref_np[slice_tup] = update_np
