@@ -19,6 +19,8 @@ import warnings
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 from pathlib import Path
 import pickle
+import json
+from collections import OrderedDict
 
 import numpy as np
 from google.protobuf import text_format
@@ -351,29 +353,32 @@ def load(
 def save_one_embedding_info(state_dict: Any, path: Union[str, Path]) -> None:
     path: Path = Path(path)
 
-    _embedding_num = 0
-    dir_name = path / f"one_embedding"
-    os.makedirs(dir_name, exist_ok=True)
+    _embedding_info_dict = {"embedding": []}
+    os.makedirs(path, exist_ok=True)
 
     for module in state_dict.keys():
+        if not isinstance(state_dict[module], collections.OrderedDict):
+            continue
         for module_key in state_dict[module].keys():
+            _info_dict = {}
             if "OneEmbeddingKeyValueOptions" in module_key:
                 module_key_prefix = module_key.rstrip("OneEmbeddingKeyValueOptions")
-                embedding_dir_name = dir_name / f"embedding_{_embedding_num}"
-                os.makedirs(embedding_dir_name, exist_ok=True)
-                with open(
-                    os.path.join(embedding_dir_name, "KeyValueOptions"), "w"
-                ) as f:
-                    f.write(
-                        state_dict["module"][
-                            module_key_prefix + "OneEmbeddingKeyValueOptions"
-                        ]
-                    )
-                with open(os.path.join(embedding_dir_name, "Snapshot"), "w") as f:
-                    f.write(
-                        state_dict["module"][module_key_prefix + "OneEmbeddingSnapshot"]
-                    )
-                _embedding_num += 1
+
+                _embedding_info_dict["embedding"].append(
+                    {
+                        "snapshot": state_dict["module"][
+                            module_key_prefix + "OneEmbeddingSnapshot"
+                        ],
+                        "kv_options": json.loads(
+                            state_dict["module"][
+                                module_key_prefix + "OneEmbeddingKeyValueOptions"
+                            ]
+                        ),
+                    }
+                )
+
+    with open(os.path.join(path, "OneEmbeddingInfo"), "w") as f:
+        f.write(json.dumps(_embedding_info_dict, indent=4))
 
 
 def save(
@@ -404,6 +409,8 @@ def save(
 
         for x in graph._state():
             _save_tensor_to_disk(x.origin, path / f"{x.name_prefix}{x.name}")
+
+        save_one_embedding_info(obj.state_dict(), path)
 
         return
 
