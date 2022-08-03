@@ -970,7 +970,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("InsertPinnedIdentityOpPass"));
     // prune the dangling constant which are the 0 gradients initialized by
     // the autograd engine for those tensors that have no gradients
-    JUST(DoPass("PruneDanglingConstantPass"));
+    JUST(DoPass("EliminateDeadNodesPass"));
     JUST(DoPass("NormalizationExponentialAverageAutoTickPass"));
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
