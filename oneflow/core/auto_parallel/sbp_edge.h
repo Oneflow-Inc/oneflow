@@ -53,6 +53,11 @@ class SbpEdge final {
     for (auto& this_edge : edge_list_) { delete this_edge; }
   }
 
+  SbpEdge(const SbpEdge&) = delete;
+  SbpEdge& operator=(SbpEdge&) = delete;
+  SbpEdge(SbpEdge&&) = delete;
+  SbpEdge& operator=(SbpEdge&&) = delete;
+
   // Update copy cost for type 2 and 3
   void SummarizeCost();
   // Duplicate Cost. Designed for merging two nodes.

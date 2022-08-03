@@ -34,6 +34,11 @@ class SbpGraph final {
   // Deconstructor
   ~SbpGraph();
 
+  SbpGraph(const SbpGraph&) = delete;
+  SbpGraph& operator=(SbpGraph&) = delete;
+  SbpGraph(SbpGraph&&) = delete;
+  SbpGraph& operator=(SbpGraph&&) = delete;
+
   // Randomly assign a SbpSignature strategy
   void RandomSbpSignature(bool use_sbp_collector) const;
   // assign 0 to a SbpSignature strategy to avoid randomness

@@ -42,6 +42,11 @@ class SbpNode final {
 
   ~SbpNode();
 
+  SbpNode(const SbpNode&) = delete;
+  SbpNode& operator=(SbpNode&) = delete;
+  SbpNode(SbpNode&&) = delete;
+  SbpNode& operator=(SbpNode&&) = delete;
+
   // another node point to this node
   void PointFrom(SbpNode* start_node);
   // this node point to another node
