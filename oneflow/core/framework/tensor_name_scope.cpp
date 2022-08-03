@@ -26,9 +26,13 @@ namespace one {
 
 const std::string& TensorNameScope::Lookup(const Tensor* tensor) const {
   uint64_t key = reinterpret_cast<uint64_t>(tensor);
+  const auto* tensor_names = [&]() {
+    if (tensor->is_lazy()) { return &lazy_tensor_names_; }
+    return &eager_tensor_names_;
+  }();
   std::lock_guard<std::mutex> lock(mutex_);
-  const auto& it = tensor_names_.find(key);
-  if (it != tensor_names_.end()) {
+  const auto& it = tensor_names->find(key);
+  if (it != tensor_names->end()) {
     return it->second;
   } else {
     return default_tensor_name_;
@@ -40,10 +44,14 @@ const std::string& TensorNameScope::Lookup(const std::shared_ptr<Tensor>& tensor
 }
 
 void TensorNameScope::Record(const Tensor* tensor, const std::string& name) {
-  std::lock_guard<std::mutex> lock(mutex_);
   uint64_t key = reinterpret_cast<uint64_t>(tensor);
+  auto* tensor_names = [&]() {
+    if (tensor->is_lazy()) { return &lazy_tensor_names_; }
+    return &eager_tensor_names_;
+  }();
+  std::lock_guard<std::mutex> lock(mutex_);
   // We assume that the name of the tensor will be update more than once.
-  tensor_names_[key] = name;
+  (*tensor_names)[key] = name;
 }
 
 void TensorNameScope::Record(const std::shared_ptr<Tensor>& tensor, const std::string& name) {
@@ -52,7 +60,8 @@ void TensorNameScope::Record(const std::shared_ptr<Tensor>& tensor, const std::s
 
 void TensorNameScope::Clear() {
   std::lock_guard<std::mutex> lock(mutex_);
-  tensor_names_.clear();
+  lazy_tensor_names_.clear();
+  eager_tensor_names_.clear();
 }
 
 }  // namespace one

@@ -152,6 +152,11 @@
   signature: "Void (OpExpr op, TensorTuple inputs, Float learning_rate=0, Double scale=1.0, Float l1=0, Float l2=0, Float lr_power, Float lambda1, Float lambda2, Float beta, Float weight_decay=0) => DispatchFtrlUpdate"
   bind_python: True
 
+- name: "dispatch_adadelta_update"
+  signature: "Void (OpExpr op, TensorTuple inputs, Float learning_rate=0, Double scale=1.0, Float l1=0, Float l2=0, Float rho, Float epsilon, Bool maximize, Float weight_decay=0) => DispatchAdadeltaUpdate"
+  bind_python: True
+
+
 - name: "dispatch_eager_ccl_all_reduce"
   signature: "Tensor (OpExpr op, Tensor input, String parallel_conf, Bool async_launch=False) => DispatchEagerCclAllReduce"
   bind_python: True
