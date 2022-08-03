@@ -87,7 +87,6 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
     (*conf.mutable_user_conf()->mutable_input())["in"].add_s(GenLogicalBlobName(lbi));
     (*conf.mutable_user_conf()->mutable_output())["out"].add_s(conf.name() + "/out_0");
   });
-  LOG(ERROR) << conf.DebugString();
   return conf;
 }
 
