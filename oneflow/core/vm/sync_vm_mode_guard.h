@@ -13,17 +13,30 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/stream_policy.h"
-#include "oneflow/core/framework/stream_on_independent_thread.h"
-#include "oneflow/core/common/env_var/vm.h"
+#ifndef ONEFLOW_CORE_VM_SYNC_VM_MODE_GUARD_H_
+#define ONEFLOW_CORE_VM_SYNC_VM_MODE_GUARD_H_
+
+#include "oneflow/core/common/thread_local_guard.h"
 
 namespace oneflow {
-namespace vm {
 
-bool StreamPolicy::OnSchedulerThread(StreamType stream_type) const {
-  if (StreamOnIndependentThread::Visit(stream_type)) { return false; }
-  return ThreadLocalEnvBool<ONEFLOW_VM_WORKLOAD_ON_SCHEDULER_THREAD>();
-}
+enum class SyncVmMode {
+  kInvalid = 0,
+  kEnable = 1,
+  kDisable = 2,
+};
 
-}  // namespace vm
+class SyncVmModeGuard final : public ThreadLocalGuard<SyncVmMode> {
+ public:
+  using ThreadLocalGuard<SyncVmMode>::ThreadLocalGuard;
+  ~SyncVmModeGuard() = default;
+
+  static bool IsCurrentSyncVmMode() {
+    const auto& opt_sync_mode = Current();
+    return opt_sync_mode.has_value() && CHECK_JUST(opt_sync_mode) == SyncVmMode::kEnable;
+  }
+};
+
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_VM_SYNC_VM_MODE_GUARD_H_
