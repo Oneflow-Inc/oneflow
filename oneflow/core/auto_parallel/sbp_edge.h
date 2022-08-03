@@ -48,10 +48,7 @@ class SbpEdge final {
           SbpEdge* second_edge);
 
   // Deconstructor
-  ~SbpEdge() {
-    if (mid_node_ != nullptr) { delete mid_node_; }
-    for (auto& this_edge : edge_list_) { delete this_edge; }
-  }
+  ~SbpEdge();
 
   SbpEdge(const SbpEdge&) = delete;
   SbpEdge& operator=(SbpEdge&) = delete;

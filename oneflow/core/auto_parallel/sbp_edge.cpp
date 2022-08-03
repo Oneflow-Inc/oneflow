@@ -39,6 +39,12 @@ SbpEdge::SbpEdge(SbpNode* start_node, SbpNode* mid_node, SbpNode* end_node, SbpE
   edge_list_.emplace_back(second_edge);
 };
 
+// Deconstructor
+SbpEdge::~SbpEdge() {
+  if (mid_node_ != nullptr) { delete mid_node_; }
+  for (auto& this_edge : edge_list_) { delete this_edge; }
+}
+
 void SbpEdge::SummarizeCost() {
   if (mid_node_) {
     cost_.resize(start_node_->cost_.size());
