@@ -279,6 +279,9 @@ class TestSliceUpdate(flow.unittest.TestCase):
             update = flow.rand(no_perm_shape, dtype=flow.float32).permute(perm)
             update_np = update.numpy()
 
+            device = random_device().value()
+            ref = ref.to(device)
+            update = update.to(device)
             ref_np[slice_tup] = update_np
             # non-inplace update
             # NOTE: should test non-inplace first
