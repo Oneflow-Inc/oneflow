@@ -79,10 +79,10 @@ void LaunchSliceForward(ep::Stream* stream, const SliceParams& entire_params,
   int64_t elem_cnt = entire_params.elem_cnt();
   if (elem_cnt == 0) { return; }
   SliceIndexHelper<NDIM> entire_splitted_large_idx_cvtr =
-      NdIndexStrideOffsetHelper<int64_t, NDIM>(entire_params.dims);
+      NdIndexStrideOffsetHelper<int64_t, NDIM>(entire_params.stride);
   SliceIndexHelper<NDIM> sliced_splitted_large_idx_cvtr(entire_params.size);
   SliceIndexHelper<NDIM> entire_full_small_idx_cvtr =
-      NdIndexStrideOffsetHelper<int64_t, NDIM>(sliced_params.dims);
+      NdIndexStrideOffsetHelper<int64_t, NDIM>(sliced_params.stride);
   SliceIndexHelper<NDIM> sliced_full_small_idx_cvtr(sliced_params.size);
   SliceForwardGpu<T, NDIM><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                              stream->As<ep::CudaStream>()->cuda_stream()>>>(
