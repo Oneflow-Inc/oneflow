@@ -78,7 +78,9 @@ Maybe<void> FuseCastScalePass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     }
     const user_op::UserOpConfWrapper cast_user_conf(op_node->op().op_conf());
     if (op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cast_user_conf.input("in", 0))).data_type()
-        != DataType::kFloat16) {
+            != DataType::kFloat16
+        && op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cast_user_conf.input("in", 0))).data_type()
+               != DataType::kBFloat16) {
       return;
     }
     if (op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cast_user_conf.output("out", 0))).data_type()
