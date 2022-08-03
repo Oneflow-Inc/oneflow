@@ -90,7 +90,7 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorMod, float, float> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC float operator()(float src0, float src1) const {
-    float trunc_mod = fmod(src0, src1);
+    float trunc_mod = std::fmod(src0, src1);
     return (trunc_mod != static_cast<float>(0))
                    && ((src1 < static_cast<float>(0)) != (trunc_mod < static_cast<float>(0)))
                ? trunc_mod + src1
@@ -103,7 +103,7 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kFloorMod, double, double> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC double operator()(double src0, double src1) const {
-    double trunc_mod = fmod(src0, src1);
+    double trunc_mod = std::fmod(src0, src1);
     return (trunc_mod != static_cast<double>(0))
                    && ((src1 < static_cast<double>(0)) != (trunc_mod < static_cast<double>(0)))
                ? trunc_mod + src1
@@ -127,7 +127,8 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kScalarBasePowerGrad, float16, 
 
   OF_DEVICE_FUNC float16 operator()(float16 src0, float16 src1) const {
     return static_cast<float16>(
-        scalar_operand * (pow(static_cast<float>(src0), scalar_operand - static_cast<float>(1)))
+        scalar_operand
+        * (std::pow(static_cast<float>(src0), scalar_operand - static_cast<float>(1)))
         * static_cast<float>(src1));
   }
   float scalar_operand;
