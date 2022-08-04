@@ -46,7 +46,8 @@ class CopyKernel final : public user_op::OpKernel {
         UNIMPLEMENTED();
       }
       std::unique_ptr<ep::primitive::Memcpy> primitive =
-          ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(ctx->stream()->device_type(), kind);
+          ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(ctx->stream()->device_type(),
+                                                                    kind);
       primitive->Launch(ctx->stream(), out->mut_raw_dptr(), in->raw_dptr(),
                         in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
     }
