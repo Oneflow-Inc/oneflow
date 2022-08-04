@@ -167,6 +167,11 @@ void test_stride_constructor() {
   }
 }
 
+TEST(NdIndexStrideOffsetHelper, constructor) {
+  test_stride_constructor<int32_t, int64_t>();
+  test_stride_constructor<int64_t, int32_t>();
+}
+
 }  // namespace test
 
 }  // namespace oneflow
