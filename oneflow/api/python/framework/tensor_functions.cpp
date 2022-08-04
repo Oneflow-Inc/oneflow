@@ -666,9 +666,8 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
         << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(sbp_obj)));
     sbp = functional::PyUnpackSbpParallelSequence(sbp_obj);
   }
-  return PyTensor_New(
-      ASSERT_PTR(functional::ToGlobal(tensor, functional::PyUnpackParallelDesc(placement_obj), sbp,
-                                      {}, check_meta, /*copy=*/copy)));
+  return PyTensor_New(ASSERT_PTR(functional::ToGlobal(
+      tensor, functional::PyUnpackParallelDesc(placement_obj), sbp, {}, check_meta, copy)));
   END_HANDLE_ERRORS
 }
 
@@ -725,8 +724,8 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
   } else if (functional::PySbpParallelSequenceCheck(grad_sbp_obj)) {
     grad_sbp = functional::PyUnpackSbpParallelSequence(grad_sbp_obj);
   }
-  return PyTensor_New(ASSERT_PTR(
-      functional::ToGlobal(tensor, placement, sbp, grad_sbp, check_meta, /*copy=*/copy)));
+  return PyTensor_New(
+      ASSERT_PTR(functional::ToGlobal(tensor, placement, sbp, grad_sbp, check_meta, copy)));
   END_HANDLE_ERRORS
 }
 
