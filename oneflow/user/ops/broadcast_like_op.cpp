@@ -43,7 +43,7 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
       ctx->NewBuilder()
           .Split(user_op::OpArg("x", 0), i - num_reduced_axis)
           .Split(user_op::OpArg("like", 0), i)
-          .Split(ctx->outputs(), i)
+          .Split(user_op::OpArg("y", 0), i)
           .Build();
     }
   }
