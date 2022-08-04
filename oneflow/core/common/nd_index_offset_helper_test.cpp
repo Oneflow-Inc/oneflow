@@ -119,9 +119,9 @@ void test_constructor() {
     const NdIndexOffsetHelper<T, 3> helper3(dims.data(), dims.size());
     std::vector<T> stride({d1 * d2, d2, 1});
     for (int i = 0; i < 3; ++i) {
-      ASSERT_EQ(helper1.stride_[i], stride[i]);
-      ASSERT_EQ(helper2.stride_[i], stride[i]);
-      ASSERT_EQ(helper3.stride_[i], stride[i]);
+      ASSERT_EQ(helper1.Stride(i), stride[i]);
+      ASSERT_EQ(helper2.Stride(i), stride[i]);
+      ASSERT_EQ(helper3.Stride(i), stride[i]);
     }
   }
   // dynamic
@@ -131,8 +131,8 @@ void test_constructor() {
     const NdIndexOffsetHelper<T, 6> helper2(dims.data(), dims.size());
     std::vector<T> stride({d1 * d2, d2, 1, 1, 1, 1});
     for (int i = 0; i < 6; ++i) {
-      ASSERT_EQ(helper1.stride_[i], stride[i]);
-      ASSERT_EQ(helper2.stride_[i], stride[i]);
+      ASSERT_EQ(helper1.Stride(i), stride[i]);
+      ASSERT_EQ(helper2.Stride(i), stride[i]);
     }
   }
 }

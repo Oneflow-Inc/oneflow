@@ -145,6 +145,7 @@ class NdIndexOffsetHelper {
   }
 
   OF_DEVICE_FUNC constexpr int Size() const { return N; }
+  OF_DEVICE_FUNC constexpr T& Stride(int i) const { return stride_[i]; }
 
  protected:
   OF_DEVICE_FUNC void InitStrides(const T* dims, const int n) {
