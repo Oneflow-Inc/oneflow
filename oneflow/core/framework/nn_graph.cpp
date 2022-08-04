@@ -276,7 +276,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   if (Singleton<JobDesc>::Get() != nullptr) { Singleton<JobDesc>::Delete(); }
 
   auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id_);
-  auto tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
+  auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
 
   // NOTE(chengcheng): do job compeleter for each rank.
   JUST(JobCompleter().Complete(&job_));

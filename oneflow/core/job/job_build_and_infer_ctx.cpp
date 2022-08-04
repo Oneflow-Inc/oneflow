@@ -933,7 +933,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     Singleton<OpGraph>::Delete();
   }
 
-  auto pass_tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
+  auto pass_tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
   if (GlobalJobDesc().Bool("__is_user_function__")) {
     JUST(DoPass("ModelUpdateConfCompatiblePass"));
     JUST(DoPass("NormalizationExponentialAverageAutoTickPass"));
