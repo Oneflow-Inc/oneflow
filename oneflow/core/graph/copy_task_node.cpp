@@ -36,7 +36,7 @@ void CopyTaskNode::BuildExecGphAndRegst() {
   Shape dummy_hierarchy({1});
   std::shared_ptr<Shape> hierarchy = std::make_shared<Shape>(dummy_hierarchy);
   auto parallel_desc = ParallelDesc::New("cuda", {"0:0-0"}, hierarchy).GetOrThrow();
-  constructed->FillOpParallelDesc(parallel_desc);
+  CHECK_JUST(constructed->FillOpParallelDesc(parallel_desc));
 
   node->mut_op() = constructed;
   node->BindBnWithRegst(node->op()->SoleIbn(), in_regst);
