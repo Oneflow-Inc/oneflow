@@ -364,8 +364,8 @@ def save_one_embedding_info(state_dict: Any, path: Union[str, Path]) -> None:
         for module_key in state_dict[module].keys():
             _info_dict = {}
             if "OneEmbeddingKeyValueOptions" in module_key:
-                if not _save_one_embedding_info_flag: 
-                    _save_one_embedding_info_flag = True 
+                if not _save_one_embedding_info_flag:
+                    _save_one_embedding_info_flag = True
 
                 module_key_prefix = module_key.rstrip("OneEmbeddingKeyValueOptions")
 
@@ -382,7 +382,7 @@ def save_one_embedding_info(state_dict: Any, path: Union[str, Path]) -> None:
                     }
                 )
 
-    if _save_one_embedding_info_flag: 
+    if _save_one_embedding_info_flag:
         with open(os.path.join(path, "one_embedding_options.json"), "w") as f:
             f.write(json.dumps(_embedding_info_dict, indent=4))
 
