@@ -30,10 +30,10 @@ class CopyHdKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     CHECK(!!in) << "input of copy not found";
     const ShapeView& in_shape = in->shape_view();
-    const DataType in_data_type = in->data_type();
     if (in_shape.elem_cnt() == 0) {
       // 0 shape tensor do not need copy
     } else {
+      const DataType in_data_type = in->data_type();
       user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
       CHECK(!!out) << "output of copy not found, op: " << ctx->op_name();
       CHECK_EQ(out->shape_view(), in_shape);
@@ -55,7 +55,6 @@ class CopyHdKernel final : public user_op::OpKernel {
     }
   }
 
-  std::unique_ptr<ep::primitive::Memcpy> primitive_;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
