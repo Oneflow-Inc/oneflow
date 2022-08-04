@@ -115,9 +115,9 @@ Shape OfShapeToOfApiShape(const of::Shape& of_shape) {
 }
 
 void LoadOneEmbedding(const std::string& model_path, const Device& device) {
-  const std::string one_embedding_info_prefix("OneEmbeddingInfo");
+  const std::string one_embedding_info_name("one_embedding_options.json");
   const std::string one_embedding_info_save_path(
-      oneflow::JoinPath(model_path, one_embedding_info_prefix));
+      oneflow::JoinPath(model_path, one_embedding_info_name));
   if (oneflow::embedding::PosixFile::FileExists(one_embedding_info_save_path)) {
     std::ifstream one_embedding_info_file(one_embedding_info_save_path);
     auto one_embedding_json = nlohmann::json::parse(one_embedding_info_file);

@@ -377,7 +377,7 @@ def save_one_embedding_info(state_dict: Any, path: Union[str, Path]) -> None:
                     }
                 )
 
-    with open(os.path.join(path, "OneEmbeddingInfo"), "w") as f:
+    with open(os.path.join(path, "one_embedding_options.json"), "w") as f:
         f.write(json.dumps(_embedding_info_dict, indent=4))
 
 
