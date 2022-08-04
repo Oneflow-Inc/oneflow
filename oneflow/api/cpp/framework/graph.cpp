@@ -65,8 +65,6 @@ namespace oneflow_api {
 
 namespace of = oneflow;
 
-#ifdef __linux__
-
 namespace {
 
 class CompileScope {
@@ -114,6 +112,8 @@ Shape OfShapeToOfApiShape(const of::Shape& of_shape) {
   return Shape(dims);
 }
 
+#ifdef __linux__
+
 void LoadOneEmbedding(const std::string& model_path, const Device& device) {
   const std::string one_embedding_info_name("one_embedding_options.json");
   const std::string one_embedding_info_save_path(
@@ -124,11 +124,17 @@ void LoadOneEmbedding(const std::string& model_path, const Device& device) {
     for (auto& it : one_embedding_json["embedding"]) {
       const std::string snapshot_path = it["snapshot"];
       auto kv_options_json = it["kv_options"];
-      std::string embedding_name = embedding::CreateKeyValueStore(kv_options_json.dump());
-      embedding::LoadSnapshot(snapshot_path, embedding_name);
+      std::string embedding_name = embedding::CreateKeyValueStore(kv_options_json.dump(),
+                                                                  /*local_rank_id=*/0,
+                                                                  /*rank_id=*/0,
+                                                                  /*world_size=*/1);
+      embedding::LoadSnapshot(snapshot_path, embedding_name, /*local_rank_id=*/0,
+                              /*rank_id=*/0);
     }
   }
 }
+
+#endif  // __linux__
 
 }  // namespace
 
@@ -224,7 +230,9 @@ IValue Graph::Forward(const IValue& inputs) {
 void Graph::set_batch_size(int batch_size) { graph_->set_batch_size(batch_size); }
 
 Graph Graph::Load(const std::string& model_path, const Device& device) {
+#ifdef __linux__
   LoadOneEmbedding(model_path, device);
+#endif  // __linux__
   Graph graph(model_path, device);
   return graph;
 }
@@ -440,7 +448,5 @@ of::Maybe<void> Graph::GraphImpl::RegisterTensors(const std::vector<Tensor>& inp
 }
 
 Graph::GraphImpl::~GraphImpl() { of::vm::ClusterSync().GetOrThrow(); }
-
-#endif  // __linux__
 
 }  // namespace oneflow_api

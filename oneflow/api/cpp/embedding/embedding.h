@@ -22,12 +22,12 @@ namespace oneflow_api {
 namespace embedding {
 
 // CreateKeyValueStore returns embedding name in the options.
-std::string CreateKeyValueStore(const std::string& key_value_store_options,
-                                int64_t local_rank_id = 0, int64_t rank_id = 0,
-                                int64_t world_size = 1);  // key_value_store_options is
-                                                          // a serialized json string.
+std::string CreateKeyValueStore(const std::string& key_value_store_options, int64_t local_rank_id,
+                                int64_t rank_id,
+                                int64_t world_size);  // key_value_store_options is
+                                                      // a serialized json string.
 void LoadSnapshot(const std::string& snapshot_name, const std::string& embedding_name,
-                  int64_t local_rank_id = 0, int64_t rank_id = 0);
+                  int64_t local_rank_id, int64_t rank_id);
 
 }  // namespace embedding
 }  // namespace oneflow_api

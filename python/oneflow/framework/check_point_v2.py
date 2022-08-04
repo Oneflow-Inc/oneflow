@@ -359,7 +359,7 @@ def save_one_embedding_info(state_dict: Any, path: Union[str, Path]) -> None:
     _save_one_embedding_info_flag = False
 
     for module in state_dict.keys():
-        if not isinstance(state_dict[module], collections.OrderedDict):
+        if not isinstance(state_dict[module], OrderedDict):
             continue
         for module_key in state_dict[module].keys():
             _info_dict = {}

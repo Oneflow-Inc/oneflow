@@ -27,7 +27,7 @@ std::string CreateKeyValueStore(const std::string& key_value_store_options, int6
       options, local_rank_id, rank_id, world_size);
   return options.Name();
 #else
-  UNIMPLEMENTED() << "Only Support with CUDA";
+  UNIMPLEMENTED() << "OneEmbedding Only Support with CUDA";
 #endif
   return "";
 }
@@ -38,7 +38,7 @@ void LoadSnapshot(const std::string& snapshot_name, const std::string& embedding
   oneflow::Singleton<oneflow::embedding::EmbeddingManager>::Get()->LoadSnapshot(
       embedding_name, local_rank_id, rank_id, snapshot_name);
 #else
-  UNIMPLEMENTED() << "Only Support with CUDA";
+  UNIMPLEMENTED() << "OneEmbedding Only Support with CUDA";
 #endif
 }
 
