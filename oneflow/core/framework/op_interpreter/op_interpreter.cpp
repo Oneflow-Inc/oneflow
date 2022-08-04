@@ -74,7 +74,7 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
                      << " has not been supported in EagerInterpreter::Apply.";
 }
 
-Maybe<void> OpExprInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const TensorTuple& inputs,
+Maybe<void> EagerInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const TensorTuple& inputs,
                                          TensorTuple* outputs, const OpExprInterpContext&) const {
   // Must reset ctx in each forward
   op_expr.reset_state();
