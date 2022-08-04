@@ -982,9 +982,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("DumpVariableInfoPass"));
   }
   JUST(DoPass("DumpBlobParallelConfPass"));
-  pass_tc->Count("Graph " + job_name + " CheckJob", 1);
-  JUST(CheckJob());
   pass_tc->Count("Graph " + job_name + " CompilePasses", 1);
+  JUST(CheckJob());
+  pass_tc->Count("Graph " + job_name + " CheckJob", 1);
   return Maybe<void>::Ok();
 }
 

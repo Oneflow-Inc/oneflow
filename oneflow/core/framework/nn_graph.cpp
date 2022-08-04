@@ -267,9 +267,11 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   CHECK_OR_RETURN(!runtime_inited_);
   auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
+  tc->Count("Graph name: " + name_ + " RegisterFreeEagerTensorsToVariableOpNames", 1);
   JUST(RegisterNewVariableOpInJobPass());
+  tc->Count("Graph name: " + name_ + " RegisterNewVariableOpInJobPass", 1);
   JUST(DeleteOutdatedVariableInVariableTensorMgr());
-  tc->Count("Graph name: " + name_ + " RegisterVariableOps", 1);
+  tc->Count("Graph name: " + name_ + " DeleteOutdatedVariableInVariableTensorMgr", 1);
 
   // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
   one::TensorNameScope::Global()->Clear();
