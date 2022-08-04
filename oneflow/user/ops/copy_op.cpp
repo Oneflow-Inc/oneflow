@@ -23,19 +23,21 @@ namespace oneflow {
 namespace {
 
 Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
-                                     const Symbol<Device>& out_device, const bool pin_memory) {
+                                     const Symbol<Device>& out_device, const bool pin_memory,
+                                     const bool asynced_copy) {
   if (in_device->type() != "cpu" && out_device->type() == "cpu") {
-    return Stream::New(in_device, StreamRole::kDevice2Host);
+    return Stream::New(in_device,
+                       (asynced_copy ? StreamType::kAsyncedDevice2Host : StreamType::kDevice2Host));
   } else if (in_device->type() == "cpu" && out_device->type() != "cpu") {
     const auto device = JUST(Device::New(out_device->type(), out_device->device_id()));
-    return Stream::New(device, StreamRole::kHost2Device);
+    return Stream::New(device, StreamType::kHost2Device);
   } else if (in_device->type() == "cpu" && out_device->type() == "cpu" && pin_memory) {
     // TODO:(zhaoluyang) Parsing pin-memory-device from python
     auto pin_device = JUST(Device::New("cuda"));
-    return Stream::New(pin_device, StreamRole::kPinnedCompute);
+    return Stream::New(pin_device, StreamType::kPinnedCompute);
   } else {
     CHECK_EQ_OR_RETURN(in_device->type(), out_device->type());
-    return Stream::New(out_device, StreamRole::kCompute);
+    return Stream::New(out_device, StreamType::kCompute);
   }
 }
 
@@ -76,7 +78,8 @@ Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
   *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = out_device;
   const Symbol<Device>& in_device = ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
   const bool pin_memory = ctx->Attr<bool>("pin_memory");
-  return MakeCopyStream(in_device, out_device, pin_memory);
+  const bool asynced_copy = ctx->Attr<bool>("asynced_copy");
+  return MakeCopyStream(in_device, out_device, pin_memory, asynced_copy);
 }
 
 }  // namespace oneflow
