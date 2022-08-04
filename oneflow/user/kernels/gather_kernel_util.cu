@@ -18,7 +18,9 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include <assert.h>
-
+#if CUDA_VERSION >= 11000
+#include <cuda_bf16.h>
+#endif  // CUDA_VERSION >= 11000
 namespace oneflow {
 
 namespace {
