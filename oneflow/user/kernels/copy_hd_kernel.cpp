@@ -27,7 +27,6 @@ class CopyHdKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    LOG(ERROR) << "running copy " << ctx->op_name();
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     CHECK(!!in) << "input of copy not found";
     const ShapeView& in_shape = in->shape_view();
