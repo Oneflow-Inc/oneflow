@@ -42,6 +42,12 @@ class SbpNode final {
 
   ~SbpNode();
 
+  SbpNode(const SbpNode&) = delete;
+  SbpNode& operator=(SbpNode&) = delete;
+  SbpNode(SbpNode&&) = delete;
+  SbpNode& operator=(SbpNode&&) = delete;
+  bool operator==(const SbpNode& other) { return this == &other; }
+
   // another node point to this node
   void PointFrom(SbpNode* start_node);
   // this node point to another node
@@ -52,7 +58,7 @@ class SbpNode final {
   // Initialize SbpSignature from Signature Objects
   void InitializeSbp();
   // Decide to use this SbpSignature
-  NdSbpSignature* FinalSbpSignature() const;
+  const NdSbpSignature& FinalSbpSignature() const;
 
   // Recompute Computation Cost after adding child nodes in it
   void SummarizeCost();
@@ -129,10 +135,8 @@ class SbpNode final {
   // compound edge out
   std::vector<SbpEdge*> edges_out_;
 
-  // Available SbpSignature pointer for this node
-  std::vector<NdSbpSignature*> sbp_sig_list_;
   // Available SbpSignature object for this node
-  std::vector<NdSbpSignature> sbp_sig_obj_list_;
+  std::vector<NdSbpSignature> sbp_sig_list_;
   // Global SbpSignature List Size
   int32_t global_sbp_sig_size_ = -1;
   // Decide to use SbpSignature with this id

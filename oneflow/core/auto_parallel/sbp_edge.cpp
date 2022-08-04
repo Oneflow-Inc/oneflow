@@ -39,6 +39,12 @@ SbpEdge::SbpEdge(SbpNode* start_node, SbpNode* mid_node, SbpNode* end_node, SbpE
   edge_list_.emplace_back(second_edge);
 };
 
+// Deconstructor
+SbpEdge::~SbpEdge() {
+  if (mid_node_ != nullptr) { delete mid_node_; }
+  for (auto& this_edge : edge_list_) { delete this_edge; }
+}
+
 void SbpEdge::SummarizeCost() {
   if (mid_node_) {
     cost_.resize(start_node_->cost_.size());
@@ -253,14 +259,14 @@ void SbpEdge::InitializeCopyCost(const std::string& ibn, bool compute_cost,
          sbp_id_producer++) {
       // get sbp parallel for a logical blob in producer
       const auto producer_sbp_bn_in_op2sbp_parallel =
-          start_node_->sbp_sig_list_[sbp_id_producer]->bn_in_op2nd_sbp();
+          start_node_->sbp_sig_list_[sbp_id_producer].bn_in_op2nd_sbp();
       const NdSbp& sbp_producer = producer_sbp_bn_in_op2sbp_parallel.at(obn);
 
       // look through sbp signature in consumer
       for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
         // get sbp parallel for a logical blob in consumer
         const auto consumer_sbp_bn_in_op2sbp_parallel =
-            end_node_->sbp_sig_list_[sbp_id_consumer]->bn_in_op2nd_sbp();
+            end_node_->sbp_sig_list_[sbp_id_consumer].bn_in_op2nd_sbp();
         const NdSbp& sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
 
         // compute copy cost for a specific logical blob
