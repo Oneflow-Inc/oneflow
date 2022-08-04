@@ -2057,6 +2057,7 @@ def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", [NoSid
   );
   let attrs = (ins
     StrAttr:$parallel_conf,
+    ShapeArrayAttr:$shape_list,
     DefaultValuedAttr<SI64Attr, "0">:$root,
     DefaultValuedAttr<BoolAttr, "true">:$async_launch
   );
@@ -5914,8 +5915,8 @@ def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", [NoSideEf
 #endif // GET_ONEFLOW_NORMALIZATION_OP_DEFINITIONS
 
 // Group: OPTIMIZER
-// adagrad_update, adam_bias_correction_factor, adam_update, indexed_slices_adam_update, indexed_slices_momentum_update, indexed_slices_sgd_update, lamb_update, lars_update, momentum_update, rmsprop_update, sgd_update, ftrl_update
-// Total: 13
+// adagrad_update, adam_bias_correction_factor, adam_update, indexed_slices_adam_update, indexed_slices_momentum_update, indexed_slices_sgd_update, lamb_update, lars_update, momentum_update, rmsprop_update, sgd_update, ftrl_update, adadelta_update
+// Total: 14
 
 #ifdef GET_ONEFLOW_OPTIMIZER_OP_DEFINITIONS
 
@@ -6241,6 +6242,35 @@ def OneFlow_FtrlUpdateOp : OneFlow_BaseOp<"ftrl_update", [NoGrad, AttrSizedOpera
     DefaultValuedAttr<F32Attr, "0.">:$lambda1, 
     DefaultValuedAttr<F32Attr, "0.">:$lambda2, 
     DefaultValuedAttr<F32Attr, "0.">:$beta
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_input_arg_modify_fn = 1;
+}
+
+def OneFlow_AdadeltaUpdateOp : OneFlow_BaseOp<"adadelta_update", [NoGrad, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$model,
+    OneFlow_Tensor:$model_diff,
+    Optional<OneFlow_Tensor>:$learning_rate,
+    Optional<OneFlow_Tensor>:$skip_if,
+    OneFlow_Tensor:$square_avgs, 
+    OneFlow_Tensor:$acc_deltas
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
+    DefaultValuedAttr<F64Attr, "1.">:$scale,
+    DefaultValuedAttr<F32Attr, "0.">:$l1,
+    DefaultValuedAttr<F32Attr, "0.">:$l2,
+    DefaultValuedAttr<F32Attr, "0.">:$weight_decay, 
+    DefaultValuedAttr<F32Attr, "0.9">:$rho, 
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon, 
+    DefaultValuedAttr<BoolAttr, "false">:$maximize
   );
   let trait_attrs = (ins
     I32ElementsAttr:$operand_segment_sizes
