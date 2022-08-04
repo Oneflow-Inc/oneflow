@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/user/ops/comm_net_device_infer_util.h"
 #include "oneflow/core/framework/op_generated.h"
@@ -49,9 +50,10 @@ namespace oneflow {
 
 /* static */ Maybe<void> EagerNcclBroadcastOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   size_t size = ctx->input_size("in");
+  const std::vector<Shape>& shape_list = ctx->Attr<std::vector<Shape>>("shape_list");
   CHECK_EQ_OR_RETURN(size, ctx->output_size("out"))
       << "the size of input tensor tuple should equal the size of output tensor tuple.";
-  for (int i = 0; i < size; ++i) { *ctx->MutOutputShape("out", i) = ctx->InputShape("in", i); }
+  for (int i = 0; i < size; ++i) { *ctx->MutOutputShape("out", i) = JUST(VectorAt(shape_list, i)); }
   return Maybe<void>::Ok();
 }
 
