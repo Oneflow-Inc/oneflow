@@ -726,7 +726,7 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
     grad_sbp = functional::PyUnpackSbpParallelSequence(grad_sbp_obj);
   }
   return PyTensor_New(ASSERT_PTR(
-      functional::ToGlobal(tensor, placement, sbp, grad_sbp, check_meta, /*copy=*/copy)));
+      functional::ToGlobal(tensor, placement, sbp, grad_sbp, check_meta, copy)));
   END_HANDLE_ERRORS
 }
 
