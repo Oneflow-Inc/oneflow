@@ -87,19 +87,13 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   }
   conf.set_name(copy_type_name + NewUniqueId());
   *conf.mutable_user_conf()->mutable_op_type_name() = copy_type_name;
-
   auto in_regst = GetSoleConsumedRegst("copy_in");
   CHECK_EQ(in_regst->NumOfLbi(), 1);
   in_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
     (*conf.mutable_user_conf()->mutable_input())["in"].add_s(GenLogicalBlobName(lbi));
+    (*conf.mutable_user_conf()->mutable_output())["out"].add_s(
+        GenLogicalBlobName(conf.name(), GenRepeatedBn("out", 0)));
   });
-
-  auto out_regst = GetProducedRegst("copy_out");
-  CHECK_EQ(out_regst->NumOfLbi(), 1);
-  out_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
-    (*conf.mutable_user_conf()->mutable_output())["out"].add_s(GenLogicalBlobName(lbi));
-  });
-
   return conf;
 }
 
