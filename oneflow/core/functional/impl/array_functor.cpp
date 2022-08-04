@@ -2169,7 +2169,11 @@ class TensorSetItemFunctor {
         //
         // value_shape = (3,), target_shape = (2, 3), slice_shape = (2, 3, 1)
         // We must change value shape to slice_shape if it uses SliceUpdate op.
-        if (target_shape != *(value_tensor->shape())) {
+        // BUG(wyg): value shape cannot initialize to a scalar tensor,
+        // so it is not possible to expand to target_shape.
+        // e.g. x[0, 0] = 1.0
+        // But x[0, 0] = flow.ones(1) do not align with numpy behavior.
+        if (target_shape != *(value_tensor->shape()) && target_shape.NumAxes() > 0) {
           value_tensor = JUST(Expand(value_tensor, target_shape));
         }
         if (slice_shape != *(value_tensor->shape())) {
