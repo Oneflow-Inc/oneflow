@@ -18,7 +18,9 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/ep/include/primitive/cast.h"
+#ifdef WITH_CUDA
 #include <cuda.h>
+#endif
 
 namespace oneflow {
 
