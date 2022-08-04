@@ -75,7 +75,7 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
 }
 
 Maybe<void> EagerInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const TensorTuple& inputs,
-                                         TensorTuple* outputs, const OpExprInterpContext&) const {
+                                        TensorTuple* outputs, const OpExprInterpContext&) const {
   // Must reset ctx in each forward
   op_expr.reset_state();
   std::shared_ptr<FunctionAutoGradCaptureState> ctx = op_expr.state();

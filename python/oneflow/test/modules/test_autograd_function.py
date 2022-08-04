@@ -45,13 +45,12 @@ def _compare_model_between_graph_and_eager(autograd_func, inputs):
 
         def build(self, *args):
             result = self.model(*args)
-            # if isinstance(result, (tuple, list)):
-            #     result = flow.stack(result)
+            if isinstance(result, (tuple, list)):
+                result = flow.stack(result)
             loss = result.sum()
             loss.backward()
             return loss
 
-    # import ipdb; ipdb.set_trace()
     graph = Graph()
     inp = [flow.tensor(v).requires_grad_() for v in inputs]
     graph_loss = graph(*inp)
@@ -60,8 +59,8 @@ def _compare_model_between_graph_and_eager(autograd_func, inputs):
     model = EagerModel()
     optim = flow.optim.SGD(model.parameters(), lr=1)
     result = model(*inp)
-    # if isinstance(result, (tuple, list)):
-    #     result = flow.stack(result)
+    if isinstance(result, (tuple, list)):
+        result = flow.stack(result)
     eager_loss = result.sum()
     optim.zero_grad()
     eager_loss.backward()
@@ -161,7 +160,7 @@ class TestAutogradFunction(flow.unittest.TestCase):
 class TestGraphAutogradFunction(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_simple_input(test_case):
-        class SquareFunc(flow.autograd.Function):
+        class WrongSquareFunc(flow.autograd.Function):
             @staticmethod
             def forward(ctx, inp):
                 ctx.save_for_backward(inp)
@@ -170,15 +169,16 @@ class TestGraphAutogradFunction(flow.unittest.TestCase):
             @staticmethod
             def backward(ctx, grad):
                 (inp,) = ctx.saved_tensors
+                # should be 2 * inp * grad
                 return inp * grad
 
         inputs = [np.random.randn(5, 5).astype("float32")]
         graph_weight, eager_weight = _compare_model_between_graph_and_eager(
-            SquareFunc, inputs
+            WrongSquareFunc, inputs
         )
         test_case.assertTrue(np.allclose(graph_weight.numpy(), eager_weight.numpy()))
 
-    @flow.unittest.skip_unless_1n2d()
+    @flow.unittest.skip_unless_1n1d()
     def test_multi_input(test_case):
         class MyMatMul(autograd.Function):
             @staticmethod
@@ -200,7 +200,7 @@ class TestGraphAutogradFunction(flow.unittest.TestCase):
         )
         test_case.assertTrue(np.allclose(graph_weight.numpy(), eager_weight.numpy()))
 
-    @flow.unittest.skip_unless_1n2d()
+    @flow.unittest.skip_unless_1n1d()
     def test_non_differentiable_interface(test_case):
         class MyModule(autograd.Function):
             @staticmethod
