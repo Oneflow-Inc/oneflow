@@ -43,6 +43,7 @@ namespace oneflow {
 /*static*/ Maybe<void> WkvGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const int64_t B = ctx->Attr<int64_t>("B");
   const int64_t C = ctx->Attr<int64_t>("C");
+  std::cout << B << ", " << C << std::endl;
   const Shape& gy_shape = ctx->InputShape("gy", 0);
   *ctx->MutOutputShape("gw", 0) = Shape({B, C});
   *ctx->MutOutputShape("gu", 0) = Shape({B, C});
@@ -83,8 +84,7 @@ Maybe<void> WkvGraphGradOp(user_op::BackwardOpConfContext* ctx) {
         .Build();
   });
   const std::string reduce_sum_w_op = ctx->FwOp().op_name() + "_grad_reduce_sum_w";
-  std::vector<int32_t> reduce_axes_vec;
-  reduce_axes_vec.emplace_back(0);
+  std::vector<int32_t> reduce_axes_vec{0};
   ctx->DefineOp(reduce_sum_w_op, [&](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("reduce_sum")
         .InputBind("input_tensor", ctx->GetOp(wkv_grad_op).output("gw", 0))

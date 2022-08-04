@@ -97,6 +97,7 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
     const int32_t output_elem_cnt = output_tensor->shape_view().elem_cnt();
+    std::cout << "enter reduce sum kernel=>" << std::endl;
 
     if (input_tensor->shape_view().elem_cnt() == 0) {
       if (output_tensor->shape_view().elem_cnt() != 0) {
