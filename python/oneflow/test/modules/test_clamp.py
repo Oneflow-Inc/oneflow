@@ -162,5 +162,145 @@ class TestClampModule(flow.unittest.TestCase):
         return y
 
 
+def _test_clamp_min(test_case, shape, device):
+    input = flow.tensor(
+        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
+    )
+    of_out = flow.clamp_min(input, 0.1)
+    np_out = np.clip(input.numpy(), 0.1, None)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
+
+
+def _test_tensor_clamp_min(test_case, shape, device):
+    input = flow.tensor(
+        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
+    )
+    of_out = input.clamp_min(0.1)
+    np_out = np.clip(input.numpy(), 0.1, None)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
+
+
+def _test_clamp_min_integral(test_case, shape, device):
+    input = flow.tensor(np.random.randint(3, 10, shape), device=flow.device(device))
+    of_out = flow.clamp_min(input, 1)
+    np_out = np.clip(input.numpy(), 1, None)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
+
+
+def _test_clamp_min_backward(test_case, shape, device):
+    x = flow.tensor(
+        np.random.randn(*shape),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    y = flow.clamp_min(x, 0.1).sum()
+    y.backward()
+    test_case.assertTrue(
+        np.allclose(
+            x.grad.numpy(), _numpy_clamp_grad(x.numpy(), 0.1, None), 1e-05, 1e-05
+        )
+    )
+
+
+class TestClampMinModule(flow.unittest.TestCase):
+    def test_clamp_min(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["fun"] = [
+            _test_clamp_min,
+            _test_tensor_clamp_min,
+            _test_clamp_min_integral,
+            _test_clamp_min_backward,
+        ]
+        arg_dict["shape"] = [(2,), (2, 3), (2, 4, 5, 6)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    @autotest(n=5)
+    def test_clamp_min_flow_with_random_data(test_case):
+        device = random_device()
+        input = random_tensor().to(device)
+        y = torch.clamp_min(input, min=random().to(float))
+        return y
+
+    @autotest(n=5, auto_backward=False, check_graph=True)
+    def test_clamp_min_with_0_size_data(test_case):
+        device = random_device()
+        x = random_tensor(4, 2, 1, 0, 3).to(device)
+        y = torch.clamp_min(x, min=random().to(float))
+        return y
+
+
+def _test_clamp_max(test_case, shape, device):
+    input = flow.tensor(
+        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
+    )
+    of_out = flow.clamp_max(input, 0.5)
+    np_out = np.clip(input.numpy(), None, 0.5)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
+
+
+def _test_tensor_clamp_max(test_case, shape, device):
+    input = flow.tensor(
+        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
+    )
+    of_out = input.clamp_max(0.5)
+    np_out = np.clip(input.numpy(), None, 0.5)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
+
+
+def _test_clamp_max_integral(test_case, shape, device):
+    input = flow.tensor(np.random.randint(3, 10, shape), device=flow.device(device))
+    of_out = flow.clamp_max(input, 1)
+    np_out = np.clip(input.numpy(), None, 1)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
+
+
+def _test_clamp_max_backward(test_case, shape, device):
+    x = flow.tensor(
+        np.random.randn(*shape),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    y = flow.clamp_max(x, 0.5).sum()
+    y.backward()
+    test_case.assertTrue(
+        np.allclose(
+            x.grad.numpy(), _numpy_clamp_grad(x.numpy(), None, 0.5), 1e-05, 1e-05
+        )
+    )
+
+
+class TestClampMaxModule(flow.unittest.TestCase):
+    def test_clamp_min(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["fun"] = [
+            _test_clamp_max,
+            _test_tensor_clamp_max,
+            _test_clamp_max_integral,
+            _test_clamp_max_backward,
+        ]
+        arg_dict["shape"] = [(2,), (2, 3), (2, 4, 5, 6)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    @autotest(n=5)
+    def test_clamp_max_flow_with_random_data(test_case):
+        device = random_device()
+        input = random_tensor().to(device)
+        y = torch.clamp_max(input, max=random().to(float))
+        return y
+
+    @autotest(n=5, auto_backward=False, check_graph=True)
+    def test_clamp_max_with_0_size_data(test_case):
+        device = random_device()
+        x = random_tensor(4, 2, 1, 0, 3).to(device)
+        y = torch.clamp_max(x, max=random().to(float))
+        return y
+
+
 if __name__ == "__main__":
     unittest.main()
