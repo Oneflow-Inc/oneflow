@@ -62,6 +62,7 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
     if (input->data_type() == output->data_type() && input->dptr() == output->dptr()) { return; }
     const size_t ndim = input->shape_view().NumAxes();
     if (ndim == 0 && elem_cnt == 1) {
+      // 0-dim tensor
       // TODO: use BroadcastElementwiseUnary primitive when it support 0-dim(scalar) tensor
       auto cast_primitive = NewCastPrimitive(ctx);
       CHECK(cast_primitive);
