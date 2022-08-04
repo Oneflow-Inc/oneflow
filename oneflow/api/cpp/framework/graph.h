@@ -68,8 +68,6 @@ class Graph {
   void RegisterJobPass(const std::function<std::string(const std::string& job)>& pass_fn);
 
   static Graph Load(const std::string& model_path, const Device& device = Device("cpu"));
-  static Graph LoadOneEmbedding(const std::string& model_path, const Device& device = Device("cpu"),
-                                const std::string& persistent_table_path = "");
 
  private:
   class GraphImpl;

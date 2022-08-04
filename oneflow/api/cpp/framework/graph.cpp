@@ -114,6 +114,22 @@ Shape OfShapeToOfApiShape(const of::Shape& of_shape) {
   return Shape(dims);
 }
 
+void LoadOneEmbedding(const std::string& model_path, const Device& device) {
+  const std::string one_embedding_info_prefix("OneEmbeddingInfo");
+  const std::string one_embedding_info_save_path(
+      oneflow::JoinPath(model_path, one_embedding_info_prefix));
+  if (oneflow::embedding::PosixFile::FileExists(one_embedding_info_save_path)) {
+    std::ifstream one_embedding_info_file(one_embedding_info_save_path);
+    auto one_embedding_json = nlohmann::json::parse(one_embedding_info_file);
+    for (auto& it : one_embedding_json["embedding"]) {
+      const std::string snapshot_path = it["snapshot"];
+      auto kv_options_json = it["kv_options"];
+      std::string embedding_name = embedding::CreateKeyValueStore(kv_options_json.dump());
+      embedding::LoadSnapshot(snapshot_path, embedding_name);
+    }
+  }
+}
+
 }  // namespace
 
 class Graph::GraphImpl final {
@@ -208,58 +224,7 @@ IValue Graph::Forward(const IValue& inputs) {
 void Graph::set_batch_size(int batch_size) { graph_->set_batch_size(batch_size); }
 
 Graph Graph::Load(const std::string& model_path, const Device& device) {
-  Graph graph(model_path, device);
-  return graph;
-}
-
-Graph Graph::LoadOneEmbedding(const std::string& model_path, const Device& device,
-                              const std::string& persistent_table_path) {
-  /*
-  OneEmbedding save format:
-  model_path
-    | one_embedding
-      | embedding_0
-        | KeyValueOption
-        | Snapshot
-      | embedding_1
-        | KeyValueOption
-        | Snapshot
-      | ...
-  */
-  const std::string one_embedding_dir_prefix("one_embedding");
-  const std::string one_embedding_save_path(
-      oneflow::JoinPath(model_path, one_embedding_dir_prefix));
-  DIR* dir = opendir(one_embedding_save_path.c_str());
-  const std::string embedding_dir_prefix("embedding");
-
-  struct dirent* ent = nullptr;
-  while ((ent = readdir(dir)) != NULL) {
-    const std::string embedding_dir_name = ent->d_name;  // embedding_0, embedding_1, ...
-    if (embedding_dir_name.find(embedding_dir_prefix) != 0) { continue; }
-
-    const std::string one_embedding_info_save_path(
-        oneflow::JoinPath(one_embedding_save_path, embedding_dir_name));
-    const std::string kv_options_path = one_embedding_info_save_path + "/KeyValueOptions";
-    const std::string snapshot_path = one_embedding_info_save_path + "/Snapshot";
-    CHECK((oneflow::embedding::PosixFile::FileExists(kv_options_path)
-           && oneflow::embedding::PosixFile::FileExists(snapshot_path)))
-        << "Not a valid one-embedding model.";
-    std::ifstream kv_options_file(kv_options_path);
-    auto kv_options_json = nlohmann::json::parse(kv_options_file);
-    if (persistent_table_path != "") {
-      kv_options_json["kv_store"]["persistent_table"]["path"] = persistent_table_path;
-    }
-    std::string embedding_name = embedding::CreateKeyValueStore(kv_options_json.dump());
-    const std::string snapshot = [&]() {
-      std::ifstream snapshot_file(snapshot_path);
-      CHECK(snapshot_file.is_open());
-      std::string snapshot;
-      snapshot_file >> snapshot;
-      snapshot_file.close();
-      return snapshot;
-    }();
-    embedding::LoadSnapshot(snapshot, embedding_name);
-  }
+  LoadOneEmbedding(model_path, device);
   Graph graph(model_path, device);
   return graph;
 }

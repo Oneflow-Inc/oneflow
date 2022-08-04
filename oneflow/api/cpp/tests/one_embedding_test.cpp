@@ -22,7 +22,7 @@ namespace oneflow_api {
 TEST(Api, embedding_test) {
   EnvScope scope;
   Device device("cuda");
-  Graph graph = Graph::LoadOneEmbedding("/path/to/embedding", device);
+  Graph graph = Graph::Load("/path/to/embedding", device);
   int64_t batch_size = 10000;
   int64_t num_features = 39;
 
