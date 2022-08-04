@@ -24,7 +24,9 @@ from oneflow.test_utils.automated_test_util import *
 
 def _test_broadcast_like(test_case, placement, sbp):
     like_shape = [8] * 4
-    like = random_tensor(4, *like_shape).to_global(placement, random_sbp(placement, max_dim=4))
+    like = random_tensor(4, *like_shape).to_global(
+        placement, random_sbp(placement, max_dim=4)
+    )
     x = random_tensor(2, *(8, 8)).to_global(placement, sbp)
     # oneflow
     of_y = flow.broadcast_like(x.oneflow, like.oneflow)
@@ -36,7 +38,9 @@ def _test_broadcast_like(test_case, placement, sbp):
 
 def _test_broadcast_like_expand_dims(test_case, placement, sbp):
     like_shape = [8] * 4
-    like = random_tensor(4, *like_shape).to_global(placement, random_sbp(placement, max_dim=4))
+    like = random_tensor(4, *like_shape).to_global(
+        placement, random_sbp(placement, max_dim=4)
+    )
     x = random_tensor(2, *(8, 8)).to_global(placement, sbp)
     # oneflow
     of_y = flow.broadcast_like(x.oneflow, like.oneflow, [1, 3])
