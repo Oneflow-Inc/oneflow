@@ -294,6 +294,8 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
 
   void Launch(Stream* stream, size_t num_src_dims, const int64_t* src_dims, const void* src,
               size_t num_dst_dims, const int64_t* dst_dims, void* dst) override {
+    CHECK_GT(num_src_dims, 0) << "num_src_dims must greater than 0";
+    CHECK_GT(num_dst_dims, 0) << "num_dst_dims must greater than 0";
     int64_t src_strides[kMaxNumDims];
     int64_t dst_strides[kMaxNumDims];
     // init stride
@@ -313,6 +315,8 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
   void Launch(Stream* stream, size_t num_src_dims, const int64_t* src_dims,
               const int64_t* src_strides, const void* src_ptr, size_t num_dst_dims,
               const int64_t* dst_dims, const int64_t* dst_strides, void* dst_ptr) override {
+    CHECK_GT(num_src_dims, 0) << "num_src_dims must greater than 0";
+    CHECK_GT(num_dst_dims, 0) << "num_dst_dims must greater than 0";
     auto* cuda_stream = stream->As<CudaStream>();
     Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
     const Src* src = reinterpret_cast<const Src*>(src_ptr);

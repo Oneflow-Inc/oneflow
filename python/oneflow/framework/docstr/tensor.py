@@ -305,6 +305,7 @@ add_docstr(
         check_meta (bool, optional): indicates whether to check meta information when createing global tensor from local
             tensor. Only can be set to False when the shape and dtype of the input local tensor on each rank are the same. If set to False, the
             execution of local_to_global can be accelerated. Default: True
+        copy (bool, optional): When copy is set, the returned global tensor takes the replication of this tensor as its local component in the current rank. Default: False
 
     .. code-block:: python
 
@@ -351,6 +352,7 @@ add_docstr(
             tensor in the backward pass. If None, the grad tensor sbp will be infered automatically. Default: None
         check_meta (bool, optional): indicates whether to check meta information. If set to True, check the consistency
             of the input meta information (placement and sbp) on each rank. Default: False
+        copy (bool, optional): When copy is set, a new Tensor is created even when the Tensor already matches the desired conversion. Default: False
 
     .. code-block:: python
 
@@ -408,6 +410,9 @@ add_docstr(
             global tensor. Default: None
         check_meta (bool, optional): indicates whether to check meta information. If set to True, check the input meta
             information on each rank. Default: True if this tensor is a local tensor, False if this tensor is a global tensor
+        copy (bool, optional): When copy is set, copy occurres in this operation. For local tensor, the returned global tensor takes the
+            replication of this tensor as its local component in the current rank. For global tensor, a new Tensor is created even when
+            the Tensor already matches the desired conversion. Default: False
 
     For local tensor:
 
@@ -467,14 +472,17 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.to_local,
     """
-    Tensor.to_local() -> Tensor
+    Tensor.to_local(**kwargs) -> Tensor
 
     Returns the local component of this global tensor in the current rank.
+
+    Keyword Args:
+        copy (bool, optional): When copy is set, a new replicated tensor of the local component of this global tensor in the current rank is returned. Default: False
 
     Note:
         This tensor should be a global tensor, and it returns a empty tensor if there is no local component in the current rank.
 
-        No copy occurred in this operation.
+        No copy occurred in this operation if copy is not set.
 
     For example:
 
