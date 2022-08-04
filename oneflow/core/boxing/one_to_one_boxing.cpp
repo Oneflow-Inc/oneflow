@@ -58,7 +58,9 @@ Maybe<one::Tensor> NaiveOneToOne(const std::shared_ptr<one::Tensor>& tensor, Sym
   int64_t src = JUST(tensor_placement->MachineId4ParallelId(0));
   int64_t dst = JUST(out->placement()->MachineId4ParallelId(0));
 
+  bool copy = true;
   if (src != dst) {
+    copy = false;
     if (GlobalProcessCtx::Rank() == src) {
       JUST(one::functional::Send(local_tensor, dst, /* send_meta */ false));
     }
@@ -69,7 +71,7 @@ Maybe<one::Tensor> NaiveOneToOne(const std::shared_ptr<one::Tensor>& tensor, Sym
   }
   return JUST(one::functional::LocalToGlobal(
       local_tensor, out->placement(), *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
-      tensor->dtype(), /* sync_data */ false, /*copy=*/false));
+      tensor->dtype(), /* sync_data */ false, /*copy=*/copy));
 }
 
 COMMAND(RegisterBoxingFunction("naive-1-to-1", CheckNaiveOneToOne, &NaiveOneToOne));
