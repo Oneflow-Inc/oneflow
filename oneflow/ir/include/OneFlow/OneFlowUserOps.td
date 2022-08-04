@@ -2057,6 +2057,7 @@ def OneFlow_EagerCclBroadcastOp : OneFlow_BaseOp<"eager_ccl_broadcast", [NoSideE
   );
   let attrs = (ins
     StrAttr:$parallel_conf,
+    ShapeArrayAttr:$shape_list,
     DefaultValuedAttr<SI64Attr, "0">:$root,
     DefaultValuedAttr<BoolAttr, "true">:$async_launch
   );

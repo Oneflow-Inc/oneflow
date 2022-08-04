@@ -196,7 +196,7 @@ class EagerCclAllGatherKernel final : public user_op::OpKernel {
     CHECK_EQ(in->data_type(), out->data_type()) << kOfBugIssueUploadPrompt;
     std::unique_ptr<ccl::AllGather> all_gather =
         ccl::NewCollectiveCommunication<ccl::AllGather>(ctx->device_type(), in->data_type());
-    all_gather->Launch(ctx->stream(), in->dptr(), out->mut_dptr(), out->shape_view().elem_cnt(),
+    all_gather->Launch(ctx->stream(), in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
                        kernel_cache->communication_ctx());
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
