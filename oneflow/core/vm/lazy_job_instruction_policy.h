@@ -23,9 +23,8 @@ limitations under the License.
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/vm/instruction_policy.h"
 #include "oneflow/core/vm/instruction_policy_util.h"
-#include "oneflow/core/vm/lazy_job_device_context.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
-#include "oneflow/core/vm/naive_stream_policy.h"
+#include "oneflow/core/vm/lazy_job_stream_policy.h"
 #include "oneflow/core/vm/virtual_machine.h"
 
 namespace oneflow {
@@ -40,17 +39,6 @@ class LazyJobInstance final : public JobInstance {
 
   std::string job_name() const override { return job_name_; }
   void Finish() const override { finish_cb_(); }
-
-  std::string sole_input_op_name_in_user_job() const override {
-    UNIMPLEMENTED();
-    return std::string();
-  }
-  std::string sole_output_op_name_in_user_job() const override {
-    UNIMPLEMENTED();
-    return std::string();
-  }
-  void PushBlob(uint64_t ofblob_ptr) const override { UNIMPLEMENTED(); }
-  void PullBlob(uint64_t ofblob_ptr) const override { UNIMPLEMENTED(); }
 
  private:
   const std::string job_name_;
@@ -99,12 +87,12 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
   std::string DebugName(const Instruction&) const override { return "LaunchLazyJob"; }
   Maybe<void> Prepare(Instruction* instruction) override { return Maybe<void>::Ok(); }
   void Compute(Instruction* instruction) override {
-    auto* device_ctx = GetLazyJobDeviceCtx(instruction);
+    auto* lazy_job_stream_policy = GetLazyJobStreamPolicy(instruction);
 
     static thread_local int64_t run_id = 0;
     {
       OF_PROFILER_RANGE_GUARD("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
-      device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(nn_graph_);
+      lazy_job_stream_policy->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(nn_graph_);
     }
     {
       OF_PROFILER_RANGE_GUARD("Send all buffers to BufferMgr");
@@ -116,23 +104,21 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
     }
     OF_UNUSED(run_id);  // disable compiler warning.
     OF_PROFILER_RANGE_GUARD("EnqueueNNGraph");
-    device_ctx->EnqueueNNGraph(nn_graph_);
+    lazy_job_stream_policy->EnqueueNNGraph(nn_graph_);
   }
 
  private:
-  LazyJobDeviceCtx* GetLazyJobDeviceCtx(Instruction* instruction) const {
+  LazyJobStreamPolicy* GetLazyJobStreamPolicy(Instruction* instruction) const {
     StreamPolicy* stream_policy = instruction->mut_stream()->mut_stream_policy();
-    NaiveStreamPolicy* naive_stream_policy = dynamic_cast<NaiveStreamPolicy*>(stream_policy);
-    CHECK_NOTNULL(naive_stream_policy);
-    auto* device_ctx = dynamic_cast<LazyJobDeviceCtx*>(naive_stream_policy->device_ctx().get());
-    CHECK_NOTNULL(device_ctx);
-    return device_ctx;
+    LazyJobStreamPolicy* lazy_job_stream_policy = dynamic_cast<LazyJobStreamPolicy*>(stream_policy);
+    CHECK_NOTNULL(lazy_job_stream_policy);
+    return lazy_job_stream_policy;
   }
 
   std::shared_ptr<LazyJobInstance> MakeJobInstance(Instruction* instruction) const {
     const auto& FinishCb = [this, instruction]() {
-      auto* device_ctx = GetLazyJobDeviceCtx(instruction);
-      device_ctx->DequeueNNGraph();
+      auto* lazy_job_stream_policy = GetLazyJobStreamPolicy(instruction);
+      lazy_job_stream_policy->DequeueNNGraph();
       auto* status_buffer = instruction->mut_status_buffer();
       NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer())->set_done();
     };
