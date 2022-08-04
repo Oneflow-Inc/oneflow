@@ -37,18 +37,9 @@ class CopyKernel final : public user_op::OpKernel {
       // 0 shape tensor do not need copy
       return;
     } else {
-      ep::primitive::MemcpyKind kind{};
-      if (ctx->op_type_name() == "copy_h2d") {
-        kind = ep::primitive::MemcpyKind::kHtoD;
-      } else if (ctx->op_type_name() == "copy_d2h") {
-        kind = ep::primitive::MemcpyKind::kDtoH;
-      } else {
-        UNIMPLEMENTED();
-      }
-      std::unique_ptr<ep::primitive::Memcpy> primitive =
-          ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(ctx->stream()->device_type(), kind);
-      primitive->Launch(ctx->stream(), out->mut_raw_dptr(), in->raw_dptr(),
-                        in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
+      AutoMemcpy(ctx->stream(), out->mut_raw_dptr(), in->raw_dptr(),
+                 in_shape.elem_cnt() * GetSizeOfDataType(in_data_type), out->mem_case(),
+                 in->mem_case());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
