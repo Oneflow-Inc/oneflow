@@ -19,6 +19,7 @@ limitations under the License.
 #include <sstream>
 #include "gtest/gtest.h"
 #define private public
+#define protected public
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
@@ -140,6 +141,60 @@ void test_constructor() {
 TEST(NdIndexOffsetHelper, constructor) {
   test_constructor<int32_t>();
   test_constructor<int64_t>();
+}
+
+template<typename T, typename U>
+void test_stride_constructor() {
+  const T d0 = 4;
+  const T d1 = 5;
+  const T d2 = 6;
+
+  const U u0 = 4;
+  const U u1 = 5;
+  const U u2 = 6;
+
+  // static
+  {
+    std::vector<T> dims({d0, d1, d2});
+    std::vector<T> dims_u({u0, u1, u2});
+    const NdIndexStrideOffsetHelper<T, 3> helper1(dims.data());
+    const NdIndexStrideOffsetHelper<T, 3> helper2(dims.data(), dims.size());
+    const NdIndexStrideOffsetHelper<T, 3> helper3(dims_u.data());
+    const NdIndexStrideOffsetHelper<T, 3> helper4(dims_u.data(), dims_u.size());
+
+    std::vector<T> stride({d1 * d2, d2, 1});
+    std::vector<U> stride_u({u1 * u2, u2, 1});
+
+    for (int i = 0; i < 3; ++i) {
+      ASSERT_EQ(helper1.stride_[i], stride[i]);
+      ASSERT_EQ(helper2.stride_[i], stride[i]);
+      ASSERT_EQ(helper3.stride_[i], stride_u[i]);
+      ASSERT_EQ(helper4.stride_[i], stride_u[i]);
+    }
+  }
+  // dynamic
+  {
+    std::vector<T> dims({d0, d1, d2});
+    std::vector<U> dims_u({u0, u1, u2});
+    const NdIndexStrideOffsetHelper<T, 6> helper1(dims.data());
+    const NdIndexStrideOffsetHelper<T, 6> helper2(dims.data(), dims.size());
+    const NdIndexStrideOffsetHelper<T, 6> helper3(dims_u.data());
+    const NdIndexStrideOffsetHelper<T, 6> helper4(dims_u.data(), dims_u.size());
+    std::vector<T> stride({d1 * d2, d2, 1, 1, 1, 1});
+    std::vector<U> stride_u({u1 * u2, u2, 1, 1, 1, 1});
+
+    for (int i = 0; i < 6; ++i) {
+      ASSERT_EQ(helper1.stride_[i], stride[i]);
+      ASSERT_EQ(helper2.stride_[i], stride[i]);
+      ASSERT_EQ(helper3.stride_[i], stride_u[i]);
+      ASSERT_EQ(helper4.stride_[i], stride_u[i]);
+    }
+  }
+}
+
+TEST(NdIndexStrideOffsetHelper, constructor) {
+  test_stride_constructor<int32_t, int64_t>();
+  test_stride_constructor<int64_t, int32_t>();
 }
 
 }  // namespace test
