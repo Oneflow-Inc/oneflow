@@ -2057,6 +2057,7 @@ def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", [NoSid
   );
   let attrs = (ins
     StrAttr:$parallel_conf,
+    ShapeArrayAttr:$shape_list,
     DefaultValuedAttr<SI64Attr, "0">:$root,
     DefaultValuedAttr<BoolAttr, "true">:$async_launch
   );
@@ -6258,7 +6259,7 @@ def OneFlow_AdadeltaUpdateOp : OneFlow_BaseOp<"adadelta_update", [NoGrad, AttrSi
     OneFlow_Tensor:$model_diff,
     Optional<OneFlow_Tensor>:$learning_rate,
     Optional<OneFlow_Tensor>:$skip_if,
-    OneFlow_Tensor:$square_avgs, 
+    OneFlow_Tensor:$square_avgs,
     OneFlow_Tensor:$acc_deltas
   );
   let attrs = (ins
@@ -6266,9 +6267,9 @@ def OneFlow_AdadeltaUpdateOp : OneFlow_BaseOp<"adadelta_update", [NoGrad, AttrSi
     DefaultValuedAttr<F64Attr, "1.">:$scale,
     DefaultValuedAttr<F32Attr, "0.">:$l1,
     DefaultValuedAttr<F32Attr, "0.">:$l2,
-    DefaultValuedAttr<F32Attr, "0.">:$weight_decay, 
-    DefaultValuedAttr<F32Attr, "0.9">:$rho, 
-    DefaultValuedAttr<F32Attr, "0.">:$epsilon, 
+    DefaultValuedAttr<F32Attr, "0.">:$weight_decay,
+    DefaultValuedAttr<F32Attr, "0.9">:$rho,
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon,
     DefaultValuedAttr<BoolAttr, "false">:$maximize
   );
   let trait_attrs = (ins
@@ -10225,7 +10226,6 @@ def OneFlow_CopyH2DOp : OneFlow_BaseOp<"copy_h2d", [NoSideEffect, NoGrad, Declar
 
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
-  let has_sbp_signature_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
@@ -10240,7 +10240,6 @@ def OneFlow_CopyD2HOp : OneFlow_BaseOp<"copy_d2h", [NoSideEffect, NoGrad, Declar
 
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
-  let has_sbp_signature_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }

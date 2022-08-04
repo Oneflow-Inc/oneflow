@@ -23,29 +23,17 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> InferLogicalOutBlobDescs(user_op::InferContext* ctx) { UNIMPLEMENTED_THEN_RETURN(); }
+Maybe<void> InferLogical(user_op::InferContext* ctx) {
+  UNIMPLEMENTED_THEN_RETURN() << "copy hd should only exist in physical graph";
+}
 
-Maybe<void> InferOutBlobDescs(user_op::InferContext* ctx) {
+Maybe<void> InferPhysical(user_op::InferContext* ctx) {
   *ctx->MutOutputTensorDesc("out", 0) = ctx->InputTensorDesc("in", 0);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferSbpSignature(user_op::InferSbpSignatureFnContext* ctx) {
-  auto* bn2sbp = ctx->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
-  const std::string& ibn = GenRepeatedBn("in", 0);
-  const std::string& obn = GenRepeatedBn("out", 0);
-  const auto& sbp_parallel = ctx->SbpParallelHint4InputArgNameAndIndex("in", 0);
-  (*bn2sbp)[ibn] = sbp_parallel;
-  (*bn2sbp)[obn] = sbp_parallel;
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-  // only for nchw
-  FOR_RANGE(int64_t, i, 0, std::min(2, (int)tensor.shape().NumAxes())) {
-    ctx->NewBuilder().Split(user_op::OpArg("in", 0), i).Split(user_op::OpArg("out", 0), i).Build();
-  }
+  ctx->NewBuilder().Broadcast(user_op::OpArg("in", 0)).Broadcast(user_op::OpArg("out", 0)).Build();
   return Maybe<void>::Ok();
 }
 
@@ -57,15 +45,11 @@ Maybe<void> InferFWDataType(user_op::InferContext* ctx) {
 }  // namespace
 
 Maybe<void> CopyD2HOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalOutBlobDescs(ctx);
+  return InferLogical(ctx);
 }
 
 Maybe<void> CopyD2HOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferOutBlobDescs(ctx);
-}
-
-Maybe<void> CopyD2HOp::InferSbpSignature(user_op::InferSbpSignatureFnContext* ctx) {
-  return InferSbpSignature(ctx);
+  return InferPhysical(ctx);
 }
 
 Maybe<void> CopyD2HOp::GetSbp(user_op::SbpContext* ctx) { return FwGetSbpFn(ctx); }
@@ -73,15 +57,11 @@ Maybe<void> CopyD2HOp::GetSbp(user_op::SbpContext* ctx) { return FwGetSbpFn(ctx)
 Maybe<void> CopyD2HOp::InferDataType(user_op::InferContext* ctx) { return InferFWDataType(ctx); }
 
 Maybe<void> CopyH2DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalOutBlobDescs(ctx);
+  return InferLogical(ctx);
 }
 
 Maybe<void> CopyH2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferOutBlobDescs(ctx);
-}
-
-Maybe<void> CopyH2DOp::InferSbpSignature(user_op::InferSbpSignatureFnContext* ctx) {
-  return InferSbpSignature(ctx);
+  return InferPhysical(ctx);
 }
 
 Maybe<void> CopyH2DOp::GetSbp(user_op::SbpContext* ctx) { return FwGetSbpFn(ctx); }

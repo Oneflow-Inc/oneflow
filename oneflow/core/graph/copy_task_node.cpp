@@ -45,14 +45,13 @@ void CopyTaskNode::BuildExecGphAndRegst() {
 
 void CopyTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
 
-void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, const DeviceId& device_id,
-                          const LogicalBlobId& lbi) {
+void CopyHdTaskNode::Init(CopyType copy_type, const DeviceId& device_id, const LogicalBlobId& lbi) {
   copy_type_ = copy_type;
   set_machine_id(device_id.rank());
   int64_t thrd_id = -1;
-  if (copy_type == CopyHdOpConf::H2D) {
+  if (copy_type == CopyType::H2D) {
     thrd_id = EncodeStreamIdToInt64(GenerateNamedTaskStreamId(device_id, "H2D"));
-  } else if (copy_type == CopyHdOpConf::D2H) {
+  } else if (copy_type == CopyType::D2H) {
     thrd_id = EncodeStreamIdToInt64(GenerateNamedTaskStreamId(device_id, "D2H"));
   } else {
     UNIMPLEMENTED();
@@ -62,9 +61,9 @@ void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, const DeviceId& device_i
 }
 
 void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
-  if (copy_type_ == CopyHdOpConf::H2D) {
+  if (copy_type_ == CopyType::H2D) {
     TaskNode::InitProducedRegstMemCase(mem_case);
-  } else if (copy_type_ == CopyHdOpConf::D2H) {
+  } else if (copy_type_ == CopyType::D2H) {
     mem_case->set_device_type(DeviceType::kCPU);
     mem_case->set_device_id(0);
     mem_case->set_pinned_device_type(device_type());
@@ -78,9 +77,9 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   OperatorConf conf;
   conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(device_type())));
   auto copy_type_name = "undefined";
-  if (copy_type_ == CopyHdOpConf::Type::CopyHdOpConf_Type_D2H) {
+  if (copy_type_ == CopyType::D2H) {
     copy_type_name = "copy_d2h";
-  } else if (copy_type_ == CopyHdOpConf::Type::CopyHdOpConf_Type_H2D) {
+  } else if (copy_type_ == CopyType::H2D) {
     copy_type_name = "copy_h2d";
   } else {
     LOG(FATAL) << "unknow copy type: " << copy_type_;

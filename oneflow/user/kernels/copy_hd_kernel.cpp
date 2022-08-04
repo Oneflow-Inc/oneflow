@@ -30,21 +30,31 @@ class CopyHdKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     CHECK(!!in) << "input of copy not found";
     const ShapeView& in_shape = in->shape_view();
-    const DataType in_data_type = in->data_type();
     if (in_shape.elem_cnt() == 0) {
       // 0 shape tensor do not need copy
     } else {
+      const DataType in_data_type = in->data_type();
       user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
       CHECK(!!out) << "output of copy not found, op: " << ctx->op_name();
       CHECK_EQ(out->shape_view(), in_shape);
       CHECK_EQ(out->data_type(), in_data_type);
-      AutoMemcpy(ctx->stream(), out->mut_raw_dptr(), in->raw_dptr(),
-                 in_shape.elem_cnt() * GetSizeOfDataType(in_data_type), out->mem_case(),
-                 in->mem_case());
+
+      ep::primitive::MemcpyKind kind{};
+      if (ctx->op_type_name() == "copy_h2d") {
+        kind = ep::primitive::MemcpyKind::kHtoD;
+      } else if (ctx->op_type_name() == "copy_d2h") {
+        kind = ep::primitive::MemcpyKind::kDtoH;
+      } else {
+        UNIMPLEMENTED();
+      }
+      std::unique_ptr<ep::primitive::Memcpy> primitive =
+          ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(ctx->stream()->device_type(),
+                                                                    kind);
+      primitive->Launch(ctx->stream(), out->mut_raw_dptr(), in->raw_dptr(),
+                        in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
     }
   }
 
-  std::unique_ptr<ep::primitive::Memcpy> primitive_;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
