@@ -955,6 +955,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
 
         std::pair<std::string, int32_t> input_arg_index_pair = std::make_pair("", -1);
         for (int j = 0; j < inputs.size(); j++) {
+          // if an input tensor is the same tensor as the output tensor
+          // then this is an inplace operation
           if (inputs[j] == output_tensor) {
             input_arg_index_pair = op_expr.indexed_input_pairs()[j];
             break;

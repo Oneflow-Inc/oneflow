@@ -19,3 +19,8 @@ message OpBlobArgPairs {
 message OpBlobArgList {
   repeated OpBlobArg oba = 1;
 }
+
+message OpIOBlobArgIndexPair {
+  required string arg = 1;
+  required int32 index = 2;
+}

@@ -30,8 +30,9 @@ import random
 class TestGraphInplaceOperations(flow.unittest.TestCase):
     def test_inplace_scalar_add(test_case):
         def _test(device):
-            
-            add_value = random.randint(1,100)
+
+            add_value = random.randint(1, 100)
+
             class InplaceGraph(nn.Graph):
                 def build(self, input):
                     flow.add(input, add_value, inplace=True)
@@ -41,10 +42,10 @@ class TestGraphInplaceOperations(flow.unittest.TestCase):
                 def build(self, input):
                     return flow.add(input, add_value)
 
-            input = flow.randn(4,4,4, device = device)
+            input = flow.randn(4, 4, 4, device=device)
             inplace_graph = InplaceGraph()
             not_inplace_graph = NotInplaceGraph()
-            eq = flow.all(not_inplace_graph(input)==inplace_graph(input))
+            eq = flow.all(not_inplace_graph(input) == inplace_graph(input))
             test_case.assertTrue(eq)
 
         _test("cpu")
@@ -52,7 +53,8 @@ class TestGraphInplaceOperations(flow.unittest.TestCase):
 
     def test_inplace_scalar_sub(test_case):
         def _test(device):
-            sub_value = random.randint(1,100)
+            sub_value = random.randint(1, 100)
+
             class InplaceGraph(nn.Graph):
                 def build(self, input):
                     flow.sub(input, sub_value, inplace=True)
@@ -65,7 +67,7 @@ class TestGraphInplaceOperations(flow.unittest.TestCase):
             inplace_graph = InplaceGraph()
             not_inplace_graph = NotInplaceGraph()
             input = flow.randn(4, 4, 4, device=device)
-            eq = flow.all(not_inplace_graph(input)==inplace_graph(input))
+            eq = flow.all(not_inplace_graph(input) == inplace_graph(input))
             test_case.assertTrue(eq)
 
         _test("cpu")
@@ -73,7 +75,8 @@ class TestGraphInplaceOperations(flow.unittest.TestCase):
 
     def test_inplace_scalar_mul(test_case):
         def _test(device):
-            mul_value = random.randint(1,100)
+            mul_value = random.randint(1, 100)
+
             class InplaceGraph(nn.Graph):
                 def build(self, input):
                     flow.mul(input, mul_value, inplace=True)
@@ -86,7 +89,7 @@ class TestGraphInplaceOperations(flow.unittest.TestCase):
             inplace_graph = InplaceGraph()
             not_inplace_graph = NotInplaceGraph()
             input = flow.randn(4, 4, 4, device=device)
-            eq = flow.all(not_inplace_graph(input)==inplace_graph(input))
+            eq = flow.all(not_inplace_graph(input) == inplace_graph(input))
             test_case.assertTrue(eq)
 
         _test("cpu")
@@ -107,7 +110,9 @@ class TestGraphInplaceOperations(flow.unittest.TestCase):
             not_inplace_graph = NotInplaceGraph()
             input1 = flow.randn(4, 4, 4, device=device)
             input2 = flow.randn(4, 4, 4, device=device)
-            eq = flow.all(not_inplace_graph(input1,input2) == inplace_graph(input1, input2))
+            eq = flow.all(
+                not_inplace_graph(input1, input2) == inplace_graph(input1, input2)
+            )
             test_case.assertTrue(eq)
 
         _test("cpu")
@@ -128,21 +133,23 @@ class TestGraphInplaceOperations(flow.unittest.TestCase):
             not_inplace_graph = NotInplaceGraph()
             input1 = flow.randn(4, 4, 4, device=device)
             input2 = flow.randn(4, 4, 4, device=device)
-            eq = flow.all(not_inplace_graph(input1,input2) == inplace_graph(input1, input2))
+            eq = flow.all(
+                not_inplace_graph(input1, input2) == inplace_graph(input1, input2)
+            )
             test_case.assertTrue(eq)
-            
 
         _test("cpu")
         _test("cuda")
 
     def test_inplace_pow(test_case):
         def _test(device):
-            exp = random.randint(1,5)
+            exp = random.randint(1, 5)
+
             class InplaceGraph(nn.Graph):
                 def build(self, input):
                     flow.pow(input, exp, inplace=True)
                     return input
-            
+
             class NotInplaceGraph(nn.Graph):
                 def build(self, input):
                     return flow.pow(input, exp)
@@ -158,7 +165,8 @@ class TestGraphInplaceOperations(flow.unittest.TestCase):
 
     def test_inplace_floor_divide(test_case):
         def _test(device):
-            div_value = random.randint(1,10)
+            div_value = random.randint(1, 10)
+
             class InplaceGraph(nn.Graph):
                 def build(self, input):
                     flow.floor_divide(input, div_value, inplace=True)
@@ -179,12 +187,13 @@ class TestGraphInplaceOperations(flow.unittest.TestCase):
 
     def test_inplace_fmod(test_case):
         def _test(device):
-            mod_value = random.randint(1,10)
+            mod_value = random.randint(1, 10)
+
             class InplaceGraph(nn.Graph):
                 def build(self, input):
                     flow.fmod(input, mod_value, inplace=True)
                     return input
-            
+
             class NotInplaceGraph(nn.Graph):
                 def build(self, input):
                     return flow.fmod(input, mod_value)
@@ -298,15 +307,17 @@ class TestGraphInplaceOperations(flow.unittest.TestCase):
     def test_inplace_tensor_scatter_nd_update(test_case):
         def _test(device):
             class InplaceGraph(nn.Graph):
-                def build(self, input,indices, updates):
+                def build(self, input, indices, updates):
                     indices = flow.tensor([[1], [3], [5]], device=device)
                     updates = flow.tensor([-1, -2, -3], device=device)
-                    flow._C.tensor_scatter_nd_update(input, indices, updates, inplace=True)
+                    flow._C.tensor_scatter_nd_update(
+                        input, indices, updates, inplace=True
+                    )
                     return input
 
             class NotInplaceGraph(nn.Graph):
                 def build(self, input, indices, updates):
-                  
+
                     return flow._C.tensor_scatter_nd_update(input, indices, updates)
 
             inplace_graph = InplaceGraph()
@@ -314,7 +325,10 @@ class TestGraphInplaceOperations(flow.unittest.TestCase):
             input = flow.arange(8, device=device)
             indices = flow.tensor([[1], [3], [5]], device=device)
             updates = flow.tensor([-1, -2, -3], device=device)
-            eq = flow.all(not_inplace_graph(input, indices, updates) == inplace_graph(input, indices, updates))
+            eq = flow.all(
+                not_inplace_graph(input, indices, updates)
+                == inplace_graph(input, indices, updates)
+            )
             test_case.assertTrue(eq)
 
         _test("cpu")
@@ -322,14 +336,13 @@ class TestGraphInplaceOperations(flow.unittest.TestCase):
 
     def test_inplace_slice_update(test_case):
         def _test(device):
-            slice_tup_list=[[1, 4, 1]]
+            slice_tup_list = [[1, 4, 1]]
             input = flow.Tensor(
-                        np.array([1, 1, 1, 1, 1]).astype(np.float32), device=device
-                    )
-            update = flow.Tensor(
-                        np.array([2, 3, 4]).astype(np.float32), device=device
-                    )
+                np.array([1, 1, 1, 1, 1]).astype(np.float32), device=device
+            )
+            update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32), device=device)
             (start, stop, step) = parse_slice_tuple_list(slice_tup_list, input.shape)
+
             class InplaceGraph(nn.Graph):
                 def build(self, input, update):
                     flow._C.slice_update(input, update, start, stop, step, inplace=True)
@@ -338,10 +351,12 @@ class TestGraphInplaceOperations(flow.unittest.TestCase):
             class NotInplaceGraph(nn.Graph):
                 def build(self, input, update):
                     return flow._C.slice_update(input, update, start, stop, step)
-            
+
             inplace_graph = InplaceGraph()
             not_inplace_graph = NotInplaceGraph()
-            eq = flow.all(not_inplace_graph(input, update) == inplace_graph(input, update))
+            eq = flow.all(
+                not_inplace_graph(input, update) == inplace_graph(input, update)
+            )
             test_case.assertTrue(eq)
 
         _test("cpu")
@@ -424,9 +439,9 @@ class TestGraphInplaceOperations(flow.unittest.TestCase):
             eq = flow.all(not_inplace_graph(input) == inplace_graph(input))
             test_case.assertTrue(eq)
 
-
         _test("cpu")
         _test("cuda")
+
 
 if __name__ == "__main__":
     unittest.main()

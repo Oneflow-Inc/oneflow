@@ -37,7 +37,7 @@ void InitArgName2BnIndex2TensorTupleIndex(
 
 }  // namespace
 
-std::pair<std::string, int> GetPair(const std::string& bn) {
+std::pair<std::string, int> GetArgIndexPair4Bn(const std::string& bn) {
   int32_t index = 0;
   const size_t pos = bn.rfind('_');
   if (pos != std::string::npos) { index = std::stoi(bn.substr(pos + 1)); }
@@ -46,7 +46,9 @@ std::pair<std::string, int> GetPair(const std::string& bn) {
 
 ArgTuple::ArgTuple(const std::vector<std::string>& indexed_bns) : indexed_bns_(indexed_bns) {
   indexed_arg_name_and_index_.reserve(indexed_bns.size());
-  for (const auto& bn : indexed_bns) { indexed_arg_name_and_index_.emplace_back(GetPair(bn)); }
+  for (const auto& bn : indexed_bns) {
+    indexed_arg_name_and_index_.emplace_back(GetArgIndexPair4Bn(bn));
+  }
   InitArgName2BnIndex2TensorTupleIndex(indexed_arg_name_and_index_,
                                        &arg_name2bn_index2tensor_tuple_index_);
   for (int i = 0; i < indexed_bns.size(); ++i) {

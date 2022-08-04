@@ -22,7 +22,7 @@ limitations under the License.
 
 namespace oneflow {
 
-std::pair<std::string, int> GetPair(const std::string& bn);
+std::pair<std::string, int> GetArgIndexPair4Bn(const std::string& bn);
 
 class ArgTuple final {
  public:

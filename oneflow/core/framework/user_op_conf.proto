@@ -2,7 +2,7 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/framework/user_op_attr.proto";
-import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/register/op_blob_arg.proto";
 
 message UserOpConf {
   message ListString {
@@ -17,13 +17,10 @@ message UserOpConf {
   repeated string input_order = 5;
   repeated string output_order = 6;
 
-  message ArgIndexPair {
-    required string arg = 1;
-    required int32 index = 2;
-  }
+
 
   // output blob name --> input arg and index
   // inplace operation's output should correspond to an input
   // When the operation is excuted, the output should be written on the input's memory
-  map<string, ArgIndexPair> inplace_operation_info = 7; 
+  map<string, OpIOBlobArgIndexPair> inplace_operation_info = 7; 
 }

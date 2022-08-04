@@ -127,6 +127,8 @@ void NormalForwardCompTaskNode::HandleInplaceOperationRegsts() {
                                  << " The asscociated in_regst is with lbn: " << input_lbi.op_name()
                                  << "/" << input_lbi.blob_name();
 
+      // set in_regst's memory can be reused
+      // let out_regst reuse in_regst's memory when the operation is executed
       in_regst->set_enable_reuse_mem(true);
       out_regst->set_hint_inplace_consumed_regst_desc_id(in_regst->regst_desc_id());
     }

@@ -597,6 +597,9 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
+  // NOTE: This function is only used for checking inplace operation memory reuse is successful
+  // during development ( in and out pointers are the same.) This function should be deleted when
+  // merging.
   void check_inplace_operation_data_pointers() {
     if (stream_->device_type() == kCPU) {  // inplace is not currently supported for cpu device
       return;
@@ -605,7 +608,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
     for (const auto& it : user_op_conf_.op_conf().user_conf().inplace_operation_info()) {
       const std::string& obn = it.first;
       const auto& input_arg_index_pair = it.second;
-      CHECK_EQ(arg2bn_tensor_pair_[GetPair(obn)].tensor->raw_dptr(),
+      CHECK_EQ(arg2bn_tensor_pair_[GetArgIndexPair4Bn(obn)].tensor->raw_dptr(),
                arg2bn_tensor_pair_[std::make_pair(input_arg_index_pair.arg(),
                                                   input_arg_index_pair.index())]
                    .tensor->raw_dptr())
