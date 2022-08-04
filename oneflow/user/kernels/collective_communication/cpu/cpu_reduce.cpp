@@ -13,14 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/framework/transport_util.h"
 #include "oneflow/user/kernels/collective_communication/cpu/cpu_communication_context.h"
-#include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/user/kernels/collective_communication/include/reduce.h"
+#include "oneflow/user/kernels/collective_communication/cpu/cpu_collective_communication_util.h"
 
 namespace oneflow {
 
@@ -28,41 +27,8 @@ namespace ccl {
 
 namespace {
 
-inline int64_t RingDecrease(int64_t n, int64_t size) { return (n - 1 + size) % size; }
-
-inline int64_t RingIncrease(int64_t n, int64_t size) { return (n + 1 + size) % size; }
-
 template<typename T, ReduceType reduce_type>
-struct ReduceFunctor;
-
-template<typename T>
-struct ReduceFunctor<T, kSum> {
-  static void Call(size_t size, T* out, const T* in0, const T* in1) {
-    size_t thread_num = Singleton<ThreadPool>::Get()->thread_num();
-    BalancedSplitter bs(size, thread_num);
-    MultiThreadLoop(thread_num, [&](size_t thread_idx) {
-      size_t end = bs.At(thread_idx).end();
-      for (size_t i = bs.At(thread_idx).begin(); i < end; ++i) { out[i] = in0[i] + in1[i]; }
-    });
-  }
-};
-
-template<typename T>
-struct ReduceFunctor<T, kMax> {
-  static void Call(size_t size, T* out, const T* in0, const T* in1) {
-    size_t thread_num = Singleton<ThreadPool>::Get()->thread_num();
-    BalancedSplitter bs(size, thread_num);
-    MultiThreadLoop(thread_num, [&](size_t thread_idx) {
-      size_t end = bs.At(thread_idx).end();
-      for (size_t i = bs.At(thread_idx).begin(); i < end; ++i) {
-        out[i] = std::max(in0[i], in1[i]);
-      }
-    });
-  }
-};
-
-template<typename T, ReduceType reduce_type>
-struct DtypeReduce final {
+struct ReduceImpl final {
   static Maybe<void> Call(const void* void_in, void* void_out, size_t elem_cnt, int64_t root,
                           Symbol<ParallelDesc> parallel_desc) {
     const T* in = reinterpret_cast<const T*>(void_in);
@@ -181,9 +147,9 @@ struct DtypeReduce final {
 
 #define MAKE_ALL_REDUCE_ENTRY(func_name, T, reduce_type) func_name<T, reduce_type>::Call
 
-DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, DtypeReduce, MAKE_ALL_REDUCE_ENTRY,  // NOLINT
-                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ),       // NOLINT
-                          REDUCE_TYPE_CTRV_SEQ);                            // NOLINT
+DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, ReduceImpl, MAKE_ALL_REDUCE_ENTRY,  // NOLINT
+                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ),      // NOLINT
+                          REDUCE_TYPE_CTRV_SEQ);                           // NOLINT
 
 #undef MAKE_ALL_REDUCE_ENTRY
 
@@ -205,8 +171,8 @@ class CpuReduce final : public Reduce {
     const auto& cpu_communication_ctx =
         std::dynamic_pointer_cast<CpuCommunicationContext>(communication_ctx);
     CHECK(cpu_communication_ctx);
-    CHECK_JUST(SwitchDtypeReduce(SwitchCase(datatype_, reduce_type_), in, out, elem_cnt, root,
-                                 cpu_communication_ctx->parallel_desc()));
+    CHECK_JUST(SwitchReduceImpl(SwitchCase(datatype_, reduce_type_), in, out, elem_cnt, root,
+                                cpu_communication_ctx->parallel_desc()));
   }
 
  private:
