@@ -94,17 +94,36 @@ Maybe<void> AutoParallelPass::RemoveParallelCastOps(Job* job) const {
     if (ctrl_in_op_names.find(op_conf.name()) != ctrl_in_op_names.end()) { return; }
     if (!IsParallelCastOp(op_conf)) { return; }
     if (op_node->in_edges().size() != 1) { return; }
-    user_op::UserOpConfWrapper conf_wrapper(op_conf);
-    const LogicalBlobId& parallel_cast_in_lbi = GenLogicalBlobId(conf_wrapper.input("in", 0));
-    const LogicalBlobId& parallel_cast_out_lbi = GenLogicalBlobId(conf_wrapper.output("out", 0));
-    const OpNode* producer = op_graph.OpNode4OpName(parallel_cast_in_lbi.op_name());
+
+    if (GlobalProcessCtx::Rank() == 0) { std::cout << op_node->op().op_name() << std::endl; }
+    // Find the first op which won't be deleted
+    const OpNode* source_op = op_node;
+    const OpNode* producer = op_node->SoleInEdge()->src_node();
+    while (IsParallelCastOp(producer->op().op_conf()) && producer->in_edges().size() == 1) {
+      source_op = producer;
+      producer = source_op->SoleInEdge()->src_node();
+    }
+    user_op::UserOpConfWrapper conf_wrapper_in(source_op->op().op_conf());
+    const LogicalBlobId& parallel_cast_in_lbi = GenLogicalBlobId(conf_wrapper_in.input("in", 0));
+
+    user_op::UserOpConfWrapper conf_wrapper_out(op_conf);
+    const LogicalBlobId& parallel_cast_out_lbi =
+        GenLogicalBlobId(conf_wrapper_out.output("out", 0));
+    // const OpNode* producer = op_graph.OpNode4OpName(parallel_cast_in_lbi.op_name());
     if (op_node->parallel_desc() != producer->parallel_desc()) { return; }
-    const NdSbp& parallel_cast_nd_sbp = op_node->NdSbp4Lbi(parallel_cast_in_lbi);
+    if (GlobalProcessCtx::Rank() == 0) { std::cout << "equal parallel desc" << std::endl; }
+    // const NdSbp& parallel_cast_nd_sbp = op_node->NdSbp4Lbi(parallel_cast_in_lbi);
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
-      if (IsParallelCastOp(consumer->op().op_conf())) { return; }
+      if (GlobalProcessCtx::Rank() == 0)
+        std::cout << consumer->op().op_name() << ": " << IsParallelCastOp(consumer->op().op_conf())
+                  << ", " << (consumer->parallel_desc() != op_node->parallel_desc()) << ", "
+                  << std::endl;
+      // << (consumer->NdSbp4Lbi(parallel_cast_out_lbi) != parallel_cast_nd_sbp)
+
+      // if (IsParallelCastOp(consumer->op().op_conf())) { return; }
       if (consumer->parallel_desc() != op_node->parallel_desc()) { return; }
-      if (consumer->NdSbp4Lbi(parallel_cast_out_lbi) != parallel_cast_nd_sbp) { return; }
+      // if (consumer->NdSbp4Lbi(parallel_cast_out_lbi) != parallel_cast_nd_sbp) { return; }
     }
     op_name2nd_sbp_signature[producer->op().op_name()] = producer->nd_sbp_signature();
     for (const OpEdge* out_edge : op_node->out_edges()) {
@@ -124,7 +143,7 @@ Maybe<void> AutoParallelPass::RemoveParallelCastOps(Job* job) const {
       }
     }
     del_op_names.emplace_back(op_conf.name());
-    LOG(INFO) << "\tremove " << op_conf.name();
+    if (GlobalProcessCtx::Rank() == 0) std::cout << "\tremove " << op_conf.name();
   });
   for (const auto& pair : op_name2op_conf) { job_builder.MutOpsOnlyOnce({pair.second}); }
   for (const auto& pair : op_name2nd_sbp_signature) {
