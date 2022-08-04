@@ -253,7 +253,6 @@ class Embedding(Module):
             >>> # a snapshot named "my_snapshot1" have been saved in the "snapshots" dir under your_configed_persistent_path
             >>> # which can be reload by flow.one_embedding.load_snapshot
         """
-        print("Herer- - -- - - - - = = == = = = = = ==")
         self.handler.SaveSnapshot(snapshot_name)
 
     def load_snapshot(self, snapshot_name):
@@ -808,7 +807,6 @@ class Ftrl(Optimizer):
         options["lambda2"] = lambda2
         options["beta"] = beta
         super().__init__(params, options)
-        # print("initial accumulator value is: ", options["initial_accumulator_value"])
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
