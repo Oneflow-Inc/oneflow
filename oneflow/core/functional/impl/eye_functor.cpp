@@ -145,11 +145,42 @@ class GlobalEyeSbpFunctor {
 
 }  // namespace impl
 
+class EyeInplaceFunctor {
+ public:
+  EyeInplaceFunctor() { op_ = CHECK_JUST(one::OpBuilder("eye").Output("out").Build()); }
+  struct EyeInplace {
+    Maybe<AttrMap> operator()(int64_t rows, int64_t cols, DataType dtype) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("rows", rows));
+      JUST(attrs.SetAttr<int64_t>("cols", cols));
+      JUST(attrs.SetAttr<DataType>("dtype", dtype));
+      return AttrMap(attrs);
+    }
+  };
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    JUST(CheckInplaceValid(x));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(EyeInplace);
+    const auto attrs =
+        *JUST(GetAttrs(x->shape()->At(0), x->shape()->At(1), x->dtype()->data_type()));
+    OpExprInterpContext ctx(attrs);
+    ctx.device = JUST(x->device());
+    JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 using namespace impl;
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<EyeDevcieFunctor, EyeDeviceStrFunctor, GlobalEyeSbpListFunctor,
                 GlobalEyeSbpFunctor>("Eye");
+  m.add_functor<EyeInplaceFunctor>("EyeInplace");
 };
 
 }  // namespace functional

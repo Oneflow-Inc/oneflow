@@ -183,16 +183,17 @@ static Maybe<void> BuildAndRunLocalCastInstruction(const BuiltinOpExpr& op_expr,
 namespace {
 
 Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root,
-                                          size_t size) {
+                                          size_t size, const std::vector<Shape>& shape_list) {
   return one::OpBuilder("eager_nccl_broadcast", *JUST(UniqueStr("eager_nccl_broadcast")))
       .Input("in", size)
       .Output("out", size)
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
+      .Attr<std::vector<Shape>>("shape_list", shape_list)
       .Attr<int64_t>("root", root)
       .Build();
 }
 
-auto* CachedEagerNcclBroadcastOpExpr = DECORATE(&EagerNcclBroadcast, ThreadLocal);
+auto* CachedEagerNcclBroadcastOpExpr = DECORATE(&EagerNcclBroadcast, ThreadLocalCachedCopiable);
 
 struct BroadcastAttrs {
   Maybe<AttrMap> operator()(int64_t src_rank) {
@@ -209,7 +210,7 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
   CHECK_OR_RETURN(parallel_desc->containing_current_rank());
   if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
   std::shared_ptr<UserOpExpr> op_expr =
-      JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank, 1));
+      JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank, 1, {*tensor->shape()}));
   constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(BroadcastAttrs);
   const auto attrs = *JUST(GetAttrs(src_rank));
   if (src_rank == GlobalProcessCtx::Rank() || inplace) {
@@ -228,8 +229,10 @@ Maybe<TensorTuple> Broadcast(const TensorTuple& inputs, int64_t src_rank,
   CHECK_OR_RETURN(parallel_desc->containing_current_rank())
       << "Current rank are not contained in the placement arguement";
   if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return inputs; }
+  std::vector<Shape> shape_list;
+  for (const auto& tensor : inputs) { shape_list.emplace_back(*tensor->shape()); }
   std::shared_ptr<UserOpExpr> op_expr =
-      JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank, inputs.size()));
+      JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank, inputs.size(), shape_list));
   constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(BroadcastAttrs);
   const auto attrs = *JUST(GetAttrs(src_rank));
   if (src_rank == GlobalProcessCtx::Rank() || inplace) {

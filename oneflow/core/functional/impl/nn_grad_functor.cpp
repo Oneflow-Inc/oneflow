@@ -137,7 +137,7 @@ class ConvDataGradFunctor {
     constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(ConvDataGrad);
     const auto attrs = *JUST(GetAttrs(num_spatial_dims, kernel_size, strides, padding_before,
                                       dilation_rate, groups, data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, weight, x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, weight, JUST(x->detach())}, attrs);
   }
 
  private:

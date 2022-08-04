@@ -1289,6 +1289,19 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
     constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(BinaryCrossEntropyWithLogitsLoss);
     const auto attrs = *JUST(GetAttrs(pos_weight.has_value()));
 
+    if (pos_weight) {
+      const auto pos_weight_shape = JUST(pos_weight)->shape();
+      // pos weight shape = (), (1,), (1,1)... or (input/target.shape[-1],)
+      const bool is_pos_weight_shape_valid =
+          (pos_weight_shape->elem_cnt() == 1)
+          || (pos_weight_shape->NumAxes() == 1
+              && pos_weight_shape->At(0) == target->shape()->back());
+
+      CHECK_OR_RETURN(is_pos_weight_shape_valid)
+          << Error::RuntimeError()
+          << "pos_weight must be a vector with length equal to the number of classes.";
+    }
+
     std::shared_ptr<Tensor> out;
     if (weight) {
       if (pos_weight) {
