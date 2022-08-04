@@ -27,18 +27,18 @@ class CopyHdKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    LOG(ERROR) << "running copy " << ctx->op_name();
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK(!!in) << "input of copy not found";
-    CHECK(!!out) << "output of copy not found";
     const ShapeView& in_shape = in->shape_view();
-    CHECK_EQ(out->shape_view(), in_shape);
     const DataType in_data_type = in->data_type();
-    CHECK_EQ(out->data_type(), in_data_type);
     if (in_shape.elem_cnt() == 0) {
       // 0 shape tensor do not need copy
-      return;
     } else {
+      user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+      CHECK(!!out) << "output of copy not found, op: " << ctx->op_name();
+      CHECK_EQ(out->shape_view(), in_shape);
+      CHECK_EQ(out->data_type(), in_data_type);
       AutoMemcpy(ctx->stream(), out->mut_raw_dptr(), in->raw_dptr(),
                  in_shape.elem_cnt() * GetSizeOfDataType(in_data_type), out->mem_case(),
                  in->mem_case());
