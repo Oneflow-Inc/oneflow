@@ -126,13 +126,13 @@ namespace oneflow {
   return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclReduceScatterOp::InferLogicalTensorDesc(
+/* static */ Maybe<void> EagerCclReduceScatterOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EagerNcclReduceScatterOp::InferPhysicalTensorDesc(
+/* static */ Maybe<void> EagerCclReduceScatterOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
   Shape* out_shape = ctx->MutOutputShape("out", 0);
@@ -151,11 +151,11 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EagerNcclReduceScatterOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> EagerCclReduceScatterOp::GetSbp(user_op::SbpContext* ctx) {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclReduceScatterOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
+/* static */ Maybe<void> EagerCclReduceScatterOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
   const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
   NdSbp* in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
   NdSbp* out_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
@@ -176,31 +176,31 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EagerNcclReduceScatterOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> EagerCclReduceScatterOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Stream>> EagerNcclReduceScatterOp::InferDeviceAndStream(
+/* static */ Maybe<Symbol<Stream>> EagerCclReduceScatterOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
   return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclAllGatherOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> EagerCclAllGatherOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
   *ctx->MutOutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> EagerNcclAllGatherOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> EagerCclAllGatherOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclAllGatherOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> EagerCclAllGatherOp::GetSbp(user_op::SbpContext* ctx) {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
 }
 
-/* static */ Maybe<void> EagerNcclAllGatherOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
+/* static */ Maybe<void> EagerCclAllGatherOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
   const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
   NdSbp* in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
   NdSbp* out_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
@@ -223,12 +223,12 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EagerNcclAllGatherOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> EagerCclAllGatherOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Stream>> EagerNcclAllGatherOp::InferDeviceAndStream(
+/* static */ Maybe<Symbol<Stream>> EagerCclAllGatherOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
   return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
 }
