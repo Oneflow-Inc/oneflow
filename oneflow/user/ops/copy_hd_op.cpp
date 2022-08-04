@@ -41,11 +41,7 @@ Maybe<void> InferSbpSignature(user_op::InferSbpSignatureFnContext* ctx) {
 }
 
 Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-  // only for nchw
-  FOR_RANGE(int64_t, i, 0, std::min(2, (int)tensor.shape().NumAxes())) {
-    ctx->NewBuilder().Split(user_op::OpArg("in", 0), i).Split(user_op::OpArg("out", 0), i).Build();
-  }
+  ctx->NewBuilder().Broadcast(user_op::OpArg("in", 0)).Broadcast(user_op::OpArg("out", 0)).Build();
   return Maybe<void>::Ok();
 }
 
