@@ -13,21 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/framework/transport_util.h"
 #include "oneflow/user/kernels/collective_communication/cpu/cpu_communication_context.h"
-#include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/user/kernels/collective_communication/include/all_gather.h"
+#include "oneflow/user/kernels/collective_communication/cpu/cpu_collective_communication_util.h"
 
 namespace oneflow {
 
 namespace ccl {
 
 namespace {
-
-inline int64_t RingDecrease(int64_t n, int64_t size) { return (n - 1 + size) % size; }
 
 Maybe<void> AllGatherImpl(const void* in, void* out, size_t elem_cnt, DataType dtype,
                           Symbol<ParallelDesc> parallel_desc) {
