@@ -157,6 +157,7 @@ void test_stride_constructor() {
   {
     std::vector<T> dims({d0, d1, d2});
     std::vector<T> dims_u({u0, u1, u2});
+    
     const NdIndexStrideOffsetHelper<T, 3> helper1(dims.data());
     const NdIndexStrideOffsetHelper<T, 3> helper2(dims.data(), dims.size());
     const NdIndexStrideOffsetHelper<T, 3> helper3(dims_u.data());
