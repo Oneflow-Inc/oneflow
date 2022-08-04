@@ -51,6 +51,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
   // Step1: new Singleton<OpGraph> and set log configs.
   Singleton<OpGraph>::New(*job);
+  tc->Count("Graph name: " + job_name + " NewOpGraph", 1);
   const JobDesc& job_desc = GlobalJobDesc();
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()
       || Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
@@ -58,12 +59,13 @@ void Compiler::Compile(Job* job, Plan* plan) const {
     Singleton<OpGraph>::Get()->ToDotWithFilePath(
         "optimized_dlnet_" + std::to_string(job_desc.job_id()) + "_op_graph.dot");
   }
-  tc->Count("Graph name: " + job_name + " save optimized job", 1);
+  tc->Count("Graph name: " + job_name + " LogOptimizedJob", 1);
 
   // Step2: build task_gph.
   // TODO(levi): we can rewrite this part of code in visitor pattern.
   auto task_gph =
       std::make_unique<TaskGraph>(job->job_conf().enable_straighten_algorithm_in_task_graph());
+  tc->Count("Graph name: " + job_name + " NewTaskGraph", 1);
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   tc->Count("Graph name: " + job_name + " ProduceAllRegstsAndBindEdges", 1);
@@ -110,9 +112,10 @@ void Compiler::Compile(Job* job, Plan* plan) const {
     } /* thread_pool.AddWork */);
   } /* task_gph->ForEachNode */);
   counter.WaitForeverUntilCntEqualZero();
-  tc->Count("Graph name: " + job_name + " Add task into plan", 1);
+  tc->Count("Graph name: " + job_name + " AddTaskIntoPlan", 1);
   // NOTE(levi): release task_gph here to decrise memory peak.
   task_gph.reset();
+  tc->Count("Graph name: " + job_name + " ReleaseTaskGraph", 1);
 
   // Step4: post-process for plan and delete Singleton<OpGraph>.
   auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
@@ -123,6 +126,7 @@ void Compiler::Compile(Job* job, Plan* plan) const {
   PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
   tc->Count("Graph name: " + job_name + " SetUniqueMemBlockId4UnreusedMemRegst", 1);
   Singleton<OpGraph>::Delete();
+  tc->Count("Graph name: " + job_name + " ReleaseOpGraph", 1);
 }
 
 }  // namespace oneflow

@@ -878,6 +878,8 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   CHECK_NOTNULL(Singleton<JobDesc>::Get());
   Singleton<JobDesc>::Delete();
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
+  auto pass_tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
+
   JobPassCtx job_pass_ctx(GlobalJobDesc());
   const auto job_name = job().job_conf().job_name();
   auto LogJob = [&](const std::string& name_suffix) -> void {
@@ -931,9 +933,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     Singleton<OpGraph>::Get()->ToDotWithFilePath("forward_dlnet_" + std::to_string(job_id())
                                                  + "_op_graph.dot");
     Singleton<OpGraph>::Delete();
+    pass_tc->Count("Graph " + job_name + " LogForwardGraph", 1);
   }
 
-  auto pass_tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
   if (GlobalJobDesc().Bool("__is_user_function__")) {
     JUST(DoPass("ModelUpdateConfCompatiblePass"));
     JUST(DoPass("NormalizationExponentialAverageAutoTickPass"));
@@ -980,8 +982,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("DumpVariableInfoPass"));
   }
   JUST(DoPass("DumpBlobParallelConfPass"));
+  pass_tc->Count("Graph " + job_name + " CheckJob", 1);
   JUST(CheckJob());
-  pass_tc->Count("Graph " + job_name + " Compile Pass", 1);
+  pass_tc->Count("Graph " + job_name + " CompilePasses", 1);
   return Maybe<void>::Ok();
 }
 

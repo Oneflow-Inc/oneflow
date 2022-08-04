@@ -265,9 +265,11 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
   CHECK_OR_RETURN(!runtime_inited_);
+  auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   JUST(RegisterNewVariableOpInJobPass());
   JUST(DeleteOutdatedVariableInVariableTensorMgr());
+  tc->Count("Graph name: " + name_ + " RegisterVariableOps", 1);
 
   // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
   one::TensorNameScope::Global()->Clear();
@@ -276,7 +278,6 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   if (Singleton<JobDesc>::Get() != nullptr) { Singleton<JobDesc>::Delete(); }
 
   auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id_);
-  auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
 
   // NOTE(chengcheng): do job compeleter for each rank.
   JUST(JobCompleter().Complete(&job_));
@@ -292,6 +293,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
       PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
+      tc->Count("Graph name: " + name_ + " LogPlan", 1);
     }
     PlanUtil::GenRegisterHint(&plan_);
     tc->Count("Graph name: " + name_ + " GenRegisterHint", 1);
@@ -315,13 +317,13 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     } else {
       Singleton<CtrlClient>::Get()->PullKV(plan_name, &plan_);
     }
-    tc->Count("Graph name: " + name_ + " Push or Pull plan", 1);
     OF_SESSION_BARRIER();
     // NOTE(zwx): After barrier plan is synchronized between all ranks,
     //     then it can be cleared for saving mem.
     if (GlobalProcessCtx::IsThisProcessMaster()) {
       Singleton<CtrlClient>::Get()->ClearKV(plan_name);
     }
+    tc->Count("Graph name: " + name_ + " Push or Pull plan", 1);
   }
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
