@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_API_PYTHON_JOB_BUILD_JOB_BUILD_AND_INFER_H_
 #define ONEFLOW_API_PYTHON_JOB_BUILD_JOB_BUILD_AND_INFER_H_
 
-#include <memory>
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/tensor.h"
