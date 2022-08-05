@@ -495,11 +495,11 @@ Maybe<void> Operator::GetNdSbpSignatureList(
 Maybe<void> Operator::GetValidNdSbpSignatureList(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list,
-    bool with_output) const {
+    bool check_output) const {
   JUST(GetNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list));
   // Leave those valid Nd SBPs
   JUST(FilterNdSbpSignatureListByLogicalShape(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list,
-                                              with_output));
+                                              check_output));
   CHECK_OR_RETURN(nd_sbp_sig_list->size() > 0)
       << "Empty sbp signature after filtering for " << op_name();
   return Maybe<void>::Ok();
@@ -666,7 +666,7 @@ Maybe<void> Operator::FilterAndCheckValidSbpSignatureListByLogicalShape(
 Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
     const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list,
-    bool with_output) const {
+    bool check_output) const {
   auto FilterSbp4Blobs = [&](const PbRpf<std::string>& bns,
                              const NdSbpSignature& nd_sbp_sig) -> Maybe<bool> {
     // {in_0 : (S(6), B), in_1 : (S(0), S(1)), out : (B, S(1))}
@@ -690,7 +690,7 @@ Maybe<void> Operator::FilterNdSbpSignatureListByLogicalShape(
   // Go down from the tail to the head, since we might drop the tail.
   for (int32_t sbp_id = nd_sbp_sig_list->size() - 1; sbp_id >= 0; sbp_id--) {
     if (JUST(FilterSbp4Blobs(input_bns(), JUST(VectorAt(*nd_sbp_sig_list, sbp_id))))
-        || (with_output
+        || (check_output
             && JUST(FilterSbp4Blobs(output_bns(), JUST(VectorAt(*nd_sbp_sig_list, sbp_id)))))) {
       // Remove the Nd SBP candidate
       (*nd_sbp_sig_list)[sbp_id] = JUST(VectorAt(*nd_sbp_sig_list, nd_sbp_sig_list->size() - 1));
@@ -876,7 +876,8 @@ Maybe<void> Operator::InferNdSbpSignature(
       return JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc();
     };
     std::vector<NdSbpSignature> nd_sbp_sig_list;
-    JUST(GetValidNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, &nd_sbp_sig_list, /*check_output=*/false));
+    JUST(GetValidNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, &nd_sbp_sig_list,
+                                    /*check_output=*/false));
     // Filter nd_sbp according to `nd_sbp_constraints`
     for (int32_t i = nd_sbp_sig_list.size() - 1; i >= 0; --i) {
       // If any blob do not match nd_sbp_constraints, the candidate nd_sbp will be deleted.
