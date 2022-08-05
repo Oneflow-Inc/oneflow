@@ -76,7 +76,10 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object);
 
-  Maybe<void> TouchTensors(const vm::EagerBlobObjectListPtr& eager_blob_object);
+  Maybe<void> TouchTensors(const vm::EagerBlobObjectListPtr& eager_blob_objects);
+
+  Maybe<void> TouchTensors(const vm::EagerBlobObjectListPtr& eager_blob_objects,
+                           Symbol<Stream> stream);
 
   template<typename T>
   Maybe<void> SyncAccessBlobByCallback(
@@ -137,18 +140,17 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
  private:
   Maybe<void> SoftSyncStream(const vm::EagerBlobObjectList& eager_blob_objects,
                              Symbol<Stream> stream);
-  Maybe<void> SoftSyncStream(small_vector<intrusive::shared_ptr<LocalDepObject>,
-                                          kOpArgsReservedSize>&& compute_local_dep_objects,
-                             const std::string& modifier, Symbol<Stream> stream);
+  Maybe<void> SoftSyncStreamBetween(
+      small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
+      Symbol<Stream> from_stream, Symbol<Stream> to_stream);
 
- private:
-  template<typename PhyInstrOperandT>
-  Maybe<void> MakeCriticalSectionBegin(vm::Stream* vm_stream,
-                                       const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);
+  Maybe<void> StreamWait(
+      small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
+      Symbol<Stream> from_stream, Symbol<Stream> to_stream);
 
-  template<typename PhyInstrOperandT>
-  Maybe<void> MakeCriticalSectionEnd(vm::Stream* vm_stream,
-                                     const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);
+  Maybe<void> RecordEvent(small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&&
+                              compute_local_dep_objects,
+                          Symbol<Stream> stream);
 
   vm::InstructionList* instruction_list_;
 };

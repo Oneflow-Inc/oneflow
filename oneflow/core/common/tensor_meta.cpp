@@ -63,14 +63,14 @@ LocalTensorMeta::LocalTensorMeta(const std::shared_ptr<const Shape>& shape,
 bool LocalTensorMeta::operator==(const LocalTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
   return *this->shape_ptr() == *other.shape_ptr() && this->dtype() == other.dtype()
-         && *this->device() == *other.device() && this->stride() == other.stride()
+         && this->device() == other.device() && this->stride() == other.stride()
          && this->storage_offset() == other.storage_offset();
 }
 
 size_t LocalTensorMeta::CalcHashValue() const {
   // It's correct to ignore is_dynamic_ field.
   return std::hash<Shape>()(*shape_ptr()) ^ std::hash<DataType>()(dtype())
-         ^ std::hash<Device>()(*device()) ^ std::hash<Stride>()(stride()) ^ storage_offset();
+         ^ std::hash<Symbol<Device>>()(device()) ^ std::hash<Stride>()(stride()) ^ storage_offset();
 }
 
 MutLocalTensorMeta::MutLocalTensorMeta()
