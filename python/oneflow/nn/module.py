@@ -613,15 +613,14 @@ class Module(object):
     def requires_grad_(self: T, requires_grad: bool = True) -> T:
         r"""Change if autograd should record operations on parameters in this
         module.
+        The interface is consistent with PyTorch.
+        The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Module.html?highlight=requires_grad_#torch.nn.Module.requires_grad_.
 
         This method sets the parameters' :attr:`requires_grad` attributes
         in-place.
 
         This method is helpful for freezing part of the module for finetuning
         or training parts of a model individually (e.g., GAN training).
-
-        See :ref:`locally-disable-grad-doc` for a comparison between
-        `.requires_grad_()` and several similar mechanisms that may be confused with it.
 
         Args:
             requires_grad (bool): whether autograd should record operations on
