@@ -48,9 +48,9 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
     Tensor* output = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t elem_cnt = input->shape_view().elem_cnt();
     // 0-size tensor
-    if (elem_cnt == 0 || output->shape_view().elem_cnt() == 0) { return; }
     CHECK_EQ(output->shape_view().elem_cnt(), elem_cnt)
         << "The number of cast op's input and output elements should be equal.";
+    if (elem_cnt == 0) { return; }
     if (input->data_type() == output->data_type() && input->dptr() == output->dptr()) { return; }
     const size_t ndim = input->shape_view().NumAxes();
     auto broadcast_primitive = NewBroadcastPrimitive(ctx);
