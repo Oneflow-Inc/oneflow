@@ -140,11 +140,18 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
  private:
   Maybe<void> SoftSyncStream(const vm::EagerBlobObjectList& eager_blob_objects,
                              Symbol<Stream> stream);
-  Maybe<void> SoftSyncStream(small_vector<intrusive::shared_ptr<LocalDepObject>,
-                                          kOpArgsReservedSize>&& compute_local_dep_objects,
-                             const std::string& modifier, Symbol<Stream> stream);
+  Maybe<void> SoftSyncStreamBetween(
+      small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
+      Symbol<Stream> from_stream, Symbol<Stream> to_stream);
 
- private:
+  Maybe<void> StreamWait(
+      small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
+      Symbol<Stream> from_stream, Symbol<Stream> to_stream);
+
+  Maybe<void> RecordEvent(small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&&
+                              compute_local_dep_objects,
+                          Symbol<Stream> stream);
+
   vm::InstructionList* instruction_list_;
 };
 

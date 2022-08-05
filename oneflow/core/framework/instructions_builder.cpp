@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/singleton_ptr.h"
+#include "oneflow/core/common/env_var/vm.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/access_blob_arg_cb_instruction_policy.h"
 #include "oneflow/core/vm/ep_record_event_instruction_policy.h"
@@ -37,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/vm/lazy_job_instruction_policy.h"
 #include "oneflow/core/vm/global_sync_instruction_policy.h"
 #include "oneflow/core/vm/op_call_instruction_policy.h"
+#include "oneflow/core/vm/stream_wait_instruction_policy.h"
 #include "oneflow/core/vm/touch_tensors_instruction_policy.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -47,6 +49,8 @@ limitations under the License.
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/stream_need_soft_sync.h"
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
+#include "oneflow/core/framework/stream_support_stream_wait.h"
+#include "oneflow/core/framework/stream_on_independent_thread.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
@@ -379,8 +383,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
     return Maybe<void>::Ok();
   }
   if (last_used_stream != producer_stream) {
-    JUST(SoftSyncStream({JUST(eager_blob_object->compute_local_dep_object())}, "mut",
-                        last_used_stream));
+    JUST(RecordEvent({JUST(eager_blob_object->compute_local_dep_object())}, last_used_stream));
   }
   Optional<Symbol<Stream>> stream{};
   if (*one::CurrentDevVmDepObjectConsumeMode() == one::DevVmDepObjectConsumeMode::NONE) {
@@ -486,7 +489,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(const vm::EagerBlobObjectList& e
   JUST(ForEachEagerBlobObjectsNeedingSoftSync(
       eager_blob_objects, stream,
       [&](Symbol<Stream> last_used_stream, auto&& dep_objects) -> Maybe<void> {
-        return SoftSyncStream(std::move(dep_objects), "mut", last_used_stream);
+        return SoftSyncStreamBetween(std::move(dep_objects), last_used_stream, stream);
       }));
   for (const auto& eager_blob_object : eager_blob_objects) {
     eager_blob_object->set_last_used_stream(stream);
@@ -494,15 +497,54 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(const vm::EagerBlobObjectList& e
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::SoftSyncStream(
+namespace {
+
+bool SupportingStreamWait(Symbol<Stream> from_stream, Symbol<Stream> to_stream) {
+  if (unlikely(!ThreadLocalEnvBool<ONEFLOW_VM_ENABLE_STREAM_WAIT>())) { return false; }
+  DeviceType from_device_type = from_stream->device()->enum_type();
+  DeviceType to_device_type = from_stream->device()->enum_type();
+  return from_stream->device() == to_stream->device() && from_device_type == DeviceType::kCUDA
+         && StreamSupportStreamWait::Visit(from_stream->stream_type(), from_device_type)
+         && StreamSupportStreamWait::Visit(to_stream->stream_type(), to_device_type)
+         && !StreamOnIndependentThread::Visit(from_stream->stream_type())
+         && !StreamOnIndependentThread::Visit(to_stream->stream_type());
+}
+
+}  // namespace
+
+Maybe<void> InstructionsBuilder::SoftSyncStreamBetween(
+    small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
+    Symbol<Stream> from_stream, Symbol<Stream> to_stream) {
+  CHECK(from_stream != to_stream) << "synchronization is unnecessary";
+  if (SupportingStreamWait(from_stream, to_stream)) {
+    JUST(StreamWait(std::move(dependences), from_stream, to_stream));
+  } else {
+    JUST(RecordEvent(std::move(dependences), from_stream));
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::StreamWait(
+    small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&& dependences,
+    Symbol<Stream> from_stream, Symbol<Stream> to_stream) {
+  auto* from_vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(from_stream));
+  auto* to_vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(to_stream));
+  auto instruction = intrusive::make_shared<vm::Instruction>(
+      to_vm_stream, std::make_unique<vm::StreamWaitInstructionPolicy>(
+                        std::move(dependences), from_vm_stream, to_vm_stream));
+  instruction_list_->EmplaceBack(std::move(instruction));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::RecordEvent(
     small_vector<intrusive::shared_ptr<LocalDepObject>, kOpArgsReservedSize>&&
         compute_local_dep_objects,
-    const std::string& modifier, Symbol<Stream> last_used_stream) {
+    Symbol<Stream> last_used_stream) {
   DeviceType device_type = last_used_stream->device()->enum_type();
   if (!NeedSoftSync::Visit(last_used_stream->stream_type(), device_type)) {
     return Maybe<void>::Ok();
   }
-  OF_PROFILER_RANGE_GUARD("SoftStream");
+  std::string modifier = "mut";
   StreamType stream_type = last_used_stream->stream_type();
   auto instruction = intrusive::make_shared<vm::Instruction>(
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(last_used_stream)),
@@ -588,7 +630,6 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(
     const std::string& modifier) {
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
   Symbol<Device> device = JUST(GetDevice(tensor));
-  Symbol<Stream> stream = JUST(GetDefaultStreamByDevice(device));
   // Do not use producer_stream or last_used_stream.
   // Bug case when using producer_stream or last_used_stream:
   //
@@ -599,6 +640,8 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(
   // ```
   // `ndarray` may not be ones because instruction AccessBlobByCallback is prescheduled before
   // oneflow.ones actually finished.
+  Symbol<Stream> stream = JUST(GetDefaultStreamByDevice(device));
+  JUST(SoftSyncStream({eager_blob_object}, stream));
   auto instruction = intrusive::make_shared<vm::Instruction>(
       // Never replace `stream` with producer_stream or last_used_stream.
       JUST(Singleton<VirtualMachine>::Get()->GetVmStream(stream)),
