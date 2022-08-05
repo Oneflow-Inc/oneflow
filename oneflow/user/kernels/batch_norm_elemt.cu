@@ -26,7 +26,7 @@ limitations under the License.
 #include "oneflow/user/kernels/batch_norm_kernel_utils.h"
 
 // NOTE(Liang Depeng):
-// The implementation of batch_norm_gather_stats_with_counts kernel is modified from
+// The implementation of batch_norm_elemt kernel is modified from
 // https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/Normalization.cuh
 
 namespace oneflow {
