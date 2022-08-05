@@ -387,26 +387,8 @@ class Optimizer(object):
         """
         for param_group in self.param_groups:
             for param in param_group.parameters:
-                if param.grad is not None:
-                    if set_to_none:
-                        param.grad = None
-                    else:
-                        if param.is_local or param.is_lazy:
-                            param.grad.zero_()
-                        else:
-                            # Replace `broadcast` with `partial_sum` to avoid unnecessary boxing
-                            # around Add operations.
-                            # TODO: Remove this trick once Add(B, P) correctly boxes B to P instead
-                            # of boxing P to B.
-                            param.grad.data = flow.zeros_like(
-                                param.grad,
-                                sbp=[
-                                    flow.sbp.partial_sum
-                                    if x == flow.sbp.broadcast
-                                    else x
-                                    for x in param.grad.sbp
-                                ],
-                            )
+                param._zero_grad(set_to_none)
+
 
     def _parse_input_parameters(self, parameters):
         """
