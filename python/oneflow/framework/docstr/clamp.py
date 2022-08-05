@@ -92,7 +92,7 @@ add_docstr(
         >>> input = flow.Tensor([0.2, 0.6, -1.5, -0.3])
         >>> output = flow.clamp_min(input, min=-0.5)
         >>> output
-        tensor([ 0.2000,  0.5000, -0.5000, -0.3000], dtype=oneflow.float32)
+        tensor([ 0.2000,  0.6000, -0.5000, -0.3000], dtype=oneflow.float32)
 
         >>> input = flow.Tensor([0.2, 0.6, -1.5, -0.3])
         >>> output = flow.clamp_min(input, min=-2)
