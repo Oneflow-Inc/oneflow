@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #ifdef WITH_CUDA
-#include "oneflow/user/kernels/collective_communication/include/all_reduce.h"
+#include "oneflow/user/kernels/collective_communication/include/all_gather.h"
 #include "oneflow/user/kernels/collective_communication/cuda/cuda_communication_context.h"
 #include "oneflow/core/device/nccl_util.h"
 
@@ -22,47 +22,29 @@ namespace oneflow {
 
 namespace ccl {
 
-namespace {
-
-inline ncclRedOp_t GetNcclReduceType(ReduceType reduce_type) {
-  switch (reduce_type) {
-#define NCCL_REDUCE_TYPE_CASE(dtype) \
-  case ReduceType::k##dtype: return ncclRedOp_t::nccl##dtype
-    NCCL_REDUCE_TYPE_CASE(Sum);
-    NCCL_REDUCE_TYPE_CASE(Max);
-    default: PRINT_BUG_PROMPT_AND_ABORT();
-  }
-}
-
-}  // namespace
-
-class CudaAllReduce final : public AllReduce {
+class CudaAllGather final : public AllGather {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CudaAllReduce);
-  CudaAllReduce() : nccl_datatype_(), nccl_reduce_op_() {}
-  ~CudaAllReduce() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CudaAllGather);
+  CudaAllGather() : nccl_datatype_() {}
+  ~CudaAllGather() = default;
 
-  void Init(DataType datatype, ReduceType reduce_type) override {
-    this->nccl_datatype_ = GetNcclDataType(datatype);
-    this->nccl_reduce_op_ = GetNcclReduceType(reduce_type);
-  }
+  void Init(DataType datatype) override { this->nccl_datatype_ = GetNcclDataType(datatype); }
 
   void Launch(ep::Stream* stream, const void* in, void* out, size_t elem_cnt,
               const std::shared_ptr<CommunicationContext>& communication_ctx) const override {
     const auto& cuda_communication_ctx =
         std::dynamic_pointer_cast<CudaCommunicationContext>(communication_ctx);
-    CHECK(cuda_communication_ctx);
-    OF_NCCL_CHECK(ncclAllReduce(in, out, elem_cnt, nccl_datatype_, nccl_reduce_op_,
+    CHECK(cuda_communication_ctx) << kOfBugIssueUploadPrompt;
+    OF_NCCL_CHECK(ncclAllGather(in, out, elem_cnt, nccl_datatype_,
                                 cuda_communication_ctx->nccl_comm(),
                                 stream->As<ep::CudaStream>()->cuda_stream()));
   }
 
  private:
   ncclDataType_t nccl_datatype_;
-  ncclRedOp_t nccl_reduce_op_;
 };
 
-REGISTER_COLLECTIVE_COMMUNICATION(DeviceType::kCUDA, AllReduce, CudaAllReduce);
+REGISTER_COLLECTIVE_COMMUNICATION(DeviceType::kCUDA, AllGather, CudaAllGather);
 
 }  // namespace ccl
 
