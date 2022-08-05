@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <chrono>
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
@@ -85,26 +86,38 @@ Maybe<void> AutoParallelPass::RemoveParallelCastOps(Job* job) const {
     return op_conf.has_user_conf()
            && (op_conf.user_conf().op_type_name() == "parallel_cast"
                || op_conf.user_conf().op_type_name() == "hierarchical_parallel_cast"
-               || op_conf.user_conf().op_type_name() == "hierarchical_parallel_cast_like");
+               || op_conf.user_conf().op_type_name() == "hierarchical_parallel_cast_like"
+               || op_conf.user_conf().op_type_name() == "identity");
   };
   std::vector<std::string> del_op_names;
-  op_graph.ForEachNode([&](const OpNode* op_node) {
+  HashSet<std::string> del_op_name_set;
+  std::function<void(const OpNode*)> Try2Delete = [&](const OpNode* op_node) {
+    if (del_op_name_set.find(op_node->op().op_name()) != del_op_name_set.end()) { return; }
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.ctrl_in_op_name().empty()) { return; }
     if (ctrl_in_op_names.find(op_conf.name()) != ctrl_in_op_names.end()) { return; }
     if (!IsParallelCastOp(op_conf)) { return; }
     if (op_node->in_edges().size() != 1) { return; }
-    user_op::UserOpConfWrapper conf_wrapper(op_conf);
-    const LogicalBlobId& parallel_cast_in_lbi = GenLogicalBlobId(conf_wrapper.input("in", 0));
-    const LogicalBlobId& parallel_cast_out_lbi = GenLogicalBlobId(conf_wrapper.output("out", 0));
-    const OpNode* producer = op_graph.OpNode4OpName(parallel_cast_in_lbi.op_name());
+
+    // Find the first op which won't be deleted
+    const OpNode* source_op = op_node;
+    const OpNode* producer = op_node->SoleInEdge()->src_node();
+    while (IsParallelCastOp(producer->op().op_conf())) {
+      Try2Delete(producer);
+      if (del_op_name_set.find(producer->op().op_name()) == del_op_name_set.end()) { break; }
+      source_op = producer;
+      producer = source_op->SoleInEdge()->src_node();
+    }
+    user_op::UserOpConfWrapper conf_wrapper_in(source_op->op().op_conf());
+    const LogicalBlobId& parallel_cast_in_lbi = GenLogicalBlobId(conf_wrapper_in.input("in", 0));
+
+    user_op::UserOpConfWrapper conf_wrapper_out(op_conf);
+    const LogicalBlobId& parallel_cast_out_lbi =
+        GenLogicalBlobId(conf_wrapper_out.output("out", 0));
     if (op_node->parallel_desc() != producer->parallel_desc()) { return; }
-    const NdSbp& parallel_cast_nd_sbp = op_node->NdSbp4Lbi(parallel_cast_in_lbi);
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
-      if (IsParallelCastOp(consumer->op().op_conf())) { return; }
       if (consumer->parallel_desc() != op_node->parallel_desc()) { return; }
-      if (consumer->NdSbp4Lbi(parallel_cast_out_lbi) != parallel_cast_nd_sbp) { return; }
     }
     op_name2nd_sbp_signature[producer->op().op_name()] = producer->nd_sbp_signature();
     for (const OpEdge* out_edge : op_node->out_edges()) {
@@ -124,8 +137,10 @@ Maybe<void> AutoParallelPass::RemoveParallelCastOps(Job* job) const {
       }
     }
     del_op_names.emplace_back(op_conf.name());
+    del_op_name_set.insert(op_conf.name());
     LOG(INFO) << "\tremove " << op_conf.name();
-  });
+  };
+  op_graph.ForEachNode(Try2Delete);
   for (const auto& pair : op_name2op_conf) { job_builder.MutOpsOnlyOnce({pair.second}); }
   for (const auto& pair : op_name2nd_sbp_signature) {
     job_builder.AddNdSbpSignature4OpName(pair.first, pair.second);
