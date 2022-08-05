@@ -35,9 +35,9 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
 #include "oneflow/user/kernels/dropout_kernel.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/user/kernels/distributions/common.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -1128,6 +1128,19 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
                            const std::string& reduction) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("has_pos_weight", pos_weight.has_value()));
+
+    if (pos_weight) {
+      const auto pos_weight_shape = JUST(pos_weight)->shape();
+      // pos weight shape = (), (1,), (1,1)... or (input/target.shape[-1],)
+      const bool is_pos_weight_shape_valid =
+          (pos_weight_shape->elem_cnt() == 1)
+          || (pos_weight_shape->NumAxes() == 1
+              && pos_weight_shape->At(0) == target->shape()->back());
+
+      CHECK_OR_RETURN(is_pos_weight_shape_valid)
+          << Error::RuntimeError()
+          << "pos_weight must be a vector with length equal to the number of classes.";
+    }
 
     std::shared_ptr<Tensor> out;
     if (weight) {
@@ -2585,9 +2598,10 @@ class OneHotFunctor {
       auto tensor_max = JUST(functional::ReduceMax(input, axis, false));
 
       int64_t max = 0;
-      const auto& callback = [&](uint64_t of_blob_ptr) {
-        auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-        of_blob->AutoMemCopyTo<int64_t>(&max, 1);  // copy 1 scalar(int64_t) tensor's value to max
+      const auto& callback = [&](ep::Stream* stream,
+                                 const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+        SyncAutoMemcpy(stream, &max, eager_blob_object->dptr(), sizeof(max),
+                       memory::MakeHostMemCase(), eager_blob_object->mem_case());
       };
       JUST(SyncAccessTensorWithTimeOut(tensor_max, callback, "const"));
       JUST(attrs.SetAttr<int64_t>("depth", max + 1));

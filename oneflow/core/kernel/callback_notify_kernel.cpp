@@ -39,10 +39,10 @@ void CallbackNotifyKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   std::string buffer_name;
   CHECK(this->op_conf().callback_notify_conf().has_job_name());
   buffer_name = GetCallbackNotifierBufferName(this->op_conf().callback_notify_conf().job_name());
-  std::shared_ptr<JobInstance> foreign_job_instance;
-  BufferStatus buffer_status = buffer_mgr->Get(buffer_name)->TryReceive(&foreign_job_instance);
+  std::shared_ptr<JobInstance> job_instance;
+  BufferStatus buffer_status = buffer_mgr->Get(buffer_name)->TryReceive(&job_instance);
   CHECK_NE(buffer_status, kBufferStatusEmpty);
-  if (buffer_status == kBufferStatusSuccess) { foreign_job_instance->Finish(); }
+  if (buffer_status == kBufferStatusSuccess) { job_instance->Finish(); }
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kCallbackNotifyConf, CallbackNotifyKernel,
