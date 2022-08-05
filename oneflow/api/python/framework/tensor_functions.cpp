@@ -642,10 +642,11 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
   PyObject* placement_obj = Py_None;
   PyObject* sbp_obj = Py_None;
   bool check_meta = true;
-  static const char* keywords[4] = {"placement", "sbp", "check_meta", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$O!:local_to_global",
+  bool copy = false;
+  static const char* keywords[5] = {"placement", "sbp", "check_meta", "copy", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$OO!:local_to_global",
                                    const_cast<char**>(keywords), &placement_obj, &sbp_obj,
-                                   &PyBool_Type, &check_meta)) {
+                                   &PyBool_Type, &check_meta, &PyBool_Type, &copy)) {
     return NULL;
   };
 
@@ -665,9 +666,8 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
         << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(sbp_obj)));
     sbp = functional::PyUnpackSbpParallelSequence(sbp_obj);
   }
-  return PyTensor_New(
-      ASSERT_PTR(functional::ToGlobal(tensor, functional::PyUnpackParallelDesc(placement_obj), sbp,
-                                      {}, check_meta, /*copy=*/false)));
+  return PyTensor_New(ASSERT_PTR(functional::ToGlobal(
+      tensor, functional::PyUnpackParallelDesc(placement_obj), sbp, {}, check_meta, copy)));
   END_HANDLE_ERRORS
 }
 
@@ -682,10 +682,11 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
   std::vector<Symbol<SbpParallel>> sbp;
   std::vector<Symbol<SbpParallel>> grad_sbp;
   bool check_meta = false;
-  static const char* keywords[5] = {"placement", "sbp", "grad_sbp", "check_meta", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$OO!:global_to_global",
+  bool copy = false;
+  static const char* keywords[6] = {"placement", "sbp", "grad_sbp", "check_meta", "copy", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$OOO!:global_to_global",
                                    const_cast<char**>(keywords), &placement_obj, &sbp_obj,
-                                   &grad_sbp_obj, &PyBool_Type, &check_meta)) {
+                                   &grad_sbp_obj, &PyBool_Type, &check_meta, &PyBool_Type, &copy)) {
     return NULL;
   };
 
@@ -723,8 +724,8 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
   } else if (functional::PySbpParallelSequenceCheck(grad_sbp_obj)) {
     grad_sbp = functional::PyUnpackSbpParallelSequence(grad_sbp_obj);
   }
-  return PyTensor_New(ASSERT_PTR(
-      functional::ToGlobal(tensor, placement, sbp, grad_sbp, check_meta, /*copy=*/false)));
+  return PyTensor_New(
+      ASSERT_PTR(functional::ToGlobal(tensor, placement, sbp, grad_sbp, check_meta, copy)));
   END_HANDLE_ERRORS
 }
 
@@ -743,12 +744,18 @@ static PyObject* PyTensorObject_to_global(PyObject* self, PyObject* args, PyObje
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_to_local(PyObject* self, PyObject* unused) {
+static PyObject* PyTensorObject_to_local(PyObject* self, PyObject* unused, PyObject* kwargs) {
   HANDLE_ERRORS
   auto tensor = PyTensor_Unpack(self);
   CHECK_OR_THROW(tensor->is_global())
       << Error::RuntimeError() << "Expected global tensor for to_local but got local tensor!";
-  return PyTensor_New(ASSERT_PTR(functional::GlobalToLocal(tensor, /*copy=*/false)));
+  bool copy = false;
+  static const char* keywords[2] = {"copy", NULL};
+  if (!PyArg_ParseTupleAndKeywords(unused, kwargs, "|$O!:to_local", const_cast<char**>(keywords),
+                                   &PyBool_Type, &copy)) {
+    return NULL;
+  };
+  return PyTensor_New(ASSERT_PTR(functional::GlobalToLocal(tensor, /*copy=*/copy)));
   END_HANDLE_ERRORS
 }
 
@@ -828,7 +835,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
      NULL},
     {"global_to_global", (PyCFunction)PyTensorObject_global_to_global, METH_VARARGS | METH_KEYWORDS,
      NULL},
-    {"to_local", PyTensorObject_to_local, METH_NOARGS, NULL},
+    {"to_local", (PyCFunction)PyTensorObject_to_local, METH_VARARGS | METH_KEYWORDS, NULL},
     {"to_global", (PyCFunction)PyTensorObject_to_global, METH_VARARGS | METH_KEYWORDS, NULL},
     {"cpu", PyTensorObject_cpu, METH_NOARGS, NULL},
     {"cuda", (PyCFunction)PyTensorObject_cuda, METH_VARARGS | METH_KEYWORDS, NULL},

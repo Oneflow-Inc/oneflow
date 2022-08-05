@@ -62,7 +62,7 @@ class CudaAllReduce final : public AllReduce {
   ncclRedOp_t nccl_reduce_op_;
 };
 
-REGISTER_COLLECTIVE_COMMUNICATION_FACTORY(DeviceType::kCUDA, AllReduce, CudaAllReduce);
+REGISTER_COLLECTIVE_COMMUNICATION(DeviceType::kCUDA, AllReduce, CudaAllReduce);
 
 }  // namespace ccl
 

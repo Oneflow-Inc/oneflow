@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/attr_value.h"
@@ -99,33 +100,33 @@ Maybe<one::UserOpExpr> EagerCclAllReduce(Symbol<ParallelDesc> parallel_desc) {
 
 static constexpr auto* CachedEagerCclAllReduceOpExpr = DECORATE(&EagerCclAllReduce, ThreadLocal);
 
-Maybe<one::UserOpExpr> EagerNcclReduceScatter(Symbol<ParallelDesc> parallel_desc,
-                                              const std::string& op_type) {
+Maybe<one::UserOpExpr> EagerCclReduceScatter(Symbol<ParallelDesc> parallel_desc,
+                                             const std::string& op_type) {
   CHECK_OR_RETURN(
-      JUST(CheckCclKernelRegistered("eager_nccl_reduce_scatter", parallel_desc->device_type())))
+      JUST(CheckCclKernelRegistered("eager_ccl_reduce_scatter", parallel_desc->device_type())))
       << OF_KERNEL_NOT_SUPPORT_ERROR("ReduceScatter", parallel_desc->device_type());
-  return one::OpBuilder("eager_nccl_reduce_scatter", *JUST(UniqueStr("eager_nccl_reduce_scatter")))
+  return one::OpBuilder("eager_ccl_reduce_scatter", *JUST(UniqueStr("eager_ccl_reduce_scatter")))
       .Input("in")
       .Output("out")
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
       .Attr<std::string>("op_type", op_type)
       .Build();
 }
-static constexpr auto* CachedNcclReduceScatterOpExpr =
-    DECORATE(&EagerNcclReduceScatter, ThreadLocalCopiable);
+static constexpr auto* CachedCclReduceScatterOpExpr =
+    DECORATE(&EagerCclReduceScatter, ThreadLocalCopiable);
 
-Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
+Maybe<one::UserOpExpr> EagerCclAllGather(Symbol<ParallelDesc> parallel_desc) {
   CHECK_OR_RETURN(
-      JUST(CheckCclKernelRegistered("eager_nccl_all_gather", parallel_desc->device_type())))
+      JUST(CheckCclKernelRegistered("eager_ccl_all_gather", parallel_desc->device_type())))
       << OF_KERNEL_NOT_SUPPORT_ERROR("AllGather", parallel_desc->device_type());
-  return one::OpBuilder("eager_nccl_all_gather", *JUST(UniqueStr("eager_nccl_all_gather")))
+  return one::OpBuilder("eager_ccl_all_gather", *JUST(UniqueStr("eager_ccl_all_gather")))
       .Input("in")
       .Output("out")
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
       .Build();
 }
 
-static constexpr auto* CachedEagerNcclAllGatherOpExpr = DECORATE(&EagerNcclAllGather, ThreadLocal);
+static constexpr auto* CachedEagerCclAllGatherOpExpr = DECORATE(&EagerCclAllGather, ThreadLocal);
 
 Maybe<one::UserOpExpr> EagerNcclS2S(Symbol<ParallelDesc> parallel_desc, Symbol<SbpParallel> src_sbp,
                                     Symbol<SbpParallel> dst_sbp) {
@@ -184,6 +185,20 @@ class BroadcastFunctor {
     DeviceType device_type = device_type_str == "cuda" ? DeviceType::kCUDA : DeviceType::kCPU;
     const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
     return one::Broadcast(x, src_rank, parallel_desc, inplace);
+  }
+};
+
+class BroadcastTensorsFunctor {
+ public:
+  BroadcastTensorsFunctor() = default;
+  Maybe<one::TensorTuple> operator()(const one::TensorTuple& inputs, int64_t src_rank,
+                                     bool inplace) const {
+    if (inputs.empty()) { return inputs; }
+    const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
+    const auto& x = JUST(VectorAt(inputs, 0));
+    DeviceType device_type = JUST(x->device())->enum_type();
+    const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
+    return one::Broadcast(inputs, src_rank, parallel_desc, inplace);
   }
 };
 
@@ -271,7 +286,7 @@ class GlobalReduceScatterFunctor {
       }
     }
     std::shared_ptr<OpExpr> op_expr =
-        JUST(CachedNcclReduceScatterOpExpr(JUST(x->parallel_desc()), op_type));
+        JUST(CachedCclReduceScatterOpExpr(JUST(x->parallel_desc()), op_type));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
 };
@@ -285,8 +300,7 @@ class GlobalAllGatherFunctor {
       CHECK_OR_RETURN(NdSbpIsAllSplit(*JUST(x->nd_sbp()), 0))
           << "Tensor's sbp must be split to get all_gather";
     }
-    std::shared_ptr<OpExpr> op_expr =
-        JUST(CachedEagerNcclAllGatherOpExpr(JUST(x->parallel_desc())));
+    std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerCclAllGatherOpExpr(JUST(x->parallel_desc())));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
 };
@@ -436,6 +450,7 @@ class LocalReduceFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::StreamTouchFunctor>("StreamTouch");
   m.add_functor<impl::BroadcastFunctor>("Broadcast");
+  m.add_functor<impl::BroadcastTensorsFunctor>("BroadcastTensors");
   m.add_functor<impl::LocalAllReduceFunctor>("LocalAllReduce");
   m.add_functor<impl::GlobalAllReduceFunctor>("GlobalAllReduce");
   m.add_functor<impl::GlobalReduceScatterFunctor>("GlobalReduceScatter");
