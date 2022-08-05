@@ -89,21 +89,17 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> import numpy as np
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.Tensor(arr)
+        >>> input = flow.Tensor([0.2, 0.6, -1.5, -0.3])
         >>> output = flow.clamp_min(input, min=-0.5)
         >>> output
         tensor([ 0.2000,  0.5000, -0.5000, -0.3000], dtype=oneflow.float32)
 
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.Tensor(arr)
+        >>> input = flow.Tensor([0.2, 0.6, -1.5, -0.3])
         >>> output = flow.clamp_min(input, min=-2)
         >>> output
         tensor([ 0.2000,  0.6000, -1.5000, -0.3000], dtype=oneflow.float32)
 
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.Tensor(arr)
+        >>> input = flow.Tensor([0.2, 0.6, -1.5, -0.3])
         >>> output = flow.clamp_min(input, min=1)
         >>> output
         tensor([1., 1., 1., 1.], dtype=oneflow.float32)
@@ -134,21 +130,17 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> import numpy as np
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.Tensor(arr)
+        >>> input = flow.Tensor([0.2, 0.6, -1.5, -0.3])
         >>> output = flow.clamp_max(input, max=-0.5)
         >>> output
         tensor([-0.5000, -0.5000, -1.5000, -0.5000], dtype=oneflow.float32)
 
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.Tensor(arr)
+        >>> input = flow.Tensor([0.2, 0.6, -1.5, -0.3])
         >>> output = flow.clamp_max(input, max=-2)
         >>> output
         tensor([-2., -2., -2., -2.], dtype=oneflow.float32)
 
-        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
-        >>> input = flow.Tensor(arr)
+        >>> input = flow.Tensor([0.2, 0.6, -1.5, -0.3])
         >>> output = flow.clamp_max(input, max=1)
         >>> output
         tensor([ 0.2000,  0.6000, -1.5000, -0.3000], dtype=oneflow.float32)
