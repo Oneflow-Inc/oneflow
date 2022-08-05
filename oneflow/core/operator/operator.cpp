@@ -876,7 +876,7 @@ Maybe<void> Operator::InferNdSbpSignature(
       return JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc();
     };
     std::vector<NdSbpSignature> nd_sbp_sig_list;
-    JUST(GetValidNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, &nd_sbp_sig_list, false));
+    JUST(GetValidNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, &nd_sbp_sig_list, /*check_output=*/false));
     // Filter nd_sbp according to `nd_sbp_constraints`
     for (int32_t i = nd_sbp_sig_list.size() - 1; i >= 0; --i) {
       // If any blob do not match nd_sbp_constraints, the candidate nd_sbp will be deleted.
