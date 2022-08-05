@@ -48,7 +48,7 @@ def _test_broadcast_matmul_grad_b_grad_impl(test_case, placement):
     )
 
     y = torch.matmul(a, b)
-   
+
     da = torch.autograd.grad(
         outputs=y,
         inputs=a,
@@ -72,7 +72,8 @@ def _test_broadcast_matmul_grad_b_grad_impl(test_case, placement):
         np.allclose(db.pytorch.detach().cpu().numpy(), db.oneflow.detach().numpy())
     )
 
-    # autotest torch.autograd.grad 不支持 inputs/outpus/grad_outputs 为 list，所以使用原始 pytorch/oneflow
+    # torch.autograd.grad in autotest does not support inputs/outpus/grad_outputs as a list
+    # so use the original pytorch/oneflow module
     dda_pytorch, ddb_pytorch = pytorch_origin.autograd.grad(
         outputs=[da.pytorch, db.pytorch],
         inputs=[a.pytorch, b.pytorch],

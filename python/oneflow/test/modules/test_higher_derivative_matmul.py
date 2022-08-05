@@ -23,9 +23,12 @@ from oneflow.test_utils.automated_test_util import *
 import torch as pytorch_origin
 import oneflow as oneflow_origin
 
+
 class TestMatmulHigherDerivative(flow.unittest.TestCase):
     def test_broadcast_matmul_grad_b_grad(test_case):
-        broadcast_dims = [np.random.randint(2, 10) for _ in range(np.random.randint(1, 3))]
+        broadcast_dims = [
+            np.random.randint(2, 10) for _ in range(np.random.randint(1, 3))
+        ]
         m = np.random.randint(2, 10)
         n = np.random.randint(2, 10)
         k = np.random.randint(2, 10)
@@ -65,7 +68,8 @@ class TestMatmulHigherDerivative(flow.unittest.TestCase):
             np.allclose(db.pytorch.detach().cpu().numpy(), db.oneflow.detach().numpy())
         )
 
-        # autotest torch.autograd.grad 不支持 inputs/outpus/grad_outputs 为 list，所以使用原始 pytorch/oneflow
+        # torch.autograd.grad in autotest does not support inputs/outpus/grad_outputs as a list
+        # so use the original pytorch/oneflow module
         dda_pytorch, ddb_pytorch = pytorch_origin.autograd.grad(
             outputs=[da.pytorch, db.pytorch],
             inputs=[a.pytorch, b.pytorch],
