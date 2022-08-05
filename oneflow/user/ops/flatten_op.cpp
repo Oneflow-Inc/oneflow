@@ -55,7 +55,10 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FlattenOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
   const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
+  if (in_shape.NumAxes() == 0) { return Maybe<void>::Ok(); }  // 0D tensor only support b/p
+
   const int32_t start_dim = ctx->Attr<int32_t>("start_dim");
   const int32_t end_dim = ctx->Attr<int32_t>("end_dim");
 
@@ -77,7 +80,6 @@ namespace oneflow {
         .Build();
   }
 
-  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
 
