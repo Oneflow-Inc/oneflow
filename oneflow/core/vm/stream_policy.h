@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/resource.pb.h"
-#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/stream_type.h"
 #include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
@@ -59,7 +59,7 @@ class StreamPolicy {
                                           const InstructionStatusBuffer& status_buffer) const = 0;
   virtual void Run(Instruction* instruction) const = 0;
 
-  virtual bool OnSchedulerThread(StreamRole stream_role) const;
+  virtual bool OnSchedulerThread(StreamType stream_type) const;
   virtual bool SupportingTransportInstructions() const = 0;
 
  protected:

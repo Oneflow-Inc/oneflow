@@ -256,6 +256,29 @@ struct FtrlUpdateFunctor {
   }
 };
 
+template<typename T, typename G>
+struct AdadeltaUpdateFunctor {
+  OF_DEVICE_FUNC void operator()(const G* model_diff, T* model, T* square_avgs, T* acc_deltas,
+                                 T scale, float l1, float l2, float rho, float epsilon,
+                                 bool maximize, float weight_decay, float learning_rate) {
+    const T model_val = *model;
+    T model_diff_val = *model_diff;
+    if (maximize) { model_diff_val = -model_diff_val; }
+    T model_diff_t =
+        CastScaleRegularizeGradientFunctor<T, G>()(model_diff_val, model_val, scale, l1, l2);
+    T square_avgs_val = *square_avgs;
+    T new_square_avgs_val = square_avgs_val * rho + model_diff_t * model_diff_t * (1.0f - rho);
+    T square_avgs_std = sqrt(new_square_avgs_val + epsilon);
+    T acc_delta_val = *acc_deltas;
+    T delta = sqrt(acc_delta_val + epsilon) / square_avgs_std * model_diff_t;
+    T new_acc_deltas = acc_delta_val * rho + delta * delta * (1.0f - rho);
+    T new_model = model_val - learning_rate * delta;
+    *model = new_model;
+    *square_avgs = new_square_avgs_val;
+    *acc_deltas = new_acc_deltas;
+  }
+};
+
 template<DeviceType device_type>
 struct BiasCorrectionFactorKernelUtil {
  public:
@@ -329,6 +352,14 @@ struct FtrlUpdateKernelUtil {
                      float lambda1, float lambda2, float beta, float weight_decay,
                      float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, const G* model_diff, T* model, T* accumulate, T* z);
+};
+
+template<DeviceType device_type, typename T, typename G>
+struct AdadeltaUpdateKernelUtil {
+  static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float rho,
+                     float epsilon, bool maximize, float weight_decay, float learning_rate_val,
+                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
+                     const G* model_diff, T* model, T* square_avgs, T* acc_deltas);
 };
 
 template<typename T, typename G, bool centered>

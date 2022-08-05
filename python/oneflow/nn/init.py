@@ -49,6 +49,23 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
 
 
 def uniform_(tensor, a=0.0, b=1.0):
+    r"""
+    
+    Fills the input Tensor with values drawn from the uniform
+    distribution :math:`\mathcal{U}(a, b)`.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
+    Args:
+        tensor: an n-dimensional `oneflow.Tensor`
+        a: the lower bound of the uniform distribution
+        b: the upper bound of the uniform distribution
+
+    Examples:
+        >>> w = flow.empty(3, 5)
+        >>> nn.init.uniform_(w)
+    """
     if isinstance(a, Tensor):
         assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
         a = a.numpy().item()
@@ -62,6 +79,23 @@ def uniform_(tensor, a=0.0, b=1.0):
 
 
 def normal_(tensor, mean=0.0, std=1.0):
+    r"""
+    
+    Fills the input Tensor with values drawn from the normal
+    distribution :math:`\mathcal{N}(\text{mean}, \text{std}^2)`.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
+    Args:
+        tensor: an n-dimensional `oneflow.Tensor`
+        mean: the mean of the normal distribution
+        std: the standard deviation of the normal distribution
+
+    Examples:
+        >>> w = flow.empty(3, 5)
+        >>> nn.init.normal_(w)
+    """
     initializer_conf = initializer_register.random_normal_initializer(mean, std)
     return _init_by_initializer_conf(tensor, initializer_conf)
 
@@ -83,7 +117,7 @@ def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
     Also known as Glorot initialization.
 
     Args:
-        tensor: an n-dimensional `flow.Tensor`
+        tensor: an n-dimensional `oneflow.Tensor`
         gain: an optional scaling factor
 
     Examples:
@@ -113,7 +147,7 @@ def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
     Also known as Glorot initialization.
 
     Args:
-        tensor: an n-dimensional `flow.Tensor`
+        tensor: an n-dimensional `oneflow.Tensor`
         gain: an optional scaling factor
 
     Examples:
@@ -168,7 +202,7 @@ def kaiming_uniform_(
     Also known as He initialization.
 
     Args:
-        tensor: an n-dimensional `flow.Tensor`
+        tensor: an n-dimensional `oneflow.Tensor`
         a: the negative slope of the rectifier used after this layer (only
             used with ``'leaky_relu'``)
         mode: either ``'fan_in'`` (default) or ``'fan_out'``. Choosing ``'fan_in'``
@@ -214,7 +248,7 @@ def kaiming_normal_(
     Also known as He initialization.
 
     Args:
-        tensor: an n-dimensional `flow.Tensor`
+        tensor: an n-dimensional `oneflow.Tensor`
         a: the negative slope of the rectifier used after this layer (only
             used with ``'leaky_relu'``)
         mode: either ``'fan_in'`` (default) or ``'fan_out'``. Choosing ``'fan_in'``
@@ -249,18 +283,85 @@ def trunc_normal_(tensor, mean=0.0, std=1.0, a=-2.0, b=2.0):
 
 
 def constant_(tensor, val):
+    r"""
+    
+    Fills the input Tensor with the value :math:`\text{val}`.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
+    Args:
+        tensor: an n-dimensional `oneflow.Tensor`
+        val: the value to fill the tensor with
+
+    Examples:
+        >>> w = flow.empty(3, 5)
+        >>> nn.init.constant_(w, 0.3)
+    """
     with flow.no_grad():
         return tensor.fill_(val)
 
 
 def ones_(tensor):
+    r"""
+    
+    Fills the input Tensor with the scalar value `1`.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
+    Args:
+        tensor: an n-dimensional `oneflow.Tensor`
+
+    Examples:
+        >>> w = flow.empty(3, 5)
+        >>> nn.init.ones_(w)
+    """
     with flow.no_grad():
         return tensor.fill_(1)
 
 
 def zeros_(tensor):
+    r"""
+    
+    Fills the input Tensor with the scalar value `0`.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
+    Args:
+        tensor: an n-dimensional `oneflow.Tensor`
+
+    Examples:
+        >>> w = flow.empty(3, 5)
+        >>> nn.init.zeros_(w)
+    """
     with flow.no_grad():
         return tensor.fill_(0)
+
+
+def eye_(tensor):
+    r"""
+    
+    Fills the 2-dimensional input `Tensor` with the identity
+    matrix. Preserves the identity of the inputs in `Linear` layers, where as
+    many inputs are preserved as possible.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
+
+    Args:
+        tensor: a 2-dimensional `oneflow.Tensor`
+
+    Examples:
+        >>> w = flow.empty(3, 5)
+        >>> nn.init.eye_(w)
+    """
+    if tensor.ndimension() != 2:
+        raise ValueError("Only tensors with 2 dimensions are supported")
+    with flow.no_grad():
+        tensor = flow._C.eye_(tensor)
+        return tensor
 
 
 def _calculate_fan_in_and_fan_out(tensor):
