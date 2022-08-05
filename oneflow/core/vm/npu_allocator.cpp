@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/device/npu_util.h"
 #include <iostream>
 
+#include<ctime>
 namespace oneflow {
 namespace vm {
 
@@ -184,6 +185,7 @@ bool NpuAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   if (final_allocate_bytes < aligned_size) { return false; }
 
   void* mem_ptr = nullptr;
+  
   if (aclrtMalloc(&mem_ptr, final_allocate_bytes, ACL_MEM_MALLOC_HUGE_FIRST) != ACL_SUCCESS) { return false; }//dck_caution_here
 
   // extend sucess

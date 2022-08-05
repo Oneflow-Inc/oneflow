@@ -31,6 +31,7 @@ class OnesLikeNpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    return ;
     user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("like", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     NpuCommand npu_command;

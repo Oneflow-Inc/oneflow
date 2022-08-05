@@ -34,13 +34,13 @@ void NpuHostAllocator::Allocate(char** mem_ptr, std::size_t size) {
   std::size_t granularity = std::ceil(std::log2(size));
   CHECK_GE(granularity, 0);
   CHECK_LT(granularity, kMaxGranularity);
-  CHECK_LE(size, 1 << granularity);
+  CHECK_LE(size, 1UL << granularity);
   NpuCurrentDeviceGuard guard(device_id_);
   std::unique_lock<std::mutex> lock(mutex_);
   auto* vec = &granularity2free_ptrs_[granularity];
   if (vec->empty()) {
     void* ptr = nullptr;
-    OF_NPU_CHECK(aclrtMallocHost(&ptr, 1 << granularity));
+    OF_NPU_CHECK(aclrtMallocHost(&ptr, 1UL << granularity));
     vec->emplace_back((char*)ptr);
   }
   *mem_ptr = vec->back();

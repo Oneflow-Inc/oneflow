@@ -41,40 +41,41 @@ class MaxPool2dNpuKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
+    std::cout<<"MaxPoolForward"<<std::endl;
+    // user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    // user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    // user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
+    // std::vector<int32_t> ksize = ctx->Attr<std::vector<int32_t>>("kernel_size");
+    // std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding");
+    // std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("stride");
+    // std::vector<int32_t> dilation = ctx->Attr<std::vector<int32_t>>("dilation");
+    // bool ceil_mode = ctx->Attr<bool>("ceil_mode");
 
-    user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
-    std::vector<int32_t> ksize = ctx->Attr<std::vector<int32_t>>("kernel_size");
-    std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding");
-    std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("stride");
-    std::vector<int32_t> dilation = ctx->Attr<std::vector<int32_t>>("dilation");
-    bool ceil_mode = ctx->Attr<bool>("ceil_mode");
+    // std::vector<int64_t> ksize_64 = {1,  ksize[0], ksize[1], 1};
+    // std::vector<int64_t> strides_64 = {1, stride[0], stride[1], 1};
+    // std::vector<int64_t> paddings_64 = { 1, padding[0], padding[1], 1};
+    // std::vector<int64_t> dilations_64 = {1, dilation[0], dilation[1], 1};
 
-    std::vector<int64_t> ksize_64 = {1,  ksize[0], ksize[1], 1};
-    std::vector<int64_t> strides_64 = {1, stride[0], stride[1], 1};
-    std::vector<int64_t> paddings_64 = { 1, padding[0], padding[1], 1};
-    std::vector<int64_t> dilations_64 = {1, dilation[0], dilation[1], 1};
-
-    MaxPoolTensorWrapper indice_wrap( indice->mut_dptr<void>(), ACL_UINT16, ACL_FORMAT_NCHW, ACL_FORMAT_NC1HWC0,
-                                        indice->shape().NumAxes(), indice->shape().ptr(), 
-                                        indice->shape().elem_cnt()*GetSizeOfDataType(indice->data_type()));
-    std::string data_format = ctx->Attr<std::string>("data_format");
+    // MaxPoolTensorWrapper indice_wrap( indice->mut_dptr<void>(), ACL_UINT16, ACL_FORMAT_NCHW, ACL_FORMAT_NC1HWC0,
+    //                                     indice->shape().NumAxes(), indice->shape().ptr(), 
+    //                                     indice->shape().elem_cnt()*GetSizeOfDataType(indice->data_type()));
+    // std::string data_format = ctx->Attr<std::string>("data_format");
     
-    NpuCommand npu_command;
-    npu_command.OpName("MaxPoolWithArgmaxV1")
-               .Input(x,data_format)
-               .Output(y,data_format)
-               .Output(indice_wrap)
-               .Attr("ksize", ksize_64)
-               .Attr("strides", strides_64)
-               .Attr("pads", paddings_64)
-               .Attr("dilation", dilations_64)
-               .Attr("ceil_mode", ceil_mode)
-               .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
-               .Check();
-    npu_command.Run()
-               .Realease();
+    // NpuCommand npu_command;
+    // npu_command.OpName("MaxPoolWithArgmaxV1")
+    //            .Input(x,data_format)
+    //            .Output(y,data_format)
+    //            .Output(indice_wrap)
+    //            .Attr("ksize", ksize_64)
+    //            .Attr("strides", strides_64)
+    //            .Attr("pads", paddings_64)
+    //            .Attr("dilation", dilations_64)
+    //            .Attr("ceil_mode", ceil_mode)
+    //            .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
+    //            .Check();
+    // npu_command.Run()
+    //            .Realease();
+
     //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
     //PrintResult(y);
     
@@ -92,42 +93,44 @@ class MaxPool2dGradNpuKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
-    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    std::cout<<"MaxPoolGradKernel"<<std::endl;
+    // user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    // user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
+    // user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    // user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
 
-    //user_op::TensorDesc* = const_cast<user_op::TensorDesc*>(indice_desc_c);
-    std::vector<int32_t> ksize = ctx->Attr<std::vector<int32_t>>("kernel_size");
-    std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding");
-    std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("stride");
-    std::vector<int32_t> dilation = ctx->Attr<std::vector<int32_t>>("dilation");
-    bool ceil_mode = ctx->Attr<bool>("ceil_mode");
+    // //user_op::TensorDesc* = const_cast<user_op::TensorDesc*>(indice_desc_c);
+    // std::vector<int32_t> ksize = ctx->Attr<std::vector<int32_t>>("kernel_size");
+    // std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding");
+    // std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("stride");
+    // std::vector<int32_t> dilation = ctx->Attr<std::vector<int32_t>>("dilation");
+    // bool ceil_mode = ctx->Attr<bool>("ceil_mode");
 
-    std::vector<int64_t> ksize_64 = {1,  ksize[0], ksize[1], 1};
-    std::vector<int64_t> strides_64 = {1, stride[0], stride[1], 1};
-    std::vector<int64_t> paddings_64 = { 1, padding[0], padding[1], 1};
-    std::vector<int64_t> dilations_64 = {1, dilation[0], dilation[1], 1};
-    std::string data_format = ctx->Attr<std::string>("data_format");
+    // std::vector<int64_t> ksize_64 = {1,  ksize[0], ksize[1], 1};
+    // std::vector<int64_t> strides_64 = {1, stride[0], stride[1], 1};
+    // std::vector<int64_t> paddings_64 = { 1, padding[0], padding[1], 1};
+    // std::vector<int64_t> dilations_64 = {1, dilation[0], dilation[1], 1};
+    // std::string data_format = ctx->Attr<std::string>("data_format");
     
-    MaxPoolTensorWrapper wrap( indice->mut_dptr<void>(), ACL_UINT16, ACL_FORMAT_NCHW, ACL_FORMAT_NC1HWC0,
-                                indice->shape().NumAxes(), indice->shape().ptr(), 
-                                indice->shape().elem_cnt()*GetSizeOfDataType(indice->data_type()));
-    NpuCommand npu_command;
-    npu_command.OpName("MaxPoolGradWithArgmaxV1")
-               .Input(x,data_format)
-               .Input(dy,data_format)
-               .Input(wrap)
-               .Output(dx,data_format)
-               .Attr("ksize", ksize_64)
-               .Attr("strides", strides_64)
-               .Attr("pads", paddings_64)
-               .Attr("dilations", dilations_64)
-               .Attr("ceil_mode", ceil_mode)
-               .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
-               .Check();
-    npu_command.Run()
-               .Realease();
+    // MaxPoolTensorWrapper wrap( indice->mut_dptr<void>(), ACL_UINT16, ACL_FORMAT_NCHW, ACL_FORMAT_NC1HWC0,
+    //                             indice->shape().NumAxes(), indice->shape().ptr(), 
+    //                             indice->shape().elem_cnt()*GetSizeOfDataType(indice->data_type()));
+    // NpuCommand npu_command;
+    // npu_command.OpName("MaxPoolGradWithArgmaxV1")
+    //            .Input(x,data_format)
+    //            .Input(dy,data_format)
+    //            .Input(wrap)
+    //            .Output(dx,data_format)
+    //            .Attr("ksize", ksize_64)
+    //            .Attr("strides", strides_64)
+    //            .Attr("pads", paddings_64)
+    //            .Attr("dilations", dilations_64)
+    //            .Attr("ceil_mode", ceil_mode)
+    //            .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
+    //            .Check();
+    // npu_command.Run()
+    //            .Realease();
+
     //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
     //PrintResult(dx);
     //std::cout<<"MaxPoolGrad Execute Over"<<std::endl; 
