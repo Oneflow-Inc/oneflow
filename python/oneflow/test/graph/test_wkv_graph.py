@@ -33,7 +33,7 @@ def test_wkv_graph(B, T, C, w, u, k, v):
             self.add_optimizer(optimizer)
 
         def build(self, x, w, u, k, v):
-            w = self.model(x) + w
+            w = self.model(x).squeeze(0) + w
             y = flow._C.wkv(B, T, C, w, u, k, v)
             loss = y.sum()
             print(loss)
