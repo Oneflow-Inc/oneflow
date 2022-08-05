@@ -33,10 +33,13 @@ void CopyTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   auto constructed = CHECK_JUST(ConstructOp(NewCopyOpConf()));
 
-  Shape dummy_hierarchy({1});
-  std::shared_ptr<Shape> hierarchy = std::make_shared<Shape>(dummy_hierarchy);
-  auto parallel_desc = ParallelDesc::New("cuda", {"0:0-0"}, hierarchy).GetOrThrow();
-  CHECK_JUST(constructed->FillOpParallelDesc(parallel_desc));
+  if (constructed->op_conf().has_user_conf()) {
+    Shape dummy_hierarchy({1});
+    std::shared_ptr<Shape> hierarchy = std::make_shared<Shape>(dummy_hierarchy);
+    auto parallel_desc =
+        ParallelDesc::New(constructed->op_conf().device_tag(), {"0:0-0"}, hierarchy).GetOrThrow();
+    CHECK_JUST(constructed->FillOpParallelDesc(parallel_desc));
+  }
 
   node->mut_op() = constructed;
   node->BindBnWithRegst(node->op()->SoleIbn(), in_regst);
