@@ -23,10 +23,10 @@ limitations under the License.
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/job/sbp_parallel.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 namespace one {
@@ -65,12 +65,13 @@ Maybe<TensorTuple> ExpandMaskIndex(const std::shared_ptr<Tensor>& index) {
   }
   if (size_tensor->is_global()) {
     // TODO(): check size_tensor sbp is broadcast.
-    size_tensor = JUST(functional::GlobalToLocal(size_tensor));
+    size_tensor = JUST(functional::GlobalToLocal(size_tensor, /*copy=*/false));
   }
   int64_t size = 0;
-  const auto& callback = [&](uint64_t of_blob_ptr) {
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    of_blob->AutoMemCopyTo<int64_t>(&size, 1);
+  const auto& callback = [&](ep::Stream* stream,
+                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+    AutoMemcpy(stream, &size, eager_blob_object->dptr(), sizeof(size), memory::MakeHostMemCase(),
+               eager_blob_object->mem_case());
   };
   JUST(SyncAccessTensorWithTimeOut(size_tensor, callback, "const"));
 
@@ -345,7 +346,7 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
     std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
     packed_indices =
         JUST(ToGlobal(packed_indices, placement, std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
-                      grad_sbp_tuple, /* check_meta */ false));
+                      grad_sbp_tuple, /* check_meta */ false, /*copy=*/false));
   } else {
     Symbol<Device> device = JUST(transposed_input->device());
     if (JUST(packed_indices->device()) != device) {
