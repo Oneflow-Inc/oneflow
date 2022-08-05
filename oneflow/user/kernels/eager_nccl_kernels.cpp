@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/kernel/new_kernel_util.h"

@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/framework/instructions_builder.h"
