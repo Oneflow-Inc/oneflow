@@ -15,11 +15,13 @@ limitations under the License.
 """
 import unittest
 
+import numpy as np
+from random import shuffle
+
 import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
-import numpy as np
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -33,6 +35,19 @@ class TestUnfoldTensor(flow.unittest.TestCase):
         step = random(1, 3).to(int).value()
         y = x.unfold(dimension, size, step)
         return y
+
+    @autotest(n=5)
+    def test_unfold_tensor_with_stride(test_case):
+        device = random_device()
+        x = random_tensor(3, 3, 4, 5).to(device)
+        perm = [0, 1, 2]
+        shuffle(perm)
+        y = x.permute(perm)
+        dimension = random(0, 2).to(int).value()
+        size = random(1, 3).to(int).value()
+        step = random(1, 3).to(int).value()
+        z = y.unfold(dimension, size, step)
+        return z
 
     @autotest(n=10, auto_backward=True, check_graph=True)
     def test_unfold_tensor_with_0dim_data(test_case):

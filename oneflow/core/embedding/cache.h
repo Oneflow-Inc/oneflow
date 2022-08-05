@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/embedding/kv_iterator.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ep/include/stream.h"
+#include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 
@@ -38,6 +39,7 @@ struct CacheOptions {
   uint64_t capacity{};
   uint32_t key_size{};
   uint32_t value_size{};
+  DataType value_type{};
   float load_factor = 0.75;
 };
 
@@ -49,6 +51,7 @@ class Cache {
 
   virtual uint32_t KeySize() const = 0;
   virtual uint32_t ValueSize() const = 0;
+  virtual DataType ValueType() const = 0;
   virtual uint32_t MaxQueryLength() const = 0;
   virtual void ReserveQueryLength(uint32_t query_length) = 0;
   virtual uint64_t Capacity() const = 0;
@@ -58,8 +61,18 @@ class Cache {
                     void* missing_keys, uint32_t* missing_indices) = 0;
   virtual void Get(ep::Stream* stream, uint32_t n_keys, const void* keys, void* values,
                    uint32_t* n_missing, void* missing_keys, uint32_t* missing_indices) = 0;
+  virtual void Get(ep::Stream* stream, uint32_t n_keys, const void* keys, void* values,
+                   uint8_t* mask) {
+    UNIMPLEMENTED();
+  }
   virtual void Put(ep::Stream* stream, uint32_t n_keys, const void* keys, const void* values,
                    uint32_t* n_evicted, void* evicted_keys, void* evicted_values) = 0;
+  virtual void FusedHalfUpdatePut(ep::Stream* stream, uint32_t n_keys, const void* keys,
+                                  const void* values, const void* update, const float* lr,
+                                  float scale, uint32_t* n_evicted, void* evicted_keys,
+                                  void* evicted_values) {
+    UNIMPLEMENTED();
+  }
   virtual void Dump(ep::Stream* stream, uint64_t start_key_index, uint64_t end_key_index,
                     uint32_t* n_dumped, void* keys, void* values) = 0;
   virtual void Clear() = 0;

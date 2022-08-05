@@ -82,14 +82,6 @@ TEST(Api, graph_multi_gpu_test) {
   Graph graph1 = LoadGraph(device1);
   Forward(graph1, device1);
 }
-
-TEST(Api, graph_trt_test) {
-  EnvScope scope;
-  Device device("cuda:0");
-  Graph graph = LoadGraph(device);
-  graph.enable_tensorrt();
-  Forward(graph, device);
-}
 #endif
 
 TEST(Api, graph_cpu_batching_test) {

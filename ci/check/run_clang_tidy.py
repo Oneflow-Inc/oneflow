@@ -86,6 +86,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--build_dir", required=True,
     )
+    parser.add_argument(
+        "--check-error-msg", action="store_true", default=False,
+    )
     args = parser.parse_args()
     loop = asyncio.get_event_loop()
     downloaded = download(args.build_dir, dry=True)
@@ -97,9 +100,11 @@ if __name__ == "__main__":
         .read_text()
         .strip()
     )
-    ret_code = loop.run_until_complete(
-        run_command(
-            f"cd .. && git diff -U0 master | {downloaded[1]} -clang-tidy-binary {downloaded[0]} -path {args.build_dir} -j $(nproc) -p1  -allow-enabling-alpha-checkers -extra-arg=-Xclang -extra-arg=-analyzer-config -extra-arg=-Xclang -extra-arg=aggressive-binary-operation-simplification=true -warnings-as-errors='{warnings_as_errors}'"
-        )
-    )
+    cmd = f"git diff -U0 master | {downloaded[1]} -clang-tidy-binary {downloaded[0]} -path {args.build_dir} -j $(nproc) -p1 -allow-enabling-alpha-checkers -extra-arg=-Xclang -extra-arg=-analyzer-config -extra-arg=-Xclang -extra-arg=aggressive-binary-operation-simplification=true"
+    if args.check_error_msg:
+        command = f" cd .. && {cmd} -warnings-as-errors='{warnings_as_errors}' && {cmd} -checks=-*,maybe-need-error-msg -warnings-as-errors=* -skip-line-filter"
+    else:
+        command = f"cd .. && {cmd} -warnings-as-errors='{warnings_as_errors}'"
+
+    ret_code = loop.run_until_complete(run_command(command))
     exit(ret_code)

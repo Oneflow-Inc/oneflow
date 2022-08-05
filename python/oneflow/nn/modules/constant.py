@@ -19,7 +19,7 @@ import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.common_types import _size_any_t
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _single
+from oneflow.nn.modules.utils import _single, _handle_size_arg
 
 
 class _ConstantBase(Module):
@@ -96,19 +96,6 @@ class Ones(_ConstantBase):
         super().__init__(size, 1, dtype, device, placement, sbp, requires_grad)
 
 
-def _handle_size_arg(*size):
-    assert len(size) > 0, "size of tensor doesn't exists"
-    if isinstance(size[0], (tuple, flow.Size, list)):
-        assert (
-            len(size) == 1
-        ), "shape should be specified by tuple of ints size, not tuple of tuple/list"
-        if len(size[0]) == 0:
-            size = []
-        else:
-            size = size[0]
-    return size
-
-
 def ones_op(
     *size: Union[_size_any_t, flow.Size, List[int]],
     dtype: Optional[flow.dtype] = None,
@@ -149,8 +136,27 @@ def ones_op(
 
 
     """
-    size = _handle_size_arg(*size)
+    size = _handle_size_arg(size)
     return Ones(size, dtype, device, placement, sbp, requires_grad)()
+
+
+def ones_like_op(
+    input,
+    dtype: Optional[flow.dtype] = None,
+    device: Union[flow.device, str, None] = None,
+    placement: flow.placement = None,
+    sbp: flow._oneflow_internal.sbp.sbp = None,
+    requires_grad: bool = False,
+):
+    if placement is None and input.is_global and input.placement is not None:
+        placement = input.placement
+    if sbp is None and input.is_global and input.sbp is not None:
+        sbp = input.sbp
+    if dtype is None:
+        dtype = input.dtype
+    if placement is None and device is None:
+        device = input.device
+    return Ones(input.size(), dtype, device, placement, sbp, requires_grad)()
 
 
 class Zeros(_ConstantBase):
@@ -201,8 +207,27 @@ def zeros_op(
                 [0., 0., 0.]], dtype=oneflow.float32)
 
     """
-    size = _handle_size_arg(*size)
+    size = _handle_size_arg(size)
     return Zeros(size, dtype, device, placement, sbp, requires_grad)()
+
+
+def zeros_like_op(
+    input,
+    dtype: Optional[flow.dtype] = None,
+    device: Union[flow.device, str, None] = None,
+    placement: flow.placement = None,
+    sbp: flow._oneflow_internal.sbp.sbp = None,
+    requires_grad: bool = False,
+):
+    if placement is None and input.is_global and input.placement is not None:
+        placement = input.placement
+    if sbp is None and input.is_global and input.sbp is not None:
+        sbp = input.sbp
+    if dtype is None:
+        dtype = input.dtype
+    if placement is None and device is None:
+        device = input.device
+    return Zeros(input.size(), dtype, device, placement, sbp, requires_grad)()
 
 
 class Full(_ConstantBase):
@@ -221,7 +246,7 @@ class Full(_ConstantBase):
 
 def full_op(
     size: Union[_size_any_t, flow.Size],
-    value: Union[float, int],
+    fill_value: Union[float, int],
     dtype: Optional[flow.dtype] = None,
     device: Union[flow.device, str, None] = None,
     placement: flow.placement = None,
@@ -235,10 +260,10 @@ def full_op(
     Args:
         size(int...): a list, tuple, or oneflow.Size of integers defining the shape of the output tensor.
         fill_value(Scalar): the value to fill the output tensor with.
-        dtype (flow.dtype, optional): the desired data type of returned tensor.
-        device (flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
-        placement (flow.placement, optional): the desired placement of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        dtype (oneflow.dtype, optional): the desired data type of returned tensor.
+        device (oneflow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        placement (oneflow.placement, optional): the desired placement of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (oneflow.sbp.sbp or tuple of oneflow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
     For example:
@@ -254,15 +279,72 @@ def full_op(
         tensor([[5., 5., 5.],
                 [5., 5., 5.]], dtype=oneflow.float32)
         >>> placement = flow.placement("cpu", ranks=[0])
-        >>> y = flow.full((2,3),5.0, placement=placement, sbp=flow.sbp.broadcast)  # construct global tensor
+        >>> y = flow.full((2,3), 5.0, placement=placement, sbp=flow.sbp.broadcast)  # construct global tensor
         >>> y.is_global
         True
 
     """
-    size = _handle_size_arg(*size)
+    size = _handle_size_arg(size)
     if dtype is None:
-        dtype = flow.tensor(value).dtype
-    return Full(size, value, dtype, device, placement, sbp, requires_grad)()
+        dtype = flow.tensor(fill_value).dtype
+    return Full(size, fill_value, dtype, device, placement, sbp, requires_grad)()
+
+
+def full_like_op(
+    input,
+    fill_value,
+    dtype: Optional[flow.dtype] = None,
+    device: Union[flow.device, str, None] = None,
+    placement: flow.placement = None,
+    sbp: flow._oneflow_internal.sbp.sbp = None,
+    requires_grad: bool = False,
+):
+    """
+    full_like(input, fill_value, \*, dtype=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
+    
+    Returns a tensor with the same size as :attr:`input` filled with :attr:`fill_value`.
+    ``oneflow.full_like(input, fill_value)`` is equivalent to
+    ``oneflow.full(input.size(), fill_value, dtype=input.dtype, device=input.device)``.
+
+    The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.full_like.html.
+
+    Args:
+        input(oneflow.Tensor)
+        fill_value(Scalar): the value to fill the output tensor with.
+        dtype (oneflow.dtype, optional): the desired data type of returned tensor.
+        device (oneflow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        placement (oneflow.placement, optional): the desired placement of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (oneflow.sbp.sbp or tuple of oneflow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.randn(2, 3)
+        >>> y = flow.full_like(x, 2.0)
+        >>> y
+        tensor([[2., 2., 2.],
+                [2., 2., 2.]], dtype=oneflow.float32)
+        >>> y = flow.full_like(x, 2, dtype=flow.int32)
+        >>> y
+        tensor([[2, 2, 2],
+                [2, 2, 2]], dtype=oneflow.int32)
+        >>> placement = flow.placement("cpu", ranks=[0])
+        >>> y = flow.full_like(x, 5.0, placement=placement, sbp=flow.sbp.broadcast)  # construct global tensor
+        >>> y.is_global
+        True
+
+    """
+    if dtype is None:
+        dtype = input.dtype
+    if device is None and placement is None:
+        device = input.device
+    return Full(
+        input.size(), fill_value, dtype, device, placement, sbp, requires_grad
+    )()
 
 
 def new_ones_op(
@@ -317,6 +399,68 @@ def new_ones_op(
         )
     else:
         res = flow._C.constant(new_size, 1.0, dtype=new_dtype, device=new_device)
+    res.requires_grad = new_requires_grad
+    return res
+
+
+def new_zeros_op(
+    x, size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False
+):
+    if isinstance(device, str):
+        device = flow.device(device)
+    if size is None or len(size) == 0:
+        new_size = x.shape
+    else:
+        new_size = _handle_size_arg(size)
+    new_dtype = dtype
+    new_device = device
+    new_placement = placement
+    new_sbp = sbp
+    new_requires_grad = requires_grad
+
+    if dtype is None:
+        new_dtype = x.dtype
+    if device is None:
+        new_device = x.device if x.is_local else None
+    if placement is None:
+        new_placement = x.placement if x.is_global else None
+    if sbp is None:
+        new_sbp = x.sbp if x.is_global else None
+    if new_placement is not None:
+        assert (
+            device is None
+        ), "argument 'device' must be None when argument 'placement' exist"
+        assert (
+            new_sbp is not None
+        ), "argument 'sbp' must not be None when argument 'placement' exist"
+    assert isinstance(
+        new_size, (int, tuple, list, flow.Size)
+    ), f"argument 'size' must be tuple of ints, not %s" % (type(new_size))
+    assert isinstance(
+        new_dtype, flow.dtype
+    ), f"argument 'dtype' must be flow.dtype, not %s" % (type(new_dtype))
+    if new_placement is not None:
+        assert isinstance(
+            new_placement, flow.placement
+        ), f"argument 'placement' must be flow.placement, not %s" % (
+            type(new_placement)
+        )
+        assert isinstance(
+            new_sbp, (flow.sbp.sbp, tuple)
+        ), f"argument 'sbp' must be flow.sbp.sbp, not %s" % (type(new_sbp))
+    else:
+        assert isinstance(
+            new_device, (str, flow.device)
+        ), f"argument 'device' must be flow.device, not %s" % (type(new_device))
+    assert isinstance(
+        new_requires_grad, bool
+    ), f"argument 'requires_grad' must be bool, not %s" % (type(new_requires_grad))
+    if new_placement is not None:
+        res = flow._C.global_constant(
+            new_size, 0.0, dtype=new_dtype, placement=new_placement, sbp=new_sbp
+        )
+    else:
+        res = flow._C.constant(new_size, 0.0, dtype=new_dtype, device=new_device)
     res.requires_grad = new_requires_grad
     return res
 

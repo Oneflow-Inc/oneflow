@@ -117,7 +117,6 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
   } else {
     UNIMPLEMENTED();
   }
-
   OperatorConf m_var(GenerateAdamHelperVariableOpConf(*var_op, "m", 0.f));
   OperatorConf v_var(GenerateAdamHelperVariableOpConf(*var_op, "v", 0.f));
   OperatorConf max_v_var{};
@@ -131,6 +130,19 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
   const std::string& train_step_lbn = job_builder->job().job_conf().train_conf().train_step_lbn();
   const std::string& learning_rate_lbn = optimizer_conf.learning_rate_lbn();
 
+  adam_update_op_builder.OpTypeName("adam_update")
+      .Input("model", GenLogicalBlobName(var_op->BnInOp2Lbi("out")))
+      .Input("model_diff", model_diff_lbn)
+      .Input("learning_rate", learning_rate_lbn)
+      .Input("m", GenVariableOutputLbn(m_var))
+      .Input("v", GenVariableOutputLbn(v_var))
+      .Attr<float>("beta1", beta1)
+      .Attr<float>("beta2", beta2)
+      .Attr<float>("epsilon", epsilon)
+      .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(optimizer_conf, *var_op))
+      .Attr<bool>("amsgrad", amsgrad)
+      .Attr<bool>("do_bias_correction", do_bias_correction)
+      .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
   if (do_bias_correction) {
     const std::string& job_pass_state_key = "adam_bias_correction_factor";
     const bool has_state = CHECK_JUST(ctx->HasState<BiasCorrectionFactorState>(job_pass_state_key));
@@ -170,37 +182,9 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
     const std::string bias_correction2_lbn =
         state->GetLbn(beta2, "adam_bias_correction_factor2", bias_correction_parallel_conf,
                       AddAdamBiasCorrectionFactorOp);
-    adam_update_op_builder.OpTypeName("adam_update")
-        .Input("model", GenLogicalBlobName(var_op->BnInOp2Lbi("out")))
-        .Input("model_diff", model_diff_lbn)
-        .Input("learning_rate", learning_rate_lbn)
-        .Input("bias_correction1", bias_correction1_lbn)
-        .Input("bias_correction2", bias_correction2_lbn)
-        .Input("m", GenVariableOutputLbn(m_var))
-        .Input("v", GenVariableOutputLbn(v_var))
-        .Attr<float>("beta1", beta1)
-        .Attr<float>("beta2", beta2)
-        .Attr<float>("epsilon", epsilon)
-        .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(optimizer_conf, *var_op))
-        .Attr<bool>("amsgrad", amsgrad)
-        .Attr<bool>("do_bias_correction", true)
-        .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
-  } else {
-    adam_update_op_builder.OpTypeName("adam_update")
-        .Input("model", GenLogicalBlobName(var_op->BnInOp2Lbi("out")))
-        .Input("model_diff", model_diff_lbn)
-        .Input("learning_rate", learning_rate_lbn)
-        .Input("m", GenVariableOutputLbn(m_var))
-        .Input("v", GenVariableOutputLbn(v_var))
-        .Attr<float>("beta1", beta1)
-        .Attr<float>("beta2", beta2)
-        .Attr<float>("epsilon", epsilon)
-        .Attr<float>("weight_decay", GetOptimizerWeightDecayRate(optimizer_conf, *var_op))
-        .Attr<bool>("amsgrad", amsgrad)
-        .Attr<bool>("do_bias_correction", false)
-        .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
+    adam_update_op_builder.Input("bias_correction1", bias_correction1_lbn)
+        .Input("bias_correction2", bias_correction2_lbn);
   }
-
   if (amsgrad) { adam_update_op_builder.Input("max_v", GenVariableOutputLbn(max_v_var)); }
 
   SetDynamicLossScaleSkipIf(ctx, &adam_update_op_builder);

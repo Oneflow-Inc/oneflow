@@ -21,8 +21,8 @@ add_docstr(
     """Sorts the elements of the input tensor along a given dimension in ascending order by value.
 
     Args:
-        input (oneflow.Tensor): The input Tensor.
-        dim (int, optional): dimension to be sorted. Defaults to the last dim (-1).
+        input (oneflow.Tensor): the input Tensor.
+        dim (int, optional): the dimension to be sorted. Defaults to the last dim (-1).
         descending (bool, optional): controls the sorting order (ascending or descending).
 
     Returns:

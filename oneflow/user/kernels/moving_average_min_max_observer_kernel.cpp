@@ -136,7 +136,7 @@ class CpuMovingAverageMinMaxObserverKernel final : public user_op::OpKernel {
     T* scale_ptr = scale->mut_dptr<T>();
     T* zero_point_ptr = zero_point->mut_dptr<T>();
 
-    int64_t num_elements = in->shape().elem_cnt();
+    int64_t num_elements = in->shape_view().elem_cnt();
 
     if (quantization_formula == "google") {
       if (quantization_scheme == "symmetric") {

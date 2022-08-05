@@ -26,13 +26,31 @@ namespace oneflow {
 
 Maybe<void> FlatShape::Init(const Shape& shape) {
   CHECK_LE_OR_RETURN(shape.NumAxes(), SHAPE_MAX_AXIS_SIZE);
+  this->clear_dim();
   for (int i = 0; i < shape.NumAxes(); ++i) { *this->mutable_dim()->Add() = shape.At(i); }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> FlatShape::Check(const Shape& shape) const {
-  CHECK_EQ_OR_RETURN(this->dim_size(), shape.NumAxes());
+  CHECK_EQ_OR_RETURN(this->dim_size(), shape.NumAxes())
+      << Error::RuntimeError()
+      << "Expected same shape on each rank, but found at least two shapes, "
+      << JUST(ToShape())->ToString() << " and " << shape.ToString() << "!";
   for (int i = 0; i < this->dim_size(); ++i) { CHECK_EQ_OR_RETURN(this->dim(i), shape.At(i)); }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> FlatShape::Check(const FlatShape& flat_shape) const {
+  CHECK_EQ_OR_RETURN(this->dim_size(), flat_shape.NumAxes())
+      << Error::RuntimeError()
+      << "Expected input of each rank must have the same size, but got at least two size, "
+      << JUST(ToShape())->ToString() << " and " << JUST(flat_shape.ToShape())->ToString();
+  for (int i = 0; i < this->dim_size(); ++i) {
+    CHECK_EQ_OR_RETURN(this->dim(i), flat_shape.At(i))
+        << Error::RuntimeError()
+        << "Expected input of each rank must have the same size, but got at least two size, "
+        << JUST(ToShape())->ToString() << " and " << JUST(flat_shape.ToShape())->ToString();
+  }
   return Maybe<void>::Ok();
 }
 

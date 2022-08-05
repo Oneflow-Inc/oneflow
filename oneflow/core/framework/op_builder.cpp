@@ -91,20 +91,6 @@ OpBuilder& OpBuilder::Attr(const std::string& attr_name, const AttrValue& attr_v
   return CHECK_JUST(MaybeAttr<AttrValue>(attr_name, attr_value));
 }
 
-template<>
-Maybe<OpBuilder&> OpBuilder::MaybeAttr(const std::string& attr_name,
-                                       const cfg::AttrValue& attr_value) {
-  AttrValue pb_attr_value;
-  attr_value.ToProto(&pb_attr_value);
-  (*(proto_.mutable_attr()))[attr_name] = pb_attr_value;
-  return *this;
-}
-
-template<>
-OpBuilder& OpBuilder::Attr(const std::string& attr_name, const cfg::AttrValue& attr_value) {
-  return CHECK_JUST(MaybeAttr(attr_name, attr_value));
-}
-
 #define DEFINE_OP_BUILDER_ATTR_FUNC(field, cpp_type, attr_type)                             \
   template<>                                                                                \
   Maybe<OpBuilder&> OpBuilder::MaybeAttr<cpp_type>(const std::string& attr_name,            \

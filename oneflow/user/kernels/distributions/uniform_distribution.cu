@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/user/kernels/distributions/uniform_distribution.h"
+#include "oneflow/core/ep/include/device.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
@@ -56,7 +57,8 @@ void UniformDistribution<DeviceType::kCUDA, T>::operator()(
     ep::Stream* stream, const int64_t elem_cnt, T* dptr,
     const std::shared_ptr<one::Generator>& generator) const {
   CHECK_GE(elem_cnt, 0);
-  auto gen = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
+  const auto device_index = stream->device()->device_index();
+  auto gen = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
   int32_t block_num = gen->max_block_num();
   int32_t thread_num = gen->max_thread_num();
   auto* curand_states = gen->curand_states();

@@ -18,10 +18,8 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include "oneflow/core/job/env_global_objects_scope.h"
-#include "oneflow/cfg/pybind_module_registry.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/job/cluster_instruction.h"
-#include "oneflow/cfg/message.h"
 
 namespace py = pybind11;
 
@@ -51,12 +49,6 @@ bool Int2IntListMapContaining(const Int2IntListMap& bigger, const Int2IntListMap
 }  // namespace
 
 PYBIND11_MODULE(_oneflow_internal, m) {
-  m.def("MasterSendAbort", []() {
-    if (Global<EnvGlobalObjectsScope>::Get() != nullptr) {
-      return ClusterInstruction::MasterSendAbort();
-    }
-  });
-
   using IntList = std::vector<int64_t>;
   using Int2IntListMap = std::unordered_map<int64_t, std::shared_ptr<IntList>>;
 
@@ -100,9 +92,6 @@ PYBIND11_MODULE(_oneflow_internal, m) {
            [](std::shared_ptr<Int2IntListMap>& lhs, std::shared_ptr<Int2IntListMap>& rhs) {
              return Int2IntListMapContaining(*lhs, *rhs) && Int2IntListMapContaining(*rhs, *lhs);
            });
-
-  py::class_<::oneflow::cfg::Message, std::shared_ptr<::oneflow::cfg::Message>>(m, "CfgMessage");
-  ::oneflow::cfg::Pybind11ModuleRegistry().ImportAll(m);
   ::oneflow::OneflowModuleRegistry().ImportAll(m);
 }
 

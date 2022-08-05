@@ -143,10 +143,13 @@ class EagerSToBFunctor {
                            const Shape& shape) const {
     Symbol<NdSbp> in_nd_sbp = JUST(GetNdSbp(in_sbp_parallels));
     {
-      CHECK_OR_RETURN(x->is_local());
-      CHECK_OR_RETURN(x->is_eager());
-      CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(), 1);
-      CHECK_OR_RETURN(IsSplitSbp(in_nd_sbp->sbp_parallel(0)));
+      CHECK_OR_RETURN(x->is_local())
+          << Error::RuntimeError() << "input tensors `.is_local` should be true";
+      CHECK_OR_RETURN(x->is_eager())
+          << Error::RuntimeError() << "input tensors `.is_eager` should be true";
+      CHECK_OR_RETURN((in_nd_sbp->sbp_parallel_size() == 1)
+                      && IsSplitSbp(in_nd_sbp->sbp_parallel(0)))
+          << Error::RuntimeError() << "The input tensor's sbp should be (split, )";
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerSToBOpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(in_nd_sbp->sbp_parallel(0)), shape));
@@ -161,8 +164,10 @@ class EagerPToBFunctor {
                            Symbol<ParallelDesc> in_parallel_desc,
                            Symbol<ParallelDesc> out_parallel_desc, const Shape& shape) const {
     {
-      CHECK_OR_RETURN(x->is_local());
-      CHECK_OR_RETURN(x->is_eager());
+      CHECK_OR_RETURN(x->is_local())
+          << Error::RuntimeError() << "input tensors `.is_local` should be true";
+      CHECK_OR_RETURN(x->is_eager())
+          << Error::RuntimeError() << "input tensors `.is_eager` should be true";
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerPToBOpExpr(in_parallel_desc, out_parallel_desc, shape));
@@ -182,12 +187,16 @@ class EagerNaiveSToSFunctor {
     Symbol<NdSbp> in_nd_sbp = JUST(GetNdSbp(in_sbp_parallels));
     Symbol<NdSbp> out_nd_sbp = JUST(GetNdSbp(out_sbp_parallels));
     {
-      CHECK_OR_RETURN(x->is_local());
-      CHECK_OR_RETURN(x->is_eager());
-      CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(), 1);
-      CHECK_OR_RETURN(IsSplitSbp(in_nd_sbp->sbp_parallel(0)));
-      CHECK_EQ_OR_RETURN(out_nd_sbp->sbp_parallel_size(), 1);
-      CHECK_OR_RETURN(IsSplitSbp(out_nd_sbp->sbp_parallel(0)));
+      CHECK_OR_RETURN(x->is_local())
+          << Error::RuntimeError() << "input tensors `.is_local` should be true";
+      CHECK_OR_RETURN(x->is_eager())
+          << Error::RuntimeError() << "input tensors `.is_eager` should be true";
+      CHECK_OR_RETURN((in_nd_sbp->sbp_parallel_size() == 1)
+                      && IsSplitSbp(in_nd_sbp->sbp_parallel(0)))
+          << Error::RuntimeError() << "The input tensor's sbp should be (split, )";
+      CHECK_OR_RETURN((out_nd_sbp->sbp_parallel_size() == 1)
+                      && IsSplitSbp(out_nd_sbp->sbp_parallel(0)))
+          << Error::RuntimeError() << "The output tensor's sbp should be (split, )";
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerNaiveSToSOpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(in_nd_sbp->sbp_parallel(0)),
@@ -206,10 +215,13 @@ class EagerBToSFunctor {
                            const Shape& shape) const {
     Symbol<NdSbp> out_nd_sbp = JUST(GetNdSbp(out_sbp_parallels));
     {
-      CHECK_OR_RETURN(x->is_local());
-      CHECK_OR_RETURN(x->is_eager());
-      CHECK_EQ_OR_RETURN(out_nd_sbp->sbp_parallel_size(), 1);
-      CHECK_OR_RETURN(IsSplitSbp(out_nd_sbp->sbp_parallel(0)));
+      CHECK_OR_RETURN(x->is_local())
+          << Error::RuntimeError() << "input tensors `.is_local` should be true";
+      CHECK_OR_RETURN(x->is_eager())
+          << Error::RuntimeError() << "input tensors `.is_eager` should be true";
+      CHECK_OR_RETURN((out_nd_sbp->sbp_parallel_size() == 1)
+                      && IsSplitSbp(out_nd_sbp->sbp_parallel(0)))
+          << Error::RuntimeError() << "The output tensor's sbp should be (split, )";
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerBToSOpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(out_nd_sbp->sbp_parallel(0)), shape));
@@ -227,10 +239,13 @@ class EagerPToSFunctor {
                            const Shape& shape) const {
     Symbol<NdSbp> out_nd_sbp = JUST(GetNdSbp(out_sbp_parallels));
     {
-      CHECK_OR_RETURN(x->is_local());
-      CHECK_OR_RETURN(x->is_eager());
-      CHECK_EQ_OR_RETURN(out_nd_sbp->sbp_parallel_size(), 1);
-      CHECK_OR_RETURN(IsSplitSbp(out_nd_sbp->sbp_parallel(0)));
+      CHECK_OR_RETURN(x->is_local())
+          << Error::RuntimeError() << "input tensors `.is_local` should be true";
+      CHECK_OR_RETURN(x->is_eager())
+          << Error::RuntimeError() << "input tensors `.is_eager` should be true";
+      CHECK_OR_RETURN((out_nd_sbp->sbp_parallel_size() == 1)
+                      && IsSplitSbp(out_nd_sbp->sbp_parallel(0)))
+          << Error::RuntimeError() << "The output tensor's sbp should be (split, )";
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerPToSOpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(out_nd_sbp->sbp_parallel(0)), shape));
@@ -248,10 +263,13 @@ class EagerSToPFunctor {
                            const Shape& shape) const {
     Symbol<NdSbp> in_nd_sbp = JUST(GetNdSbp(in_sbp_parallels));
     {
-      CHECK_OR_RETURN(x->is_local());
-      CHECK_OR_RETURN(x->is_eager());
-      CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(), 1);
-      CHECK_OR_RETURN(IsSplitSbp(in_nd_sbp->sbp_parallel(0)));
+      CHECK_OR_RETURN(x->is_local())
+          << Error::RuntimeError() << "input tensors `.is_local` should be true";
+      CHECK_OR_RETURN(x->is_eager())
+          << Error::RuntimeError() << "input tensors `.is_eager` should be true";
+      CHECK_OR_RETURN((in_nd_sbp->sbp_parallel_size() == 1)
+                      && IsSplitSbp(in_nd_sbp->sbp_parallel(0)))
+          << Error::RuntimeError() << "The input tensor's sbp should be (split, )";
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerSToPOpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(in_nd_sbp->sbp_parallel(0)), shape));

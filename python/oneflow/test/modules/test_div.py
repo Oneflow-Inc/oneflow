@@ -98,7 +98,7 @@ class TestDiv(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_div_impl(test_case, *arg)
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_random_dim_div(test_case):
         device = random_device()
         dim0 = random(low=1, high=4).to(int)
@@ -108,7 +108,7 @@ class TestDiv(flow.unittest.TestCase):
         z = x / y
         return z
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_random_dim_scalar_div(test_case):
         device = random_device()
         dim0 = random(low=1, high=4).to(int)
@@ -118,7 +118,7 @@ class TestDiv(flow.unittest.TestCase):
         z = x / y
         return z
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_0_size_div(test_case):
         device = random_device()
         x = random_tensor(4, 2, 1, 0, 3).to(device)
@@ -126,7 +126,7 @@ class TestDiv(flow.unittest.TestCase):
         z = x / y
         return z
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_0dim_div(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)

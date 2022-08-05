@@ -126,6 +126,7 @@ def _test_layernorm_backward(test_case, device):
     )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestLayerNorm(flow.unittest.TestCase):
     def test_layernorm(test_case):
@@ -140,10 +141,10 @@ class TestLayerNorm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=20, auto_backward=True, rtol=1.0, atol=1.0)
+    @autotest(n=20, auto_backward=True, rtol=1e-3, atol=1e-3)
     def test_layernorm_with_random_data_warp(test_case):
-        device = random_device()
-        channel = random(1, 200).to(int)
+        device = "cuda"
+        channel = random(1, 32).to(int)
         height = random(1, 2).to(int)
         width = random(1, 1024).to(int)
 
@@ -161,8 +162,8 @@ class TestLayerNorm(flow.unittest.TestCase):
 
     @autotest(n=10, auto_backward=True, rtol=1e-3, atol=1e-3)
     def test_layernorm_with_random_data_shared_mem(test_case):
-        device = random_device()
-        channel = random(1, 200).to(int)
+        device = "cuda"
+        channel = random(1, 32).to(int)
         height = random(1, 2).to(int)
         width = random(1024, 8192).to(int)
 
@@ -180,8 +181,8 @@ class TestLayerNorm(flow.unittest.TestCase):
 
     @autotest(n=5, auto_backward=True, rtol=1e-3, atol=1e-3)
     def test_layernorm_with_random_data_uncached(test_case):
-        device = random_device()
-        channel = random(1, 200).to(int)
+        device = "cuda"
+        channel = random(1, 32).to(int)
         height = random(1, 2).to(int)
         width = random(8192, 32768).to(int)
 
@@ -200,7 +201,7 @@ class TestLayerNorm(flow.unittest.TestCase):
     @autotest(n=10, auto_backward=True, rtol=1e-3, atol=1e-3)
     def test_layernorm_without_affine(test_case):
         device = random_device()
-        channel = random(1, 200).to(int)
+        channel = random(1, 32).to(int)
         height = random(1, 2).to(int)
         width = random(8192, 32768).to(int)
 

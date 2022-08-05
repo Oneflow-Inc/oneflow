@@ -19,29 +19,16 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-template<intrusive::ChannelStatus (PendingInstructionChannel::*Move)(PendingInstructionList*)>
-intrusive::ChannelStatus ThreadCtx::MoveAndRun(size_t* cnt) {
-  const StreamType& stream_type = stream_rt_desc().stream_type();
-  intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)> tmp_list;
-  intrusive::ChannelStatus status = (mut_pending_instruction_list()->*Move)(&tmp_list);
-  *cnt = tmp_list.size();
-  if (*cnt == 0) { return status; }
+size_t ThreadCtx::TryReceiveAndRun() {
+  intrusive::List<INTRUSIVE_FIELD(Instruction, worker_pending_instruction_hook_)> tmp_list;
+  mut_worker_pending_instruction_list()->MoveTo(&tmp_list);
+  size_t size = tmp_list.size();
   INTRUSIVE_FOR_EACH(instruction, &tmp_list) {
     tmp_list.Erase(instruction.Mutable());
-    stream_type.Run(instruction.Mutable());
+    const StreamPolicy& stream_policy = instruction->stream().stream_policy();
+    stream_policy.Run(instruction.Mutable());
   }
-  return status;
-}
-
-intrusive::ChannelStatus ThreadCtx::ReceiveAndRun() {
-  size_t cnt = 0;
-  return MoveAndRun<&PendingInstructionChannel::MoveTo>(&cnt);
-}
-
-size_t ThreadCtx::TryReceiveAndRun() {
-  size_t cnt = 0;
-  MoveAndRun<&PendingInstructionChannel::TryMoveTo>(&cnt);
-  return cnt;
+  return size;
 }
 
 }  // namespace vm

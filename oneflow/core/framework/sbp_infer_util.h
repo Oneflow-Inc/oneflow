@@ -21,6 +21,37 @@ limitations under the License.
 
 namespace oneflow {
 
+enum SbpInferRuleTag : int {
+  kAllMatch = 1,   // All match first, then lowest cost
+  kMatchAMAP = 2,  // Match as much as possible
+  kMinCost = 3     // Lowest cost
+};
+
+enum Penalty4PartialInConsumerTag : int {
+  kSlight = 1,  // Slight penalty
+  kMiddle = 2,  // Make sure we do not select P in the consumer
+  kStrict = 3   // Not allow a transfer to P
+};
+
+// [2, 3, 4, 5, 9, 100, 8]: (P, S0, P, P, B, S1, P)
+// partial ratio = 2 * 4 * 5 * 8
+int32_t PartialRatio4Producer(const NdSbp& sbp_producer,
+                              const ParallelDesc& producer_parallel_desc);
+
+// [2, 3, 4, 5, 9, 100, 8]: (P, S0, B, P, B, S1, P)
+// broadcast ratio = 4 * 9
+int32_t BroadcastRatio4Consumer(const NdSbp& sbp_consumer,
+                                const ParallelDesc& consumer_parallel_desc);
+
+void NdSbpDimReduce(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
+                    ParallelDesc* reduced_parallel_desc, NdSbp* reduced_nd_sbp);
+
+void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
+                            const ParallelDesc& out_parallel_desc, const NdSbp& in_nd_sbp,
+                            const NdSbp& out_nd_sbp, ParallelDesc* reduced_in_parallel_desc,
+                            ParallelDesc* reduced_out_parallel_desc, NdSbp* reduced_in_nd_sbp,
+                            NdSbp* reduced_out_nd_sbp);
+
 double GetValidMaxCopyCost();
 
 double GetTransferCost();
@@ -47,7 +78,7 @@ Maybe<double> ComputeCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel,
                                           const BlobDesc& logical_blob_desc,
                                           const ParallelDesc& producer_parallel_desc,
                                           const ParallelDesc& consumer_parallel_desc,
-                                          bool is_same_sbp);
+                                          bool requires_same_sbp);
 
 // Cost for boxing in lazy
 Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel,
@@ -65,6 +96,23 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
                                              const ParallelDesc& producer_parallel_desc,
                                              const ParallelDesc& consumer_parallel_desc,
                                              bool requires_same_sbp);
+
+// Decide the priority to infer sbp
+// 0: highest priority
+// 1.0: normal priority
+// 2.0: Penality, the same as infinity
+double ComputeSbpInferPriority(const NdSbp& producer_sbp_parallel,
+                               const NdSbp& consumer_sbp_parallel,
+                               const ParallelDesc& producer_parallel_desc,
+                               const ParallelDesc& consumer_parallel_desc, bool requires_same_sbp);
+
+// The transfer ratio for general basic communication
+// Cost = ratio * data amount
+double Cost4GeneralBasicCommunication(const NdSbp& producer_sbp_parallel,
+                                      const NdSbp& consumer_sbp_parallel,
+                                      const BlobDesc& logical_blob_desc,
+                                      const ParallelDesc& producer_parallel_desc,
+                                      const ParallelDesc& consumer_parallel_desc);
 
 }  // namespace oneflow
 

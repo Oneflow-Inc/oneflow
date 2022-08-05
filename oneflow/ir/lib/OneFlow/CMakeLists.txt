@@ -1,7 +1,7 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 message(STATUS "MLIR_DIALECT_LIBS: ${dialect_libs}")
 if(WITH_MLIR_CUDA_CODEGEN)
-  set(MLIR_GPU_LIBS MLIRSCFToGPU MLIRGPUToNVVMTransforms MLIRNVVMToLLVMIRTranslation)
+  set(MLIR_GPU_LIBS MLIRGPUToNVVMTransforms MLIRNVVMToLLVMIRTranslation)
 endif(WITH_MLIR_CUDA_CODEGEN)
 
 set(ONEFLOW_OP_GROUPS
@@ -17,16 +17,21 @@ endforeach()
 
 oneflow_add_mlir_dialect_library(
   MLIROneFlow
+  SBP/SBPDialect.cpp
+  SBP/SBPAttributes.cpp
+  SBP/SBPImporter.cpp
   OneFlowDialect.cpp
   OneFlowTypes.cpp
   OneFlowOps.cpp
   OneFlowOpTraits.cpp
   OneFlowSupport.cpp
+  OneFlowOpFolders.cpp
   Conversion/OneFlowToTosa.cpp
-  Conversion/SCFToGPU.cpp
   Conversion/PTXToCubin.cpp
   Transform/BufferHostRegister.cpp
   Transform/OutlineAndFuse.cpp
+  Transform/AutoNhwc.cpp
+  Transform/ConvertInferenceOp.cpp
   Passes.cpp
   ${GROUPED_OP_CPP_FILES}
   ADDITIONAL_HEADER_DIRS
@@ -40,6 +45,7 @@ oneflow_add_mlir_dialect_library(
   MLIRTosaToLinalg
   MLIRMemRefToLLVM
   MLIRLinalgToLLVM
+  MLIRSCFToGPU
   MLIRReconcileUnrealizedCasts
   ${MLIR_GPU_LIBS}
   MLIRIR

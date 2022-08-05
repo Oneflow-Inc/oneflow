@@ -20,6 +20,9 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 
 namespace oneflow {
+
+class Stream;
+
 namespace one {
 
 class Tensor;
@@ -49,8 +52,29 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& exp
 Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
                       const std::vector<int32_t>& squeeze_dims);
 
+Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& in_shape,
+                     const std::vector<int32_t>& expand_shape);
+
+Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, const int64_t& start,
+                     const int64_t& length);
+
+Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input, const std::vector<int32_t>& size,
+                        const std::vector<int32_t>& stride, const int32_t& storage_offset);
+
+Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& permute);
+
+Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const int32_t& dimension,
+                           const int32_t& size, const int32_t& step);
+
+Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offset,
+                       const int32_t dim1, const int32_t dim2);
+
 }  // namespace view
+
+Maybe<void> Touch(std::shared_ptr<Tensor> input, Symbol<Stream> stream);
+
 }  // namespace one
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_METHOD_H_

@@ -18,6 +18,7 @@ import os
 import unittest
 
 import numpy as np
+from google.protobuf import text_format
 
 import oneflow
 import oneflow as flow
@@ -42,20 +43,17 @@ class TestFeedVariableTensor(unittest.TestCase):
             oneflow._oneflow_internal.JobBuildAndInferCtx_Open(
                 "cc_test_variable_op_expr_job"
             )
-            job_conf = (
-                oneflow._oneflow_internal.oneflow.core.job.job_conf.JobConfigProto()
-            )
-            job_conf.set_job_name("cc_test_variable_op_expr_job")
-            job_conf.mutable_predict_conf()
+            job_conf = oneflow.core.job.job_conf_pb2.JobConfigProto()
+            job_conf.job_name = "cc_test_variable_op_expr_job"
+            job_conf.predict_conf.SetInParent()
             c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
             op_name = "cc_Variable_0"
-            var_conf = (
-                oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedVariableOpConf()
-            )
-            var_conf.set_in_0("EagerTensorInput")
-            var_conf.set_out_0("out_0")
+            var_conf = oneflow.core.operator.op_conf_pb2.FeedVariableOpConf()
+            var_conf.in_0 = "EagerTensorInput"
+            var_conf.out_0 = "out_0"
+            var_conf_str = text_format.MessageToString(var_conf)
             var_op = oneflow._oneflow_internal.one.FeedVariableOpExpr(
-                op_name, var_conf, ["in_0"], ["out_0"]
+                op_name, var_conf_str, ["in_0"], ["out_0"]
             )
             out_tensor = _C.dispatch_feed_variable(var_op, x, l2=0)
             test_case.assertEqual(out_tensor.shape, (1, 1, 10, 10))

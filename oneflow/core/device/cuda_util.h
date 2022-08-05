@@ -82,7 +82,10 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error);
 
 #define OF_NCCL_CHECK_OR_RETURN(condition)                                                         \
   for (ncclResult_t _of_nccl_check_status = (condition); _of_nccl_check_status != ncclSuccess;)    \
-  return Error::CheckFailedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)                 \
+  return Error::CheckFailedError().AddStackFrame([](const char* function) {                        \
+    thread_local static auto frame = SymbolOf(ErrorStackFrame(__FILE__, __LINE__, function));      \
+    return frame;                                                                                  \
+  }(__FUNCTION__))                                                                                 \
          << "Check failed: " #condition " : " << ncclGetErrorString(_of_nccl_check_status) << " (" \
          << _of_nccl_check_status << ") "
 
@@ -113,9 +116,10 @@ const int32_t kCudaWarpSize = 32;
 // TODO: limit of shared memory should be different for different arch
 const int32_t kCudaMaxSharedMemoryByteSize = 48 << 10;
 
-inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
+inline int64_t BlocksNum4ThreadsNum(const int64_t n) {
   CHECK_GT(n, 0);
-  return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock, kCudaMaxBlocksNum);
+  return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock,
+                  static_cast<int64_t>(kCudaMaxBlocksNum));
 }
 
 #define RUN_CUDA_KERNEL(func, stream, elem_cnt, ...) \
@@ -151,13 +155,15 @@ class CublasMathModeGuard final {
   cublasMath_t new_mode_{};
 };
 
-int GetCudaSmVersion();
-
-int GetCudaPtxVersion();
-
 int GetCudaDeviceIndex();
 
 int GetCudaDeviceCount();
+
+Maybe<double> GetCUDAMemoryUsed();
+
+void SetCudaDeviceIndex(int device_id);
+
+void CudaSynchronize(int device_id);
 
 void InitCudaContextOnce(int device_id);
 

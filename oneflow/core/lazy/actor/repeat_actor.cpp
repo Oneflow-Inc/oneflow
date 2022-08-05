@@ -36,10 +36,10 @@ class RepeatActor final : public Actor {
 };
 
 void RepeatActor::VirtualActorInit(const TaskProto& proto) {
-  const Shape& in_time_shape = Global<RegstMgr>::Get()
+  const Shape& in_time_shape = Singleton<RegstMgr>::Get()
                                    ->RegstDesc4RegstDescId(Name2SoleRegstDescId("in"))
                                    .data_regst_time_shape();
-  const Shape& out_time_shape = Global<RegstMgr>::Get()
+  const Shape& out_time_shape = Singleton<RegstMgr>::Get()
                                     ->RegstDesc4RegstDescId(Name2SoleRegstDescId("out"))
                                     .data_regst_time_shape();
   CHECK_GE(out_time_shape.NumAxes(), 1);
@@ -58,14 +58,20 @@ void RepeatActor::VirtualActorInit(const TaskProto& proto) {
     LOG(WARNING)
         << "RepeatActor has more than one consumed register. This will impact performance.";
   }
-  const int64_t out_regst_desc_id = out_regst_desc.regst_desc_id();
-  for (int64_t i = 1; i < repeat_num_; ++i) {
-    Global<RegstMgr>::Get()->NewRegsts(out_regst_desc, [this, out_regst_desc_id](Regst* regst) {
-      produced_regsts_[out_regst_desc_id].emplace_back(regst);
-      produced_regst2reading_cnt_[regst] = 0;
-      naive_produced_rs_.TryPushBackRegst(regst);
-    });
+
+  for (const auto& pair : proto.produced_regst_desc()) {
+    const RegstDescProto& regst_desc = pair.second;
+    int64_t regst_desc_id = regst_desc.regst_desc_id();
+    // This itor begins from 1 because first regst was already inserted in TakeOverNaiveProduced
+    for (int64_t i = 1; i < repeat_num_; ++i) {
+      Singleton<RegstMgr>::Get()->NewRegsts(regst_desc, [this, regst_desc_id](Regst* regst) {
+        produced_regsts_[regst_desc_id].emplace_back(regst);
+        produced_regst2reading_cnt_[regst] = 0;
+        naive_produced_rs_.TryPushBackRegst(regst);
+      });
+    }
   }
+
   OF_SET_MSG_HANDLER(&RepeatActor::HandlerNormal);
 }
 

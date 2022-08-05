@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "mlir/Parser.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Parser/Parser.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/ExecutionEngine/MemRefUtils.h"
@@ -49,9 +49,9 @@ REGISTER_USER_OP("mlir_jit")
       CHECK_EQ(ctx->inputs().size(), 2);
       CHECK_EQ(ctx->outputs().size(), 1);
       const Shape& in_shape = ctx->InputShape("in", 0);
-      Shape* out_shape = ctx->OutputShape("out", 0);
+      Shape* out_shape = ctx->MutOutputShape("out", 0);
       *out_shape = in_shape;
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 1);
+      *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 1);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -65,7 +65,7 @@ REGISTER_USER_OP("mlir_jit")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+      *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
@@ -77,8 +77,8 @@ OpaqueMemRefDescriptor CreateMemRefDescriptor(user_op::Tensor* tensor) {
   auto desc = new MemRefType();
   *desc = mlir::detail::makeStridedMemRefDescriptor<N>(
       tensor->dptr<T>(), tensor->dptr<T>(),
-      {tensor->shape().ptr(), tensor->shape().ptr() + tensor->shape().NumAxes()},
-      {tensor->shape().ptr(), tensor->shape().ptr() + tensor->shape().NumAxes()});
+      {tensor->shape_view().ptr(), tensor->shape_view().ptr() + tensor->shape_view().NumAxes()},
+      {tensor->shape_view().ptr(), tensor->shape_view().ptr() + tensor->shape_view().NumAxes()});
   auto deleter = [](void const* data) {
     auto p = static_cast<MemRefType const*>(data);
     delete p;
@@ -92,8 +92,8 @@ OpaqueMemRefDescriptor CreateMutMemRefDescriptor(user_op::Tensor* tensor) {
   auto desc = new MemRefType();
   *desc = mlir::detail::makeStridedMemRefDescriptor<N>(
       tensor->mut_dptr<T>(), tensor->mut_dptr<T>(),
-      {tensor->shape().ptr(), tensor->shape().ptr() + tensor->shape().NumAxes()},
-      {tensor->shape().ptr(), tensor->shape().ptr() + tensor->shape().NumAxes()});
+      {tensor->shape_view().ptr(), tensor->shape_view().ptr() + tensor->shape_view().NumAxes()},
+      {tensor->shape_view().ptr(), tensor->shape_view().ptr() + tensor->shape_view().NumAxes()});
   auto deleter = [](void const* data) {
     auto p = static_cast<MemRefType const*>(data);
     delete p;
@@ -120,13 +120,13 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
   for (auto& pair : ctx->inputs()) {
     auto tensor = ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
     auto ref = SwitchCreateMemRefDescriptor(
-        SwitchCase(tensor->shape().NumAxes(), tensor->data_type()), tensor);
+        SwitchCase(tensor->shape_view().NumAxes(), tensor->data_type()), tensor);
     args.push_back(ref);
   }
   for (auto& pair : ctx->outputs()) {
     auto tensor = ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
     auto ref = SwitchCreateMutMemRefDescriptor(
-        SwitchCase(tensor->shape().NumAxes(), tensor->data_type()), tensor);
+        SwitchCase(tensor->shape_view().NumAxes(), tensor->data_type()), tensor);
     args.push_back(ref);
   }
   return args;
@@ -138,7 +138,7 @@ void WithMlirContext(
     const std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)>& lower) {
   mlir::DialectRegistry registry;
   registry
-      .insert<mlir::oneflow::OneFlowDialect, mlir::StandardOpsDialect, mlir::memref::MemRefDialect,
+      .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
               mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect>();
   mlir::registerLLVMDialectTranslation(registry);
   mlir::MLIRContext mlir_ctx(registry);
@@ -155,9 +155,13 @@ void WithMlirContext(
     module->print(os_mlir);
     TeePersistentLogStream::Create(JoinPath("jit", ctx->op_name() + ".mlir"))->Write(mlir);
   }
-  auto jit_or_error = mlir::ExecutionEngine::create(
-      /* m */ *module, /* llvmModuleBuilder */ nullptr, /* transformer */ {},
-      /* jitCodeGenOptLevel */ llvm::None, /* sharedLibPaths */ ext_libs);
+
+  mlir::ExecutionEngineOptions jitOptions;
+  jitOptions.transformer = {};
+  jitOptions.jitCodeGenOptLevel = llvm::None;
+  jitOptions.sharedLibPaths = ext_libs;
+
+  auto jit_or_error = mlir::ExecutionEngine::create(*module, jitOptions);
   CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
                         << llvm::toString(jit_or_error.takeError());
   auto jit = std::move(jit_or_error.get());

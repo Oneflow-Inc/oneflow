@@ -13,8 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/boxing/eager_boxing_logger.h"
 #include "oneflow/core/boxing/boxing_interpreter_status.h"
 
@@ -38,14 +39,15 @@ class NaiveEagerBoxingLogger final : public EagerBoxingLogger {
   ~NaiveEagerBoxingLogger() override = default;
 
   void Log(const BoxingInterpreterStatus& status, const std::string& prefix) const override {
-    LOG(INFO) << prefix << "boxing interpreter route: " << (status.boxing_interpreter_routing());
+    LOG(INFO) << prefix << "Boxing route: " << (status.boxing_routing());
+    LOG(INFO) << prefix << "Logical shape: " << (status.logical_shape().ToString());
     LOG(INFO) << prefix << "Altered state of sbp: " << (status.nd_sbp_routing());
     LOG(INFO) << prefix << "Altered state of placement: " << (status.placement_routing());
   }
 };
 
 const EagerBoxingLogger* CreateEagerBoxingLogger() {
-  if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr) {
+  if (IsInDebugMode()) {
     return new NaiveEagerBoxingLogger();
   } else {
     return new NullEagerBoxingLogger();
@@ -54,6 +56,6 @@ const EagerBoxingLogger* CreateEagerBoxingLogger() {
 
 }  // namespace
 
-COMMAND(Global<const EagerBoxingLogger>::SetAllocated(CreateEagerBoxingLogger()));
+COMMAND(Singleton<const EagerBoxingLogger>::SetAllocated(CreateEagerBoxingLogger()));
 
 }  // namespace oneflow

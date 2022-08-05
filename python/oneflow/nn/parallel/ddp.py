@@ -13,9 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import warnings
 from collections import OrderedDict
 
 import oneflow as flow
+from oneflow.support.env_var_util import parse_boolean_from_env
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 
 
@@ -67,7 +69,11 @@ def DistributedDataParallel(
     module: "flow.nn.Module", *, broadcast_buffers: bool = True, bucket_size: int = 10
 ):
     assert all(x.dtype == flow.float32 for x in module.parameters())
-
+    if parse_boolean_from_env("ONEFLOW_DISABLE_VIEW", False):
+        warnings.warn(
+            "because the environment variable 'ONEFLOW_DISABLE_VIEW' is set to true, so the view mechanism is disabled, and we will set bucket_size = 1"
+        )
+        bucket_size = 1
     world_size = flow.env.get_world_size()
     with flow.no_grad():
         for x in module.parameters():
@@ -196,6 +202,9 @@ def DistributedDataParallel(
                 ),
                 n=1,
             )[0]
+        buffers = list(module.buffers())
+        if len(buffers) > 0:
+            flow._C.stream_touch(buffers)
         return output
 
     module.register_forward_hook(post_forward_hook)
@@ -205,10 +214,7 @@ def DistributedDataParallel(
         def pre_forward_hook(module, input):
             with flow.no_grad():
                 buffers = list(module.buffers())
-                if len(buffers) > 0:
-                    flow._C.stream_touch(buffers)  # for reusing soft syncs
-                for x in buffers:
-                    flow._C.broadcast(x, inplace=True)
+                flow._C.broadcast(buffers, inplace=True)
 
         module.register_forward_pre_hook(pre_forward_hook)
 

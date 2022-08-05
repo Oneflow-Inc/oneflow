@@ -48,6 +48,7 @@ class OpExpr {
   virtual int output_size() const = 0;
 
   virtual Maybe<bool> IsGradDisabled() const = 0;
+  virtual Maybe<bool> SupportNonContiguous() const = 0;
 
   virtual Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const = 0;
 
@@ -108,6 +109,8 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
 
   Maybe<bool> IsGradDisabled() const override;
 
+  Maybe<bool> SupportNonContiguous() const override;
+
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
   Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrMap& attrs) const override;
@@ -122,8 +125,9 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
-class StatefulLocalOpKernel;
-class ConsistentTensorInferCache;
+class StatefulOpKernel;
+class LocalTensorInferCache;
+class GlobalTensorInferCache;
 
 class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
  public:
@@ -136,7 +140,7 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
 
   const AttrMap& base_attrs() const { return base_attrs_; }
 
-  Maybe<StatefulLocalOpKernel> MutKernel4Stream(Symbol<Stream> stream) const;
+  Maybe<StatefulOpKernel> MutKernel4Stream(Symbol<Stream> stream) const;
 
   bool has_device_and_stream_infer_fn() const {
     return static_cast<bool>(device_and_stream_infer_fn_);
@@ -145,19 +149,22 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
     return device_and_stream_infer_fn_;
   }
 
-  Maybe<void> InferPhysicalShapeAndDType(
+  Maybe<void> InferPhysicalTensorDesc(
       const AttrMap& attrs, const std::string& device_tag,
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
 
-  Maybe<void> InferLogicalShapeAndDType(
+  Maybe<void> InferLogicalTensorDesc(
       const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc,
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
   Maybe<Symbol<Stream>> InferDeviceAndStream(const AttrMap& attrs, const TensorTuple& inputs,
                                              TensorTuple* outputs) const;
-  ConsistentTensorInferCache* mut_consistent_tensor_infer_cache() const {
-    return consistent_tensor_infer_cache_.get();
+  LocalTensorInferCache* mut_local_tensor_infer_cache() const {
+    return local_tensor_infer_cache_.get();
+  }
+  GlobalTensorInferCache* mut_global_tensor_infer_cache() const {
+    return global_tensor_infer_cache_.get();
   }
 
  private:
@@ -166,18 +173,19 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
              const std::vector<std::string>& indexed_obns);
   Maybe<void> Init(const std::shared_ptr<const UserOpExpr>& self);
   AttrMap base_attrs_;
-  user_op::TensorDescInferFn shape_infer_fn_;
+  user_op::TensorDescInferFn tensor_desc_infer_fn_;
   user_op::DataTypeInferFn dtype_infer_fn_;
   user_op::DeviceAndStreamInferFn device_and_stream_infer_fn_;
-  mutable HashMap<Symbol<Stream>, std::shared_ptr<StatefulLocalOpKernel>> stream2kernel_;
-  std::shared_ptr<ConsistentTensorInferCache> consistent_tensor_infer_cache_;
+  mutable HashMap<Symbol<Stream>, std::shared_ptr<StatefulOpKernel>> stream2kernel_;
+  std::shared_ptr<LocalTensorInferCache> local_tensor_infer_cache_;
+  std::shared_ptr<GlobalTensorInferCache> global_tensor_infer_cache_;
 };
 
-class ConsistentToConsistentOpExpr : public OpExpr {
+class GlobalToGlobalOpExpr : public OpExpr {
  public:
-  virtual ~ConsistentToConsistentOpExpr() = default;
+  virtual ~GlobalToGlobalOpExpr() = default;
 
-  static Maybe<ConsistentToConsistentOpExpr> New(const Optional<Symbol<NdSbp>>& grad_nd_sbp);
+  static Maybe<GlobalToGlobalOpExpr> New(const Optional<Symbol<NdSbp>>& grad_nd_sbp);
 
   const Optional<Symbol<NdSbp>>& grad_nd_sbp() const { return grad_nd_sbp_; }
   const std::string& op_type_name() const override;
@@ -185,56 +193,58 @@ class ConsistentToConsistentOpExpr : public OpExpr {
   int output_size() const override { return 1; }
 
   Maybe<bool> IsGradDisabled() const override { return false; }
+  Maybe<bool> SupportNonContiguous() const override { return false; }
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  protected:
-  ConsistentToConsistentOpExpr(const Optional<Symbol<NdSbp>>& grad_nd_sbp);
+  GlobalToGlobalOpExpr(const Optional<Symbol<NdSbp>>& grad_nd_sbp);
 
   Optional<Symbol<NdSbp>> grad_nd_sbp_;  //  Reserved for configuring grad sbp
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
-class CastConsistentOpExpr : public OpExpr {
+class CastGlobalOpExpr : public OpExpr {
  public:
-  virtual ~CastConsistentOpExpr() = default;
+  virtual ~CastGlobalOpExpr() = default;
 
   const std::string& op_name() const { return op_name_; }
   int input_size() const override { return 1; }
   int output_size() const override { return 1; }
 
   Maybe<bool> IsGradDisabled() const override { return false; }
+  Maybe<bool> SupportNonContiguous() const override { return false; }
 
  protected:
-  CastConsistentOpExpr(const std::string& op_name);
+  CastGlobalOpExpr(const std::string& op_name);
 
   std::string op_name_;
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
-class CastToConsistentOpExpr final : public CastConsistentOpExpr {
+class CastToGlobalOpExpr final : public CastGlobalOpExpr {
  public:
-  ~CastToConsistentOpExpr() = default;
+  ~CastToGlobalOpExpr() = default;
 
-  static Maybe<CastToConsistentOpExpr> New(const std::string& op_name);
+  static Maybe<CastToGlobalOpExpr> New(const std::string& op_name);
 
   const std::string& op_type_name() const override;
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
-  CastToConsistentOpExpr(const std::string& op_name);
+  CastToGlobalOpExpr(const std::string& op_name);
 };
 
-class CastFromConsistentOpExpr final : public CastConsistentOpExpr {
+class CastFromGlobalOpExpr final : public CastGlobalOpExpr {
  public:
-  ~CastFromConsistentOpExpr() = default;
+  ~CastFromGlobalOpExpr() = default;
 
-  static Maybe<CastFromConsistentOpExpr> New(const std::string& op_name);
+  static Maybe<CastFromGlobalOpExpr> New(const std::string& op_name);
 
   const std::string& op_type_name() const override;
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
-  CastFromConsistentOpExpr(const std::string& op_name);
+  CastFromGlobalOpExpr(const std::string& op_name);
 };
 
 // NOTE(chengcheng): For Lazy nn.Graph Feed/Fetch EagerTensor to/from LazyTensor.
@@ -246,8 +256,8 @@ using FetchOutputOpExpr = BuiltinOpExprImpl<FetchOutputOpConf>;
 using ImageDecoderRandomCropResizeOpExpr = BuiltinOpExprImpl<ImageDecoderRandomCropResizeOpConf>;
 
 using VariableOpExpr = BuiltinOpExprImpl<VariableOpConf>;
-using CastToMirroredOpExpr = BuiltinOpExprImpl<CastToMirroredOpConf>;
-using CastFromMirroredOpExpr = BuiltinOpExprImpl<CastFromMirroredOpConf>;
+using CastToLocalOpExpr = BuiltinOpExprImpl<CastToLocalOpConf>;
+using CastFromLocalOpExpr = BuiltinOpExprImpl<CastFromLocalOpConf>;
 using DistributeSplitOpExpr = BuiltinOpExprImpl<DistributeSplitOpConf>;
 using DistributeCloneOpExpr = BuiltinOpExprImpl<DistributeCloneOpConf>;
 using DistributeConcatOpExpr = BuiltinOpExprImpl<DistributeConcatOpConf>;
@@ -275,6 +285,8 @@ class SelectTopNOpExpr final : public OpExpr {
   }
 
   Maybe<bool> IsGradDisabled() const override { return false; }
+
+  Maybe<bool> SupportNonContiguous() const override { return false; }
 
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
@@ -313,6 +325,7 @@ class FunctionOpExpr final : public OpExpr {
   void reset_state() const;
 
   Maybe<bool> IsGradDisabled() const override { return false; }
+  Maybe<bool> SupportNonContiguous() const override { return false; }
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:

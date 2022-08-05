@@ -91,7 +91,7 @@ class ElemwiseXimumKernel final : public user_op::OpKernel {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
-    int64_t n = tensor_x->shape().elem_cnt();
+    int64_t n = tensor_x->shape_view().elem_cnt();
 
     ElemwiseXimumFunctor<device_type, Opt, T>()(ctx->stream(), n, tensor_z->mut_dptr<T>(),
                                                 tensor_x->dptr<T>(), tensor_y->dptr<T>());
@@ -121,8 +121,9 @@ class ElemwiseXimumBackwardKernel final : public user_op::OpKernel {
     T* dptr_dx = tensor_dx ? tensor_dx->mut_dptr<T>() : nullptr;
     T* dptr_dy = tensor_dy ? tensor_dy->mut_dptr<T>() : nullptr;
 
-    ElemwiseXimumGradFunctor<device_type, Opt, T>()(ctx->stream(), tensor_dz->shape().elem_cnt(),
-                                                    dptr_dz, dptr_x, dptr_y, dptr_dx, dptr_dy);
+    ElemwiseXimumGradFunctor<device_type, Opt, T>()(ctx->stream(),
+                                                    tensor_dz->shape_view().elem_cnt(), dptr_dz,
+                                                    dptr_x, dptr_y, dptr_dx, dptr_dy);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -21,13 +21,14 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <cuda.h>
 // CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
-#if CUDA_VERSION >= 11040
+#if CUDA_VERSION >= 11060
 
 namespace oneflow {
 
 namespace {
 
 constexpr int32_t kAuxReluLdAlignRequirement = 128;
+constexpr size_t kDefaultWorkspaceSizeMb = 4;  // 4M
 
 long AlignReluAuxLd(long aux_ld) {
   /*
@@ -47,17 +48,20 @@ class CublasFusedMLPKernelCache final : public user_op::OpKernelCache {
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_a_desc, CUDA_R_32F, 1, 1, 1));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_b_desc, CUDA_R_32F, 1, 1, 1));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_c_desc, CUDA_R_32F, 1, 1, 1));
+    OF_CUBLAS_CHECK(cublasLtMatmulPreferenceCreate(&cublas_preference));
   }
   ~CublasFusedMLPKernelCache() override {
     OF_CUBLAS_CHECK(cublasLtMatmulDescDestroy(operation_desc));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_a_desc));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_b_desc));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_c_desc));
+    OF_CUBLAS_CHECK(cublasLtMatmulPreferenceDestroy(cublas_preference));
   }
   cublasLtMatmulDesc_t operation_desc;
   cublasLtMatrixLayout_t cublas_a_desc;
   cublasLtMatrixLayout_t cublas_b_desc;
   cublasLtMatrixLayout_t cublas_c_desc;
+  cublasLtMatmulPreference_t cublas_preference;
 };
 
 std::shared_ptr<CublasFusedMLPKernelCache> CreateCublasFusedMLPKernelCache() {
@@ -83,7 +87,12 @@ cudaDataType_t GetCudaDataType(DataType data_type) {
 
 cublasComputeType_t GetComputeType(DataType data_type) {
   switch (data_type) {
-    case kFloat: return CUBLAS_COMPUTE_32F;
+    case kFloat:
+      if (ParseBooleanFromEnv("ONEFLOW_EP_CUDA_ENABLE_TF32_EXECUTION", true)) {
+        return CUBLAS_COMPUTE_32F_FAST_TF32;
+      } else {
+        return CUBLAS_COMPUTE_32F;
+      }
     case kDouble: return CUBLAS_COMPUTE_64F;
     case kFloat16: return CUBLAS_COMPUTE_32F;
     case kBFloat16: return CUBLAS_COMPUTE_32F;
@@ -100,7 +109,7 @@ CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cublasComputeType_
   CublasScalarParameter sp{};
   if (compute_type == CUBLAS_COMPUTE_64F) {
     sp.d = scalar.Value<double>();
-  } else if (compute_type == CUBLAS_COMPUTE_32F) {
+  } else if (compute_type == CUBLAS_COMPUTE_32F || compute_type == CUBLAS_COMPUTE_32F_FAST_TF32) {
     sp.s = scalar.Value<float>();
   } else {
     UNIMPLEMENTED();
@@ -163,20 +172,24 @@ void SetCublasMatrixLayout(cublasLtMatrixLayout_t layout_desc, cudaDataType_t cu
 
 void SetCublasEpilogue(const CublasFusedMLPKernelCache* matmul_cache, cublasLtEpilogue_t epilogue,
                        const void* bias_ptr, const void* aux_ptr) {
+  // Set epilogue
+  OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
+      matmul_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
   if (epilogue == CUBLASLT_EPILOGUE_RELU_BIAS || epilogue == CUBLASLT_EPILOGUE_BIAS
-      || epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS || epilogue == CUBLASLT_EPILOGUE_DRELU_BGRAD) {
-    // Set epilogue
-    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
-        matmul_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
+      || epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS || epilogue == CUBLASLT_EPILOGUE_DRELU_BGRAD
+      || epilogue == CUBLASLT_EPILOGUE_BGRADB) {
     // Set bias ptr
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
                                                    CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias_ptr,
                                                    sizeof(bias_ptr)));
   } else {
-    Error::UnimplementedError() << "Unsupported Epilogue. ";
+    // unset
+    bias_ptr = nullptr;
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
+                                                   CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias_ptr,
+                                                   sizeof(bias_ptr)));
   }
 
-  // TODO: Support GELU_AUX_BIAS
   if (epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS || epilogue == CUBLASLT_EPILOGUE_DRELU_BGRAD) {
     // Set aux ptr for backward.
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
@@ -202,12 +215,17 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
       matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_COMPUTE_TYPE, &cublas_compute_dtype,
       sizeof(cublas_compute_dtype)));
 
-  // For best performance when using the bias vector, specify beta == 0 and
-  // CUBLASLT_POINTER_MODE_HOST.(from
-  // https://docs.nvidia.com/cuda/cublas/index.html#cublasLtPointerMode_t)
-  cublasLtPointerMode_t mode = CUBLASLT_POINTER_MODE_HOST;
-  OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
-      matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_POINTER_MODE, &mode, sizeof(mode)));
+  size_t workspace_size =
+      ParseIntegerFromEnv("ONEFLOW_EP_CUDA_CUBLAS_WORKSPACE_SIZE_MB", kDefaultWorkspaceSizeMb)
+      * 1024 * 1024;
+  OF_CUBLAS_CHECK(cublasLtMatmulPreferenceSetAttribute(matmul_grad_cache->cublas_preference,
+                                                       CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES,
+                                                       &workspace_size, sizeof(workspace_size)));
+
+  uint32_t pointer_mode = CUBLASLT_POINTER_MODE_MASK_HOST;
+  OF_CUBLAS_CHECK(cublasLtMatmulPreferenceSetAttribute(matmul_grad_cache->cublas_preference,
+                                                       CUBLASLT_MATMUL_PREF_POINTER_MODE_MASK,
+                                                       &pointer_mode, sizeof(pointer_mode)));
 
   // transpose_a = False, transpose_b = True. But in cublas is reversed.
   const cublasOperation_t cublas_trans_a =
@@ -236,6 +254,11 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_grad_cache->operation_desc,
                                                    CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD,
                                                    &aligned_aux_ld, sizeof(aligned_aux_ld)));
+  } else {
+    long no_need_aligned_aux_ld = 0;
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
+        matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD,
+        &no_need_aligned_aux_ld, sizeof(no_need_aligned_aux_ld)));
   }
   // Set matrix layout
   SetCublasMatrixLayout(matmul_grad_cache->cublas_a_desc, cuda_data_type, cublas_trans_a, cublas_m,
@@ -250,6 +273,6 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
 
 }  // namespace oneflow
 
-#endif  // CUDA_VERSION >= 11040
+#endif  // CUDA_VERSION >= 11060
 
 #endif  // defined(__CUDACC__)

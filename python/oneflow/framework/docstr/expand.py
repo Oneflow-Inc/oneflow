@@ -30,7 +30,7 @@ add_docstr(
     For the new dimensions, the size cannot be set to -1.
 
     Args:
-        input (oneflow.Tensor): The input Tensor.
+        input (oneflow.Tensor): the input Tensor.
         *sizes  (oneflow.Size or int): The desired expanded size.
 
     Returns:

@@ -24,7 +24,7 @@ Maybe<void> getOutShapeAndStride(const std::vector<int32_t>& in_shape,
   // NOTE(Liang Depeng): compute the input stride.
   std::vector<int32_t> original_stride(in_shape.size(), 1);
   for (int i = in_shape.size() - 2; i >= 0; --i) {
-    original_stride[i] = in_shape.at(i + 1) * original_stride.at(i + 1);
+    original_stride[i] = in_shape[i + 1] * original_stride[i + 1];
   }
 
   // NOTE(Liang Depeng): compute the output stride and shape.
@@ -34,20 +34,19 @@ Maybe<void> getOutShapeAndStride(const std::vector<int32_t>& in_shape,
   for (int i = out_shape.size() - 1; i >= 0; --i) {
     int index = i - shift;
     if (index >= 0) {
-      if (expand_shape.at(i) == -1 || expand_shape.at(i) == in_shape.at(index)) {
-        out_shape[i] = in_shape.at(index);
-        stride[i] = original_stride.at(index);
+      if (expand_shape[i] == -1 || expand_shape[i] == in_shape[index]) {
+        out_shape[i] = in_shape[index];
+        stride[i] = original_stride[index];
       } else {
-        CHECK_OR_RETURN(expand_shape.at(i) > 0 && in_shape.at(index) == 1)
-            << "Invalid expand shape ";
-        out_shape[i] = expand_shape.at(i);
+        CHECK_OR_RETURN(expand_shape[i] >= 0 && in_shape[index] == 1) << "Invalid expand shape ";
+        out_shape[i] = expand_shape[i];
         stride[i] = 0;
       }
     } else {
-      CHECK_GT_OR_RETURN(expand_shape.at(i), 0) << "Invalid expand shape ";
-      out_shape[i] = expand_shape.at(i);
-      if (expand_shape.at(i) == 1 && i < out_shape.size() - 1) {
-        stride[i] = stride.at(i + 1);
+      CHECK_GE_OR_RETURN(expand_shape[i], 0) << "Invalid expand shape ";
+      out_shape[i] = expand_shape[i];
+      if (expand_shape[i] == 1 && i < out_shape.size() - 1) {
+        stride[i] = stride[i + 1];
       } else {
         stride[i] = 0;
       }

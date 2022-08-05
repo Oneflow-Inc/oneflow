@@ -24,7 +24,7 @@ namespace oneflow {
   const std::vector<int32_t> dims = ctx->Attr<std::vector<int32_t>>("dims");
   CHECK_OR_RETURN(dims.size() <= input_dims) << "len of dims must less than len of input tensor";
   for (auto x : dims) { CHECK_OR_RETURN(x < input_dims) << "dims parameter is illegal."; }
-  user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
   *y_desc->mut_shape() = x_desc.shape();
   return Maybe<void>::Ok();
 }
@@ -49,26 +49,25 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ auto FlipOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FlipGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  const Shape& dy_shape = ctx->InputShape("dy", 0);
-  Shape* dx_shape = ctx->OutputShape("dx", 0);
-  *dx_shape = dy_shape;
-  return Maybe<void>::Ok();
-}
-/*static*/ auto FlipGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  return FlipGradOp::InferLogicalTensorDesc(ctx);
-}
-/*static*/ auto FlipGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
-  ctx->NewBuilder().Split(user_op::OpArg("dy", 0), 0).Split(user_op::OpArg("dx", 0), 0).Build();
-  return Maybe<void>::Ok();
-}
-/*static*/ auto FlipGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-  return Maybe<void>::Ok();
-}
+REGISTER_USER_OP_GRAD("flip").SetBackwardOpConfGenFn(
+    [](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
+      const std::string ref_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
+      const auto dims = ctx->FwOp().attr<std::vector<int32_t>>("dims");
+      ctx->DefineOp(ref_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
+        return builder.OpTypeName("flip")
+            .InputBind("x", ctx->FwOp().output_grad("y", 0))
+            .Attr("dims", dims)
+            .Output("y")
+            .Build();
+      });
+      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [&]() -> const std::string& {
+        return ctx->GetOp(ref_grad_op_name).output("y", 0);
+      });
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace oneflow

@@ -40,10 +40,10 @@ class MinMaxObserverFunctor {
                          .Build());
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
-                                const std::string quantization_formula,
+                                const std::string& quantization_formula,
                                 const int32_t& quantization_bit,
-                                const std::string quantization_scheme,
-                                const bool per_layer_quantization) const {
+                                const std::string& quantization_scheme,
+                                const bool& per_layer_quantization) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
     JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));
@@ -71,11 +71,12 @@ class MovingAverageMinMaxObserverFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in,
                                 const std::shared_ptr<one::Tensor>& current_train_step,
                                 const std::shared_ptr<one::Tensor>& moving_max,
-                                const std::shared_ptr<one::Tensor>& moving_min, const bool training,
-                                const std::string quantization_formula,
-                                const int64_t& stop_update_after_iters,
+                                const std::shared_ptr<one::Tensor>& moving_min,
+                                const bool& training, const int64_t& stop_update_after_iters,
+                                const std::string& quantization_formula,
                                 const int32_t& quantization_bit,
-                                const std::string quantization_scheme, const float momentum) const {
+                                const std::string& quantization_scheme,
+                                const float& momentum) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("training", training));
     JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
@@ -104,8 +105,8 @@ class FakeQuantizationFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
                            const std::shared_ptr<one::Tensor>& scale,
                            const std::shared_ptr<one::Tensor>& zero_point,
-                           const std::string quantization_formula, const int32_t& quantization_bit,
-                           const std::string quantization_scheme) const {
+                           const std::string& quantization_formula, const int32_t& quantization_bit,
+                           const std::string& quantization_scheme) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("quantization_formula", quantization_formula));
     JUST(attrs.SetAttr<int32_t>("quantization_bit", quantization_bit));

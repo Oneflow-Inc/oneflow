@@ -24,7 +24,7 @@ add_docstr(
     This operator repeat the input tensor to a larger size along the specified dimensions.
 
     Args:
-        input (oneflow.Tensor): The input Tensor.
+        input (oneflow.Tensor): the input Tensor.
         sizes (flow.Shape or List): The number of times to repeat this tensor along each dimension.
 
     Returns:

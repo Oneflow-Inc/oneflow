@@ -61,4 +61,4 @@ def _set_python_exit_flag():
 atexit.register(_set_python_exit_flag)
 
 
-from . import worker, signal_handling, collate, fetch
+from . import worker, signal_handling, collate, fetch, pin_memory

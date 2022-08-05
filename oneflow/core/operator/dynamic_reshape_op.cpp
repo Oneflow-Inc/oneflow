@@ -65,7 +65,7 @@ class DynamicReshapeOp final : public Operator {
     *out = *in;
     DimVector out_dim_vec(conf.shape().dim().begin(), conf.shape().dim().end());
     if (parallel_ctx->parallel_num() > 1) {
-      // consistent strategy
+      // global strategy
       //   ONLY support sbp: S(0); and -1 must at axis 0
       const auto& out_sbp_it = sbp_signature->bn_in_op2sbp_parallel().find("out");
       CHECK_OR_RETURN(out_sbp_it != sbp_signature->bn_in_op2sbp_parallel().end());

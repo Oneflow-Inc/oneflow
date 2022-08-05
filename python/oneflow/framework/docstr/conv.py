@@ -19,19 +19,19 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow._C.conv1d,
     r"""
-    conv1d(input, weight, bias=None, stride=[1], padding=[0], dilation=[1], groups=1) -> Tensor
-
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.conv1d.html?highlight=conv1d
+    conv1d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1) -> Tensor
 
     Applies a 1D convolution over an input signal composed of several input
     planes.
 
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.conv1d.html.
+
     See :class:`~oneflow.nn.Conv1d` for details and output shape.
 
     Args:
-        input: quantized input tensor of shape :math:`(\text{minibatch} , \text{in_channels} , iW)`
-        weight: quantized filters of shape :math:`(\text{out_channels} , \frac{\text{in_channels}}{\text{groups}} , iW)`
-        bias: **non-quantized** bias tensor of shape :math:`(\text{out_channels})`. The tensor type must be `flow.float`.
+        input: input tensor of shape :math:`(\text{minibatch} , \text{in_channels} , iW)`
+        weight: filters of shape :math:`(\text{out_channels} , \frac{\text{in_channels}}{\text{groups}} , iW)`
+        bias: optional bias of shape :math:`(\text{out_channels})`. Default: None.
         stride: the stride of the convolving kernel. Can be a single number or a
           tuple `(sW,)`. Default: 1
         padding: implicit paddings on both sides of the input. Can be a
@@ -46,29 +46,29 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> import numpy as np
+        >>> import oneflow.nn.functional as F
         
-        >>> input = flow.tensor(np.random.randn(33, 16, 30), dtype=flow.float32)
-        >>> filters = flow.tensor(np.random.randn(20, 16, 5), dtype=flow.float32)
-        >>> out = flow._C.conv1d(input, filters,stride=[1], padding=[0], dilation=[1], channel_pos="channels_first")
+        >>> inputs = flow.randn(33, 16, 30)
+        >>> filters = flow.randn(20, 16, 5)
+        >>> outputs = F.conv1d(inputs, filters)
         """,
 )
 add_docstr(
     oneflow._C.conv2d,
     r"""
-    conv2d(input, weight, bias=None, stride=[1], padding=[0], dilation=[1], groups=1) -> Tensor
-
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.conv2d.html?highlight=conv2d
+    conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1) -> Tensor
 
     Applies a 2D convolution over an input image composed of several input
     planes.
 
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.conv2d.html.
+
     See :class:`~oneflow.nn.Conv2d` for details and output shape.
 
     Args:
-        input: quantized input tensor of shape :math:`(\text{minibatch} , \text{in_channels} , iH , iW)`
-        weight: quantized filters of shape :math:`(\text{out_channels} , \frac{\text{in_channels}}{\text{groups}} , kH , kW)`
-        bias: **non-quantized** bias tensor of shape :math:`(\text{out_channels})`. The tensor type must be `flow.float`.
+        input: input tensor of shape :math:`(\text{minibatch} , \text{in_channels} , iH , iW)`
+        weight: filters of shape :math:`(\text{out_channels} , \frac{\text{in_channels}}{\text{groups}} , kH , kW)`
+        bias: optional bias of shape :math:`(\text{out_channels})`. Default: None.
         stride: the stride of the convolving kernel. Can be a single number or a
           tuple `(sH, sW)`. Default: 1
         padding: implicit paddings on both sides of the input. Can be a
@@ -77,30 +77,38 @@ add_docstr(
           a tuple `(dH, dW)`. Default: 1
         groups: split input into groups, :math:`\text{in_channels}` should be divisible by the
           number of groups. Default: 1
-    
+
+    For examples:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn.functional as F
+        
+        >>> inputs = flow.randn(8, 4, 3, 3)
+        >>> filters = flow.randn(1, 4, 5, 5)
+        >>> outputs = F.conv2d(inputs, filters, padding=1)
     
         """,
 )
 add_docstr(
     oneflow._C.conv3d,
     r"""
-    conv3d(input, weight, bias=None, stride=[1], padding=[0], dilation=[1], groups=1) -> Tensor
-
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.conv3d.html?highlight=conv3d
+    conv3d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1) -> Tensor
 
     Applies a 3D convolution over an input image composed of several input
     planes.
 
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.conv3d.html.
 
     See :class:`~oneflow.nn.Conv3d` for details and output shape.
 
     Args:
-        input: quantized input tensor of shape
+        input: input tensor of shape
           :math:`(\text{minibatch} , \text{in_channels} , iD , iH , iW)`
-        weight: quantized filters of shape
+        weight: filters of shape
           :math:`(\text{out_channels} , \frac{\text{in_channels}}{\text{groups}} , kD , kH , kW)`
-        bias: **non-quantized** bias tensor of shape
-          :math:`(\text{out_channels})`. The tensor type must be `flow.float`.
+        bias: optional bias of shape :math:`(\text{out_channels})`. Default: None.
         stride: the stride of the convolving kernel. Can be a single number or a
           tuple `(sD, sH, sW)`. Default: 1
         padding: implicit paddings on both sides of the input. Can be a
@@ -109,7 +117,17 @@ add_docstr(
           a tuple `(dD, dH, dW)`. Default: 1
         groups: split input into groups, :math:`\text{in_channels}` should be
           divisible by the number of groups. Default: 1
+
+    For examples:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn.functional as F
         
+        >>> inputs = flow.randn(20, 16, 50, 10, 20)
+        >>> filters = flow.randn(33, 16, 3, 3, 3)
+        >>> outputs = F.conv3d(inputs, filters)
         
     """,
 )

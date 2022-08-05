@@ -111,7 +111,8 @@ def _compare_graph_lr_scheduler_with_eager(test_case, **kwargs):
             ret = graph(_rand_input())
             ret.numpy()  # sync for graph finishing
 
-    lr_log_file = glob.glob("log/*/train_step2lr.csv")[0]
+    pid = os.getpid()
+    lr_log_file = glob.glob(f"log/*/{pid}-train_step2lr.csv")[0]
     lrs = _get_graph_lrs_from_log(lr_log_file)
     lrs = lrs[:iters]
 
@@ -181,7 +182,7 @@ class TestGraphLRSchedulerWithEager(flow.unittest.TestCase):
             base_lr=0.1,
             iters=20,
             lr_scheduler=flow.optim.lr_scheduler.PolynomialLR,
-            steps=20,
+            decay_batch=20,
             end_learning_rate=1e-5,
             power=2.0,
             atol=1e-5,
@@ -191,7 +192,7 @@ class TestGraphLRSchedulerWithEager(flow.unittest.TestCase):
             base_lr=0.01,
             iters=20,
             lr_scheduler=flow.optim.lr_scheduler.PolynomialLR,
-            steps=20,
+            decay_batch=20,
             end_learning_rate=1e-4,
             power=1.0,
             cycle=True,

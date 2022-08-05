@@ -1,6 +1,9 @@
 # OneFlow
 
-**OneFlow is a performance-centered and open-source deep learning framework.**
+OneFlow is a deep learning framework designed to be **user-friendly, scalable and efficient**. With OneFlow, it is easy to:
+- program a model with **PyTorch-like API**
+- scale a model to n-dimensional-parallel/distributed exectuion with the **Global View API**
+- accelerate/deploy a model with the **Static Graph Compiler**.
 
 [![Simple CI](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml/badge.svg)](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml)
 [![Nightly Docker Image](https://github.com/Oneflow-Inc/docker-images/actions/workflows/oneflow-nightly.yml/badge.svg)](https://github.com/Oneflow-Inc/docker-images/actions/workflows/oneflow-nightly.yml)
@@ -9,10 +12,8 @@
 
 ## Latest News
 
-- Version 0.6.0 is out!
-  - Improved consistent mode support.
-  - More performant eager execution.
-  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.6.0)
+- Version 0.8.0 is out!
+  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.8.0)
 
 ## Publication
 
@@ -34,7 +35,8 @@
 
 ### System Requirements
 
-- Python 3.6, 3.7, 3.8, 3.9, 3.10
+- Linux. As for now, there is no pre-built release for macOS, Windows.
+- Python 3.7, 3.8, 3.9, 3.10
 - (**Highly recommended**) Upgrade pip
 
   ```
@@ -52,7 +54,7 @@
 - To install latest stable release of OneFlow with CUDA support:
 
   ```bash
-  python3 -m pip install -f https://release.oneflow.info oneflow==0.6.0+cu102
+  python3 -m pip install oneflow
   ```
 
 - To install nightly release of OneFlow with CUDA support:
@@ -65,7 +67,7 @@
 
   - Stable
     ```bash
-    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.6.0+[PLATFORM]
+    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.8.0+[PLATFORM]
     ```
   - Nightly
     ```
@@ -206,11 +208,7 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 
 ### Advanced features
 
-<details>
-<summary>XRT</summary>
-
-- You can check this [doc](oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
-</details>
+- [OneFlow-XRT](https://github.com/Oneflow-Inc/oneflow-xrt): An extension for OneFlow to target third-party compiler, such as XLA, TensorRT and OpenVINO etc.
 
 ## Getting Started
 
@@ -225,12 +223,17 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 
 ## Model Zoo and Benchmark
 
-- [OneFlow Models](https://github.com/Oneflow-Inc/models)
-- [OneFlow-Benchmark](https://github.com/Oneflow-Inc/OneFlow-Benchmark)
-- [GPT](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/LanguageModeling/GPT)
-- [ResNet-50](https://github.com/Oneflow-Inc/models/tree/main/Vision/classification/image/resnet50)
-- [Wide&Deep](https://github.com/Oneflow-Inc/models/tree/main/RecommenderSystems/wide_and_deep)
-- [BERT](https://github.com/Oneflow-Inc/models/tree/main/NLP/bert-oneflow)
+- [Libai(Toolbox for Parallel Training Large-Scale Transformer Models)](https://github.com/Oneflow-Inc/libai)
+  - [BERT-large](https://libai.readthedocs.io/en/latest/tutorials/get_started/quick_run.html)
+  - [GPT](https://libai.readthedocs.io/en/latest/modules/libai.models.html#id5)
+  - [T5](https://libai.readthedocs.io/en/latest/modules/libai.models.html#id4)
+  - [VisionTransformer](https://libai.readthedocs.io/en/latest/modules/libai.models.html#id1)
+  - [SwinTransformer](https://libai.readthedocs.io/en/latest/modules/libai.models.html#id2)
+- [FlowVision(Toolbox for Computer Vision Datasets, SOTA Models and Utils)](https://github.com/Oneflow-Inc/vision)
+- [OneFlow-Models(Examples of How to Implement Models in Various Fields with OneFlow)](https://github.com/Oneflow-Inc/models)
+  - [ResNet-50](https://github.com/Oneflow-Inc/models/tree/main/Vision/classification/image/resnet50)
+  - [Wide&Deep](https://github.com/Oneflow-Inc/models/tree/main/RecommenderSystems/wide_and_deep)
+- [OneFlow-Benchmark(Outdated)](https://github.com/Oneflow-Inc/OneFlow-Benchmark)
 
 ## Communication
 

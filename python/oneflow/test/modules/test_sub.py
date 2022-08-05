@@ -142,6 +142,20 @@ class TestSubModule(flow.unittest.TestCase):
         out4 = torch.sub(x, y)
         return out1, out2, out3, out4
 
+    @autotest(n=5)
+    def test_sub_with_alpha(test_case):
+        device = random_device()
+        x1 = random_tensor(2, 2, 3).to(device)
+        x2 = random_tensor(2, 2, 3).to(device)
+        x3 = random_tensor(2, 2, 3).to(device)
+        y = random_tensor(2, 2, 3).to(device)
+        s = random().to(float)
+        alpha = random().to(float)
+        z1 = torch.sub(x1, y, alpha=alpha)
+        z2 = torch.sub(x2, s, alpha=alpha)
+        z3 = torch.sub(s, x3, alpha=alpha)
+        return z1, z2, z3
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -66,7 +66,10 @@ class Generator final {
   std::shared_ptr<GeneratorImpl> impl_;
 };
 
-Maybe<void> ManualSeed(uint64_t seed);
+Maybe<Generator> ManualSeed(uint64_t seed);
+
+Maybe<void> ManualSeed(uint64_t seed, const std::string& device, int device_index = -1);
+Maybe<void> ManualSeed(uint64_t seed, DeviceType device, int device_index = -1);
 
 Maybe<Generator> DefaultGenerator(const std::string& device, int device_index = -1);
 Maybe<Generator> DefaultGenerator(DeviceType device, int device_index = -1);
@@ -84,6 +87,7 @@ Maybe<Generator> MakeCPUGenerator();
 Maybe<Generator> DefaultCUDAGenerator(int device_index = -1);
 Maybe<Generator> MakeCUDAGenerator();
 #endif  // WITH_CUDA
+Maybe<void> ManualSeedAllCudaGenerator(uint64_t seed);
 
 }  // namespace one
 }  // namespace oneflow

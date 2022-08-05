@@ -339,10 +339,10 @@ class FusedFusedBiasAddKernel final : public user_op::OpKernel {
     const auto* b_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);
     auto* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int32_t bias_add_axis = ctx->Attr<int32_t>("axis");
-    const int64_t outer_size = a_tensor->shape().Count(0, bias_add_axis);
-    const int64_t bias_size = a_tensor->shape().At(bias_add_axis);
-    const int64_t inner_size = a_tensor->shape().Count(bias_add_axis + 1);
-    const auto n = a_tensor->shape().elem_cnt();
+    const int64_t outer_size = a_tensor->shape_view().Count(0, bias_add_axis);
+    const int64_t bias_size = a_tensor->shape_view().At(bias_add_axis);
+    const int64_t inner_size = a_tensor->shape_view().Count(bias_add_axis + 1);
+    const auto n = a_tensor->shape_view().elem_cnt();
     GeluFunctor<T> gelu_functor{};
     DispatchFusedBiasAddForwardImpl<decltype(gelu_functor), T>(
         ctx->stream(), gelu_functor, n, outer_size, bias_size, inner_size, a_tensor->dptr<T>(),
@@ -377,10 +377,10 @@ class FusedBiasAddMaskScaleKernel final : public user_op::OpKernel {
     auto* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int32_t bias_add_axis = ctx->Attr<int32_t>("axis");
     const float scale = ctx->Attr<float>("scale");
-    const int64_t outer_size = a_tensor->shape().Count(0, bias_add_axis);
-    const int64_t bias_size = a_tensor->shape().At(bias_add_axis);
-    const int64_t inner_size = a_tensor->shape().Count(bias_add_axis + 1);
-    const auto n = a_tensor->shape().elem_cnt();
+    const int64_t outer_size = a_tensor->shape_view().Count(0, bias_add_axis);
+    const int64_t bias_size = a_tensor->shape_view().At(bias_add_axis);
+    const int64_t inner_size = a_tensor->shape_view().Count(bias_add_axis + 1);
+    const auto n = a_tensor->shape_view().elem_cnt();
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       MaskAndScaleAddFunctor<T> mask_and_scale_add_functor(mask_tensor->dptr<bool>(),
@@ -423,10 +423,10 @@ class FusedFusedBiasAddGradKernel final : public user_op::OpKernel {
     const auto* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     auto* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const int32_t bias_add_axis = ctx->Attr<int32_t>("axis");
-    const int64_t outer_size = a_tensor->shape().Count(0, bias_add_axis);
-    const int64_t bias_size = a_tensor->shape().At(bias_add_axis);
-    const int64_t inner_size = a_tensor->shape().Count(bias_add_axis + 1);
-    const auto n = a_tensor->shape().elem_cnt();
+    const int64_t outer_size = a_tensor->shape_view().Count(0, bias_add_axis);
+    const int64_t bias_size = a_tensor->shape_view().At(bias_add_axis);
+    const int64_t inner_size = a_tensor->shape_view().Count(bias_add_axis + 1);
+    const auto n = a_tensor->shape_view().elem_cnt();
     GeluGradFunctor<T> gelu_grad_functor;
     if (IsKernelSafeInt32(n)) {
       FusedBiasAddGradImpl<decltype(gelu_grad_functor), T, int32_t>(

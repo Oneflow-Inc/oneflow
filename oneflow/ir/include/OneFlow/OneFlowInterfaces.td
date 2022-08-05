@@ -82,9 +82,37 @@ def NoGrad : OpInterface<"NoGrad"> {
   let cppNamespace = "::mlir::oneflow";
 }
 
+def SupportNonContiguous : OpInterface<"SupportNonContiguous"> {
+  let description = [{
+  }];
+  let cppNamespace = "::mlir::oneflow";
+}
+
 def CpuOnly : OpInterface<"CpuOnly"> {
   let description = [{
   }];
+  let cppNamespace = "::mlir::oneflow";
+}
+
+def NCHWCompatibleInterface : OpInterface<"NCHWCompatible"> {
+  let description = [{
+    Interface of NCHW compatibility
+  }];
+
+  let methods = [
+    InterfaceMethod<"",
+        "bool", "IsNCHW", (ins)
+    >,
+    InterfaceMethod<"Create NHWC op and return the new op's results to be transposed",
+        "llvm::SmallVector<mlir::Value, 4>", "NchwToNhwc", (ins "llvm::SmallVector<mlir::Value, 4>": $transposed_inputs, "PatternRewriter&": $rewriter)
+    >,
+    InterfaceMethod<"",
+        "llvm::DenseSet<mlir::Value>", "OperandsToTranspose", (ins)
+    >,
+    InterfaceMethod<"",
+        "llvm::DenseSet<mlir::Value>", "ResultsToTranspose", (ins)
+    >,
+  ];
   let cppNamespace = "::mlir::oneflow";
 }
 

@@ -20,7 +20,10 @@ limitations under the License.
 
 namespace py = pybind11;
 
+namespace oneflow {
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("CheckAndClearRegistryFlag",
-        []() { return oneflow::CheckAndClearRegistryFlag().GetOrThrow(); });
+  m.def("CheckAndClearRegistryFlag", &CheckAndClearRegistryFlag);
 }
+
+}  // namespace oneflow

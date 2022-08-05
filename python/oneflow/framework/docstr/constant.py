@@ -67,7 +67,7 @@ add_docstr(
     """
     new_ones(x, size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
 
-    Returns a Tensor of size size filled with 1. By default, the returned Tensor has the same torch.dtype and torch.device as this tensor.
+    Returns a Tensor of size size filled with 1. By default, the returned Tensor has the same oneflow.dtype and oneflow.device as this tensor.
 
     Args:
         size (int...): a list, tuple, or flow.Size of integers defining the shape of the output tensor.

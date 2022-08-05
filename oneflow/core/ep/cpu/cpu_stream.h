@@ -77,20 +77,26 @@ class CpuNumThreadsGuard {
 #endif
 };
 
+#ifdef WITH_ONEDNN
+
+class OneDnnExecutor;
+
+#endif
+
 class CpuStream : public Stream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuStream);
-  explicit CpuStream(Device* device) : device_(device) {
+
+  explicit CpuStream(CpuDevice* device) : device_(device) {
 #ifdef WITH_ONEDNN
-    onednn_engine_.reset(new dnnl::engine(dnnl::engine::kind::cpu, 0));
-    onednn_stream_.reset(new dnnl::stream(*onednn_engine_));
+    onednn_executor_ = std::make_unique<ep::OneDnnExecutor>(this);
 #endif
   }
 
   ~CpuStream() override = default;
 
   DeviceType device_type() const override;
-  Device* device() const override;
+  CpuDevice* device() const override;
   Maybe<void> Sync() override;
   void RecordEvent(Event* event) override;
 
@@ -98,12 +104,11 @@ class CpuStream : public Stream {
   void ParallelFor(int64_t begin, int64_t end, const F& func) {
     ParallelFor(begin, end, func, kParallelForDefaultGrain);
   }
-
   template<typename F>
   void ParallelFor(int64_t begin, int64_t end, const F& func, size_t grain_size) {
 #if OF_CPU_THREADING_RUNTIME != OF_RUNTIME_SEQ
     auto DivUp = [](int64_t x, int64_t y) { return (x + y - 1) / y; };
-    size_t num_threads = dynamic_cast<CpuDevice*>(device())->GetNumThreads();
+    size_t num_threads = device()->GetNumThreads();
 #endif
     if (begin >= end) { return; }
 #if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
@@ -140,18 +145,46 @@ class CpuStream : public Stream {
   }
 
 #ifdef WITH_ONEDNN
-  dnnl::engine* onednn_engine() const { return onednn_engine_.get(); }
-  dnnl::stream* onednn_stream() const { return onednn_stream_.get(); }
+  const std::unique_ptr<ep::OneDnnExecutor>& onednn_executor() const;
 #endif
 
  private:
-#ifdef WITH_ONEDNN
-  std::unique_ptr<dnnl::engine> onednn_engine_;
-  std::unique_ptr<dnnl::stream> onednn_stream_;
-#endif
-  Device* device_;
+  CpuDevice* device_;
   static constexpr size_t kParallelForDefaultGrain = 32768;
+#ifdef WITH_ONEDNN
+  std::unique_ptr<ep::OneDnnExecutor> onednn_executor_;
+#endif
 };
+
+#ifdef WITH_ONEDNN
+
+class OneDnnExecutor {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(OneDnnExecutor);
+
+  OneDnnExecutor() = delete;
+
+  explicit OneDnnExecutor(CpuStream* cpu_stream) : cpu_stream_(cpu_stream) {
+    engine_.reset(new dnnl::engine(dnnl::engine::kind::cpu, 0));
+    stream_.reset(new dnnl::stream(*engine_));
+  }
+
+  ~OneDnnExecutor() = default;
+
+  template<typename F>
+  void Launch(const F& f) {
+    CpuNumThreadsGuard guard(cpu_stream_->device()->GetNumThreads());
+    f(engine_.get(), stream_.get());
+    stream_->wait();
+  }
+
+ private:
+  CpuStream* cpu_stream_ = nullptr;
+  std::unique_ptr<dnnl::engine> engine_;
+  std::unique_ptr<dnnl::stream> stream_;
+};
+
+#endif
 
 }  // namespace ep
 

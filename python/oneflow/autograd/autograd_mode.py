@@ -74,7 +74,7 @@ class inference_mode:
         pass
 
 
-class grad_enable:
+class enable_grad:
     r"""
     Context-manager that enabled gradient calculation.
 
@@ -89,11 +89,11 @@ class grad_enable:
         >>> import oneflow as flow
         >>> x = flow.ones(2, 3, requires_grad=True)
         >>> with flow.no_grad():
-        ...     with flow.grad_enable():
+        ...     with flow.enable_grad():
         ...         y = x * x
         >>> y.requires_grad
         True
-        >>> @flow.grad_enable()
+        >>> @flow.enable_grad()
         ... def no_grad_func(x):
         ...     return x * x
         >>> with flow.no_grad():
@@ -157,6 +157,55 @@ class no_grad:
 
     def __enter__(self):
         self.grad_mode = AutoGradMode(False)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+
+class set_grad_enabled:
+    r"""
+    Context-manager that enabled gradient calculation.
+
+    Enables gradient calculation, if it has been disabled via no_grad.
+
+    This context manager is thread local; it will not affect computation in other threads.
+
+    Also functions as a decorator. (Make sure to instantiate with parenthesis.)
+
+
+    Args:
+        mode (bool): Flag whether to enable or disable gradient calculation. (default: True)
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.ones(2, 3, requires_grad=True)
+        >>> with flow.set_grad_enabled(True):
+        ...     y = x * x
+        >>> y.requires_grad
+        True
+        >>> @flow.set_grad_enabled(False)
+        ... def no_grad_func(x):
+        ...     return x * x
+        >>> y = no_grad_func(x)
+        >>> y.requires_grad
+        False
+        
+    """
+
+    def __init__(self, is_train=True):
+        self.is_train = is_train
+
+    def __call__(self, func):
+        def wrapper(*args, **kwargs):
+            with AutoGradMode(self.is_train):
+                return func(*args, **kwargs)
+
+        return wrapper
+
+    def __enter__(self):
+        self.grad_mode = AutoGradMode(self.is_train)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

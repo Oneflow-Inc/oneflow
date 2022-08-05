@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "release/*"
+
   schedule:
     # beijing: 2 am.
     # utc: 6 pm.
@@ -32,7 +33,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@priority-pr-support
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@support-iree-ci
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -44,6 +45,7 @@ jobs:
             release
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entries: |
+            cu116
             cu112
             cu102
             cpu
@@ -69,10 +71,10 @@ jobs:
       - name: Install dependencies
         run: |
           python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
-          python3 -m pip install -U pip setuptools wheel --user
+          python3 -m pip install -U setuptools wheel --user
           python3 -m pip install oss2  --user
       - uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow@priority-pr-support
+      - uses: Oneflow-Inc/get-oneflow@support-iree-ci
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry !='cpu' }}
         with:
@@ -91,12 +93,11 @@ jobs:
           clean-ccache: true
           nightly: ${{ github.event_name == 'schedule' }}
           python-versions: |
-            3.6
             3.7
             3.8
             3.9
             3.10
-      - uses: Oneflow-Inc/get-oneflow@priority-pr-support
+      - uses: Oneflow-Inc/get-oneflow@support-iree-ci
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cpu' }}
         with:
@@ -115,7 +116,6 @@ jobs:
           clean-ccache: false
           nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/master'}}
           python-versions: |
-            3.6
             3.7
             3.8
             3.9

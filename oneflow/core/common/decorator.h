@@ -20,6 +20,8 @@ limitations under the License.
 #include <unordered_map>
 #include "tuple_hash.h"
 #include "static_check.h"
+#include "oneflow/core/common/env_var/env_var.h"
+#include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
 
@@ -132,6 +134,70 @@ struct ThreadLocalCopiable<RetT, Arg0, Arg1, Arg2, Arg3, Args...> {
 // for scalar type key.
 template<typename RetT, typename... Args>
 struct ThreadLocal : public ThreadLocalCopiable<RetT, Args...> {
+ private:
+  static_assert(StaticAll<IsDecayedScalarType, Args...>::value, "");
+};
+
+template<typename... Args>
+struct ThreadLocalCachedCopiable;
+
+template<typename RetT>
+struct ThreadLocalCachedCopiable<RetT> {
+  template<RetT (*func)()>
+  static RetT Call() {
+    static thread_local RetT value = func();
+    return value;
+  }
+};
+
+template<typename RetT, typename Arg0>
+struct ThreadLocalCachedCopiable<RetT, Arg0> {
+  template<RetT (*func)(Arg0)>
+  static RetT Call(Arg0 arg0) {
+    using KeyT = typename std::decay<Arg0>::type;
+    using MappedT = typename std::decay<RetT>::type;
+    static thread_local std::unordered_map<KeyT, MappedT> map;
+    auto iter = map.find(arg0);
+    if (iter == map.end()) {
+      if (unlikely(map.size() >= ThreadLocalEnvInteger<ONEFLOW_THRAED_LOCAL_CACHED_SIZE>())) {
+        map.clear();
+      }
+      iter = map.emplace(arg0, func(arg0)).first;
+    }
+    return iter->second;
+  }
+
+ private:
+  static_assert(!IsOutArg<Arg0>::value, "");
+  static_assert(!StaticAny<IsOutArg, Arg0>::value, "");
+};
+
+template<typename RetT, typename Arg0, typename... Args>
+struct ThreadLocalCachedCopiable<RetT, Arg0, Args...> {
+  template<RetT (*func)(Arg0, Args...)>
+  static RetT Call(Arg0 arg0, Args... args) {
+    using KeyT0 = typename std::decay<Arg0>::type;
+    using KeyT = std::tuple<KeyT0, typename std::decay<Args>::type...>;
+    using MappedT = typename std::decay<RetT>::type;
+    static thread_local std::unordered_map<KeyT, MappedT> map;
+    const auto& key = KeyT(arg0, args...);
+    auto iter = map.find(key);
+    if (iter == map.end()) {
+      if (unlikely(map.size() >= ThreadLocalEnvInteger<ONEFLOW_THRAED_LOCAL_CACHED_SIZE>())) {
+        map.clear();
+      }
+      iter = map.emplace(key, func(arg0, args...)).first;
+    }
+    return iter->second;
+  }
+
+ private:
+  static_assert(!StaticAny<IsOutArg, Arg0, Args...>::value, "");
+};
+
+// for scalar type key.
+template<typename RetT, typename... Args>
+struct ThreadLocalCached : public ThreadLocalCachedCopiable<RetT, Args...> {
  private:
   static_assert(StaticAll<IsDecayedScalarType, Args...>::value, "");
 };
