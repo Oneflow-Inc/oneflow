@@ -131,7 +131,7 @@ class GpuBatchNormGatherStatsWithCountsKernel final : public user_op::OpKernel {
     const float momentum = ctx->Attr<float>("momentum");
 
     const int64_t world_size = mean->shape_view().At(0);
-    const int64_t channel_size = mean->shape_view().At(0);
+    const int64_t channel_size = mean->shape_view().At(1);
 
     BatchNormGatherStatsWithCountsFunctor<T>()(
         ctx->stream(), world_size, channel_size, mean_ptr, invstd_ptr, counts_ptr, global_mean_ptr,
