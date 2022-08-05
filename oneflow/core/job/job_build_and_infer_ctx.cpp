@@ -913,7 +913,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     }
     auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
     JUST(JobPass4Name(pass_name)(mut_job(), &job_pass_ctx));
-    tc->Count(pass_name, 1);
+    tc->Count("Graph name: " + job_name + " " + pass_name, 1);
     if (unlikely(NeedLogJob(pass_name))) {
       FLAGS_v = prev_v;
       std::string cnt_str = cnt > 0 ? std::to_string(cnt) : "";
@@ -933,7 +933,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     Singleton<OpGraph>::Get()->ToDotWithFilePath("forward_dlnet_" + std::to_string(job_id())
                                                  + "_op_graph.dot");
     Singleton<OpGraph>::Delete();
-    pass_tc->Count("Graph " + job_name + " LogForwardGraph", 1);
+    pass_tc->Count("Graph name: " + job_name + " LogForwardGraph", 1);
   }
 
   if (GlobalJobDesc().Bool("__is_user_function__")) {
@@ -982,9 +982,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("DumpVariableInfoPass"));
   }
   JUST(DoPass("DumpBlobParallelConfPass"));
-  pass_tc->Count("Graph " + job_name + " CompilePasses", 1);
+  pass_tc->Count("Graph name: " + job_name + " CompilePasses", 1);
   JUST(CheckJob());
-  pass_tc->Count("Graph " + job_name + " CheckJob", 1);
+  pass_tc->Count("Graph name: " + job_name + " CheckJob", 1);
   return Maybe<void>::Ok();
 }
 
