@@ -92,6 +92,15 @@ class TestCast(flow.unittest.TestCase):
         arg_dict["shape"] = [(2, 3, 0, 5)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+    
+    @autotest(n=1, check_graph=False)
+    def test_cast_with_scalar_input(test_case):
+        device = random_device()
+        t = random_tensor(ndim=1, requires_grad=False)
+        x = torch.tensor(t.item(), device=device)
+        y = x.to(dtype=torch.float64, device=device)
+        z = y.to(dtype=torch.int8, device=device)
+        return z
 
     @autotest(n=5)
     def test_cast_with_stride_input(test_case):

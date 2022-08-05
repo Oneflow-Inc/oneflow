@@ -62,9 +62,10 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
       Shape output_shape(DimVector{1});
       Stride input_stride(DimVector{1});
       Stride output_stride(DimVector{1});
-      broadcast_primitive->Launch(ctx->stream(), ndim, input_shape.data(), input_stride.data(),
-                                  input->dptr(), ndim, output_shape.data(), output_stride.data(),
-                                  output->mut_dptr());
+      const size_t scalar_ndim = 1;
+      broadcast_primitive->Launch(ctx->stream(), scalar_ndim, input_shape.data(),
+                                  input_stride.data(), input->dptr(), scalar_ndim,
+                                  output_shape.data(), output_stride.data(), output->mut_dptr());
     } else {
       broadcast_primitive->Launch(
           ctx->stream(), ndim, input->shape_view().data(), input->stride().data(), input->dptr(),
