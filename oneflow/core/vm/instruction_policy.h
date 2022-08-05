@@ -29,10 +29,16 @@ namespace oneflow {
 namespace vm {
 
 class EagerBlobObject;
+class Stream;
 
 class InstructionPolicy {
  public:
   virtual ~InstructionPolicy() = default;
+
+  // Same stream.
+  virtual bool Prescheduleable(const vm::Stream* src, const vm::Stream* dst) const {
+    return src == dst;
+  }
 
   virtual const DependenceVector& input_dependences() const = 0;
   virtual const DependenceVector& output_dependences() const = 0;
