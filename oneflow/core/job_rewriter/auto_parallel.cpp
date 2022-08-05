@@ -138,7 +138,7 @@ Maybe<void> AutoParallelPass::RemoveParallelCastOps(Job* job) const {
     }
     del_op_names.emplace_back(op_conf.name());
     del_op_name_set.insert(op_conf.name());
-    if (GlobalProcessCtx::Rank() == 0) { LOG(INFO) << "\tremove " << op_conf.name(); }
+    LOG(INFO) << "\tremove " << op_conf.name();
   };
   op_graph.ForEachNode(Try2Delete);
   for (const auto& pair : op_name2op_conf) { job_builder.MutOpsOnlyOnce({pair.second}); }
