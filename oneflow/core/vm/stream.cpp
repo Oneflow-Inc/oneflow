@@ -34,7 +34,7 @@ void Stream::__Init__(
   stream_policy_ = CHECK_JUST(CreateStreamPolicy::Visit(stream_type, device));
   schedule_local_dep_object_ = schedule_local_dep_object;
   transport_local_dep_object_ = transport_local_dep_object;
-  on_scheduler_thread_ = stream_policy_->OnSchedulerThread(stream_type);
+  on_scheduler_thread_ = stream_policy_->OnSchedulerThread(stream_type, device->enum_type());
 }
 
 int64_t Stream::device_id() const { return device_->device_id(); }

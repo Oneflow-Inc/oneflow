@@ -16,7 +16,26 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_DEVICE_TYPE_H_
 #define ONEFLOW_CORE_COMMON_DEVICE_TYPE_H_
 
+#include "glog/logging.h"
 #include "oneflow/core/common/device_type.pb.h"
+
+namespace oneflow {
+
+template<typename DerivedT>
+struct DeviceTypeVisitor {
+  template<typename... Args>
+  static auto Visit(DeviceType device_type, Args&&... args) {
+    switch (device_type) {
+      case DeviceType::kInvalidDevice: LOG(FATAL) << "invalid device type";
+      case DeviceType::kCPU: return DerivedT::VisitCPU(std::forward<Args>(args)...);
+      case DeviceType::kCUDA: return DerivedT::VisitCUDA(std::forward<Args>(args)...);
+      case DeviceType::kMockDevice: return DerivedT::VisitMockDevice(std::forward<Args>(args)...);
+    }
+    LOG(FATAL) << "invalid device type";
+  }
+};
+
+}  // namespace oneflow
 
 namespace std {
 

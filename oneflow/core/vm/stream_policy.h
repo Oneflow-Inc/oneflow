@@ -59,7 +59,7 @@ class StreamPolicy {
                                           const InstructionStatusBuffer& status_buffer) const = 0;
   virtual void Run(Instruction* instruction) const = 0;
 
-  virtual bool OnSchedulerThread(StreamType stream_type) const;
+  virtual bool OnSchedulerThread(StreamType stream_type, DeviceType device_type) const;
   virtual bool SupportingTransportInstructions() const = 0;
 
  protected:

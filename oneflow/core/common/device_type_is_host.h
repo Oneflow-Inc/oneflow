@@ -13,19 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/stream_policy.h"
-#include "oneflow/core/vm/stream_output_mem_is_host.h"
-#include "oneflow/core/framework/stream_on_independent_thread.h"
-#include "oneflow/core/common/env_var/vm.h"
+#ifndef ONEFLOW_CORE_COMMON_DEVICE_TYPE_IS_HOST_H_
+#define ONEFLOW_CORE_COMMON_DEVICE_TYPE_IS_HOST_H_
+
+#include "oneflow/core/common/device_type.h"
 
 namespace oneflow {
-namespace vm {
 
-bool StreamPolicy::OnSchedulerThread(StreamType stream_type, DeviceType device_type) const {
-  if (StreamOnIndependentThread::Visit(stream_type)) { return false; }
-  if (StreamOutputMemIsHost::Visit(stream_type, device_type)) { return true; }
-  return !ThreadLocalEnvBool<ONEFLOW_VM_COMPUTE_ON_WORKER_THREAD>();
-}
+struct DeviceTypeIsHost final : public DeviceTypeVisitor<DeviceTypeIsHost> {
+  static bool VisitCPU() { return true; }
+  static bool VisitCUDA() { return false; }
+  static bool VisitMockDevice() { return true; }
+};
 
-}  // namespace vm
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_COMMON_DEVICE_TYPE_IS_HOST_H_
