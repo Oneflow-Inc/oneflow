@@ -45,7 +45,8 @@ class TensorStorage {
   TensorStorage()
       : non_pod_allocator_(std::make_unique<MemoryAllocator>()),
         producer_stream_(NullOpt),
-        last_used_stream_(NullOpt) {}
+        last_used_stream_(NullOpt),
+        is_allocated_in_vm_(false) {}
 
   ~TensorStorage() {
     for (const auto& hook : storage_delete_hooks_) { hook(); }
@@ -54,12 +55,15 @@ class TensorStorage {
   size_t blob_bytes() const { return blob_bytes_; }
 
   char* blob_dptr() { return blob_dptr_.get(); }
+  bool is_allocated_in_vm() { return is_allocated_in_vm_; }
 
   MemoryAllocator* non_pod_allocator() { return non_pod_allocator_.get(); }
 
-  void set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>&& blob_dptr, size_t bytes) {
+  void set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>&& blob_dptr, size_t bytes,
+                     bool is_allocated_in_vm) {
     blob_dptr_ = std::move(blob_dptr);
     blob_bytes_ = bytes;
+    is_allocated_in_vm_ = is_allocated_in_vm;
   }
 
   const Optional<Symbol<::oneflow::Stream>>& producer_stream() const { return producer_stream_; }
@@ -90,6 +94,7 @@ class TensorStorage {
   Optional<Symbol<::oneflow::Stream>> producer_stream_;
   Optional<Symbol<::oneflow::Stream>> last_used_stream_;
   std::vector<std::function<void()>> storage_delete_hooks_;
+  bool is_allocated_in_vm_;
 };
 
 class EagerBlobObject final : public user_op::Tensor,
@@ -143,10 +148,6 @@ class EagerBlobObject final : public user_op::Tensor,
   void* mut_raw_dptr() override { return const_cast<void*>(raw_dptr()); }
 
   void set_storage_offset(const int64_t offset);
-
-  [[deprecated("\"Blob\" will be removed in eager. Please avoid to use this method whenever "
-               "possible. Almost all methods of `Blob` are also in `EagerBlobObject`.")]] Blob*
-  blob();
 
   Maybe<void> TryAllocateBlobBodyMemory(vm::Allocator* allocator);
   Maybe<void> DeallocateBlobDataPtr() {
@@ -230,9 +231,6 @@ class EagerBlobObject final : public user_op::Tensor,
   bool pin_memory_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
 
-  // NOTE: Will be removed soon. Avoid to use it whenever possible.
-  BlobDesc blob_desc_;
-  std::unique_ptr<Blob> blob_;
   Symbol<one::LocalTensorMeta> static_local_tensor_meta_;
   std::shared_ptr<const one::MutLocalTensorMeta> dynamic_local_tensor_meta_;
 };

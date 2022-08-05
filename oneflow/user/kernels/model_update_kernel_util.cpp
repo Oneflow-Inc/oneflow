@@ -440,4 +440,30 @@ void FtrlUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
 template struct FtrlUpdateKernelUtil<DeviceType::kCPU, float, float>;
 template struct FtrlUpdateKernelUtil<DeviceType::kCPU, double, double>;
 
+template<typename T, typename G>
+struct AdadeltaUpdateKernelUtil<DeviceType::kCPU, T, G> {
+  static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float rho,
+                     float epsilon, bool maximize, float weight_decay, float learning_rate_val,
+                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
+                     const G* model_diff, T* model, T* square_avgs, T* acc_deltas);
+};
+
+template<typename T, typename G>
+void AdadeltaUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
+    ep::Stream* stream, int64_t n, T scale, float l1, float l2, float rho, float epsilon,
+    bool maximize, float weight_decay, float learning_rate_val, const float* learning_rate,
+    const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model, T* square_avgs,
+    T* acc_deltas) {
+  if (skip_if != nullptr && *skip_if != 0) { return; }
+  if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
+  if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
+  for (int64_t i = 0; i != n; ++i) {
+    AdadeltaUpdateFunctor<T, G>()(model_diff + i, model + i, square_avgs + i, acc_deltas + i, scale,
+                                  l1, l2, rho, epsilon, maximize, weight_decay, learning_rate_val);
+  }
+}
+
+template struct AdadeltaUpdateKernelUtil<DeviceType::kCPU, float, float>;
+template struct AdadeltaUpdateKernelUtil<DeviceType::kCPU, double, double>;
+
 }  // namespace oneflow

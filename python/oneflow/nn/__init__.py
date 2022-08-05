@@ -96,6 +96,7 @@ from oneflow.nn.modules.dataset import (
     OFRecordBytesDecoder,
     GPTIndexedBinDataReader,
     OneRecReader,
+    RawReader,
 )
 
 from oneflow.nn.modules.dropout import Dropout
