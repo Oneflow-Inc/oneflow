@@ -187,7 +187,7 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
 Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) {
   const JobDesc& job_desc = GlobalJobDesc();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    auto tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
+    auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
     if (need_job_complete) { JUST(JobCompleter().Complete(job)); }
     Compiler().Compile(job, plan);
     PlanUtil::GenMemBlockAndChunk4Plan(plan);
@@ -873,7 +873,7 @@ Maybe<void> CompileJobsAndPushMergedPlan(const PbRpf<Job>& job_confs) {
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     Plan plan;
     JUST(CompileJobsAndMergePlans(job_confs, plan));
-    auto tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
+    auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
     // push op_attribute_info
     OpAttributeInfo op_attribute_info;
     *op_attribute_info.mutable_job_id2op_attribute_ref_table() =
@@ -895,7 +895,7 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
   OF_PROFILER_RANGE_PUSH("CompileJobsAndPushMergedPlan");
   JUST(CompileJobsAndPushMergedPlan(job_set.job()));
   OF_PROFILER_RANGE_POP();  // CompileJobsAndPushMergedPlan
-  auto tc = std::make_unique<TimeCounter<std::chrono::seconds>>(true);
+  auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
   PullPlan("merged_plan", &plan_);
   tc->Count("PullPlan merged_plan", 0);
   if (GlobalProcessCtx::IsThisProcessMaster()) {

@@ -105,16 +105,18 @@ Maybe<void> SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_
 }  // namespace
 
 Maybe<void> JobCompleter::Complete(Job* job) const {
-  const std::string& job_name = job->job_conf().job_name();
+  const std::string job_name = job->job_conf().job_name();
+  auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
   JobPassCtx job_pass_ctx(GlobalJobDesc());
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
+  tc->Count("Graph name: " + job_name + " DumpBlobParallelConfPass", 1);
   // NOTE(chengcheng): disable this pass for reduce boxing memory life cycle to memory cost.
   if (!Singleton<ResourceDesc, ForSession>::Get()
            ->resource()
            .disable_group_boxing_by_dst_parallel()) {
     JUST(WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel));
   }
-  auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
+  tc->Count("Graph name: " + job_name + " GroupBoxingByDstParallel", 1);
   JUST(WithOpGraphAndMutJobBuilder(job, &BoxingWithMiddleNodes));
   tc->Count("Graph name: " + job_name + " BoxingWithMiddleNodes", 1);
   JUST(WithOpGraphAndMutJobBuilder(job, &SetCtrlInOpName4VariableOp));
