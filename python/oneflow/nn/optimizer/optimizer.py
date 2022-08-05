@@ -387,7 +387,7 @@ class Optimizer(object):
         """
         for param_group in self.param_groups:
             for param in param_group.parameters:
-                param._zero_grad(set_to_none)
+                param._zero_grad_(set_to_none)
 
 
     def _parse_input_parameters(self, parameters):

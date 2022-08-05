@@ -248,7 +248,7 @@ static PyObject* PyTensorObject_zero_grad(PyObject* self, PyObject* args, PyObje
   HANDLE_ERRORS
   int set_to_none = 0;
   static const char* keywords[2] = {"set_to_none", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|p:_zero_grad", const_cast<char**>(keywords),
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|p:_zero_grad_", const_cast<char**>(keywords),
                                    &set_to_none)) {
     return NULL;
   }
@@ -259,7 +259,7 @@ static PyObject* PyTensorObject_zero_grad(PyObject* self, PyObject* args, PyObje
       ASSERT(t->set_acc_grad(NULL));
     } else {
       ASSERT(EagerLocalTensorZeros(acc_grad));
-      if (acc_grad->is_global()) {
+      if (acc_grad->is_global() && acc_grad->is_eager()) {
         const auto local_tensor = ASSERT_PTR(functional::GlobalToLocal(acc_grad, false));
         const auto p = ASSERT_PTR(functional::LocalToGlobal(
             local_tensor, ASSERT(acc_grad->parallel_desc()), SbpBToP(ASSERT(acc_grad->nd_sbp())),
@@ -455,7 +455,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"detach", PyTensorObject_detach, METH_NOARGS, NULL},
     {"clone", PyTensorObject_clone, METH_NOARGS, NULL},
     {"zero_", PyTensorObject_zero_, METH_NOARGS, NULL},
-    {"_zero_grad", (PyCFunction)PyTensorObject_zero_grad, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"_zero_grad_", (PyCFunction)PyTensorObject_zero_grad, METH_VARARGS | METH_KEYWORDS, NULL},
     {"register_hook", PyTensorObject_register_hook, METH_O, NULL},
     {"_register_post_grad_accumulation_hook", PyTensorObject__register_post_grad_accumulation_hook,
      METH_O, NULL},
