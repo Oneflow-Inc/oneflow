@@ -147,7 +147,9 @@ class Graph(object):
         self._session = session_ctx.GetDefaultSession()
         assert type(self._session) is MultiClientSession
         self._session.TryInit()
-        self._c_nn_graph = None
+        self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
+            self._name, self._session._session_ctx
+        )
         self.env_enable_mlir_inference_opt = None
 
     def build(self, *args, **kwargs):
@@ -874,7 +876,7 @@ class Graph(object):
             + " end building graph builders of parameters and buffers.",
         )
 
-        with graph_build_util.graph_build_context(self.config.proto, self._session):
+        with graph_build_util.graph_build_context(self.config.proto, self._session, self._c_nn_graph):
             # Deal with inputs
             self.__print(0, 1, self._shallow_repr() + " start building graph inputs.")
             arg_op_names, lazy_args, lazy_kwargs, self._args_repr, _ = self.__build_io(
@@ -970,11 +972,9 @@ class Graph(object):
                 self._shallow_repr()
                 + " end re-building graph outputs for optimizatioin.",
             )
-            self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
-                self._name,
-                self._full_job_proto.SerializeToString(),
+            self._c_nn_graph.set_job( 
                 self._job_id,
-                self._session._session_ctx,
+                self._full_job_proto.SerializeToString(),
             )
             # Register input/output/variable/buffer to _c_nn_graph
             self._c_nn_graph.register_input_op_names_and_tensors(

@@ -94,7 +94,7 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
     Singleton<IDMgr>::New();
     Singleton<TaskStreamIndexManager>::New();
     // TODO(chengcheng): refactor JobBuildAndInferCtxMgr
-    Singleton<LazyJobBuildAndInferCtxMgr>::New();
+    Singleton<JobBuildAndInferCtxMgr>::New();
 
     {
       // NOTE(chengcheng): init runtime global objects
@@ -158,7 +158,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
       Singleton<VariableTensorMgr>::Delete();
     }
 
-    Singleton<LazyJobBuildAndInferCtxMgr>::Delete();
+    Singleton<JobBuildAndInferCtxMgr>::Delete();
     Singleton<TaskStreamIndexManager>::Delete();
     Singleton<IDMgr>::Delete();
 

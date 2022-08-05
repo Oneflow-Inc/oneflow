@@ -125,6 +125,18 @@ Maybe<void> NNGraph::RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> NNGraph::SetJobStr(int64_t job_id, const std::string& serialized_job) {
+  job_id_ = job_id;
+  CHECK_OR_RETURN(job_.ParseFromString(serialized_job)) << " serialized_job is not a valid Job.";
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> NNGraph::SetJob(int64_t job_id, const Job& job) {
+  job_id_ = job_id;
+  job_ = job;
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> NNGraph::RegisterInputOpNamesAndTensors(
     const std::vector<std::string>& inputs_op_names,
     const std::vector<std::shared_ptr<one::Tensor>>& input_tensors) {

@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_API_PYTHON_JOB_BUILD_JOB_BUILD_AND_INFER_H_
 #define ONEFLOW_API_PYTHON_JOB_BUILD_JOB_BUILD_AND_INFER_H_
 
+#include <memory>
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/tensor.h"
@@ -28,9 +29,10 @@ limitations under the License.
 
 namespace oneflow {
 
-inline Maybe<void> JobBuildAndInferCtx_Open(const std::string& job_name) {
+inline Maybe<void> JobBuildAndInferCtx_Open(const std::string& job_name, const std::shared_ptr<NNGraph>& nn_graph) {
   auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
-  return mgr->OpenJobBuildAndInferCtx(job_name);
+  std::weak_ptr<NNGraph> g = nn_graph;
+  return mgr->OpenJobBuildAndInferCtx(job_name, std::move(g));
 }
 
 inline Maybe<std::string> JobBuildAndInferCtx_GetCurrentJobName() {

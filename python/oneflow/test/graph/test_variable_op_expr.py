@@ -34,17 +34,21 @@ from oneflow.framework.multi_client_session import MultiClientSession
 class TestFeedVariableTensor(unittest.TestCase):
     def test_feed_var_tensor(test_case):
         test_case.assertTrue(oneflow.framework.env_util.HasAllMultiClientEnvVars())
+        job_name = "cc_test_variable_op_expr_job"
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
         session = session_ctx.GetDefaultSession()
         test_case.assertTrue(isinstance(session, MultiClientSession))
         session.TryInit()
+        c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
+            job_name, session._session_ctx
+        )
         with oneflow._oneflow_internal.lazy_mode.guard(True):
             oneflow._oneflow_internal.JobBuildAndInferCtx_Open(
-                "cc_test_variable_op_expr_job"
+               job_name, c_nn_graph 
             )
             job_conf = oneflow.core.job.job_conf_pb2.JobConfigProto()
-            job_conf.job_name = "cc_test_variable_op_expr_job"
+            job_conf.job_name = job_name
             job_conf.predict_conf.SetInParent()
             c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
             op_name = "cc_Variable_0"

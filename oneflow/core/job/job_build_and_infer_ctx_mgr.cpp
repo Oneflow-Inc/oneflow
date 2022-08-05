@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include <memory>
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/global_for.h"
@@ -22,7 +23,7 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> JobBuildAndInferCtxMgr::OpenJobBuildAndInferCtx(const std::string& job_name) {
+Maybe<void> JobBuildAndInferCtxMgr::OpenJobBuildAndInferCtx(const std::string& job_name, std::weak_ptr<NNGraph>&& nn_graph) {
   CHECK_OR_RETURN(!has_cur_job_) << Error::UnknownJobBuildAndInferError()
                                  << "cur job not leave before you enter this job_name:" << job_name;
   CHECK_OR_RETURN(!job_name.empty()) << Error::JobNameEmptyError();
@@ -31,16 +32,16 @@ Maybe<void> JobBuildAndInferCtxMgr::OpenJobBuildAndInferCtx(const std::string& j
   int64_t job_id = job_set_.job_size();
   Job* job = job_set_.add_job();
   job->mutable_job_conf()->set_job_name(job_name);
-  std::unique_ptr<JobBuildAndInferCtx> ctx(NewJobBuildAndInferCtx(job, job_id));
+  std::unique_ptr<JobBuildAndInferCtx> ctx(NewJobBuildAndInferCtx(job, job_id, std::move(nn_graph)));
   job_name2infer_ctx_.emplace(job_name, std::move(ctx));
   cur_job_name_ = job_name;
   has_cur_job_ = true;
   return Maybe<void>::Ok();
 }
 
-JobBuildAndInferCtx* LazyJobBuildAndInferCtxMgr::NewJobBuildAndInferCtx(Job* job,
-                                                                        int64_t job_id) const {
-  return new LazyJobBuildAndInferCtx(job, job_id);
+JobBuildAndInferCtx* JobBuildAndInferCtxMgr::NewJobBuildAndInferCtx(Job* job,
+                                                                        int64_t job_id, std::weak_ptr<NNGraph>&& nn_graph) const {
+  return new JobBuildAndInferCtx(job, job_id, std::move(nn_graph));
 }
 
 Maybe<JobBuildAndInferCtx*> JobBuildAndInferCtxMgr::FindJobBuildAndInferCtx(
@@ -76,7 +77,7 @@ std::string JobBuildAndInferCtxMgr::structure_graph() const {
   return json_array.dump();
 }
 
-Maybe<void> LazyJobBuildAndInferCtxMgr::VirtualCloseJob() {
+Maybe<void> JobBuildAndInferCtxMgr::VirtualCloseJob() {
   const JobDesc* job_desc = Singleton<JobDesc>::Get();
   if (job_desc == nullptr) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(job_desc->job_name(), *JUST(GetCurrentJobName()));
@@ -86,7 +87,7 @@ Maybe<void> LazyJobBuildAndInferCtxMgr::VirtualCloseJob() {
 }
 
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
-  return JUST(SingletonMaybe<LazyJobBuildAndInferCtxMgr>());
+  return JUST(SingletonMaybe<JobBuildAndInferCtxMgr>());
 }
 
 Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name) {

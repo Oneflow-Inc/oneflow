@@ -54,17 +54,20 @@ def _test_user_op_graph(test_case, is_cuda):
     #    y0 * x1 -> out1
     #    relu(out1) -> y1
 
+    job_name = "cc_test_user_op_expr_job_with_cuda" + str(is_cuda)
     session = session_ctx.GetDefaultSession()
     test_case.assertTrue(isinstance(session, MultiClientSession))
     session.TryInit()
+    c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
+        job_name, session._session_ctx
+    )
 
     with oneflow._oneflow_internal.lazy_mode.guard(True):
-
         oneflow._oneflow_internal.JobBuildAndInferCtx_Open(
-            "cc_test_user_op_expr_job_with_cuda" + str(is_cuda)
+           job_name, c_nn_graph 
         )
         job_conf = oneflow.core.job.job_conf_pb2.JobConfigProto()
-        job_conf.job_name = "cc_test_user_op_expr_job_with_cuda" + str(is_cuda)
+        job_conf.job_name = job_name 
         job_conf.predict_conf.SetInParent()
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
 

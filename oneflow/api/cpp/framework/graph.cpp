@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <memory>
 #include "nlohmann/json.hpp"
 #include "oneflow/api/common/variable_tensor_mgr.h"
 #include "oneflow/api/cpp/env_impl.h"
@@ -69,12 +70,12 @@ namespace {
 
 class CompileScope {
  public:
-  CompileScope(const of::JobConfigProto& job_config, const of::Device& device) {
+  CompileScope(const of::JobConfigProto& job_config, const of::Device& device, const std::shared_ptr<of::NNGraph>& nn_graph) {
     of::JobConfigProto mut_job_config = job_config;
     const std::shared_ptr<of::Scope> scope = CHECK_JUST(MakeScope(mut_job_config, device));
     CHECK_JUST(of::ThreadLocalScopeStackPush(scope));
 
-    CHECK_JUST(of::JobBuildAndInferCtx_Open(mut_job_config.job_name()));
+    CHECK_JUST(of::JobBuildAndInferCtx_Open(mut_job_config.job_name(), nn_graph));
     CHECK_JUST(CHECK_JUST(of::GetCurInferCtx())->SetJobConf(mut_job_config));
   }
 
@@ -244,6 +245,9 @@ Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
   if (of::ParseBooleanFromEnv("ONEFLOW_SERVING_DEBUG", false)) { LOG(ERROR) << job_.DebugString(); }
   job_.mutable_job_conf()->mutable_predict_conf();
   job_.mutable_job_conf()->set_job_name(job_.mutable_job_conf()->job_name() + of::NewUniqueId());
+  CHECK(of::Singleton<OneFlowEnv>::Get() != nullptr);
+  graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name(),
+                                         of::Singleton<OneFlowEnv>::Get()->GetSessionCtx());
 }
 
 InputOutputInfos Graph::GraphImpl::GetInputInfos() { return input_infos_; }
@@ -342,7 +346,7 @@ of::Maybe<void> Graph::GraphImpl::AddOp(of::OperatorConf op_conf) {
 }
 
 of::Maybe<void> Graph::GraphImpl::BuildGraph() {
-  CompileScope build_graph_scope(job_.job_conf(), *device_.device_->shared_from_symbol());
+  CompileScope build_graph_scope(job_.job_conf(), *device_.device_->shared_from_symbol(), graph_);
   {
     const of::OpGraph op_graph(job_);
     op_graph.TopoForEachNode([&](const of::OpNode* node) -> of::Maybe<void> {
@@ -367,8 +371,7 @@ of::Maybe<void> Graph::GraphImpl::BuildGraph() {
 
   // apply custom job passes
   complete_job = JUST(ApplyJobPasses(*complete_job));
-  graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name(), *complete_job, job_id,
-                                         of::Singleton<OneFlowEnv>::Get()->GetSessionCtx());
+  JUST(graph_->SetJob(job_id, *complete_job));
   {
     const of::OpGraph complete_graph(*complete_job);
     complete_graph.TopoForEachNode([&](const of::OpNode* node) -> of::Maybe<void> {

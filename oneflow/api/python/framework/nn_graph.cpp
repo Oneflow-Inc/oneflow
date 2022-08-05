@@ -51,13 +51,9 @@ Maybe<py::bytes> APINNGraphGetCurrentSerializedJob(const std::shared_ptr<NNGraph
 ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
   using namespace oneflow;
   py::class_<NNGraph, std::shared_ptr<NNGraph>>(m, "CNNGraph")
-      .def(py::init([](const std::string& name, const std::string& serialized_job, int64_t job_id,
+      .def(py::init([](const std::string& name, 
                        const std::shared_ptr<MultiClientSessionContext>& session_ctx) {
-        Job job;
-        if (!job.ParseFromString(serialized_job)) {
-          PyErr_SetString(PyExc_TypeError, "the second argument is not a valid job");
-        }
-        return std::make_shared<NNGraph>(name, job, job_id, session_ctx);
+        return std::make_shared<NNGraph>(name, session_ctx);
       }))
       .def_property_readonly("name", &NNGraph::job_name)
       .def_property(
@@ -73,6 +69,7 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
           })
       .def_property("job_id", &NNGraph::job_id,
                     [](NNGraph& nn_graph, int64_t job_id) { nn_graph.restore_job_id(job_id); })
+      .def("set_job", &NNGraph::SetJobStr)
       .def("register_input_op_names_and_tensors", &NNGraph::RegisterInputOpNamesAndTensors)
       .def("register_output_op_names_and_tensors", &NNGraph::RegisterOutputOpNamesAndTensors)
       .def("register_variable_op_names_and_tensors", &NNGraph::RegisterVariableOpNamesAndTensors)

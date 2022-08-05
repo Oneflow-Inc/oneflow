@@ -54,7 +54,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Singleton<JobName2JobId>::New();
     Singleton<CriticalSectionDesc>::New();
     Singleton<InterUserJobInfo>::New();
-    Singleton<LazyJobBuildAndInferCtxMgr>::New();
+    Singleton<JobBuildAndInferCtxMgr>::New();
     Singleton<JobSetCompileCtx>::New();
     Singleton<RuntimeBufferManagersScope>::New();
   }
@@ -100,7 +100,7 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     Singleton<RuntimeBufferManagersScope>::Delete();
     Singleton<JobSetCompileCtx>::Delete();
-    Singleton<LazyJobBuildAndInferCtxMgr>::Delete();
+    Singleton<JobBuildAndInferCtxMgr>::Delete();
     Singleton<InterUserJobInfo>::Delete();
     Singleton<CriticalSectionDesc>::Delete();
     Singleton<JobName2JobId>::Delete();

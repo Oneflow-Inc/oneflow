@@ -16,20 +16,22 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_JOB_BUILD_AND_INFER_CXT_MGR_H_
 #define ONEFLOW_CORE_JOB_JOB_BUILD_AND_INFER_CXT_MGR_H_
 
+#include <memory>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 
 namespace oneflow {
 
-class JobBuildAndInferCtxMgr {
+class JobBuildAndInferCtxMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobBuildAndInferCtxMgr);
   virtual ~JobBuildAndInferCtxMgr() = default;
 
-  Maybe<void> OpenJobBuildAndInferCtx(const std::string& job_name);
+  Maybe<void> OpenJobBuildAndInferCtx(const std::string& job_name, std::weak_ptr<NNGraph>&& nn_graph);
   Maybe<JobBuildAndInferCtx*> FindJobBuildAndInferCtx(const std::string& job_name);
   Maybe<std::string> GetCurrentJobName() const;
   Maybe<void> CloseCurrentJobBuildAndInferCtx();
@@ -37,32 +39,18 @@ class JobBuildAndInferCtxMgr {
   const JobSet& job_set() const { return job_set_; }
   std::string structure_graph() const;
 
- protected:
-  virtual JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const = 0;
-  JobBuildAndInferCtxMgr() : has_cur_job_(false) {}
-  virtual Maybe<void> VirtualCloseJob() = 0;
-  JobSet* mut_job_set() { return &job_set_; }
-
-  void clear_job_name2infer_ctx() { job_name2infer_ctx_.clear(); }
-
  private:
+  JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id, std::weak_ptr<NNGraph>&& nn_graph) const;
+  JobBuildAndInferCtxMgr() : has_cur_job_(false) {}
+  Maybe<void> VirtualCloseJob();
+  JobSet* mut_job_set() { return &job_set_; }
+  void clear_job_name2infer_ctx() { job_name2infer_ctx_.clear(); }
+  friend class Singleton<JobBuildAndInferCtxMgr>;
+
   JobSet job_set_;
   bool has_cur_job_;
   std::string cur_job_name_;
   HashMap<std::string, std::unique_ptr<JobBuildAndInferCtx>> job_name2infer_ctx_;
-};
-
-class LazyJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(LazyJobBuildAndInferCtxMgr);
-  LazyJobBuildAndInferCtxMgr() : JobBuildAndInferCtxMgr() {}
-  ~LazyJobBuildAndInferCtxMgr() override = default;
-
- private:
-  friend class Singleton<LazyJobBuildAndInferCtxMgr>;
-
-  Maybe<void> VirtualCloseJob() override;
-  JobBuildAndInferCtx* NewJobBuildAndInferCtx(Job* job, int64_t job_id) const override;
 };
 
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr();

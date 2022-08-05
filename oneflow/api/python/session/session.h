@@ -90,7 +90,7 @@ inline Maybe<void> DestroyLazyGlobalSession() {
 inline Maybe<void> StartLazyGlobalSession() {
   CHECK_NOTNULL_OR_RETURN(Singleton<SessionGlobalObjectsScope>::Get()) << "session not found";
   CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
-  const JobSet& job_set = Singleton<LazyJobBuildAndInferCtxMgr>::Get()->job_set();
+  const JobSet& job_set = Singleton<JobBuildAndInferCtxMgr>::Get()->job_set();
   if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("job_set.prototxt")->Write(job_set);
   }

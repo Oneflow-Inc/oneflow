@@ -32,11 +32,8 @@ class Blob;
 
 class NNGraph final : public NNGraphIf {
  public:
-  explicit NNGraph(const std::string& name, const Job& job, int64_t job_id,
-                   const std::shared_ptr<MultiClientSessionContext>& session_ctx)
+  explicit NNGraph(const std::string& name, const std::shared_ptr<MultiClientSessionContext>& session_ctx)
       : name_(name),
-        job_(job),
-        job_id_(job_id),
         session_ctx_(session_ctx),
         runtime_inited_(false),
         is_closed_(false) {}
@@ -57,6 +54,8 @@ class NNGraph final : public NNGraphIf {
   void restore_job(const Job& job) { job_ = job; }
   void restore_job_id(int64_t job_id) { job_id_ = job_id; }
 
+  Maybe<void> SetJobStr(int64_t job_id, const std::string& serialized_job);
+  Maybe<void> SetJob(int64_t job_id, const Job& job);
   Maybe<void> RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(
       const std::vector<std::string>& additional_var_names,
       const std::vector<std::shared_ptr<one::Tensor>>& additional_var_tensors);

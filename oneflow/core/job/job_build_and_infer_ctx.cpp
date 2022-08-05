@@ -79,12 +79,6 @@ void UpdateOpName2AncestorsNeedNoGrad(
 
 }  // namespace
 
-JobBuildAndInferCtx::JobBuildAndInferCtx(Job* job, int64_t job_id)
-    : job_(job), job_id_(job_id), unique_op_name_index_(0) {
-  is_job_conf_frozen_ = false;
-  has_job_conf_ = false;
-}
-
 Maybe<void> JobBuildAndInferCtx::SetJobConf(const JobConfigProto& job_conf) {
   CHECK_OR_RETURN(!is_job_conf_frozen_) << Error::JobConfFrozenError();
   CHECK_OR_RETURN(!has_job_conf_) << Error::JobConfRepeatedSetError();
@@ -431,7 +425,7 @@ Maybe<void> JobBuildAndInferCtx::CheckAllInputsConvertableToLocalBlob(const Oper
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LazyJobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(const Operator& op,
+Maybe<void> JobBuildAndInferCtx::CheckAllInputsWithSameParallelNum(const Operator& op,
                                                                        int32_t parallel_num) const {
   for (const auto& ibn : op.input_bns()) {
     const auto& lbi = op.BnInOp2Lbi(ibn);
@@ -804,17 +798,17 @@ Maybe<void> JobBuildAndInferCtx::CheckLbnValidAndExist(const std::string& lbn) c
 
 const Job& JobBuildAndInferCtx::job() const { return *job_; }
 
-std::string LazyJobBuildAndInferCtx::GetLocalOpName(const std::string& op_name,
+std::string JobBuildAndInferCtx::GetLocalOpName(const std::string& op_name,
                                                     int64_t parallel_id) const {
   return op_name + "_" + std::to_string(parallel_id);
 }
 
-ParallelConf LazyJobBuildAndInferCtx::GetLocalOpParallelConf(const ParallelDesc& parallel_desc,
+ParallelConf JobBuildAndInferCtx::GetLocalOpParallelConf(const ParallelDesc& parallel_desc,
                                                              int64_t parallel_id) const {
   return parallel_desc.GetParallelIdOnlyParallelConf(parallel_id);
 }
 
-Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatibleGlobalBlob(
+Maybe<LogicalBlobId> JobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatibleGlobalBlob(
     int64_t scope_symbol_id, const LogicalBlobId& lbi) {
   const std::string& lbn = GenLogicalBlobName(lbi);
   const auto& sbn_it = mut_global_lbi2local_lbi()->find(lbi);
@@ -872,7 +866,7 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateLocalLbiFromCompatible
   return local_lbi;
 }
 
-Maybe<void> LazyJobBuildAndInferCtx::Complete() {
+Maybe<void> JobBuildAndInferCtx::Complete() {
   CHECK_GT_OR_RETURN(job().net().op_size(), 0)
       << " Sorry, nn.Graph need at least 1 op in net, but get 0 now.";
   CHECK_NOTNULL(Singleton<JobDesc>::Get());

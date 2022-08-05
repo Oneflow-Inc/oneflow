@@ -55,9 +55,9 @@ def InitLazyGlobalSession(config_proto):
     oneflow._oneflow_internal.InitLazyGlobalSession(config_proto_str)
 
 
-def JobBuildAndInferCtx_Open(job_name):
+def JobBuildAndInferCtx_Open(job_name, c_nn_graph):
     job_name = str(job_name)
-    oneflow._oneflow_internal.JobBuildAndInferCtx_Open(job_name)
+    oneflow._oneflow_internal.JobBuildAndInferCtx_Open(job_name, c_nn_graph)
 
 
 def CurJobBuildAndInferCtx_SetJobConf(job_config_proto):

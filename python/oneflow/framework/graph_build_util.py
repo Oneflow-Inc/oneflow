@@ -33,7 +33,7 @@ lazy_mode = oneflow._oneflow_internal.lazy_mode
 
 
 @contextmanager
-def graph_build_context(config_proto, session):
+def graph_build_context(config_proto, session, c_nn_graph):
     prev_scope = oneflow._oneflow_internal.GetCurrentScope()
     assert type(config_proto) is job_conf_pb.JobConfigProto, type(config_proto)
     config_proto_str = text_format.MessageToString(config_proto)
@@ -44,17 +44,18 @@ def graph_build_context(config_proto, session):
     graph_scope = _make_new_graph_scope(new_scope, config_proto.job_name)
 
     with lazy_mode.guard(True):
-        with JobBuildAndInferCtx(config_proto):
+        with JobBuildAndInferCtx(config_proto, c_nn_graph):
             with BlockScopeContext(prev_scope, graph_scope):
                 yield
 
 
 class JobBuildAndInferCtx(object):
-    def __init__(self, config_proto):
+    def __init__(self, config_proto, c_nn_graph):
         self._job_conf = config_proto
+        self._c_nn_graph = c_nn_graph
 
     def __enter__(self):
-        c_api_util.JobBuildAndInferCtx_Open(self._job_conf.job_name)
+        c_api_util.JobBuildAndInferCtx_Open(self._job_conf.job_name, self._c_nn_graph)
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(self._job_conf)
 
     def __exit__(self, exc_type, exc_val, exc_tb):

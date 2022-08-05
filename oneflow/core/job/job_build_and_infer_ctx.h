@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/operator.h"
@@ -31,7 +32,7 @@ namespace oneflow {
 class JobBuildAndInferCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobBuildAndInferCtx);
-  JobBuildAndInferCtx(Job* job, int64_t job_id);
+  explicit JobBuildAndInferCtx(Job* job, int64_t job_id, std::weak_ptr<NNGraph>&& nn_graph):job_(job), job_id_(job_id), nn_graph_(std::move(nn_graph)), unique_op_name_index_(0), is_job_conf_frozen_(false), has_job_conf_(false) {}
   virtual ~JobBuildAndInferCtx() = default;
 
   Maybe<void> SetJobConf(const JobConfigProto& job_conf);
@@ -67,22 +68,26 @@ class JobBuildAndInferCtx {
   Maybe<void> CheckLbnValidAndExist(const std::string& lbn) const;
   Maybe<void> Rebuild();
   Maybe<std::string> GetOpBlobLbn(const std::string& op_name, const std::string& bn_in_op) const;
-
-  // NOTE(chengcheng): Only used in multi-client.
   Maybe<std::string> NewUniqueOpNameByFunctionalOpConf(const OperatorConf& op_conf);
+  Maybe<std::shared_ptr<NNGraph>> GetNNGraph() {
+   std::shared_ptr<NNGraph> sp = nn_graph_.lock();
+   CHECK_NOTNULL_OR_RETURN(sp) << Error::CheckFailedError() << " Graph " << job().job_conf().job_name() << "'s C NN Graph cannot be NULL.";
+   return sp;
+  }
 
-  virtual Maybe<void> Complete() = 0;
+  Maybe<void> Complete();
+  Maybe<void> CheckAllInputsWithSameParallelNum(const Operator& op,
+                                                int32_t parallel_num) const;
+  std::string GetLocalOpName(const std::string& op_name, int64_t parallel_id) const;
+  int64_t SizeOfSubGlobalOpList(int64_t parallel_num) const { return parallel_num; }
+  ParallelConf GetLocalOpParallelConf(const ParallelDesc&, int64_t parallel_id) const;
+  bool GetIsLocalParallelView() const { return false; }
+  Maybe<LogicalBlobId> FindOrCreateLocalLbiFromCompatibleGlobalBlob(
+      int64_t scope_symbol_id, const LogicalBlobId& lbn);
+  
 
- protected:
-  virtual Maybe<void> CheckAllInputsWithSameParallelNum(const Operator& op,
-                                                        int32_t parallel_num) const = 0;
-  virtual std::string GetLocalOpName(const std::string& op_name, int64_t parallel_id) const = 0;
-  virtual int64_t SizeOfSubGlobalOpList(int64_t parallel_num) const = 0;
-  virtual ParallelConf GetLocalOpParallelConf(const ParallelDesc&, int64_t parallel_id) const = 0;
-  virtual bool GetIsLocalParallelView() const = 0;
-  virtual Maybe<LogicalBlobId> FindOrCreateLocalLbiFromCompatibleGlobalBlob(
-      int64_t scope_symbol_id, const LogicalBlobId& lbn) = 0;
 
+ private:
   Job* mut_job() const { return job_; }
   const HashMap<LogicalBlobId, std::vector<LogicalBlobId>>& local_lbi2sub_lbis() const {
     return local_lbi2sub_lbis_;
@@ -99,8 +104,6 @@ class JobBuildAndInferCtx {
   Maybe<Operator*> Op4OpName(const std::string& op_name) const;
   Maybe<OpAttribute> AddAndInferOp(const OperatorConf& op_conf, const ParallelConf& parallel_conf,
                                    const JobDesc* job_desc, bool is_local_parallel_view);
-
- private:
   Maybe<ParallelConf> InferOpParallelConf(
       const Operator& op, const ParallelConf& origin_parallel_conf,
       const HashMap<std::string, bool>& ibn2disable_boxing) const;
@@ -149,28 +152,11 @@ class JobBuildAndInferCtx {
   HashMap<LogicalBlobId, std::vector<LogicalBlobId>> local_lbi2sub_lbis_;
   HashMap<LogicalBlobId, ParallelDesc> local_lbi2parallel_desc_;
   HashMap<LogicalBlobId, SbpParallel> local_lbi2sbp_parallel_;
+  HashMap<std::string, bool> op_name2ancestors_need_no_grad_;
+  std::weak_ptr<NNGraph> nn_graph_;
+  int64_t unique_op_name_index_;
   bool is_job_conf_frozen_;
   bool has_job_conf_;
-  HashMap<std::string, bool> op_name2ancestors_need_no_grad_;
-  int64_t unique_op_name_index_;
-};
-
-class LazyJobBuildAndInferCtx : public JobBuildAndInferCtx {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(LazyJobBuildAndInferCtx);
-  LazyJobBuildAndInferCtx(Job* job, int64_t job_id) : JobBuildAndInferCtx(job, job_id) {}
-  virtual ~LazyJobBuildAndInferCtx() = default;
-
- private:
-  Maybe<void> Complete() override;
-  Maybe<void> CheckAllInputsWithSameParallelNum(const Operator& op,
-                                                int32_t parallel_num) const override;
-  std::string GetLocalOpName(const std::string& op_name, int64_t parallel_id) const override;
-  int64_t SizeOfSubGlobalOpList(int64_t parallel_num) const override { return parallel_num; }
-  ParallelConf GetLocalOpParallelConf(const ParallelDesc&, int64_t parallel_id) const override;
-  bool GetIsLocalParallelView() const override { return false; }
-  Maybe<LogicalBlobId> FindOrCreateLocalLbiFromCompatibleGlobalBlob(
-      int64_t scope_symbol_id, const LogicalBlobId& lbn) override;
 };
 
 }  // namespace oneflow
