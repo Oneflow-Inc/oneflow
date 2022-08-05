@@ -3156,11 +3156,17 @@ class PinMemoryFunctor {
     JUST(empty->set_requires_grad(requires_grad));
     const int32_t ndim = input->ndim();
     if (ndim == 0) {
+      // TODO(wyg): use TensorSetItem after supporting non-requires_grad tensor inplace
       // for 0-dim tensor
-      TensorIndex tensor_index;
-      tensor_index.emplace_back(functional::detail::IndexItem(functional::detail::EllipsisIndex{}));
-      JUST(functional::TensorSetItem(empty, tensor_index, input));
-      return empty;
+      empty = JUST(functional::ExpandDims(empty, 0));              // expand to [1, ]
+      auto expand_input = JUST(functional::ExpandDims(input, 0));  // expand to [1, ]
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::vector<int64_t>>("start", {0}));
+      JUST(attrs.SetAttr<std::vector<int64_t>>("stop", {1}));
+      JUST(attrs.SetAttr<std::vector<int64_t>>("step", {1}));
+      auto outputs = TensorTuple{empty};
+      JUST(OpInterpUtil::Dispatch(*op_, TensorTuple{empty, expand_input}, &outputs, attrs));
+      return outputs[0];
     } else {
       MutableAttrMap attrs;
       std::vector<int64_t> starts(ndim, 0);
