@@ -2424,3 +2424,15 @@
 - name: "multi_tensor_adam_update"
   signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple m, TensorTuple v, Tensor learning_rate, Float beta1, Float beta2, Float bias_correction1_val, Float bias_correction2_val, Bool do_bias_correction, Double scale, Float weight_decay) => MultiTensorAdamUpdate"
   bind_python: True
+
+- name: "batch_norm_stats"
+  signature: "TensorTuple (Tensor input, Int32 axis, Float eps) => BatchNormStats"
+  bind_python: True
+
+- name: "batch_norm_gather_stats_with_counts"
+  signature: "TensorTuple (Tensor input, Tensor mean, Tensor invstd, Tensor running_mean=None, Tensor running_var=None, Float momentum, Float eps, Tensor counts) => BatchNormGatherStatsWithCounts"
+  bind_python: True
+
+- name: "batch_norm_elemt"
+  signature: "Tensor (Tensor input, Tensor weight, Tensor bias, Tensor mean, Tensor invstd, Int32 axis, Float eps) => BatchNormElemt"
+  bind_python: True
