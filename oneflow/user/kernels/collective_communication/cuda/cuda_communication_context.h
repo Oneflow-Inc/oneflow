@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_CUDA_CUDA_COMMUNICATION_CONTEXT_H_
-#define ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_CUDA_CUDA_COMMUNICATION_CONTEXT_H_
+#ifndef ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_CUDA_CUDA_COMMUNICATION_CONTEXT_H_
+#define ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_CUDA_CUDA_COMMUNICATION_CONTEXT_H_
 
 #include "oneflow/user/kernels/collective_communication/include/communication_context.h"
 #include "oneflow/core/common/symbol.h"
@@ -47,4 +47,4 @@ class CudaCommunicationContext : public CommunicationContext {
 
 #endif  // WITH_CUDA
 
-#endif  // ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_CUDA_CUDA_COMMUNICATION_CONTEXT_H_
+#endif  // ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_CUDA_CUDA_COMMUNICATION_CONTEXT_H_

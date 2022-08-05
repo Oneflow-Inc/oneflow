@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/framework/transport_util.h"
 #include "oneflow/user/kernels/collective_communication/cpu/cpu_communication_context.h"
-#include "oneflow/user/kernels/collective_communication/include/all_reduce.h"
+#include "oneflow/user/kernels/collective_communication/include/reduce_scatter.h"
 #include "oneflow/user/kernels/collective_communication/cpu/cpu_collective_communication_util.h"
 
 namespace oneflow {
@@ -27,7 +27,7 @@ namespace ccl {
 namespace {
 
 template<typename T, ReduceType reduce_type>
-struct AllReduceImpl final {
+struct ReduceScatterImpl final {
   static Maybe<void> Call(const void* void_in, void* void_out, size_t elem_cnt,
                           Symbol<ParallelDesc> parallel_desc) {
     int64_t parallel_num = parallel_desc->parallel_num();
@@ -35,23 +35,28 @@ struct AllReduceImpl final {
       if (void_in != void_out) { std::memcpy(void_out, void_in, elem_cnt * sizeof(T)); }
       return Maybe<void>::Ok();
     }
+
     const T* in = reinterpret_cast<const T*>(void_in);
     T* out = reinterpret_cast<T*>(void_out);
-    BalancedSplitter bs(elem_cnt, parallel_num);
+
+    BalancedSplitter bs(elem_cnt * parallel_num, parallel_num);
+    const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
+    CHECK_OR_RETURN(opt_parallel_id->has_value()) << kOfBugIssueUploadPrompt;
+    int64_t parallel_id = JUST(*opt_parallel_id);
+
     auto recv_buffer = std::make_unique<T[]>(bs.At(0).size());
-    Optional<int64_t> parallel_id;
-    JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
     const auto& rank_group = JUST(RankGroup::New(parallel_desc));
+
     TransportToken transport_token =
         JUST(TransportToken::NewTransportToken(kTransportTokenTypeData));
-    for (int64_t i = 0, part_id = JUST(parallel_id); i < parallel_num - 1;
+    for (int64_t i = 0, part_id = RingDecrease(parallel_id, parallel_num); i < parallel_num - 1;
          ++i, part_id = RingDecrease(part_id, parallel_num)) {
       int64_t send_part_id = part_id;
       const T* send_ptr = nullptr;
       if (i == 0) {
         send_ptr = &in[bs.At(send_part_id).begin()];
       } else {
-        send_ptr = &out[bs.At(send_part_id).begin()];
+        send_ptr = out;
       }
       size_t send_size = bs.At(send_part_id).size();
       int64_t recv_part_id = RingDecrease(part_id, parallel_num);
@@ -79,40 +84,7 @@ struct AllReduceImpl final {
       }
       JUST(ctx.WaitDone());
       const T* cur_in = &in[bs.At(recv_part_id).begin()];
-      T* cur_out = &out[bs.At(recv_part_id).begin()];
-      if (recv_size > 0) {
-        ReduceFunctor<T, reduce_type>::Call(recv_size, cur_out, cur_in, recv_ptr);
-      }
-    }
-    for (int64_t i = 0, part_id = RingIncrease(JUST(parallel_id), parallel_num);
-         i < parallel_num - 1; ++i, part_id = RingDecrease(part_id, parallel_num)) {
-      int64_t send_part_id = part_id;
-      const T* send_ptr = &out[bs.At(send_part_id).begin()];
-      size_t send_size = bs.At(send_part_id).size();
-      int64_t recv_part_id = RingDecrease(part_id, parallel_num);
-      T* recv_ptr = &out[bs.At(recv_part_id).begin()];
-      size_t recv_size = bs.At(recv_part_id).size();
-      NaiveAsyncTransportCtx ctx(
-          transport_token,
-          [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
-            *buffer = const_cast<T*>(send_ptr);
-            *size = send_size * sizeof(T);
-            *Cb = [] {};
-            return Maybe<void>::Ok();
-          },
-          [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
-            *buffer = recv_ptr;
-            *size = recv_size * sizeof(T);
-            *Cb = [] {};
-            return Maybe<void>::Ok();
-          });
-      if (send_size > 0) {
-        JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
-      }
-      if (recv_size > 0) {
-        JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
-      }
-      JUST(ctx.WaitDone());
+      if (recv_size > 0) { ReduceFunctor<T, reduce_type>::Call(recv_size, out, cur_in, recv_ptr); }
     }
     return Maybe<void>::Ok();
   }
@@ -120,19 +92,19 @@ struct AllReduceImpl final {
 
 #define MAKE_ALL_REDUCE_ENTRY(func_name, T, reduce_type) func_name<T, reduce_type>::Call
 
-DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, AllReduceImpl, MAKE_ALL_REDUCE_ENTRY,  // NOLINT
-                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ),         // NOLINT
-                          REDUCE_TYPE_CTRV_SEQ);                              // NOLINT
+DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, ReduceScatterImpl, MAKE_ALL_REDUCE_ENTRY,  // NOLINT
+                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ),             // NOLINT
+                          REDUCE_TYPE_CTRV_SEQ);                                  // NOLINT
 
 #undef MAKE_ALL_REDUCE_ENTRY
 
 }  // namespace
 
-class CpuAllReduce final : public AllReduce {
+class CpuReduceScatter final : public ReduceScatter {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CpuAllReduce);
-  CpuAllReduce() : datatype_(kInvalidDataType), reduce_type_(kInvalidReduceFunctorType) {}
-  ~CpuAllReduce() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CpuReduceScatter);
+  CpuReduceScatter() : datatype_(kInvalidDataType), reduce_type_(kInvalidReduceFunctorType) {}
+  ~CpuReduceScatter() = default;
 
   void Init(DataType datatype, ReduceType reduce_type) override {
     this->datatype_ = datatype;
@@ -144,8 +116,8 @@ class CpuAllReduce final : public AllReduce {
     const auto& cpu_communication_ctx =
         std::dynamic_pointer_cast<CpuCommunicationContext>(communication_ctx);
     CHECK(cpu_communication_ctx) << kOfBugIssueUploadPrompt;
-    CHECK_JUST(SwitchAllReduceImpl(SwitchCase(datatype_, reduce_type_), in, out, elem_cnt,
-                                   cpu_communication_ctx->parallel_desc()));
+    CHECK_JUST(SwitchReduceScatterImpl(SwitchCase(datatype_, reduce_type_), in, out, elem_cnt,
+                                       cpu_communication_ctx->parallel_desc()));
   }
 
  private:
@@ -153,7 +125,7 @@ class CpuAllReduce final : public AllReduce {
   ReduceType reduce_type_;
 };
 
-REGISTER_COLLECTIVE_COMMUNICATION(DeviceType::kCPU, AllReduce, CpuAllReduce);
+REGISTER_COLLECTIVE_COMMUNICATION(DeviceType::kCPU, ReduceScatter, CpuReduceScatter);
 
 }  // namespace ccl
 
