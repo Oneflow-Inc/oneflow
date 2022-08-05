@@ -45,15 +45,6 @@ enum ReduceType {
                       OF_PP_FOR_EACH_TUPLE(OF_PP_I_MAKE_REPLICATE_TUPLE_SEQ, CCL_REDUCE_TYPE_SEQ))
 
 template<DeviceType device_type>
-Maybe<void> ReduceScatter(const void* in, void* out, size_t elem_cnt, DataType dtype,
-                          ReduceType reduce_type, Symbol<ParallelDesc> parallel_desc,
-                          ep::Stream* stream);
-
-template<DeviceType device_type>
-Maybe<void> AllGather(const void* in, void* out, size_t elem_cnt, DataType dtype,
-                      Symbol<ParallelDesc> parallel_desc, ep::Stream* stream);
-
-template<DeviceType device_type>
 Maybe<void> Send(const void* in, size_t elem_cnt, DataType dtype, int64_t dst, ep::Stream* stream);
 
 template<DeviceType device_type>
