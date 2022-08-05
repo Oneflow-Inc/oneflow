@@ -391,7 +391,7 @@ class Optimizer(object):
                     if set_to_none:
                         param.grad = None
                     else:
-                        if param.is_local:
+                        if param.is_local or param.is_lazy:
                             param.grad.zero_()
                         else:
                             # Replace `broadcast` with `partial_sum` to avoid unnecessary boxing
