@@ -87,8 +87,8 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
 Maybe<void> SbpConstructor::DumpNdSbpSignatureForJob(const OpGraph& op_graph, Job* job) {
   for (auto& op_conf : *job->mutable_net()->mutable_op()) {
     const OpNode* node = op_graph.OpNode4OpName(op_conf.name());
-    SbpNode<NdSbpSignature>* sbp_node = op_name2sbp_node_[node->op().op_name()];
-    const NdSbpSignature& nd_sbp_sig = *sbp_node->FinalSbpSignature();
+    SbpNode* sbp_node = op_name2sbp_node_[node->op().op_name()];
+    const NdSbpSignature& nd_sbp_sig = sbp_node->FinalSbpSignature();
     // Update NdSbpSignature
     (*job->mutable_job_parallel_view_conf()
           ->mutable_op_name2nd_sbp_signature_conf())[node->op().op_name()]
@@ -136,7 +136,7 @@ Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph, const J
   for (int32_t i = 0; i < op_node_list.size(); i++) {
     OpNode* op_node = op_node_list[order[i]];
     // Generate sbp node in cost model and link it with corresponding op node
-    SbpNode<NdSbpSignature>* sbp_node = sbp_graph_.GenerateNode();
+    SbpNode* sbp_node = sbp_graph_.GenerateNode();
     // Mapping from sbp_node to op_node
     sbp_node->op_node_ = op_node;  // TODO: SetOpNode()
     op_name2sbp_node_[op_node->op().op_name()] = sbp_node;
@@ -145,7 +145,7 @@ Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph, const J
   for (int32_t i = 0; i < op_node_list.size(); i++) {
     OpNode* op_node = op_node_list[order[i]];
     // Get corresponding sbp node
-    SbpNode<NdSbpSignature>* sbp_node = op_name2sbp_node_[op_node->op().op_name()];
+    SbpNode* sbp_node = op_name2sbp_node_[op_node->op().op_name()];
     std::vector<OpNode*> output_node_list;
     for (const auto op_edge : op_node->out_edges()) {
       output_node_list.push_back(op_edge->dst_node());
@@ -186,9 +186,9 @@ Maybe<void> SbpConstructor::FillSbpSignatureForOpNode(const OpGraph& op_graph, c
       return *(it->second);
     };
     // Get all valid sbp_signatures
-    SbpNode<NdSbpSignature>* sbp_node = op_name2sbp_node_[op_node->op().op_name()];
+    SbpNode* sbp_node = op_name2sbp_node_[op_node->op().op_name()];
     JUST(op_node->op().GetValidNdSbpSignatureList(LogicalBlobDesc4Ibn, op_node->parallel_desc(),
-                                                  &sbp_node->sbp_sig_obj_list_, true));
+                                                  &sbp_node->sbp_sig_list_, true));
     sbp_node->InitializeSbp();
     return Maybe<void>::Ok();
   }));
@@ -200,9 +200,8 @@ Maybe<void> SbpConstructor::StealSbpSignatureFromOpNode(const OpGraph& op_graph,
   for (auto* sbp_node : sbp_graph_.node_list_) {
     // sbp_collectors do not have op_node
     if (sbp_node->op_node_) {
-      for (int32_t sbp_id = 0; sbp_id < sbp_node->sbp_sig_obj_list_.size(); sbp_id++) {
-        if (*JUST(sbp_node->op_node_->op().nd_sbp_signature())
-            == sbp_node->sbp_sig_obj_list_[sbp_id]) {
+      for (int32_t sbp_id = 0; sbp_id < sbp_node->sbp_sig_list_.size(); sbp_id++) {
+        if (*JUST(sbp_node->op_node_->op().nd_sbp_signature()) == sbp_node->sbp_sig_list_[sbp_id]) {
           sbp_node->final_sbp_sig_id_ = sbp_id;
           break;
         }
@@ -216,7 +215,7 @@ Maybe<void> SbpConstructor::InitComputationCost(const OpGraph& op_graph) {
   // Compute computation cost for sbp nodes
   JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
     // get corresponding sbp node producer
-    SbpNode<NdSbpSignature>* sbp_node = op_name2sbp_node_[op_node->op().op_name()];
+    SbpNode* sbp_node = op_name2sbp_node_[op_node->op().op_name()];
     // get parallel description. Number of devices.
     const ParallelDesc& parallel_desc = op_node->parallel_desc();
 
@@ -227,7 +226,7 @@ Maybe<void> SbpConstructor::InitComputationCost(const OpGraph& op_graph) {
     };
     for (int32_t sbp_id = 0; sbp_id < sbp_node->sbp_sig_list_.size(); sbp_id++) {
       double comp_cost = JUST(op_node->op().GetComputeComplexity(
-          sbp_node->sbp_sig_list_[sbp_id], logical_blob_desc4bn, parallel_desc));
+          &sbp_node->sbp_sig_list_[sbp_id], logical_blob_desc4bn, parallel_desc));
       if (comp_cost > GetValidMaxCopyCost()) {
         sbp_node->cost_.at(sbp_id) = comp_cost;
       } else {
@@ -243,7 +242,7 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
   // Compute copy cost for sbp edges
   op_graph.ForEachNode([&](OpNode* op_node) {
     // get corresponding sbp node consumer
-    SbpNode<NdSbpSignature>* sbp_node_consumer = op_name2sbp_node_[op_node->op().op_name()];
+    SbpNode* sbp_node_consumer = op_name2sbp_node_[op_node->op().op_name()];
     // Initialize copy cost between two nodes
     for (auto* sbp_edge : sbp_node_consumer->edges_in_) {
       // producer sbp node
@@ -421,7 +420,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
     auto it = op_name2sbp_node_.find(op_node->op().op_name());
     // Print debug information for sbp graph
     CHECK(it != op_name2sbp_node_.end());
-    const SbpNode<NdSbpSignature>* sbp_node = it->second;
+    const SbpNode* sbp_node = it->second;
     std::cout << "Computation Cost: " << sbp_node->cost_[sbp_node->final_sbp_sig_id_];
     std::cout << ", Min Layer: " << sbp_node->min_layer_ << ", Max Layer: " << sbp_node->max_layer_
               << ", Tributary Layer: " << sbp_node->tributary_layer_
@@ -431,7 +430,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
     const auto& op_input_bns = op_node->op().input_bns();
     auto comp = [](const std::string& a, const std::string& b) { return a.compare(b) > 0; };
     auto_parallel::DecideOrder(op_input_bns, str_order, comp);
-    const NdSbpSignature& sbp_signature = *sbp_node->FinalSbpSignature();
+    const NdSbpSignature& sbp_signature = sbp_node->FinalSbpSignature();
     // Print out SBP information for input operator
     for (int32_t j : str_order) {
       const auto& ibn = op_input_bns[j];
