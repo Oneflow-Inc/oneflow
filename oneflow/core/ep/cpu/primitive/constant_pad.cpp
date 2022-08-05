@@ -163,6 +163,7 @@ template<typename T>
 void SimplifyThenLaunch(size_t num_dims, const int64_t* src_dims, const void* src,
                         const int64_t* padding_before, const int64_t* padding_after, T pad_val,
                         void* dst) {
+  CHECK_GT(num_dims, 0) << "num_dims must greater than 0";
   CHECK_LE(num_dims, kMaxNumDims);
   int64_t simplified_dst_dims[kMaxNumDims];
   int64_t simplified_src_dims[kMaxNumDims];

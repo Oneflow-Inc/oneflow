@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #ifdef WITH_CUDA
-#include "oneflow/user/kernels/collective_communication/include/all_reduce.h"
+#include "oneflow/user/kernels/collective_communication/include/reduce_scatter.h"
 #include "oneflow/user/kernels/collective_communication/cuda/cuda_communication_context.h"
 #include "oneflow/core/device/nccl_util.h"
 
@@ -36,11 +36,11 @@ inline ncclRedOp_t GetNcclReduceType(ReduceType reduce_type) {
 
 }  // namespace
 
-class CudaAllReduce final : public AllReduce {
+class CudaReduceScatter final : public ReduceScatter {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CudaAllReduce);
-  CudaAllReduce() : nccl_datatype_(), nccl_reduce_op_() {}
-  ~CudaAllReduce() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CudaReduceScatter);
+  CudaReduceScatter() : nccl_datatype_(), nccl_reduce_op_() {}
+  ~CudaReduceScatter() = default;
 
   void Init(DataType datatype, ReduceType reduce_type) override {
     this->nccl_datatype_ = GetNcclDataType(datatype);
@@ -51,10 +51,10 @@ class CudaAllReduce final : public AllReduce {
               const std::shared_ptr<CommunicationContext>& communication_ctx) const override {
     const auto& cuda_communication_ctx =
         std::dynamic_pointer_cast<CudaCommunicationContext>(communication_ctx);
-    CHECK(cuda_communication_ctx);
-    OF_NCCL_CHECK(ncclAllReduce(in, out, elem_cnt, nccl_datatype_, nccl_reduce_op_,
-                                cuda_communication_ctx->nccl_comm(),
-                                stream->As<ep::CudaStream>()->cuda_stream()));
+    CHECK(cuda_communication_ctx) << kOfBugIssueUploadPrompt;
+    OF_NCCL_CHECK(ncclReduceScatter(in, out, elem_cnt, nccl_datatype_, nccl_reduce_op_,
+                                    cuda_communication_ctx->nccl_comm(),
+                                    stream->As<ep::CudaStream>()->cuda_stream()));
   }
 
  private:
@@ -62,7 +62,7 @@ class CudaAllReduce final : public AllReduce {
   ncclRedOp_t nccl_reduce_op_;
 };
 
-REGISTER_COLLECTIVE_COMMUNICATION(DeviceType::kCUDA, AllReduce, CudaAllReduce);
+REGISTER_COLLECTIVE_COMMUNICATION(DeviceType::kCUDA, ReduceScatter, CudaReduceScatter);
 
 }  // namespace ccl
 
