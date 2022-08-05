@@ -70,6 +70,7 @@ class NNGraph final : public NNGraphIf {
       const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors);
   Maybe<std::vector<std::string>> GetAdditionalVarOpNames() const;
   Maybe<std::vector<std::shared_ptr<one::Tensor>>> GetAdditionalVarOpTensors() const;
+  Maybe<std::shared_ptr<MultiClientSessionContext>> GetSessionCtx() { return session_ctx_; }
   Maybe<void> CompileAndInitRuntime();
   Maybe<void> Close();
 
