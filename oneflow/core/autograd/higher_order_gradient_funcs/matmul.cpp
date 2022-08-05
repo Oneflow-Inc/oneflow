@@ -58,6 +58,11 @@ class BroadcastMatmulGradBGrad : public OpExprGradFunction<BroadcastMatmulGradBG
                     TensorTuple* in_grads) const override {
     in_grads->resize(2);
 
+    // for matmul: input_a[dims..., m, k] * input_b[k, n] -> [dims..., m, n]
+    // if forward: BroadcastMatmulGradB(input_a, JUST(VectorAt(out_grads, 0)), ctx->alpha))
+    //       then: a.shape = [dims..., m, k], b.shape = [dims..., m, n], grad.shape = [k, n]
+    // if forward: BroadcastMatmulGradB(JUST(VectorAt(out_grads, 0)), input_a, ctx->alpha))
+    //       then: a.shape = [dims..., m, n], b.shape = [dims..., m, k], grad.shape = [n, k]
     if (ctx->a_requires_grad) {
       const auto& b = ctx->SavedTensors()[ctx->b_index];
       in_grads->at(0) = JUST(functional::MatMul(b, out_grads.at(0), false, true, ctx->alpha));
