@@ -51,7 +51,7 @@ class CudaReduce final : public Reduce {
               const std::shared_ptr<CommunicationContext>& communication_ctx) const override {
     const auto& cuda_communication_ctx =
         std::dynamic_pointer_cast<CudaCommunicationContext>(communication_ctx);
-    CHECK(cuda_communication_ctx);
+    CHECK(cuda_communication_ctx) << kOfBugIssueUploadPrompt;
     OF_NCCL_CHECK(ncclReduce(in, out, elem_cnt, nccl_datatype_, nccl_reduce_op_,
                              cuda_communication_ctx->nccl_index4rank(root),
                              cuda_communication_ctx->nccl_comm(),

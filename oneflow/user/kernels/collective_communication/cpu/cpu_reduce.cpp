@@ -170,7 +170,7 @@ class CpuReduce final : public Reduce {
               const std::shared_ptr<CommunicationContext>& communication_ctx) const override {
     const auto& cpu_communication_ctx =
         std::dynamic_pointer_cast<CpuCommunicationContext>(communication_ctx);
-    CHECK(cpu_communication_ctx);
+    CHECK(cpu_communication_ctx) << kOfBugIssueUploadPrompt;
     CHECK_JUST(SwitchReduceImpl(SwitchCase(datatype_, reduce_type_), in, out, elem_cnt, root,
                                 cpu_communication_ctx->parallel_desc()));
   }

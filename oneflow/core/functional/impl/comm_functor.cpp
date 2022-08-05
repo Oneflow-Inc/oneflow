@@ -416,12 +416,13 @@ class LocalReduceFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t dst, bool inplace) const {
     const auto& device = JUST(x->device());
     { CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank()); }
-    static thread_local std::unordered_map<Symbol<RankGroup>, Symbol<ParallelDesc>>
-        rank_group2parallel_desc;
+    static thread_local std::unordered_map<std::pair<Symbol<RankGroup>, Symbol<Device>>,
+                                           Symbol<ParallelDesc>>
+        rank_group_with_device2parallel_desc;
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
-    auto iter = rank_group2parallel_desc.find(rank_group);
+    auto iter = rank_group_with_device2parallel_desc.find({rank_group, device});
     Symbol<ParallelDesc> parallel_desc;
-    if (iter == rank_group2parallel_desc.end()) {
+    if (iter == rank_group_with_device2parallel_desc.end()) {
       ParallelConf parallel_conf;
       parallel_conf.set_device_tag(device->type());
       JUST(rank_group->ForEachRank([&parallel_conf](int64_t rank) -> Maybe<void> {
@@ -430,7 +431,7 @@ class LocalReduceFunctor {
         return Maybe<void>::Ok();
       }));
       parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
-      rank_group2parallel_desc[rank_group] = parallel_desc;
+      rank_group_with_device2parallel_desc[{rank_group, device}] = parallel_desc;
     } else {
       parallel_desc = iter->second;
     }
