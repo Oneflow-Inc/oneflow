@@ -92,7 +92,7 @@ class TestCast(flow.unittest.TestCase):
         arg_dict["shape"] = [(2, 3, 0, 5)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    
+
     @autotest(n=5, check_graph=False)
     def test_cast_with_scalar_input(test_case):
         device = random_device()
