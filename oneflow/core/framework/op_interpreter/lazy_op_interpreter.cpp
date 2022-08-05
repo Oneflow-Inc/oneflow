@@ -440,6 +440,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
                                        /* is_local= */ input_tensor->is_local()));
   TensorNameScope::Global()->Record(origin_input, GenLogicalBlobName(op_conf.name(), obn));
 
+  // NOTE: The input will then be unpacked in DispatchFeedInputOpExprFunctor
+  // if GradAcc is enabled
   (*outputs)[0] = origin_input;
   return Maybe<void>::Ok();
 }
@@ -501,12 +503,16 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   // NOTE(chengcheng): Record EagerTensor as variable tensor name
   TensorNameScope::Global()->Record(input_tensor, GenLogicalBlobName(op_conf.name(), obn));
 
+  // NOTE: The output variable will then be repeat in DispatchFeedVariableOpExprFunctor
+  // if GradAcc is enabled
   (*outputs)[0] = origin_var;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const OpExprInterpContext& ctx) const {
+  // NOTE: The input has been packed in DispatchFetchOutputOpExprFunctor
+  // if GradAcc is enabled
   // NOTE(chengcheng): inputs[0] is the LazyTensor
   CHECK_EQ_OR_RETURN(inputs.size(), 1);         // NOLINT(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);  // NOLINT(maybe-need-error-msg)
