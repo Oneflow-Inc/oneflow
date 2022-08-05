@@ -184,10 +184,13 @@ def _test_bce_loss(dim=int, with_logits: bool = False):
         weight=oneof(weight, nothing()),
         reduction=oneof("none", "sum", "mean", nothing()),
     )
+    pos_weight_for_testing_broadcast = random_tensor(
+        1, 1, low=1, high=3, requires_grad=False,
+    ).to(device)
     if with_logits:
         m = torch.nn.BCEWithLogitsLoss(
             weight=oneof(weight, nothing()),
-            pos_weight=oneof(pos_weight, nothing()),
+            pos_weight=oneof(pos_weight, pos_weight_for_testing_broadcast, nothing()),
             reduction=oneof("none", "sum", "mean", nothing()),
         )
     m.train(random())
