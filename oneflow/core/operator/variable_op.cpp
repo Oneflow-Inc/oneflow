@@ -74,12 +74,16 @@ Maybe<void> VariableOp::InferOutBlobDescs(
 }
 
 Maybe<void> VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  int64_t num_axes = op_conf().variable_conf().shape().dim_size();
+  const Shape& shape = Shape(op_conf().variable_conf().shape());
+  int64_t num_axes = shape.NumAxes();
+  int32_t parallel_num = JUST(GetOpParallelDesc())->parallel_num();
   for (int i = 0; i < num_axes; ++i) {
-    SbpSignatureBuilder()
-        .Broadcast(input_bns())
-        .Split(output_bns(), i)
-        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    if (shape.At(i) >= parallel_num) {
+      SbpSignatureBuilder()
+          .Broadcast(input_bns())
+          .Split(output_bns(), i)
+          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    }
   }
   return Maybe<void>::Ok();
 }
