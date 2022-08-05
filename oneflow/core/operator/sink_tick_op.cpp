@@ -49,7 +49,10 @@ Maybe<void> SinkTickOp::InferOutBlobDescs(
 }
 
 Maybe<void> SinkTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder().Broadcast(input_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  SbpSignatureBuilder()
+      .Broadcast(input_bns())
+      .Broadcast(output_bns())
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 
