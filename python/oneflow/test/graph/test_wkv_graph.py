@@ -21,7 +21,7 @@ import oneflow.nn as nn
 import oneflow.unittest
 
 def test_wkv_graph(B, T, C, w, u, k, v):
-    model = nn.Sequential(nn.Linear(1, 1)).to("cuda")
+    model = nn.Sequential(nn.Linear(1, 1, bias=True)).to("cuda")
     optimizer = flow.optim.SGD(model.parameters(), lr=1e-3)
     loss_fn = nn.MSELoss().to("cuda")
 
@@ -41,6 +41,7 @@ def test_wkv_graph(B, T, C, w, u, k, v):
             return y
 
     model = WkvGraph()
+    # model.debug(2, op_repr_with_py_stack=True, only_user_py_stack=False, max_py_stack_depth=10)
     x = flow.randn(1, 1).to("cuda")
     return model(x, w, u, k, v)
     
