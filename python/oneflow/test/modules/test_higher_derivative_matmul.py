@@ -25,19 +25,23 @@ import oneflow as oneflow_origin
 
 class TestMatmulHigherDerivative(flow.unittest.TestCase):
     def test_broadcast_matmul_grad_b_grad(test_case):
-        batch = np.random.randint(2, 10)
+        broadcast_dims = [np.random.randint(2, 10) for _ in range(np.random.randint(1, 3))]
         m = np.random.randint(2, 10)
         n = np.random.randint(2, 10)
         k = np.random.randint(2, 10)
 
-        a = random_tensor(ndim=3, dim0=batch, dim1=m, dim2=k).requires_grad_(True)
-        b = random_tensor(ndim=2, dim0=k, dim1=n).requires_grad_(True)
+        shape_a = broadcast_dims + [m, k]
+        shape_b = [k, n]
+        shape_y = broadcast_dims + [m, n]
+
+        a = random_tensor(len(shape_a), *shape_a).requires_grad_(True)
+        b = random_tensor(len(shape_b), *shape_b).requires_grad_(True)
 
         y = torch.matmul(a, b)
 
-        init_grad_a = random_tensor(ndim=3, dim0=batch, dim1=m, dim2=k).requires_grad_(True)
-        init_grad_b = random_tensor(ndim=2, dim0=k, dim1=n).requires_grad_(True)
-        init_grad_y = random_tensor(ndim=3, dim0=batch, dim1=m, dim2=n).requires_grad_(True)
+        init_grad_a = random_tensor(len(shape_a), *shape_a).requires_grad_(True)
+        init_grad_b = random_tensor(len(shape_b), *shape_b).requires_grad_(True)
+        init_grad_y = random_tensor(len(shape_y), *shape_y).requires_grad_(True)
 
         da = torch.autograd.grad(
             outputs=y,

@@ -22,14 +22,14 @@ import oneflow as oneflow_origin
 
 
 def _test_broadcast_matmul_grad_b_grad_impl(test_case, placement):
-    batch = np.random.randint(1, 10) * 8
-    m = np.random.randint(1, 10) * 8
-    n = np.random.randint(1, 10) * 8
-    k = np.random.randint(1, 10) * 8
+    broadcast_dims = [np.random.randint(1, 5) * 8 for _ in range(2)]
+    m = np.random.randint(1, 5) * 8
+    n = np.random.randint(1, 5) * 8
+    k = np.random.randint(1, 5) * 8
 
-    a_shape = [batch, m, k]
+    a_shape = broadcast_dims + [m, k]
     b_shape = [k, n]
-    y_shape = [batch, m, n]
+    y_shape = broadcast_dims + [m, n]
 
     a = random_tensor(len(a_shape), *a_shape).to_global(
         placement=placement, sbp=random_sbp(placement, max_dim=2)
