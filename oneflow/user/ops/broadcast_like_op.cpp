@@ -27,10 +27,6 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
   int32_t x_num_axes = x_shape.NumAxes();
   int32_t like_num_axes = like_shape.NumAxes();
   const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("broadcast_axes");
-  if (x_num_axes != like_num_axes && (x_num_axes + reduced_axes.size() != like_num_axes)) {
-    return Error::RuntimeError() << "Can not broadcast shape " << x_shape.ToString() << " to "
-                                 << like_shape.ToString();
-  }
   HashSet<int32_t> conf_axes;
   ReduceSbpUtil::GetRegularAxes(like_num_axes, reduced_axes, &conf_axes);
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, like_num_axes);
@@ -47,7 +43,7 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
       ctx->NewBuilder()
           .Split(user_op::OpArg("x", 0), i - num_reduced_axis)
           .Split(user_op::OpArg("like", 0), i)
-          .Split(ctx->outputs(), i)
+          .Split(user_op::OpArg("y", 0), i)
           .Build();
     }
   }
