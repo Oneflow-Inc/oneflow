@@ -32,51 +32,63 @@ class PyFrameGetter final : public FrameGetter {
  public:
   void RecordCurrentFrame(int64_t id) override {
     if (IsShuttingDown()) { return; }
-    id %= frames_.max_size();
-    frames_[id].clear();
+    id2frames_[index_].first = id;
+    for (const auto& pair : id2frames_[index_].second) {
+      Py_DECREF(pair.first);
+    }
+    id2frames_[index_].second.clear();
     PyFrameObject* frame = PyEval_GetFrame();
     CHECK_NOTNULL(frame);
     Py_INCREF(frame);
     while (frame != nullptr) {
       int lineno = PyFrame_GetLineNumber(frame);
-      frames_[id].push_back(std::make_pair(frame, lineno));
+      id2frames_[index_].second.push_back(std::make_pair(frame, lineno));
       frame = frame->f_back;
     }
+    index_ = (index_ + 1) % id2frames_.max_size();
   }
   void Print(int64_t id) const override {
-    id %= frames_.max_size();
-    CHECK_JUST(Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
-      if (frames_[id].empty()) { return Maybe<void>::Ok(); }
-      FrameVector frame_and_no_vec = frames_.at(id);  // NOLINT
-      for (auto it = frame_and_no_vec.rbegin(); it != frame_and_no_vec.rend(); ++it) {
-        const auto& frame_and_no = *it;
-        PyFrameObject* frame = frame_and_no.first;
-        int lineno = frame_and_no.second;
-
+    auto PrintFrame = [](const FrameVector& frame_vec) {
+      for (const auto& pair : frame_vec) {
+        PyFrameObject* frame = pair.first;
+        int lineno = pair.second;
         const std::string filename = PyBytes_AS_STRING(
             PyUnicode_AsEncodedString(frame->f_code->co_filename, "utf-8", "~E~"));
         const std::string funcname =
             PyBytes_AS_STRING(PyUnicode_AsEncodedString(frame->f_code->co_name, "utf-8", "~E~"));
-        std::ifstream ifs(filename);
-        if (!ifs.is_open()) {
-          std::cout << "??? " << filename << std::endl;
-          return Maybe<void>::Ok();
-        }
-        std::string line_text;
-        for (int j = 0; j < lineno; ++j) {
-          std::getline(ifs, line_text);
-        }
-        line_text.erase(line_text.find_last_not_of(' ')+1);         //suffixing spaces
-        line_text.erase(0, line_text.find_first_not_of(' '));       //prefixing spaces
-        std::cout << "  File \"" << filename << "\", line " << lineno << ", in " << funcname << std::endl;
+        const std::string line_text = [&]() -> std::string {
+          std::string line_text;
+          std::ifstream ifs(filename);
+          if (!ifs.is_open()) { return "<unknown>"; }
+          for (int j = 0; j < lineno; ++j) { std::getline(ifs, line_text); }
+          line_text.erase(line_text.find_last_not_of(' ') + 1);  // suffixing spaces
+          line_text.erase(0, line_text.find_first_not_of(' '));  // prefixing spaces
+          return line_text;
+        }();
+        // immitate python's stack trace format
+        std::cout << "  File \"" << filename << "\", line " << lineno << ", in " << funcname
+                  << std::endl;
         std::cout << "    " << line_text << std::endl;
       }
+    };
+    // NOTE: intentionally not using CHECK_JUST here, because CHECK_JUST may also
+    // call current function (FrameGetter::Print) and cause infinite loop.
+    // NOLINTNEXTLINE
+    Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+      for (const auto& pair : id2frames_) {
+        if (pair.first == id) {
+          PrintFrame(pair.second);
+          return Maybe<void>::Ok();
+        }
+      }
+      std::cout << "  <unknown frames>" << std::endl;
       return Maybe<void>::Ok();
-    }));
+    });
   }
 
  private:
-  std::array<FrameVector, 5000> frames_;
+  std::array<std::pair<int64_t, FrameVector>, 5000> id2frames_;
+  int64_t index_ = 0;
 };
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
