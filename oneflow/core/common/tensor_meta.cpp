@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/common/tensor_meta.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 namespace one {
@@ -116,17 +117,22 @@ size_t GlobalTensorMeta::CalcHashValue() const {
 }
 
 bool IsContiguous(const Shape& shape, const Stride& stride) {
-  if (!shape.is_initialized() || shape.NumAxes() < 1 || shape.elem_cnt() <= 1) { return true; }
-  int64_t dim = shape.NumAxes();
+  if (!shape.is_initialized()) { return true; }
+  return IsContiguous(ShapeView(shape), stride);
+}
+
+bool IsContiguous(const ShapeView& shape_view, const Stride& stride) {
+  if (shape_view.NumAxes() < 1 || shape_view.elem_cnt() <= 1) { return true; }
+  int64_t dim = shape_view.NumAxes();
   int64_t expected_stride = 1;
   bool contig_if_nonempty = true;
   for (int64_t i = dim - 1; i >= 0; --i) {
     // Contiguous by default when any dim is equal to zero
     // https://stackoverflow.com/questions/31681324/identify-contiguous-segments-of-a-non-contiguous-numpy-array
-    if (shape.At(i) == 0) { return true; }
-    if (contig_if_nonempty && shape.At(i) != 1) {
+    if (shape_view.At(i) == 0) { return true; }
+    if (contig_if_nonempty && shape_view.At(i) != 1) {
       if (stride.at(i) != expected_stride) { contig_if_nonempty = false; }
-      expected_stride *= shape.At(i);
+      expected_stride *= shape_view.At(i);
     }
   }
   return contig_if_nonempty;

@@ -258,6 +258,16 @@ class TestSliceUpdate(flow.unittest.TestCase):
 
         test_case.assertTrue(np.array_equal(output.numpy(), np_out))
 
+    def test_slice_update_expand_value(test_case):
+        ref_np = np.random.rand(2, 3, 4)
+        ref_of = flow.tensor(ref_np)
+        update_np = np.random.rand(3,)
+        update_ref = flow.tensor(update_np)
+
+        ref_of[:, :, 1] = update_ref
+        ref_np[:, :, 1] = update_np
+        test_case.assertTrue(np.array_equal(ref_of.numpy(), ref_np))
+
 
 if __name__ == "__main__":
     unittest.main()
