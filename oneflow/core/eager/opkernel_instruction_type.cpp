@@ -112,7 +112,24 @@ struct LocalCallOpKernelUtil final {
                 dynamic_cast<vm::ThreadSafeAllocator*>(device_ctx->mut_allocator())) {
           if (auto* dtr_allocator =
                   dynamic_cast<vm::DtrCudaAllocator*>(thread_safe_allocator->backend_allocator())) {
-            dtr_allocator->left = !dtr_allocator->left;
+            const bool is_high_op = [&]() {
+              if (!EnvBool<OF_DTR_NLR>()) { return false; }
+              std::vector<std::string> high_compute_cost_names{"conv2d",           "conv_data_grad",
+                                                               "conv_filter_grad", "add_n",
+                                                               "matmul",           "batch_matmul"};
+              const std::string& name = operand->opkernel().op_type_name();
+              if (std::find(high_compute_cost_names.cbegin(), high_compute_cost_names.cend(), name)
+                  != high_compute_cost_names.cend()) {
+                return true;
+              }
+              return false;
+            }();
+            Global<dtr::TensorPool>::Get()->set_current_op_type_name(
+                operand->opkernel().op_type_name());
+            dtr_allocator->iterate_group_index(is_high_op);
+
+            Global<dtr::TensorPool>::Get()->set_current_op_type_name("");
+            // dtr_allocator->left = !dtr_allocator->left;
           } else {
             CHECK_OR_RETURN(false);
           }

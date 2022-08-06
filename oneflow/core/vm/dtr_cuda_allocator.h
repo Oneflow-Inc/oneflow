@@ -42,6 +42,8 @@ class DtrCudaAllocator final : public Allocator {
   void set_left(bool is_left) { left = is_left; }
   bool left = true;
 
+  size_t iterate_group_index(bool high) const;
+
  private:
   using offset_t = size_t;
 
@@ -63,12 +65,14 @@ class DtrCudaAllocator final : public Allocator {
 
   bool InSmallMemoryArea(void* ptr);
 
-  offset_t FindProperPositionInGroup(size_t group_idx, size_t request_size);
+  offset_t FindProperPositionInGroup(Piece* piece, size_t group_idx, size_t request_size) const;
 
   Piece* AllocateMemoryInPiece(Piece* piece, offset_t offset_in_piece, size_t size);
 
   void InsertToFreeList(Piece* piece);
   void EraseFromFreeList(Piece* piece);
+
+  void InitMemory();
 
   // Try find free Piece which size is larger than aligned_size
   // Return nullptr when find failure
@@ -102,10 +106,11 @@ class DtrCudaAllocator final : public Allocator {
   struct PieceCmp {
     bool operator()(const Piece* lhs, const Piece* rhs) const {
       if (lhs->size != rhs->size) { return lhs->size < rhs->size; }
-      return lhs->ptr < rhs->ptr;
+      // compare pointer by raw < or > is undefined behavior
+      return std::less<>{}(lhs->ptr, rhs->ptr);
     }
   };
-  std::set<Piece*, PieceCmp> free_pieces_;
+  std::vector<std::set<Piece*, PieceCmp>> free_pieces_overlapping_with_group_;
   // std::map is sorted by key, so we can find contiguous memory by it
   std::map<char*, Piece*> ptr2piece_;
   std::vector<std::tuple<size_t, int, int64_t>> search_free_mem_cost_;
@@ -114,8 +119,14 @@ class DtrCudaAllocator final : public Allocator {
   size_t total_deallocate_bytes_ = 0;
 
   // -----
-  // size_t group_num_;
-  // size_t cur_group_index_;
+  size_t normal_group_num_;
+  std::vector<size_t> group_indexes_;
+  mutable size_t cur_group_index_id_;
+  mutable size_t cur_group_index_id_high_cost_;
+  bool enable_left_and_right_;
+  std::vector<std::pair<offset_t, offset_t>> group_boundaries_;
+
+  size_t group_index(bool high) const;
 };
 
 }  // namespace vm
