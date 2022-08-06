@@ -67,6 +67,8 @@ struct TensorPool {
   std::set<vm::DTRInstrOperand*> operand_visited_;
   std::set<vm::DTREagerBlobObject*> need_eager_eviction_ebos_;
 
+  int num_forced_eviction() const { return num_forced_eviction_; }
+
   // TODO: Implementation of disjoint-set data structure
 
  private:

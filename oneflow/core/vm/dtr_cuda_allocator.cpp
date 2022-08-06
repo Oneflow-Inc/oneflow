@@ -335,7 +335,9 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceMegEngineStyle(size_
     return size;
   };
 
+  int i = 0;
   while (true) {
+    i++;
     double min_cost = std::numeric_limits<double>::max();
     vm::DTREagerBlobObject* min_tensor = nullptr;
     for (auto it = ptr2piece_.begin();
@@ -361,12 +363,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceMegEngineStyle(size_
   }
 }
 
-DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required_size) {
-  if (EnvBool<ONEFLOW_DTR_OPERATION_LOG>()) {
-    LOG(INFO) << "****"
-              << "START-EvictAndFindPiece" << std::endl;
-  }
-  if (dtr::debug_level() >= 2) { LOG(INFO) << "required size: " << required_size; }
+DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required_size, int64_t &tmp) {
   auto start = ptr2piece_.begin();
   auto end = ptr2piece_.begin();
   size_t total_size = 0;
@@ -374,19 +371,19 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required
   double min_cost = std::numeric_limits<double>::max();
   auto min_start = start;
   auto min_end = start;
+  std::vector<double> costs;
+  costs.reserve(ptr2piece_.size());
+  size_t start_i = 0;
+  size_t end_i = 0;
   while (end != ptr2piece_.end() && !InSmallMemoryArea(end->second->ptr)) {
     if (total_size < required_size) {
       auto* end_tensor = end->second->tensor;
       if (end_tensor != nullptr && (end_tensor->is_pinned() || !end_tensor->is_evictable())) {
-        if (dtr::debug_level() >= 2) {
-          LOG(INFO) << "skip tensor: " << end_tensor
-                    << ", size: " << end_tensor->blob_body_bytes_double() << ", compute op "
-                    << end_tensor->compute_op_type_name()
-                    << ", num_pinned: " << end_tensor->num_pinned()
-                    << ", is_evictable: " << end_tensor->is_evictable();
-        }
         end++;
+        costs.push_back(0);
+        end_i++;
         start = end;
+        start_i = end_i;
         total_size = 0;
         cost_except_size = 0;
         continue;
@@ -396,19 +393,15 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required
       if (end_tensor != nullptr) {
         const char* start_id = start->first;
         const char* end_id = end->first;
-        CHECK_JUST(Global<dtr::TensorPool>::Get()->update_after_pesudo_evict(end_tensor, start_id,
-                                                                             end_id));
+        // CHECK_JUST(Global<dtr::TensorPool>::Get()->update_after_pesudo_evict(end_tensor, start_id,
+        //                                                                      end_id));
       }
       int coeff = -1;
       auto cur_op_cost = get_cost(end_tensor, coeff);
+      costs.push_back(cur_op_cost);
       cost_except_size += cur_op_cost;
-      if (dtr::debug_level() >= 2) {
-        LOG(INFO) << "move end, include op: "
-                  << (end_tensor != nullptr ? end_tensor->compute_op_type_name() : "no tensor")
-                  << ", size: " << end->second->size << ", total_size: " << total_size
-                  << ", total cost: " << cost_except_size << ", cur op cost: " << cur_op_cost;
-      }
       end++;
+      end_i++;
     } else {
       auto* start_tensor = start->second->tensor;
       // const auto* start_tensor = start->second->tensor;
@@ -416,27 +409,22 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required
       // start_tensor is back in the pool, update_after_pesudo_compute
       int coeff = -1;
       if (start_tensor != nullptr) {
-        coeff = Global<dtr::TensorPool>::Get()->update_after_pesudo_compute(start_tensor);
+        // coeff = Global<dtr::TensorPool>::Get()->update_after_pesudo_compute(start_tensor);
       }
+      // auto cur_op_cost = costs[start_i];
       auto cur_op_cost = get_cost(start_tensor, coeff);
       cost_except_size -= cur_op_cost;
-      if (dtr::debug_level() >= 2) {
-        LOG(INFO) << "move start, exclude op: "
-                  << (start_tensor != nullptr ? start_tensor->compute_op_type_name() : "no tensor")
-                  << ", size: " << start->second->size << ", total_size: " << total_size
-                  << ", total cost: " << cost_except_size << ", cur op cost: " << cur_op_cost;
-      }
       start++;
+      start_i++;
     }
     double cost = cost_except_size;
-    if (EnvBool<ONEFLOW_DTR_HEURISTIC_WITH_SIZE>()) { cost /= total_size; }
     if (total_size >= required_size && cost < min_cost) {
       min_cost = cost;
       min_start = start;
       min_end = end;
-      if (dtr::debug_level() >= 2) { LOG(INFO) << "record, min_cost: " << min_cost; }
     }
   }
+  tmp = profiler::GetTimeNow();
   // CHECK(min_end != start);
   // collect piece ptrs into a new container, because evict() will devalidate the iterators
   std::vector<Piece*> pieces_to_be_evicted;
@@ -445,18 +433,6 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required
     pieces_to_be_evicted.push_back(piece);
   }
   for (auto* piece : pieces_to_be_evicted) {
-    if (dtr::is_enabled_and_debug()) {
-      int coeff = -1;
-      LOG(INFO) << "release dptr: " << get_offset(piece->ptr) << ", size: " << piece->size
-                << ", cost: " << get_cost(piece->tensor, coeff) << ", compute op: "
-                << (piece->tensor != nullptr ? piece->tensor->compute_op_type_name() : "no")
-                << ", id: "
-                << (piece->tensor != nullptr ? std::to_string(piece->tensor->id()) : "no");
-    }
-  }
-  size_t evict_size = 0;
-  for (auto* piece : pieces_to_be_evicted) {
-    evict_size += piece->size;
     // NOTE: evict will trigger the merge and deallocation of neighbour free pieces,
     // e.g. two contiguous pieces relu, no_tensor, after relu evict, no_tensor will be deallocated.
     // currently deallocation only set tensor to nullptr, not real free,
@@ -465,12 +441,6 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required
       CHECK(!ShouldBeHeldBySmallPiece(piece->size));
       CHECK_JUST(piece->tensor->evict(false));
     }
-  }
-  if (dtr::debug_level() >= 2) { LOG(INFO) << "evict size: " << evict_size; }
-
-  if (EnvBool<ONEFLOW_DTR_OPERATION_LOG>()) {
-    LOG(INFO) << "****"
-              << "END-EvictAndFindPiece" << std::endl;
   }
 
   if (!pieces_to_be_evicted.empty()) { return CHECK_NOTNULL(FindPiece(required_size, true)); }
@@ -494,17 +464,16 @@ void DtrCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
       first_time = false;
     }
     const auto started_at = profiler::GetTimeNow();
+    const int evict_num1 = Global<dtr::TensorPool>::Get()->num_forced_eviction();
+    int64_t tmp = 0;
     if (EnvBool<ONEFLOW_DTR_MEGENGINE_STYLE>()) {
       piece = EvictAndFindPieceMegEngineStyle(aligned_size);
     } else {
-      piece = EvictAndFindPieceOnce(aligned_size);
+      piece = EvictAndFindPieceOnce(aligned_size, tmp);
     }
+    const int evict_num2 = Global<dtr::TensorPool>::Get()->num_forced_eviction();
     const auto duration = profiler::GetTimeNow() - started_at;
-    if (search_free_mem_cost_.find(size) != search_free_mem_cost_.end()) {
-      search_free_mem_cost_[size] = (search_free_mem_cost_[size] + duration) / 2;
-    } else {
-      search_free_mem_cost_[size] = duration;
-    }
+    search_free_mem_cost_.emplace_back(size, evict_num2 - evict_num1, duration);
     if (EnvBool<ONEFLOW_DTR_RECORD_MEM_FRAG_RATE>()) {
       size_t free_mem = 0;
       for (const auto& pair : ptr2piece_) {
@@ -588,20 +557,7 @@ size_t DtrCudaAllocator::allocated_memory() {
 }
 
 nlohmann::json DtrCudaAllocator::DumpSearchFreeMemCost() {
-  std::vector<size_t> sizes;
-  std::vector<int64_t> costs;
-  for (const auto& x : search_free_mem_cost_) {
-    sizes.emplace_back(x.first);
-    costs.emplace_back(x.second);
-  }
-  return nlohmann::json{{
-                            "mem_size",
-                            sizes,
-                        },
-                        {
-                            "search_cost",
-                            costs,
-                        }};
+  return {{"overhead", search_free_mem_cost_}};
 }
 
 }  // namespace vm

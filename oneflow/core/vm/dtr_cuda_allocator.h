@@ -89,7 +89,7 @@ class DtrCudaAllocator final : public Allocator {
 
   void MergeNeighbourFreePiece(Piece* lhs, Piece* rhs);
 
-  Piece* EvictAndFindPieceOnce(size_t size);
+  Piece* EvictAndFindPieceOnce(size_t required_size, int64_t &tmp);
   Piece* EvictAndFindPieceMegEngineStyle(size_t size);
 
   int64_t device_id_;
@@ -108,7 +108,7 @@ class DtrCudaAllocator final : public Allocator {
   std::set<Piece*, PieceCmp> free_pieces_;
   // std::map is sorted by key, so we can find contiguous memory by it
   std::map<char*, Piece*> ptr2piece_;
-  std::map<size_t, int64_t> search_free_mem_cost_;
+  std::vector<std::tuple<size_t, int, int64_t>> search_free_mem_cost_;
   Piece* recycle_piece_list_;
   size_t total_allocate_bytes_ = 0;
   size_t total_deallocate_bytes_ = 0;
