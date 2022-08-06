@@ -43,6 +43,17 @@ inline bool ShouldBeHeldBySmallPiece(size_t size) {
   return EnvBool<ONEFLOW_DTR_SMALL_PIECE>() && size <= kSmallPieceThreshold;
 }
 
+std::vector<size_t> GroupNumToIndexes(size_t group_num) {
+  switch (group_num) {
+    case 1: return {0};
+    case 2: return {0, 1};
+    case 3: return {0, 1, 2};
+    case 4: return {0, 1, 3, 2};
+    case 6: return {3, 1, 0, 5, 4, 2};
+  }
+  UNIMPLEMENTED();
+}
+
 }  // namespace
 
 DtrCudaAllocator::DtrCudaAllocator(int64_t device_id)
@@ -50,10 +61,11 @@ DtrCudaAllocator::DtrCudaAllocator(int64_t device_id)
       device_id_(device_id),
       memory_size_(0),
       recycle_piece_list_(nullptr),
-      normal_group_num_(2),
-      group_indexes_({0, 1}),
-      cur_group_index_id_(0),
-      enable_left_and_right_(EnvBool<OF_DTR_LR>()) {
+      normal_group_num_(EnvInteger<ONEFLOW_DTR_GROUP_NUM>()),
+      group_indexes_(GroupNumToIndexes(normal_group_num_)),
+      cur_group_index_id_(EnvBool<OF_DTR_NLR>() && normal_group_num_ > 1 ? 1 : 0),
+      cur_group_index_id_high_cost_(0),
+      enable_left_and_right_(EnvBool<OF_DTR_LR>() && normal_group_num_ > 1) {
   free_pieces_overlapping_with_group_.resize(normal_group_num_ + 1);
 }
 
@@ -229,35 +241,15 @@ void DtrCudaAllocator::InsertToFreeList(Piece* piece) {
 
 void DtrCudaAllocator::EraseFromFreeList(Piece* piece) {
   LOG(INFO) << "erase " << get_offset(piece->ptr);
-  bool has1 = false;
-  size_t old_size = free_pieces_overlapping_with_group_[0].size();
-  for (const auto& x : free_pieces_overlapping_with_group_[0]) {
-    if (get_offset(x->ptr) == 1892852736) {
-      has1 = true;
-    }
-  }
-  bool hasxx = false;
-  for (auto& free_list : free_pieces_overlapping_with_group_) { 
+  // NOTE: very strange bug:
+  // std::map::erase(Key) returns 2 instead of 0 or 1, which conflicts with documentation.
+  for (auto& free_list : free_pieces_overlapping_with_group_) {
     for (auto it = free_list.begin(); it != free_list.end(); it++) {
       if ((*it)->ptr == piece->ptr) {
         free_list.erase(it);
-        hasxx = true;
         break;
       }
     }
-  }
-  if (!hasxx) {
-    LOG(FATAL) << "wrong!!! " << get_offset(piece->ptr);
-  }
-  bool has2 = false;
-  size_t new_size = free_pieces_overlapping_with_group_[0].size();
-  for (const auto& x : free_pieces_overlapping_with_group_[0]) {
-    if (get_offset(x->ptr) == 1892852736) {
-      has2 = true;
-    }
-  }
-  if (has1 && !has2 && get_offset(piece->ptr) != 1892852736) {
-    LOG(INFO) << "!!!!!!!!!! piece->ptr: " << get_offset(piece->ptr) << ", " << old_size << ", " << new_size;
   }
 }
 
@@ -315,13 +307,32 @@ auto DtrCudaAllocator::AllocateMemoryInPiece(Piece* piece, offset_t offset_in_pi
   return piece2;
 }
 
-size_t DtrCudaAllocator::iterate_group_index() const {
-  size_t index = group_indexes_[cur_group_index_id_];
-  cur_group_index_id_ = (cur_group_index_id_ + 1) % normal_group_num_;
-  return index;
+size_t DtrCudaAllocator::iterate_group_index(bool high) const {
+  auto is_high_group = [](size_t idx) -> bool { return (idx / 2) % 2 == (idx % 2); };
+  if (high) {
+    size_t index; // NOLINT
+    do {
+      cur_group_index_id_high_cost_ = (cur_group_index_id_high_cost_ + 1) % normal_group_num_;
+      index = group_indexes_[cur_group_index_id_high_cost_];
+    } while (!is_high_group(index));
+    return index;
+  } else {
+    size_t index; // NOLINT
+    do {
+      cur_group_index_id_ = (cur_group_index_id_ + 1) % normal_group_num_;
+      index = group_indexes_[cur_group_index_id_];
+    } while (EnvBool<OF_DTR_NLR>() && is_high_group(index));
+    return index;
+  }
 }
 
-size_t DtrCudaAllocator::group_index() const { return group_indexes_[cur_group_index_id_]; }
+size_t DtrCudaAllocator::group_index(bool high) const {
+  if (high) {
+    return group_indexes_[cur_group_index_id_high_cost_];
+  } else {
+    return group_indexes_[cur_group_index_id_];
+  }
+}
 
 void DtrCudaAllocator::InitMemory() {
   memory_size_ = dtr::memory_threshold();
@@ -335,7 +346,7 @@ void DtrCudaAllocator::InitMemory() {
   const size_t normal_area_size = memory_size_ - small_piece_area_size;
   small_piece_area_ptr_ = static_cast<char*>(memory_) + normal_area_size;
 
-  CHECK_EQ(normal_group_num_ % 2, 0);
+  if (enable_left_and_right_) { CHECK_EQ(normal_group_num_ % 2, 0); }
   const size_t effective_normal_group_num =
       enable_left_and_right_ ? normal_group_num_ / 2 : normal_group_num_;
   const std::vector<offset_t> boundary_tmp = [&]() {
@@ -373,26 +384,23 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size, bool a
 
   if (memory_ == nullptr) { InitMemory(); }
 
+  const bool is_high_op = [&]() {
+    if (!EnvBool<OF_DTR_NLR>()) { return false; }
+    std::vector<std::string> high_compute_cost_names{"conv2d", "conv_data_grad", "conv_filter_grad",
+                                                     "add_n",  "matmul",         "batch_matmul"};
+    const std::string& name = Global<dtr::TensorPool>::Get()->current_op_type_name();
+    PNT(name);
+    if (std::find(high_compute_cost_names.cbegin(), high_compute_cost_names.cend(), name)
+        != high_compute_cost_names.cend()) {
+      return true;
+    }
+    return false;
+  }();
+
   size_t group_idx = [&]() -> size_t {
     if (ShouldBeHeldBySmallPiece(aligned_size)) { return normal_group_num_; }
     // if (after_eviction) { return true; }
-    if (EnvBool<OF_DTR_NLR>()) {
-      // CHECK(ParseBooleanFromEnv("OF_DTR_HIGH_CONV", true));
-      // CHECK(ParseBooleanFromEnv("OF_DTR_HIGH_ADD_N", true));
-      std::vector<std::string> high_compute_cost_names{"conv2d", "conv_data_grad",
-                                                       "conv_filter_grad", "add_n", "matmul"};
-      const std::string& name = Global<dtr::TensorPool>::Get()->current_op_type_name();
-      PNT(name);
-      if (std::find(high_compute_cost_names.cbegin(), high_compute_cost_names.cend(), name)
-          != high_compute_cost_names.cend()) {
-        return 0;
-      }
-      return 1;
-
-    } else {
-      // left is updated in opkernel_instruction_type.cpp
-      return group_index();
-    }
+    return group_index(is_high_op);
   }();
   PNT(aligned_size);
   size_t iterate_num = 0;
@@ -418,7 +426,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size, bool a
     }
     // update group_idx only if this group fails
     // multiple outputs of a single op places in the same group
-    group_idx = iterate_group_index();
+    group_idx = iterate_group_index(is_high_op);
     iterate_num++;
   } while (!ShouldBeHeldBySmallPiece(aligned_size) && iterate_num < normal_group_num_);
 

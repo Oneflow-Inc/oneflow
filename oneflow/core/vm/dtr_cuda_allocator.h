@@ -40,7 +40,7 @@ class DtrCudaAllocator final : public Allocator {
   void set_left(bool is_left) { left = is_left; }
   bool left = true;
 
-  size_t iterate_group_index() const;
+  size_t iterate_group_index(bool high) const;
 
  private:
   using offset_t = size_t;
@@ -119,10 +119,11 @@ class DtrCudaAllocator final : public Allocator {
   size_t normal_group_num_;
   std::vector<size_t> group_indexes_;
   mutable size_t cur_group_index_id_;
+  mutable size_t cur_group_index_id_high_cost_;
   bool enable_left_and_right_;
   std::vector<std::pair<offset_t, offset_t>> group_boundaries_;
 
-  size_t group_index() const;
+  size_t group_index(bool high) const;
 };
 
 }  // namespace vm
