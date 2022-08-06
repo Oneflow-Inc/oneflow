@@ -32,7 +32,7 @@ struct DTRConfig {
   float memory_threshold;
   int debug_level;
   std::string heuristic;
-  DTRConfig(bool is_enabled, float memory_threshold, int debug_level, const std::string &heuristic)
+  DTRConfig(bool is_enabled, float memory_threshold, int debug_level, const std::string& heuristic)
       : is_enabled(is_enabled),
         memory_threshold(memory_threshold),
         debug_level(debug_level),

@@ -32,8 +32,7 @@ void AccessBlobArgCbPhyInstrOperand::ForEachConstMirroredObject(
 void AccessBlobArgCbPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(MirroredObject* compute)>& DoEach) const {
   if (eager_blob_object_->producer_stream().has_value()) {
-    DoEach(CHECK_JUST(eager_blob_object_->producer_stream())
-                        ->mut_schedule_local_dep_object());
+    DoEach(CHECK_JUST(eager_blob_object_->producer_stream())->mut_schedule_local_dep_object());
   }
   if (modifier_ == "mut") { DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object())); }
 }

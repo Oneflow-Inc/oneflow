@@ -28,7 +28,8 @@ namespace vm {
 class ConditionalAllocator final : public Allocator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConditionalAllocator);
-  ConditionalAllocator(std::function<bool()> condition, std::unique_ptr<Allocator> allocator1, std::unique_ptr<Allocator> allocator2);
+  ConditionalAllocator(std::function<bool()> condition, std::unique_ptr<Allocator> allocator1,
+                       std::unique_ptr<Allocator> allocator2);
   ~ConditionalAllocator() override = default;
 
   void Allocate(char** mem_ptr, std::size_t size) override;
@@ -46,4 +47,3 @@ class ConditionalAllocator final : public Allocator {
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_VM_CONDITIONAL_ALLOCATOR_H_
-

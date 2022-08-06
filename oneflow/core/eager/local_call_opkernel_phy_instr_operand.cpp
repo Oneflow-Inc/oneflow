@@ -27,7 +27,6 @@ Maybe<void> LocalCallOpKernelPhyInstrOperand::Init() {
   return Maybe<void>::Ok();
 }
 
-
 const ComposedAttrMap& LocalCallOpKernelPhyInstrOperand::composed_attrs() const {
   return *opkernel_->composed_attrs_for_scheduler_thread();
 }
@@ -86,46 +85,51 @@ void LocalCallOpKernelPhyInstrOperand::ForEachMut2MirroredObject(
 }
 
 DTRInstrOperand::DTRInstrOperand(
-      const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
-      const one::EagerBlobObjectListPtr& input, const one::EagerBlobObjectListPtr& output,
-      const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
-      const one::OpExprInterpContext& op_interp_ctx_,
-      const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
-      : opkernel_(opkernel),
-        consistent_tensor_infer_result_(consistent_tensor_infer_result),
-        op_interp_ctx_(op_interp_ctx_),
-        dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode) {
-        if (dtr::debug_level() >= 2) {
-          for (const auto &x : *input) {
-            for (const auto &y : *output) {
-              if (x.get() == y.get()) {
-                LOG(INFO) << "inplace!!!!" << std::endl;
-                LOG(INFO) << opkernel->user_op_conf_->op_type_name() << std::endl;
-              }
-            }
-          }
+    const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+    const one::EagerBlobObjectListPtr& input, const one::EagerBlobObjectListPtr& output,
+    const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
+    const one::OpExprInterpContext& op_interp_ctx_,
+    const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
+    : opkernel_(opkernel),
+      consistent_tensor_infer_result_(consistent_tensor_infer_result),
+      op_interp_ctx_(op_interp_ctx_),
+      dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode) {
+  if (dtr::debug_level() >= 2) {
+    for (const auto& x : *input) {
+      for (const auto& y : *output) {
+        if (x.get() == y.get()) {
+          LOG(INFO) << "inplace!!!!" << std::endl;
+          LOG(INFO) << opkernel->user_op_conf_->op_type_name() << std::endl;
         }
-    // inputs & outputs weak_ptr
-    inputs_ = std::vector<std::weak_ptr<vm::EagerBlobObject>>();
-    for (const auto& in : *input) { inputs_.emplace_back(in); }
-    outputs_ = std::vector<std::weak_ptr<vm::EagerBlobObject>>();
-    for (const auto& out : *output) { outputs_.emplace_back(out); }
-
-    if (opkernel->op_type_name() == "normalization") {
-      const OperatorConf op_conf = [&]() {
-        auto op_conf = opkernel_->user_op_conf_->op_conf();
-        op_conf.mutable_user_conf()->mutable_input()->erase("moving_mean");
-        op_conf.mutable_user_conf()->mutable_input()->erase("moving_variance");
-        return op_conf;
-      }();
-      const std::vector<std::string> input_indexed_bns = [&]() {
-        auto input_indexed_bns = opkernel_->input_arg_tuple()->indexed_bns();
-        input_indexed_bns.erase(std::remove(input_indexed_bns.begin(), input_indexed_bns.end(), "moving_mean"), input_indexed_bns.end());
-        return input_indexed_bns;
-      }();
-
-      opkernel_ = CHECK_JUST(one::StatefulLocalOpKernel::New(std::make_shared<OperatorConf>(op_conf), opkernel_->stream(), opkernel_->composed_attrs_for_scheduler_thread()->base_attr_map(), std::make_shared<const ArgTuple>(input_indexed_bns), opkernel_->output_arg_tuple()));
+      }
     }
   }
+  // inputs & outputs weak_ptr
+  inputs_ = std::vector<std::weak_ptr<vm::EagerBlobObject>>();
+  for (const auto& in : *input) { inputs_.emplace_back(in); }
+  outputs_ = std::vector<std::weak_ptr<vm::EagerBlobObject>>();
+  for (const auto& out : *output) { outputs_.emplace_back(out); }
+
+  if (opkernel->op_type_name() == "normalization") {
+    const OperatorConf op_conf = [&]() {
+      auto op_conf = opkernel_->user_op_conf_->op_conf();
+      op_conf.mutable_user_conf()->mutable_input()->erase("moving_mean");
+      op_conf.mutable_user_conf()->mutable_input()->erase("moving_variance");
+      return op_conf;
+    }();
+    const std::vector<std::string> input_indexed_bns = [&]() {
+      auto input_indexed_bns = opkernel_->input_arg_tuple()->indexed_bns();
+      input_indexed_bns.erase(
+          std::remove(input_indexed_bns.begin(), input_indexed_bns.end(), "moving_mean"),
+          input_indexed_bns.end());
+      return input_indexed_bns;
+    }();
+
+    opkernel_ = CHECK_JUST(one::StatefulLocalOpKernel::New(
+        std::make_shared<OperatorConf>(op_conf), opkernel_->stream(),
+        opkernel_->composed_attrs_for_scheduler_thread()->base_attr_map(),
+        std::make_shared<const ArgTuple>(input_indexed_bns), opkernel_->output_arg_tuple()));
+  }
+}
 }  // namespace vm
 }  // namespace oneflow

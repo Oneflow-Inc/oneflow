@@ -130,8 +130,8 @@ Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Stream(Symbol<Stream> stream)
   JUST(BuildOpConf(op_conf.get(), {}));
   op_conf->set_device_tag(stream->device()->type());
   auto parallel_desc = JUST(Placement4Device(stream->device())).shared_from_symbol();
-  const auto& opkernel = JUST(StatefulLocalOpKernel::New(
-      op_conf, stream, base_attrs(), input_arg_tuple(), output_arg_tuple()));
+  const auto& opkernel = JUST(StatefulLocalOpKernel::New(op_conf, stream, base_attrs(),
+                                                         input_arg_tuple(), output_arg_tuple()));
   stream2kernel_.emplace(stream, opkernel);
   return opkernel;
 }

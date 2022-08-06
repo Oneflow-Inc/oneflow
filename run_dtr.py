@@ -81,8 +81,14 @@ parser.add_argument(
     "--no-allocator", action=NegativeArgAction, env_var_name="OF_DTR_ALLO"
 )
 parser.add_argument("--nlr", action=PositiveArgAction, env_var_name="OF_DTR_NLR")
-parser.add_argument("--me-style", action=PositiveArgAction, env_var_name="ONEFLOW_DTR_MEGENGINE_STYLE")
-parser.add_argument("--with-size", action=PositiveArgAction, env_var_name="ONEFLOW_DTR_HEURISTIC_WITH_SIZE")
+parser.add_argument(
+    "--me-style", action=PositiveArgAction, env_var_name="ONEFLOW_DTR_MEGENGINE_STYLE"
+)
+parser.add_argument(
+    "--with-size",
+    action=PositiveArgAction,
+    env_var_name="ONEFLOW_DTR_HEURISTIC_WITH_SIZE",
+)
 parser.add_argument(
     "--high-conv", action=PositiveArgAction, env_var_name="OF_DTR_HIGH_CONV"
 )
@@ -90,6 +96,7 @@ parser.add_argument(
     "--high-add-n", action=PositiveArgAction, env_var_name="OF_DTR_HIGH_ADD_N"
 )
 parser.add_argument("--debug-level", type=int, default=0)
+parser.add_argument("--me-method", type=str, default="eq")
 parser.add_argument("--no-dataloader", action="store_true")
 
 args = parser.parse_args()
@@ -111,7 +118,8 @@ if args.allocator:
     heuristic = "eq_compute_time_and_last_access"
     # heuristic = "full_compute_time_and_last_access"
     if args.me_style:
-        heuristic = "eq"
+        heuristic = args.me_method
+
 else:
     heuristic = "eq"
 
@@ -130,6 +138,7 @@ setup_seed(20)
 enable_tensorboard = args.exp_id is not None
 if enable_tensorboard:
     from torch.utils.tensorboard import SummaryWriter
+
     writer = SummaryWriter("./tensorboard/" + args.exp_id)
 
 
@@ -190,9 +199,9 @@ def unet_info():
 
 
 def update_dataset(prof):
-    DATASET_FILENAME = '/home/dev/op_time_dataset.json'
+    DATASET_FILENAME = "/home/dev/op_time_dataset.json"
     if os.path.exists(DATASET_FILENAME):
-        with open(DATASET_FILENAME, 'r') as f:
+        with open(DATASET_FILENAME, "r") as f:
             time_dict = json.load(f)
     else:
         time_dict = {}
@@ -201,11 +210,13 @@ def update_dataset(prof):
     new_time_dict = {}
     for e in events:
         if isinstance(e, flow.profiler.events.KernelEvent):
-            new_time_dict[f"{e.name} {e.description['shape']} {e.description['attr']}"] = e.cuda_time
+            new_time_dict[
+                f"{e.name} {e.description['shape']} {e.description['attr']}"
+            ] = e.cuda_time
 
     time_dict.update(new_time_dict)
 
-    with open('/home/dev/op_time_dataset.json', 'w') as f:
+    with open("/home/dev/op_time_dataset.json", "w") as f:
         json.dump(time_dict, f)
 
 
@@ -238,8 +249,8 @@ optimizer = flow.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.0)
 if args.no_dataloader:
     global data
     global label
-    data = get_fixed_input(args.bs).to('cuda')
-    label = get_fixed_label(args.bs).to('cuda')
+    data = get_fixed_input(args.bs).to("cuda")
+    label = get_fixed_label(args.bs).to("cuda")
 
     class FixedDataset(flow.utils.data.Dataset):
         def __len__(self):
@@ -283,6 +294,7 @@ def run_iter(train_data, train_label):
     flow.comm.barrier()
     if args.allocator:
         flow._oneflow_internal.dtr.set_left(True)
+
 
 for iter, (train_data, train_label) in enumerate(train_data_loader):
     if iter >= WARMUP_ITERS or iter >= ALL_ITERS:

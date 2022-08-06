@@ -45,6 +45,18 @@ do
   ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --nlr --me-style
 done
 
+METHOD=me-style-mul-beta
+for threshold in "${array[@]}"
+do
+  ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --nlr --me-style --me-method eq_mul_beta
+done
+
+METHOD=me-style-div-beta
+for threshold in "${array[@]}"
+do
+  ONEFLOW_DTR_SUMMARY_FILE_PREFIX=$PREFIX-$METHOD-$threshold ONEFLOW_DISABLE_VIEW=1 python3 -u $SCRIPT_DIR/run_dtr.py $MODEL_NAME $BS ${threshold}mb $ITERS --no-dataloader --no-o-one --nlr --me-style --me-method eq_div_beta
+done
+
 METHOD=ours-with-size
 for threshold in "${array[@]}"
 do

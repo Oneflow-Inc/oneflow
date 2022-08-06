@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import oneflow as flow
 import oneflow.nn as nn
 from oneflow import Tensor
@@ -88,7 +103,7 @@ class Bottleneck(nn.Module):
         dilation: int = 1,
         norm_layer: Optional[Callable[..., nn.Module]] = None,
         fuse_bn_relu=False,
-        fuse_bn_add_relu=False
+        fuse_bn_add_relu=False,
     ) -> None:
         super(Bottleneck, self).__init__()
         self.fuse_bn_relu = fuse_bn_relu
@@ -123,7 +138,7 @@ class Bottleneck(nn.Module):
         identity = x
 
         out = self.conv1(x)
-        
+
         if self.fuse_bn_relu:
             out = self.bn1(out, None)
         else:
@@ -165,7 +180,7 @@ class ResNet(nn.Module):
         replace_stride_with_dilation: Optional[List[bool]] = None,
         norm_layer: Optional[Callable[..., nn.Module]] = None,
         fuse_bn_relu=False,
-        fuse_bn_add_relu=False
+        fuse_bn_add_relu=False,
     ) -> None:
         super(ResNet, self).__init__()
         if norm_layer is None:
@@ -258,7 +273,7 @@ class ResNet(nn.Module):
                 previous_dilation,
                 norm_layer,
                 fuse_bn_relu=self.fuse_bn_relu,
-                fuse_bn_add_relu=self.fuse_bn_add_relu
+                fuse_bn_add_relu=self.fuse_bn_add_relu,
             )
         )
         self.inplanes = planes * block.expansion
@@ -272,7 +287,7 @@ class ResNet(nn.Module):
                     dilation=self.dilation,
                     norm_layer=norm_layer,
                     fuse_bn_relu=self.fuse_bn_relu,
-                    fuse_bn_add_relu=self.fuse_bn_add_relu
+                    fuse_bn_add_relu=self.fuse_bn_add_relu,
                 )
             )
 

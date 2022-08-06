@@ -38,10 +38,8 @@ namespace vm {
 
 inline Allocator* GetAllocator(int64_t device_id) {
   if (EnvBool<OF_DTR>()) {
-    if (EnvBool<OF_DTR_ALLO>()) { 
-      if (!Global<DtrCudaAllocator>::Get()) {
-        Global<DtrCudaAllocator>::New(0);
-      }
+    if (EnvBool<OF_DTR_ALLO>()) {
+      if (!Global<DtrCudaAllocator>::Get()) { Global<DtrCudaAllocator>::New(0); }
       return Global<DtrCudaAllocator>::Get();
     }
     return new DtrNaiveCudaAllocator(device_id);
@@ -73,8 +71,7 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx, public SingleThreadQueryCuda
 
   ep::Stream* stream() override { return GetOrCreateCudaStream(); }
 
-  vm::Allocator* mut_allocator() override {
-    return cuda_allocator_.get(); }
+  vm::Allocator* mut_allocator() override { return cuda_allocator_.get(); }
 
   DeviceType device_type() const override { return DeviceType::kCUDA; }
 
