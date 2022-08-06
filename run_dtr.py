@@ -95,12 +95,15 @@ parser.add_argument(
 parser.add_argument(
     "--high-add-n", action=PositiveArgAction, env_var_name="OF_DTR_HIGH_ADD_N"
 )
+parser.add_argument("--group-num", type=int, required=True)
 parser.add_argument("--debug-level", type=int, default=0)
 parser.add_argument("--me-method", type=str, default="eq")
 parser.add_argument("--no-dataloader", action="store_true")
 
 args = parser.parse_args()
 assert not (args.me_style and args.with_size)
+
+os.environ["ONEFLOW_DTR_GROUP_NUM"] = str(args.group_num)
 
 if args.debug_level > 0:
     print(os.environ)
@@ -125,10 +128,13 @@ else:
 
 if args.dtr:
     print(
-        f"model_name: {args.model_name}, dtr_enabled: {args.dtr}, dtr_allo: {args.allocator}, threshold: {args.threshold}, batch size: {args.bs}, eager eviction: {args.ee}, left and right: {args.lr}, debug_level: {args.debug_level}, heuristic: {heuristic}, o_one: {args.o_one}, me_style: {args.me_style}, with_size: {args.with_size}"
+        f"model_name: {args.model_name}, dtr_enabled: {args.dtr}, dtr_allo: {args.allocator}, threshold: {args.threshold}, batch size: {args.bs}, eager eviction: {args.ee}, left and right: {args.lr}, debug_level: {args.debug_level}, heuristic: {heuristic}, o_one: {args.o_one}, me_style: {args.me_style}, with_size: {args.with_size}, group_num: {args.group_num}"
     )
 else:
     print(f"model_name: {args.model_name}, dtr_enabled: {args.dtr}")
+
+if args.nlr and not args.lr:
+    raise ValueError()
 
 if args.dtr:
     flow.enable_dtr(args.dtr, args.threshold, args.debug_level, heuristic)

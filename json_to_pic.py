@@ -69,11 +69,16 @@ model_name = sys.argv[1]
 def draw_from_files_and_draw(get_y, pic_name):
     _, ax = plt.subplots()
 
-    draw_from_file(ax, rf"{model_name}-ours-\d+.json", get_threshold_from_json_file, get_y, 'ours')
+    draw_from_file(ax, rf"{model_name}-ours-\d+.json", get_threshold_from_json_file, get_y, 'g2')
+    draw_from_file(ax, rf"{model_name}-ours-g4-\d+.json", get_threshold_from_json_file, get_y, 'g4')
+    draw_from_file(ax, rf"{model_name}-ours-g6-\d+.json", get_threshold_from_json_file, get_y, 'g6')
+    draw_from_file(ax, rf"{model_name}-ours-id-guided-\d+.json", get_threshold_from_json_file, get_y, 'g2i')
+    draw_from_file(ax, rf"{model_name}-ours-g4-id-guided-\d+.json", get_threshold_from_json_file, get_y, 'g4i')
+    draw_from_file(ax, rf"{model_name}-ours-g6-id-guided-\d+.json", get_threshold_from_json_file, get_y, 'g6i')
     # draw_from_file(ax, rf"{model_name}-ours-with-size-\d+.json", get_threshold_from_json_file, get_y, 'ours w/ size')
     # draw_from_file(ax, rf"{model_name}-raw-gp-\d+.json", get_threshold_from_json_file, get_y, 'raw grouping')
     # draw_from_file(ax, rf"{model_name}-raw-gp-size-\d+.json", get_threshold_from_json_file, get_y, 'raw grouping w/ size')
-    # draw_from_file(ax, rf"{model_name}-no-gp-\d+.json", get_threshold_from_json_file, get_y, 'no grouping')
+    draw_from_file(ax, rf"{model_name}-no-gp-\d+.json", get_threshold_from_json_file, get_y, 'no grouping')
     # draw_from_file(ax, rf"{model_name}-no-gp-size-\d+.json", get_threshold_from_json_file, get_y, 'no grouping w/ size')
     # draw_from_file(ax, rf"{model_name}-no-fbip-\d+.json", get_threshold_from_json_file, get_y, 'no fbip')
     # draw_from_file(ax, rf"{model_name}-no-fbip-size-\d+.json", get_threshold_from_json_file, get_y, 'no fbip w/ size')
@@ -86,7 +91,7 @@ def draw_from_files_and_draw(get_y, pic_name):
     ax.legend()
     plt.savefig(pic_name)
 
-draw_from_files_and_draw(get_theo_time_from_json_file, f'{model_name}-theo-time.png')
-draw_from_files_and_draw(get_real_time_from_json_file, f'{model_name}-real-time.png')
+# draw_from_files_and_draw(get_theo_time_from_json_file, f'{model_name}-theo-time.png')
+# draw_from_files_and_draw(get_real_time_from_json_file, f'{model_name}-real-time.png')
 draw_from_files_and_draw(get_mem_frag_rate_from_json_file, f'{model_name}-mem-frag.png')
 draw_from_files_and_draw(get_dataset_time_from_json_file, f'{model_name}-dataset-time.png')
