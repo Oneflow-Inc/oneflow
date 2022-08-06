@@ -3369,7 +3369,7 @@ def OneFlow_TensorScatterNdAddOp : OneFlow_BaseOp<"tensor_scatter_nd_add", [NoSi
   let has_input_arg_modify_fn = 1;
 }
 
-def OneFlow_TensorScatterNdUpdateOp : OneFlow_BaseOp<"tensor_scatter_nd_update", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TensorScatterNdUpdateOp : OneFlow_BaseOp<"tensor_scatter_nd_update", [NoSideEffect, SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$params,
     OneFlow_Tensor:$updates,
@@ -3797,8 +3797,8 @@ def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", [NoSideEf
 #endif // GET_ONEFLOW_LOSS_OP_DEFINITIONS
 
 // Group: MATH
-// abs_grad, ceil_grad, erf, erf_grad, exp, exp_grad, expand_grad, expm1, expm1_grad, floor_grad, floordiv_x_grad, floordiv_y_grad, lgamma, lgamma_grad, log, log1p, log1p_grad, log2_grad, log_grad, log_sigmoid, log_sigmoid_grad, negative_grad, reciprocal_grad, reciprocal_no_nan, reciprocal_no_nan_grad, rint_grad, round_grad, rsqrt, rsqrt_grad, sigmoid_v2, sigmoid_v2_grad, sign_grad, softplus, softplus_grad, softsign_grad, var, sqrt, sqrt_grad, square, square_grad, xlogy_x_grad, xlogy_y_grad, cumsum, erfinv, wkv, wkv_grad
-// Total: 46
+// abs_grad, ceil_grad, erf, erf_grad, exp, exp_grad, expand_grad, expm1, expm1_grad, floor_grad, floordiv_x_grad, floordiv_y_grad, lgamma, lgamma_grad, log, log1p, log1p_grad, log2_grad, log_grad, log_sigmoid, log_sigmoid_grad, negative_grad, reciprocal_grad, reciprocal_no_nan, reciprocal_no_nan_grad, rint_grad, round_grad, rsqrt, rsqrt_grad, sigmoid_v2, sigmoid_v2_grad, sign_grad, softplus, softplus_grad, softsign_grad, var, sqrt, sqrt_grad, square, square_grad, xlogy_x_grad, xlogy_y_grad, cumsum, erfinv
+// Total: 44
 
 #ifdef GET_ONEFLOW_MATH_OP_DEFINITIONS
 
@@ -10201,52 +10201,6 @@ def OneFlow_FusedGruCellGradOp : OneFlow_BaseOp<"fused_gru_cell_grad", [NoSideEf
   );
   let trait_attrs = (ins
     I32ElementsAttr:$result_segment_sizes
-  );
-  let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
-  let has_get_sbp_fn = 1;
-  let has_data_type_infer_fn = 1;
-}
-
-def OneFlow_WkvOp : OneFlow_BaseOp<"wkv", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    OneFlow_Tensor:$w,
-    OneFlow_Tensor:$u,
-    OneFlow_Tensor:$k,
-    OneFlow_Tensor:$v
-  );
-  let output = (outs
-    OneFlow_Tensor:$y
-  );
-  let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "0">:$B,
-    DefaultValuedAttr<SI64Attr, "0">:$T,
-    DefaultValuedAttr<SI64Attr, "0">:$C
-  );
-  let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
-  let has_get_sbp_fn = 1;
-  let has_data_type_infer_fn = 1;
-}
-
-def OneFlow_WkvGradOp : OneFlow_BaseOp<"wkv_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    OneFlow_Tensor:$w,
-    OneFlow_Tensor:$u,
-    OneFlow_Tensor:$k,
-    OneFlow_Tensor:$v,
-    OneFlow_Tensor:$gy
-  );
-  let output = (outs
-    OneFlow_Tensor:$gw,
-    OneFlow_Tensor:$gu,
-    OneFlow_Tensor:$gk,
-    OneFlow_Tensor:$gv
-  );
-  let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "0">:$B,
-    DefaultValuedAttr<SI64Attr, "0">:$T,
-    DefaultValuedAttr<SI64Attr, "0">:$C
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
