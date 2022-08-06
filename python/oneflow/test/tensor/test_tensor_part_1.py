@@ -563,16 +563,25 @@ class TestTensor(flow.unittest.TestCase):
         compare_setitem_with_numpy(x, se[1, :, 2], v)
 
     @flow.unittest.skip_unless_1n1d()
-    @autotest(n=5)
+    @autotest(n=5, auto_backward=False)
     def test_setitem_with_random_data(test_case):
         device = random_device()
-        x = random_tensor(low=0, high=0, ndim=1, dim0=16).to(device)
+        x = random_tensor(low=0, high=0, ndim=1, dim0=16, requires_grad=False).to(
+            device
+        )
         y = random_tensor(low=-2, high=2, ndim=1, dim0=16).to(device)
         idx = random_tensor(
             low=0, high=15, ndim=1, dim0=20, dtype=int, requires_grad=False
         ).to(device)
-        z = y[idx]
-        x[idx] = z
+
+        getitem_of = y.oneflow[idx.oneflow]
+        getitem_torch = y.pytorch[idx.pytorch]
+        test_case.assertTrue(
+            np.allclose(getitem_of.numpy(), getitem_torch.detach().cpu().numpy())
+        )
+
+        x.oneflow[idx.oneflow] = getitem_of
+        x.pytorch[idx.pytorch] = getitem_torch
         return x
 
     @flow.unittest.skip_unless_1n1d()
