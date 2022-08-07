@@ -60,6 +60,9 @@ class FunctionAutoGradCaptureState final
 
   std::shared_ptr<FunctionAutoGradCaptureState> GetSharedFromThis() { return shared_from_this(); }
 
+ public:
+  std::vector<bool> input_requires_grad;
+
  private:
   HashSet<Tensor*> non_differentiable_tensors_;
 };
@@ -158,6 +161,12 @@ class FunctionOpExprGradFunction final : public OpExprGradFunctionIf {
   Maybe<void> CaptureIf(AutoGradCaptureState* ctx, const TensorTuple& inputs,
                         const TensorTuple& outputs,
                         const OpExprInterpContext& interp_ctx) const override {
+    FunctionAutoGradCaptureState* func_ctx = dynamic_cast<FunctionAutoGradCaptureState*>(ctx);
+    func_ctx->input_requires_grad.resize(inputs.size());
+    for (int i = 0; i < inputs.size(); ++i) {
+      func_ctx->input_requires_grad[i] = false;
+      if (inputs.at(i)->requires_grad()) { func_ctx->input_requires_grad[i] = true; }
+    }
     // do nothing
     return Maybe<void>::Ok();
   }
@@ -169,7 +178,15 @@ class FunctionOpExprGradFunction final : public OpExprGradFunctionIf {
     CHECK_NOTNULL_OR_RETURN(func_ctx);
     const std::shared_ptr<TensorTuple>& out = backward_fn_(
         const_cast<FunctionAutoGradCaptureState*>(func_ctx)->GetSharedFromThis(), out_grads);
-    in_grads->assign(out->begin(), out->end());
+    // in_grads->assign(out->begin(), out->end());
+    in_grads->resize(func_ctx->input_requires_grad.size());
+    int idx = 0;
+    for (int i = 0; i < in_grads->size(); ++i) {
+      if (func_ctx->input_requires_grad[i]) {
+        in_grads->at(i) = out->at(idx);
+        idx++;
+      }
+    }
     return Maybe<void>::Ok();
   }
 

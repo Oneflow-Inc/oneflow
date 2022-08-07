@@ -483,6 +483,12 @@ class SyncBatchNormFunction(flow.autograd.Function):
         saved_input, weight, mean, invstd, count_tensor = self.saved_tensors
         grad_input = grad_weight = grad_bias = None
 
+        ############ for test
+        grad_input = flow.full(saved_input.shape, 1, device=saved_input.device)
+        grad_weight = flow.full(weight.shape, 2, device=saved_input.device)
+        grad_bias = flow.full(mean.shape, 3, device=saved_input.device)
+        ###################
+
         #     if saved_input.numel() > 0:
         #         # calculate local stats as well as grad_weight / grad_bias
         #         sum_dy, sum_dy_xmu, grad_weight, grad_bias = torch.batch_norm_backward_reduce(
@@ -542,7 +548,7 @@ class SyncBatchNormFunction(flow.autograd.Function):
         #         # Leave grad_input, grad_weight and grad_bias as None, which will be
         #         # interpreted by the autograd engine as Tensors full of zeros.
 
-        return grad_input, grad_weight, grad_bias, None, None
+        return grad_input, grad_weight, grad_bias
 
 
 class SyncBatchNorm(_BatchNorm):
