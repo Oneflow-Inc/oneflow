@@ -36,9 +36,11 @@ class CudaCommunicationContext : public CommunicationContext {
   void Init(Symbol<ParallelDesc>) override;
 
   ncclComm_t nccl_comm() const { return nccl_comm_; }
+  int64_t nccl_index4rank(int rank) const { return rank2nccl_index_.at(rank); }
 
  private:
   ncclComm_t nccl_comm_;
+  HashMap<int64_t, int64_t> rank2nccl_index_;
 };
 
 }  // namespace ccl
