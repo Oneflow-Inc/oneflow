@@ -245,6 +245,10 @@
   signature: "Tensor (Tensor dz, Tensor x, Tensor y) => FloorDivYGrad"
   bind_python: False
 
+- name: "trunc_divide"
+  signature: "Tensor (Tensor input, Tensor other) => TruncDiv"
+  bind_python: True
+
 - name: "xdivy_x_grad"
   signature: "Tensor (Tensor dz, Tensor x, Tensor y) => XdivyXGrad"
   bind_python: False

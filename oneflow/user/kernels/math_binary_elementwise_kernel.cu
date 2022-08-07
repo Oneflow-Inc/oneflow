@@ -114,14 +114,15 @@ class MathBinaryElementwiseYGradGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_KERNEL_AND_GRAD(math_type_pair, data_type_pair)   \
+#define REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_KERNEL(math_type_pair, data_type_pair)            \
   REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                                        \
       .SetCreateFn<                                                                             \
           MathBinaryElementwiseGpuKernel<OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor), \
                                          OF_PP_PAIR_FIRST(data_type_pair)>>()                   \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
-                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair))); \
-                                                                                                \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
+
+#define REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_GRAD_KERNEL(math_type_pair, data_type_pair)       \
   REGISTER_USER_KERNEL((std::string("") + OF_PP_PAIR_FIRST(math_type_pair) + "_x_grad"))        \
       .SetCreateFn<MathBinaryElementwiseXGradGpuKernel<                                         \
           OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor),                                \
@@ -135,11 +136,18 @@ class MathBinaryElementwiseYGradGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
                        && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
 
+#define REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_KERNEL_AND_GRAD(math_type_pair, data_type_pair) \
+  REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_KERNEL(math_type_pair, data_type_pair)                \
+  REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_GRAD_KERNEL(math_type_pair, data_type_pair)
+
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_KERNEL_AND_GRAD,
                                  MATH_BINARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ)
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_KERNEL_AND_GRAD,
                                  OF_PP_MAKE_TUPLE_SEQ("floordiv", FloorDiv),
                                  INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+    REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_KERNEL, OF_PP_MAKE_TUPLE_SEQ("truncdiv", TruncDiv),
+    INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ FLOATING_DATA_TYPE_SEQ)
 
 template<template<typename> class BinaryFunctor>
 class MathBinaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
@@ -219,25 +227,32 @@ class MathBinaryElementwiseYGradGpuHalfKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_HALF_KERNEL_AND_GRAD(math_type_str,              \
-                                                                   math_func_prefix)           \
+#define REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_HALF_KERNEL(math_type_str, math_func_prefix)     \
   REGISTER_USER_KERNEL(math_type_str)                                                          \
       .SetCreateFn<MathBinaryElementwiseGpuHalfKernel<OF_PP_CAT(math_func_prefix, Functor)>>() \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                         \
-                       && (user_op::HobDataType("x", 0) == DataType::kFloat16));               \
-                                                                                               \
-  REGISTER_USER_KERNEL((std::string("") + math_type_str + "_x_grad"))                          \
-      .SetCreateFn<                                                                            \
-          MathBinaryElementwiseXGradGpuHalfKernel<OF_PP_CAT(math_func_prefix, Functor)>>()     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                         \
-                       && (user_op::HobDataType("x", 0) == DataType::kFloat16));               \
-  REGISTER_USER_KERNEL((std::string("") + math_type_str + "_y_grad"))                          \
-      .SetCreateFn<                                                                            \
-          MathBinaryElementwiseYGradGpuHalfKernel<OF_PP_CAT(math_func_prefix, Functor)>>()     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                         \
                        && (user_op::HobDataType("x", 0) == DataType::kFloat16));
+
+#define REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_GRAD_HALF_KERNEL(math_type_str, math_func_prefix) \
+  REGISTER_USER_KERNEL((std::string("") + math_type_str + "_x_grad"))                           \
+      .SetCreateFn<                                                                             \
+          MathBinaryElementwiseXGradGpuHalfKernel<OF_PP_CAT(math_func_prefix, Functor)>>()      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
+                       && (user_op::HobDataType("x", 0) == DataType::kFloat16));                \
+  REGISTER_USER_KERNEL((std::string("") + math_type_str + "_y_grad"))                           \
+      .SetCreateFn<                                                                             \
+          MathBinaryElementwiseYGradGpuHalfKernel<OF_PP_CAT(math_func_prefix, Functor)>>()      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
+                       && (user_op::HobDataType("x", 0) == DataType::kFloat16));
+
+#define REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_HALF_KERNEL_AND_GRAD(math_type_str,    \
+                                                                   math_func_prefix) \
+  REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_HALF_KERNEL(math_type_str, math_func_prefix) \
+  REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_GRAD_HALF_KERNEL(math_type_str, math_func_prefix)
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_HALF_KERNEL_AND_GRAD,
                      MATH_BINARY_ELEMENTWISE_FUNC_SEQ)
+OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_CUDA_HALF_KERNEL,
+                     OF_PP_MAKE_TUPLE_SEQ("truncdiv", TruncDiv))
 
 }  // namespace oneflow

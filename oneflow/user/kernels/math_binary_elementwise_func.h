@@ -87,6 +87,17 @@ struct FloorDivFunctor {
 };
 
 template<typename T>
+struct TruncDivFunctor {
+  static OF_DEVICE_FUNC const T Forward(const T x, const T y) {
+#if defined(__CUDACC__)
+    return trunc(fdividef(x, y));
+#else
+    return std::trunc(x / y);
+#endif
+  }
+};
+
+template<typename T>
 struct XdivyFunctor {
   static OF_DEVICE_FUNC const T Forward(const T x, const T y) {
     if (T(0) == x) {
@@ -182,6 +193,13 @@ struct FloorDivFunctor<half> {
 
   static OF_HALF_FUNC const half BackwardYGrad(const half x, const half y, const half dz) {
     return GetZeroVal<half>();
+  }
+};
+
+template<>
+struct TruncDivFunctor<half> {
+  static OF_HALF_FUNC const half Forward(const half x, const half y) {
+    return htrunc(__hdiv(x, y));
   }
 };
 
