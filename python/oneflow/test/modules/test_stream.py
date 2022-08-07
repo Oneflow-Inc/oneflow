@@ -26,7 +26,7 @@ import oneflow.unittest
 @flow.unittest.skip_unless_1n1d()
 class TestMockModule(flow.unittest.TestCase):
     def test_tmp_compute_stream_type(test_case):
-        with flow.tmp_compute_stream_type():
+        with flow.tmp_compute_stream():
             test_case.assertEqual(flow.ones(1)[0], 1)
 
 

@@ -18,7 +18,7 @@ import contextlib
 
 
 @contextlib.contextmanager
-def tmp_compute_stream_type(stream_tag="default"):
+def tmp_compute_stream(stream_tag="default"):
     guard = oneflow._oneflow_internal.eager.TmpComputeStreamTypeGuard(stream_tag)
     yield
     del guard
