@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <atomic>
-#include "oneflow/core/common/frame_getter.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/device/event_record.h"
@@ -27,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/common/foreign_stack_getter.h"
 #include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/access_blob_arg_cb_instruction_policy.h"

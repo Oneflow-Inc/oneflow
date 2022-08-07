@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/error_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
-#include "oneflow/core/common/frame_getter.h"
+#include "oneflow/core/common/foreign_stack_getter.h"
 #include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
@@ -331,8 +331,8 @@ void ThrowError(const std::shared_ptr<StackedError>& error) {
       GetErrorString(error));
   fmt::print(std::cerr, str);
   if (!IsMainThread()) {
-    if (auto* frame_getter = Singleton<FrameGetter>::Get()) {
-      frame_getter->Print(GetCurrentInstructionIdThisThread());
+    if (auto* stack_getter = Singleton<ForeignStackGetter>::Get()) {
+      stack_getter->Print(GetCurrentInstructionIdThisThread());
     }
   }
   *MutThreadLocalError() = error;

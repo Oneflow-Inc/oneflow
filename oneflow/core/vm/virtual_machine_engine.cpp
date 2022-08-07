@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/common/env_var/vm.h"
-#include "oneflow/core/common/frame_getter.h"
+#include "oneflow/core/common/foreign_stack_getter.h"
 #include "oneflow/core/vm/caching_allocator.h"
 #include "oneflow/core/vm/fuse_instruction_policy.h"
 #include "oneflow/core/vm/release_tensor_instruction_policy.h"

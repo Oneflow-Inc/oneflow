@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_FRAME_GETTER_H
-#define ONEFLOW_CORE_COMMON_FRAME_GETTER_H
+#ifndef ONEFLOW_CORE_COMMON_FOREIGN_STACK_GETTER_H
+#define ONEFLOW_CORE_COMMON_FOREIGN_STACK_GETTER_H
 
 #include <cstdint>
 
@@ -37,13 +37,13 @@ inline int GetNextInstructionId() {
 }
 
 namespace oneflow {
-class FrameGetter {
+class ForeignStackGetter {
  public:
-  virtual ~FrameGetter() = default;
-  virtual void RecordCurrentFrame(int64_t id) = 0;
+  virtual ~ForeignStackGetter() = default;
+  virtual void RecordCurrentStack(int64_t id) = 0;
   virtual void Print(int64_t id) const = 0;
 };
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_FRAME_GETTER_H
+#endif  // ONEFLOW_CORE_COMMON_FOREIGN_STACK_GETTER_H
 

@@ -13,15 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/frame_getter.h"
-
 #include <Python.h>
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
-#include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/common/foreign_stack_getter.h"
 #include "fmt/core.h"
 #include "fmt/color.h"
 #include "fmt/ostream.h"
@@ -30,36 +28,35 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-using FrameVector = small_vector<std::pair<PyFrameObject*, int>, 10>;
+using Stack = small_vector<std::pair<PyFrameObject*, int>, 10>;
 
-// It's not thread safe because RecordCurrentFrame and Print can write and read
-// the same element of id2frames_arr_ concurrently.
-// But the chance is very little (1 / id2frames_arr_.max_size()), so we ignore
-// it in favor of performance.
-class PyFrameGetter final : public FrameGetter {
+class PyStackGetter final : public ForeignStackGetter {
  public:
-  void RecordCurrentFrame(int64_t id) override {
+  // "happy path", performance is important
+  void RecordCurrentStack(int64_t id) override {
     if (IsShuttingDown()) { return; }
 
     std::lock_guard<std::mutex> lock(mutex_);
-    auto& id2frames = id2frames_arr_[index_];
-    id2frames.first = id;
-    if (!id2frames.second.empty()) { Py_DECREF(id2frames.second[0].first); }
-    id2frames.second.clear();
+    auto& id2stack = id2stack_arr_[index_];
+    id2stack.first = id;
+    if (!id2stack.second.empty()) { Py_DECREF(id2stack.second[0].first); }
+    id2stack.second.clear();
     PyFrameObject* frame = PyEval_GetFrame();
     CHECK_NOTNULL(frame);
     Py_INCREF(frame);
     while (frame != nullptr) {
       int lineno = PyFrame_GetLineNumber(frame);
-      id2frames.second.emplace_back(frame, lineno);
+      id2stack.second.emplace_back(frame, lineno);
       frame = frame->f_back;
     }
-    index_ = (index_ + 1) % id2frames_arr_.max_size();
+    index_ = (index_ + 1) % id2stack_arr_.max_size();
   }
+
+  // "bad path", performance is not important
   void Print(int64_t id) const override {
     std::lock_guard<std::mutex> lock(mutex_);
-    auto PrintFrame = [](const FrameVector& frame_vec) {
-      for (const auto& pair : frame_vec) {
+    auto PrintStack = [](const Stack& stack) {
+      for (const auto& pair : stack) {
         PyFrameObject* frame = pair.first;
         int lineno = pair.second;
         const std::string filename = PyBytes_AS_STRING(
@@ -82,35 +79,35 @@ class PyFrameGetter final : public FrameGetter {
       }
     };
     // NOTE: intentionally not using CHECK_JUST here, because CHECK_JUST may also
-    // call current function (FrameGetter::Print) and cause infinite loop.
+    // call current function (StackGetter::Print) and cause infinite loop.
     // NOLINTNEXTLINE
     Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
-      for (const auto& pair : id2frames_arr_) {
+      const std::string str = fmt::format(fmt::emphasis::bold | fmt::fg(fmt::color::dark_orange),
+                                          "Related Python stack trace:\n");
+      fmt::print(std::cerr, str);
+      for (const auto& pair : id2stack_arr_) {
         if (pair.first == id) {
-          const std::string str = fmt::format(fmt::emphasis::bold | fmt::fg(fmt::color::dark_orange),
-                                              "Related Python stack trace:\n");
-          fmt::print(std::cerr, str);
-          PrintFrame(pair.second);
+          PrintStack(pair.second);
           return Maybe<void>::Ok();
         }
       }
-      std::cerr << "  <unknown frames>" << std::endl;
+      std::cerr << "  <unknown>" << std::endl;
       return Maybe<void>::Ok();
     });
   }
 
  private:
-  std::array<std::pair<int64_t, FrameVector>, 20000> id2frames_arr_;
+  std::array<std::pair<int64_t, Stack>, 20000> id2stack_arr_;
   int64_t index_ = 0;
   mutable std::mutex mutex_;
 };
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("RegisterFrameGetter", []() {
-    Singleton<FrameGetter>::Delete();
-    Singleton<FrameGetter>::SetAllocated(new PyFrameGetter());
+  m.def("RegisterStackGetter", []() {
+    Singleton<ForeignStackGetter>::Delete();
+    Singleton<ForeignStackGetter>::SetAllocated(new PyStackGetter());
   });
-  m.def("PrintFrame", [](int64_t id) { Singleton<FrameGetter>::Get()->Print(id); });
+  m.def("PrintStack", [](int64_t id) { Singleton<ForeignStackGetter>::Get()->Print(id); });
 }
 
 }  // namespace oneflow
