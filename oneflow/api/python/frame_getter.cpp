@@ -21,6 +21,10 @@ limitations under the License.
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
+#include "oneflow/core/profiler/profiler.h"
+#include "fmt/core.h"
+#include "fmt/color.h"
+#include "fmt/ostream.h"
 
 namespace py = pybind11;
 
@@ -28,26 +32,32 @@ namespace oneflow {
 
 using FrameVector = small_vector<std::pair<PyFrameObject*, int>, 10>;
 
+// It's not thread safe because RecordCurrentFrame and Print can write and read
+// the same element of id2frames_arr_ concurrently.
+// But the chance is very little (1 / id2frames_arr_.max_size()), so we ignore
+// it in favor of performance.
 class PyFrameGetter final : public FrameGetter {
  public:
   void RecordCurrentFrame(int64_t id) override {
     if (IsShuttingDown()) { return; }
-    id2frames_[index_].first = id;
-    for (const auto& pair : id2frames_[index_].second) {
-      Py_DECREF(pair.first);
-    }
-    id2frames_[index_].second.clear();
+
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto& id2frames = id2frames_arr_[index_];
+    id2frames.first = id;
+    if (!id2frames.second.empty()) { Py_DECREF(id2frames.second[0].first); }
+    id2frames.second.clear();
     PyFrameObject* frame = PyEval_GetFrame();
     CHECK_NOTNULL(frame);
     Py_INCREF(frame);
     while (frame != nullptr) {
       int lineno = PyFrame_GetLineNumber(frame);
-      id2frames_[index_].second.push_back(std::make_pair(frame, lineno));
+      id2frames.second.emplace_back(frame, lineno);
       frame = frame->f_back;
     }
-    index_ = (index_ + 1) % id2frames_.max_size();
+    index_ = (index_ + 1) % id2frames_arr_.max_size();
   }
   void Print(int64_t id) const override {
+    std::lock_guard<std::mutex> lock(mutex_);
     auto PrintFrame = [](const FrameVector& frame_vec) {
       for (const auto& pair : frame_vec) {
         PyFrameObject* frame = pair.first;
@@ -66,29 +76,33 @@ class PyFrameGetter final : public FrameGetter {
           return line_text;
         }();
         // immitate python's stack trace format
-        std::cout << "  File \"" << filename << "\", line " << lineno << ", in " << funcname
-                  << std::endl;
-        std::cout << "    " << line_text << std::endl;
+        const std::string str = fmt::format("  File \"{}\", line {}, in {}\n    {}\n", filename,
+                                            lineno, funcname, line_text);
+        fmt::print(std::cerr, str);
       }
     };
     // NOTE: intentionally not using CHECK_JUST here, because CHECK_JUST may also
     // call current function (FrameGetter::Print) and cause infinite loop.
     // NOLINTNEXTLINE
     Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
-      for (const auto& pair : id2frames_) {
+      for (const auto& pair : id2frames_arr_) {
         if (pair.first == id) {
+          const std::string str = fmt::format(fmt::emphasis::bold | fmt::fg(fmt::color::dark_orange),
+                                              "Related Python stack trace:\n");
+          fmt::print(std::cerr, str);
           PrintFrame(pair.second);
           return Maybe<void>::Ok();
         }
       }
-      std::cout << "  <unknown frames>" << std::endl;
+      std::cerr << "  <unknown frames>" << std::endl;
       return Maybe<void>::Ok();
     });
   }
 
  private:
-  std::array<std::pair<int64_t, FrameVector>, 5000> id2frames_;
+  std::array<std::pair<int64_t, FrameVector>, 20000> id2frames_arr_;
   int64_t index_ = 0;
+  mutable std::mutex mutex_;
 };
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {

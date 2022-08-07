@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <stdexcept>
+#include "fmt/core.h"
+#include "fmt/color.h"
+#include "fmt/ostream.h"
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/exception.h"
 #include "oneflow/core/common/protobuf.h"
@@ -21,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/common/error_util.h"
 #include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/common/frame_getter.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
@@ -322,8 +326,14 @@ std::string GetErrorString(const std::shared_ptr<StackedError>& error) {
 }
 
 void ThrowError(const std::shared_ptr<StackedError>& error) {
-  if (auto* frame_getter = Singleton<FrameGetter>::Get()) {
-    frame_getter->Print(GetCurrentInstructionIdThisThread());
+  const std::string str = fmt::format(
+      "{} {}\n", fmt::styled("Error:", fmt::emphasis::bold | fmt::fg(fmt::color::red)),
+      GetErrorString(error));
+  fmt::print(std::cerr, str);
+  if (!IsMainThread()) {
+    if (auto* frame_getter = Singleton<FrameGetter>::Get()) {
+      frame_getter->Print(GetCurrentInstructionIdThisThread());
+    }
   }
   *MutThreadLocalError() = error;
   if ((*error)->has_runtime_error()) { throw RuntimeException(GetErrorString(error)); }

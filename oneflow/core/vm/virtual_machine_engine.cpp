@@ -391,7 +391,6 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
   if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
   // Compute
   if (OnSchedulerThread(*stream)) {
-    std::cout << "instruction id: " << instruction->id() << std::endl;
     stream->stream_policy().Run(instruction);
   } else {
     stream->mut_thread_ctx()->mut_worker_pending_instruction_list()->PushBack(instruction);

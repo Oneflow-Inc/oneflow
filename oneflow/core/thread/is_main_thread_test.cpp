@@ -13,28 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/shut_down_util.h"
+#include <gtest/gtest.h>
+#include <thread>
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
+namespace test {
 
-namespace {
-
-std::atomic<bool>* GetShuttingDown() {
-  static std::atomic<bool> shutting_down{false};
-  return &shutting_down;
+TEST(IsMainThread, IsMainThread) {
+  EXPECT_TRUE(IsMainThread());
+  auto non_main_thread = std::thread([&]() { EXPECT_FALSE(IsMainThread()); });
+  non_main_thread.join();
 }
 
-}  // namespace
-
-bool IsShuttingDown() {
-  auto* shutting_down = GetShuttingDown();
-  bool is_interpreter_shutdown = shutting_down->load(std::memory_order_acquire);
-  return is_interpreter_shutdown;
-}
-
-void SetShuttingDown(bool arg_shutting_down) {
-  auto* shutting_down = GetShuttingDown();
-  shutting_down->store(arg_shutting_down, std::memory_order_release);
-}
-
+}  // namespace test
 }  // namespace oneflow
