@@ -37,10 +37,13 @@ struct CreateStreamPolicy final : public StreamTypeVisitor<CreateStreamPolicy> {
   static Maybe<vm::StreamPolicy> VisitHost2Device(Symbol<Device> device) {
     return std::shared_ptr<vm::StreamPolicy>(new vm::EventRecordedEpStreamPolicy(device));
   }
+  static Maybe<vm::StreamPolicy> VisitTmpHost2Device(Symbol<Device> device) {
+    return VisitHost2Device(device);
+  }
   static Maybe<vm::StreamPolicy> VisitDevice2Host(Symbol<Device> device) {
     return std::shared_ptr<vm::StreamPolicy>(new vm::EpD2HStreamPolicy(device));
   }
-  static Maybe<vm::StreamPolicy> VisitAsyncedDevice2Host(Symbol<Device> device) {
+  static Maybe<vm::StreamPolicy> VisitTmpDevice2Host(Symbol<Device> device) {
     return VisitDevice2Host(device);
   }
   static Maybe<vm::StreamPolicy> VisitSyncedLaunchedCommNet(Symbol<Device> device) {

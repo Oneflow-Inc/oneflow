@@ -13,29 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_STREAM_ON_INDEPENDENT_THREAD_H_
-#define ONEFLOW_CORE_FRAMEWORK_STREAM_ON_INDEPENDENT_THREAD_H_
+#ifndef ONEFLOW_CORE_VM_STREAM_TYPE_IS_TMP_H_
+#define ONEFLOW_CORE_VM_STREAM_TYPE_IS_TMP_H_
 
-#include <glog/logging.h>
 #include "oneflow/core/common/stream_type.h"
 
 namespace oneflow {
 
-struct StreamOnIndependentThread : public StreamTypeVisitor<StreamOnIndependentThread> {
+struct StreamTypeIsTmp final : public StreamTypeVisitor<StreamTypeIsTmp> {
   static bool VisitCompute() { return false; }
   static bool VisitHost2Device() { return false; }
-  static bool VisitTmpHost2Device() { return false; }
+  static bool VisitTmpHost2Device() { return true; }
   static bool VisitDevice2Host() { return false; }
-  static bool VisitTmpDevice2Host() { return false; }
+  static bool VisitTmpDevice2Host() { return true; }
   static bool VisitSyncedLaunchedCommNet() { return false; }
   static bool VisitAsyncedLaunchedCommNet() { return false; }
   static bool VisitBarrier() { return false; }
-  static bool VisitCriticalSection() { return true; }
-  static bool VisitLazyJobLauncher() { return true; }
-  static bool VisitPinnedCompute() { return VisitCompute(); }
-  static bool VisitTmpCompute() { return VisitCompute(); }
+  static bool VisitCriticalSection() { return false; }
+  static bool VisitLazyJobLauncher() { return false; }
+  static bool VisitPinnedCompute() { return false; }
+  static bool VisitTmpCompute() { return true; }
 };
-
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_STREAM_ON_INDEPENDENT_THREAD_H_
+#endif  // ONEFLOW_CORE_VM_STREAM_TYPE_IS_TMP_H_

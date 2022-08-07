@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <atomic>
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/framework/tmp_compute_stream_type_guard.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/device/event_record.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
@@ -358,6 +359,7 @@ Maybe<void> InstructionsBuilder::Call(
     vm::EagerBlobObjectList&& output_eager_blob_objects,
     const std::shared_ptr<const one::GlobalTensorInferResult>& global_tensor_infer_result,
     const one::OpExprInterpContext& ctx, Symbol<Stream> stream) {
+  stream = JUST(TmpComputeStreamTypeGuard::TryConvertToTmpCompute(stream));
   JUST(SoftSyncStream(output_eager_blob_objects, stream));
   JUST(SoftSyncStream(input_eager_blob_objects, stream));
   for (const auto& output : output_eager_blob_objects) {
@@ -641,6 +643,7 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(
   // `ndarray` may not be ones because instruction AccessBlobByCallback is prescheduled before
   // oneflow.ones actually finished.
   Symbol<Stream> stream = JUST(GetDefaultStreamByDevice(device));
+  stream = JUST(TmpComputeStreamTypeGuard::TryConvertToTmpCompute(stream));
   JUST(SoftSyncStream({eager_blob_object}, stream));
   auto instruction = intrusive::make_shared<vm::Instruction>(
       // Never replace `stream` with producer_stream or last_used_stream.

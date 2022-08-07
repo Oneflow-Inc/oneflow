@@ -27,8 +27,9 @@ namespace oneflow {
 struct GetStreamTypeName : public StreamTypeVisitor<GetStreamTypeName> {
   static const char* VisitCompute() { return "compute"; }
   static const char* VisitHost2Device() { return "h2d"; }
+  static const char* VisitTmpHost2Device() { return "tmp_h2d"; }
   static const char* VisitDevice2Host() { return "d2h"; }
-  static const char* VisitAsyncedDevice2Host() { return "asynced_d2h"; }
+  static const char* VisitTmpDevice2Host() { return "tmp_d2h"; }
   static const char* VisitSyncedLaunchedCommNet() { return "synced_launched_comm_net"; }
   static const char* VisitAsyncedLaunchedCommNet() { return "asynced_launched_comm_net"; }
   static const char* VisitBarrier() { return "barrier"; }

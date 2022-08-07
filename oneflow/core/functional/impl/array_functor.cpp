@@ -1479,7 +1479,7 @@ class CopyFunctor {
     JUST(attrs.SetAttr<std::string>("device_type", device_type));
     JUST(attrs.SetAttr<int64_t>("device_id", device_id));
     JUST(attrs.SetAttr<bool>("pin_memory", pin_memory));
-    JUST(attrs.SetAttr<bool>("asynced_copy", JUST(GetAsyncedCopy(*x))));
+    JUST(attrs.SetAttr<bool>("tmp_copy", JUST(GetTmpCopy(*x))));
 
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
@@ -1487,7 +1487,7 @@ class CopyFunctor {
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
-  Maybe<bool> GetAsyncedCopy(const one::Tensor& x) const {
+  Maybe<bool> GetTmpCopy(const one::Tensor& x) const {
     if (!x.is_eager()) { return false; }
     if (!x.is_local()) { return false; }
     const auto& eager_blob_object = JUST(x.eager_blob_object());

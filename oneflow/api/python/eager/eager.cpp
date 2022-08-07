@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
+#include "oneflow/core/framework/tmp_compute_stream_type_guard.h"
 
 ONEFLOW_API_PYBIND11_MODULE("eager", m) {
   using namespace oneflow;
@@ -32,4 +33,14 @@ ONEFLOW_API_PYBIND11_MODULE("eager", m) {
     return std::make_shared<one::DevVmDepObjectConsumeModeGuard>(
         one::DevVmDepObjectConsumeMode::NONE);
   });
+
+  py::class_<TmpComputeStreamTypeGuard, std::shared_ptr<TmpComputeStreamTypeGuard>>(
+      m, "TmpComputeStreamTypeGuard")
+      .def(py::init([](const Optional<std::string>& stream_tag) {
+        if (stream_tag.has_value()) {
+          return std::make_shared<TmpComputeStreamTypeGuard>(*CHECK_JUST(stream_tag));
+        } else {
+          return std::make_shared<TmpComputeStreamTypeGuard>();
+        }
+      }));
 }

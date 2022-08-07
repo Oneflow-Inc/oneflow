@@ -140,12 +140,17 @@ struct MakeReleaseTensorInstructionPolicy
       const Optional<vm::Stream*>& stream) {
     return Make(data_type, eager_blob_object, stream);
   }
+  static Maybe<vm::InstructionPolicy> VisitTmpHost2Device(
+      DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const Optional<vm::Stream*>& stream) {
+    return VisitHost2Device(data_type, eager_blob_object, stream);
+  }
   static Maybe<vm::InstructionPolicy> VisitDevice2Host(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     return Make(data_type, eager_blob_object, stream);
   }
-  static Maybe<vm::InstructionPolicy> VisitAsyncedDevice2Host(
+  static Maybe<vm::InstructionPolicy> VisitTmpDevice2Host(
       DataType data_type, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const Optional<vm::Stream*>& stream) {
     return VisitDevice2Host(data_type, eager_blob_object, stream);

@@ -32,25 +32,33 @@ class Stream final {
   ~Stream() = default;
 
   bool operator==(const Stream& that) const {
-    return this->device() == that.device() && this->stream_type() == that.stream_type();
+    return this->device() == that.device() && this->stream_type() == that.stream_type()
+           && this->stream_tag() == that.stream_tag();
   }
   bool operator!=(const Stream& that) const { return !(*this == that); }
 
-  static Maybe<Symbol<Stream>> New(Symbol<Device> device, StreamType stream_type);
+  static Maybe<Symbol<Stream>> New(Symbol<Device> device, StreamType stream_type) {
+    return New(device, stream_type, "");
+  }
+  static Maybe<Symbol<Stream>> New(Symbol<Device> device, StreamType stream_type,
+                                   const std::string& stream_tag);
 
   Symbol<Device> device() const { return device_; }
   StreamType stream_type() const { return stream_type_; }
+  const std::string& stream_tag() const { return stream_tag_; }
   size_t unique_stream_id() const { return unique_stream_id_; }
 
  private:
-  Stream(Symbol<Device> device, StreamType stream_type);
+  Stream(Symbol<Device> device, StreamType stream_type, const std::string& stream_tag);
 
-  static Maybe<Symbol<Stream>> RawNew(Symbol<Device> device, StreamType stream_type);
+  static Maybe<Symbol<Stream>> RawNew(Symbol<Device> device, StreamType stream_type,
+                                      const std::string& stream_tag);
 
   Maybe<void> Init(size_t unique_stream_id);
 
   Symbol<Device> device_;
   StreamType stream_type_;
+  std::string stream_tag_;
   size_t unique_stream_id_;
 };
 
@@ -66,7 +74,8 @@ struct hash<oneflow::Stream> final {
   size_t operator()(const oneflow::Stream& stream) const {
     using namespace oneflow;
     return std::hash<Symbol<Device>>()(stream.device())
-           ^ std::hash<StreamType>()(stream.stream_type());
+           ^ std::hash<StreamType>()(stream.stream_type())
+           ^ std::hash<std::string>()(stream.stream_tag());
   }
 };
 
