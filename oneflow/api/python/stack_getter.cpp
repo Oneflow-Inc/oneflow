@@ -53,9 +53,10 @@ class PyStackGetter final : public ForeignStackGetter {
   }
 
   // "bad path", performance is not important
-  void Print(int64_t id) const override {
+  std::string GetFormatted(int64_t id) const override {
     std::lock_guard<std::mutex> lock(mutex_);
-    auto PrintStack = [](const Stack& stack) {
+    auto GetFormattedStack = [](const Stack& stack) -> std::string {
+      std::string buffer;
       for (const auto& pair : stack) {
         PyFrameObject* frame = pair.first;
         int lineno = pair.second;
@@ -73,27 +74,24 @@ class PyStackGetter final : public ForeignStackGetter {
           return line_text;
         }();
         // immitate python's stack trace format
-        const std::string str = fmt::format("  File \"{}\", line {}, in {}\n    {}\n", filename,
-                                            lineno, funcname, line_text);
-        fmt::print(std::cerr, str);
+        fmt::format_to(std::back_inserter(buffer), "  File \"{}\", line {}, in {}\n    {}\n",
+                       filename, lineno, funcname, line_text);
       }
+      return buffer;
     };
+    std::string result = "  <unknown>\n";
     // NOTE: intentionally not using CHECK_JUST here, because CHECK_JUST may also
     // call current function (StackGetter::Print) and cause infinite loop.
     // NOLINTNEXTLINE
     Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
-      const std::string str = fmt::format(fmt::emphasis::bold | fmt::fg(fmt::color::dark_orange),
-                                          "Related Python stack trace:\n");
-      fmt::print(std::cerr, str);
       for (const auto& pair : id2stack_arr_) {
         if (pair.first == id) {
-          PrintStack(pair.second);
-          return Maybe<void>::Ok();
+          result = GetFormattedStack(pair.second);
         }
       }
-      std::cerr << "  <unknown>" << std::endl;
       return Maybe<void>::Ok();
     });
+    return result;
   }
 
  private:
@@ -107,7 +105,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
     Singleton<ForeignStackGetter>::Delete();
     Singleton<ForeignStackGetter>::SetAllocated(new PyStackGetter());
   });
-  m.def("PrintStack", [](int64_t id) { Singleton<ForeignStackGetter>::Get()->Print(id); });
 }
 
 }  // namespace oneflow

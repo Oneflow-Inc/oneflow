@@ -41,7 +41,7 @@ class ForeignStackGetter {
  public:
   virtual ~ForeignStackGetter() = default;
   virtual void RecordCurrentStack(int64_t id) = 0;
-  virtual void Print(int64_t id) const = 0;
+  virtual std::string GetFormatted(int64_t id) const = 0;
 };
 }  // namespace oneflow
 

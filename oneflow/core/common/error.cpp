@@ -326,20 +326,24 @@ std::string GetErrorString(const std::shared_ptr<StackedError>& error) {
 }
 
 void ThrowError(const std::shared_ptr<StackedError>& error) {
-  const std::string str = fmt::format(
-      "{} {}\n", fmt::styled("Error:", fmt::emphasis::bold | fmt::fg(fmt::color::red)),
-      GetErrorString(error));
-  fmt::print(std::cerr, str);
+  std::string error_str;
+  fmt::format_to(std::back_inserter(error_str), "{} {}\n",
+                 fmt::styled("Error:", fmt::emphasis::bold | fmt::fg(fmt::color::red)),
+                 GetErrorString(error));
   if (!IsMainThread()) {
     if (auto* stack_getter = Singleton<ForeignStackGetter>::Get()) {
-      stack_getter->Print(GetCurrentInstructionIdThisThread());
+      fmt::format_to(std::back_inserter(error_str),
+                     fmt::emphasis::bold | fmt::fg(fmt::color::dark_orange),
+                     "Related Python stack trace:\n");
+      fmt::format_to(std::back_inserter(error_str), "{}",
+                     stack_getter->GetFormatted(GetCurrentInstructionIdThisThread()));
     }
   }
   *MutThreadLocalError() = error;
-  if ((*error)->has_runtime_error()) { throw RuntimeException(GetErrorString(error)); }
-  if ((*error)->has_type_error()) { throw TypeException(GetErrorString(error)); }
-  if ((*error)->has_index_error()) { throw IndexException(GetErrorString(error)); }
-  if ((*error)->has_unimplemented_error()) { throw NotImplementedException(GetErrorString(error)); }
+  if ((*error)->has_runtime_error()) { throw RuntimeException(error_str); }
+  if ((*error)->has_type_error()) { throw TypeException(error_str); }
+  if ((*error)->has_index_error()) { throw IndexException(error_str); }
+  if ((*error)->has_unimplemented_error()) { throw NotImplementedException(error_str); }
   throw Exception(GetStackedErrorString(error));
 }
 
