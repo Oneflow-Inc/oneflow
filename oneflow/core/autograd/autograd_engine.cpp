@@ -220,7 +220,11 @@ Maybe<bool> FunctionNode::Apply(bool create_graph) {
   TensorTuple output_grads(output_meta_data_.size());
   for (int i = 0; i < output_meta_data_.size(); ++i) {
     if (output_meta_data_.at(i)->current_grad()->Empty()) {
+      // For some op, it will have some 'int' outputs which don't need grad at all.
+      // So, add this judgement to save time.
+      if(output_meta_data_.at(i)->requires_grad()){
       output_grads.at(i) = JUST(output_tensor_infos_.at(i).zeros());
+      }
     } else {
       const auto& hooks = JUST(oneflow::VectorAt(output_meta_data_, i))->hooks();
       JUST(oneflow::VectorAt(output_grads, i)) =
