@@ -313,14 +313,14 @@ auto DtrCudaAllocator::AllocateMemoryInPiece(Piece* piece, offset_t offset_in_pi
 size_t DtrCudaAllocator::iterate_group_index(bool high) const {
   auto is_high_group = [](size_t idx) -> bool { return (idx / 2) % 2 == (idx % 2); };
   if (high) {
-    size_t index; // NOLINT
+    size_t index;  // NOLINT
     do {
       cur_group_index_id_high_cost_ = (cur_group_index_id_high_cost_ + 1) % normal_group_num_;
       index = group_indexes_[cur_group_index_id_high_cost_];
     } while (!is_high_group(index));
     return index;
   } else {
-    size_t index; // NOLINT
+    size_t index;  // NOLINT
     do {
       cur_group_index_id_ = (cur_group_index_id_ + 1) % normal_group_num_;
       index = group_indexes_[cur_group_index_id_];
@@ -569,7 +569,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required
         cur_op_cost = costs[start_i];
       }
       cost_except_size -= cur_op_cost;
-            if (dtr::debug_level() >= 2) {
+      if (dtr::debug_level() >= 2) {
         LOG(INFO) << "move start, exclude op: "
                   << (start_tensor != nullptr ? start_tensor->compute_op_type_name() : "no tensor")
                   << ", size: " << start->second->size << ", total_size: " << total_size
