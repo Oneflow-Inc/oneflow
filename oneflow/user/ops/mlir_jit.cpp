@@ -36,7 +36,9 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferDataType(user_op::InferContext* ctx) {
+Maybe<void> InferDataTypeFn(user_op::InferContext* ctx) {
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
   *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
@@ -53,6 +55,6 @@ Maybe<void> MlirJitOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
 
 Maybe<void> MlirJitOp::GetSbp(user_op::SbpContext* ctx) { return GetSbpFn(ctx); }
 
-Maybe<void> MlirJitOp::InferDataType(user_op::InferContext* ctx) { return InferDataType(ctx); }
+Maybe<void> MlirJitOp::InferDataType(user_op::InferContext* ctx) { return InferDataTypeFn(ctx); }
 
 }  // namespace oneflow
