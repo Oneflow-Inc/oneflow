@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 #if defined(__CUDACC__)
 
 template<typename T>
@@ -32,6 +31,7 @@ using acc_type = typename AccumulateType<T>::type;
 
 constexpr int32_t MAX_BLOCK_SIZE = 512;
 constexpr unsigned MAX_GRID_SIZE = 65535u;
+#define WARP_SIZE 32
 
 // Number of threads in a block given an input size up to MAX_BLOCK_SIZE
 static int32_t getNumThreads(int64_t nElem) {
@@ -72,7 +72,5 @@ __device__ __forceinline__ T WARP_SHFL_XOR(T value, int laneMask, int width = wa
                                            unsigned int mask = 0xffffffff) {
   return __shfl_xor_sync(mask, value, laneMask, width);
 }
-
-#define WARP_SIZE 32
 
 #endif

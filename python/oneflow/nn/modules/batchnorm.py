@@ -483,71 +483,40 @@ class SyncBatchNormFunction(flow.autograd.Function):
         saved_input, weight, mean, invstd, count_tensor = self.saved_tensors
         grad_input = grad_weight = grad_bias = None
 
-        ############ for test
-        grad_input = flow.full(saved_input.shape, 1, device=saved_input.device)
-        grad_weight = flow.full(weight.shape, 2, device=saved_input.device)
-        grad_bias = flow.full(mean.shape, 3, device=saved_input.device)
-        ###################
+        channel_axis = 1
+        if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+            if saved_input.dim() == 3:
+                channel_axis = 2
+            elif saved_input.dim() == 4:
+                channel_axis = 3
+            elif saved_input.dim() == 5:
+                channel_axis = 4
 
-        #     if saved_input.numel() > 0:
-        #         # calculate local stats as well as grad_weight / grad_bias
-        #         sum_dy, sum_dy_xmu, grad_weight, grad_bias = torch.batch_norm_backward_reduce(
-        #             grad_output,
-        #             saved_input,
-        #             mean,
-        #             invstd,
-        #             weight,
-        #             self.needs_input_grad[0],
-        #             self.needs_input_grad[1],
-        #             self.needs_input_grad[2]
-        #         )
+        # calculate local stats as well as grad_weight / grad_bias
+        sum_dy, sum_dy_xmu, grad_weight, grad_bias = flow._C.batch_norm_backward_reduce(
+            grad_output, saved_input, mean, invstd, channel_axis
+        )
 
-        #         if self.needs_input_grad[0]:
-        #             # synchronizing stats used to calculate input gradient.
-        #             num_channels = sum_dy.shape[0]
-        #             combined = torch.cat([sum_dy, sum_dy_xmu], dim=0)
-        #             torch.distributed.all_reduce(
-        #                 combined, torch.distributed.ReduceOp.SUM, process_group, async_op=False)
-        #             sum_dy, sum_dy_xmu = torch.split(combined, num_channels)
+        # synchronizing stats used to calculate input gradient.
+        num_channels = sum_dy.shape[0]
+        combined = flow.cat([sum_dy, sum_dy_xmu], dim=0)
+        flow.comm.all_reduce(combined)
+        sum_dy, sum_dy_xmu = flow.split(combined, num_channels)
 
-        #             # backward pass for gradient calculation
-        #             grad_input = torch.batch_norm_backward_elemt(
-        #                 grad_output,
-        #                 saved_input,
-        #                 mean,
-        #                 invstd,
-        #                 weight,
-        #                 sum_dy,
-        #                 sum_dy_xmu,
-        #                 count_tensor
-        #             )
-        #         # synchronizing of grad_weight / grad_bias is not needed as distributed
-        #         # training would handle all reduce.
-        #         if weight is None or not self.needs_input_grad[1]:
-        #             grad_weight = None
-
-        #         if weight is None or not self.needs_input_grad[2]:
-        #             grad_bias = None
-        #     else:
-        #         # This process got an empty input tensor in the forward pass.
-        #         # Although this process can directly set grad_input as an empty
-        #         # tensor of zeros, it still needs to participate in the collective
-        #         # communication to unblock its peers, as other peer processes might
-        #         # have recieved non-empty inputs.
-        #         num_channels = saved_input.shape[1]
-        #         if self.needs_input_grad[0]:
-        #             # launch all_reduce to unblock other peer processes
-        #             combined = torch.zeros(
-        #                 2 * num_channels,
-        #                 dtype=saved_input.dtype,
-        #                 device=saved_input.device
-        #             )
-        #             torch.distributed.all_reduce(
-        #                 combined, torch.distributed.ReduceOp.SUM, process_group, async_op=False)
-
-        #         # Leave grad_input, grad_weight and grad_bias as None, which will be
-        #         # interpreted by the autograd engine as Tensors full of zeros.
-
+        # backward pass for gradient calculation
+        grad_input = flow._C.batch_norm_backward_elemt(
+            grad_output,
+            saved_input,
+            mean,
+            invstd,
+            weight,
+            sum_dy,
+            sum_dy_xmu,
+            count_tensor,
+            channel_axis,
+        )
+        # synchronizing of grad_weight / grad_bias is not needed as distributed
+        # training would handle all reduce.
         return grad_input, grad_weight, grad_bias
 
 

@@ -178,7 +178,6 @@ class FunctionOpExprGradFunction final : public OpExprGradFunctionIf {
     CHECK_NOTNULL_OR_RETURN(func_ctx);
     const std::shared_ptr<TensorTuple>& out = backward_fn_(
         const_cast<FunctionAutoGradCaptureState*>(func_ctx)->GetSharedFromThis(), out_grads);
-    // in_grads->assign(out->begin(), out->end());
     in_grads->resize(func_ctx->input_requires_grad.size());
     int idx = 0;
     for (int i = 0; i < in_grads->size(); ++i) {

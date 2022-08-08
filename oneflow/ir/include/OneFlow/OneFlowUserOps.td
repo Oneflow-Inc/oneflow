@@ -10274,4 +10274,50 @@ def OneFlow_BatchNormElemtOp : OneFlow_BaseOp<"batch_norm_elemt", [NoSideEffect,
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_BatchNormBackwardReduceOp : OneFlow_BaseOp<"batch_norm_backward_reduce", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$grad_out,
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$mean,
+    OneFlow_Tensor:$invstd
+  );
+  let output = (outs
+    OneFlow_Tensor:$sum_dy,
+    OneFlow_Tensor:$sum_dy_xmu,
+    OneFlow_Tensor:$grad_weight,
+    OneFlow_Tensor:$grad_bias
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "1">:$axis
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_BatchNormBackwardElemtOp : OneFlow_BaseOp<"batch_norm_backward_elemt", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$grad_out,
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$mean,
+    OneFlow_Tensor:$invstd,
+    OneFlow_Tensor:$weight,
+    OneFlow_Tensor:$sum_dy,
+    OneFlow_Tensor:$sum_dy_xmu,
+    OneFlow_Tensor:$count
+  );
+  let output = (outs
+    OneFlow_Tensor:$grad_in
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "1">:$axis
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+
 #endif // GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS
