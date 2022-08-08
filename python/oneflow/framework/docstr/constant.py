@@ -88,7 +88,7 @@ add_docstr(
     new_ones(x, size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
 
     The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.new_ones.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.Tensor.new_ones.html.
 
     Returns a Tensor of size size filled with 1. By default, the returned Tensor has the same oneflow.dtype and oneflow.device as this tensor.
 
@@ -121,7 +121,7 @@ add_docstr(
     empty(*size, *, dtype=None, device=None, placement=None, sbp=None, requires_grad=False, pin_memory=False) -> Tensor
 
     The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.new_ones.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.empty.html.
 
     Returns a tensor filled with uninitialized data.
     The shape of the tensor is defined by the variable argument ``size``.
