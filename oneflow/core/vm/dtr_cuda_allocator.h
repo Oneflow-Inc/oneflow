@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/env_var/dtr.h"
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/common/util.h"
+#include "nlohmann/json.hpp"
 
 namespace oneflow {
 
@@ -36,6 +37,7 @@ class DtrCudaAllocator final : public Allocator {
   void Deallocate(char* mem_ptr, std::size_t size) override;
   void Mark(DTREagerBlobObject* ebo, char* mem_ptr);
   void DisplayAllPieces();
+  nlohmann::json DumpSearchFreeMemCost();
   size_t allocated_memory();
   void set_left(bool is_left) { left = is_left; }
   bool left = true;
@@ -91,7 +93,7 @@ class DtrCudaAllocator final : public Allocator {
 
   void MergeNeighbourFreePiece(Piece* lhs, Piece* rhs);
 
-  Piece* EvictAndFindPieceOnce(size_t size);
+  Piece* EvictAndFindPieceOnce(size_t required_size);
   Piece* EvictAndFindPieceMegEngineStyle(size_t size);
 
   int64_t device_id_;
@@ -111,6 +113,7 @@ class DtrCudaAllocator final : public Allocator {
   std::vector<std::set<Piece*, PieceCmp>> free_pieces_overlapping_with_group_;
   // std::map is sorted by key, so we can find contiguous memory by it
   std::map<char*, Piece*> ptr2piece_;
+  std::vector<std::tuple<size_t, int, int64_t>> search_free_mem_cost_;
   Piece* recycle_piece_list_;
   size_t total_allocate_bytes_ = 0;
   size_t total_deallocate_bytes_ = 0;
