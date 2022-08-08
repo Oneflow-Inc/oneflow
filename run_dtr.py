@@ -174,6 +174,14 @@ def resnet50_info():
     return model, criterion, get_fixed_input, get_fixed_label, get_imagenet_imagefolder
 
 
+def resnet152_info():
+    model = models.resnet152()
+    criterion = nn.CrossEntropyLoss()
+    get_fixed_input = lambda bs: flow.ones(bs, 3, 224, 224)
+    get_fixed_label = lambda bs: flow.ones(bs, dtype=flow.int64)
+    return model, criterion, get_fixed_input, get_fixed_label, get_imagenet_imagefolder
+
+
 def densenet121_info():
     model = models.densenet121()
     criterion = nn.CrossEntropyLoss()
