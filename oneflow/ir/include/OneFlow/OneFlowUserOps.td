@@ -10188,8 +10188,8 @@ def OneFlow_FusedGruCellGradOp : OneFlow_BaseOp<"fused_gru_cell_grad", [NoSideEf
 include "mlir/Interfaces/CallInterfaces.td"
 
 def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpInterfaceMethods<UserOpCompatibleInterface> ] > {
-  let input = (ins Variadic<AnyType>:$data_input);
-  let output = (outs Variadic<AnyType>:$data_output);
+  let input = (ins Variadic<AnyType>:$in);
+  let output = (outs Variadic<AnyType>:$out);
   let attrs = (ins
     FlatSymbolRefAttr:$callee,
     StrAttr:$mlir_assembly
@@ -10197,8 +10197,8 @@ def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpI
   let builders = [
     OpBuilder<(ins "func::FuncOp":$callee,
       "NamedAttrList":$attributes,
-      CArg<"ValueRange", "{}">:$data_input), [{
-      $_state.addOperands(data_input);
+      CArg<"ValueRange", "{}">:$in), [{
+      $_state.addOperands(in);
       $_state.addAttributes(attributes);
       $_state.addAttribute("callee", SymbolRefAttr::get(callee));
       $_state.addTypes(callee.getFunctionType().getResults());
@@ -10216,7 +10216,7 @@ def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpI
     }
   }];
   let assemblyFormat = [{
-    $callee `(` $data_input `)` attr-dict `:` functional-type($data_input, results)
+    $callee `(` $in `)` attr-dict `:` functional-type($in, results)
   }];
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
