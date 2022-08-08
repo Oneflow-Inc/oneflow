@@ -50,6 +50,7 @@ limitations under the License.
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/stream_need_soft_sync.h"
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
+#include "oneflow/core/framework/stream_type_is_tmp.h"
 #include "oneflow/core/framework/stream_support_stream_wait.h"
 #include "oneflow/core/framework/stream_on_independent_thread.h"
 #include "oneflow/core/job/env_desc.h"
@@ -508,6 +509,8 @@ bool SupportingStreamWait(Symbol<Stream> from_stream, Symbol<Stream> to_stream) 
   return from_stream->device() == to_stream->device() && from_device_type == DeviceType::kCUDA
          && StreamSupportStreamWait::Visit(from_stream->stream_type(), from_device_type)
          && StreamSupportStreamWait::Visit(to_stream->stream_type(), to_device_type)
+         && (StreamTypeIsTmp::Visit(from_stream->stream_type())
+              == StreamTypeIsTmp::Visit(to_stream->stream_type()))
          && !StreamOnIndependentThread::Visit(from_stream->stream_type())
          && !StreamOnIndependentThread::Visit(to_stream->stream_type());
 }
