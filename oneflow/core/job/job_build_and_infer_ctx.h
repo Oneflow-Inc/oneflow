@@ -74,6 +74,7 @@ class JobBuildAndInferCtx {
 
   // NOTE(chengcheng): Only used in multi-client.
   Maybe<std::string> NewUniqueOpNameByFunctionalOpConf(const OperatorConf& op_conf);
+  Maybe<Operator*> Op4OpName(const std::string& op_name) const;
 
   virtual Maybe<void> Complete() = 0;
 
@@ -100,7 +101,6 @@ class JobBuildAndInferCtx {
   }
   Maybe<const SbpParallel*> SbpParallel4Lbi(const LogicalBlobId& lbi) const;
   bool IsVariableLbi(const LogicalBlobId& lbi) const;
-  Maybe<Operator*> Op4OpName(const std::string& op_name) const;
   Maybe<OpAttribute> AddAndInferOp(const OperatorConf& op_conf, const ParallelConf& parallel_conf,
                                    const JobDesc* job_desc, bool is_local_parallel_view);
 

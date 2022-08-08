@@ -20,8 +20,6 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_captured_tensor.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/framework/op_interpreter.h"
-#include "oneflow/core/framework/scope_util.h"
-#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
@@ -187,18 +185,16 @@ class OpExprGradClosure {
       : OpExprGradClosure(impl, impl->MakeCustomState()) {}
   explicit OpExprGradClosure(const std::shared_ptr<OpExprGradFunctionIf>& impl,
                              const std::shared_ptr<AutoGradCaptureState>& state)
-      : impl_(impl), state_(state), scope_(nullptr) {}
+      : impl_(impl), state_(state) {}
 
   virtual ~OpExprGradClosure() = default;
 
   Maybe<void> Capture(const TensorTuple& inputs, const TensorTuple& outputs,
                       const OpExprInterpContext& interp_ctx) const {
-    if (LazyMode::is_enabled()) { scope_ = JUST(GetCurrentScope()); }
     return impl_->CaptureIf(state_.get(), inputs, outputs, interp_ctx);
   }
 
   Maybe<void> Apply(const TensorTuple& out_grads, TensorTuple* in_grads) const {
-    BackwardPassScopeGuard scope_guard(scope_);
     return impl_->ApplyIf(state_.get(), out_grads, in_grads);
   }
 
@@ -207,7 +203,6 @@ class OpExprGradClosure {
  private:
   std::shared_ptr<OpExprGradFunctionIf> impl_;
   std::shared_ptr<AutoGradCaptureState> state_;
-  mutable std::shared_ptr<Scope> scope_;
 };
 
 #define REGISTER_OP_EXPR_GRAD_FUNCTION(op_type, op_grad) \

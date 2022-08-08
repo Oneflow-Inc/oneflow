@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/framework/tensor_methods.h"
+#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/functional/functional.h"
@@ -382,6 +383,7 @@ Maybe<void> GraphTask::Apply(bool save_grad_for_leaf) {
       node->ReleaseOutTensorArgs();
       continue;
     }
+    BackwardPassScopeGuard backward_guard(node->scope());
     if (/*bool not_ready_to_apply=*/!(JUST(node->Apply(create_graph_)))) { continue; }
     if (save_grad_for_leaf) { JUST(node->AccGrad4LeafTensor(create_graph_)); }
     JUST(node->AccGrad4RetainGradTensor());
@@ -456,6 +458,7 @@ Maybe<FunctionNode> GraphAutogradEngine::AddNode(
   for (const std::shared_ptr<Tensor>& out_tensor : *outputs) {
     out_tensor->set_grad_fn_node(func_node);
   }
+  if (LazyMode::is_enabled()) { func_node->set_scope(JUST(GetCurrentScope())); }
   OF_PROFILER_RANGE_POP();
   return func_node;
 }
@@ -472,6 +475,9 @@ Maybe<void> AddAccumulateFunctionNode(const std::shared_ptr<Tensor>& tensor) {
   backward_fn->status = []() { return false; };
   tensor->set_grad_fn_node(GraphFunctionNode::New(
       "accumulate_grad", backward_fn, /*inputs=*/TensorTuple{}, /*outputs*/ TensorTuple{tensor}));
+  if (LazyMode::is_enabled()) {
+    tensor->mut_grad_fn_node()->set_scope(JUST(GetTensorScope(tensor)));
+  }
   return Maybe<void>::Ok();
 }
 
