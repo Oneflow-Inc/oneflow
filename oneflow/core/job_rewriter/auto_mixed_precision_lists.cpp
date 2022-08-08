@@ -30,7 +30,8 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "fused_matmul_bias_add_relu_dropout",
                                "fused_dot_feature_interaction",
                                "embedding_lookup_placeholder",
-                               "binary_cross_entropy_with_logits_reduce_mean"};
+                               "binary_cross_entropy_with_logits_reduce_mean",
+                               "fused_cross_feature_interaction"};
   return white_list;
 }
 

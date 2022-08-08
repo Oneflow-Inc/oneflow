@@ -66,4 +66,28 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
+/* static */ Maybe<void> IsFiniteOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  *ctx->MutOutputShape("out", 0) = ctx->InputShape("in", 0);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> IsFiniteOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> IsFiniteOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
+  const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  for (int i = 0; i < in_tensor.shape().NumAxes(); ++i) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  }
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> IsFiniteOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->MutOutputDType("out", 0) = DataType::kBool;
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow
