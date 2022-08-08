@@ -472,9 +472,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceMegEngineStyle(size_
     return size;
   };
 
-  int i = 0;
   while (true) {
-    i++;
     double min_cost = std::numeric_limits<double>::max();
     vm::DTREagerBlobObject* min_tensor = nullptr;
     for (auto it = ptr2piece_.begin();
@@ -501,6 +499,11 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceMegEngineStyle(size_
 }
 
 DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required_size) {
+  if (EnvBool<ONEFLOW_DTR_OPERATION_LOG>()) {
+    LOG(INFO) << "****"
+              << "START-EvictAndFindPiece" << std::endl;
+  }
+  if (dtr::debug_level() >= 2) { LOG(INFO) << "required size: " << required_size; }
   auto start = ptr2piece_.begin();
   auto end = ptr2piece_.begin();
   size_t total_size = 0;
@@ -516,6 +519,13 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required
     if (total_size < required_size) {
       auto* end_tensor = end->second->tensor;
       if (end_tensor != nullptr && (end_tensor->is_pinned() || !end_tensor->is_evictable())) {
+        if (dtr::debug_level() >= 2) {
+          LOG(INFO) << "skip tensor: " << end_tensor
+                    << ", size: " << end_tensor->blob_body_bytes_double() << ", compute op "
+                    << end_tensor->compute_op_type_name()
+                    << ", num_pinned: " << end_tensor->num_pinned()
+                    << ", is_evictable: " << end_tensor->is_evictable();
+        }
         end++;
         costs.push_back(0);
         end_i++;
@@ -594,7 +604,9 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required
                 << (piece->tensor != nullptr ? std::to_string(piece->tensor->id()) : "no");
     }
   }
+  size_t evict_size = 0;
   for (auto* piece : pieces_to_be_evicted) {
+    evict_size += piece->size;
     // NOTE: evict will trigger the merge and deallocation of neighbour free pieces,
     // e.g. two contiguous pieces relu, no_tensor, after relu evict, no_tensor will be deallocated.
     // currently deallocation only set tensor to nullptr, not real free,
@@ -604,6 +616,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required
       CHECK_JUST(piece->tensor->evict(false));
     }
   }
+  if (dtr::debug_level() >= 2) { LOG(INFO) << "evict size: " << evict_size; }
 
   if (EnvBool<ONEFLOW_DTR_OPERATION_LOG>()) {
     LOG(INFO) << "****"
