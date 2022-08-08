@@ -151,7 +151,7 @@ Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph, const J
     // Get corresponding sbp node
     SbpNode* sbp_node = op_name2sbp_node_[op_node->op().op_name()];
     std::vector<OpNode*> output_node_list;
-    for (const auto op_edge : op_node->out_edges()) {
+    for (const auto* op_edge : op_node->out_edges()) {
       output_node_list.push_back(op_edge->dst_node());
     }
     auto_parallel::DecideOrder(output_node_list, output_order, comp_op_name);
@@ -181,7 +181,7 @@ Maybe<void> SbpConstructor::FillSbpSignatureForOpNode(const OpGraph& op_graph, c
     JUST(FindShape4Blobs(op_node->op().output_bns()));
     // Get logical blob description
     auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc&> {
-      auto it = ibn2blob_desc.find(ibn);
+      const auto& it = ibn2blob_desc.find(ibn);
       if (it == ibn2blob_desc.end()) {
         return Error::InvalidValueError()
                << "Cannot find corresponding blob description for input_blob_name : " + ibn + " in "
@@ -351,7 +351,7 @@ Maybe<HashMap<const OpNode*, HashSet<std::string>>> SbpConstructor::GetMutableOp
     }
     return false;
   };
-  auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
+  const auto& IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
   HashMap<const OpNode*, HashSet<std::string>> op_node2ctrl_in_op_names;
   JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
     if (op_node->op().op_conf().has_variable_conf() == false) { return Maybe<void>::Ok(); }
@@ -421,7 +421,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
     OpNode* op_node = node_list[order[i]];
     std::cout << op_node->op().op_name() << " (^_^):" << std::endl;
     // get corresponding sbp node
-    auto it = op_name2sbp_node_.find(op_node->op().op_name());
+    const auto& it = op_name2sbp_node_.find(op_node->op().op_name());
     // Print debug information for sbp graph
     CHECK(it != op_name2sbp_node_.end());
     const SbpNode* sbp_node = it->second;

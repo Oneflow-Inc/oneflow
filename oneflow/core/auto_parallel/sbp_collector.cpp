@@ -157,7 +157,7 @@ void SbpCollector::InitializeCopyCostFromNode2Proxy(const SbpNode* sbp_proxy,
   for (int32_t sbp_id_producer = 0; sbp_id_producer < sbp_node_producer->sbp_sig_list_.size();
        sbp_id_producer++) {
     // get sbp parallel for a logical blob in producer
-    const auto producer_sbp_bn_in_op2sbp_parallel =
+    const auto& producer_sbp_bn_in_op2sbp_parallel =
         sbp_node_producer->sbp_sig_list_[sbp_id_producer].bn_in_op2nd_sbp();
     const NdSbp& sbp_producer = producer_sbp_bn_in_op2sbp_parallel.at(obn);
 
@@ -216,7 +216,7 @@ void SbpCollector::InitializeCopyCostFromProxy2Consumer(
       // look through sbp signatures in consumers
       for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
         // get sbp parallel for a logical blob in consumer
-        const auto consumer_sbp_bn_in_op2sbp_parallel =
+        const auto& consumer_sbp_bn_in_op2sbp_parallel =
             sbp_node_consumer->sbp_sig_list_[sbp_id_consumer].bn_in_op2nd_sbp();
         const NdSbp& sbp_consumer = consumer_sbp_bn_in_op2sbp_parallel.at(ibn);
 
