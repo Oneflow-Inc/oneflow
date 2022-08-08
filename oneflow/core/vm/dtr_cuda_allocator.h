@@ -93,7 +93,7 @@ class DtrCudaAllocator final : public Allocator {
 
   void MergeNeighbourFreePiece(Piece* lhs, Piece* rhs);
 
-  Piece* EvictAndFindPieceOnce(size_t required_size, int64_t &tmp);
+  Piece* EvictAndFindPieceOnce(size_t required_size);
   Piece* EvictAndFindPieceMegEngineStyle(size_t size);
 
   int64_t device_id_;

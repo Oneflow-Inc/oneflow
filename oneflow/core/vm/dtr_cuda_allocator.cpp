@@ -500,7 +500,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceMegEngineStyle(size_
   }
 }
 
-DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required_size, int64_t &tmp) {
+DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required_size) {
   auto start = ptr2piece_.begin();
   auto end = ptr2piece_.begin();
   size_t total_size = 0;
@@ -527,16 +527,22 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required
       }
       total_size += end->second->size;
       // end_tensor is fakely evicted, update_after_pesudo_evict
-      if (end_tensor != nullptr) {
+      if (EnvBool<OF_DTR_O_ONE>() && end_tensor != nullptr) {
         const char* start_id = start->first;
         const char* end_id = end->first;
-        // CHECK_JUST(Global<dtr::TensorPool>::Get()->update_after_pesudo_evict(end_tensor, start_id,
-        //                                                                      end_id));
+        CHECK_JUST(Global<dtr::TensorPool>::Get()->update_after_pesudo_evict(end_tensor, start_id,
+                                                                             end_id));
       }
       int coeff = -1;
       auto cur_op_cost = get_cost(end_tensor, coeff);
       costs.push_back(cur_op_cost);
       cost_except_size += cur_op_cost;
+      if (dtr::debug_level() >= 2) {
+        LOG(INFO) << "move end, include op: "
+                  << (end_tensor != nullptr ? end_tensor->compute_op_type_name() : "no tensor")
+                  << ", size: " << end->second->size << ", total_size: " << total_size
+                  << ", total cost: " << cost_except_size << ", cur op cost: " << cur_op_cost;
+      }
       end++;
       end_i++;
     } else {
@@ -545,29 +551,48 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required
       total_size -= start->second->size;
       // start_tensor is back in the pool, update_after_pesudo_compute
       int coeff = -1;
-      if (start_tensor != nullptr) {
-        // coeff = Global<dtr::TensorPool>::Get()->update_after_pesudo_compute(start_tensor);
+      double cur_op_cost = 0;
+      if (EnvBool<OF_DTR_O_ONE>() && start_tensor != nullptr) {
+        coeff = Global<dtr::TensorPool>::Get()->update_after_pesudo_compute(start_tensor);
+        cur_op_cost = get_cost(start_tensor, coeff);
+      } else {
+        cur_op_cost = costs[start_i];
       }
-      // auto cur_op_cost = costs[start_i];
-      auto cur_op_cost = get_cost(start_tensor, coeff);
       cost_except_size -= cur_op_cost;
+            if (dtr::debug_level() >= 2) {
+        LOG(INFO) << "move start, exclude op: "
+                  << (start_tensor != nullptr ? start_tensor->compute_op_type_name() : "no tensor")
+                  << ", size: " << start->second->size << ", total_size: " << total_size
+                  << ", total cost: " << cost_except_size << ", cur op cost: " << cur_op_cost;
+      }
       start++;
       start_i++;
     }
     double cost = cost_except_size;
+    if (EnvBool<ONEFLOW_DTR_HEURISTIC_WITH_SIZE>()) { cost /= total_size; }
     if (total_size >= required_size && cost < min_cost) {
       min_cost = cost;
       min_start = start;
       min_end = end;
+      if (dtr::debug_level() >= 2) { LOG(INFO) << "record, min_cost: " << min_cost; }
     }
   }
-  tmp = profiler::GetTimeNow();
   // CHECK(min_end != start);
   // collect piece ptrs into a new container, because evict() will devalidate the iterators
   std::vector<Piece*> pieces_to_be_evicted;
   for (auto it = min_start; it != min_end; ++it) {
     Piece* piece = it->second;
     pieces_to_be_evicted.push_back(piece);
+  }
+  if (dtr::is_enabled_and_debug()) {
+    for (auto* piece : pieces_to_be_evicted) {
+      int coeff = -1;
+      LOG(INFO) << "release dptr: " << get_offset(piece->ptr) << ", size: " << piece->size
+                << ", cost: " << get_cost(piece->tensor, coeff) << ", compute op: "
+                << (piece->tensor != nullptr ? piece->tensor->compute_op_type_name() : "no")
+                << ", id: "
+                << (piece->tensor != nullptr ? std::to_string(piece->tensor->id()) : "no");
+    }
   }
   for (auto* piece : pieces_to_be_evicted) {
     // NOTE: evict will trigger the merge and deallocation of neighbour free pieces,
@@ -578,6 +603,11 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPieceOnce(size_t required
       CHECK(!ShouldBeHeldBySmallPiece(piece->size));
       CHECK_JUST(piece->tensor->evict(false));
     }
+  }
+
+  if (EnvBool<ONEFLOW_DTR_OPERATION_LOG>()) {
+    LOG(INFO) << "****"
+              << "END-EvictAndFindPiece" << std::endl;
   }
 
   if (!pieces_to_be_evicted.empty()) { return CHECK_NOTNULL(FindPiece(required_size, true)); }
@@ -602,11 +632,10 @@ void DtrCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
     }
     const auto started_at = profiler::GetTimeNow();
     const int evict_num1 = Global<dtr::TensorPool>::Get()->num_forced_eviction();
-    int64_t tmp = 0;
     if (EnvBool<ONEFLOW_DTR_MEGENGINE_STYLE>()) {
       piece = EvictAndFindPieceMegEngineStyle(aligned_size);
     } else {
-      piece = EvictAndFindPieceOnce(aligned_size, tmp);
+      piece = EvictAndFindPieceOnce(aligned_size);
     }
     const int evict_num2 = Global<dtr::TensorPool>::Get()->num_forced_eviction();
     const auto duration = profiler::GetTimeNow() - started_at;
