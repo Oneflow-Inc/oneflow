@@ -115,11 +115,12 @@ Maybe<void> TensorLayoutProcessor::Apply() {
     if (outputs_) {
       size_t len = std::min(inputs_.size(), outputs_->size());
       for (int i = 0; i < len; ++i) {
-        // only requires the inplaced input be contiguous
-        CHECK_OR_RETURN((*outputs_)[i] != inputs_[i] || inputs_[i]->is_contiguous())
-            << Error::RuntimeError()
-            << "inplace operation is not allowed if input is non-contiguous and non-contiguous is "
-               "not supported for this operation";
+        // inplace operation is not allowed if input is non-contiguous and non-contiguous is
+        // not supported for this operation
+        if ((*outputs_)[i] == inputs_[i] && !inputs_[i]->is_contiguous()) {
+          (*outputs_)[i] = nullptr;
+          post_process_output_indices_.emplace_back(i);
+        }
       }
     }
     contiguous_inputs_.resize(inputs_.size());
@@ -127,6 +128,14 @@ Maybe<void> TensorLayoutProcessor::Apply() {
     converted_ = true;
   }
   return Maybe<void>::Ok();
+}
+
+TensorLayoutProcessor::~TensorLayoutProcessor() {
+  for (int i : post_process_output_indices_) {
+    functional::TensorIndex ellipsis_index;
+    ellipsis_index.emplace_back(functional::detail::EllipsisIndex());
+    CHECK_JUST(functional::TensorSetItem(inputs_[i], ellipsis_index, (*outputs_)[i]));
+  }
 }
 
 }  // namespace functional

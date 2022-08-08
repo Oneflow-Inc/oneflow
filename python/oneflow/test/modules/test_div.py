@@ -134,6 +134,14 @@ class TestDiv(flow.unittest.TestCase):
         z = x / y
         return z
 
+    @autotest(n=3)
+    def test_non_contiguous_inplace_div(test_case):
+        device = random_device()
+        x = random_tensor(2, 4).to(device)
+        x = x[:, 1:3]
+        x /= random_tensor(2, 2).to(device)
+        return x
+
 
 if __name__ == "__main__":
     unittest.main()
