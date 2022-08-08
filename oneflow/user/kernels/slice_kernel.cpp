@@ -440,6 +440,9 @@ REGISTER_SLICE_KERNEL_WITH_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_SLICE_KERNEL_WITH_DEVICE(DeviceType::kCUDA)
 REGISTER_SLICE_KERNEL(DeviceType::kCUDA, float16)
+#if CUDA_VERSION >= 11000
+REGISTER_SLICE_KERNEL(DeviceType::kCUDA, nv_bfloat16)
+#endif
 #endif
 
 }  // namespace oneflow

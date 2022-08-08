@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 namespace one {
