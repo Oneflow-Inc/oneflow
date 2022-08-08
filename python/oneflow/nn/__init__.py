@@ -95,6 +95,9 @@ from oneflow.nn.modules.dataset import (
 )
 
 from oneflow.nn.modules.dropout import Dropout
+from oneflow.nn.modules.dropout import Dropout as Dropout1d
+from oneflow.nn.modules.dropout import Dropout as Dropout2d
+from oneflow.nn.modules.dropout import Dropout as Dropout3d
 from oneflow.nn.modules.flatten import Flatten
 from oneflow.nn.modules.instancenorm import (
     InstanceNorm1d,
