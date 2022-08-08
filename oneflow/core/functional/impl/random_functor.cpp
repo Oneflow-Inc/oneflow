@@ -55,7 +55,32 @@ class BernoulliFunctor {
     JUST(bernoulli_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    // p == -1 means bernoulli op doesn't use p to generate random number
+    JUST(bernoulli_attrs.SetAttr<double>("p", -1.0));
+    return OpInterpUtil::Dispatch<Tensor>(*bernoulli_op_, {x},
+                                          OpExprInterpContext(bernoulli_attrs, distribution_state));
+  }
 
+ private:
+  std::shared_ptr<OpExpr> bernoulli_op_;
+};
+
+class BernoulliProbFunctor {
+ public:
+  BernoulliProbFunctor() {
+    bernoulli_op_ = CHECK_JUST(one::OpBuilder("bernoulli").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& p,
+                           const Symbol<DType>& dtype,
+                           const Optional<one::Generator>& generator) const {
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    MutableAttrMap bernoulli_attrs;
+    JUST(bernoulli_attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    JUST(bernoulli_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    CHECK_OR_THROW(p >= 0.0 && p <= 1.0) << "bernoulli expects p to be in [0, 1], but got p=" << p;
+    JUST(bernoulli_attrs.SetAttr<double>("p", p));
     return OpInterpUtil::Dispatch<Tensor>(*bernoulli_op_, {x},
                                           OpExprInterpContext(bernoulli_attrs, distribution_state));
   }
@@ -423,6 +448,7 @@ using namespace impl;
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<BernoulliFunctor>("Bernoulli");
+  m.add_functor<BernoulliProbFunctor>("Bernoulli");
   m.add_functor<RandPermFunctor>("RandPerm");
   m.add_functor<GlobalRandPermFunctor>("GlobalRandPerm");
   m.add_functor<RandFunctor>("Rand");
