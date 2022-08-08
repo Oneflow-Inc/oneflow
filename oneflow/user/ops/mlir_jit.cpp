@@ -39,8 +39,6 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
 Maybe<void> InferDataTypeFn(user_op::InferContext* ctx) {
   *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
-  return Maybe<void>::Ok();
 }
 
 }  // namespace
