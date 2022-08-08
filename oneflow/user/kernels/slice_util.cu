@@ -16,6 +16,9 @@ limitations under the License.
 #include "oneflow/user/kernels/slice_util.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#if CUDA_VERSION >= 11000
+#include <cuda_bf16.h>
+#endif  // CUDA_VERSION >= 11000
 
 namespace oneflow {
 
@@ -227,5 +230,8 @@ struct SliceKernelUtil<DeviceType::kCUDA, T> {
 
 INSTANTIATE_SLICE_KERNEL_UTIL_WITH_DEVICE(DeviceType::kCUDA)
 INSTANTIATE_SLICE_KERNEL_UTIL(DeviceType::kCUDA, float16)
+#if CUDA_VERSION >= 11000
+INSTANTIATE_SLICE_KERNEL_UTIL(DeviceType::kCUDA, nv_bfloat16)
+#endif
 
 }  // namespace oneflow

@@ -715,6 +715,10 @@
     ]
   bind_python: True
 
+- name: "eye_"
+  signature: "Tensor (Tensor x) => EyeInplace"
+  bind_python: True
+
 - name: "erfinv"
   signature: "Tensor (Tensor x) => Erfinv"
   bind_python: True

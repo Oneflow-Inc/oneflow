@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COLLECTIVE_COMMUNICATION_H_
-#define ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COLLECTIVE_COMMUNICATION_H_
+#ifndef ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COLLECTIVE_COMMUNICATION_H_
+#define ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COLLECTIVE_COMMUNICATION_H_
 
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/common/switch_func.h"
@@ -58,11 +58,11 @@ static std::unique_ptr<CollectiveCommunicationType> NewCollectiveCommunication(
   return collective_communication_entry;
 }
 
-#define REGISTER_COLLECTIVE_COMMUNICATION_FACTORY(device, Base, Derived) \
+#define REGISTER_COLLECTIVE_COMMUNICATION(device, Base, Derived) \
   REGISTER_CLASS(DeviceType, device, Base, Derived)
 
 }  // namespace ccl
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COLLECTIVE_COMMUNICATION_H_
+#endif  // ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COLLECTIVE_COMMUNICATION_H_
