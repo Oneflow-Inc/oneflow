@@ -22,6 +22,7 @@ import oneflow.unittest
 
 import torch
 
+
 @flow.unittest.skip_unless_1n2d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestSyncBatchNorm(flow.unittest.TestCase):
@@ -54,14 +55,17 @@ class TestSyncBatchNorm(flow.unittest.TestCase):
         of_res.sum().backward()
         torch_res.sum().backward()
 
-        test_case.assertTrue(np.allclose(torch_res.detach().cpu().numpy(), of_res.numpy(), atol=1e-8))
-        test_case.assertTrue(np.allclose(torch_input.grad.detach().cpu().numpy(), of_input.grad.numpy(), atol=1e-8))
+        test_case.assertTrue(
+            np.allclose(torch_res.detach().cpu().numpy(), of_res.numpy(), atol=1e-8)
+        )
+        test_case.assertTrue(
+            np.allclose(
+                torch_input.grad.detach().cpu().numpy(),
+                of_input.grad.numpy(),
+                atol=1e-8,
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
-
-
-
-
-
-
