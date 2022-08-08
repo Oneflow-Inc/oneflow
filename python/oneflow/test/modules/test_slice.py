@@ -310,6 +310,16 @@ class TestSliceUpdate(flow.unittest.TestCase):
                 shape = [randint(1, 21) for _ in range(dims)]
                 compare_result_between_oneflow_and_numpy(test_case, shape)
 
+    def test_slice_update_expand_value(test_case):
+        ref_np = np.random.rand(2, 3, 4)
+        ref_of = flow.tensor(ref_np)
+        update_np = np.random.rand(3,)
+        update_ref = flow.tensor(update_np)
+
+        ref_of[:, :, 1] = update_ref
+        ref_np[:, :, 1] = update_np
+        test_case.assertTrue(np.array_equal(ref_of.numpy(), ref_np))
+
 
 if __name__ == "__main__":
     unittest.main()

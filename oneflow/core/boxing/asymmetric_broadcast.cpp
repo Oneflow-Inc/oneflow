@@ -78,9 +78,9 @@ Maybe<int64_t> CalBroadcastRoot(Symbol<ParallelDesc> src_parallel_desc,
 
 static constexpr auto* CachedGetBroadcastRoot = DECORATE(&CalBroadcastRoot, ThreadLocalCached);
 
-Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root,
-                                          const Shape& shape) {
-  return one::OpBuilder("eager_nccl_broadcast", *JUST(UniqueStr("eager_nccl_broadcast")))
+Maybe<one::UserOpExpr> EagerCclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root,
+                                         const Shape& shape) {
+  return one::OpBuilder("eager_ccl_broadcast", *JUST(UniqueStr("eager_ccl_broadcast")))
       .Input("in")
       .Output("out")
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
@@ -89,8 +89,8 @@ Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, in
       .Build();
 }
 
-static constexpr auto* CachedEagerNcclBroadcast =
-    DECORATE(&EagerNcclBroadcast, ThreadLocalCachedCopiable);
+static constexpr auto* CachedEagerCclBroadcast =
+    DECORATE(&EagerCclBroadcast, ThreadLocalCachedCopiable);
 }  // namespace
 
 Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tensor,
@@ -116,7 +116,7 @@ Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tenso
           JUST(MapAt(*broadcast_group, GlobalProcessCtx::Rank()));
       int64_t root = JUST(CachedGetBroadcastRoot(in_placement, broadcast_placement_cur_rank));
       std::shared_ptr<one::UserOpExpr> op_expr =
-          JUST(CachedEagerNcclBroadcast(broadcast_placement_cur_rank, root, *tensor->shape()));
+          JUST(CachedEagerCclBroadcast(broadcast_placement_cur_rank, root, *tensor->shape()));
       local_tensor = JUST(one::OpInterpUtil::Dispatch<one::Tensor>(*op_expr, {local_tensor}));
     }
   }
