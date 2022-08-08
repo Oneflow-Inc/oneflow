@@ -93,11 +93,10 @@ class TestCast(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=5, check_graph=False)
+    @autotest(n=5, auto_backward=False)
     def test_cast_with_scalar_input(test_case):
         device = random_device()
-        t = random_tensor(ndim=1, requires_grad=False)
-        x = torch.tensor(t.item(), device=device)
+        x = torch.tensor(3.14, device=device)
         y = x.to(dtype=torch.float64, device=device)
         z = y.to(dtype=torch.int8, device=device)
         return z
