@@ -1453,14 +1453,15 @@ class TensorScatterNdUpdateFunctor {
                            const std::shared_ptr<one::Tensor>& updates, bool inplace) const {
     CHECK_OR_RETURN(*tensor->dtype() == *updates->dtype())
         << Error::RuntimeError() << "The dtype of tensor and updates must be same.";
+    std::shared_ptr<Tensor> contiguous_index = JUST(functional::ToContiguous(indices));
     if (inplace) {
       JUST(CheckInplaceValid(tensor));
       auto outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = tensor;
-      JUST(OpInterpUtil::Dispatch(*op_, {tensor, indices, updates}, outputs.get()));
+      JUST(OpInterpUtil::Dispatch(*op_, {tensor, contiguous_index, updates}, outputs.get()));
       return outputs->at(0);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {tensor, indices, updates});
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {tensor, contiguous_index, updates});
     }
   }
 
@@ -2685,9 +2686,6 @@ class TensorGetItemFunctor {
       JUST(UnifyLocalTensorAndIndicesOnDevice(x, tensor_indices));
       result = JUST(ApplyAdvancedIndexing(result, tensor_indices));
     }
-
-    // TODO(): Returns a view of tensor `x`.
-    if (result == x) { result = JUST(Identity(x)); }
     return result;
   }
 };
@@ -2703,24 +2701,21 @@ class TensorSetItemFunctor {
     std::vector<int64_t> target_dims;
     JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &expand_dims,
                              &target_dims));
-    if (expand_dims.size()) {
-      slice_indices = *JUST(RemoveExpandDimSlice(slice_indices, expand_dims));
+    auto expand_input = x;
+    if (!expand_dims.empty()) {
+      CHECK_OR_RETURN(view::IsViewApplicable(x)) << "expand dims must enable view, "
+                                                    "please try to set ONEFLOW_DISABLE_VIEW=0";
+      for (int i = 0; i < expand_dims.size(); ++i) {
+        int64_t dim = expand_dims[i];
+        expand_input = JUST(functional::ExpandDims(expand_input, dim + i));
+      }
     }
-    int64_t ndims = x->shape()->NumAxes();
+    int64_t ndims = expand_input->shape()->NumAxes();
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims)
         << Error::RuntimeError() << "Failed to prepare slice indices.";
-    // Not support combined indexing now
-    if (!tensor_indices.empty()) {
-      CHECK_OR_RETURN(tensor_indices.size() == ndims
-                      && std::all_of(tensor_indices.begin(), tensor_indices.end(),
-                                     [](const std::shared_ptr<Tensor>& index) { return index; }))
-          << Error::RuntimeError()
-          << "Combining indexing is not support for tensor setitem currently";
-    }
 
     Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
     if (target_shape.Count(0) == 0) { return Maybe<void>::Ok(); }
-
     const auto& value_shape = value->shape();
     bool matched = [&]() {
       for (int i = 0; i < value_shape->NumAxes() - target_shape.NumAxes(); ++i) {
@@ -2735,51 +2730,70 @@ class TensorSetItemFunctor {
     // TODO: replace reshape by unsqueeze with view mechanism.
     // after here, each scalar tensor will be one with one dimension.
     for (auto& tensor : tensor_indices) {
-      if (tensor->ndim() == 0) { tensor = JUST(functional::Reshape(tensor, Shape({1}))); }
+      if (tensor && tensor->ndim() == 0) { tensor = JUST(functional::Reshape(tensor, Shape({1}))); }
     }
-    if (tensor_indices.size() == ndims) {  // advance indexing
-      if (ndims == 0 && index[0].IsEllipsis()) {
-        // for scalar input tensor setitem, only support ellipsis indexing type
-        Shape tmp_shape{1};
-        const auto& value_tensor = JUST(functional::View(value, tmp_shape));
-        const auto& input_tensor = JUST(functional::View(x, tmp_shape));
-        std::vector<int64_t> starts(1, 0);
-        std::vector<int64_t> stops(1, 1);
-        std::vector<int64_t> steps(1, 1);
-        JUST(SliceUpdate(input_tensor, value_tensor, starts, stops, steps, /*inplace=*/true));
-      } else {
-        // advance indexing
-        std::shared_ptr<Tensor> indices = JUST(functional::Stack(tensor_indices, 0));
-        if (indices->shape()->elem_cnt() == 0) { return Maybe<void>::Ok(); }
-        indices = JUST(functional::Transpose(indices, {1, 0}));
-        value_tensor = JUST(functional::Expand(value_tensor, {indices->shape()->At(0)}));
-        JUST(functional::TensorScatterNdUpdate(x, indices, value_tensor, /*inplace=*/true));
-      }
-    } else {                              // slice update
-      if (target_shape.NumAxes() != 0 &&  // NOLINT
-          /*need_expand=*/value_shape->Count(0) != target_shape.Count(0)) {
-        // Remove the beginning redundant 1-dimensions.
-        if (value_shape->NumAxes() > target_shape.NumAxes()) {
-          int64_t start_axis = value_shape->NumAxes() - target_shape.NumAxes();
-          const auto& shape = JUST(value_shape->Slice(start_axis, value_shape->NumAxes()));
-          value_tensor = JUST(Reshape(value, *shape));
-        }
-        value_tensor = JUST(Expand(value_tensor, target_shape));
-      }
-      std::vector<int64_t> start(ndims), end(ndims), step(ndims);
-      DimVector slice_dims(ndims);
-      for (int i = 0; i < ndims; ++i) {
-        const auto& slice = slice_indices.at(i);
-        start[i] = slice.start();
-        end[i] = slice.end();
-        step[i] = slice.step();
-        slice_dims[i] = (end[i] - start[i] + step[i] - 1) / step[i];
-      }
+
+    DimVector slice_dims(ndims);
+    std::vector<int64_t> start(ndims), end(ndims), step(ndims);
+    for (int i = 0; i < ndims; ++i) {
+      const auto& slice = slice_indices[i];
+      start[i] = slice.start();
+      end[i] = slice.end();
+      step[i] = slice.step();
+      slice_dims[i] = (end[i] - start[i] + step[i] - 1) / step[i];
+    }
+    if (tensor_indices.empty()) {
       Shape slice_shape(slice_dims);
       if (slice_shape != *(value_tensor->shape())) {
-        value_tensor = JUST(Reshape(value_tensor, slice_shape));
+        // NOTE:
+        // 1. The value shape must can be broadcasted to the target shape.
+        // 2. The slice shape must have equal element count with the target shape.
+        //
+        // So, we should be expand to target_shape and then reshape to slice_shape.
+        //
+        // For example:
+        // x = flow.rand(2, 3, 4)
+        // y = flow.rand(3)
+        // x[:, :, 1] = y
+        //
+        // value_shape = (3,), target_shape = (2, 3), slice_shape = (2, 3, 1)
+        // We must change value shape to slice_shape if it uses SliceUpdate op.
+        // BUG(wyg): value shape cannot initialize to a scalar tensor,
+        // so it is not possible to expand to target_shape.
+        // e.g. x[0, 0] = 1.0
+        // But x[0, 0] = flow.ones(1) do not align with numpy behavior.
+        if (target_shape != *(value_tensor->shape()) && target_shape.NumAxes() > 0) {
+          value_tensor = JUST(Expand(value_tensor, target_shape));
+        }
+        if (slice_shape != *(value_tensor->shape())) {
+          value_tensor = JUST(Reshape(value_tensor, slice_shape));
+        }
       }
-      JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
+      JUST(SliceUpdate(expand_input, value_tensor, start, end, step, /*inplace=*/true));
+    } else {
+      bool is_identity = [&]() {
+        if (target_shape.NumAxes() == 0) { return false; }
+        for (int i = 0; i < ndims; ++i) {
+          if (start[i] != 0 || end[i] != expand_input->shape()->At(i) || step[i] != 1) {
+            return false;
+          }
+        }
+        return true;
+      }();
+      std::shared_ptr<one::Tensor> result;
+      if (is_identity) {
+        result = expand_input;
+      } else {
+        CHECK_OR_RETURN(view::IsViewApplicable(expand_input))
+            << "combined slice setitem must enable view, please try to set ONEFLOW_DISABLE_VIEW=0";
+        result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/true));
+      }
+      if (target_shape != *(result->shape())) {
+        result = JUST(functional::View(result, target_shape));
+      }
+
+      JUST(UnifyLocalTensorAndIndicesOnDevice(expand_input, tensor_indices));
+      JUST(ApplyAdvancedIndexingUpdate(result, tensor_indices, value));
     }
     return Maybe<void>::Ok();
   }
@@ -3805,6 +3819,15 @@ class PinMemoryFunctor {
       return AttrMap(attrs);
     }
   };
+  struct SliceUpdate0Dim {
+    Maybe<AttrMap> operator()() {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::vector<int64_t>>("start", {0}));
+      JUST(attrs.SetAttr<std::vector<int64_t>>("stop", {1}));
+      JUST(attrs.SetAttr<std::vector<int64_t>>("step", {1}));
+      return AttrMap(attrs);
+    }
+  };
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
     // TODO:(zhaoluyang) support global tensor.pin_memory()
@@ -3824,11 +3847,15 @@ class PinMemoryFunctor {
     JUST(empty->set_requires_grad(requires_grad));
     const int32_t ndim = input->ndim();
     if (ndim == 0) {
+      // TODO(wyg): use TensorSetItem after supporting non-requires_grad tensor inplace
       // for 0-dim tensor
-      TensorIndex tensor_index;
-      tensor_index.emplace_back(functional::detail::IndexItem(functional::detail::EllipsisIndex{}));
-      JUST(functional::TensorSetItem(empty, tensor_index, input));
-      return empty;
+      empty = JUST(functional::ExpandDims(empty, 0));              // expand to [1, ]
+      auto expand_input = JUST(functional::ExpandDims(input, 0));  // expand to [1, ]
+      constexpr auto* GetAttrs = CACHED_FUNCTOR_PTR(SliceUpdate0Dim);
+      const auto attrs = *JUST(GetAttrs());
+      auto outputs = TensorTuple{empty};
+      JUST(OpInterpUtil::Dispatch(*op_, TensorTuple{empty, expand_input}, &outputs, attrs));
+      return outputs[0];
     } else {
       std::vector<int64_t> starts(ndim, 0);
       std::vector<int64_t> stops(ndim);

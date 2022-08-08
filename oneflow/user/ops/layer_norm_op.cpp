@@ -36,7 +36,9 @@ Shape InferBnParamShape(const Shape& x_shape, const int64_t begin_norm_axis) {
 }
 
 oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
-  return x_data_type == DataType::kFloat16 ? DataType::kFloat : x_data_type;
+  return (x_data_type == DataType::kFloat16 || x_data_type == DataType::kBFloat16)
+             ? DataType::kFloat
+             : x_data_type;
 }
 
 }  // namespace

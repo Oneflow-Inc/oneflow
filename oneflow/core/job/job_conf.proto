@@ -250,6 +250,7 @@ message JobConfigProto {
   optional bool cudnn_conv_enable_pseudo_half = 600 [default = true];
   optional bool enable_auto_mixed_precision = 602 [default = false];
   optional bool enable_quantization_aware_training = 603 [default = false];
+  optional DataType mixed_precision_data_type = 604 [default = kFloat16]; // kFloat16 or kBFloat16
 
   optional bool enable_straighten_algorithm_in_task_graph = 700 [default = false];
   
