@@ -14,8 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
+#include <iterator>
+#include "oneflow/core/common/singleton.h"
+#include "oneflow/core/graph/compute_task_node.h"
+#include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/register/logical_blob_id.pb.h"
+#include "oneflow/core/register/register_desc.h"
 
 namespace oneflow {
 
@@ -83,6 +90,49 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
   ForEachInDataEdge([&](TaskEdge* edge) {
     for (const auto& regst : edge->GetRegsts()) { ConsumeRegst("in", regst); }
   });
+}
+
+void NormalForwardCompTaskNode::HandleInplaceOperationRegsts() {
+  const auto& _op = op();
+  if (_op->op_conf().has_user_conf()) {
+    const auto& inplace_operation_info = _op->op_conf().user_conf().inplace_operation_info();
+
+    for (const auto& it : inplace_operation_info) {
+      const std::string& obn = it.first;
+      const auto& input_arg_index_pair = it.second;
+
+      const std::string out_regst_name = GetOutRegstNameByObn(obn);
+      std::shared_ptr<RegstDesc> out_regst = GetProducedRegst(out_regst_name);
+
+      const std::string& input_lbn = _op->op_conf()
+                                         .user_conf()
+                                         .input()
+                                         .at(input_arg_index_pair.arg())
+                                         .s(input_arg_index_pair.index());
+      const LogicalBlobId input_lbi = GenLogicalBlobId(input_lbn);
+
+      std::shared_ptr<RegstDesc> in_regst = nullptr;
+      for (TaskEdge* in_edge : in_edges()) {
+        CompTaskNode* comp_task_node = dynamic_cast<CompTaskNode*>(in_edge->src_node());
+        if (!comp_task_node) continue;
+        if (comp_task_node->op()->op_name() == input_lbi.op_name()) {
+          in_regst = comp_task_node->GetProducedRegst(GetOutRegstNameByObn(input_lbi.blob_name()));
+          break;
+        }
+      }
+
+      CHECK(in_regst != nullptr) << "Must have found in_regst at this point! But operation: "
+                                 << _op->op_name() << " of obn: " << obn
+                                 << " does not have an associated in_regst!"
+                                 << " The asscociated in_regst is with lbn: " << input_lbi.op_name()
+                                 << "/" << input_lbi.blob_name();
+
+      // set in_regst's memory can be reused
+      // let out_regst reuse in_regst's memory when the operation is executed
+      in_regst->set_enable_reuse_mem(true);
+      out_regst->set_hint_inplace_consumed_regst_desc_id(in_regst->regst_desc_id());
+    }
+  }
 }
 
 void NormalForwardCompTaskNode::BuildExecGphAndRegst() {

@@ -14,6 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/user_kernel.h"
+#include <cstdint>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/core/common/singleton.h"
+#include "oneflow/core/framework/arg_tuple.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/op_kernel_infer_cache.h"
@@ -26,6 +33,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/register/logical_blob_id.pb.h"
 
 namespace oneflow {
 
@@ -589,6 +597,27 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
+  // NOTE: This function is only used for checking inplace operation memory reuse is successful
+  // during development ( in and out pointers are the same.) This function should be deleted when
+  // merging.
+  void check_inplace_operation_data_pointers() {
+    if (stream_->device_type() == kCPU) {  // inplace is not currently supported for cpu device
+      return;
+    }
+
+    for (const auto& it : user_op_conf_.op_conf().user_conf().inplace_operation_info()) {
+      const std::string& obn = it.first;
+      const auto& input_arg_index_pair = it.second;
+      CHECK_EQ(arg2bn_tensor_pair_[GetArgIndexPair4Bn(obn)].tensor->raw_dptr(),
+               arg2bn_tensor_pair_[std::make_pair(input_arg_index_pair.arg(),
+                                                  input_arg_index_pair.index())]
+                   .tensor->raw_dptr())
+          << "Inplace operation: " << user_op_conf_.op_name() << " does not have input: "
+          << GenRepeatedBn(input_arg_index_pair.arg(), input_arg_index_pair.index())
+          << " and output: " << obn << " as the same pointer! ";
+    }
+  }
+
  private:
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
@@ -689,6 +718,7 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
   }
 #endif  // WITH_CUDA_GRAPHS
 
+  ctx_->check_inplace_operation_data_pointers();
   kernel_->Compute(ctx_.get(), opkernel_state, opkernel_cache_.get());
 
 #ifdef WITH_CUDA_GRAPHS

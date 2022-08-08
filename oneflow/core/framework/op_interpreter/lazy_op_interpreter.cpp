@@ -14,10 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <memory>
+#include <utility>
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/singleton.h"
+#include "oneflow/core/framework/arg_tuple.h"
 #include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -38,8 +41,10 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/register/logical_blob_id.pb.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/framework/variable_op_output_tensor_scope.h"
 namespace oneflow {
 
 namespace one {
@@ -422,6 +427,7 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
   const std::string& empty_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   CHECK_OR_RETURN(empty_lbn.empty());
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
+  VariableOpOutputTensorScope::Global()->Add(input_tensor);
   OperatorConf op_conf;
   op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
   op_conf.set_device_tag(JUST(GetDeviceTagOfTensor(input_tensor)));
@@ -574,6 +580,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   const std::string obn = "out";  // NOTE(chengcheng): obn is NOT op_expr.indexed_obns
   auto origin_var = JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true,
                                      /* is_local */ input_tensor->is_local()));
+
+  VariableOpOutputTensorScope::Global()->Add(origin_var);
 
   // NOTE(chengcheng): Record variable op output LazyTenosr
   TensorNameScope::Global()->Record(origin_var, GenLogicalBlobName(op_conf.name(), obn));
@@ -933,6 +941,41 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
       JUST(infer_ctx->DisableBoxing(lbn));
     }
   }
+
+  // Set the inplace info for inplace operations
+  if (Singleton<JobDesc>::Get()->enable_inplace()) {
+    for (int i = 0; i < op_expr.output_size(); ++i) {
+      const auto& output_tensor = outputs->at(i);
+      if (output_tensor) {  // inplace output
+        // we do not handle inplace var op tensors for now
+        // TODO: deal with var op in the future
+        if (VariableOpOutputTensorScope::Global()->Has(output_tensor)) { continue; }
+
+        const std::string& obn = JUST(VectorAt(op_expr.indexed_obns(), i));
+
+        std::pair<std::string, int32_t> input_arg_index_pair = std::make_pair("", -1);
+        for (int j = 0; j < inputs.size(); j++) {
+          // if an input tensor is the same tensor as the output tensor
+          // then this is an inplace operation
+          if (inputs[j] == output_tensor) {
+            input_arg_index_pair = op_expr.indexed_input_pairs()[j];
+            break;
+          }
+        }
+
+        CHECK_OR_RETURN(!input_arg_index_pair.first.empty())
+            << "Inplace output tensor should correspond to a tensor in input! But no such tensor "
+               "is found!";
+
+        // store the inplace info for later use
+        (*op_conf->mutable_user_conf()->mutable_inplace_operation_info())[obn].set_arg(
+            input_arg_index_pair.first);
+        (*op_conf->mutable_user_conf()->mutable_inplace_operation_info())[obn].set_index(
+            input_arg_index_pair.second);
+      }
+    }
+  }
+
   VLOG(2) << "Lazy nn.Graph name " << graph_name << " try to add op: \n"
           << op_conf->DebugString() << std::endl;
   OpAttribute op_attr = *JUST(infer_ctx->AddAndInferGlobalOp(*op_conf));
