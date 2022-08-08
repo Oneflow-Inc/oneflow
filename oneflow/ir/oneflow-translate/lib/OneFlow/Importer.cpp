@@ -21,6 +21,8 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 
 #include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/SBP/SBPDialect.h"
+#include "OneFlow/SBP/SBPAttributes.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowTypes.h"
 #include "OneFlow/OneFlowSupport.h"
@@ -58,6 +60,8 @@ limitations under the License.
 
 #include <google/protobuf/text_format.h>
 
+#include "oneflow/core/framework/sbp_context.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 namespace mlir {
 
 namespace oneflow {
@@ -390,7 +394,8 @@ Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp) {
     } else if (sbp.has_partial_sum_parallel()) {
       sbp_strs.emplace_back("P");
     } else {
-      llvm::errs() << "unsupported sbp";
+      llvm::errs() << "unsupported sbp: " << nd_sbp.DebugString();
+      exit(EXIT_FAILURE);
     }
   }
   return builder.getStrArrayAttr(
@@ -475,6 +480,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   state.addAttributes(named_attributes);
   state.addOperands(operands);
   state.addTypes(out_types);
+  SetOpStateLoc(op, state);
   created_op = GetBuilder().create(state);
 
   if (created_op == nullptr) {
@@ -772,7 +778,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::Operat
   for (auto id_attr : op->getAttrDictionary()) {
     auto id = id_attr.getName();
     // mlir only attrs
-    // TODO: find a way to skip attrs like callee in a declarative way
+    // TODO: prefix special attributes with "oneflow.". For example: `oneflow.op_type_name = "add"`
     if (id.strref().equals("callee")
         || id.strref().equals(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr())
         || id.strref().equals(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr())
@@ -897,6 +903,12 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::Operat
   return success();
 }
 
+void Importer::SetOpStateLoc(const ::oneflow::OperatorConf& op_conf, OperationState& state) {
+  if (op_conf.has_loc()) {
+    state.location = (FileLineColLoc::get(GetMLIRContext(), op_conf.loc(), 0, 0));
+  }
+}
+
 LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_conf) {
   op_conf->set_name(op.op_name().str());
   op_conf->set_device_tag(op.device_tag().str());
@@ -935,10 +947,19 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
 
   if (op->hasAttr("trainable")) { var_op_conf->set_trainable(op.trainable()); }
 
-  for (const auto& sbp : op.nd_sbp()) {
-    var_op_conf->add_nd_sbp(sbp.cast<StringAttr>().getValue().str());
+  for (auto output : op.parallel()->getOutputs()) {
+    if (auto nd_outputs = output.dyn_cast<ArrayAttr>()) {
+      for (auto nd_output : nd_outputs) {
+        std::string sbp{};
+        if (failed(SBPTranslation::PrintSbpAttrToString(nd_output, sbp))) return failure();
+        var_op_conf->add_nd_sbp(sbp);
+      }
+    } else {
+      std::string sbp{};
+      if (failed(SBPTranslation::PrintSbpAttrToString(output, sbp))) return failure();
+      var_op_conf->add_nd_sbp(sbp);
+    }
   }
-
   // all operands are ctrl_inputs
   for (const auto& operand : op->getOperands()) {
     op_conf->add_ctrl_in_op_name(

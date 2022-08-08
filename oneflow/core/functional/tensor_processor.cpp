@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 namespace one {
@@ -96,6 +97,34 @@ Maybe<void> TensorProcessor::Apply() {
             JUST(one::functional::Cast(tensor_tuple_[i], base_dtype, /*pin_memory=*/false));
       }
     }
+  }
+  return Maybe<void>::Ok();
+}
+
+static bool IsAllContiguous(const TensorTuple& tensors) {
+  for (const auto& t : tensors) {
+    if (!t->is_contiguous()) { return false; }
+  }
+  return true;
+}
+
+Maybe<void> TensorLayoutProcessor::Apply() {
+  if (LazyMode::is_enabled()) { return Maybe<void>::Ok(); }
+  if (!non_contiguous_enabled_ && !IsAllContiguous(inputs_)) {
+    // inplace is not allowed if input is non-contiguous
+    if (outputs_) {
+      size_t len = std::min(inputs_.size(), outputs_->size());
+      for (int i = 0; i < len; ++i) {
+        // only requires the inplaced input be contiguous
+        CHECK_OR_RETURN((*outputs_)[i] != inputs_[i] || inputs_[i]->is_contiguous())
+            << Error::RuntimeError()
+            << "inplace operation is not allowed if input is non-contiguous and non-contiguous is "
+               "not supported for this operation";
+      }
+    }
+    contiguous_inputs_.resize(inputs_.size());
+    for (int i = 0; i < inputs_.size(); ++i) { contiguous_inputs_[i] = inputs_[i]->contiguous(); }
+    converted_ = true;
   }
   return Maybe<void>::Ok();
 }

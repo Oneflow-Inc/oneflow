@@ -14,12 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/instruction.h"
-#include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
-#include "oneflow/core/framework/stream_get_stream_role_name.h"
+#include "oneflow/core/framework/stream_get_stream_type_name.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/profiler/profiler.h"
@@ -29,13 +27,13 @@ namespace vm {
 
 std::string Instruction::DebugName() const {
   std::string instr_name = instruction_policy().DebugName(*this);
-  return instr_name + ":" + GetStreamRoleName::Visit(stream().stream_role());
+  return instr_name + ":" + GetStreamTypeName::Visit(stream().stream_type());
 }
 
 void Instruction::__Init__(Stream* stream,
-                           std::unique_ptr<InstructionPolicy>&& instruction_policy) {
+                           std::shared_ptr<InstructionPolicy>&& instruction_policy) {
   stream_ = stream;
-  instruction_policy_ = std::move(instruction_policy);
+  instruction_policy_ = instruction_policy;
 }
 
 void Instruction::InitStatus() { instruction_policy_->InitInstructionStatusIf(this); }
@@ -51,7 +49,8 @@ void Instruction::DeleteStatusAndClearEdges() {
 }
 
 bool Instruction::Done() const {
-  return stream_policy().QueryInstructionStatusDone(stream(), status_buffer());
+  return stream_policy().QueryInstructionStatusDone(stream(), status_buffer())
+         && in_edges().empty();
 }
 
 StreamPolicy* Instruction::mut_stream_policy() { return mut_stream()->mut_stream_policy(); }
