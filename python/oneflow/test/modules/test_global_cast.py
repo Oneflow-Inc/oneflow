@@ -1297,6 +1297,7 @@ class GraphModel(nn.Graph):
         return self.model(x)
 
 
+@flow.unittest.skip_unless_1n2d()
 class TestToGlobalLocal(oneflow.unittest.TestCase):
     placement = flow.placement("cpu", ranks=[0, 1])
     sbp = None

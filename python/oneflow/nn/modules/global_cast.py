@@ -411,7 +411,7 @@ def to_local_op(input, *, copy=False):
         False
     """
     if isinstance(input, Tensor):
-        return _to_local_tensor(input)
+        return _to_local_tensor(input, copy)
     elif isinstance(input, (dict, tuple, list)):
         input_tree = ArgsTree(input)
 
