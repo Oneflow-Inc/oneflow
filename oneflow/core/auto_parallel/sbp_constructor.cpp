@@ -56,7 +56,11 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   sbp_graph_.Set0SbpSignature();
   double ori_cost = sbp_graph_.ComputeCost();
   LOG(INFO) << "Initial cost: " << ori_cost;
-  JUST(StealSbpSignatureFromOpNode(op_graph, job));
+  // If we do not prune those identity, steal the initial strategy from user setting and semi-auto
+  // parallelism
+  if (!job.job_conf().enable_auto_parallel_prune_parallel_cast_ops()) {
+    JUST(StealSbpSignatureFromOpNode(op_graph, job));
+  }
   ori_cost = sbp_graph_.ComputeCost();
   LOG(INFO) << "OpGraph cost: " << ori_cost;
   return Maybe<void>::Ok();

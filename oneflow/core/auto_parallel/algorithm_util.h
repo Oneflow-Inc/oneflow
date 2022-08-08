@@ -57,7 +57,7 @@ void InverseFunction(const std::vector<T>& v, std::unordered_map<T, int32_t>& in
 // We could define the comparison, then we have
 // comp(v[order[i]], v[order[j]]) == true for all i<j.
 template<class T, class Compare>
-void DecideOrder(const T& v, std::vector<int32_t>& order, Compare comp) {
+void DecideOrder(const T& v, std::vector<int32_t>& order, const Compare& comp) {
   // Initialize order
   order.resize(v.size());
   for (int32_t i = 0; i < v.size(); i++) { order[i] = i; }
