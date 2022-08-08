@@ -882,7 +882,7 @@ class DimGatherFunctor {
     }
 
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    JUST(attrs.SetAttr<int32_t>("dim", dim < 0 ? dim + input->ndim() : dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
