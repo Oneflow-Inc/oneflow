@@ -807,7 +807,8 @@
 - name: "bernoulli"
   signature:
     [
-      "Tensor (Tensor x, *, DataType dtype=kFloat, Generator generator=None) => Bernoulli",
+      "Tensor (Tensor input, *, DataType dtype=kFloat, Generator generator=None) => Bernoulli",
+      "Tensor (Tensor input, Double p, *, DataType dtype=kFloat, Generator generator=None) => Bernoulli",
     ]
   bind_python: True
 
