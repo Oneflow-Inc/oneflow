@@ -25,8 +25,8 @@ namespace one {
 
 namespace {
 
-Maybe<one::UserOpExpr> EagerNcclReduce(Symbol<ParallelDesc> parallel_desc, int64_t root) {
-  return one::OpBuilder("eager_nccl_reduce", *JUST(UniqueStr("eager_nccl_reduce")))
+Maybe<one::UserOpExpr> EagerCclReduce(Symbol<ParallelDesc> parallel_desc, int64_t root) {
+  return one::OpBuilder("eager_ccl_reduce", *JUST(UniqueStr("eager_ccl_reduce")))
       .Input("in")
       .Output("out")
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
@@ -34,14 +34,14 @@ Maybe<one::UserOpExpr> EagerNcclReduce(Symbol<ParallelDesc> parallel_desc, int64
       .Build();
 }
 
-Maybe<one::UserOpExpr> FindOrCreatEagerNcclReduceOpExpr(Symbol<ParallelDesc> parallel_desc,
-                                                        int64_t root) {
+Maybe<one::UserOpExpr> FindOrCreatEagerCclReduceOpExpr(Symbol<ParallelDesc> parallel_desc,
+                                                       int64_t root) {
   thread_local HashMap<std::pair<Symbol<ParallelDesc>, int64_t>, std::shared_ptr<one::UserOpExpr>>
       parallel_desc_and_root_device2eager_nccl_reduce;
   const auto& key = std::make_pair(parallel_desc, root);
   auto iter = parallel_desc_and_root_device2eager_nccl_reduce.find(key);
   if (iter == parallel_desc_and_root_device2eager_nccl_reduce.end()) {
-    std::shared_ptr<UserOpExpr> op_expr = JUST(EagerNcclReduce(parallel_desc, root));
+    std::shared_ptr<UserOpExpr> op_expr = JUST(EagerCclReduce(parallel_desc, root));
     iter = parallel_desc_and_root_device2eager_nccl_reduce.emplace(key, op_expr).first;
   }
   return iter->second;
@@ -49,12 +49,12 @@ Maybe<one::UserOpExpr> FindOrCreatEagerNcclReduceOpExpr(Symbol<ParallelDesc> par
 
 }  // namespace
 
-struct EagerNcclBroadcastCaptureState : public AutoGradCaptureState {
+struct EagerCclBroadcastCaptureState : public AutoGradCaptureState {  // NOLINT
   Symbol<ParallelDesc> parallel_desc;
   int64_t root;
 };
 
-class EagerNcclBroadcast : public OpExprGradFunction<EagerNcclBroadcastCaptureState> {
+class EagerCclBroadcast : public OpExprGradFunction<EagerCclBroadcastCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -62,7 +62,7 @@ class EagerNcclBroadcast : public OpExprGradFunction<EagerNcclBroadcastCaptureSt
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(EagerNcclBroadcastCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(EagerCclBroadcastCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs,
                       const OpExprInterpContext& interp_ctx) const override {
     ctx->root = JUST(interp_ctx.attrs.GetAttr<int64_t>("root"));
@@ -70,16 +70,16 @@ class EagerNcclBroadcast : public OpExprGradFunction<EagerNcclBroadcastCaptureSt
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const EagerNcclBroadcastCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const EagerCclBroadcastCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    const auto& grad_op = JUST(FindOrCreatEagerNcclReduceOpExpr(ctx->parallel_desc, ctx->root));
+    const auto& grad_op = JUST(FindOrCreatEagerCclReduceOpExpr(ctx->parallel_desc, ctx->root));
     in_grads->resize(1);
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op, {out_grads.at(0)}));
     return Maybe<void>::Ok();
   }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("eager_nccl_broadcast", EagerNcclBroadcast);
+REGISTER_OP_EXPR_GRAD_FUNCTION("eager_ccl_broadcast", EagerCclBroadcast);
 
 }  // namespace one
 }  // namespace oneflow

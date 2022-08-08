@@ -63,7 +63,7 @@ std::function<bool(OpNode*)> MakePredicatorIsAllowedToRunWithHalf(const OpGraph&
 }
 
 void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>& white_set,
-                      JobBuilder* job_builder) {
+                      const DataType mixed_precision_data_type, JobBuilder* job_builder) {
   HashSet<OpEdge*> white_set_edges;
   {
     std::function<const std::unordered_set<OpEdge*>&(OpNode*)> Node2Edges =
@@ -104,7 +104,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
     if (blob_desc.data_type() != DataType::kFloat) { continue; }
 
     std::string cast_suffix = f2h ? "-cast_f2h" : "-cast_h2f";
-    DataType cast_data_type = f2h ? DataType::kFloat16 : DataType::kFloat;
+    DataType cast_data_type = f2h ? mixed_precision_data_type : DataType::kFloat;
     auto cast_op = user_op::UserOpConfWrapperBuilder(ReplaceSlashToDash4Lbn(lbn) + cast_suffix)
                        .Op("cast")
                        .Input("in", lbn)
@@ -165,15 +165,7 @@ class AutoMixedPrecision final : public JobPass {
   bool IsEnabled(const JobPassCtx& ctx) const {
     return ctx.job_desc().enable_auto_mixed_precision();
   }
-
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
-
-  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
-    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
-    const OpGraph op_graph(*job);
-    JobBuilder job_builder(job);
-    return Apply(op_graph, &job_builder);
-  }
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override;
 
  private:
   void FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) const;
@@ -184,7 +176,7 @@ class AutoMixedPrecision final : public JobPass {
                                        const HashSet<OpNode*>& black_set,
                                        HashSet<OpNode*>* white_set) const;
   void InsertCastOp(const OpGraph& op_graph, const HashSet<OpNode*>& white_set,
-                    JobBuilder* job_builder) const;
+                    const DataType mixed_precision_data_type, JobBuilder* job_builder) const;
 
   const AMPList& white_list_;
   const AMPList& black_list_;
@@ -192,7 +184,10 @@ class AutoMixedPrecision final : public JobPass {
   const AMPList& clear_list_;
 };
 
-Maybe<void> AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<void> AutoMixedPrecision::Apply(Job* job, JobPassCtx* ctx) const {
+  if (!ctx->job_desc().enable_auto_mixed_precision()) { return Maybe<void>::Ok(); }
+  const OpGraph op_graph(*job);
+  JobBuilder job_builder(job);
   CHECK_GE(CUDA_VERSION, 10000);
   CHECK(GlobalJobDesc().DefaultDataType() == DataType::kFloat);
 
@@ -218,8 +213,10 @@ Maybe<void> AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_b
   PropagateWhiteThroughClearNodes(op_graph, IsAllowedToRunWithHalf, black_set, &white_set);
   VLOG(2) << "WhiteSet include: "
           << Container2Str<HashSet<OpNode*>, OpNode*>(white_set, OpName4Node);
-
-  InsertCastOp(op_graph, white_set, job_builder);
+  const DataType mixed_precision_data_type = ctx->job_desc().mixed_precision_data_type();
+  CHECK(mixed_precision_data_type == DataType::kFloat16
+        || mixed_precision_data_type == DataType::kBFloat16);
+  InsertCastOp(op_graph, white_set, mixed_precision_data_type, &job_builder);
   return Maybe<void>::Ok();
 }
 
@@ -302,9 +299,10 @@ void AutoMixedPrecision::PropagateWhiteThroughClearNodes(
 }
 
 void AutoMixedPrecision::InsertCastOp(const OpGraph& op_graph, const HashSet<OpNode*>& white_set,
+                                      const DataType mixed_precision_data_type,
                                       JobBuilder* job_builder) const {
-  InsertCastOpImpl(true, op_graph, white_set, job_builder);
-  InsertCastOpImpl(false, op_graph, white_set, job_builder);
+  InsertCastOpImpl(true, op_graph, white_set, mixed_precision_data_type, job_builder);
+  InsertCastOpImpl(false, op_graph, white_set, mixed_precision_data_type, job_builder);
 }
 
 REGISTER_JOB_PASS("AutoMixedPrecision", AutoMixedPrecision);
