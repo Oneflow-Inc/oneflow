@@ -25,7 +25,6 @@ Maybe<Tensor> GradAccTryInsertUnpackAfterInput(const std::shared_ptr<Tensor>& in
 Maybe<Tensor> GradAccTryInsertRepeatAfterVar(const std::shared_ptr<Tensor>& variable);
 Maybe<Tensor> GradAccTryInsertPackBeforeOutput(const std::shared_ptr<Tensor>& output);
 
-Maybe<Tensor> GradAccTryInsertRepeatAfterFreeVar(const std::shared_ptr<Tensor>& variable);
 Maybe<void> GradAccTryInsertRepeatTickBeforeSource(
     const std::shared_ptr<OperatorConf>& source_op_conf, bool is_local);
 
