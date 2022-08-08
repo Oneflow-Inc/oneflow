@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/notifier.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/thread/thread_pool.h"
-#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/stream_type.h"
 #include "oneflow/core/common/steady_vector.h"
 
 namespace oneflow {
@@ -56,19 +56,19 @@ class VirtualMachine final {
   void ScheduleLoop(const std::function<void()>& Initializer);
 
   intrusive::shared_ptr<vm::Dependence> FindOrCreateScheduleLocalDepObject(Symbol<Device> device,
-                                                                           StreamRole stream_role);
+                                                                           StreamType stream_type);
   bool NoMoreErasedInstructions(size_t* last_total_erased_instruction_cnt) const;
 
   const vm::VirtualMachineEngine& engine() const { return *engine_; }
   vm::VirtualMachineEngine* mut_engine() { return engine_.Mutable(); }
 
   void ControlSync();
-  Maybe<vm::ThreadCtx*> FindOrCreateThreadCtx(Symbol<Device> device, StreamRole stream_role);
-  Maybe<vm::ThreadCtx*> CreateThreadCtx(Symbol<Device> device, StreamRole stream_role);
-  Maybe<vm::Stream*> CreateStream(Symbol<Device> device, StreamRole stream_role);
+  Maybe<vm::ThreadCtx*> FindOrCreateThreadCtx(Symbol<Device> device, StreamType stream_type);
+  Maybe<vm::ThreadCtx*> CreateThreadCtx(Symbol<Device> device, StreamType stream_type);
+  Maybe<vm::Stream*> CreateStream(Symbol<Device> device, StreamType stream_type);
 
   Maybe<vm::Stream*> CreateStream(vm::ThreadCtx* thread_ctx, Symbol<Device> device,
-                                  StreamRole stream_role);
+                                  StreamType stream_type);
 
   Maybe<void> RunInCurrentThread(vm::InstructionList* instr_list);
 
@@ -87,10 +87,10 @@ class VirtualMachine final {
   // for creating vm::Stream and vm::ThreadCtx
   std::recursive_mutex creating_stream_and_thread_ctx_mutex_;
   HashMap<DeviceType, vm::ThreadCtx*> devcie_type2non_independent_thread_ctx_;
-  HashMap<std::pair<DeviceType, StreamRole>, vm::ThreadCtx*>
-      devcie_type_stream_role_2independent_thread_ctx_;
-  HashMap<std::pair<Symbol<Device>, StreamRole>, intrusive::shared_ptr<vm::Dependence>>
-      device_stream_role2local_dep_object_;
+  HashMap<std::pair<DeviceType, StreamType>, vm::ThreadCtx*>
+      devcie_type_stream_type_2independent_thread_ctx_;
+  HashMap<std::pair<Symbol<Device>, StreamType>, intrusive::shared_ptr<vm::Dependence>>
+      device_stream_type2local_dep_object_;
   intrusive::shared_ptr<vm::Dependence> transport_local_dep_object_;
   SteadyVector<vm::Stream*> unique_stream_id2vm_stream_;
 

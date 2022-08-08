@@ -17,11 +17,8 @@ limitations under the License.
 #include "oneflow/core/common/env_var/vm.h"
 #include "oneflow/core/vm/caching_allocator.h"
 #include "oneflow/core/vm/fuse_instruction_policy.h"
-#include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/naive_instruction_policy.h"
 #include "oneflow/core/vm/release_tensor_instruction_policy.h"
 #include "oneflow/core/vm/allocator.h"
-#include "oneflow/core/vm/naive_stream_policy.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/cpp_attribute.h"
@@ -112,7 +109,7 @@ void VirtualMachineEngine::MakeAndAppendFusedInstruction(
   auto* begin = fused_instruction_list.Begin();
   auto instruction = intrusive::make_shared<Instruction>(
       begin->mut_stream(),
-      std::make_unique<FuseInstructionPolicy>(std::move(fused_instruction_list)));
+      std::make_shared<FuseInstructionPolicy>(std::move(fused_instruction_list)));
   pending_instructions->EmplaceBack(std::move(instruction));
 }
 
@@ -255,7 +252,7 @@ void VirtualMachineEngine::ConsumeDependences(Instruction* instruction) {
 }
 
 bool VirtualMachineEngine::EdgeDispatchable(const Instruction* src, const Instruction* dst) const {
-  return (&src->stream() == &dst->stream()) /* same stream*/
+  return dst->instruction_policy().Prescheduleable(&src->stream(), &dst->stream())
          && !src->dispatched_instruction_hook().empty() /* dispatched */;
 }
 
@@ -330,10 +327,8 @@ void BusyWaitAllInstructionsDone(Stream* stream) {
 }
 
 void ShrinkMemory(Stream* stream) {
-  auto* stream_policy = stream->mut_stream_policy();
-  auto* naive_stream_policy = CHECK_NOTNULL(dynamic_cast<NaiveStreamPolicy*>(stream_policy));
-  if (naive_stream_policy->device_ctx() == nullptr) { return; }
-  auto* allocator = naive_stream_policy->mut_allocator();
+  auto* allocator = stream->mut_stream_policy()->mut_allocator();
+  if (allocator == nullptr) { return; }
   auto* shrinkable_cache = dynamic_cast<CachingAllocator*>(allocator);
   CHECK_NOTNULL(shrinkable_cache)->Shrink();
 }

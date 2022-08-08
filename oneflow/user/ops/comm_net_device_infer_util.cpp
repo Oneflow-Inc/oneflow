@@ -26,13 +26,13 @@ Maybe<bool> IsAsyncLaunched(user_op::DeviceAndStreamInferContext* ctx) {
 namespace {
 
 Maybe<Symbol<Stream>> RawGetNcclDevice(bool is_async_launced) {
-  StreamRole stream_role =
-      (is_async_launced ? StreamRole::kAsyncedLaunchedCommNet : StreamRole::kSyncedLaunchedCommNet);
-  return Stream::New(JUST(Device::New("cuda")), stream_role);
+  StreamType stream_type =
+      (is_async_launced ? StreamType::kAsyncedLaunchedCommNet : StreamType::kSyncedLaunchedCommNet);
+  return Stream::New(JUST(Device::New("cuda")), stream_type);
 }
 
 Maybe<Symbol<Stream>> RawGetCpuTransportDevice() {
-  return Stream::New(JUST(Device::New("cpu")), StreamRole::kSyncedLaunchedCommNet);
+  return Stream::New(JUST(Device::New("cpu")), StreamType::kSyncedLaunchedCommNet);
 }
 
 }  // namespace

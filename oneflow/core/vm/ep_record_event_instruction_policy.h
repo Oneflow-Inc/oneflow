@@ -93,54 +93,62 @@ class EpRecordEventInstructionPolicy final : public InstructionPolicy {
 
 }  // namespace vm
 
-struct GetRecordEventInstructionPolicy : public StreamRoleVisitor<GetRecordEventInstructionPolicy> {
+struct GetRecordEventInstructionPolicy : public StreamTypeVisitor<GetRecordEventInstructionPolicy> {
   template<typename... Args>
-  static std::unique_ptr<vm::InstructionPolicy> VisitCompute(DeviceType device_type,
-                                                             Args&&... args) {
-    return std::make_unique<vm::EpRecordEventInstructionPolicy>(std::forward<Args>(args)...);
+  static Maybe<vm::InstructionPolicy> VisitCompute(DeviceType device_type, Args&&... args) {
+    return std::shared_ptr<vm::InstructionPolicy>(
+        new vm::EpRecordEventInstructionPolicy(std::forward<Args>(args)...));
   }
   template<typename... Args>
-  static std::unique_ptr<vm::InstructionPolicy> VisitHost2Device(DeviceType device_type,
+  static Maybe<vm::InstructionPolicy> VisitHost2Device(DeviceType device_type, Args&&... args) {
+    return std::shared_ptr<vm::InstructionPolicy>(
+        new vm::EpRecordEventInstructionPolicy(std::forward<Args>(args)...));
+  }
+  template<typename... Args>
+  static Maybe<vm::InstructionPolicy> VisitDevice2Host(DeviceType device_type, Args&&... args) {
+    return std::shared_ptr<vm::InstructionPolicy>(
+        new vm::EpRecordEventInstructionPolicy(std::forward<Args>(args)...));
+  }
+  template<typename... Args>
+  static Maybe<vm::InstructionPolicy> VisitAsyncedDevice2Host(DeviceType device_type,
+                                                              Args&&... args) {
+    return VisitDevice2Host(device_type, std::forward<Args>(args)...);
+  }
+  template<typename... Args>
+  static Maybe<vm::InstructionPolicy> VisitSyncedLaunchedCommNet(DeviceType device_type,
                                                                  Args&&... args) {
-    return std::make_unique<vm::EpRecordEventInstructionPolicy>(std::forward<Args>(args)...);
+    return std::shared_ptr<vm::InstructionPolicy>(
+        new vm::EpRecordEventInstructionPolicy(std::forward<Args>(args)...));
   }
   template<typename... Args>
-  static std::unique_ptr<vm::InstructionPolicy> VisitDevice2Host(DeviceType device_type,
-                                                                 Args&&... args) {
-    return std::make_unique<vm::EpRecordEventInstructionPolicy>(std::forward<Args>(args)...);
+  static Maybe<vm::InstructionPolicy> VisitAsyncedLaunchedCommNet(DeviceType device_type,
+                                                                  Args&&... args) {
+    return std::shared_ptr<vm::InstructionPolicy>(
+        new vm::EpRecordEventInstructionPolicy(std::forward<Args>(args)...));
   }
   template<typename... Args>
-  static std::unique_ptr<vm::InstructionPolicy> VisitSyncedLaunchedCommNet(DeviceType device_type,
-                                                                           Args&&... args) {
-    return std::make_unique<vm::EpRecordEventInstructionPolicy>(std::forward<Args>(args)...);
+  static Maybe<vm::InstructionPolicy> VisitBarrier(DeviceType device_type, Args&&... args) {
+    UNIMPLEMENTED_THEN_RETURN() << "EpRecordEvent instruction not supported in Barrier stream";
   }
   template<typename... Args>
-  static std::unique_ptr<vm::InstructionPolicy> VisitAsyncedLaunchedCommNet(DeviceType device_type,
-                                                                            Args&&... args) {
-    return std::make_unique<vm::EpRecordEventInstructionPolicy>(std::forward<Args>(args)...);
+  static Maybe<vm::InstructionPolicy> VisitCriticalSection(DeviceType device_type, Args&&... args) {
+    UNIMPLEMENTED_THEN_RETURN()
+        << "EpRecordEvent instruction not supported in CriticalSection stream";
   }
   template<typename... Args>
-  static std::unique_ptr<vm::InstructionPolicy> VisitBarrier(DeviceType device_type,
-                                                             Args&&... args) {
-    PRINT_BUG_PROMPT_AND_ABORT();
-    return std::unique_ptr<vm::EpRecordEventInstructionPolicy>();
+  static Maybe<vm::InstructionPolicy> VisitLazyJobLauncher(DeviceType device_type, Args&&... args) {
+    UNIMPLEMENTED_THEN_RETURN()
+        << "EpRecordEvent instruction not supported in LaunchLazyJob stream";
   }
   template<typename... Args>
-  static std::unique_ptr<vm::InstructionPolicy> VisitCriticalSection(DeviceType device_type,
-                                                                     Args&&... args) {
-    PRINT_BUG_PROMPT_AND_ABORT();
-    return std::unique_ptr<vm::EpRecordEventInstructionPolicy>();
+  static Maybe<vm::InstructionPolicy> VisitPinnedCompute(DeviceType device_type, Args&&... args) {
+    return std::shared_ptr<vm::InstructionPolicy>(
+        new vm::EpRecordEventInstructionPolicy(std::forward<Args>(args)...));
   }
   template<typename... Args>
-  static std::unique_ptr<vm::InstructionPolicy> VisitLazyJobLauncher(DeviceType device_type,
-                                                                     Args&&... args) {
-    PRINT_BUG_PROMPT_AND_ABORT();
-    return std::unique_ptr<vm::EpRecordEventInstructionPolicy>();
-  }
-  template<typename... Args>
-  static std::unique_ptr<vm::InstructionPolicy> VisitPinnedCompute(DeviceType device_type,
-                                                                   Args&&... args) {
-    return std::make_unique<vm::EpRecordEventInstructionPolicy>(std::forward<Args>(args)...);
+  static Maybe<vm::InstructionPolicy> VisitTmpCompute(DeviceType device_type, Args&&... args) {
+    return std::shared_ptr<vm::InstructionPolicy>(
+        new vm::EpRecordEventInstructionPolicy(std::forward<Args>(args)...));
   }
 };
 
