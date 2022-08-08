@@ -412,7 +412,6 @@ jobs:
             module
             misc
             speed-test
-            benchmark
 
   test-distributed:
     name: Distributed test suite
