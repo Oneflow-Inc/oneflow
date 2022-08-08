@@ -392,7 +392,12 @@ bool operator==(const CudnnConvParams& a, const CudnnConvParams& b) {
 }
 
 DataType GetConvDescDataType(DataType data_type, bool pseudo_half) {
-  return (data_type == DataType::kFloat16 && pseudo_half) ? DataType::kFloat : data_type;
+  if (data_type == DataType::kFloat16 && pseudo_half) {
+    return DataType::kFloat;
+  } else if (data_type == DataType::kBFloat16) {
+    return DataType::kFloat;
+  }
+  return data_type;
 }
 
 cudnnStatus_t GetCudnnConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,

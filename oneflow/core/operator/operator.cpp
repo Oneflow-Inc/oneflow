@@ -29,7 +29,6 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/job/nd_sbp_infer_hint.h"
-#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
@@ -540,19 +539,13 @@ Maybe<void> Operator::FillNdSbpSignature(const NdSbpSignature& signature) {
 Maybe<void> Operator::InferSbpSignatureIf(
     const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+    const std::function<Maybe<const SbpInferHint*>(const std::string&)>& SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) {
   SbpSignature signature;
-  if (parallel_desc.parallel_num() == 1) {
-    auto* bn2sbp = signature.mutable_bn_in_op2sbp_parallel();
-    for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn].mutable_broadcast_parallel(); }
-    for (const auto& obn : output_bns()) { (*bn2sbp)[obn].mutable_broadcast_parallel(); }
-  } else if (parallel_desc.parallel_num() > 1) {
-    JUST(InferSbpSignature(&signature, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
-                           parallel_desc));
-  } else {
-    UNIMPLEMENTED();
-  }
+
+  JUST(InferSbpSignature(&signature, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
+                         parallel_desc));
+
   JUST(FillSbpSignature(signature));
   return Maybe<void>::Ok();
 }
@@ -606,16 +599,10 @@ Maybe<void> Operator::InferSbpSignature(
   } else {
     CalcOrderValue4SbpSig = [](const SbpSignature&) -> int32_t { return 0; };
   }
-  if (op_parallel_desc_->parallel_num() == 1) {
-    auto* bn2sbp = infered_sbp_signature->mutable_bn_in_op2sbp_parallel();
-    for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn].mutable_broadcast_parallel(); }
-    for (const auto& obn : output_bns()) { (*bn2sbp)[obn].mutable_broadcast_parallel(); }
-  } else if (op_parallel_desc_->parallel_num() > 1) {
-    JUST(InferSbpSignature(infered_sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig,
-                           SbpInferHint4Ibn, *op_parallel_desc_));
-  } else {
-    UNIMPLEMENTED();
-  }
+
+  JUST(InferSbpSignature(infered_sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig,
+                         SbpInferHint4Ibn, *op_parallel_desc_));
+
   return Maybe<void>::Ok();
 }
 
@@ -1028,8 +1015,8 @@ Maybe<const NdSbp*> Operator::NdSbp4BnInOp(const std::string& bn_in_op) const {
   CHECK_OR_RETURN(nd_sbp_signature_) << "parallel distribution signature not infered";
   const auto& map = nd_sbp_signature_->bn_in_op2nd_sbp();
   const auto& iter = map.find(bn_in_op);
-  CHECK_OR_RETURN(iter != map.end())
-      << "blob_name " << bn_in_op << " not found in parallel distribution";
+  CHECK_OR_RETURN(iter != map.end()) << "op_name " << op_name() << " blob_name " << bn_in_op
+                                     << " not found in parallel distribution";
   return &iter->second;
 }
 

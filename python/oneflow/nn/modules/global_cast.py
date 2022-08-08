@@ -34,7 +34,7 @@ def _check_sbp(sbp):
     return sbp
 
 
-def local_to_global_op(input, placement=None, sbp=None, *, check_meta=True):
+def local_to_global_op(input, placement=None, sbp=None, *, check_meta=True, copy=False):
     assert isinstance(input, Tensor)
     assert input.is_local, "input must be a local tensor"
     if placement is None or sbp is None:
@@ -48,11 +48,11 @@ def local_to_global_op(input, placement=None, sbp=None, *, check_meta=True):
 
     sbp = _check_sbp(sbp)
     grad_sbp = tuple()
-    return flow._C.to_global(input, placement, sbp, grad_sbp, check_meta)
+    return flow._C.to_global(input, placement, sbp, grad_sbp, check_meta, copy)
 
 
 def global_to_global_op(
-    input, placement=None, sbp=None, *, grad_sbp=None, check_meta=False
+    input, placement=None, sbp=None, *, grad_sbp=None, check_meta=False, copy=False
 ):
     assert isinstance(input, Tensor)
     assert input.is_global, "input must be a global tensor"
@@ -71,7 +71,7 @@ def global_to_global_op(
     grad_sbp = _check_sbp(grad_sbp)
     if grad_sbp is None:
         grad_sbp = tuple()
-    return flow._C.to_global(input, placement, sbp, grad_sbp, check_meta)
+    return flow._C.to_global(input, placement, sbp, grad_sbp, check_meta, copy)
 
 
 def to_global_op(input, placement=None, sbp=None, **kwargs):
@@ -85,6 +85,6 @@ def to_global_op(input, placement=None, sbp=None, **kwargs):
         return local_to_global_op(input=input, placement=placement, sbp=sbp, **kwargs)
 
 
-def to_local_op(input):
+def to_local_op(input, *, copy=False):
     assert input.is_global, "Expected global tensor for to_local but got local tensor!"
-    return flow._C.to_local(input)
+    return flow._C.to_local(input, copy)
