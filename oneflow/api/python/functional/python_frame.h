@@ -45,27 +45,20 @@ std::string get_python_frame_str_repr(int32_t stack_index, PyFrameObject* frame)
   return repr + code_name + " at " + file_name + ": line " + std::to_string(line_number) + "; ";
 }
 
-// all the files except those specified in paths_to_be_kepted in 'oneflow/python' should be filtered
-const static std::vector<std::string> paths_to_be_filtered = {ONEFLOW_PYTHON_BASE_DIR};
-
-// keep the files in 'python/oneflow/test' and 'python/oneflow/nn/modules' for running and debugging
-// tests
-const static std::vector<std::string> paths_to_be_kepted = {
-    std::string(ONEFLOW_PYTHON_BASE_DIR) + "/oneflow/test",
-    std::string(ONEFLOW_PYTHON_BASE_DIR) + "/oneflow/nn/modules"};
-
 bool check_if_python_file_should_be_filtered(const std::string& path) {
-  for (int i = 0; i < paths_to_be_kepted.size(); ++i) {
-    const std::string& path_to_keep = paths_to_be_kepted[i];
-    if (path.size() > path_to_keep.size()) {
-      if (path.substr(0, path_to_keep.size()) == path_to_keep) { return false; }
+  const auto& paths_to_be_kept = GetPythonPathsToBeKeptForDebugging();
+  for (int i = 0; i < paths_to_be_kept.size(); ++i) {
+    const std::string& path_to_be_kept = paths_to_be_kept[i];
+    if (path.size() > path_to_be_kept.size()) {
+      if (path.substr(0, path_to_be_kept.size()) == path_to_be_kept) { return false; }
     }
   }
 
+  const auto& paths_to_be_filtered = GetPythonPathsToBeFilteredForDebugging();
   for (int i = 0; i < paths_to_be_filtered.size(); ++i) {
-    const std::string& path_to_filter = paths_to_be_filtered[i];
-    if (path.size() > path_to_filter.size()) {
-      if (path.substr(0, path_to_filter.size()) == path_to_filter) { return true; }
+    const std::string& path_to_be_filtered = paths_to_be_filtered[i];
+    if (path.size() > path_to_be_filtered.size()) {
+      if (path.substr(0, path_to_be_filtered.size()) == path_to_be_filtered) { return true; }
     }
   }
 

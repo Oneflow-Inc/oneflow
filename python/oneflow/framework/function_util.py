@@ -115,14 +115,6 @@ def _MakeLeafJobConfigCall(method):
     return lambda self, *argv, **kwarg: method(self.function_desc, *argv, **kwarg)
 
 
-def _RunEagerJob(session, function_desc, *args):
-    return session.TryInit().EagerRun(function_desc, *args)
-
-
-def _RunLazyJob(session, job_func, *args, **kwargs):
-    return session.TryInit().LazyRun(job_func, *args, **kwargs)
-
-
 @oneflow_function_config("default_data_type")
 def set_default_data_type(func_desc, value):
     """Set default data type for job

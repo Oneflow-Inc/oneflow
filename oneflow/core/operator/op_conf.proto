@@ -128,13 +128,6 @@ message InputOpConf {
   optional string job_name = 4;
 }
 
-message ForeignInputOpConf {
-  optional string tick = 1;
-  required string out = 2;
-  required InterfaceBlobConf blob_conf = 3;
-  required string ofblob_buffer_name = 4;
-}
-
 message ReturnOpConf {
   required string in = 1;
   required string out = 2;
@@ -146,16 +139,6 @@ message OutputOpConf {
   required string out = 2;
   required InterfaceBlobConf blob_conf = 3;
   optional string job_name = 4;
-}
-
-message ForeignOutputOpConf {
-  required string in = 1;
-  required string ofblob_buffer_name = 3;
-}
-
-message ForeignWatchOpConf {
-  required string in = 1;
-  required string handler_uuid = 2;
 }
 
 message VariableOpConf {
@@ -443,11 +426,8 @@ message OperatorConf {
     WaitAndSendIdsOpConf wait_and_send_ids_conf = 139;
     ReentrantLockOpConf reentrant_lock_conf = 140;
     CallbackNotifyOpConf callback_notify_conf = 141;
-    ForeignInputOpConf foreign_input_conf = 142;
-    ForeignOutputOpConf foreign_output_conf = 143;
     AccTickOpConf acc_tick_conf = 144;
     ReturnOpConf return_conf = 146;
-    ForeignWatchOpConf foreign_watch_conf = 151;
     DistributeConcatOpConf distribute_concat_conf = 155;
     DistributeSplitOpConf distribute_split_conf = 156;
     DistributeCloneOpConf distribute_clone_conf = 157;

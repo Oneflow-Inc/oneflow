@@ -89,6 +89,10 @@ class FnOpCompTaskNodeCreator : public OpCompTaskNodeCreator {
   REGISTER_CLASS_CREATOR(std::string, op_type_name, OpCompTaskNodeCreator,      \
                          ([] { return new StaticOpCompTaskNodeCreator<comp_task_node_type>(); }));
 
+#define REGISTER_USER_OP_COMP_TASK_NODE_TYPE_WITH_FUNC(op_type_name, func) \
+  REGISTER_CLASS_CREATOR(std::string, op_type_name, OpCompTaskNodeCreator, \
+                         ([] { return new FnOpCompTaskNodeCreator(func); }));
+
 #define REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(op_type_case, comp_task_node_type) \
   REGISTER_CLASS_CREATOR(int32_t, op_type_case, OpCompTaskNodeCreator,            \
                          ([] { return new StaticOpCompTaskNodeCreator<comp_task_node_type>(); }));
