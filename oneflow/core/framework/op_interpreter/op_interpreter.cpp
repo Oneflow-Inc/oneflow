@@ -114,6 +114,13 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
                                                  inputs, outputs));
     OF_PROFILER_RANGE_POP();
   }
+
+  if (requires_grad && !LazyMode::is_enabled()) {
+    OF_PROFILER_RANGE_GUARD("autograd.Capture");
+    // Capture inputs and outputs after `AddBackwardFuncPtr` because of that grad function
+    // node has been attached to them.
+    JUST(grad_closure->Capture(inputs, *outputs, ctx));
+  }
   // Update outputs autograd meta
   // Note: if requires_grad is True, we will create a new autograd meta for each output
   // in `AddBackwardFuncPtr` to support inplace operation, so the update should after
@@ -144,13 +151,6 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
       JUST(output->set_requires_grad(
           requires_grad && IsSupportRequireGradDataType(output->dtype()->data_type())));
     }
-  }
-
-  if (requires_grad && !LazyMode::is_enabled()) {
-    OF_PROFILER_RANGE_GUARD("autograd.Capture");
-    // Capture inputs and outputs after `AddBackwardFuncPtr` because of that grad function
-    // node has been attached to them.
-    JUST(grad_closure->Capture(inputs, *outputs, ctx));
   }
   return Maybe<void>::Ok();
 }
