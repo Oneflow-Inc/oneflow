@@ -34,8 +34,7 @@ void CopyTaskNode::BuildExecGphAndRegst() {
   auto constructed = CHECK_JUST(ConstructOp(NewCopyOpConf()));
 
   if (constructed->op_conf().has_user_conf()) {
-    Shape dummy_hierarchy({1});
-    std::shared_ptr<Shape> hierarchy = std::make_shared<Shape>(dummy_hierarchy);
+    std::shared_ptr<Shape> hierarchy = std::make_shared<Shape>(Shape({1}));
     auto parallel_desc =
         ParallelDesc::New(constructed->op_conf().device_tag(), {"0:0-0"}, hierarchy).GetOrThrow();
     CHECK_JUST(constructed->FillOpParallelDesc(parallel_desc));
