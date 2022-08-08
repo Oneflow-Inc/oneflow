@@ -509,7 +509,7 @@ Maybe<void> SbpGraph::Find1Strategy4Greedy() const {
     nbh_id2order[nbh_id] = nbh_id;
   }
   // Combining deep first search and pruning based on cut ratio
-  CHECK(DfsFindReasonableCost(nbh_id2node_list_id, node_list_id2nbh_id, nbh_id2order, 0))
+  CHECK(DfsFindReasonableCost(nbh_id2node_list_id, node_list_id2nbh_id, nbh_id2order, /*nbh_id=*/0))
       << "Can't find a reasonable strategy!";
   return Maybe<void>::Ok();
 }
@@ -590,7 +590,7 @@ double SbpGraph::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) co
   // Use brute force (DFS) to adjust for the best strategy in the neighborhood.
   DfsAddNbhCost(nbh_id2node_list_id, node_list_id2nbh_id, order2nbh_id, nbh_id2order,
                 order2acc_min_in_nbh_cost, out_nbh_costs, nbh_id2order2sbp_id, min_sbp_sig_id,
-                min_cost, 0, 0);
+                min_cost, /*order=*/0, /*curr_cost=*/0);
   // Use the sbp strategy with minimum cost
   for (int32_t nbh_id = 0; nbh_id < num_nbh; nbh_id++) {
     node_list_[nbh_id2node_list_id[nbh_id]]->final_sbp_sig_id_ = min_sbp_sig_id[nbh_id];
@@ -602,7 +602,7 @@ double SbpGraph::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) co
     // diff: -4.65661e-10, relative diff:2.09279e-16
     // Therefore, we use a threshold to filter out such fake true detection to
     // avoid unlimited search.
-    if ((original_cost - min_cost) / original_cost > 1e-12) { return min_cost - original_cost; }
+    if (original_cost * float_deviation_minus > min_cost) { return min_cost - original_cost; }
   }
   return 0.0;
 }
