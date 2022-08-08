@@ -102,40 +102,6 @@ def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceM
   let output = (outs AnyType:$out);
 }
 
-// JIT ops
-
-def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpInterfaceMethods<UserOpCompatibleInterface> ] > {
-  let input = (ins Variadic<AnyType>:$data_input);
-  let output = (outs Variadic<AnyType>:$data_output);
-  let attrs = (ins
-    FlatSymbolRefAttr:$callee,
-    StrAttr:$mlir_assembly
-  );
-  let builders = [
-    OpBuilder<(ins "func::FuncOp":$callee,
-      "NamedAttrList":$attributes,
-      CArg<"ValueRange", "{}">:$data_input), [{
-      $_state.addOperands(data_input);
-      $_state.addAttributes(attributes);
-      $_state.addAttribute("callee", SymbolRefAttr::get(callee));
-      $_state.addTypes(callee.getFunctionType().getResults());
-    }]>
-  ];
-  let extraClassDeclaration = [{
-    operand_range getArgOperands() {
-      return {arg_operand_begin(), arg_operand_end()};
-    }
-
-    operand_iterator arg_operand_begin() { return operand_begin(); }
-    operand_iterator arg_operand_end() { return operand_end(); }
-    CallInterfaceCallable getCallableForCallee() {
-      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
-    }
-  }];
-  let assemblyFormat = [{
-    $callee `(` $data_input `)` attr-dict `:` functional-type($data_input, results)
-  }];
-}
 
 class OneFlow_ConcreteSystemOp<string mnemonic, list<Trait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible,
