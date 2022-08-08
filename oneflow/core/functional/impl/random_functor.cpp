@@ -56,7 +56,7 @@ class BernoulliFunctor {
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     // p == -1 means bernoulli op doesn't use p to generate random number
-    JUST(bernoulli_attrs.SetAttr<double>("p", -1));
+    JUST(bernoulli_attrs.SetAttr<double>("p", -1.0));
     return OpInterpUtil::Dispatch<Tensor>(*bernoulli_op_, {x},
                                           OpExprInterpContext(bernoulli_attrs, distribution_state));
   }

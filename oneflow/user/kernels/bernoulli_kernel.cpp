@@ -53,7 +53,7 @@ class BernoulliKerenl final : public user_op::OpKernel {
 
     double p = ctx->Attr<double>("p");
     // prob != -1 means use prob instead of tensor to generate random number
-    if (p != static_cast<double>(-1)) {
+    if (p != static_cast<double>(-1.0)) {
       for (int32_t i = 0; i < out_blob->shape_view().elem_cnt(); ++i) {
         std::bernoulli_distribution dis(p);
         *(out_dptr + i) = dis(cpu_generator->engine()) ? GetOneVal<K>() : GetZeroVal<K>();
