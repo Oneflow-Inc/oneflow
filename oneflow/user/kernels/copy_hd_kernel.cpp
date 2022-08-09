@@ -28,14 +28,14 @@ class CopyHdKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    CHECK(!!in) << "input of copy not found";
+    CHECK(in) << "input of copy not found";
     const ShapeView& in_shape = in->shape_view();
     if (in_shape.elem_cnt() == 0) {
       // 0 shape tensor do not need copy
     } else {
       const DataType in_data_type = in->data_type();
       user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-      CHECK(!!out) << "output of copy not found, op: " << ctx->op_name();
+      CHECK(out) << "output of copy not found, op: " << ctx->op_name();
       CHECK_EQ(out->shape_view(), in_shape);
       CHECK_EQ(out->data_type(), in_data_type);
 
