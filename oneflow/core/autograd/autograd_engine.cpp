@@ -221,8 +221,8 @@ Maybe<bool> FunctionNode::Apply(bool create_graph) {
   for (int i = 0; i < output_meta_data_.size(); ++i) {
     if (output_meta_data_.at(i)->current_grad()->Empty()) {
       // Only initialize out_grads for those requires_grad outputs
-      if(output_meta_data_.at(i)->requires_grad()){
-      output_grads.at(i) = JUST(output_tensor_infos_.at(i).zeros());
+      if (output_meta_data_.at(i)->requires_grad()) {
+        output_grads.at(i) = JUST(output_tensor_infos_.at(i).zeros());
       }
     } else {
       const auto& hooks = JUST(oneflow::VectorAt(output_meta_data_, i))->hooks();
