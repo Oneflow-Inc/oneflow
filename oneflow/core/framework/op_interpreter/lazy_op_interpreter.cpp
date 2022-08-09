@@ -251,7 +251,7 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
   // NOTE(chengcheng): MUST record this eager_tensor name as new variable output lbn.
   // NOTE(chengcheng): in GradAcc FreeEagerTensor need insert repeat op, but there is no need to
   //  create a new tensor for repeat op out. We just set repeat lbn as this free eager tensor's lbn.
-  auto repeat_tensor = JUST(GradAccTryInsertRepeatAfterFreeVar(var_tensor));
+  auto repeat_tensor = JUST(GradAccTryInsertRepeatAfterVar(var_tensor));
   const std::string& repeat_tensor_name = TensorNameScope::Global()->Lookup(repeat_tensor);
   CHECK_OR_RETURN(!repeat_tensor_name.empty());  // NOLINT(maybe-need-error-msg)
   TensorNameScope::Global()->Record(input_tensor, repeat_tensor_name);
@@ -319,25 +319,6 @@ Maybe<Tensor> GradAccTryInsertPackBeforeOutput(const std::shared_ptr<Tensor>& ou
     return functional::GradAccPack(output, grad_acc_step);
   } else {
     return output;
-  }
-}
-
-Maybe<Tensor> GradAccTryInsertRepeatAfterFreeVar(const std::shared_ptr<Tensor>& variable) {
-  int32_t grad_acc_step = JUST(GetGradAccStep());
-  if (grad_acc_step > 1) {
-    // NOTE(chengcheng):
-    //   We assume that the nn.Graph once call is one mini-batch which containing multi
-    //   micro-batches. So we just repeat variable tensor for each micro-batch.
-    VLOG(2)
-        << " Current OneFlow nn.Graph grad acc semantics is different from Torch. \n"
-        << " Once call nn.Graph in OneFlow, it indicates a mini-batch. When grad acc steps > 1, \n"
-        << " the free var tensor of nn.Graph will be repeated exec for multiple micro-batches. \n";
-    const auto& infer_ctx = JUST(GetCurInferCtx());
-    VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name()
-            << " add grad acc repeat op after free eager variable";
-    return functional::GradAccRepeat(variable, grad_acc_step);
-  } else {
-    return variable;
   }
 }
 
@@ -440,6 +421,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
                                        /* is_local= */ input_tensor->is_local()));
   TensorNameScope::Global()->Record(origin_input, GenLogicalBlobName(op_conf.name(), obn));
 
+  // NOTE: The input will then be unpacked in DispatchFeedInputOpExprFunctor
+  // if GradAcc is enabled
   (*outputs)[0] = origin_input;
   return Maybe<void>::Ok();
 }
@@ -501,12 +484,16 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   // NOTE(chengcheng): Record EagerTensor as variable tensor name
   TensorNameScope::Global()->Record(input_tensor, GenLogicalBlobName(op_conf.name(), obn));
 
+  // NOTE: The output variable will then be repeat in DispatchFeedVariableOpExprFunctor
+  // if GradAcc is enabled
   (*outputs)[0] = origin_var;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const OpExprInterpContext& ctx) const {
+  // NOTE: The input has been packed in DispatchFetchOutputOpExprFunctor
+  // if GradAcc is enabled
   // NOTE(chengcheng): inputs[0] is the LazyTensor
   CHECK_EQ_OR_RETURN(inputs.size(), 1);         // NOLINT(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);  // NOLINT(maybe-need-error-msg)
