@@ -125,6 +125,58 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow._C.l1_loss,
+    r"""
+    This operator computes the L1 Loss between each element in input and target.
+
+    see :class:`~oneflow.nn.L1Loss` for details.
+
+    Args:
+        input (Tensor): The input Tensor.
+        target (Tensor): The target Tensor.
+        reduction (string, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
+    
+    Examples::
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn.functional as F
+        >>> input = flow.randn(3, 4, requires_grad=True)
+        >>> target = flow.rand(3, 4, requires_grad=False)
+        >>> loss = F.l1_loss(input, target)
+        >>> loss.backward()
+
+    """,
+)
+
+add_docstr(
+    oneflow._C.mse_loss,
+    r"""
+    Creates a criterion that measures the mean squared error (squared L2 norm) 
+    between each element in the input :math:`x` and target :math:`y`.
+
+    see :class:`~oneflow.nn.MSELoss` for details.
+
+    Args:
+        input (Tensor): The input Tensor.
+        target (Tensor): The target Tensor.
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
+            ``'mean'``: the sum of the output will be divided by the number of
+            elements in the output, ``'sum'``: the output will be summed. Default: ``'mean'``
+
+    Examples::
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn.functional as F
+        >>> input = flow.randn(3, 4, requires_grad=True)
+        >>> target = flow.rand(3, 4, requires_grad=False)
+        >>> loss = F.mse_loss(input, target)
+        >>> loss.backward()
+
+    """,
+)
+
+add_docstr(
     oneflow._C.smooth_l1_loss,
     """
     smooth_l1_loss(input: Tensor, target: Tensor, size_average: bool=True, reduce: bool=True, reduction: str='mean', beta: float=1.0) -> Tensor
