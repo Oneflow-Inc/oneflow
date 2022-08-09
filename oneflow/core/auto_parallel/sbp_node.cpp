@@ -213,17 +213,17 @@ void SbpNode::FinalizeSbp() {
   }
 
   // Finalize Sbp of edges in edges_out_
-  for (const auto& edge_out : edges_out_) edge_out->FinalizeSbp();
+  for (const auto& edge_out : edges_out_) { edge_out->FinalizeSbp(); }
 
   // Finalize Sbp again in case of the node on the other side is not finalized
   // yet. This may happen when Two side of an edge merged into two larger nodes
   // and this edge is just a sub edge.
-  for (const auto& edge_in : edges_in_) edge_in->FinalizeSbp();
+  for (const auto& edge_in : edges_in_) { edge_in->FinalizeSbp(); }
 
   // Finalize Sbp of children_ Attachment
   for (int32_t i = 0; i < children_.size(); i++) {
     children_[i]->FinalizeSbp();
-    for (const auto& edge_in : children_[i]->edges_in_) edge_in->FinalizeSbp();
+    for (const auto& edge_in : children_[i]->edges_in_) { edge_in->FinalizeSbp(); }
   }
 }
 
@@ -287,14 +287,14 @@ double SbpNode::EvalInNbhCost(const std::unordered_map<int32_t, int32_t>& node_l
   // check if this node is in the node list
   CHECK(node_list_id_ >= 0) << "Compute in cost for a node out of the node list";
   // check if the node is in the neighborhood
-  auto this_it = node_list_id2nbh_id.find(node_list_id_);
+  const auto& this_it = node_list_id2nbh_id.find(node_list_id_);
   CHECK(this_it != node_list_id2nbh_id.end())
       << "Compute in cost for a node out of the neighborhood";
   // Compute the minimum cost between this node and adjacent nodes with a lower order
   int32_t order = nbh_id2order[this_it->second];
   double curr_cost = 0;
   for (SbpEdge* this_edge : edges_in_) {
-    auto it = node_list_id2nbh_id.find(this_edge->start_node_->node_list_id_);
+    const auto& it = node_list_id2nbh_id.find(this_edge->start_node_->node_list_id_);
     // if the start node is in the neighborhood
     if (it != node_list_id2nbh_id.end() && nbh_id2order[it->second] < order) {
       curr_cost += this_edge->cost_[this_edge->start_node_->final_sbp_sig_id_][final_sbp_sig_id_];
@@ -303,7 +303,7 @@ double SbpNode::EvalInNbhCost(const std::unordered_map<int32_t, int32_t>& node_l
     }
   }
   for (SbpEdge* this_edge : edges_out_) {
-    auto it = node_list_id2nbh_id.find(this_edge->end_node_->node_list_id_);
+    const auto& it = node_list_id2nbh_id.find(this_edge->end_node_->node_list_id_);
     // if the end node is in the neighborhood
     if (it != node_list_id2nbh_id.end() && nbh_id2order[it->second] < order) {
       curr_cost += this_edge->cost_[final_sbp_sig_id_][this_edge->end_node_->final_sbp_sig_id_];
@@ -318,21 +318,21 @@ double SbpNode::EvalMinInNbhCost(const std::unordered_map<int32_t, int32_t>& nod
   // check if this node is in the node list
   CHECK(node_list_id_ >= 0) << "Compute out cost for a node out of the node list" << std::endl;
   // check if the node is in the neighborhood
-  auto this_it = node_list_id2nbh_id.find(node_list_id_);
+  const auto& this_it = node_list_id2nbh_id.find(node_list_id_);
   CHECK(this_it != node_list_id2nbh_id.end())
       << "Compute out cost for a node out of the neighborhood" << std::endl;
   // Compute the minimum cost between this node and adjacent nodes with a higher order
   int32_t order = nbh_id2order[this_it->second];
   double curr_cost = 0;
   for (SbpEdge* this_edge : edges_in_) {
-    auto it = node_list_id2nbh_id.find(this_edge->start_node_->node_list_id_);
+    const auto& it = node_list_id2nbh_id.find(this_edge->start_node_->node_list_id_);
     // if the start node is in the neighborhood
     if (it != node_list_id2nbh_id.end() && nbh_id2order[it->second] > order) {
       curr_cost += this_edge->GetMinCost();
     }
   }
   for (SbpEdge* this_edge : edges_out_) {
-    auto it = node_list_id2nbh_id.find(this_edge->end_node_->node_list_id_);
+    const auto& it = node_list_id2nbh_id.find(this_edge->end_node_->node_list_id_);
     // if the end node is in the neighborhood
     if (it != node_list_id2nbh_id.end() && nbh_id2order[it->second] > order) {
       curr_cost += this_edge->GetMinCost();
@@ -381,7 +381,7 @@ void SbpNode::NRingNeighborhood(int32_t n, std::vector<int32_t>& nbh_n_ring,
     }
   }
   // Recover false for buffer
-  for (auto nbh_id : nbh_n_ring) node_tags[nbh_id] = false;
+  for (auto nbh_id : nbh_n_ring) { node_tags[nbh_id] = false; }
 }
 
 // Get or compute the minimum layer of this node
@@ -397,7 +397,7 @@ int32_t SbpNode::GetMinLayer(
     if (producer_min_layer > min_layer_) { min_layer_ = producer_min_layer; }
   }
   for (const auto& ctrl_in_op_name : op_node_->op().op_conf().ctrl_in_op_name()) {
-    auto it = op_name2sbp_node.find(ctrl_in_op_name);
+    const auto& it = op_name2sbp_node.find(ctrl_in_op_name);
     if (it != op_name2sbp_node.end()) {
       int32_t producer_min_layer =
           it->second->GetMinLayer(op_name2sbp_node, op_node2mutable_op_ctrl_deps);
@@ -406,7 +406,7 @@ int32_t SbpNode::GetMinLayer(
   }
   if (op_node2mutable_op_ctrl_deps.find(op_node_) != op_node2mutable_op_ctrl_deps.end()) {
     for (const auto& ctrl_in_op_name : op_node2mutable_op_ctrl_deps.at(op_node_)) {
-      auto it = op_name2sbp_node.find(ctrl_in_op_name);
+      const auto& it = op_name2sbp_node.find(ctrl_in_op_name);
       if (it != op_name2sbp_node.end()) {
         int32_t producer_min_layer =
             it->second->GetMinLayer(op_name2sbp_node, op_node2mutable_op_ctrl_deps);
@@ -426,12 +426,12 @@ void SbpNode::SpreadMaxLayer(
   int32_t producer_max_lay = min_layer_ - 1;
   for (SbpEdge* this_edge : edges_in_) { this_edge->start_node_->DropMaxLayer(producer_max_lay); }
   for (const auto& ctrl_in_op_name : op_node_->op().op_conf().ctrl_in_op_name()) {
-    auto it = op_name2sbp_node.find(ctrl_in_op_name);
+    const auto& it = op_name2sbp_node.find(ctrl_in_op_name);
     if (it != op_name2sbp_node.end()) { it->second->DropMaxLayer(producer_max_lay); }
   }
   if (op_node2mutable_op_ctrl_deps.find(op_node_) != op_node2mutable_op_ctrl_deps.end()) {
     for (const auto& ctrl_in_op_name : op_node2mutable_op_ctrl_deps.at(op_node_)) {
-      auto it = op_name2sbp_node.find(ctrl_in_op_name);
+      const auto& it = op_name2sbp_node.find(ctrl_in_op_name);
       if (it != op_name2sbp_node.end()) { it->second->DropMaxLayer(producer_max_lay); }
     }
   }
@@ -490,7 +490,7 @@ void SbpNode::SpreadTrunk(const HashMap<std::string, SbpNode*>& op_name2sbp_node
     }
   }
   for (const auto& ctrl_in_op_name : op_node_->op().op_conf().ctrl_in_op_name()) {
-    auto it = op_name2sbp_node.find(ctrl_in_op_name);
+    const auto& it = op_name2sbp_node.find(ctrl_in_op_name);
     if (it != op_name2sbp_node.end() && it->second->min_layer_ >= min_layer_ - 1) {
       it->second->SpreadTrunk(op_name2sbp_node);
     }
@@ -505,7 +505,7 @@ void SbpNode::RaiseConsumerNum(const HashMap<std::string, SbpNode*>& op_name2sbp
   if (min_layer_ <= 0) { return; }
   for (SbpEdge* this_edge : edges_in_) { this_edge->start_node_->counter_++; }
   for (const auto& ctrl_in_op_name : op_node_->op().op_conf().ctrl_in_op_name()) {
-    auto it = op_name2sbp_node.find(ctrl_in_op_name);
+    const auto& it = op_name2sbp_node.find(ctrl_in_op_name);
     if (it != op_name2sbp_node.end()) { it->second->counter_++; }
   }
 }
@@ -567,7 +567,7 @@ void SbpNode::SpreadAvailWaitTime(const std::vector<double>& trunk_cost,
   }
   // Put the rest the trunk cost in the upstream nodes.
   for (const auto& ctrl_in_op_name : op_node_->op().op_conf().ctrl_in_op_name()) {
-    auto it = op_name2sbp_node.find(ctrl_in_op_name);
+    const auto& it = op_name2sbp_node.find(ctrl_in_op_name);
     if (it != op_name2sbp_node.end()) {
       SbpNode* producer = it->second;
       // Do not inherit trunk cost for nodes on the trunk
@@ -654,7 +654,7 @@ void SbpNode::SpreadTributaryLayer(const HashMap<std::string, SbpNode*>& op_name
     }
   }
   for (const auto& ctrl_in_op_name : op_node_->op().op_conf().ctrl_in_op_name()) {
-    auto it = op_name2sbp_node.find(ctrl_in_op_name);
+    const auto& it = op_name2sbp_node.find(ctrl_in_op_name);
     if (it != op_name2sbp_node.end()) {
       it->second->DropTributaryLayer(producer_max_lay);
       if (--it->second->counter_ == 0) { it->second->SpreadTributaryLayer(op_name2sbp_node); }
