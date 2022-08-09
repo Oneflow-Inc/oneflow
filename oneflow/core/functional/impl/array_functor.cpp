@@ -164,7 +164,6 @@ class ConstantFunctor {
   ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Optional<Symbol<Device>>& device) const {
-    if (shape.size() == 0 && !shape.is_initialized()) {}
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
@@ -2174,7 +2173,7 @@ class TensorSetItemFunctor {
         // so it is not possible to expand to target_shape.
         // e.g. x[0, 0] = 1.0
         // But x[0, 0] = flow.ones(1) do not align with numpy behavior.
-        if (target_shape != *(value_tensor->shape()) /*&& target_shape.NumAxes() > 0*/) {
+        if (target_shape != *(value_tensor->shape())) {
           value_tensor = JUST(Expand(value_tensor, target_shape));
         }
         if (slice_shape != *(value_tensor->shape())) {
