@@ -33,6 +33,7 @@ void CopyTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   auto constructed = CHECK_JUST(ConstructOp(NewCopyOpConf()));
 
+  // prevent filling parallel desc for copy commnet
   if (constructed->op_conf().has_user_conf()) {
     std::shared_ptr<Shape> hierarchy = std::make_shared<Shape>(Shape({1}));
     auto parallel_desc =
