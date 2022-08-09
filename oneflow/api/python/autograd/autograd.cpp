@@ -50,7 +50,8 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
       << " gradients";
   for (int i = 0; i < outputs.size(); ++i) {
     CHECK_OR_RETURN(outputs.at(i)->requires_grad())
-        << "All output tensors `.requires_grad` should be true";
+        << "\nRuntimeError: element " << i
+        << " of tensors does not require grad and does not have a grad_fn";
     if (!outputs.at(i)->grad_fn_node()) {
       CHECK_OR_RETURN(outputs.at(i)->is_leaf())
           << "output[" << i << "] doesn't have grad_fn and it is not leaf tensor!\n"
