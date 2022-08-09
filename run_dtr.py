@@ -212,6 +212,19 @@ def unet_info():
     return model, criterion, get_fixed_input, get_fixed_label, get_imagefolder
 
 
+def cycle_gan_info():
+    import cycle_gan
+
+    model = cycle_gan.CycleGANModel()
+    get_fixed_input = lambda bs: flow.ones(bs, 3, 256, 256)
+    get_fixed_label = lambda bs: flow.ones(bs, 3, 256, 256)
+
+    def get_imagefolder():
+        raise NotImplementedError
+
+    return model, None, get_fixed_input, get_fixed_label, get_imagefolder
+
+
 def update_dataset(prof):
     DATASET_FILENAME = "/home/dev/op_time_dataset.json"
     if os.path.exists(DATASET_FILENAME):
@@ -253,11 +266,13 @@ model, criterion, get_fixed_input, get_fixed_label, get_imagefolder = eval(
     f"{args.model_name}_info()"
 )
 
-model.to("cuda")
-criterion.to("cuda")
-
 learning_rate = 0.001
-optimizer = flow.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.0)
+optimizer = None
+
+if args.model_name != "cycle_gan":
+    model.to("cuda")
+    criterion.to("cuda")
+    optimizer = flow.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.0)
 
 
 if args.no_dataloader:
@@ -280,7 +295,7 @@ else:
         imagefolder, batch_size=args.bs, shuffle=True, num_workers=0
     )
 
-if args.dtr:
+if args.dtr and args.model_name != "cycle_gan":
     flow.nn.ContiguousGrad(model)
 zero_grad_set_to_none = args.old_immutable
 
@@ -293,17 +308,21 @@ def run_iter(train_data, train_label):
     # print(f'iter {iter} start, all pieces:')
     # flow._oneflow_internal.dtr.display_all_pieces()
 
-    logits = model(train_data)
-    loss = criterion(logits, train_label)
-    loss.backward()
-    if enable_tensorboard:
-        writer.add_scalar("Loss/train/loss", loss.item(), iter)
-        writer.flush()
+    if args.model_name == "cycle_gan":
+        model.set_input(train_data, train_label)
+        model.optimize_parameters()
+    else:
+        logits = model(train_data)
+        loss = criterion(logits, train_label)
+        loss.backward()
+        if enable_tensorboard:
+            writer.add_scalar("Loss/train/loss", loss.item(), iter)
+            writer.flush()
 
-    optimizer.step()
-    optimizer.zero_grad(set_to_none=zero_grad_set_to_none)
-    del logits
-    del loss
+        optimizer.step()
+        optimizer.zero_grad(set_to_none=zero_grad_set_to_none)
+        del logits
+        del loss
 
     flow.comm.barrier()
     if args.allocator:
