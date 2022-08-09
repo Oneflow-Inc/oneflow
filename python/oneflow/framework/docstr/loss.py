@@ -127,7 +127,7 @@ add_docstr(
 add_docstr(
     oneflow._C.l1_loss,
     r"""
-    This operator computes the L1 Loss between each element in input and target.
+    This operator computes the L1 loss between each element in input and target.
 
     see :class:`~oneflow.nn.L1Loss` for details.
 
@@ -151,8 +151,8 @@ add_docstr(
 add_docstr(
     oneflow._C.mse_loss,
     r"""
-    Creates a criterion that measures the mean squared error (squared L2 norm) 
-    between each element in the input :math:`x` and target :math:`y`.
+    This operator computes the mean squared error (squared L2 norm) 
+    loss between each element in input and target.
 
     see :class:`~oneflow.nn.MSELoss` for details.
 
