@@ -88,7 +88,7 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   } else {
     LOG(FATAL) << "unknow copy type: " << copy_type_;
   }
-  conf.set_name(copy_type_name + "_" + NewUniqueId());
+  conf.set_name(std::string(copy_type_name) + "_" + NewUniqueId());
   *conf.mutable_user_conf()->mutable_op_type_name() = copy_type_name;
   auto in_regst = GetSoleConsumedRegst("copy_in");
   CHECK_EQ(in_regst->NumOfLbi(), 1);
