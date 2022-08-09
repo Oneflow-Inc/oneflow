@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, typename IDX>
+template<DeviceType device_type, typename T, typename T_TGT, typename T_INLEN, typename T_TGTLEN>
 class CtcLossKernel final : public user_op::OpKernel {
  public:
   CtcLossKernel() = default;
@@ -34,9 +34,9 @@ class CtcLossKernel final : public user_op::OpKernel {
     user_op::Tensor* alpha = ctx->Tensor4ArgNameAndIndex("alpha", 0);
 
     const T* log_probs_ptr = log_probs->dptr<T>();
-    const int* targets_ptr = targets->dptr<int>();
-    const IDX* input_lengths_ptr = input_lengths->dptr<IDX>();
-    const IDX* target_lengths_ptr = target_lengths->dptr<IDX>();
+    const T_TGT* targets_ptr = targets->dptr<T_TGT>();
+    const T_INLEN* input_lengths_ptr = input_lengths->dptr<T_INLEN>();
+    const T_TGTLEN* target_lengths_ptr = target_lengths->dptr<T_TGTLEN>();
     const int32_t blank = ctx->Attr<int32_t>("blank");
     const int64_t max_input_length = log_probs->shape_view().At(0);
     const int64_t batch_size = log_probs->shape_view().At(1);
@@ -49,7 +49,7 @@ class CtcLossKernel final : public user_op::OpKernel {
                                                  2 * max_target_length + 1);
     T* loss_ptr = loss->mut_dptr<T>();
     T* alpha_ptr = alpha->mut_dptr<T>();
-    CtcLossKernelUtil<device_type, T, IDX>::CtcLossForward(
+    CtcLossKernelUtil<device_type, T, T_TGT, T_INLEN, T_TGTLEN>::CtcLossForward(
         ctx->stream(), log_probs_ptr, targets_ptr, input_lengths_ptr, target_lengths_ptr, alpha_ptr,
         loss_ptr, input_helper, alpha_helper, batch_size, max_input_length, max_target_length,
         blank, targets_ndim);
@@ -57,18 +57,25 @@ class CtcLossKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CTC_LOSS_KERNEL(device, dtype, idx_dtype)                                        \
+// #define REGISTER_CTC_LOSS_KERNEL(device, dtype, idx_dtype)
+#define REGISTER_CTC_LOSS_KERNEL(device, dtype, target_dtype, input_lengths_dtype,                \
+                                 target_lengths_dtype)                                            \
   REGISTER_USER_KERNEL("ctc_loss")                                                                \
-      .SetCreateFn<CtcLossKernel<device, OF_PP_PAIR_FIRST(dtype), OF_PP_PAIR_FIRST(idx_dtype)>>() \
-      .SetIsMatchedHob(                                                                           \
-          (user_op::HobDeviceType() == device)                                                    \
-          && (user_op::HobDataType("log_probs", 0) == OF_PP_PAIR_SECOND(dtype))                   \
-          && (user_op::HobDataType("input_lengths", 0) == OF_PP_PAIR_SECOND(idx_dtype)));
+      .SetCreateFn<CtcLossKernel<device, OF_PP_PAIR_FIRST(dtype), OF_PP_PAIR_FIRST(target_dtype), \
+                                 OF_PP_PAIR_FIRST(input_lengths_dtype),                           \
+                                 OF_PP_PAIR_FIRST(target_lengths_dtype)>>()                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                       \
+                       && (user_op::HobDataType("log_probs", 0) == OF_PP_PAIR_SECOND(dtype))      \
+                       && (user_op::HobDataType("targets", 0) == OF_PP_PAIR_SECOND(target_dtype)) \
+                       && (user_op::HobDataType("target_lengths", 0)                              \
+                           == OF_PP_PAIR_SECOND(target_lengths_dtype))                            \
+                       && (user_op::HobDataType("input_lengths", 0)                               \
+                           == OF_PP_PAIR_SECOND(input_lengths_dtype)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CTC_LOSS_KERNEL, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ,
-                                 INDEX_DATA_TYPE_SEQ)
+                                 INDEX_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
-template<DeviceType device_type, typename T, typename IDX>
+template<DeviceType device_type, typename T, typename T_TGT, typename T_INLEN, typename T_TGTLEN>
 class CtcLossGradKernel final : public user_op::OpKernel {
  public:
   CtcLossGradKernel() = default;
@@ -90,9 +97,9 @@ class CtcLossGradKernel final : public user_op::OpKernel {
     const T* loss_ptr = loss->dptr<T>();
     const T* alpha_ptr = alpha->dptr<T>();
     const T* log_probs_ptr = log_probs->dptr<T>();
-    const int* targets_ptr = targets->dptr<int>();
-    const IDX* input_lengths_ptr = input_lengths->dptr<IDX>();
-    const IDX* target_lengths_ptr = target_lengths->dptr<IDX>();
+    const T_TGT* targets_ptr = targets->dptr<T_TGT>();
+    const T_INLEN* input_lengths_ptr = input_lengths->dptr<T_INLEN>();
+    const T_TGTLEN* target_lengths_ptr = target_lengths->dptr<T_TGTLEN>();
     const int32_t blank = ctx->Attr<int32_t>("blank");
     const bool zero_infinity = ctx->Attr<bool>("zero_infinity");
     const int64_t batch_size = log_probs->shape_view().At(1);
@@ -106,7 +113,7 @@ class CtcLossGradKernel final : public user_op::OpKernel {
                                                 2 * max_target_length + 1);
     T* grad_ptr = grad->mut_dptr<T>();
     T* beta_ptr = tmp_buffer->mut_dptr<T>();
-    CtcLossKernelUtil<device_type, T, IDX>::CtcLossBackward(
+    CtcLossKernelUtil<device_type, T, T_TGT, T_INLEN, T_TGTLEN>::CtcLossBackward(
         ctx->stream(), grad_out_ptr, loss_ptr, alpha_ptr, log_probs_ptr, targets_ptr,
         input_lengths_ptr, target_lengths_ptr, beta_ptr, grad_ptr, input_helper, beta_helper,
         batch_size, max_input_length, max_target_length, num_labels, blank, zero_infinity,
@@ -115,23 +122,29 @@ class CtcLossGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CTC_LOSS_BACKWARD_KERNEL(device, dtype, idx_dtype)                          \
-  REGISTER_USER_KERNEL("ctc_loss_grad")                                                      \
-      .SetCreateFn<                                                                          \
-          CtcLossGradKernel<device, OF_PP_PAIR_FIRST(dtype), OF_PP_PAIR_FIRST(idx_dtype)>>() \
-      .SetIsMatchedHob(                                                                      \
-          (user_op::HobDeviceType() == device)                                               \
-          && (user_op::HobDataType("log_probs", 0) == OF_PP_PAIR_SECOND(dtype))              \
-          && (user_op::HobDataType("input_lengths", 0) == OF_PP_PAIR_SECOND(idx_dtype)))     \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                    \
-        const Shape& log_probs_shape = ctx->InputShape("log_probs", 0);                      \
-        const int64_t max_target_length = ctx->Attr<int64_t>("max_target_length");           \
-        int64_t elem_cnt =                                                                   \
-            log_probs_shape.At(1) * log_probs_shape.At(0) * (2 * max_target_length + 1);     \
-        return elem_cnt * sizeof(OF_PP_PAIR_FIRST(dtype));                                   \
+#define REGISTER_CTC_LOSS_BACKWARD_KERNEL(device, dtype, target_dtype, input_lengths_dtype,       \
+                                          target_lengths_dtype)                                   \
+  REGISTER_USER_KERNEL("ctc_loss_grad")                                                           \
+      .SetCreateFn<CtcLossGradKernel<                                                             \
+          device, OF_PP_PAIR_FIRST(dtype), OF_PP_PAIR_FIRST(target_dtype),                        \
+          OF_PP_PAIR_FIRST(input_lengths_dtype), OF_PP_PAIR_FIRST(target_lengths_dtype)>>()       \
+      .SetIsMatchedHob(                                                                           \
+          (user_op::HobDeviceType() == device)                                                    \
+          && (user_op::HobDataType("log_probs", 0) == OF_PP_PAIR_SECOND(dtype))                   \
+          && (user_op::HobDataType("targets", 0) == OF_PP_PAIR_SECOND(target_dtype))               \
+          && (user_op::HobDataType("input_lengths", 0) == OF_PP_PAIR_SECOND(input_lengths_dtype)) \
+          && (user_op::HobDataType("target_lengths", 0)                                           \
+              == OF_PP_PAIR_SECOND(target_lengths_dtype)))                                        \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
+        const Shape& log_probs_shape = ctx->InputShape("log_probs", 0);                           \
+        const int64_t max_target_length = ctx->Attr<int64_t>("max_target_length");                \
+        int64_t elem_cnt =                                                                        \
+            log_probs_shape.At(1) * log_probs_shape.At(0) * (2 * max_target_length + 1);          \
+        return elem_cnt * sizeof(OF_PP_PAIR_FIRST(dtype));                                        \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CTC_LOSS_BACKWARD_KERNEL, DEVICE_TYPE_SEQ,
-                                 FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
