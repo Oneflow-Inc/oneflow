@@ -94,7 +94,7 @@ class TestCast(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
     @autotest(n=5, auto_backward=False)
-    # NOTE:if set auto_backward=True, both oneflow and pytorch will raise RuntimeError: 
+    # NOTE:if set auto_backward=True, both oneflow and pytorch will raise RuntimeError:
     # element 0 of tensors does not require grad and does not have a grad_fn
     def test_cast_with_scalar_input(test_case):
         device = random_device()
