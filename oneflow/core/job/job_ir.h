@@ -22,6 +22,7 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<std::string> ConvertJobToTosaIR(Job* job);
+Maybe<std::string> ConvertJobToIR(Job* job);
 Maybe<void> SaveJobToIR(Job* job, const std::string& path);
 Maybe<void> LoadJobFromIR(Job* job, const std::string& path);
 
