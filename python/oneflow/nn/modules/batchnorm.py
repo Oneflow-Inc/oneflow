@@ -581,9 +581,6 @@ class SyncBatchNorm(_BatchNorm):
             buffers :attr:`running_mean` and :attr:`running_var` as ``None``.
             When these buffers are ``None``, this module always uses batch statistics.
             in both training and eval modes. Default: ``True``
-        process_group: synchronization of stats happen within each process group
-            individually. Default behavior is synchronization across the whole
-            world
 
     Shape:
         - Input: :math:`(N, C, +)`
@@ -596,16 +593,12 @@ class SyncBatchNorm(_BatchNorm):
 
     Examples::
 
-        >>> # With Learnable Parameters
-        >>> m = nn.SyncBatchNorm(100)
-        >>> # Without Learnable Parameters
-        >>> m = nn.BatchNorm3d(100, affine=False)
-        >>> input = flow.randn(20, 100, 35, 45, 10)
-        >>> output = m(input)
-
-        >>> # network is nn.BatchNorm layer
-        >>> sync_bn_network = nn.SyncBatchNorm.convert_sync_batchnorm(network)
-        >>> ddp_sync_bn_network = flow.nn.parallel.DistributedDataParallel(sync_bn_network)
+        >>> import oneflow as flow
+        
+        >>> bn = flow.nn.BatchNorm2d(100)
+        >>> sync_bn = flow.nn.SyncBatchNorm.convert_sync_batchnorm(bn).cuda()
+        >>> input = flow.randn(20, 100, 35, 45, device="cuda")
+        >>> output = sync_bn(input)
     """
 
     def __init__(
@@ -695,6 +688,7 @@ class SyncBatchNorm(_BatchNorm):
             global_momentum = exponential_average_factor
             global_world_size = flow.env.get_world_size()
             global_axis = self.channel_axis
+            assert self.track_running_stats, "`track_running_stats` should be True when using SyncBatchNorm."
             return SyncBatchNormFunction.apply(
                 input, self.weight, self.bias, self.running_mean, self.running_var,
             )
@@ -715,11 +709,9 @@ class SyncBatchNorm(_BatchNorm):
 
         Example::
 
-            >>> # Network with nn.BatchNorm layer
-            >>> module = flow.nn.Sequential(
-            >>>            flow.nn.Linear(20, 100),
-            >>>            flow.nn.BatchNorm1d(100),
-            >>>          ).cuda()
+            >>> import oneflow as flow
+
+            >>> module = flow.nn.Sequential( flow.nn.Linear(20, 100), flow.nn.BatchNorm1d(100)).cuda()
             >>> sync_bn_module = flow.nn.SyncBatchNorm.convert_sync_batchnorm(module)
 
         """
