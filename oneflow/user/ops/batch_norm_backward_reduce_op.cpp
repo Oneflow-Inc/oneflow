@@ -25,7 +25,7 @@ std::function<Maybe<void>(const std::string&)> MakeSetOutTensorDescFn(user_op::I
   return [=](const std::string& bn) -> Maybe<void> {
     if (ctx->has_output(bn, 0)) {
       auto* tensor_desc = ctx->MutOutputTensorDesc(bn, 0);
-      CHECK_OR_RETURN(tensor_desc != nullptr);
+      CHECK_OR_RETURN(tensor_desc != nullptr) << "output tensordesc of " << bn << " is null.";
       *tensor_desc->mut_shape() = shape;
     }
     return Maybe<void>::Ok();
@@ -37,7 +37,7 @@ std::function<Maybe<void>(const std::string&)> MakeSetOutDataTypeFn(user_op::Inf
   return [=](const std::string& bn) -> Maybe<void> {
     if (ctx->has_output(bn, 0)) {
       auto* tensor_desc = ctx->MutOutputTensorDesc(bn, 0);
-      CHECK_OR_RETURN(tensor_desc != nullptr);
+      CHECK_OR_RETURN(tensor_desc != nullptr) << "output tensordesc of " << bn << " is null.";
       *tensor_desc->mut_data_type() = data_type;
     }
     return Maybe<void>::Ok();
@@ -51,8 +51,8 @@ std::function<Maybe<void>(const std::string&)> MakeSetOutDataTypeFn(user_op::Inf
   const auto& x = ctx->InputTensorDesc("input", 0);
   const Shape& x_shape = x.shape();
   const auto axis = ctx->Attr<int32_t>("axis");
-  CHECK_GE_OR_RETURN(axis, 0);
-  CHECK_LT_OR_RETURN(axis, x_shape.NumAxes());
+  CHECK_GE_OR_RETURN(axis, 0) << "channel axis should be larger than 0";
+  CHECK_LT_OR_RETURN(axis, x_shape.NumAxes()) << "channel axis should be less than " << x_shape.NumAxes();
   const Shape param_shape({x_shape.At(axis)});
   const auto SetOutTensorDesc = MakeSetOutTensorDescFn(ctx, param_shape);
   JUST(SetOutTensorDesc("sum_dy"));

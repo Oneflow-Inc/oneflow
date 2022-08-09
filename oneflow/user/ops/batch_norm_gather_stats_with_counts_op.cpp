@@ -25,7 +25,7 @@ std::function<Maybe<void>(const std::string&)> MakeSetOutTensorDescFn(user_op::I
   return [=](const std::string& bn) -> Maybe<void> {
     if (ctx->has_output(bn, 0)) {
       auto* tensor_desc = ctx->MutOutputTensorDesc(bn, 0);
-      CHECK_OR_RETURN(tensor_desc != nullptr);
+      CHECK_OR_RETURN(tensor_desc != nullptr) << "output tensordesc of " << bn << " is null.";
       *tensor_desc->mut_shape() = shape;
     }
     return Maybe<void>::Ok();
@@ -37,7 +37,7 @@ std::function<Maybe<void>(const std::string&)> MakeSetOutDataTypeFn(user_op::Inf
   return [=](const std::string& bn) -> Maybe<void> {
     if (ctx->has_output(bn, 0)) {
       auto* tensor_desc = ctx->MutOutputTensorDesc(bn, 0);
-      CHECK_OR_RETURN(tensor_desc != nullptr);
+      CHECK_OR_RETURN(tensor_desc != nullptr) << "output tensordesc of " << bn << " is null.";
       *tensor_desc->mut_data_type() = data_type;
     }
     return Maybe<void>::Ok();
@@ -80,13 +80,13 @@ std::function<Maybe<void>(const std::string&)> MakeSetOutDataTypeFn(user_op::Inf
 /* static */ Maybe<void> BatchNormGatherStatsWithCountsOp::ModifyInputArg(
     const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   if (conf.has_input("running_mean", 0)) {
-    CHECK_OR_RETURN(conf.has_input("running_var", 0));
+    CHECK_OR_RETURN(conf.has_input("running_var", 0)) << "running_mean and running_var should be provided as inputs in the same time.";
     user_op::InputArgModifier* running_mean_modifier = GetInputArgModifierFn("running_mean", 0);
-    CHECK_OR_RETURN(running_mean_modifier != nullptr);
+    CHECK_OR_RETURN(running_mean_modifier != nullptr) << "input arg modifier of running_mean is null.";
     running_mean_modifier->set_is_mutable(true);
     running_mean_modifier->set_requires_grad(false);
     user_op::InputArgModifier* running_var_modifier = GetInputArgModifierFn("running_var", 0);
-    CHECK_OR_RETURN(running_var_modifier != nullptr);
+    CHECK_OR_RETURN(running_var_modifier != nullptr) << "input arg modifier of running_var is null.";
     running_var_modifier->set_is_mutable(true);
     running_var_modifier->set_requires_grad(false);
   }

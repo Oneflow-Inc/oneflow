@@ -25,7 +25,7 @@ std::function<Maybe<void>(const std::string&)> MakeSetOutTensorDescFn(user_op::I
   return [=](const std::string& bn) -> Maybe<void> {
     if (ctx->has_output(bn, 0)) {
       auto* tensor_desc = ctx->MutOutputTensorDesc(bn, 0);
-      CHECK_OR_RETURN(tensor_desc != nullptr);
+      CHECK_OR_RETURN(tensor_desc != nullptr) << "output tensordesc of " << bn << " is null.";
       *tensor_desc->mut_shape() = shape;
     }
     return Maybe<void>::Ok();
@@ -37,7 +37,7 @@ std::function<Maybe<void>(const std::string&)> MakeSetOutDataTypeFn(user_op::Inf
   return [=](const std::string& bn) -> Maybe<void> {
     if (ctx->has_output(bn, 0)) {
       auto* tensor_desc = ctx->MutOutputTensorDesc(bn, 0);
-      CHECK_OR_RETURN(tensor_desc != nullptr);
+      CHECK_OR_RETURN(tensor_desc != nullptr) << "output tensordesc of " << bn << " is null.";
       *tensor_desc->mut_data_type() = data_type;
     }
     return Maybe<void>::Ok();
