@@ -1288,7 +1288,7 @@ class TestGlobalCast_1To1(flow.unittest.TestCase):
             )
 
 
-class GraphModel(nn.Graph):
+class GraphTestModel(nn.Graph):
     def __init__(self, model):
         super().__init__()
         self.model = model
@@ -1298,11 +1298,11 @@ class GraphModel(nn.Graph):
 
 
 @flow.unittest.skip_unless_1n2d()
-class TestToGlobalLocal(oneflow.unittest.TestCase):
+class TestToGlobalAndLocal(flow.unittest.TestCase):
     placement = flow.placement("cpu", ranks=[0, 1])
     sbp = None
     model = nn.Sequential(nn.Linear(8, 4), nn.ReLU(), nn.Linear(4, 2))
-    local_graph_model = GraphModel(model)
+    local_graph_model = GraphTestModel(model)
     global_graph_model = None
 
     def __all_global(test_case, input, placement, sbp):
@@ -1365,10 +1365,14 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
         global_inputs = []
         for i in inputs:
             ret = flow.to_global(
-                i, placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp
+                i,
+                placement=TestToGlobalAndLocal.placement,
+                sbp=TestToGlobalAndLocal.sbp,
             )
             test_case.__all_global(
-                ret, placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp
+                ret,
+                placement=TestToGlobalAndLocal.placement,
+                sbp=TestToGlobalAndLocal.sbp,
             )
             global_inputs.append(ret)
 
@@ -1382,16 +1386,16 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
         # local tensor -> global tensor
         global_tensor = flow.to_global(
             local_tensor,
-            placement=TestToGlobalLocal.placement,
-            sbp=TestToGlobalLocal.sbp,
+            placement=TestToGlobalAndLocal.placement,
+            sbp=TestToGlobalAndLocal.sbp,
         )
         test_case.assertTrue(global_tensor.is_global)
 
         # global tensor -> global tensor
         global_tensor = flow.to_global(
             global_tensor,
-            placement=TestToGlobalLocal.placement,
-            sbp=TestToGlobalLocal.sbp,
+            placement=TestToGlobalAndLocal.placement,
+            sbp=TestToGlobalAndLocal.sbp,
         )
         test_case.assertTrue(global_tensor.is_global)
 
@@ -1403,14 +1407,16 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
         with test_case.assertRaises(TypeError):
             global_tensor = flow.to_global(
                 local_tensor,
-                placement=TestToGlobalLocal.placement,
-                sbp=(TestToGlobalLocal.sbp, 0),
+                placement=TestToGlobalAndLocal.placement,
+                sbp=(TestToGlobalAndLocal.sbp, 0),
             )
 
     def _test_tensor_to_local(test_case):
         # global tensor -> local tensor
         global_tensor = flow.ones(
-            (3, 4), placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp
+            (3, 4),
+            placement=TestToGlobalAndLocal.placement,
+            sbp=TestToGlobalAndLocal.sbp,
         )
         local_tensor = flow.to_local(global_tensor)
         test_case.assertFalse(local_tensor.is_global)
@@ -1419,25 +1425,25 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
         # local state dict -> global state dict
         global_state_dict = flow.to_global(
             local_state_dict,
-            placement=TestToGlobalLocal.placement,
-            sbp=TestToGlobalLocal.sbp,
+            placement=TestToGlobalAndLocal.placement,
+            sbp=TestToGlobalAndLocal.sbp,
         )
         test_case.__all_global(
             global_state_dict,
-            placement=TestToGlobalLocal.placement,
-            sbp=TestToGlobalLocal.sbp,
+            placement=TestToGlobalAndLocal.placement,
+            sbp=TestToGlobalAndLocal.sbp,
         )
 
         # global state dict -> global state dict
         global_state_dict = flow.to_global(
             global_state_dict,
-            placement=TestToGlobalLocal.placement,
-            sbp=TestToGlobalLocal.sbp,
+            placement=TestToGlobalAndLocal.placement,
+            sbp=TestToGlobalAndLocal.sbp,
         )
         test_case.__all_global(
             global_state_dict,
-            placement=TestToGlobalLocal.placement,
-            sbp=TestToGlobalLocal.sbp,
+            placement=TestToGlobalAndLocal.placement,
+            sbp=TestToGlobalAndLocal.sbp,
         )
 
     def __test_state_dict_to_local(test_case, global_state_dict):
@@ -1449,31 +1455,31 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
         local_state_dict = flow.to_local(local_state_dict)
 
     def _test_eagar_state_dict(test_case):
-        test_case.__test_state_dict_to_global(TestToGlobalLocal.model.state_dict())
-        global_model = TestToGlobalLocal.model.to_global(
-            placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp
+        test_case.__test_state_dict_to_global(TestToGlobalAndLocal.model.state_dict())
+        global_model = TestToGlobalAndLocal.model.to_global(
+            placement=TestToGlobalAndLocal.placement, sbp=TestToGlobalAndLocal.sbp
         )
         test_case.__test_state_dict_to_local(global_model.state_dict())
 
     def _test_graph_state_dict(test_case):
         test_case.__test_state_dict_to_global(
-            TestToGlobalLocal.local_graph_model.state_dict()
+            TestToGlobalAndLocal.local_graph_model.state_dict()
         )
         test_case.__test_state_dict_to_local(
-            TestToGlobalLocal.global_graph_model.state_dict()
+            TestToGlobalAndLocal.global_graph_model.state_dict()
         )
 
-    def test(test_case):
+    def test_to_global_local(test_case):
         sbp_types = [
             (flow.sbp.broadcast,),
             (flow.sbp.split(0),),
             (flow.sbp.partial_sum,),
         ]
         for sbp in sbp_types:
-            TestToGlobalLocal.sbp = sbp
-            TestToGlobalLocal.global_graph_model = GraphModel(
-                TestToGlobalLocal.model.to_global(
-                    placement=TestToGlobalLocal.placement, sbp=sbp
+            TestToGlobalAndLocal.sbp = sbp
+            TestToGlobalAndLocal.global_graph_model = GraphTestModel(
+                TestToGlobalAndLocal.model.to_global(
+                    placement=TestToGlobalAndLocal.placement, sbp=sbp
                 )
             )
             test_case._test_any_input()

@@ -288,6 +288,7 @@ def _test_graph_save_load_global_split_2(
             else:
                 local_state_dict = None
 
+            # test sbp_for_special_keys
             global_state_dict = flow.dict_to_global(
                 local_state_dict,
                 placement=model_file_placement,
@@ -575,6 +576,7 @@ def _test_graph_save_load_global_split_4(
             else:
                 local_state_dict = None
 
+            # test sbp_for_special_keys
             global_state_dict = flow.dict_to_global(
                 local_state_dict,
                 placement=model_file_placement,
@@ -754,7 +756,7 @@ def _test_graph_save_load_global_split_4(
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
-class TestGraphSaveLoadGlobal2(oneflow.unittest.TestCase):
+class TestGraphSaveLoadGlobal2d(oneflow.unittest.TestCase):
     def test_linear_graph_save_load_gpu_1b(test_case):
         _test_linear_graph_save_load_global_broadcast(
             test_case,
@@ -786,7 +788,7 @@ class TestGraphSaveLoadGlobal2(oneflow.unittest.TestCase):
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n4d()
-class TestGraphSaveLoadGlobal4(oneflow.unittest.TestCase):
+class TestGraphSaveLoadGlobal4d(oneflow.unittest.TestCase):
     def test_graph_save_load_gpu_2s2n(test_case):
         _test_graph_save_load_global_split_4(
             test_case,
