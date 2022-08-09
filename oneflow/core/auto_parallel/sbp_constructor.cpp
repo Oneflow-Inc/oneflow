@@ -130,10 +130,10 @@ Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph, const J
 
   // Decide the order to visit the op
   std::vector<int32_t> order;
-  auto comp_op_name = [&](OpNode* a, OpNode* b) {
+  auto CompareOpName = [&](OpNode* a, OpNode* b) {
     return a->op().op_name().compare(b->op().op_name()) > 0;
   };
-  auto_parallel::DecideOrder(op_node_list, order, comp_op_name);
+  auto_parallel::DecideOrder(op_node_list, order, CompareOpName);
   std::vector<int32_t> output_order;
 
   // Create sbp nodes
@@ -154,7 +154,7 @@ Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph, const J
     for (const auto* op_edge : op_node->out_edges()) {
       output_node_list.push_back(op_edge->dst_node());
     }
-    auto_parallel::DecideOrder(output_node_list, output_order, comp_op_name);
+    auto_parallel::DecideOrder(output_node_list, output_order, CompareOpName);
     for (int32_t j : output_order) {
       const auto& end_node_name = output_node_list[j]->op().op_name();
       // Generate sbp edge in cost model
@@ -224,13 +224,13 @@ Maybe<void> SbpConstructor::InitComputationCost(const OpGraph& op_graph) {
     const ParallelDesc& parallel_desc = op_node->parallel_desc();
 
     CHECK_EQ_OR_RETURN(sbp_node->cost_.size(), sbp_node->sbp_sig_list_.size());
-    auto logical_blob_desc4bn = [&](const std::string& bn) -> const BlobDesc& {
+    auto LogicalBlobDesc4Bn = [&](const std::string& bn) -> const BlobDesc& {
       const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(bn);
       return op_node->LogicalBlobDesc4Lbi(lbi);
     };
     for (int32_t sbp_id = 0; sbp_id < sbp_node->sbp_sig_list_.size(); sbp_id++) {
       double comp_cost = JUST(op_node->op().GetComputeComplexity(
-          &sbp_node->sbp_sig_list_[sbp_id], logical_blob_desc4bn, parallel_desc));
+          &sbp_node->sbp_sig_list_[sbp_id], LogicalBlobDesc4Bn, parallel_desc));
       if (comp_cost > GetValidMaxCopyCost()) {
         sbp_node->cost_.at(sbp_id) = comp_cost;
       } else {
@@ -282,9 +282,9 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
 }
 
 Maybe<void> SbpConstructor::ApplyTrunkAlgo() {
-  auto op_node2mutable_op_ctrl_deps = JUST(GetMutableOpCtrlDeps(*op_graph_));
+  auto OpNode2MutableOpCtrlDeps = JUST(GetMutableOpCtrlDeps(*op_graph_));
   // Compute layer number for each node
-  int32_t max_min_layer = sbp_graph_.ComputeLayer(op_name2sbp_node_, *op_node2mutable_op_ctrl_deps);
+  int32_t max_min_layer = sbp_graph_.ComputeLayer(op_name2sbp_node_, *OpNode2MutableOpCtrlDeps);
   // Accumulate cost on the trunk after initializing computation cost
   sbp_graph_.FindTrunk(max_min_layer, op_name2sbp_node_);
   return Maybe<void>::Ok();
@@ -432,8 +432,10 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
               << ", Remain Cost: " << sbp_node->acc_trunk_cost_ << std::endl;
     // Sort before printing
     const auto& op_input_bns = op_node->op().input_bns();
-    auto comp = [](const std::string& a, const std::string& b) { return a.compare(b) > 0; };
-    auto_parallel::DecideOrder(op_input_bns, str_order, comp);
+    auto CompareString = [](const std::string& a, const std::string& b) {
+      return a.compare(b) > 0;
+    };
+    auto_parallel::DecideOrder(op_input_bns, str_order, CompareString);
     const NdSbpSignature& sbp_signature = sbp_node->FinalSbpSignature();
     // Print out SBP information for input operator
     for (int32_t j : str_order) {
@@ -449,7 +451,7 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
     }
     // Sort before printing
     const auto& op_output_bns = op_node->op().output_bns();
-    auto_parallel::DecideOrder(op_output_bns, str_order, comp);
+    auto_parallel::DecideOrder(op_output_bns, str_order, CompareString);
     // Print out SBP information for output blobs
     for (int32_t j : str_order) {
       const auto& obn = op_output_bns[j];

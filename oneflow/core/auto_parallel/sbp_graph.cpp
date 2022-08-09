@@ -541,9 +541,9 @@ double SbpGraph::NbhGreedyStrategy(std::vector<int32_t>& nbh_id2node_list_id) co
   }
   // pre-compute and store the order of the out_nbh_costs
   std::vector<std::vector<int32_t>> nbh_id2order2sbp_id(num_nbh);
+  auto CompareDoubleLess = [](double a, double b) { return a < b; };
   for (int32_t nbh_id = 0; nbh_id < num_nbh; nbh_id++) {
-    DecideOrder(out_nbh_costs[nbh_id], nbh_id2order2sbp_id[nbh_id],
-                [](double a, double b) { return a < b; });
+    DecideOrder(out_nbh_costs[nbh_id], nbh_id2order2sbp_id[nbh_id], CompareDoubleLess);
   }
 
   // Decide the order to go through the neighborhood.
