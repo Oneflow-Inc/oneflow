@@ -105,16 +105,16 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> RawTorchGlobalTensor(const std::shared_ptr<one::Tensor>& tensor) {
+Maybe<void> RawTouchGlobalTensor(const std::shared_ptr<one::Tensor>& tensor) {
   // Do nothing.
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* TorchGlobalTensor = DECORATE(&RawTorchGlobalTensor, CheckGlobalTensorMeta);
+static constexpr auto* TouchGlobalTensor = DECORATE(&RawTouchGlobalTensor, CheckGlobalTensorMeta);
 
 Maybe<void> CheckGlobalTensorsMeta(const TensorTuple& tensor_tuple) {
   for (const auto& tensor : tensor_tuple) {
-    if (tensor->is_global() && tensor->is_eager()) { JUST(TorchGlobalTensor(tensor)); }
+    if (tensor->is_global() && tensor->is_eager()) { JUST(TouchGlobalTensor(tensor)); }
   }
   return Maybe<void>::Ok();
 }

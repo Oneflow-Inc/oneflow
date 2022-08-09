@@ -40,7 +40,7 @@ class Identity : public OpExprGradFunction<IdentityCaptureState> {
     in_grads->resize(1);
     if (ctx->requires_grad) {
       if (LazyMode::is_enabled()) {
-        // requires an intermediate node to avoid redundant memory copy or comnet
+        // requires an intermediate node to avoid redundant memory copy or commnet
         // communication in lazy mode
         in_grads->at(0) = JUST(functional::Identity(out_grads.at(0)));
       } else {

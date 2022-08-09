@@ -158,10 +158,14 @@ class GlobalConstantFunctor {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {},
                                             OpExprInterpContext(attrs, placement, nd_sbp));
     };
-    bool has_partial_parallel = false;
-    for (const auto& sbp : sbp_tuple) {
-      if (sbp->has_partial_sum_parallel()) { has_partial_parallel = true; }
-    }
+    bool has_partial_parallel = [&]() {
+      for (const auto& sbp : sbp_tuple) {
+        if (sbp->has_partial_sum_parallel()) { return true; }
+      }
+      return false;
+    }();
+    // Since the source op does not support Partial, it is necessary to replace Partial
+    // with Broadcast, and then convert it to Partial
     if (has_partial_parallel) {
       const auto& fixed_sbp_tuple = JUST(NdSbpReplacePartialByBroadcast(sbp_tuple));
       const auto& tensor = JUST(dispatch_constant(*fixed_sbp_tuple));
