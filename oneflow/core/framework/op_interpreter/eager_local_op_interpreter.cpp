@@ -181,9 +181,9 @@ static Maybe<void> BuildAndRunLocalCastInstruction(const BuiltinOpExpr& op_expr,
 
 namespace {
 
-Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root,
-                                          size_t size, const std::vector<Shape>& shape_list) {
-  return one::OpBuilder("eager_nccl_broadcast", *JUST(UniqueStr("eager_nccl_broadcast")))
+Maybe<one::UserOpExpr> EagerCclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root,
+                                         size_t size, const std::vector<Shape>& shape_list) {
+  return one::OpBuilder("eager_ccl_broadcast", *JUST(UniqueStr("eager_ccl_broadcast")))
       .Input("in", size)
       .Output("out", size)
       .Attr<std::string>("parallel_conf", PbMessage2TxtString(parallel_desc->parallel_conf()))
@@ -192,7 +192,7 @@ Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, in
       .Build();
 }
 
-auto* CachedEagerNcclBroadcastOpExpr = DECORATE(&EagerNcclBroadcast, ThreadLocalCachedCopiable);
+auto* CachedEagerCclBroadcastOpExpr = DECORATE(&EagerCclBroadcast, ThreadLocalCachedCopiable);
 
 }  // namespace
 
@@ -201,7 +201,7 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
   CHECK_OR_RETURN(parallel_desc->containing_current_rank());
   if (parallel_desc->parallel_num() == 1 /* no broadcast */) { return tensor; }
   std::shared_ptr<UserOpExpr> op_expr =
-      JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank, 1, {*tensor->shape()}));
+      JUST(CachedEagerCclBroadcastOpExpr(parallel_desc, src_rank, 1, {*tensor->shape()}));
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<int64_t>("root", src_rank));
   if (src_rank == GlobalProcessCtx::Rank() || inplace) {
@@ -223,7 +223,7 @@ Maybe<TensorTuple> Broadcast(const TensorTuple& inputs, int64_t src_rank,
   std::vector<Shape> shape_list;
   for (const auto& tensor : inputs) { shape_list.emplace_back(*tensor->shape()); }
   std::shared_ptr<UserOpExpr> op_expr =
-      JUST(CachedEagerNcclBroadcastOpExpr(parallel_desc, src_rank, inputs.size(), shape_list));
+      JUST(CachedEagerCclBroadcastOpExpr(parallel_desc, src_rank, inputs.size(), shape_list));
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<int64_t>("root", src_rank));
   if (src_rank == GlobalProcessCtx::Rank() || inplace) {

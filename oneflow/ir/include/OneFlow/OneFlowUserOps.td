@@ -1964,7 +1964,7 @@ def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", [NoSideEffect, NoGrad, DeclareOpInt
 #endif // GET_ONEFLOW_DETECTION_OP_DEFINITIONS
 
 // Group: EAGER
-// eager_b_to_s, eager_naive_s_to_s, eager_ccl_all_gather, eager_ccl_all_reduce, eager_nccl_broadcast, eager_nccl_reduce, eager_ccl_reduce_scatter, eager_nccl_s2s, eager_p_to_b, eager_p_to_s, eager_s_to_b, eager_symmetric_s_to_p
+// eager_b_to_s, eager_naive_s_to_s, eager_ccl_all_gather, eager_ccl_all_reduce, eager_ccl_broadcast, eager_ccl_reduce, eager_ccl_reduce_scatter, eager_nccl_s2s, eager_p_to_b, eager_p_to_s, eager_s_to_b, eager_symmetric_s_to_p
 // Total: 12
 
 #ifdef GET_ONEFLOW_EAGER_OP_DEFINITIONS
@@ -2048,7 +2048,7 @@ def OneFlow_EagerCclAllReduceOp : OneFlow_BaseOp<"eager_ccl_all_reduce", [NoSide
   let has_device_and_stream_infer_fn = 1;
 }
 
-def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EagerCclBroadcastOp : OneFlow_BaseOp<"eager_ccl_broadcast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in
   );
@@ -2082,7 +2082,7 @@ def OneFlow_EagerNcclTouchOp : OneFlow_BaseOp<"eager_nccl_touch", [NoSideEffect,
   let has_device_and_stream_infer_fn = 1;
 }
 
-def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_EagerCclReduceOp : OneFlow_BaseOp<"eager_ccl_reduce", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in
   );
@@ -3369,7 +3369,7 @@ def OneFlow_TensorScatterNdAddOp : OneFlow_BaseOp<"tensor_scatter_nd_add", [NoSi
   let has_input_arg_modify_fn = 1;
 }
 
-def OneFlow_TensorScatterNdUpdateOp : OneFlow_BaseOp<"tensor_scatter_nd_update", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_TensorScatterNdUpdateOp : OneFlow_BaseOp<"tensor_scatter_nd_update", [NoSideEffect, SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$params,
     OneFlow_Tensor:$updates,

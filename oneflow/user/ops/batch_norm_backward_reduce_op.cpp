@@ -52,7 +52,8 @@ std::function<Maybe<void>(const std::string&)> MakeSetOutDataTypeFn(user_op::Inf
   const Shape& x_shape = x.shape();
   const auto axis = ctx->Attr<int32_t>("axis");
   CHECK_GE_OR_RETURN(axis, 0) << "channel axis should be larger than 0";
-  CHECK_LT_OR_RETURN(axis, x_shape.NumAxes()) << "channel axis should be less than " << x_shape.NumAxes();
+  CHECK_LT_OR_RETURN(axis, x_shape.NumAxes())
+      << "channel axis should be less than " << x_shape.NumAxes();
   const Shape param_shape({x_shape.At(axis)});
   const auto SetOutTensorDesc = MakeSetOutTensorDescFn(ctx, param_shape);
   JUST(SetOutTensorDesc("sum_dy"));
