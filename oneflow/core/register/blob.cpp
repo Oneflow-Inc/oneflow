@@ -43,7 +43,6 @@ void Blob::Init(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* hea
   this->blob_access_checker_ = Singleton<BlobAccessCheckerIf<true, true>>::Get();
   int64_t* shape_ptr = reinterpret_cast<int64_t*>(header_ptr);
   shape_view_.reset(new ShapeView(shape_ptr, static_shape().NumAxes()));
-  stride_.reset(new Stride(static_shape()));
   if (blob_desc->is_dynamic()) {
     mut_shape_view_.reset(new MutShapeView(shape_ptr, static_shape().NumAxes()));
   }
