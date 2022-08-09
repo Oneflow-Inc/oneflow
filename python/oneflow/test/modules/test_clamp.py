@@ -203,6 +203,7 @@ def _test_clamp_min_backward(test_case, shape, device):
     )
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestClampMinModule(flow.unittest.TestCase):
     def test_clamp_min(test_case):
         arg_dict = OrderedDict()
@@ -273,6 +274,7 @@ def _test_clamp_max_backward(test_case, shape, device):
     )
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestClampMaxModule(flow.unittest.TestCase):
     def test_clamp_min(test_case):
         arg_dict = OrderedDict()
