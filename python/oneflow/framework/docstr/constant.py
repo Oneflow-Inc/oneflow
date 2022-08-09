@@ -177,7 +177,6 @@ add_docstr(
           construct local tensor.
         sbp (flow.sbp or List[flow.sbp], optional): The desired sbp of returned global tensor.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
-        pin_memory (bool, optional) – If set, returned tensor would be allocated in the pinned memory. Works only for CPU tensors. Default: False.
 
     For example:
 
