@@ -38,7 +38,7 @@ def _check_sbp(sbp):
 
 
 def local_to_global_op(input, placement=None, sbp=None, *, check_meta=True, copy=False):
-    # convert None to a tensor with shape 0, in order to input it into flow._C.to_global
+    # Convert None to a tensor with shape 0, in order to input it into flow._C.to_global.
     if input is None:
         input = flow.tensor(())
 
@@ -122,8 +122,7 @@ def _check_input_global(input):
 
 
 def _check_placement_on_all_ranks(placement):
-    """Determine whether the ranks of placement are same as all ranks
-    """
+    # Determine whether the ranks of placement are same as all ranks
     is_placement_on_all_ranks = False
     all_ranks = flow.env.all_device_placement("cpu").ranks
     if (
@@ -254,8 +253,7 @@ def to_global_op(input, placement=None, sbp=None, **kwargs):
 
 
 def _flatten_dict(input_dict, output_dict=None, parent_key=None, separator="."):
-    """ Flatten any nested dict.
-    """
+    # Flatten any nested dict.
     if output_dict is None:
         output_dict = {}
 
@@ -272,8 +270,7 @@ def _flatten_dict(input_dict, output_dict=None, parent_key=None, separator="."):
 def _restore_flat_dict(
     flat_dict, original_dict, output_dict=None, parent_key="", separator="."
 ):
-    """ Restore a flat dict according to the original dict's structure, reverse operation of _flatten_dict function.
-    """
+    # Restore a flat dict according to the original dict's structure, reverse operation of _flatten_dict function.
     if output_dict is None:
         output_dict = {}
 
@@ -295,16 +292,20 @@ def _restore_flat_dict(
 
 
 def dict_to_global(input_dict, placement, sbp, *, sbp_for_special_keys):
-    r"""Converts the input dict containing tensor(s) to global one, supporting to assign different SBP(s) for special
-        key(s). Usually used for making graph models's state dict global.
+    r"""Converts the input dict containing tensor(s) to global one, supporting to assign different SBP(s) for special key(s). Usually used for making graph models's state dict global.
 
     Args:
         input_dict (dict): the input dict that needs to be converted.
         placement (oneflow.placement): the common placement for all keys.
         sbp (oneflow.sbp.sbp): the default SBP for not special keys.
         sbp_for_special_keys (dict): The keys are str type, and the values are oneflow.sbp.sbp type.
-         This is used to specify special SBPs for "System-Train-TrainStep" tensor with shape [1] and 
-         other insplitable "small tensors". The keys here support the use of "." to indicate nested dicts.
+         This is used to specify special SBPs for "System-Train-TrainStep" tensor with shape [1] etc.
+         Also, it is worth noting that, for a tensor of shape `(1, n)`, you can specify SBP is `oneflow.sbp.split(1)`.
+         The keys here support the use of "." to indicate nested dicts.
+
+    Note:
+        For example, there is a state dict with `{"module_pipeline": {"m_stage0.linear.weight": ..., ...}, ...}`, and you want to specify the SBP for `m_stage0.linear.weight` as `oneflow.sbp.split(1)`,
+        the above sbp_for_special_keys (dict) parameter can be assigned `{"module_pipeline.m_stage1.linear.weight": oneflow.sbp.split(1)}`.
     """
     assert (
         isinstance(input_dict, dict) or input_dict is None

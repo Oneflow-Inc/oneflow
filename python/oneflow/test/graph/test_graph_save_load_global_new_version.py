@@ -787,11 +787,12 @@ class TestGraphSaveLoadGlobal2(oneflow.unittest.TestCase):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n4d()
 class TestGraphSaveLoadGlobal4(oneflow.unittest.TestCase):
-    # def test_graph_save_load_gpu_2s2n(test_case):
-    #     _test_graph_save_load_global_split_4(
-    #         test_case,
-    #         model_tensor_placement=flow.placement("cuda", ranks=[0, 1, 2, 3]),
-    #         model_file_placement=flow.placement("cpu", ranks=[0, 1]))
+    def test_graph_save_load_gpu_2s2n(test_case):
+        _test_graph_save_load_global_split_4(
+            test_case,
+            model_tensor_placement=flow.placement("cuda", ranks=[0, 1, 2, 3]),
+            model_file_placement=flow.placement("cpu", ranks=[0, 1]),
+        )
 
     def test_graph_save_load_cpu_2s2n(test_case):
         _test_graph_save_load_global_split_4(
