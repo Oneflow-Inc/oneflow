@@ -25,15 +25,12 @@ limitations under the License.
 #include "oneflow/core/vm/vm_object.h"
 #include "oneflow/core/vm/instruction_policy.h"
 #include "oneflow/core/vm/stream_policy.h"
-#include "oneflow/core/vm/phy_instr_operand.h"
 
 namespace oneflow {
 
 class Stream;
 
 namespace vm {
-
-class InstructionType;
 
 static const int kInstructionStatusBufferBytes = 64;
 
@@ -114,9 +111,6 @@ class Instruction final : public intrusive::Base {
   const InstructionStatusBuffer& status_buffer() const { return status_buffer_; }
   const intrusive::ListHook& main_instruction_hook() const { return main_instruction_hook_; }
   const InstructionPolicy& instruction_policy() const { return *instruction_policy_; }
-  const std::shared_ptr<PhyInstrOperand>& phy_instr_operand() const {
-    return instruction_policy_->phy_instr_operand();
-  }
   std::string DebugName() const;
 
   const intrusive::ListHook& dispatched_instruction_hook() const {

@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/op_interpreter/lazy_op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -33,19 +34,26 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor(
       "DispatchFeedInput",
       [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input) -> Maybe<Tensor> {
-        return OpInterpUtil::Dispatch<Tensor>(*op, {input});
+        const auto& origin_input = JUST(OpInterpUtil::Dispatch<Tensor>(*op, {input}));
+        // Unpack input when do grad acc
+        return GradAccTryInsertUnpackAfterInput(origin_input);
       });
   m.add_functor(
       "DispatchFetchOutput",
       [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input) -> Maybe<Tensor> {
-        return OpInterpUtil::Dispatch<Tensor>(*op, {input});
+        // Pack output when do grad acc
+        const auto& pack_input = JUST(GradAccTryInsertPackBeforeOutput(input));
+        return OpInterpUtil::Dispatch<Tensor>(*op, {pack_input});
       });
   m.add_functor("DispatchFeedVariable",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const Scalar& l2) -> Maybe<Tensor> {
                   MutableAttrMap attrs;
                   JUST(attrs.SetAttr<double>("l2", l2.As<double>()));
-                  return OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs);
+                  const auto& origin_var =
+                      JUST(OpInterpUtil::Dispatch<Tensor>(*op, {input}, attrs));
+                  // Repeat variable when do grad acc
+                  return GradAccTryInsertRepeatAfterVar(origin_var);
                 });
   m.add_functor(
       "DispatchOfrecordReader",
@@ -525,6 +533,22 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   JUST(attrs.SetAttr("lambda1", lambda1));
                   JUST(attrs.SetAttr("lambda2", lambda2));
                   JUST(attrs.SetAttr("beta", beta));
+                  JUST(attrs.SetAttr("weight_decay", weight_decay));
+                  JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
+                  return Maybe<void>::Ok();
+                });
+  m.add_functor("DispatchAdadeltaUpdate",
+                [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
+                   float learning_rate, double scale, float l1, float l2, float rho, float epsilon,
+                   bool maximize, float weight_decay) -> Maybe<void> {
+                  MutableAttrMap attrs;
+                  JUST(attrs.SetAttr("learning_rate_val", learning_rate));
+                  JUST(attrs.SetAttr("scale", scale));
+                  JUST(attrs.SetAttr("l1", l1));
+                  JUST(attrs.SetAttr("l2", l2));
+                  JUST(attrs.SetAttr("rho", rho));
+                  JUST(attrs.SetAttr("epsilon", epsilon));
+                  JUST(attrs.SetAttr("maximize", maximize));
                   JUST(attrs.SetAttr("weight_decay", weight_decay));
                   JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
                   return Maybe<void>::Ok();
