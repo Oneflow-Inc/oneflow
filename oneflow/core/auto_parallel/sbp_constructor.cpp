@@ -60,9 +60,9 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   // parallelism
   if (!job.job_conf().enable_auto_parallel_prune_parallel_cast_ops()) {
     JUST(StealSbpSignatureFromOpNode(op_graph, job));
+    ori_cost = sbp_graph_.ComputeCost();
+    LOG(INFO) << "OpGraph cost: " << ori_cost;
   }
-  ori_cost = sbp_graph_.ComputeCost();
-  LOG(INFO) << "OpGraph cost: " << ori_cost;
   return Maybe<void>::Ok();
 }
 
