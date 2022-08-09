@@ -67,9 +67,15 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
                                   input_stride.data(), input->dptr(), scalar_ndim,
                                   output_shape.data(), output_stride.data(), output->mut_dptr());
     } else {
-      broadcast_primitive->Launch(
-          ctx->stream(), ndim, input->shape_view().data(), input->stride().data(), input->dptr(),
-          ndim, output->shape_view().data(), output->stride().data(), output->mut_dptr());
+      const int64_t* stride_prt = input->stride().data();
+      if (input->stride().size() == 0 && ndim > 0) {
+        // NOTE: in lazy mode(nn.Graph), some tensor have shape but with empty stride
+        Stride input_stride(input->shape_view());
+        stride_prt = input_stride.data();
+      }
+      broadcast_primitive->Launch(ctx->stream(), ndim, input->shape_view().data(), stride_prt,
+                                  input->dptr(), ndim, output->shape_view().data(),
+                                  output->stride().data(), output->mut_dptr());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

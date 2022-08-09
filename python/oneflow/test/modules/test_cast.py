@@ -101,7 +101,7 @@ class TestCast(flow.unittest.TestCase):
         z = y.to(dtype=torch.int8, device=device)
         return z
 
-    @autotest(n=5)
+    @autotest(n=5, auto_backward=False)
     def test_cast_with_stride_input(test_case):
         device = random_device()
         x = random_tensor()
