@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_REGISTER_BLOB_H_
 #define ONEFLOW_CORE_REGISTER_BLOB_H_
 
+#include <memory>
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/memory/memory_case.pb.h"
@@ -108,7 +109,15 @@ class Blob final {
   MutShapeView* ForceMutShapeView() { return mut_shape_view_.get(); }
 
   // stride
-  const Stride& stride() const { return blob_desc_->stride(); }
+  const Stride& stride() const {
+    // TODO:support view(stride) mechanism in lazy mode and remove the if/else judgement
+    if (blob_desc_->stride().size() > 0) {
+      return blob_desc_->stride();
+    } else {
+      *stride_ = Stride(*shape_view_);
+      return *stride_;
+    }
+  }
 
   void reset_dptr(char* dptr) { dptr_ = dptr; }
 
@@ -138,6 +147,7 @@ class Blob final {
   char* header_ptr_;
   int64_t storage_offset_;
   std::unique_ptr<ShapeView> shape_view_;
+  std::shared_ptr<Stride> stride_;
   std::unique_ptr<MutShapeView> mut_shape_view_;
 };
 
