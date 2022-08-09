@@ -136,10 +136,7 @@ class Shape final : public DimVector, public MutShapeMixIn<Shape> {
   bool is_initialized() const { return is_initialized_; }
   const DimVector& dim_vec() const { return *this; }
   DimVector& dim_vec() { return *this; }
-  int64_t NumAxes() const {
-    CHECK(is_initialized());
-    return ConstShapeMixIn<Shape>::NumAxes();
-  }
+  int64_t NumAxes() const { return ConstShapeMixIn<Shape>::NumAxes(); }
   AxisVector ShiftNegativeAxisVec(const AxisVector& axis_vec) const;
   Shape RemoveOnes(const AxisVector& axis_vec) const;
   static Shape Ones(const int64_t num_axes);
