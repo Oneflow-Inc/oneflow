@@ -47,7 +47,8 @@ void CopyTaskNode::BuildExecGphAndRegst() {
 
 void CopyTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
 
-void CopyHdTaskNode::Init(CopyHdType copy_type, const DeviceId& device_id, const LogicalBlobId& lbi) {
+void CopyHdTaskNode::Init(CopyHdType copy_type, const DeviceId& device_id,
+                          const LogicalBlobId& lbi) {
   copy_type_ = copy_type;
   set_machine_id(device_id.rank());
   int64_t thrd_id = -1;
