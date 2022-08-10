@@ -57,6 +57,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t chain_id() const { return chain_id_; }
   int64_t order_in_graph() const { return order_in_graph_; }
   const ExecGraph& exec_gph() const { return exec_gph_; }
+  virtual const OpNode* op_node() const { return nullptr; }
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
   const std::list<std::shared_ptr<RegstDesc>>& GetConsumedRegst(const std::string& name);
   std::shared_ptr<RegstDesc> GetSoleConsumedRegst(const std::string& name);
@@ -131,7 +132,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   ExecGraph& mut_exec_gph() { return exec_gph_; }
   void EraseConsumedRegstsByName(const std::string& name);
 
-  const OpNode* op_node() const { return nullptr; }
   virtual void BuildExecGphAndRegst() = 0;
 
   virtual void InferProducedDataRegstTimeShape() = 0;

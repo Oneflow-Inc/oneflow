@@ -304,6 +304,7 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
       }
       comp_task_node->set_thrd_id(EncodeStreamIdToInt64(StreamId{device_id, stream_index}));
       comp_task_node->set_op_node(op_node);
+      // Seperate into machine_id + dev_phy_id -> tasks to enable parallel?
       sorted_comp_tasks->emplace_back(comp_task_node);
     }
   }

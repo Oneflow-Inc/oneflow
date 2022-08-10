@@ -47,6 +47,15 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
   // NOTE(levi): memory of op_attribute_ is released here.
   kernel_conf->set_allocated_op_attribute(nullptr);
 }
+
+void CreateOpAttributeRef(TaskProto* task_proto, const std::string& op_name) {
+  CHECK(task_proto->exec_sequence().exec_node_size() == 1);
+  auto* exec_node = task_proto->mutable_exec_sequence()->mutable_exec_node(0);
+  CHECK(!exec_node->kernel_conf().has_op_attribute());
+  auto* kernel_conf =
+      task_proto->mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
+  kernel_conf->set_op_attribute_ref(op_name);
+}
 }  // namespace
 
 void PlanCompiler::Compile(Job* job, Plan* plan) {
@@ -98,21 +107,22 @@ void PlanCompiler::Compile(Job* job, Plan* plan) {
   std::mutex mtx;
   ThreadPool thread_pool(thread_pool_size);
   task_gph->ForEachNode([&](TaskNode* task_node) {
-    thread_pool.AddWork([task_node, plan, &job_desc, &counter, &mtx]() {
+    thread_pool.AddWork([task_node, plan, &counter, &mtx]() {
       if (!task_node->IsMeaningLess()) {
         TaskProto task_proto;
         // OpAttr is set here but removed in CreateOpAttributeRef, can be optimized.
         // Try to avoid mut plan here
         task_node->ToProto(&task_proto);
-        // {
-        //   std::unique_lock<std::mutex> guard(mtx);
-        //   if (task_node->GetTaskType() == kNormalForward || task_node->GetTaskType() == kRepeat
-        //       || task_node->GetTaskType() == kAcc) {
-        //     CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto);
-        //   }
-        //   // global mut
-        //   plan->mutable_task()->Add(std::move(task_proto));
-        // }  // guard(mtx)
+        {
+          if (task_node->GetTaskType() == kNormalForward || task_node->GetTaskType() == kRepeat
+              || task_node->GetTaskType() == kAcc) {
+            CHECK(task_node->op_node());
+            CreateOpAttributeRef(&task_proto, task_node->op_node()->op().op_name());
+          }
+          // global mut
+          std::unique_lock<std::mutex> guard(mtx);
+          plan->mutable_task()->Add(std::move(task_proto));
+        }  // guard(mtx)
       }
       counter.Decrease();
     } /* thread_pool.AddWork */);
