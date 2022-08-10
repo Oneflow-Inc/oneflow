@@ -966,7 +966,7 @@ jobs:
             ${{ env.TEST_CONTAINER_NAME }} bash ci/test/expensive_generic_test_multi_client.sh
       - name: Exception API test
         timeout-minutes: 45
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && false }}
         run: docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/multi_client_exception_test.sh
       - name: Dataloader API test
         timeout-minutes: 45
