@@ -113,6 +113,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
       << Error::TypeError() << "Tensors ref and value must have same type";
   auto* y_desc = ctx->MutOutputTensorDesc("y", 0);
   *y_desc->mut_data_type() = ref_desc.data_type();
+  *y_desc->mut_stride() = ref_desc.stride();
   return Maybe<void>::Ok();
 }
 
