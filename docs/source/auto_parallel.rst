@@ -53,7 +53,7 @@ Example::
 
 .. warning::
 
-   If you enable auto parallelism, all ``oneflow.sbp`` operations will be ignored.
+   If you enable auto parallelism, all ``oneflow.sbp`` configed will be ignored.
 
 
 Configuration API for auto parallelism
