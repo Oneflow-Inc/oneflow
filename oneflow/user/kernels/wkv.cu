@@ -54,6 +54,43 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
   }
 }
 
+template<>
+__global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C,
+                               const half* __restrict__ const _w, const half* __restrict__ const _u,
+                               const half* __restrict__ const _k, const half* __restrict__ const _v,
+                               half* __restrict__ const _y) {
+  const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const int _b = idx / C;
+  const int _c = idx % C;
+  const int _offset = _b * T * C + _c;
+
+  half u = _u[_c];
+  const half w = __hmul(static_cast<half>(-1.0), hexp(_w[_c]));
+  const half* __restrict__ const k = _k + _offset;
+  const half* __restrict__ const v = _v + _offset;
+  half* __restrict__ const y = _y + _offset;
+
+  half p = static_cast<half>(0.0), q = static_cast<half>(0.0), o = static_cast<half>(-65500.0);
+  // p and q are running sums divided by exp(o) (to avoid overflows)
+  for (int i = 0; i < T; i++) {
+    const int ii = i * C;
+
+    // half no = max(o, u + k[ii]);
+    half no = o > u + k[ii] ? o : u + k[ii];
+    half A = hexp(o - no);
+    half B = hexp(u + k[ii] - no);
+    y[ii] = (A * p + B * v[ii]) / (A * q + B);
+
+    // no = max(w + o, k[ii]);
+    no = w + o > k[ii] ? w + o : k[ii];
+    A = hexp(w + o - no);
+    B = hexp(k[ii] - no);
+    p = A * p + B * v[ii];
+    q = A * q + B;
+    o = no;
+  }
+}
+
 template<typename F>
 __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t C,
                                 const F* __restrict__ const _w, const F* __restrict__ const _u,
@@ -131,6 +168,90 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   _gu[_offsetBC] += gu;
 }
 
+template<>
+__global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t C,
+                                const half* __restrict__ const _w,
+                                const half* __restrict__ const _u,
+                                const half* __restrict__ const _k,
+                                const half* __restrict__ const _v,
+                                const half* __restrict__ const _gy, half* __restrict__ const _gw,
+                                half* __restrict__ const _gu, half* __restrict__ const _gk,
+                                half* __restrict__ const _gv) {
+  const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const int _b = idx / C;
+  const int _c = idx % C;
+  const int _offset = _b * T * C + _c;
+
+  half u = _u[_c];
+  const half w = static_cast<half>(-1.0) * hexp(_w[_c]);
+  const half* __restrict__ const k = _k + _offset;
+  const half* __restrict__ const v = _v + _offset;
+  const half* __restrict__ const gy = _gy + _offset;
+
+  half* __restrict__ const gk = _gk + _offset;
+  half* __restrict__ const gv = _gv + _offset;
+
+  half y[1024], z[1024], zexp[1024];
+
+  half gw = 0, gu = 0;
+  half p = 0, q = 0;
+  half dpdw = 0, dqdw = 0;
+  half o = -65500;
+  for (int i = 0; i < T; i++) {
+    const int ii = i * C;
+    // half no = max(o, k[ii] + u);
+    half no = o > k[ii] + u ? o : k[ii] + u;
+    half A = hexp(o - no);
+    half B = hexp(k[ii] + u - no);
+
+    half num = A * p + B * v[ii];
+    // half iden = 1 / (A * q + B);
+    half iden = __hdiv(1.0, A * q + B);
+
+    y[i] = num * iden;
+    z[i] = iden;
+    zexp[i] = k[ii] + u - no;
+
+    gw += gy[ii] * (dpdw - dqdw * y[i]) * iden * A;
+    gu += gy[ii] * (v[ii] - y[i]) * B * iden;
+
+    // no = max(w + o, k[ii]);
+    no = w + o > k[ii] ? w + o : k[ii];
+    A = hexp(w + o - no);
+    B = hexp(k[ii] - no);
+    dpdw = A * (p + dpdw);
+    dqdw = A * (q + dqdw);
+    p = A * p + B * v[ii];
+    q = A * q + B;
+    o = no;
+  }
+
+  half gp = 0, gq = 0;
+  o = -65500;
+  for (int i = T - 1; i >= 0; i--) {
+    const int ii = i * C;
+    half A = gy[ii] * z[i] * hexp(zexp[i]);
+    half B = hexp(k[ii] + o);
+    gk[ii] = A * (v[ii] - y[i]) + B * (gp * v[ii] + gq);
+    gv[ii] = A + B * gp;
+
+    // half no = max(w + o, zexp[i] - k[ii] - u);
+    half no = w + o > zexp[i] - k[ii] - u ? w + o : zexp[i] - k[ii] - u;
+    A = hexp(w + o - no);
+    // B = gy[ii] * z[i] * exp(zexp[i] - k[ii] - u - no);
+    B = __hmul(gy[ii], __hmul(z[i], hexp(zexp[i] - k[ii] - u - no)));
+    gp = A * gp + B;
+    gq = A * gq - B * y[i];
+    o = no;
+  }
+
+  // Multiply by w because the w -> -exp(w) preprocessing is halfway in the backwards pass, even
+  // though it's not in the forward pass
+  const int _offsetBC = _b * C + _c;
+  _gw[_offsetBC] += gw * w;
+  _gu[_offsetBC] += gu;
+}
+
 }  // namespace
 
 template<typename F>
@@ -165,6 +286,7 @@ class WkvGPUKernel final : public user_op::OpKernel {
       (user_op::HobDeviceType() == DeviceType::kCUDA)                             \
       && (user_op::HobDataType("w", 0) == GetDataType<dtype>::value));
 
+REGISTER_WKV_CUDA_KERNEL(half)
 REGISTER_WKV_CUDA_KERNEL(float)
 REGISTER_WKV_CUDA_KERNEL(double)
 
@@ -208,5 +330,6 @@ class WkvGradGPUKernel final : public user_op::OpKernel {
 
 REGISTER_WKVGRAD_CUDA_KERNEL(float)
 REGISTER_WKVGRAD_CUDA_KERNEL(double)
+REGISTER_WKVGRAD_CUDA_KERNEL(half)
 
 }  // namespace oneflow

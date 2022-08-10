@@ -32,6 +32,7 @@ def test_wkv_graph(B, T, C, w, u, k, v):
             self.model = model
             self.loss_fn = loss_fn
             self.add_optimizer(optimizer)
+            self.config.enable_amp(True)
 
         def build(self, x, w, u, k, v):
             w = self.model(x).squeeze(0) + w
