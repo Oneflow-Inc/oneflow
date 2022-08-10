@@ -174,7 +174,7 @@ std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
   if (dt.isSignedInteger(64)) { return ::oneflow::DataType::kInt64; }
   if (dt.isSignedInteger(128)) { return ::oneflow::DataType::kInt128; }
   llvm::errs() << "unsupported data type: " << dt << "\n";
-  return {};
+  exit(0);
 }
 }  // namespace support
 
