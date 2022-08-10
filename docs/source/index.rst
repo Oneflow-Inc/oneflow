@@ -30,6 +30,7 @@ OneFlow upholds the core concept and architecture of static compilation and stre
     nn.init
     optim
     graph
+    auto_parallel
     image
     utils.data
     one_embedding

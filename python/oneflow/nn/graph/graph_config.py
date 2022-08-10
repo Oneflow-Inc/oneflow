@@ -302,7 +302,7 @@ class GraphConfig(object):
         self.proto.enable_auto_parallel = mode
 
     def enable_auto_parallel_prune_parallel_cast_ops(self, mode: bool = True):
-        """If true, then graph will use auto parallel algorithm.
+        """If true, it will ignore all user configurations of SBP.
 
         Args:
             mode (bool, optional): [description]. Default is True.
@@ -336,13 +336,13 @@ class GraphConfig(object):
 
     def enable_auto_parallel_mainstem_algo(self, mode: bool = True):
         """
-        Find the mainstem of the sbp graph, then reduce the wait time for tributaries.
+        Find the mainstem of the SBP graph, then reduce the wait time for tributaries.
         """
         self.proto.enable_auto_parallel_mainstem_algo = mode
 
     def enable_auto_parallel_sbp_collector(self, mode: bool = True):
         """
-        Use sbp collector to create sbp proxy for nodes with multiple downstream operators.
+        Use \"sbp collector\" to create \"sbp proxy\" for nodes with multiple downstream operators.
         """
         self.proto.enable_auto_parallel_sbp_collector = mode
 
