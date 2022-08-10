@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "OneFlow/OneFlowDialect.h"
+#include "OneFlow/OneFlowSupport.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/shape.h"
@@ -37,27 +38,6 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-  auto parse_type = [](mlir::Type type) -> DataType {
-    if (type.isBF16()) return DataType::kBFloat16;
-    if (type.isF16()) return DataType::kFloat16;
-    if (type.isF32()) return DataType::kFloat;
-    if (type.isF64()) return DataType::kDouble;
-
-    if (type.isSignedInteger(8)) return DataType::kInt8;
-    if (type.isSignedInteger(16)) return DataType::kInt16;
-    if (type.isSignedInteger(32)) return DataType::kInt32;
-    if (type.isSignedInteger(64)) return DataType::kInt64;
-    if (type.isSignedInteger(128)) return DataType::kInt128;
-
-    if (type.isSignlessInteger(8)) return DataType::kUInt8;
-    if (type.isSignlessInteger(16)) return DataType::kUInt16;
-    if (type.isSignlessInteger(32)) return DataType::kUInt32;
-    if (type.isSignlessInteger(64)) return DataType::kUInt64;
-    if (type.isSignlessInteger(128)) return DataType::kUInt128;
-    LOG(ERROR) << "Failed to parse type in mlir assembly";
-    return {};
-  };
-
   auto mlir_assembly_str = ctx->Attr<std::string>("mlir_assembly");
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
@@ -73,7 +53,8 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   auto in1 = (++args_it)->getType().dyn_cast<mlir::RankedTensorType>();
 
   CHECK_EQ(Shape(in0.getShape().begin(), in0.getShape().end()), ctx->InputShape("in", 0));
-  CHECK_EQ(parse_type(in1.getElementType()), ctx->InputDType("in", 1));
+  CHECK_EQ(mlir::oneflow::support::GetDataTypeFromLLVMType(in1.getElementType()),
+           ctx->InputDType("in", 1));
 
   CHECK_EQ(ctx->inputs().size(), 2);
   CHECK_EQ(ctx->outputs().size(), 1);
