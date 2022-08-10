@@ -156,6 +156,10 @@ __device__ __forceinline__ nv_bfloat16 AddImpl(nv_bfloat16* address, nv_bfloat16
   return atomicAdd(address, val);
 }
 
+__device__ __forceinline__ nv_bfloat162 AddImpl(nv_bfloat162* address, nv_bfloat162 val) {
+  return atomicAdd(address, val);
+}
+
 #endif  // __CUDA_ARCH__ >= 800
 
 #if __CUDA_ARCH__ < 530

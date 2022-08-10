@@ -149,6 +149,14 @@ class TestAutograd(flow.unittest.TestCase):
             z.sum().backward()
         return (x.grad, y.grad)
 
+    @autotest(n=1, check_graph=False)
+    def test_requires_grad_tensor_inplace_and_backward(test_case):
+        random_shape = [random(1, 10).to(int) for _ in range(4)]
+        x = random_tensor(4, *random_shape, requires_grad=False)
+        y = random_tensor(4, *random_shape, requires_grad=True)
+        x += y
+        return x
+
 
 if __name__ == "__main__":
     unittest.main()
