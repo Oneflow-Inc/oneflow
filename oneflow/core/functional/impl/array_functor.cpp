@@ -636,6 +636,117 @@ class StackGradFunctor {
   std::vector<std::shared_ptr<OpExpr>> ops_;
 };
 
+class AtLeast1DFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x) const {
+    if (x->ndim() == 0) {
+      return JUST(Reshape(x, {1}));
+    } else
+      return x;
+  }
+};
+
+class AtLeast1DListFunctor {
+ public:
+  Maybe<TensorTuple> operator()(const TensorTuple& inputs) const {
+    TensorTuple result = TensorTuple(inputs.size());
+    for (int32_t i = 0; i < inputs.size(); i++) {
+      result.at(i) = JUST(AtLeast1D(JUST(VectorAt(inputs, i))));
+    }
+    return result;
+  }
+};
+
+class AtLeast2DFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x) const {
+    if (x->ndim() == 0) {
+      return JUST(Reshape(x, {1, 1}));
+    } else if (x->ndim() == 1) {
+      return JUST(Unsqueeze(x, 0));
+    } else
+      return x;
+  }
+};
+
+class AtLeast2DListFunctor {
+ public:
+  Maybe<TensorTuple> operator()(const TensorTuple& inputs) const {
+    TensorTuple result = TensorTuple(inputs.size());
+    for (int32_t i = 0; i < inputs.size(); i++) {
+      result.at(i) = JUST(AtLeast2D(JUST(VectorAt(inputs, i))));
+    }
+    return result;
+  }
+};
+
+class AtLeast3DFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x) const {
+    if (x->ndim() == 0) {
+      return JUST(Reshape(x, {1, 1, 1}));
+    } else if (x->ndim() == 1) {
+      return JUST(Reshape(x, {1, x->shape()->At(0), 1}));
+    } else if (x->ndim() == 2) {
+      return JUST(Unsqueeze(x, -1));
+    } else
+      return x;
+  }
+};
+
+class AtLeast3DListFunctor {
+ public:
+  Maybe<TensorTuple> operator()(const TensorTuple& inputs) const {
+    TensorTuple result = TensorTuple(inputs.size());
+    for (int32_t i = 0; i < inputs.size(); i++) {
+      result.at(i) = JUST(AtLeast3D(JUST(VectorAt(inputs, i))));
+    }
+    return result;
+  }
+};
+
+class ColumnStackFunctor {
+ public:
+  Maybe<Tensor> operator()(const TensorTuple& inputs) const {
+    std::shared_ptr<TensorTuple> new_inputs = std::make_shared<TensorTuple>(inputs.size());
+    for (int32_t i = 0; i < inputs.size(); i++) {
+      const auto& t = JUST(VectorAt(inputs, i));
+      if (t->ndim() <= 1)
+        new_inputs->at(i) = JUST(Reshape(t, {t->nelement(), 1}));
+      else
+        new_inputs->at(i) = t;
+    }
+    return HStack(*new_inputs);
+  }
+};
+
+class HStackFunctor {
+ public:
+  Maybe<Tensor> operator()(const TensorTuple& inputs) const {
+    std::shared_ptr<TensorTuple> new_inputs = JUST(AtLeast1D(inputs));
+    if (new_inputs->at(0)->ndim() == 1)
+      return Concat(*new_inputs, 0);
+    else
+      return Concat(*new_inputs, 1);
+  }
+};
+
+class VStackFunctor {
+ public:
+  Maybe<Tensor> operator()(const TensorTuple& inputs) const {
+    std::shared_ptr<TensorTuple> new_inputs = JUST(AtLeast2D(inputs));
+    return Concat(*new_inputs, 0);
+  }
+};
+
+class DStackFunctor {
+ public:
+  Maybe<Tensor> operator()(const TensorTuple& inputs) const {
+    std::shared_ptr<TensorTuple> new_inputs = JUST(AtLeast3D(inputs));
+    return Concat(*new_inputs, 2);
+  }
+};
+
 class ExpandFunctor {
  public:
   ExpandFunctor() { op_ = CHECK_JUST(one::OpBuilder("expand").Input("in").Output("out").Build()); }
@@ -3263,6 +3374,16 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConcatFunctor>("Concat");
   m.add_functor<impl::StackFunctor>("Stack");
   m.add_functor<impl::StackGradFunctor>("StackGrad");
+  m.add_functor<impl::AtLeast1DFunctor>("AtLeast1D");
+  m.add_functor<impl::AtLeast1DListFunctor>("AtLeast1D");
+  m.add_functor<impl::AtLeast2DFunctor>("AtLeast2D");
+  m.add_functor<impl::AtLeast2DListFunctor>("AtLeast2D");
+  m.add_functor<impl::AtLeast3DFunctor>("AtLeast3D");
+  m.add_functor<impl::AtLeast3DListFunctor>("AtLeast3D");
+  m.add_functor<impl::HStackFunctor>("HStack");
+  m.add_functor<impl::ColumnStackFunctor>("ColumnStack");
+  m.add_functor<impl::VStackFunctor>("VStack");
+  m.add_functor<impl::DStackFunctor>("DStack");
   m.add_functor<impl::ExpandFunctor>("Expand");
   m.add_functor<impl::ExpandGradFunctor>("ExpandGrad");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
