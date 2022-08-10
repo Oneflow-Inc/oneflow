@@ -44,13 +44,17 @@ void Instruction::Compute() { return instruction_policy_->ComputeIf(this); }
 void Instruction::DeleteStatusAndClearEdges() {
   OF_PROFILER_RANGE_GUARD("Instruction::DeleteStatusAndClearEdges");
   instruction_policy_->DeleteInstructionStatusIf(this);
-  mut_in_edges()->Clear();
-  mut_out_edges()->Clear();
+  INTRUSIVE_FOR_EACH_PTR(edge, mut_in_edges()) {
+    Instruction* in_instruction = edge->mut_src_instruction();
+    CHECK(in_instruction->Done());
+    in_instruction->mut_out_edges()->Erase(edge);
+    mut_in_edges()->Erase(edge);
+  }
+  CHECK_EQ(out_edges().size(), 0);
 }
 
 bool Instruction::Done() const {
-  return stream_policy().QueryInstructionStatusDone(stream(), status_buffer())
-         && in_edges().empty();
+  return stream_policy().QueryInstructionStatusDone(stream(), status_buffer());
 }
 
 StreamPolicy* Instruction::mut_stream_policy() { return mut_stream()->mut_stream_policy(); }
