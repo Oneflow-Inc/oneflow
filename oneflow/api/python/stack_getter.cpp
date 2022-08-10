@@ -33,7 +33,7 @@ using Stack = small_vector<std::pair<PyFrameObject*, int>, 10>;
 class PyStackGetter final : public ForeignStackGetter {
  public:
   // "happy path", performance is important
-  void RecordCurrentStack(int64_t id) override {
+  void RecordCurrentStack(StackId id) override {
     if (IsShuttingDown()) { return; }
 
     std::lock_guard<std::mutex> lock(mutex_);
@@ -53,7 +53,7 @@ class PyStackGetter final : public ForeignStackGetter {
   }
 
   // "bad path", performance is not important
-  std::string GetFormatted(int64_t id) const override {
+  std::string GetFormatted(StackId id) const override {
     std::lock_guard<std::mutex> lock(mutex_);
     auto GetFormattedStack = [](const Stack& stack) -> std::string {
       std::string buffer;
@@ -96,7 +96,7 @@ class PyStackGetter final : public ForeignStackGetter {
   }
 
  private:
-  std::array<std::pair<int64_t, Stack>, 20000> id2stack_arr_;
+  std::array<std::pair<StackId, Stack>, 20000> id2stack_arr_;
   int64_t index_ = 0;
   mutable std::mutex mutex_;
 };

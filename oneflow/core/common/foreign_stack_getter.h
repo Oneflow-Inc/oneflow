@@ -19,34 +19,27 @@ limitations under the License.
 #include <cstdint>
 #include <utility>
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/thread_local_guard.h"
 
 namespace oneflow {
 
-inline Optional<int>* GetInstructionIdThisThreadInternal() {
-  static thread_local Optional<int> current_instr_id_in_thread;
-  return &current_instr_id_in_thread;
-}
+struct StackIdGuardKind {};
 
-inline Optional<int> GetCurrentInstructionIdThisThread() {
-  return *GetInstructionIdThisThreadInternal();
-}
+using StackId = int64_t;
 
-inline void SetCurrentInstructionIdThisThread(Optional<int> instruction_id) {
-  *GetInstructionIdThisThreadInternal() = std::move(instruction_id);
-}
+using StackIdThreadLocalGuard = ThreadLocalGuard<StackId, StackIdGuardKind>;
 
-inline int GetNextInstructionId() {
-  static int next_instruction_id = 0;
+inline StackId GetNextInstructionId() {
+  static StackId next_instruction_id = 0;
   return next_instruction_id++;
 }
 
 class ForeignStackGetter {
  public:
   virtual ~ForeignStackGetter() = default;
-  virtual void RecordCurrentStack(int64_t id) = 0;
-  virtual std::string GetFormatted(int64_t id) const = 0;
+  virtual void RecordCurrentStack(StackId id) = 0;
+  virtual std::string GetFormatted(StackId id) const = 0;
 };
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_FOREIGN_STACK_GETTER_H
-

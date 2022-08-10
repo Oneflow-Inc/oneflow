@@ -372,7 +372,7 @@ void VirtualMachineEngine::AbortOnOOM(vm::Stream* stream, const ScheduleCtx& sch
 template<void (VirtualMachineEngine::*OOMHandler)(vm::Stream*, const ScheduleCtx&)>
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
                                                const ScheduleCtx& schedule_ctx) {
-  SetCurrentInstructionIdThisThread(instruction->id());
+  StackIdThreadLocalGuard guard(instruction->id());
   auto* stream = instruction->mut_stream();
   // Prepare
   {
@@ -396,7 +396,6 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
     stream->mut_thread_ctx()->mut_worker_pending_instruction_list()->PushBack(instruction);
     schedule_ctx.OnWorkerLoadPending(stream->mut_thread_ctx());
   }
-  SetCurrentInstructionIdThisThread(NullOpt);
 }
 
 // Returns true if old scheduler_pending_instruction_list is empty

@@ -331,7 +331,10 @@ void ThrowError(const std::shared_ptr<StackedError>& error) {
                  fmt::styled("Error:", fmt::emphasis::bold | fmt::fg(fmt::color::red)),
                  GetErrorString(error));
   // Only append Python stack trace when instruction id is set.
-  GetCurrentInstructionIdThisThread().bind([&](int id) -> Optional<int> {
+  // The ideal way is to `map` Optional<StackId> to Optional<std::string>
+  // and concat it to error_str. But Optional<std::string> holds a
+  // std::shared_ptr<std::string> which we don't like.
+  StackIdThreadLocalGuard::Current().bind([&](StackId id) -> Optional<StackId> {
     if (!IsMainThread()) {
       if (auto* stack_getter = Singleton<ForeignStackGetter>::Get()) {
         fmt::format_to(std::back_inserter(error_str),

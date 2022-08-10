@@ -19,6 +19,7 @@ limitations under the License.
 #include <cstring>
 #include <memory>
 #include <mutex>
+#include "oneflow/core/common/foreign_stack_getter.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/intrusive/object_pool.h"
@@ -201,7 +202,7 @@ class Instruction final : public intrusive::Base {
   Stream* stream_;
   std::shared_ptr<InstructionPolicy> instruction_policy_;
   InstructionStatusBuffer status_buffer_;
-  int64_t id_;
+  StackId id_;
 };
 
 using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, main_instruction_hook_)>;

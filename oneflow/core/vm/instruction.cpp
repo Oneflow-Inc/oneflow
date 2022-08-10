@@ -44,15 +44,12 @@ void Instruction::__Init__(Stream* stream,
 void Instruction::InitStatus() { instruction_policy_->InitInstructionStatusIf(this); }
 
 Maybe<void> Instruction::Prepare() { 
-  SetCurrentInstructionIdThisThread(id_);
-  auto ret = instruction_policy_->PrepareIf(this);
-  SetCurrentInstructionIdThisThread(NullOpt);
-  return ret;
+  StackIdThreadLocalGuard guard(id_);
+  return instruction_policy_->PrepareIf(this);
 }
 void Instruction::Compute() { 
-  SetCurrentInstructionIdThisThread(id_);
+  StackIdThreadLocalGuard guard(id_);
   instruction_policy_->ComputeIf(this);
-  SetCurrentInstructionIdThisThread(NullOpt);
 }
 
 void Instruction::DeleteStatusAndClearEdges() {
