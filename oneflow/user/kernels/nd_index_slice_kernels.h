@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_ND_INDEX_SLICE_KERNELS_H_
 
 #include "oneflow/user/kernels/nd_index_slice_util.h"
+#include "oneflow/core/common/tensor_meta.h"
 
 namespace oneflow {
 
@@ -74,7 +75,7 @@ void GatherNdKernel<device_type, T, I>::Compute(user_op::KernelComputeContext* c
   const user_op::Tensor* params = ctx->Tensor4ArgNameAndIndex("params", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
   if (indices->shape_view().elem_cnt() == 0) { return; }
-  auto args = ConstructNdIndexSliceArgs<T, I>(*params, *out, *indices);
+  auto args = ConstructNdIndexSliceArgs(*params, *out, *indices);
   GatherNdFunctor<device_type, T, I>()(ctx->stream(), args, indices->dptr<I>(), params->dptr<T>(),
                                        out->mut_dptr<T>());
 }
@@ -87,7 +88,7 @@ void ScatterNdKernel<device_type, T, I>::Compute(user_op::KernelComputeContext* 
   size_t out_bytes_size = out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type());
   Memset<device_type>(ctx->stream(), out->mut_dptr<T>(), 0, out_bytes_size);
   if (indices->shape_view().elem_cnt() == 0) { return; }
-  auto args = ConstructNdIndexSliceArgs<T, I>(*out, *updates, *indices);
+  auto args = ConstructNdIndexSliceArgs(*out, *updates, *indices);
   ScatterNdAddFunctor<device_type, T, I>()(ctx->stream(), args, indices->dptr<I>(),
                                            updates->dptr<T>(), out->mut_dptr<T>());
 }
@@ -102,9 +103,15 @@ void TensorScatterNdUpdateKernel<device_type, T, I>::Compute(
   size_t out_bytes_size = out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type());
   Memcpy<device_type>(ctx->stream(), out->mut_dptr<T>(), params->dptr<T>(), out_bytes_size);
   if (indices->shape_view().elem_cnt() == 0) { return; }
-  auto args = ConstructNdIndexSliceArgs<T, I>(*params, *updates, *indices);
-  ScatterNdUpdateFunctor<device_type, T, I>()(ctx->stream(), args, indices->dptr<I>(),
-                                              updates->dptr<T>(), out->mut_dptr<T>());
+  auto args = ConstructNdIndexSliceArgs(*params, *updates, *indices);
+  if (one::IsContiguous(params->shape_view(), params->stride())
+      && one::IsContiguous(updates->shape_view(), updates->stride())) {
+    ScatterNdUpdateFunctor<device_type, T, I>()(ctx->stream(), args, indices->dptr<I>(),
+                                                updates->dptr<T>(), out->mut_dptr<T>());
+  } else {
+    ScatterNdUpdateWithStrideFunctor<device_type, T, I>()(ctx->stream(), args, indices->dptr<I>(),
+                                                          updates->dptr<T>(), out->mut_dptr<T>());
+  }
 }
 
 template<DeviceType device_type, typename T, typename I>
@@ -117,7 +124,7 @@ void TensorScatterNdAddKernel<device_type, T, I>::Compute(
   size_t out_bytes_size = out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type());
   Memcpy<device_type>(ctx->stream(), out->mut_dptr<T>(), params->dptr<T>(), out_bytes_size);
   if (indices->shape_view().elem_cnt() == 0) { return; }
-  auto args = ConstructNdIndexSliceArgs<T, I>(*params, *updates, *indices);
+  auto args = ConstructNdIndexSliceArgs(*params, *updates, *indices);
   ScatterNdAddFunctor<device_type, T, I>()(ctx->stream(), args, indices->dptr<I>(),
                                            updates->dptr<T>(), out->mut_dptr<T>());
 }
