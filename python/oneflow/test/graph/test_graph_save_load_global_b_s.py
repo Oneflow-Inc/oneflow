@@ -289,7 +289,7 @@ def _test_graph_save_load_global_split_2(
                 local_state_dict = None
 
             # test sbp_for_special_keys
-            global_state_dict = flow.dict_to_global(
+            global_state_dict = flow.utils.dict_to_global(
                 local_state_dict,
                 placement=model_file_placement,
                 sbp=flow.sbp.split(0),
@@ -404,7 +404,7 @@ def _test_graph_save_load_global_split_2(
         iter1_state_dict = graph_model.state_dict()
 
         if call_cnt == 0:
-            model_file_state_dict = flow.dict_to_global(
+            model_file_state_dict = flow.utils.dict_to_global(
                 iter1_state_dict,
                 placement=model_file_placement,
                 sbp=flow.sbp.split(0),
@@ -577,7 +577,7 @@ def _test_graph_save_load_global_split_4(
                 local_state_dict = None
 
             # test sbp_for_special_keys
-            global_state_dict = flow.dict_to_global(
+            global_state_dict = flow.utils.dict_to_global(
                 local_state_dict,
                 placement=model_file_placement,
                 sbp=flow.sbp.split(0),
@@ -736,7 +736,7 @@ def _test_graph_save_load_global_split_4(
         iter1_state_dict = graph_model.state_dict()
 
         if call_cnt == 0:
-            model_file_state_dict = flow.dict_to_global(
+            model_file_state_dict = flow.utils.dict_to_global(
                 iter1_state_dict,
                 placement=model_file_placement,
                 sbp=flow.sbp.split(0),

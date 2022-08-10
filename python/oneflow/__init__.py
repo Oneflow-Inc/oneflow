@@ -377,7 +377,7 @@ from oneflow.nn.modules.global_cast import local_to_global_op as local_to_global
 from oneflow.nn.modules.global_cast import global_to_global_op as global_to_global
 from oneflow.nn.modules.global_cast import to_global_op as to_global
 from oneflow.nn.modules.global_cast import to_local_op as to_local
-from oneflow.nn.modules.global_cast import dict_to_global as dict_to_global
+from oneflow.utils.to_global.dict_to_global import dict_to_global
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
 from oneflow.ops.stateful_ops import StatefulOp as stateful_op
