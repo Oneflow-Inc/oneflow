@@ -711,6 +711,16 @@ class Module(object):
                         )
                     )
                     continue
+                if input_param.is_global != param.is_global:
+                    error_msgs.append(
+                        'local / global mismatch for "{}":  param from checkpoint is {} tensor, but the param in current model is {} tensor.'.format(
+                            key,
+                            "global" if input_param.is_global else "local",
+                            "global" if param.is_global else "local",
+                        )
+                    )
+                    continue
+
                 try:
                     with flow.no_grad():
                         param.copy_(input_param)
