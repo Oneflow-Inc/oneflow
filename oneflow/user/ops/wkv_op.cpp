@@ -13,15 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/functional/impl/common.h"
 
 namespace oneflow {
 
 /*static*/ Maybe<void> WkvOp::GetSbp(user_op::SbpContext* ctx) {
-  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+  // return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("w", 0))
+      .Broadcast(user_op::OpArg("u", 0))
+      .Split(user_op::OpArg("k", 0), 1)
+      .Split(user_op::OpArg("v", 0), 1)
+      .Split(user_op::OpArg("y", 0), 1)
+      .Build();
+  return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> WkvOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& v_shape = ctx->InputShape("v", 0);
@@ -39,6 +49,18 @@ namespace oneflow {
 
 /*static*/ Maybe<void> WkvGradOp::GetSbp(user_op::SbpContext* ctx) {
   return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("w", 0))
+      .Broadcast(user_op::OpArg("u", 0))
+      .Split(user_op::OpArg("k", 0), 1)
+      .Split(user_op::OpArg("v", 0), 1)
+      .Split(user_op::OpArg("gy", 0), 1)
+      .Broadcast(user_op::OpArg("gw", 0))
+      .Broadcast(user_op::OpArg("gu", 0))
+      .Split(user_op::OpArg("gk", 0), 1)
+      .Split(user_op::OpArg("gv", 0), 1)
+      .Build();
+  return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> WkvGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const int64_t B = ctx->Attr<int64_t>("B");
