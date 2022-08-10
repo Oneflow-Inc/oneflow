@@ -10141,7 +10141,6 @@ def OneFlow_CopyD2HOp : OneFlow_BaseOp<"copy_d2h", [NoSideEffect, NoGrad, Declar
 // mlir_jit
 // Total: 1
 
-#ifdef WITH_MLIR
 #ifdef GET_ONEFLOW_MLIR_JIT_OP_DEFINITIONS
 
 include "mlir/Interfaces/CallInterfaces.td"
@@ -10184,4 +10183,3 @@ def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpI
 }
 
 #endif // GET_ONEFLOW_MLIR_JIT_OP_DEFINITIONS
-#endif // WITH_MLIR
