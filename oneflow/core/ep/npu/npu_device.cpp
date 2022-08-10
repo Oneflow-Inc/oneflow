@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/ep/npu/npu_device.h"
 #include "oneflow/core/ep/npu/npu_event.h"
 #include "oneflow/core/ep/npu/npu_stream.h"
-
+#include <ctime>
 namespace oneflow {
 
 namespace ep {

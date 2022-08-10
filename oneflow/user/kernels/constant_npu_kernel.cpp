@@ -37,16 +37,31 @@ class ConstantNpuKernel final : public OpKernel {
     //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));
     if(is_floating_value)
     {
-        double value = ctx->Attr<double>("floating_value");
-        std::vector<float> values(elem_cnt,value);
-        OF_NPU_CHECK(aclrtMemcpy(out_tensor->mut_dptr<void>(), len, static_cast<void*>(values.data()), len, ACL_MEMCPY_HOST_TO_DEVICE));
+        float value = ctx->Attr<double>("floating_value");
+        NpuCommand npu_command;
+        npu_command.OpName("Fills")
+                .Input(out_tensor,"channels_nd")
+                .Output(out_tensor,"channels_nd")
+                .Attr("value",value)
+                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
+                .Check();
+        npu_command.Run()
+                .Realease();   
     }
     else
     {
-        int64_t value = ctx->Attr<int64_t>("integer_value");
-        std::vector<int64_t> values(elem_cnt, value);
-        OF_NPU_CHECK(aclrtMemcpy(out_tensor->mut_dptr<void>(), len, static_cast<void*>(values.data()), len, ACL_MEMCPY_HOST_TO_DEVICE));        
+        float value = ctx->Attr<int64_t>("integer_value");
+        NpuCommand npu_command;
+        npu_command.OpName("Fills")
+                .Input(out_tensor,"channels_nd")
+                .Output(out_tensor,"channels_nd")
+                .Attr("value",value)
+                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
+                .Check();
+        npu_command.Run()
+                .Realease();   
     }
+    
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

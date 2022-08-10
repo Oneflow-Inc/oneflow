@@ -120,7 +120,8 @@ void InitNpuContextOnce(int device_id ) {
   static aclrtContext context_;
   std::call_once(aclcontext,[&](){
     std::cout<<"Init && Create Context Once"<<std::endl;
-    OF_NPU_CHECK(aclInit("/data/acl_test/acl.json"));
+    static std::string json_path = "/data/acl_test/acl.json";
+    OF_NPU_CHECK(aclInit(json_path.c_str()));
     OF_NPU_CHECK(aclrtCreateContext(&context_, device_id));
     //InitNpuOtherOnce(device_id);
   });
