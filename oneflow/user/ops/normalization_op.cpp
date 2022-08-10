@@ -180,7 +180,9 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn(
       CHECK_EQ_OR_RETURN(add_to_output.data_type(), data_type);
     }
     *ctx->MutOutputTensorDesc("y", 0) = x;
-    const DataType param_data_type = data_type == DataType::kFloat16 ? DataType::kFloat : data_type;
+    const DataType param_data_type =
+        (data_type == DataType::kFloat16 || data_type == DataType::kBFloat16) ? DataType::kFloat
+                                                                              : data_type;
     const auto CheckParamDataType = MakeCheckParamDataTypeFn(ctx, param_data_type);
     const auto SetParamDataType = MakeSetParamDataTypeFn(ctx, param_data_type);
     if (ctx->has_input("moving_mean", 0)) {
@@ -460,7 +462,8 @@ Maybe<void> BwDataTypeInferFn(user_op::InferContext* ctx) {
   }
   *ctx->MutOutputTensorDesc("dx", 0) = x;
   if (ctx->has_output("addend_diff", 0)) { *ctx->MutOutputTensorDesc("addend_diff", 0) = x; }
-  const DataType param_data_type = x_type == DataType::kFloat16 ? DataType::kFloat : x_type;
+  const DataType param_data_type =
+      (x_type == DataType::kFloat16 || x_type == DataType::kBFloat16) ? DataType::kFloat : x_type;
   const auto CheckParamDataType = MakeCheckParamDataTypeFn(ctx, param_data_type);
   const auto SetParamDataType = MakeSetParamDataTypeFn(ctx, param_data_type);
   JUST(CheckParamDataType("mean"));
@@ -583,8 +586,9 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
 REGISTER_USER_OP_GRAD("normalization")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const bool is_training = ctx->FwOp().attr<bool>("training");
-      const bool is_fp16 = ctx->FwOp().arg_tensor_desc("y", 0).data_type() == DataType::kFloat16;
-
+      const bool is_fp16 =
+          (ctx->FwOp().arg_tensor_desc("y", 0).data_type() == DataType::kFloat16
+           || ctx->FwOp().arg_tensor_desc("y", 0).data_type() == DataType::kBFloat16);
       std::string mean;
       std::string inv_variance;
       if (ctx->FwOp().user_op_conf().has_input("moving_variance", 0)) {
@@ -713,7 +717,7 @@ REGISTER_USER_OP_GRAD("normalization")
                       return builder.OpTypeName("cast")
                           .InputBind("in", ctx->GetOp(dy_mul_inv_var_op_name).output("z", 0))
                           .Output("out")
-                          .Attr("dtype", DataType::kFloat16)
+                          .Attr("dtype", ctx->FwOp().arg_tensor_desc("y", 0).data_type())
                           .Build();
                     });
 

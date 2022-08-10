@@ -15,13 +15,13 @@ limitations under the License.
 */
 #include "oneflow/api/python/utils/tensor_utils.h"
 
-#include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/framework/consistency_check.h"
@@ -44,9 +44,9 @@ Maybe<void> EagerLocalTensorZeros(const std::shared_ptr<Tensor>& t) {
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     JUST(builder->AccessBlobByCallback(
         local_tensor,
-        [](uint64_t of_blob_ptr) {
-          auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-          of_blob->AsyncAutoMemset(0);
+        [](ep::Stream* stream, const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+          AutoMemset(stream, eager_blob_object->mut_dptr(), 0,
+                     eager_blob_object->ByteSizeOfBlobBody(), eager_blob_object->mem_case());
         },
         "mut"));
     return Maybe<void>::Ok();
@@ -54,10 +54,20 @@ Maybe<void> EagerLocalTensorZeros(const std::shared_ptr<Tensor>& t) {
   return Maybe<void>::Ok();
 }
 
+namespace {
+void CopyFromNumpyArray(ep::Stream* stream,
+                        const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+                        const NumPyArrayPtr& array_ptr) {
+  SyncAutoMemcpy(stream, eager_blob_object->mut_dptr(), array_ptr.data(),
+                 eager_blob_object->ByteSizeOfBlobBody(), eager_blob_object->mem_case(),
+                 memory::MakeHostMemCase());
+}
+}  // namespace
+
 template<typename T>
 Maybe<void> CopyLocalTensorFromUntypedArray(const std::shared_ptr<Tensor>& tensor,
                                             PyObject* array) {
-  return CopyBetweenLocalTensorAndNumpy<T>(tensor, array, BlobNumpyCopyUtil<T>::From, "mut",
+  return CopyBetweenLocalTensorAndNumpy<T>(tensor, array, CopyFromNumpyArray, "mut",
                                            /*block_host_until_done=*/false);
 }
 
@@ -96,7 +106,8 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   auto btb = std::make_shared<BlockingThenBusy>(1);
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->SyncAccessBlobByCallback(
-        tensor, btb, [](uint64_t) {}, "const");
+        tensor, btb, [](ep::Stream* stream, const std::shared_ptr<vm::EagerBlobObject>&) {},
+        "const");
   }));
   JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
 

@@ -412,7 +412,6 @@ jobs:
             module
             misc
             speed-test
-            benchmark
 
   test-distributed:
     name: Distributed test suite
@@ -825,7 +824,7 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         timeout-minutes: 10
         run: |
-          docker exec -e ONEFLOW_SERVING_DEBUG=1 ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} ./liboneflow-ci-linux/bin/oneflow_cpp_api_testexe
+          docker exec -e ONEFLOW_SERVING_DEBUG=1 ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} ./liboneflow-ci-linux/bin/oneflow_cpp_api_testexe --gtest_filter=-Api.embedding*
       - name: Test container
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
@@ -967,7 +966,7 @@ jobs:
             ${{ env.TEST_CONTAINER_NAME }} bash ci/test/expensive_generic_test_multi_client.sh
       - name: Exception API test
         timeout-minutes: 45
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && false }}
         run: docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/multi_client_exception_test.sh
       - name: Dataloader API test
         timeout-minutes: 45
