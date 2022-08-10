@@ -712,11 +712,16 @@ class Module(object):
                     )
                     continue
                 if input_param.is_global != param.is_global:
+                    if param.is_global:
+                        help_msg = "Maybe you need to convert the param to globa, or set global_src_rank=0 when using flow.load to load model's state_dict"
+                    else:
+                        help_msg = "Maybe you need to convert your model to global."
                     error_msgs.append(
-                        'local / global mismatch for "{}":  param from checkpoint is {} tensor, but the param in current model is {} tensor.'.format(
+                        'local / global mismatch for "{}":  param from checkpoint is {} tensor, but the param in current model is {} tensor. {}'.format(
                             key,
                             "global" if input_param.is_global else "local",
                             "global" if param.is_global else "local",
+                            help_msg,
                         )
                     )
                     continue
