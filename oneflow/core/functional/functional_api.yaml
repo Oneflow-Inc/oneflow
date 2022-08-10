@@ -1926,38 +1926,42 @@
 - name: "atleast_1d"
   signature: [
     "Tensor (Tensor input) => AtLeast1D",
-    "TensorTuple (TensorTuple inputs) => AtLeast1D",
+    "TensorTuple (TensorTuple tensors) => AtLeast1D",
   ]
   bind_python: True
 
 - name: "atleast_2d"
   signature: [
     "Tensor (Tensor input) => AtLeast2D",
-    "TensorTuple (TensorTuple inputs) => AtLeast2D",
+    "TensorTuple (TensorTuple tensors) => AtLeast2D",
   ]
   bind_python: True
 
 - name: "atleast_3d"
   signature: [
     "Tensor (Tensor input) => AtLeast3D",
-    "TensorTuple (TensorTuple inputs) => AtLeast3D",
+    "TensorTuple (TensorTuple tensors) => AtLeast3D",
   ]
   bind_python: True
 
 - name: "hstack"
-  signature: "Tensor (TensorTuple inputs) => HStack"
+  signature: "Tensor (TensorTuple tensors) => HStack"
   bind_python: True
 
 - name: "vstack"
-  signature: "Tensor (TensorTuple inputs) => VStack"
+  signature: "Tensor (TensorTuple tensors) => VStack"
   bind_python: True
 
 - name: "dstack"
-  signature: "Tensor (TensorTuple inputs) => DStack"
+  signature: "Tensor (TensorTuple tensors) => DStack"
   bind_python: True
 
 - name: "column_stack"
-  signature: "Tensor (TensorTuple inputs) => ColumnStack"
+  signature: "Tensor (TensorTuple tensors) => ColumnStack"
+  bind_python: True
+
+- name: "row_stack"
+  signature: "Tensor (TensorTuple tensors) => RowStack"
   bind_python: True
 
 - name: "local_to_global"

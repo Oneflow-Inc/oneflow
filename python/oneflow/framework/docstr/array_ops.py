@@ -273,7 +273,7 @@ add_docstr(
     r"""Returns a 1-D view of each input tensor with 0 dimensions. Tensors with dimensions greater than 0 will be returned directly.
 
     Args:
-        inputs (List[oneflow.Tensor] or oneflow.Tensor): Tensor or list of tensors to be reshaped
+        tensors (List[oneflow.Tensor] or oneflow.Tensor): Tensor or list of tensors to be reshaped
 
     Returns:
         A `Tensor`
@@ -293,7 +293,7 @@ add_docstr(
         oneflow.Size([1])
         >>>
 
-    """
+    """,
 )
 
 add_docstr(
@@ -301,7 +301,7 @@ add_docstr(
     r"""Returns a 2-D view of each input tensor with dimensions less than 2. Tensors with dimensions greater than 1 will be returned directly.
 
     Args:
-        inputs (List[oneflow.Tensor] or oneflow.Tensor): Tensor or list of tensors to be reshaped
+        tensors (List[oneflow.Tensor] or oneflow.Tensor): Tensor or list of tensors to be reshaped
 
     Returns:
         A `Tensor`
@@ -323,7 +323,7 @@ add_docstr(
         >>> flow.atleast_2d(x).shape
         oneflow.Size([3, 3])
 
-    """
+    """,
 )
 
 add_docstr(
@@ -331,7 +331,7 @@ add_docstr(
     r"""Returns a 3-D view of each input tensor with dimensions less than 3. Tensors with dimensions greater than 2 will be returned directly.
 
     Args:
-        inputs (List[oneflow.Tensor] or oneflow.Tensor): Tensor or list of tensors to be reshaped
+        tensors (List[oneflow.Tensor] or oneflow.Tensor): Tensor or list of tensors to be reshaped
 
     Returns:
         A `Tensor`
@@ -353,7 +353,7 @@ add_docstr(
         >>> x = flow.randn(3, 4, 5)
         >>> flow.atleast_3d(x).shape
         oneflow.Size([3, 4, 5])
-    """
+    """,
 )
 
 add_docstr(
@@ -389,14 +389,14 @@ add_docstr(
 
 add_docstr(
     oneflow.hstack,
-    r"""Stack tensors in :attr:`inputs` horizontally (column wise).
+    r"""Stack tensors in :attr:`tensors` horizontally (column wise).
 
-    This is equivalent to concatenation tensors in :attr:`inputs` along the first axis for 1-D tensors, and along the second axis for all other tensors.
+    This is equivalent to concatenation tensors in :attr:`tensors` along the first axis for 1-D tensors, and along the second axis for all other tensors.
 
     When there are tensors with dimension less than 1, these tensors will be reshaped by ``oneflow.atleast_1d()`` to 1-dims tensors before stacking.
 
     Args:
-        inputs: (List[oneflow.Tensor]): sequence of tensors to stack
+        tensors: (List[oneflow.Tensor]): sequence of tensors to stack
 
     Returns:
         A `Tensor`
@@ -413,19 +413,19 @@ add_docstr(
         >>> x = flow.randn(5)
         >>> flow.hstack([x, x]).shape
         oneflow.Size([10])
-    """
+    """,
 )
 
 add_docstr(
     oneflow.vstack,
-    r"""Stack tensors in :attr:`inputs` vertically (row wise).
+    r"""Stack tensors in :attr:`tensors` vertically (row wise).
 
-    This is equivalent to concatenation tensors in :attr:`inputs` along the first axis.
+    This is equivalent to concatenation tensors in :attr:`tensors` along the first axis.
 
     When there are tensors with dimension less than 2, these tensors will be reshaped by ``oneflow.atleast_2d()`` to 2-D tensors before stacking.
 
     Args:
-        inputs: (List[oneflow.Tensor]): sequence of tensors to stack
+        tensors: (List[oneflow.Tensor]): sequence of tensors to stack
 
     Returns:
         A `Tensor`
@@ -442,17 +442,17 @@ add_docstr(
         >>> x = flow.randn(5)
         >>> flow.vstack([x, x]).shape
         oneflow.Size([2, 5])
-    """
+    """,
 )
 
 add_docstr(
     oneflow.dstack,
-    r"""Stack tensors in :attr:`inputs` depthwish (along third axis).
+    r"""Stack tensors in :attr:`tensors` depthwish (along third axis).
 
-    This is equivalent to concatenation tensors in :attr:`inputs` along the third axis after 1-D and 2-D tensors have been reshaped by ``oneflow.atleast_3d()``.
+    This is equivalent to concatenation tensors in :attr:`tensors` along the third axis after 1-D and 2-D tensors have been reshaped by ``oneflow.atleast_3d()``.
 
     Args:
-        inputs: (List[oneflow.Tensor]): sequence of tensors to stack
+        tensors: (List[oneflow.Tensor]): sequence of tensors to stack
 
     Returns:
         A `Tensor`
@@ -469,17 +469,17 @@ add_docstr(
         >>> x = flow.randn(6, 4)
         >>> flow.dstack([x, x]).shape
         oneflow.Size([6, 4, 2])
-    """
+    """,
 )
 
 add_docstr(
     oneflow.column_stack,
-    r"""Creates a new tensor by horizontally stacking the tensors in :attr:`inputs`.
+    r"""Creates a new tensor by horizontally stacking the tensors in :attr:`tensors`.
 
     Equivalent to :code:`oneflow.hstack(tensors)`, tensors with dimensions less than 2 will be reshaped to :code:`(t.numel(), 1)` before being stacked horizontally.
 
     Args:
-        inputs: (List[oneflow.Tensor]): sequence of tensors to stack
+        tensors: (List[oneflow.Tensor]): sequence of tensors to stack
 
     Returns:
         A `Tensor`
@@ -498,21 +498,21 @@ add_docstr(
         >>> flow.column_stack([x1, x2]).shape
         oneflow.Size([2, 7])
 
-    """
+    """,
 )
 
 add_docstr(
     oneflow.row_stack,
     r"""Alias of ``oneflow.vstack()``.
 
-    Stack tensors in :attr:`inputs` vertically (row wise).
+    Stack tensors in :attr:`tensors` vertically (row wise).
 
-    This is equivalent to concatenation tensors in :attr:`inputs` along the first axis.
+    This is equivalent to concatenation tensors in :attr:`tensors` along the first axis.
 
     When there are tensors with dimension less than 2, these tensors will be reshaped by ``oneflow.atleast_2d()`` to 2-D tensors before stacking.
 
     Args:
-        inputs: (List[oneflow.Tensor]): sequence of tensors to stack
+        tensors: (List[oneflow.Tensor]): sequence of tensors to stack
 
     Returns:
         A `Tensor`
@@ -529,7 +529,7 @@ add_docstr(
         >>> x = flow.randn(5)
         >>> flow.vstack([x, x]).shape
         oneflow.Size([2, 5])
-    """
+    """,
 )
 
 add_docstr(

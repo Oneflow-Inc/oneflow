@@ -3383,6 +3383,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::HStackFunctor>("HStack");
   m.add_functor<impl::ColumnStackFunctor>("ColumnStack");
   m.add_functor<impl::VStackFunctor>("VStack");
+  m.add_functor<impl::VStackFunctor>("RowStack");
   m.add_functor<impl::DStackFunctor>("DStack");
   m.add_functor<impl::ExpandFunctor>("Expand");
   m.add_functor<impl::ExpandGradFunctor>("ExpandGrad");
