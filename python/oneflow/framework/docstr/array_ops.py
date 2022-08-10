@@ -300,6 +300,91 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.hstack,
+    r"""Stack tensors in :attr:`inputs` horizontally (column wise).
+
+    This is equivalent to concatenation tensors in :attr:`inputs` along the first axis for 1-D tensors, and along the second axis for all other tensors.
+
+    When there are tensors with dimension less than 1, these tensors will be reshaped by ``oneflow.atleast_1d()`` to 1-dims tensors before stacking.
+
+    Args:
+        inputs: (List[oneflow.Tensor]): sequence of tensors to stack
+
+    Returns:
+        A `Tensor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x1 = flow.arange(10).reshape(5, 2)
+        >>> x2 = flow.arange(15).reshape(5, 3)
+        >>> flow.hstack([x1, x2]).shape
+        oneflow.Size([5, 5])
+        >>> x = flow.arange(5)
+        >>> flow.hstack([x, x]).shape
+        oneflow.Size([10])
+    """
+)
+
+add_docstr(
+    oneflow.vstack,
+    r"""Stack tensors in :attr:`inputs` vertically (row wise).
+
+    This is equivalent to concatenation tensors in :attr:`inputs` along the first axis.
+
+    When there are tensors with dimension less than 2, these tensors will be reshaped by ``oneflow.atleast_2d()`` to 2-D tensors before stacking.
+
+    Args:
+        inputs: (List[oneflow.Tensor]): sequence of tensors to stack
+
+    Returns:
+        A `Tensor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x1 = flow.arange(10).reshape(2, 5)
+        >>> x2 = flow.arange(15).reshape(3, 5)
+        >>> flow.vstack([x1, x2]).shape
+        oneflow.Size([5, 5])
+        >>> x = flow.arange(5)
+        >>> flow.vstack([x, x]).shape
+        oneflow.Size([2, 5])
+    """
+)
+
+add_docstr(
+    oneflow.dstack,
+    r"""Stack tensors in :attr:`inputs` depthwish (along third axis).
+
+    This is equivalent to concatenation tensors in :attr:`inputs` along the third axis after 1-D and 2-D tensors have been reshaped by ``oneflow.atleast_3d()``.
+
+    Args:
+        inputs: (List[oneflow.Tensor]): sequence of tensors to stack
+
+    Returns:
+        A `Tensor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x1 = flow.arange(24).reshape(2, 3, 4)
+        >>> x2 = flow.arange(12).reshape(2, 3, 2)
+        >>> flow.dstack([x1, x2]).shape
+        oneflow.Size([2, 3, 6])
+        >>> x = flow.arange(24).reshape(6, 4)
+        >>> flow.dstack([x, x]).shape
+        oneflow.Size([6, 4, 2])
+    """
+)
+
+add_docstr(
     oneflow.squeeze,
     r"""This operator removes the specified dimention which size is 1 of the input Tensor.
     If the `dim` is not specified, this operator will remove all the dimention which size is 1 of the input Tensor.
