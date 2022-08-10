@@ -153,7 +153,7 @@ std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
   exit(EXIT_FAILURE);
 }
 
-llvm::Optional<::oneflow::DataType> GetDataTypeFromLLVMType(Type dt) {
+::oneflow::DataType GetDataTypeFromLLVMType(Type dt) {
   if (dt.dyn_cast<InvalidElementType>()) { return ::oneflow::DataType::kInvalidDataType; }
   if (dt.dyn_cast<CharElementType>()) { return ::oneflow::DataType::kChar; }
   if (dt.dyn_cast<OFRecordElementType>()) { return ::oneflow::DataType::kOFRecord; }
@@ -174,7 +174,7 @@ llvm::Optional<::oneflow::DataType> GetDataTypeFromLLVMType(Type dt) {
   if (dt.isSignedInteger(64)) { return ::oneflow::DataType::kInt64; }
   if (dt.isSignedInteger(128)) { return ::oneflow::DataType::kInt128; }
   llvm::errs() << "unsupported data type: " << dt << "\n";
-  return llvm::None;
+  return {};
 }
 }  // namespace support
 
