@@ -15,20 +15,15 @@ low throughput just because of a slight mistake in the configuration of SBP sign
    It only works on :doc:`graph` mode.
 
 
-Why do you need auto parallelism?
+Our strength
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To get rid of all those configurations for SBP signatures, we developed auto parallelism.
-If you read this paragraph before you rush into any SBP stuff, then congratulation,
+Still, configurations of placement are necessary and we have not supported auto placement
+yet. If you read this paragraph before you rush into any SBP stuff, then congratulation,
 you do not need to learn SBPs. You can start writing your code as you did under CPU mode.
 Our auto parallelism would generate a fast strategy customized for your specific models,
 the size of parameters, and the number of available GPUs.
-
-
-What can automatic parallelism do for you?
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-TODO: Auto parallelism can do what for users.
 
 
 How to use auto parallelism?
@@ -53,7 +48,8 @@ Example::
 
 .. warning::
 
-   If you enable auto parallelism, all ``oneflow.sbp`` configed will be ignored.
+   If you enable auto parallelism, OneFlow will take care of the sbp configurations
+   of operators except for explicit ``to_global`` functions.
 
 
 Configuration API for auto parallelism

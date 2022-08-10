@@ -302,7 +302,7 @@ class GraphConfig(object):
         self.proto.enable_auto_parallel = mode
 
     def enable_auto_parallel_prune_parallel_cast_ops(self, mode: bool = True):
-        """If true, then graph will use auto parallel algorithm.
+        """If true, it will ignore all user configurations of sbp.
 
         Args:
             mode (bool, optional): [description]. Default is True.
