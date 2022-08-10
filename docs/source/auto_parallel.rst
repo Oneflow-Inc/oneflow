@@ -48,7 +48,7 @@ Example::
 
 .. warning::
 
-   If you enable auto parallelism, OneFlow will take care of the sbp configurations
+   If you enable auto parallelism, OneFlow will take care of the SBP configurations
    of operators except for explicit ``to_global`` functions.
 
 
