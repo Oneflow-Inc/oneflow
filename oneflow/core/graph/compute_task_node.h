@@ -53,7 +53,7 @@ class CompTaskNode : public TaskNode {
 
  private:
   ParallelContext parallel_ctx_;
-  const OpNode* op_node_;
+  const OpNode* op_node_{};
 };
 
 class OpCompTaskNodeCreator {

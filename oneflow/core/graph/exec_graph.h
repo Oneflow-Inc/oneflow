@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/graph/exec_sequence.pb.h"
 #include "oneflow/core/graph/graph.h"
+#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/register/register_desc.h"
 
@@ -72,7 +73,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   std::string VisualStr() const override { return op_->op_name(); }
   void ToProto(const ParallelContext*, ExecNodeProto*) const;
 
-  void InferBlobDescs(const ParallelContext* parallel_ctx);
+  void InferBlobDescs(const OpNode* op_node, const ParallelContext* parallel_ctx);
 
   const HashMap<std::string, std::string>& mut_inplace_obn2ibn() const {
     return mut_inplace_obn2ibn_;

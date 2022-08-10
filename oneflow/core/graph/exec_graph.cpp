@@ -105,9 +105,8 @@ Maybe<void> CheckPhysicalBlobDesc(
 
 }  // namespace
 
-void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
+void ExecNode::InferBlobDescs(const OpNode* op_node, const ParallelContext* parallel_ctx) {
   auto GetBlobDesc4BnInOp = GetBlobDesc4BnInOpFunc();
-  const OpNode* op_node = Singleton<OpGraph>::Get()->OpNode4OpName(op()->op_name());
   const NdSbpSignature* nd_sbp_signature = nullptr;
   if (op_node != nullptr) { nd_sbp_signature = &op_node->nd_sbp_signature(); }
 

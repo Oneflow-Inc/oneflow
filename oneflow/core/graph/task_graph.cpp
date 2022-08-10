@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
+#include <memory>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/register/blob_desc.h"
@@ -399,7 +400,7 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const OpEdge* op_edge) {
 }
 
 void ForEachOpGraphNecessaryCtrlEdge(
-    const OpGraph* op_graph, const std::function<void(const OpNode*, const OpNode*)>& Handler) {
+    std::shared_ptr<const OpGraph> op_graph, const std::function<void(const OpNode*, const OpNode*)>& Handler) {
   auto IsOpGraphDataReachable = op_graph->MakePredicatorIsReachable();
   op_graph->ForEachNode([&](OpNode* dst) {
     for (const auto& ctrl_in_op_name : dst->op().op_conf().ctrl_in_op_name()) {
@@ -421,8 +422,7 @@ void ForEachOpGraphNecessaryCtrlEdge(
 
 }  // namespace
 
-TaskGraph::TaskGraph(bool enable_straighten_algorithm) {
-  OpGraph* op_graph = Singleton<OpGraph>::Get();
+TaskGraph::TaskGraph(std::shared_ptr<const OpGraph> op_graph, bool enable_straighten_algorithm) {
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
   hierarchical_sub_tsk_gph_builder_.reset(new DispatchHierarchicalSubTskGphBuilder());

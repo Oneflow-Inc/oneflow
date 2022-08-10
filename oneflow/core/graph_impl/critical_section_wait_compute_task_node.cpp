@@ -56,7 +56,7 @@ void CriticalSectionWaitTickCompTaskNode::BuildExecGphAndRegst() {
     out_regst->AddLbi(lbi);
     node->BindBnWithRegst(obn, out_regst);
   }
-  node->InferBlobDescs(parallel_ctx());
+  node->InferBlobDescs(op_node(), parallel_ctx());
 }
 
 REGISTER_INDEPENDENT_TASK_STREAM_INDEX_GETTER(TaskType::kCriticalSectionWaitTick);
