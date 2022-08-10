@@ -269,6 +269,94 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.atleast_1d,
+    r"""Returns a 1-D view of each input tensor with 0 dimensions. Tensors with dimensions greater than 0 will be returned directly.
+
+    Args:
+        inputs (List[oneflow.Tensor] or oneflow.Tensor): Tensor or list of tensors to be reshaped
+
+    Returns:
+        A `Tensor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.randn(1)
+        >>> flow.atleast_1d(x).shape
+        oneflow.Size([1])
+        >>> x = flow.tensor(0)
+        >>> x.shape
+        oneflow.Size([])
+        >>> flow.atleast_1d(x).shape
+        oneflow.Size([1])
+        >>>
+
+    """
+)
+
+add_docstr(
+    oneflow.atleast_2d,
+    r"""Returns a 2-D view of each input tensor with dimensions less than 2. Tensors with dimensions greater than 1 will be returned directly.
+
+    Args:
+        inputs (List[oneflow.Tensor] or oneflow.Tensor): Tensor or list of tensors to be reshaped
+
+    Returns:
+        A `Tensor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor(0)
+        >>> x.shape
+        oneflow.Size([])
+        >>> flow.atleast_2d(x).shape
+        oneflow.Size([1, 1])
+        >>> x = flow.randn(3)
+        >>> flow.atleast_2d(x).shape
+        oneflow.Size([1, 3])
+        >>> x = flow.randn(3, 3)
+        >>> flow.atleast_2d(x).shape
+        oneflow.Size([3, 3])
+
+    """
+)
+
+add_docstr(
+    oneflow.atleast_3d,
+    r"""Returns a 3-D view of each input tensor with dimensions less than 3. Tensors with dimensions greater than 2 will be returned directly.
+
+    Args:
+        inputs (List[oneflow.Tensor] or oneflow.Tensor): Tensor or list of tensors to be reshaped
+
+    Returns:
+        A `Tensor`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor(0)
+        >>> flow.atleast_3d(x).shape
+        oneflow.Size([1, 1, 1])
+        >>> x = flow.randn(3)
+        >>> flow.atleast_3d(x).shape
+        oneflow.Size([1, 3, 1])
+        >>> x = flow.randn(3, 4)
+        >>> flow.atleast_3d(x).shape
+        oneflow.Size([3, 4, 1])
+        >>> x = flow.randn(3, 4, 5)
+        >>> flow.atleast_3d(x).shape
+        oneflow.Size([3, 4, 5])
+    """
+)
+
+add_docstr(
     oneflow.stack,
     r"""Concatenates a sequence of tensors along a new dimension.
     The returned tensor shares the same underlying data with input tensors.
