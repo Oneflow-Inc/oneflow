@@ -392,7 +392,6 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   InterfaceBlobConf* blob_conf = input_conf->mutable_blob_conf();
 
   input_tensor->shape()->ToProto(blob_conf->mutable_shape());
-  JUST(input_tensor->stride())->ToProto(blob_conf->mutable_stride());
   blob_conf->set_data_type(input_tensor->dtype()->data_type());
   // NOTE(chengcheng): is_dynamic true has conflict in global lazy job even if world size 1.
   //     this flag will be removed in the future.
@@ -524,7 +523,6 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   output_conf->set_out("out");
   InterfaceBlobConf* blob_conf = output_conf->mutable_blob_conf();
   input_tensor->shape()->ToProto(blob_conf->mutable_shape());
-  JUST(input_tensor->stride())->ToProto(blob_conf->mutable_stride());
   blob_conf->set_data_type(input_tensor->dtype()->data_type());
   // NOTE(chengcheng): is_dynamic true has conflict in global lazy job even if world size 1.
   //     this flag will be removed in the future.
