@@ -16,13 +16,14 @@ limitations under the License.
 
 import unittest
 from collections import OrderedDict
+from random import randint
 
 import numpy as np
 from oneflow.test_utils.test_util import GenArgList
-from oneflow.test_utils.automated_test_util import util
 
 import oneflow as flow
 import oneflow.unittest
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_slice(test_case, device):
@@ -245,18 +246,69 @@ class TestSliceUpdate(flow.unittest.TestCase):
         value_grad = np.array([1.0, 1.0, 1.0]).astype(np.float32)
         test_case.assertTrue(np.array_equal(-test_m.value_grad, value_grad))
 
-    @unittest.skip("TODO:(zhaoluyang) test when slice_update support stride")
-    def test_slice_update_with_stride(test_case, device):
-        arr = np.arange(24).reshape(2, 2, 2, 3).astype(np.float32)
-        np_in = arr
-        np_out = np_in.transpose(1, 0, 2, 3)
-        np_out[0:1, 1:2, :, 1:2] = 3.1415
+    def test_random_nd_slice_update_in_non_contiguous_tensor(test_case):
+        def get_random_slice_tuple(shape):
+            slice_tup = []
+            slice_size = []
+            for i in range(len(shape)):
+                start = randint(0, shape[i] - 1)
+                end = randint(start + 1, shape[i])
+                step = randint(1, end - start + 1)
+                slice_tup.append(slice(start, end, step))
+                slice_size.append((end - start + step - 1) // step)
+            return tuple(slice_tup), tuple(slice_size)
 
-        input = flow.tensor(arr, device=flow.device(device))
-        output = input.permute(1, 0, 2, 3)
-        output[0:1, 1:2, :, 1:2] = 3.1415
+        def get_random_update_shape_and_perm(shape):
+            perm = flow.randperm(len(shape)).tolist()
+            no_perm_shape = [shape[i] for i in perm]
+            inv_perm = [0] * len(shape)
+            for i in range(len(shape)):
+                inv_perm[perm[i]] = i
+            return no_perm_shape, inv_perm
 
-        test_case.assertTrue(np.array_equal(output.numpy(), np_out))
+        def compare_result_between_oneflow_and_numpy(test_case, shape):
+            device = random_device().value()
+            # non-contiguous ref
+            ref = (
+                flow.rand(shape, dtype=flow.float32)
+                .to(device)
+                .permute(flow.randperm(len(shape)).tolist())
+            )
+            ref_np = ref.detach().clone().numpy()
+            shape = ref.shape
+            # slice param
+            slice_tup, slice_size = get_random_slice_tuple(shape)
+            # non-contiguous update
+            no_perm_shape, perm = get_random_update_shape_and_perm(slice_size)
+            update = (
+                flow.rand(no_perm_shape, dtype=flow.float32).to(device).permute(perm)
+            )
+            update_np = update.detach().clone().numpy()
+
+            ref_np[slice_tup] = update_np
+            # non-inplace update
+            # NOTE: should test non-inplace first
+            def slice_tuple_to_slice_list(slice_tup):
+                # NOTE: oneflow.slice_update don't support passing slice parameters.
+                slice_list = []
+                for i in range(len(slice_tup)):
+                    slice_list.append(
+                        (slice_tup[i].start, slice_tup[i].stop, slice_tup[i].step)
+                    )
+                return slice_list
+
+            of_res = flow.slice_update(
+                ref, update, slice_tuple_to_slice_list(slice_tup)
+            )
+            test_case.assertTrue(np.array_equal(of_res.numpy(), ref_np))
+            # inplace update
+            ref[slice_tup] = update
+            test_case.assertTrue(np.array_equal(ref.numpy(), ref_np))
+
+        for dims in (2, 3, 4):
+            for _ in range(10):
+                shape = [randint(1, 21) for _ in range(dims)]
+                compare_result_between_oneflow_and_numpy(test_case, shape)
 
     def test_slice_update_expand_value(test_case):
         ref_np = np.random.rand(2, 3, 4)
