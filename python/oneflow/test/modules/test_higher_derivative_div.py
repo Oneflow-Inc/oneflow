@@ -26,7 +26,7 @@ from numpy.random import randint
 def _test_div_grad_grad_impl(test_case):
     y_shape = [randint(2, 5) for _ in range(randint(0, 6))]
     x_shape = [randint(2, 5) for _ in range(randint(0, 6 - len(y_shape)))] + y_shape
-    if randint(0, 2) == 0:
+    if random_bool().value():
         x_shape, y_shape = y_shape, x_shape
 
     x = random_tensor(len(x_shape), *x_shape).requires_grad_(True)
@@ -87,7 +87,7 @@ def _test_div_grad_grad_impl(test_case):
 class TestDivHigherDerivative(flow.unittest.TestCase):
     def test_div_grad_grad(test_case):
         for i in range(10):
-            print("Test loop ", i)
+            print("loop ", i)
             _test_div_grad_grad_impl(test_case)
 
 
