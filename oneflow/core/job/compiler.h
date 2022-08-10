@@ -23,13 +23,13 @@ limitations under the License.
 
 namespace oneflow {
 
-class Compiler final {
+class PlanCompiler final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Compiler);
-  Compiler() = default;
-  ~Compiler() = default;
+  OF_DISALLOW_COPY_AND_MOVE(PlanCompiler);
+  PlanCompiler() = default;
+  ~PlanCompiler() = default;
 
-  void Compile(Job*, Plan*) const;
+  static void Compile(Job*, Plan*);
 };
 
 }  // namespace oneflow

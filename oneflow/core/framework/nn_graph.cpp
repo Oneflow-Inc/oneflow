@@ -243,8 +243,9 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
   }));
   return Maybe<void>::Ok();
 }
+
 Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
-  std::set<std::string> variable_names = [&]() -> Maybe<std::set<std::string>> {
+  std::set<std::string> variable_names = *JUST([&]() -> Maybe<std::set<std::string>> {
     std::set<std::string> variable_names_;
     OpGraph op_graph(job_);
     JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
@@ -253,8 +254,7 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
       return Maybe<void>::Ok();
     }));
     return variable_names_;
-  }()
-                                                      .GetOrThrow();
+  }());
 
   auto mgr = Singleton<VariableTensorMgr>::Get();
   for (auto& name : mgr->DumpNames()) {
@@ -287,7 +287,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     // TODO(chengcheng): new memory reused by chunk
-    Compiler().Compile(&job_, &plan_);
+    PlanCompiler::Compile(&job_, &plan_);
     tc->Count("Graph name: " + name_ + " Compile plan", 1);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
     tc->Count("Graph name: " + name_ + " Generate MemBlock and Chunk", 1);

@@ -1018,7 +1018,7 @@ void Operator::GenKernelConf(
     (*dtype_signature->mutable_name2dtype())[ibn] = blob_desc->data_type();
   }
 
-  CHECK_JUST(ToOpAttribute(kernel_conf->mutable_op_attribute()));
+  // CHECK_JUST(ToOpAttribute(kernel_conf->mutable_op_attribute()));
   kernel_conf->set_all_blobs_are_static(
       !HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
                             [](const BlobDesc* blob_desc) { return blob_desc->is_dynamic(); }));

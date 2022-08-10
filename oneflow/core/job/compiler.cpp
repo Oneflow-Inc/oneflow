@@ -26,6 +26,7 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
 void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
   auto* job_id2op_attribute_ref_table = plan->mutable_job_id2op_attribute_ref_table();
   CHECK(task_proto->exec_sequence().exec_node_size() == 1);
@@ -45,8 +46,9 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
   // NOTE(levi): memory of op_attribute_ is released here.
   kernel_conf->set_allocated_op_attribute(nullptr);
 }
+}  // namespace
 
-void Compiler::Compile(Job* job, Plan* plan) const {
+void PlanCompiler::Compile(Job* job, Plan* plan) {
   const std::string job_name = job->job_conf().job_name();
   auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
   // Step1: new Singleton<OpGraph> and set log configs.
@@ -98,15 +100,18 @@ void Compiler::Compile(Job* job, Plan* plan) const {
     thread_pool.AddWork([task_node, plan, &job_desc, &counter, &mtx]() {
       if (!task_node->IsMeaningLess()) {
         TaskProto task_proto;
+        // OpAttr is set here but removed in CreateOpAttributeRef, can be optimized.
+        // Try to avoid mut plan here
         task_node->ToProto(&task_proto);
-        {
-          std::unique_lock<std::mutex> guard(mtx);
-          if (task_node->GetTaskType() == kNormalForward || task_node->GetTaskType() == kRepeat
-              || task_node->GetTaskType() == kAcc) {
-            CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto);
-          }
-          plan->mutable_task()->Add(std::move(task_proto));
-        }  // guard(mtx)
+        // {
+        //   std::unique_lock<std::mutex> guard(mtx);
+        //   if (task_node->GetTaskType() == kNormalForward || task_node->GetTaskType() == kRepeat
+        //       || task_node->GetTaskType() == kAcc) {
+        //     CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto);
+        //   }
+        //   // global mut
+        //   plan->mutable_task()->Add(std::move(task_proto));
+        // }  // guard(mtx)
       }
       counter.Decrease();
     } /* thread_pool.AddWork */);

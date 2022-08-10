@@ -189,7 +189,7 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) 
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
     if (need_job_complete) { JUST(JobCompleter().Complete(job)); }
-    Compiler().Compile(job, plan);
+    PlanCompiler::Compile(job, plan);
     PlanUtil::GenMemBlockAndChunk4Plan(plan);
     std::ostringstream oss;
     oss << "\njob_id: " << job_desc.job_id() << " , job_name: " << job_desc.job_name()
