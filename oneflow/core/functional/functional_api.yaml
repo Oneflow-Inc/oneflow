@@ -807,7 +807,8 @@
 - name: "bernoulli"
   signature:
     [
-      "Tensor (Tensor x, *, DataType dtype=kFloat, Generator generator=None) => Bernoulli",
+      "Tensor (Tensor input, *, DataType dtype=kFloat, Generator generator=None) => Bernoulli",
+      "Tensor (Tensor input, Double p, *, DataType dtype=kFloat, Generator generator=None) => Bernoulli",
     ]
   bind_python: True
 
@@ -2436,3 +2437,19 @@
 - name: "multi_tensor_adam_update"
   signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple m, TensorTuple v, Tensor learning_rate, Float beta1, Float beta2, Float bias_correction1_val, Float bias_correction2_val, Bool do_bias_correction, Double scale, Float weight_decay) => MultiTensorAdamUpdate"
   bind_python: True
+
+- name: "grad_acc_repeat"
+  signature: "Tensor (Tensor input, Int32 repeat_num) => GradAccRepeat"
+  bind_python: False
+
+- name: "grad_acc_collect"
+  signature: "Tensor (Tensor input, Int32 collect_num) => GradAccCollect"
+  bind_python: False
+
+- name: "grad_acc_pack"
+  signature: "Tensor (Tensor input, Int32 pack_num) => GradAccPack"
+  bind_python: False
+
+- name: "grad_acc_unpack"
+  signature: "Tensor (Tensor input, Int32 unpack_num) => GradAccUnpack"
+  bind_python: False
