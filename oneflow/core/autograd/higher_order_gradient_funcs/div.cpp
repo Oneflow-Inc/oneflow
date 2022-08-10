@@ -86,8 +86,7 @@ class DivGradGrad : public OpExprGradFunction<DivGradGradCaptureState> {
                    .then(std::bind(functional::Div, out_grads.at(0), std::placeholders::_1))
                    .then(std::bind(functional::Mul, std::placeholders::_1, z))
                    .then(std::bind(functional::Mul, std::placeholders::_1, grad))
-                   .then(std::bind(functional::BroadcastReduceSumLike, std::placeholders::_1,
-                                   JUST(y->detach())))
+                   .then(std::bind(functional::BroadcastReduceSumLike, std::placeholders::_1, y))
                    .call(y));
     }
 

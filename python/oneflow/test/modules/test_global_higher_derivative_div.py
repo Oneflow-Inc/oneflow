@@ -24,10 +24,10 @@ from numpy.random import randint
 
 
 def _test_global_div_grad_grad_impl(test_case, placement):
-    y_shape = [8, 8]
     x_shape = [8, 8, 8, 8]
-    # if randint(0, 2) == 0:
-    #     x_shape, y_shape = y_shape, x_shape
+    y_shape = [8, 8]
+    if randint(0, 2) == 0:
+        x_shape, y_shape = y_shape, x_shape
 
     x = random_tensor(len(x_shape), *x_shape).to_global(
         placement=placement, sbp=random_sbp(placement, max_dim=2)
@@ -47,7 +47,6 @@ def _test_global_div_grad_grad_impl(test_case, placement):
         placement=placement, sbp=random_sbp(placement, max_dim=2)
     )
 
-
     dx_and_dy = torch.autograd.grad(z, [x, y], init_grad_z, True, True)
     test_case.assertTrue(
         np.allclose(
@@ -66,33 +65,29 @@ def _test_global_div_grad_grad_impl(test_case, placement):
         )
     )
 
-    ddx_and_ddy = torch.autograd.grad(
-        dx_and_dy, [x, y], [init_grad_x, init_grad_y], True, True
+    ddx_and_ddy_and_ddz = torch.autograd.grad(
+        dx_and_dy, [x, y, init_grad_z], [init_grad_x, init_grad_y], True, True
     )
     test_case.assertTrue(
         np.allclose(
-            ddx_and_ddy.pytorch[0].detach().cpu().numpy(),
-            ddx_and_ddy.oneflow[0].detach().numpy(),
+            ddx_and_ddy_and_ddz.pytorch[0].detach().cpu().numpy(),
+            ddx_and_ddy_and_ddz.oneflow[0].detach().numpy(),
             rtol=1e-5,
             atol=1e-5,
         )
     )
     test_case.assertTrue(
         np.allclose(
-            ddx_and_ddy.pytorch[1].detach().cpu().numpy(),
-            ddx_and_ddy.oneflow[1].detach().numpy(),
+            ddx_and_ddy_and_ddz.pytorch[1].detach().cpu().numpy(),
+            ddx_and_ddy_and_ddz.oneflow[1].detach().numpy(),
             rtol=1e-5,
             atol=1e-5,
         )
     )
-
-    ddz = torch.autograd.grad(
-        dx_and_dy, init_grad_z, [init_grad_x, init_grad_y], True, True
-    )[0]
     test_case.assertTrue(
         np.allclose(
-            ddz.pytorch.detach().cpu().numpy(),
-            ddz.oneflow.detach().numpy(),
+            ddx_and_ddy_and_ddz.pytorch[2].detach().cpu().numpy(),
+            ddx_and_ddy_and_ddz.oneflow[2].detach().numpy(),
             rtol=1e-5,
             atol=1e-5,
         )
@@ -104,7 +99,7 @@ class TestGlobalDivHigherDerivative(flow.unittest.TestCase):
     def test_global_div_grad_grad(test_case):
         for placement in all_placement():
             for i in range(10):
-                print('loop ', i)
+                print("Test loop ", i)
                 _test_global_div_grad_grad_impl(test_case, placement)
 
 

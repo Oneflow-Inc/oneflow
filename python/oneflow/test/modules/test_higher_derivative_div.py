@@ -55,33 +55,29 @@ def _test_div_grad_grad_impl(test_case):
         )
     )
 
-    ddx_and_ddy = torch.autograd.grad(
-        dx_and_dy, [x, y], [init_grad_x, init_grad_y], True, True
+    ddx_and_ddy_and_ddz = torch.autograd.grad(
+        dx_and_dy, [x, y, init_grad_z], [init_grad_x, init_grad_y], True, True
     )
     test_case.assertTrue(
         np.allclose(
-            ddx_and_ddy.pytorch[0].detach().cpu().numpy(),
-            ddx_and_ddy.oneflow[0].detach().numpy(),
+            ddx_and_ddy_and_ddz.pytorch[0].detach().cpu().numpy(),
+            ddx_and_ddy_and_ddz.oneflow[0].detach().numpy(),
             rtol=1e-5,
             atol=1e-5,
         )
     )
     test_case.assertTrue(
         np.allclose(
-            ddx_and_ddy.pytorch[1].detach().cpu().numpy(),
-            ddx_and_ddy.oneflow[1].detach().numpy(),
+            ddx_and_ddy_and_ddz.pytorch[1].detach().cpu().numpy(),
+            ddx_and_ddy_and_ddz.oneflow[1].detach().numpy(),
             rtol=1e-5,
             atol=1e-5,
         )
     )
-
-    ddz = torch.autograd.grad(
-        dx_and_dy, init_grad_z, [init_grad_x, init_grad_y], True, True
-    )[0]
     test_case.assertTrue(
         np.allclose(
-            ddz.pytorch.detach().cpu().numpy(),
-            ddz.oneflow.detach().numpy(),
+            ddx_and_ddy_and_ddz.pytorch[2].detach().cpu().numpy(),
+            ddx_and_ddy_and_ddz.oneflow[2].detach().numpy(),
             rtol=1e-5,
             atol=1e-5,
         )
@@ -90,8 +86,8 @@ def _test_div_grad_grad_impl(test_case):
 
 class TestDivHigherDerivative(flow.unittest.TestCase):
     def test_div_grad_grad(test_case):
-        for i in range(100):
-            print("-" * 40, i, "-" * 40)
+        for i in range(10):
+            print("Test loop ", i)
             _test_div_grad_grad_impl(test_case)
 
 
