@@ -1,7 +1,14 @@
 Auto Parallelism
 ====================================================
 
-TODO: A brief introduction
+As the scale of deep-learning models grows larger and larger, distributed training,
+or parallelism, is needed. Data parallelism and model parallelism has been designed
+to speed up the training and solve memory issues.
+
+In oneflow, SBP signature enables users to configure parallelism policy easily.
+However, users still need to specify the SBP property for each operator, or most of them.
+Users might spend a couple of days digging into the detail of parallelism and get a
+low throughput just because of a slight mistake in the configuration of SBP signature.
 
 .. note::
 
@@ -11,7 +18,11 @@ TODO: A brief introduction
 Why do you need auto parallelism?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-TODO: Advantages of using automatic parallelism.
+To get rid of all those configurations for SBP signatures, we developed auto parallelism.
+If you read this paragraph before you rush into any SBP stuff, then congratulation,
+you do not need to learn SBPs. You can start writing your code as you did under CPU mode.
+Our auto parallelism would generate a fast strategy customized for your specific models,
+the size of parameters, and the number of available GPUs.
 
 
 What can automatic parallelism do for you?
