@@ -10184,4 +10184,4 @@ def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpI
 }
 
 #endif // GET_ONEFLOW_MLIR_JIT_OP_DEFINITIONS
-#endif // WITH_MLITH
+#endif // WITH_MLIR
