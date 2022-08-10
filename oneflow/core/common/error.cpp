@@ -330,15 +330,18 @@ void ThrowError(const std::shared_ptr<StackedError>& error) {
   fmt::format_to(std::back_inserter(error_str), "{} {}\n",
                  fmt::styled("Error:", fmt::emphasis::bold | fmt::fg(fmt::color::red)),
                  GetErrorString(error));
-  if (!IsMainThread()) {
-    if (auto* stack_getter = Singleton<ForeignStackGetter>::Get()) {
-      fmt::format_to(std::back_inserter(error_str),
-                     fmt::emphasis::bold | fmt::fg(fmt::color::dark_orange),
-                     "Related Python stack trace:\n");
-      fmt::format_to(std::back_inserter(error_str), "{}",
-                     stack_getter->GetFormatted(GetCurrentInstructionIdThisThread()));
+  // Only append Python stack trace when instruction id is set.
+  GetCurrentInstructionIdThisThread().bind([&](int id) -> Optional<int> {
+    if (!IsMainThread()) {
+      if (auto* stack_getter = Singleton<ForeignStackGetter>::Get()) {
+        fmt::format_to(std::back_inserter(error_str),
+                       fmt::emphasis::bold | fmt::fg(fmt::color::dark_orange),
+                       "Related Python stack trace:\n");
+        fmt::format_to(std::back_inserter(error_str), "{}", stack_getter->GetFormatted(id));
+      }
     }
-  }
+    return NullOpt;
+  });
   *MutThreadLocalError() = error;
   if ((*error)->has_runtime_error()) { throw RuntimeException(error_str); }
   if ((*error)->has_type_error()) { throw TypeException(error_str); }

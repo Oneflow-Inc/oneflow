@@ -87,6 +87,7 @@ class PyStackGetter final : public ForeignStackGetter {
       for (const auto& pair : id2stack_arr_) {
         if (pair.first == id) {
           result = GetFormattedStack(pair.second);
+          break;
         }
       }
       return Maybe<void>::Ok();

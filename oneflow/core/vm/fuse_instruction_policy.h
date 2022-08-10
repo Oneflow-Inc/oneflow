@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_FUSE_INSTRUCTION_POLICY_H_
 
 #include <functional>
+#include "oneflow/core/common/foreign_stack_getter.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_policy_util.h"
 #include "oneflow/core/vm/vm_object.h"
@@ -73,7 +74,9 @@ class FuseInstructionPolicy final : public InstructionPolicy {
   }
   void Compute(Instruction* instruction) override {
     OF_PROFILER_RANGE_GUARD("F:" + instruction->DebugName());
-    INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, mut_instruction_list()) { instruction->Compute(); }
+    INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, mut_instruction_list()) {
+      instruction->Compute();
+    }
   }
   void InitInstructionStatus(Instruction* instruction) override {
     auto* last_instruction = CHECK_NOTNULL(mut_instruction_list()->Last());

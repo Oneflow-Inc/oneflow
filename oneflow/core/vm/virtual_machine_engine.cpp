@@ -396,6 +396,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
     stream->mut_thread_ctx()->mut_worker_pending_instruction_list()->PushBack(instruction);
     schedule_ctx.OnWorkerLoadPending(stream->mut_thread_ctx());
   }
+  SetCurrentInstructionIdThisThread(NullOpt);
 }
 
 // Returns true if old scheduler_pending_instruction_list is empty

@@ -13,24 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/thread_ctx.h"
-#include "oneflow/core/common/foreign_stack_getter.h"
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
-namespace vm {
 
-size_t ThreadCtx::TryReceiveAndRun() {
-  intrusive::List<INTRUSIVE_FIELD(Instruction, worker_pending_instruction_hook_)> tmp_list;
-  mut_worker_pending_instruction_list()->MoveTo(&tmp_list);
-  size_t size = tmp_list.size();
-  INTRUSIVE_FOR_EACH(instruction, &tmp_list) {
-    tmp_list.Erase(instruction.Mutable());
-    const StreamPolicy& stream_policy = instruction->stream().stream_policy();
-    stream_policy.Run(instruction.Mutable());
+namespace {
+
+class ThrowErrorKernel final : public user_op::OpKernel {
+ public:
+  ThrowErrorKernel() = default;
+  ~ThrowErrorKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    THROW(RuntimeError);
   }
-  return size;
-}
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
 
-}  // namespace vm
+REGISTER_USER_KERNEL("throw_error").SetCreateFn<ThrowErrorKernel>().SetIsMatchedHob(user_op::HobTrue());
+
+}  // namespace
+
 }  // namespace oneflow

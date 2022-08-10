@@ -36,7 +36,6 @@ void Instruction::__Init__(Stream* stream,
   stream_ = stream;
   instruction_policy_ = std::move(instruction_policy);
   id_ = GetNextInstructionId();
-  SetCurrentInstructionIdThisThread(id_);
   if (auto* stack_getter = Singleton<ForeignStackGetter>::Get()) {
     stack_getter->RecordCurrentStack(id_);
   }
@@ -44,8 +43,17 @@ void Instruction::__Init__(Stream* stream,
 
 void Instruction::InitStatus() { instruction_policy_->InitInstructionStatusIf(this); }
 
-Maybe<void> Instruction::Prepare() { return instruction_policy_->PrepareIf(this); }
-void Instruction::Compute() { return instruction_policy_->ComputeIf(this); }
+Maybe<void> Instruction::Prepare() { 
+  SetCurrentInstructionIdThisThread(id_);
+  auto ret = instruction_policy_->PrepareIf(this);
+  SetCurrentInstructionIdThisThread(NullOpt);
+  return ret;
+}
+void Instruction::Compute() { 
+  SetCurrentInstructionIdThisThread(id_);
+  instruction_policy_->ComputeIf(this);
+  SetCurrentInstructionIdThisThread(NullOpt);
+}
 
 void Instruction::DeleteStatusAndClearEdges() {
   OF_PROFILER_RANGE_GUARD("Instruction::DeleteStatusAndClearEdges");

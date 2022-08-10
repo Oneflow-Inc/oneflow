@@ -17,18 +17,22 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_FOREIGN_STACK_GETTER_H
 
 #include <cstdint>
+#include <utility>
+#include "oneflow/core/common/optional.h"
 
-inline int* GetInstructionIdThisThreadInternal() {
-  static thread_local int current_instr_id_in_thread = 0;
+namespace oneflow {
+
+inline Optional<int>* GetInstructionIdThisThreadInternal() {
+  static thread_local Optional<int> current_instr_id_in_thread;
   return &current_instr_id_in_thread;
 }
 
-inline int GetCurrentInstructionIdThisThread() {
+inline Optional<int> GetCurrentInstructionIdThisThread() {
   return *GetInstructionIdThisThreadInternal();
 }
 
-inline void SetCurrentInstructionIdThisThread(int instruction_id) {
-  *GetInstructionIdThisThreadInternal() = instruction_id;
+inline void SetCurrentInstructionIdThisThread(Optional<int> instruction_id) {
+  *GetInstructionIdThisThreadInternal() = std::move(instruction_id);
 }
 
 inline int GetNextInstructionId() {
@@ -36,7 +40,6 @@ inline int GetNextInstructionId() {
   return next_instruction_id++;
 }
 
-namespace oneflow {
 class ForeignStackGetter {
  public:
   virtual ~ForeignStackGetter() = default;
