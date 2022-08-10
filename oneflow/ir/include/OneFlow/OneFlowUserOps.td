@@ -1,112 +1,3 @@
-// ASSIGN;BASE;BINARY;BROADCAST;CONV;CROSS_ENTROPY;CUDA;DATASET;DETECTION;EAGER;FUSED;IDEMPOTENT;IDENTITY;IMAGE;INDICES;INVOLUTION;LOSS;MATH;MATMUL;MISC;NCCL;NORMALIZATION;OPTIMIZER;PADDING;PARALLEL_CAST;POOL;QUANTIZATION;REDUCE;RESHAPE;SCALAR;SOFTMAX;SUMMARY;TENSOR_BUFFER;TEST;TRIGONOMETRIC;UNARY;UPSAMPLE
-
-/*
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.assign_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.binary_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.broadcast_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.conv_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.cross_entropy_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.cuda_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.dataset_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.detection_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.eager_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.fused_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.idempotent_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.identity_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.image_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.indices_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.involution_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.loss_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.math_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.matmul_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.misc_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.nccl_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.normalization_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.optimizer_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.padding_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.parallel_cast_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.pool_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.quantization_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.reduce_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.reshape_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.scalar_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.softmax_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.summary_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.tensor_buffer_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.trigonometric_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.unary_ops.cpp.inc"
-,
-#define GET_OP_LIST
-#include "OneFlow/OneFlow.upsample_ops.cpp.inc"
-*/
-
 // Group: ASSIGN
 // assign, assign_if, assign_if_not
 // Total: 3
@@ -3281,7 +3172,7 @@ def OneFlow_SliceOp : OneFlow_BaseOp<"slice", [NoSideEffect, DeclareOpInterfaceM
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$ref,
     OneFlow_Tensor:$value
@@ -6259,7 +6150,7 @@ def OneFlow_AdadeltaUpdateOp : OneFlow_BaseOp<"adadelta_update", [NoGrad, AttrSi
     OneFlow_Tensor:$model_diff,
     Optional<OneFlow_Tensor>:$learning_rate,
     Optional<OneFlow_Tensor>:$skip_if,
-    OneFlow_Tensor:$square_avgs, 
+    OneFlow_Tensor:$square_avgs,
     OneFlow_Tensor:$acc_deltas
   );
   let attrs = (ins
@@ -6267,9 +6158,9 @@ def OneFlow_AdadeltaUpdateOp : OneFlow_BaseOp<"adadelta_update", [NoGrad, AttrSi
     DefaultValuedAttr<F64Attr, "1.">:$scale,
     DefaultValuedAttr<F32Attr, "0.">:$l1,
     DefaultValuedAttr<F32Attr, "0.">:$l2,
-    DefaultValuedAttr<F32Attr, "0.">:$weight_decay, 
-    DefaultValuedAttr<F32Attr, "0.9">:$rho, 
-    DefaultValuedAttr<F32Attr, "0.">:$epsilon, 
+    DefaultValuedAttr<F32Attr, "0.">:$weight_decay,
+    DefaultValuedAttr<F32Attr, "0.9">:$rho,
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon,
     DefaultValuedAttr<BoolAttr, "false">:$maximize
   );
   let trait_attrs = (ins
@@ -10209,6 +10100,42 @@ def OneFlow_FusedGruCellGradOp : OneFlow_BaseOp<"fused_gru_cell_grad", [NoSideEf
 }
 
 #endif // GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS
+
+// Group: System
+// copy_h2d, copy_d2h
+// Total: 2
+
+#ifdef GET_ONEFLOW_SYSTEM_OP_DEFINITIONS
+
+def OneFlow_CopyH2DOp : OneFlow_BaseOp<"copy_h2d", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+      OneFlow_Tensor:$in
+  );
+  let output = (outs
+      OneFlow_Tensor:$out
+  );
+
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_CopyD2HOp : OneFlow_BaseOp<"copy_d2h", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+      OneFlow_Tensor:$in
+  );
+  let output = (outs
+      OneFlow_Tensor:$out
+  );
+
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+#endif // GET_ONEFLOW_SYSTEM_OP_DEFINITIONS
 
 // Group: MLIR_JIT
 // mlir_jit
