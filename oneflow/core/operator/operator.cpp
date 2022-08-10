@@ -316,7 +316,13 @@ Maybe<void> Operator::InferLogicalOutBlobDescsIf() {
   output_index2logical_blob_desc_.reset(new std::vector<std::shared_ptr<const BlobDesc>>());
   output_index2logical_blob_desc_->resize(output_bns().size());
   for (int32_t i = 0; i < output_bns().size(); ++i) {
-    output_index2logical_blob_desc_->at(i) = output_logical_blob_desc_vec.at(i);
+    auto& out_blob_desc = output_logical_blob_desc_vec.at(i);
+    // initialize stride by shape if stride is empty
+    if (out_blob_desc->stride().empty()
+        && out_blob_desc->shape().size() != out_blob_desc->stride().size()) {
+      out_blob_desc->mut_stride() = Stride(out_blob_desc->shape());
+    }
+    output_index2logical_blob_desc_->at(i) = out_blob_desc;
   }
   return Maybe<void>::Ok();
 }
@@ -332,7 +338,16 @@ Maybe<void> Operator::InferBlobDescsIf(
 Maybe<void> Operator::InferOutBlobDescsIf(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  return InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
+  JUST(InferOutBlobDescs(GetBlobDesc4BnInOp, parallel_ctx));
+  for (const auto& bn : output_bns()) {
+    BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(bn);
+    // initialize stride by shape if stride is empty
+    if (out_blob_desc->stride().empty()
+        && out_blob_desc->shape().size() != out_blob_desc->stride().size()) {
+      out_blob_desc->mut_stride() = Stride(out_blob_desc->shape());
+    }
+  }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> Operator::InferOutBlobDescs(
