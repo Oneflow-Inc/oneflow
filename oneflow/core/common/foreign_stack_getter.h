@@ -29,9 +29,11 @@ using StackId = int64_t;
 
 using StackIdThreadLocalGuard = ThreadLocalGuard<StackId, StackIdGuardKind>;
 
+// Only intended for use in main thread, because only main thread
+// has meaningful stack. So this function is not designed to be thread-safe.
 inline StackId GetNextStackId() {
-  static std::atomic<StackId> next_stack_id{0};
-  return next_stack_id.fetch_add(1, std::memory_order_relaxed);
+  static StackId next_stack_id = 0;
+  return next_stack_id++;
 }
 
 class ForeignStackGetter {

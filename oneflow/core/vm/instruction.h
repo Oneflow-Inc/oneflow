@@ -202,7 +202,7 @@ class Instruction final : public intrusive::Base {
   Stream* stream_;
   std::shared_ptr<InstructionPolicy> instruction_policy_;
   InstructionStatusBuffer status_buffer_;
-  StackId id_;
+  StackId id_ = -1;
 };
 
 using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, main_instruction_hook_)>;
