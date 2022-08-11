@@ -29,9 +29,9 @@ using StackId = int64_t;
 
 using StackIdThreadLocalGuard = ThreadLocalGuard<StackId, StackIdGuardKind>;
 
-inline StackId GetNextInstructionId() {
-  static StackId next_instruction_id = 0;
-  return next_instruction_id++;
+inline StackId GetNextStackId() {
+  static std::atomic<StackId> next_stack_id{0};
+  return next_stack_id.fetch_add(1, std::memory_order_relaxed);
 }
 
 class ForeignStackGetter {

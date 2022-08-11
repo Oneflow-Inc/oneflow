@@ -35,7 +35,7 @@ void Instruction::__Init__(Stream* stream,
                            std::shared_ptr<InstructionPolicy>&& instruction_policy) {
   stream_ = stream;
   instruction_policy_ = std::move(instruction_policy);
-  id_ = GetNextInstructionId();
+  id_ = GetNextStackId();
   if (auto* stack_getter = Singleton<ForeignStackGetter>::Get()) {
     stack_getter->RecordCurrentStack(id_);
   }
