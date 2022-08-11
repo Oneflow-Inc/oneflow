@@ -134,11 +134,14 @@ Maybe<void> TensorLayoutProcessor::Apply() {
 
 TensorLayoutProcessor::~TensorLayoutProcessor() {
   for (int i = 0; i < post_process_output_indices_.size(); ++i) {
+    int output_index = post_process_output_indices_[i];
+    CHECK_OR_THROW((*outputs_)[output_index])
+        << "the output which index is " << i << " should not be nullptr";
     functional::TensorIndex ellipsis_index;
     ellipsis_index.emplace_back(functional::detail::EllipsisIndex());
-    CHECK_OR_THROW((*outputs_)[i]) << "the output which index is " << i << " should not be nullptr";
-    CHECK_JUST(functional::TensorSetItem(post_process_outputs_[i], ellipsis_index, (*outputs_)[i]));
-    (*outputs_)[i] = post_process_outputs_[i];
+    CHECK_JUST(functional::TensorSetItem(post_process_outputs_[i], ellipsis_index,
+                                         (*outputs_)[output_index]));
+    (*outputs_)[output_index] = post_process_outputs_[i];
   }
 }
 
