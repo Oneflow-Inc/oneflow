@@ -50,7 +50,7 @@ std::function<Maybe<void>(const std::string&)> MakeSetParamTensorDescFn(user_op:
                                                                         const Shape& shape) {
   return [=](const std::string& bn) -> Maybe<void> {
     if (ctx->has_output(bn, 0)) {
-      auto* tensor_desc = ctx->OutputTensorDesc(bn, 0);
+      auto* tensor_desc = ctx->MutOutputTensorDesc(bn, 0);
       CHECK_OR_RETURN(tensor_desc != nullptr);
       *tensor_desc->mut_shape() = shape;
     }
@@ -62,7 +62,7 @@ std::function<Maybe<void>(const std::string&)> MakeSetParamDataTypeFn(user_op::I
                                                                       DataType data_type) {
   return [=](const std::string& bn) -> Maybe<void> {
     if (ctx->has_output(bn, 0)) {
-      auto* tensor_desc = ctx->OutputTensorDesc(bn, 0);
+      auto* tensor_desc = ctx->MutOutputTensorDesc(bn, 0);
       CHECK_OR_RETURN(tensor_desc != nullptr);
       *tensor_desc->mut_data_type() = data_type;
     }
@@ -141,7 +141,7 @@ user_op::TensorDescInferFn MakeFwTensorDescInferFn(
       CHECK_EQ_OR_RETURN(add_to_output.data_type(), data_type);
       CHECK_EQ_OR_RETURN(add_to_output.shape(), x_shape);
     }
-    *ctx->OutputTensorDesc("y", 0) = x;
+    *ctx->MutOutputTensorDesc("y", 0) = x;
     const auto axis = ctx->Attr<int32_t>("axis");
     CHECK_GE_OR_RETURN(axis, 0);
     CHECK_LT_OR_RETURN(axis, x_shape.NumAxes());
@@ -159,7 +159,7 @@ user_op::TensorDescInferFn MakeFwTensorDescInferFn(
     JUST(SetParamTensorDesc("inv_variance"));
     if (ctx->has_output("reserve_space", 0)) {
       CHECK_OR_RETURN(reserve_space_infer_fn);
-      reserve_space_infer_fn(ctx, &x, ctx->OutputTensorDesc("reserve_space", 0));
+      reserve_space_infer_fn(ctx, &x, ctx->MutOutputTensorDesc("reserve_space", 0));
     }
     return Maybe<void>::Ok();
   };
@@ -179,8 +179,10 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn(
       const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
       CHECK_EQ_OR_RETURN(add_to_output.data_type(), data_type);
     }
-    *ctx->OutputTensorDesc("y", 0) = x;
-    const DataType param_data_type = data_type == DataType::kFloat16 ? DataType::kFloat : data_type;
+    *ctx->MutOutputTensorDesc("y", 0) = x;
+    const DataType param_data_type =
+        (data_type == DataType::kFloat16 || data_type == DataType::kBFloat16) ? DataType::kFloat
+                                                                              : data_type;
     const auto CheckParamDataType = MakeCheckParamDataTypeFn(ctx, param_data_type);
     const auto SetParamDataType = MakeSetParamDataTypeFn(ctx, param_data_type);
     if (ctx->has_input("moving_mean", 0)) {
@@ -195,7 +197,7 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn(
     JUST(SetParamDataType("inv_variance"));
     if (ctx->has_output("reserve_space", 0)) {
       CHECK_OR_RETURN(reserve_space_infer_fn);
-      reserve_space_infer_fn(ctx, &x, ctx->OutputTensorDesc("reserve_space", 0));
+      reserve_space_infer_fn(ctx, &x, ctx->MutOutputTensorDesc("reserve_space", 0));
     }
     return Maybe<void>::Ok();
   };
@@ -435,8 +437,8 @@ Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
     const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
     CHECK_EQ_OR_RETURN(y.shape(), x_shape);
   }
-  *ctx->OutputTensorDesc("dx", 0) = x;
-  if (ctx->has_output("addend_diff", 0)) { *ctx->OutputTensorDesc("addend_diff", 0) = x; }
+  *ctx->MutOutputTensorDesc("dx", 0) = x;
+  if (ctx->has_output("addend_diff", 0)) { *ctx->MutOutputTensorDesc("addend_diff", 0) = x; }
   const Shape param_shape({x_shape.At(ctx->Attr<int32_t>("axis"))});
   const auto CheckParamTensorDesc = MakeCheckParamTensorDescFn(ctx, param_shape);
   const auto SetParamTensorDesc = MakeSetParamTensorDescFn(ctx, param_shape);
@@ -458,9 +460,10 @@ Maybe<void> BwDataTypeInferFn(user_op::InferContext* ctx) {
     const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
     CHECK_EQ_OR_RETURN(y.data_type(), x_type);
   }
-  *ctx->OutputTensorDesc("dx", 0) = x;
-  if (ctx->has_output("addend_diff", 0)) { *ctx->OutputTensorDesc("addend_diff", 0) = x; }
-  const DataType param_data_type = x_type == DataType::kFloat16 ? DataType::kFloat : x_type;
+  *ctx->MutOutputTensorDesc("dx", 0) = x;
+  if (ctx->has_output("addend_diff", 0)) { *ctx->MutOutputTensorDesc("addend_diff", 0) = x; }
+  const DataType param_data_type =
+      (x_type == DataType::kFloat16 || x_type == DataType::kBFloat16) ? DataType::kFloat : x_type;
   const auto CheckParamDataType = MakeCheckParamDataTypeFn(ctx, param_data_type);
   const auto SetParamDataType = MakeSetParamDataTypeFn(ctx, param_data_type);
   JUST(CheckParamDataType("mean"));
@@ -583,8 +586,9 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
 REGISTER_USER_OP_GRAD("normalization")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const bool is_training = ctx->FwOp().attr<bool>("training");
-      const bool is_fp16 = ctx->FwOp().arg_tensor_desc("y", 0).data_type() == DataType::kFloat16;
-
+      const bool is_fp16 =
+          (ctx->FwOp().arg_tensor_desc("y", 0).data_type() == DataType::kFloat16
+           || ctx->FwOp().arg_tensor_desc("y", 0).data_type() == DataType::kBFloat16);
       std::string mean;
       std::string inv_variance;
       if (ctx->FwOp().user_op_conf().has_input("moving_variance", 0)) {
@@ -713,7 +717,7 @@ REGISTER_USER_OP_GRAD("normalization")
                       return builder.OpTypeName("cast")
                           .InputBind("in", ctx->GetOp(dy_mul_inv_var_op_name).output("z", 0))
                           .Output("out")
-                          .Attr("dtype", DataType::kFloat16)
+                          .Attr("dtype", ctx->FwOp().arg_tensor_desc("y", 0).data_type())
                           .Build();
                     });
 

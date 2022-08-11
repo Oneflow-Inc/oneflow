@@ -37,11 +37,17 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
   CHECK_EQ_OR_RETURN(start_vec.size(), ndim)
-      << "start_vec's dim not equal to ref shape's dim: " << start_vec.size() << " vs " << ndim;
+      << Error::RuntimeError()
+      << "The size of start list must be equal to the dimension of ref tensor, "
+      << "but got " << start_vec.size() << " and " << ndim;
   CHECK_EQ_OR_RETURN(stop_vec.size(), ndim)
-      << "stop_vec's dim not equal to ref shape's dim: " << start_vec.size() << " vs " << ndim;
+      << Error::RuntimeError()
+      << "The size of stop list must be equal to the dimension of ref tensor, "
+      << "but got " << stop_vec.size() << " and " << ndim;
   CHECK_EQ_OR_RETURN(step_vec.size(), ndim)
-      << "step_vec's dim not equal to ref shape's dim: " << start_vec.size() << " vs " << ndim;
+      << Error::RuntimeError()
+      << "The size of step list must be equal to the dimension of ref tensor, "
+      << "but got " << step_vec.size() << " and " << ndim;
 
   FOR_RANGE(int64_t, axis, 0, ndim) {
     ctx->NewBuilder()
@@ -67,21 +73,32 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
-  CHECK_OR_RETURN(!ref_desc.is_dynamic());
+  CHECK_OR_RETURN(!ref_desc.is_dynamic())
+      << Error::RuntimeError() << "The ref tensor is not dynamic";
   FOR_RANGE(size_t, i, 0, step_vec.size()) {
     const int64_t step = step_vec.at(i);
     const int64_t start = start_vec.at(i);
     const int64_t stop = stop_vec.at(i);
-    CHECK_GT_OR_RETURN(step, 0) << "slice_update step must be greater than 0";
-    CHECK_GE_OR_RETURN(start, 0) << "slice_update start must be greater or equal to 0";
-    CHECK_GE_OR_RETURN(stop, 0) << "slice_update stop must be greater or equal than 0";
-    CHECK_LE_OR_RETURN(start, stop) << "slice_update start must be less or equal than stop";
+    CHECK_GT_OR_RETURN(step, 0) << Error::RuntimeError()
+                                << "The step list elements must be greater than 0, "
+                                << "but got " << step << " at index " << i;
+
+    CHECK_GE_OR_RETURN(start, 0) << Error::RuntimeError()
+                                 << "The start list elements must be greater than or equal to 0, "
+                                 << "but got " << start << " at index " << i;
+    CHECK_GE_OR_RETURN(stop, 0) << Error::RuntimeError()
+                                << "The stop list elements must be greater than or equal to 0, "
+                                << "but got " << stop << " at index " << i;
+    CHECK_LE_OR_RETURN(start, stop) << Error::RuntimeError()
+                                    << "The element in start list must be less than or equal to "
+                                       "the element in stop list at index "
+                                    << i << ", but got " << start << " and " << stop;
     CHECK_EQ_OR_RETURN((stop - start + step - 1) / step, value_shape.At(i))
-        << "slice_update slice tuple size must equal to value tensor shape, but got " << start
-        << ":" << stop << ":" << step << " vs " << value_shape.At(i) << " at dim "
-        << "i";
+        << Error::RuntimeError()
+        << "The size of slice tuple must be equal to the size of value tensor at dimension " << i
+        << ", but got " << (stop - start + step - 1) / step << " and " << value_shape.At(i);
   }
-  auto* y_desc = ctx->OutputTensorDesc("y", 0);
+  auto* y_desc = ctx->MutOutputTensorDesc("y", 0);
   *y_desc->mut_shape() = ref_desc.shape();
   *y_desc->mut_is_dynamic() = ref_desc.is_dynamic();
   return Maybe<void>::Ok();
@@ -92,9 +109,11 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
 /*static*/ Maybe<void> SliceUpdateOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& ref_desc = ctx->InputTensorDesc("ref", 0);
   const user_op::TensorDesc& value_desc = ctx->InputTensorDesc("value", 0);
-  CHECK_OR_RETURN(ref_desc.data_type() == value_desc.data_type());
-  auto* y_desc = ctx->OutputTensorDesc("y", 0);
+  CHECK_OR_RETURN(ref_desc.data_type() == value_desc.data_type())
+      << Error::TypeError() << "Tensors ref and value must have same type";
+  auto* y_desc = ctx->MutOutputTensorDesc("y", 0);
   *y_desc->mut_data_type() = ref_desc.data_type();
+  *y_desc->mut_stride() = ref_desc.stride();
   return Maybe<void>::Ok();
 }
 
@@ -136,14 +155,23 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
     const int64_t step = step_vec.at(i);
     const int64_t start = start_vec.at(i);
     const int64_t stop = stop_vec.at(i);
-    CHECK_GT_OR_RETURN(step, 0) << "Slice step must be greater than 0";
-    CHECK_GE_OR_RETURN(start, 0) << "Slice start must be greater or equal to 0";
-    CHECK_GE_OR_RETURN(stop, 0) << "Slice stop must be greater or equal to 0";
-    CHECK_LE_OR_RETURN(start, stop) << "Slice start must be less or equal to stop";
+    CHECK_GT_OR_RETURN(step, 0) << Error::RuntimeError()
+                                << "The step list elements must be greater than 0, "
+                                << "but got " << step << " at index " << i;
+    CHECK_GE_OR_RETURN(start, 0) << Error::RuntimeError()
+                                 << "The start list elements must be greater than or equal to 0, "
+                                 << "but got " << start << " at index " << i;
+    CHECK_GE_OR_RETURN(stop, 0) << Error::RuntimeError()
+                                << "The stop list elements must be greater than or equal to 0, "
+                                << "but got " << stop << " at index " << i;
+    CHECK_LE_OR_RETURN(start, stop) << Error::RuntimeError()
+                                    << "The element in start list must be less than or equal to "
+                                       "the element in stop list at index "
+                                    << i << ", but got " << start << " and " << stop;
     const int64_t diff = stop - start - 1;
     dim_vec[i] = diff / step + 1;
   }
-  *ctx->OutputShape("y", 0) = Shape(dim_vec);
+  *ctx->MutOutputShape("y", 0) = Shape(dim_vec);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -171,11 +199,11 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
   const TensorSliceView& slice_view =
       GetTensorSliceView4ParallelId(parallel_hierarchy, y_nd_sbp, logical_shape, parallel_id);
-  *ctx->OutputShape("y", 0) = Shape(slice_view.shape());
+  *ctx->MutOutputShape("y", 0) = Shape(slice_view.shape());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -186,12 +214,17 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
   CHECK_EQ_OR_RETURN(start_vec.size(), ndim)
-      << "start_vec's dim not equal to ref shape's dim: " << start_vec.size() << " vs " << ndim;
+      << Error::RuntimeError()
+      << "The size of start list must be equal to the dimension of ref tensor, "
+      << "but got " << start_vec.size() << " and " << ndim;
   CHECK_EQ_OR_RETURN(stop_vec.size(), ndim)
-      << "stop_vec's dim not equal to ref shape's dim: " << start_vec.size() << " vs " << ndim;
+      << Error::RuntimeError()
+      << "The size of stop list must be equal to the dimension of ref tensor, "
+      << "but got " << stop_vec.size() << " and " << ndim;
   CHECK_EQ_OR_RETURN(step_vec.size(), ndim)
-      << "step_vec's dim not equal to ref shape's dim: " << start_vec.size() << " vs " << ndim;
-
+      << Error::RuntimeError()
+      << "The size of step list must be equal to the dimension of ref tensor, "
+      << "but got " << step_vec.size() << " and " << ndim;
   FOR_RANGE(int, i, 0, ndim) {
     if (IsFullSlice(start_vec[i], stop_vec[i], step_vec[i], like_shape.At(i))) {
       ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
@@ -210,18 +243,24 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
 
   const int64_t ndim = dy_shape.NumAxes();
   CHECK_EQ_OR_RETURN(start_vec.size(), ndim)
-      << "start_vec's dim not equal to ref shape's dim: " << start_vec.size() << " vs " << ndim;
+      << Error::RuntimeError()
+      << "The size of start list must be equal to the dimension of ref tensor, "
+      << "but got " << start_vec.size() << " and " << ndim;
   CHECK_EQ_OR_RETURN(stop_vec.size(), ndim)
-      << "stop_vec's dim not equal to ref shape's dim: " << start_vec.size() << " vs " << ndim;
+      << Error::RuntimeError()
+      << "The size of stop list must be equal to the dimension of ref tensor, "
+      << "but got " << stop_vec.size() << " and " << ndim;
   CHECK_EQ_OR_RETURN(step_vec.size(), ndim)
-      << "step_vec's dim not equal to ref shape's dim: " << start_vec.size() << " vs " << ndim;
-  *ctx->OutputShape("dx", 0) = like_shape;
+      << Error::RuntimeError()
+      << "The size of step list must be equal to the dimension of ref tensor, "
+      << "but got " << step_vec.size() << " and " << ndim;
+  *ctx->MutOutputShape("dx", 0) = like_shape;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   Shape logical_shape = ctx->Attr<Shape>("like_shape");
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
   *dx_desc->mut_is_dynamic() = dy_desc.is_dynamic();
 
   const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("dx", 0);
@@ -230,12 +269,12 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   int dx_ndim = dx_desc->shape().NumAxes();
   int dy_ndim = dy_desc.shape().NumAxes();
   CHECK_EQ_OR_RETURN(dx_ndim, dy_ndim)
-      << "Output dimension (" << dx_ndim << ") should equal to the input dimension (" << dy_ndim
-      << ") for slice backward.";
+      << Error::RuntimeError() << "The output dimension (" << dx_ndim
+      << ") should be equal to the input dimension (" << dy_ndim << ") for slice backward";
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  *ctx->MutOutputDType("dx", 0) = ctx->InputDType("dy", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceGradOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,

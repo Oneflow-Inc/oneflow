@@ -32,7 +32,7 @@ def arange_op(
     elif flow.is_tensor(start):
         # support start as a Scalar Tensor
         assert len(start.shape) == 0, "start must be a Scalar"
-        start = int(start.numpy())
+        start = start.item()
 
     if end is None:
         end = start
@@ -40,7 +40,7 @@ def arange_op(
     elif flow.is_tensor(end):
         # support end as a Scalar Tensor
         assert len(end.shape) == 0, "end must be a Scalar"
-        end = int(end.numpy())
+        end = end.item()
 
     if placement is None:
         if isinstance(device, str):

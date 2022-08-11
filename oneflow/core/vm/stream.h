@@ -20,7 +20,8 @@ limitations under the License.
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/optional.h"
-#include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/stream_type.h"
+#include "oneflow/core/vm/stream_policy.h"
 
 namespace oneflow {
 
@@ -29,8 +30,8 @@ class Device;
 namespace vm {
 
 class ThreadCtx;
-class StreamType;
 class MirroredObject;
+class Dependence;
 
 class Stream final : public intrusive::Base {
  public:
@@ -39,36 +40,35 @@ class Stream final : public intrusive::Base {
       intrusive::List<INTRUSIVE_FIELD(Instruction, dispatched_instruction_hook_)>;
 
   // Getters
+  const StreamPolicy& stream_policy() const { return *stream_policy_; }
   const ThreadCtx& thread_ctx() const { return *thread_ctx_; }
   bool has_thread_ctx() const { return thread_ctx_ != nullptr; }
-  const std::unique_ptr<DeviceCtx>& device_ctx() const { return device_ctx_; }
   const intrusive::ListHook& active_stream_hook() const { return active_stream_hook_; }
   const DispatchedInstructionList& running_instruction_list() const {
     return running_instruction_list_;
   }
 
   // Setters
+  StreamPolicy* mut_stream_policy() { return stream_policy_.get(); }
   ThreadCtx* mut_thread_ctx() { return thread_ctx_; }
   void set_thread_ctx(ThreadCtx* val) { thread_ctx_ = val; }
   void clear_thread_ctx() { thread_ctx_ = nullptr; }
-  std::unique_ptr<DeviceCtx>* mut_device_ctx() { return &device_ctx_; }
   DispatchedInstructionList* mut_running_instruction_list() { return &running_instruction_list_; }
 
   // methods
-  void __Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamRole stream_role,
-                const intrusive::shared_ptr<MirroredObject>& schedule_local_dep_object,
-                const Optional<intrusive::shared_ptr<MirroredObject>>& transport_local_dep_object);
+  void __Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamType stream_type,
+                const intrusive::shared_ptr<Dependence>& schedule_local_dep_object,
+                const Optional<intrusive::shared_ptr<Dependence>>& transport_local_dep_object);
   int64_t device_id() const;
   Symbol<Device> device() const { return device_; }
-  StreamRole stream_role() const { return stream_role_; }
-  const StreamType& stream_type() const;
+  StreamType stream_type() const { return stream_type_; }
   bool on_scheduler_thread() const { return on_scheduler_thread_; }
 
-  const intrusive::shared_ptr<MirroredObject>& schedule_local_dep_object() const {
+  const intrusive::shared_ptr<Dependence>& schedule_local_dep_object() const {
     return schedule_local_dep_object_;
   }
 
-  const Optional<intrusive::shared_ptr<MirroredObject>>& transport_local_dep_object() const {
+  const Optional<intrusive::shared_ptr<Dependence>>& transport_local_dep_object() const {
     return transport_local_dep_object_;
   }
 
@@ -83,10 +83,9 @@ class Stream final : public intrusive::Base {
       : intrusive_ref_(),
         thread_ctx_(),
         device_(),
-        stream_role_(StreamRole::kInvalid),
-        stream_type_(),
+        stream_type_(StreamType::kInvalid),
+        stream_policy_(),
         on_scheduler_thread_(false),
-        device_ctx_(),
         running_instruction_list_(),
         active_stream_hook_(),
         thread_ctx_stream_hook_() {}
@@ -94,15 +93,14 @@ class Stream final : public intrusive::Base {
   // fields
   ThreadCtx* thread_ctx_;
   Symbol<Device> device_;
-  StreamRole stream_role_;
-  const StreamType* stream_type_;
+  StreamType stream_type_;
+  std::shared_ptr<StreamPolicy> stream_policy_;
   bool on_scheduler_thread_;
-  std::unique_ptr<DeviceCtx> device_ctx_;
   // lists
   DispatchedInstructionList running_instruction_list_;
 
-  intrusive::shared_ptr<MirroredObject> schedule_local_dep_object_;
-  Optional<intrusive::shared_ptr<MirroredObject>> transport_local_dep_object_;
+  intrusive::shared_ptr<Dependence> schedule_local_dep_object_;
+  Optional<intrusive::shared_ptr<Dependence>> transport_local_dep_object_;
 
  public:
   // list hooks

@@ -28,45 +28,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("JobBuildAndInferCtx_GetCurrentJobId", &JobBuildAndInferCtx_GetCurrentJobId);
   m.def("JobBuildAndInferCtx_Close", &JobBuildAndInferCtx_Close);
 
-  m.def("CurJobBuildAndInferCtx_CheckJob", &CurJobBuildAndInferCtx_CheckJob);
   m.def("CurJobBuildAndInferCtx_SetJobConf", &CurJobBuildAndInferCtx_SetJobConf);
-  m.def("CurJobBuildAndInferCtx_SetTrainConf", &CurJobBuildAndInferCtx_SetTrainConf);
 
   m.def("CurJobBuildAndInferCtx_Complete", &CurJobBuildAndInferCtx_Complete,
         py::call_guard<py::gil_scoped_release>());
-  m.def("CurJobBuildAndInferCtx_Rebuild", &CurJobBuildAndInferCtx_Rebuild,
-        py::call_guard<py::gil_scoped_release>());
-  m.def("CurJobBuildAndInferCtx_HasJobConf", &CurJobBuildAndInferCtx_HasJobConf);
-  m.def("CurJobBuildAndInferCtx_AddAndInferMirroredOp",
-        &CurJobBuildAndInferCtx_AddAndInferMirroredOp, py::call_guard<py::gil_scoped_release>());
-
-  m.def("CurJobBuildAndInferCtx_AddAndInferConsistentOp",
-        &CurJobBuildAndInferCtx_AddAndInferConsistentOp);
-  m.def("CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair",
-        &CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair);
-
-  m.def("JobBuildAndInferCtx_GetSerializedIdListAsStaticShape",
-        &JobBuildAndInferCtx_GetSerializedIdListAsStaticShape);
-  m.def("JobBuildAndInferCtx_GetDataType", &JobBuildAndInferCtx_GetDataType);
-  m.def("JobBuildAndInferCtx_IsDynamic", &JobBuildAndInferCtx_IsDynamic);
-
-  m.def("JobBuildAndInferCtx_IsDisableBoxing", &JobBuildAndInferCtx_IsDisableBoxing);
-
-  m.def("JobBuildAndInferCtx_GetSplitAxisFromProducerView",
-        &JobBuildAndInferCtx_GetSplitAxisFromProducerView);
-  m.def("JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView",
-        &JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView);
-
-  m.def("CurJobBuildAndInferCtx_AddLossLogicalBlobName",
-        &CurJobBuildAndInferCtx_AddLossLogicalBlobName);
-
-  m.def("JobBuildAndInferCtx_IsMirroredBlob", &JobBuildAndInferCtx_IsMirroredBlob);
-  m.def("JobBuildAndInferCtx_MirroredBlobGetNumSubLbi",
-        &JobBuildAndInferCtx_MirroredBlobGetNumSubLbi);
-  m.def("JobBuildAndInferCtx_MirroredBlobGetSerializedSubLbi",
-        &JobBuildAndInferCtx_MirroredBlobGetSubLbi);
-  m.def("JobBuildAndInferCtx_CheckLbnValidAndExist", &JobBuildAndInferCtx_CheckLbnValidAndExist);
-  m.def("JobBuildAndInferCtx_GetOpBlobLbn", &JobBuildAndInferCtx_GetOpBlobLbn);
 }
 
 }  // namespace oneflow

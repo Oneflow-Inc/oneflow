@@ -23,10 +23,10 @@ limitations under the License.
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/job/sbp_parallel.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 namespace one {
@@ -63,14 +63,15 @@ Maybe<TensorTuple> ExpandMaskIndex(const std::shared_ptr<Tensor>& index) {
     return Error::RuntimeError()
            << "Advanced indexing by boolean(mask) tensor only valid in eager mode.";
   }
-  if (size_tensor->is_consistent()) {
+  if (size_tensor->is_global()) {
     // TODO(): check size_tensor sbp is broadcast.
-    size_tensor = JUST(functional::ConsistentToLocal(size_tensor));
+    size_tensor = JUST(functional::GlobalToLocal(size_tensor, /*copy=*/false));
   }
   int64_t size = 0;
-  const auto& callback = [&](uint64_t of_blob_ptr) {
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    of_blob->AutoMemCopyTo<int64_t>(&size, 1);
+  const auto& callback = [&](ep::Stream* stream,
+                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+    AutoMemcpy(stream, &size, eager_blob_object->dptr(), sizeof(size), memory::MakeHostMemCase(),
+               eager_blob_object->mem_case());
   };
   JUST(SyncAccessTensorWithTimeOut(size_tensor, callback, "const"));
 
@@ -83,36 +84,39 @@ Maybe<TensorTuple> ExpandMaskIndex(const std::shared_ptr<Tensor>& index) {
   return indices;
 }
 
+// NOTE: expand each non-empty indice to same shape.
 Maybe<TensorTuple> ExpandIndices(const TensorTuple& indices) {
-  bool first = true;
   std::shared_ptr<const Shape> expanded_shape;
-  for (int i = 0; i < indices.size(); ++i) {
-    if (!indices.at(i)) { continue; }
-    if (first) {
-      expanded_shape = indices.at(i)->shape();
-      first = false;
-    } else {
-      const auto& shape = indices.at(i)->shape();
-      int ndims = std::max(shape->NumAxes(), expanded_shape->NumAxes());
-      DimVector sizes(ndims);
-      for (int j = ndims - 1; j >= 0; --j) {
-        int dim = j - (ndims - shape->NumAxes());
-        int expanded_dim = j - (ndims - expanded_shape->NumAxes());
-        if (dim < 0) {
-          sizes[j] = expanded_shape->At(expanded_dim);
-        } else if (expanded_dim < 0) {
-          sizes[j] = shape->At(dim);
-        } else {
-          int size = shape->At(dim);
-          int expanded_size = expanded_shape->At(expanded_dim);
-          CHECK_OR_RETURN(size == expanded_size || size == 1 || expanded_size == 1)
-              << Error::RuntimeError() << "The size of tensor a (" << size
-              << ") must match the size of tensor b (" << expanded_size
-              << ") at non-singleton dimension " << i;
-          sizes[j] = size == 1 ? expanded_size : size;
+  {
+    bool first = true;
+    for (int i = 0; i < indices.size(); ++i) {
+      if (!indices.at(i)) { continue; }
+      if (first) {
+        expanded_shape = indices.at(i)->shape();
+        first = false;
+      } else {
+        const auto& shape = indices.at(i)->shape();
+        int ndims = std::max(shape->NumAxes(), expanded_shape->NumAxes());
+        DimVector sizes(ndims);
+        for (int j = ndims - 1; j >= 0; --j) {
+          int dim = j - (ndims - shape->NumAxes());
+          int expanded_dim = j - (ndims - expanded_shape->NumAxes());
+          if (dim < 0) {
+            sizes[j] = expanded_shape->At(expanded_dim);
+          } else if (expanded_dim < 0) {
+            sizes[j] = shape->At(dim);
+          } else {
+            int size = shape->At(dim);
+            int expanded_size = expanded_shape->At(expanded_dim);
+            CHECK_OR_RETURN(size == expanded_size || size == 1 || expanded_size == 1)
+                << Error::RuntimeError() << "The size of tensor a (" << size
+                << ") must match the size of tensor b (" << expanded_size
+                << ") at non-singleton dimension " << i;
+            sizes[j] = size == 1 ? expanded_size : size;
+          }
         }
+        expanded_shape.reset(new Shape(sizes));
       }
-      expanded_shape.reset(new Shape(sizes));
     }
   }
   auto expanded_indices = std::make_shared<TensorTuple>(indices.size());
@@ -127,6 +131,11 @@ Maybe<TensorTuple> ExpandIndices(const TensorTuple& indices) {
   return expanded_indices;
 }
 
+// NOTE(wyg):
+// Judge whether all index dims are contiguous.
+// e.g. [:, index0, index1, :] -> True
+// [index0, :, index1] -> False
+// [index0, index1, :] -> True
 Maybe<bool> IsContinuousSubspace(const TensorTuple& indices) {
   int token = 0;
   for (int i = 0; i < indices.size(); ++i) {
@@ -141,6 +150,9 @@ Maybe<bool> IsContinuousSubspace(const TensorTuple& indices) {
   return true;
 }
 
+// NOTE(wyg):
+// Move indices subspace to be contiguous and ahead.
+// e.g. [:, index0, index1] -> [index0, index1, :]
 Maybe<void> TransposeFront(const std::shared_ptr<Tensor>& input, const TensorTuple& indices,
                            std::shared_ptr<Tensor>* output, TensorTuple* valid_indices) {
   std::vector<int> permute;
@@ -169,7 +181,7 @@ Maybe<void> TransposeFront(const std::shared_ptr<Tensor>& input, const TensorTup
 }
 
 Maybe<Tensor> AdjustSubspace(const std::shared_ptr<Tensor>& input, const TensorTuple& indices,
-                             const int& index_ndim) {
+                             const int& index_ndim, bool reverse = false) {
   int index_subspace_pos = -1;
   for (int i = 0; i < indices.size(); ++i) {
     if (indices.at(i)) {
@@ -183,10 +195,17 @@ Maybe<Tensor> AdjustSubspace(const std::shared_ptr<Tensor>& input, const TensorT
       << Error::IndexError()
       << "Failed to adjust subspace since the index is out of bounds for tensor dimension " << ndim;
   std::vector<int> permute;
-  permute.reserve(ndim);
-  for (int i = 0; i < index_subspace_pos; ++i) { permute.emplace_back(i + index_ndim); }
-  for (int i = 0; i < index_ndim; ++i) { permute.emplace_back(i); }
-  for (int i = permute.size(); i < ndim; ++i) { permute.emplace_back(i); }
+  {
+    permute.reserve(ndim);
+    if (reverse) {
+      for (int i = 0; i < index_ndim; ++i) { permute.emplace_back(index_subspace_pos + i); }
+      for (int i = 0; i < index_subspace_pos; ++i) { permute.emplace_back(i); }
+    } else {
+      for (int i = 0; i < index_subspace_pos; ++i) { permute.emplace_back(i + index_ndim); }
+      for (int i = 0; i < index_ndim; ++i) { permute.emplace_back(i); }
+    }
+    for (int i = permute.size(); i < ndim; ++i) { permute.emplace_back(i); }
+  }
   return Transpose(input, permute);
 }
 
@@ -323,7 +342,7 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   bool is_continuous_subspace = JUST(IsContinuousSubspace(indices));
 
   // Since the start dimension cannot be specified for `gather_nd`, so we should
-  // transpose the input as long as the first indice is null.
+  // transpose the input as long as the first index is null.
   std::shared_ptr<Tensor> transposed_input;
   TensorTuple valid_indices;
   JUST(TransposeFront(input, *expanded_indices, &transposed_input, &valid_indices));
@@ -338,14 +357,14 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   std::iota(permute.begin(), permute.end() - 1, 1);
   packed_indices = JUST(Transpose(packed_indices, permute))->contiguous();
 
-  if (transposed_input->is_consistent()) {
+  if (transposed_input->is_global()) {
     const auto& placement = JUST(transposed_input->parallel_desc());
     const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
     int n = JUST(input->nd_sbp())->sbp_parallel_size();
     std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-    packed_indices = JUST(ToConsistent(packed_indices, placement,
-                                       std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
-                                       grad_sbp_tuple, /* check_meta */ false));
+    packed_indices =
+        JUST(ToGlobal(packed_indices, placement, std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
+                      grad_sbp_tuple, /* check_meta */ false, /*copy=*/false));
   } else {
     Symbol<Device> device = JUST(transposed_input->device());
     if (JUST(packed_indices->device()) != device) {
@@ -359,8 +378,96 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   CHECK_EQ_OR_RETURN(result->ndim(), required_ndim)
       << Error::RuntimeError() << "The indexing result dimension is " << result->ndim()
       << ", but shoule be " << required_ndim;
-  if (is_continuous_subspace) { result = JUST(AdjustSubspace(result, indices, index_ndim)); }
+  if (is_continuous_subspace) {
+    result = JUST(AdjustSubspace(result, indices, index_ndim, /*reverse*/ false));
+  }
   return result;
+}
+
+Maybe<void> ApplyAdvancedIndexingUpdate(const std::shared_ptr<Tensor>& input,
+                                        const TensorTuple& indices,
+                                        const std::shared_ptr<Tensor>& value) {
+  CHECK_GE_OR_RETURN(input->ndim(), indices.size())
+      << Error::IndexError() << "Too many indices for tensor of dimension " << input->ndim();
+  const auto& expanded_indices = JUST(ExpandIndices(indices));
+  bool is_continuous_subspace = JUST(IsContinuousSubspace(indices));
+
+  // Since the start dimension cannot be specified for `scatter_nd`, so we should
+  // transpose the input as long as the first index is null.
+  std::shared_ptr<Tensor> transposed_input;
+  TensorTuple valid_indices;
+  JUST(TransposeFront(input, *expanded_indices, &transposed_input, &valid_indices));
+  CHECK_EQ_OR_RETURN(JUST(transposed_input->tensor_storage()), JUST(input->tensor_storage()))
+      << Error::RuntimeError()
+      << "This setitem operator must enable view mechanism, please try to set "
+         "ONEFLOW_DISABLE_VIEW=0";
+
+  if (valid_indices.empty()) {
+    CHECK_EQ_OR_RETURN(value->nelement(), 0) << Error::IndexError() << "invalid indices";
+    return Maybe<void>::Ok();
+  }
+  int index_ndim = valid_indices[0]->ndim();
+  auto packed_indices = JUST(Stack(valid_indices, 0));
+  {
+    int packed_ndim = packed_indices->ndim();
+    CHECK_GT_OR_RETURN(packed_ndim, 0)
+        << Error::RuntimeError() << "Index array dimension should be greater than 0.";
+    std::vector<int> permute(packed_ndim);
+    permute[packed_ndim - 1] = 0;
+    std::iota(permute.begin(), permute.end() - 1, 1);
+    packed_indices = JUST(Transpose(packed_indices, permute))->contiguous();
+  }
+
+  if (transposed_input->is_global()) {
+    const auto& placement = JUST(transposed_input->parallel_desc());
+    const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
+    int n = JUST(input->nd_sbp())->sbp_parallel_size();
+    std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
+    packed_indices =
+        JUST(ToGlobal(packed_indices, placement, std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
+                      grad_sbp_tuple, /*check_meta=*/false, /*copy=*/false));
+  } else {
+    Symbol<Device> device = JUST(transposed_input->device());
+    if (JUST(packed_indices->device()) != device) {
+      packed_indices =
+          JUST(Copy(packed_indices, device->type(), device->device_id(), /*pin_memory=*/false));
+    }
+  }
+
+  Shape expand_shape;
+  {
+    if (is_continuous_subspace) {
+      bool index_subspace_begin = true;
+      for (int i = 0; i < indices.size(); ++i) {
+        // if the index is the first not-null index
+        if (indices[i]) {
+          if (!index_subspace_begin) { continue; }
+          for (int j = 0; j < index_ndim; ++j) {
+            expand_shape.emplace_back(valid_indices[0]->shape()->At(j));
+          }
+          index_subspace_begin = false;
+        } else {
+          expand_shape.emplace_back(input->shape()->At(i));
+        }
+      }
+    } else {
+      expand_shape = *(valid_indices[0]->shape());
+      for (int i = 0; i < indices.size(); ++i) {
+        if (!indices[i]) { expand_shape.emplace_back(input->shape()->At(i)); }
+      }
+    }
+    for (int i = indices.size(); i < input->ndim(); ++i) {
+      expand_shape.emplace_back(input->shape()->At(i));
+    }
+  }
+  std::shared_ptr<Tensor> expand_value = JUST(Expand(value, expand_shape));
+  // reverse adjust value if index subspace is continuous but transposed since the start
+  // dimension cannot be specified for `scatter_nd`
+  if (is_continuous_subspace) {
+    expand_value = JUST(AdjustSubspace(expand_value, indices, index_ndim, /*reverse*/ true));
+  }
+  JUST(TensorScatterNdUpdate(transposed_input, packed_indices, expand_value, /*inplace=*/true));
+  return Maybe<void>::Ok();
 }
 
 Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
@@ -396,12 +503,12 @@ Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
 
 Maybe<void> UnifyLocalTensorAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
                                                TensorTuple& tensor_indices) {
-  if (!x->is_consistent()) {
+  if (x->is_local()) {
     const auto x_device = JUST(x->device());
     for (int64_t i = 0; i < tensor_indices.size(); ++i) {
       const auto tensor_index = tensor_indices[i];
       if (tensor_index == nullptr) { continue; }
-      if (tensor_index->is_consistent()) { return Maybe<void>::Ok(); }
+      if (tensor_index->is_global()) { return Maybe<void>::Ok(); }
       const auto tensor_index_device = JUST(tensor_index->device());
       if ((tensor_index_device->type() != x_device->type())
           || (tensor_index_device->device_id() != x_device->device_id())) {

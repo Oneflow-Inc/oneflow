@@ -121,6 +121,8 @@ class ModuleBlock(Block):
         self._debug_min_s_level = 2
         self._debug_max_v_level = 0
         self._debug_max_py_stack_depth = 2
+        self._debug_only_user_py_stack = True
+        self._debug_op_repr_with_py_stack = False
         self._type = BlockType.MODULE
         self._is_executing_forward = False
         self._modules = OrderedDict()
@@ -161,9 +163,13 @@ class ModuleBlock(Block):
         *,
         ranks: Optional[Union[int, List[int]]] = None,
         max_py_stack_depth: int = 2,
+        only_user_py_stack=True,
+        op_repr_with_py_stack=False,
     ) -> None:
         assert isinstance(v_level, int)
         assert isinstance(max_py_stack_depth, int)
+        assert isinstance(only_user_py_stack, bool)
+        assert isinstance(op_repr_with_py_stack, bool)
 
         if ranks is None:
             rank_list = [0]
@@ -180,14 +186,21 @@ class ModuleBlock(Block):
             if self._debug:
                 self._debug_min_s_level = 0
                 self._debug_max_v_level = max(0, v_level)
-                self._debug_max_py_stack_depth = max_py_stack_depth
+
+            self._debug_max_py_stack_depth = max_py_stack_depth
+            self._debug_only_user_py_stack = only_user_py_stack
+            self._debug_op_repr_with_py_stack = op_repr_with_py_stack
 
             if self._type == BlockType.MODULE:
 
                 def _set_child(d):
                     for (_, n) in d.items():
                         n.debug(
-                            v_level, ranks=ranks, max_py_stack_depth=max_py_stack_depth
+                            v_level,
+                            ranks=ranks,
+                            max_py_stack_depth=max_py_stack_depth,
+                            only_user_py_stack=only_user_py_stack,
+                            op_repr_with_py_stack=op_repr_with_py_stack,
                         )
 
                 _set_child(self._modules)
@@ -230,6 +243,7 @@ class ModuleBlock(Block):
             self._debug_max_v_level,
             self._debug,
             self._debug_max_py_stack_depth,
+            self._debug_only_user_py_stack,
         ):
             result = self.__block_forward(*args, **kwargs)
 
@@ -595,7 +609,9 @@ class ModuleBlock(Block):
                     self.name_prefix + self.name
                 ]
                 return operators_repr(
-                    module_conf.ops, self._belonged_graph._compiled_graph_proto
+                    module_conf.ops,
+                    self._belonged_graph._compiled_graph_proto,
+                    self._debug_op_repr_with_py_stack,
                 )
 
         return []

@@ -29,7 +29,6 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/common/stride.h"
-#include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/blocking_then_busy.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
@@ -55,13 +54,13 @@ struct format_descriptor<oneflow::float16> {
 namespace oneflow {
 namespace one {
 
-Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t);
+Maybe<void> EagerLocalTensorZeros(const std::shared_ptr<Tensor>& t);
 
 template<typename T>
-inline static Maybe<PyObject*> EagerMirroredTensorToNumpy(PyObject* py_tensor) {
+inline static Maybe<PyObject*> EagerLocalTensorToNumpy(PyObject* py_tensor) {
   const auto& t = PyTensor_Unpack(py_tensor);
 
-  std::shared_ptr<MirroredTensor> tensor = JUST(t->AsMirroredTensor());
+  std::shared_ptr<LocalTensor> tensor = JUST(t->AsLocalTensor());
   CHECK_OR_RETURN(JUST(tensor->device()) == JUST(Device::New("cpu")));
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only.";
   // set base object attr
@@ -74,8 +73,9 @@ inline static Maybe<PyObject*> EagerMirroredTensorToNumpy(PyObject* py_tensor) {
       numpy::OFStrideToNumpyStride(*JUST(tensor->stride()), tensor->dtype()->data_type());
 
   T* data_ptr = nullptr;
-  const auto& Callback = [&](uint64_t ofblob_ptr) {
-    data_ptr = reinterpret_cast<OfBlob*>(ofblob_ptr)->mut_blob()->mut_dptr<T>();
+  const auto& Callback = [&](ep::Stream*,
+                             const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+    data_ptr = eager_blob_object->mut_dptr<T>();
   };
   auto btb = std::make_shared<BlockingThenBusy>(1);
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
@@ -90,17 +90,19 @@ inline static Maybe<PyObject*> EagerMirroredTensorToNumpy(PyObject* py_tensor) {
 }
 
 template<typename T>
-inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
+inline Maybe<void> CopyBetweenLocalTensorAndNumpy(
     const std::shared_ptr<Tensor>& t, PyObject* array,
-    Maybe<void> (*Copy)(uint64_t, const NumPyArrayPtr&), const std::string& modifier,
-    bool block_host_until_done) {
-  auto tensor = JUST(t->AsMirroredTensor());
+    void (*Copy)(ep::Stream*, const std::shared_ptr<vm::EagerBlobObject>&, const NumPyArrayPtr&),
+    const std::string& modifier, bool block_host_until_done) {
+  auto tensor = JUST(t->AsLocalTensor());
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only.";
 
   if (block_host_until_done) {
     NumPyArrayPtr array_ptr(array);
-    const auto& Callback = [array_ptr, Copy](uint64_t ofblob_ptr) {
-      CHECK_JUST(Copy(ofblob_ptr, array_ptr));
+    const auto& Callback = [array_ptr, Copy](
+                               ep::Stream* stream,
+                               const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+      Copy(stream, eager_blob_object, array_ptr);
     };
     auto btb = std::make_shared<BlockingThenBusy>(1);
     JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
@@ -119,16 +121,19 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
     JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
       return builder->AccessBlobByCallback(
           tensor,
-          [array_ptr, Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array_ptr)); },
+          [array_ptr, Copy](ep::Stream* stream,
+                            const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+            Copy(stream, eager_blob_object, array_ptr);
+          },
           modifier);
     }));
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<std::string> GetCopyMirroredTensorToNumpyFuncName(DataType dtype);
+Maybe<std::string> GetCopyLocalTensorToNumpyFuncName(DataType dtype);
 
-Maybe<std::string> GetCopyMirroredTensorFromNumpyFuncName(DataType dtype);
+Maybe<std::string> GetCopyLocalTensorFromNumpyFuncName(DataType dtype);
 
 Maybe<std::tuple<std::vector<Shape>, std::vector<Symbol<DType>>>>
 MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t);
@@ -144,10 +149,10 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
                                       const Optional<Symbol<Device>>& device,
                                       const bool requires_grad, const bool pin_memory);
 
-Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
-                                           Symbol<ParallelDesc> placement,
-                                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                                           const bool requires_grad);
+Maybe<Tensor> MakeGlobalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
+                                       Symbol<ParallelDesc> placement,
+                                       const std::vector<Symbol<SbpParallel>>& sbp_tuple,
+                                       const bool requires_grad);
 
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const bool pin_memory);

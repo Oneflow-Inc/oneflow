@@ -45,8 +45,11 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
-#include "oneflow/api/common/ofblob.h"
 #include "oneflow/core/framework/tensor_util.h"
+#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/framework/tensor_util.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 
 namespace oneflow {
 namespace one {
@@ -122,11 +125,9 @@ class ArgMinFunctor {
         .call(input);
   }
 };
-class ConsistentConstantFunctor {
+class GlobalConstantFunctor {
  public:
-  ConsistentConstantFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build());
-  }
+  GlobalConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
@@ -204,9 +205,9 @@ class EmptyFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ConsistentEmptyFunctor {
+class GlobalEmptyFunctor {
  public:
-  ConsistentEmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
+  GlobalEmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
@@ -416,6 +417,48 @@ class ArgWhereFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class NonZeroFunctor {
+ public:
+  NonZeroFunctor() {}
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, bool as_tuple) const {
+    std::shared_ptr<one::Tensor> input = x;
+    if (as_tuple && input->ndim() == 0) { input = JUST(functional::Unsqueeze(input, 0)); }
+    int64_t ndim = input->ndim();
+    const auto& output_tuple =
+        JUST(functional::ArgWhere(input, JUST(DType::Get(DataType::kInt64))));
+    const std::shared_ptr<one::Tensor>& size = JUST(VectorAt(*output_tuple, 1));
+    CHECK_EQ_OR_RETURN(size->shape()->elem_cnt(), 1)
+        << Error::RuntimeError() << kOfBugIssueUploadPrompt;
+    CHECK_OR_RETURN(size->dtype() == JUST(DType::Get(DataType::kInt64)))
+        << Error::RuntimeError() << kOfBugIssueUploadPrompt;
+    int64_t size_val = -1;
+    {
+      if (size->is_global()) {
+        CHECK_OR_RETURN(JUST(size->parallel_desc())->parallel_num() == 1  // NOLINT
+                        || NdSbpIsAllBroadcast(*JUST(size->nd_sbp())));   // NOLINT
+      }
+      JUST(CopyLocalTensorDataTo(size->is_local() ? size : JUST(size->cur_rank_phy_tensor()),
+                                 (void*)(&size_val), GetSizeOfDataType(DataType::kInt64)));
+    }
+    std::vector<int64_t> start{0, 0};
+    std::vector<int64_t> stop{size_val, ndim};
+    std::vector<int64_t> step{1, 1};
+    const auto& output = JUST(
+        functional::Slice(output_tuple->at(0), start, stop, step, /*enable_view_slice=*/false));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>();
+    if (as_tuple) {
+      const auto& transposed_output = JUST(functional::Transpose2dim(output, 1, 0));
+      for (int64_t i = 0; i < ndim; ++i) {
+        outputs->emplace_back(
+            JUST(functional::TensorGetItem(transposed_output, {functional::detail::IndexItem(i)})));
+      }
+    } else {
+      outputs->emplace_back(output);
+    }
+    return outputs;
+  }
 };
 
 class BroadcastLikeFunctor {
@@ -668,8 +711,7 @@ class ExpandDimsFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim) const {
     int32_t expand_dim = dim;
     const int32_t ndim = input->shape()->NumAxes();
-    JUST(maybe_wrap_dim(dim, ndim + 1));
-    if (dim < 0) { expand_dim = dim + ndim + 1; }
+    expand_dim = JUST(maybe_wrap_dim(dim, ndim + 1));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
 
@@ -680,6 +722,45 @@ class ExpandDimsFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class UnsqueezeMultipleFunctor {
+ public:
+  UnsqueezeMultipleFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& dim,
+                           const int32_t& n_dims) const {
+    if (dim.size() == 0 || x->ndim() == n_dims) {
+      return x;
+    } else if (dim.size() == 1) {
+      return JUST(functional::Unsqueeze(x, JUST(VectorAt(dim, 0))));
+    } else {
+      std::shared_ptr<Tensor> tensor = x;
+      const auto& dims_to_unsqueeze = JUST(dim_list_to_bitset(dim, n_dims));
+
+      // Unsqueeze is called several times to extend the dimension when the View mechanism is
+      // enabled. Otherwise, calculate the target shape and call reshape.
+      if (view::IsViewApplicable(tensor)) {
+        for (int32_t i = 0; i < n_dims; i++) {
+          if ((*dims_to_unsqueeze)[i]) { tensor = JUST(view::Unsqueeze(tensor, i)); }
+        }
+      } else {
+        std::vector<int64_t> target_dims(n_dims, 0);
+        int32_t tensor_index = 0;
+        for (int32_t i = 0; i < n_dims; i++) {
+          if ((*dims_to_unsqueeze)[i]) {
+            target_dims[i] = 1;
+          } else {
+            CHECK_LT_OR_RETURN(tensor_index, tensor->ndim());  // NOLINT(maybe-need-error-msg)
+            target_dims[i] = tensor->shape()->at(tensor_index);
+            tensor_index++;
+          }
+        }
+        Shape infered_shape(DimVector(target_dims.begin(), target_dims.end()));
+        tensor = JUST(functional::Reshape(tensor, infered_shape));
+      }
+      return tensor;
+    }
+  }
 };
 
 class SqueezeFunctor {
@@ -774,7 +855,7 @@ class DimGatherFunctor {
     CHECK_EQ_OR_RETURN(sparse_grad, false)
         << Error::RuntimeError() << "Only support bool = False for now!";
 
-    JUST(maybe_wrap_dim(dim, index->ndim()));
+    int64_t new_dim = JUST(maybe_wrap_dim(dim, index->ndim()));
     if (input->ndim() > 0 && index->ndim() > 0) {
       CHECK_EQ_OR_RETURN(input->ndim(), index->ndim())
           << Error::RuntimeError()
@@ -790,17 +871,17 @@ class DimGatherFunctor {
     }
     if (input->ndim() > 0 && index->ndim() > 0) {
       FOR_RANGE(int32_t, i, 0, input->ndim()) {
-        if (i != dim) {
+        if (i != new_dim) {
           CHECK_LE_OR_RETURN(index->shape()->At(i), input->shape()->At(i))
               << Error::RuntimeError() << "Size does not match at dimension " << i
               << " expected index " << *(index->shape()) << " to be smaller than self "
-              << *(input->shape()) << " apart from dimension " << dim;
+              << *(input->shape()) << " apart from dimension " << new_dim;
         }
       }
     }
 
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    JUST(attrs.SetAttr<int32_t>("dim", new_dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
@@ -1105,14 +1186,15 @@ class TensorScatterNdUpdateFunctor {
                            const std::shared_ptr<one::Tensor>& updates, bool inplace) const {
     CHECK_OR_RETURN(*tensor->dtype() == *updates->dtype())
         << Error::RuntimeError() << "The dtype of tensor and updates must be same.";
+    std::shared_ptr<Tensor> contiguous_index = JUST(functional::ToContiguous(indices));
     if (inplace) {
       JUST(CheckInplaceValid(tensor));
       auto outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = tensor;
-      JUST(OpInterpUtil::Dispatch(*op_, {tensor, indices, updates}, outputs.get()));
+      JUST(OpInterpUtil::Dispatch(*op_, {tensor, contiguous_index, updates}, outputs.get()));
       return outputs->at(0);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {tensor, indices, updates});
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {tensor, contiguous_index, updates});
     }
   }
 
@@ -1146,7 +1228,7 @@ class ReshapeFunctor {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    Shape infered_shape = *JUST(InferShape(x, shape));
+    Shape infered_shape = *JUST(InferShapeUnspecifiedDim(x->shape()->Count(0), shape));
 
     if (view::IsViewApplicable(x)) {
       Optional<Stride> infered_stride =
@@ -1168,14 +1250,14 @@ class ViewFunctor {
  public:
   ViewFunctor() { op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    Shape infered_shape = *JUST(InferShape(x, shape));
+    Shape infered_shape = *JUST(InferShapeUnspecifiedDim(x->shape()->Count(0), shape));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 
     if (view::IsViewApplicable(x)) {
       Optional<Stride> infered_stride =
           ComputeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
-      CHECK_OR_RETURN(infered_stride.has_value())
+      CHECK_OR_RETURN_ERROR(infered_stride.has_value())
           << Error::RuntimeError()
           << "view size is not compatible with input tensor's size and stride (at least one "
              "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
@@ -1195,7 +1277,7 @@ class ToContiguousFunctor {
     op_ = CHECK_JUST(one::OpBuilder("to_contiguous").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
-    if (input->is_consistent() || input->is_lazy()) { return input; }
+    if (input->is_global() || input->is_lazy()) { return input; }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input});
   }
 
@@ -1217,11 +1299,21 @@ class InplaceToContiguousFunctor {
         << "Both ref and value must be local tensor.";
     std::shared_ptr<Stride> stride(new Stride(*input->shape()));
     // update stride
-    JUST(input->mut_eager_mirrored_tensor_impl())->mut_tensor_meta()->set_stride(stride);
     const auto& blob_object = JUST(input->eager_blob_object());
-    // update eager_blob_object
-    JUST(JUST(input->mut_eager_mirrored_tensor_impl())
-             ->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object())));
+    Symbol<LocalTensorMeta> old_tensor_meta = JUST(input->local_tensor_meta());
+
+    Symbol<LocalTensorMeta> new_tensor_meta = SymbolOf(LocalTensorMeta(
+        std::make_shared<Shape>(old_tensor_meta->shape()), stride, old_tensor_meta->dtype(),
+        old_tensor_meta->device(), old_tensor_meta->storage_offset()));
+
+    std::shared_ptr<EagerLocalTensorImpl> final_tensor_impl =
+        std::make_shared<EagerLocalTensorImpl>(JUST(input->tensor_storage()),
+                                               input->requires_grad(), input->is_leaf());
+    JUST(final_tensor_impl->set_retain_grad(input->retain_grad()));
+    JUST(final_tensor_impl->InitEagerBlobObject(new_tensor_meta,
+                                                JUST(blob_object->compute_local_dep_object())));
+    JUST(JUST(input->AsLocalTensor())->set_impl(final_tensor_impl));
+
     // assign contiguous tensor data
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*assign_op_, {input, contiguous_tensor}));
     return input;
@@ -1386,11 +1478,21 @@ class CopyFunctor {
     JUST(attrs.SetAttr<std::string>("device_type", device_type));
     JUST(attrs.SetAttr<int64_t>("device_id", device_id));
     JUST(attrs.SetAttr<bool>("pin_memory", pin_memory));
+    JUST(attrs.SetAttr<bool>("asynced_copy", JUST(GetAsyncedCopy(*x))));
 
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
 #endif
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+  Maybe<bool> GetAsyncedCopy(const one::Tensor& x) const {
+    if (!x.is_eager()) { return false; }
+    if (!x.is_local()) { return false; }
+    const auto& eager_blob_object = JUST(x.eager_blob_object());
+    const auto& opt_stream = eager_blob_object->last_used_stream();
+    if (!opt_stream.has_value()) { return false; }
+    return JUST(opt_stream)->stream_type() == StreamType::kTmpCompute;
   }
 
  private:
@@ -1994,9 +2096,6 @@ class TensorGetItemFunctor {
       JUST(UnifyLocalTensorAndIndicesOnDevice(x, tensor_indices));
       result = JUST(ApplyAdvancedIndexing(result, tensor_indices));
     }
-
-    // TODO(): Returns a view of tensor `x`.
-    if (result == x) { result = JUST(Identity(x)); }
     return result;
   }
 };
@@ -2012,24 +2111,21 @@ class TensorSetItemFunctor {
     std::vector<int64_t> target_dims;
     JUST(PrepareSliceIndices(index, *(x->shape()), &slice_indices, &tensor_indices, &expand_dims,
                              &target_dims));
-    if (expand_dims.size()) {
-      slice_indices = *JUST(RemoveExpandDimSlice(slice_indices, expand_dims));
+    auto expand_input = x;
+    if (!expand_dims.empty()) {
+      CHECK_OR_RETURN(view::IsViewApplicable(x)) << "expand dims must enable view, "
+                                                    "please try to set ONEFLOW_DISABLE_VIEW=0";
+      for (int i = 0; i < expand_dims.size(); ++i) {
+        int64_t dim = expand_dims[i];
+        expand_input = JUST(functional::ExpandDims(expand_input, dim + i));
+      }
     }
-    int64_t ndims = x->shape()->NumAxes();
+    int64_t ndims = expand_input->shape()->NumAxes();
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims)
         << Error::RuntimeError() << "Failed to prepare slice indices.";
-    // Not support combined indexing now
-    if (!tensor_indices.empty()) {
-      CHECK_OR_RETURN(tensor_indices.size() == ndims
-                      && std::all_of(tensor_indices.begin(), tensor_indices.end(),
-                                     [](const std::shared_ptr<Tensor>& index) { return index; }))
-          << Error::RuntimeError()
-          << "Combining indexing is not support for tensor setitem currently";
-    }
 
     Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
     if (target_shape.Count(0) == 0) { return Maybe<void>::Ok(); }
-
     const auto& value_shape = value->shape();
     bool matched = [&]() {
       for (int i = 0; i < value_shape->NumAxes() - target_shape.NumAxes(); ++i) {
@@ -2044,51 +2140,70 @@ class TensorSetItemFunctor {
     // TODO: replace reshape by unsqueeze with view mechanism.
     // after here, each scalar tensor will be one with one dimension.
     for (auto& tensor : tensor_indices) {
-      if (tensor->ndim() == 0) { tensor = JUST(functional::Reshape(tensor, Shape({1}))); }
+      if (tensor && tensor->ndim() == 0) { tensor = JUST(functional::Reshape(tensor, Shape({1}))); }
     }
-    if (tensor_indices.size() == ndims) {  // advance indexing
-      if (ndims == 0 && index[0].IsEllipsis()) {
-        // for scalar input tensor setitem, only support ellipsis indexing type
-        Shape tmp_shape{1};
-        const auto& value_tensor = JUST(functional::View(value, tmp_shape));
-        const auto& input_tensor = JUST(functional::View(x, tmp_shape));
-        std::vector<int64_t> starts(1, 0);
-        std::vector<int64_t> stops(1, 1);
-        std::vector<int64_t> steps(1, 1);
-        JUST(SliceUpdate(input_tensor, value_tensor, starts, stops, steps, /*inplace=*/true));
-      } else {
-        // advance indexing
-        std::shared_ptr<Tensor> indices = JUST(functional::Stack(tensor_indices, 0));
-        if (indices->shape()->elem_cnt() == 0) { return Maybe<void>::Ok(); }
-        indices = JUST(functional::Transpose(indices, {1, 0}));
-        value_tensor = JUST(functional::Expand(value_tensor, {indices->shape()->At(0)}));
-        JUST(functional::TensorScatterNdUpdate(x, indices, value_tensor, /*inplace=*/true));
-      }
-    } else {                              // slice update
-      if (target_shape.NumAxes() != 0 &&  // NOLINT
-          /*need_expand=*/value_shape->Count(0) != target_shape.Count(0)) {
-        // Remove the beginning redundant 1-dimensions.
-        if (value_shape->NumAxes() > target_shape.NumAxes()) {
-          int64_t start_axis = value_shape->NumAxes() - target_shape.NumAxes();
-          const auto& shape = JUST(value_shape->Slice(start_axis, value_shape->NumAxes()));
-          value_tensor = JUST(Reshape(value, *shape));
-        }
-        value_tensor = JUST(Expand(value_tensor, target_shape));
-      }
-      std::vector<int64_t> start(ndims), end(ndims), step(ndims);
-      DimVector slice_dims(ndims);
-      for (int i = 0; i < ndims; ++i) {
-        const auto& slice = slice_indices.at(i);
-        start[i] = slice.start();
-        end[i] = slice.end();
-        step[i] = slice.step();
-        slice_dims[i] = (end[i] - start[i] + step[i] - 1) / step[i];
-      }
+
+    DimVector slice_dims(ndims);
+    std::vector<int64_t> start(ndims), end(ndims), step(ndims);
+    for (int i = 0; i < ndims; ++i) {
+      const auto& slice = slice_indices[i];
+      start[i] = slice.start();
+      end[i] = slice.end();
+      step[i] = slice.step();
+      slice_dims[i] = (end[i] - start[i] + step[i] - 1) / step[i];
+    }
+    if (tensor_indices.empty()) {
       Shape slice_shape(slice_dims);
       if (slice_shape != *(value_tensor->shape())) {
-        value_tensor = JUST(Reshape(value_tensor, slice_shape));
+        // NOTE:
+        // 1. The value shape must can be broadcasted to the target shape.
+        // 2. The slice shape must have equal element count with the target shape.
+        //
+        // So, we should be expand to target_shape and then reshape to slice_shape.
+        //
+        // For example:
+        // x = flow.rand(2, 3, 4)
+        // y = flow.rand(3)
+        // x[:, :, 1] = y
+        //
+        // value_shape = (3,), target_shape = (2, 3), slice_shape = (2, 3, 1)
+        // We must change value shape to slice_shape if it uses SliceUpdate op.
+        // BUG(wyg): value shape cannot initialize to a scalar tensor,
+        // so it is not possible to expand to target_shape.
+        // e.g. x[0, 0] = 1.0
+        // But x[0, 0] = flow.ones(1) do not align with numpy behavior.
+        if (target_shape != *(value_tensor->shape()) && target_shape.NumAxes() > 0) {
+          value_tensor = JUST(Expand(value_tensor, target_shape));
+        }
+        if (slice_shape != *(value_tensor->shape())) {
+          value_tensor = JUST(Reshape(value_tensor, slice_shape));
+        }
       }
-      JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
+      JUST(SliceUpdate(expand_input, value_tensor, start, end, step, /*inplace=*/true));
+    } else {
+      bool is_identity = [&]() {
+        if (target_shape.NumAxes() == 0) { return false; }
+        for (int i = 0; i < ndims; ++i) {
+          if (start[i] != 0 || end[i] != expand_input->shape()->At(i) || step[i] != 1) {
+            return false;
+          }
+        }
+        return true;
+      }();
+      std::shared_ptr<one::Tensor> result;
+      if (is_identity) {
+        result = expand_input;
+      } else {
+        CHECK_OR_RETURN(view::IsViewApplicable(expand_input))
+            << "combined slice setitem must enable view, please try to set ONEFLOW_DISABLE_VIEW=0";
+        result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/true));
+      }
+      if (target_shape != *(result->shape())) {
+        result = JUST(functional::View(result, target_shape));
+      }
+
+      JUST(UnifyLocalTensorAndIndicesOnDevice(expand_input, tensor_indices));
+      JUST(ApplyAdvancedIndexingUpdate(result, tensor_indices, value));
     }
     return Maybe<void>::Ok();
   }
@@ -2595,8 +2710,8 @@ Maybe<Tensor> LocalTensorTo(const std::shared_ptr<Tensor>& x, const std::string&
   return tensor;
 }
 
-Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::string& device_type,
-                                 const Symbol<DType>& dtype, const bool& copy) {
+Maybe<Tensor> GlobalTensorTo(const std::shared_ptr<Tensor>& x, const std::string& device_type,
+                             const Symbol<DType>& dtype, const bool& copy) {
   std::shared_ptr<Tensor> tensor;
   auto input_placement = JUST(x->parallel_desc());
   std::string input_device_tag = input_placement->device_tag();
@@ -2620,11 +2735,12 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
     auto nd_sbp = JUST(x->nd_sbp());
     std::vector<Symbol<SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
     for (int i = 0; i < sbp_tuple.size(); ++i) { sbp_tuple[i] = nd_sbp->sbp_parallel().Get(i); }
-    tensor = JUST(ConsistentToLocal(x));
+    tensor = JUST(GlobalToLocal(x, /*copy=*/false));
     Symbol<Device> device = JUST(Device::New(device_type));
     tensor = JUST(LocalTensorTo(tensor, device->type(), device->device_id(), dtype, copy));
     JUST(tensor->set_requires_grad(x->requires_grad()));
-    return JUST(LocalToConsistent(tensor, placement, sbp_tuple, *(x->shape()), dtype));
+    return JUST(LocalToGlobal(tensor, placement, sbp_tuple, *(x->shape()), dtype,
+                              /* sync_data */ true, /*copy=*/false));
   }
 }
 
@@ -2636,14 +2752,14 @@ class ToFunctor {
                            const Optional<std::string>& device_,
                            const Optional<Symbol<DType>>& dtype_, bool copy) const {
     Symbol<DType> dtype = dtype_.value_or(input->dtype());
-    if (input->is_consistent()) {
+    if (input->is_global()) {
       std::string device_type = device_.value_or(JUST(input->parallel_desc())->device_tag());
       CHECK_OR_RETURN(ep::DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(device_type)
                       != DeviceType::kInvalidDevice)
           << Error::RuntimeError()
           << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
-          << "for consistent tensor, but got " << device_.value_or("");
-      return JUST(ConsistentTensorTo(input, device_type, dtype, copy));
+          << "for global tensor, but got " << device_.value_or("");
+      return JUST(GlobalTensorTo(input, device_type, dtype, copy));
     } else {
       std::string device_name = "";
       int device_id = 0;
@@ -2665,13 +2781,13 @@ class To2Functor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<Symbol<Device>>& device_,
                            const Optional<Symbol<DType>>& dtype_, bool copy) const {
-    CHECK_OR_RETURN(!(input->is_consistent() && device_.has_value()))
+    CHECK_OR_RETURN(!(input->is_global() && device_.has_value()))
         << Error::RuntimeError()
         << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
-        << "for consistent tensor, but got " << device_.value_or(Symbol<Device>())->ToRepr();
-    if (input->is_consistent()) {
+        << "for global tensor, but got " << device_.value_or(Symbol<Device>())->ToRepr();
+    if (input->is_global()) {
       std::string device_type = JUST(input->parallel_desc())->device_tag();
-      return JUST(ConsistentTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
+      return JUST(GlobalTensorTo(input, device_type, dtype_.value_or(input->dtype()), copy));
     } else {
       auto dtype = dtype_.value_or(input->dtype());
       auto device =
@@ -2686,8 +2802,8 @@ class To3Functor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<Symbol<DType>>& dtype_, bool copy) const {
     Symbol<DType> dtype = dtype_.value_or(input->dtype());
-    if (input->is_consistent()) {
-      return ConsistentTensorTo(input, JUST(input->parallel_desc())->device_tag(), dtype, copy);
+    if (input->is_global()) {
+      return GlobalTensorTo(input, JUST(input->parallel_desc())->device_tag(), dtype, copy);
     } else {
       auto device = JUST(input->device());
       return LocalTensorTo(input, device->type(), device->device_id(), dtype, copy);
@@ -2699,7 +2815,7 @@ class To4Functor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const std::shared_ptr<Tensor>& other, bool copy) const {
-    CHECK_OR_RETURN(!input->is_consistent() && !other->is_consistent())
+    CHECK_OR_RETURN(!input->is_global() && !other->is_global())
         << Error::RuntimeError()
         << "tensor.to(other) can only be called when tensor and other are local tensors";
     Symbol<DType> dtype = other->dtype();
@@ -2834,8 +2950,14 @@ class RepeatFunctor {
           }
         } else {
           input_reshape_vec.insert(input_reshape_vec.begin(), input_shape_val);
-          expand_shape_vec.insert(expand_shape_vec.begin(), input_shape_val);
-          output_reshape_vec.insert(output_reshape_vec.begin(), input_shape_val);
+          // For 0-size tensor, align with PyTorch.
+          if (repeat_shape_val == 0) {
+            expand_shape_vec.insert(expand_shape_vec.begin(), 0);
+            output_reshape_vec.insert(output_reshape_vec.begin(), 0);
+          } else {
+            expand_shape_vec.insert(expand_shape_vec.begin(), input_shape_val);
+            output_reshape_vec.insert(output_reshape_vec.begin(), input_shape_val);
+          }
         }
       } else {
         expand_shape_vec.insert(expand_shape_vec.begin(), repeat_shape.At(i));
@@ -2848,7 +2970,7 @@ class RepeatFunctor {
     std::shared_ptr<one::Tensor> reshaped_tensor = JUST(Reshape(input, input_reshape));
     std::shared_ptr<one::Tensor> expanded_tensor = JUST(Expand(reshaped_tensor, expand_shape));
     std::shared_ptr<one::Tensor> result = JUST(Reshape(expanded_tensor, output_reshape));
-    return result;
+    return result->contiguous();
   }
 };
 
@@ -2923,9 +3045,11 @@ class RepeatInterLeaveTensorFunctor {
 
     std::vector<int64_t> repeats_value(repeats_shape->elem_cnt());
     if (!output_size.has_value()) {
-      const auto& callback = [&](uint64_t ofblob_ptr) {
-        CHECK_JUST(BlobBufferCopyUtil<int64_t>::To(ofblob_ptr, repeats_value.data(),
-                                                   repeats_value.size()));
+      const auto& callback = [&](ep::Stream* stream,
+                                 const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+        SyncAutoMemcpy(stream, repeats_value.data(), eager_blob_object->dptr(),
+                       repeats_value.size() * sizeof(int64_t), memory::MakeHostMemCase(),
+                       eager_blob_object->mem_case());
       };
       SyncAccessTensorWithTimeOut(repeats, callback, "const").GetOrThrow();
       for (const auto x : repeats_value) {
@@ -3014,11 +3138,11 @@ class PinMemoryFunctor {
         CHECK_JUST(one::OpBuilder("slice_update").Input("ref").Input("value").Output("y").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
-    // TODO:(zhaoluyang) support consistent tensor.pin_memory()
+    // TODO:(zhaoluyang) support global tensor.pin_memory()
     CHECK_OR_RETURN(input->is_local() && !(LazyMode::is_enabled()))
         << Error::RuntimeError() << "Tensor.pin_memory() only support local tensor for now!";
     // if tensor already pinned, then just return
-    if (JUST(JUST(input->AsMirroredTensor())->is_pinned())) { return input; }
+    if (JUST(JUST(input->AsLocalTensor())->is_pinned())) { return input; }
     auto shape = input->shape();
     auto device = JUST(input->device());
     const bool requires_grad = input->requires_grad();
@@ -3031,11 +3155,17 @@ class PinMemoryFunctor {
     JUST(empty->set_requires_grad(requires_grad));
     const int32_t ndim = input->ndim();
     if (ndim == 0) {
+      // TODO(wyg): use TensorSetItem after supporting non-requires_grad tensor inplace
       // for 0-dim tensor
-      TensorIndex tensor_index;
-      tensor_index.emplace_back(functional::detail::IndexItem(functional::detail::EllipsisIndex{}));
-      JUST(functional::TensorSetItem(empty, tensor_index, input));
-      return empty;
+      empty = JUST(functional::ExpandDims(empty, 0));              // expand to [1, ]
+      auto expand_input = JUST(functional::ExpandDims(input, 0));  // expand to [1, ]
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<std::vector<int64_t>>("start", {0}));
+      JUST(attrs.SetAttr<std::vector<int64_t>>("stop", {1}));
+      JUST(attrs.SetAttr<std::vector<int64_t>>("step", {1}));
+      auto outputs = TensorTuple{empty};
+      JUST(OpInterpUtil::Dispatch(*op_, TensorTuple{empty, expand_input}, &outputs, attrs));
+      return outputs[0];
     } else {
       MutableAttrMap attrs;
       std::vector<int64_t> starts(ndim, 0);
@@ -3113,9 +3243,9 @@ class FillTensorFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ArgMaxFunctor>("ArgMax");
   m.add_functor<impl::ArgMinFunctor>("ArgMin");
-  m.add_functor<impl::ConsistentConstantFunctor>("ConsistentConstant");
+  m.add_functor<impl::GlobalConstantFunctor>("GlobalConstant");
   m.add_functor<impl::ConstantFunctor>("Constant");
-  m.add_functor<impl::ConsistentEmptyFunctor>("ConsistentEmpty");
+  m.add_functor<impl::GlobalEmptyFunctor>("GlobalEmpty");
   m.add_functor<impl::EmptyFunctor>("Empty");
   m.add_functor<impl::ZerosLikeFunctor>("ZerosLike");
   m.add_functor<impl::OnesLikeFunctor>("OnesLike");
@@ -3127,6 +3257,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::WhereScalarYFunctor>("WhereScalarY");
   m.add_functor<impl::WhereScalarXYFunctor>("WhereScalarXY");
   m.add_functor<impl::ArgWhereFunctor>("ArgWhere");
+  m.add_functor<impl::NonZeroFunctor>("NonZero");
   m.add_functor<impl::BroadcastLikeFunctor>("BroadcastLike");
   m.add_functor<impl::ConcatFunctor>("Concat");
   m.add_functor<impl::StackFunctor>("Stack");
@@ -3135,6 +3266,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ExpandGradFunctor>("ExpandGrad");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::ExpandDimsFunctor>("Unsqueeze");
+  m.add_functor<impl::UnsqueezeMultipleFunctor>("UnsqueezeMultiple");
   m.add_functor<impl::SqueezeFunctor>("Squeeze");
   m.add_functor<impl::RollFunctor>("Roll");
   m.add_functor<impl::GatherFunctor>("Gather");

@@ -26,7 +26,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SquareSumOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
   *y->mut_shape() = Shape({1});
   return Maybe<void>::Ok();
 }
@@ -34,7 +34,7 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> SquareSumOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -50,7 +50,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> MultiSquareSumOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
   *y->mut_shape() = Shape({1});
   return Maybe<void>::Ok();
 }
@@ -59,17 +59,21 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> MultiSquareSumOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_0 = ctx->InputTensorDesc("x", 0);
-  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
+  user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
   for (int64_t i = 1; i < ctx->input_size("x"); ++i) {
     const user_op::TensorDesc& x_i = ctx->InputTensorDesc("x", i);
-    CHECK_EQ_OR_RETURN(x_i.data_type(), x_0.data_type());
+    CHECK_EQ_OR_RETURN(x_i.data_type(), x_0.data_type())
+        << Error::TypeError()
+        << "All tensors are expected to have the same dtype, but found at least two dtypes, "
+        << DataType_Name(x_i.data_type()) << " and " << DataType_Name(x_0.data_type());
   }
   *y->mut_data_type() = x_0.data_type();
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> MultiSquareSumOp::CheckAttr(const user_op::UserOpDefWrapper&,
                                                    const user_op::UserOpConfWrapper& op_conf) {
-  CHECK_OR_RETURN(op_conf.input_size("x") >= 1);
+  CHECK_OR_RETURN(op_conf.input_size("x") >= 1)
+      << Error::RuntimeError() << "The number of x should be greater than or equal to 1";
   return Maybe<void>::Ok();
 }
 }  // namespace oneflow

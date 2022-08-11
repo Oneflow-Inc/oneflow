@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/ep/include/primitive/matmul.h"
 #include "oneflow/core/ep/include/primitive/batch_matmul.h"
+#include "oneflow/core/ep/include/primitive/broadcast_matmul.h"
 
 namespace oneflow {
 
@@ -96,6 +97,18 @@ std::unique_ptr<ep::primitive::BatchMatmul> NewBatchMatmulPrimitive(Context* ctx
       ctx->device_type(), data_type, trans_a, trans_b);
 }
 
+template<typename Context>
+std::unique_ptr<ep::primitive::BroadcastMatmul> NewBroadcastMatmulPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
+  const auto trans_a = GetBlasTransposeType(ctx, "transpose_a");
+  const auto trans_b = GetBlasTransposeType(ctx, "transpose_b");
+  const int64_t a_num_axes = ctx->TensorDesc4ArgNameAndIndex("a", 0)->shape().NumAxes();
+  const int64_t b_num_axes = ctx->TensorDesc4ArgNameAndIndex("b", 0)->shape().NumAxes();
+  const int64_t max_num_axes = std::max(a_num_axes, b_num_axes);
+  return ep::primitive::NewPrimitive<ep::primitive::BroadcastMatmulFactory>(
+      ctx->device_type(), data_type, trans_a, trans_b, max_num_axes);
+}
+
 auto MemcpyPrimitiveExists() {
   return hob::make_custom("MemcpyPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
     return NewMemcpyPrimitive(&ctx).operator bool();
@@ -112,6 +125,13 @@ auto BatchMatmulPrimitiveExists() {
   return hob::make_custom("BatchMatmulPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
     return NewBatchMatmulPrimitive(&ctx).operator bool();
   });
+}
+
+auto BroadcastMatmulPrimitiveExists() {
+  return hob::make_custom("BroadcastMatmulPrimitiveExists",
+                          [](const user_op::KernelRegContext& ctx) {
+                            return NewBroadcastMatmulPrimitive(&ctx).operator bool();
+                          });
 }
 
 class MatmulKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -230,7 +250,6 @@ REGISTER_USER_KERNEL("batch_matmul")
       return Maybe<void>::Ok();
     });
 
-// TODO(liujuncheng): fully support
 class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   BroadcastMatmulKernel() = default;
@@ -243,7 +262,6 @@ class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::Cu
     double alpha = ctx->Attr<double>("alpha");
     bool transpose_a = ctx->Attr<bool>("transpose_a");
     bool transpose_b = ctx->Attr<bool>("transpose_b");
-    CHECK(!transpose_a);
 
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
@@ -261,27 +279,20 @@ class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::Cu
       beta = 1.0;
     }
 
-    CHECK_EQ(b->shape_view().NumAxes(), 2);
-    CHECK_GT(a->shape_view().NumAxes(), b->shape_view().NumAxes());
-    int64_t m = a->shape_view().Count(0, a->shape_view().NumAxes() - 1);
-    int64_t k = a->shape_view().At(a->shape_view().NumAxes() - 1);
-    int64_t n = -1;
-    if (!transpose_b) {
-      n = b->shape_view().At(1);
-      CHECK_EQ(k, b->shape_view().At(0));
-    } else {
-      n = b->shape_view().At(0);
-      CHECK_EQ(k, b->shape_view().At(1));
-    }
-    auto matmul = NewMatmulPrimitive(ctx);
-    CHECK(matmul);
-    matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
+    const int64_t a_num_axes = a->shape_view().NumAxes();
+    const int64_t b_num_axes = b->shape_view().NumAxes();
+    const int64_t out_num_axes = out->shape_view().NumAxes();
+    auto broadcast_matmul = NewBroadcastMatmulPrimitive(ctx);
+    CHECK(broadcast_matmul);
+    broadcast_matmul->Launch(ctx->stream(), alpha, a_num_axes, a->shape_view().ptr(), a->dptr(),
+                             b_num_axes, b->shape_view().ptr(), b->dptr(), beta, out_num_axes,
+                             out->shape_view().ptr(), out->mut_dptr());
   }
 };
 
 REGISTER_USER_KERNEL("broadcast_matmul")
     .SetCreateFn<BroadcastMatmulKernel>()
-    .SetIsMatchedHob(MemcpyPrimitiveExists() && MatmulPrimitiveExists())
+    .SetIsMatchedHob(MemcpyPrimitiveExists() && BroadcastMatmulPrimitiveExists())
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.has_input("_add_to_output", 0)) {
@@ -310,7 +321,6 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel,
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-
     double beta = 0.0;
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
@@ -328,7 +338,6 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel,
     CHECK_EQ(b->shape_view().Count(0, b->shape_view().NumAxes() - 1), k);
     int64_t m = a->shape_view().At(a->shape_view().NumAxes() - 1);
     int64_t n = b->shape_view().At(b->shape_view().NumAxes() - 1);
-
     auto matmul = NewMatmulPrimitiveForBroadcastMatmulGradB(ctx);
     CHECK(matmul);
     matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
@@ -351,7 +360,6 @@ REGISTER_USER_KERNEL("broadcast_matmul_grad_b")
       }
       return Maybe<void>::Ok();
     });
-
 }  // namespace
 
 }  // namespace oneflow

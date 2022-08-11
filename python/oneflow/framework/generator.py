@@ -24,11 +24,12 @@ def create_generator(device=None):
 
 
 def seed() -> int:
-    r"""The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.seed.html.
-    
+    r"""
     Sets the seed for generating random numbers to a non-deterministic
     random number. Returns a 64 bit number used to seed the RNG.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.seed.html.
     """
     seed = default_generator.seed()
     oneflow._oneflow_internal.manual_seed(seed)
@@ -36,11 +37,12 @@ def seed() -> int:
 
 
 def manual_seed(seed):
-    r"""The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.manual_seed.html.
-    
+    r"""
     Sets the seed for generating random numbers. Returns a
     `oneflow.Generator` object.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.manual_seed.html.
 
     Args:
         seed (int): The desired seed. Value must be within the inclusive range
@@ -53,11 +55,13 @@ def manual_seed(seed):
 
 
 def initial_seed() -> int:
-    r"""The documentation is referenced from:
-    https://pytorch.org/docs/1.10/_modules/torch/random.html.
-    
+    r"""
     Returns the initial seed for generating random numbers as a
     Python `long`.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/_modules/torch/random.html.
+    
     """
     return default_generator.initial_seed()
 
@@ -72,11 +76,12 @@ def _setstate(self, state_dict):
 
 
 def get_rng_state():
-    r"""The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.get_rng_state.html.
-    
+    r"""
     Sets the random number generator state.
 
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.get_rng_state.html.
+    
     .. note: This function only works for CPU. For CUDA, please use
              oneflow.manual_seed(seed), which works for both CPU and CUDA.
 
@@ -87,11 +92,12 @@ def get_rng_state():
 
 
 def set_rng_state(state):
-    """The documentation is referenced from:
+    """
+    Returns the random number generator state as a `oneflow.ByteTensor`.
+
+    The documentation is referenced from:
     https://pytorch.org/docs/1.10/generated/torch.set_rng_state.html.
     
-    
-    Returns the random number generator state as a `oneflow.ByteTensor`.
     """
 
     return oneflow.default_generator.set_state(state)

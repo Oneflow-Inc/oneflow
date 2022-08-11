@@ -20,6 +20,10 @@ limitations under the License.
 #include <type_traits>
 #if defined(WITH_CUDA)
 #include <cuda_fp16.h>
+#include <cuda.h>
+#if CUDA_VERSION >= 11000
+#include <cuda_bf16.h>
+#endif  // CUDA_VERSION >= 11000
 #endif
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/data_type_seq.h"
@@ -98,6 +102,11 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ FLOAT16_DATA_TY
 template<typename T>
 struct GetDataType<T, typename std::enable_if<IsFloat16<T>::value>::type>
     : std::integral_constant<DataType, DataType::kFloat16> {};
+
+#if CUDA_VERSION >= 11000
+template<>
+struct GetDataType<nv_bfloat16> : std::integral_constant<DataType, DataType::kBFloat16> {};
+#endif
 
 template<DataType type>
 using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataType, type>{}));

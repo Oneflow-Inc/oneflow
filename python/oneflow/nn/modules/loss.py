@@ -335,10 +335,7 @@ class NLLLoss(_WeightedLoss):
 
 
 class KLDivLoss(_Loss):
-    """The interface is consistent with PyTorch.
-    The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.nn.KLDivLoss.html.
-
+    """
     The Kullback-Leibler divergence loss measure
 
     `Kullback-Leibler divergence`_ is a useful distance measure for continuous
@@ -374,6 +371,10 @@ class KLDivLoss(_Loss):
     ``'batchmean'`` in the next major release.
 
     .. _`kullback-leibler divergence`: https://en.wikipedia.org/wiki/Kullback-Leibler_divergence
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.KLDivLoss.html.
 
     Args:
         reduction (string, optional): Specifies the reduction to apply to the output:
@@ -430,10 +431,7 @@ class KLDivLoss(_Loss):
 
 
 class MSELoss(_Loss):
-    """The interface is consistent with PyTorch.
-    The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.nn.MSELoss.html.
-
+    """
     Creates a criterion that measures the mean squared error (squared L2 norm) between
     each element in the input :math:`x` and target :math:`y`.
 
@@ -459,6 +457,10 @@ class MSELoss(_Loss):
     The mean operation still operates over all the elements, and divides by :math:`n`.
 
     The division by :math:`n` can be avoided if one sets ``reduction = 'sum'``.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.nn.MSELoss.html.
 
     Args:
         reduction (string, optional): Specifies the reduction to apply to the output:

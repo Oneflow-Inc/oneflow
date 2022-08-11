@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <memory>
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
@@ -54,7 +55,32 @@ class BernoulliFunctor {
     JUST(bernoulli_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    // p == -1 means bernoulli op doesn't use p to generate random number
+    JUST(bernoulli_attrs.SetAttr<double>("p", -1.0));
+    return OpInterpUtil::Dispatch<Tensor>(*bernoulli_op_, {x},
+                                          OpExprInterpContext(bernoulli_attrs, distribution_state));
+  }
 
+ private:
+  std::shared_ptr<OpExpr> bernoulli_op_;
+};
+
+class BernoulliProbFunctor {
+ public:
+  BernoulliProbFunctor() {
+    bernoulli_op_ = CHECK_JUST(one::OpBuilder("bernoulli").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const double& p,
+                           const Symbol<DType>& dtype,
+                           const Optional<one::Generator>& generator) const {
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    MutableAttrMap bernoulli_attrs;
+    JUST(bernoulli_attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    JUST(bernoulli_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    CHECK_OR_THROW(p >= 0.0 && p <= 1.0) << "bernoulli expects p to be in [0, 1], but got p=" << p;
+    JUST(bernoulli_attrs.SetAttr<double>("p", p));
     return OpInterpUtil::Dispatch<Tensor>(*bernoulli_op_, {x},
                                           OpExprInterpContext(bernoulli_attrs, distribution_state));
   }
@@ -99,9 +125,9 @@ class RandFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ConsistentRandFunctor {
+class GlobalRandFunctor {
  public:
-  ConsistentRandFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
+  GlobalRandFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                            const Optional<Symbol<DType>>& dtype,
@@ -174,9 +200,9 @@ class RandNFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ConsistentRandNFunctor {
+class GlobalRandNFunctor {
  public:
-  ConsistentRandNFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
+  GlobalRandNFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                            const Optional<Symbol<DType>>& dtype,
@@ -258,11 +284,33 @@ class RandInt2Functor {
   }
 };
 
-class ConsistentRandIntFunctor {
+class RandIntLikeFunctor {
  public:
-  ConsistentRandIntFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("uniform_int").Output("out").Build());
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const int64_t low,
+                           const int64_t high, const Optional<Symbol<DType>>& dtype,
+                           const Optional<Symbol<Device>>& device,
+                           const Optional<one::Generator>& generator,
+                           const bool& requires_grad) const {
+    const Shape shape = *input->shape();
+    return RandInt(low, high, shape, dtype, device, generator, requires_grad);
   }
+};
+
+class RandIntLike2Functor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const int64_t high,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<Symbol<Device>>& device,
+                           const Optional<one::Generator>& generator,
+                           const bool& requires_grad) const {
+    const Shape shape = *input->shape();
+    return RandInt(/*low*/ 0, high, shape, dtype, device, generator, requires_grad);
+  }
+};
+
+class GlobalRandIntFunctor {
+ public:
+  GlobalRandIntFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform_int").Output("out").Build()); }
 
   Maybe<Tensor> operator()(const int64_t low, const int64_t high, const Shape& shape,
                            const Symbol<ParallelDesc>& placement,
@@ -299,7 +347,7 @@ class ConsistentRandIntFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ConsistentRandInt2Functor {
+class GlobalRandInt2Functor {
  public:
   Maybe<Tensor> operator()(const int64_t high, const Shape& shape,
                            const Symbol<ParallelDesc>& placement,
@@ -308,8 +356,33 @@ class ConsistentRandInt2Functor {
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    return ConsistentRandInt(/*low*/ 0, high, shape, placement, sbp, dtype, generator,
-                             requires_grad);
+    return GlobalRandInt(/*low*/ 0, high, shape, placement, sbp, dtype, generator, requires_grad);
+  }
+};
+
+class GlobalRandIntLikeFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const int64_t low,
+                           const int64_t high, const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<SbpParallel>>& sbp,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<one::Generator>& generator,
+                           const bool& requires_grad) const {
+    const Shape shape = *input->shape();
+    return GlobalRandInt(low, high, shape, placement, sbp, dtype, generator, requires_grad);
+  }
+};
+
+class GlobalRandIntLike2Functor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const int64_t high,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<SbpParallel>>& sbp,
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<one::Generator>& generator,
+                           const bool& requires_grad) const {
+    const Shape shape = *input->shape();
+    return GlobalRandInt(/*low*/ 0, high, shape, placement, sbp, dtype, generator, requires_grad);
   }
 };
 
@@ -338,9 +411,9 @@ class RandPermFunctor {
   std::shared_ptr<OpExpr> randperm_op_;
 };
 
-class ConsistentRandPermFunctor {
+class GlobalRandPermFunctor {
  public:
-  ConsistentRandPermFunctor() {
+  GlobalRandPermFunctor() {
     randperm_op_ = CHECK_JUST(one::OpBuilder("randperm").Output("out").Build());
   }
   Maybe<Tensor> operator()(const int32_t n, const Symbol<ParallelDesc>& placement,
@@ -375,14 +448,17 @@ using namespace impl;
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<BernoulliFunctor>("Bernoulli");
+  m.add_functor<BernoulliProbFunctor>("Bernoulli");
   m.add_functor<RandPermFunctor>("RandPerm");
-  m.add_functor<ConsistentRandPermFunctor>("ConsistentRandPerm");
+  m.add_functor<GlobalRandPermFunctor>("GlobalRandPerm");
   m.add_functor<RandFunctor>("Rand");
-  m.add_functor<ConsistentRandFunctor>("ConsistentRand");
+  m.add_functor<GlobalRandFunctor>("GlobalRand");
   m.add_functor<RandNFunctor>("RandN");
-  m.add_functor<ConsistentRandNFunctor>("ConsistentRandN");
+  m.add_functor<GlobalRandNFunctor>("GlobalRandN");
   m.add_functor<RandIntFunctor, RandInt2Functor>("RandInt");
-  m.add_functor<ConsistentRandIntFunctor, ConsistentRandInt2Functor>("ConsistentRandInt");
+  m.add_functor<GlobalRandIntFunctor, GlobalRandInt2Functor>("GlobalRandInt");
+  m.add_functor<RandIntLikeFunctor, RandIntLike2Functor>("RandIntLike");
+  m.add_functor<GlobalRandIntLikeFunctor, GlobalRandIntLike2Functor>("GlobalRandIntLike");
 };
 
 }  // namespace functional

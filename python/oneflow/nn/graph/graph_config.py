@@ -20,6 +20,7 @@ from collections import OrderedDict
 import oneflow.boxing.nccl as nccl_config
 from oneflow.nn.graph.optimizer import OptDict
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
+import oneflow as flow
 
 
 class GraphConfig(object):
@@ -46,7 +47,7 @@ class GraphConfig(object):
             return False
         raise NotImplementedError
 
-    def enable_amp(self, mode: bool = True):
+    def enable_amp(self, mode: bool = True, *, dtype: flow.dtype = flow.float16):
         r"""If set to true, then graph will use mixed precision mode, it means use both float16 and float32 during model training.
 
         For example:
@@ -68,9 +69,14 @@ class GraphConfig(object):
         Args:
             mode (bool, optional): The default vaule is True.
 
+
         """
         assert type(mode) is bool
+        assert dtype in (flow.float16, flow.bfloat16)
         self.proto.enable_auto_mixed_precision = mode
+        self.proto.mixed_precision_data_type = flow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
+            dtype
+        )
 
     def set_zero_redundancy_optimizer_mode(self, mode: str = "distributed_split"):
         raise RuntimeError(
@@ -111,7 +117,7 @@ class GraphConfig(object):
         Args:
             mode (bool): if set to true, optimizer states of Data Parallel will be sharded across devices.
             stage (int): optimization stage, range from 1 to 3. 
-            shard_min_size (int): min size of a shard of an optimizer state.
+            shard_min_size (int): min size (element count) of a shard of an optimizer state.
             shard_restore_level (int): level to restore sharded parameter to whole parameter for consumer operators, level 0 is no restore, level 1 is soft restore, level 2 is hard restore. Note that this paremeter is at pre-alpha stage.
         """
         if not mode:

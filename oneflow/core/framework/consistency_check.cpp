@@ -24,7 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/sync_symbol_parallel_desc.h"
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/check_level.h"
-#include "oneflow/core/framework/sync_symbol_consistent_tensor_meta.h"
+#include "oneflow/core/framework/sync_symbol_global_tensor_meta.h"
 
 namespace oneflow {
 

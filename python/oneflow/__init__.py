@@ -20,6 +20,10 @@ import collections
 
 import oneflow._oneflow_internal
 
+oneflow_python_base_dir = os.path.dirname(os.path.realpath(__file__))
+oneflow._oneflow_internal.InitPythonPathsToBeKeptAndFilteredForDebugging(
+    oneflow_python_base_dir
+)
 oneflow._oneflow_internal.InitNumpyCAPI()
 oneflow._oneflow_internal.CheckAndClearRegistryFlag()
 Size = oneflow._oneflow_internal.Size
@@ -88,7 +92,7 @@ from oneflow._C import logical_and
 from oneflow._C import logical_or
 from oneflow._C import logical_xor
 from oneflow._C import logical_not
-from oneflow._C import gelu
+from oneflow._C import gelu_with_approximate as gelu
 from oneflow._C import mish
 from oneflow._C import repeat
 from oneflow._C import repeat_interleave
@@ -101,11 +105,10 @@ from oneflow._C import selu
 from oneflow._C import softshrink
 from oneflow._C import softsign
 from oneflow._C import cast
-from oneflow._C import ones_like
-from oneflow._C import zeros_like
 from oneflow._C import diag
 from oneflow._C import log1p
 from oneflow._C import add
+from oneflow._C import addcdiv
 from oneflow._C import div, div_
 from oneflow._C import addcmul
 from oneflow._C import floor, floor_
@@ -153,7 +156,7 @@ from oneflow._C import sqrt
 from oneflow._C import square
 from oneflow._C import matmul
 from oneflow._C import mm
-from oneflow._C import mv
+from oneflow._C import matrix_vector_product as mv
 from oneflow._C import bernoulli
 from oneflow._C import round
 from oneflow._C import softplus
@@ -178,6 +181,7 @@ from oneflow._C import permute
 from oneflow._C import select
 from oneflow._C import unbind
 from oneflow._C import tensor_split
+from oneflow._C import hann_window
 from oneflow._C import hsplit
 from oneflow._C import vsplit
 from oneflow._C import concat
@@ -207,6 +211,7 @@ from oneflow._C import searchsorted
 from oneflow._C import index_select
 from oneflow._C import isnan
 from oneflow._C import isinf
+from oneflow._C import isfinite
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
@@ -229,15 +234,7 @@ __oneflow_global_unique_env = env_util.GetEnv()
 session_ctx.NewDefaultSession(__oneflow_global_unique_env)
 
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
-oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
-
-oneflow._oneflow_internal.EnableEagerEnvironment(True)
-from oneflow.framework import python_callback
-
-oneflow._oneflow_internal.RegisterGlobalForeignCallback(
-    python_callback.global_python_callback
-)
-del python_callback
+oneflow._oneflow_internal.InitDefaultGlobalTransportTokenScope()
 
 
 class ExitHook:
@@ -327,15 +324,20 @@ from oneflow.nn.modules.einsum import einsum_op as einsum
 from oneflow.nn.modules.is_tensor import is_tensor_op as is_tensor
 from oneflow.nn.modules.arange import arange_op as arange
 from oneflow.nn.modules.linspace import linspace_op as linspace
+from oneflow.nn.modules.logspace import logspace_op as logspace
 from oneflow.nn.modules.argsort import argsort_op as argsort
 from oneflow.nn.modules.argwhere import argwhere_op as argwhere
 from oneflow.nn.modules.constant import ones_op as ones
 from oneflow.nn.modules.constant import zeros_op as zeros
+from oneflow.nn.modules.constant import zeros_like_op as zeros_like
+from oneflow.nn.modules.constant import ones_like_op as ones_like
 from oneflow.nn.modules.constant import full_op as full
+from oneflow.nn.modules.constant import full_like_op as full_like
 from oneflow.nn.modules.constant import new_ones_op as new_ones
 from oneflow.nn.modules.constant import new_zeros_op as new_zeros
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.empty import new_empty_op as new_empty
+from oneflow.nn.modules.empty import empty_like_op as empty_like
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
@@ -356,6 +358,7 @@ from oneflow._C import normal
 from oneflow._C import rand
 from oneflow._C import randn
 from oneflow._C import randint
+from oneflow._C import randint_like
 from oneflow._C import randperm
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
@@ -377,24 +380,6 @@ from oneflow.nn.modules.global_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
 from oneflow.ops.stateful_ops import StatefulOp as stateful_op
-from oneflow.ops.initializer_util import constant_initializer
-from oneflow.ops.initializer_util import glorot_normal_initializer
-from oneflow.ops.initializer_util import (
-    glorot_normal_initializer as xavier_normal_initializer,
-)
-from oneflow.ops.initializer_util import glorot_uniform_initializer
-from oneflow.ops.initializer_util import (
-    glorot_uniform_initializer as xavier_uniform_initializer,
-)
-from oneflow.ops.initializer_util import (
-    kaiming_initializer,
-    ones_initializer,
-    random_normal_initializer,
-    random_uniform_initializer,
-    truncated_normal_initializer,
-    variance_scaling_initializer,
-    zeros_initializer,
-)
 
 from . import (
     autograd,
@@ -407,7 +392,6 @@ from . import (
     amp,
 )
 import oneflow.utils.data
-import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing

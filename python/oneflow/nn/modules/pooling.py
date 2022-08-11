@@ -29,10 +29,10 @@ from oneflow.nn.modules.utils import (
 
 
 class MaxPool1d(Module):
-    r"""The interface is consistent with PyTorch.
+    r"""Applies a 1D max pooling over an input signal composed of several input planes.
+    
+    The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.MaxPool1d.html.
-
-    Applies a 1D max pooling over an input signal composed of several input planes.
 
     In the simplest case, the output value of the layer with input size :math:`(N, C, L)`
     and output :math:`(N, C, L_{out})` can be precisely described as:
@@ -43,7 +43,7 @@ class MaxPool1d(Module):
 
     If :attr:`padding` is non-zero, then the input is implicitly padded with minimum value on both sides
     for :attr:`padding` number of points. :attr:`dilation` is the stride between the elements within the
-    sliding window. This `link`_ has a nice visualization of the pooling parameters.
+    sliding window. This link has a nice visualization of the pooling parameters.
 
     Note:
         When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
@@ -55,7 +55,6 @@ class MaxPool1d(Module):
         padding: Implicit negative infinity padding to be added on both sides, must be >= 0 and <= kernel_size / 2.
         dilation: The stride between elements within a sliding window, must be > 0.
         return_indices: If ``True``, will return the argmax along with the max values.
-                        Useful for :class:`torch.nn.MaxUnpool1d` later
         ceil_mode: If ``True``, will use `ceil` instead of `floor` to compute the output shape. This
                    ensures that every element in the input tensor is covered by a sliding window.
 
@@ -163,10 +162,10 @@ def calc_pool_padding(padding, dhw_offset, ndims):
 
 
 class MaxPool2d(Module):
-    r"""The interface is consistent with PyTorch.
+    r"""Applies a 2D max pooling over an input signal composed of several input planes.
+    
+    The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.MaxPool2d.html.
-
-    Applies a 2D max pooling over an input signal composed of several input planes.
 
     In the simplest case, the output value of the layer with input size :math:`(N, C, H, W)`,
     output :math:`(N, C, H_{out}, W_{out})` and :attr:`kernel_size` :math:`(kH, kW)`
@@ -181,7 +180,7 @@ class MaxPool2d(Module):
 
     If :attr:`padding` is non-zero, then the input is implicitly minimum value padded on both sides
     for :attr:`padding` number of points. :attr:`dilation` controls the spacing between the kernel points.
-    It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
+    It is harder to describe, but this link has a nice visualization of what :attr:`dilation` does.
 
     Note:
         When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
@@ -278,10 +277,10 @@ class MaxPool2d(Module):
 
 
 class MaxPool3d(Module):
-    r"""The interface is consistent with PyTorch.
+    r"""Applies a 3D max pooling over an input signal composed of several input planes.
+    
+    The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.MaxPool3d.html.
-
-    Applies a 3D max pooling over an input signal composed of several input planes.
 
     In the simplest case, the output value of the layer with input size :math:`(N, C, D, H, W)`,
     output :math:`(N, C, D_{out}, H_{out}, W_{out})` and :attr:`kernel_size` :math:`(kD, kH, kW)`
@@ -296,7 +295,7 @@ class MaxPool3d(Module):
 
     If :attr:`padding` is non-zero, then the input is implicitly minimum value on both sides
     for :attr:`padding` number of points. :attr:`dilation` controls the spacing between the kernel points.
-    It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
+    It is harder to describe, but this link has a nice visualization of what :attr:`dilation` does.
 
     Note:
         When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
