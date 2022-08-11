@@ -24,7 +24,7 @@ namespace oneflow {
 namespace one {
 
 struct ReduceSumLikeCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
+  bool requires_grad = false;
   std::vector<int32_t> axis;
 };
 
