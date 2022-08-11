@@ -57,13 +57,15 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   for (auto args_it = module->getBodyRegion().getOps().begin()->getRegions().begin()->args_begin();
        args_it != nullptr; args_it++) {
     ins.emplace_back(args_it->getType().dyn_cast<mlir::RankedTensorType>());
+
+    auto index = ins.size() - 1;
+    CHECK_EQ(Shape(ins[index].getShape().begin(), ins[index].getShape().end()),
+             ctx->InputShape("in", index));
+    CHECK_EQ(mlir::oneflow::support::GetDataTypeFromMLIRType(ins[index].getElementType()),
+             ctx->InputDType("in", index));
   }
 
   CHECK_EQ(ins.size(), 2);
-  CHECK_EQ(Shape(ins[0].getShape().begin(), ins[0].getShape().end()), ctx->InputShape("in", 0));
-  CHECK_EQ(mlir::oneflow::support::GetDataTypeFromMLIRType(ins[1].getElementType()),
-           ctx->InputDType("in", 1));
-
   CHECK_EQ(ctx->inputs().size(), 2);
   CHECK_EQ(ctx->outputs().size(), 1);
   const Shape& in_shape = ctx->InputShape("in", 0);
