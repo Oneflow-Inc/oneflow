@@ -2110,7 +2110,7 @@ class VarianceFunctor {
       for (int i = 0; i < ndim; i++) { axis.emplace_back(i); }
     } else {
       std::vector<int32_t>& dims = *JUST(dim);
-      JUST(maybe_wrap_dim(dims.size(), ndim));
+      JUST(maybe_wrap_dim(dims.size(), ndim));  // only check validation
       std::sort(dims.begin(), dims.end());
       axis.assign(dims.begin(), dims.end());
     }
