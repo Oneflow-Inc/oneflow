@@ -413,12 +413,11 @@ endfunction()
 if(BUILD_TESTING)
   if(of_all_test_cc)
     oneflow_add_test(oneflow_testexe SRCS ${of_all_test_cc} TEST_NAME oneflow_test)
+    target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} glog::glog
+                          ${oneflow_test_libs})
     if(WITH_MLIR)
-      target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} glog::glog
-                            ${oneflow_test_libs} MLIROneFlowExtension)
+      target_link_libraries(oneflow_testexe MLIROneFlowExtension)
     else()
-      target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} glog::glog
-                            ${oneflow_test_libs})
     endif()
   endif()
 
