@@ -171,15 +171,6 @@ def _test_clamp_min(test_case, shape, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
 
 
-def _test_tensor_clamp_min(test_case, shape, device):
-    input = flow.tensor(
-        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
-    )
-    of_out = input.clamp_min(0.1)
-    np_out = np.clip(input.numpy(), 0.1, None)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-
-
 def _test_clamp_min_integral(test_case, shape, device):
     input = flow.tensor(np.random.randint(3, 10, shape), device=flow.device(device))
     of_out = flow.clamp_min(input, 1)
@@ -209,7 +200,6 @@ class TestClampMinModule(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["fun"] = [
             _test_clamp_min,
-            _test_tensor_clamp_min,
             _test_clamp_min_integral,
             _test_clamp_min_backward,
         ]
@@ -238,15 +228,6 @@ def _test_clamp_max(test_case, shape, device):
         np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
     )
     of_out = flow.clamp_max(input, 0.5)
-    np_out = np.clip(input.numpy(), None, 0.5)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-
-
-def _test_tensor_clamp_max(test_case, shape, device):
-    input = flow.tensor(
-        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
-    )
-    of_out = input.clamp_max(0.5)
     np_out = np.clip(input.numpy(), None, 0.5)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
 
@@ -280,7 +261,6 @@ class TestClampMaxModule(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["fun"] = [
             _test_clamp_max,
-            _test_tensor_clamp_max,
             _test_clamp_max_integral,
             _test_clamp_max_backward,
         ]
