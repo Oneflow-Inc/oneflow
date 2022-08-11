@@ -293,7 +293,6 @@ add_docstr(
         oneflow.Size([])
         >>> flow.atleast_1d(x).shape
         oneflow.Size([1])
-        >>>
 
     """,
 )
@@ -360,6 +359,7 @@ add_docstr(
         >>> x = flow.randn(3, 4, 5)
         >>> flow.atleast_3d(x).shape
         oneflow.Size([3, 4, 5])
+
     """,
 )
 
