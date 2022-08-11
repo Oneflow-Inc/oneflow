@@ -29,6 +29,7 @@ def _test_atleast1d_with_random_data(test_case, placement, sbp):
     out = torch.atleast1d([x, y])
     return out
 
+
 @autotest(n=2, check_graph=False)
 def _test_atleast2d_with_random_data(test_case, placement, sbp):
     x = random_tensor(ndim=0).to_global(placement, sbp)
@@ -36,6 +37,7 @@ def _test_atleast2d_with_random_data(test_case, placement, sbp):
     z = random_tensor(ndim=3).to_global(placement, sbp)
     out = torch.atleast1d([x, y, z])
     return out
+
 
 @autotest(n=2, check_graph=False)
 def _test_atleast3d_with_random_data(test_case, placement, sbp):

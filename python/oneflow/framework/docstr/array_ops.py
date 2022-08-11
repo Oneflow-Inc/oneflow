@@ -270,7 +270,9 @@ add_docstr(
 
 add_docstr(
     oneflow.atleast_1d,
-    r"""Returns a 1-D view of each input tensor with 0 dimensions. Tensors with dimensions greater than 0 will be returned directly.
+    r"""Returns a 1-dimensional view of each input tensor with zero dimensions. Input tensors with one or more dimensions are returned as-is.
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.atleast_1d.html.
 
     Args:
         tensors (List[oneflow.Tensor] or oneflow.Tensor): Tensor or list of tensors to be reshaped
@@ -298,7 +300,10 @@ add_docstr(
 
 add_docstr(
     oneflow.atleast_2d,
-    r"""Returns a 2-D view of each input tensor with dimensions less than 2. Tensors with dimensions greater than 1 will be returned directly.
+    r"""Returns a 2-dimensional view of each input tensor with zero dimensions. Input tensors with two or more dimensions are returned as-is.
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.atleast_2d.html.
+
 
     Args:
         tensors (List[oneflow.Tensor] or oneflow.Tensor): Tensor or list of tensors to be reshaped
@@ -328,7 +333,9 @@ add_docstr(
 
 add_docstr(
     oneflow.atleast_3d,
-    r"""Returns a 3-D view of each input tensor with dimensions less than 3. Tensors with dimensions greater than 2 will be returned directly.
+    r"""Returns a 3-dimensional view of each input tensor with zero dimensions. Input tensors with three or more dimensions are returned as-is.
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.atleast_3d.html.
 
     Args:
         tensors (List[oneflow.Tensor] or oneflow.Tensor): Tensor or list of tensors to be reshaped
@@ -395,6 +402,8 @@ add_docstr(
 
     When there are tensors with dimension less than 1, these tensors will be reshaped by ``oneflow.atleast_1d()`` to 1-dims tensors before stacking.
 
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.hstack.html.
+
     Args:
         tensors: (List[oneflow.Tensor]): sequence of tensors to stack
 
@@ -424,6 +433,8 @@ add_docstr(
 
     When there are tensors with dimension less than 2, these tensors will be reshaped by ``oneflow.atleast_2d()`` to 2-D tensors before stacking.
 
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.vstack.html.
+
     Args:
         tensors: (List[oneflow.Tensor]): sequence of tensors to stack
 
@@ -451,6 +462,8 @@ add_docstr(
 
     This is equivalent to concatenation tensors in :attr:`tensors` along the third axis after 1-D and 2-D tensors have been reshaped by ``oneflow.atleast_3d()``.
 
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.dstack.html.
+
     Args:
         tensors: (List[oneflow.Tensor]): sequence of tensors to stack
 
@@ -477,6 +490,8 @@ add_docstr(
     r"""Creates a new tensor by horizontally stacking the tensors in :attr:`tensors`.
 
     Equivalent to :code:`oneflow.hstack(tensors)`, tensors with dimensions less than 2 will be reshaped to :code:`(t.numel(), 1)` before being stacked horizontally.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.column_stack.html.
 
     Args:
         tensors: (List[oneflow.Tensor]): sequence of tensors to stack
@@ -510,6 +525,8 @@ add_docstr(
     This is equivalent to concatenation tensors in :attr:`tensors` along the first axis.
 
     When there are tensors with dimension less than 2, these tensors will be reshaped by ``oneflow.atleast_2d()`` to 2-D tensors before stacking.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.row_stack.html.
 
     Args:
         tensors: (List[oneflow.Tensor]): sequence of tensors to stack
