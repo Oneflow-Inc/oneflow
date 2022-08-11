@@ -65,7 +65,7 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
   const int _offset = _b * T * C + _c;
 
   half u = _u[_c];
-  const half w = __hmul(static_cast<half>(-1.0), exp(static_cast<float>(_w[_c])));
+  const half w = static_cast<half>(-1.0) * static_cast<half>(exp(static_cast<float>(_w[_c])));
   const half* __restrict__ const k = _k + _offset;
   const half* __restrict__ const v = _v + _offset;
   half* __restrict__ const y = _y + _offset;
@@ -239,8 +239,7 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
     half no = w + o > zexp[i] - k[ii] - u ? w + o : zexp[i] - k[ii] - u;
     A = static_cast<half>(exp(static_cast<float>(w + o - no)));
     // B = gy[ii] * z[i] * exp(zexp[i] - k[ii] - u - no);
-    B = __hmul(gy[ii],
-               __hmul(z[i], static_cast<half>(exp(static_cast<float>(zexp[i] - k[ii] - u - no)))));
+    B = gy[ii] * z[i] * static_cast<half>(exp(static_cast<float>(zexp[i] - k[ii] - u - no)));
     gp = A * gp + B;
     gq = A * gq - B * y[i];
     o = no;
