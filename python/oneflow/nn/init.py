@@ -299,7 +299,8 @@ def constant_(tensor, val):
         >>> nn.init.constant_(w, 0.3)
     """
     with flow.no_grad():
-        return tensor.fill_(val)
+        tensor[...] = val
+        return tensor
 
 
 def ones_(tensor):
