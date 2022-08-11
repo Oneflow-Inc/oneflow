@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
+#include <memory>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
@@ -28,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job_desc.h"
@@ -287,20 +289,22 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     // TODO(chengcheng): new memory reused by chunk
-    PlanCompiler::Compile(&job_, &plan_);
+    std::shared_ptr<TaskGraph> task_graph;
+    PlanCompiler::Compile(&job_, &plan_, task_graph);
+    CHECK_OR_RETURN(task_graph);
     tc->Count("Graph name: " + name_ + " Compile plan", 1);
-    PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
+    PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, std::const_pointer_cast<const TaskGraph>(task_graph), variable_op_names_);
     tc->Count("Graph name: " + name_ + " Generate MemBlock and Chunk", 1);
 
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
-      PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
+      PlanUtil::ToDotFile(plan_, std::const_pointer_cast<const TaskGraph>(task_graph), "job_" + name_ + "_plan.dot");
       tc->Count("Graph name: " + name_ + " LogPlan", 1);
     }
     PlanUtil::GenRegisterHint(&plan_);
     tc->Count("Graph name: " + name_ + " GenRegisterHint", 1);
     // TODO(chengcheng): test collective boxing for multi-job.
-    PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
+    PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_, std::const_pointer_cast<const TaskGraph>(task_graph));
     tc->Count("Graph name: " + name_ + " GenCollectiveBoxingPlan", 1);
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
@@ -310,6 +314,38 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       PlanUtil::GenLightPlan(&plan_, name_);
     }
     tc->Count("Graph name: " + name_ + " Memory and Plan Log", 1);
+
+    // NOTE(strint): Add op attr into plan.
+    {
+      auto op_graph = task_graph->GetOpGraph();
+      auto* job_id2op_attribute_ref_table = plan_.mutable_job_id2op_attribute_ref_table();
+      auto* op_name2op_attribute =
+          (*job_id2op_attribute_ref_table)[job_id_].mutable_op_name2op_attribute();
+      const int64_t node_num = op_graph->node_num();
+      const int64_t cpu_num = std::thread::hardware_concurrency();
+      const int64_t thread_pool_size = std::min(node_num, cpu_num);
+      BlockingCounter counter(node_num);
+      std::mutex mtx;
+      ThreadPool thread_pool(thread_pool_size);
+      op_graph->ForEachNode([&](OpNode* op_node) {
+        thread_pool.AddWork([op_node, op_name2op_attribute, &counter, &mtx]() {
+          // TODO(strint): add filter of task type
+          OpAttribute op_attr;
+          CHECK_JUST(op_node->op().ToOpAttribute(&op_attr));
+          const std::string op_name = op_node->op().op_name();
+
+          // TODO(strint): Try to avoid mut plan here
+          std::unique_lock<std::mutex> guard(mtx);
+          auto find_it = op_name2op_attribute->find(op_name);
+          if (find_it == op_name2op_attribute->end()) {
+            op_name2op_attribute->insert({op_name, op_attr});
+          }
+          counter.Decrease();
+        } /* thread_pool.AddWork */);
+      } /* task_gph->ForEachNode */);
+      counter.WaitForeverUntilCntEqualZero();
+      tc->Count("Graph name: " + name_ + " AddOpAttrtoPlan", 1);
+    }
   }
   if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name = "plan:" + job_name();

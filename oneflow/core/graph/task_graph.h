@@ -47,6 +47,9 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   explicit TaskGraph(std::shared_ptr<const OpGraph> op_graph, bool enable_straighten_algorithm);
 
   const char* TypeName() const override { return "TaskGraph"; }
+
+  const std::shared_ptr<const OpGraph>& GetOpGraph() const { return op_graph_; }
+
   void RemoveEmptyRegsts();
   void MergeChainAndAddOrderingCtrlEdgeInSameChain();
 
@@ -98,6 +101,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void ForEachGpuDeviceNodes(
       const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const;
 
+  std::shared_ptr<const OpGraph> op_graph_;
   std::vector<TaskNode*> ordered_task_nodes_;
   std::unique_ptr<HierarchicalSubTskGphBuilder> hierarchical_sub_tsk_gph_builder_;
   std::unique_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;

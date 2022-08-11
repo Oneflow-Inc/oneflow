@@ -33,7 +33,7 @@ void GetOpName2JobId2TaskProtos(
     if (task->exec_sequence().exec_node_size() == 1) {
       const KernelConf& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
       std::string op_name =
-          PlanUtil::GetOpAttribute(plan, task->job_id(), kernel_conf).op_conf().name();
+          PlanUtil::GetOpName(plan, task->job_id(), kernel_conf);
       if (op_names.find(op_name) != op_names.end()) {
         CHECK(task->has_parallel_ctx());
         (*op_name2job_id2task_protos)[op_name][task->job_id()].emplace_back(task);

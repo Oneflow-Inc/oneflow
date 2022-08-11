@@ -423,25 +423,25 @@ void ForEachOpGraphNecessaryCtrlEdge(
 
 }  // namespace
 
-TaskGraph::TaskGraph(std::shared_ptr<const OpGraph> op_graph, bool enable_straighten_algorithm) {
+TaskGraph::TaskGraph(std::shared_ptr<const OpGraph> op_graph, bool enable_straighten_algorithm): op_graph_(op_graph) {
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
   hierarchical_sub_tsk_gph_builder_.reset(new DispatchHierarchicalSubTskGphBuilder());
   HashMap<const OpNode*, std::vector<CompTaskNode*>> op_node2sorted_comp_tasks;
 
-  op_graph->ForEachNode([&](const OpNode* op_node) {
+  op_graph_->ForEachNode([&](const OpNode* op_node) {
     std::vector<CompTaskNode*>* sorted_comp_tasks = &(op_node2sorted_comp_tasks[op_node]);
     GenSortedCompTaskNodes(op_node, sorted_comp_tasks);
     for (CompTaskNode* comp_task : *sorted_comp_tasks) { AddAllocatedNode(comp_task); }
   });
 
-  op_graph->ForEachEdge([&](const OpEdge* op_edge) {
+  op_graph_->ForEachEdge([&](const OpEdge* op_edge) {
     BldSubTskGphMthd method = GetMthdForBldSubTskGph(op_edge);
     (this->*method)(op_edge, op_node2sorted_comp_tasks.at(op_edge->src_node()),
                     op_node2sorted_comp_tasks.at(op_edge->dst_node()));
   });
 
-  ForEachOpGraphNecessaryCtrlEdge(op_graph, [&](const OpNode* src, const OpNode* dst) {
+  ForEachOpGraphNecessaryCtrlEdge(op_graph_, [&](const OpNode* src, const OpNode* dst) {
     const auto& src_task_nodes = op_node2sorted_comp_tasks.at(src);
     const auto& dst_task_nodes = op_node2sorted_comp_tasks.at(dst);
     if (src->op().op_conf().has_src_subset_tick_conf()) {

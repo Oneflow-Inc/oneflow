@@ -20,7 +20,6 @@ limitations under the License.
 #include <google/protobuf/text_format.h>
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/singleton.h"
-#include "oneflow/core/job/cluster.h"
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/global_for.h"
