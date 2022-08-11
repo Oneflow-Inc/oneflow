@@ -1010,7 +1010,7 @@ bool HasBlobDescWithField(std::function<const BlobDesc*(const std::string&)> Get
 
 void Operator::GenKernelConf(
     const std::function<const BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+    const ParallelContext* parallel_ctx, const bool need_op_attr, KernelConf* kernel_conf) const {
   auto* dtype_signature = kernel_conf->mutable_dtype_signature();
   for (const std::string& ibn : input_bns()) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(ibn);
@@ -1018,7 +1018,9 @@ void Operator::GenKernelConf(
     (*dtype_signature->mutable_name2dtype())[ibn] = blob_desc->data_type();
   }
 
-  // CHECK_JUST(ToOpAttribute(kernel_conf->mutable_op_attribute()));
+  if (need_op_attr) {
+    CHECK_JUST(ToOpAttribute(kernel_conf->mutable_op_attribute()));
+  }
   kernel_conf->set_all_blobs_are_static(
       !HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
                             [](const BlobDesc* blob_desc) { return blob_desc->is_dynamic(); }));

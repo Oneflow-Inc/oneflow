@@ -30,13 +30,17 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-void CreateOpAttributeRef(TaskProto* task_proto, const std::string& op_name) {
-  CHECK(task_proto->exec_sequence().exec_node_size() == 1);
-  auto* exec_node = task_proto->mutable_exec_sequence()->mutable_exec_node(0);
-  CHECK(!exec_node->kernel_conf().has_op_attribute());
-  auto* kernel_conf =
-      task_proto->mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
-  kernel_conf->set_op_attribute_ref(op_name);
+void CreateOpAttributeRef(const TaskNode* task_node, TaskProto* task_proto) {
+  // Create Op Attr Ref for task which has logical op.
+  if (task_node->op_node()) {
+    CHECK(task_proto->exec_sequence().exec_node_size() == 1);
+    auto* exec_node = task_proto->mutable_exec_sequence()->mutable_exec_node(0);
+    CHECK(!exec_node->kernel_conf().has_op_attribute());
+    auto* kernel_conf =
+        task_proto->mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
+    const std::string& op_name = task_node->op_node()->op().op_name();
+    kernel_conf->set_op_attribute_ref(op_name);
+  }
 }
 }  // namespace
 
@@ -94,11 +98,7 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
         TaskProto task_proto;
         task_node->ToProto(&task_proto);
         {
-          if (task_node->GetTaskType() == kNormalForward || task_node->GetTaskType() == kRepeat
-              || task_node->GetTaskType() == kAcc) {
-            CHECK(task_node->op_node());
-            CreateOpAttributeRef(&task_proto, task_node->op_node()->op().op_name());
-          }
+          CreateOpAttributeRef(task_node, &task_proto);
           // global mut
           // TODO(strint): Try to avoid mut plan here
           std::unique_lock<std::mutex> guard(mtx);

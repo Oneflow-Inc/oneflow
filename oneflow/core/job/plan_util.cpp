@@ -1182,7 +1182,7 @@ std::string PlanUtil::GetOpName(const Plan* plan, int64_t job_id, const KernelCo
   } else if (kernel_conf.has_op_attribute_ref()) {
     return kernel_conf.op_attribute_ref();
   } else {
-    UNIMPLEMENTED() << "kernel_conf must has either op_attribute or op_attribute_ref. kernel_conf: "
+    UNIMPLEMENTED() << " kernel_conf must has either op_attribute or op_attribute_ref. kernel_conf: "
                     << kernel_conf.DebugString();
   }
 }
