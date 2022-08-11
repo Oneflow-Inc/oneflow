@@ -322,7 +322,7 @@ Maybe<void> Operator::InferLogicalOutBlobDescsIf() {
         && out_blob_desc->shape().size() != out_blob_desc->stride().size()) {
       out_blob_desc->mut_stride() = Stride(out_blob_desc->shape());
     }
-    output_index2logical_blob_desc_->at(i) = out_blob_desc;
+    (*output_index2logical_blob_desc_)[i] = out_blob_desc;
   }
   return Maybe<void>::Ok();
 }
