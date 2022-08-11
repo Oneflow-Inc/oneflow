@@ -24,7 +24,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestAtLeast(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_atleast_1d_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
@@ -32,7 +32,7 @@ class TestAtLeast(flow.unittest.TestCase):
         out = torch.atleast_1d([x, y])
         return out
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_atleast_2d_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
@@ -41,7 +41,7 @@ class TestAtLeast(flow.unittest.TestCase):
         out = torch.atleast_2d([x, y, z])
         return out
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_atleast_3d_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
