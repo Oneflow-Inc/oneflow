@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
@@ -104,7 +105,7 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   const int _offset = _b * T * C + _c;
 
   F u = _u[_c];
-  const F w = -1 * exp(_w[_c]);
+  F w = _w[_c];
   const F* __restrict__ const k = _k + _offset;
   const F* __restrict__ const v = _v + _offset;
   const F* __restrict__ const gy = _gy + _offset;
@@ -164,7 +165,7 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   // Multiply by w because the w -> -exp(w) preprocessing is halfway in the backwards pass, even
   // though it's not in the forward pass
   const int _offsetBC = _b * C + _c;
-  _gw[_offsetBC] += gw * w;
+  _gw[_offsetBC] += gw * _w[_c];
   _gu[_offsetBC] += gu;
 }
 
@@ -308,6 +309,14 @@ class WkvGradGPUKernel final : public user_op::OpKernel {
     user_op::Tensor* gu = ctx->Tensor4ArgNameAndIndex("gu", 0);
     user_op::Tensor* gk = ctx->Tensor4ArgNameAndIndex("gk", 0);
     user_op::Tensor* gv = ctx->Tensor4ArgNameAndIndex("gv", 0);
+    Memset<DeviceType::kCUDA>(ctx->stream(), gw->mut_dptr(), 0,
+                              gw->shape_view().Count(0) * sizeof(F));
+    Memset<DeviceType::kCUDA>(ctx->stream(), gu->mut_dptr(), 0,
+                              gu->shape_view().Count(0) * sizeof(F));
+    Memset<DeviceType::kCUDA>(ctx->stream(), gk->mut_dptr(), 0,
+                              gk->shape_view().Count(0) * sizeof(F));
+    Memset<DeviceType::kCUDA>(ctx->stream(), gv->mut_dptr(), 0,
+                              gv->shape_view().Count(0) * sizeof(F));
     const int64_t B = ctx->Attr<int64_t>("B");
     const int64_t T = ctx->Attr<int64_t>("T");
     const int64_t C = ctx->Attr<int64_t>("C");
