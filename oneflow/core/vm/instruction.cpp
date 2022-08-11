@@ -41,11 +41,17 @@ void Instruction::InitStatus() { instruction_policy_->InitInstructionStatusIf(th
 Maybe<void> Instruction::Prepare() { return instruction_policy_->PrepareIf(this); }
 void Instruction::Compute() { return instruction_policy_->ComputeIf(this); }
 
-void Instruction::DeleteStatusAndClearEdges() {
-  OF_PROFILER_RANGE_GUARD("Instruction::DeleteStatusAndClearEdges");
+void Instruction::DeleteStatusAndCheckEdges() {
+  OF_PROFILER_RANGE_GUARD("Instruction::DeleteStatusAndCheckEdges");
   instruction_policy_->DeleteInstructionStatusIf(this);
-  mut_in_edges()->Clear();
-  mut_out_edges()->Clear();
+  INTRUSIVE_FOR_EACH_PTR(edge, mut_in_edges()) {
+    Instruction* in_instruction = edge->mut_src_instruction();
+    LOG(FATAL) << "unerased edge: " << in_instruction->DebugName() << " -> " << this->DebugName();
+  }
+  INTRUSIVE_FOR_EACH_PTR(edge, mut_out_edges()) {
+    Instruction* out_instruction = edge->mut_dst_instruction();
+    LOG(FATAL) << "unerased edge: " << this->DebugName() << " -> " << out_instruction->DebugName();
+  }
 }
 
 bool Instruction::Done() const {

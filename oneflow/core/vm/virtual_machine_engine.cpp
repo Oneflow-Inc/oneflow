@@ -177,13 +177,14 @@ void VirtualMachineEngine::ReleaseFinishedInstructions(const ScheduleCtx& schedu
   INTRUSIVE_FOR_EACH_PTR(stream, mut_active_stream_list()) {
     while (true) {
       auto* instruction_ptr = stream->mut_running_instruction_list()->Begin();
-      if (instruction_ptr == nullptr || !instruction_ptr->Done()) { break; }
+      if (instruction_ptr == nullptr) { break; }
+      if (!(instruction_ptr->in_edges().empty() && instruction_ptr->Done())) { break; }
       ReleaseInstruction(instruction_ptr);
       // Prevent destructing instruction_ptr.
       intrusive::shared_ptr<Instruction> instruction =
           stream->mut_running_instruction_list()->Erase(instruction_ptr);
       LivelyInstructionListErase(instruction_ptr);
-      instruction_ptr->DeleteStatusAndClearEdges();
+      instruction_ptr->DeleteStatusAndCheckEdges();
     }
     if (stream->running_instruction_list().empty()) { mut_active_stream_list()->Erase(stream); }
   }
@@ -252,7 +253,7 @@ void VirtualMachineEngine::ConsumeDependences(Instruction* instruction) {
 }
 
 bool VirtualMachineEngine::EdgeDispatchable(const Instruction* src, const Instruction* dst) const {
-  return (&src->stream() == &dst->stream()) /* same stream*/
+  return dst->instruction_policy().Prescheduleable(&src->stream(), &dst->stream())
          && !src->dispatched_instruction_hook().empty() /* dispatched */;
 }
 

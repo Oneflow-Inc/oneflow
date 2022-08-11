@@ -396,6 +396,54 @@ class TestTensorIndexing(flow.unittest.TestCase):
         numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
         _test_mask_setitem(test_case, numpy_x)
 
+    def test_combined_mask_setitem(test_case):
+        np_in = np.random.rand(5, 4, 3, 2)
+        np_mask_dim1 = np.array([False, True, False, True])
+        np_mask_dim3 = np.array([True, False])
+        np_update = np.random.rand(2, 5, 3)
+        np_in[:, np_mask_dim1, :, np_mask_dim3] = np_update
+
+        flow_in = flow.tensor(np_in)
+        flow_mask_dim1 = flow.tensor(np_mask_dim1)
+        flow_mask_dim3 = flow.tensor(np_mask_dim3)
+        flow_update = flow.tensor(np_update)
+        flow_in[:, flow_mask_dim1, :, flow_mask_dim3] = flow_update
+        test_case.assertTrue(np.array_equal(flow_in.numpy(), np_in))
+
+    def test_non_contiguous_combined_mask_setitem(test_case):
+        np_in = np.random.rand(5, 4, 3, 2)
+        np_mask_dim1 = np.array([False, True, False])
+        np_mask_dim3 = np.array([True, False, False, True, True])
+        np_update = np.random.rand(4, 2, 3)
+
+        flow_in = flow.tensor(np_in).permute(3, 2, 1, 0)  # (2, 3, 4, 5)
+        flow_mask_dim1 = flow.tensor(np_mask_dim1)
+        flow_mask_dim3 = flow.tensor(np_mask_dim3)
+        flow_update = flow.tensor(np_update).permute(2, 1, 0)  # (3, 2, 4)
+        flow_in[:, flow_mask_dim1, :, flow_mask_dim3] = flow_update
+
+        np_in = np_in.transpose(3, 2, 1, 0)
+        np_update = np_update.transpose(2, 1, 0)
+        np_in[:, np_mask_dim1, :, np_mask_dim3] = np_update
+        test_case.assertTrue(np.array_equal(flow_in.numpy(), np_in))
+
+    def test_combined_indexing_setitem(test_case):
+        np_in = np.random.rand(2, 3, 4)
+        np_in[[0, 1], 1:2, [0, 1]] = 1.0
+
+        flow_in = flow.tensor(np_in)
+        flow_in[[0, 1], 1:2, [0, 1]] = 1.0
+        test_case.assertTrue(np.array_equal(flow_in.numpy(), np_in))
+
+    def test_expand_dim_setitem(test_case):
+        a = flow.tensor(1.0)
+        a[True, ...] = 0.0
+        test_case.assertTrue(np.array_equal(a.numpy(), 0.0))
+
+        a = flow.tensor(1.0)
+        a[False, ...] = 1.0
+        test_case.assertTrue(np.array_equal(a.numpy(), 1.0))
+
     def test_advanced_indexing_with_scalar_index(test_case):
         index = flow.tensor([0, 2])
         x = flow.randn(5)
