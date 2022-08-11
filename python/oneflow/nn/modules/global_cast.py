@@ -19,7 +19,7 @@ import pickle
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.graph.util import ArgsTree
-from oneflow.utils.global_utils.global_utils import (
+from oneflow.utils.global_view.global_utils import (
     to_global_tensor,
     to_local_tensor,
     check_input_global,
