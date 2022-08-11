@@ -249,20 +249,10 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
     positive_stop_vec[i] = RegulateSliceStop(stop_attr[i], logical_dims[i]);
   }
 
-  // BUG(wyg): Input's stride is empty in lazy mode, so we need initialize it for kernel
-  // temporarily. Remove this and copy stride straightly after fix lazy stride infer.
-  auto CopyStrideOrCreate = [](const user_op::Tensor* tensor, SliceParams* slice_params) {
-    if (tensor->shape_view().NumAxes() != tensor->stride().size()) {
-      const Stride& stride = Stride(Shape(tensor->shape_view()));
-      std::copy(stride.begin(), stride.end(), slice_params->stride);
-    } else {
-      std::copy(tensor->stride().begin(), tensor->stride().end(), slice_params->stride);
-    }
-  };
   SliceParams large_slice_param;
-  CopyStrideOrCreate(large, &large_slice_param);
+  std::copy(large->stride().begin(), large->stride().end(), large_slice_param.stride);
   SliceParams small_slice_param;
-  CopyStrideOrCreate(small, &small_slice_param);
+  std::copy(small->stride().begin(), small->stride().end(), small_slice_param.stride);
   ConstructSliceParamsLarge(slice_ctx, positive_start_vec, positive_stop_vec, step_attr,
                             large->shape_view(), &large_slice_param);
   ConstructSliceParamsSmall(slice_ctx, positive_start_vec, positive_stop_vec, step_attr,
