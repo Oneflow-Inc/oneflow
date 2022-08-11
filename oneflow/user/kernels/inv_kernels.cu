@@ -34,6 +34,31 @@ static inline size_t MatrixStride(const user_op::Tensor* batched_matrices) {
   return batched_matrices->shape().At(num_axes - 2) * batched_matrices->shape().At(num_axes - 1);
 }
 
+void OFgetrfBatched(ep::Stream* stream, int n, float** dA_array,
+  int ldda, int* ipiv_array, int* info_array,
+  int batchsize) {
+OF_CUBLAS_CHECK(cublasSgetrfBatched(stream->As<ep::CudaStream>()->cublas_handle(), n, dA_array,
+ldda, ipiv_array, info_array, batchsize));
+}
+void OFgetrfBatched(ep::Stream* stream, int n, double** dA_array,
+  int ldda, int* ipiv_array, int* info_array,
+  int batchsize) {
+OF_CUBLAS_CHECK(cublasDgetrfBatched(stream->As<ep::CudaStream>()->cublas_handle(), n, dA_array,
+ldda, ipiv_array, info_array, batchsize));
+}
+void OFgetriBatched(ep::Stream* stream, int n, float** dA_array,
+  int ldda, int* ipiv_array, float** dC_array,
+  int lddc, int* info_array, int batchsize) {
+OF_CUBLAS_CHECK(cublasSgetriBatched(stream->As<ep::CudaStream>()->cublas_handle(), n, dA_array,
+ldda, ipiv_array, dC_array, lddc, info_array, batchsize));
+}
+void OFgetriBatched(ep::Stream* stream, int n, double** dA_array,
+  int ldda, int* ipiv_array, double** dC_array,
+  int lddc, int* info_array, int batchsize) {
+OF_CUBLAS_CHECK(cublasDgetriBatched(stream->As<ep::CudaStream>()->cublas_handle(), n, dA_array,
+ldda, ipiv_array, dC_array, lddc, info_array, batchsize));
+}
+
 }  // namespace
 
 namespace user_op {
@@ -80,9 +105,9 @@ class CudaInvKernel final : public user_op::OpKernel {
     Memset<DeviceType::kCUDA>(ctx->stream(), infos_getrf_ptr, 0, infos_bytes);
     Memset<DeviceType::kCUDA>(ctx->stream(), infos_getrs_ptr, 0, infos_bytes);
     Memset<DeviceType::kCUDA>(ctx->stream(), ipiv_ptr, 0, ipiv_bytes);
-    NewKernelUtil<DeviceType::kCUDA>::OFgetrfBatched(
+    OFgetrfBatched(
         ctx->stream(), matrix_size, x_pptr, matrix_size, ipiv_ptr, infos_getrf_ptr, batch_count);
-    NewKernelUtil<DeviceType::kCUDA>::OFgetriBatched(ctx->stream(), matrix_size, x_pptr,
+    OFgetriBatched(ctx->stream(), matrix_size, x_pptr,
                                                      matrix_size, ipiv_ptr, y_pptr, matrix_size,
                                                      infos_getrs_ptr, batch_count);
     std::vector<int> infos_getrf_vec_host(batch_count, 0);

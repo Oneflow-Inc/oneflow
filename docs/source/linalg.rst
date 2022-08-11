@@ -19,4 +19,3 @@ Matrix Properties
     matrix_norm
     diagonal
     inv
-
