@@ -71,6 +71,7 @@ class TensorLayoutProcessor final {
   bool converted_;
   TensorTuple contiguous_inputs_;
   std::vector<int> post_process_output_indices_;
+  TensorTuple post_process_outputs_;
 };
 
 }  // namespace functional

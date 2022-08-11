@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/functional/tensor_processor.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/job/lazy_mode.h"
@@ -103,7 +104,7 @@ Maybe<void> TensorProcessor::Apply() {
 
 static bool IsAllContiguous(const TensorTuple& tensors) {
   for (const auto& t : tensors) {
-    if (!t->is_contiguous()) { return false; }
+    if (t && !t->is_contiguous()) { return false; }
   }
   return true;
 }
@@ -111,30 +112,33 @@ static bool IsAllContiguous(const TensorTuple& tensors) {
 Maybe<void> TensorLayoutProcessor::Apply() {
   if (LazyMode::is_enabled()) { return Maybe<void>::Ok(); }
   if (!non_contiguous_enabled_ && !IsAllContiguous(inputs_)) {
-    // inplace is not allowed if input is non-contiguous
-    if (outputs_) {
-      size_t len = std::min(inputs_.size(), outputs_->size());
-      for (int i = 0; i < len; ++i) {
-        // inplace operation is not allowed if input is non-contiguous and non-contiguous is
-        // not supported for this operation
-        if ((*outputs_)[i] == inputs_[i] && !inputs_[i]->is_contiguous()) {
-          (*outputs_)[i] = nullptr;
-          post_process_output_indices_.emplace_back(i);
-        }
-      }
-    }
     contiguous_inputs_.resize(inputs_.size());
     for (int i = 0; i < inputs_.size(); ++i) { contiguous_inputs_[i] = inputs_[i]->contiguous(); }
     converted_ = true;
+  }
+  // inplace operation is not allowed if input is non-contiguous and non-contiguous is
+  // not supported for this operation
+  if (!non_contiguous_enabled_ && outputs_ && !IsAllContiguous(*outputs_)) {
+    post_process_outputs_.reserve(outputs_->size());
+    post_process_output_indices_.reserve(outputs_->size());
+    for (int i = 0; i < outputs_->size(); ++i) {
+      if ((*outputs_)[i] && !(*outputs_)[i]->is_contiguous()) {
+        post_process_outputs_.emplace_back((*outputs_)[i]);
+        post_process_output_indices_.emplace_back(i);
+        (*outputs_)[i] = nullptr;
+      }
+    }
   }
   return Maybe<void>::Ok();
 }
 
 TensorLayoutProcessor::~TensorLayoutProcessor() {
-  for (int i : post_process_output_indices_) {
+  for (int i = 0; i < post_process_output_indices_.size(); ++i) {
     functional::TensorIndex ellipsis_index;
     ellipsis_index.emplace_back(functional::detail::EllipsisIndex());
-    CHECK_JUST(functional::TensorSetItem(inputs_[i], ellipsis_index, (*outputs_)[i]));
+    CHECK_OR_THROW((*outputs_)[i]) << "the output which index is " << i << " should not be nullptr";
+    CHECK_JUST(functional::TensorSetItem(post_process_outputs_[i], ellipsis_index, (*outputs_)[i]));
+    (*outputs_)[i] = post_process_outputs_[i];
   }
 }
 
