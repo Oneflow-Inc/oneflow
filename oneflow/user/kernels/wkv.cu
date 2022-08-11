@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/common/scalar.h"
+#include "oneflow/core/ep/include/primitive/fill.h"
 
 namespace oneflow {
 
@@ -253,6 +255,18 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   _gu[_offsetBC] += gu;
 }
 
+template<typename Context>
+std::unique_ptr<ep::primitive::Fill> NewFillPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("gy", 0)->data_type();
+  return ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->device_type(), data_type);
+}
+
+auto FillPrimitiveExists() {
+  return hob::make_custom("FillPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewFillPrimitive(&ctx).operator bool();
+  });
+}
+
 }  // namespace
 
 template<typename F>
@@ -309,14 +323,14 @@ class WkvGradGPUKernel final : public user_op::OpKernel {
     user_op::Tensor* gu = ctx->Tensor4ArgNameAndIndex("gu", 0);
     user_op::Tensor* gk = ctx->Tensor4ArgNameAndIndex("gk", 0);
     user_op::Tensor* gv = ctx->Tensor4ArgNameAndIndex("gv", 0);
-    Memset<DeviceType::kCUDA>(ctx->stream(), gw->mut_dptr(), 0,
-                              gw->shape_view().Count(0) * sizeof(F));
-    Memset<DeviceType::kCUDA>(ctx->stream(), gu->mut_dptr(), 0,
-                              gu->shape_view().Count(0) * sizeof(F));
-    Memset<DeviceType::kCUDA>(ctx->stream(), gk->mut_dptr(), 0,
-                              gk->shape_view().Count(0) * sizeof(F));
-    Memset<DeviceType::kCUDA>(ctx->stream(), gv->mut_dptr(), 0,
-                              gv->shape_view().Count(0) * sizeof(F));
+
+    Scalar init_value = Scalar(1.0);
+    std::unique_ptr<ep::primitive::Fill> fill = NewFillPrimitive(ctx);
+    CHECK(fill);
+    fill->Launch(ctx->stream(), gw->mut_dptr<F>(), init_value, gw->shape_view().elem_cnt());
+    fill->Launch(ctx->stream(), gu->mut_dptr<F>(), init_value, gu->shape_view().elem_cnt());
+    fill->Launch(ctx->stream(), gk->mut_dptr<F>(), init_value, gk->shape_view().elem_cnt());
+    fill->Launch(ctx->stream(), gv->mut_dptr<F>(), init_value, gv->shape_view().elem_cnt());
     const int64_t B = ctx->Attr<int64_t>("B");
     const int64_t T = ctx->Attr<int64_t>("T");
     const int64_t C = ctx->Attr<int64_t>("C");
@@ -331,11 +345,12 @@ class WkvGradGPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_WKVGRAD_CUDA_KERNEL(dtype)                            \
-  REGISTER_USER_KERNEL("wkv_grad")                                     \
-      .SetCreateFn<WkvGradGPUKernel<dtype>>()                          \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("w", 0) == GetDataType<dtype>::value));
+#define REGISTER_WKVGRAD_CUDA_KERNEL(dtype)                                           \
+  REGISTER_USER_KERNEL("wkv_grad")                                                    \
+      .SetCreateFn<WkvGradGPUKernel<dtype>>()                                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                \
+                       && (user_op::HobDataType("w", 0) == GetDataType<dtype>::value) \
+                       && FillPrimitiveExists());
 
 REGISTER_WKVGRAD_CUDA_KERNEL(float)
 REGISTER_WKVGRAD_CUDA_KERNEL(double)
