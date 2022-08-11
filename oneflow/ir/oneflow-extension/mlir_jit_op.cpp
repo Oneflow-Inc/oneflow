@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowSupport.h"
+#include "llvm/Support/raw_ostream.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/shape.h"
@@ -47,7 +48,10 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 
   mlir::OwningOpRef<mlir::ModuleOp> module =
       mlir::parseSourceString<mlir::ModuleOp>(mlir_assembly_str, &context);
-
+  if (!module) {
+    LOG(ERROR) << "Fail to load mlir assembly";
+    exit(1);
+  }
   auto args_it = module->getBodyRegion().getOps().begin()->getRegions().begin()->args_begin();
   auto in0 = args_it->getType().dyn_cast<mlir::RankedTensorType>();
   auto in1 = (++args_it)->getType().dyn_cast<mlir::RankedTensorType>();
