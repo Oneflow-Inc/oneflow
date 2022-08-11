@@ -88,7 +88,7 @@ def _test_amin_not_keepdim(test_case, device):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestAmax(flow.unittest.TestCase):
+class TestAmin(flow.unittest.TestCase):
     def test_amin(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
@@ -130,6 +130,11 @@ class TestAmax(flow.unittest.TestCase):
         y = torch.amin(x, dim=tuple(dim), keepdim=random().to(bool))
         return y
 
+    @profile(torch.amin)
+    def profile_amin(test_case):
+        input = torch.ones(4,4)
+        torch.amin(input, 1)
+        torch.amin(input, 1 ,True)
 
 if __name__ == "__main__":
     unittest.main()

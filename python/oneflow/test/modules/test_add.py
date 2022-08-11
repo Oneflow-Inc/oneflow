@@ -254,6 +254,10 @@ class TestAddModule(flow.unittest.TestCase):
         z3 = torch.add(s, x3, alpha=alpha)
         return z1, z2, z3
 
+    @profile(torch.add)
+    def profile_add(test_case):
+        torch.add(torch.ones(4),20)
+        torch.add(torch.ones(4),torch.ones(4,1),alpha=10)
 
 if __name__ == "__main__":
     unittest.main()
