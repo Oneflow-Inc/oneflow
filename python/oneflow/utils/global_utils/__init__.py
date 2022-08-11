@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.framework.config_util import api_load_library as load_library
-from oneflow.utils.torch.from_or_to_torch_tensor import from_torch, to_torch
 from oneflow.utils.global_utils.dict_to_global import dict_to_global
 from oneflow.utils.global_utils.global_utils import (
     to_global_tensor,
@@ -22,3 +20,11 @@ from oneflow.utils.global_utils.global_utils import (
     check_input_global,
     check_placement_on_all_ranks,
 )
+
+__all__ = [
+    "dict_to_global",
+    "to_global_tensor",
+    "to_local_tensor",
+    "check_input_global",
+    "check_placement_on_all_ranks",
+]

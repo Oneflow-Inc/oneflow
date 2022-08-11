@@ -19,10 +19,10 @@ import pickle
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.graph.util import ArgsTree
-from oneflow.nn.modules.global_cast import (
-    _check_input_global,
-    _check_placement_on_all_ranks,
-    _to_global_tensor,
+from oneflow.utils.global_utils.global_utils import (
+    to_global_tensor,
+    check_input_global,
+    check_placement_on_all_ranks,
 )
 
 
@@ -46,8 +46,8 @@ def dict_to_global(input_dict, placement, sbp, *, sbp_for_special_keys):
         isinstance(input_dict, dict) or input_dict is None
     ), "The input_dict must be a dict or None!"
 
-    if (not _check_input_global(input_dict)) and (
-        not _check_placement_on_all_ranks(placement)
+    if (not check_input_global(input_dict)) and (
+        not check_placement_on_all_ranks(placement)
     ):
         src_rank = placement.ranks.flat[0]
         cur_rank = flow.env.get_rank()
@@ -88,11 +88,11 @@ def dict_to_global(input_dict, placement, sbp, *, sbp_for_special_keys):
 
     for key in flat_dict.keys():
         if key not in sbp_for_special_keys.keys():
-            flat_dict[key] = _to_global_tensor(
+            flat_dict[key] = to_global_tensor(
                 flat_dict[key], placement=placement, sbp=sbp
             )
         else:
-            flat_dict[key] = _to_global_tensor(
+            flat_dict[key] = to_global_tensor(
                 flat_dict[key], placement=placement, sbp=sbp_for_special_keys[key]
             )
 

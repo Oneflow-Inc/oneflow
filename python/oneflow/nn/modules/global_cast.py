@@ -19,6 +19,12 @@ import pickle
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.graph.util import ArgsTree
+from oneflow.utils.global_utils.global_utils import (
+    to_global_tensor,
+    to_local_tensor,
+    check_input_global,
+    check_placement_on_all_ranks,
+)
 
 
 def _check_sbp(sbp):
@@ -81,59 +87,6 @@ def global_to_global_op(
     return flow._C.to_global(input, placement, sbp, grad_sbp, check_meta, copy)
 
 
-def _to_global_tensor(input_tensor, placement=None, sbp=None, **kwargs):
-    # specific operation for None
-    if input_tensor is None:
-        return local_to_global_op(
-            input=input_tensor, placement=placement, sbp=sbp, **kwargs
-        )
-
-    if input_tensor.is_global:
-        return global_to_global_op(
-            input=input_tensor, placement=placement, sbp=sbp, **kwargs
-        )
-    else:
-        if "grad_sbp" in kwargs:
-            del kwargs["grad_sbp"]
-        return local_to_global_op(
-            input=input_tensor, placement=placement, sbp=sbp, **kwargs
-        )
-
-
-def _check_input_global(input):
-    is_input_global = False
-    if input is not None:
-        if isinstance(input, Tensor):
-            is_input_global = input.is_global
-        elif isinstance(input, (dict, tuple, list)):
-            is_first_tensor_in_input = True
-            input_tree_for_is_global = ArgsTree(input)
-            for arg in input_tree_for_is_global.iter_nodes():
-                if isinstance(arg, Tensor):
-                    if is_first_tensor_in_input:
-                        is_input_global = arg.is_global
-                        is_first_tensor_in_input = False
-                    else:
-                        assert (
-                            arg.is_global == is_input_global
-                        ), "Tensor(s) in the input must be all local or all global."
-
-    return is_input_global
-
-
-def _check_placement_on_all_ranks(placement):
-    # Determine whether the ranks of placement are same as all ranks
-    is_placement_on_all_ranks = False
-    all_ranks = flow.env.all_device_placement("cpu").ranks
-    if (
-        all_ranks.shape == placement.ranks.shape
-        and (all_ranks == placement.ranks).all()
-    ):
-        is_placement_on_all_ranks = True
-
-    return is_placement_on_all_ranks
-
-
 def to_global_op(input, placement=None, sbp=None, **kwargs):
     r"""Converts the input tensor or input tensor(s) in list/tuple/dict to global tensor(s).
     
@@ -187,8 +140,8 @@ def to_global_op(input, placement=None, sbp=None, **kwargs):
     if (
         (not is_input_not_tensor_or_none)
         and (placement is not None)
-        and (not _check_input_global(input))
-        and (not _check_placement_on_all_ranks(placement))
+        and (not check_input_global(input))
+        and (not check_placement_on_all_ranks(placement))
     ):
         src_rank = placement.ranks.flat[0]
         cur_rank = flow.env.get_rank()
@@ -226,13 +179,13 @@ def to_global_op(input, placement=None, sbp=None, **kwargs):
                 )
 
     if isinstance(input, Tensor) or input is None:
-        return _to_global_tensor(input, placement, sbp, **kwargs)
+        return to_global_tensor(input, placement, sbp, **kwargs)
     elif isinstance(input, (dict, tuple, list)):
         input_tree = ArgsTree(input)
 
         def leaf_fn(node):
             if isinstance(node, Tensor) or node is None:
-                return _to_global_tensor(node, placement, sbp, **kwargs)
+                return to_global_tensor(node, placement, sbp, **kwargs)
             else:
                 warnings.warn(
                     "Non-Tensor type: {} encountered, it will remain the same.".format(
@@ -250,13 +203,6 @@ def to_global_op(input, placement=None, sbp=None, **kwargs):
             )
         )
         return input
-
-
-def _to_local_tensor(input_tensor, copy):
-    if not input_tensor.is_global:
-        warnings.warn("The tensor should be global, local tensor will remain the same.")
-        return input_tensor
-    return flow._C.to_local(input_tensor, copy)
 
 
 def to_local_op(input, *, copy=False):
@@ -299,13 +245,13 @@ def to_local_op(input, *, copy=False):
         False
     """
     if isinstance(input, Tensor):
-        return _to_local_tensor(input, copy)
+        return to_local_tensor(input, copy)
     elif isinstance(input, (dict, tuple, list)):
         input_tree = ArgsTree(input)
 
         def leaf_fn(node):
             if isinstance(node, Tensor):
-                return _to_local_tensor(node, copy)
+                return to_local_tensor(node, copy)
             else:
                 warnings.warn(
                     "Non-Tensor type: {} encountered, it will remain the same.".format(
