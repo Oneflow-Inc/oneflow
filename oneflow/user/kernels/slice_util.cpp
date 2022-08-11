@@ -77,14 +77,27 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
     CHECK_EQ(entire_params.ndim, NDIM);
     CHECK_EQ(sliced_params.ndim, NDIM);
     int64_t elem_cnt = entire_params.elem_cnt();
-    SliceIndexHelper<NDIM> entire_splitted_large_idx_cvtr(entire_params.dims);
+    SliceIndexHelper<NDIM> entire_splitted_large_idx_cvtr =
+        NdIndexStrideOffsetHelper<int64_t, NDIM>(entire_params.stride);
     SliceIndexHelper<NDIM> sliced_splitted_large_idx_cvtr(entire_params.size);
-    SliceIndexHelper<NDIM> entire_full_small_idx_cvtr(sliced_params.dims);
+    SliceIndexHelper<NDIM> entire_full_small_idx_cvtr =
+        NdIndexStrideOffsetHelper<int64_t, NDIM>(sliced_params.stride);
     SliceIndexHelper<NDIM> sliced_full_small_idx_cvtr(sliced_params.size);
-    // Calculate the length of continuous part
+
     int cnt = 1;
+    int entire_target_stride = 1;
+    int sliced_target_stride = 1;
+    // Calculate the length of continuous part
     for (int i = NDIM - 1; i >= 0; i--) {
-      if (entire_params.step[i] == 1) { cnt *= entire_params.size[i]; }
+      if (entire_params.stride[i] != entire_target_stride
+          || sliced_params.stride[i] != sliced_target_stride) {
+        break;
+      }
+      entire_target_stride *= entire_params.size[i];
+      sliced_target_stride *= sliced_params.size[i];
+      if (sliced_params.step[i] == 1 && entire_params.step[i] == 1) {
+        cnt *= sliced_params.size[i];
+      }
       if (!entire_params.IsFullSlice(i) || !sliced_params.IsFullSlice(i)) { break; }
     }
     for (int i = 0; i < elem_cnt; i += cnt) {

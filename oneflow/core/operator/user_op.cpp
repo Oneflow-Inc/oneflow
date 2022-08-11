@@ -718,6 +718,10 @@ LogicalBlobId UserOp::lbi4ibn(const std::string& input_bn) const {
 }
 
 LogicalBlobId UserOp::lbi4obn(const std::string& output_bn) const {
+  // TODO: remove this workaround and use different lbi for input and output
+  const bool is_copy_hd = op_conf().user_conf().op_type_name() == "copy_d2h"
+                          || op_conf().user_conf().op_type_name() == "copy_h2d";
+  if (is_copy_hd) { return GenLogicalBlobId(op_conf().user_conf().input().at("in").s(0)); }
   auto pair = GenUnRepeatedBn(output_bn);
   auto ret = GenLogicalBlobId(op_conf().user_conf().output().at(pair.first).s(pair.second));
   CHECK_EQ(ret.op_name(), op_conf().name());
