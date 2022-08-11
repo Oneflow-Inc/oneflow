@@ -2632,6 +2632,17 @@ class OneHotFunctor {
   std::shared_ptr<OpExpr> one_hot_op_;
 };
 
+class PairwiseDistanceFunctor {
+  public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& y, const double& p, const double& eps, bool keepdim) const {
+    int64_t xdim = x->ndim();
+    int64_t ydim = y->ndim();
+    int64_t output_dim = xdim > ydim ? xdim: ydim;
+    auto sub = JUST(ScalarAdd(JUST(Sub(x, y, 1, false)), eps, 1, false));
+    return ScalarNorm(sub, p, output_dim - 1, keepdim, NullOpt);
+  }
+};
+
 class CosineSimilarityFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -3835,6 +3846,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneHotFunctor>("OneHot");
   m.add_functor<impl::FusedSelfAttentionFunctor>("FusedSelfAttention");
   m.add_functor<impl::FusedSelfAttentionGradFunctor>("FusedSelfAttentionGrad");
+  m.add_functor<impl::PairwiseDistanceFunctor>("PairwiseDistance");
   m.add_functor<impl::CosineSimilarityFunctor>("CosineSimilarity");
   m.add_functor<impl::NormalizeFunctor>("Normalize");
   m.add_functor<impl::L2NormalizeFunctor>("L2Normalize");
