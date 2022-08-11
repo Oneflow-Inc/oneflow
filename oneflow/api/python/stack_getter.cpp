@@ -28,7 +28,7 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-using Stack = small_vector<std::pair<PyFrameObject*, int>, 20>;
+using Stack = small_vector<std::pair<PyFrameObject*, int>, 10>;
 
 class PyStackGetter final : public ForeignStackGetter {
  public:
