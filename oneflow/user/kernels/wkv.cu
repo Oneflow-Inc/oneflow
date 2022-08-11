@@ -65,7 +65,7 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
   const int _offset = _b * T * C + _c;
 
   half u = _u[_c];
-  const half w = __hmul(static_cast<half>(-1.0), hexp(_w[_c]));
+  const half w = __hmul(static_cast<half>(-1.0), exp(static_cast<float>(_w[_c])));
   const half* __restrict__ const k = _k + _offset;
   const half* __restrict__ const v = _v + _offset;
   half* __restrict__ const y = _y + _offset;
@@ -77,14 +77,14 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
 
     // half no = max(o, u + k[ii]);
     half no = o > u + k[ii] ? o : u + k[ii];
-    half A = hexp(o - no);
-    half B = hexp(u + k[ii] - no);
+    half A = static_cast<half>(exp(static_cast<float>(o - no)));
+    half B = static_cast<half>(exp(static_cast<float>(u + k[ii] - no)));
     y[ii] = (A * p + B * v[ii]) / (A * q + B);
 
     // no = max(w + o, k[ii]);
     no = w + o > k[ii] ? w + o : k[ii];
-    A = hexp(w + o - no);
-    B = hexp(k[ii] - no);
+    A = static_cast<half>(exp(static_cast<float>(w + o - no)));
+    B = static_cast<half>(exp(static_cast<float>(k[ii] - no)));
     p = A * p + B * v[ii];
     q = A * q + B;
     o = no;
@@ -183,7 +183,7 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   const int _offset = _b * T * C + _c;
 
   half u = _u[_c];
-  const half w = static_cast<half>(-1.0) * hexp(_w[_c]);
+  const half w = static_cast<half>(-1.0) * static_cast<half>(exp(static_cast<float>(_w[_c])));
   const half* __restrict__ const k = _k + _offset;
   const half* __restrict__ const v = _v + _offset;
   const half* __restrict__ const gy = _gy + _offset;
@@ -193,20 +193,20 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
 
   half y[1024], z[1024], zexp[1024];
 
-  half gw = 0, gu = 0;
-  half p = 0, q = 0;
-  half dpdw = 0, dqdw = 0;
-  half o = -65500;
+  half gw = static_cast<half>(0.0), gu = static_cast<half>(0.0);
+  half p = static_cast<half>(0.0), q = static_cast<half>(0.0);
+  half dpdw = static_cast<half>(0.0), dqdw = static_cast<half>(0.0);
+  half o = static_cast<half>(-65500.0);
   for (int i = 0; i < T; i++) {
     const int ii = i * C;
     // half no = max(o, k[ii] + u);
     half no = o > k[ii] + u ? o : k[ii] + u;
-    half A = hexp(o - no);
-    half B = hexp(k[ii] + u - no);
+    half A = static_cast<half>(exp(static_cast<float>(o - no)));
+    half B = static_cast<half>(exp(static_cast<float>(k[ii] + u - no)));
 
     half num = A * p + B * v[ii];
     // half iden = 1 / (A * q + B);
-    half iden = __hdiv(1.0, A * q + B);
+    half iden = static_cast<half>(1.0) / (A * q + B);
 
     y[i] = num * iden;
     z[i] = iden;
@@ -217,8 +217,8 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
 
     // no = max(w + o, k[ii]);
     no = w + o > k[ii] ? w + o : k[ii];
-    A = hexp(w + o - no);
-    B = hexp(k[ii] - no);
+    A = static_cast<half>(exp(static_cast<float>(w + o - no)));
+    B = static_cast<half>(exp(static_cast<float>(k[ii] - no)));
     dpdw = A * (p + dpdw);
     dqdw = A * (q + dqdw);
     p = A * p + B * v[ii];
@@ -226,20 +226,21 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
     o = no;
   }
 
-  half gp = 0, gq = 0;
-  o = -65500;
+  half gp = static_cast<half>(0.0), gq = static_cast<half>(0.0);
+  o = static_cast<half>(-65500.0);
   for (int i = T - 1; i >= 0; i--) {
     const int ii = i * C;
-    half A = gy[ii] * z[i] * hexp(zexp[i]);
-    half B = hexp(k[ii] + o);
+    half A = gy[ii] * z[i] * static_cast<half>(exp(static_cast<float>(zexp[i])));
+    half B = static_cast<half>(exp(static_cast<float>(k[ii] + o)));
     gk[ii] = A * (v[ii] - y[i]) + B * (gp * v[ii] + gq);
     gv[ii] = A + B * gp;
 
     // half no = max(w + o, zexp[i] - k[ii] - u);
     half no = w + o > zexp[i] - k[ii] - u ? w + o : zexp[i] - k[ii] - u;
-    A = hexp(w + o - no);
+    A = static_cast<half>(exp(static_cast<float>(w + o - no)));
     // B = gy[ii] * z[i] * exp(zexp[i] - k[ii] - u - no);
-    B = __hmul(gy[ii], __hmul(z[i], hexp(zexp[i] - k[ii] - u - no)));
+    B = __hmul(gy[ii],
+               __hmul(z[i], static_cast<half>(exp(static_cast<float>(zexp[i] - k[ii] - u - no)))));
     gp = A * gp + B;
     gq = A * gq - B * y[i];
     o = no;
