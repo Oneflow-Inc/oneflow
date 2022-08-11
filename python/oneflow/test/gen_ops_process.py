@@ -65,6 +65,29 @@ def get_api(rst_dir):
     api_list = api_str.strip().replace(" ", "").replace(",", "").split("\n")
     return api_list
 
+def get_profile_func(path):
+    """
+    Iterate through files under `path` to find out all operator names, 
+    and update code links to file_func_map_list by file_func_map. 
+    """
+    files = os.listdir(path)
+    commit_bytes = subprocess.check_output(["git", "rev-parse", "HEAD"])
+    commit_str = commit_bytes.decode("utf-8").replace("\n", "")
+    result_profile_func_list = []
+    for file in files:
+        if file!="log" and not os.path.isdir(file) and file.find("__pycache__") == -1:
+            f = open(path + "/" + file)
+            last_line = ""
+            iter_f = iter(f)
+            line_num = 1
+            for line in iter_f:
+                line = line.strip()
+                if "@profile" in line:
+                    tem_profile=line[9:-1]
+                    tem_profile_name=tem_profile.split(".")[-1]
+                    result_profile_func_list.append(tem_profile_name)
+                
+    return result_profile_func_list
 
 def get_test_func(path):
     """
@@ -168,31 +191,35 @@ if __name__ == "__main__":
     ]
     num_cols = 4
     test_func_list = list()
+    test_prifile_list = list()
     file_func_map = dict()
     file_func_map_list = []
 
     for i in range(0, len(dir_list)):
         tmp_func_list = list()
+        tmp_profile_list = list()
         file_func_map = dict()
         for path in dir_list[i]:
             tmp_func_list.extend(get_test_func(path))
+            tmp_profile_list.extend(get_profile_func(path))
         test_func_list.append(tmp_func_list)
+        test_prifile_list.extend(tmp_profile_list)
         file_func_map_list.append(file_func_map)
 
     result_list = []
     result_list.append(f"## Ops Version : Alpha")
     result_list.append(f"")
     result_list.append(f"")
-    table_head = f"| Op Name | Doc Test | Compatiable/Completeness Test | Exception |"
+    table_head = f"| Op Name | Doc Test | Compatiable/Completeness Test | Exception | Performance Test |"
     result_list.append(table_head)
     result_list.append(
-        f"| ------------------------- | ------------- | ----------------------------- | --------- |"
+        f"| ------------------------- | ------------- | ----------------------------- | --------- | ---------------- |"
     )
 
     cnt0 = 0  # the number of doc_test
     cnt1 = 0  # the number of compatiable_completeness_test
     cnt2 = 0  # the number of exception_test
-
+    cnt3 = 0  # the number of profile_test
     for name in api_list:
         table_line = f"| {name} |"
         name = name.split(".")[-1]
@@ -207,11 +234,17 @@ if __name__ == "__main__":
                     cnt2 += 1
                 table_line += file_func_map_list[i][match_name]
             table_line += "  |"
+        if name in test_prifile_list:
+            table_line += " done "
+            cnt3 += 1
+        table_line += "  |"
+
         result_list.append(table_line)
 
     doc_test_ratio = cnt0 * 1.0 / len(api_list)
     compatiable_completeness_test_ratio = cnt1 * 1.0 / len(api_list)
     exception_test_ratio = cnt2 * 1.0 / len(api_list)
+    performance_test_ratio = cnt3 * 1.0 / len(api_list)
 
     result_list.append(f"## Test Data Summary")
     result_list.append(f"- OneFlow Total API Number: {len(api_list)}")
@@ -224,7 +257,9 @@ if __name__ == "__main__":
     result_list.append(
         f"- Exception Test Ratio: {100*exception_test_ratio:.2f}% ({cnt2} / {len(api_list)})"
     )
-
+    result_list.append(
+        f"- Performance Test Ratio: {100*performance_test_ratio:.2f}% ({cnt3} / {len(api_list)})"
+    )
     f = open("./README.md", "w")
     for line in result_list:
         f.write(line + "\n")
