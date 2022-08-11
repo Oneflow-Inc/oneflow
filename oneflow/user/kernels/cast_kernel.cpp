@@ -67,17 +67,9 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
                                   input_stride.data(), input->dptr(), scalar_ndim,
                                   output_shape.data(), output_stride.data(), output->mut_dptr());
     } else {
-      if (ndim > 0 && input->stride().size() == 0) {
-        // TODO:support view(stride) mechanism in lazy mode and remove the if judgement
-        Stride in_stride(input->shape_view());
-        broadcast_primitive->Launch(
-            ctx->stream(), ndim, input->shape_view().data(), in_stride.data(), input->dptr(), ndim,
-            output->shape_view().data(), output->stride().data(), output->mut_dptr());
-      } else {
-        broadcast_primitive->Launch(
-            ctx->stream(), ndim, input->shape_view().data(), input->stride().data(), input->dptr(),
-            ndim, output->shape_view().data(), output->stride().data(), output->mut_dptr());
-      }
+      broadcast_primitive->Launch(
+          ctx->stream(), ndim, input->shape_view().data(), input->stride().data(), input->dptr(),
+          ndim, output->shape_view().data(), output->stride().data(), output->mut_dptr());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
