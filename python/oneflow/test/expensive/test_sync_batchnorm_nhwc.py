@@ -30,14 +30,20 @@ class TestSyncBatchNormChannelLast(flow.unittest.TestCase):
         os.environ["ONEFLOW_ENABLE_NHWC"] = "1"
 
         channel = 8
-        of_input = flow.rand(32, 256, 256, channel, requires_grad=True, dtype=flow.float32, device="cuda")
+        of_input = flow.rand(
+            32, 256, 256, channel, requires_grad=True, dtype=flow.float32, device="cuda"
+        )
         of_bn = flow.nn.BatchNorm2d(channel)
         of_bn = flow.nn.SyncBatchNorm.convert_sync_batchnorm(of_bn).cuda()
         of_res = of_bn(of_input)
 
-        torch.distributed.init_process_group(backend="gloo", group_name='test_sync_batchnorm2d_nhwc')
+        torch.distributed.init_process_group(
+            backend="gloo", group_name="test_sync_batchnorm2d_nhwc"
+        )
         torch_input = torch.tensor(
-            of_input.numpy(), requires_grad=True, device=f"cuda:{torch.distributed.get_rank()}"
+            of_input.numpy(),
+            requires_grad=True,
+            device=f"cuda:{torch.distributed.get_rank()}",
         )
         torch_input1 = torch_input.permute(0, 3, 1, 2)
         torch_input1 = torch_input1.to(memory_format=torch.channels_last)
@@ -59,7 +65,9 @@ class TestSyncBatchNormChannelLast(flow.unittest.TestCase):
         )
         test_case.assertTrue(
             np.allclose(
-                torch_input.grad.detach().cpu().numpy(), of_input.grad.numpy(), atol=1e-8
+                torch_input.grad.detach().cpu().numpy(),
+                of_input.grad.numpy(),
+                atol=1e-8,
             )
         )
         torch.distributed.destroy_process_group()
