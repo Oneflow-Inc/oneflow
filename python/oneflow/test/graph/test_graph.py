@@ -71,7 +71,6 @@ class TestGraph(flow.unittest.TestCase):
                 return self.m(x)
 
         g = CustomGraphNestedModule()
-        test_case.assertEqual(g.name, g._c_nn_graph.name)
         test_case.assertTrue(isinstance(g.m, flow.nn.graph.Block))
         test_case.assertEqual(g.m.type, "MODULE")
         test_case.assertEqual(g.m.name, "m")

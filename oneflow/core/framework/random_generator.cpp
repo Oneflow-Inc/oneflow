@@ -45,7 +45,7 @@ Maybe<void> ManualSeed(uint64_t seed, const std::string& device, int device_inde
   } else {
     return Error::RuntimeError() << "Invalid device " << device
                                  << " for making generator, please make sure the device is one of "
-                                 << PrintAvailableDevices();
+                                 << PrintGeneratorAvailableDevices();
   }
   return Maybe<void>::Ok();
 }
@@ -149,7 +149,7 @@ Maybe<Generator> MakeGenerator(const std::string& device, int device_index) {
   } else {
     return Error::RuntimeError() << "Invalid device " << device
                                  << " for making generator, please make sure the device is one of "
-                                 << PrintAvailableDevices();
+                                 << PrintGeneratorAvailableDevices();
   }
 }
 
@@ -167,7 +167,7 @@ Maybe<Generator> DefaultGenerator(const std::string& device, int device_index) {
   } else {
     return Error::RuntimeError() << "Invalid device " << device
                                  << " for making generator, please make sure the device is one of "
-                                 << PrintAvailableDevices();
+                                 << PrintGeneratorAvailableDevices();
   }
 }
 

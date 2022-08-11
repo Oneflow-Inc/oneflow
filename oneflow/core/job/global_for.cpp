@@ -15,13 +15,12 @@ limitations under the License.
 */
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/error.h"
-#include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-COMMAND(Global<bool, EagerExecution>::SetAllocated(new bool(false)));
-COMMAND(Global<Optional<bool>, MultiClient>::SetAllocated(new Optional<bool>()));
+COMMAND(Singleton<Optional<bool>, MultiClient>::SetAllocated(new Optional<bool>()));
 
 }  // namespace oneflow

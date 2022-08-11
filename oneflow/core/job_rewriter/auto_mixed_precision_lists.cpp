@@ -27,8 +27,11 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "prelu",
                                "tf_prelu",
                                "cublas_fused_mlp",
+                               "fused_matmul_bias_add_relu_dropout",
                                "fused_dot_feature_interaction",
-                               "embedding_lookup_placeholder"};
+                               "embedding_lookup_placeholder",
+                               "binary_cross_entropy_with_logits_reduce_mean",
+                               "fused_cross_feature_interaction"};
   return white_list;
 }
 
@@ -44,7 +47,6 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "tf_avg_pool_2d",
                               "tf_avg_pool_3d",
                               "bias_add",
-                              "multiply",
                               "sigmoid_v2",
                               "tanh",
                               "sqrt",
@@ -58,10 +60,13 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "layer_norm",
                               "dropout",
                               "softmax",
+                              "log_softmax",
                               "gelu",
                               "normalization",
                               "normalization_add_relu",
                               "sparse_softmax_cross_entropy",
+                              "sparse_softmax_cross_entropy_ms",
+                              "nll",
                               "fused_tril_scale_softmax_mask_scale",
                               "fused_scale_mask_softmax_dropout",
                               "fused_scale_mask_softmax",
@@ -90,6 +95,7 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "identity",
                                "flatten",
                                "squeeze",
+                               "embedding",
                                "expand_dims",
                                "cast_to_static_shape",
                                "parallel_cast",

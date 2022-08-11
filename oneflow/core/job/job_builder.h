@@ -81,6 +81,7 @@ class JobBuilder final {
  private:
   void AddOpNamesToPlacementGroup(const std::vector<std::string>& op_names,
                                   const ParallelConf& parallel_conf);
+  void AddOpToModuleConf(const OperatorConf& op_conf);
 
   Job* job_;
   HashMap<std::string, OperatorConf*> op_name2op_conf_;

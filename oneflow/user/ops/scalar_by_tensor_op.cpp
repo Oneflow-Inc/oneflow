@@ -23,8 +23,9 @@ namespace {
 Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& scalar = ctx->InputTensorDesc("scalar", 0);
-  CHECK_EQ_OR_RETURN(scalar.shape().elem_cnt(), 1) << "op: " << ctx->op_name();
-  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
+  CHECK_EQ_OR_RETURN(scalar.shape().elem_cnt(), 1)
+      << Error::RuntimeError() << "The input scalar tensor is not a scalar";
+  user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
   *y->mut_shape() = x.shape();
   *y->mut_is_dynamic() = x.is_dynamic();
   return Maybe<void>::Ok();
@@ -33,8 +34,9 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
 Maybe<void> DataTypeInferFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& scalar = ctx->InputTensorDesc("scalar", 0);
-  CHECK_EQ_OR_RETURN(x.data_type(), scalar.data_type());
-  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
+  CHECK_EQ_OR_RETURN(x.data_type(), scalar.data_type())
+      << Error::TypeError() << "Tensors x and scalar have different type";
+  user_op::TensorDesc* y = ctx->MutOutputTensorDesc("y", 0);
   *y->mut_data_type() = x.data_type();
   return Maybe<void>::Ok();
 }
@@ -221,17 +223,17 @@ REGISTER_USER_OP_GRAD("scalar_mul_by_tensor")
         int64_t num_axes = op.TensorDesc4ArgNameAndIndex("y", 0).shape().NumAxes();
         user_op::UserOpConfWrapperBuilder builder0(op.op_name() + "scalar_grad_multiply");
         user_op::UserOpConfWrapper scalar_grad_multiply_op =
-            builder0.Op("multiply")
+            builder0.Op("broadcast_mul")
                 .Input("x", op.GetGradTensorWithOpOutput("y", 0))
                 .Input("y", op.input("x", 0))
-                .Output("out")
+                .Output("z")
                 .Build();
         std::vector<int32_t> axes_vec(num_axes);
         std::iota(axes_vec.begin(), axes_vec.end(), 0);
         user_op::UserOpConfWrapperBuilder builder1(op.op_name() + "scalar_grad_reduce_sum");
         user_op::UserOpConfWrapper scalar_grad_reduce_sum_op =
             builder1.Op("reduce_sum")
-                .Input("input_tensor", scalar_grad_multiply_op.output("out", 0))
+                .Input("input_tensor", scalar_grad_multiply_op.output("z", 0))
                 .Output("output_tensor")
                 .Attr("axis", axes_vec)
                 .Attr("keepdims", false)

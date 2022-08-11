@@ -239,7 +239,7 @@ class RoIAlignKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* rois_blob = ctx->Tensor4ArgNameAndIndex("rois", 0);
-    if (rois_blob->shape().elem_cnt() == 0) { return; }
+    if (rois_blob->shape_view().elem_cnt() == 0) { return; }
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t pooled_h = ctx->Attr<int32_t>("pooled_h");
     const int32_t pooled_w = ctx->Attr<int32_t>("pooled_w");
@@ -247,12 +247,12 @@ class RoIAlignKernel final : public user_op::OpKernel {
     const int32_t sampling_ratio = ctx->Attr<int32_t>("sampling_ratio");
     const bool aligned = ctx->Attr<bool>("aligned");
 
-    const int64_t elem_cnt = y_blob->shape().elem_cnt();
+    const int64_t elem_cnt = y_blob->shape_view().elem_cnt();
     RoiAlignForward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         elem_cnt, x_blob->dptr<T>(), rois_blob->dptr<T>(), spatial_scale, sampling_ratio,
-        x_blob->shape().At(1), x_blob->shape().At(2), x_blob->shape().At(3), pooled_h, pooled_w,
-        aligned, y_blob->mut_dptr<T>());
+        x_blob->shape_view().At(1), x_blob->shape_view().At(2), x_blob->shape_view().At(3),
+        pooled_h, pooled_w, aligned, y_blob->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -269,7 +269,7 @@ class RoIAlignGradKernel final : public user_op::OpKernel {
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
     if (dx_blob == nullptr) { return; }
     Memset<DeviceType::kCUDA>(ctx->stream(), dx_blob->mut_dptr<T>(), 0,
-                              dx_blob->shape().elem_cnt() * sizeof(T));
+                              dx_blob->shape_view().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* rois_blob = ctx->Tensor4ArgNameAndIndex("rois", 0);
     const int32_t pooled_h = ctx->Attr<int32_t>("pooled_h");
@@ -278,13 +278,13 @@ class RoIAlignGradKernel final : public user_op::OpKernel {
     const int32_t sampling_ratio = ctx->Attr<int32_t>("sampling_ratio");
     const bool aligned = ctx->Attr<bool>("aligned");
 
-    const int64_t elem_cnt = dy_blob->shape().elem_cnt();
+    const int64_t elem_cnt = dy_blob->shape_view().elem_cnt();
     if (elem_cnt > 0) {
       RoiAlignBackward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           elem_cnt, dy_blob->dptr<T>(), rois_blob->dptr<T>(), spatial_scale, sampling_ratio,
-          dx_blob->shape().At(1), dx_blob->shape().At(2), dx_blob->shape().At(3), pooled_h,
-          pooled_w, aligned, dx_blob->mut_dptr<T>());
+          dx_blob->shape_view().At(1), dx_blob->shape_view().At(2), dx_blob->shape_view().At(3),
+          pooled_h, pooled_w, aligned, dx_blob->mut_dptr<T>());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

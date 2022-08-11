@@ -37,6 +37,8 @@ class CopyTaskNode : public TransportTaskNode {
   void InferProducedDataRegstTimeShape() final;
 };
 
+enum CopyHdType { H2D = 0, D2H = 1 };
+
 class CopyHdTaskNode final : public CopyTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyHdTaskNode);
@@ -45,13 +47,13 @@ class CopyHdTaskNode final : public CopyTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kCopyHd; }
 
-  void Init(CopyHdOpConf::Type, const DeviceId& device_id, const LogicalBlobId& lbi);
+  void Init(CopyHdType, const DeviceId& device_id, const LogicalBlobId& lbi);
 
-  CopyHdOpConf::Type copy_type() const { return copy_type_; }
+  CopyHdType copy_type() const { return copy_type_; }
   MemZoneId MemZoneId121() const override {
-    if (copy_type_ == CopyHdOpConf::H2D) {
+    if (copy_type_ == CopyHdType::H2D) {
       return TaskNode::MemZoneId121();
-    } else if (copy_type_ == CopyHdOpConf::D2H) {
+    } else if (copy_type_ == CopyHdType::D2H) {
       return GetNodeCPUMemZoneId(this->machine_id());
     } else {
       UNIMPLEMENTED();
@@ -63,7 +65,7 @@ class CopyHdTaskNode final : public CopyTaskNode {
   void InitProducedRegstMemCase(MemoryCase*) override;
   OperatorConf NewCopyOpConf() override;
 
-  CopyHdOpConf::Type copy_type_;
+  CopyHdType copy_type_;
 };
 
 class CopyCommNetTaskNode final : public CopyTaskNode {

@@ -37,7 +37,6 @@ class KernelRegContext {
   virtual ~KernelRegContext() = default;
 
   virtual DeviceType device_type() const = 0;
-  virtual const std::string& device_tag() const = 0;
   virtual const ParallelContext& parallel_ctx() const = 0;
   virtual const TensorDesc* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) const = 0;
 

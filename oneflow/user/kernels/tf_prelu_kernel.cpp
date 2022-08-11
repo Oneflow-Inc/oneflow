@@ -33,11 +33,11 @@ class TfCpuPReluKernel final : public user_op::OpKernel {
     const T* x_ptr = x->dptr<T>();
     T* y_ptr = y->mut_dptr<T>();
     T* broadcasted_alpha_ptr = broadcasted_alpha->mut_dptr<T>();
-    const int32_t elem_cnt = x->shape().elem_cnt();
+    const int32_t elem_cnt = x->shape_view().elem_cnt();
     const Shape& left_extended_shape =
-        CreateLeftExtendedShape(ShapeView(alpha->shape()), x->shape().NumAxes());
+        CreateLeftExtendedShape(ShapeView(alpha->shape_view()), x->shape_view().NumAxes());
     NdarrayUtil<DeviceType::kCPU, T>::BroadcastTo(
-        ctx->stream(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha_ptr),
+        ctx->stream(), XpuVarNdarray<T>(x->shape_view(), broadcasted_alpha_ptr),
         XpuVarNdarray<const T>(left_extended_shape, alpha->dptr<T>()));
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
       y_ptr[i] = x_ptr[i] > 0 ? x_ptr[i] : x_ptr[i] * broadcasted_alpha_ptr[i];
@@ -76,16 +76,16 @@ class TfCpuPReluGradKernel final : public user_op::OpKernel {
     const T* x_ptr = x->dptr<T>();
     const T* dy_ptr = dy->dptr<T>();
     T* dx_ptr = dx->mut_dptr<T>();
-    const int32_t elem_cnt = x->shape().elem_cnt();
+    const int32_t elem_cnt = x->shape_view().elem_cnt();
     T* broadcasted_alpha_ptr = tmp_buffer->mut_dptr<T>();
     T* broadcasted_alpha_diff = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()
                                                      + GetCudaAlignedSize(elem_cnt * sizeof(T)));
     T* reduce_sum_tmp_buf = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()
                                                  + 2 * GetCudaAlignedSize(elem_cnt * sizeof(T)));
     const Shape& left_extended_shape =
-        CreateLeftExtendedShape(ShapeView(alpha->shape()), x->shape().NumAxes());
+        CreateLeftExtendedShape(ShapeView(alpha->shape_view()), x->shape_view().NumAxes());
     NdarrayUtil<DeviceType::kCPU, T>::BroadcastTo(
-        ctx->stream(), XpuVarNdarray<T>(x->shape(), broadcasted_alpha_ptr),
+        ctx->stream(), XpuVarNdarray<T>(x->shape_view(), broadcasted_alpha_ptr),
         XpuVarNdarray<const T>(left_extended_shape, alpha->dptr<T>()));
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
       dx_ptr[i] = x_ptr[i] > 0 ? dy_ptr[i] : dy_ptr[i] * broadcasted_alpha_ptr[i];
@@ -93,8 +93,8 @@ class TfCpuPReluGradKernel final : public user_op::OpKernel {
     }
     NdarrayUtil<DeviceType::kCPU, T>::ReduceSum(
         ctx->stream(), XpuVarNdarray<T>(left_extended_shape, alpha_diff->mut_dptr<T>()),
-        XpuVarNdarray<const T>(x->shape(), broadcasted_alpha_diff),
-        XpuVarNdarray<T>(x->shape(), reduce_sum_tmp_buf));
+        XpuVarNdarray<const T>(x->shape_view(), broadcasted_alpha_diff),
+        XpuVarNdarray<T>(x->shape_view(), reduce_sum_tmp_buf));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -13,22 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <vector>
+#include "oneflow/core/framework/variable_tensor_mgr.h"
+#include "oneflow/core/operator/variable_op.h"
+#include "oneflow/core/framework/sbp_context.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/framework/random_generator.h"
+#include "OneFlow/SBP/SBPImporter.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/OneFlowSupport.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SmallVector.h"
+#include "OneFlow/SBP/SBPAttributes.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/MLIRContext.h"
-#include "oneflow/core/framework/random_generator.h"
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
-#include "llvm/Support/Casting.h"
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
@@ -37,7 +37,7 @@ limitations under the License.
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/Passes.h"
+#include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/Transforms/Passes.h"
@@ -56,13 +56,21 @@ limitations under the License.
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
-#include "oneflow/core/framework/variable_tensor_mgr.h"
+
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
+
+#include <algorithm>
+#include <vector>
 
 #ifdef WITH_MLIR_CUDA_CODEGEN
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
-#include "mlir/Dialect/GPU/Passes.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
 #endif  // WITH_MLIR_CUDA_CODEGEN
 
@@ -349,9 +357,9 @@ IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value)
 
 NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name) {
   NamedAttrList attrs;
-  attrs.set("op_name", StringAttr::get(ctx, op_name));
-  attrs.set("device_tag", StringAttr::get(ctx, "cpu"));
-  attrs.set("device_name",
+  attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), StringAttr::get(ctx, op_name));
+  attrs.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(), StringAttr::get(ctx, "cpu"));
+  attrs.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
             ArrayAttr::get(ctx, llvm::to_vector<8>(llvm::map_range(ArrayRef<StringRef>({"@0:0"}),
                                                                    [&](StringRef v) -> Attribute {
                                                                      return StringAttr::get(ctx, v);
@@ -417,21 +425,21 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
           conv_op->getLoc(), conv_op->getResultTypes(), SmallVector<Value, 4>({div_op.z()}),
           reshape_op_attrs);
 
-      auto mul_op = rewriter.create<oneflow::MultiplyOp>(
+      auto mul_op = rewriter.create<oneflow::BroadcastMulOp>(
           conv_op->getLoc(), conv_op->getResultTypes(),
           SmallVector<Value, 4>({conv_op.weight(), reshape_op.out()}),
           GetUserOpCommonAttrs(ctx, "multiply"));
-      operands.push_back(mul_op.out());
+      operands.push_back(mul_op.z());
 
       // deal with bias
       if (!conv_op.bias()) {
-        auto mul_op_bias = rewriter.create<oneflow::MultiplyOp>(
+        auto mul_op_bias = rewriter.create<oneflow::BroadcastMulOp>(
             conv_op->getLoc(), conv_op->getResultTypes(),
             SmallVector<Value, 4>({bn_op.moving_mean(), div_op.z()}),
             GetUserOpCommonAttrs(ctx, "multiply_bias"));
         auto sub_op_bias = rewriter.create<oneflow::BroadcastSubOp>(
             conv_op->getLoc(), conv_op->getResultTypes(),
-            SmallVector<Value, 4>({bn_op.beta(), mul_op_bias.out()}),
+            SmallVector<Value, 4>({bn_op.beta(), mul_op_bias.z()}),
             GetUserOpCommonAttrs(ctx, "sub_bias"));
         operands.push_back(sub_op_bias.z());
       } else {
@@ -485,16 +493,21 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
     if (!op) return failure();
     NamedAttrList attrs;
     if (op.op_name().str().find("FreeEagerTensor") != std::string::npos) { return failure(); }
-    attrs.set(StringAttr::get(getContext(), "value"),
-              support::TensorToDenseElementsAttr(
-                  ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()->Get(op.op_name().str()),
-                  rewriter.getContext()));
+    attrs.set(
+        StringAttr::get(getContext(), "value"),
+        support::TensorToDenseElementsAttr(
+            ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Get(op.op_name().str()),
+            rewriter.getContext()));
     attrs.set(op.op_nameAttrName(), op.op_nameAttr());
     attrs.set(op.device_tagAttrName(), op.device_tagAttr());
     attrs.set(op.device_nameAttrName(), op.device_nameAttr());
     attrs.set(op.scope_symbol_idAttrName(), op.scope_symbol_idAttr());
     attrs.set(op.hierarchyAttrName(), op.hierarchyAttr());
-    attrs.set(op.nd_sbpAttrName(), op.nd_sbpAttr());
+    auto name = FrozenVariableOp::nd_sbpAttrName(
+        OperationName(FrozenVariableOp::getOperationName(), rewriter.getContext()));
+
+    auto parallel_attr = op.parallelAttr();
+    attrs.set(name, SBPTranslation::ConvertSBPToString(rewriter, parallel_attr));
     auto op_new = rewriter.create<oneflow::FrozenVariableOp>(op->getLoc(), op.output().getType(),
                                                              ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
@@ -527,12 +540,23 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
     attrs.set(op.device_nameAttrName(), op.device_nameAttr());
     attrs.set(op.scope_symbol_idAttrName(), op.scope_symbol_idAttr());
     attrs.set(op.hierarchyAttrName(), op.hierarchyAttr());
-    attrs.set(op.nd_sbpAttrName(), op.nd_sbpAttr());
+    auto name = VariableOp::parallelAttrName(
+        OperationName(VariableOp::getOperationName(), rewriter.getContext()));
+
+    auto nd_size = op.hierarchy()->size();
+    ArrayAttr nd_sbp = op.nd_sbp();
+    std::vector<std::string> nd_sbp_str;
+    std::for_each(nd_sbp.begin(), nd_sbp.end(), [&](Attribute elem) {
+      if (auto sbp_str_attr = elem.dyn_cast<StringAttr>()) {
+        nd_sbp_str.push_back(sbp_str_attr.str());
+      }
+    });
+    attrs.set(name, SBPTranslation::ConvertNdSbpToPsig(rewriter, nd_sbp_str, nd_size));
     auto op_new = rewriter.create<oneflow::VariableOp>(op->getLoc(), op.output().getType(),
                                                        ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
     const std::string tensor_name = op.op_nameAttr().str();
-    ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()->Set(
+    ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get()->Set(
         tensor_name,  // tensor_name can't be replaced by op.op_nameAttr().str() directly when
                       // compiling with gcc and I has no idea why.
                       // But it works when compiling with clang.
@@ -569,7 +593,8 @@ llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, 
                                                              PatternRewriter& rewriter) {
   std::string transpose_name = OpTrait::IsOpConfCompatible<void>::getOpName(op).str()
                                + "_transpose_input_" + std::to_string(num_transposed_operand);
-  transpose_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
+  transpose_attributes.set(llvm::StringRef(OpTrait::IsOpConfCompatible<void>::getOpNameAttr()),
+                           rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> input_operands;
   input_operands.push_back(val);
   auto res = rewriter
@@ -583,7 +608,8 @@ TransposeOp getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList tra
                                  int num_transposed_result, PatternRewriter& rewriter) {
   std::string transpose_name = OpTrait::IsOpConfCompatible<void>::getOpName(op).str()
                                + "_transpose_output_" + std::to_string(num_transposed_result);
-  transpose_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
+  transpose_attributes.set(llvm::StringRef(OpTrait::IsOpConfCompatible<void>::getOpNameAttr()),
+                           rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> operands;
   operands.push_back(val);
   TransposeOp transpose_op = rewriter.create<oneflow::TransposeOp>(op.getLoc(), val.getType(),
@@ -767,9 +793,10 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   AddLowerToLinalgMemRefPasses(pm);
   pm.addNestedPass<func::FuncOp>(
       createConvertLinalgToParallelLoopsPass());  // convert-linalg-to-parallel-loops
-  pm.addPass(createMapSCFToGPUPass());            // gpu-greedy-parallel-loop-mapping
-  pm.addPass(createParallelLoopToGpuPass());      // convert-parallel-loops-to-gpu
-  pm.addPass(createGpuKernelOutliningPass());     // gpu-kernel-outlining
+  pm.addNestedPass<func::FuncOp>(createGpuMapParallelLoopsPass());  // gpu-map-parallel-loops
+  pm.addPass(createParallelLoopToGpuPass());                        // convert-parallel-loops-to-gpu
+  pm.addPass(createGpuLauchSinkIndexComputationsPass());
+  pm.addPass(createGpuKernelOutliningPass());                      // gpu-kernel-outlining
   pm.addNestedPass<func::FuncOp>(createBufferHostRegisterPass());  // buffer-host-register
   pm.addPass(createCanonicalizerPass());                           // canonicalize
   // -pass-pipeline='gpu.module([PASS1][PASS2]...)'
@@ -779,6 +806,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
   pm.addNestedPass<gpu::GPUModuleOp>(createSerializeToCubinPass());      // out-of-tree-gpu-to-cubin
   pm.addNestedPass<func::FuncOp>(createGpuCopyArgPass());                // buffer-host-register
   pm.addPass(createGpuToLLVMConversionPass());
+  pm.addPass(createReconcileUnrealizedCastsPass());  // reconcile-unrealized-casts
   if (enable_ir_printing) pm.enableIRPrinting();
   return pm.run(module);
 }

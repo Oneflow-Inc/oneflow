@@ -34,6 +34,7 @@ class MultiClientSessionContext {
   Maybe<void> TryInit(const std::string& config_proto_str);
   Maybe<void> UpdateResource(const Resource& reso_proto);
   Maybe<void> UpdateResource(const std::string& reso_proto_str);
+
   Maybe<void> TryClose();
 
   // NOTE(chengcheng): for nn.Graph catch free EagerTensor in Graph.build().

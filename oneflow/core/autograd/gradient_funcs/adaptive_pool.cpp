@@ -44,7 +44,7 @@ class AdaptivePoolNdGrad : public OpExprGradFunction<AdaptivePoolCaptureState> {
 
 Maybe<void> AdaptivePoolNdGrad::Init(const OpExpr& op, std::string mode, const int& ndims) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   mode_ = mode;
   ndims_ = ndims;
@@ -63,8 +63,7 @@ Maybe<void> AdaptivePoolNdGrad::Capture(AdaptivePoolCaptureState* ctx, const Ten
 Maybe<void> AdaptivePoolNdGrad::Apply(const AdaptivePoolCaptureState* ctx,
                                       const TensorTuple& out_grads, TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
   in_grads->resize(1);
   in_grads->at(0) = JUST(functional::AdaptivePoolNdGrad(x, out_grads.at(0), mode_, ndims_));

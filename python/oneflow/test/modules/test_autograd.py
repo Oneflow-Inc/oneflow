@@ -109,6 +109,13 @@ class TestAutograd(flow.unittest.TestCase):
         x = random_tensor(ndim=ndim, requires_grad=True).to(device)
         return x
 
+    @autotest(n=1, auto_backward=False, check_graph=False)
+    def test_out_grad_with_different_dtype(test_case):
+        x = random_tensor(ndim=2, requires_grad=True)
+        y = x.sum()
+        y.backward(torch.tensor(False))
+        return x.grad
+
     @autotest(n=10, auto_backward=False, check_graph=False)
     def test_grad_grad(test_case):
         device = random_device()
@@ -141,6 +148,14 @@ class TestAutograd(flow.unittest.TestCase):
         for _ in range(10):
             z.sum().backward()
         return (x.grad, y.grad)
+
+    @autotest(n=1, check_graph=False)
+    def test_requires_grad_tensor_inplace_and_backward(test_case):
+        random_shape = [random(1, 10).to(int) for _ in range(4)]
+        x = random_tensor(4, *random_shape, requires_grad=False)
+        y = random_tensor(4, *random_shape, requires_grad=True)
+        x += y
+        return x
 
 
 if __name__ == "__main__":

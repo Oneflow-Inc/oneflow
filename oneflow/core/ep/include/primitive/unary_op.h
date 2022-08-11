@@ -22,10 +22,33 @@ namespace ep {
 namespace primitive {
 
 enum class UnaryOp {
+  kIdentity,
+  // activation op
+  kElu,
+  kCelu,
   kRelu,
   kGelu,
+  kHardSwish,
+  kHardSigmoid,
+  kHardShrink,
+  kHardTanh,
+  kLeakyRelu,
+  kMish,
+  kSelu,
+  kSilu,
+  kSoftShrink,
+  kSoftSign,
+  kSoftPlus,
   kTanh,
+  kThreshold,
+
+  // logical op
   kLogicalNot,
+
+  // utils op
+  kIsInf,
+  kIsNan,
+  kIsFinite,
 };
 
 }

@@ -108,21 +108,21 @@ class TestClampModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_clamp_flow_with_random_data(test_case):
         device = random_device()
         input = random_tensor().to(device)
         y = torch.clamp(input, min=random().to(float), max=random().to(float))
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_clamp_min_none_flow_with_random_data(test_case):
         device = random_device()
         input = random_tensor().to(device)
         y = torch.clamp(input, min=random().to(float), max=random().to(float))
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_clamp_max_none_flow_with_random_data(test_case):
         device = random_device()
         input = random_tensor().to(device)
@@ -131,21 +131,21 @@ class TestClampModule(flow.unittest.TestCase):
         )
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_clip_flow_with_random_data(test_case):
         device = random_device()
         input = random_tensor().to(device)
         y = torch.clip(input, min=random().to(float), max=random().to(float))
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_clip_min_none_flow_with_random_data(test_case):
         device = random_device()
         input = random_tensor().to(device)
         y = torch.clip(input, min=random().to(float), max=random().to(float))
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_clip_max_none_flow_with_random_data(test_case):
         device = random_device()
         input = random_tensor().to(device)
@@ -154,7 +154,7 @@ class TestClampModule(flow.unittest.TestCase):
         )
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_clamp_with_0_size_data(test_case):
         device = random_device()
         x = random_tensor(4, 2, 1, 0, 3).to(device)

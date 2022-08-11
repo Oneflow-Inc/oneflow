@@ -87,6 +87,7 @@ def _init(
     ).itemsize
     assert value_type_size > 0
     key_value_store_options["value_type_size"] = value_type_size
+    key_value_store_options["value_type"] = str(dtype)
     scale_factor = store_options["size_factor"]
     key_value_store_options["storage_dim"] = scale_factor * embedding_dim
     # kv store
@@ -209,7 +210,10 @@ class Embedding(Module):
             "%Y-%m-%d-%H-%M-%S-%f"
         )
         self.handler.SaveSnapshot(snapshot_timestamp_str)
-        destination[prefix + "OneEmbedding"] = snapshot_timestamp_str
+        destination[prefix + "OneEmbeddingSnapshot"] = snapshot_timestamp_str
+        destination[
+            prefix + "OneEmbeddingKeyValueOptions"
+        ] = self.key_value_store_options
 
     def _load_from_state_dict(
         self,
@@ -221,7 +225,7 @@ class Embedding(Module):
         unexpected_keys,
         error_msgs,
     ):
-        key = prefix + "OneEmbedding"
+        key = prefix + "OneEmbeddingSnapshot"
         if key in state_dict:
             saved_snapshot_name = state_dict[key]
             try:
@@ -744,18 +748,16 @@ class Ftrl(Optimizer):
     The formula is: 
 
         .. math:: 
-
-            & accumlator_{i+1} = accumlator_{i} + grad * grad
-            
-            & sigma = (accumulator_{i+1}^{lr\_power} - accumulator_{i}^{lr\_power}) / learning\_rate
-            
-            & z_{i+1} = z_{i} + grad - sigma * param_{i}
-
-            \text{}
-                param_{i+1} = \begin{cases}
-            0 & \text{ if } |z_{i+1}| < \lambda_1 \\
-            -(\frac{\beta+accumlator_{i+1}^{lr\_power}}{learning\_rate} + \lambda_2)*(z_{i+1} - sign(z_{i+1})*\lambda_1) & \text{ otherwise } \\
-            \end{cases}
+                \begin{align}
+                accumlator_{i+1} = accumlator_{i} + grad * grad \\
+                sigma = (accumulator_{i+1}^{lr\_power} - accumulator_{i}^{lr\_power}) / learning\_rate \\
+                z_{i+1} = z_{i} + grad - sigma * param_{i} \\
+                \text{}
+                    param_{i+1} = \begin{cases}
+                    0 & \text{ if } |z_{i+1}| < \lambda_1 \\
+                    -(\frac{\beta+accumlator_{i+1}^{lr\_power}}{learning\_rate} + \lambda_2)*(z_{i+1} - sign(z_{i+1})*\lambda_1) & \text{ otherwise } \\
+                \end{cases}
+                \end{align}
     
     Example 1: 
 
@@ -805,7 +807,6 @@ class Ftrl(Optimizer):
         options["lambda2"] = lambda2
         options["beta"] = beta
         super().__init__(params, options)
-        # print("initial accumulator value is: ", options["initial_accumulator_value"])
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
@@ -907,6 +908,7 @@ def make_persistent_table_reader(
     paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=512,
 ):
     r"""Creates a reader for reading persistent table.
+
     Args:
         paths (list): paths of tables to read
         snapshot_name (str): name of the snapshot to read
@@ -930,6 +932,7 @@ def make_persistent_table_writer(
     paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=512,
 ):
     r"""Creates a writer for writing persistent table.
+
     Args:
         paths (list): paths of tables to write
         snapshot_name (str): name of the snapshot to write

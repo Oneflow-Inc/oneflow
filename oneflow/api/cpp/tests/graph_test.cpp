@@ -84,26 +84,6 @@ TEST(Api, graph_multi_gpu_test) {
 }
 #endif
 
-#ifdef WITH_TENSORRT
-TEST(Api, graph_trt_test) {
-  EnvScope scope;
-  Device device("cuda:0");
-  Graph graph = LoadGraph(device);
-  graph.enable_tensorrt();
-  Forward(graph, device);
-}
-#endif
-
-#ifdef WITH_OPENVINO
-TEST(Api, graph_openvino_test) {
-  EnvScope scope;
-  Device device("cpu");
-  Graph graph = LoadGraph(device);
-  graph.enable_openvino();
-  Forward(graph, device);
-}
-#endif
-
 TEST(Api, graph_cpu_batching_test) {
   EnvScope scope;
   Device device("cpu");

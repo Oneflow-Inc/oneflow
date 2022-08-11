@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/register/runtime_register_desc.h"
+#include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
@@ -45,7 +46,7 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
     sorted_blob_desc_vec_.emplace_back(std::make_unique<const BlobDesc>(BlobDesc(DataType::kChar)));
   }
 
-  if ((proto.mem_case().has_device_cuda_mem())
+  if ((!memory::IsHostMem(proto.mem_case()))
       || (proto.has_variable_op_name() && !proto.variable_op_name().empty())) {
     // NOTE(chengcheng): When this regst is shared with EagerBlobObject, header is ALWAYS separated.
     has_separated_header_ = true;

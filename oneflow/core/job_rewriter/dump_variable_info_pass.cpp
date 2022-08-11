@@ -43,7 +43,7 @@ class DumpVariableInfoPass final : public JobPass {
   ~DumpVariableInfoPass() override = default;
 
   bool IsEnabled(const JobPassCtx& ctx) const {
-    return Global<ResourceDesc, ForSession>::Get()->enable_debug_mode();
+    return Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode();
   }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 

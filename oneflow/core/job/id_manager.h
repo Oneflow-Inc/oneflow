@@ -36,7 +36,7 @@ class IDMgr final {
   TaskIdGenerator* GetTaskIdGenerator() { return &task_id_gen_; }
 
  private:
-  friend class Global<IDMgr>;
+  friend class Singleton<IDMgr>;
   IDMgr();
 
   int64_t regst_desc_id_count_;

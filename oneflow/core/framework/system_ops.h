@@ -26,7 +26,7 @@ limitations under the License.
 namespace oneflow {
 namespace schema {
 
-class CastToConsistentOp : public OpBase {
+class CastToGlobalOp : public OpBase {
  public:
   Maybe<AttrVal> GetAttr(const std::string& attr_name) const override;
   const HashSet<std::string>& AttrNames() const override;

@@ -37,7 +37,7 @@ class TestFlip(flow.unittest.TestCase):
         y = torch.flip(x, constant([0, 1, 2]))
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_flow_flip_tuple_with_random_data(test_case):
         device = random_device()
         x = random_tensor(
@@ -46,7 +46,7 @@ class TestFlip(flow.unittest.TestCase):
         y = torch.flip(x, constant((0, 1, 2)))
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_flow_flip_bool_tuple_with_random_data(test_case):
         device = random_device()
         x = random_tensor(

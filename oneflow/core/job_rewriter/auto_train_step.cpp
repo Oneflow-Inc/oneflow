@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
-#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/job_rewriter/dynamic_loss_scale_job_pass_state.h"
 #include "oneflow/core/framework/scope_util.h"
@@ -59,12 +58,18 @@ Maybe<void> AutoTrainStep::Apply(Job* job, JobPassCtx* ctx) const {
       GenLogicalBlobName(identity_op_conf.name(), identity_conf->out());
 
   JobBuilder job_builder(job);
-  const ParallelConf& parallel_conf = GenParallelConfOfCpuZeroOnMaster();
+  ParallelConf parallel_conf;
+  if (ParseBooleanFromEnv("ONEFLOW_GRAPH_PLACE_TRAINING_STATE_ON_ALL_RANKS", false)) {
+    parallel_conf = GenParallelConfOfCpuOnAllRanks();
+
+  } else {
+    parallel_conf = GenParallelConfOfCpuZeroOnMaster();
+  }
   int64_t scope_symbol_id = 0;
   {
     const auto& opt_scope_symbol_id =
         JUST(MakeInitialScope(job->job_conf(), SymbolOf(ParallelDesc(parallel_conf)),
-                              /* is_mirrored */ false))
+                              /* is_local */ false))
             ->symbol_id();
     CHECK_OR_RETURN(opt_scope_symbol_id.has_value())
         << Error::RuntimeError() << "symbol_id not initialized";

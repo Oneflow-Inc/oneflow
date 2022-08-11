@@ -48,7 +48,7 @@ class ClientCall final {
 }  // namespace
 
 void RpcClient::Barrier(const std::string& barrier_name) {
-  Barrier(barrier_name, Global<EnvDesc>::Get()->TotalMachineNum());
+  Barrier(barrier_name, Singleton<EnvDesc>::Get()->TotalMachineNum());
 }
 
 void RpcClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
@@ -201,7 +201,8 @@ void RpcClient::LoadServer(const LoadServerRequest& request, CtrlService::Stub* 
 CtrlService::Stub* RpcClient::GetThisStub() { return stubs_[GlobalProcessCtx::Rank()].get(); }
 
 CtrlService::Stub* RpcClient::GetResponsibleStub(const std::string& key) {
-  int64_t machine_id = (std::hash<std::string>{}(key)) % Global<EnvDesc>::Get()->TotalMachineNum();
+  int64_t machine_id =
+      (std::hash<std::string>{}(key)) % Singleton<EnvDesc>::Get()->TotalMachineNum();
   return stubs_[machine_id].get();
 }
 

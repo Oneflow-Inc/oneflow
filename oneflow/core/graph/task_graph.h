@@ -43,7 +43,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
   ~TaskGraph() override;
 
-  explicit TaskGraph();
+  explicit TaskGraph(bool enable_straighten_algorithm);
 
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();

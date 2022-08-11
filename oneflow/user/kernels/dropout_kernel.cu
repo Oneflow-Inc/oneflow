@@ -338,14 +338,13 @@ __global__ RETURN_VOID_IF_DOUBLE FusedDropoutAddGpu(
   }
 }
 
-template<int pack_size>
 unsigned int ComputeGridSize(ep::Stream* stream, const int32_t block_size, const int64_t elem_cnt) {
   auto* cuda_stream = stream->As<ep::CudaStream>();
   const int32_t max_threads_multi_process =
       cuda_stream->device_properties().maxThreadsPerMultiProcessor;
   const int32_t multi_processor_count = cuda_stream->device_properties().multiProcessorCount;
   unsigned int blocks_per_sm = max_threads_multi_process / block_size;
-  unsigned int grid_size = ((elem_cnt + block_size - 1) / block_size);
+  unsigned int grid_size = std::max((int64_t)1, ((elem_cnt + block_size - 1) / block_size));
   grid_size = std::min((unsigned int)multi_processor_count * blocks_per_sm, grid_size);
   return grid_size;
 }
@@ -354,9 +353,9 @@ template<typename T, bool has_addend>
 void DispatchTail(ep::Stream* stream, uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                   const int64_t elem_cnt, float rate, float scale, const T* x, bool* mask,
                   const T* addend, T* y) {
-  unsigned int grid_size = ComputeGridSize<4>(stream, kBlockSize, elem_cnt);
   constexpr int pack_size = GetDropoutPackSize<T>();
   const int64_t pack_num = elem_cnt / pack_size;
+  unsigned int grid_size = ComputeGridSize(stream, kBlockSize, pack_num);
   const int64_t tail_offset = pack_num * pack_size;
   const int64_t n_tail = elem_cnt - tail_offset;
   const bool tail = n_tail > 0 ? true : false;
@@ -436,11 +435,11 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       DispatchTail<T, true>(
-          stream, seed, cuda_gen_state, in->shape().elem_cnt(), rate, scale,
+          stream, seed, cuda_gen_state, in->shape_view().elem_cnt(), rate, scale,
           reinterpret_cast<const T*>(in->dptr()), reinterpret_cast<bool*>(mask->mut_dptr()),
           reinterpret_cast<const T*>(addend->dptr()), reinterpret_cast<T*>(out->mut_dptr()));
     } else {
-      DispatchTail<T, false>(stream, seed, cuda_gen_state, in->shape().elem_cnt(), rate, scale,
+      DispatchTail<T, false>(stream, seed, cuda_gen_state, in->shape_view().elem_cnt(), rate, scale,
                              reinterpret_cast<const T*>(in->dptr()),
                              reinterpret_cast<bool*>(mask->mut_dptr()), nullptr,
                              reinterpret_cast<T*>(out->mut_dptr()));
@@ -475,7 +474,7 @@ class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::Cud
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const float scale = ctx->Attr<float>("scale");
-    const int64_t elem_cnt = dy->shape().elem_cnt();
+    const int64_t elem_cnt = dy->shape_view().elem_cnt();
     OF_CUDA_CHECK((cuda::elementwise::Binary(
         MaskAndScaleFunctor<T>(scale), elem_cnt, reinterpret_cast<T*>(dx->mut_dptr()),
         reinterpret_cast<const T*>(dy->dptr()), reinterpret_cast<const bool*>(mask->dptr()),

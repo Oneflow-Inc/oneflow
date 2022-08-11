@@ -1275,6 +1275,74 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.mv,
+    r"""
+    mv(input, vec) -> Tensor
+
+    Performs a matrix-vector product of the matrix :attr:`input` and the vector :attr:`vec`.
+
+    If :attr:`input` is a :math:`(n \times m)` tensor, :attr:`vec` is a
+    1-D tensor of size `m`, :attr:`out` will be a 1-D tensor of size `n`.
+    
+    .. note:: This function does not broadcast.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.mv.html.
+
+    Args:
+        input (oneflow.Tensor): matrix to be matrix multiplied
+        vec (oneflow.Tensor): vector to be matrix multiplied
+    Returns:
+        oneflow.Tensor: the output Tensor
+    
+    For example:
+
+    .. code-block:: python
+    
+        >>> import oneflow as flow
+        >>> mat = flow.randn(2, 3)
+        >>> vec = flow.randn(3)
+        >>> out = flow.mv(mat, vec)
+        >>> out.shape
+        oneflow.Size([2])
+    """,
+)
+
+add_docstr(
+    oneflow.mm,
+    r"""
+    mm(input, mat2) -> Tensor
+    
+    Performs a matrix multiplication of the matrices :attr:`input` and :attr:`mat2`.
+
+    If :attr:`input` is a :math:`(n \times m)` tensor, :attr:`mat2` is a
+    :math:`(m \times p)` tensor, :attr:`out` will be a :math:`(n \times p)` tensor.
+
+    .. note:: This function does not broadcast.
+            For broadcasting matrix products, see :func:`oneflow.matmul`.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.mm.html.
+
+    Args:
+        input (oneflow.Tensor): the first matrix to be matrix multiplied
+        mat2 (oneflow.Tensor): the second matrix to be matrix multiplied
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> mat1 = flow.randn(2, 3)
+        >>> mat2 = flow.randn(3, 3)
+        >>> of_out = flow.mm(mat1, mat2)
+        >>> of_out.shape
+        oneflow.Size([2, 3])
+    """,
+)
+
+add_docstr(
     oneflow.round,
     r"""This operator rounds the value of Blob to the nearest integer.
     Args:
@@ -1365,31 +1433,6 @@ add_docstr(
     """,
 )
 
-add_docstr(
-    oneflow.logical_not,
-    r"""
-    Computes the element-wise logical NOT of the given input tensors.
-    Zeros are treated as False and nonzeros are treated as True.
-    Args:
-        input (oneflow.Tensor): The input Tensor
-        other (oneflow.Tensor): The Tensor to compute NOT with
-
-    Returns:
-        oneflow.Tensor: The output Tensor
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-
-        >>> input = flow.tensor([1, 0, -1], dtype=flow.float32)
-        >>> out = flow.logical_not(input)
-        >>> out
-        tensor([False,  True, False], dtype=oneflow.bool)
-
-    """,
-)
 
 add_docstr(
     oneflow.dot,
@@ -1519,7 +1562,7 @@ add_docstr(
     Performs the element-wise multiplication of tensor1 by tensor2, multiply the result
     by the scalar value and add it to input.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.addcmul.html
+    https://pytorch.org/docs/1.10/generated/torch.addcmul.html
     
     .. math::
         \text{out}_i = \text{input}_i + value \times\  \text{tensor1}_i \times\ \text{tensor2}_i
@@ -1630,25 +1673,22 @@ add_docstr(
 add_docstr(
     oneflow.hsplit,
     r"""
-    Splits input, a tensor with one or more dimensions, into multiple tensors horizontally according to indices_or_sections.
-    Each split is a view of input.
-    If input is one dimensional this is equivalent to calling oneflow.tensor_split(input, indices_or_sections, dim=0) 
-    (the split dimension is zero), and if input has two or more dimensions it’s equivalent to calling 
-    oneflow.tensor_split(input, indices_or_sections, dim=1) (the split dimension is 1), except that if indices_or_sections
-    is an integer it must evenly divide the split dimension or a runtime error will be thrown.
+    hsplit(input, indices_or_sections) -> List of Tensors
+
     The documentation is referenced from:
     https://pytorch.org/docs/1.10/generated/torch.hsplit.html.
 
+    Splits `input`, a tensor with one or more dimensions, into multiple tensors horizontally according to `indices_or_sections`.
+    Each split is a view of `input`.
+
+    If `input` is one dimensional this is equivalent to calling oneflow.tensor_split(input, indices_or_sections, dim=0) 
+    (the split dimension is zero), and if `input` has two or more dimensions it’s equivalent to calling 
+    oneflow.tensor_split(input, indices_or_sections, dim=1) (the split dimension is 1), except that if `indices_or_sections`
+    is an integer it must evenly divide the split dimension or a runtime error will be thrown.
+
     Args:
         input (Tensor): the input tensor.
-        indices_or_sections (int or a list): If indices_or_sections is an integer n , input is split into n sections 
-            along dimension dim.If input is divisible by n along dimension dim, each section will be of equal size, 
-            input.size (dim) / n. If input is not divisible by n, the sizes of the first int(input.size(dim) % n).
-            sections will have size int(input.size(dim) / n) + 1, and the rest will have size int(input.size(dim) / n).
-            If indices_or_sections is a list or tuple of ints, then input is split along dimension dim at each of the indices in 
-            the list, tuple or tensor. For instance, indices_or_sections=[2, 3] and dim=0 would result in the tensors 
-            input[:2], input[2:3], and input[3:].If indices_or_sections is a tensor, it must be a zero-dimensional or
-            one-dimensional long tensor on the CPU.
+        indices_or_sections (int or a list): See argument in :func:`oneflow.tensor_split()`.
 
     Returns:
         oneflow.TensorTuple: the output TensorTuple.
@@ -1700,8 +1740,8 @@ add_docstr(
 
         >>> import oneflow as flow
 
-        >>> input = flow.rand(3,4,5,6)
-        >>> output = flow.vsplit(input,(1,3))
+        >>> input = flow.rand(4, 4, 5, 6)
+        >>> output = flow.vsplit(input, (1, 3))
         >>> output[0].size()
         oneflow.Size([1, 4, 5, 6])
         >>> output[1].size()

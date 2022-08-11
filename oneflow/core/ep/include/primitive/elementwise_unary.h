@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EP_PRIMITIVE_ELEMENTWISE_UNARY_H_
 #define ONEFLOW_CORE_EP_PRIMITIVE_ELEMENTWISE_UNARY_H_
 
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/ep/include/primitive/primitive.h"
 #include "oneflow/core/ep/include/primitive/unary_op.h"
 
@@ -41,6 +42,12 @@ class ElementwiseUnaryFactory : public Factory<ElementwiseUnary> {
 
   virtual std::unique_ptr<ElementwiseUnary> New(UnaryOp op, DataType src_type,
                                                 DataType dst_type) = 0;
+
+  virtual std::unique_ptr<ElementwiseUnary> New(UnaryOp op, DataType src_type, DataType dst_type,
+                                                Scalar attr0) = 0;
+
+  virtual std::unique_ptr<ElementwiseUnary> New(UnaryOp op, DataType src_type, DataType dst_type,
+                                                Scalar attr0, Scalar attr1) = 0;
 };
 
 }  // namespace primitive
