@@ -409,14 +409,14 @@ class SyncBatchNormFunction(flow.autograd.Function):
                 )
             )
 
-        num_channels = input.shape[1]
+        num_channels = input.shape[global_axis]
         if input.numel() > 0:
             # calculate mean/invstd for input.
             mean, invstd = flow._C.batch_norm_stats(input, global_axis, global_eps)
 
             count = flow.full(
                 (1,),
-                input.numel() // input.size(1),
+                input.numel() // input.size(global_axis),
                 dtype=mean.dtype,
                 device=mean.device,
             )
@@ -515,6 +515,7 @@ class SyncBatchNormFunction(flow.autograd.Function):
             count_tensor,
             channel_axis,
         )
+
         # synchronizing of grad_weight / grad_bias is not needed as distributed
         # training would handle all reduce.
         return grad_input, grad_weight, grad_bias
@@ -688,7 +689,9 @@ class SyncBatchNorm(_BatchNorm):
             global_momentum = exponential_average_factor
             global_world_size = flow.env.get_world_size()
             global_axis = self.channel_axis
-            assert self.track_running_stats, "`track_running_stats` should be True when using SyncBatchNorm."
+            assert (
+                self.track_running_stats
+            ), "`track_running_stats` should be True when using SyncBatchNorm."
             return SyncBatchNormFunction.apply(
                 input, self.weight, self.bias, self.running_mean, self.running_var,
             )

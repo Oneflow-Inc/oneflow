@@ -33,6 +33,44 @@ namespace oneflow {
 
 namespace {
 
+template<typename T, typename IDX_TYPE, int PARALLEL_LOADS>
+__global__ void batch_norm_transform_input_channels_last_kernel(
+    const T* __restrict__ input_ptr, const T* __restrict__ mean_ptr,
+    const T* __restrict__ inv_std_ptr, const T* __restrict__ weight_ptr,
+    const T* __restrict__ bias_ptr, T* __restrict__ out_ptr, const IDX_TYPE reduction_size,
+    const IDX_TYPE stride) {
+  // tensor dimension (m,c)
+  // loop along m dimension
+  IDX_TYPE inner_loop_stride = blockDim.y * gridDim.y;
+
+  // offset along m dimension
+  IDX_TYPE m_offset = blockIdx.y * blockDim.y + threadIdx.y;
+  IDX_TYPE c_offset = blockIdx.x * blockDim.x + threadIdx.x;
+
+  if (c_offset >= stride || m_offset >= reduction_size) { return; }
+
+  auto m_c = mean_ptr[c_offset];
+  auto inv_std_c = static_cast<T>(inv_std_ptr[c_offset]);
+  auto w_c = weight_ptr == nullptr ? T(1.0) : static_cast<T>(weight_ptr[c_offset]);
+  auto b_c = bias_ptr == nullptr ? T(0.0) : static_cast<T>(bias_ptr[c_offset]);
+
+  IDX_TYPE loop_count = 1 + (reduction_size - 1) / (inner_loop_stride * PARALLEL_LOADS);
+  IDX_TYPE address_base = m_offset * stride + c_offset;
+  IDX_TYPE address_increment = inner_loop_stride * stride;
+
+  for (IDX_TYPE i = 0; i < loop_count; i++) {
+#pragma unroll
+    for (int j = 0; j < PARALLEL_LOADS; j++) {
+      if (c_offset < stride && m_offset < reduction_size) {
+        out_ptr[address_base] =
+            static_cast<T>(w_c * (static_cast<T>(input_ptr[address_base]) - m_c) * inv_std_c + b_c);
+      }
+      m_offset += inner_loop_stride;
+      address_base += address_increment;
+    }
+  }
+}
+
 template<typename T, typename IDX_TYPE>
 __global__ void batch_norm_transform_input_kernel(const IDX_TYPE batch_size,
                                                   const IDX_TYPE channel_size,
@@ -93,6 +131,29 @@ struct BatchNormElemtFunctor final {
   }
 };
 
+template<typename T>
+struct BatchNormElemtChannelLastFunctor final {
+  void operator()(ep::Stream* stream, const int64_t stride, const int64_t reduction_size,
+                  const T* input_ptr, const T* mean_ptr, const T* invstd_ptr, const T* weight_ptr,
+                  const T* bias_ptr, T* output_ptr) {
+    dim3 block;
+    dim3 grid;
+    flexible_launch_configs(reduction_size, stride, block, grid);
+
+    if (reduction_size * stride < std::numeric_limits<int32_t>::max()) {
+      batch_norm_transform_input_channels_last_kernel<T, int32_t, ELEMENTS_PER_ITER>
+          <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              input_ptr, mean_ptr, invstd_ptr, weight_ptr, bias_ptr, output_ptr,
+              static_cast<int32_t>(reduction_size), static_cast<int32_t>(stride));
+    } else {
+      batch_norm_transform_input_channels_last_kernel<T, int64_t, ELEMENTS_PER_ITER>
+          <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              input_ptr, mean_ptr, invstd_ptr, weight_ptr, bias_ptr, output_ptr, reduction_size,
+              stride);
+    }
+  }
+};
+
 }  // namespace
 
 template<typename T>
@@ -121,7 +182,10 @@ class GpuBatchNormElemtKernel final : public user_op::OpKernel {
 
     bool use_channels_last_kernel = axis == 1 ? false : true;
     if (use_channels_last_kernel) {  // NHWC format
-
+      const int64_t stride = input->shape_view().At(axis);
+      const int64_t reduction_size = input->shape_view().elem_cnt() / stride;
+      BatchNormElemtChannelLastFunctor<T>()(ctx->stream(), stride, reduction_size, input_ptr,
+                                            mean_ptr, invstd_ptr, weight_ptr, bias_ptr, output_ptr);
     } else {  // NCHW format
       const int64_t batch_size = input->shape_view().At(0);
       const int64_t channel_size = input->shape_view().At(1);

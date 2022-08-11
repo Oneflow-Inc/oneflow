@@ -71,6 +71,53 @@ __global__ void batch_norm_backward_elemt_kernel(
   }
 }
 
+template<typename T, typename ACC_T, typename IDX_TYPE, int PARALLEL_LOADS>
+__global__ void batch_norm_backward_elemt_channels_last_kernel(
+    const T* grad_out_ptr, const T* input_ptr, const ACC_T* mean_ptr, const ACC_T* invstd_ptr,
+    const T* weight_ptr, const ACC_T* sum_dy_ptr, const ACC_T* sum_dy_xmu_ptr,
+    const int32_t* count_ptr, T* grad_in_ptr, const IDX_TYPE world_size, const IDX_TYPE stride,
+    const IDX_TYPE reduction_size) {
+  IDX_TYPE total_numel = 0;
+  for (IDX_TYPE i = 0; i < world_size; i++) { total_numel += count_ptr[i]; }
+
+  auto norm_fct = static_cast<ACC_T>(1) / static_cast<ACC_T>(total_numel);
+
+  // tensor dimension (m,c)
+  // loop along m dimension
+  IDX_TYPE inner_loop_stride = blockDim.y * gridDim.y;
+
+  // offset along m dimension
+  IDX_TYPE m_offset = blockIdx.y * blockDim.y + threadIdx.y;
+  IDX_TYPE c_offset = blockIdx.x * blockDim.x + threadIdx.x;
+
+  if (c_offset >= stride || m_offset >= reduction_size) { return; }
+
+  auto m_c = mean_ptr[c_offset];
+  auto m_dy_c = sum_dy_ptr[c_offset] * norm_fct;
+  auto factor_1_c = invstd_ptr[c_offset];
+  auto factor_2_c =
+      (weight_ptr == nullptr ? ACC_T(1.0) : static_cast<ACC_T>(weight_ptr[c_offset])) * factor_1_c;
+  factor_1_c = factor_1_c * factor_1_c * sum_dy_xmu_ptr[c_offset] * norm_fct;
+
+  int loop_count = 1 + (reduction_size - 1) / (inner_loop_stride * PARALLEL_LOADS);
+  int address_base = m_offset * stride + c_offset;
+  int address_increment = inner_loop_stride * stride;
+
+  for (int i = 0; i < loop_count; i++) {
+#pragma unroll
+    for (int j = 0; j < PARALLEL_LOADS; j++) {
+      if (c_offset < stride && m_offset < reduction_size) {
+        grad_in_ptr[address_base] =
+            static_cast<T>((static_cast<ACC_T>(grad_out_ptr[address_base]) - m_dy_c
+                            - (static_cast<ACC_T>(input_ptr[address_base]) - m_c) * factor_1_c)
+                           * factor_2_c);
+      }
+      m_offset += inner_loop_stride;
+      address_base += address_increment;
+    }
+  }
+}
+
 template<typename T>
 struct BatchNormBackwardElemtFunctor final {
   void operator()(ep::Stream* stream, const int64_t batch_size, const int64_t channel_size,
@@ -103,6 +150,32 @@ struct BatchNormBackwardElemtFunctor final {
           <<<blocks_trans, threads_trans, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
               batch_size, channel_size, spatial_size, grad_out_ptr, input_ptr, mean_ptr, invstd_ptr,
               weight_ptr, sum_dy_ptr, sum_dy_xmu_ptr, grad_in_ptr, count_ptr, world_size);
+    }
+  }
+};
+
+template<typename T>
+struct BatchNormBackwardElemtChannelLastFunctor final {
+  void operator()(ep::Stream* stream, const int64_t stride, const int64_t reduction_size,
+                  const T* grad_out_ptr, const T* input_ptr, const T* mean_ptr, const T* invstd_ptr,
+                  const T* weight_ptr, const T* sum_dy_ptr, const T* sum_dy_xmu_ptr, T* grad_in_ptr,
+                  const int32_t* count_ptr, const int64_t world_size) {
+    using ACC_T = acc_type<T>;
+    dim3 block;
+    dim3 grid;
+    flexible_launch_configs(reduction_size, stride, block, grid);
+
+    if (stride * reduction_size < std::numeric_limits<int32_t>::max()) {
+      batch_norm_backward_elemt_channels_last_kernel<T, ACC_T, int32_t, ELEMENTS_PER_ITER>
+          <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              grad_out_ptr, input_ptr, mean_ptr, invstd_ptr, weight_ptr, sum_dy_ptr, sum_dy_xmu_ptr,
+              count_ptr, grad_in_ptr, world_size, static_cast<int32_t>(stride),
+              static_cast<int32_t>(reduction_size));
+    } else {
+      batch_norm_backward_elemt_channels_last_kernel<T, ACC_T, int64_t, ELEMENTS_PER_ITER>
+          <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              grad_out_ptr, input_ptr, mean_ptr, invstd_ptr, weight_ptr, sum_dy_ptr, sum_dy_xmu_ptr,
+              count_ptr, grad_in_ptr, world_size, stride, reduction_size);
     }
   }
 };
@@ -142,13 +215,17 @@ class GpuBatchNormBackwardElemtKernel final : public user_op::OpKernel {
     const int32_t axis = ctx->Attr<int32_t>("axis");
 
     bool use_channels_last_kernel = axis == 1 ? false : true;
+    const int64_t world_size = count->shape_view().elem_cnt();
     if (use_channels_last_kernel) {  // NHWC format
-
+      const int64_t stride = input->shape_view().At(axis);
+      const int64_t reduction_size = input->shape_view().elem_cnt() / stride;
+      BatchNormBackwardElemtChannelLastFunctor<T>()(
+          ctx->stream(), stride, reduction_size, grad_out_ptr, input_ptr, mean_ptr, invstd_ptr,
+          weight_ptr, sum_dy_ptr, sum_dy_xmu_ptr, grad_in_ptr, count_ptr, world_size);
     } else {  // NCHW format
       const int64_t batch_size = input->shape_view().At(0);
       const int64_t channel_size = input->shape_view().At(1);
       const int64_t spatial_size = input->shape_view().Count(2);
-      const int64_t world_size = count->shape_view().elem_cnt();
 
       BatchNormBackwardElemtFunctor<T>()(
           ctx->stream(), batch_size, channel_size, spatial_size, grad_out_ptr, input_ptr, mean_ptr,

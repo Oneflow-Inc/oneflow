@@ -33,6 +33,195 @@ namespace oneflow {
 
 namespace {
 
+template<typename T>
+static size_t InferTmpSizeForChannelLastKernel(user_op::InferContext* ctx) {
+  const int32_t axis = ctx->Attr<int32_t>("axis");
+  const Shape& in_shape = ctx->InputTensorDesc("input", 0).shape();
+  const int64_t stride = in_shape.At(axis);
+  const int64_t reduction_size = in_shape.elem_cnt() / stride;
+  dim3 block;
+  dim3 grid;
+  flexible_launch_configs(reduction_size, stride, block, grid, true);
+  size_t tmp_size = 0;
+  if (grid.y > 1) {
+    tmp_size += 4 * stride * grid.y * sizeof(T);
+    tmp_size += grid.x * sizeof(int32_t);
+  }
+  return tmp_size;
+}
+
+template<typename T, typename C>
+__device__ __forceinline__ void welford_merge_element(C& count, T& mean, T& m2n, const C& count_new,
+                                                      const T& mean_new, const T& m2n_new) {
+  T factor = T(1.0) / ::max(C(1), (count + count_new));
+  T delta0 = mean - mean_new;
+  mean = (mean_new * count_new + mean * count) * factor;
+  m2n += m2n_new + delta0 * delta0 * count_new * count * factor;
+  count += count_new;
+}
+
+// merge mean/m2n among threadIdx.y within block
+template<typename T, typename C>
+__device__ __forceinline__ void welford_merge_block_vertical(C& count, T& mean, T& m2n,
+                                                             C* shmem_count, T* shmem_mean,
+                                                             T* shmem_m2n) {
+  // write to shared memory
+  auto address_base = threadIdx.x + threadIdx.y * blockDim.x;
+
+#pragma unroll
+  for (int offset = blockDim.y / 2; offset > 0; offset >>= 1) {
+    if (threadIdx.y < offset * 2) {
+      shmem_mean[address_base] = mean;
+      shmem_m2n[address_base] = m2n;
+      shmem_count[address_base] = count;
+    }
+    __syncthreads();
+    if (threadIdx.y < offset && threadIdx.y + offset < blockDim.y) {
+      auto address = address_base + offset * blockDim.x;
+      // read shared memory back to register for reduction
+      auto count_new = shmem_count[address];
+      auto mean_new = shmem_mean[address];
+      auto m2n_new = shmem_m2n[address];
+
+      welford_merge_element(count, mean, m2n, count_new, mean_new, m2n_new);
+    }
+  }
+}
+
+template<typename T, typename ACC_T, typename IDX_TYPE, int PARALLEL_LOADS>
+__global__ void batch_norm_collect_statistics_channels_last_kernel(
+    const T* __restrict__ input_ptr, ACC_T* __restrict__ out_mean_ptr,
+    ACC_T* __restrict__ out_invstd_ptr, volatile ACC_T* staging_data_ptr, int32_t* semaphores_ptr,
+    const IDX_TYPE reduction_size, const IDX_TYPE stride, ACC_T epsilon) {
+  // hide latency with concurrency
+  ACC_T x_mean[PARALLEL_LOADS];
+  ACC_T m_2_n[PARALLEL_LOADS];
+  IDX_TYPE count[PARALLEL_LOADS];
+
+#pragma unroll
+  for (IDX_TYPE i = 0; i < PARALLEL_LOADS; i++) {
+    x_mean[i] = ACC_T(0);
+    m_2_n[i] = ACC_T(0);
+    count[i] = ACC_T(0);
+  }
+  // tensor dimension (m,c)
+
+  // loop along m dimension
+  IDX_TYPE inner_loop_stride = blockDim.y * gridDim.y;
+
+  // offset along m dimension
+  IDX_TYPE m_offset = blockIdx.y * blockDim.y + threadIdx.y;
+  IDX_TYPE c_offset = blockIdx.x * blockDim.x + threadIdx.x;
+
+  IDX_TYPE loop_count = 1 + (reduction_size - 1) / (inner_loop_stride * PARALLEL_LOADS);
+  IDX_TYPE address_base = m_offset * stride + c_offset;
+  IDX_TYPE address_increment = inner_loop_stride * stride;
+
+  for (IDX_TYPE i = 0; i < loop_count; i++) {
+    ACC_T x_math[PARALLEL_LOADS];
+    ACC_T x_count_inv[PARALLEL_LOADS];
+    ACC_T is_valid[PARALLEL_LOADS];
+
+    // load multiple data in
+#pragma unroll
+    for (IDX_TYPE j = 0; j < PARALLEL_LOADS; j++) {
+      if (c_offset < stride && m_offset < reduction_size) {
+        x_math[j] = input_ptr[address_base];
+        count[j]++;
+        x_count_inv[j] = ACC_T(1) / count[j];
+        is_valid[j] = ACC_T(1);
+      } else {
+        x_math[j] = ACC_T(0);
+        x_count_inv[j] = ACC_T(0);
+        is_valid[j] = ACC_T(0);
+      }
+      m_offset += inner_loop_stride;
+      address_base += address_increment;
+    }
+
+    // calculate mean/m2n with welford
+#pragma unroll
+    for (IDX_TYPE j = 0; j < PARALLEL_LOADS; j++) {
+      ACC_T delta0 = x_math[j] - x_mean[j];
+      x_mean[j] += delta0 * x_count_inv[j];
+      ACC_T delta1 = x_math[j] - x_mean[j];
+      m_2_n[j] += delta0 * delta1 * is_valid[j];
+    }
+  }
+
+  // thread reduction to accumulate mean/m_2_n/count between PARALLEL_LOADS
+#pragma unroll
+  for (IDX_TYPE j = 1; j < PARALLEL_LOADS; j++) {
+    welford_merge_element(count[0], x_mean[0], m_2_n[0], count[j], x_mean[j], m_2_n[j]);
+  }
+
+  // release x_mean / m_2_n
+  auto mean_th = x_mean[0];
+  auto m2_th = m_2_n[0];
+  auto count_th = count[0];
+
+  // block-wise reduction with shared memory (since reduction cannot be done within a warp)
+  static __shared__ ACC_T shmem_mean[MAX_BLOCK_SIZE];
+  static __shared__ ACC_T shmem_m2n[MAX_BLOCK_SIZE];
+  static __shared__ IDX_TYPE shmem_count[MAX_BLOCK_SIZE];
+
+  welford_merge_block_vertical(count_th, mean_th, m2_th, shmem_count, shmem_mean, shmem_m2n);
+
+  if (gridDim.y > 1) {
+    volatile ACC_T* staging_mean = staging_data_ptr;
+    volatile ACC_T* staging_m2n = &staging_data_ptr[stride * gridDim.y];
+    volatile IDX_TYPE* staging_count =
+        reinterpret_cast<volatile IDX_TYPE*>(&staging_m2n[stride * gridDim.y]);
+
+    address_base = c_offset + blockIdx.y * stride;
+    // write data to staging_data_ptr;
+    if (threadIdx.y == 0 && c_offset < stride) {
+      staging_mean[address_base] = mean_th;
+      staging_m2n[address_base] = m2_th;
+      staging_count[address_base] = count_th;
+    }
+
+    __threadfence();
+    __syncthreads();  // ensuring writes to staging_ is visible to all blocks
+
+    __shared__ bool is_last_block_done;
+    // mark block done
+    if (threadIdx.x == 0 && threadIdx.y == 0) {
+      IDX_TYPE old = atomicAdd(&semaphores_ptr[blockIdx.x], 1);
+      is_last_block_done = (old == (gridDim.y - 1));
+    }
+
+    __syncthreads();
+
+    // check that all data is now available in global memory
+    if (is_last_block_done) {
+      count_th = 0;
+      mean_th = ACC_T(0.0);
+      m2_th = ACC_T(0.0);
+
+      for (IDX_TYPE y = threadIdx.y; y < gridDim.y; y += blockDim.y) {
+        address_base = c_offset + y * stride;
+        IDX_TYPE count_new = c_offset < stride ? staging_count[address_base] : 0;
+        ACC_T mean_new = c_offset < stride ? staging_mean[address_base] : ACC_T(0.0);
+        ACC_T m2n_new = c_offset < stride ? staging_m2n[address_base] : ACC_T(0.0);
+
+        welford_merge_element(count_th, mean_th, m2_th, count_new, mean_new, m2n_new);
+      }
+
+      welford_merge_block_vertical(count_th, mean_th, m2_th, shmem_count, shmem_mean, shmem_m2n);
+      if (threadIdx.y == 0 && c_offset < stride) {
+        out_mean_ptr[c_offset] = static_cast<ACC_T>(mean_th);
+        out_invstd_ptr[c_offset] = inv_std(m2_th / count_th, epsilon);
+      }
+    }
+  } else {
+    if (blockIdx.y == 0 && threadIdx.y == 0 && c_offset < stride) {
+      out_mean_ptr[c_offset] = static_cast<ACC_T>(mean_th);
+      out_invstd_ptr[c_offset] = inv_std(m2_th / count_th, epsilon);
+    }
+  }
+}
+
 template<typename T, typename ACC_T, typename IDX_TYPE>
 __global__ void batch_norm_collect_statistics_kernel(const T* input_ptr, const IDX_TYPE batch_size,
                                                      const IDX_TYPE channel_size,
@@ -126,9 +315,7 @@ struct BatchNormStatsFunctor final {
     using ACC_T = acc_type<T>;
     const ShapeView& input_shape = input->shape_view();
     const int64_t input_numel = input_shape.elem_cnt();
-
-    int64_t spatial_size = 1;
-    for (int64_t i = 2; i < input_shape.NumAxes(); ++i) { spatial_size *= input_shape.At(i); }
+    const int64_t spatial_size = input_shape.Count(2);
 
     dim3 blocks(input_shape.At(1));
     int32_t tf = getNumThreads(spatial_size);
@@ -153,6 +340,46 @@ struct BatchNormStatsFunctor final {
   }
 };
 
+template<typename T>
+struct BatchNormStatsChannelLastFunctor final {
+  void operator()(ep::Stream* stream, const user_op::Tensor* input, user_op::Tensor* mean,
+                  user_op::Tensor* invstd, user_op::Tensor* tmp_buffer, const float eps,
+                  const int32_t axis) {
+    using ACC_T = acc_type<T>;
+    const ShapeView& input_shape = input->shape_view();
+    const int64_t stride = input_shape.At(axis);
+    const int64_t reduction_size = input_shape.elem_cnt() / stride;
+
+    dim3 block;
+    dim3 grid;
+    flexible_launch_configs(reduction_size, stride, block, grid, true);
+
+    T* staging_data_ptr = nullptr;
+    int32_t* semaphores_ptr = nullptr;
+    if (grid.y > 1) {
+      staging_data_ptr = tmp_buffer->mut_dptr<T>();
+      semaphores_ptr = reinterpret_cast<int32_t*>(tmp_buffer->mut_dptr<char>()
+                                                  + 4 * stride * grid.y * sizeof(T));
+    }
+
+    const T* input_ptr = input->dptr<T>();
+    T* mean_ptr = mean->mut_dptr<T>();
+    T* invstd_ptr = invstd->mut_dptr<T>();
+
+    if (input_shape.elem_cnt() < std::numeric_limits<int32_t>::max()) {
+      batch_norm_collect_statistics_channels_last_kernel<T, ACC_T, int32_t, ELEMENTS_PER_ITER>
+          <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              input_ptr, mean_ptr, invstd_ptr, staging_data_ptr, semaphores_ptr,
+              static_cast<int32_t>(reduction_size), static_cast<int32_t>(stride), eps);
+    } else {
+      batch_norm_collect_statistics_channels_last_kernel<T, ACC_T, int64_t, ELEMENTS_PER_ITER>
+          <<<grid, block, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              input_ptr, mean_ptr, invstd_ptr, staging_data_ptr, semaphores_ptr, reduction_size,
+              stride, eps);
+    }
+  }
+};
+
 }  // namespace
 
 template<typename T>
@@ -173,7 +400,9 @@ class GpuBatchNormStatsKernel final : public user_op::OpKernel {
 
     bool use_channels_last_kernel = axis == 1 ? false : true;
     if (use_channels_last_kernel) {  // NHWC format
-
+      user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+      BatchNormStatsChannelLastFunctor<T>()(ctx->stream(), input, mean, invstd, tmp_buffer, eps,
+                                            axis);
     } else {  // NCHW format
       BatchNormStatsFunctor<T>()(ctx->stream(), input, mean, invstd, eps);
     }
@@ -182,11 +411,12 @@ class GpuBatchNormStatsKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_BATCH_NORM_STATS_KERNEL(dtype)                        \
-  REGISTER_USER_KERNEL("batch_norm_stats")                             \
-      .SetCreateFn<GpuBatchNormStatsKernel<dtype>>()                   \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value))
+#define REGISTER_BATCH_NORM_STATS_KERNEL(dtype)                                            \
+  REGISTER_USER_KERNEL("batch_norm_stats")                                                 \
+      .SetCreateFn<GpuBatchNormStatsKernel<dtype>>()                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                     \
+                       && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn(InferTmpSizeForChannelLastKernel<dtype>)
 
 REGISTER_BATCH_NORM_STATS_KERNEL(float);
 REGISTER_BATCH_NORM_STATS_KERNEL(double);
