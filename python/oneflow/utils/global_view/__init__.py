@@ -14,17 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.utils.global_view.dict_to_global import dict_to_global
-from oneflow.utils.global_view.global_utils import (
-    to_global_tensor,
-    to_local_tensor,
-    check_input_global,
-    check_placement_on_all_ranks,
-)
+from oneflow.utils.global_view.to_global import to_global
+from oneflow.utils.global_view.to_local import to_local
 
 __all__ = [
     "dict_to_global",
-    "to_global_tensor",
-    "to_local_tensor",
-    "check_input_global",
-    "check_placement_on_all_ranks",
+    "to_global",
+    "to_local",
 ]

@@ -75,7 +75,7 @@ def _test_linear_graph_save_load_global_broadcast(
             else:
                 local_state_dict = None
 
-            global_state_dict = flow.to_global(
+            global_state_dict = flow.utils.to_global(
                 local_state_dict, placement=model_file_placement, sbp=B
             )
             linear_t_g.load_state_dict(global_state_dict)
@@ -150,13 +150,13 @@ def _test_linear_graph_save_load_global_broadcast(
         # Save the model
         if call_cnt == 0:
             # Transfer the state dict to model_file_placement
-            model_file_state_dict = flow.to_global(
+            model_file_state_dict = flow.utils.to_global(
                 iter1_state_dict, placement=model_file_placement, sbp=B
             )
 
             # Get the local component and save it on model_file_placement's rank(s)
             if cur_rank in model_file_placement.ranks:
-                iter1_local_dict = flow.to_local(model_file_state_dict)
+                iter1_local_dict = flow.utils.to_local(model_file_state_dict)
                 flow.save(iter1_local_dict, state_dict_dir)
 
             of_graph_out = linear_t_g(x)
@@ -411,7 +411,7 @@ def _test_graph_save_load_global_split_2(
                 sbp_for_special_keys=sbp_for_special_keys,
             )
             if flow.env.get_rank() in model_file_placement.ranks:
-                flow.save(flow.to_local(model_file_state_dict), state_dict_dir)
+                flow.save(flow.utils.to_local(model_file_state_dict), state_dict_dir)
 
             graph_model(x)
             iter2_state_dict = graph_model.state_dict()
@@ -743,7 +743,7 @@ def _test_graph_save_load_global_split_4(
                 sbp_for_special_keys=sbp_for_special_keys,
             )
             if flow.env.get_rank() in model_file_placement.ranks:
-                flow.save(flow.to_local(model_file_state_dict), state_dict_dir)
+                flow.save(flow.utils.to_local(model_file_state_dict), state_dict_dir)
 
             graph_model(x)
             iter2_state_dict = graph_model.state_dict()

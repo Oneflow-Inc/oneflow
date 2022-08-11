@@ -1364,7 +1364,7 @@ class TestToGlobalAndLocal(flow.unittest.TestCase):
         ]
         global_inputs = []
         for i in inputs:
-            ret = flow.to_global(
+            ret = flow.utils.to_global(
                 i,
                 placement=TestToGlobalAndLocal.placement,
                 sbp=TestToGlobalAndLocal.sbp,
@@ -1377,14 +1377,14 @@ class TestToGlobalAndLocal(flow.unittest.TestCase):
             global_inputs.append(ret)
 
         for i in global_inputs:
-            ret = flow.to_local(i)
+            ret = flow.utils.to_local(i)
             test_case.__all_local(ret)
 
     def _test_tensor_to_global(test_case):
         local_tensor = flow.ones((3, 4))
 
         # local tensor -> global tensor
-        global_tensor = flow.to_global(
+        global_tensor = flow.utils.to_global(
             local_tensor,
             placement=TestToGlobalAndLocal.placement,
             sbp=TestToGlobalAndLocal.sbp,
@@ -1392,7 +1392,7 @@ class TestToGlobalAndLocal(flow.unittest.TestCase):
         test_case.assertTrue(global_tensor.is_global)
 
         # global tensor -> global tensor
-        global_tensor = flow.to_global(
+        global_tensor = flow.utils.to_global(
             global_tensor,
             placement=TestToGlobalAndLocal.placement,
             sbp=TestToGlobalAndLocal.sbp,
@@ -1401,11 +1401,11 @@ class TestToGlobalAndLocal(flow.unittest.TestCase):
 
         # passing no placement and sbp
         with test_case.assertRaises(ValueError):
-            global_tensor = flow.to_global(local_tensor, placement=None, sbp=None)
+            global_tensor = flow.utils.to_global(local_tensor, placement=None, sbp=None)
 
         # wrong sbp type
         with test_case.assertRaises(TypeError):
-            global_tensor = flow.to_global(
+            global_tensor = flow.utils.to_global(
                 local_tensor,
                 placement=TestToGlobalAndLocal.placement,
                 sbp=(TestToGlobalAndLocal.sbp, 0),
@@ -1418,12 +1418,12 @@ class TestToGlobalAndLocal(flow.unittest.TestCase):
             placement=TestToGlobalAndLocal.placement,
             sbp=TestToGlobalAndLocal.sbp,
         )
-        local_tensor = flow.to_local(global_tensor)
+        local_tensor = flow.utils.to_local(global_tensor)
         test_case.assertFalse(local_tensor.is_global)
 
     def __test_state_dict_to_global(test_case, local_state_dict):
         # local state dict -> global state dict
-        global_state_dict = flow.to_global(
+        global_state_dict = flow.utils.to_global(
             local_state_dict,
             placement=TestToGlobalAndLocal.placement,
             sbp=TestToGlobalAndLocal.sbp,
@@ -1435,7 +1435,7 @@ class TestToGlobalAndLocal(flow.unittest.TestCase):
         )
 
         # global state dict -> global state dict
-        global_state_dict = flow.to_global(
+        global_state_dict = flow.utils.to_global(
             global_state_dict,
             placement=TestToGlobalAndLocal.placement,
             sbp=TestToGlobalAndLocal.sbp,
@@ -1448,11 +1448,11 @@ class TestToGlobalAndLocal(flow.unittest.TestCase):
 
     def __test_state_dict_to_local(test_case, global_state_dict):
         # global state dict -> local state dict
-        local_state_dict = flow.to_local(global_state_dict)
+        local_state_dict = flow.utils.to_local(global_state_dict)
         test_case.__all_local(local_state_dict)
 
         # local input, display warning
-        local_state_dict = flow.to_local(local_state_dict)
+        local_state_dict = flow.utils.to_local(local_state_dict)
 
     def _test_eagar_state_dict(test_case):
         test_case.__test_state_dict_to_global(TestToGlobalAndLocal.model.state_dict())

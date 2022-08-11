@@ -13,18 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import warnings
-import pickle
-
 import oneflow as flow
-from oneflow.framework.tensor import Tensor
-from oneflow.nn.graph.util import ArgsTree
-from oneflow.utils.global_view.global_utils import (
-    to_global_tensor,
-    to_local_tensor,
-    check_input_global,
-    check_placement_on_all_ranks,
-)
+from oneflow.framework.tensor import register_tensor_op, Tensor
+from oneflow.nn.module import Module
 
 
 def _check_sbp(sbp):
@@ -88,184 +79,16 @@ def global_to_global_op(
 
 
 def to_global_op(input, placement=None, sbp=None, **kwargs):
-    r"""Converts the input tensor or input tensor(s) in list/tuple/dict to global tensor(s).
-    
-    Note:
-        Both placement and sbp are required if the input is local, otherwise at least one of placement and sbp is required.
+    assert isinstance(input, Tensor)
 
-    Args:
-        input (oneflow.Tensor/None/list/tuple/dict): the input that needs to be converted.
-        placement (oneflow.placement, optional):  the desired placement of the input. Default: None
-        sbp (oneflow.sbp.sbp or list/tuple of oneflow.sbp.sbp, optional): the desired sbp of the input. Default: None
-    
-    Returns:
-        The converted input.
-
-    For a tensor input: please refer to the examples in :func:`oneflow.Tensor.to_global`.
-
-    For an input of other type (take a state dict as an example):
-
-    .. code-block:: python
-
-        >>> # Run on 2 ranks respectively
-        >>> import oneflow as flow
-        >>> from oneflow import nn
-        >>> placement = flow.placement("cpu", ranks=[0, 1]) # doctest: +SKIP
-        >>> sbp = (flow.sbp.broadcast,) # doctest: +SKIP
-        >>> model = nn.Sequential(nn.Linear(8, 4), nn.ReLU(), nn.Linear(4, 2)) # doctest: +SKIP
-        >>> global_state_dict = flow.to_global(model.state_dict(), placement, sbp) # doctest: +SKIP
-        >>> for val in state_dict.values(): # doctest: +SKIP
-        >>>     print(val.is_global) # doctest: +SKIP
-
-    .. code-block:: python
-
-        >>> # results on rank 0
-        True
-        True
-        True
-        True
-
-    .. code-block:: python
-
-        >>> # results on rank 1
-        True
-        True
-        True
-        True
-    """
-    is_input_not_tensor_or_none = False
-    if (input is not None) and (not isinstance(input, (Tensor, dict, tuple, list))):
-        is_input_not_tensor_or_none = True
-
-    if (
-        (not is_input_not_tensor_or_none)
-        and (placement is not None)
-        and (not check_input_global(input))
-        and (not check_placement_on_all_ranks(placement))
-    ):
-        src_rank = placement.ranks.flat[0]
-        cur_rank = flow.env.get_rank()
-
-        if cur_rank == src_rank:
-            # Replace tensor(s) in the input with None, in order to reduce communication cost
-            if isinstance(input, Tensor) or input is None:
-                mapped_input_none = None
-            else:
-                input_tree_none = ArgsTree(input)
-
-                def leaf_fn_to_none(node):
-                    if isinstance(node, Tensor):
-                        return None
-                    else:
-                        warnings.warn(
-                            "Non-Tensor type: {} encountered, it will remain the same.".format(
-                                type(node)
-                            )
-                        )
-                        return node
-
-                mapped_input_none = input_tree_none.map_leaf(leaf_fn_to_none)
-
-            obj_input = pickle.dumps(mapped_input_none)
-            flow._oneflow_internal.cpu_broadcast(obj_input, src_rank)
-        else:
-            if cur_rank in placement.ranks:
-                # Participating in the broadcast process but retaining original value
-                flow._oneflow_internal.cpu_broadcast(None, src_rank)
-            else:
-                # The input of other ranks will be always overwritten no matter what is passed in
-                input = pickle.loads(
-                    flow._oneflow_internal.cpu_broadcast(None, src_rank)
-                )
-
-    if isinstance(input, Tensor) or input is None:
-        return to_global_tensor(input, placement, sbp, **kwargs)
-    elif isinstance(input, (dict, tuple, list)):
-        input_tree = ArgsTree(input)
-
-        def leaf_fn(node):
-            if isinstance(node, Tensor) or node is None:
-                return to_global_tensor(node, placement, sbp, **kwargs)
-            else:
-                warnings.warn(
-                    "Non-Tensor type: {} encountered, it will remain the same.".format(
-                        type(node)
-                    )
-                )
-                return node
-
-        mapped_input = input_tree.map_leaf(leaf_fn)
-        return mapped_input
+    if input.is_global:
+        return global_to_global_op(input=input, placement=placement, sbp=sbp, **kwargs)
     else:
-        warnings.warn(
-            "Non-Tensor type: {} encountered, it will remain the same.".format(
-                type(input)
-            )
-        )
-        return input
+        if "grad_sbp" in kwargs:
+            del kwargs["grad_sbp"]
+        return local_to_global_op(input=input, placement=placement, sbp=sbp, **kwargs)
 
 
 def to_local_op(input, *, copy=False):
-    r"""Returns the local part of the input.
-    
-    Returns:
-        The converted input.
-
-    For a tensor input: please refer to the examples in :func:`oneflow.Tensor.to_local`.
-
-    For an input of other type (take a state dict as an example):
-
-    .. code-block:: python
-
-        >>> # Run on 2 ranks respectively
-        >>> import oneflow as flow
-        >>> from oneflow import nn
-        >>> placement = flow.placement("cpu", ranks=[0, 1]) # doctest: +SKIP
-        >>> sbp = (flow.sbp.broadcast,) # doctest: +SKIP
-        >>> model = nn.Sequential(nn.Linear(8, 4), nn.ReLU(), nn.Linear(4, 2)) # doctest: +SKIP
-        >>> model = model.to_global(placement=placement, sbp=sbp) # doctest: +SKIP
-        >>> local_state_dict = flow.to_local(model.state_dict()) # doctest: +SKIP
-        >>> for val in local_state_dict.values(): # doctest: +SKIP
-        >>>     print(val.is_global) # doctest: +SKIP
-
-    .. code-block:: python
-
-        >>> # results on rank 0
-        False
-        False
-        False
-        False
-
-    .. code-block:: python
-
-        >>> # results on rank 1
-        False
-        False
-        False
-        False
-    """
-    if isinstance(input, Tensor):
-        return to_local_tensor(input, copy)
-    elif isinstance(input, (dict, tuple, list)):
-        input_tree = ArgsTree(input)
-
-        def leaf_fn(node):
-            if isinstance(node, Tensor):
-                return to_local_tensor(node, copy)
-            else:
-                warnings.warn(
-                    "Non-Tensor type: {} encountered, it will remain the same.".format(
-                        type(node)
-                    )
-                )
-                return node
-
-        mapped_input = input_tree.map_leaf(leaf_fn)
-        return mapped_input
-    else:
-        warnings.warn(
-            "Non-Tensor type: {} encountered, it will remain the same.".format(
-                type(input)
-            )
-        )
-        return input
+    assert input.is_global, "Expected global tensor for to_local but got local tensor!"
+    return flow._C.to_local(input, copy)
