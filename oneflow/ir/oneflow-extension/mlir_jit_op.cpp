@@ -52,12 +52,16 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
     LOG(ERROR) << "Fail to load mlir assembly";
     exit(1);
   }
-  auto args_it = module->getBodyRegion().getOps().begin()->getRegions().begin()->args_begin();
-  auto in0 = args_it->getType().dyn_cast<mlir::RankedTensorType>();
-  auto in1 = (++args_it)->getType().dyn_cast<mlir::RankedTensorType>();
 
-  CHECK_EQ(Shape(in0.getShape().begin(), in0.getShape().end()), ctx->InputShape("in", 0));
-  CHECK_EQ(mlir::oneflow::support::GetDataTypeFromMLIRType(in1.getElementType()),
+  std::vector<mlir::RankedTensorType> ins;
+  for (auto args_it = module->getBodyRegion().getOps().begin()->getRegions().begin()->args_begin();
+       args_it != nullptr; args_it++) {
+    ins.emplace_back(args_it->getType().dyn_cast<mlir::RankedTensorType>());
+  }
+
+  CHECK_EQ(ins.size(), 2);
+  CHECK_EQ(Shape(ins[0].getShape().begin(), ins[0].getShape().end()), ctx->InputShape("in", 0));
+  CHECK_EQ(mlir::oneflow::support::GetDataTypeFromMLIRType(ins[1].getElementType()),
            ctx->InputDType("in", 1));
 
   CHECK_EQ(ctx->inputs().size(), 2);
