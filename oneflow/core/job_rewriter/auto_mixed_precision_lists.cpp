@@ -119,6 +119,9 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
   // TODO(niuchong): tuple_identity
   static AMPList clear_list = {"broadcast_like",
                                "gather",
+                               "gather_nd",
+                               "scatter_nd",
+                               "scatter_nd_like",
                                "unsorted_segment_sum_like",
                                "tf_max_pool_1d",
                                "tf_max_pool_1d_grad",
