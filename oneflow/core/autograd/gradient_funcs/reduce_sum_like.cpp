@@ -13,16 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
+
 namespace oneflow {
 namespace one {
 
 struct ReduceSumLikeCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
+  bool requires_grad = false;
   std::vector<int32_t> axis;
 };
 
@@ -50,6 +52,8 @@ Maybe<void> ReduceSumLike::Capture(ReduceSumLikeCaptureState* ctx, const TensorT
   CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
   ctx->requires_grad = inputs.at(0)->requires_grad();
+  CHECK_OR_RETURN(!inputs.at(1)->requires_grad())
+      << Error::RuntimeError() << "like tensor does not require grad";
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
