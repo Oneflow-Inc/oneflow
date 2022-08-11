@@ -24,7 +24,7 @@ namespace {
 
 int64_t GetStreamSetId() {
   static std::atomic<int64_t> stream_set_id(0);
-  return ++stream_set_id;
+  return stream_set_id++;
 }
 
 }  // namespace
