@@ -16,9 +16,11 @@ limitations under the License.
 import oneflow._oneflow_internal
 import contextlib
 
+Stream = oneflow._oneflow_internal.Stream
+
 
 @contextlib.contextmanager
-def tmp_compute_stream(stream_tag="default"):
-    guard = oneflow._oneflow_internal.eager.TmpComputeStreamTypeGuard(stream_tag)
+def stream(stream_obj: Stream, exclude_ccl=False):
+    guard = oneflow._oneflow_internal.StreamGuard(stream_obj, exclude_ccl)
     yield
     del guard

@@ -42,7 +42,6 @@ limitations under the License.
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/stream_get_stream_type_name.h"
 #include "oneflow/core/framework/stream_mgr.h"
-#include "oneflow/core/vm/stream_type_is_tmp.h"
 
 namespace oneflow {
 
@@ -355,9 +354,10 @@ intrusive::shared_ptr<vm::Dependence> VirtualMachine::FindOrCreateTransportLocal
   return transport_local_dep_object_;
 }
 
-Maybe<vm::Stream*> VirtualMachine::CreateStream(Symbol<Device> device, StreamType stream_type) {
+Maybe<vm::Stream*> VirtualMachine::CreateStream(Symbol<Device> device, StreamType stream_type,
+                                                size_t thread_uid) {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
-  vm::ThreadCtx* thread_ctx = JUST(FindOrCreateThreadCtx(device, stream_type));
+  vm::ThreadCtx* thread_ctx = JUST(FindOrCreateThreadCtx(device, stream_type, thread_uid));
   return JUST(CreateStream(thread_ctx, device, stream_type));
 }
 
@@ -372,7 +372,8 @@ Maybe<vm::Stream*> VirtualMachine::GetVmStream(Symbol<Stream> stream) {
             << "invalid Stream::unique_stream_id()";
         unique_stream_id2vm_stream_.SetOrAdd(
             cur_stream->unique_stream_id(),
-            JUST(CreateStream(cur_stream->device(), cur_stream->stream_type())));
+            JUST(CreateStream(cur_stream->device(), cur_stream->stream_type(),
+                              cur_stream->thread_uid())));
       }
     }
   }
@@ -380,23 +381,25 @@ Maybe<vm::Stream*> VirtualMachine::GetVmStream(Symbol<Stream> stream) {
 }
 
 Maybe<vm::ThreadCtx*> VirtualMachine::FindOrCreateThreadCtx(Symbol<Device> device,
-                                                            StreamType stream_type) {
+                                                            StreamType stream_type,
+                                                            size_t thread_uid) {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
   vm::ThreadCtx** thread_ctx_ptr = nullptr;
   if (StreamOnIndependentThread::Visit(stream_type)) {
     auto key = std::make_pair(device->enum_type(), stream_type);
     thread_ctx_ptr = &devcie_type_stream_type_2independent_thread_ctx_[key];
-  } else if (StreamTypeIsTmp::Visit(stream_type)) {
-    thread_ctx_ptr = &devcie_type2tmp_non_independent_thread_ctx_[device->enum_type()];
   } else {
-    thread_ctx_ptr = &devcie_type2non_independent_thread_ctx_[device->enum_type()];
+    auto key = std::make_pair(device->enum_type(), thread_uid);
+    thread_ctx_ptr = &devcie_type_thread_uid2shared_thread_ctx_[key];
   }
-  if (*thread_ctx_ptr == nullptr) { *thread_ctx_ptr = JUST(CreateThreadCtx(device, stream_type)); }
+  if (*thread_ctx_ptr == nullptr) {
+    *thread_ctx_ptr = JUST(CreateThreadCtx(device, stream_type, thread_uid));
+  }
   return *thread_ctx_ptr;
 }
 
-Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device,
-                                                      StreamType stream_type) {
+Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device, StreamType stream_type,
+                                                      size_t thread_uid) {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
   // thread_ctx_ptr may be used after timout.
   auto thread_ctx_ptr = std::make_shared<vm::ThreadCtx*>(nullptr);
@@ -414,23 +417,23 @@ Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device,
   }
   auto* thread_ctx = *thread_ctx_ptr;
   {
-    const auto& WorkerInitializer = [device, stream_type](vm::ThreadCtx* thread_ctx) {
-      int device_type_value = static_cast<int>(device->enum_type()) * 2
-                              + static_cast<int>(StreamTypeIsTmp::Visit(stream_type));
-      CHECK_GT(device_type_value, 0);
-      const std::string thread_tag = [&]() {
-        std::string device_tag = *CHECK_JUST(DeviceTag4DeviceType(device->enum_type()));
-        if (StreamOnIndependentThread::Visit(stream_type)) {
-          return device_tag + GetStreamTypeName::Visit(stream_type);
-        } else if (StreamTypeIsTmp::Visit(stream_type)) {
-          return device_tag + "_tmp";
-        } else {
-          return device_tag;
-        }
-      }();
-      if (!StreamOnIndependentThread::Visit(stream_type)) {
-        CHECK_JUST(
-            InitThisThreadGlobalId(device_type_value + kThreadGlobalIdScheduler, thread_tag));
+    const bool need_thread_global_id = [&] {
+      return !StreamOnIndependentThread::Visit(stream_type) && device->enum_type() == kCPU;
+    }();
+    size_t thread_global_id = thread_uid + kThreadGlobalIdWorkerStart;
+    if (need_thread_global_id) { JUST(CheckThreadGlobalIdAvailable(thread_global_id)); }
+    const std::string thread_tag = [&] {
+      std::string device_tag = *CHECK_JUST(DeviceTag4DeviceType(device->enum_type()));
+      if (StreamOnIndependentThread::Visit(stream_type)) {
+        return device_tag + GetStreamTypeName::Visit(stream_type);
+      } else {
+        return device_tag + std::to_string(thread_uid);
+      }
+    }();
+    const auto& WorkerInitializer = [need_thread_global_id, thread_global_id,
+                                     thread_tag](vm::ThreadCtx* thread_ctx) {
+      if (need_thread_global_id) {
+        CHECK_JUST(InitThisThreadGlobalId(thread_global_id, thread_tag));
       }
       OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Worker_" + thread_tag);
     };

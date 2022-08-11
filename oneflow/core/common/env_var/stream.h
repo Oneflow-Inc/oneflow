@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,23 +12,15 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
+*/
+#ifndef ONEFLOW_CORE_COMMON_ENV_VAR_STREAM_H_
+#define ONEFLOW_CORE_COMMON_ENV_VAR_STREAM_H_
 
-import unittest
-from collections import OrderedDict
+#include "oneflow/core/common/env_var/env_var.h"
 
-import numpy as np
+namespace oneflow {
 
-import oneflow as flow
-import oneflow.unittest
+DEFINE_THREAD_LOCAL_ENV_INTEGER(ONEFLOW_DEVICE_STREAM_MAX_SIZE, 16);
 
-
-@flow.unittest.skip_unless_1n1d()
-class TestMockModule(flow.unittest.TestCase):
-    def test_stream(test_case):
-        with flow.stream(flow.Stream()):
-            test_case.assertEqual(flow.ones(1)[0], 1)
-
-
-if __name__ == "__main__":
-    unittest.main()
+}  // namespace oneflow
+#endif  // ONEFLOW_CORE_COMMON_ENV_VAR_STREAM_H_

@@ -105,17 +105,9 @@ struct GetRecordEventInstructionPolicy : public StreamTypeVisitor<GetRecordEvent
         new vm::EpRecordEventInstructionPolicy(std::forward<Args>(args)...));
   }
   template<typename... Args>
-  static Maybe<vm::InstructionPolicy> VisitTmpHost2Device(DeviceType device_type, Args&&... args) {
-    return VisitHost2Device(device_type, std::forward<Args>(args)...);
-  }
-  template<typename... Args>
   static Maybe<vm::InstructionPolicy> VisitDevice2Host(DeviceType device_type, Args&&... args) {
     return std::shared_ptr<vm::InstructionPolicy>(
         new vm::EpRecordEventInstructionPolicy(std::forward<Args>(args)...));
-  }
-  template<typename... Args>
-  static Maybe<vm::InstructionPolicy> VisitTmpDevice2Host(DeviceType device_type, Args&&... args) {
-    return VisitDevice2Host(device_type, std::forward<Args>(args)...);
   }
   template<typename... Args>
   static Maybe<vm::InstructionPolicy> VisitSyncedLaunchedCommNet(DeviceType device_type,
@@ -145,11 +137,6 @@ struct GetRecordEventInstructionPolicy : public StreamTypeVisitor<GetRecordEvent
   }
   template<typename... Args>
   static Maybe<vm::InstructionPolicy> VisitPinnedCompute(DeviceType device_type, Args&&... args) {
-    return std::shared_ptr<vm::InstructionPolicy>(
-        new vm::EpRecordEventInstructionPolicy(std::forward<Args>(args)...));
-  }
-  template<typename... Args>
-  static Maybe<vm::InstructionPolicy> VisitTmpCompute(DeviceType device_type, Args&&... args) {
     return std::shared_ptr<vm::InstructionPolicy>(
         new vm::EpRecordEventInstructionPolicy(std::forward<Args>(args)...));
   }

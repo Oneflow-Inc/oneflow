@@ -67,7 +67,7 @@ def is_deprecated(func_or_class):
     )
 
 
-from oneflow.framework.stream import tmp_compute_stream
+from oneflow.framework.stream import Stream, stream
 
 from oneflow._C import abs
 from oneflow._C import exp

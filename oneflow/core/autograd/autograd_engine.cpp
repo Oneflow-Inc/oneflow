@@ -122,7 +122,7 @@ Maybe<void> TouchInTmpComputeStream(const TensorTuple& inputs) {
     if (input->is_global()) { input = JUST(input->cur_rank_phy_tensor()); }
     if (input) {
       Symbol<Device> device = JUST(input->device());
-      auto stream = JUST(Stream::New(device, StreamType::kTmpCompute));
+      auto stream = JUST(Stream::New(device, StreamType::kCompute, Stream::kTmpStreamThreadUid));
       JUST(Touch(input, stream));
     }
   }
@@ -153,7 +153,7 @@ Maybe<void> AutogradEngine::RunBackwardAndSaveGrads4LeafTensorIf(const TensorTup
   JUST(CheckGlobalTensorsMeta(out_grads));
   DisableCheckGlobalTensorMetaScope disable_meta_check;
   if (ThreadLocalEnvBool<ONEFLOW_AD_PUT_LOSS_ON_TMP_COMPUTE_STREAM>()) {
-    // Put outputs into kTmpCompute stream for reducing blocking time of outputs[i].numpy() in main
+    // Put outputs into tmp stream for reducing blocking time of outputs[i].numpy() in main
     // thread.
     auto copied_outputs = JUST(TryCopyForSmallTensor(outputs));
     JUST(TouchInTmpComputeStream(outputs));

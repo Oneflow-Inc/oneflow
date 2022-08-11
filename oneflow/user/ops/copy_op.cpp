@@ -26,8 +26,8 @@ Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
                                      const Symbol<Device>& out_device, const bool pin_memory,
                                      const bool tmp_copy) {
   if (in_device->type() != "cpu" && out_device->type() == "cpu") {
-    return Stream::New(in_device,
-                       (tmp_copy ? StreamType::kTmpDevice2Host : StreamType::kDevice2Host));
+    return Stream::New(in_device, StreamType::kDevice2Host,
+                       (tmp_copy ? Stream::kTmpStreamThreadUid : Stream::kDefaultStreamThreadUid));
   } else if (in_device->type() == "cpu" && out_device->type() != "cpu") {
     const auto device = JUST(Device::New(out_device->type(), out_device->device_id()));
     return Stream::New(device, StreamType::kHost2Device);

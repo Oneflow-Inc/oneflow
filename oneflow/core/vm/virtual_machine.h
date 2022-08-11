@@ -63,9 +63,11 @@ class VirtualMachine final {
   vm::VirtualMachineEngine* mut_engine() { return engine_.Mutable(); }
 
   void ControlSync();
-  Maybe<vm::ThreadCtx*> FindOrCreateThreadCtx(Symbol<Device> device, StreamType stream_type);
-  Maybe<vm::ThreadCtx*> CreateThreadCtx(Symbol<Device> device, StreamType stream_type);
-  Maybe<vm::Stream*> CreateStream(Symbol<Device> device, StreamType stream_type);
+  Maybe<vm::ThreadCtx*> FindOrCreateThreadCtx(Symbol<Device> device, StreamType stream_type,
+                                              size_t thread_uid);
+  Maybe<vm::ThreadCtx*> CreateThreadCtx(Symbol<Device> device, StreamType stream_type,
+                                        size_t thread_uid);
+  Maybe<vm::Stream*> CreateStream(Symbol<Device> device, StreamType stream_type, size_t thread_uid);
 
   Maybe<vm::Stream*> CreateStream(vm::ThreadCtx* thread_ctx, Symbol<Device> device,
                                   StreamType stream_type);
@@ -86,8 +88,7 @@ class VirtualMachine final {
 
   // for creating vm::Stream and vm::ThreadCtx
   std::recursive_mutex creating_stream_and_thread_ctx_mutex_;
-  HashMap<DeviceType, vm::ThreadCtx*> devcie_type2non_independent_thread_ctx_;
-  HashMap<DeviceType, vm::ThreadCtx*> devcie_type2tmp_non_independent_thread_ctx_;
+  HashMap<std::pair<DeviceType, size_t>, vm::ThreadCtx*> devcie_type_thread_uid2shared_thread_ctx_;
   HashMap<std::pair<DeviceType, StreamType>, vm::ThreadCtx*>
       devcie_type_stream_type_2independent_thread_ctx_;
   HashMap<std::pair<Symbol<Device>, StreamType>, intrusive::shared_ptr<vm::Dependence>>

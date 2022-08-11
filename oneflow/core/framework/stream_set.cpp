@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,23 +12,25 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
+*/
+#include <vector>
+#include <mutex>
+#include "oneflow/core/framework/stream_set.h"
+#include "oneflow/core/common/env_var/stream.h"
 
-import unittest
-from collections import OrderedDict
+namespace oneflow {
 
-import numpy as np
+namespace {
 
-import oneflow as flow
-import oneflow.unittest
+int64_t GetStreamSetId() {
+  static std::atomic<int64_t> stream_set_id(0);
+  return ++stream_set_id;
+}
 
+}  // namespace
 
-@flow.unittest.skip_unless_1n1d()
-class TestMockModule(flow.unittest.TestCase):
-    def test_stream(test_case):
-        with flow.stream(flow.Stream()):
-            test_case.assertEqual(flow.ones(1)[0], 1)
+StreamSet::StreamSet(int64_t stream_set_id) : stream_set_id_(stream_set_id) {}
 
+StreamSet::StreamSet() : stream_set_id_(GetStreamSetId()) {}
 
-if __name__ == "__main__":
-    unittest.main()
+}  // namespace oneflow

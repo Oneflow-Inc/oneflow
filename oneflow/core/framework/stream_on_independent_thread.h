@@ -24,16 +24,13 @@ namespace oneflow {
 struct StreamOnIndependentThread : public StreamTypeVisitor<StreamOnIndependentThread> {
   static bool VisitCompute() { return false; }
   static bool VisitHost2Device() { return false; }
-  static bool VisitTmpHost2Device() { return false; }
   static bool VisitDevice2Host() { return false; }
-  static bool VisitTmpDevice2Host() { return false; }
   static bool VisitSyncedLaunchedCommNet() { return false; }
   static bool VisitAsyncedLaunchedCommNet() { return false; }
   static bool VisitBarrier() { return false; }
   static bool VisitCriticalSection() { return true; }
   static bool VisitLazyJobLauncher() { return true; }
   static bool VisitPinnedCompute() { return VisitCompute(); }
-  static bool VisitTmpCompute() { return VisitCompute(); }
 };
 
 }  // namespace oneflow
