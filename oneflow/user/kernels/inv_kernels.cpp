@@ -22,15 +22,15 @@ namespace {
 
 static inline size_t BatchCount(const user_op::Tensor* batched_matrices) {
   size_t result = 1;
-  for (size_t i = 0; i < batched_matrices->shape().NumAxes() - 2; i++) {
-    result *= batched_matrices->shape().At(i);
+  for (size_t i = 0; i < batched_matrices->shape_view().NumAxes() - 2; i++) {
+    result *= batched_matrices->shape_view().At(i);
   }
   return result;
 }
 
 static inline size_t MatrixStride(const user_op::Tensor* batched_matrices) {
-  const int64_t num_axes = batched_matrices->shape().NumAxes();
-  return batched_matrices->shape().At(num_axes - 2) * batched_matrices->shape().At(num_axes - 1);
+  const int64_t num_axes = batched_matrices->shape_view().NumAxes();
+  return batched_matrices->shape_view().At(num_axes - 2) * batched_matrices->shape_view().At(num_axes - 1);
 }
 
 }  // namespace
@@ -47,7 +47,7 @@ class CpuInvKernel final : public user_op::OpKernel {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     auto batch_count = BatchCount(x);
     auto matrix_stride = MatrixStride(x);
-    auto matrix_size = x->shape().At(x->shape().NumAxes() - 2);
+    auto matrix_size = x->shape_view().At(x->shape_view().NumAxes() - 2);
     const T* x_ptr = x->dptr<T>();
     T* y_ptr = y->mut_dptr<T>();
     FOR_RANGE(int64_t, i, 0, batch_count) {

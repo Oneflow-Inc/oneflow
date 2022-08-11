@@ -10114,6 +10114,10 @@ def OneFlow_InvOp : OneFlow_BaseOp<"inv", [NoSideEffect, DeclareOpInterfaceMetho
   let output = (outs
     OneFlow_Tensor:$y
   );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
 }
 
 #endif // GET_ONEFLOW_LINEAR_ALGEBRA_OP_DEFINITIONS

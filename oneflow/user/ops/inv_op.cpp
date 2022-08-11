@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 /*static*/ Maybe<void> InvOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  *ctx->OutputShape("y", 0) = ctx->InputShape("x", 0);
+  *ctx->MutOutputShape("y", 0) = ctx->InputShape("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -36,7 +36,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> InvOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->MutOutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
