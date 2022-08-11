@@ -417,8 +417,6 @@ if(BUILD_TESTING)
                           ${oneflow_test_libs})
     if(WITH_MLIR)
       target_link_libraries(oneflow_testexe MLIROneFlowExtension)
-    else()
-
     endif()
   endif()
 
