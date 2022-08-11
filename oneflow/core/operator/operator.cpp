@@ -316,7 +316,7 @@ Maybe<void> Operator::InferLogicalOutBlobDescsIf() {
   output_index2logical_blob_desc_.reset(new std::vector<std::shared_ptr<const BlobDesc>>());
   output_index2logical_blob_desc_->resize(output_bns().size());
   for (int32_t i = 0; i < output_bns().size(); ++i) {
-    auto& out_blob_desc = output_logical_blob_desc_vec.at(i);
+    auto& out_blob_desc = output_logical_blob_desc_vec[i];
     // initialize stride by shape if stride is empty
     if (out_blob_desc->stride().empty()
         && out_blob_desc->shape().size() != out_blob_desc->stride().size()) {
