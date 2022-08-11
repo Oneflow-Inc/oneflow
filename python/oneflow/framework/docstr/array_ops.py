@@ -271,7 +271,9 @@ add_docstr(
 add_docstr(
     oneflow.atleast_1d,
     r"""Returns a 1-dimensional view of each input tensor with zero dimensions. Input tensors with one or more dimensions are returned as-is.
+
     The interface is consistent with PyTorch.
+
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.atleast_1d.html.
 
     Args:
@@ -300,7 +302,9 @@ add_docstr(
 add_docstr(
     oneflow.atleast_2d,
     r"""Returns a 2-dimensional view of each input tensor with zero dimensions. Input tensors with two or more dimensions are returned as-is.
+
     The interface is consistent with PyTorch.
+
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.atleast_2d.html.
 
 
@@ -333,7 +337,9 @@ add_docstr(
 add_docstr(
     oneflow.atleast_3d,
     r"""Returns a 3-dimensional view of each input tensor with zero dimensions. Input tensors with three or more dimensions are returned as-is.
+
     The interface is consistent with PyTorch.
+
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.atleast_3d.html.
 
     Args:
