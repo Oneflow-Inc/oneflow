@@ -74,6 +74,8 @@ Maybe<std::string> GetTensorMetaString(const std::shared_ptr<one::Tensor>& tenso
 
 }  // namespace
 
+REGISTER_FUNCTION_CONFIG_DEF().Bool("__is_user_function__", true, "is user defined function");
+
 NNGraph::~NNGraph() {
   VLOG(1) << "Graph destructor Try to close c nn graph name " << name_ << "." << std::endl;
   CHECK_JUST(Close());

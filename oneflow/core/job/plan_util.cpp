@@ -1171,7 +1171,7 @@ const OperatorConf& PlanUtil::GetOpConf(std::shared_ptr<const TaskGraph> task_gr
   } else if (kernel_conf.has_op_attribute_ref()) {
     return task_graph->GetOpGraph()->OpNode4OpName(kernel_conf.op_attribute_ref())->op().op_conf();
   } else {
-    UNIMPLEMENTED() << "kernel_conf must has either op_attribute or op_attribute_ref. kernel_conf: "
+    UNIMPLEMENTED() << " kernel_conf must has either op_attribute or op_attribute_ref, kernel_conf: "
                     << kernel_conf.DebugString();
   }
 }
