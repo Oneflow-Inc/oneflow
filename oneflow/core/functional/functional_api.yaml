@@ -1718,33 +1718,27 @@
   bind_python: True
 
 - name: "clamp"
-  signature:
-    ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clamp"]
+  signature: "Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clamp"
   bind_python: true
 
 - name: "clamp_"
-  signature:
-    ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => ClampInplace"]
+  signature: "Tensor (Tensor input, Scalar min=None, Scalar max=None) => ClampInplace"
   bind_python: true
 
 - name: "clamp_min"
-  signature:
-    ["Tensor (Tensor input, Scalar min) => ClampMin"]
+  signature: "Tensor (Tensor input, Scalar min) => ClampMin"
   bind_python: true
 
 - name: "clamp_min_"
-  signature:
-    ["Tensor (Tensor input, Scalar min) => ClampMinInplace"]
+  signature: "Tensor (Tensor input, Scalar min) => ClampMinInplace"
   bind_python: true
 
 - name: "clamp_max"
-  signature:
-    ["Tensor (Tensor input, Scalar max) => ClampMax"]
+  signature: "Tensor (Tensor input, Scalar max) => ClampMax"
   bind_python: true
 
 - name: "clamp_max_"
-  signature:
-    ["Tensor (Tensor input, Scalar min) => ClampMaxInplace"]
+  signature: "Tensor (Tensor input, Scalar min) => ClampMaxInplace"
   bind_python: true
 
 - name: "clip"
