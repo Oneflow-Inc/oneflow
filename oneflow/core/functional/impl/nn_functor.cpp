@@ -2636,9 +2636,9 @@ class PairwiseDistanceFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& y,
                            const float& p, const double& eps, bool keepdim) const {
-    int64_t xdim = x->ndim();
-    int64_t ydim = y->ndim();
-    int64_t output_dim = xdim > ydim ? xdim : ydim;
+    const int64_t xdim = x->ndim();
+    const int64_t ydim = y->ndim();
+    const int64_t output_dim = xdim > ydim ? xdim : ydim;
     auto sub = JUST(ScalarAdd(JUST(Sub(x, y, 1, false)), eps, 1, false));
     return ScalarNorm(sub, p, output_dim - 1, keepdim, NullOpt);
   }

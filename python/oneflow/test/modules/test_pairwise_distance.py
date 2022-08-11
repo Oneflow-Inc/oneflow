@@ -26,8 +26,18 @@ class TestPairwiseDistance(flow.unittest.TestCase):
     @autotest(n=3)
     def test_pairwise_distance_module_with_random_data(test_case):
         device = random_device()
-        a = random_tensor(ndim=random(1, 3).to(int), dim0=10, dim1=128).to(device)
-        b = random_tensor(ndim=random(1, 3).to(int), dim0=10, dim1=128).to(device)
+        a = random_tensor(ndim=2, dim0=10, dim1=128).to(device)
+        b = random_tensor(ndim=2, dim0=10, dim1=128).to(device)
+        cos = torch.nn.PairwiseDistance(p=2, eps=1e-6).to(device)
+        cos.train(random())
+        output = cos(a, b)
+        return output
+
+    @autotest(n=3)
+    def test_pairwise_distance_module_with_nonequal_dim_random_data(test_case):
+        device = random_device()
+        a = random_tensor(ndim=1, dim0=128).to(device)
+        b = random_tensor(ndim=2, dim0=10, dim1=128).to(device)
         cos = torch.nn.PairwiseDistance(p=2, eps=1e-6).to(device)
         cos.train(random())
         output = cos(a, b)
@@ -36,8 +46,16 @@ class TestPairwiseDistance(flow.unittest.TestCase):
     @autotest(n=3)
     def test_pairwise_distance_functional_with_random_data(test_case):
         device = random_device()
-        a = random_tensor(ndim=random(1, 3).to(int), dim0=10, dim1=128).to(device)
-        b = random_tensor(ndim=random(1, 3).to(int), dim0=10, dim1=128).to(device)
+        a = random_tensor(ndim=2, dim0=10, dim1=128).to(device)
+        b = random_tensor(ndim=2, dim0=10, dim1=128).to(device)
+        output = torch.nn.functional.pairwise_distance(a, b, p=2, eps=1e-6)
+        return output
+
+    @autotest(n=3)
+    def test_pairwise_distance_functional_with_nonequal_dim_random_data(test_case):
+        device = random_device()
+        a = random_tensor(ndim=1, dim0=128).to(device)
+        b = random_tensor(ndim=2, dim0=10, dim1=128).to(device)
         output = torch.nn.functional.pairwise_distance(a, b, p=2, eps=1e-6)
         return output
 
