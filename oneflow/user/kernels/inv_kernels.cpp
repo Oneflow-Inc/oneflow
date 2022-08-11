@@ -30,7 +30,8 @@ static inline size_t BatchCount(const user_op::Tensor* batched_matrices) {
 
 static inline size_t MatrixStride(const user_op::Tensor* batched_matrices) {
   const int64_t num_axes = batched_matrices->shape_view().NumAxes();
-  return batched_matrices->shape_view().At(num_axes - 2) * batched_matrices->shape_view().At(num_axes - 1);
+  return batched_matrices->shape_view().At(num_axes - 2)
+         * batched_matrices->shape_view().At(num_axes - 1);
 }
 
 }  // namespace
