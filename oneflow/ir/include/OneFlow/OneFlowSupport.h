@@ -49,7 +49,7 @@ std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
     const mlir::Attribute& attr, const mlir::Attribute& device_tag,
     const mlir::Attribute& device_name);
 
-::oneflow::DataType GetDataTypeFromLLVMType(Type dt);
+::oneflow::DataType GetDataTypeFromMLIRType(Type dt);
 }  // namespace support
 
 }  // namespace oneflow

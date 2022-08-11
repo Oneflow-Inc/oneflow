@@ -153,7 +153,7 @@ std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
   exit(EXIT_FAILURE);
 }
 
-::oneflow::DataType GetDataTypeFromLLVMType(Type dt) {
+::oneflow::DataType GetDataTypeFromMLIRType(Type dt) {
   if (dt.dyn_cast<InvalidElementType>()) { return ::oneflow::DataType::kInvalidDataType; }
   if (dt.dyn_cast<CharElementType>()) { return ::oneflow::DataType::kChar; }
   if (dt.dyn_cast<OFRecordElementType>()) { return ::oneflow::DataType::kOFRecord; }

@@ -53,7 +53,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   auto in1 = (++args_it)->getType().dyn_cast<mlir::RankedTensorType>();
 
   CHECK_EQ(Shape(in0.getShape().begin(), in0.getShape().end()), ctx->InputShape("in", 0));
-  CHECK_EQ(mlir::oneflow::support::GetDataTypeFromLLVMType(in1.getElementType()),
+  CHECK_EQ(mlir::oneflow::support::GetDataTypeFromMLIRType(in1.getElementType()),
            ctx->InputDType("in", 1));
 
   CHECK_EQ(ctx->inputs().size(), 2);
