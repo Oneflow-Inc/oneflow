@@ -66,6 +66,14 @@ Type convertSigned(MLIRContext* context, Type type) {
   return type;
 }
 
+FunctionType convertSignedFuncType(MLIRContext* context, FunctionType funcType) {
+  llvm::SmallVector<Type, 4> inputs;
+  llvm::SmallVector<Type, 4> results;
+  for (auto arg : funcType.getInputs()) { inputs.push_back(convertSigned(context, arg)); }
+  for (auto res : funcType.getResults()) { results.push_back(convertSigned(context, res)); }
+  return FunctionType::get(context, inputs, results);
+}
+
 Value CreateTranspose(Location& loc, ConversionPatternRewriter& rewriter, Value input,
                       ArrayRef<int32_t> perms) {
   int perms_size = perms.size();
@@ -133,8 +141,8 @@ struct JobLowering final : public OpConversionPattern<Job> {
   using OpConversionPattern<Job>::OpConversionPattern;
   LogicalResult matchAndRewrite(Job op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto func =
-        rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getName(), op.getFunctionType());
+    auto ft = convertSignedFuncType(op->getContext(), op.function_type());
+    auto func = rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getName(), ft);
     rewriter.inlineRegionBefore(op.getRegion(), func.getBody(), func.end());
     rewriter.eraseOp(op);
     return success();
