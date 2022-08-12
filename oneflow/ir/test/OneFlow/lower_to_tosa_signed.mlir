@@ -1,4 +1,4 @@
-// RUN: oneflow-opt -convert-to-signless-for-tosa -lower-oneflow-to-tosa --print-after-all %s
+// RUN: oneflow-opt -convert-to-signless-for-tosa   --mlir-print-ir-before-all --mlir-print-ir-after-all -lower-oneflow-to-tosa --print-after-all %s
 
 module  {
   func.func @test(%arg0: tensor<1x64x112x112xf32>) -> tensor<1x64x56x56xsi64> {

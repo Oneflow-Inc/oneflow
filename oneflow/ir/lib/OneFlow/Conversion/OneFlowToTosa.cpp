@@ -397,11 +397,15 @@ struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
 
     auto y = CreateTranspose(loc, rewriter, max_pool2d, {0, 3, 1, 2});
 
-    auto indice_output = op.indice().getType();
+    auto indice_output = convertToSignless(op->getContext(), op.indice().getType());
     auto value = DenseElementsAttr::get(indice_output, rewriter.getZeroAttr(rewriter.getI64Type()));
 
-    auto indice = rewriter.create<tosa::ConstOp>(loc, indice_output, value);
-    rewriter.replaceOp(op, {y, indice});
+    tosa::ConstOp indice = rewriter.create<tosa::ConstOp>(loc, indice_output, value);
+
+    UnrealizedConversionCastOp indice_urc = rewriter.create<UnrealizedConversionCastOp>(
+        op->getLoc(), op.indice().getType(), indice->getResults());
+
+    rewriter.replaceOp(op, {y, indice_urc->getResult(0)});
     return success();
   }
 };
@@ -663,6 +667,25 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   }
 }
 
+struct ConvertReturnToSignlessPattern : public OpRewritePattern<func::ReturnOp> {
+  explicit ConvertReturnToSignlessPattern(::mlir::MLIRContext* context)
+      : OpRewritePattern<func::ReturnOp>(context, /*benefit=*/1) {}
+  ::mlir::LogicalResult matchAndRewrite(func::ReturnOp op,
+                                        ::mlir::PatternRewriter& rewriter) const override {
+    LOG(ERROR) << "allSignless(op.getOperandTypes()): " << allSignless(op.getOperandTypes());
+    // make sure result not converted
+    if (allSignless(op.getOperandTypes())) { return failure(); }
+    llvm::SmallVector<Type, 1> results;
+    for (auto res : op->getOperandTypes()) {
+      results.push_back(convertToSignless(op->getContext(), res));
+    }
+    auto uc = rewriter.create<UnrealizedConversionCastOp>(op->getLoc(), results, op.operands());
+    rewriter.replaceOpWithNewOp<func::ReturnOp>(op, op->getResultTypes(), uc->getResults(),
+                                                op->getAttrs());
+    return success();
+  }
+};
+
 struct ConvertFuncToSignlessPattern : public OpRewritePattern<func::FuncOp> {
   explicit ConvertFuncToSignlessPattern(::mlir::MLIRContext* context)
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/1) {}
@@ -681,26 +704,11 @@ struct ConvertFuncToSignlessPattern : public OpRewritePattern<func::FuncOp> {
         }
       }
       rewriter.eraseOp(op);
+      RewritePatternSet patterns(func->getContext());
+      patterns.add<ConvertReturnToSignlessPattern>(func->getContext());
+      (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
       return success();
     }
-  }
-};
-
-struct ConvertReturnToSignlessPattern : public OpRewritePattern<func::ReturnOp> {
-  explicit ConvertReturnToSignlessPattern(::mlir::MLIRContext* context)
-      : OpRewritePattern<func::ReturnOp>(context, /*benefit=*/1) {}
-  ::mlir::LogicalResult matchAndRewrite(func::ReturnOp op,
-                                        ::mlir::PatternRewriter& rewriter) const override {
-    // result not converted
-    if (allSignless(op->getResultTypes())) { return failure(); }
-    // operand must be converted first
-    if (!allSignless(op->getOperandTypes())) { return failure(); }
-    llvm::SmallVector<Type, 1> results;
-    for (auto res : op->getResultTypes()) {
-      results.push_back(convertToSignless(op->getContext(), res));
-    }
-    rewriter.replaceOpWithNewOp<func::ReturnOp>(op, results, op->getOperands(), op->getAttrs());
-    return success();
   }
 };
 
@@ -708,7 +716,6 @@ void ConvertToSignlessForTosaPass::runOnOperation() {
   Operation* op = getOperation();
   RewritePatternSet patterns(op->getContext());
   patterns.add<ConvertFuncToSignlessPattern>(op->getContext());
-  patterns.add<ConvertReturnToSignlessPattern>(op->getContext());
   (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
 }
 
