@@ -54,15 +54,25 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   }
 
   std::vector<mlir::RankedTensorType> ins;
-  for (auto args_it = module->getBodyRegion().getOps().begin()->getRegions().begin()->args_begin();
-       args_it != nullptr; args_it++) {
-    ins.emplace_back(args_it->getType().dyn_cast<mlir::RankedTensorType>());
-
-    auto index = ins.size() - 1;
-    CHECK_EQ(Shape(ins[index].getShape().begin(), ins[index].getShape().end()),
-             ctx->InputShape("in", index));
-    CHECK_EQ(mlir::oneflow::support::GetDataTypeFromMLIRType(ins[index].getElementType()),
-             ctx->InputDType("in", index));
+  mlir::func::FuncOp funcOp = mlir::SymbolTable::lookupNearestSymbolFrom<mlir::func::FuncOp>(
+      module.get(), mlir::SymbolRefAttr::get(&context, ctx->op_name()));
+  CHECK(funcOp) << "Fail to find funcOp of symbol " << ctx->op_name();
+  int32_t arg_i = 0;
+  for (mlir::Type arg_type : funcOp.getArgumentTypes()) {
+    if (auto rankedTensorType = arg_type.dyn_cast<mlir::RankedTensorType>()) {
+      CHECK_EQ((Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()}),
+               ctx->InputShape("in", arg_i))
+          << "arg #" << arg_i;
+      CHECK_EQ(mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType()),
+               ctx->InputDType("in", arg_i))
+          << "arg #" << arg_i;
+      arg_i += 1;
+    } else {
+      std::string arg_type_str = "";
+      llvm::raw_string_ostream os(arg_type_str);
+      arg_type.print(os);
+      LOG(FATAL) << "Unsupported arg type " << arg_type_str;
+    }
   }
 
   CHECK_EQ(ins.size(), 2);
