@@ -328,10 +328,16 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
         Regst* regst =
             index2state_.Get(regst_desc_id_index_.Lookup(regst_desc_id_it->second)).regst;
         if (regst == nullptr) {
+          LOG(WARNING) << "null regst found, op:"
+                       << node.kernel_conf().op_attribute().op_conf().name();
           CHECK(kernel_info_[0]->bn_in_op2blob.emplace(bn, nullptr).second);
           continue;
         }
         Blob* blob = regst->GetBlobByLbi(pair.second);
+        if (!blob) {
+          LOG(WARNING) << "null blob found, op: "
+                       << node.kernel_conf().op_attribute().op_conf().name();
+        }
         CHECK(kernel_info_[0]->bn_in_op2blob.emplace(bn, blob).second);
       }
     }
