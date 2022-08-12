@@ -56,8 +56,11 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   mlir::func::FuncOp funcOp = mlir::SymbolTable::lookupNearestSymbolFrom<mlir::func::FuncOp>(
       module.get(), mlir::SymbolRefAttr::get(&context, ctx->op_name()));
   CHECK(funcOp) << "Fail to find funcOp of symbol " << ctx->op_name();
+  const auto funcType = funcOp.getFunctionType();
+  CHECK_EQ(funcType.getNumInputs(), ctx->input_size("in"));
+  CHECK_EQ(funcType.getNumResults(), ctx->output_size("out"));
   int32_t arg_i = 0;
-  for (mlir::Type arg_type : funcOp.getArgumentTypes()) {
+  for (mlir::Type arg_type : funcType.getInputs()) {
     if (auto rankedTensorType = arg_type.dyn_cast<mlir::RankedTensorType>()) {
       CHECK_EQ((Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()}),
                ctx->InputShape("in", arg_i))
@@ -73,14 +76,21 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
       LOG(FATAL) << "Unsupported arg type " << arg_type_str;
     }
   }
-
-  CHECK_EQ(funcOp.getArgumentTypes().size(), 2);
-  CHECK_EQ(ctx->inputs().size(), 2);
-  CHECK_EQ(ctx->outputs().size(), 1);
-  const Shape& in_shape = ctx->InputShape("in", 0);
-  Shape* out_shape = ctx->MutOutputShape("out", 0);
-  *out_shape = in_shape;
-  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 1);
+  int32_t res_i = 0;
+  for (mlir::Type res_type : funcType.getResults()) {
+    if (auto rankedTensorType = res_type.dyn_cast<mlir::RankedTensorType>()) {
+      *ctx->MutOutputShape("out", res_i) =
+          Shape{rankedTensorType.getShape().begin(), rankedTensorType.getShape().end()};
+      *ctx->MutOutputDType("out", res_i) =
+          mlir::oneflow::support::GetDataTypeFromMLIRType(rankedTensorType.getElementType());
+      res_i += 1;
+    } else {
+      std::string res_type_str = "";
+      llvm::raw_string_ostream os(res_type_str);
+      res_type.print(os);
+      LOG(FATAL) << "Unsupported arg type " << res_type_str;
+    }
+  }
   return Maybe<void>::Ok();
 }
 
