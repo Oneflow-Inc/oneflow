@@ -83,6 +83,12 @@ bool isSignLessTensorOrOther(Type type) {
   }
   return true;
 }
+bool allSignless(mlir::TypeRange types) {
+  for (auto type : types) {
+    if (!isSignLessTensorOrOther(type)) { return false; }
+  }
+  return true;
+}
 
 bool allSignless(FunctionType funcType) {
   for (auto arg : funcType.getInputs()) {
@@ -680,10 +686,29 @@ struct ConvertFuncToSignlessPattern : public OpRewritePattern<func::FuncOp> {
   }
 };
 
+struct ConvertReturnToSignlessPattern : public OpRewritePattern<func::ReturnOp> {
+  explicit ConvertReturnToSignlessPattern(::mlir::MLIRContext* context)
+      : OpRewritePattern<func::ReturnOp>(context, /*benefit=*/1) {}
+  ::mlir::LogicalResult matchAndRewrite(func::ReturnOp op,
+                                        ::mlir::PatternRewriter& rewriter) const override {
+    // result not converted
+    if (allSignless(op->getResultTypes())) { return failure(); }
+    // operand must be converted first
+    if (!allSignless(op->getOperandTypes())) { return failure(); }
+    llvm::SmallVector<Type, 1> results;
+    for (auto res : op->getResultTypes()) {
+      results.push_back(convertToSignless(op->getContext(), res));
+    }
+    rewriter.replaceOpWithNewOp<func::ReturnOp>(op, results, op->getOperands(), op->getAttrs());
+    return success();
+  }
+};
+
 void ConvertToSignlessForTosaPass::runOnOperation() {
   Operation* op = getOperation();
   RewritePatternSet patterns(op->getContext());
   patterns.add<ConvertFuncToSignlessPattern>(op->getContext());
+  patterns.add<ConvertReturnToSignlessPattern>(op->getContext());
   (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
 }
 
