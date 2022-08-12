@@ -40,6 +40,7 @@ limitations under the License.
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
@@ -50,11 +51,10 @@ namespace mlir {
 
 namespace oneflow {
 
-Type convertSigned(MLIRContext* context, Type type) {
-  // In oneflow int tensor is explicit signed. Convert them before lowering to TOSA.
+Type convertToSignless(MLIRContext* context, Type type) {
   if (auto ranked_tensor = type.dyn_cast<RankedTensorType>()) {
     if (auto intTy = ranked_tensor.getElementType().dyn_cast<IntegerType>()) {
-      if (intTy.Signed) {
+      if (!intTy.isSignless()) {
         mlir::Type rt = RankedTensorType::get(
             ranked_tensor.getShape(),
             IntegerType::get(context, intTy.getWidth(),
@@ -66,12 +66,32 @@ Type convertSigned(MLIRContext* context, Type type) {
   return type;
 }
 
-FunctionType convertSignedFuncType(MLIRContext* context, FunctionType funcType) {
+FunctionType convertToSignlessFuncType(MLIRContext* context, FunctionType funcType) {
   llvm::SmallVector<Type, 4> inputs;
   llvm::SmallVector<Type, 4> results;
-  for (auto arg : funcType.getInputs()) { inputs.push_back(convertSigned(context, arg)); }
-  for (auto res : funcType.getResults()) { results.push_back(convertSigned(context, res)); }
+  for (auto arg : funcType.getInputs()) { inputs.push_back(convertToSignless(context, arg)); }
+  for (auto res : funcType.getResults()) { results.push_back(convertToSignless(context, res)); }
   return FunctionType::get(context, inputs, results);
+}
+
+bool isSignLessTensorOrOther(Type type) {
+  if (auto ranked_tensor = type.dyn_cast<RankedTensorType>()) {
+    if (auto intTy = ranked_tensor.getElementType().dyn_cast<IntegerType>()) {
+      if (intTy.isUnsigned()) { return false; }
+      if (intTy.isSigned()) { return false; }
+    }
+  }
+  return true;
+}
+
+bool allSignless(FunctionType funcType) {
+  for (auto arg : funcType.getInputs()) {
+    if (!isSignLessTensorOrOther(arg)) { return false; }
+  }
+  for (auto res : funcType.getResults()) {
+    if (!isSignLessTensorOrOther(res)) { return false; }
+  }
+  return true;
 }
 
 Value CreateTranspose(Location& loc, ConversionPatternRewriter& rewriter, Value input,
@@ -141,7 +161,7 @@ struct JobLowering final : public OpConversionPattern<Job> {
   using OpConversionPattern<Job>::OpConversionPattern;
   LogicalResult matchAndRewrite(Job op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto ft = convertSignedFuncType(op->getContext(), op.function_type());
+    auto ft = convertToSignlessFuncType(op->getContext(), op.function_type());
     auto func = rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getName(), ft);
     rewriter.inlineRegionBefore(op.getRegion(), func.getBody(), func.end());
     rewriter.eraseOp(op);
@@ -587,13 +607,24 @@ struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
 };
 
 namespace {
+
 struct OneFlowLoweringToTosaPass : public LowerOneFlowToTosaPassBase<OneFlowLoweringToTosaPass> {
   void runOnOperation() override;
 };
+
+struct ConvertToSignlessForTosaPass
+    : public ConvertToSignlessForTosaPassBase<ConvertToSignlessForTosaPass> {
+  void runOnOperation() override;
+};
+
 }  // namespace
 
 std::unique_ptr<Pass> createLowerOneFlowToTosaPass() {
   return std::make_unique<OneFlowLoweringToTosaPass>();
+}
+
+std::unique_ptr<Pass> createConvertToSignlessForTosaPass() {
+  return std::make_unique<ConvertToSignlessForTosaPass>();
 }
 
 void OneFlowLoweringToTosaPass::runOnOperation() {
@@ -604,7 +635,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   target.addIllegalDialect<OneFlowDialect>();
 
   TypeConverter typeConverter;
-  typeConverter.addConversion([context](Type type) { return convertSigned(context, type); });
+  typeConverter.addConversion([context](Type type) { return convertToSignless(context, type); });
   RewritePatternSet patterns(context);
 
   const auto mgr = ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get();
@@ -624,6 +655,37 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
     getOperation()->dump();
     signalPassFailure();
   }
+}
+
+struct ConvertFuncToSignlessPattern : public OpRewritePattern<func::FuncOp> {
+  explicit ConvertFuncToSignlessPattern(::mlir::MLIRContext* context)
+      : OpRewritePattern<func::FuncOp>(context, /*benefit=*/1) {}
+  ::mlir::LogicalResult matchAndRewrite(func::FuncOp op,
+                                        ::mlir::PatternRewriter& rewriter) const override {
+    if (allSignless(op.getFunctionType())) {
+      return failure();
+    } else {
+      auto ft = convertToSignlessFuncType(op->getContext(), op.getFunctionType());
+      auto func = rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getName(), ft);
+      BlockAndValueMapping bvm;
+      op.getRegion().cloneInto(&func.getRegion(), bvm);
+      for (auto& block : func.getBody().getBlocks()) {
+        for (auto arg : block.getArguments()) {
+          arg.setType(convertToSignless(op.getContext(), arg.getType()));
+        }
+      }
+      rewriter.eraseOp(op);
+      func->dump();
+      return success();
+    }
+  }
+};
+
+void ConvertToSignlessForTosaPass::runOnOperation() {
+  Operation* op = getOperation();
+  RewritePatternSet patterns(op->getContext());
+  patterns.add<ConvertFuncToSignlessPattern>(op->getContext());
+  (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
 }
 
 }  // namespace oneflow
