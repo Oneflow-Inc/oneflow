@@ -87,10 +87,22 @@ namespace oneflow {
 namespace {
 
 Maybe<void> WkvGraphGradOp(user_op::BackwardOpConfContext* ctx) {
+  const std::string exp_op = ctx->FwOp().op_name() + "_w_exp";
+  ctx->DefineOp(exp_op, [&](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("exp").InputBind("x", ctx->FwOp().input("w", 0)).Output("y").Build();
+  });
+  const std::string neg_op = ctx->FwOp().op_name() + "_w_exp_negative";
+  ctx->DefineOp(neg_op, [&](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("negative")
+        .InputBind("x", ctx->GetOp(exp_op).output("y", 0))
+        .Output("y")
+        .Build();
+  });
+
   const std::string wkv_grad_op = ctx->FwOp().op_name() + "_grad";
   ctx->DefineOp(wkv_grad_op, [&](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("wkv_grad")
-        .InputBind("w", ctx->FwOp().input("w", 0))
+        .InputBind("w", ctx->GetOp(neg_op).output("y", 0))
         .InputBind("u", ctx->FwOp().input("u", 0))
         .InputBind("k", ctx->FwOp().input("k", 0))
         .InputBind("v", ctx->FwOp().input("v", 0))
