@@ -675,7 +675,6 @@ struct ConvertFuncToSignlessPattern : public OpRewritePattern<func::FuncOp> {
         }
       }
       rewriter.eraseOp(op);
-      func->dump();
       return success();
     }
   }
