@@ -766,7 +766,6 @@ static PyObject* PyTensorObject_to_local(PyObject* self, PyObject* unused, PyObj
 int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
   HANDLE_ERRORS
   auto tensor = PyTensor_Unpack(self);
-
   std::shared_ptr<Tensor> value_tensor;
   CHECK_OR_THROW(functional::PyTensorIndexCheck(item))
       << Error::TypeError() << "tensor_setitem(): argument 'index' must be index, not "

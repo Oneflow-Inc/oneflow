@@ -2128,7 +2128,6 @@ class TensorSetItemFunctor {
     Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
     if (target_shape.Count(0) == 0) { return Maybe<void>::Ok(); }
     const auto& value_shape = value->shape();
-
     bool matched = [&]() {
       for (int i = 0; i < value_shape->NumAxes() - target_shape.NumAxes(); ++i) {
         if (value_shape->At(i) != 1) { return false; }
@@ -2154,10 +2153,8 @@ class TensorSetItemFunctor {
       step[i] = slice.step();
       slice_dims[i] = (end[i] - start[i] + step[i] - 1) / step[i];
     }
-
     if (tensor_indices.empty()) {
       Shape slice_shape(slice_dims);
-
       if (slice_shape != *(value_tensor->shape())) {
         // NOTE:
         // 1. The value shape must can be broadcasted to the target shape.
