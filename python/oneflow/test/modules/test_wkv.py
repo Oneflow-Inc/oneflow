@@ -21,19 +21,11 @@ import torch
 from torch.utils.cpp_extension import load
 
 CUDA_KERNEL_VERSION = 2
-wkv_cuda = load(
-    name="wkv",
-    sources=[
-        "/home/zhangxiaoyu/RWKV-CUDA/wkv/cuda/wkv_op.cpp",
-        f"/home/zhangxiaoyu/RWKV-CUDA/wkv/cuda/wkv_cuda_v{CUDA_KERNEL_VERSION}.cu",
-    ],
-    verbose=True,
-    extra_cuda_cflags=["--use_fast_math", "--extra-device-vectorization"],
-)
+wkv_cuda = load(name="wkv", sources=["/home/zhangxiaoyu/RWKV-CUDA/wkv/cuda/wkv_op.cpp", f"/home/zhangxiaoyu/RWKV-CUDA/wkv/cuda/wkv_cuda_v{CUDA_KERNEL_VERSION}.cu"],
+                  verbose=True, extra_cuda_cflags=['--use_fast_math', '--extra-device-vectorization'])
 
-file = open("./input.pkl", "rb")
+file = open('./input.pkl','rb')
 input_dict = pickle.load(file)
-
 
 class WKV(torch.autograd.Function):
     @staticmethod
@@ -41,11 +33,12 @@ class WKV(torch.autograd.Function):
         ctx.B = B
         ctx.T = T
         ctx.C = C
+        w = -torch.exp(w.contiguous())
         u = u.contiguous()
         k = k.contiguous()
         v = v.contiguous()
         ctx.save_for_backward(w, u, k, v)
-        y = torch.empty((B, T, C), device="cuda", memory_format=torch.contiguous_format)
+        y = torch.empty((B, T, C), device='cuda', memory_format=torch.contiguous_format)
         wkv_cuda.forward(B, T, C, w, u, k, v, y)
         return y
 
@@ -55,24 +48,22 @@ class WKV(torch.autograd.Function):
         T = ctx.T
         C = ctx.C
         w, u, k, v = ctx.saved_tensors
-        gw = torch.zeros((B, C), device="cuda")
-        gu = torch.zeros((B, C), device="cuda")
-        gk = torch.zeros((B, T, C), device="cuda")
-        gv = torch.zeros((B, T, C), device="cuda")
+        gw = torch.zeros((B, C), device='cuda')
+        gu = torch.zeros((B, C), device='cuda')
+        gk = torch.zeros((B, T, C), device='cuda')
+        gv = torch.zeros((B, T, C), device='cuda')
         wkv_cuda.backward(B, T, C, w, u, k, v, gy.contiguous(), gw, gu, gk, gv)
         gw = torch.sum(gw, dim=0)
         gu = torch.sum(gu, dim=0)
         return (None, None, None, gw, gu, gk, gv)
 
-
 def RUN_CUDA(B, T, C, w, u, k, v):
     return WKV.apply(B, T, C, w.cuda(), u.cuda(), k.cuda(), v.cuda())
 
-
 def CHECK_CUDA():
-    B = input_dict["B"]
-    T = input_dict["T"]
-    C = input_dict["C"]
+    B = input_dict['B']
+    T = input_dict['T']
+    C = input_dict['C']
     print(B, T, C)
 
     with torch.no_grad():
@@ -80,18 +71,18 @@ def CHECK_CUDA():
         # u = torch.zeros(C, requires_grad=True, device='cuda').uniform_(-1, 1)
         # k = torch.zeros(B, T, C, requires_grad=True, device='cuda').uniform_(-1, 1)
         # v = torch.zeros(B, T, C, requires_grad=True, device='cuda').uniform_(-1, 1)
-        w = torch.from_numpy(input_dict["time_decay"]).to("cuda").requires_grad_()
-        u = torch.from_numpy(input_dict["time_first"]).to("cuda").requires_grad_()
-        k = torch.from_numpy(input_dict["k"]).to("cuda").requires_grad_()
-        v = torch.from_numpy(input_dict["v"]).to("cuda").requires_grad_()
+        w = torch.from_numpy(input_dict['time_decay']).to("cuda").requires_grad_()
+        u = torch.from_numpy(input_dict['time_first']).to("cuda").requires_grad_()
+        k = torch.from_numpy(input_dict['k']).to("cuda").requires_grad_()
+        v = torch.from_numpy(input_dict['v']).to("cuda").requires_grad_()
 
     with torch.autograd.profiler.profile(use_cuda=True) as prof:
-        y1 = RUN_CUDA(B, T, C, -torch.exp(w.contiguous()), u, k, v)
+        y1 = RUN_CUDA(B, T, C, w, u, k, v)
     loss1 = y1.sum()
-    print("loss1, ", loss1)
+    print('loss1, ', loss1)
     with torch.autograd.profiler.profile(use_cuda=True) as prof:
         loss1.backward()
-
+    
     gw = w.grad
     gu = u.grad
     gk = k.grad
@@ -100,14 +91,14 @@ def CHECK_CUDA():
     gu_torch = gu.detach().cpu().numpy()
     gk_torch = gk.detach().cpu().numpy()
     gv_torch = gv.detach().cpu().numpy()
-
-    w = flow.tensor(w.detach().cpu().numpy(), requires_grad=True, device="cuda")
-    u = flow.tensor(u.detach().cpu().numpy(), requires_grad=True, device="cuda")
-    k = flow.tensor(k.detach().cpu().numpy(), requires_grad=True, device="cuda")
-    v = flow.tensor(v.detach().cpu().numpy(), requires_grad=True, device="cuda")
-    y2 = flow._C.wkv(B, T, C, -flow.exp(w.contiguous()), u, k, v).requires_grad_()
+    
+    w = flow.tensor(w.detach().cpu().numpy(), requires_grad=True, device='cuda')
+    u = flow.tensor(u.detach().cpu().numpy(), requires_grad=True, device='cuda')
+    k = flow.tensor(k.detach().cpu().numpy(), requires_grad=True, device='cuda')
+    v = flow.tensor(v.detach().cpu().numpy(), requires_grad=True, device='cuda')
+    y2 = flow._C.wkv(B, T, C, w, u, k, v).requires_grad_()
     loss2 = y2.sum()
-    print("loss2, ", loss2)
+    print('loss2, ', loss2)
     loss2.backward()
 
     gw = w.grad
@@ -129,6 +120,6 @@ def CHECK_CUDA():
     print(gv_flow.flatten()[:5], gv_torch.flatten()[:5])
     # print(gu_flow, gu_torch)
 
-
+    
 if __name__ == "__main__":
     CHECK_CUDA()
