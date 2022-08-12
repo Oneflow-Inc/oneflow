@@ -32,7 +32,6 @@ REGISTER_USER_KERNEL("exp")
     })
     .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kExp, "y", "x"));
 
-
 // REGISTER_USER_KERNEL("threshold_grad")
 //     .SetCreateFn([]() {
 //       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
@@ -45,7 +44,8 @@ REGISTER_USER_KERNEL("exp")
 //                 ctx->Attr<double>("threshold_val"));
 //           });
 //     })
-//     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kThresholdBackwardWithDyX, "dx",
+//     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kThresholdBackwardWithDyX,
+//     "dx",
 //                                            "dy"));
 
 }  // namespace oneflow
