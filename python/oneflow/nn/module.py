@@ -711,7 +711,10 @@ class Module(object):
                         )
                     )
                     continue
-                if isinstance(input_param, flow.Tensor) and input_param.is_global != param.is_global:
+                if (
+                    isinstance(input_param, flow.Tensor)
+                    and input_param.is_global != param.is_global
+                ):
                     if param.is_global:
                         help_msg = "Maybe you need to convert the checkpoint param to global, or set global_src_rank=0 when using flow.load to load model's state_dict"
                     else:
