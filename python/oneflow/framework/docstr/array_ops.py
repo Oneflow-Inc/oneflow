@@ -270,7 +270,10 @@ add_docstr(
 
 add_docstr(
     oneflow.atleast_1d,
-    r"""Returns a 1-dimensional view of each input tensor with zero dimensions. Input tensors with one or more dimensions are returned as-is.
+    r"""
+    oneflow.atleast_1d(*tensors) -> Tensor or List[Tensor]
+
+    Returns a 1-dimensional view of each input tensor with zero dimensions. Input tensors with one or more dimensions are returned as-is.
 
     The interface is consistent with PyTorch.
 
@@ -301,7 +304,10 @@ add_docstr(
 
 add_docstr(
     oneflow.atleast_2d,
-    r"""Returns a 2-dimensional view of each input tensor with zero dimensions. Input tensors with two or more dimensions are returned as-is.
+    r"""
+    oneflow.atleast_2d(*tensors) -> Tensor or List[Tensor]
+
+    Returns a 2-dimensional view of each input tensor with zero dimensions. Input tensors with two or more dimensions are returned as-is.
 
     The interface is consistent with PyTorch.
 
@@ -336,7 +342,10 @@ add_docstr(
 
 add_docstr(
     oneflow.atleast_3d,
-    r"""Returns a 3-dimensional view of each input tensor with zero dimensions. Input tensors with three or more dimensions are returned as-is.
+    r"""
+    oneflow.atleast_3d(*tensors) -> Tensor or List[Tensor]
+
+    Returns a 3-dimensional view of each input tensor with zero dimensions. Input tensors with three or more dimensions are returned as-is.
 
     The interface is consistent with PyTorch.
 
@@ -402,7 +411,10 @@ add_docstr(
 
 add_docstr(
     oneflow.hstack,
-    r"""Stack tensors in :attr:`tensors` horizontally (column wise).
+    r"""
+    oneflow.hstack(tensors) -> Tensor
+
+    Stack tensors in :attr:`tensors` horizontally (column wise).
 
     This is equivalent to concatenation tensors in :attr:`tensors` along the first axis for 1-D tensors, and along the second axis for all other tensors.
 
@@ -433,7 +445,10 @@ add_docstr(
 
 add_docstr(
     oneflow.vstack,
-    r"""Stack tensors in :attr:`tensors` vertically (row wise).
+    r"""
+    oneflow.vstack(tensors) -> Tensor
+
+    Stack tensors in :attr:`tensors` vertically (row wise).
 
     This is equivalent to concatenation tensors in :attr:`tensors` along the first axis.
 
@@ -464,7 +479,10 @@ add_docstr(
 
 add_docstr(
     oneflow.dstack,
-    r"""Stack tensors in :attr:`tensors` depthwish (along third axis).
+    r"""
+    oneflow.dstack(tensors) -> Tensor
+
+    Stack tensors in :attr:`tensors` depthwish (along third axis).
 
     This is equivalent to concatenation tensors in :attr:`tensors` along the third axis after 1-D and 2-D tensors have been reshaped by ``oneflow.atleast_3d()``.
 
@@ -493,7 +511,10 @@ add_docstr(
 
 add_docstr(
     oneflow.column_stack,
-    r"""Creates a new tensor by horizontally stacking the tensors in :attr:`tensors`.
+    r"""
+    oneflow.column_stack(tensors) -> Tensor
+
+    Creates a new tensor by horizontally stacking the tensors in :attr:`tensors`.
 
     Equivalent to :code:`oneflow.hstack(tensors)`, tensors with dimensions less than 2 will be reshaped to :code:`(t.numel(), 1)` before being stacked horizontally.
 
@@ -524,7 +545,10 @@ add_docstr(
 
 add_docstr(
     oneflow.row_stack,
-    r"""Alias of ``oneflow.vstack()``.
+    r"""
+    oneflow.row_stack(tensors) -> Tensor
+
+    Alias of ``oneflow.vstack()``.
 
     Stack tensors in :attr:`tensors` vertically (row wise).
 
