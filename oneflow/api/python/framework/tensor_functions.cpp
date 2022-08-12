@@ -781,8 +781,9 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
                                          ASSERT(MakeBroadcastSbpParallel()));
     if (functional::PyScalarCheck(value)) {
       Scalar value_scalar = functional::PyUnpackScalar(value);
-      value_tensor =
-          ASSERT_PTR(functional::GlobalConstant({}, value_scalar, tensor->dtype(), placement, sbp));
+      const Shape& Emptyshape = DimVector();
+      value_tensor = ASSERT_PTR(
+          functional::GlobalConstant(Emptyshape, value_scalar, tensor->dtype(), placement, sbp));
     } else {
       value_tensor = PyTensor_Unpack(value);
       CHECK_OR_THROW(value_tensor->is_global())
@@ -794,8 +795,9 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
   } else {
     if (functional::PyScalarCheck(value)) {
       Scalar value_scalar = functional::PyUnpackScalar(value);
-      value_tensor = ASSERT_PTR(
-          functional::Constant({}, value_scalar, tensor->dtype(), ASSERT(tensor->device())));
+      const Shape& Emptyshape = DimVector();
+      value_tensor = ASSERT_PTR(functional::Constant(Emptyshape, value_scalar, tensor->dtype(),
+                                                     ASSERT(tensor->device())));
     } else {
       value_tensor = PyTensor_Unpack(value);
       CHECK_OR_THROW(value_tensor->is_local())
