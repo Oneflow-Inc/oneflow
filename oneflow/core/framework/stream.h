@@ -33,7 +33,8 @@ class Stream final {
 
   bool operator==(const Stream& that) const {
     return this->device() == that.device() && this->stream_type() == that.stream_type()
-           && this->thread_uid() == that.thread_uid();
+           && this->thread_uid() == that.thread_uid()
+           && this->stream_set_id() == that.stream_set_id();
   }
   bool operator!=(const Stream& that) const { return !(*this == that); }
 
@@ -41,27 +42,35 @@ class Stream final {
     return New(device, stream_type, kDefaultStreamThreadUid);
   }
   static Maybe<Symbol<Stream>> New(Symbol<Device> device, StreamType stream_type,
-                                   size_t thread_uid);
+                                   size_t thread_uid) {
+    return New(device, stream_type, thread_uid, kDefaultStreamSetId);
+  }
+  static Maybe<Symbol<Stream>> New(Symbol<Device> device, StreamType stream_type, size_t thread_uid,
+                                   size_t stream_set_id);
 
   Symbol<Device> device() const { return device_; }
   StreamType stream_type() const { return stream_type_; }
   size_t thread_uid() const { return thread_uid_; }
+  size_t stream_set_id() const { return stream_set_id_; }
   size_t unique_stream_id() const { return unique_stream_id_; }
 
   static size_t kDefaultStreamThreadUid;
   static size_t kTmpStreamThreadUid;
 
+  static size_t kDefaultStreamSetId;
+
  private:
-  Stream(Symbol<Device> device, StreamType stream_type, size_t thread_uid);
+  Stream(Symbol<Device> device, StreamType stream_type, size_t thread_uid, size_t stream_set_id);
 
   static Maybe<Symbol<Stream>> RawNew(Symbol<Device> device, StreamType stream_type,
-                                      size_t thread_uid);
+                                      size_t thread_uid, size_t stream_set_id);
 
   Maybe<void> Init(size_t unique_stream_id);
 
   Symbol<Device> device_;
   StreamType stream_type_;
   size_t thread_uid_;
+  size_t stream_set_id_;
   size_t unique_stream_id_;
 };
 
@@ -78,7 +87,7 @@ struct hash<oneflow::Stream> final {
     using namespace oneflow;
     return std::hash<Symbol<Device>>()(stream.device())
            ^ std::hash<StreamType>()(stream.stream_type())
-           ^ std::hash<size_t>()(stream.thread_uid());
+           ^ std::hash<size_t>()(stream.thread_uid()) ^ std::hash<size_t>()(stream.stream_set_id());
   }
 };
 
