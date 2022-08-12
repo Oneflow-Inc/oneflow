@@ -32,6 +32,19 @@ REGISTER_USER_KERNEL("exp")
     })
     .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kExp, "y", "x"));
 
+REGISTER_USER_KERNEL("negative")
+    .SetCreateFn([]() {
+      return user_op::NewOpKernel<UnaryPrimitiveKernel>(
+          "y", "x", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+            const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+            return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+                ctx->device_type(), ep::primitive::UnaryOp::kNegative, src->data_type(),
+                dst->data_type());
+          });
+    })
+    .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kExp, "y", "x"));
+
 // REGISTER_USER_KERNEL("threshold_grad")
 //     .SetCreateFn([]() {
 //       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
