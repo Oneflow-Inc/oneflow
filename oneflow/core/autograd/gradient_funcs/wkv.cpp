@@ -70,6 +70,7 @@ Maybe<void> WkvGrad::Apply(const WkvGradCaptureState* ctx, const TensorTuple& ou
     const std::shared_ptr<oneflow::one::Tensor>& u = ctx->SavedTensors().at(1);
     const std::shared_ptr<oneflow::one::Tensor>& k = ctx->SavedTensors().at(2);
     const std::shared_ptr<oneflow::one::Tensor>& v = ctx->SavedTensors().at(3);
+
     const auto& outputs =
         JUST(functional::WkvGrad(ctx->B, ctx->T, ctx->C, w, u, k, v, out_grads[0]));
     (*in_grads)[0] = (*outputs)[0];

@@ -22,6 +22,8 @@ namespace oneflow {
 
 namespace {
 
+#define MIN_VALUE (-1e38)
+
 template<typename F>
 __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C,
                                const F* __restrict__ const _w, const F* __restrict__ const _u,
@@ -33,12 +35,12 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
   const int _offset = _b * T * C + _c;
 
   F u = _u[_c];
-  const F w = -1 * exp(_w[_c]);
+  const F w = _w[_c];
   const F* __restrict__ const k = _k + _offset;
   const F* __restrict__ const v = _v + _offset;
   F* __restrict__ const y = _y + _offset;
 
-  F p = 0, q = 0, o = -65500;
+  F p = 0, q = 0, o = MIN_VALUE;
   // p and q are running sums divided by exp(o) (to avoid overflows)
   for (int i = 0; i < T; i++) {
     const int ii = i * C;
@@ -68,12 +70,12 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
   const int _offset = _b * T * C + _c;
 
   half u = _u[_c];
-  const half w = static_cast<half>(-1.0) * static_cast<half>(exp(static_cast<float>(_w[_c])));
+  const half w = _w[_c];
   const half* __restrict__ const k = _k + _offset;
   const half* __restrict__ const v = _v + _offset;
   half* __restrict__ const y = _y + _offset;
 
-  half p = static_cast<half>(0.0), q = static_cast<half>(0.0), o = static_cast<half>(-65500.0);
+  half p = static_cast<half>(0.0), q = static_cast<half>(0.0), o = static_cast<half>(MIN_VALUE);
   // p and q are running sums divided by exp(o) (to avoid overflows)
   for (int i = 0; i < T; i++) {
     const int ii = i * C;
@@ -120,7 +122,7 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   F gw = 0, gu = 0;
   F p = 0, q = 0;
   F dpdw = 0, dqdw = 0;
-  F o = -65500;
+  F o = MIN_VALUE;
   for (int i = 0; i < T; i++) {
     const int ii = i * C;
     F no = max(o, k[ii] + u);
@@ -148,7 +150,7 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   }
 
   F gp = 0, gq = 0;
-  o = -65500;
+  o = MIN_VALUE;
   for (int i = T - 1; i >= 0; i--) {
     const int ii = i * C;
     F A = gy[ii] * z[i] * exp(zexp[i]);
@@ -199,7 +201,7 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   half gw = static_cast<half>(0.0), gu = static_cast<half>(0.0);
   half p = static_cast<half>(0.0), q = static_cast<half>(0.0);
   half dpdw = static_cast<half>(0.0), dqdw = static_cast<half>(0.0);
-  half o = static_cast<half>(-65500.0);
+  half o = static_cast<half>(MIN_VALUE);
   for (int i = 0; i < T; i++) {
     const int ii = i * C;
     // half no = max(o, k[ii] + u);
@@ -230,7 +232,7 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   }
 
   half gp = static_cast<half>(0.0), gq = static_cast<half>(0.0);
-  o = static_cast<half>(-65500.0);
+  o = static_cast<half>(MIN_VALUE);
   for (int i = T - 1; i >= 0; i--) {
     const int ii = i * C;
     half A = gy[ii] * z[i] * static_cast<half>(exp(static_cast<float>(zexp[i])));
@@ -324,7 +326,7 @@ class WkvGradGPUKernel final : public user_op::OpKernel {
     user_op::Tensor* gk = ctx->Tensor4ArgNameAndIndex("gk", 0);
     user_op::Tensor* gv = ctx->Tensor4ArgNameAndIndex("gv", 0);
 
-    Scalar init_value = Scalar(1.0);
+    Scalar init_value = Scalar(0.0);
     std::unique_ptr<ep::primitive::Fill> fill = NewFillPrimitive(ctx);
     CHECK(fill);
     fill->Launch(ctx->stream(), gw->mut_dptr<F>(), init_value, gw->shape_view().elem_cnt());
