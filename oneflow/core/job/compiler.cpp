@@ -86,30 +86,47 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
   tc->Count("Graph name: " + job_name + " CheckRegstLbiValid", 1);
 
   // Step3: put infomation from task_gph into plan.
-  const int64_t node_num = task_gph->node_num();
-  const int64_t cpu_num = std::thread::hardware_concurrency();
-  const int64_t thread_pool_size = std::min(node_num, cpu_num);
-  BlockingCounter counter(node_num);
-  std::mutex mtx;
-  ThreadPool thread_pool(thread_pool_size);
-  task_gph->ForEachNode([&](TaskNode* task_node) {
-    thread_pool.AddWork([task_node, plan, &counter, &mtx]() {
-      if (!task_node->IsMeaningLess()) {
-        TaskProto task_proto;
-        task_node->ToProto(&task_proto);
-        {
+  {
+    const int64_t node_num = task_gph->node_num();
+    const int64_t cpu_num = std::thread::hardware_concurrency();
+    const int64_t thread_pool_size = std::min(node_num, cpu_num);
+    BlockingCounter counter(node_num);
+    std::mutex mtx;
+    ThreadPool thread_pool(thread_pool_size);
+    auto* job_id2op_attribute_ref_table = plan->mutable_job_id2op_attribute_ref_table();
+    auto* op_name2op_attribute =
+        (*job_id2op_attribute_ref_table)[job_desc.job_id()].mutable_op_name2op_attribute();
+    task_gph->ForEachNode([&](TaskNode* task_node) {
+      thread_pool.AddWork([task_node, plan, op_name2op_attribute, &counter, &mtx]() {
+        if (!task_node->IsMeaningLess()) {
+          TaskProto task_proto;
+          task_node->ToProto(&task_proto);
           CreateOpAttributeRef(task_node, &task_proto);
-          // global mut
-          // TODO(strint): Try to avoid mut plan here
-          std::unique_lock<std::mutex> guard(mtx);
-          plan->mutable_task()->Add(std::move(task_proto));
-        }  // guard(mtx)
-      }
-      counter.Decrease();
-    } /* thread_pool.AddWork */);
-  } /* task_gph->ForEachNode */);
-  counter.WaitForeverUntilCntEqualZero();
-  tc->Count("Graph name: " + job_name + " AddTaskIntoPlan", 1);
+          {
+            // global mut
+            // TODO(strint): Try to avoid mut plan here
+            std::unique_lock<std::mutex> guard(mtx);
+            plan->mutable_task()->Add(std::move(task_proto));
+
+            if (task_node->op_node()) {
+              auto op_node = task_node->op_node();
+              const std::string op_name = op_node->op().op_name();
+              auto find_it = op_name2op_attribute->find(op_name);
+              if (find_it == op_name2op_attribute->end()) {
+                OpAttribute op_attr;
+                CHECK_JUST(op_node->op().ToOpAttribute(&op_attr));
+                // TODO(strint): Try to optimize here
+                op_name2op_attribute->insert({op_name, op_attr});
+              }
+            }
+          }  // guard(mtx)
+        }
+        counter.Decrease();
+      } /* thread_pool.AddWork */);
+    } /* task_gph->ForEachNode */);
+    counter.WaitForeverUntilCntEqualZero();
+    tc->Count("Graph name: " + job_name + " AddTaskIntoPlan", 1);
+  }
 
   // Step4: post-process for plan.
   auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();

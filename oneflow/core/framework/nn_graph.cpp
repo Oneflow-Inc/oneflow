@@ -319,68 +319,38 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
     // NOTE(strint): Add op attr into plan.
     // {
-    //   auto op_graph = task_graph->GetOpGraph();
-    //   auto* job_id2op_attribute_ref_table = plan_.mutable_job_id2op_attribute_ref_table();
-    //   auto* op_name2op_attribute =
-    //       (*job_id2op_attribute_ref_table)[job_id_].mutable_op_name2op_attribute();
-    //   const int64_t node_num = op_graph->node_num();
+    //   const int64_t node_num = task_graph->node_num();
     //   const int64_t cpu_num = std::thread::hardware_concurrency();
     //   const int64_t thread_pool_size = std::min(node_num, cpu_num);
     //   BlockingCounter counter(node_num);
     //   std::mutex mtx;
     //   ThreadPool thread_pool(thread_pool_size);
-    //   op_graph->ForEachNode([&](OpNode* op_node) {
-    //     thread_pool.AddWork([op_node, op_name2op_attribute, &counter, &mtx]() {
-    //       // TODO(strint): add filter of task type
-    //       OpAttribute op_attr;
-    //       CHECK_JUST(op_node->op().ToOpAttribute(&op_attr));
-    //       const std::string op_name = op_node->op().op_name();
 
-    //       // TODO(strint): Try to avoid mut plan here
-    //       std::unique_lock<std::mutex> guard(mtx);
-    //       auto find_it = op_name2op_attribute->find(op_name);
-    //       if (find_it == op_name2op_attribute->end()) {
-    //         op_name2op_attribute->insert({op_name, op_attr});
+    //   auto* job_id2op_attribute_ref_table = plan_.mutable_job_id2op_attribute_ref_table();
+    //   auto* op_name2op_attribute =
+    //       (*job_id2op_attribute_ref_table)[job_id_].mutable_op_name2op_attribute();
+    //   task_graph->ForEachNode([&](TaskNode* task_node) {
+    //     thread_pool.AddWork([task_node, op_name2op_attribute, &counter, &mtx]() {
+    //       if (!task_node->IsMeaningLess() && task_node->op_node()) {
+    //           auto op_node = task_node->op_node();
+    //           const std::string op_name = op_node->op().op_name();
+    //           {
+    //             std::unique_lock<std::mutex> guard(mtx);
+    //             auto find_it = op_name2op_attribute->find(op_name);
+    //             if (find_it == op_name2op_attribute->end()) {
+    //               OpAttribute op_attr;
+    //               CHECK_JUST(op_node->op().ToOpAttribute(&op_attr));
+    //               // TODO(strint): Try to optimize here
+    //               op_name2op_attribute->insert({op_name, op_attr});
+    //             }  // guard(mtx)
+    //           }
     //       }
     //       counter.Decrease();
     //     } /* thread_pool.AddWork */);
-    //   } /* op_graph->ForEachNode */);
+    //   } /* task_gph->ForEachNode */);
     //   counter.WaitForeverUntilCntEqualZero();
     //   tc->Count("Graph name: " + name_ + " AddOpAttrtoPlan", 1);
     // }
-    {
-      const int64_t node_num = task_graph->node_num();
-      const int64_t cpu_num = std::thread::hardware_concurrency();
-      const int64_t thread_pool_size = std::min(node_num, cpu_num);
-      BlockingCounter counter(node_num);
-      std::mutex mtx;
-      ThreadPool thread_pool(thread_pool_size);
-
-      auto* job_id2op_attribute_ref_table = plan_.mutable_job_id2op_attribute_ref_table();
-      auto* op_name2op_attribute =
-          (*job_id2op_attribute_ref_table)[job_id_].mutable_op_name2op_attribute();
-      task_graph->ForEachNode([&](TaskNode* task_node) {
-        thread_pool.AddWork([task_node, op_name2op_attribute, &counter, &mtx]() {
-          if (!task_node->IsMeaningLess() && task_node->op_node()) {
-              auto op_node = task_node->op_node();
-              const std::string op_name = op_node->op().op_name();
-              // {
-              //   std::unique_lock<std::mutex> guard(mtx);
-              //   auto find_it = op_name2op_attribute->find(op_name);
-              //   if (find_it == op_name2op_attribute->end()) {
-              //     OpAttribute op_attr;
-              //     CHECK_JUST(op_node->op().ToOpAttribute(&op_attr));
-              //     // TODO(strint): Try to optimize here
-              //     op_name2op_attribute->insert({op_name, op_attr});
-              //   }  // guard(mtx)
-              // }
-          }
-          counter.Decrease();
-        } /* thread_pool.AddWork */);
-      } /* task_gph->ForEachNode */);
-      counter.WaitForeverUntilCntEqualZero();
-      tc->Count("Graph name: " + name_ + " AddOpAttrtoPlan", 1);
-    }
   }
   if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name = "plan:" + job_name();
