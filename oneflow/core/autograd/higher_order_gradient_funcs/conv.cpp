@@ -85,15 +85,15 @@ Maybe<void> ConvDataGradGrad::Apply(const ConvDataGradGradCaptureState* ctx,
   in_grads->resize(3);
   size_t num_spatial_dims = ctx->kernel_size.size();
 
-  // 一阶前向: ConvND
-  // x * w = y ( * => 卷积)
-  // 一阶反向:
+  // first order forward: ConvND
+  // x * w = y ( * => convolution)
+  // first order backward:
   // x_grad = y_grad * w.rot180           (y.shape * w.shape -> x.shape)  call ConvDataGrad
   // w_grad = x * y_grad                  (x.shape * y.shape -> w.shape)  call ConvFilterGrad
 
-  // 二阶前向(一阶反向): ConvDataGrad
+  // second order forward (first order backward): ConvDataGrad
   // y_grad * w.rot180 = x_grad
-  // second order backward:
+  // second order forward:
   // w_grad_grad = out_grads_x * y_grad   (x.shape * y.shape -> w.shape)  call ConvFilterGrad
   // grad_for_y_grad = out_grads_x * w    (x.shape * w.shape -> y.shape)  call ConvND
 
@@ -184,15 +184,15 @@ Maybe<void> ConvFilterGradGrad::Apply(const ConvFilterGradGradCaptureState* ctx,
   in_grads->resize(2);
   size_t num_spatial_dims = ctx->kernel_size.size();
 
-  // 一阶前向: ConvND
-  // x * w = y ( * => 卷积)
-  // 一阶反向:
+  // first order forward: ConvND
+  // x * w = y ( * => convolution)
+  // first order backward:
   // x_grad = y_grad * w.rot180           (y.shape * w.shape -> x.shape)  call ConvDataGrad
   // w_grad = x * y_grad                  (x.shape * y.shape -> w.shape)  call ConvFilterGrad
 
-  // 二阶前向(一阶反向): ConvFilterGrad
+  // second order forward (first order backward): ConvFilterGrad
   // x * y_grad = w_grad
-  // 二阶反向:
+  // second order backward:
   // x_grad_grad = out_grads_w * y_grad.rot180    (y.shape * w.shape -> x.shape)  call ConvDataGrad
   // grad_for_y_grad = x * out_grads_w            (x.shape * w.shape -> y.shape)  call ConvND
 
