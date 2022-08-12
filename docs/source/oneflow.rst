@@ -386,14 +386,3 @@ BLAS and LAPACK Operations
     mm
     mv
 
-Global View Ops
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-
-    to_global
-    to_local
-    dict_to_global
-
