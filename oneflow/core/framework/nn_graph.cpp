@@ -355,6 +355,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       BlockingCounter counter(node_num);
       std::mutex mtx;
       ThreadPool thread_pool(thread_pool_size);
+      tc->Count("Graph name: " + name_ + " ThreadPoolInit", 1);
 
       auto* job_id2op_attribute_ref_table = plan_.mutable_job_id2op_attribute_ref_table();
       auto* op_name2op_attribute =
