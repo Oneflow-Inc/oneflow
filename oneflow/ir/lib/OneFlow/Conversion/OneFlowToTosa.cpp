@@ -50,6 +50,22 @@ namespace mlir {
 
 namespace oneflow {
 
+Type convertSigned(MLIRContext* context, Type type) {
+  // In oneflow int tensor is explicit signed. Convert them before lowering to TOSA.
+  if (auto ranked_tensor = type.dyn_cast<RankedTensorType>()) {
+    if (auto intTy = ranked_tensor.getElementType().dyn_cast<IntegerType>()) {
+      if (intTy.Signed) {
+        mlir::Type rt = RankedTensorType::get(
+            ranked_tensor.getShape(),
+            IntegerType::get(context, intTy.getWidth(),
+                             mlir::IntegerType::SignednessSemantics::Signless));
+        return rt;
+      }
+    }
+  }
+  return type;
+}
+
 Value CreateTranspose(Location& loc, ConversionPatternRewriter& rewriter, Value input,
                       ArrayRef<int32_t> perms) {
   int perms_size = perms.size();
@@ -580,21 +596,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   target.addIllegalDialect<OneFlowDialect>();
 
   TypeConverter typeConverter;
-  typeConverter.addConversion([context](Type type) {
-    // In oneflow int tensor is explicit signed. Convert them before lowering to TOSA.
-    if (auto ranked_tensor = type.dyn_cast<RankedTensorType>()) {
-      if (auto intTy = ranked_tensor.getElementType().dyn_cast<IntegerType>()) {
-        if (intTy.Signed) {
-          mlir::Type rt = RankedTensorType::get(
-              ranked_tensor.getShape(),
-              IntegerType::get(context, intTy.getWidth(),
-                               mlir::IntegerType::SignednessSemantics::Signless));
-          return rt;
-        }
-      }
-    }
-    return type;
-  });
+  typeConverter.addConversion([context](Type type) { return convertSigned(context, type); });
   RewritePatternSet patterns(context);
 
   const auto mgr = ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get();
