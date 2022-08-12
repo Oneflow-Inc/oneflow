@@ -736,7 +736,11 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
     const user_op::TensorDesc& tensor_desc = infer_ctx.OutputTensorDesc(pair.first, pair.second);
     out_blob_desc->set_data_type(tensor_desc.data_type());
     out_blob_desc->mut_shape() = tensor_desc.shape();
-    out_blob_desc->mut_stride() = tensor_desc.stride();
+    if (val_->non_contiguous_supported) {
+      out_blob_desc->mut_stride() = tensor_desc.stride();
+    } else {
+      out_blob_desc->mut_stride() = Stride(out_blob_desc->shape());
+    }
     out_blob_desc->set_is_dynamic(tensor_desc.is_dynamic());
   }
   return Maybe<void>::Ok();
