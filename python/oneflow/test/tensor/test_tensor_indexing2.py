@@ -875,7 +875,7 @@ def _test_setitem_scalars(test_case, device):
     # with test_case.assertRaises(IndexError):
     #     r[...] = 9.9
 
-    # scalar indexed with ones(1)
+    # scalar indexed with oneflow.Size([1])
     np_x = np.random.rand(2, 3)
     np_x[0, 0] = np.ones(1)
     x = flow.tensor(np_x)
