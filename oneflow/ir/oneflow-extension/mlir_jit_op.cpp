@@ -53,7 +53,6 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
     exit(1);
   }
 
-  std::vector<mlir::RankedTensorType> ins;
   mlir::func::FuncOp funcOp = mlir::SymbolTable::lookupNearestSymbolFrom<mlir::func::FuncOp>(
       module.get(), mlir::SymbolRefAttr::get(&context, ctx->op_name()));
   CHECK(funcOp) << "Fail to find funcOp of symbol " << ctx->op_name();
@@ -75,7 +74,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
     }
   }
 
-  CHECK_EQ(ins.size(), 2);
+  CHECK_EQ(funcOp.getArgumentTypes().size(), 2);
   CHECK_EQ(ctx->inputs().size(), 2);
   CHECK_EQ(ctx->outputs().size(), 1);
   const Shape& in_shape = ctx->InputShape("in", 0);
