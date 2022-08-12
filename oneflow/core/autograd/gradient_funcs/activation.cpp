@@ -46,7 +46,7 @@ class Silu : public BaseActivation {
     in_grads->resize(1);
     if (ctx->requires_grad) {
       const auto& x = ctx->SavedTensors().at(0);
-      in_grads->at(0) = JUST(functional::SiluGrad(out_grads.at(0), x));
+      in_grads->at(0) = JUST(functional::SiluGrad(x, out_grads.at(0)));
     }
     return Maybe<void>::Ok();
   }
@@ -60,7 +60,7 @@ class Mish : public BaseActivation {
     in_grads->resize(1);
     if (ctx->requires_grad) {
       const auto& x = ctx->SavedTensors().at(0);
-      in_grads->at(0) = JUST(functional::MishGrad(out_grads.at(0), x));
+      in_grads->at(0) = JUST(functional::MishGrad(x, out_grads.at(0)));
     }
     return Maybe<void>::Ok();
   }
@@ -74,7 +74,7 @@ class Selu : public BaseActivation {
     in_grads->resize(1);
     if (ctx->requires_grad) {
       const auto& x = ctx->SavedTensors().at(0);
-      in_grads->at(0) = JUST(functional::SeluGrad(out_grads.at(0), x));
+      in_grads->at(0) = JUST(functional::SeluGrad(x, out_grads.at(0)));
     }
     return Maybe<void>::Ok();
   }
@@ -88,7 +88,7 @@ class Softsign : public BaseActivation {
     in_grads->resize(1);
     if (ctx->requires_grad) {
       const auto& x = ctx->SavedTensors().at(0);
-      in_grads->at(0) = JUST(functional::SoftSignGrad(out_grads.at(0), x));
+      in_grads->at(0) = JUST(functional::SoftSignGrad(x, out_grads.at(0)));
     }
     return Maybe<void>::Ok();
   }
@@ -102,7 +102,7 @@ class GeLU : public BaseActivation {
     in_grads->resize(1);
     if (ctx->requires_grad) {
       const auto& x = ctx->SavedTensors().at(0);
-      in_grads->at(0) = JUST(functional::GeluGrad(out_grads.at(0), x));
+      in_grads->at(0) = JUST(functional::GeluGrad(x, out_grads.at(0)));
     }
     return Maybe<void>::Ok();
   }
@@ -116,7 +116,7 @@ class HardSigmoid : public BaseActivation {
     in_grads->resize(1);
     if (ctx->requires_grad) {
       const auto& x = ctx->SavedTensors().at(0);
-      in_grads->at(0) = JUST(functional::HardSigmoidGrad(out_grads.at(0), x));
+      in_grads->at(0) = JUST(functional::HardSigmoidGrad(x, out_grads.at(0)));
     }
     return Maybe<void>::Ok();
   }
@@ -172,7 +172,7 @@ class HardSwish : public BaseActivation {
     in_grads->resize(1);
     if (ctx->requires_grad) {
       const auto& x = ctx->SavedTensors().at(0);
-      in_grads->at(0) = JUST(functional::HardSwishGrad(out_grads.at(0), x));
+      in_grads->at(0) = JUST(functional::HardSwishGrad(x, out_grads.at(0)));
     }
     return Maybe<void>::Ok();
   }
@@ -202,7 +202,7 @@ class ReLU : public OpExprGradFunction<ReLUCaptureState> {
     in_grads->resize(1);
     if (ctx->requires_grad) {
       const auto& y = ctx->SavedTensors().at(0);
-      in_grads->at(0) = JUST(functional::ReluGrad(out_grads.at(0), y));
+      in_grads->at(0) = JUST(functional::ReluGrad(y, out_grads.at(0)));
     }
     return Maybe<void>::Ok();
   }

@@ -537,7 +537,7 @@
   bind_python: True
 
 - name: "relu_grad"
-  signature: "Tensor (Tensor dy, Tensor y) => ReluGrad"
+  signature: "Tensor (Tensor y, Tensor dy) => ReluGrad"
   bind_python: False
 
 - name: "hann_window"
@@ -602,7 +602,7 @@
   bind_python: True
 
 - name: "gelu_grad"
-  signature: "Tensor (Tensor dy, Tensor x) => GeluGrad"
+  signature: "Tensor (Tensor x, Tensor dy) => GeluGrad"
   bind_python: False
 
 - name: "gelu_with_approximate"
@@ -626,7 +626,7 @@
   bind_python: True
 
 - name: "hardsigmoid_grad"
-  signature: "Tensor (Tensor dy, Tensor x) => HardSigmoidGrad"
+  signature: "Tensor (Tensor x, Tensor dy) => HardSigmoidGrad"
   bind_python: False
 
 - name: "hardshrink"
@@ -654,7 +654,7 @@
   bind_python: True
 
 - name: "hardswish_grad"
-  signature: "Tensor (Tensor dy, Tensor x) => HardSwishGrad"
+  signature: "Tensor (Tensor x, Tensor dy) => HardSwishGrad"
   bind_python: False
 
 - name: "leaky_relu"
@@ -2452,4 +2452,44 @@
 
 - name: "grad_acc_unpack"
   signature: "Tensor (Tensor input, Int32 unpack_num) => GradAccUnpack"
+  bind_python: False
+
+- name: "silu_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) => SiluGradGrad"  
+  bind_python: False
+
+- name: "mish_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) => MishGradGrad"  
+  bind_python: False
+
+- name: "selu_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) => SeluGradGrad"  
+  bind_python: False
+
+- name: "softsign_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) => SoftSignGradGrad"  
+  bind_python: False
+
+- name: "gelu_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) => GeluGradGrad"  
+  bind_python: False
+
+- name: "hardsigmoid_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) => HardSigmoidGradGrad"  
+  bind_python: False
+
+- name: "hardswish_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) => HardSwishGradGrad"  
+  bind_python: False
+
+- name: "softplus_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx, Double beta=1.0, Double threshold=20.0) => SoftplusGradGrad"  
+  bind_python: False
+
+- name: "elu_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx, Double alpha) => EluGradGrad"  
+  bind_python: False
+
+- name: "celu_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx, Double alpha) => CeluGradGrad"  
   bind_python: False

@@ -99,8 +99,8 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
 
   if (!ctx->skip_final_activation) {
     // step1: use dy and final output to get last layer's relu grad.
-    last_bias_dy = JUST(functional::ReluGrad(JUST(VectorAt(out_grads, 0)),
-                                             JUST(VectorAt(ctx->SavedTensors(), 1 + weight_num))));
+    last_bias_dy = JUST(functional::ReluGrad(JUST(VectorAt(ctx->SavedTensors(), 1 + weight_num))),
+                        JUST(VectorAt(out_grads, 0)));
   }
 
   TensorTuple hiddens(weight_num);
