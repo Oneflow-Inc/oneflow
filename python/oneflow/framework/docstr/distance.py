@@ -82,5 +82,5 @@ add_docstr(
         >>> output.shape
         oneflow.Size([3])
 
-    """
+    """,
 )
