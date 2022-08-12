@@ -365,13 +365,12 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
               auto op_node = task_node->op_node();
               const std::string op_name = op_node->op().op_name();
               {
-                // TODO(strint): Try to optimize here
-                OpAttribute op_attr;
-                CHECK_JUST(op_node->op().ToOpAttribute(&op_attr));
-
                 std::unique_lock<std::mutex> guard(mtx);
                 auto find_it = op_name2op_attribute->find(op_name);
                 if (find_it == op_name2op_attribute->end()) {
+                  OpAttribute op_attr;
+                  CHECK_JUST(op_node->op().ToOpAttribute(&op_attr));
+                  // TODO(strint): Try to optimize here
                   op_name2op_attribute->insert({op_name, op_attr});
                 }  // guard(mtx)
               }
