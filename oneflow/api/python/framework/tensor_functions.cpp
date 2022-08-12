@@ -766,6 +766,7 @@ static PyObject* PyTensorObject_to_local(PyObject* self, PyObject* unused, PyObj
 int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
   HANDLE_ERRORS
   auto tensor = PyTensor_Unpack(self);
+
   std::shared_ptr<Tensor> value_tensor;
   CHECK_OR_THROW(functional::PyTensorIndexCheck(item))
       << Error::TypeError() << "tensor_setitem(): argument 'index' must be index, not "
@@ -781,9 +782,8 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
                                          ASSERT(MakeBroadcastSbpParallel()));
     if (functional::PyScalarCheck(value)) {
       Scalar value_scalar = functional::PyUnpackScalar(value);
-      const Shape& Emptyshape = DimVector();
       value_tensor = ASSERT_PTR(
-          functional::GlobalConstant(Emptyshape, value_scalar, tensor->dtype(), placement, sbp));
+          functional::GlobalConstant(Shape({}), value_scalar, tensor->dtype(), placement, sbp));
     } else {
       value_tensor = PyTensor_Unpack(value);
       CHECK_OR_THROW(value_tensor->is_global())
@@ -795,9 +795,8 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
   } else {
     if (functional::PyScalarCheck(value)) {
       Scalar value_scalar = functional::PyUnpackScalar(value);
-      const Shape& Emptyshape = DimVector();
-      value_tensor = ASSERT_PTR(functional::Constant(Emptyshape, value_scalar, tensor->dtype(),
-                                                     ASSERT(tensor->device())));
+      value_tensor = ASSERT_PTR(
+          functional::Constant(Shape({}), value_scalar, tensor->dtype(), ASSERT(tensor->device())));
     } else {
       value_tensor = PyTensor_Unpack(value);
       CHECK_OR_THROW(value_tensor->is_local())
@@ -807,6 +806,7 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
       value_tensor = ASSERT_PTR(functional::To(value_tensor, device, value_tensor->dtype(), false));
     }
   }
+  const auto& indexvec = functional::PyUnpackTensorIndex(item);
   ASSERT(functional::TensorSetItem(tensor, functional::PyUnpackTensorIndex(item), value_tensor));
   return 0;
   END_HANDLE_ERRORS_RET(-1)
