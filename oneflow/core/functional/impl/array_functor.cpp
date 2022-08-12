@@ -2156,6 +2156,19 @@ class TensorSetItemFunctor {
     if (tensor_indices.empty()) {
       Shape slice_shape(slice_dims);
       if (slice_shape != *(value_tensor->shape())) {
+        // NOTE:
+        // 1. The value shape must can be broadcasted to the target shape.
+        // 2. The slice shape must have equal element count with the target shape.
+        //
+        // So, we should be expand to target_shape and then reshape to slice_shape.
+        //
+        // For example:
+        // x = flow.rand(2, 3, 4)
+        // y = flow.rand(3)
+        // x[:, :, 1] = y
+        //
+        // value_shape = (3,), target_shape = (2, 3), slice_shape = (2, 3, 1)
+        // We must change value shape to slice_shape if it uses SliceUpdate op.
         if (target_shape != *(value_tensor->shape()) && target_shape.NumAxes() > 0) {
           value_tensor = JUST(Expand(value_tensor, target_shape));
         }
