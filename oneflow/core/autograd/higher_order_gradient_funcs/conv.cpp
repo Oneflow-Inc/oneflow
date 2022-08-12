@@ -93,7 +93,7 @@ Maybe<void> ConvDataGradGrad::Apply(const ConvDataGradGradCaptureState* ctx,
 
   // 二阶前向(一阶反向): ConvDataGrad
   // y_grad * w.rot180 = x_grad
-  // 二阶反向:
+  // second order backward:
   // w_grad_grad = out_grads_x * y_grad   (x.shape * y.shape -> w.shape)  call ConvFilterGrad
   // grad_for_y_grad = out_grads_x * w    (x.shape * w.shape -> y.shape)  call ConvND
 
