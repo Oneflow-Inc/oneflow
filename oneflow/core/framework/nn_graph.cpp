@@ -355,7 +355,6 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       BlockingCounter counter(node_num);
       std::mutex mtx;
       ThreadPool thread_pool(thread_pool_size);
-      tc->Count("Graph name: " + name_ + " ThreadPoolInit", 1);
 
       auto* job_id2op_attribute_ref_table = plan_.mutable_job_id2op_attribute_ref_table();
       auto* op_name2op_attribute =
@@ -366,12 +365,13 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
               auto op_node = task_node->op_node();
               const std::string op_name = op_node->op().op_name();
               {
+                // TODO(strint): Try to optimize here
+                OpAttribute op_attr;
+                CHECK_JUST(op_node->op().ToOpAttribute(&op_attr));
+
                 std::unique_lock<std::mutex> guard(mtx);
                 auto find_it = op_name2op_attribute->find(op_name);
                 if (find_it == op_name2op_attribute->end()) {
-                  OpAttribute op_attr;
-                  // TODO(strint): Try to optimize here
-                  CHECK_JUST(op_node->op().ToOpAttribute(&op_attr));
                   op_name2op_attribute->insert({op_name, op_attr});
                 }  // guard(mtx)
               }
