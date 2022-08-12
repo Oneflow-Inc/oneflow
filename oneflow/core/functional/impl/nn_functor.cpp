@@ -2659,8 +2659,8 @@ class CosineSimilarityFunctor {
         int64_t offset = max_shape.NumAxes() - 1 - i;
         int64_t dim_x = x_shape.NumAxes() - 1 - offset;
         int64_t dim_y = y_shape.NumAxes() - 1 - offset;
-        int64_t size_x = (dim_x >= 0) ? x_shape.At(i) : 1;
-        int64_t size_y = (dim_y >= 0) ? y_shape.At(i) : 1;
+        int64_t size_x = (dim_x >= 0) ? x_shape.At(dim_x) : 1;
+        int64_t size_y = (dim_y >= 0) ? y_shape.At(dim_y) : 1;
         if (!(size_x == size_y || size_x == 1 || size_y == 1)) {
           return Error::RuntimeError()
                  << "The size of tensor a (" << size_x << ") must match the size of tensor b ("
