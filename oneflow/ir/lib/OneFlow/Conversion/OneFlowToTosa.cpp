@@ -55,11 +55,10 @@ Type convertToSignless(MLIRContext* context, Type type) {
   if (auto ranked_tensor = type.dyn_cast<RankedTensorType>()) {
     if (auto intTy = ranked_tensor.getElementType().dyn_cast<IntegerType>()) {
       if (!intTy.isSignless()) {
-        mlir::Type rt = RankedTensorType::get(
+        return RankedTensorType::get(
             ranked_tensor.getShape(),
             IntegerType::get(context, intTy.getWidth(),
                              mlir::IntegerType::SignednessSemantics::Signless));
-        return rt;
       }
     }
   }
@@ -394,7 +393,6 @@ struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
     auto output = reshape_type(op.y().getType().cast<ShapedType>(), perms);
 
     auto max_pool2d = rewriter.create<tosa::MaxPool2dOp>(loc, output, input, kernel, stride, pad);
-
     auto y = CreateTranspose(loc, rewriter, max_pool2d, {0, 3, 1, 2});
 
     auto indice_output = convertToSignless(op->getContext(), op.indice().getType());
@@ -402,10 +400,7 @@ struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
 
     tosa::ConstOp indice = rewriter.create<tosa::ConstOp>(loc, indice_output, value);
 
-    UnrealizedConversionCastOp indice_urc = rewriter.create<UnrealizedConversionCastOp>(
-        op->getLoc(), op.indice().getType(), indice->getResults());
-
-    rewriter.replaceOp(op, {y, indice_urc->getResult(0)});
+    rewriter.replaceOp(op, {y, indice});
     return success();
   }
 };
@@ -612,7 +607,6 @@ struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
     auto res = CreateTranspose(loc, rewriter, conv2d, {0, 3, 1, 2});
     rewriter.replaceOp(op, {res});
     return success();
-    getTypeConverter();
   }
 };
 
@@ -662,8 +656,9 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
            OutputOpLowering, NormalizationOpLowering, NormalizationInferenceOpLowering>(
           typeConverter, context);
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
-    getOperation()->dump();
     signalPassFailure();
+    LOG(ERROR) << "Failed to lower OneFlow to Tosa";
+    getOperation()->dump();
   }
 }
 
