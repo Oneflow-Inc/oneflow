@@ -60,14 +60,14 @@ class TestSyncBatchNormChannelLast(flow.unittest.TestCase):
             np.allclose(
                 torch_res.detach().permute(0, 2, 3, 1).contiguous().cpu().numpy(),
                 of_res.numpy(),
-                atol=1e-8,
+                atol=1e-5,
             )
         )
         test_case.assertTrue(
             np.allclose(
                 torch_input.grad.detach().cpu().numpy(),
                 of_input.grad.numpy(),
-                atol=1e-8,
+                atol=1e-5,
             )
         )
         torch.distributed.destroy_process_group()

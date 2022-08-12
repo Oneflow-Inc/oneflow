@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 set -ex
-
 cd $ONEFLOW_TEST_DIR
 
 export ONEFLOW_TEST_DEVICE_NUM=2
