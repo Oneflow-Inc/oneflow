@@ -25,13 +25,21 @@ import oneflow as oneflow_origin
 from collections import defaultdict
 
 
-def _test_activation_grad_grad_impl(test_case, op_name, *args, **kwargs):
-    x = random_tensor(ndim=2, low=-5)
+def _test_activation_grad_grad_impl(
+    test_case, op_name, placement, sbp, *args, **kwargs
+):
+    x = random_tensor(ndim=2, low=-5, dim0=8, dim1=8).to_global(
+        placement=placement, sbp=sbp
+    )
     y = eval(f"torch.nn.functional.{op_name}")(x, *args, **kwargs)
 
     x_shape = x.oneflow.shape
-    init_grad_x = random_tensor(len(x_shape), *x_shape)
-    init_grad_y = random_tensor(len(x_shape), *x_shape)
+    init_grad_x = random_tensor(len(x_shape), *x_shape).to_global(
+        placement=placement, sbp=sbp
+    )
+    init_grad_y = random_tensor(len(x_shape), *x_shape).to_global(
+        placement=placement, sbp=sbp
+    )
 
     dx = torch.autograd.grad(y, x, init_grad_y, True, True)[0]
     test_case.assertTrue(
@@ -48,16 +56,28 @@ def _test_activation_grad_grad_impl(test_case, op_name, *args, **kwargs):
     )
 
 
-def _test_prelu_activation_grad_grad_impl(test_case, op_name, *args, **kwargs):
-    x = random_tensor(ndim=2, low=-5)
-    a = random_tensor(ndim=1, dim0=x.oneflow.shape[1])
+def _test_prelu_activation_grad_grad_impl(
+    test_case, op_name, placement, sbp, *args, **kwargs
+):
+    x = random_tensor(ndim=2, low=-5, dim0=8, dim1=8).to_global(
+        placement=placement, sbp=sbp
+    )
+    a = random_tensor(ndim=1, dim0=x.oneflow.shape[1]).to_global(
+        placement=placement, sbp=random_sbp(placement, max_dim=1)
+    )
     y = torch.nn.functional.prelu(x, a)
 
     x_shape = x.oneflow.shape
     a_shape = a.oneflow.shape
-    init_grad_x = random_tensor(len(x_shape), *x_shape)
-    init_grad_y = random_tensor(len(x_shape), *x_shape)
-    init_grad_a = random_tensor(len(a_shape), *a_shape)
+    init_grad_x = random_tensor(len(x_shape), *x_shape).to_global(
+        placement=placement, sbp=sbp
+    )
+    init_grad_y = random_tensor(len(x_shape), *x_shape).to_global(
+        placement=placement, sbp=sbp
+    )
+    init_grad_a = random_tensor(len(a_shape), *a_shape).to_global(
+        placement=placement, sbp=random_sbp(placement, max_dim=1)
+    )
 
     dx_and_da = torch.autograd.grad(y, [x, a], init_grad_y, True, True)
     dx, da = dx_and_da[0], dx_and_da[1]
@@ -69,7 +89,7 @@ def _test_prelu_activation_grad_grad_impl(test_case, op_name, *args, **kwargs):
     )
 
     ddx_dda_ddy = torch.autograd.grad(
-        dx_and_da, [dx, da, init_grad_y], [init_grad_x, init_grad_a]
+        dx_and_da, [dx, da, init_grad_y], [init_grad_x, init_grad_a], True, True
     )
     ddx, dda, ddy = ddx_dda_ddy[0], ddx_dda_ddy[1], ddx_dda_ddy[2]
     test_case.assertTrue(
@@ -83,13 +103,21 @@ def _test_prelu_activation_grad_grad_impl(test_case, op_name, *args, **kwargs):
     )
 
 
-def _test_hardswish_activation_grad_grad_impl(test_case, op_name, *args, **kwargs):
-    x = random_tensor(ndim=2, low=-1, dim1=4)
+def _test_hardswish_activation_grad_grad_impl(
+    test_case, op_name, placement, sbp, *args, **kwargs
+):
+    x = random_tensor(ndim=2, low=-1, dim0=8, dim1=8).to_global(
+        placement=placement, sbp=sbp
+    )
     y = torch.nn.functional.hardswish(x, *args, **kwargs)
 
     x_shape = x.oneflow.shape
-    init_grad_x = random_tensor(len(x_shape), *x_shape)
-    init_grad_y = random_tensor(len(x_shape), *x_shape)
+    init_grad_x = random_tensor(len(x_shape), *x_shape).to_global(
+        placement=placement, sbp=sbp
+    )
+    init_grad_y = random_tensor(len(x_shape), *x_shape).to_global(
+        placement=placement, sbp=sbp
+    )
 
     dx_pytorch = pytorch_origin.autograd.grad(
         y.pytorch, x.pytorch, init_grad_y.pytorch
@@ -110,21 +138,31 @@ def _test_hardswish_activation_grad_grad_impl(test_case, op_name, *args, **kwarg
         init_grad_x.oneflow,
         init_grad_y.oneflow,
     )
+
+    zeros_grad = flow.zeros_like(x).to_global(placement=placement, sbp=sbp)
     manual_ddx = flow.where(
-        ((x > -3.0) < 3.0), 1.0 / 3.0 * init_grad_x * init_grad_y, flow.tensor(0.0)
+        ((x > -3.0) < 3.0), 1.0 / 3.0 * init_grad_x * init_grad_y, zeros_grad
     )
     manual_ddy = dx / init_grad_y * init_grad_x
     test_case.assertTrue(np.allclose(manual_ddx.detach().numpy(), ddx.detach().numpy()))
     test_case.assertTrue(np.allclose(manual_ddy.detach().numpy(), ddy.detach().numpy()))
 
 
-def _test_hardsigmoid_activation_grad_grad_impl(test_case, op_name, *args, **kwargs):
-    x = random_tensor(ndim=2, low=-1, dim1=4)
+def _test_hardsigmoid_activation_grad_grad_impl(
+    test_case, op_name, placement, sbp, *args, **kwargs
+):
+    x = random_tensor(ndim=2, low=-1, dim0=8, dim1=8).to_global(
+        placement=placement, sbp=sbp
+    )
     y = torch.nn.functional.hardsigmoid(x, *args, **kwargs)
 
     x_shape = x.oneflow.shape
-    init_grad_x = random_tensor(len(x_shape), *x_shape)
-    init_grad_y = random_tensor(len(x_shape), *x_shape)
+    init_grad_x = random_tensor(len(x_shape), *x_shape).to_global(
+        placement=placement, sbp=sbp
+    )
+    init_grad_y = random_tensor(len(x_shape), *x_shape).to_global(
+        placement=placement, sbp=sbp
+    )
 
     dx_pytorch = pytorch_origin.autograd.grad(
         y.pytorch, x.pytorch, init_grad_y.pytorch
@@ -152,6 +190,7 @@ def _test_hardsigmoid_activation_grad_grad_impl(test_case, op_name, *args, **kwa
 
 
 class TestActivationHigherDerivative(flow.unittest.TestCase):
+    @globaltest
     def test_activation_grad_grad(test_case):
         op_args = defaultdict(list)
         op_kwargs = defaultdict(dict)
@@ -199,7 +238,16 @@ class TestActivationHigherDerivative(flow.unittest.TestCase):
                 functor = _test_activation_grad_grad_impl
 
             print(f"| {op_name:-^60} |")
-            functor(test_case, op_name, *op_args[op_name], **op_kwargs[op_name])
+            for placement in all_placement():
+                for sbp in all_sbp(placement, max_dim=2):
+                    functor(
+                        test_case,
+                        op_name,
+                        placement,
+                        sbp,
+                        *op_args[op_name],
+                        **op_kwargs[op_name],
+                    )
 
 
 if __name__ == "__main__":

@@ -75,10 +75,10 @@ class NoParamActivationGradGrad : public OpExprGradFunction<BaseActivationGradGr
   REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##GradGradCls);
 
 // first order backward param: (x, dy)
+// INSTANTIAT_AND_REGISTER_NOPARAM_ACTIVATION_CLASS("mish_grad", Mish)  // TODO
+// INSTANTIAT_AND_REGISTER_NOPARAM_ACTIVATION_CLASS("gelu_grad", Gelu)  // TODO
 INSTANTIAT_AND_REGISTER_NOPARAM_ACTIVATION_CLASS("silu_grad", Silu)
-INSTANTIAT_AND_REGISTER_NOPARAM_ACTIVATION_CLASS("mish_grad", Mish)
 INSTANTIAT_AND_REGISTER_NOPARAM_ACTIVATION_CLASS("selu_grad", Selu)
-INSTANTIAT_AND_REGISTER_NOPARAM_ACTIVATION_CLASS("gelu_grad", Gelu)
 INSTANTIAT_AND_REGISTER_NOPARAM_ACTIVATION_CLASS("softsign_grad", SoftSign)
 INSTANTIAT_AND_REGISTER_NOPARAM_ACTIVATION_CLASS("hardsigmoid_grad", HardSigmoid)
 INSTANTIAT_AND_REGISTER_NOPARAM_ACTIVATION_CLASS("hardswish_grad", HardSwish)
@@ -131,6 +131,52 @@ class HardShrinkGradGrad : public OpExprGradFunction<HardShrinkGradGradCaptureSt
   AttrMap base_attrs_;
 };
 
+struct SoftShrinkGradGradCaptureState : public AutoGradCaptureState {
+  bool y_requires_grad = false;
+  bool grad_requires_grad = false;
+  double alpha = 0.5;
+};
+
+class SoftShrinkGradGrad : public OpExprGradFunction<SoftShrinkGradGradCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+    return Maybe<void>::Ok();
+  }
+  Maybe<void> Capture(SoftShrinkGradGradCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    // y, dy
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
+
+    ctx->y_requires_grad = inputs.at(0)->requires_grad();
+    ctx->grad_requires_grad = inputs.at(1)->requires_grad();
+    if (!ctx->y_requires_grad || !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
+
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
+    if (ctx->grad_requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const SoftShrinkGradGradCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    in_grads->resize(2);
+
+    if (ctx->y_requires_grad) { in_grads->at(0) = JUST(functional::ZerosLike(out_grads.at(0))); }
+    if (ctx->grad_requires_grad) {
+      const auto& y = ctx->SavedTensors().at(0);
+      in_grads->at(1) = JUST(functional::SoftShrinkGrad(y, out_grads.at(0), ctx->alpha));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  AttrMap base_attrs_;
+};
+
 struct ReluGradGradCaptureState : public AutoGradCaptureState {
   bool y_requires_grad = false;
   bool grad_requires_grad = false;
@@ -170,9 +216,6 @@ struct LeakyReluGradGradCaptureState : public AutoGradCaptureState {
 };
 
 class LeakyReluGradGrad : public OpExprGradFunction<LeakyReluGradGradCaptureState> {
-  // leaky_relu_grad = (x > 0 ? 1 : alpha) * grad
-  // So: out_grad_grad = (x > 0 ? 1 : alpha) * gradgrad
-  //     x_grad_grad = 0 * gradgrad = 0
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -214,9 +257,8 @@ class LeakyReluGradGrad : public OpExprGradFunction<LeakyReluGradGradCaptureStat
 };
 
 struct SoftplusGradGradCaptureState : public AutoGradCaptureState {
-  bool x_requires_grad = true;
-  bool grad_requires_grad = true;
-
+  bool x_requires_grad = false;
+  bool grad_requires_grad = false;
   double beta = 1.0;
   double threshold = 20.0;
 };
@@ -319,8 +361,8 @@ class HardTanhGradGrad : public OpExprGradFunction<HardTanhGradGradCaptureState>
 };
 
 struct EluGradGradCaptureState : public AutoGradCaptureState {
-  bool x_requires_grad = true;
-  bool grad_requires_grad = true;
+  bool x_requires_grad = false;
+  bool grad_requires_grad = false;
   double alpha = 1.0;
 };
 
@@ -357,8 +399,8 @@ class EluGradGrad : public OpExprGradFunction<EluGradGradCaptureState> {
 
     if (ctx->x_requires_grad) {
       const auto& grad = ctx->SavedTensors().at(1);
-      in_grads->at(0) =
-          JUST(functional::Mul(out_grads.at(0), JUST(functional::EluGradGrad(x, grad, ctx->alpha))));
+      in_grads->at(0) = JUST(
+          functional::Mul(out_grads.at(0), JUST(functional::EluGradGrad(x, grad, ctx->alpha))));
     }
     if (ctx->grad_requires_grad) {
       in_grads->at(1) = JUST(functional::EluGrad(x, out_grads.at(0), ctx->alpha));
@@ -379,60 +421,14 @@ class CeluGradGrad : public EluGradGrad {
 
     if (ctx->x_requires_grad) {
       const auto& grad = ctx->SavedTensors().at(1);
-      in_grads->at(0) = 
-          JUST(functional::Mul(out_grads.at(0), JUST(functional::CeluGradGrad(x, grad, ctx->alpha))));
+      in_grads->at(0) = JUST(
+          functional::Mul(out_grads.at(0), JUST(functional::CeluGradGrad(x, grad, ctx->alpha))));
     }
     if (ctx->grad_requires_grad) {
       in_grads->at(1) = JUST(functional::CeluGrad(x, out_grads.at(0), ctx->alpha));
     }
     return Maybe<void>::Ok();
   }
-};
-
-struct SoftShrinkGradGradCaptureState : public AutoGradCaptureState {
-  bool y_requires_grad = false;
-  bool grad_requires_grad = false;
-  double alpha = 0.5;
-};
-
-class SoftShrinkGradGrad : public OpExprGradFunction<SoftShrinkGradGradCaptureState> {
- public:
-  Maybe<void> Init(const OpExpr& op) override {
-    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
-    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-    return Maybe<void>::Ok();
-  }
-  Maybe<void> Capture(SoftShrinkGradGradCaptureState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override {
-    // y, dy
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
-
-    ctx->y_requires_grad = inputs.at(0)->requires_grad();
-    ctx->grad_requires_grad = inputs.at(1)->requires_grad();
-    if (!ctx->y_requires_grad || !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
-
-    ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
-    if (ctx->grad_requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Apply(const SoftShrinkGradGradCaptureState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override {
-    in_grads->resize(2);
-
-    if (ctx->y_requires_grad) { in_grads->at(0) = JUST(functional::ZerosLike(out_grads.at(0))); }
-    if (ctx->grad_requires_grad) {
-      const auto& y = ctx->SavedTensors().at(0);
-      in_grads->at(1) = JUST(functional::SoftShrinkGrad(y, out_grads.at(0), ctx->alpha));
-    }
-    return Maybe<void>::Ok();
-  }
-
- private:
-  AttrMap base_attrs_;
 };
 
 struct PReluGradGradCaptureState : public AutoGradCaptureState {
@@ -499,15 +495,12 @@ class PReluGradGrad : public OpExprGradFunction<PReluGradGradCaptureState> {
 };
 
 struct ThresholdGradGradCaptureState : public AutoGradCaptureState {
-  bool x_requires_grad = true;
-  bool grad_requires_grad = true;
+  bool x_requires_grad = false;
+  bool grad_requires_grad = false;
   double threshold = 0.0;
 };
 
 class ThresholdGradGrad : public OpExprGradFunction<ThresholdGradGradCaptureState> {
-  // leaky_relu_grad = (x > 0 ? 1 : alpha) * grad
-  // So: out_grad_grad = (x > 0 ? 1 : alpha) * gradgrad
-  //     x_grad_grad = 0 * gradgrad = 0
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -527,7 +520,7 @@ class ThresholdGradGrad : public OpExprGradFunction<ThresholdGradGradCaptureStat
     if (!ctx->x_requires_grad || !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->threshold = JUST(composed_attrs.GetAttr<float>("threshold_val"));
+    ctx->threshold = JUST(composed_attrs.GetAttr<double>("threshold_val"));
 
     if (ctx->grad_requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
     return Maybe<void>::Ok();
@@ -549,15 +542,15 @@ class ThresholdGradGrad : public OpExprGradFunction<ThresholdGradGradCaptureStat
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("relu_grad", ReluGradGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("hardshrink_grad", HardShrinkGradGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("leaky_relu_grad", LeakyReluGradGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("hardtanh_grad", HardTanhGradGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("elu_grad", EluGradGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("celu_grad", CeluGradGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("prelu_grad", PReluGradGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("hardshrink_grad", HardShrinkGradGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("softshrink_grad", SoftShrinkGradGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("leaky_relu_grad", LeakyReluGradGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("hardtanh_grad", HardTanhGradGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("threshold_grad", ThresholdGradGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("softplus_grad", SoftplusGradGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("softshrink_grad", SoftShrinkGradGrad);
 
 }  // namespace one
 }  // namespace oneflow
