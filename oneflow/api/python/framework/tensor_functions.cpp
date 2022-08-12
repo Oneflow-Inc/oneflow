@@ -805,7 +805,6 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
       value_tensor = ASSERT_PTR(functional::To(value_tensor, device, value_tensor->dtype(), false));
     }
   }
-  const auto& indexvec = functional::PyUnpackTensorIndex(item);
   ASSERT(functional::TensorSetItem(tensor, functional::PyUnpackTensorIndex(item), value_tensor));
   return 0;
   END_HANDLE_ERRORS_RET(-1)
