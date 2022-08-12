@@ -76,7 +76,7 @@ add_docstr(
         >>> import oneflow as flow
         >>> x1 = flow.arange(12).reshape(3, 4)
         >>> x2 = flow.arange(12).reshape(3, 4)
-        >>> output = flow.nn.functional_pairwise_distance(x1, x2, p=2)
+        >>> output = flow.nn.functional.pairwise_distance(x1, x2, p=2)
         >>> output
         tensor([2.0000e-06, 2.0000e-06, 2.0000e-06], dtype=oneflow.float32)
         >>> output.shape
