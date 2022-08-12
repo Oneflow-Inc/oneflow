@@ -92,6 +92,7 @@ void PlanCompiler::Compile(Job* job, Plan* plan, std::shared_ptr<TaskGraph>& tas
   BlockingCounter counter(node_num);
   std::mutex mtx;
   ThreadPool thread_pool(thread_pool_size);
+  tc->Count("Graph name: " + job_name + " ThreadPoolInit", 1);
   task_gph->ForEachNode([&](TaskNode* task_node) {
     thread_pool.AddWork([task_node, plan, &counter, &mtx]() {
       if (!task_node->IsMeaningLess()) {
