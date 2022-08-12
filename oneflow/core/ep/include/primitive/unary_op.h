@@ -41,6 +41,7 @@ enum class UnaryOp {
   kSoftPlus,
   kTanh,
   kThreshold,
+  kExp, 
 
   // logical op
   kLogicalNot,
