@@ -212,6 +212,7 @@ from oneflow._C import index_select
 from oneflow._C import isnan
 from oneflow._C import isinf
 from oneflow._C import isfinite
+from oneflow._C import inv as inverse
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
