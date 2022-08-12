@@ -333,7 +333,7 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(low=-2, high=2).to(device)
         y = x + 1
-        y = input.clamp_max_(random(low=-0.5, high=0.5).to(float))
+        y.clamp_max_(random(low=-0.5, high=0.5).to(float))
         return y
 
     @autotest(auto_backward=False)
@@ -348,7 +348,7 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(low=-2, high=2).to(device)
         y = x + 1
-        y = input.clamp_max_(random(low=-0.5, high=0.5).to(float))
+        y.clamp_max_(random(low=-0.5, high=0.5).to(float))
         return y
 
     @autotest(n=5)
