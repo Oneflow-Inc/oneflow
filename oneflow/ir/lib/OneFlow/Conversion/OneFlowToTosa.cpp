@@ -580,11 +580,25 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   target.addIllegalDialect<OneFlowDialect>();
 
   TypeConverter typeConverter;
-  typeConverter.addConversion([](Type type) { return type; });
+  typeConverter.addConversion([context](Type type) {
+    // In oneflow int tensor is explicit signed. Convert them before lowering to TOSA.
+    if (auto ranked_tensor = type.dyn_cast<RankedTensorType>()) {
+      if (auto intTy = ranked_tensor.getElementType().dyn_cast<IntegerType>()) {
+        if (intTy.Signed) {
+          mlir::Type rt = RankedTensorType::get(
+              ranked_tensor.getShape(),
+              IntegerType::get(context, intTy.getWidth(),
+                               mlir::IntegerType::SignednessSemantics::Signless));
+          return rt;
+        }
+      }
+    }
+    return type;
+  });
   RewritePatternSet patterns(context);
 
   const auto mgr = ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get();
-  // judge whether the pass is trigger by python through the existence of variable tensor manger
+  // check if the pass is triggered by python based on the presence of variable tensor manger
   if (mgr) {
     patterns.add<VariableOpLowering>(typeConverter, context);
   } else {
