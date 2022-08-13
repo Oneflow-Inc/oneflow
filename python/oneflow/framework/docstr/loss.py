@@ -81,6 +81,8 @@ add_docstr(
 add_docstr(
     oneflow._C.cross_entropy,
     r"""
+    cross_entropy(input, target, weight=None, ignore_index=-100, reduction="mean")
+
     See :class:`~oneflow.nn.CrossEntropyLoss` for details.
 
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.cross_entropy.html.
@@ -127,6 +129,8 @@ add_docstr(
 add_docstr(
     oneflow._C.l1_loss,
     r"""
+    l1_loss(input, target, reduction="mean") -> Tensor
+
     This operator computes the L1 loss between each element in input and target.
 
     see :class:`~oneflow.nn.L1Loss` for details.
@@ -151,6 +155,8 @@ add_docstr(
 add_docstr(
     oneflow._C.mse_loss,
     r"""
+    mse_loss(input, target, reduction="mean") -> Tensor
+
     This operator computes the mean squared error (squared L2 norm) 
     loss between each element in input and target.
 
