@@ -296,7 +296,9 @@ class TestL1LossModule(flow.unittest.TestCase):
         x = random_tensor(len(shape), *shape).to(device)
         target = random_tensor(len(shape), *shape, requires_grad=False).to(device)
 
-        y = torch.nn.functional.l1_loss(x, target, reduction=oneof("none", "sum", "mean", nothing()))
+        y = torch.nn.functional.l1_loss(
+            x, target, reduction=oneof("none", "sum", "mean", nothing())
+        )
         return y
 
 
@@ -345,7 +347,9 @@ class TestMSELossModule(flow.unittest.TestCase):
         x = random_tensor(len(shape), *shape).to(device)
         target = random_tensor(len(shape), *shape, requires_grad=False).to(device)
 
-        y = torch.nn.functional.mse_loss(x, target, reduction=oneof("none", "sum", "mean", nothing()))
+        y = torch.nn.functional.mse_loss(
+            x, target, reduction=oneof("none", "sum", "mean", nothing())
+        )
         return y
 
 
