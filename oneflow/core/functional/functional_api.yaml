@@ -2132,6 +2132,10 @@
   signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => SplitLike"
   bind_python: True
 
+- name: "pairwise_distance"
+  signature: "Tensor (Tensor x1, Tensor x2, Float p=2.0, Double eps=1e-6, Bool keepdim=False) => PairwiseDistance"
+  bind_python: True
+
 - name: "cosine_similarity"
   signature: "Tensor (Tensor x, Tensor y, Int32 dim=1, Double eps=1e-8) => CosineSimilarity"
   bind_python: True

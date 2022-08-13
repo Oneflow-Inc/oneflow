@@ -198,9 +198,57 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(flow.nn.init.calculate_gain("conv2d"), 1)
         test_case.assertEqual(flow.nn.init.calculate_gain("tanh"), 5.0 / 3)
 
+    def _test_non_contiguous_tensor_init_methods(test_case, tensor_creator, get_numpy):
+        shape = (8, 8)
+        x = flow.zeros(shape)
+        sliced_x = x[::2, 1::2]
+        not_sliced_x = x[1::2, ::2]
+        random_fill_val = 923.53
+        np_zeros = np.zeros((4, 4))
+        # ones
+        flow.nn.init.ones_(sliced_x)
+        test_case.assertTrue(np.allclose(get_numpy(sliced_x), np.ones((4, 4))))
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # constant
+        flow.nn.init.constant_(sliced_x, random_fill_val)
+        test_case.assertTrue(
+            np.allclose(get_numpy(sliced_x), np.ones((4, 4)) * random_fill_val)
+        )
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # eye
+        flow.nn.init.eye_(sliced_x)
+        test_case.assertTrue(np.allclose(get_numpy(sliced_x), np.eye(4)))
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # kaiming_normal_
+        flow.nn.init.kaiming_normal_(
+            sliced_x, a=0.1, mode="fan_out", nonlinearity="relu"
+        )
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # kaiming_uniform_
+        flow.nn.init.kaiming_uniform_(sliced_x)
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # xavier_normal_ with relu gain
+        flow.nn.init.xavier_normal_(sliced_x, flow.nn.init.calculate_gain("relu"))
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # xavier_uniform_ with relu gain
+        flow.nn.init.xavier_uniform_(sliced_x, flow.nn.init.calculate_gain("relu"))
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # trunc_normal_
+        flow.nn.init.trunc_normal_(sliced_x, mean=0.0, std=1.0, a=-2.0, b=2.0)
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # normal_
+        flow.nn.init.normal_(sliced_x, mean=0.0, std=1.0)
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+        # orthogonal_
+        flow.nn.init.orthogonal_(sliced_x)
+        test_case.assertTrue(np.allclose(get_numpy(not_sliced_x), np_zeros))
+
     @flow.unittest.skip_unless_1n1d()
     def test_local_tensor_init_methods(test_case):
         test_case._test_tensor_init_methods(
+            lambda *args, **kwargs: flow.Tensor(*args, **kwargs), lambda x: x.numpy()
+        )
+        test_case._test_non_contiguous_tensor_init_methods(
             lambda *args, **kwargs: flow.Tensor(*args, **kwargs), lambda x: x.numpy()
         )
 

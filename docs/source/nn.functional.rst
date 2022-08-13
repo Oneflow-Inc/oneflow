@@ -114,6 +114,7 @@ Distance functions
     :nosignatures:
 
     cosine_similarity
+    pairwise_distance
 
 
 Loss functions
