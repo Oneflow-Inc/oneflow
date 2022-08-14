@@ -24,27 +24,27 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=2, check_graph=False)
 def _test_atleast1d_with_random_data(test_case, placement, sbp):
-    x = random_tensor(ndim=1).to_global(placement, sbp)
-    y = random_tensor(ndim=2).to_global(placement, sbp)
+    x = random_tensor(ndim=1, dim0=8).to_global(placement, sbp)
+    y = random_tensor(ndim=2, dim0=8).to_global(placement, sbp)
     out = torch.atleast_1d([x, y])
     return out
 
 
 @autotest(n=2, check_graph=False)
 def _test_atleast2d_with_random_data(test_case, placement, sbp):
-    x = random_tensor(ndim=1).to_global(placement, sbp)
-    y = random_tensor(ndim=2).to_global(placement, sbp)
-    z = random_tensor(ndim=3).to_global(placement, sbp)
+    x = random_tensor(ndim=1, dim0=8).to_global(placement, sbp)
+    y = random_tensor(ndim=2, dim0=8).to_global(placement, sbp)
+    z = random_tensor(ndim=3, dim0=8).to_global(placement, sbp)
     out = torch.atleast_2d([x, y, z])
     return out
 
 
 @autotest(n=2, check_graph=False)
 def _test_atleast3d_with_random_data(test_case, placement, sbp):
-    x = random_tensor(ndim=1).to_global(placement, sbp)
-    y = random_tensor(ndim=2).to_global(placement, sbp)
-    z = random_tensor(ndim=3).to_global(placement, sbp)
-    p = random_tensor(ndim=4).to_global(placement, sbp)
+    x = random_tensor(ndim=1, dim0=8).to_global(placement, sbp)
+    y = random_tensor(ndim=2, dim0=8).to_global(placement, sbp)
+    z = random_tensor(ndim=3, dim0=8).to_global(placement, sbp)
+    p = random_tensor(ndim=4, dim0=8).to_global(placement, sbp)
     out = torch.atleast_3d([x, y, z, p])
     return out
 
