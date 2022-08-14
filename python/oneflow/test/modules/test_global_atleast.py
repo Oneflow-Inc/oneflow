@@ -26,7 +26,7 @@ from oneflow.test_utils.automated_test_util import *
 def _test_atleast1d_with_random_data(test_case, placement, sbp):
     x = random_tensor(ndim=1).to_global(placement, sbp)
     y = random_tensor(ndim=2).to_global(placement, sbp)
-    out = torch.atleast1d([x, y])
+    out = torch.atleast_1d([x, y])
     return out
 
 
@@ -35,7 +35,7 @@ def _test_atleast2d_with_random_data(test_case, placement, sbp):
     x = random_tensor(ndim=1).to_global(placement, sbp)
     y = random_tensor(ndim=2).to_global(placement, sbp)
     z = random_tensor(ndim=3).to_global(placement, sbp)
-    out = torch.atleast1d([x, y, z])
+    out = torch.atleast_2d([x, y, z])
     return out
 
 
@@ -45,7 +45,7 @@ def _test_atleast3d_with_random_data(test_case, placement, sbp):
     y = random_tensor(ndim=2).to_global(placement, sbp)
     z = random_tensor(ndim=3).to_global(placement, sbp)
     p = random_tensor(ndim=4).to_global(placement, sbp)
-    out = torch.atleast1d([x, y, z, p])
+    out = torch.atleast_3d([x, y, z, p])
     return out
 
 
