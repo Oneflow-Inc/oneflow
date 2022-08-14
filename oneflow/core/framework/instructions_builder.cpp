@@ -39,6 +39,8 @@ limitations under the License.
 #include "oneflow/core/vm/global_sync_instruction_policy.h"
 #include "oneflow/core/vm/op_call_instruction_policy.h"
 #include "oneflow/core/vm/stream_wait_instruction_policy.h"
+#include "oneflow/core/vm/stream_record_event_instruction_policy.h"
+#include "oneflow/core/vm/stream_wait_event_instruction_policy.h"
 #include "oneflow/core/vm/touch_tensors_instruction_policy.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -500,14 +502,16 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(const vm::EagerBlobObjectList& e
 namespace {
 
 bool SupportingStreamWait(Symbol<Stream> from_stream, Symbol<Stream> to_stream) {
+  if (from_stream->device() == to_stream->device()
+      && from_stream->stream_type() == to_stream->stream_type()) {
+    CHECK(from_stream == to_stream);
+  }
   if (unlikely(!ThreadLocalEnvBool<ONEFLOW_VM_ENABLE_STREAM_WAIT>())) { return false; }
   DeviceType from_device_type = from_stream->device()->enum_type();
   DeviceType to_device_type = from_stream->device()->enum_type();
   return from_stream->device() == to_stream->device() && from_device_type == DeviceType::kCUDA
          && StreamSupportStreamWait::Visit(from_stream->stream_type(), from_device_type)
-         && StreamSupportStreamWait::Visit(to_stream->stream_type(), to_device_type)
-         && !StreamOnIndependentThread::Visit(from_stream->stream_type())
-         && !StreamOnIndependentThread::Visit(to_stream->stream_type());
+         && StreamSupportStreamWait::Visit(to_stream->stream_type(), to_device_type);
 }
 
 }  // namespace
@@ -529,10 +533,23 @@ Maybe<void> InstructionsBuilder::StreamWait(
     Symbol<Stream> from_stream, Symbol<Stream> to_stream) {
   auto* from_vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(from_stream));
   auto* to_vm_stream = JUST(Singleton<VirtualMachine>::Get()->GetVmStream(to_stream));
-  auto instruction = intrusive::make_shared<vm::Instruction>(
-      to_vm_stream, std::make_unique<vm::StreamWaitInstructionPolicy>(
-                        std::move(dependences), from_vm_stream, to_vm_stream));
-  instruction_list_->EmplaceBack(std::move(instruction));
+  if (from_vm_stream->mut_thread_ctx() != to_vm_stream->mut_thread_ctx()) {
+    auto stream_record_event =
+        std::make_shared<vm::StreamRecordEventInstructionPolicy>(dependences);
+    auto record_instruction =
+        intrusive::make_shared<vm::Instruction>(from_vm_stream, stream_record_event);
+    instruction_list_->EmplaceBack(std::move(record_instruction));
+    auto stream_wait_event =
+        std::make_shared<vm::StreamWaitEventInstructionPolicy>(dependences, stream_record_event);
+    auto wait_instruction =
+        intrusive::make_shared<vm::Instruction>(to_vm_stream, stream_wait_event);
+    instruction_list_->EmplaceBack(std::move(wait_instruction));
+  } else {
+    auto instruction = intrusive::make_shared<vm::Instruction>(
+        to_vm_stream, std::make_unique<vm::StreamWaitInstructionPolicy>(
+                          std::move(dependences), from_vm_stream, to_vm_stream));
+    instruction_list_->EmplaceBack(std::move(instruction));
+  }
   return Maybe<void>::Ok();
 }
 
