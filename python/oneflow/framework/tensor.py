@@ -495,6 +495,10 @@ def _cumprod(self, dim, dtype=None):
     return flow._C.cumprod(self, dim, dtype=dtype)
 
 
+def _inv(self):
+    return flow._C.inv(self)
+
+
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
@@ -559,6 +563,7 @@ def RegisterMethods():
     Tensor.cumsum = _cumsum
     Tensor.cumprod = _cumprod
     Tensor.mv = _mv
+    Tensor.inverse = _inv
 
 
 def register_tensor_op(op_name):
