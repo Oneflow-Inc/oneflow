@@ -70,7 +70,8 @@ def _test_convnd_grad_grad_impl(test_case, ndim):
         np.allclose(dw.pytorch.detach().cpu().numpy(), dw.oneflow.detach().numpy())
     )
 
-    # autotest torch.autograd.grad 不支持 inputs/outpus/grad_outputs 为 list，所以使用原始 pytorch/oneflow
+    # torch.autograd.grad in autotest does not support inputs/outpus/grad_outputs as a list
+    # so use the original pytorch/oneflow module
     ddx_pytorch, ddw_pytorch = pytorch_origin.autograd.grad(
         outputs=[dx.pytorch, dw.pytorch],
         inputs=[x.pytorch, w.pytorch],

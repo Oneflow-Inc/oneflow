@@ -198,6 +198,15 @@ class TestMulModule(flow.unittest.TestCase):
         x.mul_(y)
         return x
 
+    @autotest(n=3)
+    def test_non_contiguous_inplace_mul(test_case):
+        device = random_device()
+        x = random_tensor(2, 2, 4).to(device)
+        y = x + 1
+        y = y[:, 1:3]
+        y *= random_tensor(2, 2, 2).to(device)
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -245,6 +245,8 @@ Pointwise Ops
     atan2 
     ceil 
     clamp 
+    clamp_min
+    clamp_max
     clip 
     cos 
     cosh 

@@ -827,8 +827,7 @@ class ExpandDimsFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim) const {
     int32_t expand_dim = dim;
     const int32_t ndim = input->shape()->NumAxes();
-    JUST(maybe_wrap_dim(dim, ndim + 1));
-    if (dim < 0) { expand_dim = dim + ndim + 1; }
+    expand_dim = JUST(maybe_wrap_dim(dim, ndim + 1));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
 
@@ -2484,7 +2483,7 @@ class ReduceSumLikeFunctor {
                            const std::vector<int32_t>& axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, JUST(like->detach())}, attrs);
   }
 
  private:
