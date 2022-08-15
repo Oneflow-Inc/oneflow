@@ -109,6 +109,12 @@ class TestArange(flow.unittest.TestCase):
         test_case.assertEqual(x.sbp, sbp)
         test_case.assertEqual(x.placement, placement)
 
+    @profile(torch.arange)
+    def profile_arange(test_case):
+        torch.arange(5)
+        torch.arange(100000)
+        torch.arange(1, 4)
+        torch.arange(1, 2.5, 0.5)
 
 if __name__ == "__main__":
     unittest.main()
