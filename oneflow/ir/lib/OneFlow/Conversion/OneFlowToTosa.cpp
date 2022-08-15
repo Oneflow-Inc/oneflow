@@ -65,6 +65,20 @@ Type convertToSignless(MLIRContext* context, Type type) {
   return type;
 }
 
+Type convertBackToSigned(MLIRContext* context, Type type) {
+  if (auto ranked_tensor = type.dyn_cast<RankedTensorType>()) {
+    if (auto intTy = ranked_tensor.getElementType().dyn_cast<IntegerType>()) {
+      if (intTy.isSignless()) {
+        return RankedTensorType::get(
+            ranked_tensor.getShape(),
+            IntegerType::get(context, intTy.getWidth(),
+                             mlir::IntegerType::SignednessSemantics::Signed));
+      }
+    }
+  }
+  return type;
+}
+
 FunctionType convertToSignlessFuncType(MLIRContext* context, FunctionType funcType) {
   llvm::SmallVector<Type, 4> inputs;
   llvm::SmallVector<Type, 4> results;
@@ -397,9 +411,7 @@ struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
 
     auto indice_output = convertToSignless(op->getContext(), op.indice().getType());
     auto value = DenseElementsAttr::get(indice_output, rewriter.getZeroAttr(rewriter.getI64Type()));
-
     tosa::ConstOp indice = rewriter.create<tosa::ConstOp>(loc, indice_output, value);
-
     rewriter.replaceOp(op, {y, indice});
     return success();
   }
@@ -639,7 +651,20 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   target.addIllegalDialect<OneFlowDialect>();
 
   TypeConverter typeConverter;
-  typeConverter.addConversion([context](Type type) { return convertToSignless(context, type); });
+  typeConverter.addConversion([context](Type type) {
+    LOG(ERROR) << "typeConverter: ";
+    type.dump();
+    llvm::errs() << "\n";
+    return convertBackToSigned(context, type);
+  });
+  typeConverter.addSourceMaterialization(
+      [&](OpBuilder& builder, Type resultType, ValueRange inputs, Location loc) -> Optional<Value> {
+        return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs).getResult(0);
+      });
+  typeConverter.addTargetMaterialization(
+      [&](OpBuilder& builder, Type resultType, ValueRange inputs, Location loc) -> Optional<Value> {
+        return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs).getResult(0);
+      });
   RewritePatternSet patterns(context);
 
   const auto mgr = ::oneflow::Singleton<::oneflow::VariableTensorMgr>::Get();

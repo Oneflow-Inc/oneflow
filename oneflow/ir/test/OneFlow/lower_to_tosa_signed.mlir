@@ -1,8 +1,8 @@
-// RUN: oneflow-opt -convert-to-signless-for-tosa   --mlir-print-ir-before-all --mlir-print-ir-after-all -lower-oneflow-to-tosa --print-after-all %s
+// RUN: oneflow-opt -convert-to-signless-for-tosa   --mlir-print-ir-before-all --mlir-print-ir-after-all -lower-oneflow-to-tosa -reconcile-unrealized-casts --print-after-all %s
 
 module  {
   func.func @test(%arg0: tensor<1x64x112x112xf32>) -> tensor<1x64x56x56xsi64> {
-    %1, %res = "oneflow.max_pool_2d"(%arg0) {
+    %1, %indice = "oneflow.max_pool_2d"(%arg0) {
       ceil_mode = false,
       data_format = "channels_first",
       device_name = ["@0:0"],
@@ -16,6 +16,6 @@ module  {
       scope_symbol_id = 49 : i64,
       stride = [2 : si32, 2 : si32]
     } : (tensor<1x64x112x112xf32>) -> (tensor<1x64x56x56xf32>, tensor<1x64x56x56xsi64>)
-    return %res : tensor<1x64x56x56xsi64>
+    return %indice : tensor<1x64x56x56xsi64>
   }
 }
