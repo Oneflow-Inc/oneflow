@@ -114,6 +114,10 @@ namespace oneflow {
     }
   }
   const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  for (int i = 0; i < logical_shape.NumAxes(); ++i) {
+    CHECK_EQ_OR_RETURN(nd_sbp.sbp_parallel_size() % logical_shape.At(i), 0)
+        << Error::RuntimeError() << "Error";
+  }
   *out_shape =
       *JUST(GetPhysicalShape(logical_shape, nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
   *out_stride = Stride(*out_shape);
