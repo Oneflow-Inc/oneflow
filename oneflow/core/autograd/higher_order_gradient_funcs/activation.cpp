@@ -74,7 +74,7 @@ class NoParamActivationGradGrad : public OpExprGradFunction<BaseActivationGradGr
   };                                                                                               \
   REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##GradGradCls);
 
-// first order backward param: (x, dy)
+// first order backward param: (dy, x)
 // INSTANTIAT_AND_REGISTER_NOPARAM_ACTIVATION_CLASS("mish_grad", Mish)  // TODO
 // INSTANTIAT_AND_REGISTER_NOPARAM_ACTIVATION_CLASS("gelu_grad", Gelu)  // TODO
 INSTANTIAT_AND_REGISTER_NOPARAM_ACTIVATION_CLASS("silu_grad", Silu)
@@ -147,7 +147,7 @@ class SoftShrinkGradGrad : public OpExprGradFunction<SoftShrinkGradGradCaptureSt
   }
   Maybe<void> Capture(SoftShrinkGradGradCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    // dy, y
+    // y, dy
     CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
     CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
 
