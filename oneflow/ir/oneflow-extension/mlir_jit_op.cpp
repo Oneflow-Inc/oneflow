@@ -57,8 +57,10 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
       module.get(), mlir::SymbolRefAttr::get(&context, ctx->op_name()));
   CHECK(funcOp) << "Fail to find funcOp of symbol " << ctx->op_name();
   const auto funcType = funcOp.getFunctionType();
-  CHECK_EQ(funcType.getNumInputs(), ctx->input_size("in"));
-  CHECK_EQ(funcType.getNumResults(), ctx->output_size("out"));
+  CHECK_EQ(funcType.getNumInputs(), ctx->input_size("in"))
+      << "input size mismatch with mlir assembly";
+  CHECK_EQ(funcType.getNumResults(), ctx->output_size("out"))
+      << "output size mismatch with mlir assembly";
   int32_t arg_i = 0;
   for (mlir::Type arg_type : funcType.getInputs()) {
     if (auto rankedTensorType = arg_type.dyn_cast<mlir::RankedTensorType>()) {
