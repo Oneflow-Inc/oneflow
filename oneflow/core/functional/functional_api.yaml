@@ -715,6 +715,10 @@
     ]
   bind_python: True
 
+- name: "eye_"
+  signature: "Tensor (Tensor x) => EyeInplace"
+  bind_python: True
+
 - name: "erfinv"
   signature: "Tensor (Tensor x) => Erfinv"
   bind_python: True
@@ -803,7 +807,8 @@
 - name: "bernoulli"
   signature:
     [
-      "Tensor (Tensor x, *, DataType dtype=kFloat, Generator generator=None) => Bernoulli",
+      "Tensor (Tensor input, *, DataType dtype=kFloat, Generator generator=None) => Bernoulli",
+      "Tensor (Tensor input, Double p, *, DataType dtype=kFloat, Generator generator=None) => Bernoulli",
     ]
   bind_python: True
 
@@ -1713,13 +1718,27 @@
   bind_python: True
 
 - name: "clamp"
-  signature:
-    ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clamp"]
+  signature: "Tensor (Tensor input, Scalar min=None, Scalar max=None) => Clamp"
   bind_python: true
 
 - name: "clamp_"
-  signature:
-    ["Tensor (Tensor input, Scalar min=None, Scalar max=None) => ClampInplace"]
+  signature: "Tensor (Tensor input, Scalar min=None, Scalar max=None) => ClampInplace"
+  bind_python: true
+
+- name: "clamp_min"
+  signature: "Tensor (Tensor input, Scalar min) => ClampMin"
+  bind_python: true
+
+- name: "clamp_min_"
+  signature: "Tensor (Tensor input, Scalar min) => ClampMinInplace"
+  bind_python: true
+
+- name: "clamp_max"
+  signature: "Tensor (Tensor input, Scalar max) => ClampMax"
+  bind_python: true
+
+- name: "clamp_max_"
+  signature: "Tensor (Tensor input, Scalar min) => ClampMaxInplace"
   bind_python: true
 
 - name: "clip"
@@ -1760,6 +1779,10 @@
       "Tensor (Tensor input, Scalar ord=None, Scalar dim, Bool keepdim=False, *, DataType dtype=None) => ScalarNorm",
       "Tensor (Tensor input, String ord, Scalar dim, Bool keepdim=False, *, DataType dtype=None) => ScalarNorm",
     ]
+  bind_python: True
+
+- name: "inv"
+  signature: "Tensor (Tensor x) => Inv"
   bind_python: True
 
 - name: "dropout"
@@ -2113,6 +2136,10 @@
   signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => SplitLike"
   bind_python: True
 
+- name: "pairwise_distance"
+  signature: "Tensor (Tensor x1, Tensor x2, Float p=2.0, Double eps=1e-6, Bool keepdim=False) => PairwiseDistance"
+  bind_python: True
+
 - name: "cosine_similarity"
   signature: "Tensor (Tensor x, Tensor y, Int32 dim=1, Double eps=1e-8) => CosineSimilarity"
   bind_python: True
@@ -2432,3 +2459,19 @@
 - name: "multi_tensor_adam_update"
   signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple m, TensorTuple v, Tensor learning_rate, Float beta1, Float beta2, Float bias_correction1_val, Float bias_correction2_val, Bool do_bias_correction, Double scale, Float weight_decay) => MultiTensorAdamUpdate"
   bind_python: True
+
+- name: "grad_acc_repeat"
+  signature: "Tensor (Tensor input, Int32 repeat_num) => GradAccRepeat"
+  bind_python: False
+
+- name: "grad_acc_collect"
+  signature: "Tensor (Tensor input, Int32 collect_num) => GradAccCollect"
+  bind_python: False
+
+- name: "grad_acc_pack"
+  signature: "Tensor (Tensor input, Int32 pack_num) => GradAccPack"
+  bind_python: False
+
+- name: "grad_acc_unpack"
+  signature: "Tensor (Tensor input, Int32 unpack_num) => GradAccUnpack"
+  bind_python: False

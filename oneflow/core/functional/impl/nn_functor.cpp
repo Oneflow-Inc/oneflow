@@ -1129,6 +1129,19 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("has_pos_weight", pos_weight.has_value()));
 
+    if (pos_weight) {
+      const auto pos_weight_shape = JUST(pos_weight)->shape();
+      // pos weight shape = (), (1,), (1,1)... or (input/target.shape[-1],)
+      const bool is_pos_weight_shape_valid =
+          (pos_weight_shape->elem_cnt() == 1)
+          || (pos_weight_shape->NumAxes() == 1
+              && pos_weight_shape->At(0) == target->shape()->back());
+
+      CHECK_OR_RETURN(is_pos_weight_shape_valid)
+          << Error::RuntimeError()
+          << "pos_weight must be a vector with length equal to the number of classes.";
+    }
+
     std::shared_ptr<Tensor> out;
     if (weight) {
       if (pos_weight) {
@@ -2619,6 +2632,18 @@ class OneHotFunctor {
   std::shared_ptr<OpExpr> one_hot_op_;
 };
 
+class PairwiseDistanceFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& y,
+                           const float& p, const double& eps, bool keepdim) const {
+    const int64_t xdim = x->ndim();
+    const int64_t ydim = y->ndim();
+    const int64_t output_dim = xdim > ydim ? xdim : ydim;
+    const auto& sub = JUST(ScalarAdd(JUST(Sub(x, y, 1, false)), eps, 1, false));
+    return ScalarNorm(sub, p, output_dim - 1, keepdim, NullOpt);
+  }
+};
+
 class CosineSimilarityFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -2634,8 +2659,8 @@ class CosineSimilarityFunctor {
         int64_t offset = max_shape.NumAxes() - 1 - i;
         int64_t dim_x = x_shape.NumAxes() - 1 - offset;
         int64_t dim_y = y_shape.NumAxes() - 1 - offset;
-        int64_t size_x = (dim_x >= 0) ? x_shape.At(i) : 1;
-        int64_t size_y = (dim_y >= 0) ? y_shape.At(i) : 1;
+        int64_t size_x = (dim_x >= 0) ? x_shape.At(dim_x) : 1;
+        int64_t size_y = (dim_y >= 0) ? y_shape.At(dim_y) : 1;
         if (!(size_x == size_y || size_x == 1 || size_y == 1)) {
           return Error::RuntimeError()
                  << "The size of tensor a (" << size_x << ") must match the size of tensor b ("
@@ -3822,6 +3847,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneHotFunctor>("OneHot");
   m.add_functor<impl::FusedSelfAttentionFunctor>("FusedSelfAttention");
   m.add_functor<impl::FusedSelfAttentionGradFunctor>("FusedSelfAttentionGrad");
+  m.add_functor<impl::PairwiseDistanceFunctor>("PairwiseDistance");
   m.add_functor<impl::CosineSimilarityFunctor>("CosineSimilarity");
   m.add_functor<impl::NormalizeFunctor>("Normalize");
   m.add_functor<impl::L2NormalizeFunctor>("L2Normalize");

@@ -70,6 +70,7 @@ Creation Ops
     linspace
     eye
     empty
+    empty_like
     full
     full_like
     tensor_scatter_nd_update
@@ -236,6 +237,8 @@ Pointwise Ops
     atan2 
     ceil 
     clamp 
+    clamp_min
+    clamp_max
     clip 
     cos 
     cosh 

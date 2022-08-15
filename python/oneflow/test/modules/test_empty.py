@@ -35,6 +35,18 @@ def _test_local_empty(test_case, shape, dtype, device, requires_grad):
     test_case.assertEqual(x.device, flow.device(device))
     if dtype == flow.float32:
         test_case.assertEqual(x.requires_grad, requires_grad)
+    empty_like_x = flow.empty_like(
+        x,
+        dtype=dtype,
+        device=flow.device(device),
+        requires_grad=requires_grad if dtype == flow.float32 else False,
+    )
+    test_case.assertFalse(empty_like_x.is_global)
+    test_case.assertEqual(empty_like_x.shape, flow.Size(shape))
+    test_case.assertEqual(empty_like_x.dtype, dtype)
+    test_case.assertEqual(empty_like_x.device, flow.device(device))
+    if dtype == flow.float32:
+        test_case.assertEqual(empty_like_x.requires_grad, requires_grad)
 
 
 def _test_new_empty(test_case, shape, dtype, device, requires_grad):
