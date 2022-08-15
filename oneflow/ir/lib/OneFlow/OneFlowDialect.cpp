@@ -143,6 +143,9 @@ void OneFlowDialect::initialize() {
       ,
 #define GET_OP_LIST
 #include "OneFlow/OneFlow.system_ops.cpp.inc"
+      ,
+#define GET_OP_LIST
+#include "OneFlow/OneFlow.mlir_jit_ops.cpp.inc"
       >();
   addTypes<
 #define GET_TYPEDEF_LIST
