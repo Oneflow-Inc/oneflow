@@ -651,9 +651,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   target.addIllegalDialect<OneFlowDialect>();
 
   TypeConverter typeConverter;
-  typeConverter.addConversion([context](Type type) {
-    return convertBackToSigned(context, type);
-  });
+  typeConverter.addConversion([context](Type type) { return convertBackToSigned(context, type); });
   typeConverter.addSourceMaterialization(
       [&](OpBuilder& builder, Type resultType, ValueRange inputs, Location loc) -> Optional<Value> {
         return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs).getResult(0);
