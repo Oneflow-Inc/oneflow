@@ -675,7 +675,6 @@ struct ConvertReturnToSignlessPattern : public OpRewritePattern<func::ReturnOp> 
       : OpRewritePattern<func::ReturnOp>(context, /*benefit=*/1) {}
   ::mlir::LogicalResult matchAndRewrite(func::ReturnOp op,
                                         ::mlir::PatternRewriter& rewriter) const override {
-    LOG(ERROR) << "allSignless(op.getOperandTypes()): " << allSignless(op.getOperandTypes());
     // make sure result not converted
     if (allSignless(op.getOperandTypes())) { return failure(); }
     llvm::SmallVector<Type, 1> results;
