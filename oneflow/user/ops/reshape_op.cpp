@@ -115,7 +115,7 @@ namespace oneflow {
   }
   const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   for (int i = 0; i < logical_shape.NumAxes(); ++i) {
-    CHECK_EQ_OR_RETURN(nd_sbp.sbp_parallel_size() % logical_shape.At(i), 0)
+    CHECK_EQ_OR_RETURN(logical_shape.At(i) % nd_sbp.sbp_parallel_size(), 0)
         << Error::RuntimeError() << "Error";
   }
   *out_shape =
