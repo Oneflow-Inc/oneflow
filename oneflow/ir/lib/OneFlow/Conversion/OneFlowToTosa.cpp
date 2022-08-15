@@ -65,20 +65,6 @@ Type convertToSignless(MLIRContext* context, Type type) {
   return type;
 }
 
-Type convertBackToSigned(MLIRContext* context, Type type) {
-  if (auto ranked_tensor = type.dyn_cast<RankedTensorType>()) {
-    if (auto intTy = ranked_tensor.getElementType().dyn_cast<IntegerType>()) {
-      if (intTy.isSignless()) {
-        return RankedTensorType::get(
-            ranked_tensor.getShape(),
-            IntegerType::get(context, intTy.getWidth(),
-                             mlir::IntegerType::SignednessSemantics::Signed));
-      }
-    }
-  }
-  return type;
-}
-
 FunctionType convertToSignlessFuncType(MLIRContext* context, FunctionType funcType) {
   llvm::SmallVector<Type, 4> inputs;
   llvm::SmallVector<Type, 4> results;
@@ -651,13 +637,15 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   target.addIllegalDialect<OneFlowDialect>();
 
   TypeConverter typeConverter;
-  typeConverter.addConversion([context](Type type) { return convertBackToSigned(context, type); });
+  typeConverter.addConversion([context](Type type) { return convertToSignless(context, type); });
   typeConverter.addSourceMaterialization(
       [&](OpBuilder& builder, Type resultType, ValueRange inputs, Location loc) -> Optional<Value> {
+        CHECK_EQ(inputs.size(), 1);
         return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs).getResult(0);
       });
   typeConverter.addTargetMaterialization(
       [&](OpBuilder& builder, Type resultType, ValueRange inputs, Location loc) -> Optional<Value> {
+        CHECK_EQ(inputs.size(), 1);
         return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs).getResult(0);
       });
   RewritePatternSet patterns(context);
