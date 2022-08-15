@@ -693,24 +693,21 @@ struct ConvertFuncToSignlessPattern : public OpRewritePattern<func::FuncOp> {
       : OpRewritePattern<func::FuncOp>(context, /*benefit=*/1) {}
   ::mlir::LogicalResult matchAndRewrite(func::FuncOp op,
                                         ::mlir::PatternRewriter& rewriter) const override {
-    if (allSignless(op.getFunctionType())) {
-      return failure();
-    } else {
-      auto ft = convertToSignlessFuncType(op->getContext(), op.getFunctionType());
-      auto func = rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getName(), ft);
-      BlockAndValueMapping bvm;
-      op.getRegion().cloneInto(&func.getRegion(), bvm);
-      for (auto& block : func.getBody().getBlocks()) {
-        for (auto arg : block.getArguments()) {
-          arg.setType(convertToSignless(op.getContext(), arg.getType()));
-        }
+    if (allSignless(op.getFunctionType())) { return failure(); }
+    auto ft = convertToSignlessFuncType(op->getContext(), op.getFunctionType());
+    auto func = rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getName(), ft);
+    BlockAndValueMapping bvm;
+    op.getRegion().cloneInto(&func.getRegion(), bvm);
+    for (auto& block : func.getBody().getBlocks()) {
+      for (auto arg : block.getArguments()) {
+        arg.setType(convertToSignless(op.getContext(), arg.getType()));
       }
-      rewriter.eraseOp(op);
-      RewritePatternSet patterns(func->getContext());
-      patterns.add<ConvertReturnToSignlessPattern>(func->getContext());
-      (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
-      return success();
     }
+    rewriter.eraseOp(op);
+    RewritePatternSet patterns(func->getContext());
+    patterns.add<ConvertReturnToSignlessPattern>(func->getContext());
+    (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
+    return success();
   }
 };
 
