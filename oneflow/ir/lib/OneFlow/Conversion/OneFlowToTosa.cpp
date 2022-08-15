@@ -166,8 +166,8 @@ struct JobLowering final : public OpConversionPattern<Job> {
   using OpConversionPattern<Job>::OpConversionPattern;
   LogicalResult matchAndRewrite(Job op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto ft = convertToSignlessFuncType(op->getContext(), op.function_type());
-    auto func = rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getName(), ft);
+    auto func_type = convertToSignlessFuncType(op->getContext(), op.function_type());
+    auto func = rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getName(), func_type);
     rewriter.inlineRegionBefore(op.getRegion(), func.getBody(), func.end());
     rewriter.eraseOp(op);
     return success();
