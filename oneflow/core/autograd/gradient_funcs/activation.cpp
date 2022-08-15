@@ -155,7 +155,7 @@ class HardShrink : public OpExprGradFunction<HardShrinkCaptureState> {
     if (ctx->requires_grad) {
       const auto& y = JUST(oneflow::VectorAt(ctx->SavedTensors(), 0));
       JUST(oneflow::VectorAt(*in_grads, 0)) =
-          JUST(functional::HardShrinkGrad(JUST(oneflow::VectorAt(out_grads, 0)), y, ctx->lambd));
+          JUST(functional::HardShrinkGrad(y, JUST(oneflow::VectorAt(out_grads, 0)), ctx->lambd));
     }
     return Maybe<void>::Ok();
   }
@@ -451,7 +451,7 @@ class SoftShrink : public OpExprGradFunction<SoftShrinkCaptureState> {
     if (ctx->requires_grad) {
       const auto& y = JUST(oneflow::VectorAt(ctx->SavedTensors(), 0));
       JUST(oneflow::VectorAt(*in_grads, 0)) =
-          JUST(functional::SoftShrinkGrad(JUST(oneflow::VectorAt(out_grads, 0)), y, ctx->alpha));
+          JUST(functional::SoftShrinkGrad(y, JUST(oneflow::VectorAt(out_grads, 0)), ctx->alpha));
     }
     return Maybe<void>::Ok();
   }

@@ -25,20 +25,18 @@ import oneflow as oneflow_origin
 from collections import defaultdict
 
 
-def _test_activation_grad_grad_impl(
-    test_case, op_name, placement, sbp, *args, **kwargs
-):
+def _test_activation_grad_grad_impl(test_case, op_name, placement, *args, **kwargs):
     x = random_tensor(ndim=2, low=-5, dim0=8, dim1=8).to_global(
-        placement=placement, sbp=sbp
+        placement=placement, sbp=random_sbp(placement=placement, max_dim=2)
     )
     y = eval(f"torch.nn.functional.{op_name}")(x, *args, **kwargs)
 
     x_shape = x.oneflow.shape
     init_grad_x = random_tensor(len(x_shape), *x_shape).to_global(
-        placement=placement, sbp=sbp
+        placement=placement, sbp=random_sbp(placement=placement, max_dim=2)
     )
     init_grad_y = random_tensor(len(x_shape), *x_shape).to_global(
-        placement=placement, sbp=sbp
+        placement=placement, sbp=random_sbp(placement=placement, max_dim=2)
     )
 
     dx = torch.autograd.grad(y, x, init_grad_y, True, True)[0]
@@ -57,10 +55,10 @@ def _test_activation_grad_grad_impl(
 
 
 def _test_prelu_activation_grad_grad_impl(
-    test_case, op_name, placement, sbp, *args, **kwargs
+    test_case, op_name, placement, *args, **kwargs
 ):
     x = random_tensor(ndim=2, low=-5, dim0=8, dim1=8).to_global(
-        placement=placement, sbp=sbp
+        placement=placement, sbp=random_sbp(placement=placement, max_dim=2)
     )
     a = random_tensor(ndim=1, dim0=x.oneflow.shape[1]).to_global(
         placement=placement, sbp=random_sbp(placement, max_dim=1)
@@ -70,10 +68,10 @@ def _test_prelu_activation_grad_grad_impl(
     x_shape = x.oneflow.shape
     a_shape = a.oneflow.shape
     init_grad_x = random_tensor(len(x_shape), *x_shape).to_global(
-        placement=placement, sbp=sbp
+        placement=placement, sbp=random_sbp(placement=placement, max_dim=2)
     )
     init_grad_y = random_tensor(len(x_shape), *x_shape).to_global(
-        placement=placement, sbp=sbp
+        placement=placement, sbp=random_sbp(placement=placement, max_dim=2)
     )
     init_grad_a = random_tensor(len(a_shape), *a_shape).to_global(
         placement=placement, sbp=random_sbp(placement, max_dim=1)
@@ -104,19 +102,19 @@ def _test_prelu_activation_grad_grad_impl(
 
 
 def _test_hardswish_activation_grad_grad_impl(
-    test_case, op_name, placement, sbp, *args, **kwargs
+    test_case, op_name, placement, *args, **kwargs
 ):
     x = random_tensor(ndim=2, low=-1, dim0=8, dim1=8).to_global(
-        placement=placement, sbp=sbp
+        placement=placement, sbp=random_sbp(placement=placement, max_dim=2)
     )
     y = torch.nn.functional.hardswish(x, *args, **kwargs)
 
     x_shape = x.oneflow.shape
     init_grad_x = random_tensor(len(x_shape), *x_shape).to_global(
-        placement=placement, sbp=sbp
+        placement=placement, sbp=random_sbp(placement=placement, max_dim=2)
     )
     init_grad_y = random_tensor(len(x_shape), *x_shape).to_global(
-        placement=placement, sbp=sbp
+        placement=placement, sbp=random_sbp(placement=placement, max_dim=2)
     )
 
     dx_pytorch = pytorch_origin.autograd.grad(
@@ -139,7 +137,9 @@ def _test_hardswish_activation_grad_grad_impl(
         init_grad_y.oneflow,
     )
 
-    zeros_grad = flow.zeros_like(x).to_global(placement=placement, sbp=sbp)
+    zeros_grad = flow.zeros_like(x).to_global(
+        placement=placement, sbp=x.sbp
+    )
     manual_ddx = flow.where(
         ((x > -3.0) < 3.0), 1.0 / 3.0 * init_grad_x * init_grad_y, zeros_grad
     )
@@ -149,19 +149,19 @@ def _test_hardswish_activation_grad_grad_impl(
 
 
 def _test_hardsigmoid_activation_grad_grad_impl(
-    test_case, op_name, placement, sbp, *args, **kwargs
+    test_case, op_name, placement, *args, **kwargs
 ):
     x = random_tensor(ndim=2, low=-1, dim0=8, dim1=8).to_global(
-        placement=placement, sbp=sbp
+        placement=placement, sbp=random_sbp(placement=placement, max_dim=2)
     )
     y = torch.nn.functional.hardsigmoid(x, *args, **kwargs)
 
     x_shape = x.oneflow.shape
     init_grad_x = random_tensor(len(x_shape), *x_shape).to_global(
-        placement=placement, sbp=sbp
+        placement=placement, sbp=random_sbp(placement=placement, max_dim=2)
     )
     init_grad_y = random_tensor(len(x_shape), *x_shape).to_global(
-        placement=placement, sbp=sbp
+        placement=placement, sbp=random_sbp(placement=placement, max_dim=2)
     )
 
     dx_pytorch = pytorch_origin.autograd.grad(
@@ -239,15 +239,13 @@ class TestActivationHigherDerivative(flow.unittest.TestCase):
 
             print(f"| {op_name:-^60} |")
             for placement in all_placement():
-                for sbp in all_sbp(placement, max_dim=2):
-                    functor(
-                        test_case,
-                        op_name,
-                        placement,
-                        sbp,
-                        *op_args[op_name],
-                        **op_kwargs[op_name],
-                    )
+                functor(
+                    test_case,
+                    op_name,
+                    placement,
+                    *op_args[op_name],
+                    **op_kwargs[op_name],
+                )
 
 
 if __name__ == "__main__":
