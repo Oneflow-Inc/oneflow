@@ -1093,11 +1093,11 @@
   bind_python: True
 
 - name: "l1_loss"
-  signature: "Tensor(Tensor input, Tensor target, String reduction) => L1Loss"
+  signature: "Tensor(Tensor input, Tensor target, String reduction=\"mean\") => L1Loss"
   bind_python: True
 
 - name: "mse_loss"
-  signature: "Tensor(Tensor input, Tensor target, String reduction) => MseLoss"
+  signature: "Tensor(Tensor input, Tensor target, String reduction=\"mean\") => MseLoss"
   bind_python: True
 
 - name: "kl_div_loss"
@@ -1779,6 +1779,10 @@
       "Tensor (Tensor input, Scalar ord=None, Scalar dim, Bool keepdim=False, *, DataType dtype=None) => ScalarNorm",
       "Tensor (Tensor input, String ord, Scalar dim, Bool keepdim=False, *, DataType dtype=None) => ScalarNorm",
     ]
+  bind_python: True
+
+- name: "inv"
+  signature: "Tensor (Tensor x) => Inv"
   bind_python: True
 
 - name: "dropout"
