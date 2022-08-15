@@ -342,7 +342,7 @@ class Optimizer(object):
         """
         raise NotImplementedError()
 
-    def clip_grad(self):
+    def clip_grad(self, error_if_nonfinite: bool = False):
         r"""Clips gradient norm of an iterable of parameters. 
         The norm is computed over all gradients together, as if they were concatenated into a single vector.
 
@@ -352,6 +352,11 @@ class Optimizer(object):
 
         You can also refer the code in :func:`oneflow.nn.utils.clip_grad_norm_`
 
+        Args:
+            error_if_nonfinite (bool): if True, an error is thrown if the total
+                norm of the gradients from :attr:``parameters`` is ``nan``,
+                ``inf``, or ``-inf``. Default: False (will switch to True in the future)
+
         """
         for param_group in self.param_groups:
             if param_group._enable_clip_grad:
@@ -359,7 +364,7 @@ class Optimizer(object):
                     param_group.parameters,
                     param_group["clip_grad_max_norm"],
                     param_group["clip_grad_norm_type"],
-                    True,
+                    error_if_nonfinite,
                 )
             else:
                 warnings.warn(

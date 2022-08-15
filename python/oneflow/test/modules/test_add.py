@@ -258,6 +258,16 @@ class TestAddModule(flow.unittest.TestCase):
     def profile_add(test_case):
         torch.add(torch.ones(4),20)
         torch.add(torch.ones(4),torch.ones(4,1),alpha=10)
+        
+    @autotest(n=3)
+    def test_non_contiguous_inplace_add(test_case):
+        device = random_device()
+        x = random_tensor(2, 2, 4).to(device)
+        y = x + 1
+        y = y[:, 1:3]
+        y += random_tensor(2, 2, 2).to(device)
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()
