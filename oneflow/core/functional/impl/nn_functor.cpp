@@ -14,9 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <cstdint>
+#include <memory>
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/error.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
@@ -31,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -2455,6 +2459,45 @@ class DropoutFunctor {
   std::shared_ptr<OpExpr> dropout_op_;
   std::shared_ptr<OpExpr> dropout_addend_op_;
   std::shared_ptr<OpExpr> add_op_;
+};
+
+namespace{
+  Maybe<Tensor> MakeFeatureNoise(const std::shared_ptr<one::Tensor>& x) {
+    const int64_t ndim = x->ndim();
+    CHECK_GE_OR_RETURN(ndim, 2)
+          << Error::RuntimeError()
+          << "Feature dropout requires at least 2 dimensions in the input";
+    std::vector <int64_t> sizes;
+    sizes.reserve(ndim);
+    sizes.push_back(x->shape()->At(0));
+    sizes.push_back(x->shape()->At(1));
+    for (int i = 2; i < ndim; i++){
+      sizes.push_back(1);
+    }
+    return JUST(Empty(Shape(sizes), x->dtype(), x->device(), false));
+  }
+  
+  Maybe<Tensor> DropoutImpl(const std::shared_ptr<one::Tensor>& input, const float& p,
+                           const bool& train) {
+    CHECK_EQ_OR_RETURN( p >=0 && p <= 1, true) << "dropout probability has to be between 0 and 1, but got " << p;
+    if (p == 0 || !train || input->shape()->elem_cnt() == 0) {
+      return input;
+    }
+    if (p == 1) {
+      std::shared_ptr <Tensor> other = Constant(input->shape(), Scalar(0.0), x->dtype(), x->device()); 
+      return InplaceMul(input, other);
+    }
+    std::shared_ptr<Tensor> noise = JUST(MakeFeatureNoise(input));
+    
+  }
+}
+
+class Dropout1dFunctor {
+  public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
+                           const bool& train) const {
+    
+  }
 };
 
 class DropoutGradFunctor {
