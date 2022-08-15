@@ -314,8 +314,8 @@ class SoftplusGradGrad : public OpExprGradFunction<SoftplusGradGradCaptureState>
 struct HardTanhGradGradCaptureState : public AutoGradCaptureState {
   bool y_requires_grad = false;
   bool grad_requires_grad = false;
-  double min_val;
-  double max_val;
+  double min_val = -1.0;
+  double max_val = 1.0;
 };
 
 class HardTanhGradGrad : public OpExprGradFunction<HardTanhGradGradCaptureState> {
