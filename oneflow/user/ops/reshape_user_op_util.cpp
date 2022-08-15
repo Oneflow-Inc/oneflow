@@ -106,28 +106,48 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
       << Error::RuntimeError()
       << "The element number of input tensor must be equal to output tensor, "
       << "but got " << in_shape.elem_cnt() << " and " << out_shape.elem_cnt();
-  int in_axis = in_shape.NumAxes() - 1;
-  int out_axis = out_shape.NumAxes() - 1;
-  while (in_axis >= 0 && out_axis >= 0) {
-    if (in_shape.Count(in_axis) < out_shape.Count(out_axis)) {
-      --in_axis;
-    } else if (in_shape.Count(in_axis) > out_shape.Count(out_axis)) {
-      --out_axis;
-    } else {
-      if (in_shape.At(in_axis) == out_shape.At(out_axis)
-          || (in_shape.Count(in_axis) % parallel_num == 0
-              && out_shape.Count(out_axis) % parallel_num == 0)) {
-        (*group_start_in_axis2out_axis)[in_axis] = out_axis;
+  // No split for 0D tensor
+  if (in_shape.NumAxes() == 0 || out_shape.NumAxes() == 0) { return Maybe<void>::Ok(); }
+  // Initialization
+  int64_t curr_in_axis = 0;
+  int64_t curr_out_axis = 0;
+  // shape_count is the product of the axis length in [start_axis, curr_axis - 1]
+  int64_t in_shape_count = 1;
+  int64_t out_shape_count = 1;
+  int64_t start_in_axis = 0;
+  int64_t start_out_axis = 0;
+  // Move forward functions
+  auto Move2NextAxis = [](const Shape& shape, int64_t& axis, int64_t& shape_count) {
+    if (axis < shape.NumAxes()) { shape_count *= shape.At(axis); }
+    axis++;
+  };
+  auto MoveInAxis = [&] { Move2NextAxis(in_shape, curr_in_axis, in_shape_count); };
+  auto MoveOutAxis = [&] { Move2NextAxis(out_shape, curr_out_axis, out_shape_count); };
+  // Move the first step
+  MoveInAxis();
+  MoveOutAxis();
+  while (curr_in_axis <= in_shape.NumAxes() || curr_out_axis <= out_shape.NumAxes()) {
+    if (in_shape_count == out_shape_count) {
+      // Record split axises
+      if (in_shape.At(start_in_axis) % parallel_num == 0
+          && out_shape.At(start_out_axis) % parallel_num == 0) {
+        (*group_start_in_axis2out_axis)[start_in_axis] = start_out_axis;
       }
-      --in_axis;
-      --out_axis;
+      // Reset grouped axises
+      start_in_axis = curr_in_axis;
+      start_out_axis = curr_out_axis;
+      in_shape_count = 1;
+      out_shape_count = 1;
+      // Move forward
+      MoveInAxis();
+      MoveOutAxis();
+    } else if (in_shape_count < out_shape_count) {
+      MoveInAxis();
+    } else {
+      // in_shape_count > out_shape_count
+      MoveOutAxis();
     }
   }
-  CHECK_GE_OR_RETURN(in_axis, -1);                           // NOLINT(maybe-need-error-msg)
-  CHECK_GE_OR_RETURN(out_axis, -1);                          // NOLINT(maybe-need-error-msg)
-  CHECK_LE_OR_RETURN(in_axis, 0);                            // NOLINT(maybe-need-error-msg)
-  CHECK_LE_OR_RETURN(out_axis, 0);                           // NOLINT(maybe-need-error-msg)
-  CHECK_EQ_OR_RETURN(in_axis == 0 && out_axis == 0, false);  // NOLINT(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
 
