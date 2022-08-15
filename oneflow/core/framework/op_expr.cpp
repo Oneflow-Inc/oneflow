@@ -158,11 +158,7 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<UserOpConf>::GetOrCreateOpGradClosure
   if (!op_grad_func_.get()) {
     CHECK_OR_RETURN((IsClassRegistered<std::string, OpExprGradFunctionIf>(proto().op_type_name())))
         << "The gradient function for op " << proto().op_type_name()
-        << " is not found. Please check whether it has been implemented and registered correctly."
-        << (proto().op_type_name().substr(proto().op_type_name().size() - 5) == "_grad"
-                ? " If you don't intend calculating higher order derivatives, please set "
-                  "`create_graph` to False."
-                : "");
+        << " is not found. Please check whether it has been implemented and registered correctly.";
     op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>(proto().op_type_name()));
     JUST(op_grad_func_->Init(*this));
   }

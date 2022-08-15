@@ -87,7 +87,6 @@ def _test_div_grad_grad_impl(test_case):
 class TestDivHigherDerivative(flow.unittest.TestCase):
     def test_div_grad_grad(test_case):
         for i in range(10):
-            print("loop ", i)
             _test_div_grad_grad_impl(test_case)
 
 

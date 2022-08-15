@@ -95,7 +95,6 @@ class TestGlobalDivHigherDerivative(flow.unittest.TestCase):
     def test_global_div_grad_grad(test_case):
         for placement in all_placement():
             for i in range(10):
-                print("loop ", i)
                 _test_global_div_grad_grad_impl(test_case, placement)
 
 
