@@ -212,6 +212,7 @@ from oneflow._C import index_select
 from oneflow._C import isnan
 from oneflow._C import isinf
 from oneflow._C import isfinite
+from oneflow._C import inv as inverse
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
@@ -337,6 +338,7 @@ from oneflow.nn.modules.constant import new_ones_op as new_ones
 from oneflow.nn.modules.constant import new_zeros_op as new_zeros
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.empty import new_empty_op as new_empty
+from oneflow.nn.modules.empty import empty_like_op as empty_like
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand

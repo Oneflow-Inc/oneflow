@@ -711,8 +711,7 @@ class ExpandDimsFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim) const {
     int32_t expand_dim = dim;
     const int32_t ndim = input->shape()->NumAxes();
-    JUST(maybe_wrap_dim(dim, ndim + 1));
-    if (dim < 0) { expand_dim = dim + ndim + 1; }
+    expand_dim = JUST(maybe_wrap_dim(dim, ndim + 1));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
 
@@ -856,7 +855,7 @@ class DimGatherFunctor {
     CHECK_EQ_OR_RETURN(sparse_grad, false)
         << Error::RuntimeError() << "Only support bool = False for now!";
 
-    JUST(maybe_wrap_dim(dim, index->ndim()));
+    int64_t new_dim = JUST(maybe_wrap_dim(dim, index->ndim()));
     if (input->ndim() > 0 && index->ndim() > 0) {
       CHECK_EQ_OR_RETURN(input->ndim(), index->ndim())
           << Error::RuntimeError()
@@ -872,17 +871,17 @@ class DimGatherFunctor {
     }
     if (input->ndim() > 0 && index->ndim() > 0) {
       FOR_RANGE(int32_t, i, 0, input->ndim()) {
-        if (i != dim) {
+        if (i != new_dim) {
           CHECK_LE_OR_RETURN(index->shape()->At(i), input->shape()->At(i))
               << Error::RuntimeError() << "Size does not match at dimension " << i
               << " expected index " << *(index->shape()) << " to be smaller than self "
-              << *(input->shape()) << " apart from dimension " << dim;
+              << *(input->shape()) << " apart from dimension " << new_dim;
         }
       }
     }
 
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    JUST(attrs.SetAttr<int32_t>("dim", new_dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
@@ -2364,7 +2363,7 @@ class ReduceSumLikeFunctor {
                            const std::vector<int32_t>& axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, JUST(like->detach())}, attrs);
   }
 
  private:

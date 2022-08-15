@@ -54,6 +54,8 @@ class TensorLayoutProcessor final {
         non_contiguous_enabled_(non_contiguous_enabled),
         converted_(false) {}
 
+  ~TensorLayoutProcessor();
+
   Maybe<void> Apply();
 
   const TensorTuple& inputs() const {
@@ -68,6 +70,8 @@ class TensorLayoutProcessor final {
   bool non_contiguous_enabled_;
   bool converted_;
   TensorTuple contiguous_inputs_;
+  std::vector<int> post_process_output_indices_;
+  TensorTuple post_process_outputs_;
 };
 
 }  // namespace functional
