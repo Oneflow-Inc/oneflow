@@ -652,9 +652,6 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
 
   TypeConverter typeConverter;
   typeConverter.addConversion([context](Type type) {
-    LOG(ERROR) << "typeConverter: ";
-    type.dump();
-    llvm::errs() << "\n";
     return convertBackToSigned(context, type);
   });
   typeConverter.addSourceMaterialization(
