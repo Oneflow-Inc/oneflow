@@ -259,6 +259,16 @@ class TestTensor(flow.unittest.TestCase):
         )
         return y
 
+    @autotest(auto_backward=False)
+    def test_clamp_maxnone_tensor_no_grad_with_random_data(test_case):
+        device = random_device()
+        input = random_tensor(low=-2, high=2).to(device)
+        y = input.clamp(
+            min=random(low=-1, high=-0.5).to(float),
+            max=random(low=0.5, high=1).to(float) | nothing(),
+        )
+        return y
+
     @autotest(n=5)
     def test_clamp_inplace_maxnone_tensor_with_random_data(test_case):
         device = random_device()
@@ -268,6 +278,77 @@ class TestTensor(flow.unittest.TestCase):
             min=random(low=-1, high=-0.5).to(float),
             max=random(low=0.5, high=1).to(float) | nothing(),
         )
+        return y
+
+    @autotest(auto_backward=False)
+    def test_clamp_inplace_maxnone_tensor_no_grad_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(low=-2, high=2).to(device)
+        y = x + 1
+        y.clamp_(
+            min=random(low=-1, high=-0.5).to(float),
+            max=random(low=0.5, high=1).to(float) | nothing(),
+        )
+        return y
+
+    @autotest(n=5)
+    def test_clamp_min_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_tensor(low=-2, high=2).to(device)
+        y = input.clamp_min(random(low=-0.5, high=0.5).to(float))
+        return y
+
+    @autotest(n=5)
+    def test_clamp_min_inplace_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(low=-2, high=2).to(device)
+        y = x + 1
+        y.clamp_min_(random(low=-0.5, high=0.5).to(float))
+        return y
+
+    @autotest(auto_backward=False)
+    def test_clamp_min_tensor_no_grad_with_random_data(test_case):
+        device = random_device()
+        input = random_tensor(low=-2, high=2).to(device)
+        y = input.clamp_min(random(low=-0.5, high=0.5).to(float))
+        return y
+
+    @autotest(auto_backward=False)
+    def test_clamp_min_inplace_tensor_no_grad_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(low=-2, high=2).to(device)
+        y = x + 1
+        y.clamp_min_(random(low=-0.5, high=0.5).to(float))
+        return y
+
+    @autotest(n=5)
+    def test_clamp_max_tensor_with_random_data(test_case):
+        device = random_device()
+        input = random_tensor(low=-2, high=2).to(device)
+        y = input.clamp_max(random(low=-0.5, high=0.5).to(float))
+        return y
+
+    @autotest(n=5)
+    def test_clamp_max_inplace_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(low=-2, high=2).to(device)
+        y = x + 1
+        y.clamp_max_(random(low=-0.5, high=0.5).to(float))
+        return y
+
+    @autotest(auto_backward=False)
+    def test_clamp_max_tensor_no_grad_with_random_data(test_case):
+        device = random_device()
+        input = random_tensor(low=-2, high=2).to(device)
+        y = input.clamp_max(random(low=-0.5, high=0.5).to(float))
+        return y
+
+    @autotest(auto_backward=False)
+    def test_clamp_max_inplace_tensor_no_grad_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(low=-2, high=2).to(device)
+        y = x + 1
+        y.clamp_max_(random(low=-0.5, high=0.5).to(float))
         return y
 
     @autotest(n=5)
@@ -466,7 +547,7 @@ class TestTensor(flow.unittest.TestCase):
     # Not check graph because of one reason:
     # Reason 1, lazy tensor cannot call .numpy(). tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor.
     # Please refer to File "python/oneflow/nn/modules/nonzero.py", line 29, in nonzero_op.
-    @autotest(n=5, auto_backward=False, check_graph="ValidatedFlase")
+    @autotest(n=5, auto_backward=False, check_graph="ValidatedFalse")
     def test_tensor_nonzero_with_random_data(test_case):
         device = random_device()
         ndim = random(2, 6).to(int)

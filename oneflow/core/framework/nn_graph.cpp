@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -270,6 +271,8 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
   one::TensorNameScope::Global()->Clear();
+  // Clear all backward pass scope
+  ClearAllBackwardPassScope();
 
   // NOTE(chengcheng): Singleton<JobDesc> need be clear before GlobalJobDescScope construct.
   if (Singleton<JobDesc>::Get() != nullptr) { Singleton<JobDesc>::Delete(); }
@@ -394,7 +397,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
         // To consistent from a local or global tensor.
         bool check_meta = load_tensor_iter->second->is_global() ? false : true;
         tensor = JUST(one::functional::ToGlobal(load_tensor_iter->second, placement, *sbp_tuple,
-                                                grad_sbp_tuple, check_meta));
+                                                grad_sbp_tuple, check_meta, /*copy=*/false));
         JUST(vm::CurrentRankSync());
         VLOG(2) << "Lazy nn.Graph name " << name_ << " op: " << op_attribute.op_conf().name()
                 << " created in JobPass, nn.Graph has loaded the tensor from state dict for this "
@@ -427,9 +430,9 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
         }
         {
           auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
-          const auto& new_tensor =
-              JUST(one::functional::ToGlobal(tensor, JUST(tensor->parallel_desc()),
-                                             optimized_sbp_parallels, {}, /* check_meta */ false));
+          const auto& new_tensor = JUST(one::functional::ToGlobal(
+              tensor, JUST(tensor->parallel_desc()), optimized_sbp_parallels, {},
+              /* check_meta */ false, /*copy=*/false));
           JUST(vm::CurrentRankSync());
           // Use tensor.set_data inferface and make new TensorImpl instead of the old one.
           JUST(tensor->set_data(new_tensor));

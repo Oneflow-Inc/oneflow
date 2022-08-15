@@ -235,6 +235,7 @@ class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::Cuda
     user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const ShapeView& in_shape = input_tensor->shape_view();
+    const DataType data_type = input_tensor->data_type();
     bool is_axis_contiguous = false;
     int64_t outer_size = 0, inner_size = 0, reduce_size = 0;
     GetReduceSumLayout(axis, in_shape, &is_axis_contiguous, &outer_size, &inner_size, &reduce_size);
@@ -243,19 +244,16 @@ class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::Cuda
       const int32_t m = (inner_size == 1) ? outer_size : inner_size;
       const int32_t n = 1;
       const int32_t k = reduce_size;
-      const float16* ones = nullptr;
+      const void* ones = nullptr;
       auto* cuda_device = dynamic_cast<ep::CudaDevice*>(ctx->stream()->device());
-      if (cuda_device != nullptr) {
-        ones =
-            static_cast<const float16*>(cuda_device->GetConstOnes(DataType::kFloat16, reduce_size));
-      }
+      if (cuda_device != nullptr) { ones = cuda_device->GetConstOnes(data_type, reduce_size); }
       if (ones == nullptr) {
         std::unique_ptr<ep::primitive::Fill> fill =
             ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
-                                                                    DataType::kFloat16);
+                                                                    data_type);
         CHECK(fill);
         fill->Launch(ctx->stream(), tmp_buffer->mut_dptr(), 1.0, reduce_size);
-        ones = tmp_buffer->dptr<float16>();
+        ones = tmp_buffer->dptr();
       }
       std::unique_ptr<ep::primitive::Matmul> matmul;
       if (trans_a) {
@@ -280,48 +278,54 @@ class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::Cuda
       CHECK_LE(in_tmp_buffer_bytes + out_tmp_buffer_bytes + reduce_tmp_buffer_bytes,
                tmp_buffer->shape_view().elem_cnt());
       auto h2f = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
-          ctx->device_type(), DataType::kFloat16, DataType::kFloat);
+          ctx->device_type(), data_type, DataType::kFloat);
       CHECK(h2f);
       auto f2h = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
-          ctx->device_type(), DataType::kFloat, DataType::kFloat16);
+          ctx->device_type(), DataType::kFloat, data_type);
       CHECK(f2h);
-      h2f->Launch(ctx->stream(), input_tensor->dptr<float16>(), in_tmp_buffer, in_shape.elem_cnt());
+      h2f->Launch(ctx->stream(), input_tensor->dptr(), in_tmp_buffer, in_shape.elem_cnt());
 
       NdarrayReduce<DeviceType::kCUDA, float, BinaryFuncSum>::Reduce(
           ctx->stream(), XpuVarNdarray<float>(reduced_shape, out_tmp_buffer),
           XpuVarNdarray<const float>(in_shape, in_tmp_buffer),
           XpuVarNdarray<float>(in_shape, reduce_tmp_buffer));
 
-      f2h->Launch(ctx->stream(), out_tmp_buffer, output_tensor->mut_dptr<float16>(),
+      f2h->Launch(ctx->stream(), out_tmp_buffer, output_tensor->mut_dptr(),
                   output_tensor->shape_view().elem_cnt());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("reduce_sum")
-    .SetCreateFn<ReduceSumHalfKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
-                     && (user_op::HobDataType("output_tensor", 0) == GetDataType<float16>::value)
-                     && ReduceMatmulTransAPrimitiveExists()
-                     && ReduceMatmulNoTransAPrimitiveExists())
-    .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
-      const Shape& in_shape = ctx->InputTensorDesc("input_tensor", 0).shape();
-      const Shape& out_shape = ctx->OutputTensorDesc("output_tensor", 0).shape();
-      const auto& axis = RegularAxis(ctx->Attr<std::vector<int32_t>>("axis"));
-      bool is_axis_contiguous = false;
-      int64_t outer_size = 0, inner_size = 0, reduce_size = 0;
-      GetReduceSumLayout(axis, ShapeView(in_shape), &is_axis_contiguous, &outer_size, &inner_size,
-                         &reduce_size);
-      size_t tmp_bytes = 0;
-      if (is_axis_contiguous && (outer_size == 1 || inner_size == 1)) {
-        tmp_bytes = GetCudaAlignedSize(reduce_size * sizeof(float16));
-      } else {
-        tmp_bytes = (2 * GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float))
-                     + GetCudaAlignedSize(out_shape.elem_cnt() * sizeof(float)));
-      }
-      return tmp_bytes;
-    });
+#define REGISTER_REDUCE_SUM_HALF_KERNEL(dtype)                                                    \
+  REGISTER_USER_KERNEL("reduce_sum")                                                              \
+      .SetCreateFn<ReduceSumHalfKernel>()                                                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                            \
+                       && (user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value) \
+                       && ReduceMatmulTransAPrimitiveExists()                                     \
+                       && ReduceMatmulNoTransAPrimitiveExists())                                  \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
+        const Shape& in_shape = ctx->InputTensorDesc("input_tensor", 0).shape();                  \
+        const Shape& out_shape = ctx->OutputTensorDesc("output_tensor", 0).shape();               \
+        const auto& axis = RegularAxis(ctx->Attr<std::vector<int32_t>>("axis"));                  \
+        bool is_axis_contiguous = false;                                                          \
+        int64_t outer_size = 0, inner_size = 0, reduce_size = 0;                                  \
+        GetReduceSumLayout(axis, ShapeView(in_shape), &is_axis_contiguous, &outer_size,           \
+                           &inner_size, &reduce_size);                                            \
+        size_t tmp_bytes = 0;                                                                     \
+        if (is_axis_contiguous && (outer_size == 1 || inner_size == 1)) {                         \
+          tmp_bytes = GetCudaAlignedSize(reduce_size * sizeof(dtype));                            \
+        } else {                                                                                  \
+          tmp_bytes = (2 * GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float))                \
+                       + GetCudaAlignedSize(out_shape.elem_cnt() * sizeof(float)));               \
+        }                                                                                         \
+        return tmp_bytes;                                                                         \
+      });
+
+REGISTER_REDUCE_SUM_HALF_KERNEL(half)
+#if CUDA_VERSION >= 11000
+REGISTER_REDUCE_SUM_HALF_KERNEL(nv_bfloat16)
+#endif
 
 class ReduceSumFloatCudaKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:

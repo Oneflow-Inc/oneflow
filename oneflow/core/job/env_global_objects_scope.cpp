@@ -38,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/hardware/node_device_descriptor_manager.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
+#include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
@@ -178,7 +179,6 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Singleton<embedding::EmbeddingManager>::New();
 #endif
   Singleton<vm::VirtualMachineScope>::New(Singleton<ResourceDesc, ForSession>::Get()->resource());
-  Singleton<EagerJobBuildAndInferCtxMgr>::New();
   if (!Singleton<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
     Singleton<EpollCommNet>::New();
@@ -224,7 +224,6 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
     Singleton<EpollCommNet>::Delete();
 #endif  // __linux__
   }
-  Singleton<EagerJobBuildAndInferCtxMgr>::Delete();
   Singleton<vm::VirtualMachineScope>::Delete();
 #ifdef WITH_CUDA
   Singleton<embedding::EmbeddingManager>::Delete();
@@ -244,6 +243,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Singleton<ProcessCtx>::Delete();
   Singleton<EnvDesc>::Delete();
   ClearAllSymbol();
+  ClearAllBackwardPassScope();
   if (Singleton<EnvGlobalObjectsScope>::Get() != nullptr) {
     Singleton<EnvGlobalObjectsScope>::SetAllocated(nullptr);
   }

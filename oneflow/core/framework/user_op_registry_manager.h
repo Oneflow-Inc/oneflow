@@ -48,6 +48,7 @@ class UserOpRegistryMgr final {
   Maybe<void> Register(OpKernelRegistryResult result);
   Maybe<const OpKernelRegistryResult*> GetOpKernelRegistryResult(const std::string& op_type_name,
                                                                  const KernelRegContext& ctx);
+  Maybe<bool> IsOpKernelRegistered(const std::string& op_type_name, const KernelRegContext& ctx);
 
   const HashMap<std::string, OpRegistryResult>& GetAllOpRegistryResults() {
     return op_reg_result_;

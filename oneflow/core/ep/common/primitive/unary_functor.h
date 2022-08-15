@@ -250,6 +250,13 @@ struct UnaryFunctor<device, UnaryOp::kIsNan, bool, Src> {
   OF_DEVICE_FUNC bool operator()(Src src) const { return false; }
 };
 
+template<DeviceType device, typename Src>
+struct UnaryFunctor<device, UnaryOp::kIsFinite, bool, Src> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(Src src) const { return true; }
+};
+
 }  // namespace primitive
 }  // namespace ep
 }  // namespace oneflow

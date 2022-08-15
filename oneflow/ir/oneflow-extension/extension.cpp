@@ -40,35 +40,6 @@ const SharedLibs* SharedLibPaths() { return MutSharedLibPaths(); }
 
 namespace {
 
-REGISTER_USER_OP("mlir_jit")
-    .Attr<std::string>("mlir_assembly")
-    .Input("in")
-    .Output("out")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      // TODO: infer shape by extracting Ops from mlir_assembly
-      CHECK_EQ(ctx->inputs().size(), 2);
-      CHECK_EQ(ctx->outputs().size(), 1);
-      const Shape& in_shape = ctx->InputShape("in", 0);
-      Shape* out_shape = ctx->MutOutputShape("out", 0);
-      *out_shape = in_shape;
-      *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 1);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("in", 0), i)
-            .Split(user_op::OpArg("out", 0), i)
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
-      return Maybe<void>::Ok();
-    });
-
 using OpaqueMemRefDescriptor = std::shared_ptr<void>;
 
 template<unsigned N, typename T>

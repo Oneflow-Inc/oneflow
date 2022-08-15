@@ -13,22 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <vector>
+#include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
+#include "oneflow/core/framework/variable_tensor_mgr.h"
+#include "oneflow/core/operator/variable_op.h"
+#include "oneflow/core/framework/sbp_context.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/framework/random_generator.h"
+#include "OneFlow/SBP/SBPImporter.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/OneFlowSupport.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SmallVector.h"
+#include "OneFlow/SBP/SBPAttributes.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/MLIRContext.h"
-#include "oneflow/core/framework/random_generator.h"
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
-#include "llvm/Support/Casting.h"
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
@@ -56,7 +57,15 @@ limitations under the License.
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
-#include "oneflow/core/framework/variable_tensor_mgr.h"
+
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
+
+#include <algorithm>
+#include <vector>
 
 #ifdef WITH_MLIR_CUDA_CODEGEN
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
@@ -495,7 +504,11 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
     attrs.set(op.device_nameAttrName(), op.device_nameAttr());
     attrs.set(op.scope_symbol_idAttrName(), op.scope_symbol_idAttr());
     attrs.set(op.hierarchyAttrName(), op.hierarchyAttr());
-    attrs.set(op.nd_sbpAttrName(), op.nd_sbpAttr());
+    auto name = FrozenVariableOp::nd_sbpAttrName(
+        OperationName(FrozenVariableOp::getOperationName(), rewriter.getContext()));
+
+    auto parallel_attr = op.parallelAttr();
+    attrs.set(name, SBPTranslation::ConvertSBPToString(rewriter, parallel_attr));
     auto op_new = rewriter.create<oneflow::FrozenVariableOp>(op->getLoc(), op.output().getType(),
                                                              ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
@@ -528,7 +541,18 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
     attrs.set(op.device_nameAttrName(), op.device_nameAttr());
     attrs.set(op.scope_symbol_idAttrName(), op.scope_symbol_idAttr());
     attrs.set(op.hierarchyAttrName(), op.hierarchyAttr());
-    attrs.set(op.nd_sbpAttrName(), op.nd_sbpAttr());
+    auto name = VariableOp::parallelAttrName(
+        OperationName(VariableOp::getOperationName(), rewriter.getContext()));
+
+    auto nd_size = op.hierarchy()->size();
+    ArrayAttr nd_sbp = op.nd_sbp();
+    std::vector<std::string> nd_sbp_str;
+    std::for_each(nd_sbp.begin(), nd_sbp.end(), [&](Attribute elem) {
+      if (auto sbp_str_attr = elem.dyn_cast<StringAttr>()) {
+        nd_sbp_str.push_back(sbp_str_attr.str());
+      }
+    });
+    attrs.set(name, SBPTranslation::ConvertNdSbpToPsig(rewriter, nd_sbp_str, nd_size));
     auto op_new = rewriter.create<oneflow::VariableOp>(op->getLoc(), op.output().getType(),
                                                        ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
@@ -623,6 +647,67 @@ bool IsSameDtype(mlir::OpResult cast_result, mlir::Value input) {
 namespace mlir {
 
 namespace oneflow {
+
+template<typename Op>
+struct FusedConsecutiveAddPattern : public OpRewritePattern<Op> {
+  explicit FusedConsecutiveAddPattern(mlir::MLIRContext* context)
+      : OpRewritePattern<Op>(context, /*benefit=*/1) {}
+
+ public:
+  LogicalResult matchAndRewrite(Op op, PatternRewriter& rewriter) const override;
+};
+
+template<typename Op>
+LogicalResult TryFusedConsecutiveAdd(Op op, const SmallVector<mlir::Value, 4>& opOperands,
+                                     PatternRewriter& rewriter) {
+  for (mlir::Value operand : opOperands) {
+    if (!operand.getDefiningOp<AddNOp>() && !operand.getDefiningOp<Add2Op>()) { continue; }
+    // check if the operand has only one user
+    LogicalResult checkResult = [&]() {
+      for (const auto& use : operand.getUses()) {
+        if (use.getOwner() != op) { return failure(); }
+      }
+      return success();
+    }();
+    if (failed(checkResult)) { continue; }
+
+    SmallVector<mlir::Value, 4> operands;
+    SmallVector<mlir::Value, 4> inputOpOperands;
+    mlir::Value inputOpResult;
+    if (AddNOp addInputOp = operand.getDefiningOp<AddNOp>()) {
+      inputOpOperands = addInputOp.in();
+      inputOpResult = addInputOp.out();
+    } else if (Add2Op addInputOp = operand.getDefiningOp<Add2Op>()) {
+      inputOpOperands = {addInputOp.in0(), addInputOp.in1()};
+      inputOpResult = addInputOp.out();
+    }
+    for (mlir::Value operand : opOperands) {
+      if (operand != inputOpResult) {
+        operands.push_back(operand);
+      } else {
+        operands.insert(operands.end(), inputOpOperands.begin(), inputOpOperands.end());
+      }
+    }
+    auto new_op =
+        rewriter.create<AddNOp>(op->getLoc(), op->getResultTypes(), operands, op->getAttrs());
+    rewriter.replaceOp(op, new_op.out());
+    return success();
+  }
+  return failure();
+}
+
+template<>
+LogicalResult FusedConsecutiveAddPattern<AddNOp>::matchAndRewrite(AddNOp op,
+                                                                  PatternRewriter& rewriter) const {
+  return TryFusedConsecutiveAdd<AddNOp>(op, op.in(), rewriter);
+}
+
+template<>
+LogicalResult FusedConsecutiveAddPattern<Add2Op>::matchAndRewrite(Add2Op op,
+                                                                  PatternRewriter& rewriter) const {
+  return TryFusedConsecutiveAdd<Add2Op>(op, {op.in0(), op.in1()}, rewriter);
+}
+
 struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
   explicit AutoNhwcPattern(mlir::MLIRContext* context)
       : OpInterfaceRewritePattern<NCHWCompatible>(context, /*benefit=*/1) {}
@@ -733,6 +818,9 @@ void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLI
 }
 
 void AddLowerToLinalgMemRefPasses(PassManager& pm) {
+  pm.addPass(createConvertToSignlessForTosaPass());  // convert-to-signless-for-tosa
+  pm.addNestedPass<func::FuncOp>(LLVM::createRequestCWrappersPass());  // llvm-request-c-wrappers
+  pm.addPass(createConvertToSignlessForTosaPass());            // convert-to-signless-for-tosa
   pm.addPass(createLowerOneFlowToTosaPass());                  // lower-oneflow-to-tosa
   pm.addPass(createCSEPass());                                 // cse
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
@@ -802,6 +890,8 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
   patterns.add<DeleteSameDtypeCastOpPattern>(patterns.getContext());
+  patterns.add<FusedConsecutiveAddPattern<Add2Op>>(patterns.getContext());
+  patterns.add<FusedConsecutiveAddPattern<AddNOp>>(patterns.getContext());
 }
 
 void populateAutoNhwcPatterns(::mlir::RewritePatternSet& patterns) {
