@@ -137,9 +137,7 @@ def _test_hardswish_activation_grad_grad_impl(
         init_grad_y.oneflow,
     )
 
-    zeros_grad = flow.zeros_like(x).to_global(
-        placement=placement, sbp=x.sbp
-    )
+    zeros_grad = flow.zeros_like(x).to_global(placement=placement, sbp=x.sbp)
     manual_ddx = flow.where(
         ((x > -3.0) < 3.0), 1.0 / 3.0 * init_grad_x * init_grad_y, zeros_grad
     )
