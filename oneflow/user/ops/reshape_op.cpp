@@ -114,10 +114,13 @@ namespace oneflow {
     }
   }
   const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
-  for (int i = 0; i < logical_shape.NumAxes(); ++i) {
-    CHECK_EQ_OR_RETURN(logical_shape.At(i) % nd_sbp.sbp_parallel_size(), 0)
-        << Error::RuntimeError() << "Error";
+  int64_t split_axis;
+  for (int64_t i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
+    const auto& sbp_parallel = nd_sbp.sbp_parallel(i);
+    if (sbp_parallel.has_split_parallel()) { split_axis = sbp_parallel.split_parallel().axis(); }
   }
+  CHECK_EQ_OR_RETURN(logical_shape.At(split_axis) % ctx->parallel_num(), 0)
+      << Error::RuntimeError() << "Error message";
   *out_shape =
       *JUST(GetPhysicalShape(logical_shape, nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
   *out_stride = Stride(*out_shape);
