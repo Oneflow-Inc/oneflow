@@ -137,7 +137,8 @@ class SoftplusGradGradFunctor {
  public:
   // beta*x <= threshold:
   // y = 1/beta*ln(1+exp(beta*x)), y' = 1/(1+exp(beta*x))*exp(beta*x)
-  // y''= beta*exp(beta*x)/(1+exp(beta*x))^2=beta*sig(beta*x)(1-sig(beta*x))=beta*sig_grad(beta*x)
+  // y'' = beta*exp(beta*x)/(1+exp(beta*x))^2 = beta*sig(beta*x)(1-sig(beta*x))
+  //     = beta*sig_grad(beta*x)
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& dydx,
                            const double& beta, const double& threshold) const {
     auto beta_x = JUST(functional::ScalarMul(x, beta, /*inplace=*/false));
@@ -156,7 +157,7 @@ class SoftplusGradGradFunctor {
 
 class EluGradGradFunctor {
  public:
-  // ELU(x)=max(0,x)+min(0,alpha∗(exp(x)−1))
+  // y = max(0,x) + min(0,alpha∗(exp(x)−1))
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& dydx,
                            const double& alpha) const {
     auto condition = JUST(functional::ScalarLogicalLess(x, Scalar(0.0)));
@@ -167,7 +168,7 @@ class EluGradGradFunctor {
 
 class CeluGradGradFunctor {
  public:
-  // CELU(x)=max(0,x)+min(0,alpha∗(exp(x/alpha)−1))
+  // y = max(0,x) + min(0,alpha∗(exp(x/alpha)−1))
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& dydx,
                            const double& alpha) const {
     auto condition = JUST(functional::ScalarLogicalLess(x, Scalar(0)));

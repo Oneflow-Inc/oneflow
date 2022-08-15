@@ -239,13 +239,14 @@ class TestActivationHigherDerivative(flow.unittest.TestCase):
 
             print(f"| {op_name:-^60} |")
             for placement in all_placement():
-                functor(
-                    test_case,
-                    op_name,
-                    placement,
-                    *op_args[op_name],
-                    **op_kwargs[op_name],
-                )
+                for i in range(2):
+                    functor(
+                        test_case,
+                        op_name,
+                        placement,
+                        *op_args[op_name],
+                        **op_kwargs[op_name],
+                    )
 
 
 if __name__ == "__main__":
