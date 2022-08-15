@@ -85,6 +85,10 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
                                              UNARY_FLOATING_MATH_OP_SEQ,
                                              CUDA_PRIMITIVE_FLOATING_TYPE_SEQ)
+            // For Float Type OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
+                                             UNARY_INT_MATH_OP_SEQ,
+                                             CUDA_PRIMITIVE_INT_TYPE_SEQ)
 
             // For Utils OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY,
