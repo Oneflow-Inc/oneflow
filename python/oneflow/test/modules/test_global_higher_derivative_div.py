@@ -32,7 +32,6 @@ def _test_global_div_grad_grad_impl(test_case, placement):
     y = random_tensor(len(y_shape), *y_shape).to_global(
         placement=placement, sbp=random_sbp(placement, max_dim=2)
     )
-    return
     z = torch.div(x, y)
     init_grad_z = random_tensor(len(z.oneflow.shape), *z.oneflow.shape).to_global(
         placement=placement, sbp=random_sbp(placement, max_dim=2)
