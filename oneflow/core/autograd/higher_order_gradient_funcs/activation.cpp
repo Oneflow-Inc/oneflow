@@ -39,17 +39,17 @@ class NoParamActivationGradGrad : public OpExprGradFunction<BaseActivationGradGr
 
   Maybe<void> Capture(BaseActivationGradGradCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    // x, dy
+    // dy, x
     CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
     CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
 
-    ctx->x_requires_grad = inputs.at(0)->requires_grad();
-    ctx->grad_requires_grad = inputs.at(1)->requires_grad();
+    ctx->x_requires_grad = inputs.at(1)->requires_grad();
+    ctx->grad_requires_grad = inputs.at(0)->requires_grad();
 
     if (!ctx->x_requires_grad || !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
 
-    ctx->SaveTensorForBackward(inputs.at(0));
-    if (ctx->x_requires_grad) { ctx->SaveTensorForBackward(inputs.at(1)); }
+    ctx->SaveTensorForBackward(inputs.at(1));
+    if (ctx->x_requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
 
     return Maybe<void>::Ok();
   }
@@ -61,9 +61,9 @@ class NoParamActivationGradGrad : public OpExprGradFunction<BaseActivationGradGr
 
     if (ctx->x_requires_grad) {
       const auto& grad = ctx->SavedTensors().at(1);
-      in_grads->at(0) = JUST(functional::Mul(out_grads.at(0), JUST(BwBwFunc(x, grad))));
+      in_grads->at(1) = JUST(functional::Mul(out_grads.at(0), JUST(BwBwFunc(x, grad))));
     }
-    if (ctx->grad_requires_grad) { in_grads->at(1) = JUST(BwFunc(x, out_grads.at(0))); }
+    if (ctx->grad_requires_grad) { in_grads->at(0) = JUST(BwFunc(out_grads.at(0), x)); }
     return Maybe<void>::Ok();
   }
 };
@@ -101,17 +101,17 @@ class HardShrinkGradGrad : public OpExprGradFunction<HardShrinkGradGradCaptureSt
   }
   Maybe<void> Capture(HardShrinkGradGradCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    // y, dy
+    // dy, y
     CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
     CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
 
-    ctx->y_requires_grad = inputs.at(0)->requires_grad();
-    ctx->grad_requires_grad = inputs.at(1)->requires_grad();
+    ctx->y_requires_grad = inputs.at(1)->requires_grad();
+    ctx->grad_requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->y_requires_grad || !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->lambd = JUST(composed_attrs.GetAttr<double>("lambd"));
-    if (ctx->grad_requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
+    if (ctx->grad_requires_grad) { ctx->SaveTensorForBackward(inputs.at(1)); }
     return Maybe<void>::Ok();
   }
 
@@ -119,10 +119,10 @@ class HardShrinkGradGrad : public OpExprGradFunction<HardShrinkGradGradCaptureSt
                     TensorTuple* in_grads) const override {
     in_grads->resize(2);
 
-    if (ctx->y_requires_grad) { in_grads->at(0) = JUST(functional::ZerosLike(out_grads.at(0))); }
+    if (ctx->y_requires_grad) { in_grads->at(1) = JUST(functional::ZerosLike(out_grads.at(0))); }
     if (ctx->grad_requires_grad) {
       const auto& y = ctx->SavedTensors().at(0);
-      in_grads->at(1) = JUST(functional::HardShrinkGrad(y, out_grads.at(0), ctx->lambd));
+      in_grads->at(0) = JUST(functional::HardShrinkGrad(out_grads.at(0), y, ctx->lambd));
     }
     return Maybe<void>::Ok();
   }
@@ -147,17 +147,17 @@ class SoftShrinkGradGrad : public OpExprGradFunction<SoftShrinkGradGradCaptureSt
   }
   Maybe<void> Capture(SoftShrinkGradGradCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    // y, dy
+    // dy, y
     CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
     CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
 
-    ctx->y_requires_grad = inputs.at(0)->requires_grad();
-    ctx->grad_requires_grad = inputs.at(1)->requires_grad();
+    ctx->y_requires_grad = inputs.at(1)->requires_grad();
+    ctx->grad_requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->y_requires_grad || !ctx->grad_requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
-    if (ctx->grad_requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
+    if (ctx->grad_requires_grad) { ctx->SaveTensorForBackward(inputs.at(1)); }
     return Maybe<void>::Ok();
   }
 
@@ -165,10 +165,10 @@ class SoftShrinkGradGrad : public OpExprGradFunction<SoftShrinkGradGradCaptureSt
                     TensorTuple* in_grads) const override {
     in_grads->resize(2);
 
-    if (ctx->y_requires_grad) { in_grads->at(0) = JUST(functional::ZerosLike(out_grads.at(0))); }
+    if (ctx->y_requires_grad) { in_grads->at(1) = JUST(functional::ZerosLike(out_grads.at(0))); }
     if (ctx->grad_requires_grad) {
       const auto& y = ctx->SavedTensors().at(0);
-      in_grads->at(1) = JUST(functional::SoftShrinkGrad(y, out_grads.at(0), ctx->alpha));
+      in_grads->at(0) = JUST(functional::SoftShrinkGrad(out_grads.at(0), y, ctx->alpha));
     }
     return Maybe<void>::Ok();
   }
@@ -187,23 +187,23 @@ class ReluGradGrad : public OpExprGradFunction<ReluGradGradCaptureState> {
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
   Maybe<void> Capture(ReluGradGradCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    // y, dy
+    // dy, y
     CHECK_EQ_OR_RETURN(inputs.size(), 2);   // NOLINT(maybe-need-error-msg)
     CHECK_EQ_OR_RETURN(outputs.size(), 1);  // NOLINT(maybe-need-error-msg)
 
-    ctx->y_requires_grad = inputs.at(0)->requires_grad();
-    ctx->grad_requires_grad = inputs.at(1)->requires_grad();
+    ctx->y_requires_grad = inputs.at(1)->requires_grad();
+    ctx->grad_requires_grad = inputs.at(0)->requires_grad();
 
-    if (ctx->grad_requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
+    if (ctx->grad_requires_grad) { ctx->SaveTensorForBackward(inputs.at(1)); }
     return Maybe<void>::Ok();
   }
   Maybe<void> Apply(const ReluGradGradCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(2);
-    if (ctx->y_requires_grad) { in_grads->at(0) = JUST(functional::ZerosLike(out_grads.at(0))); }
+    if (ctx->y_requires_grad) { in_grads->at(1) = JUST(functional::ZerosLike(out_grads.at(0))); }
     if (ctx->grad_requires_grad) {
       const auto& y = ctx->SavedTensors().at(0);
-      in_grads->at(1) = JUST(functional::ReluGrad(y, out_grads.at(0)));
+      in_grads->at(0) = JUST(functional::ReluGrad(out_grads.at(0), y));
     }
     return Maybe<void>::Ok();
   }

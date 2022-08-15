@@ -86,7 +86,7 @@ class SeluGradGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
                            const std::shared_ptr<Tensor>& dydx) const {
     auto condition = JUST(functional::ScalarLogicalLess(x, Scalar(0.0)));
-    auto res = functional::Where(condition, JUST(functional::SeluGrad(x, dydx)),
+    auto res = functional::Where(condition, JUST(functional::SeluGrad(dydx, x)),
                                  JUST(functional::ZerosLike(x)));
     return res;
   }

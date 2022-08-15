@@ -57,7 +57,7 @@ class ReluFunctor {
 class ReluGradFunctor : public BinaryFunctor {
  public:
   ReluGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("relu_grad").Input("y").Input("dy").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("relu_grad").Input("dy").Input("y").Output("dx").Build());
   }
 };
 
@@ -215,7 +215,7 @@ class GeluFunctor : public UnaryFunctor {
 class GeluGradFunctor : public BinaryFunctor {
  public:
   GeluGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("gelu_grad").Input("x").Input("dy").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("gelu_grad").Input("dy").Input("x").Output("dx").Build());
   }
 };
 
@@ -266,7 +266,7 @@ class HardSigmoidGradFunctor : public BinaryFunctor {
  public:
   HardSigmoidGradFunctor() {
     op_ =
-        CHECK_JUST(one::OpBuilder("hardsigmoid_grad").Input("x").Input("dy").Output("dx").Build());
+        CHECK_JUST(one::OpBuilder("hardsigmoid_grad").Input("dy").Input("x").Output("dx").Build());
   }
 };
 
@@ -298,13 +298,13 @@ class HardShrinkFunctor {
 class HardShrinkGradFunctor {
  public:
   HardShrinkGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("hardshrink_grad").Input("y").Input("dy").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("hardshrink_grad").Input("dy").Input("y").Output("dx").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y, const std::shared_ptr<Tensor>& dy,
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& dy, const std::shared_ptr<Tensor>& y,
                            const double& lambd) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("lambd", lambd));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {y, dy}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, y}, attrs);
   }
 
  private:
@@ -394,7 +394,7 @@ class HardSwishFunctor : public UnaryFunctor {
 class HardSwishGradFunctor : public BinaryFunctor {
  public:
   HardSwishGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("hardswish_grad").Input("x").Input("dy").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("hardswish_grad").Input("dy").Input("x").Output("dx").Build());
   }
 };
 
@@ -481,7 +481,7 @@ class SiluFunctor : public UnaryFunctor {
 class SiluGradFunctor : public BinaryFunctor {
  public:
   SiluGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("silu_grad").Input("x").Input("dy").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("silu_grad").Input("dy").Input("x").Output("dx").Build());
   }
 };
 
@@ -493,7 +493,7 @@ class MishFunctor : public UnaryFunctor {
 class MishGradFunctor : public BinaryFunctor {
  public:
   MishGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("mish_grad").Input("x").Input("dy").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("mish_grad").Input("dy").Input("x").Output("dx").Build());
   }
 };
 
@@ -505,7 +505,7 @@ class SeluFunctor : public UnaryFunctor {
 class SeluGradFunctor : public BinaryFunctor {
  public:
   SeluGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("selu_grad").Input("x").Input("dy").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("selu_grad").Input("dy").Input("x").Output("dx").Build());
   }
 };
 
@@ -519,7 +519,7 @@ class SoftSignFunctor : public UnaryFunctor {
 class SoftSignGradFunctor : public BinaryFunctor {
  public:
   SoftSignGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("softsign_grad").Input("x").Input("dy").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("softsign_grad").Input("dy").Input("x").Output("dx").Build());
   }
 };
 
@@ -589,13 +589,13 @@ class ThresholdGradFunctor {
 class SoftShrinkGradFunctor {
  public:
   SoftShrinkGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("softshrink_grad").Input("y").Input("dy").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("softshrink_grad").Input("dy").Input("y").Output("dx").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y, const std::shared_ptr<Tensor>& dy,
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& dy, const std::shared_ptr<Tensor>& y,
                            const double& alpha) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {y, dy}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, y}, attrs);
   }
 
  private:
