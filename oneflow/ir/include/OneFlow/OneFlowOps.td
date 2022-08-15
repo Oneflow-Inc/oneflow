@@ -303,7 +303,7 @@ def PostConvertInferenceOpPass : Pass<"post-convert-inference-op", "ModuleOp"> {
 def ConvertToSignlessForTosaPass : Pass<"convert-to-signless-for-tosa", "ModuleOp"> {
   let summary = "convert func type to unsigned before lowering to tosa";
   let description = [{
-    In oneflow int tensor is explicit signed. Convert them before lowering to TOSA.
+    In oneflow, int typed tensor is explicit signed. Convert them before lowering to TOSA.
   }];
   let constructor = "mlir::oneflow::createConvertToSignlessForTosaPass()";
   let dependentDialects = ["func::FuncDialect"];
