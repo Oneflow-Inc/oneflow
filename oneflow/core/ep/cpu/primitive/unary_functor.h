@@ -73,6 +73,15 @@ struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kIsFinite, bool, Src> {
   OF_DEVICE_FUNC bool operator()(Src src) const { return std::isfinite(src); }
 };
 
+template<typename Dst, typename Src>
+struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kRsqrt, Dst, Src> {
+  OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return static_cast<Dst>(static_cast<Src>(1.0) / static_cast<Src>(std::sqrt(src)));
+  }
+};
+
 }  // namespace primitive
 }  // namespace ep
 }  // namespace oneflow
