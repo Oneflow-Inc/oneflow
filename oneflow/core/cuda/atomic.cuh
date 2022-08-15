@@ -44,6 +44,8 @@ struct CastCASImpl {
   }
 };
 
+#if __CUDA_ARCH__ < 700
+
 template<typename T>
 struct CastCASImpl<T, unsigned short int> {
   __device__ __forceinline__ T operator()(T* address, T compare, T val, bool* success) const {
@@ -64,6 +66,8 @@ struct CastCASImpl<T, unsigned short int> {
     return *(reinterpret_cast<T*>(&ret));
   }
 };
+
+#endif  // __CUDA_ARCH__
 
 template<typename T>
 __device__ __forceinline__ typename std::enable_if<sizeof(T) == sizeof(unsigned int), T>::type
