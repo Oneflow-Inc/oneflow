@@ -139,6 +139,9 @@ void OneFlowDialect::initialize() {
 #include "OneFlow/OneFlow.one_embedding_ops.cpp.inc"
       ,
 #define GET_OP_LIST
+#include "OneFlow/OneFlow.linear_algebra_ops.cpp.inc"
+      ,
+#define GET_OP_LIST
 #include "OneFlow/OneFlow.system_ops.cpp.inc"
       ,
 #define GET_OP_LIST
