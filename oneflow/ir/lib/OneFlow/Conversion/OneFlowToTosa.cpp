@@ -640,12 +640,12 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   typeConverter.addConversion([context](Type type) { return convertToSignless(context, type); });
   typeConverter.addSourceMaterialization(
       [&](OpBuilder& builder, Type resultType, ValueRange inputs, Location loc) -> Optional<Value> {
-        CHECK_EQ(inputs.size(), 1);
+        CHECK_EQ(inputs.size(), 1) << "expect to materialize a single value";
         return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs).getResult(0);
       });
   typeConverter.addTargetMaterialization(
       [&](OpBuilder& builder, Type resultType, ValueRange inputs, Location loc) -> Optional<Value> {
-        CHECK_EQ(inputs.size(), 1);
+        CHECK_EQ(inputs.size(), 1) << "expect to materialize a single value";
         return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs).getResult(0);
       });
   RewritePatternSet patterns(context);
