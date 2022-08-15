@@ -10157,3 +10157,50 @@ def OneFlow_CopyD2HOp : OneFlow_BaseOp<"copy_d2h", [NoSideEffect, NoGrad, Declar
 }
 
 #endif // GET_ONEFLOW_SYSTEM_OP_DEFINITIONS
+
+// Group: MLIR_JIT
+// mlir_jit
+// Total: 1
+
+#ifdef GET_ONEFLOW_MLIR_JIT_OP_DEFINITIONS
+
+include "mlir/Interfaces/CallInterfaces.td"
+
+def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpInterfaceMethods<UserOpCompatibleInterface> ] > {
+  let input = (ins Variadic<AnyType>:$in);
+  let output = (outs Variadic<AnyType>:$out);
+  let attrs = (ins
+    FlatSymbolRefAttr:$callee,
+    StrAttr:$mlir_assembly
+  );
+  let builders = [
+    OpBuilder<(ins "func::FuncOp":$callee,
+      "NamedAttrList":$attributes,
+      CArg<"ValueRange", "{}">:$in), [{
+      $_state.addOperands(in);
+      $_state.addAttributes(attributes);
+      $_state.addAttribute("callee", SymbolRefAttr::get(callee));
+      $_state.addTypes(callee.getFunctionType().getResults());
+    }]>
+  ];
+  let extraClassDeclaration = [{
+    operand_range getArgOperands() {
+      return {arg_operand_begin(), arg_operand_end()};
+    }
+
+    operand_iterator arg_operand_begin() { return operand_begin(); }
+    operand_iterator arg_operand_end() { return operand_end(); }
+    CallInterfaceCallable getCallableForCallee() {
+      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+    }
+  }];
+  let assemblyFormat = [{
+    $callee `(` $in `)` attr-dict `:` functional-type($in, results)
+  }];
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+#endif // GET_ONEFLOW_MLIR_JIT_OP_DEFINITIONS
