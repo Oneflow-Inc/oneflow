@@ -76,7 +76,7 @@ def get_profile_func(path):
     result_profile_func_list = []
     for file in files:
         if file!="log" and not os.path.isdir(file) and file.find("__pycache__") == -1:
-            f = open(path + "/" + file)
+            f = open(os.path.join(path,file))
             last_line = ""
             iter_f = iter(f)
             line_num = 1
@@ -100,7 +100,7 @@ def get_test_func(path):
     result_func_list = []
     for file in files:
         if not os.path.isdir(file) and file.find("__pycache__") == -1:
-            f = open(path + "/" + file)
+            f = open(os.path.join(path,file))
             last_line = ""
             iter_f = iter(f)
             line_num = 1
@@ -220,6 +220,7 @@ if __name__ == "__main__":
     cnt1 = 0  # the number of compatiable_completeness_test
     cnt2 = 0  # the number of exception_test
     cnt3 = 0  # the number of profile_test
+
     for name in api_list:
         table_line = f"| {name} |"
         name = name.split(".")[-1]
@@ -241,10 +242,10 @@ if __name__ == "__main__":
 
         result_list.append(table_line)
 
-    doc_test_ratio = cnt0 * 1.0 / len(api_list)
-    compatiable_completeness_test_ratio = cnt1 * 1.0 / len(api_list)
-    exception_test_ratio = cnt2 * 1.0 / len(api_list)
-    performance_test_ratio = cnt3 * 1.0 / len(api_list)
+    doc_test_ratio = cnt0 / len(api_list)
+    compatiable_completeness_test_ratio = cnt1 / len(api_list)
+    exception_test_ratio = cnt2 / len(api_list)
+    performance_test_ratio = cnt3 / len(api_list)
 
     result_list.append(f"## Test Data Summary")
     result_list.append(f"- OneFlow Total API Number: {len(api_list)}")
