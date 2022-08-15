@@ -782,7 +782,7 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
     if (functional::PyScalarCheck(value)) {
       Scalar value_scalar = functional::PyUnpackScalar(value);
       value_tensor = ASSERT_PTR(
-          functional::GlobalConstant({1}, value_scalar, tensor->dtype(), placement, sbp));
+          functional::GlobalConstant(Shape({}), value_scalar, tensor->dtype(), placement, sbp));
     } else {
       value_tensor = PyTensor_Unpack(value);
       CHECK_OR_THROW(value_tensor->is_global())
@@ -795,7 +795,7 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
     if (functional::PyScalarCheck(value)) {
       Scalar value_scalar = functional::PyUnpackScalar(value);
       value_tensor = ASSERT_PTR(
-          functional::Constant({1}, value_scalar, tensor->dtype(), ASSERT(tensor->device())));
+          functional::Constant(Shape({}), value_scalar, tensor->dtype(), ASSERT(tensor->device())));
     } else {
       value_tensor = PyTensor_Unpack(value);
       CHECK_OR_THROW(value_tensor->is_local())
