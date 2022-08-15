@@ -123,13 +123,7 @@ class ScalarMathBaseFunctor {
 
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       (*outputs)[0] = x;
-      // TODO:(zhaoluyang)
-      // If the op need inplace operaton, and input tensor is non-contiguous,
-      // the interpreter will do input->contiguous() operaton for geting the correct result,
-      // therefore, output tensor and input will not inplaced. When scalar_math op/kernel
-      // support strided tensor as input, the problem above will be solved!
-      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(),
-                                  OpExprInterpContext(attrs, /*inplace=*/true)));
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), OpExprInterpContext(attrs)));
       return outputs->at(0);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
@@ -1138,7 +1132,7 @@ class GlobalHannWindowFunctor {
         result = JUST(ScalarDiv(JUST(ScalarSub(1, JUST(Cos(div_result)), 1)), 2));
       }
     }
-    result = JUST(ToGlobal(result, placement, sbp, {}, true));
+    result = JUST(ToGlobal(result, placement, sbp, {}, true, /*copy=*/false));
     JUST(result->set_requires_grad(requires_grad));
     return result;
   }
@@ -1230,7 +1224,21 @@ class ClampFunctor : public ClampBaseFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& min,
                            const Optional<Scalar>& max) const {
-    return ClampBaseFunctor::operator()(x, min, max, false);
+    return ClampBaseFunctor::operator()(x, min, max, /* inplace=*/false);
+  }
+};
+
+class ClampMinFunctor : public ClampBaseFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& min) const {
+    return ClampBaseFunctor::operator()(x, min, NullOpt, /* inplace=*/false);
+  }
+};
+
+class ClampMaxFunctor : public ClampBaseFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& max) const {
+    return ClampBaseFunctor::operator()(x, NullOpt, max, /* inplace=*/false);
   }
 };
 
@@ -1238,7 +1246,21 @@ class ClampInplaceFunctor : public ClampBaseFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& min,
                            const Optional<Scalar>& max) const {
-    return ClampBaseFunctor::operator()(x, min, max, true);
+    return ClampBaseFunctor::operator()(x, min, max, /* inplace=*/true);
+  }
+};
+
+class ClampMinInplaceFunctor : public ClampBaseFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& min) const {
+    return ClampBaseFunctor::operator()(x, min, NullOpt, /* inplace=*/true);
+  }
+};
+
+class ClampMaxInplaceFunctor : public ClampBaseFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& max) const {
+    return ClampBaseFunctor::operator()(x, NullOpt, max, /* inplace=*/true);
   }
 };
 
@@ -1656,6 +1678,25 @@ class ScalarNorm2Functor {
       UNIMPLEMENTED_THEN_RETURN() << "linalg_norm(): only supports int dim.";
     }
   }
+};
+
+class InvFunctor {
+ public:
+  InvFunctor() { op_ = CHECK_JUST(one::OpBuilder("inv").Input("x").Output("y").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x) const {
+    if (x->ndim() < 2) {
+      return Error::RuntimeError() << "linalg.inv: The input tensor must be at least 2 dimensions.";
+    }
+    if (x->dim(x->ndim() - 1) != x->dim(x->ndim() - 2)) {
+      return Error::RuntimeError() << "linalg.inv: A must be batches of square matrices, "
+                                   << "but they are " << x->dim(x->ndim() - 2) << " by "
+                                   << x->dim(x->ndim() - 1) << " matrices";
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class ClampGradFunctor {
@@ -2088,7 +2129,7 @@ class VarianceFunctor {
       for (int i = 0; i < ndim; i++) { axis.emplace_back(i); }
     } else {
       std::vector<int32_t>& dims = *JUST(dim);
-      JUST(maybe_wrap_dim(dims.size(), ndim));
+      JUST(maybe_wrap_dim(dims.size(), ndim));  // only check validation
       std::sort(dims.begin(), dims.end());
       axis.assign(dims.begin(), dims.end());
     }
@@ -2103,6 +2144,29 @@ class VarianceFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class RMSLayerNormalizationFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& hidden_states,
+                           const std::shared_ptr<Tensor>& weight,
+                           const float& variance_epsilon) const {
+    std::shared_ptr<Tensor> cast_hidden_states = hidden_states;
+    if (hidden_states->dtype() != DType::Float()) {
+      cast_hidden_states =
+          JUST(functional::Cast(hidden_states, DType::Float(), /*pin_memory=*/false));
+    }
+    std::shared_ptr<Tensor> normalized_hidden_states = JUST(functional::Mul(
+        cast_hidden_states, JUST(functional::Rsqrt(JUST(functional::ScalarAdd(
+                                JUST(functional::ReduceMean(JUST(Square(hidden_states)),
+                                                            std::vector<int32_t>{-1}, true)),
+                                Scalar(variance_epsilon), 1.0, false))))));
+    if (weight->dtype() == DType::Float16()) {
+      normalized_hidden_states =
+          JUST(functional::Cast(normalized_hidden_states, weight->dtype(), /*pin_memory=*/false));
+    }
+    return JUST(functional::Mul(normalized_hidden_states, weight));
+  }
 };
 
 class DotFunctor {
@@ -3070,7 +3134,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<GlobalHannWindowFunctor>("GlobalHannWindow");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
+  m.add_functor<ClampMinFunctor>("ClampMin");
+  m.add_functor<ClampMaxFunctor>("ClampMax");
   m.add_functor<ClampInplaceFunctor>("ClampInplace");
+  m.add_functor<ClampMinInplaceFunctor>("ClampMinInplace");
+  m.add_functor<ClampMaxInplaceFunctor>("ClampMaxInplace");
   m.add_functor<ClipFunctor>("Clip");
   m.add_functor<ClipInplaceFunctor>("ClipInplace");
   m.add_functor<SqrtSquareSumFunctor>("SqrtSquareSum");
@@ -3101,6 +3169,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarLogicalXorFunctor, ScalarLogicalXor2Functor>("ScalarLogicalXor");
   m.add_functor<StandardDeviationFunctor>("StandardDeviation");
   m.add_functor<VarianceFunctor>("Variance");
+  m.add_functor<RMSLayerNormalizationFunctor>("RMSLayerNormalization");
   m.add_functor<DotFunctor>("Dot");
   m.add_functor<MovedimVecFunctor>("MovedimVec");
   m.add_functor<MovedimIntFunctor>("MovedimInt");
@@ -3116,6 +3185,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CumProdFunctor>("Cumprod");
   m.add_functor<CumProdGradFunctor>("CumprodGrad");
   m.add_functor<EinSumFunctor>("EinSum");
+  m.add_functor<InvFunctor>("Inv");
   m.add_functor<GeluWithApproximateFunctor>("GeluWithApproximate");
 };
 

@@ -29,9 +29,9 @@ Maybe<Symbol<Stream>> MakeCastStream(const Symbol<Device>& in_device,
         << "cast op only support pin_memory in cpu device but got " << in_device->type();
     // TODO:(zhaoluyang) Parsing pin-memory-device from python
     auto pin_device = JUST(Device::New("cuda"));
-    return Stream::New(pin_device, StreamRole::kPinnedCompute);
+    return Stream::New(pin_device, StreamType::kPinnedCompute);
   }
-  return Stream::New(out_device, StreamRole::kCompute);
+  return Stream::New(out_device, StreamType::kCompute);
 }
 
 }  // namespace
