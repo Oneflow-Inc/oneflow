@@ -32,7 +32,7 @@ from .functional_maxpool import max_pool3d
 from oneflow._C import adaptive_avg_pool1d
 from oneflow._C import adaptive_avg_pool2d
 from oneflow._C import adaptive_avg_pool3d
-from oneflow._C import cosine_similarity
+from oneflow._C import cosine_similarity, pairwise_distance
 from oneflow._C import relu
 from oneflow._C import hardtanh
 from oneflow._C import hardsigmoid
@@ -64,6 +64,8 @@ from oneflow._C import triplet_margin_loss
 from oneflow._C import ctc_greedy_decoder
 from oneflow._C import one_hot
 from oneflow._C import normalize
+from oneflow._C import mse_loss
+from oneflow._C import l1_loss
 from oneflow._C import cross_entropy
 from oneflow._C import binary_cross_entropy_loss as binary_cross_entropy
 from oneflow._C import (
