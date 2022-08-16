@@ -171,6 +171,6 @@ class MathUnaryElementwiseGradGpuHalfKernel final : public user_op::OpKernel,
                        && (user_op::HobDataType("x", 0) == DataType::kFloat16));
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_GUDA_HALF_KERNEL_AND_GRAD,
-                     MATH_UNARY_ELEMENTWISE_FUNC_SEQ)
+                     MATH_UNARY_ELEMENTWISE_REGISTER_SEQ)
 
 }  // namespace oneflow
