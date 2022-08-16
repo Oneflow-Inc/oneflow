@@ -119,7 +119,6 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
     for (OpEdge* edge : pair.second) {
       CHECK(src_node == edge->src_node());
       OpNode* dst_node = edge->dst_node();
-      LogicalBlobId cur_lbi = edge->lbis().front();
       CHECK_EQ(lbn, GenLogicalBlobName(cur_lbi));
       const auto& dst_ibns = edge->lbi2ibns().at(cur_lbi);
       for (const auto& dst_ibn : dst_ibns) {
