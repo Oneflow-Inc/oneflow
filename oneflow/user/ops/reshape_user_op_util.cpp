@@ -135,7 +135,9 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
     const Shape& in_shape, const Shape& out_shape, std::vector<user_op::OpArg> in_args,
     std::vector<user_op::OpArg> out_args, const int64_t parallel_num,
     user_op::UserOpSbpSignatureBuilder* builder) {
-  if (in_shape.NumAxes() == 0) { return Maybe<void>::Ok(); }
+  if (in_shape.NumAxes() == 0 || in_shape.elem_cnt() == 0) {
+    return Maybe<void>::Ok();
+  }  // 0D/0Size tensor only support b2b
   HashMap<int, int> squeezed_group_start_in_axis2out_axis;
   HashMap<int, int> in_squeezed_axis2original_axis;
   HashMap<int, int> out_squeezed_axis2original_axis;

@@ -146,7 +146,7 @@ class Operator {
   Maybe<void> InferSbpSignatureIf(
       const SbpSignature& sbp_sig_conf,
       const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-      std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+      const std::function<Maybe<const SbpInferHint*>(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc);
   Maybe<void> InferNdSbpSignatureIf(
       const NdSbpSignature& nd_sbp_constraints, const ParallelDesc& parallel_desc,

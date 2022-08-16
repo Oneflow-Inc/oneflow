@@ -252,7 +252,7 @@ void VirtualMachineEngine::ConsumeDependences(Instruction* instruction) {
 }
 
 bool VirtualMachineEngine::EdgeDispatchable(const Instruction* src, const Instruction* dst) const {
-  return (&src->stream() == &dst->stream()) /* same stream*/
+  return dst->instruction_policy().Prescheduleable(&src->stream(), &dst->stream())
          && !src->dispatched_instruction_hook().empty() /* dispatched */;
 }
 

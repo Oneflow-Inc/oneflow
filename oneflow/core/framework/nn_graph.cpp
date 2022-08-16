@@ -298,11 +298,6 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, std::const_pointer_cast<const TaskGraph>(task_graph), variable_op_names_);
     tc->Count("Graph name: " + name_ + " Generate MemBlock and Chunk", 1);
 
-    if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
-      PlanUtil::ToDotFile(plan_, std::const_pointer_cast<const TaskGraph>(task_graph), "job_" + name_ + "_plan.dot");
-      tc->Count("Graph name: " + name_ + " LogPlan", 1);
-    }
     PlanUtil::GenRegisterHint(&plan_);
     tc->Count("Graph name: " + name_ + " GenRegisterHint", 1);
     // TODO(chengcheng): test collective boxing for multi-job.
@@ -350,6 +345,11 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       } /* task_gph->ForEachNode */);
       counter.WaitForeverUntilCntEqualZero();
       tc->Count("Graph name: " + name_ + " AddOpAttrtoPlan", 1);
+    }
+    if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+      TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
+      PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
+      tc->Count("Graph name: " + name_ + " LogPlan", 1);
     }
   }
   if (GlobalProcessCtx::WorldSize() > 1) {
