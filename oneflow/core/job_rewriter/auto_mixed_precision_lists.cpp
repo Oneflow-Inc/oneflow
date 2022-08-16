@@ -83,7 +83,7 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "broadcast_mul",
                               "broadcast_div",
                               "layer_norm",
-                              "layer_norm_param_grad",
+                              // "layer_norm_param_grad",
                               "layer_norm_grad",
                               "dropout",
                               "dropout_grad",
