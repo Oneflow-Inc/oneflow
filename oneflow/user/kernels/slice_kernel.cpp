@@ -258,17 +258,23 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
   ConstructSliceParamsSmall(slice_ctx, positive_start_vec, positive_stop_vec, step_attr,
                             small->shape_view(), &small_slice_param);
   CHECK_EQ(large_slice_param.elem_cnt(), small_slice_param.elem_cnt());
-  if (from_large_to_small) {
-    if (small_slice_param.elem_cnt() == small->shape_view().elem_cnt()) {
-      SliceKernelUtil<device_type, T>::Forward(ctx->stream(), large_slice_param, src->dptr<T>(),
-                                               dst->mut_dptr<T>());
+  if (large_slice_param.ndim == 0 && small_slice_param.ndim == 0) {
+    AutoMemcpy(ctx->stream(), dst->mut_dptr<T>(), src->dptr<T>(), sizeof(T), src->mem_case(),
+               dst->mem_case());
+  } else {
+    if (from_large_to_small) {
+      if (small_slice_param.elem_cnt() == small->shape_view().elem_cnt()) {
+        SliceKernelUtil<device_type, T>::Forward(ctx->stream(), large_slice_param, src->dptr<T>(),
+                                                 dst->mut_dptr<T>());
+      } else {
+        SliceKernelUtil<device_type, T>::Forward(ctx->stream(), large_slice_param,
+                                                 small_slice_param, src->dptr<T>(),
+                                                 dst->mut_dptr<T>());
+      }
     } else {
-      SliceKernelUtil<device_type, T>::Forward(ctx->stream(), large_slice_param, small_slice_param,
+      SliceKernelUtil<device_type, T>::Forward(ctx->stream(), small_slice_param, large_slice_param,
                                                src->dptr<T>(), dst->mut_dptr<T>());
     }
-  } else {
-    SliceKernelUtil<device_type, T>::Forward(ctx->stream(), small_slice_param, large_slice_param,
-                                             src->dptr<T>(), dst->mut_dptr<T>());
   }
 }
 

@@ -36,7 +36,7 @@ def consec(size, start=1):
     """
     Generate a arithmetic progression with given size and start value.
     """
-    sequence = flow.ones([int(np.array(size).prod(0)),]).cumsum(0)
+    sequence = flow.ones([int(np.array(size).prod(0)), ]).cumsum(0)
     sequence.add_(start - 1)
     return sequence.view(*size)
 
@@ -53,13 +53,19 @@ def _test_basic_slice(test_case, device):
         rtol=0,
     )
 
-    _assert_tensor_equal(test_case, reference[0], consec((3, 3)), atol=0, rtol=0)
-    _assert_tensor_equal(test_case, reference[1], consec((3, 3), 10), atol=0, rtol=0)
-    _assert_tensor_equal(test_case, reference[2], consec((3, 3), 19), atol=0, rtol=0)
-    _assert_tensor_equal(test_case, reference[0, 1], consec((3,), 4), atol=0, rtol=0)
-    _assert_tensor_equal(test_case, reference[0:2], consec((2, 3, 3)), atol=0, rtol=0)
+    _assert_tensor_equal(
+        test_case, reference[0], consec((3, 3)), atol=0, rtol=0)
+    _assert_tensor_equal(test_case, reference[1], consec(
+        (3, 3), 10), atol=0, rtol=0)
+    _assert_tensor_equal(test_case, reference[2], consec(
+        (3, 3), 19), atol=0, rtol=0)
+    _assert_tensor_equal(
+        test_case, reference[0, 1], consec((3,), 4), atol=0, rtol=0)
+    _assert_tensor_equal(
+        test_case, reference[0:2], consec((2, 3, 3)), atol=0, rtol=0)
     test_case.assertEqual(reference[2, 2, 2].item(), 27)
-    _assert_tensor_equal(test_case, reference[:], consec((3, 3, 3)), atol=0, rtol=0)
+    _assert_tensor_equal(
+        test_case, reference[:], consec((3, 3, 3)), atol=0, rtol=0)
 
     # indexing with Ellipsis
     _assert_tensor_equal(
@@ -105,7 +111,8 @@ def _test_basic_slice(test_case, device):
         atol=0,
         rtol=0,
     )
-    _assert_tensor_equal(test_case, reference_5d[...], reference_5d, atol=0, rtol=0)
+    _assert_tensor_equal(
+        test_case, reference_5d[...], reference_5d, atol=0, rtol=0)
 
     # LongTensor indexing
     reference = consec((5, 5, 5)).to(device)
@@ -115,11 +122,14 @@ def _test_basic_slice(test_case, device):
     )
 
     # None indexing
-    _assert_tensor_equal(test_case, reference[2, None], reference[2].unsqueeze(0))
     _assert_tensor_equal(
-        test_case, reference[2, None, None], reference[2].unsqueeze(0).unsqueeze(0)
+        test_case, reference[2, None], reference[2].unsqueeze(0))
+    _assert_tensor_equal(
+        test_case, reference[2, None,
+                             None], reference[2].unsqueeze(0).unsqueeze(0)
     )
-    _assert_tensor_equal(test_case, reference[2:4, None], reference[2:4].unsqueeze(1))
+    _assert_tensor_equal(
+        test_case, reference[2:4, None], reference[2:4].unsqueeze(1))
     _assert_tensor_equal(
         test_case,
         reference[None, 2, None, None],
@@ -140,7 +150,8 @@ def _test_basic_slice(test_case, device):
     # indexing with step
     reference = consec((10, 10, 10)).to(device)
     _assert_tensor_equal(
-        test_case, reference[1:5:2], flow.stack([reference[1], reference[3]], 0)
+        test_case, reference[1:5:2], flow.stack(
+            [reference[1], reference[3]], 0)
     )
     _assert_tensor_equal(
         test_case,
@@ -148,7 +159,8 @@ def _test_basic_slice(test_case, device):
         flow.stack([reference[1], reference[3], reference[5]], 0),
     )
     _assert_tensor_equal(
-        test_case, reference[1:9:4], flow.stack([reference[1], reference[5]], 0)
+        test_case, reference[1:9:4], flow.stack(
+            [reference[1], reference[5]], 0)
     )
     _assert_tensor_equal(
         test_case,
@@ -168,7 +180,8 @@ def _test_basic_slice(test_case, device):
     _assert_tensor_equal(
         test_case,
         reference[:, 2, 1:6:2],
-        flow.stack([reference[:, 2, 1], reference[:, 2, 3], reference[:, 2, 5]], 1),
+        flow.stack([reference[:, 2, 1], reference[:, 2, 3],
+                   reference[:, 2, 5]], 1),
     )
 
     lst = [list(range(i, i + 10)) for i in range(0, 100, 10)]
@@ -188,14 +201,16 @@ def _test_basic_slice(test_case, device):
         else:
             lst_indexed = lst[idx1]
             tensor_indexed = tensor[idx1]
-        _assert_tensor_equal(test_case, flow.DoubleTensor(lst_indexed), tensor_indexed)
+        _assert_tensor_equal(test_case, flow.DoubleTensor(
+            lst_indexed), tensor_indexed)
 
     test_case.assertRaises(RuntimeError, lambda: reference[1:9:0])
     test_case.assertRaises(RuntimeError, lambda: reference[1:9:-1])
 
     test_case.assertRaises(IndexError, lambda: reference[1, 1, 1, 1])
     test_case.assertRaises(IndexError, lambda: reference[1, 1, 1, 1:1])
-    test_case.assertRaises(IndexError, lambda: reference[3, 3, 3, 3, 3, 3, 3, 3])
+    test_case.assertRaises(
+        IndexError, lambda: reference[3, 3, 3, 3, 3, 3, 3, 3])
 
     test_case.assertRaises(IndexError, lambda: reference[0.0])
     test_case.assertRaises(RuntimeError, lambda: reference[0.0:2.0])
@@ -218,13 +233,13 @@ def _test_advanced_indexing(test_case, device, dtype):
 
     def validate_indexing(x):
         _assert_tensor_equal(test_case, x[[0]], consec((1,)))
-        _assert_tensor_equal(test_case, x[ri([0]),], consec((1,)))
-        _assert_tensor_equal(test_case, x[ri([3]),], consec((1,), 4))
+        _assert_tensor_equal(test_case, x[ri([0]), ], consec((1,)))
+        _assert_tensor_equal(test_case, x[ri([3]), ], consec((1,), 4))
         _assert_tensor_equal(test_case, x[[2, 3, 4]], consec((3,), 3))
-        _assert_tensor_equal(test_case, x[ri([2, 3, 4]),], consec((3,), 3))
+        _assert_tensor_equal(test_case, x[ri([2, 3, 4]), ], consec((3,), 3))
         _assert_tensor_equal(
             test_case,
-            x[ri([0, 2, 4]),],
+            x[ri([0, 2, 4]), ],
             flow.tensor([1, 3, 5], dtype=dtype, device=device),
         )
 
@@ -235,22 +250,24 @@ def _test_advanced_indexing(test_case, device, dtype):
         )
         x[[0]] = -1
         _assert_tensor_equal(
-            test_case, x[ri([0]),], flow.tensor([-1], dtype=dtype, device=device)
+            test_case, x[ri([0]), ], flow.tensor(
+                [-1], dtype=dtype, device=device)
         )
         x[[2, 3, 4]] = 4
         _assert_tensor_equal(
-            test_case, x[[2, 3, 4]], flow.tensor([4, 4, 4], dtype=dtype, device=device)
+            test_case, x[[2, 3, 4]], flow.tensor(
+                [4, 4, 4], dtype=dtype, device=device)
         )
-        x[ri([2, 3, 4]),] = 3
+        x[ri([2, 3, 4]), ] = 3
         _assert_tensor_equal(
             test_case,
-            x[ri([2, 3, 4]),],
+            x[ri([2, 3, 4]), ],
             flow.tensor([3, 3, 3], dtype=dtype, device=device),
         )
-        x[ri([0, 2, 4]),] = flow.tensor([5, 4, 3], dtype=dtype, device=device)
+        x[ri([0, 2, 4]), ] = flow.tensor([5, 4, 3], dtype=dtype, device=device)
         _assert_tensor_equal(
             test_case,
-            x[ri([0, 2, 4]),],
+            x[ri([0, 2, 4]), ],
             flow.tensor([5, 4, 3], dtype=dtype, device=device),
         )
 
@@ -274,7 +291,8 @@ def _test_advanced_indexing(test_case, device, dtype):
         flow.tensor([2, 4, 6], dtype=dtype, device=device),
     )
     _assert_tensor_equal(test_case, reference[ri([0]), ri([0])], consec((1,)))
-    _assert_tensor_equal(test_case, reference[ri([2]), ri([1])], consec((1,), 6))
+    _assert_tensor_equal(
+        test_case, reference[ri([2]), ri([1])], consec((1,), 6))
     _assert_tensor_equal(
         test_case,
         reference[[ri([0, 0]), ri([0, 1])]],
@@ -329,7 +347,8 @@ def _test_advanced_indexing(test_case, device, dtype):
         reference[ri([0, 1, 2]), ri([0])],
         flow.tensor([-1, 2, -4], dtype=dtype, device=device),
     )
-    reference[rows, columns] = flow.tensor([[4, 6], [2, 3]], dtype=dtype, device=device)
+    reference[rows, columns] = flow.tensor(
+        [[4, 6], [2, 3]], dtype=dtype, device=device)
     _assert_tensor_equal(
         test_case,
         reference[rows, columns],
@@ -419,7 +438,8 @@ def _test_advanced_indexing(test_case, device, dtype):
         reference[ri([0, 1, 2]), ri([0])],
         flow.tensor([-1, 2, -4], dtype=dtype, device=device),
     )
-    reference[rows, columns] = flow.tensor([[4, 6], [2, 3]], dtype=dtype, device=device)
+    reference[rows, columns] = flow.tensor(
+        [[4, 6], [2, 3]], dtype=dtype, device=device)
     _assert_tensor_equal(
         test_case,
         reference[rows, columns],
@@ -433,7 +453,7 @@ def _test_advanced_indexing(test_case, device, dtype):
     reference = consec((3, 2))
     _assert_tensor_equal(
         test_case,
-        reference[ri([0, 2]),],
+        reference[ri([0, 2]), ],
         flow.tensor([[1, 2], [5, 6]], dtype=dtype, device=device),
     )
     _assert_tensor_equal(
@@ -488,7 +508,8 @@ def _test_combined_indexing(test_case, device, dtype):
         return npt
 
     def assert_get_eq(tensor, indexer):
-        _assert_tensor_equal(test_case, tensor[indexer], get_numpy(tensor, indexer))
+        _assert_tensor_equal(
+            test_case, tensor[indexer], get_numpy(tensor, indexer))
 
     def assert_set_eq(tensor, indexer, val):
         pyt = tensor.clone()
@@ -512,7 +533,8 @@ def _test_combined_indexing(test_case, device, dtype):
     def get_set_tensor(indexed, indexer):
         set_size = indexed[indexer].size()
         set_count = indexed[indexer].numel()
-        set_tensor = flow.randperm(set_count).view(set_size).to(dtype).to(device)
+        set_tensor = flow.randperm(set_count).view(
+            set_size).to(dtype).to(device)
         return set_tensor
 
     # Tensor is  0  1  2  3  4
@@ -578,7 +600,7 @@ def _test_combined_indexing(test_case, device, dtype):
         # non-contiguous indexing subspace
         [[0, 2, 3], slice(None), [1, 3, 4]],
         # less dim, ellipsis
-        [[0, 2],],
+        [[0, 2], ],
         [[0, 2], slice(None)],
         [[0, 2], Ellipsis],
         [[0, 2], slice(None), Ellipsis],
@@ -606,7 +628,8 @@ def _test_combined_indexing(test_case, device, dtype):
         if device != "cpu":
             assert_backward_eq(reference, indexer)
 
-    reference = flow.arange(0.0, 1296, dtype=dtype, device=device).view(3, 9, 8, 6)
+    reference = flow.arange(0.0, 1296, dtype=dtype,
+                            device=device).view(3, 9, 8, 6)
 
     indices_to_test = [
         [slice(None), slice(None), slice(None), [0, 3, 4]],
@@ -663,7 +686,7 @@ def _test_combined_indexing(test_case, device, dtype):
         [[0], [1, 2, 4], slice(None)],
         [[0], [1, 2, 4], Ellipsis],
         [[0], [1, 2, 4], Ellipsis, slice(None)],
-        [[1],],
+        [[1], ],
         [[0, 2, 1], [3], [4]],
         [[0, 2, 1], [3], [4], slice(None)],
         [[0, 2, 1], [3], [4], Ellipsis],
@@ -727,10 +750,12 @@ def _test_bool_indices(test_case, device):
         [True, False, True, True, False], dtype=flow.bool, device=device
     )
     test_case.assertEqual(v[boolIndices].shape, (3, 7, 3))
-    _assert_tensor_equal(test_case, v[boolIndices], flow.stack([v[0], v[2], v[3]]))
+    _assert_tensor_equal(
+        test_case, v[boolIndices], flow.stack([v[0], v[2], v[3]]))
 
     v = flow.tensor([True, False, True], dtype=flow.bool, device=device)
-    boolIndices = flow.tensor([True, False, False], dtype=flow.bool, device=device)
+    boolIndices = flow.tensor([True, False, False],
+                              dtype=flow.bool, device=device)
     uint8Indices = flow.tensor([1, 0, 0], dtype=flow.uint8, device=device)
     test_case.assertEqual(v[boolIndices].shape, v[uint8Indices].shape)
     test_case.assertEqual(v[boolIndices], v[uint8Indices])
@@ -811,7 +836,8 @@ def _test_empty_ndim_index(test_case, device):
 def _test_empty_ndim_index_bool(test_case, device):
     x = flow.randn(5, device=device)
     test_case.assertRaises(
-        IndexError, lambda: x[flow.empty(0, 2, dtype=flow.uint8, device=device)]
+        IndexError, lambda: x[flow.empty(
+            0, 2, dtype=flow.uint8, device=device)]
     )
 
 
@@ -829,7 +855,8 @@ def _test_index_getitem_copy_bools_slices(test_case, device):
     true = flow.tensor(1, dtype=flow.uint8, device=device)
     false = flow.tensor(0, dtype=flow.uint8, device=device)
 
-    tensors = [flow.randn(2, 3, device=device), flow.tensor([1.0], device=device)]
+    tensors = [flow.randn(2, 3, device=device),
+               flow.tensor([1.0], device=device)]
 
     # TODO: compare tensor_storage after exporting the inferface
     for a in tensors:
@@ -869,9 +896,11 @@ def _test_setitem_scalars(test_case, device):
         r[:] = 8.8
     with test_case.assertRaises(IndexError):
         r[zero] = 8.8
-    # TODO: support scalar tensor setitem
-    # r[...] = 9.9
-    # test_case.assertEqual(9.9, r)
+        r = flow.randn((), device=device)
+    r[...] = 9.9
+    np_r = np.random.rand(1)
+    np_r[...] = 9.9
+    test_case.assertEqual(r.numpy().all(), np_r.all())
 
     # scalar indexed with oneflow.Size([1])
     np_x = np.random.rand(2, 3)
@@ -902,6 +931,12 @@ def _test_ellipsis_tensor(test_case, device):
     idx = flow.tensor([0, 2], device=device)
     test_case.assertEqual(x[..., idx].tolist(), [[0, 2], [3, 5], [6, 8]])
     test_case.assertEqual(x[idx, ...].tolist(), [[0, 1, 2], [6, 7, 8]])
+
+    # test getitem:scalar indexed with scalar
+    y = flow.randn((), device=device)
+    x_scalar = flow.tensor(9.9)
+    y = x_scalar[...]
+    test_case.assertEqual(y, 9.9)
 
 
 @flow.unittest.skip_unless_1n1d()
