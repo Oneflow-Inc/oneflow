@@ -33,7 +33,6 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/tensor_processor.h"
 
-#include <cstdio>
 #include <sstream>
 #include <bitset>
 
