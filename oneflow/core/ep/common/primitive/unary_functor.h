@@ -394,7 +394,9 @@ template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kLogSigmoid, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(-log(static_cast<Src>(1.0) + exp(-src))); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return static_cast<Dst>(-log(static_cast<Src>(1.0) + exp(-src)));
+  }
 };
 
 template<DeviceType device, typename Dst, typename Src>
@@ -408,18 +410,18 @@ template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kReciprocal, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(static_cast<Src>(1.0) / src); }
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return static_cast<Dst>(static_cast<Src>(1.0) / src);
+  }
 };
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kReciprocalNoNan, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const { 
-    if(abs(src) <= static_cast<Src>(0.0)){
-      return static_cast<Dst>(0.0); 
-    }
-    return static_cast<Dst>(static_cast<Src>(1.0) / src); 
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    if (abs(src) <= static_cast<Src>(0.0)) { return static_cast<Dst>(0.0); }
+    return static_cast<Dst>(static_cast<Src>(1.0) / src);
   }
 };
 
@@ -427,35 +429,29 @@ template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kRint, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const { 
-    return static_cast<Dst>(rint(src)); 
-  }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(rint(src)); }
 };
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kRound, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const { 
-    return static_cast<Dst>(round(src)); 
-  }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(round(src)); }
 };
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kRsqrt, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const { 
-    return static_cast<Dst>(rsqrt(src)); 
-  }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(rsqrt(src)); }
 };
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kSigmoid, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const { 
-    return static_cast<Dst>(static_cast<Src>(1.0) / (static_cast<Src>(1.0) + exp(-src))); 
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return static_cast<Dst>(static_cast<Src>(1.0) / (static_cast<Src>(1.0) + exp(-src)));
   }
 };
 
@@ -463,12 +459,12 @@ template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kSign, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const { 
-    const Src zero = static_cast<Src>(0.0); 
-    if(src > zero){
-      return static_cast<Dst>(1.0); 
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    const Src zero = static_cast<Src>(0.0);
+    if (src > zero) {
+      return static_cast<Dst>(1.0);
     } else {
-      return static_cast<Dst>(0.0); 
+      return static_cast<Dst>(0.0);
     }
   }
 };
@@ -477,53 +473,43 @@ template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kSin, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const { 
-    return static_cast<Dst>(sin(src)); 
-  }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(sin(src)); }
 };
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kSinh, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const { 
-    return static_cast<Dst>(sinh(src)); 
-  }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(sinh(src)); }
 };
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kSqrt, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const { 
-    return static_cast<Dst>(sqrt(src)); 
-  }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(sqrt(src)); }
 };
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kSquare, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const { 
-    return static_cast<Dst>(src * src); 
-  }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(src * src); }
 };
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kTan, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const { 
-    return static_cast<Dst>(tan(src)); 
-  }
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(tan(src)); }
 };
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kNotEqualZero, Dst, Src> {
   OF_DEVICE_FUNC UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const { 
-    return static_cast<Dst>(src!=static_cast<Src>(0.0)); 
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return static_cast<Dst>(src != static_cast<Src>(0.0));
   }
 };
 
