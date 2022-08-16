@@ -787,11 +787,11 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
   HashMap<int64_t, HashMap<MemAllocAlgoType, MemBlockResultInfo>> mem_chain2algo2result;
 
   for (int64_t mem_chain_id : mem_chains) {
-    mem_chain2task2alloc_regsts.emplace(mem_chain_id, std::vector<HashSet<RegstDescProto*>>());
-    mem_chain2task2free_regsts.emplace(mem_chain_id, std::vector<HashSet<RegstDescProto*>>());
-    mem_chain2regst2mutual_exclusion_regsts.emplace(mem_chain_id, HashMap<RegstDescProto*, std::vector<RegstDescProto*>>());
-    mem_chain2consumer2inplaced_regst.emplace(mem_chain_id, HashMap<RegstDescProto*, RegstDescProto*>());
-    mem_chain2algo2result.emplace(mem_chain_id, HashMap<MemAllocAlgoType, MemBlockResultInfo>());
+    CHECK(mem_chain2task2alloc_regsts[mem_chain_id].empty());
+    CHECK(mem_chain2task2free_regsts[mem_chain_id].empty());
+    CHECK(mem_chain2regst2mutual_exclusion_regsts[mem_chain_id].empty());
+    CHECK(mem_chain2consumer2inplaced_regst[mem_chain_id].empty());
+    CHECK(mem_chain2algo2result[mem_chain_id].empty());
   }
   tc->Count("InitForEachMemChain", 1);
   // step 1: generate regst alloc/free queue AND regst mutual exclusions
@@ -802,7 +802,8 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
     ThreadPool thread_pool(thread_pool_size);
     // Parallel run between chain
     for (int64_t mem_chain_id : mem_chains) {
-      thread_pool.AddWork([&]() {
+      thread_pool.AddWork([&, mem_chain_id]() {
+        LOG(ERROR) << "+++++++ " << mem_chain_id;
         auto reused = mem_chain2mem_reused_regsts.at(mem_chain_id);
         GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
             mem_chain2sorted_tasks.at(mem_chain_id), reused, regst_desc_id2regst_desc,
