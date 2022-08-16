@@ -579,13 +579,6 @@ LogicalResult JobImporter::ProcessJob() {
     }
   });
   if (is_succeeded == false) { return failure(); }
-  SmallVector<mlir::Value, 4> loss_tensors;
-  for (auto& loss_lbn : job_wrapper_.job()->job_conf().train_conf().loss_lbn()) {
-    loss_tensors.push_back(lbn2result_.at(loss_lbn));
-  }
-  if (job_wrapper_.job()->job_conf().train_conf().loss_lbn_size() > 0) {
-    GetBuilder().create<mlir::oneflow::LossMarkerOp>(GetRootLocation(), loss_tensors);
-  }
   mlir::oneflow::ReturnOp return_op;
   if (!entryBlock->empty()) { return_op = dyn_cast<mlir::oneflow::ReturnOp>(entryBlock->back()); }
   if (!return_op) { GetBuilder().create<mlir::oneflow::ReturnOp>(GetRootLocation(), results); }

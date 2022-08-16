@@ -2618,8 +2618,8 @@ def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", [NoSideEffect, DeclareOpIn
 #endif // GET_ONEFLOW_IDEMPOTENT_OP_DEFINITIONS
 
 // Group: IDENTITY
-// amp_white_identity, identity, identity_buffer, tuple_identity
-// Total: 4
+// amp_white_identity, identity, identity_buffer, tuple_identity, pinned_identity
+// Total: 5
 
 #ifdef GET_ONEFLOW_IDENTITY_OP_DEFINITIONS
 
@@ -2678,6 +2678,20 @@ def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", [NoSideEffect, De
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
   let has_sbp_signature_infer_fn = 1;
+}
+
+def OneFlow_PinnedIdentityOp : OneFlow_BaseOp<"pinned_identity", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let summary = "mark defining op of operand can't be erased";
+  let input = (ins
+    OneFlow_Tensor:$in
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
 }
 
 #endif // GET_ONEFLOW_IDENTITY_OP_DEFINITIONS
