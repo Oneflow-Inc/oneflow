@@ -25,6 +25,17 @@ import oneflow as oneflow_origin
 from collections import defaultdict
 
 
+def _assert_true(test_case, value1, value2):
+    test_case.assertTrue(
+        np.allclose(
+            value1.detach().cpu().numpy(),
+            value2.detach().numpy(),
+            rtol=1e-05,
+            atol=1e-05,
+        )
+    )
+
+
 def _test_activation_grad_grad_impl(test_case, op_name, placement, *args, **kwargs):
     x = random_tensor(ndim=2, low=-5, dim0=8, dim1=8).to_global(
         placement=placement, sbp=random_sbp(placement=placement, max_dim=2)
@@ -40,18 +51,12 @@ def _test_activation_grad_grad_impl(test_case, op_name, placement, *args, **kwar
     )
 
     dx = torch.autograd.grad(y, x, init_grad_y, True, True)[0]
-    test_case.assertTrue(
-        np.allclose(dx.pytorch.detach().cpu().numpy(), dx.oneflow.detach().numpy())
-    )
+    _assert_true(test_case, dx.pytorch, dx.oneflow)
 
     ddx_ddy = torch.autograd.grad(dx, [x, init_grad_y], init_grad_x)
     ddx, ddy = ddx_ddy[0], ddx_ddy[1]
-    test_case.assertTrue(
-        np.allclose(ddx.pytorch.detach().cpu().numpy(), ddx.oneflow.detach().numpy())
-    )
-    test_case.assertTrue(
-        np.allclose(ddy.pytorch.detach().cpu().numpy(), ddy.oneflow.detach().numpy())
-    )
+    _assert_true(test_case, ddx.pytorch, ddx.oneflow)
+    _assert_true(test_case, ddy.pytorch, ddy.oneflow)
 
 
 def _test_prelu_activation_grad_grad_impl(
@@ -79,26 +84,16 @@ def _test_prelu_activation_grad_grad_impl(
 
     dx_and_da = torch.autograd.grad(y, [x, a], init_grad_y, True, True)
     dx, da = dx_and_da[0], dx_and_da[1]
-    test_case.assertTrue(
-        np.allclose(dx.pytorch.detach().cpu().numpy(), dx.oneflow.detach().numpy())
-    )
-    test_case.assertTrue(
-        np.allclose(da.pytorch.detach().cpu().numpy(), da.oneflow.detach().numpy())
-    )
+    _assert_true(test_case, dx.pytorch, dx.oneflow)
+    _assert_true(test_case, da.pytorch, da.oneflow)
 
     ddx_dda_ddy = torch.autograd.grad(
         dx_and_da, [dx, da, init_grad_y], [init_grad_x, init_grad_a], True, True
     )
     ddx, dda, ddy = ddx_dda_ddy[0], ddx_dda_ddy[1], ddx_dda_ddy[2]
-    test_case.assertTrue(
-        np.allclose(ddx.pytorch.detach().cpu().numpy(), ddx.oneflow.detach().numpy())
-    )
-    test_case.assertTrue(
-        np.allclose(dda.pytorch.detach().cpu().numpy(), dda.oneflow.detach().numpy())
-    )
-    test_case.assertTrue(
-        np.allclose(ddy.pytorch.detach().cpu().numpy(), ddy.oneflow.detach().numpy())
-    )
+    _assert_true(test_case, ddx.pytorch, ddx.oneflow)
+    _assert_true(test_case, dda.pytorch, dda.oneflow)
+    _assert_true(test_case, ddy.pytorch, ddy.oneflow)
 
 
 def _test_hardswish_activation_grad_grad_impl(
@@ -123,9 +118,7 @@ def _test_hardswish_activation_grad_grad_impl(
     dx_oneflow = oneflow_origin.autograd.grad(
         y.oneflow, x.oneflow, init_grad_y.oneflow, True, True
     )[0]
-    test_case.assertTrue(
-        np.allclose(dx_pytorch.detach().cpu().numpy(), dx_oneflow.detach().numpy())
-    )
+    _assert_true(test_case, dx_pytorch, dx_oneflow)
 
     ddx, ddy = flow.autograd.grad(
         dx_oneflow, [x.oneflow, init_grad_y.oneflow], init_grad_x.oneflow
@@ -142,8 +135,8 @@ def _test_hardswish_activation_grad_grad_impl(
         ((x > -3.0) < 3.0), 1.0 / 3.0 * init_grad_x * init_grad_y, zeros_grad
     )
     manual_ddy = dx / init_grad_y * init_grad_x
-    test_case.assertTrue(np.allclose(manual_ddx.detach().numpy(), ddx.detach().numpy()))
-    test_case.assertTrue(np.allclose(manual_ddy.detach().numpy(), ddy.detach().numpy()))
+    _assert_true(test_case, manual_ddx, ddx)
+    _assert_true(test_case, manual_ddy, ddy)
 
 
 def _test_hardsigmoid_activation_grad_grad_impl(
@@ -168,9 +161,7 @@ def _test_hardsigmoid_activation_grad_grad_impl(
     dx_oneflow = oneflow_origin.autograd.grad(
         y.oneflow, x.oneflow, init_grad_y.oneflow, True, True
     )[0]
-    test_case.assertTrue(
-        np.allclose(dx_pytorch.detach().cpu().numpy(), dx_oneflow.detach().numpy())
-    )
+    _assert_true(test_case, dx_pytorch, dx_oneflow)
 
     ddx, ddy = flow.autograd.grad(
         dx_oneflow, [x.oneflow, init_grad_y.oneflow], init_grad_x.oneflow
@@ -183,8 +174,8 @@ def _test_hardsigmoid_activation_grad_grad_impl(
     )
     manual_ddx = flow.zeros_like(x)
     manual_ddy = dx / init_grad_y * init_grad_x
-    test_case.assertTrue(np.allclose(manual_ddx.detach().numpy(), ddx.detach().numpy()))
-    test_case.assertTrue(np.allclose(manual_ddy.detach().numpy(), ddy.detach().numpy()))
+    _assert_true(test_case, manual_ddx, ddx)
+    _assert_true(test_case, manual_ddy, ddy)
 
 
 class TestActivationHigherDerivative(flow.unittest.TestCase):
@@ -201,8 +192,8 @@ class TestActivationHigherDerivative(flow.unittest.TestCase):
             "min_val": random(-5, -1).to(float),
             "max_val": random(1, 5).to(float),
         }
-        op_kwargs["elu"] = {"alpha": random(-1, 1).to(float)}
-        op_kwargs["celu"] = {"alpha": random(-1, 1).to(float)}
+        op_kwargs["elu"] = {"alpha": random(0, 10).to(float)}
+        op_kwargs["celu"] = {"alpha": random(0, 10).to(float)}
         op_kwargs["threshold"] = {
             "threshold": random().to(float),
             "value": random().to(float),

@@ -422,7 +422,7 @@ class CeluGradGrad : public EluGradGrad {
     if (ctx->x_requires_grad) {
       const auto& grad = ctx->SavedTensors().at(1);
       in_grads->at(0) = JUST(
-          functional::Mul(out_grads.at(0), JUST(functional::CeluGradGrad(x, grad, ctx->alpha))));
+          functional::CeluGradGrad(x, JUST(functional::Mul(out_grads.at(0), (grad))), ctx->alpha));
     }
     if (ctx->grad_requires_grad) {
       in_grads->at(1) = JUST(functional::CeluGrad(x, out_grads.at(0), ctx->alpha));
