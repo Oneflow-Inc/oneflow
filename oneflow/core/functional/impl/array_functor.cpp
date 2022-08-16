@@ -619,7 +619,7 @@ class StackFunctor {
         outputs.emplace_back(JUST(functional::ExpandDims(partial_inputs[0], dim)));
       } else {
         outputs.emplace_back(
-            JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
+            JUST(OpInterpUtil::Dispatch<Tensor>(*ops_[size - 1], partial_inputs, attrs)));
       }
     }
     if (outputs.size() == 1) { return outputs.at(0); }
