@@ -143,20 +143,6 @@ struct ScalarMulByTensorOpLowering final : public OpConversionPattern<ScalarMulB
   LogicalResult matchAndRewrite(ScalarMulByTensorOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     Value scalar = op.scalar();
-    if (auto scalar_type = scalar.getType().dyn_cast<RankedTensorType>()) {
-      auto rank = op.x().getType().dyn_cast<RankedTensorType>().getRank();
-      if (scalar_type.getRank() != rank) {
-        std::vector<int64_t> perm(rank);
-        std::fill(perm.begin(), perm.end(), 1);
-        scalar = rewriter
-                     .create<tosa::ReshapeOp>(
-                         op->getLoc(),
-                         RankedTensorType::get(
-                             perm, scalar.getType().cast<TensorType>().getElementType()),
-                         scalar, rewriter.getI64ArrayAttr(perm))
-                     .output();
-      }
-    }
     rewriter.replaceOpWithNewOp<tosa::MulOp>(
         op,
         /* output */ op->getResultTypes().front().cast<TensorType>(),
@@ -490,16 +476,11 @@ struct NormalizationInferenceOpLowering final
     const auto out_type = op.y().getType();
 
     const auto epsilon_type = RankedTensorType::get({}, rewriter.getF32Type());
-    // epsilon   = reshape(epsilon, shape_1)
     auto epsilon = rewriter.create<tosa::ConstOp>(
         loc, epsilon_type, DenseElementsAttr::get(epsilon_type, op.epsilon()));
-    //  mean = reshape(mean, shape_0)
     auto mean = reshape_dim(out_type, adaptor.moving_mean());
-    //  variance= reshape(variance, shape_0)
     auto variance = reshape_dim(out_type, adaptor.moving_variance());
-    // scale = reshape(scale, shape_0)
     auto gamma = reshape_dim(out_type, adaptor.gamma());
-    // beta = reshape(beta, shape_0)
     auto beta = reshape_dim(out_type, adaptor.beta());
     auto output = op.y();
     auto x = op.x();
