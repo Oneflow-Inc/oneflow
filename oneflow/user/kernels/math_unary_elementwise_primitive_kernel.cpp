@@ -78,12 +78,14 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("reciprocal_grad", ep::primitive::BinaryOp::kReciprocalBackwardWithDyX) \
   OF_PP_MAKE_TUPLE_SEQ("reciprocal_no_nan_grad", ep::primitive::BinaryOp::kReciprocalNoNanBackwardWithDyX) \
   OF_PP_MAKE_TUPLE_SEQ("rsqrt_grad", ep::primitive::BinaryOp::kRsqrtBackwardWithDyX) \
-  OF_PP_MAKE_TUPLE_SEQ("sigmoid_grad", ep::primitive::BinaryOp::kSigmoidBackwardWithDyY) \
   OF_PP_MAKE_TUPLE_SEQ("sin_grad", ep::primitive::BinaryOp::kSinBackwardWithDyX) \
   OF_PP_MAKE_TUPLE_SEQ("sinh_grad", ep::primitive::BinaryOp::kSinhBackwardWithDyX) \
   OF_PP_MAKE_TUPLE_SEQ("sqrt_grad", ep::primitive::BinaryOp::kSqrtBackwardWithDyX) \
   OF_PP_MAKE_TUPLE_SEQ("square_grad", ep::primitive::BinaryOp::kSquareBackwardWithDyX) \
   OF_PP_MAKE_TUPLE_SEQ("tan_grad", ep::primitive::BinaryOp::kTanBackwardWithDyX)
+
+#define MATH_UNARY_ELEMENTWISE_GRAD_WITH_DY_Y_PRIMITIVE_SEQ                      \
+  OF_PP_MAKE_TUPLE_SEQ("sigmoid_grad", ep::primitive::BinaryOp::kSigmoidBackwardWithDyY)           
 
 #define REGISTER_MATH_UNARY_PRIMITIVE_KERNEL(name, UnaryOp) \
     REGISTER_USER_KERNEL(name) \
@@ -120,48 +122,21 @@ OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_GRAD_PRIMITIVE_WITH_DY_X_KERNEL,
                      MATH_UNARY_ELEMENTWISE_GRAD_WITH_DY_X_PRIMITIVE_SEQ)
 
 
-// #define REGISTER_MATH_UNARY_GRAD_PRIMITIVE_WITH_DY_Y_KERNEL(name, BinaryOp) \
-//     REGISTER_USER_KERNEL(name) \
-//     .SetCreateFn([]() { \
-//     return user_op::NewOpKernel<BinaryPrimitiveKernel>(\
-//         "dx", "dy", "y", [](user_op::KernelComputeContext* ctx) {\
-//         const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);\
-//         const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);\
-//         return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(\
-//             ctx->device_type(), BinaryOp,\
-//             src->data_type(), dst->data_type(), 1 /*max_num_dims*/);\
-//         });\
-//     })\
-//     .SetIsMatchedHob(BinaryPrimitiveExists(BinaryOp, "dx", "dy")); \
+#define REGISTER_MATH_UNARY_GRAD_PRIMITIVE_WITH_DY_Y_KERNEL(name, BinaryOp) \
+    REGISTER_USER_KERNEL(name) \
+    .SetCreateFn([]() { \
+    return user_op::NewOpKernel<BinaryPrimitiveKernel>(\
+        "dx", "dy", "y", [](user_op::KernelComputeContext* ctx) {\
+        const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);\
+        const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);\
+        return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(\
+            ctx->device_type(), BinaryOp,\
+            src->data_type(), dst->data_type(), 1 /*max_num_dims*/);\
+        });\
+    })\
+    .SetIsMatchedHob(BinaryPrimitiveExists(BinaryOp, "dx", "dy")); \
 
-// OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_GRAD_PRIMITIVE_WITH_DY_Y_KERNEL,
-//                      MATH_UNARY_ELEMENTWISE_GRAD_WITH_DY_Y_PRIMITIVE_SEQ)
-
-// REGISTER_USER_KERNEL("abs_grad")
-//     .SetCreateFn([]() { 
-//     return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-//         "dx", "dy", "x", [](user_op::KernelComputeContext* ctx) {
-//             const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
-//             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
-//             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
-//                 ctx->device_type(), ep::primitive::ep::primitive::BinaryOp::kAcoshBackwardWithDyX,
-//                 src->data_type(), dst->data_type(), 1 /*max_num_dims*/);
-//         });
-//     })
-//     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::ep::primitive::BinaryOp::kAcoshBackwardWithDyX, "dx", "dy")); 
-
-// REGISTER_USER_KERNEL("abs_grad")
-//     .SetCreateFn([]() {
-//       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-//           "dx", "dy", "x", [](user_op::KernelComputeContext* ctx) {
-//             const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
-//             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
-//             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
-//                 ctx->device_type(), ep::primitive::BinaryOp::kAbsBackwardWithDyX, src->data_type(),
-//                 dst->data_type(), 1 /*max_num_dims*/);
-//           });
-//     })
-//     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kAbsBackwardWithDyX, "dx",
-//                                            "dy"));
+OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_GRAD_PRIMITIVE_WITH_DY_Y_KERNEL,
+                     MATH_UNARY_ELEMENTWISE_GRAD_WITH_DY_Y_PRIMITIVE_SEQ)
 
 }  // namespace oneflow
