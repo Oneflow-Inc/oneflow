@@ -30,6 +30,8 @@ namespace functional {
 
 namespace impl {
 
+Maybe<Tensor> ScalarTensorToDevice(const std::shared_ptr<Tensor>& tensor, Symbol<Device> device);
+
 class BinaryFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -51,17 +53,10 @@ class BinaryFloatFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
-    TensorProcessor tensor_processor;
     // NOTE:If tensor x is scalar tensor and it's divice not equal to tensor y,
     // than need move it to the target device first.This behavior aligns to torch.
-    std::shared_ptr<one::Tensor> tensor_x = x;
-    if (x->shape()->NumAxes() == 0 && x->shape()->elem_cnt() == 1) {
-      const auto& target_device = JUST(y->device());
-      if (JUST(x->device())->type() != target_device->type()) {
-        tensor_x = JUST(functional::Copy(x, target_device->type(), target_device->device_id(),
-                                         /*pin_memory=*/false));
-      }
-    }
+    const auto& tensor_x = JUST(ScalarTensorToDevice(x, JUST(y->device())));
+    TensorProcessor tensor_processor;
     JUST(tensor_processor.AddInputs({tensor_x, y}, DType::Float()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple);
@@ -96,19 +91,11 @@ class InplaceableBinaryFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y, bool inplace) const {
-    TensorProcessor tensor_processor;
     // NOTE:If tensor x is scalar tensor and it's divice not equal to tensor y,
     // than need move it to the target device first.This behavior aligns to torch.
-    if (x->shape()->NumAxes() == 0 && x->shape()->elem_cnt() == 1) {
-      const auto& target_device = JUST(y->device());
-      if (JUST(x->device())->type() != target_device->type()) {
-        const auto& tensor = JUST(functional::Copy(
-            x, target_device->type(), target_device->device_id(), /*pin_memory=*/false));
-        JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({tensor, y}).Apply());
-      }
-    } else {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
-    }
+    const auto& tensor_x = JUST(ScalarTensorToDevice(x, JUST(y->device())));
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({tensor_x, y}).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (inplace) {
       std::shared_ptr<one::Tensor>& x_cast = input_tuple.at(0);

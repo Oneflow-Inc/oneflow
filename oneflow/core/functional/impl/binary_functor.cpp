@@ -33,6 +33,17 @@ namespace functional {
 
 namespace impl {
 
+Maybe<Tensor> ScalarTensorToDevice(const std::shared_ptr<Tensor>& tensor, Symbol<Device> device) {
+  std::shared_ptr<Tensor> output = tensor;
+  if (tensor->shape()->NumAxes() == 0 && tensor->shape()->elem_cnt() == 1) {
+    if (JUST(tensor->device())->type() != device->type()) {
+      output = JUST(functional::Copy(tensor, device->type(), device->device_id(),
+                                     /*pin_memory=*/false));
+    }
+  }
+  return output;
+}
+
 class AddFunctor {
  public:
   AddFunctor() {
@@ -44,15 +55,9 @@ class AddFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& other, const Scalar& alpha,
                            bool inplace) const {
-    std::shared_ptr<one::Tensor> input_tensor = input;
-    if (input_tensor->shape()->NumAxes() == 0 && input_tensor->shape()->elem_cnt() == 1) {
-      const auto& target_device = JUST(other->device());
-      if (JUST(input_tensor->device())->type() != target_device->type()) {
-        input_tensor =
-            JUST(functional::Copy(input, target_device->type(), target_device->device_id(),
-                                  /*pin_memory=*/false));
-      }
-    }
+    // NOTE:If tensor x is scalar tensor and it's divice not equal to tensor y,
+    // than need move it to the target device first.(This behavior aligns to torch)
+    const auto& input_tensor = JUST(ScalarTensorToDevice(input, JUST(other->device())));
     if (IsIntegralDataType(input_tensor->dtype()->data_type())
         && IsIntegralDataType(other->dtype()->data_type()) && alpha.IsFloatingPoint()) {
       return Error::RuntimeError()
@@ -161,17 +166,10 @@ class MulFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
-    TensorProcessor tensor_processor;
-    std::shared_ptr<one::Tensor> tensor_x = x;
     // NOTE:If tensor x is scalar tensor and it's divice not equal to tensor y,
-    // than need move it to the target device first.This behavior aligns to torch.
-    if (x->shape()->NumAxes() == 0 && x->shape()->elem_cnt() == 1) {
-      const auto& target_device = JUST(y->device());
-      if (JUST(x->device())->type() != target_device->type()) {
-        tensor_x = JUST(functional::Copy(x, target_device->type(), target_device->device_id(),
-                                         /*pin_memory=*/false));
-      }
-    }
+    // than need move it to the target device first.(This behavior aligns to torch)
+    const auto& tensor_x = JUST(ScalarTensorToDevice(x, JUST(y->device())));
+    TensorProcessor tensor_processor;
     JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({tensor_x, y}).Apply());
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
 
