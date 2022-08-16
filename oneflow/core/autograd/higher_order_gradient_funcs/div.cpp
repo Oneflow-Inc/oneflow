@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <functional>
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
@@ -66,28 +67,29 @@ class DivGradGrad : public OpExprGradFunction<DivGradGradCaptureState> {
     in_grads->resize(3);
     const auto& y = ctx->SavedTensors().at(ctx->y_index);
 
-    if (ctx->grad_requires_grad || ctx->z_requires_grad) {
-      auto neg_dy_div_y = JUST(functional::Negative(JUST(functional::Div(out_grads.at(0), y))));
-      if (ctx->grad_requires_grad) {
-        const auto& z = ctx->SavedTensors().at(ctx->z_index);
-        in_grads->at(0) = JUST(functional::Mul(neg_dy_div_y, z));
-      }
-      if (ctx->z_requires_grad) {
-        const auto& grad = ctx->SavedTensors().at(ctx->grad_index);
-        in_grads->at(1) = JUST(functional::Mul(neg_dy_div_y, grad));
-      }
+    if (ctx->grad_requires_grad) {
+      const auto& z = ctx->SavedTensors().at(ctx->z_index);
+      in_grads->at(0) = JUST(functional::sequence_function(functional::Mul)
+                                 .then(functional::Negative)
+                                 .then(std::bind(functional::Div, std::placeholders::_1, y))
+                                 .call(out_grads.at(0), z));
     }
-
+    if (ctx->z_requires_grad) {
+      const auto& grad = ctx->SavedTensors().at(ctx->grad_index);
+      in_grads->at(1) = JUST(functional::sequence_function(functional::Mul)
+                                 .then(functional::Negative)
+                                 .then(std::bind(functional::Div, std::placeholders::_1, y))
+                                 .call(out_grads.at(0), grad));
+    }
     if (ctx->y_requires_grad) {
       const auto& z = ctx->SavedTensors().at(ctx->z_index);
       const auto& grad = ctx->SavedTensors().at(ctx->grad_index);
-      in_grads->at(2) =
-          JUST(functional::sequence_function(functional::Square)
-                   .then(std::bind(functional::Div, out_grads.at(0), std::placeholders::_1))
-                   .then(std::bind(functional::Mul, std::placeholders::_1, z))
-                   .then(std::bind(functional::Mul, std::placeholders::_1, grad))
-                   .then(std::bind(functional::BroadcastReduceSumLike, std::placeholders::_1, y))
-                   .call(y));
+      in_grads->at(2) = JUST(
+          functional::sequence_function(functional::Mul)
+              .then(std::bind(functional::Mul, std::placeholders::_1, z))
+              .then(std::bind(functional::BroadcastReduceSumLike, std::placeholders::_1, y))
+              .then(std::bind(functional::Div, std::placeholders::_1, JUST(functional::Square(y))))
+              .call(out_grads.at(0), grad));
     }
 
     return Maybe<void>::Ok();
