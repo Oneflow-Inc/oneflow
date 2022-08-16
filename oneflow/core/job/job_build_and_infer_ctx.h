@@ -39,6 +39,10 @@ class JobBuildAndInferCtx {
   Maybe<OpAttribute> AddAndInferLocalOp(const OperatorConf& op_conf);
   Maybe<void> AddLossLogicalBlobName(const std::string& lbn);
   Maybe<void> SetTrainConf(const TrainConf& train_conf);
+  Maybe<void> MarkVariableGradientBlobNames(
+      const HashMap<std::string, std::string>& variable_grad_lbns);
+  Maybe<void> MarkOutputGradientBlobNames(
+      const HashMap<std::string, std::string>& output_gradient_lbns);
 
   bool HasJobConf() const;
   Maybe<Shape> GetStaticShape(const std::string& lbn) const;
@@ -70,6 +74,7 @@ class JobBuildAndInferCtx {
 
   // NOTE(chengcheng): Only used in multi-client.
   Maybe<std::string> NewUniqueOpNameByFunctionalOpConf(const OperatorConf& op_conf);
+  Maybe<Operator*> Op4OpName(const std::string& op_name) const;
 
   virtual Maybe<void> Complete() = 0;
 
@@ -96,7 +101,6 @@ class JobBuildAndInferCtx {
   }
   Maybe<const SbpParallel*> SbpParallel4Lbi(const LogicalBlobId& lbi) const;
   bool IsVariableLbi(const LogicalBlobId& lbi) const;
-  Maybe<Operator*> Op4OpName(const std::string& op_name) const;
   Maybe<OpAttribute> AddAndInferOp(const OperatorConf& op_conf, const ParallelConf& parallel_conf,
                                    const JobDesc* job_desc, bool is_local_parallel_view);
 
@@ -132,9 +136,6 @@ class JobBuildAndInferCtx {
   Maybe<const LogicalBlobId*> GetSubLbi(int64_t scope_symbol_id, const LogicalBlobId& lbi,
                                         int32_t index);
   Maybe<bool> AllInputsBroadcastParallel(const Operator& op) const;
-  Maybe<void> InferBlobBackwardSignature(Operator* op);
-  Maybe<void> InferBlobBackwardSignature(
-      const Operator& op, std::function<bool(const LogicalBlobId&)>* IsLbiBackwardUsed);
 
   Job* job_;
   int64_t job_id_;

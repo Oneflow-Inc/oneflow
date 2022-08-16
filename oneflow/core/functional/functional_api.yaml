@@ -1093,11 +1093,11 @@
   bind_python: True
 
 - name: "l1_loss"
-  signature: "Tensor(Tensor input, Tensor target, String reduction) => L1Loss"
+  signature: "Tensor(Tensor input, Tensor target, String reduction=\"mean\") => L1Loss"
   bind_python: True
 
 - name: "mse_loss"
-  signature: "Tensor(Tensor input, Tensor target, String reduction) => MseLoss"
+  signature: "Tensor(Tensor input, Tensor target, String reduction=\"mean\") => MseLoss"
   bind_python: True
 
 - name: "kl_div_loss"
@@ -1290,7 +1290,7 @@
   bind_python: False
 
 - name: "layer_norm_param_grad"
-  signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int64 begin_params_axis, Double epsilon) => LayerNormParamGrad"
+  signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int64 begin_params_axis) => LayerNormParamGrad"
   bind_python: False
 
 - name: "avg_pool2d_nhwc"
