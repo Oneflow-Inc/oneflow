@@ -19,39 +19,31 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct IdentityCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
+struct GraphFeedAndFetchCaptureState : public AutoGradCaptureState {
+  bool requires_grad = false;
 };
 
-class Identity : public OpExprGradFunction<IdentityCaptureState> {
+class GraphFeedAndFetch : public OpExprGradFunction<GraphFeedAndFetchCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(IdentityCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(GraphFeedAndFetchCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);  // NOLINT(maybe-need-error-msg)
     ctx->requires_grad = inputs.at(0)->requires_grad();
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const IdentityCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const GraphFeedAndFetchCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     in_grads->resize(1);
-    if (ctx->requires_grad) {
-      if (LazyMode::is_enabled()) {
-        // requires an intermediate node to avoid redundant memory copy or commnet
-        // communication in lazy mode
-        in_grads->at(0) = JUST(functional::Identity(out_grads.at(0)));
-      } else {
-        in_grads->at(0) = out_grads.at(0);
-      }
-    }
+    if (ctx->requires_grad) { in_grads->at(0) = out_grads.at(0); }
     return Maybe<void>::Ok();
   }
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("identity", Identity);
+REGISTER_OP_EXPR_GRAD_FUNCTION("graph_feed_and_fetch", GraphFeedAndFetch);
 
 }  // namespace one
 }  // namespace oneflow
