@@ -18,6 +18,7 @@ import unittest
 import oneflow.unittest
 import oneflow as flow
 
+
 @flow.unittest.skip_unless_1n2d()
 class TestReshapeSbp(flow.unittest.TestCase):
     def test_reshape_sbp(test_case):
@@ -25,8 +26,8 @@ class TestReshapeSbp(flow.unittest.TestCase):
             9, 9, 8, placement=flow.placement("cuda", [0, 1]), sbp=flow.sbp.split(0)
         )
 
-        out = input.view(81, 8)
-        print(out.sbp)
+        output = input.view(81, 8)
+        test_case.assertTrue(output.sbp[0] != flow.sbp.split(0))
 
 
 if __name__ == "__main__":
