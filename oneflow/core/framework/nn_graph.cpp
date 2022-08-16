@@ -352,6 +352,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       tc->Count("Graph name: " + name_ + " LogPlan", 1);
     }
   }
+  tc->Count("Graph name: " + name_ + " ReleaseTaskGraph", 1);
   if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name = "plan:" + job_name();
     if (GlobalProcessCtx::IsThisProcessMaster()) {
