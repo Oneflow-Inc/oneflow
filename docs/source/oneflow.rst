@@ -340,7 +340,6 @@ Spectral Ops
     :toctree: generated
     :nosignatures:
 
-    
     hann_window
     
 Other Ops

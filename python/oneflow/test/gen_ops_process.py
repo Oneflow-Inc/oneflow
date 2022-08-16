@@ -28,6 +28,8 @@ def get_api(rst_dir):
     """
     op_files = glob.glob(rst_dir + "/*.rst")
     op_files.remove(rst_dir + "/graph.rst")
+    op_files.remove(rst_dir + "/index.rst")
+    #print("op_files:",op_files)
     api_list = []
     api_str = ""
     for op_file in op_files:
@@ -38,14 +40,28 @@ def get_api(rst_dir):
                 skip = False
                 if ".. currentmodule::" in line:
                     pre = line.strip().replace(".. currentmodule::", "") + "."
+
                 elif ".. autofunction::" in line:
                     if "oneflow" not in line:
                         api_str += pre
                     api_str += line.replace(".. autofunction::", "")
-                elif ".. automodule::" in line or ".. autoclass:: " in line:
-                    pre_a = line.replace(".. automodule:: ", "").replace(
-                        ".. autoclass:: ", ""
-                    )
+                
+                elif ".. autosummary::" in line or ".. autoclass::" in line or ":toctree:" in line or ":nosignatures:" in line or ":template:" in line:
+                    if ":nosignatures:" in line:
+                        line = f.readline()
+                        if ":template:" in line:
+                            line = f.readline()
+                        line = f.readline()
+                        while (
+                            line and len(line.replace(" ", "")) > 1
+                            ):
+                            if "oneflow" not in line:
+                                api_str += pre
+                            api_str += line
+                            line = f.readline()    
+
+                elif ".. automodule::" in line:
+                    pre_a = line.replace(".. automodule:: ", "")
                     line = f.readline()
                     skip = True
                     if ":members:" in line and len(line) > 14:
@@ -57,12 +73,14 @@ def get_api(rst_dir):
                         ):
                             api_str += pre_a + line
                             line = f.readline()
-                    else:
-                        api_str += pre_a
+                    #else:
+                        #api_str += pre_a
+
                 if not skip:
                     line = f.readline()
 
     api_list = api_str.strip().replace(" ", "").replace(",", "").split("\n")
+    #print("output:::",api_list)
     return api_list
 
 def get_profile_func(path):
@@ -99,7 +117,7 @@ def get_test_func(path):
     commit_str = commit_bytes.decode("utf-8").replace("\n", "")
     result_func_list = []
     for file in files:
-        if not os.path.isdir(file) and file.find("__pycache__") == -1:
+        if file!="log" and not os.path.isdir(file) and file.find("__pycache__") == -1:
             f = open(os.path.join(path,file))
             last_line = ""
             iter_f = iter(f)
