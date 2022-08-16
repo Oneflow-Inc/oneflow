@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
+#include <string>
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/time_util.h"
@@ -803,7 +804,6 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
     // Parallel run between chain
     for (int64_t mem_chain_id : mem_chains) {
       thread_pool.AddWork([&, mem_chain_id]() {
-        LOG(ERROR) << "+++++++ " << mem_chain_id;
         auto reused = mem_chain2mem_reused_regsts.at(mem_chain_id);
         GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
             mem_chain2sorted_tasks.at(mem_chain_id), reused, regst_desc_id2regst_desc,
@@ -832,11 +832,13 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
         thread_pool.AddWork([algo_id, mem_chain_id, &mem_chain2task2alloc_regsts,
                              &mem_chain2task2free_regsts, &mem_chain2regst2mutual_exclusion_regsts,
                              result, &counter]() {
+          auto tc_alg = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
           SelectAlgorithmGenMemBlockOffset4Regsts(
               algo_id, mem_chain2task2alloc_regsts.at(mem_chain_id),
               mem_chain2task2free_regsts.at(mem_chain_id),
               mem_chain2regst2mutual_exclusion_regsts.at(mem_chain_id), result);
           counter.Decrease();
+          tc_alg->Count("OneAlg " + std::to_string(mem_chain_id) + "_" + std::to_string(algo_id), 1);
         });
       }
     }
