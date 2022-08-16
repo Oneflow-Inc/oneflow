@@ -428,14 +428,6 @@ struct BinaryFunctor<device, BinaryOp::kAtanhBackwardWithDyX, Src, Dst> {
   }
 };
 
-// template<DeviceType device, typename Src, typename Dst>
-// struct BinaryFunctor<device, BinaryOp::kCeilBackward, Src, Dst> {
-//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-//     return static_cast<Dst>(0.0);
-//   }
-// };
-
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kCosBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
@@ -484,14 +476,6 @@ struct BinaryFunctor<device, BinaryOp::kExpm1BackwardWithDyX, Src, Dst> {
   }
 };
 
-// template<DeviceType device, typename Src, typename Dst>
-// struct BinaryFunctor<device, BinaryOp::kFloor, Src, Dst> {
-//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-//     return 0.0
-//   }
-// };
-
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kLgammaBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
@@ -530,18 +514,9 @@ template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kLogSigmoidBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    // return dy * (static_cast<Src>(1.0) / exp(x) + static_cast<Src>(1.0)));
     return dy * (static_cast<Src>(1.0) / (exp(x) + static_cast<Src>(1.0)));
   }
 };
-
-// template<DeviceType device, typename Src, typename Dst>
-// struct BinaryFunctor<device, BinaryOp::kNegativeBackwardWithDy, Src, Dst> {
-//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-//     return -dy;
-//   }
-// };
 
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kReciprocalBackwardWithDyX, Src, Dst> {
@@ -560,22 +535,6 @@ struct BinaryFunctor<device, BinaryOp::kReciprocalNoNanBackwardWithDyX, Src, Dst
   }
 };
 
-// template<DeviceType device, typename Src, typename Dst>
-// struct BinaryFunctor<device, BinaryOp::kRintBackward, Src, Dst> {
-//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-//     return 0.0f;
-//   }
-// };
-
-// template<DeviceType device, typename Src, typename Dst>
-// struct BinaryFunctor<device, BinaryOp::kRoundBackward, Src, Dst> {
-//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-//     return 0.0f;
-//   }
-// };
-
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kRsqrtBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
@@ -591,16 +550,6 @@ struct BinaryFunctor<device, BinaryOp::kSigmoidBackwardWithDyY, Src, Dst> {
     return dy * (y * (1.0 - y));
   }
 };
-
-// Maybe use a different kernel impl to save memory. (zzk)
-// template<DeviceType device, typename Src, typename Dst>
-// struct BinaryFunctor<device, BinaryOp::kSignBackward, Src, Dst> {
-//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-//     const Src zero = static_cast<Src>(0.0);
-//     return zero;
-//   }
-// };
 
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kSinBackwardWithDyX, Src, Dst> {
@@ -651,6 +600,55 @@ struct BinaryFunctor<device, BinaryOp::kTanBackwardWithDyX, Src, Dst> {
 //   }
 // };
 
+// Maybe use a different kernel impl to save memory. (zzk)
+// template<DeviceType device, typename Src, typename Dst>
+// struct BinaryFunctor<device, BinaryOp::kSignBackward, Src, Dst> {
+//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+//     const Src zero = static_cast<Src>(0.0);
+//     return zero;
+//   }
+// };
+
+// template<DeviceType device, typename Src, typename Dst>
+// struct BinaryFunctor<device, BinaryOp::kRintBackward, Src, Dst> {
+//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+//     return 0.0f;
+//   }
+// };
+
+// template<DeviceType device, typename Src, typename Dst>
+// struct BinaryFunctor<device, BinaryOp::kRoundBackward, Src, Dst> {
+//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+//     return 0.0f;
+//   }
+// };
+
+// template<DeviceType device, typename Src, typename Dst>
+// struct BinaryFunctor<device, BinaryOp::kNegativeBackwardWithDy, Src, Dst> {
+//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+//     return -dy;
+//   }
+// };
+
+// template<DeviceType device, typename Src, typename Dst>
+// struct BinaryFunctor<device, BinaryOp::kFloor, Src, Dst> {
+//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+//     return 0.0
+//   }
+// };
+
+// template<DeviceType device, typename Src, typename Dst>
+// struct BinaryFunctor<device, BinaryOp::kCeilBackward, Src, Dst> {
+//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+//     return static_cast<Dst>(0.0);
+//   }
+// };
 
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive
