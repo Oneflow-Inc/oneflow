@@ -784,26 +784,47 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
       mem_chain2regst2mutual_exclusion_regsts;
   // info for inplace
   HashMap<int64_t, HashMap<RegstDescProto*, RegstDescProto*>> mem_chain2consumer2inplaced_regst;
+  HashMap<int64_t, HashMap<MemAllocAlgoType, MemBlockResultInfo>> mem_chain2algo2result;
 
+  for (int64_t mem_chain_id : mem_chains) {
+    mem_chain2task2alloc_regsts.emplace(mem_chain_id, std::vector<HashSet<RegstDescProto*>>());
+    mem_chain2task2free_regsts.emplace(mem_chain_id, std::vector<HashSet<RegstDescProto*>>());
+    mem_chain2regst2mutual_exclusion_regsts.emplace(mem_chain_id, HashMap<RegstDescProto*, std::vector<RegstDescProto*>>());
+    mem_chain2consumer2inplaced_regst.emplace(mem_chain_id, HashMap<RegstDescProto*, RegstDescProto*>());
+    mem_chain2algo2result.emplace(mem_chain_id, HashMap<MemAllocAlgoType, MemBlockResultInfo>());
+  }
+  tc->Count("InitForEachMemChain", 1);
   // step 1: generate regst alloc/free queue AND regst mutual exclusions
-  for (const auto& pair : mem_chain2mem_reused_regsts) {
-    GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
-        mem_chain2sorted_tasks.at(pair.first), pair.second, regst_desc_id2regst_desc,
-        &mem_chain2task2alloc_regsts[pair.first], &mem_chain2task2free_regsts[pair.first],
-        &mem_chain2regst2mutual_exclusion_regsts[pair.first],
-        &mem_chain2consumer2inplaced_regst[pair.first]);
+  {
+    int64_t work_size = mem_chain2mem_reused_regsts.size();
+    int64_t thread_pool_size = std::min<int64_t>(work_size, std::thread::hardware_concurrency());
+    BlockingCounter counter(work_size);
+    ThreadPool thread_pool(thread_pool_size);
+    // Parallel run between chain
+    for (int64_t mem_chain_id : mem_chains) {
+      thread_pool.AddWork([&]() {
+        auto reused = mem_chain2mem_reused_regsts.at(mem_chain_id);
+        GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
+            mem_chain2sorted_tasks.at(mem_chain_id), reused, regst_desc_id2regst_desc,
+            &mem_chain2task2alloc_regsts[mem_chain_id], &mem_chain2task2free_regsts[mem_chain_id],
+            &mem_chain2regst2mutual_exclusion_regsts[mem_chain_id],
+            &mem_chain2consumer2inplaced_regst[mem_chain_id]);
+        InitAlgo2Result(&mem_chain2algo2result[mem_chain_id]);
+        counter.Decrease();
+      });
+    }
+    counter.WaitForeverUntilCntEqualZero();
   }
   tc->Count("GenRegstAllocFreeTimeLineAndRegstMutualExclusions", 1);
-
   // step 2: multi-thread run several algorithm for each mem chain
-  HashMap<int64_t, HashMap<MemAllocAlgoType, MemBlockResultInfo>> mem_chain2algo2result;
   {
     int64_t work_size = mem_chain2mem_reused_regsts.size() * CountMemAllocAlgoNum();
     int64_t thread_pool_size = std::min<int64_t>(work_size, std::thread::hardware_concurrency());
     BlockingCounter counter(work_size);
     ThreadPool thread_pool(thread_pool_size);
+    // Parallel run between chain
     for (int64_t mem_chain_id : mem_chains) {
-      InitAlgo2Result(&mem_chain2algo2result[mem_chain_id]);
+      // Paralle run between alg
       for (auto& pair : mem_chain2algo2result.at(mem_chain_id)) {
         MemAllocAlgoType algo_id = pair.first;
         MemBlockResultInfo* result = &pair.second;
