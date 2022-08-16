@@ -182,7 +182,7 @@ class OpExprGradClosure {
  public:
   // Use `shared_ptr` in order to keep `impl` alive even if the forward op has been released.
   explicit OpExprGradClosure(const std::shared_ptr<OpExprGradFunctionIf>& impl)
-      : impl_(impl), state_(impl->MakeCustomState()) {}
+      : OpExprGradClosure(impl, impl->MakeCustomState()) {}
   explicit OpExprGradClosure(const std::shared_ptr<OpExprGradFunctionIf>& impl,
                              const std::shared_ptr<AutoGradCaptureState>& state)
       : impl_(impl), state_(state) {}
