@@ -911,7 +911,6 @@ def _test_ellipsis_tensor(test_case, device):
     y = x_scalar[...]
     test_case.assertEqual(y, 9.9)
 
-
 @flow.unittest.skip_unless_1n1d()
 class TestIndexing(flow.unittest.TestCase):
     def test_slice(test_case):
