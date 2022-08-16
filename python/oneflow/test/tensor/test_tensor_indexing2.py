@@ -857,6 +857,12 @@ def _test_setitem_scalars(test_case, device):
     value = a[1, 0].numpy()
     test_case.assertEqual(np.array(7.7, dtype=value.dtype), value)
 
+    np_x = np.random.rand(2, 3)
+    np_x[0, 0] = 1.0
+    x = flow.tensor(np_x)
+    x[0, 0] = 1.0
+    test_case.assertEqual(x.numpy().all(), np_x.all())
+
     # scalar indexed with scalars
     r = flow.randn((), device=device)
     with test_case.assertRaises(IndexError):
@@ -866,6 +872,13 @@ def _test_setitem_scalars(test_case, device):
     # TODO: support scalar tensor setitem
     # r[...] = 9.9
     # test_case.assertEqual(9.9, r)
+
+    # scalar indexed with oneflow.Size([1])
+    np_x = np.random.rand(2, 3)
+    np_x[0, 0] = np.ones(1)
+    x = flow.tensor(np_x)
+    x[0, 0] = flow.ones(1).to(flow.float64)
+    test_case.assertEqual(x.numpy().all(), np_x.all())
 
 
 def _test_basic_advanced_combined(test_case, device):

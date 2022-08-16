@@ -2618,8 +2618,8 @@ def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", [NoSideEffect, DeclareOpIn
 #endif // GET_ONEFLOW_IDEMPOTENT_OP_DEFINITIONS
 
 // Group: IDENTITY
-// amp_white_identity, identity, identity_buffer, tuple_identity
-// Total: 4
+// amp_white_identity, identity, identity_buffer, tuple_identity, pinned_identity
+// Total: 5
 
 #ifdef GET_ONEFLOW_IDENTITY_OP_DEFINITIONS
 
@@ -2678,6 +2678,20 @@ def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", [NoSideEffect, De
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
   let has_sbp_signature_infer_fn = 1;
+}
+
+def OneFlow_PinnedIdentityOp : OneFlow_BaseOp<"pinned_identity", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let summary = "mark defining op of operand can't be erased";
+  let input = (ins
+    OneFlow_Tensor:$in
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
 }
 
 #endif // GET_ONEFLOW_IDENTITY_OP_DEFINITIONS
@@ -7004,7 +7018,7 @@ def OneFlow_ReduceSumOp : OneFlow_BaseOp<"reduce_sum", [NoSideEffect, DeclareOpI
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ReduceSumLikeOp : OneFlow_BaseOp<"reduce_sum_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
     OneFlow_Tensor:$like
@@ -10101,6 +10115,27 @@ def OneFlow_FusedGruCellGradOp : OneFlow_BaseOp<"fused_gru_cell_grad", [NoSideEf
 
 #endif // GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS
 
+// Group: linear algebra.
+// inv
+// Total: 1
+
+#ifdef GET_ONEFLOW_LINEAR_ALGEBRA_OP_DEFINITIONS
+
+def OneFlow_InvOp : OneFlow_BaseOp<"inv", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+#endif // GET_ONEFLOW_LINEAR_ALGEBRA_OP_DEFINITIONS
+
 // Group: System
 // copy_h2d, copy_d2h
 // Total: 2
@@ -10136,3 +10171,50 @@ def OneFlow_CopyD2HOp : OneFlow_BaseOp<"copy_d2h", [NoSideEffect, NoGrad, Declar
 }
 
 #endif // GET_ONEFLOW_SYSTEM_OP_DEFINITIONS
+
+// Group: MLIR_JIT
+// mlir_jit
+// Total: 1
+
+#ifdef GET_ONEFLOW_MLIR_JIT_OP_DEFINITIONS
+
+include "mlir/Interfaces/CallInterfaces.td"
+
+def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpInterfaceMethods<UserOpCompatibleInterface> ] > {
+  let input = (ins Variadic<AnyType>:$in);
+  let output = (outs Variadic<AnyType>:$out);
+  let attrs = (ins
+    FlatSymbolRefAttr:$callee,
+    StrAttr:$mlir_assembly
+  );
+  let builders = [
+    OpBuilder<(ins "func::FuncOp":$callee,
+      "NamedAttrList":$attributes,
+      CArg<"ValueRange", "{}">:$in), [{
+      $_state.addOperands(in);
+      $_state.addAttributes(attributes);
+      $_state.addAttribute("callee", SymbolRefAttr::get(callee));
+      $_state.addTypes(callee.getFunctionType().getResults());
+    }]>
+  ];
+  let extraClassDeclaration = [{
+    operand_range getArgOperands() {
+      return {arg_operand_begin(), arg_operand_end()};
+    }
+
+    operand_iterator arg_operand_begin() { return operand_begin(); }
+    operand_iterator arg_operand_end() { return operand_end(); }
+    CallInterfaceCallable getCallableForCallee() {
+      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+    }
+  }];
+  let assemblyFormat = [{
+    $callee `(` $in `)` attr-dict `:` functional-type($in, results)
+  }];
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+#endif // GET_ONEFLOW_MLIR_JIT_OP_DEFINITIONS

@@ -127,7 +127,7 @@ from oneflow._C import atan
 from oneflow._C import atan as arctan
 from oneflow._C import atan2
 from oneflow._C import ceil
-from oneflow._C import clamp, clamp_
+from oneflow._C import clamp, clamp_, clamp_min, clamp_min_, clamp_max, clamp_max_
 from oneflow._C import clip, clip_
 from oneflow._C import cos
 from oneflow._C import cosh
@@ -212,6 +212,7 @@ from oneflow._C import index_select
 from oneflow._C import isnan
 from oneflow._C import isinf
 from oneflow._C import isfinite
+from oneflow._C import inv as inverse
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
