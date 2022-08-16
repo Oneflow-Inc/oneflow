@@ -906,7 +906,7 @@ def _test_ellipsis_tensor(test_case, device):
     test_case.assertEqual(x[idx, ...].tolist(), [[0, 1, 2], [6, 7, 8]])
 
     # test getitem:scalar indexed with scalar
-    y = flow.randn((), device=device)
+    y = flow.tensor(1.0).to(device)
     x_scalar = flow.tensor(9.9)
     y = x_scalar[...]
     test_case.assertEqual(y, 9.9)
