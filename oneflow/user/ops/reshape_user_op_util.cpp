@@ -127,8 +127,9 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
   while (curr_in_axis <= in_shape.NumAxes() || curr_out_axis <= out_shape.NumAxes()) {
     if (in_shape_count == out_shape_count) {
       // Record split axises
-      if (in_shape.At(start_in_axis) % parallel_num == 0
-          && out_shape.At(start_out_axis) % parallel_num == 0) {
+      if (in_shape.At(start_in_axis) == out_shape.At(start_out_axis)
+          || (in_shape.At(start_in_axis) % parallel_num == 0
+              && out_shape.At(start_out_axis) % parallel_num == 0)) {
         (*group_start_in_axis2out_axis)[start_in_axis] = start_out_axis;
       }
       // Reset grouped axises
