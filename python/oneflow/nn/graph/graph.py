@@ -713,6 +713,19 @@ class Graph(object):
                 )
                 state2lazy_builder[state_tensor] = state_block.lazy_origin_builder()
 
+    def _mark_variable_gradients(self):
+        variable = []
+        gradients = []
+        for state_block in self._state():
+            if (
+                state_block.type == BlockType.PARAMETER
+                and state_block.origin.grad is not None
+                and state_block.origin.grad.is_lazy
+            ):
+                variable.append(state_block.origin)
+                gradients.append(state_block.origin.grad)
+        oneflow._oneflow_internal.nn.graph.MarkVariableGradients(variable, gradients)
+
     @staticmethod
     def to_graph(func):
         """Make a function to do static graph run with nn.Graph.
@@ -906,6 +919,9 @@ class Graph(object):
 
             # Save forward graph job proto
             self._forward_job_proto = c_api_util.GetCurrentJob()
+
+            if self.training:
+                self._mark_variable_gradients()
 
             self.__print(
                 0,

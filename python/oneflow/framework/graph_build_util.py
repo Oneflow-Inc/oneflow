@@ -264,5 +264,4 @@ def build_graph_output(op_name, out):
         op_name, output_conf_str, ["in_0"], ["out_0"]
     )
     fake_eager_out = _C.dispatch_fetch_output(output_op, out)
-
     return fake_eager_out
