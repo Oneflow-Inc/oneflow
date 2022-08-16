@@ -82,6 +82,13 @@ class TestAsStrided(flow.unittest.TestCase):
         z = torch.as_strided(x, (2, 2, 3), (1, 1, 2), storage_offset)
         return z
 
+    @profile(torch.as_strided) 
+    def profile_as_strided(test_case):
+        input = torch.ones(2,3,5)
+        torch.as_strided(input, (2,3,3), (1,2,3))
+        torch.as_strided(input, (2,3,3), (1,2,3), 1)
+
+
 
 if __name__ == "__main__":
     unittest.main()
