@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/tensor_processor.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -51,7 +52,17 @@ class BinaryFloatFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.AddInputs({x, y}, DType::Float()).Apply());
+    // NOTE:If tensor x is scalar tensor and it's divice not equal to tensor y,
+    // than need move it to the target device first.This behavior aligns to torch.
+    std::shared_ptr<one::Tensor> tensor_x = x;
+    if (x->shape()->NumAxes() == 0 && x->shape()->elem_cnt() == 1) {
+      const auto& target_device = JUST(y->device());
+      if (JUST(x->device())->type() != target_device->type()) {
+        tensor_x = JUST(functional::Copy(x, target_device->type(), target_device->device_id(),
+                                         /*pin_memory=*/false));
+      }
+    }
+    JUST(tensor_processor.AddInputs({tensor_x, y}, DType::Float()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple);
   }
@@ -86,7 +97,18 @@ class InplaceableBinaryFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y, bool inplace) const {
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    // NOTE:If tensor x is scalar tensor and it's divice not equal to tensor y,
+    // than need move it to the target device first.This behavior aligns to torch.
+    if (x->shape()->NumAxes() == 0 && x->shape()->elem_cnt() == 1) {
+      const auto& target_device = JUST(y->device());
+      if (JUST(x->device())->type() != target_device->type()) {
+        const auto& tensor = JUST(functional::Copy(
+            x, target_device->type(), target_device->device_id(), /*pin_memory=*/false));
+        JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({tensor, y}).Apply());
+      }
+    } else {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    }
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (inplace) {
       std::shared_ptr<one::Tensor>& x_cast = input_tuple.at(0);
