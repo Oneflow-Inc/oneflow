@@ -615,6 +615,7 @@ class StackFunctor {
       TensorTuple partial_inputs(size);
       for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
       if (partial_inputs.size() == 1) {
+        // Use ExpandDims functor for only one input
         outputs.emplace_back(JUST(functional::ExpandDims(partial_inputs[0], dim)));
       } else {
         outputs.emplace_back(
