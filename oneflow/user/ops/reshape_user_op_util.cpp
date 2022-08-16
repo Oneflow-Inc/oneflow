@@ -122,7 +122,9 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
   // Move the first step
   MoveInAxis();
   MoveOutAxis();
-  while (in_axis >= 0 || out_axis >= 0) {
+  // At the last step, both in_axis == out_axis == 0
+  // Then they would move to -1 simultaneously.
+  while (in_axis >= 0) {
     if (in_shape_count == out_shape_count) {
       // Record split axises
       if (in_shape.At(in_axis) == out_shape.At(out_axis)
