@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/time_util.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/register/runtime_register_desc.h"
@@ -763,16 +764,19 @@ void InitAlgo2Result(HashMap<MemAllocAlgoType, MemBlockResultInfo>* algo2result)
 void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
     Plan* plan, const std::function<bool(const std::string&, const std::string&)>&
                     IsOpNameDataOrCtrlReachable) {
+  auto tc = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
   // 1 device 1 mem chain
   HashMap<int64_t, std::vector<TaskProto*>> mem_chain2sorted_tasks;
   HashMap<int64_t, HashSet<RegstDescProto*>> mem_chain2mem_reused_regsts;
   GenMemChainTasksAndRegsts(plan, IsOpNameDataOrCtrlReachable, &mem_chain2sorted_tasks,
                             &mem_chain2mem_reused_regsts);
+  tc->Count("GenMemChainTasksAndRegsts", 1);
   if (mem_chain2mem_reused_regsts.empty()) { return; }
   HashSet<int64_t> mem_chains;
   for (const auto& pair : mem_chain2mem_reused_regsts) { mem_chains.insert(pair.first); }
   HashMap<int64_t, RegstDescProto*> regst_desc_id2regst_desc;
   GenRegstDescId2RegstDesc(plan, &regst_desc_id2regst_desc);
+  tc->Count("GenRegstDescId2RegstDesc", 1);
   // info for algorithm
   HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2alloc_regsts;
   HashMap<int64_t, std::vector<HashSet<RegstDescProto*>>> mem_chain2task2free_regsts;
@@ -789,6 +793,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
         &mem_chain2regst2mutual_exclusion_regsts[pair.first],
         &mem_chain2consumer2inplaced_regst[pair.first]);
   }
+  tc->Count("GenRegstAllocFreeTimeLineAndRegstMutualExclusions", 1);
 
   // step 2: multi-thread run several algorithm for each mem chain
   HashMap<int64_t, HashMap<MemAllocAlgoType, MemBlockResultInfo>> mem_chain2algo2result;
@@ -815,6 +820,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
     }
     counter.WaitForeverUntilCntEqualZero();
   }
+  tc->Count("SelectAlgorithmGenMemBlockOffset4Regsts", 1);
 
   // step 3: choose best one for each mem chain and set offset for inplace consumer regst
   for (const auto& pair : mem_chain2algo2result) {
@@ -865,6 +871,7 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
       consumer_regst_desc->set_inplace_consumed_regst_desc_id(hint);
     }
   }
+  tc->Count("ChooseBestOneForEachMemChain", 1);
 }
 
 }  // namespace oneflow
