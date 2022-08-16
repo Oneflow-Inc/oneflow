@@ -107,36 +107,29 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
       << "The element number of input tensor must be equal to output tensor, "
       << "but got " << in_shape.elem_cnt() << " and " << out_shape.elem_cnt();
   // Initialization
-  int64_t curr_in_axis = 0;
-  int64_t curr_out_axis = 0;
-  // shape_count is the product of the axis length in [start_axis, curr_axis - 1]
+  // shape_count is the product of the axis length in [start_axis, end)
   int64_t in_shape_count = 1;
   int64_t out_shape_count = 1;
-  int64_t start_in_axis = 0;
-  int64_t start_out_axis = 0;
+  int64_t in_axis = in_shape.NumAxes();
+  int64_t out_axis = out_shape.NumAxes();
   // Move forward functions
   auto Move2NextAxis = [](const Shape& shape, int64_t& axis, int64_t& shape_count) {
-    if (axis < shape.NumAxes()) { shape_count *= shape.At(axis); }
-    axis++;
+    axis--;
+    if (axis >= 0) { shape_count *= shape.At(axis); }
   };
-  auto MoveInAxis = [&] { Move2NextAxis(in_shape, curr_in_axis, in_shape_count); };
-  auto MoveOutAxis = [&] { Move2NextAxis(out_shape, curr_out_axis, out_shape_count); };
+  auto MoveInAxis = [&] { Move2NextAxis(in_shape, in_axis, in_shape_count); };
+  auto MoveOutAxis = [&] { Move2NextAxis(out_shape, out_axis, out_shape_count); };
   // Move the first step
   MoveInAxis();
   MoveOutAxis();
-  while (curr_in_axis <= in_shape.NumAxes() || curr_out_axis <= out_shape.NumAxes()) {
+  while (in_axis >= 0 || out_axis >= 0) {
     if (in_shape_count == out_shape_count) {
       // Record split axises
-      if (in_shape.At(start_in_axis) == out_shape.At(start_out_axis)
-          || (in_shape.At(start_in_axis) % parallel_num == 0
-              && out_shape.At(start_out_axis) % parallel_num == 0)) {
-        (*group_start_in_axis2out_axis)[start_in_axis] = start_out_axis;
+      if (in_shape.At(in_axis) == out_shape.At(out_axis)
+          || (in_shape.At(in_axis) % parallel_num == 0
+              && out_shape.At(out_axis) % parallel_num == 0)) {
+        (*group_start_in_axis2out_axis)[in_axis] = out_axis;
       }
-      // Reset grouped axises
-      start_in_axis = curr_in_axis;
-      start_out_axis = curr_out_axis;
-      in_shape_count = 1;
-      out_shape_count = 1;
       // Move forward
       MoveInAxis();
       MoveOutAxis();
