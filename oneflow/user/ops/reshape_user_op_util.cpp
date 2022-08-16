@@ -106,8 +106,6 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
       << Error::RuntimeError()
       << "The element number of input tensor must be equal to output tensor, "
       << "but got " << in_shape.elem_cnt() << " and " << out_shape.elem_cnt();
-  // No split for 0D tensor
-  if (in_shape.NumAxes() == 0 || out_shape.NumAxes() == 0) { return Maybe<void>::Ok(); }
   // Initialization
   int64_t curr_in_axis = 0;
   int64_t curr_out_axis = 0;
