@@ -348,7 +348,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     }
     if (Singleton<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
-      PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
+      PlanUtil::ToDotFile(plan_, task_graph, "job_" + name_ + "_plan.dot");
       tc->Count("Graph name: " + name_ + " LogPlan", 1);
     }
   }
