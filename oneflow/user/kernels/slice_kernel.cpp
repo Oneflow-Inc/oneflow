@@ -259,6 +259,7 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
                             small->shape_view(), &small_slice_param);
   CHECK_EQ(large_slice_param.elem_cnt(), small_slice_param.elem_cnt());
   if (large_slice_param.ndim == 0 && small_slice_param.ndim == 0) {
+    // Copy data directly for scalar tensor
     AutoMemcpy(ctx->stream(), dst->mut_dptr<T>(), src->dptr<T>(), sizeof(T), src->mem_case(),
                dst->mem_case());
     return;
