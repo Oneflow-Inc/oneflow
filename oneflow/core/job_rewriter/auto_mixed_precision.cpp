@@ -352,6 +352,8 @@ REGISTER_NO_CAST_REGISTRY("normalization_add_relu_grad", "reserve_space", 0)
 
 REGISTER_NO_CAST_REGISTRY("layer_norm_grad", "mean", 0)
 REGISTER_NO_CAST_REGISTRY("layer_norm_grad", "inv_variance", 0)
+REGISTER_NO_CAST_REGISTRY("layer_norm_param_grad", "mean", 0)
+REGISTER_NO_CAST_REGISTRY("layer_norm_param_grad", "inv_variance", 0)
 
 }  // namespace
 
