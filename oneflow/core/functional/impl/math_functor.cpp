@@ -33,6 +33,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/tensor_processor.h"
 
+#include <cstdio>
 #include <sstream>
 #include <bitset>
 
@@ -1883,7 +1884,7 @@ class ScalarLogicalBaseFunctor {
       } else {
         lowest_dtype = x->dtype();
       }
-    } else if (scalar.IsIntegral()) {
+    } else if (scalar.IsIntegral() || scalar.IsBool()) {
       JUST(attrs.SetAttr<int64_t>("int_operand", scalar.As<int64_t>()));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
