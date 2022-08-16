@@ -22,6 +22,40 @@ namespace py = pybind11;
 
 namespace oneflow {
 
+Maybe<void> MarkVariableGradients(const one::TensorTuple& variables,
+                                  const one::TensorTuple& gradients) {
+  CHECK_OR_RETURN(LazyMode::is_enabled());                 // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(variables.size(), gradients.size());  // NOLINT(maybe-need-error-msg)
+  HashMap<std::string, std::string> variable_grad_lbns;
+  for (int i = 0; i < variables.size(); ++i) {
+    const std::string& variable_lbn = one::TensorNameScope::Global()->Lookup(variables[i]);
+    CHECK_OR_RETURN(!variable_lbn.empty())
+        << "variable which index is " << i << " expected to have a tensor name";
+    const std::string& gradient_lbn = one::TensorNameScope::Global()->Lookup(gradients[i]);
+    CHECK_OR_RETURN(!gradient_lbn.empty())
+        << "gradient which index is " << i << " expected to have a tensor name";
+    variable_grad_lbns.emplace(variable_lbn, gradient_lbn);
+  }
+  return JUST(GetCurInferCtx())->MarkVariableGradientBlobNames(variable_grad_lbns);
+}
+
+Maybe<void> MarkOutputGradients(const one::TensorTuple& outputs,
+                                const one::TensorTuple& gradients) {
+  CHECK_OR_RETURN(LazyMode::is_enabled());               // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(outputs.size(), gradients.size());  // NOLINT(maybe-need-error-msg)
+  HashMap<std::string, std::string> output_gradient_lbns;
+  for (int i = 0; i < outputs.size(); ++i) {
+    const std::string& output_lbn = one::TensorNameScope::Global()->Lookup(outputs[i]);
+    CHECK_OR_RETURN(!output_lbn.empty())
+        << "output which index is " << i << " expected to have a tensor name";
+    const std::string& gradient_lbn = one::TensorNameScope::Global()->Lookup(gradients[i]);
+    CHECK_OR_RETURN(!gradient_lbn.empty())
+        << "gradient which index is " << i << " expected to have a tensor name";
+    output_gradient_lbns.emplace(output_lbn, gradient_lbn);
+  }
+  return JUST(GetCurInferCtx())->MarkOutputGradientBlobNames(output_gradient_lbns);
+}
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("JobBuildAndInferCtx_Open", &JobBuildAndInferCtx_Open);
   m.def("JobBuildAndInferCtx_GetCurrentJobName", &JobBuildAndInferCtx_GetCurrentJobName);
