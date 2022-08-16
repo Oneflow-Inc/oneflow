@@ -315,91 +315,110 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   _gu[_offsetBC] += gu;
 }
 
-// #if CUDA_VERSION >= 11000
-// template<>
-// __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t C,
-//                                 const nv_bfloat16* __restrict__ const _w,
-//                                 const nv_bfloat16* __restrict__ const _u,
-//                                 const nv_bfloat16* __restrict__ const _k,
-//                                 const nv_bfloat16* __restrict__ const _v,
-//                                 const nv_bfloat16* __restrict__ const _gy, nv_bfloat16* __restrict__ const _gw,
-//                                 nv_bfloat16* __restrict__ const _gu, nv_bfloat16* __restrict__ const _gk,
-//                                 nv_bfloat16* __restrict__ const _gv) {
-//   const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-//   const int _b = idx / C;
-//   const int _c = idx % C;
-//   const int _offset = _b * T * C + _c;
+#if CUDA_VERSION >= 11000
+template<>
+__global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t C,
+                                const nv_bfloat16* __restrict__ const _w,
+                                const nv_bfloat16* __restrict__ const _u,
+                                const nv_bfloat16* __restrict__ const _k,
+                                const nv_bfloat16* __restrict__ const _v,
+                                const nv_bfloat16* __restrict__ const _gy, nv_bfloat16* __restrict__ const _gw,
+                                nv_bfloat16* __restrict__ const _gu, nv_bfloat16* __restrict__ const _gk,
+                                nv_bfloat16* __restrict__ const _gv) {
+  const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const int _b = idx / C;
+  const int _c = idx % C;
+  const int _offset = _b * T * C + _c;
 
-//   nv_bfloat16 u = _u[_c];
-//   const nv_bfloat16 w = static_cast<nv_bfloat16>(-1.0) * static_cast<nv_bfloat16>(exp(static_cast<float>(_w[_c])));
-//   const nv_bfloat16* __restrict__ const k = _k + _offset;
-//   const nv_bfloat16* __restrict__ const v = _v + _offset;
-//   const nv_bfloat16* __restrict__ const gy = _gy + _offset;
+  nv_bfloat16 u = _u[_c];
+  const nv_bfloat16 w = static_cast<nv_bfloat16>(-1.0) * static_cast<nv_bfloat16>(exp(static_cast<float>(_w[_c])));
+  const nv_bfloat16* __restrict__ const k = _k + _offset;
+  const nv_bfloat16* __restrict__ const v = _v + _offset;
+  const nv_bfloat16* __restrict__ const gy = _gy + _offset;
 
-//   nv_bfloat16* __restrict__ const gk = _gk + _offset;
-//   nv_bfloat16* __restrict__ const gv = _gv + _offset;
+  nv_bfloat16* __restrict__ const gk = _gk + _offset;
+  nv_bfloat16* __restrict__ const gv = _gv + _offset;
 
-//   nv_bfloat16 y[1024], z[1024], zexp[1024];
+  nv_bfloat16 y[1024], z[1024], zexp[1024];
 
-//   nv_bfloat16 gw = static_cast<nv_bfloat16>(0.0), gu = static_cast<nv_bfloat16>(0.0);
-//   nv_bfloat16 p = static_cast<nv_bfloat16>(0.0), q = static_cast<nv_bfloat16>(0.0);
-//   nv_bfloat16 dpdw = static_cast<nv_bfloat16>(0.0), dqdw = static_cast<nv_bfloat16>(0.0);
-//   nv_bfloat16 o = static_cast<nv_bfloat16>(MIN_VALUE);
-//   for (int i = 0; i < T; i++) {
-//     const int ii = i * C;
-//     // half no = max(o, k[ii] + u);
-//     nv_bfloat16 no = o > k[ii] + u ? o : k[ii] + u;
-//     nv_bfloat16 A = static_cast<nv_bfloat16>(exp(static_cast<float>(o - no)));
-//     nv_bfloat16 B = static_cast<nv_bfloat16>(exp(static_cast<float>(k[ii] + u - no)));
+  nv_bfloat16 gw = static_cast<nv_bfloat16>(0.0), gu = static_cast<nv_bfloat16>(0.0);
+  nv_bfloat16 p = static_cast<nv_bfloat16>(0.0), q = static_cast<nv_bfloat16>(0.0);
+  nv_bfloat16 dpdw = static_cast<nv_bfloat16>(0.0), dqdw = static_cast<nv_bfloat16>(0.0);
+  nv_bfloat16 o = static_cast<nv_bfloat16>(MIN_VALUE);
+  nv_bfloat16 no;
+  for (int i = 0; i < T; i++) {
+    const int ii = i * C;
+    // half no = max(o, k[ii] + u);
+    // nv_bfloat16 no = o > k[ii] + u ? o : k[ii] + u;
+    if (o > k[ii] + u) {
+      no = o;
+    }
+    else{
+      no = k[ii] + u;
+    }
+    nv_bfloat16 A = static_cast<nv_bfloat16>(exp(static_cast<float>(o - no)));
+    nv_bfloat16 B = static_cast<nv_bfloat16>(exp(static_cast<float>(k[ii] + u - no)));
 
-//     nv_bfloat16 num = A * p + B * v[ii];
-//     // half iden = 1 / (A * q + B);
-//     nv_bfloat16 iden = static_cast<nv_bfloat16>(1.0) / (A * q + B);
+    nv_bfloat16 num = A * p + B * v[ii];
+    // half iden = 1 / (A * q + B);
+    nv_bfloat16 iden = static_cast<nv_bfloat16>(1.0) / (A * q + B);
 
-//     y[i] = num * iden;
-//     z[i] = iden;
-//     zexp[i] = k[ii] + u - no;
+    y[i] = num * iden;
+    z[i] = iden;
+    zexp[i] = k[ii] + u - no;
 
-//     gw += gy[ii] * (dpdw - dqdw * y[i]) * iden * A;
-//     gu += gy[ii] * (v[ii] - y[i]) * B * iden;
+    gw = gw + gy[ii] * (dpdw - dqdw * y[i]) * iden * A;
+    gu = gu + gy[ii] * (v[ii] - y[i]) * B * iden;
 
-//     // no = max(w + o, k[ii]);
-//     no = w + o > k[ii] ? w + o : k[ii];
-//     A = static_cast<nv_bfloat16>(exp(static_cast<float>(w + o - no)));
-//     B = static_cast<nv_bfloat16>(exp(static_cast<float>(k[ii] - no)));
-//     dpdw = A * (p + dpdw);
-//     dqdw = A * (q + dqdw);
-//     p = A * p + B * v[ii];
-//     q = A * q + B;
-//     o = no;
-//   }
+    // no = max(w + o, k[ii]);
+    // no = w + o > k[ii] ? w + o : k[ii];
+    if (w + o > k[ii]) {
+      no = w + o;
+    }
+    else{
+      no = k[ii];
+    }
+    A = static_cast<nv_bfloat16>(exp(static_cast<float>(w + o - no)));
+    B = static_cast<nv_bfloat16>(exp(static_cast<float>(k[ii] - no)));
+    dpdw = A * (p + dpdw);
+    dqdw = A * (q + dqdw);
+    p = A * p + B * v[ii];
+    q = A * q + B;
+    o = no;
+  }
 
-//   nv_bfloat16 gp = static_cast<nv_bfloat16>(0.0), gq = static_cast<nv_bfloat16>(0.0);
-//   o = static_cast<nv_bfloat16>(MIN_VALUE);
-//   for (int i = T - 1; i >= 0; i--) {
-//     const int ii = i * C;
-//     nv_bfloat16 A = gy[ii] * z[i] * static_cast<nv_bfloat16>(exp(static_cast<float>(zexp[i])));
-//     nv_bfloat16 B = static_cast<nv_bfloat16>(exp(static_cast<float>(k[ii] + o)));
-//     gk[ii] = A * (v[ii] - y[i]) + B * (gp * v[ii] + gq);
-//     gv[ii] = A + B * gp;
+  nv_bfloat16 gp = static_cast<nv_bfloat16>(0.0), gq = static_cast<nv_bfloat16>(0.0);
+  o = static_cast<nv_bfloat16>(MIN_VALUE);
+  for (int i = T - 1; i >= 0; i--) {
+    const int ii = i * C;
+    nv_bfloat16 A = gy[ii] * z[i] * static_cast<nv_bfloat16>(exp(static_cast<float>(zexp[i])));
+    nv_bfloat16 B = static_cast<nv_bfloat16>(exp(static_cast<float>(k[ii] + o)));
+    gk[ii] = A * (v[ii] - y[i]) + B * (gp * v[ii] + gq);
+    gv[ii] = A + B * gp;
 
-//     // half no = max(w + o, zexp[i] - k[ii] - u);
-//     nv_bfloat16 no = w + o > zexp[i] - k[ii] - u ? w + o : zexp[i] - k[ii] - u;
-//     A = static_cast<nv_bfloat16>(exp(static_cast<float>(w + o - no)));
-//     // B = gy[ii] * z[i] * exp(zexp[i] - k[ii] - u - no);
-//     B = gy[ii] * z[i] * static_cast<nv_bfloat16>(exp(static_cast<float>(zexp[i] - k[ii] - u - no)));
-//     gp = A * gp + B;
-//     gq = A * gq - B * y[i];
-//     o = no;
-//   }
+    // half no = max(w + o, zexp[i] - k[ii] - u);
+    // nv_bfloat16 no = w + o > zexp[i] - k[ii] - u ? w + o : zexp[i] - k[ii] - u;
+    if (w + o > zexp[i] - k[ii] - u) {
+      no = w + o;
+    }
+    else{
+      no = zexp[i] - k[ii] - u;
+    }
+    A = static_cast<nv_bfloat16>(exp(static_cast<float>(w + o - no)));
+    // B = gy[ii] * z[i] * exp(zexp[i] - k[ii] - u - no);
+    B = gy[ii] * z[i] * static_cast<nv_bfloat16>(exp(static_cast<float>(zexp[i] - k[ii] - u - no)));
+    gp = A * gp + B;
+    gq = A * gq - B * y[i];
+    o = no;
+  }
 
-//   // Multiply by w because the w -> -exp(w) preprocessing is halfway in the backwards pass, even
-//   // though it's not in the forward pass
-//   const int _offsetBC = _b * C + _c;
-//   _gw[_offsetBC] += gw * w;
-//   _gu[_offsetBC] += gu;
-// }
-// #endif
+  // Multiply by w because the w -> -exp(w) preprocessing is halfway in the backwards pass, even
+  // though it's not in the forward pass
+  const int _offsetBC = _b * C + _c;
+  _gw[_offsetBC] = _gw[_offsetBC] + gw * w;
+  _gu[_offsetBC] = _gu[_offsetBC] + gu;
+}
+#endif
 
 template<typename Context>
 std::unique_ptr<ep::primitive::Fill> NewFillPrimitive(Context* ctx) {
@@ -501,6 +520,9 @@ class WkvGradGPUKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("w", 0) == GetDataType<dtype>::value) \
                        && FillPrimitiveExists());
 
+#if CUDA_VERSION >= 11000
+REGISTER_WKVGRAD_CUDA_KERNEL(nv_bfloat16)
+#endif  // CUDA_VERSION >= 11000
 REGISTER_WKVGRAD_CUDA_KERNEL(float)
 REGISTER_WKVGRAD_CUDA_KERNEL(double)
 REGISTER_WKVGRAD_CUDA_KERNEL(half)
