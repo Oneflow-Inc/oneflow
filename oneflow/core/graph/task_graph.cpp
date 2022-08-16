@@ -102,11 +102,6 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
       return true;
     }
   }
-  // NOTE(chengcheng): ONLY nccl_use_compute_stream = false will exclude optimizer pass ops
-  if (!Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
-      && IsOptimizerPassOp(op)) {
-    return true;
-  }
   return false;
 }
 
@@ -569,6 +564,25 @@ void TaskGraph::SetOrderInGraphForEachNode() {
 }
 
 void TaskGraph::MergeChain() {
+  const OpGraph& op_graph = *Singleton<OpGraph>::Get();
+  
+  std::vector<const OpNode*> ordered_op_nodes;
+  HashMap<const OpNode*, int64_t> op_node2global_order;
+  op_graph.TopoForEachNodeWithCtrlEdge([&](const OpNode* node) {
+    ordered_op_nodes.emplace_back(node);
+    op_node2global_order.emplace(node, ordered_op_nodes.size() - 1);
+  });
+
+  std::vector<HashSet<const OpNode*>> subgraph_list;
+  FindAllConnectedSubgraphForGpuExecOrder(&subgraph_list, op_graph, ordered_op_nodes);
+  if (subgraph_list.size() == 0) { return Maybe<void>::Ok(); }
+
+  auto CmpOpNodeOrder = [&](const OpNode* lhs, const OpNode* rhs) {
+    return op_node2global_order.at(lhs) < op_node2global_order.at(rhs);
+  };
+
+  auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
+
   int64_t chain_id = 0;
   for (auto* this_node : ordered_task_nodes_) {
     // skip if this node has been set in a chain.
