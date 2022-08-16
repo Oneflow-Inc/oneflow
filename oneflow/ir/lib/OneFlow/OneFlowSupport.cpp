@@ -13,8 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <iostream>
-#include <vector>
+#include "OneFlow/OneFlowTypes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -31,6 +30,8 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/memory/memory_case_util.h"
 
+#include <iostream>
+#include <vector>
 namespace mlir {
 
 namespace oneflow {
@@ -152,6 +153,29 @@ std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
   exit(EXIT_FAILURE);
 }
 
+::oneflow::DataType GetDataTypeFromMLIRType(Type dt) {
+  if (dt.dyn_cast<InvalidElementType>()) { return ::oneflow::DataType::kInvalidDataType; }
+  if (dt.dyn_cast<CharElementType>()) { return ::oneflow::DataType::kChar; }
+  if (dt.dyn_cast<OFRecordElementType>()) { return ::oneflow::DataType::kOFRecord; }
+  if (dt.dyn_cast<TensorBufferElementType>()) { return ::oneflow::DataType::kTensorBuffer; }
+  if (dt.isF16()) { return ::oneflow::DataType::kFloat16; }
+  if (dt.isF32()) { return ::oneflow::DataType::kFloat; }
+  if (dt.isF64()) { return ::oneflow::DataType::kDouble; }
+
+  if (dt.isSignlessInteger(8)) { return ::oneflow::DataType::kBool; }
+  if (dt.isSignlessInteger(16)) { return ::oneflow::DataType::kUInt16; }
+  if (dt.isSignlessInteger(32)) { return ::oneflow::DataType::kUInt32; }
+  if (dt.isSignlessInteger(64)) { return ::oneflow::DataType::kUInt64; }
+  if (dt.isSignlessInteger(128)) { return ::oneflow::DataType::kUInt128; }
+
+  if (dt.isSignedInteger(8)) { return ::oneflow::DataType::kInt8; }
+  if (dt.isSignedInteger(16)) { return ::oneflow::DataType::kInt16; }
+  if (dt.isSignedInteger(32)) { return ::oneflow::DataType::kInt32; }
+  if (dt.isSignedInteger(64)) { return ::oneflow::DataType::kInt64; }
+  if (dt.isSignedInteger(128)) { return ::oneflow::DataType::kInt128; }
+  llvm::errs() << "unsupported data type: " << dt << "\n";
+  exit(1);
+}
 }  // namespace support
 
 }  // namespace oneflow
