@@ -1,6 +1,6 @@
 // RUN: oneflow-opt -convert-to-signless-for-tosa   --mlir-print-ir-before-all --mlir-print-ir-after-all \
-// RUN: -tosa-make-broadcastable \
 // RUN: -lower-oneflow-to-tosa \
+// RUN: -tosa-make-broadcastable \
 // RUN: -reconcile-unrealized-casts --print-after-all %s
 
 module  {

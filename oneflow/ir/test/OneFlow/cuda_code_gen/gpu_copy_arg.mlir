@@ -1,4 +1,4 @@
-// RUN: oneflow-opt %s -tosa-make-broadcastable -lower-oneflow-to-tosa -pass-pipeline="func.func(tosa-to-linalg)" -cse --linalg-fuse-elementwise-ops -linalg-bufferize -convert-linalg-to-parallel-loops -gpu-map-parallel-loops \
+// RUN: oneflow-opt %s -lower-oneflow-to-tosa -tosa-make-broadcastable -pass-pipeline="func.func(tosa-to-linalg)" -cse --linalg-fuse-elementwise-ops -linalg-bufferize -convert-linalg-to-parallel-loops -gpu-map-parallel-loops \
 // RUN: -convert-parallel-loops-to-gpu -gpu-kernel-outlining -buffer-host-register -canonicalize \
 // RUN: -pass-pipeline='gpu.module(strip-debuginfo,lower-affine,convert-gpu-to-nvvm,out-of-tree-gpu-to-cubin)' \
 // RUN: --func-bufferize -buffer-results-to-out-params -gpu-copy-arg

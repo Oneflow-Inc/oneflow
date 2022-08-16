@@ -1,7 +1,7 @@
 // RUN: oneflow-opt %s \
 // RUN: -split-input-file \
-// RUN: -tosa-make-broadcastable \
 // RUN: -lower-oneflow-to-tosa \
+// RUN: -tosa-make-broadcastable \
 // RUN: -verify-diagnostics -o - \
 // RUN: | python3 -m iree.compiler.tools.scripts.ireec \
 // RUN: --iree-input-type=tosa \

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
 #include "oneflow/core/operator/variable_op.h"
@@ -822,6 +823,7 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addNestedPass<func::FuncOp>(LLVM::createRequestCWrappersPass());  // llvm-request-c-wrappers
   pm.addPass(createConvertToSignlessForTosaPass());            // convert-to-signless-for-tosa
   pm.addPass(createLowerOneFlowToTosaPass());                  // lower-oneflow-to-tosa
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());         // tosa-make-broadcastable
   pm.addPass(createCSEPass());                                 // cse
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
   pm.addNestedPass<func::FuncOp>(
