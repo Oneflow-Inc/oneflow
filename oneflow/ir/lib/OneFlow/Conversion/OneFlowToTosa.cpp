@@ -619,10 +619,6 @@ struct ConvertToSignlessForTosaPass
   void runOnOperation() override;
 };
 
-struct TosaMakeBroadcastablePass : TosaMakeBroadcastablePassBase<TosaMakeBroadcastablePass> {
-  void runOnOperation() override;
-};
-
 }  // namespace
 
 std::unique_ptr<Pass> createLowerOneFlowToTosaPass() {
@@ -631,10 +627,6 @@ std::unique_ptr<Pass> createLowerOneFlowToTosaPass() {
 
 std::unique_ptr<Pass> createConvertToSignlessForTosaPass() {
   return std::make_unique<ConvertToSignlessForTosaPass>();
-}
-
-std::unique_ptr<Pass> createTosaMakeBroadcastablePass() {
-  return std::make_unique<TosaMakeBroadcastablePass>();
 }
 
 void OneFlowLoweringToTosaPass::runOnOperation() {
@@ -725,8 +717,6 @@ void ConvertToSignlessForTosaPass::runOnOperation() {
   patterns.add<ConvertFuncToSignlessPattern>(op->getContext());
   (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
 }
-
-void TosaMakeBroadcastablePass::runOnOperation() {}
 
 }  // namespace oneflow
 
