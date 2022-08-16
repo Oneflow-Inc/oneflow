@@ -80,7 +80,7 @@ class TestTensor(flow.unittest.TestCase):
         of_out = input.eq(other)
         np_out = np.equal(arr1, arr2)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
-    
+
     def test_tensor_equal_bool_dtype(test_case):
         np_bool = np.random.randint(0, 2, size=()).astype(np.bool).item()
         input = flow.tensor(np_bool, dtype=flow.bool)
