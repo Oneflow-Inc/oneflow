@@ -38,7 +38,7 @@ struct PlanUtil {
   static std::function<RegstDescProto*(int64_t)> MakeMutRegstDesc4Id(Plan* plan);
   static void SetForceInplaceMemBlock(Plan* plan);
   static void DumpCtrlRegstInfoToPlan(Plan* plan);
-  static void GenCollectiveBoxingPlan(Job* job, Plan* plan, std::shared_ptr<const TaskGraph> task_graph);
+  static void GenCollectiveBoxingPlan(Job* job, std::shared_ptr<const TaskGraph> task_graph, Plan* plan);
   static void GenRegisterHint(Plan* plan);
   static void GenLightPlan(Plan* plan, const std::string& plan_name);
   static void PlanMemoryLog(Plan* plan, const std::string& plan_name);

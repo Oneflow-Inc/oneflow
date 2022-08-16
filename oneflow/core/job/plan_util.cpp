@@ -712,7 +712,7 @@ void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* 
 
 }  // namespace
 
-void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan, std::shared_ptr<const TaskGraph> task_graph) {
+void PlanUtil::GenCollectiveBoxingPlan(Job* job, std::shared_ptr<const TaskGraph> task_graph, Plan* plan) {
   using namespace boxing::collective;
 
   RequestSet* request_set = &(*plan->mutable_collective_boxing_plan()
