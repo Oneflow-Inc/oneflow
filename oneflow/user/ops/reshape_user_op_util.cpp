@@ -113,12 +113,12 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
   int64_t in_axis = in_shape.NumAxes();
   int64_t out_axis = out_shape.NumAxes();
   // Move forward functions
-  auto Move2NextAxis = [](const Shape& shape, int64_t& axis, int64_t& shape_count) {
-    axis--;
-    if (axis >= 0) { shape_count *= shape.At(axis); }
+  auto Move2NextAxis = [](const Shape& shape, int64_t* axis, int64_t* shape_count) {
+    (*axis)--;
+    if (*axis >= 0) { *shape_count *= shape.At(*axis); }
   };
-  auto MoveInAxis = [&] { Move2NextAxis(in_shape, in_axis, in_shape_count); };
-  auto MoveOutAxis = [&] { Move2NextAxis(out_shape, out_axis, out_shape_count); };
+  auto MoveInAxis = [&] { Move2NextAxis(in_shape, &in_axis, &in_shape_count); };
+  auto MoveOutAxis = [&] { Move2NextAxis(out_shape, &out_axis, &out_shape_count); };
   // Move the first step
   MoveInAxis();
   MoveOutAxis();
