@@ -410,22 +410,22 @@ struct FlattenOpLowering final : public OpConversionPattern<FlattenOp> {
     const auto in_shape = in_type.cast<ShapedType>();
     const auto rank = in_type.dyn_cast<RankedTensorType>().getRank();
 
-    // calculate reshape_vec
-    std::vector<int64_t> reshape_vec;
-    for (auto dim = 0; dim < start_dim; ++dim) { reshape_vec.push_back(in_shape.getDimSize(dim)); }
+    // calculate flatten shape
+    std::vector<int64_t> flatten_shape_vec;
+    for (auto dim = 0; dim < start_dim; ++dim) { flatten_shape_vec.push_back(in_shape.getDimSize(dim)); }
     auto last_dim = end_dim < 0 ? rank : end_dim + 1;
     int flatten_size = 1;
     for (auto dim = start_dim; dim < last_dim; ++dim) { flatten_size *= in_shape.getDimSize(dim); }
-    reshape_vec.push_back(flatten_size);
+    flatten_shape_vec.push_back(flatten_size);
     if (end_dim > 0) {
       for (auto dim = end_dim + 1; dim < rank; ++dim) {
-        reshape_vec.push_back(in_shape.getDimSize(dim));
+        flatten_shape_vec.push_back(in_shape.getDimSize(dim));
       }
     }
-    // generate reshape op
-    const auto output = RankedTensorType::get(reshape_vec, in_shape.getElementType());
+    // generate reshape op as flatten op
+    const auto output = RankedTensorType::get(flatten_shape_vec, in_shape.getElementType());
     auto input1 = op.in();
-    auto new_shape = rewriter.getI64ArrayAttr(reshape_vec);
+    auto new_shape = rewriter.getI64ArrayAttr(flatten_shape_vec);
 
     rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(op, output, input1, new_shape);
     return success();
