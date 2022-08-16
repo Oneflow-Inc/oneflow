@@ -304,4 +304,13 @@ def ConvertToSignlessForTosaPass : Pass<"convert-to-signless-for-tosa", "ModuleO
   let dependentDialects = ["func::FuncDialect"];
 }
 
+def TosaMakeBroadcastablePass : Pass<"tosa-make-broadcastable", "ModuleOp"> {
+  let summary = "convert data shape from oneflow standard to tosa standard";
+  let description = [{
+    In oneflow, data shapes are nchw type. Convert them before lowering to TOSA.
+  }];
+  let constructor = "mlir::oneflow::createTosaMakeBroadcastablePass()";
+  let dependentDialects = ["func::FuncDialect"];
+}
+
 #endif // ONEFLOW_PASSES

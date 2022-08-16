@@ -1,4 +1,6 @@
-// RUN: oneflow-opt -lower-oneflow-to-tosa --print-after-all %s
+// RUN: oneflow-opt \
+// RUN: -tosa-make-broadcastable \
+// RUN: -lower-oneflow-to-tosa --print-after-all %s
 
 module  {
   func.func @Cast_1__FUSE__ScalarMulByTensor_2(%arg0: tensor<96x96xi64>, %arg1: tensor<1xf32>) -> tensor<96x96xf32> {

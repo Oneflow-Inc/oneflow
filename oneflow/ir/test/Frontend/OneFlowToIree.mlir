@@ -1,5 +1,6 @@
 // RUN: oneflow-opt %s \
 // RUN: -split-input-file \
+// RUN: -tosa-make-broadcastable \
 // RUN: -lower-oneflow-to-tosa \
 // RUN: -verify-diagnostics -o - \
 // RUN: | python3 -m iree.compiler.tools.scripts.ireec \
