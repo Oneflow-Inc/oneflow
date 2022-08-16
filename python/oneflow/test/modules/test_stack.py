@@ -46,7 +46,7 @@ class TestStackModule(flow.unittest.TestCase):
 
     @autotest(auto_backward=True, check_graph=True)
     def test_stack_kMaxInputCount_inputs(test_case):
-        kMaxInputCount = 129
+        kMaxInputCount = 128 + 1
         stack_list = [
             random_tensor(ndim=2, dim0=3, dim1=4) for _ in range(kMaxInputCount)
         ]
