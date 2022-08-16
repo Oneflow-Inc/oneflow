@@ -99,7 +99,7 @@ bool allSignless(FunctionType funcType) {
   return true;
 }
 
-Value CreateTranspose(Location& loc, ConversionPatternRewriter& rewriter, Value input,
+Value CreateTransposeValue(Location& loc, ConversionPatternRewriter& rewriter, Value input,
                       ArrayRef<int32_t> perms) {
   int perms_size = perms.size();
   auto transpose_perms = rewriter.create<tosa::ConstOp>(
@@ -110,6 +110,12 @@ Value CreateTranspose(Location& loc, ConversionPatternRewriter& rewriter, Value 
   for (const auto& index : perms) ranked_type.push_back(shape_type.getDimSize(index));
   return rewriter.create<tosa::TransposeOp>(
       loc, RankedTensorType::get(ranked_type, shape_type.getElementType()), input, transpose_perms);
+};
+
+RankedTensorType CreateTransposeType(ShapedType output, ArrayRef<int32_t> perms) {
+  std::vector<int64_t> ranked_type;
+  for (auto index : perms) ranked_type.push_back(output.getDimSize(index));
+  return RankedTensorType::get(ranked_type, output.getElementType());
 };
 
 Value CreateBNOp(Location loc, ConversionPatternRewriter& rewriter, Value output, Value x,
@@ -332,12 +338,6 @@ struct AvgPool2DOpLowering final : public OpConversionPattern<AvgPool2DOp> {
               arr.getValue()[1].cast<IntegerAttr>().getSInt()};
     };
 
-    auto reshape_type = [](ShapedType shape_type, ArrayRef<int32_t> perms) -> RankedTensorType {
-      std::vector<int64_t> ranked_type;
-      for (auto index : perms) ranked_type.push_back(shape_type.getDimSize(index));
-      return RankedTensorType::get(ranked_type, shape_type.getElementType());
-    };
-
     auto stride_pairs = get_pair_int64_from_array(op.stride());
     auto pad_pairs = get_pair_int64_from_array(op.padding());
     auto kernel_pairs = get_pair_int64_from_array(op.kernel_size());
@@ -350,12 +350,12 @@ struct AvgPool2DOpLowering final : public OpConversionPattern<AvgPool2DOp> {
     const auto pad = rewriter.getI64ArrayAttr(
         {pad_pairs.first, pad_pairs.second, pad_pairs.first, pad_pairs.second});
 
-    auto input = CreateTranspose(loc, rewriter, op.x(), perms);
-    auto output = reshape_type(op.y().getType().cast<ShapedType>(), perms);
+    auto input = CreateTransposeValue(loc, rewriter, op.x(), perms);
+    auto output = CreateTransposeType(op.y().getType().cast<ShapedType>(), perms);
 
     auto avg_pool2d = rewriter.create<tosa::AvgPool2dOp>(loc, output, input, kernel, stride, pad);
 
-    auto out = CreateTranspose(loc, rewriter, avg_pool2d, {0, 3, 1, 2});
+    auto out = CreateTransposeValue(loc, rewriter, avg_pool2d, {0, 3, 1, 2});
     rewriter.replaceOp(op, {out});
     return success();
   }
@@ -369,11 +369,6 @@ struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
     auto get_pair_int64_from_array = [](ArrayAttr arr) -> std::pair<int64_t, int64_t> {
       return {arr.getValue()[0].cast<IntegerAttr>().getSInt(),
               arr.getValue()[1].cast<IntegerAttr>().getSInt()};
-    };
-    auto reshape_type = [](ShapedType shape_type, ArrayRef<int32_t> perms) -> RankedTensorType {
-      std::vector<int64_t> ranked_type;
-      for (auto index : perms) ranked_type.push_back(shape_type.getDimSize(index));
-      return RankedTensorType::get(ranked_type, shape_type.getElementType());
     };
     // TODO: support return indice
     if (op.return_indices()) { return op->emitError("not support return indices now"); }
@@ -389,11 +384,11 @@ struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
     const auto pad = rewriter.getI64ArrayAttr(
         {pad_pairs.first, pad_pairs.second, pad_pairs.first, pad_pairs.second});
 
-    auto input = CreateTranspose(loc, rewriter, op.x(), perms);
-    auto output = reshape_type(op.y().getType().cast<ShapedType>(), perms);
+    auto input = CreateTransposeValue(loc, rewriter, op.x(), perms);
+    auto output = CreateTransposeType(op.y().getType().cast<ShapedType>(), perms);
 
     auto max_pool2d = rewriter.create<tosa::MaxPool2dOp>(loc, output, input, kernel, stride, pad);
-    auto y = CreateTranspose(loc, rewriter, max_pool2d, {0, 3, 1, 2});
+    auto y = CreateTransposeValue(loc, rewriter, max_pool2d, {0, 3, 1, 2});
 
     auto indice_output = convertToSignless(op->getContext(), op.indice().getType());
     auto value = DenseElementsAttr::get(indice_output, rewriter.getZeroAttr(rewriter.getI64Type()));
@@ -447,7 +442,7 @@ struct MatmulOpLowering final : public OpConversionPattern<MatmulOp> {
 
     auto preprocess = [&](Value matrix, bool transpose) -> Value {
       auto shape_type = matrix.getType().cast<ShapedType>();
-      if (transpose) { matrix = CreateTranspose(loc, rewriter, matrix, {1, 0}); }
+      if (transpose) { matrix = CreateTransposeValue(loc, rewriter, matrix, {1, 0}); }
 
       shape_type = matrix.getType().cast<ShapedType>();
       auto reshape_type = RankedTensorType::get(
@@ -568,11 +563,6 @@ struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
       return {arr.getValue()[0].cast<IntegerAttr>().getSInt(),
               arr.getValue()[1].cast<IntegerAttr>().getSInt()};
     };
-    auto reshape_type = [](ShapedType shape_type, ArrayRef<int32_t> perms) -> RankedTensorType {
-      std::vector<int64_t> ranked_type;
-      for (auto index : perms) ranked_type.push_back(shape_type.getDimSize(index));
-      return RankedTensorType::get(ranked_type, shape_type.getElementType());
-    };
 
     auto stride_pairs = get_pair_int64_from_array(op.strides());
     auto pad_pairs = get_pair_int64_from_array(op.padding_beforeAttr());
@@ -595,14 +585,14 @@ struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
     }
 
     auto perms = {0, 2, 3, 1};
-    auto in = CreateTranspose(loc, rewriter, op.in(), perms);
-    auto weight = CreateTranspose(loc, rewriter, op.weight(), perms);
-    const auto output = reshape_type(op.out().getType().cast<ShapedType>(), perms);
+    auto in = CreateTransposeValue(loc, rewriter, op.in(), perms);
+    auto weight = CreateTransposeValue(loc, rewriter, op.weight(), perms);
+    const auto output = CreateTransposeType(op.out().getType().cast<ShapedType>(), perms);
 
     auto conv2d =
         rewriter.create<tosa::Conv2DOp>(loc, output, in, weight, bias, pad, stride, dilation);
 
-    auto res = CreateTranspose(loc, rewriter, conv2d, {0, 3, 1, 2});
+    auto res = CreateTransposeValue(loc, rewriter, conv2d, {0, 3, 1, 2});
     rewriter.replaceOp(op, {res});
     return success();
   }
