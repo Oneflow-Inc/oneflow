@@ -408,7 +408,7 @@ struct FlattenOpLowering final : public OpConversionPattern<FlattenOp> {
         flatten_shape_vec.push_back(in_shape.getDimSize(dim));
       }
     }
-    // generate reshape op as flatten op
+    // lowering oneflow flatten op to tosa reshape op
     const auto output = RankedTensorType::get(flatten_shape_vec, in_shape.getElementType());
     auto input1 = op.in();
     auto new_shape = rewriter.getI64ArrayAttr(flatten_shape_vec);
