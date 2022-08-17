@@ -870,12 +870,7 @@ def _test_setitem_scalars(test_case, device):
     with test_case.assertRaises(IndexError):
         r[zero] = 8.8
     r[...] = 9.9
-    # Numpy was temporarily adopted before resolving the bug
-    np_r = np.random.rand(1)
-    np_r[...] = 9.9
-    test_case.assertEqual(r.numpy().all(), np_r.all())
-    # TODO: fix the bug about the direct comparison of tensors and numbers in the cuda scene
-    # test_case.assertTrue(r == 9.9)
+    test_case.assertEqual(r, 9.9)
 
     # scalar indexed with oneflow.Size([1])
     np_x = np.random.rand(2, 3)
