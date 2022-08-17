@@ -250,6 +250,7 @@ Distance Functions
     :template: classtemplate.rst
 
     nn.CosineSimilarity
+    nn.PairwiseDistance
 
 Loss Functions
 ----------------------------------
