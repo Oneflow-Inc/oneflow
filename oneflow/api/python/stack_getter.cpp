@@ -29,7 +29,7 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-const int kDefaultStackSize = 10;
+const int kDefaultStackSize = 15;
 using Stack = small_vector<std::pair<PyCodeObject*, int>, kDefaultStackSize>;
 
 class PyStackGetter final : public ForeignStackGetter {
