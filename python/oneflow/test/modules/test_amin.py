@@ -132,12 +132,13 @@ class TestAmin(flow.unittest.TestCase):
 
     @profile(torch.amin)
     def profile_amin(test_case):
-        input1 = torch.ones(4,4)
-        input2 = torch.ones(100,100)
+        input1 = torch.ones(4, 4)
+        input2 = torch.ones(100, 100)
         torch.amin(input1, 1)
-        torch.amin(input1, 1 ,True)
+        torch.amin(input1, 1, True)
         torch.amin(input2, 1)
-        torch.amin(input2, 1 ,True)
+        torch.amin(input2, 1, True)
+
 
 if __name__ == "__main__":
     unittest.main()

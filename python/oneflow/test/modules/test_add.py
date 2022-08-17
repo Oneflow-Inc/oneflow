@@ -256,9 +256,9 @@ class TestAddModule(flow.unittest.TestCase):
 
     @profile(torch.add)
     def profile_add(test_case):
-        torch.add(torch.ones(100),20)
-        torch.add(torch.ones(100),torch.ones(100,1),alpha=10)
-        
+        torch.add(torch.ones(100), 20)
+        torch.add(torch.ones(100), torch.ones(100, 1), alpha=10)
+
     @autotest(n=3)
     def test_non_contiguous_inplace_add(test_case):
         device = random_device()

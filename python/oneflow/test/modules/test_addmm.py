@@ -101,9 +101,10 @@ class TestAddmm(flow.unittest.TestCase):
     def profile_addmm(test_case):
         input = torch.ones(2, 3)
         mat1 = torch.ones(2, 3)
-        mat2  = torch.ones(3, 3)
+        mat2 = torch.ones(3, 3)
         torch.addmm(input, mat1, mat2)
-        torch.addmm(input, mat1, mat2,alpha=1, beta=2)
+        torch.addmm(input, mat1, mat2, alpha=1, beta=2)
+
 
 if __name__ == "__main__":
     unittest.main()

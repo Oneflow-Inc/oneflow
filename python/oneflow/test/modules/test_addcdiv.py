@@ -60,10 +60,11 @@ class TestAddcdiv(flow.unittest.TestCase):
 
     @profile(torch.addcdiv)
     def profile_addcdiv(test_case):
-        t=torch.ones(1,3)
-        t1=torch.ones(3,1)
-        t2=torch.ones(1,3)
-        torch.addcdiv(t,t1,t2,value=0.1)
+        t = torch.ones(1, 3)
+        t1 = torch.ones(3, 1)
+        t2 = torch.ones(1, 3)
+        torch.addcdiv(t, t1, t2, value=0.1)
+
 
 if __name__ == "__main__":
     unittest.main()

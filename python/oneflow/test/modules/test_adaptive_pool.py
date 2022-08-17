@@ -47,7 +47,7 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
 
     @profile(torch.nn.functional.adaptive_avg_pool1d)
     def profile_adaptive_avg_pool1d(test_case):
-        torch.nn.functional.adaptive_avg_pool1d(torch.ones(1, 64, 8),5)
+        torch.nn.functional.adaptive_avg_pool1d(torch.ones(1, 64, 8), 5)
 
     @autotest(n=5)
     def test_adaptive_avgpool2d(test_case):
@@ -58,11 +58,11 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
         x = random_tensor(ndim=4).to(device)
         y = m(x)
         return y
-    
+
     @profile(torch.nn.functional.adaptive_avg_pool2d)
     def profile_adaptive_avg_pool2d(test_case):
-        torch.nn.functional.adaptive_avg_pool2d(torch.ones(1, 64, 10, 9),7)
-        torch.nn.functional.adaptive_avg_pool2d(torch.ones(1, 64, 8, 9),(5,7))
+        torch.nn.functional.adaptive_avg_pool2d(torch.ones(1, 64, 10, 9), 7)
+        torch.nn.functional.adaptive_avg_pool2d(torch.ones(1, 64, 8, 9), (5, 7))
 
     @unittest.skipIf(
         version.parse(torch_original.__version__) < version.parse("1.10.0"),
@@ -80,8 +80,9 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
 
     @profile(torch.nn.functional.adaptive_avg_pool3d)
     def profile_adaptive_avg_pool3d(test_case):
-        torch.nn.functional.adaptive_avg_pool3d(torch.ones(1, 64, 8, 9, 10),(5,7,9))
-        torch.nn.functional.adaptive_avg_pool3d(torch.ones(1, 64, 10, 9, 8),7)
+        torch.nn.functional.adaptive_avg_pool3d(torch.ones(1, 64, 8, 9, 10), (5, 7, 9))
+        torch.nn.functional.adaptive_avg_pool3d(torch.ones(1, 64, 10, 9, 8), 7)
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestAdaptiveAvgPoolFunctional(flow.unittest.TestCase):

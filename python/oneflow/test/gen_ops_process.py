@@ -97,9 +97,9 @@ def get_profile_func(path):
             line_num = 1
             for line in iter_f:
                 line = line.strip()
-                match = re.fullmatch(r'^@profile\((.+)\)$', line)
+                match = re.fullmatch(r"^@profile\((.+)\)$", line)
                 if match:
-                    tem_profile=match.group(1)
+                    tem_profile = match.group(1)
                     tem_profile_name = tem_profile.split(".")[-1]
                     result_profile_func_list.append(tem_profile_name)
 

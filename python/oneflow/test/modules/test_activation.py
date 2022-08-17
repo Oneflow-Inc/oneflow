@@ -62,10 +62,9 @@ class TestReLUModule(flow.unittest.TestCase):
     @profile(torch.nn.functional.relu)
     def profile_relu(test_case):
         torch.nn.functional.relu(torch.ones(1, 128, 28, 28))
-        torch.nn.functional.relu(torch.ones(1, 128, 28, 28),inplace=True)
+        torch.nn.functional.relu(torch.ones(1, 128, 28, 28), inplace=True)
         torch.nn.functional.relu(torch.ones(16, 128, 28, 28))
-        torch.nn.functional.relu(torch.ones(16, 128, 28, 28),inplace=True)
-
+        torch.nn.functional.relu(torch.ones(16, 128, 28, 28), inplace=True)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -99,6 +98,7 @@ class TestReLU6Module(flow.unittest.TestCase):
         x = random_tensor(4, 2, 3, 0, 3).to(device)
         y = m(x)
         return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestTanh(flow.unittest.TestCase):
@@ -158,6 +158,7 @@ class TestTanh(flow.unittest.TestCase):
         torch.nn.functional.tanh(torch.ones(1, 128, 28, 28))
         torch.nn.functional.tanh(torch.ones(16, 128, 28, 28))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestELUModule(flow.unittest.TestCase):
     @autotest(n=5)
@@ -192,8 +193,9 @@ class TestELUModule(flow.unittest.TestCase):
 
     @profile(torch.nn.functional.elu)
     def profile_elu(test_case):
-        torch.nn.functional.elu(torch.ones(1, 128, 28, 28),1.0)
-        torch.nn.functional.elu(torch.ones(16, 128, 28, 28),1.0)
+        torch.nn.functional.elu(torch.ones(1, 128, 28, 28), 1.0)
+        torch.nn.functional.elu(torch.ones(16, 128, 28, 28), 1.0)
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestCELUModule(flow.unittest.TestCase):
@@ -236,13 +238,14 @@ class TestCELUModule(flow.unittest.TestCase):
         y = x + 0.001
         m(y)
         return y
-    
+
     @profile(torch.nn.functional.celu)
     def profile_celu(test_case):
         torch.nn.functional.celu(torch.ones(1, 128, 28, 28))
-        torch.nn.functional.celu(torch.ones(1, 128, 28, 28),inplace=True)
+        torch.nn.functional.celu(torch.ones(1, 128, 28, 28), inplace=True)
         torch.nn.functional.celu(torch.ones(16, 128, 28, 28))
-        torch.nn.functional.celu(torch.ones(16, 128, 28, 28),inplace=True)
+        torch.nn.functional.celu(torch.ones(16, 128, 28, 28), inplace=True)
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestGelu(flow.unittest.TestCase):
@@ -265,11 +268,12 @@ class TestGelu(flow.unittest.TestCase):
         x = random_tensor(ndim=0).to(device)
         y = m(x)
         return y
-    
+
     @profile(torch.nn.functional.gelu)
     def profile_gelu(test_case):
         torch.nn.functional.gelu(torch.ones(1, 128, 28, 28))
         torch.nn.functional.gelu(torch.ones(16, 128, 28, 28))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestSigmoidModule(flow.unittest.TestCase):
@@ -400,14 +404,13 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
         x = random_tensor(ndim=0).to(device)
         y = torch.nn.functional.hardsigmoid(x, random_bool())
         return y
-    
+
     @profile(torch.nn.functional.hardsigmoid)
     def profile_hardsigmoid(test_case):
         torch.nn.functional.hardsigmoid(torch.ones(1, 128, 28, 28))
-        torch.nn.functional.hardsigmoid(torch.ones(1, 128, 28, 28),inplace=True)
+        torch.nn.functional.hardsigmoid(torch.ones(1, 128, 28, 28), inplace=True)
         torch.nn.functional.hardsigmoid(torch.ones(16, 128, 28, 28))
-        torch.nn.functional.hardsigmoid(torch.ones(16, 128, 28, 28),inplace=True)
-
+        torch.nn.functional.hardsigmoid(torch.ones(16, 128, 28, 28), inplace=True)
 
 
 def do_test_softmax(batch_size: int, log_softmax: bool = False):
@@ -450,6 +453,7 @@ class TestSoftmax(flow.unittest.TestCase):
         torch.nn.functional.softmax(torch.ones(1, 128, 28, 28))
         torch.nn.functional.softmax(torch.ones(16, 128, 28, 28))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestLogSoftmaxModule(flow.unittest.TestCase):
     @autotest(n=5)
@@ -472,6 +476,7 @@ class TestLogSoftmaxModule(flow.unittest.TestCase):
     def profile_logsoftmax(test_case):
         torch.nn.functional.log_softmax(torch.ones(1, 128, 28, 28))
         torch.nn.functional.log_softmax(torch.ones(16, 128, 28, 28))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestLogSigmoidModule(flow.unittest.TestCase):
@@ -499,6 +504,7 @@ class TestLogSigmoidModule(flow.unittest.TestCase):
     def profile_logsigmoid(test_case):
         torch.nn.functional.logsigmoid(torch.ones(1, 128, 28, 28))
         torch.nn.functional.logsigmoid(torch.ones(16, 128, 28, 28))
+
 
 def numpy_softplus(x, beta, threshold):
     return np.where(
@@ -571,11 +577,12 @@ class TestSoftplusModule(flow.unittest.TestCase):
         x = random_tensor().to(device)
         y = m(x)
         return y
-    
+
     @profile(torch.nn.functional.softplus)
     def profile_softplus(test_case):
         torch.nn.functional.softplus(torch.ones(1, 128, 28, 28))
         torch.nn.functional.softplus(torch.ones(16, 128, 28, 28))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestHardswishModule(flow.unittest.TestCase):
@@ -603,6 +610,7 @@ class TestHardswishModule(flow.unittest.TestCase):
     def profile_hardswish(test_case):
         torch.nn.functional.hardswish(torch.ones(1, 128, 28, 28))
         torch.nn.functional.hardswish(torch.ones(16, 128, 28, 28))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestHardtanhModule(flow.unittest.TestCase):
@@ -634,8 +642,13 @@ class TestHardtanhModule(flow.unittest.TestCase):
 
     @profile(torch.nn.functional.hardtanh)
     def profile_hardtanh(test_case):
-        torch.nn.functional.hardtanh(torch.ones(1, 128, 28, 28),min_val=- 1.0, max_val=1.0)
-        torch.nn.functional.hardtanh(torch.ones(16, 128, 28, 28),min_val=- 1.0, max_val=1.0)
+        torch.nn.functional.hardtanh(
+            torch.ones(1, 128, 28, 28), min_val=-1.0, max_val=1.0
+        )
+        torch.nn.functional.hardtanh(
+            torch.ones(16, 128, 28, 28), min_val=-1.0, max_val=1.0
+        )
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestLeakyReLUModule(flow.unittest.TestCase):
@@ -673,10 +686,10 @@ class TestLeakyReLUModule(flow.unittest.TestCase):
 
     @profile(torch.nn.functional.leaky_relu)
     def profile_leaky_relu(test_case):
-        torch.nn.functional.leaky_relu(torch.ones(1, 128, 28, 28),0.1)
-        torch.nn.functional.leaky_relu(torch.ones(1, 128, 28, 28),0.1,inplace=True)
-        torch.nn.functional.leaky_relu(torch.ones(16, 128, 28, 28),0.1)
-        torch.nn.functional.leaky_relu(torch.ones(16, 128, 28, 28),0.1,inplace=True)
+        torch.nn.functional.leaky_relu(torch.ones(1, 128, 28, 28), 0.1)
+        torch.nn.functional.leaky_relu(torch.ones(1, 128, 28, 28), 0.1, inplace=True)
+        torch.nn.functional.leaky_relu(torch.ones(16, 128, 28, 28), 0.1)
+        torch.nn.functional.leaky_relu(torch.ones(16, 128, 28, 28), 0.1, inplace=True)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -706,6 +719,7 @@ class TestMishModule(flow.unittest.TestCase):
         torch.nn.functional.mish(torch.ones(1, 128, 28, 28))
         torch.nn.functional.mish(torch.ones(16, 128, 28, 28))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestSiluModule(flow.unittest.TestCase):
     @autotest(n=5)
@@ -732,6 +746,7 @@ class TestSiluModule(flow.unittest.TestCase):
     def profile_silu(test_case):
         torch.nn.functional.silu(torch.ones(1, 128, 28, 28))
         torch.nn.functional.silu(torch.ones(16, 128, 28, 28))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestSeluModule(flow.unittest.TestCase):
@@ -760,6 +775,7 @@ class TestSeluModule(flow.unittest.TestCase):
         torch.nn.functional.selu(torch.ones(1, 128, 28, 28))
         torch.nn.functional.selu(torch.ones(16, 128, 28, 28))
 
+
 @unittest.skip("still have error in ci test")
 class TestSoftsignModule(flow.unittest.TestCase):
     @autotest(n=5)
@@ -771,12 +787,13 @@ class TestSoftsignModule(flow.unittest.TestCase):
         x = random_tensor().to(device)
         y = m(x)
         return y
-    
+
     #'Ran 1 test in 0.000s',return a blank table
     @profile(torch.nn.functional.softsign)
     def profile_softsign(test_case):
         torch.nn.functional.softsign(torch.ones(1, 128, 28, 28))
         torch.nn.functional.softsign(torch.ones(16, 128, 28, 28))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestReluFunction(flow.unittest.TestCase):
@@ -794,6 +811,7 @@ class TestReluFunction(flow.unittest.TestCase):
         y = torch.relu(x)
         return y
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestRelu6Function(flow.unittest.TestCase):
     @autotest(n=5)
@@ -809,7 +827,7 @@ class TestRelu6Function(flow.unittest.TestCase):
         x = random_tensor(ndim=0).to(device)
         y = torch.nn.functional.relu6(x)
         return y
-    
+
     @profile(torch.nn.functional.relu6)
     def profile_relu6(test_case):
         torch.nn.functional.relu6(torch.ones(1, 128, 28, 28))
@@ -831,6 +849,7 @@ class TestLogSigmoidFunction(flow.unittest.TestCase):
         x = random_tensor(ndim=0).to(device)
         y = torch.nn.functional.logsigmoid(x)
         return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestHardshrinkModule(flow.unittest.TestCase):
@@ -869,6 +888,7 @@ class TestHardshrinkModule(flow.unittest.TestCase):
         torch.nn.functional.hardshrink(torch.ones(1, 128, 28, 28))
         torch.nn.functional.hardshrink(torch.ones(16, 128, 28, 28))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestSoftshrinkModule(flow.unittest.TestCase):
     @autotest(n=5)
@@ -900,11 +920,12 @@ class TestSoftshrinkModule(flow.unittest.TestCase):
         x = random_tensor(4, 2, 3, 0, 3).to(device)
         y = m(x)
         return y
-    
+
     @profile(torch.nn.functional.softshrink)
     def profile_softshrink(test_case):
         torch.nn.functional.softshrink(torch.ones(1, 128, 28, 28))
         torch.nn.functional.softshrink(torch.ones(16, 128, 28, 28))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestThresholdModule(flow.unittest.TestCase):
@@ -943,11 +964,15 @@ class TestThresholdModule(flow.unittest.TestCase):
         x = random_tensor(4, 2, 3, 0, 3).to(device)
         y = m(x)
         return y
-    
+
     @profile(torch.nn.functional.threshold)
     def profile_threshold(test_case):
-        torch.nn.functional.threshold(torch.ones(1, 128, 28, 28),threshold=0.1,value= 20)
-        torch.nn.functional.threshold(torch.ones(16, 128, 28, 28),threshold=0.1,value= 20)
+        torch.nn.functional.threshold(
+            torch.ones(1, 128, 28, 28), threshold=0.1, value=20
+        )
+        torch.nn.functional.threshold(
+            torch.ones(16, 128, 28, 28), threshold=0.1, value=20
+        )
 
 
 if __name__ == "__main__":

@@ -67,5 +67,6 @@ class TestAddcmul(flow.unittest.TestCase):
         tensor2 = torch.ones(100, 12, 13)
         torch.addcmul(input, tensor1, tensor2, value=2)
 
+
 if __name__ == "__main__":
     unittest.main()

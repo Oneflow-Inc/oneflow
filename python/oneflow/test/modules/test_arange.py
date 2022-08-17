@@ -116,5 +116,6 @@ class TestArange(flow.unittest.TestCase):
         torch.arange(1, 4)
         torch.arange(1, 2.5, 0.5)
 
+
 if __name__ == "__main__":
     unittest.main()
