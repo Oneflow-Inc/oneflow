@@ -1290,7 +1290,7 @@
   bind_python: False
 
 - name: "layer_norm_param_grad"
-  signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int64 begin_params_axis, Double epsilon) => LayerNormParamGrad"
+  signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int64 begin_params_axis) => LayerNormParamGrad"
   bind_python: False
 
 - name: "avg_pool2d_nhwc"
