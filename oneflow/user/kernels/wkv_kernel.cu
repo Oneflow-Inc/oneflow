@@ -80,22 +80,35 @@ __global__ void kernel_forward(const int64_t B, const int64_t T, const int64_t C
   half* __restrict__ const y = _y + _offset;
 
   half p = static_cast<half>(0.0), q = static_cast<half>(0.0), o = static_cast<half>(MIN_VALUE);
+  half no, AA, BB;
   // p and q are running sums divided by exp(o) (to avoid overflows)
   for (int i = 0; i < T; i++) {
     const int ii = i * C;
 
     // half no = max(o, u + k[ii]);
-    half no = o > u + k[ii] ? o : u + k[ii];
-    half A = static_cast<half>(exp(static_cast<float>(o - no)));
-    half B = static_cast<half>(exp(static_cast<float>(u + k[ii] - no)));
-    y[ii] = (A * p + B * v[ii]) / (A * q + B);
+    // half no = o > u + k[ii] ? o : u + k[ii];
+    if (o > u + k[ii]) {
+      no = o;
+    }
+    else{
+      no = u + k[ii];
+    }
+    AA = static_cast<half>(exp(static_cast<float>(o - no)));
+    BB = static_cast<half>(exp(static_cast<float>(u + k[ii] - no)));
+    y[ii] = (AA * p + BB * v[ii]) / (AA * q + BB);
 
     // no = max(w + o, k[ii]);
-    no = w + o > k[ii] ? w + o : k[ii];
-    A = static_cast<half>(exp(static_cast<float>(w + o - no)));
-    B = static_cast<half>(exp(static_cast<float>(k[ii] - no)));
-    p = A * p + B * v[ii];
-    q = A * q + B;
+    // no = w + o > k[ii] ? w + o : k[ii];
+    if (w + o > k[ii]) {
+      no = w + o;
+    }
+    else{
+      no = k[ii];
+    }
+    AA = static_cast<half>(exp(static_cast<float>(w + o - no)));
+    BB = static_cast<half>(exp(static_cast<float>(k[ii] - no)));
+    p = AA * p + BB * v[ii];
+    q = AA * q + BB;
     o = no;
   }
 }
@@ -260,10 +273,17 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   half p = static_cast<half>(0.0), q = static_cast<half>(0.0);
   half dpdw = static_cast<half>(0.0), dqdw = static_cast<half>(0.0);
   half o = static_cast<half>(MIN_VALUE);
+  half no;
   for (int i = 0; i < T; i++) {
     const int ii = i * C;
     // half no = max(o, k[ii] + u);
-    half no = o > k[ii] + u ? o : k[ii] + u;
+    // half no = o > k[ii] + u ? o : k[ii] + u;
+    if (o > k[ii] + u) {
+      no = o;
+    }
+    else{
+      no = k[ii] + u;
+    }
     half A = static_cast<half>(exp(static_cast<float>(o - no)));
     half B = static_cast<half>(exp(static_cast<float>(k[ii] + u - no)));
 
@@ -275,11 +295,17 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
     z[i] = iden;
     zexp[i] = k[ii] + u - no;
 
-    gw += gy[ii] * (dpdw - dqdw * y[i]) * iden * A;
-    gu += gy[ii] * (v[ii] - y[i]) * B * iden;
+    gw = gw + gy[ii] * (dpdw - dqdw * y[i]) * iden * A;
+    gu = gu + gy[ii] * (v[ii] - y[i]) * B * iden;
 
     // no = max(w + o, k[ii]);
-    no = w + o > k[ii] ? w + o : k[ii];
+    // no = w + o > k[ii] ? w + o : k[ii];
+    if (w + o > k[ii]) {
+      no = w + o;
+    }
+    else{
+      no = k[ii];
+    }
     A = static_cast<half>(exp(static_cast<float>(w + o - no)));
     B = static_cast<half>(exp(static_cast<float>(k[ii] - no)));
     dpdw = A * (p + dpdw);
@@ -299,7 +325,13 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
     gv[ii] = A + B * gp;
 
     // half no = max(w + o, zexp[i] - k[ii] - u);
-    half no = w + o > zexp[i] - k[ii] - u ? w + o : zexp[i] - k[ii] - u;
+    // half no = w + o > zexp[i] - k[ii] - u ? w + o : zexp[i] - k[ii] - u;
+    if (w + o > zexp[i] - k[ii] - u) {
+      no = w + o;
+    }
+    else{
+      no = zexp[i] - k[ii] - u;
+    }
     A = static_cast<half>(exp(static_cast<float>(w + o - no)));
     // B = gy[ii] * z[i] * exp(zexp[i] - k[ii] - u - no);
     B = gy[ii] * z[i] * static_cast<half>(exp(static_cast<float>(zexp[i] - k[ii] - u - no)));
@@ -311,8 +343,8 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   // Multiply by w because the w -> -exp(w) preprocessing is halfway in the backwards pass, even
   // though it's not in the forward pass
   const int _offsetBC = _b * C + _c;
-  _gw[_offsetBC] += gw * w;
-  _gu[_offsetBC] += gu;
+  _gw[_offsetBC] = _gw[_offsetBC] + gw * w;
+  _gu[_offsetBC] = _gu[_offsetBC] + gu;
 }
 
 #if CUDA_VERSION >= 11000

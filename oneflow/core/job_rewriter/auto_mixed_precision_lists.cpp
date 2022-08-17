@@ -93,7 +93,7 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "log_softmax_grad",
                               "gelu",
                               "gelu_grad",
-                              "wkv_grad",
+                              // "wkv_grad",
                               "normalization",
                               "normalization_grad",
                               "normalization_add_relu",
