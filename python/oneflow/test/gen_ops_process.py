@@ -21,15 +21,14 @@ import re
 
 def get_api(rst_dir):
     """
-    Extract operator names from rst files. 
-    
-    `currentmodule` is not regarded as operators. 
+    Extract operator names from rst files.
+
+    `currentmodule` is not regarded as operators.
     `autoclass` and `automodule` are regarded as operators in the absence of `members`.
     """
     op_files = glob.glob(rst_dir + "/*.rst")
     op_files.remove(rst_dir + "/graph.rst")
     op_files.remove(rst_dir + "/index.rst")
-    #print("op_files:",op_files)
     api_list = []
     api_str = ""
     for op_file in op_files:
@@ -40,26 +39,27 @@ def get_api(rst_dir):
                 skip = False
                 if ".. currentmodule::" in line:
                     pre = line.strip().replace(".. currentmodule::", "") + "."
-
                 elif ".. autofunction::" in line:
                     if "oneflow" not in line:
                         api_str += pre
                     api_str += line.replace(".. autofunction::", "")
-                
-                elif ".. autosummary::" in line or ".. autoclass::" in line or ":toctree:" in line or ":nosignatures:" in line or ":template:" in line:
+                elif (
+                    ".. autosummary::" in line
+                    or ".. autoclass::" in line
+                    or ":toctree:" in line
+                    or ":nosignatures:" in line
+                    or ":template:" in line
+                ):
                     if ":nosignatures:" in line:
                         line = f.readline()
                         if ":template:" in line:
                             line = f.readline()
                         line = f.readline()
-                        while (
-                            line and len(line.replace(" ", "")) > 1
-                            ):
+                        while line and len(line.replace(" ", "")) > 1:
                             if "oneflow" not in line:
                                 api_str += pre
                             api_str += line
-                            line = f.readline()    
-
+                            line = f.readline()
                 elif ".. automodule::" in line:
                     pre_a = line.replace(".. automodule:: ", "")
                     line = f.readline()
@@ -73,52 +73,51 @@ def get_api(rst_dir):
                         ):
                             api_str += pre_a + line
                             line = f.readline()
-                    #else:
-                        #api_str += pre_a
-
                 if not skip:
                     line = f.readline()
 
     api_list = api_str.strip().replace(" ", "").replace(",", "").split("\n")
-    #print("output:::",api_list)
     return api_list
+
 
 def get_profile_func(path):
     """
-    Iterate through files under `path` to find out all operator names, 
-    and update code links to file_func_map_list by file_func_map. 
+    Iterate through files under `path` to find out all operator names,
+    and update code links to file_func_map_list by file_func_map.
     """
     files = os.listdir(path)
     commit_bytes = subprocess.check_output(["git", "rev-parse", "HEAD"])
     commit_str = commit_bytes.decode("utf-8").replace("\n", "")
     result_profile_func_list = []
     for file in files:
-        if file!="log" and not os.path.isdir(file) and file.find("__pycache__") == -1:
-            f = open(os.path.join(path,file))
+        if file != "log" and not os.path.isdir(file) and file.find("__pycache__") == -1:
+            f = open(os.path.join(path, file))
             last_line = ""
             iter_f = iter(f)
             line_num = 1
             for line in iter_f:
                 line = line.strip()
-                if "@profile" in line:
-                    tem_profile=line[9:-1]
-                    tem_profile_name=tem_profile.split(".")[-1]
+                match = re.fullmatch(r'^@profile\((.+)\)$', line)
+                if match:
+                    tem_profile=match.group(1)
+                    tem_profile_name = tem_profile.split(".")[-1]
                     result_profile_func_list.append(tem_profile_name)
-                
+
     return result_profile_func_list
+
 
 def get_test_func(path):
     """
-    Iterate through files under `path` to find out all operator names, 
-    and update code links to file_func_map_list by file_func_map. 
+    Iterate through files under `path` to find out all operator names,
+    and update code links to file_func_map_list by file_func_map.
     """
     files = os.listdir(path)
     commit_bytes = subprocess.check_output(["git", "rev-parse", "HEAD"])
     commit_str = commit_bytes.decode("utf-8").replace("\n", "")
     result_func_list = []
     for file in files:
-        if file!="log" and not os.path.isdir(file) and file.find("__pycache__") == -1:
-            f = open(os.path.join(path,file))
+        if file != "log" and not os.path.isdir(file) and file.find("__pycache__") == -1:
+            f = open(os.path.join(path, file))
             last_line = ""
             iter_f = iter(f)
             line_num = 1
@@ -158,11 +157,11 @@ def get_test_func(path):
 def pure_match(x, y):
     """
     Check whether x contains y.
-    
-    The purpose of identifying "." is to accurately match operator documents. 
+
+    The purpose of identifying "." is to accurately match operator documents.
     For example, if we make pos = x.find(y) while y = clip_, either oneflow.Tensor.clip or oneflow.Tensor.clip_ is right.
 
-    Besides, identifying "_" is important. 
+    Besides, identifying "_" is important.
     For example, if we make pos = x.find(y) while y = squeeze, either test of squeeze or unsqueeze is right.
     """
     x = x.lower()
@@ -190,7 +189,7 @@ def match_test_func(func, func_list):
     func: operator name
     func_list: names of all operators
 
-    Check whether func_list contains func. If yes, return matching content, or else return "". 
+    Check whether func_list contains func. If yes, return matching content, or else return "".
     """
     match_res = ""
     for i in range(len(func_list)):
