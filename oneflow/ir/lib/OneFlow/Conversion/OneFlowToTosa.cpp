@@ -100,21 +100,21 @@ bool allSignless(FunctionType funcType) {
 }
 
 Value CreateTransposeValue(Location& loc, ConversionPatternRewriter& rewriter, Value input,
-                      ArrayRef<int32_t> dims) {
-  int perms_size = dims.size();
+                      ArrayRef<int32_t> perms) {
+  int perms_size = perms.size();
   auto transpose_perms = rewriter.create<tosa::ConstOp>(
       loc, RankedTensorType::get({perms_size}, rewriter.getI32Type()),
-      rewriter.getI32TensorAttr(dims));
+      rewriter.getI32TensorAttr(perms));
   const auto shape_type = input.getType().cast<ShapedType>();
   std::vector<int64_t> ranked_type;
-  for (const auto& index : dims) ranked_type.push_back(shape_type.getDimSize(index));
+  for (const auto& index : perms) ranked_type.push_back(shape_type.getDimSize(index));
   return rewriter.create<tosa::TransposeOp>(
       loc, RankedTensorType::get(ranked_type, shape_type.getElementType()), input, transpose_perms);
 };
 
-RankedTensorType CreateTransposeType(ShapedType output, ArrayRef<int32_t> dims) {
+RankedTensorType CreateTransposeType(ShapedType output, ArrayRef<int32_t> perms) {
   std::vector<int64_t> ranked_type;
-  for (auto index : dims) ranked_type.push_back(output.getDimSize(index));
+  for (auto index : perms) ranked_type.push_back(output.getDimSize(index));
   return RankedTensorType::get(ranked_type, output.getElementType());
 };
 
