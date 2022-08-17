@@ -52,7 +52,8 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
   const int64_t axis = ctx->Attr<int64_t>("axis");
   CHECK_GE_OR_RETURN(axis, 0) << "The axis should be greater than or equal to 0.";
   const int64_t in_num_axes = first_in_desc.shape().NumAxes();
-  CHECK_LE_OR_RETURN(axis, in_num_axes) "The axis should be less than or equal to input num axes.";
+  CHECK_LE_OR_RETURN(axis, in_num_axes)
+      << "The axis should be less than or equal to input num axes.";
   DimVector out_dim_vec(in_num_axes + 1);
   for (int i = 0; i < in_num_axes + 1; i++) {
     if (i == axis) {

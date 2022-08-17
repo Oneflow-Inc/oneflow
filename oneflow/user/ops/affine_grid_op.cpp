@@ -66,7 +66,7 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
     is_2d_grid = true;
   } else if (theta.shape().At(1) == 3) {
     CHECK_EQ_OR_RETURN(theta.shape().At(2), 4) << "Theta shape  MUST be (N, 2, 3) or (N, 3, 4)";
-    CHECK_EQ_OR_RETURN(size.NumAxes(), 5) "Dimension of size MUST be 4, when 3d affine grid";
+    CHECK_EQ_OR_RETURN(size.NumAxes(), 5) << "Dimension of size MUST be 4, when 3d affine grid";
     CHECK_EQ_OR_RETURN(theta.shape().At(0), size.At(0))
         << "Theta and size MUST have same batch dimension";
     is_2d_grid = false;
@@ -102,7 +102,7 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
     is_2d_grid = true;
   } else if (theta_shape.At(1) == 3) {
     CHECK_EQ_OR_RETURN(theta_shape.At(2), 4) << "Theta shape  MUST be (N, 2, 3) or (N, 3, 4)";
-    CHECK_EQ_OR_RETURN(size.NumAxes(), 5) "Dimension of size MUST be 4, when 3d affine grid";
+    CHECK_EQ_OR_RETURN(size.NumAxes(), 5) << "Dimension of size MUST be 4, when 3d affine grid";
     is_2d_grid = false;
   } else {
     CHECK_OR_RETURN(false) << "Theta MUST be 2D or 3D grid";

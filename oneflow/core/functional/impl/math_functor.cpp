@@ -2813,7 +2813,7 @@ class EinSumFunctor {
             CHECK_OR_RETURN(
                 // Ensure ellipsis is correct
                 i + 2 < rhs.length() && rhs[++i] == '.' && rhs[++i] == '.')
-            "einsum(): found \'.\' for output that is not part of any ellipsis (...)";
+                << "einsum(): found \'.\' for output that is not part of any ellipsis (...)";
             ell_index = perm_index;
             perm_index += ell_num_dim;
             found_ell = true;
