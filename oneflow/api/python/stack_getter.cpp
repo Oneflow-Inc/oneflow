@@ -47,6 +47,8 @@ class PyStackGetter final : public ForeignStackGetter {
     CHECK_NOTNULL(frame);
     while (frame != nullptr && (id2stack.second.size() < kDefaultStackSize || IsInDebugMode())) {
       int lineno = PyFrame_GetLineNumber(frame);
+      // hold the PyCodeObject instead of the PyFrameObject because the latter holds
+      // references to the local objects in the frame.
       id2stack.second.emplace_back(frame->f_code, lineno);
       Py_INCREF(frame->f_code);
       frame = frame->f_back;
