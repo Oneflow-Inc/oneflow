@@ -44,6 +44,15 @@ class TestStackModule(flow.unittest.TestCase):
         out = torch.stack((x, y), dim=random(low=1, high=4).to(int))
         return out
 
+    @autotest(auto_backward=True, check_graph=True)
+    def test_stack_kMaxInputCount_inputs(test_case):
+        kMaxInputCount = 128 + 1
+        stack_list = [
+            random_tensor(ndim=2, dim0=3, dim1=4) for _ in range(kMaxInputCount)
+        ]
+        out = torch.stack(stack_list, 0)
+        return out
+
 
 if __name__ == "__main__":
     unittest.main()
