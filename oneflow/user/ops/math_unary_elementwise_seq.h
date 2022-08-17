@@ -21,7 +21,6 @@ limitations under the License.
 namespace oneflow {
 
 #define MATH_UNARY_ELEMENTWISE_FUNC_SEQ                      \
-  OF_PP_MAKE_TUPLE_SEQ("abs", Abs)                           \
   OF_PP_MAKE_TUPLE_SEQ("acos", Acos)                         \
   OF_PP_MAKE_TUPLE_SEQ("acosh", Acosh)                       \
   OF_PP_MAKE_TUPLE_SEQ("asin", Asin)                         \
@@ -57,7 +56,6 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", NotEqualZero)
 
 #define MATH_UNARY_ELEMENTWISE_FUNC_SEQ_ODS                  \
-  OF_PP_MAKE_TUPLE_SEQ("abs", Abs)                           \
   OF_PP_MAKE_TUPLE_SEQ("acos", Acos)                         \
   OF_PP_MAKE_TUPLE_SEQ("acosh", Acosh)                       \
   OF_PP_MAKE_TUPLE_SEQ("asin", Asin)                         \

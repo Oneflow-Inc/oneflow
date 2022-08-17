@@ -144,6 +144,56 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTanhBackwardWithDyX, Src, Dst>
   }
 };
 
+// template<typename Src, typename Dst>
+// struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kAcosBackwardWithDyX, Src, Dst> {
+//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+//     return dy * -(static_cast<Src>(1.0) / sqrt(static_cast<Src>(1.0) - x * x));
+//   }
+// };
+
+// template<typename Src, typename Dst>
+// struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kAcoshBackwardWithDyX, Src, Dst> {
+//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+//     return dy / sqrt(x * x - static_cast<Src>(1.0));
+//   }
+// };
+
+// template<typename Src, typename Dst>
+// struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kAsinBackwardWithDyX, Src, Dst> {
+//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+//     return dy * (static_cast<Src>(1.0) / sqrt(static_cast<Src>(1.0) - x * x));
+//   }
+// };
+
+// template<typename Src, typename Dst>
+// struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kAsinhBackwardWithDyX, Src, Dst> {
+//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+//     return dy * (static_cast<Src>(1.0) / sqrt(static_cast<Src>(1.0) + x * x));
+//   }
+// };
+
+// template<typename Src, typename Dst>
+// struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kErfBackwardWithDyX, Src, Dst> {
+//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+//     return dy * static_cast<Src>(2.0) * (static_cast<Src>(1.0) / sqrt(static_cast<Src>(M_PI)))
+//            * exp(-x * x);
+//   }
+// };
+
+// template<typename Src, typename Dst>
+// struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kErfcBackwardWithDyX, Src, Dst> {
+//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+//     return dy * static_cast<Src>(-2.0) * (static_cast<Src>(1.0) / sqrt(static_cast<Src>(M_PI)))
+//            * exp(-x * x);
+//   }
+// };
+
 #define SPECIALIZATION_CPU_BINARY_FUNCTOR(op, type)                                          \
   template<>                                                                                 \
   struct BinaryFunctor<DeviceType::kCPU, op, type, type> {                                   \

@@ -65,7 +65,7 @@ enum class BinaryOp {
   kTanhBackwardWithDyX,
   kThresholdBackwardWithDyX,
   kSigmoidBackwardWithDyY,
-
+  kAbsBackwardWithDyX,
 };
 
 }
