@@ -62,9 +62,9 @@ class TestAddcmul(flow.unittest.TestCase):
 
     @profile(torch.addcmul)
     def profile_addcmul(test_case):
-        input = torch.ones(2, 3, 4)
-        tensor1 = torch.ones(2, 3, 4)
-        tensor2 = torch.ones(2, 3, 4)
+        input = torch.ones(100, 12, 13)
+        tensor1 = torch.ones(100, 12, 13)
+        tensor2 = torch.ones(100, 12, 13)
         torch.addcmul(input, tensor1, tensor2, value=2)
 
 if __name__ == "__main__":

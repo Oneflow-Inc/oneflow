@@ -105,6 +105,5 @@ class TestAddmm(flow.unittest.TestCase):
         torch.addmm(input, mat1, mat2)
         torch.addmm(input, mat1, mat2,alpha=1, beta=2)
 
-
 if __name__ == "__main__":
     unittest.main()

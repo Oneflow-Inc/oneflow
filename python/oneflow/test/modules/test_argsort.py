@@ -91,7 +91,8 @@ class TestArgsort(flow.unittest.TestCase):
 
     @profile(torch.argsort) 
     def profile_argsort(test_case):
-        torch.argsort(torch.ones(4,4), dim=1)
+        torch.argsort(torch.ones(10,10), dim=1)
+        torch.argsort(torch.ones(1000,1000), dim=1)
 
 
 if __name__ == "__main__":

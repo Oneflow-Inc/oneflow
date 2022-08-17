@@ -208,7 +208,7 @@ if __name__ == "__main__":
     ]
     num_cols = 4
     test_func_list = list()
-    test_prifile_list = list()
+    test_profile_list = list()
     file_func_map = dict()
     file_func_map_list = []
 
@@ -220,7 +220,7 @@ if __name__ == "__main__":
             tmp_func_list.extend(get_test_func(path))
             tmp_profile_list.extend(get_profile_func(path))
         test_func_list.append(tmp_func_list)
-        test_prifile_list.extend(tmp_profile_list)
+        test_profile_list.extend(tmp_profile_list)
         file_func_map_list.append(file_func_map)
 
     result_list = []
@@ -252,7 +252,7 @@ if __name__ == "__main__":
                     cnt2 += 1
                 table_line += file_func_map_list[i][match_name]
             table_line += "  |"
-        if name in test_prifile_list:
+        if name in test_profile_list:
             table_line += " done "
             cnt3 += 1
         table_line += "  |"
