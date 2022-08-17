@@ -47,6 +47,14 @@ class TestLinspace(flow.unittest.TestCase):
         device = random_device()
         x.to(device)
         return x
+    
+    @autotest(n=5, auto_backward=False)
+    def test_linspace_with_scalar_tensor_as_params(test_case):
+        start = random_tensor(2, 3, 4, requires_grad=False).mean()
+        end = start + random_tensor(2, 3, 4, requires_grad=False).mean()
+        steps = random(0, 10).to(int)
+        y = torch.linspace(start=start, end=end, steps=steps)
+        return y
 
     def test_global_naive(test_case):
         placement = flow.placement("cpu", ranks=[0])
