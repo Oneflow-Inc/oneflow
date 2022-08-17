@@ -47,33 +47,6 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("floor", Floor)                 \
   OF_PP_MAKE_TUPLE_SEQ("ceil", Ceil)
 
-// #define FLOAT_UNARY_WITH_DY_X_FUNC_SEQ                     \
-//   OF_PP_MAKE_TUPLE_SEQ("acosh", Acosh)           \
-//   OF_PP_MAKE_TUPLE_SEQ("asin", Asin)             \
-//   OF_PP_MAKE_TUPLE_SEQ("asinh", Asinh)           \
-//   OF_PP_MAKE_TUPLE_SEQ("atan", Atan)             \
-//   OF_PP_MAKE_TUPLE_SEQ("atanh", Atanh)           \
-//   OF_PP_MAKE_TUPLE_SEQ("sin", Sin)               \
-//   OF_PP_MAKE_TUPLE_SEQ("cos", Cos)               \
-//   OF_PP_MAKE_TUPLE_SEQ("erf", Erf)               \
-//   OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)             \
-//   OF_PP_MAKE_TUPLE_SEQ("exp", Exp)               \
-//   OF_PP_MAKE_TUPLE_SEQ("expm1", Expm1)           \
-//   OF_PP_MAKE_TUPLE_SEQ("log", Log)               \
-//   OF_PP_MAKE_TUPLE_SEQ("log2", Log2)             \
-//   OF_PP_MAKE_TUPLE_SEQ("log1p", Log1p)           \
-//   OF_PP_MAKE_TUPLE_SEQ("negative", Negative)     \
-//   OF_PP_MAKE_TUPLE_SEQ("reciprocal", Reciprocal) \
-//   OF_PP_MAKE_TUPLE_SEQ("rsqrt", Rsqrt)           \
-//   OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", Sigmoid)    \
-//   OF_PP_MAKE_TUPLE_SEQ("sign", Sign)             \
-//   OF_PP_MAKE_TUPLE_SEQ("sinh", Sinh)             \
-//   OF_PP_MAKE_TUPLE_SEQ("sqrt", Sqrt)             \
-//   OF_PP_MAKE_TUPLE_SEQ("square", Square)         \
-//   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)               \
-//   OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)             \
-//   OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", NotEqualZero)
-
 #define FLOAT_UNARY_WITH_DY_X_FUNC_SEQ           \
   OF_PP_MAKE_TUPLE_SEQ("acosh", Acosh)           \
   OF_PP_MAKE_TUPLE_SEQ("asin", Asin)             \
@@ -176,33 +149,33 @@ using namespace impl;
   m.add_functor<class_name##WithDyYGradFunctor>(std::string("") + functor_name + "Grad");
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Abs, "Abs");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Acos, "Acos");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Acosh, "Acosh");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Asin, "Asin");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Asinh, "Asinh");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Atan, "Atan");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Atanh, "Atanh");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Cos, "Cos");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Cosh, "Cosh");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Erf, "Erf");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Erfc, "Erfc");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Exp, "Exp");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Expm1, "Expm1");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Lgamma, "Lgamma");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Log, "Log");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Log2, "Log2");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Log1p, "Log1p");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(LogSigmoid, "LogSigmoid");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Reciprocal, "Reciprocal");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(ReciprocalNoNan, "ReciprocalNoNan");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Rsqrt, "Rsqrt");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Sin, "Sin");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Sinh, "Sinh");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Sqrt, "Sqrt");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Square, "Square");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Tan, "Tan");
-  // ADD_UNARY_FUNCTOR_WITH_DY_X(Tanh, "Tanh");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Abs, "Abs");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Acos, "Acos");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Acosh, "Acosh");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Asin, "Asin");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Asinh, "Asinh");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Atan, "Atan");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Atanh, "Atanh");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Cos, "Cos");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Cosh, "Cosh");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Erf, "Erf");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Erfc, "Erfc");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Exp, "Exp");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Expm1, "Expm1");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Lgamma, "Lgamma");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Log, "Log");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Log2, "Log2");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Log1p, "Log1p");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(LogSigmoid, "LogSigmoid");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Reciprocal, "Reciprocal");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(ReciprocalNoNan, "ReciprocalNoNan");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Rsqrt, "Rsqrt");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Sin, "Sin");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Sinh, "Sinh");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Sqrt, "Sqrt");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Square, "Square");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Tan, "Tan");
+  ADD_UNARY_FUNCTOR_WITH_DY_X(Tanh, "Tanh");
   ADD_UNARY_FUNCTOR_WITH_DY_Y(Sigmoid, "Sigmoid");
 
   m.add_functor<NotEqualZeroFunctor>("NotEqualZero");

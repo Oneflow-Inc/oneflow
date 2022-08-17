@@ -127,6 +127,25 @@ OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_Y,
 OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_FILL,
                      MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_FILL_SEQ)
 
+// test abs 
+// MATH_ELEMENTWISE_DEFAULT_SET_FUNC(AbsOp)
+// REGISTER_USER_OP_GRAD("abs")
+//     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+//                                const user_op::AddOpFn& AddOp) -> Maybe<void> {
+//       if (op.NeedGenGradTensor4OpInput("x", 0)) {
+//         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+//         user_op::UserOpConfWrapper grad_op = builder.Op("abs_grad")
+//                                                  .Input("x", op.input("x", 0))
+//                                                  .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
+//                                                  .Output("dx")
+//                                                  .Build();
+//         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
+//         AddOp(grad_op);
+//       }
+//       return Maybe<void>::Ok();
+//     });
+
+
 // For negative
 MATH_ELEMENTWISE_DEFAULT_SET_FUNC(NegativeOp)
 REGISTER_USER_OP_GRAD("negative")

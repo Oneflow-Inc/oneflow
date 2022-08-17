@@ -89,7 +89,7 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
 
             // For math unary backward.
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
-                                             BINARY_MATH_BACKWARD_OP_SEQ,
+                                             BINARY_MATH_BACKWARD_WITH_DY_X_OP_SEQ,
                                              CUDA_PRIMITIVE_FLOATING_TYPE_SEQ)};
 
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY

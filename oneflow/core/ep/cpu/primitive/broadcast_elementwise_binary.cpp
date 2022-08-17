@@ -571,9 +571,9 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
                         BINARY_ACTIVATION_BACKWARD_OP_SEQ, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)
 
             // For math unary backward.
-            // OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-            //     MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
-            //     BINARY_MATH_BACKWARD_OP_SEQ, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
+                BINARY_MATH_BACKWARD_WITH_DY_X_OP_SEQ, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)
 
         };
 

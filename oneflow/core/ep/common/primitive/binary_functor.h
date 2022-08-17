@@ -572,63 +572,6 @@ struct BinaryFunctor<device, BinaryOp::kTanBackwardWithDyX, Src, Dst> {
   }
 };
 
-// template<DeviceType device, typename Src, typename Dst>
-// struct BinaryFunctor<device, BinaryOp::kNotEqualZeroBackward, Src, Dst> {
-//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-//     return static_cast<Dst>(0.0);
-//   }
-// };
-
-// Maybe use a different kernel impl to save memory. (zzk)
-// template<DeviceType device, typename Src, typename Dst>
-// struct BinaryFunctor<device, BinaryOp::kSignBackward, Src, Dst> {
-//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-//     const Src zero = static_cast<Src>(0.0);
-//     return zero;
-//   }
-// };
-
-// template<DeviceType device, typename Src, typename Dst>
-// struct BinaryFunctor<device, BinaryOp::kRintBackward, Src, Dst> {
-//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-//     return 0.0f;
-//   }
-// };
-
-// template<DeviceType device, typename Src, typename Dst>
-// struct BinaryFunctor<device, BinaryOp::kRoundBackward, Src, Dst> {
-//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-//     return 0.0f;
-//   }
-// };
-
-// template<DeviceType device, typename Src, typename Dst>
-// struct BinaryFunctor<device, BinaryOp::kNegativeBackwardWithDy, Src, Dst> {
-//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-//     return -dy;
-//   }
-// };
-
-// template<DeviceType device, typename Src, typename Dst>
-// struct BinaryFunctor<device, BinaryOp::kFloor, Src, Dst> {
-//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-//     return 0.0
-//   }
-// };
-
-// template<DeviceType device, typename Src, typename Dst>
-// struct BinaryFunctor<device, BinaryOp::kCeilBackward, Src, Dst> {
-//   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-//   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-//     return static_cast<Dst>(0.0);
-//   }
-// };
 
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive

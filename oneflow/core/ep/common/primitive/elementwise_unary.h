@@ -25,21 +25,6 @@ namespace primitive {
 
 #define UNARY_MATH_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu)
 
-/*
-OF_PP_MAKE_TUPLE_SEQ("abs", Abs)                           \
-OF_PP_MAKE_TUPLE_SEQ("acos", Acos)                         \
-OF_PP_MAKE_TUPLE_SEQ("ceil", Ceil)                         \
-OF_PP_MAKE_TUPLE_SEQ("cosh", Cosh)                         \
-OF_PP_MAKE_TUPLE_SEQ("floor", Floor)                       \
-OF_PP_MAKE_TUPLE_SEQ("lgamma", Lgamma)                     \
-OF_PP_MAKE_TUPLE_SEQ("log_sigmoid", LogSigmoid)            \
-OF_PP_MAKE_TUPLE_SEQ("reciprocal_no_nan", ReciprocalNoNan) \
-OF_PP_MAKE_TUPLE_SEQ("rint", Rint)                         \
-OF_PP_MAKE_TUPLE_SEQ("sign", Sign)                         \
-OF_PP_MAKE_TUPLE_SEQ("NotEqualZero", NotEqualZero)         \
-OF_PP_MAKE_TUPLE_SEQ("round", Round)
-*/
-
 #define UNARY_FLOATING_MATH_OP_SEQ                \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kElu)             \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kCelu)            \
@@ -61,6 +46,7 @@ OF_PP_MAKE_TUPLE_SEQ("round", Round)
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAcos)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAcosh)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAsin)            \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAsinh)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAtan)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAtanh)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kCeil)            \
