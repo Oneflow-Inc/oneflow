@@ -2499,12 +2499,56 @@ class Dropout1dFunctor {
     CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, true)
         << "dropout probability has to be between 0 and 1, but got " << p;
     const int input_dim = input->ndim();
-    CHECK_EQ_OR_RETURN(input_dim != 2 || input_dim != 3, true)
+    CHECK_EQ_OR_RETURN(input_dim != 2 && input_dim != 3, true)
         << "dropout1d: Expected 2D or 3D input, but received a {inp_dim}D input. "
            "Note that dropout1d exists to provide channel-wise dropout on inputs with 1 "
            "spatial dimension, a channel dimension, and an optional batch dimension "
            "(i.e. 2D or 3D inputs).";
     bool is_batched = (input_dim == 3);
+    std::shared_ptr<one::Tensor> result;
+    if (!is_batched) { result = JUST(Unsqueeze(input, 0)); }
+    result = JUST(DropoutImpl(result, p, train));
+    if (!is_batched) { result = JUST(Squeeze(result, std::vector<int32_t>{0})); }
+    return result;
+  }
+};
+
+class Dropout2dFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
+                           const bool& train) const {
+    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, true)
+        << "dropout probability has to be between 0 and 1, but got " << p;
+    const int input_dim = input->ndim();
+    CHECK_EQ_OR_RETURN(input_dim != 3 && input_dim != 4, true)
+        << "dropout2d: Received a {inp_dim}-D input to dropout2d, which is deprecated "
+                    "and will result in an error in a future release. To retain the behavior "
+                    "and silence this warning, please use dropout instead. Note that dropout2d "
+                    "exists to provide channel-wise dropout on inputs with 2 spatial dimensions, "
+                    "a channel dimension, and an optional batch dimension (i.e. 3D or 4D inputs).";
+    CHECK_EQ_OR_RETURN(input_dim==3, true) << "dropout2d: Received a 3D input to dropout2d and assuming that channel-wise "
+                      "1D dropout behavior is desired - input is interpreted as shape (N, C, L), where C "
+                      "is the channel dim. This behavior will change in a future release to interpret the "
+                      "input as one without a batch dimension, i.e. shape (C, H, W). To maintain the 1D "
+                      "channel-wise dropout behavior, please switch to using dropout1d instead.";
+    return JUST(DropoutImpl(input, p, train));
+  }
+};
+
+class Dropout3dFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
+                           const bool& train) const {
+    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, true)
+        << "dropout probability has to be between 0 and 1, but got " << p;
+    const int input_dim = input->ndim();
+    CHECK_EQ_OR_RETURN(input_dim != 4 && input_dim != 5, true)
+        << "dropout3d: Received a {inp_dim}-D input to dropout3d, which is deprecated "
+                    "and will result in an error in a future release. To retain the behavior "
+                    "and silence this warning, please use dropout instead. Note that dropout3d "
+                    "exists to provide channel-wise dropout on inputs with 3 spatial dimensions, "
+                    "a channel dimension, and an optional batch dimension (i.e. 4D or 5D inputs).";
+    bool is_batched = (input_dim == 5);
     std::shared_ptr<one::Tensor> result;
     if (!is_batched) { result = JUST(Unsqueeze(input, 0)); }
     result = JUST(DropoutImpl(result, p, train));
@@ -3894,6 +3938,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PadFunctor>("Pad");
   m.add_functor<impl::DropoutFunctor>("Dropout");
   m.add_functor<impl::DropoutGradFunctor>("DropoutGrad");
+  m.add_functor<impl::Dropout1dFunctor>("Dropout1d");
+  m.add_functor<impl::Dropout2dFunctor>("Dropout2d");
+  m.add_functor<impl::Dropout3dFunctor>("Dropout3d");
   m.add_functor<impl::PixelShuffleFunctor>("PixelShuffle");
   m.add_functor<impl::AvgPool1DFunctor>("AvgPool1D");
   m.add_functor<impl::AvgPool2DFunctor>("AvgPool2D");
