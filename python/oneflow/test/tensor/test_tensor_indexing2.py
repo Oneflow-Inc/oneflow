@@ -864,16 +864,17 @@ def _test_setitem_scalars(test_case, device):
     test_case.assertEqual(x.numpy().all(), np_x.all())
 
     # scalar indexed with scalars
-    r = flow.randn((), device=device)
+    r = flow.tensor(1.0).to(device)
+    # r = flow.randn((), device=device)
     with test_case.assertRaises(IndexError):
         r[:] = 8.8
     with test_case.assertRaises(IndexError):
         r[zero] = 8.8
-        r = flow.randn((), device=device)
     r[...] = 9.9
     np_r = np.random.rand(1)
     np_r[...] = 9.9
-    test_case.assertEqual(r.numpy().all(), np_r.all())
+    # test_case.assertEqual(r.numpy().all(), np_r.all())
+    test_case.assertTrue(r == 9.9)
 
     # scalar indexed with oneflow.Size([1])
     np_x = np.random.rand(2, 3)
@@ -906,10 +907,11 @@ def _test_ellipsis_tensor(test_case, device):
     test_case.assertEqual(x[idx, ...].tolist(), [[0, 1, 2], [6, 7, 8]])
 
     # test getitem:scalar indexed with scalar
-    y = flow.randn((), device=device)
+    y = flow.tensor(1.0).to(device)
     x_scalar = flow.tensor(9.9)
     y = x_scalar[...]
     test_case.assertEqual(y, 9.9)
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestIndexing(flow.unittest.TestCase):
