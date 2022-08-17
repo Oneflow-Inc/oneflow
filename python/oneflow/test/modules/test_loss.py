@@ -184,16 +184,42 @@ def _test_bce_loss(dim=int, with_logits: bool = False):
         weight=oneof(weight, nothing()),
         reduction=oneof("none", "sum", "mean", nothing()),
     )
+    pos_weight_for_testing_broadcast = random_tensor(
+        1, 1, low=1, high=3, requires_grad=False,
+    ).to(device)
     if with_logits:
         m = torch.nn.BCEWithLogitsLoss(
             weight=oneof(weight, nothing()),
-            pos_weight=oneof(pos_weight, nothing()),
+            pos_weight=oneof(pos_weight, pos_weight_for_testing_broadcast, nothing()),
             reduction=oneof("none", "sum", "mean", nothing()),
         )
     m.train(random())
     m.to(device)
 
     y = m(x, target)
+    return y
+
+
+def _test_nn_functional_binary_cross_entropy(dim=int):
+    (x, target, weight, pos_weight, device) = generate_necessity_for_bce_loss(dim)
+    y = torch.nn.functional.binary_cross_entropy(
+        x,
+        target,
+        weight=oneof(weight, nothing()),
+        reduction=oneof("none", "sum", "mean", nothing()),
+        pos_weight=oneof(pos_weight, nothing()),
+    )
+    return y
+
+
+def _test_nn_functional_binary_cross_entropy_with_logits(dim=int):
+    (x, target, weight, pos_weight, device) = generate_necessity_for_bce_loss(dim)
+    y = torch.nn.functional.binary_cross_entropy_with_logits(
+        x,
+        target,
+        weight=oneof(weight, nothing()),
+        reduction=oneof("none", "sum", "mean", nothing()),
+    )
     return y
 
 
@@ -215,6 +241,11 @@ class TestBCELossModule(flow.unittest.TestCase):
     def test_bce_loss_with_random_data_dim_5(test_case):
         return _test_bce_loss(5)
 
+    @autotest(n=5)
+    def test_nn_functional_binary_cross_entropy(test_case):
+        dim = random(2, 6).to(int).value()
+        return _test_nn_functional_binary_cross_entropy(dim)
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestBCEWithLogitsLossModule(flow.unittest.TestCase):
@@ -234,6 +265,11 @@ class TestBCEWithLogitsLossModule(flow.unittest.TestCase):
     def test_bce_with_logits_loss_with_random_data_dim_5(test_case):
         return _test_bce_loss(5, True)
 
+    @autotest(n=5)
+    def test_nn_functional_binary_cross_entropy_with_logits(test_case):
+        dim = random(2, 6).to(int).value()
+        return _test_nn_functional_binary_cross_entropy_with_logits(dim)
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestL1LossModule(flow.unittest.TestCase):
@@ -250,6 +286,19 @@ class TestL1LossModule(flow.unittest.TestCase):
         m.to(device)
 
         y = m(x, target)
+        return y
+
+    @autotest(n=5)
+    def _test_nn_functional_l1_loss(test_case):
+        device = random_device()
+        shape = random_tensor().oneflow.shape
+
+        x = random_tensor(len(shape), *shape).to(device)
+        target = random_tensor(len(shape), *shape, requires_grad=False).to(device)
+
+        y = torch.nn.functional.l1_loss(
+            x, target, reduction=oneof("none", "sum", "mean", nothing())
+        )
         return y
 
 
@@ -288,6 +337,19 @@ class TestMSELossModule(flow.unittest.TestCase):
         m.to(device)
 
         y = m(x, target)
+        return y
+
+    @autotest(n=5)
+    def _test_nn_functional_mse_loss(test_case):
+        device = random_device()
+        shape = random_tensor().oneflow.shape
+
+        x = random_tensor(len(shape), *shape).to(device)
+        target = random_tensor(len(shape), *shape, requires_grad=False).to(device)
+
+        y = torch.nn.functional.mse_loss(
+            x, target, reduction=oneof("none", "sum", "mean", nothing())
+        )
         return y
 
 

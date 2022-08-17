@@ -19,8 +19,10 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 
 namespace oneflow {
 
@@ -45,8 +47,8 @@ class CheckpointingPass final : public JobPass {
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 };
 
-const std::string kCheckpointingFakeOpNamePrefix = "OneFlow-System-Checkpointing-Fake-Fw-Op_";
-const std::string kCheckpointingBadOpName = "OneFlow-System-CheckpointPassBadEndOpName";
+const std::string kCheckpointingFakeOpNamePrefix = "Sys-Checkpointing-Fake-Fw-Op_";
+const std::string kCheckpointingBadOpName = "Sys-CheckpointPassBadEndOpName";
 
 const Scope& Scope4OpNode(const OpNode* op_node) {
   int64_t scope_symbol_id = op_node->op().op_conf().scope_symbol_id();
@@ -148,6 +150,7 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
   //   so we need collect bw consumer between subgraphs, and update them in job builder only once.
   HashMap<std::string, OperatorConf> total_bw_consumers_op_name2conf;
 
+  int32_t subgraph_id = 0;
   for (auto& subgraph : checkpointing_subgraphs) {
     // step 3.1 ignore this subgraph if there is no direct edge to backward pass op.
     HashSet<const OpNode*> bw_consumers;
@@ -160,6 +163,8 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
       });
     }
     if (bw_consumers.empty()) { continue; }
+
+    HashSet<LogicalBlobId> checkpointing_tensor;
 
     HashMap<std::string, const OpNode*> subgraph_op_name2op_node;
     ParallelConf parallel_conf;
@@ -216,6 +221,7 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
             list_s.set_s(i, kCheckpointingFakeOpNamePrefix + old_lbn);
           } else {
             source_node_in_fake_subgraph.insert(fake_op_name);
+            checkpointing_tensor.insert(old_lbi);
           }
         }
       }
@@ -290,6 +296,22 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     std::vector<OperatorConf> fake_op_confs;
     for (auto& pair : fake_op_name2conf) { fake_op_confs.emplace_back(pair.second); }
     job_builder->AddOps(parallel_conf, fake_op_confs);
+
+    // step 3.6 log checkpointing tensor flow debug.
+    if (IsInDebugMode()) {
+      VLOG(2) << " In subgraph: " << subgraph_id
+              << " has checkpointing tensor num = " << checkpointing_tensor.size();
+      for (const auto& lbi : checkpointing_tensor) {
+        const OpNode* node = op_graph.OpNode4OpName(lbi.op_name());
+        const BlobDesc& blob = node->LogicalBlobDesc4Lbi(lbi);
+        VLOG(2) << "Checkpointing tensor: " << GenLogicalBlobName(lbi)
+                << " ,shape: " << blob.shape().ToString()
+                << " ,dtype: " << DataType_Name(blob.data_type())
+                << " ,placement: " << *JUST(PlacementToString(SymbolOf(node->parallel_desc())))
+                << " ,sbp: " << NdSbpToString(node->NdSbp4Lbi(lbi));
+      }
+      subgraph_id++;
+    }
   }
 
   // step 4. update bw consumers in job builder only once

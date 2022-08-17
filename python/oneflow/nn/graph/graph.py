@@ -15,6 +15,7 @@ limitations under the License.
 """
 import logging
 import os
+import sys
 import time
 import inspect
 from collections import OrderedDict
@@ -135,6 +136,8 @@ class Graph(object):
         self._debug_min_s_level = 2
         self._debug_max_v_level = 0
         self._debug_max_py_stack_depth = 2
+        self._debug_op_repr_with_py_stack = False
+        self._debug_only_user_py_stack = True
         self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
 
@@ -420,10 +423,12 @@ class Graph(object):
 
     def debug(
         self,
-        v_level: int = 0,
+        v_level: int = -1,
         *,
         ranks: Optional[Union[int, List[int]]] = None,
         max_py_stack_depth: int = 2,
+        only_user_py_stack=True,
+        op_repr_with_py_stack=False,
     ) -> None:
         r"""Open or close debug mode of the graph.
 
@@ -443,6 +448,10 @@ class Graph(object):
 
         Use ``max_py_stack_depth`` to specify the max Python stack depth for the debug information.
 
+        Use ``only_user_py_stack`` to only print the operators' locations which are from users' code or models.
+
+        Use ``op_repr_with_py_stack`` to print operators' locations when printing nn.Graph's repr.
+
         For example:
 
         .. code-block:: python
@@ -455,13 +464,17 @@ class Graph(object):
             v_level (int): choose verbose debug info level, default v_level is 0, max v_level is 3. v_level can be set to -1 to close the debug mode.
             ranks (int or list(int)): choose ranks to print the debug information. Default rank ``0``.
                 You can choose any valid rank. Ranks equals ``-1`` means debug on all ranks.
-            max_py_stack_depth(int): the maximum depth for the Python stack debug information. Default: ``2``
+            max_py_stack_depth(int): the maximum depth for the Python stack debug information. Default: ``2``.
+            only_user_py_stack(bool): only to print the operators' locations from users' code. Default: ``True``.
+            op_repr_with_py_stack(bool):  print operators' locations when printing nn.Graph's repr. Default: ``False``.
         """
         assert isinstance(v_level, int)
         assert v_level >= -1, "The min verbose debug info level is -1."
         assert v_level <= 3, "The max verbose debug info level is 3."
         assert max_py_stack_depth >= 0, "The min max stack depth is 0."
         assert isinstance(max_py_stack_depth, int)
+        assert isinstance(only_user_py_stack, bool)
+        assert isinstance(op_repr_with_py_stack, bool)
 
         if ranks is None:
             rank_list = [0]
@@ -480,9 +493,17 @@ class Graph(object):
                 self._debug_max_v_level = max(0, v_level)
             for name, block in self._blocks.items():
                 assert block.type == BlockType.MODULE
-                block.debug(v_level, ranks=ranks, max_py_stack_depth=max_py_stack_depth)
+                block.debug(
+                    v_level,
+                    ranks=ranks,
+                    max_py_stack_depth=max_py_stack_depth,
+                    only_user_py_stack=only_user_py_stack,
+                    op_repr_with_py_stack=op_repr_with_py_stack,
+                )
 
         self._debug_max_py_stack_depth = max_py_stack_depth
+        self._debug_op_repr_with_py_stack = op_repr_with_py_stack
+        self._debug_only_user_py_stack = only_user_py_stack
 
     def __repr__(self):
         r"""For printing the graph structure.
@@ -539,7 +560,11 @@ class Graph(object):
         """
         if self._is_compiled and self._compiled_graph_proto is not None:
             module_conf = self._compiled_graph_proto.module_name2module_conf[self.name]
-            return operators_repr(module_conf.ops, self._compiled_graph_proto)
+            return operators_repr(
+                module_conf.ops,
+                self._compiled_graph_proto,
+                self._debug_op_repr_with_py_stack,
+            )
 
         return []
 
@@ -688,6 +713,19 @@ class Graph(object):
                 )
                 state2lazy_builder[state_tensor] = state_block.lazy_origin_builder()
 
+    def _mark_variable_gradients(self):
+        variable = []
+        gradients = []
+        for state_block in self._state():
+            if (
+                state_block.type == BlockType.PARAMETER
+                and state_block.origin.grad is not None
+                and state_block.origin.grad.is_lazy
+            ):
+                variable.append(state_block.origin)
+                gradients.append(state_block.origin.grad)
+        oneflow._oneflow_internal.nn.graph.MarkVariableGradients(variable, gradients)
+
     @staticmethod
     def to_graph(func):
         """Make a function to do static graph run with nn.Graph.
@@ -755,6 +793,7 @@ class Graph(object):
                 self._debug_max_v_level,
                 self._debug,
                 self._debug_max_py_stack_depth,
+                self._debug_only_user_py_stack,
             ):
                 outputs = self.__build_graph(*args, **kwargs)
             build_graph_end = time.perf_counter()
@@ -798,6 +837,7 @@ class Graph(object):
                 self._debug_max_v_level,
                 self._debug,
                 self._debug_max_py_stack_depth,
+                self._debug_only_user_py_stack,
             ):
                 self._c_nn_graph.complie_and_init_runtime()
             # Get compiled job
@@ -815,7 +855,8 @@ class Graph(object):
                 + "s."
                 + "\n",
             )
-        except:
+        except Exception as e:
+            print(e, file=sys.stderr)
             self.__print(
                 2, 0, "[ERROR]" + self._shallow_repr() + " building plan got error."
             )
@@ -878,6 +919,9 @@ class Graph(object):
 
             # Save forward graph job proto
             self._forward_job_proto = c_api_util.GetCurrentJob()
+
+            if self.training:
+                self._mark_variable_gradients()
 
             self.__print(
                 0,

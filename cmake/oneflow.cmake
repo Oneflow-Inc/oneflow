@@ -306,6 +306,7 @@ elseif(UNIX)
     ${oneflow_third_party_libs}
     ${EXTERNAL_TARGETS}
     -Wl,--no-whole-archive
+    -Wl,--as-needed
     -ldl
     -lrt)
   if(BUILD_CUDA)
@@ -414,6 +415,9 @@ if(BUILD_TESTING)
     oneflow_add_test(oneflow_testexe SRCS ${of_all_test_cc} TEST_NAME oneflow_test)
     target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} glog::glog
                           ${oneflow_test_libs})
+    if(WITH_MLIR)
+      target_link_libraries(oneflow_testexe MLIROneFlowExtension)
+    endif()
   endif()
 
   if(BUILD_CPP_API)

@@ -26,3 +26,14 @@ def vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
 
 def matrix_norm(self, ord="fro", dim=(-2, -1), keepdim=False, dtype=None):
     return flow._C.matrix_norm(self, ord, dim, keepdim, dtype=dtype)
+
+
+def inv(self):
+    return flow._C.inv(self)
+
+
+def diagonal(self, input, offset=0, dim1=-2, dim2=-1):
+    """
+    Alias for :func:`oneflow.diagonal` with defaults :attr:`dim1`\ `= -2`, :attr:`dim2`\ `= -1`.
+    """
+    return flow._C.diagonal(self, input, offset=offset, dim1=dim1, dim2=dim2)

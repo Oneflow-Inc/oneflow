@@ -493,29 +493,30 @@ class IdShuffleKernel final : public user_op::OpKernel {
   OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32) \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
 
-#define REGISTER_CUDA_ID_SHUFFLE_KERNEL(k_dtype_pair, table_id_dtype_pair, idx_dtype_pair)        \
-  REGISTER_USER_KERNEL("id_shuffle")                                                              \
-      .SetCreateFn<                                                                               \
-          IdShuffleKernel<OF_PP_PAIR_FIRST(k_dtype_pair), OF_PP_PAIR_FIRST(table_id_dtype_pair),  \
-                          OF_PP_PAIR_FIRST(idx_dtype_pair)>>()                                    \
-      .SetIsMatchedHob(                                                                           \
-          (user_op::HobDeviceType() == DeviceType::kCUDA)                                         \
-          && (user_op::HobDataType("ids", 0) == OF_PP_PAIR_SECOND(k_dtype_pair))                  \
-          && (user_op::HobDataType("cur_rank_unique_table_ids", 0)                                \
-              == OF_PP_PAIR_SECOND(table_id_dtype_pair))                                          \
-          && (user_op::HobDataType("num_unique_matrix", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
-        const user_op::TensorDesc& ids = ctx->InputTensorDesc("ids", 0);                          \
-        const bool has_table_ids = ctx->has_input("table_ids", 0);                                \
-        const int32_t num_tables = ctx->Attr<int32_t>("num_tables");                              \
-        const bool need_gen_table_ids = (!has_table_ids && num_tables > 1);                       \
-        const bool need_process_table_ids = (has_table_ids || num_tables > 1);                    \
-        IdShuffleTmpBufferManager<OF_PP_PAIR_FIRST(k_dtype_pair),                                 \
-                                  OF_PP_PAIR_FIRST(table_id_dtype_pair),                          \
-                                  OF_PP_PAIR_FIRST(idx_dtype_pair)>                               \
-            buffer_manager(nullptr, ids.shape().elem_cnt(), ctx->parallel_desc().parallel_num(),  \
-                           need_gen_table_ids, need_process_table_ids);                           \
-        return buffer_manager.TotalBufferSize();                                                  \
+#define REGISTER_CUDA_ID_SHUFFLE_KERNEL(k_dtype_pair, table_id_dtype_pair, idx_dtype_pair)       \
+  REGISTER_USER_KERNEL("id_shuffle")                                                             \
+      .SetCreateFn<                                                                              \
+          IdShuffleKernel<OF_PP_PAIR_FIRST(k_dtype_pair), OF_PP_PAIR_FIRST(table_id_dtype_pair), \
+                          OF_PP_PAIR_FIRST(idx_dtype_pair)>>()                                   \
+      .SetIsMatchedHob(                                                                          \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                        \
+          && (user_op::HobDataType("ids", 0) == OF_PP_PAIR_SECOND(k_dtype_pair))                 \
+          && (user_op::HobDataType("cur_rank_unique_table_ids", 0)                               \
+              == OF_PP_PAIR_SECOND(table_id_dtype_pair))                                         \
+          && (user_op::HobDataType("num_unique_matrix", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair)) \
+          && (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ID_SHUFFLE_USE_P2P", false)))          \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
+        const user_op::TensorDesc& ids = ctx->InputTensorDesc("ids", 0);                         \
+        const bool has_table_ids = ctx->has_input("table_ids", 0);                               \
+        const int32_t num_tables = ctx->Attr<int32_t>("num_tables");                             \
+        const bool need_gen_table_ids = (!has_table_ids && num_tables > 1);                      \
+        const bool need_process_table_ids = (has_table_ids || num_tables > 1);                   \
+        IdShuffleTmpBufferManager<OF_PP_PAIR_FIRST(k_dtype_pair),                                \
+                                  OF_PP_PAIR_FIRST(table_id_dtype_pair),                         \
+                                  OF_PP_PAIR_FIRST(idx_dtype_pair)>                              \
+            buffer_manager(nullptr, ids.shape().elem_cnt(), ctx->parallel_desc().parallel_num(), \
+                           need_gen_table_ids, need_process_table_ids);                          \
+        return buffer_manager.TotalBufferSize();                                                 \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ID_SHUFFLE_KERNEL, ID_DATA_TYPE_SEQ,
@@ -525,7 +526,7 @@ template<typename T, typename IDX>
 void ShuffleEmbeddings(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parallel_id,
                        int64_t parallel_num, int64_t num_ids, int64_t embedding_size,
                        DataType data_type, IDX* host_num_unique_matrix,
-                       T* reverse_unique_cur_rank_embeddings, T* received_embeddings) {
+                       const T* reverse_unique_cur_rank_embeddings, T* received_embeddings) {
   std::vector<int64_t> send_offsets;
   std::vector<int64_t> send_elem_cnt;
   std::vector<int64_t> recv_offsets;
@@ -939,6 +940,8 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     auto* kernel_state = dynamic_cast<DataShuffleKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
     embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
+    std::unique_ptr<embedding::TmpBufferAllocator> allocator =
+        embedding_state->NewTmpBufferAllocator(ctx);
     embedding_state->OnEmbeddingShuffleStart(ctx, current_iter_);
     const user_op::Tensor* num_unique_matrix = ctx->Tensor4ArgNameAndIndex("num_unique_matrix", 0);
     const user_op::Tensor* cur_rank_inverse_indices =
@@ -955,6 +958,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     const int64_t num_ids = inverse_unique_partition_indices->shape_view().elem_cnt();
     const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+    const bool skip_last_gather = ctx->Attr<bool>("skip_last_gather");
     bool enable_quantized_comm_env_var =
         ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false);
     bool enable_quantized_comm = enable_quantized_comm_env_var && (embedding_size < kMaxColSize);
@@ -985,9 +989,8 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       // 1. reverse cur_rank unique, from (num_unique, embedding_size) to (cur_rank_num_ids,
       // embedding_size)
       void* reverse_unique_cur_rank_embeddings;
-      embedding_state->AllocTmpBuffer(
-          ctx, &reverse_unique_cur_rank_embeddings,
-          GetCudaAlignedSize(cur_rank_num_ids * embedding_size * sizeof(T)));
+      allocator->Allocate(&reverse_unique_cur_rank_embeddings,
+                          cur_rank_num_ids * embedding_size * sizeof(T));
       GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
           cur_rank_num_ids, cur_rank_embeddings_ptr, Shape({1, num_unique, embedding_size}),
@@ -995,34 +998,40 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
 
       // 2. send recv embedding, from (cur_rank_num_ids, embedding_size) to
       // (unique_partitioned_num_ids, embedding_size)
-      void* received_embeddings;  // T
-      embedding_state->AllocTmpBuffer(
-          ctx, &received_embeddings,
-          GetCudaAlignedSize(unique_partitioned_num_ids * embedding_size * sizeof(T)));
+      if (skip_last_gather) {
+        ShuffleEmbeddings(cuda_stream, comm, parallel_id, parallel_num, num_ids, embedding_size,
+                          data_type, host_num_unique_matrix,
+                          reinterpret_cast<T*>(reverse_unique_cur_rank_embeddings),
+                          embeddings->mut_dptr<T>());
+        allocator->Free(reverse_unique_cur_rank_embeddings);
+      } else {
+        void* received_embeddings;  // T
+        allocator->Allocate(&received_embeddings, GetCudaAlignedSize(unique_partitioned_num_ids
+                                                                     * embedding_size * sizeof(T)));
 
-      ShuffleEmbeddings(cuda_stream, comm, parallel_id, parallel_num, num_ids, embedding_size,
-                        data_type, host_num_unique_matrix,
-                        reinterpret_cast<T*>(reverse_unique_cur_rank_embeddings),
-                        reinterpret_cast<T*>(received_embeddings));
-      embedding_state->FreeTmpBuffer(ctx, reverse_unique_cur_rank_embeddings);
+        ShuffleEmbeddings(cuda_stream, comm, parallel_id, parallel_num, num_ids, embedding_size,
+                          data_type, host_num_unique_matrix,
+                          reinterpret_cast<T*>(reverse_unique_cur_rank_embeddings),
+                          reinterpret_cast<T*>(received_embeddings));
+        allocator->Free(reverse_unique_cur_rank_embeddings);
 
-      // 3. reverse unique_partition, from (unique_partitioned_num_ids, embedding_size) to (num_ids,
-      // embedding_size)
-      GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
-          ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
-          num_ids, reinterpret_cast<T*>(received_embeddings),
-          Shape({1, unique_partitioned_num_ids, embedding_size}), embeddings->mut_dptr<T>(), 0);
-      embedding_state->FreeTmpBuffer(ctx, received_embeddings);
+        // 3. reverse unique_partition, from (unique_partitioned_num_ids, embedding_size) to
+        // (num_ids, embedding_size)
+        GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
+            ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
+            num_ids, reinterpret_cast<T*>(received_embeddings),
+            Shape({1, unique_partitioned_num_ids, embedding_size}), embeddings->mut_dptr<T>(), 0);
+        allocator->Free(received_embeddings);
+      }
     } else {
+      CHECK(!skip_last_gather) << "when enable_quantized_comm, should not use fuse kernel.";
       // 1. quantize cur_rank_embeddings, from (num_unique, embedding_size) T to (num_unique,
       // embedding_size) int8_t, and get (num_unique,) T factor
       void* quantize_cur_rank_embeddings;  // int8_t
-      embedding_state->AllocTmpBuffer(
-          ctx, &quantize_cur_rank_embeddings,
-          GetCudaAlignedSize(num_unique * embedding_size * sizeof(int8_t)));
+      allocator->Allocate(&quantize_cur_rank_embeddings,
+                          num_unique * embedding_size * sizeof(int8_t));
       void* cur_rank_quantize_factor;  // T
-      embedding_state->AllocTmpBuffer(ctx, &cur_rank_quantize_factor,
-                                      GetCudaAlignedSize(num_unique * sizeof(T)));
+      allocator->Allocate(&cur_rank_quantize_factor, num_unique * sizeof(T));
       DispatchQuantizeWarpImplPackSize<T, ComputeType>()(
           cuda_stream, cur_rank_embeddings_ptr,
           reinterpret_cast<int8_t*>(quantize_cur_rank_embeddings),
@@ -1031,36 +1040,32 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       // embedding_size)
       void* reverse_unique_cur_rank_embeddings;  // int8_t
 
-      embedding_state->AllocTmpBuffer(
-          ctx, &reverse_unique_cur_rank_embeddings,
-          GetCudaAlignedSize(cur_rank_num_ids * embedding_size * sizeof(int8_t)));
+      allocator->Allocate(&reverse_unique_cur_rank_embeddings,
+                          cur_rank_num_ids * embedding_size * sizeof(int8_t));
 
       GatherKernelUtilImpl<DeviceType::kCUDA, int8_t, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
           cur_rank_num_ids, reinterpret_cast<int8_t*>(quantize_cur_rank_embeddings),
           Shape({1, num_unique, embedding_size}),
           reinterpret_cast<int8_t*>(reverse_unique_cur_rank_embeddings), 0);
-      embedding_state->FreeTmpBuffer(ctx, quantize_cur_rank_embeddings);
+      allocator->Free(quantize_cur_rank_embeddings);
 
       // 3. reverse cur_rank quantize factor unique, from (num_unique) to (cur_rank_num_ids)
       void* reverse_cur_rank_quantize_factor;  // T
-      embedding_state->AllocTmpBuffer(ctx, &reverse_cur_rank_quantize_factor,
-                                      GetCudaAlignedSize(cur_rank_num_ids * sizeof(T)));
+      allocator->Allocate(&reverse_cur_rank_quantize_factor, cur_rank_num_ids * sizeof(T));
 
       GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
           cur_rank_num_ids, reinterpret_cast<T*>(cur_rank_quantize_factor),
           Shape({1, num_unique, 1}), reinterpret_cast<T*>(reverse_cur_rank_quantize_factor), 0);
-      embedding_state->FreeTmpBuffer(ctx, cur_rank_quantize_factor);
+      allocator->Free(cur_rank_quantize_factor);
       // 4. send recv embedding and factor, from (cur_rank_num_ids, embedding_size) to
       // (unique_partitioned_num_ids, embedding_size)
       void* received_embeddings;   // int8_t
       void* recv_quantize_factor;  // T
-      embedding_state->AllocTmpBuffer(
-          ctx, &received_embeddings,
-          GetCudaAlignedSize(unique_partitioned_num_ids * embedding_size * sizeof(int8_t)));
-      embedding_state->AllocTmpBuffer(ctx, &recv_quantize_factor,
-                                      GetCudaAlignedSize(unique_partitioned_num_ids * sizeof(T)));
+      allocator->Allocate(&received_embeddings,
+                          unique_partitioned_num_ids * embedding_size * sizeof(int8_t));
+      allocator->Allocate(&recv_quantize_factor, unique_partitioned_num_ids * sizeof(T));
 
       ShuffleEmbeddings(cuda_stream, comm, parallel_id, parallel_num, num_ids, embedding_size,
                         data_type, host_num_unique_matrix,
@@ -1068,33 +1073,31 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
                         reinterpret_cast<int8_t*>(received_embeddings),
                         reinterpret_cast<T*>(reverse_cur_rank_quantize_factor),
                         reinterpret_cast<T*>(recv_quantize_factor));
-      embedding_state->FreeTmpBuffer(ctx, reverse_unique_cur_rank_embeddings);
-      embedding_state->FreeTmpBuffer(ctx, reverse_cur_rank_quantize_factor);
+      allocator->Free(reverse_unique_cur_rank_embeddings);
+      allocator->Free(reverse_cur_rank_quantize_factor);
 
       // 5. reverse unique_partition, from (unique_partitioned_num_ids, embedding_size) to (num_ids,
       // embedding_size)
       void* reverse_recv_quantize_cur_rank_embeddings;  // int8_t
-      embedding_state->AllocTmpBuffer(
-          ctx, &reverse_recv_quantize_cur_rank_embeddings,
-          GetCudaAlignedSize(num_ids * embedding_size * sizeof(int8_t)));
+      allocator->Allocate(&reverse_recv_quantize_cur_rank_embeddings,
+                          num_ids * embedding_size * sizeof(int8_t));
 
       GatherKernelUtilImpl<DeviceType::kCUDA, int8_t, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
           num_ids, reinterpret_cast<int8_t*>(received_embeddings),
           Shape({1, unique_partitioned_num_ids, embedding_size}),
           reinterpret_cast<int8_t*>(reverse_recv_quantize_cur_rank_embeddings), 0);
-      embedding_state->FreeTmpBuffer(ctx, received_embeddings);
+      allocator->Free(received_embeddings);
       // 6. reverse unique_partition_factor, from (unique_partitioned_num_ids) to (num_ids)
       void* reverse_recv_quantize_factor;  // T
-      embedding_state->AllocTmpBuffer(ctx, &reverse_recv_quantize_factor,
-                                      GetCudaAlignedSize(num_ids * sizeof(T)));
+      allocator->Allocate(&reverse_recv_quantize_factor, num_ids * sizeof(T));
 
       GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
           num_ids, reinterpret_cast<T*>(recv_quantize_factor),
           Shape({1, unique_partitioned_num_ids, 1}),
           reinterpret_cast<T*>(reverse_recv_quantize_factor), 0);
-      embedding_state->FreeTmpBuffer(ctx, recv_quantize_factor);
+      allocator->Free(recv_quantize_factor);
 
       // 7. dequantize embeddings, from (num_ids, embedding_size) int8_t to (num_ids,
       // embedding_size) T
@@ -1104,8 +1107,8 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
           cuda_stream, reinterpret_cast<int8_t*>(reverse_recv_quantize_cur_rank_embeddings),
           reinterpret_cast<T*>(reverse_recv_quantize_factor), embeddings->mut_dptr<T>(),
           embedding_size, dequantize_elem_cnt)));
-      embedding_state->FreeTmpBuffer(ctx, reverse_recv_quantize_cur_rank_embeddings);
-      embedding_state->FreeTmpBuffer(ctx, reverse_recv_quantize_factor);
+      allocator->Free(reverse_recv_quantize_cur_rank_embeddings);
+      allocator->Free(reverse_recv_quantize_factor);
     }
     embedding_state->OnEmbeddingShuffleEnd(ctx, current_iter_);
     current_iter_++;
@@ -1121,6 +1124,9 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       .SetIsMatchedHob(                                                                           \
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                         \
           && (user_op::HobDataType("cur_rank_embeddings", 0) == OF_PP_PAIR_SECOND(t_dtype_pair))  \
+          && ((user_op::HobAttr<bool>("skip_last_gather") == false)                               \
+              || (!embedding::UseEmbeddingShuffleP2PKernel(OF_PP_PAIR_SECOND(t_dtype_pair),       \
+                                                           OF_PP_PAIR_SECOND(idx_dtype_pair))))   \
           && (user_op::HobDataType("num_unique_matrix", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
         const user_op::TensorDesc& inverse_unique_partition_indices =                             \
@@ -1168,7 +1174,7 @@ template<typename T, typename IDX>
 void ShuffleEmbeddingsGrad(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parallel_id,
                            int64_t parallel_num, int64_t num_ids, int64_t embedding_size,
                            DataType data_type, IDX* host_num_unique_matrix,
-                           T* unique_partition_embedding_grad, T* received_embeddings_grad) {
+                           const T* unique_partition_embedding_grad, T* received_embeddings_grad) {
   std::vector<int64_t> send_offsets;
   std::vector<int64_t> send_elem_cnt;
   std::vector<int64_t> recv_offsets;
@@ -1360,7 +1366,8 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     auto* kernel_state = dynamic_cast<DataShuffleKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
     embedding::EmbeddingState* embedding_state = kernel_state->EmbeddingState();
-    embedding_state->OnEmbeddingGradientShuffleStart(ctx, current_iter_);
+    std::unique_ptr<embedding::TmpBufferAllocator> allocator =
+        embedding_state->NewTmpBufferAllocator(ctx);
     const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);
 
     const user_op::Tensor* num_unique_matrix = ctx->Tensor4ArgNameAndIndex("num_unique_matrix", 0);
@@ -1389,11 +1396,11 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
       LOG(WARNING) << "Only envrionment variable ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM=1 and "
                       "embedding_size less equal than 1024 can use quantized communication. ";
     }
+    const bool skip_first_scatter = ctx->Attr<bool>("skip_first_scatter");
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     const std::vector<uint32_t>& num_unique_matrix_vec =
         embedding_state->GetIdNumUniqueMatrix(current_iter_);
     CHECK_EQ(sizeof(IDX), sizeof(uint32_t)) << "assume sizeof(IDX) equals to sizeof(uint32_t)";
-    ;
     std::memcpy(host_num_unique_matrix, num_unique_matrix_vec.data(),
                 parallel_num * parallel_num * sizeof(IDX));
     uint32_t num_unique = embedding_state->GetIdNumUnique(current_iter_);
@@ -1410,25 +1417,29 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
       // 1. sum to unique grad, from (num_ids, embedding_size) to (unique_partitioned_num_ids,
       // padded_embedding_size)
       void* unique_partition_embedding_grad;  // T
-      embedding_state->AllocTmpBuffer(
-          ctx, &unique_partition_embedding_grad,
-          GetCudaAlignedSize(unique_partitioned_num_ids * padded_embedding_size * sizeof(T)));
+      allocator->Allocate(&unique_partition_embedding_grad,
+                          unique_partitioned_num_ids * padded_embedding_size * sizeof(T));
 
-      UniquePartitionEmbeddingGrad(
-          ctx->stream(), unique_partitioned_num_ids, num_ids, embedding_size, padded_embedding_size,
-          host_num_unique_matrix, embedding_grad->dptr<T>(),
-          reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
-          reinterpret_cast<T*>(unique_partition_embedding_grad));
+      const T* unique_embedding_grad_ptr;
+      if (skip_first_scatter) {
+        unique_embedding_grad_ptr = embedding_grad->dptr<T>();
+      } else {
+        UniquePartitionEmbeddingGrad(
+            ctx->stream(), unique_partitioned_num_ids, num_ids, embedding_size,
+            padded_embedding_size, host_num_unique_matrix, embedding_grad->dptr<T>(),
+            reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
+            reinterpret_cast<T*>(unique_partition_embedding_grad));
+        unique_embedding_grad_ptr = reinterpret_cast<T*>(unique_partition_embedding_grad);
+      }
       // 2. send recv grad, from (unique_partitioned_num_ids, padded_embedding_size) to
       // (cur_rank_num_ids, padded_embedding_size)
       void* received_embedding_grad;  // T
-      embedding_state->AllocTmpBuffer(
-          ctx, &received_embedding_grad,
-          GetCudaAlignedSize(cur_rank_num_ids * padded_embedding_size * sizeof(T)));
+      allocator->Allocate(&received_embedding_grad,
+                          cur_rank_num_ids * padded_embedding_size * sizeof(T));
 
       ShuffleEmbeddingsGrad(cuda_stream, comm, parallel_id, parallel_num, num_ids,
                             padded_embedding_size, data_type, host_num_unique_matrix,
-                            reinterpret_cast<T*>(unique_partition_embedding_grad),
+                            unique_embedding_grad_ptr,
                             reinterpret_cast<T*>(received_embedding_grad));
 
       // 3. sum to unique grad, from (cur_rank_num_ids, padded_embedding_size) to (num_unique,
@@ -1444,15 +1455,15 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
           reinterpret_cast<T*>(received_embedding_grad),
           reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
           cur_rank_unique_embedding_grad->mut_dptr<T>(), buffer_ptr);
-      embedding_state->FreeTmpBuffer(ctx, unique_partition_embedding_grad);
-      embedding_state->FreeTmpBuffer(ctx, received_embedding_grad);
+      allocator->Free(unique_partition_embedding_grad);
+      allocator->Free(received_embedding_grad);
     } else {
+      CHECK(!skip_first_scatter) << "when enable_quantized_comm, should not use fuse kernel.";
       // 1. sum to unique grad, from (num_ids, embedding_size) to (unique_partitioned_num_ids,
       // padded_embedding_size)
       void* unique_partition_embedding_grad;  // T
-      embedding_state->AllocTmpBuffer(
-          ctx, &unique_partition_embedding_grad,
-          GetCudaAlignedSize(unique_partitioned_num_ids * padded_embedding_size * sizeof(T)));
+      allocator->Allocate(&unique_partition_embedding_grad,
+                          unique_partitioned_num_ids * padded_embedding_size * sizeof(T));
 
       UniquePartitionEmbeddingGrad(
           ctx->stream(), unique_partitioned_num_ids, num_ids, embedding_size, padded_embedding_size,
@@ -1464,12 +1475,10 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
       // quantize_cur_rank_embedding_grad(unique_partitioned_num_ids, padded_embedding_size) int8_t
       // and cur_rank_quantize_factor(unique_partitioned_num_ids) T
       void* quantize_cur_rank_embedding_grad;  // int8_t
-      embedding_state->AllocTmpBuffer(
-          ctx, &quantize_cur_rank_embedding_grad,
-          GetCudaAlignedSize(unique_partitioned_num_ids * padded_embedding_size * sizeof(int8_t)));
+      allocator->Allocate(&quantize_cur_rank_embedding_grad,
+                          unique_partitioned_num_ids * padded_embedding_size * sizeof(int8_t));
       void* cur_rank_quantize_factor;  // T
-      embedding_state->AllocTmpBuffer(ctx, &cur_rank_quantize_factor,
-                                      GetCudaAlignedSize(unique_partitioned_num_ids * sizeof(T)));
+      allocator->Allocate(&cur_rank_quantize_factor, unique_partitioned_num_ids * sizeof(T));
 
       DispatchQuantizeWarpImplPackSize<T, ComputeType>()(
           cuda_stream, reinterpret_cast<T*>(unique_partition_embedding_grad),
@@ -1481,12 +1490,10 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
       // (cur_rank_num_ids, padded_embedding_size) int8_t send recv quantize_factor, from
       // (unique_partitioned_num_ids) T to (cur_rank_num_ids) T
       void* received_embedding_grad;  // int8_t
-      embedding_state->AllocTmpBuffer(
-          ctx, &received_embedding_grad,
-          GetCudaAlignedSize(cur_rank_num_ids * padded_embedding_size * sizeof(int8_t)));
+      allocator->Allocate(&received_embedding_grad,
+                          cur_rank_num_ids * padded_embedding_size * sizeof(int8_t));
       void* received_cur_rank_quantize_factor;  // T
-      embedding_state->AllocTmpBuffer(ctx, &received_cur_rank_quantize_factor,
-                                      GetCudaAlignedSize(cur_rank_num_ids * sizeof(T)));
+      allocator->Allocate(&received_cur_rank_quantize_factor, cur_rank_num_ids * sizeof(T));
 
       ShuffleEmbeddingsGrad(cuda_stream, comm, parallel_id, parallel_num, num_ids,
                             padded_embedding_size, data_type, host_num_unique_matrix,
@@ -1494,8 +1501,8 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
                             reinterpret_cast<int8_t*>(received_embedding_grad),
                             reinterpret_cast<T*>(cur_rank_quantize_factor),
                             reinterpret_cast<T*>(received_cur_rank_quantize_factor));
-      embedding_state->FreeTmpBuffer(ctx, quantize_cur_rank_embedding_grad);
-      embedding_state->FreeTmpBuffer(ctx, cur_rank_quantize_factor);
+      allocator->Free(quantize_cur_rank_embedding_grad);
+      allocator->Free(cur_rank_quantize_factor);
 
       /*
       Host num unique matrix:
@@ -1510,17 +1517,16 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
       // 4. dequantize grad, from (cur_rank_num_ids, padded_embedding_size) int8_t to
       // (cur_rank_num_ids, padded_embedding_size) T
       void* dequantize_cur_rank_embedding_grad;  // T
-      embedding_state->AllocTmpBuffer(
-          ctx, &dequantize_cur_rank_embedding_grad,
-          GetCudaAlignedSize(cur_rank_num_ids * padded_embedding_size * sizeof(T)));
+      allocator->Allocate(&dequantize_cur_rank_embedding_grad,
+                          cur_rank_num_ids * padded_embedding_size * sizeof(T));
 
       OF_CUDA_CHECK((LaunchDequantizeKernel<T, ComputeType, IDX>(
           cuda_stream, reinterpret_cast<int8_t*>(received_embedding_grad),
           reinterpret_cast<T*>(received_cur_rank_quantize_factor),
           reinterpret_cast<T*>(dequantize_cur_rank_embedding_grad), padded_embedding_size,
           cur_rank_num_ids * padded_embedding_size)));
-      embedding_state->FreeTmpBuffer(ctx, received_embedding_grad);
-      embedding_state->FreeTmpBuffer(ctx, received_cur_rank_quantize_factor);
+      allocator->Free(received_embedding_grad);
+      allocator->Free(received_cur_rank_quantize_factor);
 
       // use unique_partition_embedding_grad as UniqueCurRankEmbeddingGrad buffer.
       T* buffer_ptr = reinterpret_cast<T*>(unique_partition_embedding_grad);
@@ -1535,10 +1541,9 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
           reinterpret_cast<T*>(dequantize_cur_rank_embedding_grad),
           reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
           cur_rank_unique_embedding_grad->mut_dptr<T>(), buffer_ptr);
-      embedding_state->FreeTmpBuffer(ctx, unique_partition_embedding_grad);
-      embedding_state->FreeTmpBuffer(ctx, dequantize_cur_rank_embedding_grad);
+      allocator->Free(unique_partition_embedding_grad);
+      allocator->Free(dequantize_cur_rank_embedding_grad);
     }
-    embedding_state->OnEmbeddingGradientShuffleEnd(ctx, current_iter_);
     current_iter_++;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -1552,6 +1557,9 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
       .SetIsMatchedHob(                                                                           \
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                         \
           && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(t_dtype_pair))       \
+          && ((user_op::HobAttr<bool>("skip_first_scatter") == false)                             \
+              || (!embedding::UseEmbeddingGradientShuffleP2PKernel(                               \
+                  OF_PP_PAIR_SECOND(t_dtype_pair), OF_PP_PAIR_SECOND(idx_dtype_pair))))           \
           && (user_op::HobDataType("num_unique_matrix", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
         const user_op::TensorDesc& cur_rank_unique_embedding_grad =                               \

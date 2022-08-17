@@ -74,4 +74,9 @@ from .tensordot import *
 from .searchsorted import *
 from .amin import *
 from .deconv import *
+from .inv import *
 from .logical_ops import *
+from .distance import *
+from .addcdiv import *
+from .hann_window import *
+from .convolution import *

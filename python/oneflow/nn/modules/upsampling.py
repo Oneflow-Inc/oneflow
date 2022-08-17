@@ -20,10 +20,7 @@ from oneflow.nn.module import Module
 
 
 class Upsample(Module):
-    """The interface is consistent with PyTorch.    
-    
-    The documentation is referenced from: https://pytorch.org/docs/1.10/_modules/torch/nn/modules/upsampling.html.
-    
+    """    
     Upsamples a given multi-channel 1D (temporal), 2D (spatial) or 3D (volumetric) data.
 
     The input data is assumed to be of the form
@@ -36,6 +33,9 @@ class Upsample(Module):
 
     One can either give a :attr:`scale_factor` or the target output :attr:`size` to
     calculate the output size. (You cannot give both, as it is ambiguous)
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/_modules/torch/nn/modules/upsampling.html.
 
     Args:
         size (int or Tuple[int] or Tuple[int, int] or Tuple[int, int, int], optional):

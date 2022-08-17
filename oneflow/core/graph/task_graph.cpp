@@ -493,7 +493,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
         // src must be not on the cpu mem zone, copy d2h first
         CHECK(IsMemcpyDtoHSupported(src_mem_zone_id.device_type()));
         CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-        copy_task->Init(CopyHdOpConf::D2H, src_mem_zone_id, lbi);
+        copy_task->Init(CopyHdType::D2H, src_mem_zone_id, lbi);
         Connect<TaskNode>(src_node, NewTaskEdgeWithLbi(lbi), copy_task);
         proxy2node[key] = copy_task;
         return copy_task;
@@ -513,7 +513,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
           GetProxyNode(src_node, lbi, GetNodeCPUMemZoneId(dst_mem_zone_id.rank()));
       CHECK(IsMemcpyHtoDSupported(dst_mem_zone_id.device_type()));
       CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-      copy_task->Init(CopyHdOpConf::H2D, dst_mem_zone_id, lbi);
+      copy_task->Init(CopyHdType::H2D, dst_mem_zone_id, lbi);
       Connect<TaskNode>(proxy_on_dst_host, NewTaskEdgeWithLbi(lbi), copy_task);
       proxy2node[key] = copy_task;
       return copy_task;
@@ -727,6 +727,12 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     const ParallelDesc& src_parallel_desc = src_op_node->parallel_desc();
     const ParallelDesc& dst_parallel_desc = dst_op_node->parallel_desc();
     const BlobDesc& blob_desc = src_op_node->LogicalBlobDesc4Lbi(lbi);
+    VLOG(3) << "src op: " << src_op_node->op().op_name()
+            << " dst op: " << dst_op_node->op().op_name()
+            << " src_parallel_conf: " << src_parallel_desc.parallel_conf().DebugString()
+            << " dst parallel conf: " << dst_parallel_desc.parallel_conf().DebugString()
+            << " src_nd_sbp " << src_nd_sbp.DebugString() << " dst nd_sbp "
+            << dst_nd_sbp.DebugString();
     auto status = CHECK_JUST(hierarchical_sub_tsk_gph_builder_->Build(
         sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks, src_parallel_desc,
         dst_parallel_desc, lbi, blob_desc, src_nd_sbp, dst_nd_sbp,

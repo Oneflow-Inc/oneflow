@@ -82,7 +82,8 @@ namespace primitive {
 
 #define UNARY_UTILS_OP_SEQ              \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kIsInf) \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kIsNan)
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kIsNan) \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kIsFinite)
 
 }  // namespace primitive
 }  // namespace ep

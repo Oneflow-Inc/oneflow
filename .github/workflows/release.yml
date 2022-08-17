@@ -71,7 +71,7 @@ jobs:
       - name: Install dependencies
         run: |
           python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
-          python3 -m pip install -U pip setuptools wheel --user
+          python3 -m pip install -U setuptools wheel --user
           python3 -m pip install oss2  --user
       - uses: actions/checkout@v2
       - uses: Oneflow-Inc/get-oneflow@support-iree-ci

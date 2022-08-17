@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_MULTI_CLIENT_SESSION_CONTEXT_H_
 #define ONEFLOW_CORE_FRAMEWORK_MULTI_CLIENT_SESSION_CONTEXT_H_
 
-#include <string>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/common/maybe.h"

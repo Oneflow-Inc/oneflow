@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_captured_tensor.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/framework/op_interpreter.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace one {
@@ -96,14 +97,19 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
     CHECK_NOTNULL_OR_RETURN(state);
     // Convert outputs from `Tensor` to `AutogradCapturedTensor` to avoid
     // circular reference between `Tensor` and `FunctionNode`.
+    OF_PROFILER_RANGE_PUSH("init inputs");
     TensorTuple captured_inputs(inputs.size());
     for (int i = 0; i < inputs.size(); ++i) {
       captured_inputs[i] = JUST(AutogradCapturedTensor::MakeTensor(inputs.at(i)));
     }
+    OF_PROFILER_RANGE_POP();
+    OF_PROFILER_RANGE_PUSH("init outputs");
     TensorTuple captured_outputs(outputs.size());
     for (int i = 0; i < outputs.size(); ++i) {
       captured_outputs[i] = JUST(AutogradCapturedTensor::MakeTensor(outputs.at(i)));
     }
+    OF_PROFILER_RANGE_POP();
+    OF_PROFILER_RANGE_GUARD("Capture");
     return Capture(state, captured_inputs, captured_outputs, interp_ctx);
   }
 
@@ -176,7 +182,7 @@ class OpExprGradClosure {
  public:
   // Use `shared_ptr` in order to keep `impl` alive even if the forward op has been released.
   explicit OpExprGradClosure(const std::shared_ptr<OpExprGradFunctionIf>& impl)
-      : impl_(impl), state_(impl->MakeCustomState()) {}
+      : OpExprGradClosure(impl, impl->MakeCustomState()) {}
   explicit OpExprGradClosure(const std::shared_ptr<OpExprGradFunctionIf>& impl,
                              const std::shared_ptr<AutoGradCaptureState>& state)
       : impl_(impl), state_(state) {}

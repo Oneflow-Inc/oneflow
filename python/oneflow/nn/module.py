@@ -56,7 +56,7 @@ class Module(object):
     
     This class is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.Module.html.
+    https://pytorch.org/docs/1.10/generated/torch.nn.Module.html.
 
     Your models should also subclass this class.
 
@@ -610,6 +610,29 @@ class Module(object):
         """
         return self.train(False)
 
+    def requires_grad_(self: T, requires_grad: bool = True) -> T:
+        r"""Change if autograd should record operations on parameters in this
+        module.
+        The interface is consistent with PyTorch.
+        The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Module.html?highlight=requires_grad_#torch.nn.Module.requires_grad_.
+
+        This method sets the parameters' :attr:`requires_grad` attributes
+        in-place.
+
+        This method is helpful for freezing part of the module for finetuning
+        or training parts of a model individually (e.g., GAN training).
+
+        Args:
+            requires_grad (bool): whether autograd should record operations on
+                                  parameters in this module. Default: ``True``.
+
+        Returns:
+            Module: self
+        """
+        for p in self.parameters():
+            p.requires_grad_(requires_grad)
+        return self
+
     def zero_grad(self, set_to_none: bool = False) -> None:
         r"""
         zero_grad(set_to_none=False)
@@ -688,6 +711,24 @@ class Module(object):
                         )
                     )
                     continue
+                if (
+                    isinstance(input_param, flow.Tensor)
+                    and input_param.is_global != param.is_global
+                ):
+                    if param.is_global:
+                        help_msg = "Maybe you need to convert the checkpoint param to global, or set global_src_rank=0 when using flow.load to load model's state_dict"
+                    else:
+                        help_msg = "Maybe you need to convert your model to global."
+                    error_msgs.append(
+                        'local / global mismatch for "{}":  param from checkpoint is {} tensor, but the param in current model is {} tensor. {}'.format(
+                            key,
+                            "global" if input_param.is_global else "local",
+                            "global" if param.is_global else "local",
+                            help_msg,
+                        )
+                    )
+                    continue
+
                 try:
                     with flow.no_grad():
                         param.copy_(input_param)

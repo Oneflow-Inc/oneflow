@@ -22,7 +22,7 @@ namespace oneflow {
   const int32_t start_dim = ctx->Attr<int32_t>("start_dim");
   const int32_t end_dim = ctx->Attr<int32_t>("end_dim");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
+  user_op::TensorDesc* out_tensor_desc = ctx->MutOutputTensorDesc("out", 0);
   const Shape& in_shape = ExpandDimIf0D(in_tensor_desc.shape());
   CHECK_GE_OR_RETURN(start_dim, 0);
   CHECK_LT_OR_RETURN(start_dim, in_shape.NumAxes());
@@ -55,7 +55,10 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FlattenOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
   const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
+  if (in_shape.NumAxes() == 0) { return Maybe<void>::Ok(); }  // 0D tensor only support b/p
+
   const int32_t start_dim = ctx->Attr<int32_t>("start_dim");
   const int32_t end_dim = ctx->Attr<int32_t>("end_dim");
 
@@ -77,12 +80,11 @@ namespace oneflow {
         .Build();
   }
 
-  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> FlattenOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  *ctx->MutOutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 

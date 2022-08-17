@@ -20,27 +20,6 @@ namespace oneflow {
 
 namespace {
 
-std::function<bool(const OpNode* op_node)> MakePredicatorIsSafeToDelete(const OpGraph& op_graph) {
-  HashSet<std::string> ctrl_in_op_names;
-  op_graph.ForEachNode([&](const OpNode* op_node) {
-    for (const std::string& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
-      ctrl_in_op_names.insert(ctrl_in_op_name);
-    }
-  });
-  return [=](const OpNode* op_node) {
-    if (op_node->out_edges().size() > 1) { return false; }
-    if (!op_node->op().op_conf().ctrl_in_op_name().empty()) { return false; }
-    if (ctrl_in_op_names.find(op_node->op().op_conf().name()) != ctrl_in_op_names.end()) {
-      return false;
-    }
-    return true;
-  };
-}
-
-bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_type_name) {
-  return op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == op_type_name;
-};
-
 class FuseUpdateOpsPass final : public JobPass {
  public:
   FuseUpdateOpsPass() = default;
@@ -72,7 +51,8 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
         && user_op_conf.op_type_name() != "lars_update"
         && user_op_conf.op_type_name() != "adagrad_update"
         && user_op_conf.op_type_name() != "lamb_update"
-        && user_op_conf.op_type_name() != "ftrl_update") {
+        && user_op_conf.op_type_name() != "ftrl_update"
+        && user_op_conf.op_type_name() != "adadelta_update") {
       return;
     }
     if (user_op_conf.attr<double>("scale") != 1.0 || user_op_conf.attr<float>("l1") != 0.0f
@@ -230,6 +210,12 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
           .Attr<float>("lambda1", user_op_conf.attr<float>("lambda1"))
           .Attr<float>("lambda2", user_op_conf.attr<float>("lambda2"))
           .Attr<float>("beta", user_op_conf.attr<float>("beta"));
+    } else if (user_op_conf.op_type_name() == "adadelta_update") {
+      fused_op_builder.Input("square_avgs", user_op_conf.input("square_avgs", 0))
+          .Input("acc_deltas", user_op_conf.input("acc_deltas", 0))
+          .Attr<float>("rho", user_op_conf.attr<float>("rho"))
+          .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"))
+          .Attr<bool>("maximize", user_op_conf.attr<bool>("maximize"));
     } else {
       UNIMPLEMENTED();
     }

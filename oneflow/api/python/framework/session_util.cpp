@@ -27,7 +27,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("push_local_strategy_enabled", &Session::PushLocalStrategyEnabled)
       .def("pop_local_strategy_enabled", &Session::PopLocalStrategyEnabled)
       .def("is_local_strategy_enabled", &Session::IsLocalStrategyEnabled)
-      .def("is_consistent_strategy_enabled", &Session::IsConsistentStrategyEnabled)
+      .def("is_global_strategy_enabled", &Session::IsGlobalStrategyEnabled)
       .def("is_local_strategy_enabled_stack_size",
            [](const Session* sess) { return sess->is_local_strategy_enabled_stack()->size(); });
 

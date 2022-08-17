@@ -84,6 +84,7 @@ enum class UnaryOp {
   // utils op
   kIsInf,
   kIsNan,
+  kIsFinite,
 };
 
 }

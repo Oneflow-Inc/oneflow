@@ -148,6 +148,54 @@ struct BinaryFunctor<device, BinaryOp::kLogicalXor, Src, Dst> {
 };
 
 template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kFmod, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const { return static_cast<Dst>(src0 % src1); }
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kFloorDiv, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const { return src0 / src1; }
+};
+
+template<DeviceType device, typename Src, typename Dst>
+struct BinaryFunctor<device, BinaryOp::kFloorMod, Src, Dst> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
+    Src trunc_mod = src0 % src1;
+    return (trunc_mod != static_cast<Src>(0))
+                   && ((src1 < static_cast<Src>(0)) != (trunc_mod < static_cast<Src>(0)))
+               ? trunc_mod + src1
+               : trunc_mod;
+  }
+};
+
+template<DeviceType device>
+struct BinaryFunctor<device, BinaryOp::kFloorMod, uint8_t, uint8_t> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC uint8_t operator()(uint8_t src0, uint8_t src1) const { return src0 % src1; }
+};
+
+template<DeviceType device>
+struct BinaryFunctor<device, BinaryOp::kFloorMod, uint32_t, uint32_t> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC uint32_t operator()(uint32_t src0, uint32_t src1) const { return src0 % src1; }
+};
+
+template<DeviceType device>
+struct BinaryFunctor<device, BinaryOp::kFloorMod, uint64_t, uint64_t> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC uint64_t operator()(uint64_t src0, uint64_t src1) const { return src0 % src1; }
+};
+
+template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kEluBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<double>()) {}
 

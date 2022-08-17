@@ -31,6 +31,7 @@ def _test_rnn_utils_pack_padded_sequence(test_case, device):
     input_size = random.randint(10, 200)
     max_seq_len = random.randint(10, 500)
     batch_size = random.randint(10, 500)
+    requires_grad = np.random.rand() > 0.5
     padded_inputs = np.zeros((max_seq_len, batch_size, input_size))
     lengths = []
     lengths.append(max_seq_len)
@@ -42,11 +43,11 @@ def _test_rnn_utils_pack_padded_sequence(test_case, device):
         padded_inputs[0 : lengths[i], i : i + 1, :] = i + 1
 
     inputs = flow.from_numpy(padded_inputs).to(device)
-    inputs.requires_grad = True
+    inputs.requires_grad = requires_grad
     flow_res = flow_rnn_utils.pack_padded_sequence(inputs, lengths)
 
     torch_inputs = torch.from_numpy(padded_inputs).to(device)
-    torch_inputs.requires_grad = True
+    torch_inputs.requires_grad = requires_grad
     torch_res = torch_rnn_utils.pack_padded_sequence(torch_inputs, lengths)
 
     test_case.assertTrue(
@@ -72,8 +73,9 @@ def _test_rnn_utils_pack_padded_sequence(test_case, device):
         flow_res, batch_first=False
     )
 
-    torch_seq_unpacked.sum().backward()
-    flow_seq_unpacked.sum().backward()
+    if requires_grad:
+        torch_seq_unpacked.sum().backward()
+        flow_seq_unpacked.sum().backward()
 
     test_case.assertTrue(
         np.allclose(
@@ -90,9 +92,11 @@ def _test_rnn_utils_pack_padded_sequence(test_case, device):
             atol=1e-8,
         )
     )
-    test_case.assertTrue(
-        np.allclose(inputs.grad.cpu().numpy(), torch_inputs.grad.cpu().numpy())
-    )
+
+    if requires_grad:
+        test_case.assertTrue(
+            np.allclose(inputs.grad.cpu().numpy(), torch_inputs.grad.cpu().numpy())
+        )
 
 
 def _test_rnn_utils_pad_sequence(test_case, device):

@@ -66,7 +66,7 @@ from oneflow.nn.modules.conv import (
     ConvTranspose2d,
     ConvTranspose3d,
 )
-from oneflow.nn.modules.distance import CosineSimilarity
+from oneflow.nn.modules.distance import CosineSimilarity, PairwiseDistance
 from oneflow.nn.modules.min_max_observer import MinMaxObserver
 from oneflow.nn.modules.moving_average_min_max_observer import (
     MovingAverageMinMaxObserver,
@@ -91,6 +91,7 @@ from oneflow.nn.modules.dataset import (
     OFRecordBytesDecoder,
     GPTIndexedBinDataReader,
     OneRecReader,
+    RawReader,
 )
 
 from oneflow.nn.modules.dropout import Dropout
@@ -115,12 +116,14 @@ from oneflow.nn.modules.loss import (
     CombinedMarginLoss,
     TripletMarginLoss,
 )
-from oneflow.nn.modules.normalization import GroupNorm, LayerNorm
+from oneflow.nn.modules.normalization import GroupNorm, LayerNorm, RMSLayerNorm
 from oneflow.nn.modules.padding import (
     ConstantPad1d,
     ConstantPad2d,
     ConstantPad3d,
+    ReflectionPad1d,
     ReflectionPad2d,
+    ReplicationPad1d,
     ReplicationPad2d,
     ZeroPad2d,
 )
@@ -159,3 +162,5 @@ from oneflow.nn.modules.rnn import (
     LSTM,
     GRU,
 )
+
+from oneflow.nn.qat.conv import QatConv1d, QatConv2d, QatConv3d

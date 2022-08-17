@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/common/singleton.h"
+#include "oneflow/core/job/graph_scope_vars.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/shut_down_util.h"
@@ -41,7 +42,6 @@ Maybe<void> SwitchToShuttingDownPhase(EnvGlobalObjectsScope* env, bool is_normal
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurrentResource", &CurrentResource);
   m.def("EnvResource", &EnvResource);
-  m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
 
   py::class_<oneflow::EnvGlobalObjectsScope, std::shared_ptr<oneflow::EnvGlobalObjectsScope>>(
       m, "EnvContext")
@@ -75,6 +75,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetGraphDebugMaxPyStackDepth", &GetGraphDebugMaxPyStackDepth);
   m.def("SetGraphDebugMode", &SetGraphDebugMode);
   m.def("GetGraphDebugMode", &GetGraphDebugMode);
+  m.def("SetGraphDebugOnlyUserPyStack", &SetGraphDebugOnlyUserPyStack);
+  m.def("GetGraphDebugOnlyUserPyStack", &GetGraphDebugOnlyUserPyStack);
+  m.def("InitPythonPathsToBeKeptAndFilteredForDebugging",
+        &InitPythonPathsToBeKeptAndFilteredForDebugging);
 }
 
 }  // namespace oneflow

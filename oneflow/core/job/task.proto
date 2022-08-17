@@ -25,8 +25,6 @@ enum TaskType {
   kWaitAndSendIds = 45;
   kReentrantLock = 46;
   kCallbackNotify = 47;
-  kForeignInput = 48;
-  kForeignOutput = 49;
   kDistributeConcat = 55;
   kDistributeSplit = 56;
   kSliceBoxing = 57;
@@ -38,6 +36,7 @@ enum TaskType {
   kSspVariableProxy = 63;
   kBoxingZeros = 64;
   kCriticalSectionWaitTick = 65;
+  kNcclSendRecvBoxing = 66;
 };
 
 message RegstDescIdSet {
