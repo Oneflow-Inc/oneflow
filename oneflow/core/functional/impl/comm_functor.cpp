@@ -332,8 +332,9 @@ class SendFunctor {
  public:
   SendFunctor() { op_expr_ = CHECK_JUST(one::OpBuilder("send").Input("in").Build()); }
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& x, int64_t dst, bool send_meta) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("dst_process_id", dst));
+    thread_local static CachedMutableAttrMap attrs;
+    attrs.reset();
+    attrs.SetAttr<int64_t>("dst_process_id", dst);
     if (send_meta) {
       std::shared_ptr<FlatShape> flat_shape = JUST(FlatShape::New(*x->shape()));
       JUST(ccl::Send<DeviceType::kCPU>(flat_shape.get(), sizeof(*flat_shape), DataType::kChar, dst,
@@ -361,8 +362,9 @@ class RecvFunctor {
                            const Optional<Symbol<DType>>& optional_dtype,
                            const Optional<Symbol<Device>>& optional_device,
                            const Optional<one::Tensor>& out) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("src_process_id", src));
+    thread_local static CachedMutableAttrMap attrs;
+    attrs.reset();
+    attrs.SetAttr<int64_t>("src_process_id", src);
     Shape shape;
     DataType data_type = DataType::kInvalidDataType;
     Symbol<Device> device;
@@ -387,10 +389,10 @@ class RecvFunctor {
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "All or none of shape, dtype and device should have value.";
     }
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", data_type));
-    JUST(attrs.SetAttr<std::string>("device_type", device->type()));
-    JUST(attrs.SetAttr<int64_t>("device_id", device->device_id()));
+    attrs.SetAttr<Shape>("shape", shape);
+    attrs.SetAttr<DataType>("dtype", data_type);
+    attrs.SetAttr<std::string>("device_type", device->type());
+    attrs.SetAttr<int64_t>("device_id", device->device_id());
 
     OpExprInterpContext op_expr_interp_context(attrs, device);
 

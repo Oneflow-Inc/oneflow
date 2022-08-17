@@ -93,6 +93,9 @@ class AttrVal {
   virtual ~AttrVal() = default;
 
   virtual size_t hash_value() const = 0;
+  virtual AttrType value_type() const = 0;
+
+  virtual const void* Ptr() const = 0;
   virtual bool operator==(const AttrVal& other) const = 0;
   bool operator!=(const AttrVal& other) const { return !(*this == other); }
 
@@ -103,7 +106,12 @@ class AttrVal {
 template<typename T>
 class TypedAttrValIf : public AttrVal {
  public:
+  TypedAttrValIf() : value_type_(GetAttrType<T>::value) {}
+
   virtual const T& val() const = 0;
+  virtual const T* val_ptr() const = 0;
+
+  const void* Ptr() const override { return static_cast<const void*>(val_ptr()); }
   size_t hash_value() const override { return std::hash<T>()(val()); }
 
   bool operator==(const AttrVal& other) const override {
@@ -111,15 +119,21 @@ class TypedAttrValIf : public AttrVal {
     if (that == nullptr) { return false; }
     return this->val() == that->val();
   }
+
+  AttrType value_type() const override { return value_type_; }
+
+ protected:
+  AttrType value_type_;
 };
 
 template<typename T>
 class TypedAttrVal final : public TypedAttrValIf<T> {
  public:
-  TypedAttrVal(T v) : val_(v) {}
+  TypedAttrVal(T v) : TypedAttrValIf<T>(), val_(v) {}
   ~TypedAttrVal() = default;
 
   const T& val() const override { return val_; }
+  const T* val_ptr() const override { return &val_; }
 
  private:
   OF_DISALLOW_COPY_AND_MOVE(TypedAttrVal);
@@ -130,10 +144,11 @@ class TypedAttrVal final : public TypedAttrValIf<T> {
 template<typename T>
 class TypedAttrValRef final : public TypedAttrValIf<T> {
  public:
-  TypedAttrValRef(const T* v) : val_(v) {}
+  TypedAttrValRef(const T* v) : TypedAttrValIf<T>(), val_(v) {}
   ~TypedAttrValRef() = default;
 
   const T& val() const override { return *val_; }
+  const T* val_ptr() const override { return val_; }
 
  private:
   OF_DISALLOW_COPY_AND_MOVE(TypedAttrValRef);

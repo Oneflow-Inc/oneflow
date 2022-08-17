@@ -50,13 +50,14 @@ class BernoulliFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Symbol<DType>& dtype,
                            const Optional<one::Generator>& generator) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap bernoulli_attrs;
-    JUST(bernoulli_attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    JUST(bernoulli_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    thread_local static CachedMutableAttrMap bernoulli_attrs;
+    bernoulli_attrs.reset();
+    bernoulli_attrs.SetAttr<DataType>("dtype", dtype->data_type());
+    bernoulli_attrs.SetAttr<int64_t>("seed", gen->current_seed());
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     // p == -1 means bernoulli op doesn't use p to generate random number
-    JUST(bernoulli_attrs.SetAttr<double>("p", -1.0));
+    bernoulli_attrs.SetAttr<double>("p", -1.0);
     return OpInterpUtil::Dispatch<Tensor>(*bernoulli_op_, {x},
                                           OpExprInterpContext(bernoulli_attrs, distribution_state));
   }
@@ -74,13 +75,14 @@ class BernoulliProbFunctor {
                            const Symbol<DType>& dtype,
                            const Optional<one::Generator>& generator) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap bernoulli_attrs;
-    JUST(bernoulli_attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    JUST(bernoulli_attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    thread_local static CachedMutableAttrMap bernoulli_attrs;
+    bernoulli_attrs.reset();
+    bernoulli_attrs.SetAttr<DataType>("dtype", dtype->data_type());
+    bernoulli_attrs.SetAttr<int64_t>("seed", gen->current_seed());
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     CHECK_OR_THROW(p >= 0.0 && p <= 1.0) << "bernoulli expects p to be in [0, 1], but got p=" << p;
-    JUST(bernoulli_attrs.SetAttr<double>("p", p));
+    bernoulli_attrs.SetAttr<double>("p", p);
     return OpInterpUtil::Dispatch<Tensor>(*bernoulli_op_, {x},
                                           OpExprInterpContext(bernoulli_attrs, distribution_state));
   }
@@ -105,12 +107,13 @@ class RandFunctor {
     }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("from", 0));
-    JUST(attrs.SetAttr<double>("to", 1));
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    thread_local static CachedMutableAttrMap attrs;
+    attrs.reset();
+    attrs.SetAttr<double>("from", 0);
+    attrs.SetAttr<double>("to", 1);
+    attrs.SetAttr<Shape>("shape", shape);
+    attrs.SetAttr<DataType>("dtype", dtype_val);
+    attrs.SetAttr<int64_t>("seed", gen->current_seed());
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
@@ -143,18 +146,19 @@ class GlobalRandFunctor {
     }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("from", 0));
-    JUST(attrs.SetAttr<double>("to", 1));
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    thread_local static CachedMutableAttrMap attrs;
+    attrs.reset();
+    attrs.SetAttr<double>("from", 0);
+    attrs.SetAttr<double>("to", 1);
+    attrs.SetAttr<Shape>("shape", shape);
+    attrs.SetAttr<DataType>("dtype", dtype_val);
+    attrs.SetAttr<int64_t>("seed", gen->current_seed());
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     if (LazyMode::is_enabled()) {
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
+      attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp)));
     }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
@@ -180,12 +184,13 @@ class RandNFunctor {
     }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("mean", 0));
-    JUST(attrs.SetAttr<double>("std", 1));
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    thread_local static CachedMutableAttrMap attrs;
+    attrs.reset();
+    attrs.SetAttr<double>("mean", 0);
+    attrs.SetAttr<double>("std", 1);
+    attrs.SetAttr<Shape>("shape", shape);
+    attrs.SetAttr<DataType>("dtype", dtype_val);
+    attrs.SetAttr<int64_t>("seed", gen->current_seed());
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
@@ -216,18 +221,19 @@ class GlobalRandNFunctor {
     }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("mean", 0));
-    JUST(attrs.SetAttr<double>("std", 1));
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    thread_local static CachedMutableAttrMap attrs;
+    attrs.reset();
+    attrs.SetAttr<double>("mean", 0);
+    attrs.SetAttr<double>("std", 1);
+    attrs.SetAttr<Shape>("shape", shape);
+    attrs.SetAttr<DataType>("dtype", dtype_val);
+    attrs.SetAttr<int64_t>("seed", gen->current_seed());
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     if (LazyMode::is_enabled()) {
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
+      attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp)));
     }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
@@ -252,12 +258,13 @@ class RandIntFunctor {
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<int64_t>("from", low));
-    JUST(attrs.SetAttr<int64_t>("to", high));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    thread_local static CachedMutableAttrMap attrs;
+    attrs.reset();
+    attrs.SetAttr<Shape>("shape", shape);
+    attrs.SetAttr<int64_t>("from", low);
+    attrs.SetAttr<int64_t>("to", high);
+    attrs.SetAttr<DataType>("dtype", dtype_val);
+    attrs.SetAttr<int64_t>("seed", gen->current_seed());
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
@@ -323,18 +330,19 @@ class GlobalRandIntFunctor {
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<int64_t>("from", low));
-    JUST(attrs.SetAttr<int64_t>("to", high));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    thread_local static CachedMutableAttrMap attrs;
+    attrs.reset();
+    attrs.SetAttr<Shape>("shape", shape);
+    attrs.SetAttr<int64_t>("from", low);
+    attrs.SetAttr<int64_t>("to", high);
+    attrs.SetAttr<DataType>("dtype", dtype_val);
+    attrs.SetAttr<int64_t>("seed", gen->current_seed());
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     const auto& nd_sbp = JUST(GetNdSbp(sbp));
     if (LazyMode::is_enabled()) {
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
+      attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp)));
     }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
@@ -393,9 +401,10 @@ class RandPermFunctor {
                            const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("n", n));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    thread_local static CachedMutableAttrMap attrs;
+    attrs.reset();
+    attrs.SetAttr<int32_t>("n", n);
+    attrs.SetAttr<int64_t>("seed", gen->current_seed());
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
@@ -422,15 +431,16 @@ class GlobalRandPermFunctor {
                            const bool& requires_grad) const {
     JUST(CheckDeviceIdsIsValid(placement));
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("n", n));
-    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+    thread_local static CachedMutableAttrMap attrs;
+    attrs.reset();
+    attrs.SetAttr<int32_t>("n", n);
+    attrs.SetAttr<int64_t>("seed", gen->current_seed());
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     if (LazyMode::is_enabled()) {
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
+      attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp)));
     }
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
         *randperm_op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));

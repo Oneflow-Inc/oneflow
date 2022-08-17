@@ -67,8 +67,8 @@ class UserOpConfWrapper final {
 
   template<typename T>
   const T& attr_or_default(const std::string& attr_name, const T& default_val) const {
-    const auto& it = attrs_.find(attr_name);
-    if (it != attrs_.end()) {
+    const auto& attr = attrs_.Attr4Name(attr_name);
+    if (attr) {
       return CHECK_JUST(attrs_.GetAttr<T>(attr_name));
     } else {
       return default_val;

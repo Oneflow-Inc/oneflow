@@ -446,10 +446,11 @@ Maybe<Tensor> LocalToGlobal(const std::shared_ptr<Tensor>& x, Symbol<ParallelDes
   bool sync_and_check_meta = NeedSyncAndCheckShapeAndDtype(check_meta_hint);
   JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp,
                                   sync_and_check_meta));
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<Shape>("shape", *shape));
-  JUST(attrs.SetAttr<DataType>("dtype", dtype));
-  JUST(attrs.SetAttr<bool>("sync_data", true));
+  thread_local static CachedMutableAttrMap attrs;
+  attrs.reset();
+  attrs.SetAttr<Shape>("shape", *shape);
+  attrs.SetAttr<DataType>("dtype", dtype);
+  attrs.SetAttr<bool>("sync_data", true);
   const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
   return output;
@@ -494,10 +495,11 @@ class LocalToGlobalFunctor {
                                     /*pin_memory=*/false));
     }
     Symbol<NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    JUST(attrs.SetAttr<bool>("sync_data", sync_data));
+    thread_local static CachedMutableAttrMap attrs;
+    attrs.reset();
+    attrs.SetAttr<Shape>("shape", shape);
+    attrs.SetAttr<DataType>("dtype", dtype->data_type());
+    attrs.SetAttr<bool>("sync_data", sync_data);
     DisableCheckGlobalTensorMetaScope scope{};
     const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
         *op_, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));

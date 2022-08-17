@@ -99,10 +99,11 @@ class CastFromGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
   Maybe<void> Apply(const CastGlobalCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& dual_nd_sbp = JUST(GetDualNdSbp(ctx->nd_sbp));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", *ctx->shape));
-    JUST(attrs.SetAttr<DataType>("dtype", ctx->dtype->data_type()));
-    JUST(attrs.SetAttr<bool>("sync_data", true));
+    thread_local static CachedMutableAttrMap attrs;
+    attrs.reset();
+    attrs.SetAttr<Shape>("shape", *ctx->shape);
+    attrs.SetAttr<DataType>("dtype", ctx->dtype->data_type());
+    attrs.SetAttr<bool>("sync_data", true);
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
         *grad_op_, {out_grads.at(0)}, OpExprInterpContext(attrs, ctx->parallel_desc, dual_nd_sbp)));
     return Maybe<void>::Ok();

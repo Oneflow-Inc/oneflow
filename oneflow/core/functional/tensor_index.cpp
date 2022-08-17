@@ -491,10 +491,11 @@ Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
   if (view::IsViewApplicable(input)) {
     return view::AsStrided(input, sizes, strides, storage_offset);
   } else {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("size", sizes));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("stride", strides));
-    JUST(attrs.SetAttr<int32_t>("storage_offset", storage_offset));
+    thread_local static CachedMutableAttrMap attrs;
+    attrs.reset();
+    attrs.SetAttr<std::vector<int32_t>>("size", sizes);
+    attrs.SetAttr<std::vector<int32_t>>("stride", strides);
+    attrs.SetAttr<int32_t>("storage_offset", storage_offset);
     std::shared_ptr<OpExpr> op_ =
         JUST(one::OpBuilder("as_strided").Input("input").Output("output").Build());
     return one::OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);

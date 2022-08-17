@@ -46,10 +46,11 @@ class EyeDevcieFunctor {
   Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Symbol<DType>& dtype, const Optional<Symbol<Device>>& device,
                            const bool& requires_grad) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("rows", rows.As<int64_t>()));
-    JUST(attrs.SetAttr<int64_t>("cols", cols.value_or(rows).As<int64_t>()));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    thread_local static CachedMutableAttrMap attrs;
+    attrs.reset();
+    attrs.SetAttr<int64_t>("rows", rows.As<int64_t>());
+    attrs.SetAttr<int64_t>("cols", cols.value_or(rows).As<int64_t>());
+    attrs.SetAttr<DataType>("dtype", dtype->data_type());
     OpExprInterpContext ctx(attrs);
     ctx.device = device;
     auto res = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
@@ -78,7 +79,8 @@ class GlobalEyeSbpListFunctor {
                            const Symbol<DType>& dtype, const bool& requires_grad,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
-    MutableAttrMap attrs;
+    thread_local static CachedMutableAttrMap attrs;
+    attrs.reset();
     CHECK_EQ_OR_RETURN(sbp_tuple.size(), placement->hierarchy()->NumAxes())
         << "len(sbp) == len(placement.hierarchy) required, but "
         << "len(sbp)==" << sbp_tuple.size() << ", "
@@ -89,9 +91,9 @@ class GlobalEyeSbpListFunctor {
           << "sbp of eye should be broadcast only";
     }
 
-    JUST(attrs.SetAttr<int64_t>("rows", rows.As<int64_t>()));
-    JUST(attrs.SetAttr<int64_t>("cols", cols.value_or(rows).As<int64_t>()));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    attrs.SetAttr<int64_t>("rows", rows.As<int64_t>());
+    attrs.SetAttr<int64_t>("cols", cols.value_or(rows).As<int64_t>());
+    attrs.SetAttr<DataType>("dtype", dtype->data_type());
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
       {
@@ -99,7 +101,7 @@ class GlobalEyeSbpListFunctor {
           nd_sbp.at(i) = SbpParallelToString(*sbp_tuple.at(i));
         }
       }
-      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp));
+      attrs.SetAttr<std::vector<std::string>>("nd_sbp", nd_sbp);
     }
     const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
     auto res = JUST(
@@ -132,10 +134,11 @@ class EyeInplaceFunctor {
     JUST(CheckInplaceValid(x));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = x;
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("rows", x->shape()->At(0)));
-    JUST(attrs.SetAttr<int64_t>("cols", x->shape()->At(1)));
-    JUST(attrs.SetAttr<DataType>("dtype", x->dtype()->data_type()));
+    thread_local static CachedMutableAttrMap attrs;
+    attrs.reset();
+    attrs.SetAttr<int64_t>("rows", x->shape()->At(0));
+    attrs.SetAttr<int64_t>("cols", x->shape()->At(1));
+    attrs.SetAttr<DataType>("dtype", x->dtype()->data_type());
     OpExprInterpContext ctx(attrs);
     ctx.device = JUST(x->device());
     JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
