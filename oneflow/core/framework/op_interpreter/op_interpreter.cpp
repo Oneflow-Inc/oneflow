@@ -85,7 +85,6 @@ Maybe<void> EagerInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const Ten
 
 Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const OpExprInterpContext& ctx) const {
-  std::cout << "excute op:" << op_expr.op_type_name() << std::endl;
   bool requires_grad = false;
   if (autograd::GradMode::is_enabled() && !JUST(op_expr.IsGradDisabled())) {
     requires_grad =
