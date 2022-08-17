@@ -862,8 +862,8 @@ Maybe<void> UserOp::GetSbpSignatures(
   UserOpSbpContext sbp_ctx(this, sbp_sig_list, LogicalBlobDesc4Ibn);
   JUST(val_->get_sbp_fn(&sbp_ctx));
   // Add Broadcast for source user op tick input
-  std::string tick_bn = GenRepeatedBn(user_op::kUserSourceOpTickInputArgName, 0);
   if (val_->op_def.input_size() == 0 && input_bns().size() == 1) {
+    std::string tick_bn = GenRepeatedBn(user_op::kUserSourceOpTickInputArgName, 0);
     CHECK_OR_RETURN(input_bns().Get(0) == tick_bn)
         << "user op_name: " << op_conf().name()
         << " op_type_name: " << op_conf().user_conf().op_type_name()
