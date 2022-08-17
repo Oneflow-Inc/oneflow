@@ -33,7 +33,6 @@ namespace oneflow {
 
 namespace {
 
-// Do InsertNcclLogicalOpPass will use backward recomputation for sublinear memory cost.
 class InsertNcclLogicalOpPass final : public JobPass {
  public:
   OF_DISALLOW_COPY_AND_MOVE(InsertNcclLogicalOpPass);
