@@ -16,6 +16,7 @@ limitations under the License.
 #include <Python.h>
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/common/singleton.h"
 #include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
@@ -28,7 +29,8 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-using Stack = small_vector<std::pair<PyFrameObject*, int>, 10>;
+const int kDefaultStackSize = 10;
+using Stack = small_vector<std::pair<PyCodeObject*, int>, kDefaultStackSize>;
 
 class PyStackGetter final : public ForeignStackGetter {
  public:
@@ -39,14 +41,14 @@ class PyStackGetter final : public ForeignStackGetter {
     std::lock_guard<std::mutex> lock(mutex_);
     auto& id2stack = id2stack_arr_[index_];
     id2stack.first = id;
-    if (!id2stack.second.empty()) { Py_DECREF(id2stack.second[0].first); }
+    for (auto& f_code_and_line_no : id2stack.second) { Py_DECREF(f_code_and_line_no.first); }
     id2stack.second.clear();
     PyFrameObject* frame = PyEval_GetFrame();
     CHECK_NOTNULL(frame);
-    Py_INCREF(frame);
-    while (frame != nullptr) {
+    while (frame != nullptr && (id2stack.second.size() < kDefaultStackSize || IsInDebugMode())) {
       int lineno = PyFrame_GetLineNumber(frame);
-      id2stack.second.emplace_back(frame, lineno);
+      id2stack.second.emplace_back(frame->f_code, lineno);
+      Py_INCREF(frame->f_code);
       frame = frame->f_back;
     }
     index_ = (index_ + 1) % id2stack_arr_.max_size();
@@ -58,12 +60,12 @@ class PyStackGetter final : public ForeignStackGetter {
     auto GetFormattedStack = [](const Stack& stack) -> std::string {
       std::string buffer;
       for (const auto& pair : stack) {
-        PyFrameObject* frame = pair.first;
+        PyCodeObject* f_code = pair.first;
         int lineno = pair.second;
-        const std::string filename = PyBytes_AS_STRING(
-            PyUnicode_AsEncodedString(frame->f_code->co_filename, "utf-8", "~E~"));
+        const std::string filename =
+            PyBytes_AS_STRING(PyUnicode_AsEncodedString(f_code->co_filename, "utf-8", "~E~"));
         const std::string funcname =
-            PyBytes_AS_STRING(PyUnicode_AsEncodedString(frame->f_code->co_name, "utf-8", "~E~"));
+            PyBytes_AS_STRING(PyUnicode_AsEncodedString(f_code->co_name, "utf-8", "~E~"));
         const std::string line_text = [&]() -> std::string {
           std::string line_text;
           std::ifstream ifs(filename);
@@ -76,6 +78,14 @@ class PyStackGetter final : public ForeignStackGetter {
         // immitate python's stack trace format
         fmt::format_to(std::back_inserter(buffer), "  File \"{}\", line {}, in {}\n    {}\n",
                        filename, lineno, funcname, line_text);
+      }
+      if (stack.size() == kDefaultStackSize && !IsInDebugMode()) {
+        fmt::format_to(
+            std::back_inserter(buffer),
+            "The Python stack may be truncated, you might want to enable the debug mode (by "
+            "setting the environment variable `{}` to 1) and get the full stack.",
+            fmt::styled("ONEFLOW_DEBUG",
+                        fmt::emphasis::bold | fmt::fg(fmt::color::dark_gray)));
       }
       return buffer;
     };
