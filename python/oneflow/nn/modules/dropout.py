@@ -38,6 +38,7 @@ class _DropoutNd(Module):
     def extra_repr(self) -> str:
         return "p={}, inplace={}".format(self.p, self.inplace)
 
+
 class Dropout(_DropoutNd):
     def __init__(self, p: float = 0.5, inplace: bool = False, generator=None):
         _DropoutNd.__init__(self, p, inplace)
@@ -56,14 +57,18 @@ class Dropout(_DropoutNd):
             addend=addend if addend is not None else None,
         )
 
+
 class Dropout1d(Dropout):
     pass
+
 
 class Dropout2d(Dropout):
     pass
 
+
 class Dropout3d(Dropout):
     pass
+
 
 if __name__ == "__main__":
     import doctest

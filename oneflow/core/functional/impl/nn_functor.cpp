@@ -2461,42 +2461,55 @@ class DropoutFunctor {
   std::shared_ptr<OpExpr> add_op_;
 };
 
-namespace{
-  Maybe<Tensor> MakeFeatureNoise(const std::shared_ptr<one::Tensor>& x) {
-    const int64_t ndim = x->ndim();
-    CHECK_GE_OR_RETURN(ndim, 2)
-          << Error::RuntimeError()
-          << "Feature dropout requires at least 2 dimensions in the input";
-    std::vector <int64_t> sizes;
-    sizes.reserve(ndim);
-    sizes.push_back(x->shape()->At(0));
-    sizes.push_back(x->shape()->At(1));
-    for (int i = 2; i < ndim; i++){
-      sizes.push_back(1);
-    }
-    return JUST(Empty(Shape(sizes), x->dtype(), x->device(), false));
-  }
-  
-  Maybe<Tensor> DropoutImpl(const std::shared_ptr<one::Tensor>& input, const float& p,
-                           const bool& train) {
-    CHECK_EQ_OR_RETURN( p >=0 && p <= 1, true) << "dropout probability has to be between 0 and 1, but got " << p;
-    if (p == 0 || !train || input->shape()->elem_cnt() == 0) {
-      return input;
-    }
-    if (p == 1) {
-      std::shared_ptr <Tensor> other = Constant(input->shape(), Scalar(0.0), x->dtype(), x->device()); 
-      return InplaceMul(input, other);
-    }
-    std::shared_ptr<Tensor> noise = JUST(MakeFeatureNoise(input));
-    
-  }
+namespace {
+Maybe<Tensor> MakeFeatureNoise(const std::shared_ptr<one::Tensor>& x) {
+  const int64_t ndim = x->ndim();
+  CHECK_GE_OR_RETURN(ndim, 2) << Error::RuntimeError()
+                              << "Feature dropout requires at least 2 dimensions in the input";
+  std::vector<int64_t> sizes;
+  sizes.reserve(ndim);
+  sizes.push_back(x->shape()->At(0));
+  sizes.push_back(x->shape()->At(1));
+  for (int i = 2; i < ndim; i++) { sizes.push_back(1); }
+  return JUST(Empty(Shape(sizes), x->dtype(), JUST(x->device()), false));
 }
 
+Maybe<Tensor> DropoutImpl(const std::shared_ptr<one::Tensor>& input, const float& p,
+                          const bool& train) {
+  CHECK_EQ_OR_RETURN(p >= 0 && p <= 1, true)
+      << "dropout probability has to be between 0 and 1, but got " << p;
+  if (p == 0 || !train || input->shape()->elem_cnt() == 0) { return input; }
+  if (p == 1) {
+    std::shared_ptr<Tensor> other =
+        JUST(Constant(*input->shape(), Scalar(0.0), input->dtype(), JUST(input->device())));
+    return InplaceMul(input, other);
+  }
+  std::shared_ptr<Tensor> noise = JUST(MakeFeatureNoise(input));
+  noise = JUST(BernoulliProb(noise, 1.0 - p, noise->dtype(), JUST(one::DefaultAutoGenerator())));
+  noise = JUST(InplaceScalarDiv(noise, Scalar(1.0 - p)));
+  noise = JUST(InplaceMul(input, noise));
+  return noise;
+}
+}  // namespace
+
 class Dropout1dFunctor {
-  public:
+ public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
                            const bool& train) const {
-    
+    CHECK_EQ_OR_RETURN(p < 0 || p > 1.0, true)
+        << "dropout probability has to be between 0 and 1, but got " << p;
+    const int input_dim = input->ndim();
+    CHECK_EQ_OR_RETURN(input_dim != 2 || input_dim != 3, true)
+        << "dropout1d: Expected 2D or 3D input, but received a {inp_dim}D input. "
+           "Note that dropout1d exists to provide channel-wise dropout on inputs with 1 "
+           "spatial dimension, a channel dimension, and an optional batch dimension "
+           "(i.e. 2D or 3D inputs).";
+    bool is_batched = (input_dim == 3);
+    std::shared_ptr<one::Tensor> result;
+    if (!is_batched) { result = JUST(Unsqueeze(input, 0)); }
+    result = JUST(DropoutImpl(result, p, train));
+    if (!is_batched) { result = JUST(Squeeze(result, std::vector<int32_t>{0})); }
+    return result;
   }
 };
 

@@ -178,7 +178,7 @@ add_docstr(
     
     .. _Improving neural networks by preventing co-adaptation of feature
         detectors: https://arxiv.org/abs/1207.0580
-    """
+    """,
 )
 
 add_docstr(
@@ -237,7 +237,7 @@ add_docstr(
 
     .. _Efficient Object Localization Using Convolutional Networks:
        https://arxiv.org/abs/1411.4280
-    """
+    """,
 )
 
 add_docstr(
@@ -296,7 +296,7 @@ add_docstr(
 
     .. _Efficient Object Localization Using Convolutional Networks:
        https://arxiv.org/abs/1411.4280
-    """
+    """,
 )
 
 add_docstr(
@@ -355,5 +355,5 @@ add_docstr(
 
     .. _Efficient Object Localization Using Convolutional Networks:
        https://arxiv.org/abs/1411.4280
-    """
+    """,
 )
