@@ -865,7 +865,6 @@ def _test_setitem_scalars(test_case, device):
 
     # scalar indexed with scalars
     r = flow.tensor(1.0).to(device)
-    # r = flow.randn((), device=device)
     with test_case.assertRaises(IndexError):
         r[:] = 8.8
     with test_case.assertRaises(IndexError):
@@ -875,7 +874,7 @@ def _test_setitem_scalars(test_case, device):
     np_r = np.random.rand(1)
     np_r[...] = 9.9
     test_case.assertEqual(r.numpy().all(), np_r.all())
-    # TODO:Fix the bug about the direct comparison of tensors and numbers in the cuda scene
+    # TODO: Fix the bug about the direct comparison of tensors and numbers in the cuda scene
     # test_case.assertTrue(r == 9.9)
 
     # scalar indexed with oneflow.Size([1])
@@ -908,7 +907,7 @@ def _test_ellipsis_tensor(test_case, device):
     test_case.assertEqual(x[..., idx].tolist(), [[0, 2], [3, 5], [6, 8]])
     test_case.assertEqual(x[idx, ...].tolist(), [[0, 1, 2], [6, 7, 8]])
 
-    # test getitem:scalar indexed with scalar
+    # Test scalar ellipsis getitem
     y = flow.tensor(1.0).to(device)
     x_scalar = flow.tensor(9.9)
     y = x_scalar[...]
