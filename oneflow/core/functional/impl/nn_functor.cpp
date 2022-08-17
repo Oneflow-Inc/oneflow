@@ -898,7 +898,7 @@ class MaxPoolNDFunctor {
       attrs.SetAttr<std::vector<int32_t>>("stride", *JUST(stride));
     } else {
       attrs.SetAttr<std::vector<int32_t>>(
-          "stride", kernel_size));  // If stride is None, we set it as kernel_size to align Pytorch.
+          "stride", kernel_size);  // If stride is None, we set it as kernel_size to align Pytorch.
     }
     attrs.SetAttr<std::vector<int32_t>>("dilation", dilation);
     attrs.SetAttr<bool>("return_indices", return_indices);
@@ -1551,11 +1551,13 @@ class SparseSoftmaxCrossEntropyFunctor {
           s0s1_sbp_parallels, /* check_meta */ false, /*copy=*/false));
     }
     // op_reduce_max_global_stage_
-    attrs.clear();
-    attrs.SetAttr<std::vector<int32_t>>("axis", {axis});
-    attrs.SetAttr<bool>("keepdims", true);
+    thread_local static CachedMutableAttrMap reduce_max_global_attrs;
+    reduce_max_global_attrs.reset();
+    reduce_max_global_attrs.SetAttr<std::vector<int32_t>>("axis", {axis});
+    reduce_max_global_attrs.SetAttr<bool>("keepdims", true);
     const auto& max_global_stage = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-        *op_reduce_max_global_stage_, {max_global_stage_input0, max_global_stage_input1}, attrs));
+        *op_reduce_max_global_stage_, {max_global_stage_input0, max_global_stage_input1},
+        reduce_max_global_attrs));
     auto& broadcast_sub_input = max_global_stage->at(0);
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
       broadcast_sub_input = JUST(functional::ToGlobal(
@@ -1563,17 +1565,18 @@ class SparseSoftmaxCrossEntropyFunctor {
           new_sbp_parallels, /* check_meta */ false, /*copy=*/false));
     }
     // op_broadcast_sub_
-    attrs.clear();
-    const auto& output_broadcast_sub = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-        *op_broadcast_sub_, {logits, broadcast_sub_input}, attrs));
+    const auto& output_broadcast_sub = JUST(
+        OpInterpUtil::Dispatch<TensorTuple>(*op_broadcast_sub_, {logits, broadcast_sub_input}));
     // op_exp_
     const auto& output_exp =
-        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_exp_, {(*output_broadcast_sub)[0]}, attrs));
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_exp_, {(*output_broadcast_sub)[0]}));
     // op_reduce_sum_
-    attrs.SetAttr<std::vector<int32_t>>("axis", {axis});
-    attrs.SetAttr<bool>("keepdims", true);
-    const auto& output_reduce_sum =
-        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_reduce_sum_, {(*output_exp)[0]}, attrs));
+    thread_local static CachedMutableAttrMap reduce_sum_attrs;
+    reduce_sum_attrs.reset();
+    reduce_sum_attrs.SetAttr<std::vector<int32_t>>("axis", {axis});
+    reduce_sum_attrs.SetAttr<bool>("keepdims", true);
+    const auto& output_reduce_sum = JUST(
+        OpInterpUtil::Dispatch<TensorTuple>(*op_reduce_sum_, {(*output_exp)[0]}, reduce_sum_attrs));
     std::shared_ptr<Tensor> broadcast_div_input1 = output_reduce_sum->at(0);
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
       std::vector<Symbol<SbpParallel>> empty_grad_sbp_parallels;
@@ -1582,13 +1585,13 @@ class SparseSoftmaxCrossEntropyFunctor {
           new_sbp_parallels, new_sbp_parallels, /* check_meta */ false, /*copy=*/false));
     }
     // op_broadcast_div_
-    attrs.clear();
     const auto& predictions = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-        *op_broadcast_div_, {(*output_exp)[0], broadcast_div_input1}, attrs));
+        *op_broadcast_div_, {(*output_exp)[0], broadcast_div_input1}));
     // op_sparse_cross_entropy_ms_
-    attrs.SetAttr<int64_t>("depth", depth);
-    const auto& output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_sparse_cross_entropy_ms_,
-                                                             {(*predictions)[0], label}, attrs));
+    thread_local static CachedMutableAttrMap sparse_cross_entropy_ms_attrs;
+    sparse_cross_entropy_ms_attrs.SetAttr<int64_t>("depth", depth);
+    const auto& output = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *op_sparse_cross_entropy_ms_, {(*predictions)[0], label}, sparse_cross_entropy_ms_attrs));
     return output;
   }
 
@@ -2533,7 +2536,7 @@ class AvgPoolNDFunctor {
       attrs.SetAttr<std::vector<int32_t>>("stride", *JUST(stride));
     } else {
       attrs.SetAttr<std::vector<int32_t>>(
-          "stride", kernel_size));  // If stride is None, we set it as kernel_size to align Pytorch.
+          "stride", kernel_size);  // If stride is None, we set it as kernel_size to align Pytorch.
     }
     attrs.SetAttr<bool>("ceil_mode", ceil_mode);
     attrs.SetAttr<bool>("count_include_pad", count_include_pad);
@@ -3101,8 +3104,7 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
     fused_scale_mask_softmax_dropout_attrs.reset();
     fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("scale_value", scale);
     fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("mask_fill_value", fill_value);
-    fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("dropout_scale_value",
-                                                               dropout_scale));
+    fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("dropout_scale_value", dropout_scale);
 
     return OpInterpUtil::Dispatch<TensorTuple>(*fused_scale_mask_softmax_dropout_op_,
                                                {x, mask, dropout_mask},

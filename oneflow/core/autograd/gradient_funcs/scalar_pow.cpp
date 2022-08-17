@@ -55,8 +55,6 @@ class ScalarPow : public OpExprGradFunction<ScalarPowCaptureState> {
   Maybe<void> Apply(const ScalarPowCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors().at(0);
-    thread_local static CachedMutableAttrMap attrs;
-    attrs.reset();
     in_grads->resize(1);
     if (ctx->requires_grad) {
       in_grads->at(0) = JUST(functional::ScalarPowGrad(x, out_grads.at(0), ctx->operand));
@@ -101,8 +99,6 @@ class ScalarReversePow : public OpExprGradFunction<ScalarPowCaptureState> {
   Maybe<void> Apply(const ScalarPowCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors()[0];
-    thread_local static CachedMutableAttrMap attrs;
-    attrs.reset();
     in_grads->resize(1);
     if (ctx->requires_grad) {
       (*in_grads)[0] = JUST(functional::ScalarReversePowGrad(x, out_grads[0], ctx->operand));

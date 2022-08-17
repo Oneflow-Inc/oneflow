@@ -1017,7 +1017,7 @@ class FusedScaleMaskSoftmaxDropoutGradFunctor {
     attrs.SetAttr<float>("scale_value", scale);
     attrs.SetAttr<float>("dropout_scale_value", dropout_scale);
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {softmax_y, dy, mask, dropout_mask}, attrs_);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {softmax_y, dy, mask, dropout_mask}, attrs);
   }
 
  private:
