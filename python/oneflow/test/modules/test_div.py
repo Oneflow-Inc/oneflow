@@ -142,7 +142,7 @@ class TestDiv(flow.unittest.TestCase):
         y = y[:, 1:3]
         y /= random_tensor(2, 2, 2).to(device)
         return y
-    
+
     @autotest(n=5)
     def test_scalar_div_with_random_devices(test_case):
         x1_device = random_device()
