@@ -244,109 +244,6 @@ __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t 
   _gu[_offsetBC] += gu;
 }
 
-template<>
-__global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t C,
-                                const half* __restrict__ const _w,
-                                const half* __restrict__ const _u,
-                                const half* __restrict__ const _k,
-                                const half* __restrict__ const _v,
-                                const half* __restrict__ const _gy, half* __restrict__ const _gw,
-                                half* __restrict__ const _gu, half* __restrict__ const _gk,
-                                half* __restrict__ const _gv) {
-  const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  const int _b = idx / C;
-  const int _c = idx % C;
-  const int _offset = _b * T * C + _c;
-
-  half u = _u[_c];
-  const half w = static_cast<half>(-1.0) * static_cast<half>(exp(static_cast<float>(_w[_c])));
-  const half* __restrict__ const k = _k + _offset;
-  const half* __restrict__ const v = _v + _offset;
-  const half* __restrict__ const gy = _gy + _offset;
-
-  half* __restrict__ const gk = _gk + _offset;
-  half* __restrict__ const gv = _gv + _offset;
-
-  half y[1024], z[1024], zexp[1024];
-
-  half gw = static_cast<half>(0.0), gu = static_cast<half>(0.0);
-  half p = static_cast<half>(0.0), q = static_cast<half>(0.0);
-  half dpdw = static_cast<half>(0.0), dqdw = static_cast<half>(0.0);
-  half o = static_cast<half>(MIN_VALUE);
-  half no;
-  for (int i = 0; i < T; i++) {
-    const int ii = i * C;
-    // half no = max(o, k[ii] + u);
-    // half no = o > k[ii] + u ? o : k[ii] + u;
-    if (o > k[ii] + u) {
-      no = o;
-    }
-    else{
-      no = k[ii] + u;
-    }
-    half A = static_cast<half>(exp(static_cast<float>(o - no)));
-    half B = static_cast<half>(exp(static_cast<float>(k[ii] + u - no)));
-
-    half num = A * p + B * v[ii];
-    // half iden = 1 / (A * q + B);
-    half iden = static_cast<half>(1.0) / (A * q + B);
-
-    y[i] = num * iden;
-    z[i] = iden;
-    zexp[i] = k[ii] + u - no;
-
-    gw = gw + gy[ii] * (dpdw - dqdw * y[i]) * iden * A;
-    gu = gu + gy[ii] * (v[ii] - y[i]) * B * iden;
-
-    // no = max(w + o, k[ii]);
-    // no = w + o > k[ii] ? w + o : k[ii];
-    if (w + o > k[ii]) {
-      no = w + o;
-    }
-    else{
-      no = k[ii];
-    }
-    A = static_cast<half>(exp(static_cast<float>(w + o - no)));
-    B = static_cast<half>(exp(static_cast<float>(k[ii] - no)));
-    dpdw = A * (p + dpdw);
-    dqdw = A * (q + dqdw);
-    p = A * p + B * v[ii];
-    q = A * q + B;
-    o = no;
-  }
-
-  half gp = static_cast<half>(0.0), gq = static_cast<half>(0.0);
-  o = static_cast<half>(MIN_VALUE);
-  for (int i = T - 1; i >= 0; i--) {
-    const int ii = i * C;
-    half A = gy[ii] * z[i] * static_cast<half>(exp(static_cast<float>(zexp[i])));
-    half B = static_cast<half>(exp(static_cast<float>(k[ii] + o)));
-    gk[ii] = A * (v[ii] - y[i]) + B * (gp * v[ii] + gq);
-    gv[ii] = A + B * gp;
-
-    // half no = max(w + o, zexp[i] - k[ii] - u);
-    // half no = w + o > zexp[i] - k[ii] - u ? w + o : zexp[i] - k[ii] - u;
-    if (w + o > zexp[i] - k[ii] - u) {
-      no = w + o;
-    }
-    else{
-      no = zexp[i] - k[ii] - u;
-    }
-    A = static_cast<half>(exp(static_cast<float>(w + o - no)));
-    // B = gy[ii] * z[i] * exp(zexp[i] - k[ii] - u - no);
-    B = gy[ii] * z[i] * static_cast<half>(exp(static_cast<float>(zexp[i] - k[ii] - u - no)));
-    gp = A * gp + B;
-    gq = A * gq - B * y[i];
-    o = no;
-  }
-
-  // Multiply by w because the w -> -exp(w) preprocessing is halfway in the backwards pass, even
-  // though it's not in the forward pass
-  const int _offsetBC = _b * C + _c;
-  _gw[_offsetBC] = _gw[_offsetBC] + gw * w;
-  _gu[_offsetBC] = _gu[_offsetBC] + gu;
-}
-
 #if CUDA_VERSION >= 11000
 template<>
 __global__ void kernel_backward(const int64_t B, const int64_t T, const int64_t C,
@@ -557,6 +454,5 @@ REGISTER_WKVGRAD_CUDA_KERNEL(nv_bfloat16)
 #endif  // CUDA_VERSION >= 11000
 REGISTER_WKVGRAD_CUDA_KERNEL(float)
 REGISTER_WKVGRAD_CUDA_KERNEL(double)
-REGISTER_WKVGRAD_CUDA_KERNEL(half)
 
 }  // namespace oneflow
