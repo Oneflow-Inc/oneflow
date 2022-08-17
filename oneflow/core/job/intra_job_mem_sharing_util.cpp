@@ -832,13 +832,13 @@ void IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(
         thread_pool.AddWork([algo_id, mem_chain_id, &mem_chain2task2alloc_regsts,
                              &mem_chain2task2free_regsts, &mem_chain2regst2mutual_exclusion_regsts,
                              result, &counter]() {
-          auto tc_alg = std::make_unique<TimeCounter<std::chrono::milliseconds>>(true);
+          // auto tc_alg = std::make_unique<TimeCounter<std::chrono::microseconds>>(true);
           SelectAlgorithmGenMemBlockOffset4Regsts(
               algo_id, mem_chain2task2alloc_regsts.at(mem_chain_id),
               mem_chain2task2free_regsts.at(mem_chain_id),
               mem_chain2regst2mutual_exclusion_regsts.at(mem_chain_id), result);
           counter.Decrease();
-          tc_alg->Count("OneAlg " + std::to_string(mem_chain_id) + "_" + std::to_string(algo_id), 1);
+          // tc_alg->Count("OneAlg " + std::to_string(mem_chain_id) + "_" + std::to_string(algo_id), 1);
         });
       }
     }
