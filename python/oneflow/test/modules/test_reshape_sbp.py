@@ -20,6 +20,7 @@ import oneflow as flow
 
 
 @flow.unittest.skip_unless_1n2d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestReshapeSbp(flow.unittest.TestCase):
     def test_reshape_sbp(test_case):
         input = flow.rand(
