@@ -121,7 +121,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)
 
 #define MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_DY_Y_ODS_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", SigmoidV2)            
+  OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", SigmoidV2)
 
 #define MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_DY_Y_SEQ OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", Sigmoid)
 

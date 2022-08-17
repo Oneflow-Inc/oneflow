@@ -136,17 +136,18 @@ OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_GRAD_PRIMITIVE_WITH_DY_X_KERNEL,
 // OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_GRAD_PRIMITIVE_WITH_DY_Y_KERNEL,
 //                      MATH_UNARY_ELEMENTWISE_GRAD_WITH_DY_Y_PRIMITIVE_SEQ)
 
-REGISTER_USER_KERNEL("sigmoid_v2_grad")                                                                    
-    .SetCreateFn([]() {                                                                       
-      return user_op::NewOpKernel<                                                            
-          BinaryPrimitiveKernel>("dx", "dy", "y", [](user_op::KernelComputeContext* ctx) {    
-        const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);            
-        const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);            
-        return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>( 
-            ctx->device_type(), ep::primitive::BinaryOp::kSigmoidBackwardWithDyY, src->data_type(), dst->data_type(),                 
-            1 /*max_num_dims*/);                                                              
-      });                                                                                     
-    })                                                                                        
-    .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kSigmoidBackwardWithDyY, "dx", "dy"));
+REGISTER_USER_KERNEL("sigmoid_v2_grad")
+    .SetCreateFn([]() {
+      return user_op::NewOpKernel<BinaryPrimitiveKernel>(
+          "dx", "dy", "y", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+            const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
+            return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
+                ctx->device_type(), ep::primitive::BinaryOp::kSigmoidBackwardWithDyY,
+                src->data_type(), dst->data_type(), 1 /*max_num_dims*/);
+          });
+    })
+    .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kSigmoidBackwardWithDyY, "dx",
+                                           "dy"));
 
 }  // namespace oneflow

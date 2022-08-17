@@ -27,11 +27,12 @@ namespace broadcast_elementwise_binary {
       Scalar attr0, Scalar attr1);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
-                                 BINARY_MATH_BACKWARD_WITH_DY_X_OP_SEQ, CUDA_PRIMITIVE_FLOATING_TYPE_SEQ);
+                                 BINARY_MATH_BACKWARD_WITH_DY_X_OP_SEQ,
+                                 CUDA_PRIMITIVE_FLOATING_TYPE_SEQ);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
-                                 BINARY_MATH_BACKWARD_WITH_DY_Y_OP_SEQ, CUDA_PRIMITIVE_FLOATING_TYPE_SEQ);
-
+                                 BINARY_MATH_BACKWARD_WITH_DY_Y_OP_SEQ,
+                                 CUDA_PRIMITIVE_FLOATING_TYPE_SEQ);
 
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive

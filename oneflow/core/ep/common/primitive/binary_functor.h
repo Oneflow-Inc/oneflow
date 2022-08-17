@@ -370,10 +370,10 @@ struct BinaryFunctor<device, BinaryOp::kAbsBackwardWithDyX, Src, Dst> {
     const Src zero = static_cast<Src>(0.0);
     if (x == zero) {
       return zero;
-    } else if (x < zero){
-      return -dy; 
+    } else if (x < zero) {
+      return -dy;
     } else {
-      return dy; 
+      return dy;
     }
   }
 };
@@ -573,7 +573,6 @@ struct BinaryFunctor<device, BinaryOp::kTanBackwardWithDyX, Src, Dst> {
     return dy * (static_cast<Src>(1.0) / cos_val * cos_val);
   }
 };
-
 
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive

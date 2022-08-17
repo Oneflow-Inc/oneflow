@@ -46,7 +46,7 @@ namespace primitive {
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAcos)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAcosh)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAsin)            \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAsinh)            \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAsinh)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAtan)            \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kAtanh)           \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kCeil)            \

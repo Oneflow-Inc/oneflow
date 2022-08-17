@@ -77,15 +77,15 @@ namespace oneflow {
 //             return Maybe<void>::Ok();                                                          \
 //           });
 
-#define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_X(math_unary_elementwise_type,     \
-                                                              func_prefix)                     \
-  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##Op)                                           \
-  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##GradOp)                                       
+#define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_X(math_unary_elementwise_type, \
+                                                              func_prefix)                 \
+  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##Op)                                       \
+  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##GradOp)
 
-#define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_Y(math_unary_elementwise_type,     \
-                                                              func_prefix)                     \
-  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##Op)                                           \
-  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##GradOp)                                       
+#define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_Y(math_unary_elementwise_type, \
+                                                              func_prefix)                 \
+  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##Op)                                       \
+  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##GradOp)
 
 // #define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_Y(math_unary_elementwise_type,     \
 //                                                               func_prefix)                     \
@@ -108,10 +108,9 @@ namespace oneflow {
 //             return Maybe<void>::Ok();                                                          \
 //           });
 
-#define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_FILL(math_unary_elementwise_type,     \
-                                                              func_prefix)                     \
-  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##Op)                                           
-
+#define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_FILL(math_unary_elementwise_type, \
+                                                              func_prefix)                 \
+  MATH_ELEMENTWISE_DEFAULT_SET_FUNC(func_prefix##Op)
 
 // #define REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_FILL(math_unary_elementwise_type,     \
 //                                                               func_prefix)                     \
@@ -133,15 +132,14 @@ namespace oneflow {
 //             return Maybe<void>::Ok();                                                          \
 //           });
 
-// OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_X,
-                    //  MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_DY_X_SEQ)
+OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_X,
+                     MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_DY_X_SEQ)
 
-// OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_Y,
-                    //  MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_DY_Y_ODS_SEQ)
+OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_DY_Y,
+                     MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_DY_Y_ODS_SEQ)
 
-// OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_FILL,
-//                      MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_FILL_SEQ)
-
+OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD_WITH_FILL,
+                     MATH_UNARY_ELEMENTWISE_FUNC_BWD_WITH_FILL_SEQ)
 
 MATH_ELEMENTWISE_DEFAULT_SET_FUNC(NegativeOp)
 REGISTER_USER_OP_GRAD("negative")

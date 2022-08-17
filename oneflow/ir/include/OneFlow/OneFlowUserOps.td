@@ -2609,11 +2609,11 @@ def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", [NoSideEffect, No
 
 def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {}
 
-// def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-// def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_RoundOp : OneFlow_IdempotentBaseOp<"round", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-// def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
 #endif // GET_ONEFLOW_IDEMPOTENT_OP_DEFINITIONS
 
@@ -3497,7 +3497,7 @@ def OneFlow_SearchSortedScalarOp : OneFlow_BaseOp<"searchsorted_scalar", [NoSide
 
 def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-// def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
 #endif // GET_ONEFLOW_INVOLUTION_OP_DEFINITIONS
 
@@ -3693,19 +3693,19 @@ def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", [NoSideEf
 
 #ifdef GET_ONEFLOW_MATH_OP_DEFINITIONS
 
-// def OneFlow_AbsGradOp : OneFlow_BaseOp<"abs_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_AbsGradOp : OneFlow_BaseOp<"abs_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
 def OneFlow_ErfOp : OneFlow_BaseOp<"erf", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -3720,19 +3720,19 @@ def OneFlow_ErfOp : OneFlow_BaseOp<"erf", [NoSideEffect, DeclareOpInterfaceMetho
   let has_data_type_infer_fn = 1;
 }
 
-// def OneFlow_ErfGradOp : OneFlow_BaseOp<"erf_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_ErfGradOp : OneFlow_BaseOp<"erf_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
 def OneFlow_ExpOp : OneFlow_BaseOp<"exp", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -3747,19 +3747,19 @@ def OneFlow_ExpOp : OneFlow_BaseOp<"exp", [NoSideEffect, DeclareOpInterfaceMetho
   let has_data_type_infer_fn = 1;
 }
 
-// def OneFlow_ExpGradOp : OneFlow_BaseOp<"exp_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_ExpGradOp : OneFlow_BaseOp<"exp_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
 def OneFlow_ExpandGradOp : OneFlow_BaseOp<"expand_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -3791,19 +3791,19 @@ def OneFlow_Expm1Op : OneFlow_BaseOp<"expm1", [NoSideEffect, DeclareOpInterfaceM
   let has_data_type_infer_fn = 1;
 }
 
-// def OneFlow_Expm1GradOp : OneFlow_BaseOp<"expm1_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_Expm1GradOp : OneFlow_BaseOp<"expm1_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
 def OneFlow_FloordivXGradOp : OneFlow_BaseOp<"floordiv_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -3848,209 +3848,209 @@ def OneFlow_LgammaOp : OneFlow_BaseOp<"lgamma", [NoSideEffect, DeclareOpInterfac
   let has_data_type_infer_fn = 1;
 }
 
-// def OneFlow_LgammaGradOp : OneFlow_BaseOp<"lgamma_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_LgammaGradOp : OneFlow_BaseOp<"lgamma_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_LogOp : OneFlow_BaseOp<"log", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_LogOp : OneFlow_BaseOp<"log", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_Log1pOp : OneFlow_BaseOp<"log1p", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_Log1pOp : OneFlow_BaseOp<"log1p", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_Log1pGradOp : OneFlow_BaseOp<"log1p_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_Log1pGradOp : OneFlow_BaseOp<"log1p_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_Log2GradOp : OneFlow_BaseOp<"log2_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_Log2GradOp : OneFlow_BaseOp<"log2_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_LogGradOp : OneFlow_BaseOp<"log_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_LogGradOp : OneFlow_BaseOp<"log_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_LogSigmoidOp : OneFlow_BaseOp<"log_sigmoid", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_LogSigmoidOp : OneFlow_BaseOp<"log_sigmoid", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_LogSigmoidGradOp : OneFlow_BaseOp<"log_sigmoid_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_LogSigmoidGradOp : OneFlow_BaseOp<"log_sigmoid_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_ReciprocalGradOp : OneFlow_BaseOp<"reciprocal_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_ReciprocalGradOp : OneFlow_BaseOp<"reciprocal_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_ReciprocalNoNanOp : OneFlow_BaseOp<"reciprocal_no_nan", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_ReciprocalNoNanOp : OneFlow_BaseOp<"reciprocal_no_nan", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_ReciprocalNoNanGradOp : OneFlow_BaseOp<"reciprocal_no_nan_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_ReciprocalNoNanGradOp : OneFlow_BaseOp<"reciprocal_no_nan_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_RsqrtOp : OneFlow_BaseOp<"rsqrt", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_RsqrtOp : OneFlow_BaseOp<"rsqrt", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_RsqrtGradOp : OneFlow_BaseOp<"rsqrt_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_RsqrtGradOp : OneFlow_BaseOp<"rsqrt_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_SigmoidV2Op : OneFlow_BaseOp<"sigmoid_v2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_SigmoidV2Op : OneFlow_BaseOp<"sigmoid_v2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_SigmoidV2GradOp : OneFlow_BaseOp<"sigmoid_v2_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$y,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_SigmoidV2GradOp : OneFlow_BaseOp<"sigmoid_v2_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$y,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
 def OneFlow_SoftplusOp : OneFlow_BaseOp<"softplus", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -4121,60 +4121,60 @@ def OneFlow_VarOp : OneFlow_BaseOp<"var", [NoSideEffect, DeclareOpInterfaceMetho
 }
 
 
-// def OneFlow_SqrtOp : OneFlow_BaseOp<"sqrt", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-//   let hasFolder = 1;
-// }
+def OneFlow_SqrtOp : OneFlow_BaseOp<"sqrt", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let hasFolder = 1;
+}
 
-// def OneFlow_SqrtGradOp : OneFlow_BaseOp<"sqrt_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_SqrtGradOp : OneFlow_BaseOp<"sqrt_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_SquareOp : OneFlow_BaseOp<"square", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_SquareOp : OneFlow_BaseOp<"square", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_SquareGradOp : OneFlow_BaseOp<"square_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_SquareGradOp : OneFlow_BaseOp<"square_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
 def OneFlow_XlogyXGradOp : OneFlow_BaseOp<"xlogy_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -4384,19 +4384,19 @@ def OneFlow_ErfcOp : OneFlow_BaseOp<"erfc", [NoSideEffect, DeclareOpInterfaceMet
   let has_data_type_infer_fn = 1;
 }
 
-// def OneFlow_ErfcGradOp : OneFlow_BaseOp<"erfc_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_ErfcGradOp : OneFlow_BaseOp<"erfc_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
 def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -7852,113 +7852,113 @@ def OneFlow_AcosOp : OneFlow_BaseOp<"acos", [NoSideEffect, DeclareOpInterfaceMet
   let has_data_type_infer_fn = 1;
 }
 
-// def OneFlow_AcosGradOp : OneFlow_BaseOp<"acos_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_AcosGradOp : OneFlow_BaseOp<"acos_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_AcoshOp : OneFlow_BaseOp<"acosh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_AcoshOp : OneFlow_BaseOp<"acosh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_AcoshGradOp : OneFlow_BaseOp<"acosh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_AcoshGradOp : OneFlow_BaseOp<"acosh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_AsinOp : OneFlow_BaseOp<"asin", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_AsinOp : OneFlow_BaseOp<"asin", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_AsinGradOp : OneFlow_BaseOp<"asin_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_AsinGradOp : OneFlow_BaseOp<"asin_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_AsinhOp : OneFlow_BaseOp<"asinh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_AsinhOp : OneFlow_BaseOp<"asinh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_AsinhGradOp : OneFlow_BaseOp<"asinh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_AsinhGradOp : OneFlow_BaseOp<"asinh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_AtanOp : OneFlow_BaseOp<"atan", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_AtanOp : OneFlow_BaseOp<"atan", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
 def OneFlow_Atan2Op : OneFlow_BaseOp<"atan2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -8004,100 +8004,100 @@ def OneFlow_Atan2YGradOp : OneFlow_BaseOp<"atan2_y_grad", [NoSideEffect, Declare
   let has_data_type_infer_fn = 1;
 }
 
-// def OneFlow_AtanGradOp : OneFlow_BaseOp<"atan_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_AtanGradOp : OneFlow_BaseOp<"atan_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_AtanhOp : OneFlow_BaseOp<"atanh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_AtanhOp : OneFlow_BaseOp<"atanh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_AtanhGradOp : OneFlow_BaseOp<"atanh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_AtanhGradOp : OneFlow_BaseOp<"atanh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_CosOp : OneFlow_BaseOp<"cos", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_CosOp : OneFlow_BaseOp<"cos", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_CosGradOp : OneFlow_BaseOp<"cos_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_CosGradOp : OneFlow_BaseOp<"cos_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_CoshOp : OneFlow_BaseOp<"cosh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_CoshOp : OneFlow_BaseOp<"cosh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_CoshGradOp : OneFlow_BaseOp<"cosh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_CoshGradOp : OneFlow_BaseOp<"cosh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
 def OneFlow_HardtanhOp : OneFlow_BaseOp<"hardtanh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -8134,86 +8134,86 @@ def OneFlow_HardtanhGradOp : OneFlow_BaseOp<"hardtanh_grad", [NoSideEffect, Decl
   let has_data_type_infer_fn = 1;
 }
 
-// def OneFlow_SinOp : OneFlow_BaseOp<"sin", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_SinOp : OneFlow_BaseOp<"sin", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_SinGradOp : OneFlow_BaseOp<"sin_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_SinGradOp : OneFlow_BaseOp<"sin_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_SinhOp : OneFlow_BaseOp<"sinh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_SinhOp : OneFlow_BaseOp<"sinh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_SinhGradOp : OneFlow_BaseOp<"sinh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_SinhGradOp : OneFlow_BaseOp<"sinh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_TanOp : OneFlow_BaseOp<"tan", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_TanOp : OneFlow_BaseOp<"tan", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
-// def OneFlow_TanGradOp : OneFlow_BaseOp<"tan_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$dy
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$dx
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_TanGradOp : OneFlow_BaseOp<"tan_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
 def OneFlow_TanhOp : OneFlow_BaseOp<"tanh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -8242,18 +8242,18 @@ def OneFlow_TanhGradOp : OneFlow_BaseOp<"tanh_grad", [NoSideEffect, DeclareOpInt
   let has_data_type_infer_fn = 1;
 }
 
-// def OneFlow_NotEqualZeroOp : OneFlow_BaseOp<"not_equal_zero", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_NotEqualZeroOp : OneFlow_BaseOp<"not_equal_zero", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
 #endif // GET_ONEFLOW_TRIGONOMETRIC_OP_DEFINITIONS
 
@@ -8651,18 +8651,18 @@ def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", [NoSideEffect, DeclareOpI
   let has_data_type_infer_fn = 1;
 }
 
-// def OneFlow_Log2Op : OneFlow_BaseOp<"log2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$y
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
+def OneFlow_Log2Op : OneFlow_BaseOp<"log2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 
 def OneFlow_LogicalNotOp : OneFlow_BaseOp<"logical_not", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
