@@ -370,8 +370,10 @@ struct BinaryFunctor<device, BinaryOp::kAbsBackwardWithDyX, Src, Dst> {
     const Src zero = static_cast<Src>(0.0);
     if (x == zero) {
       return zero;
+    } else if (x < zero){
+      return -dy; 
     } else {
-      return x < zero ? -dy : dy;
+      return dy; 
     }
   }
 };
