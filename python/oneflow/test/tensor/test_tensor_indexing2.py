@@ -530,11 +530,10 @@ def _test_combined_indexing(test_case, device, dtype):
         #  # weird shape
         #  [slice(None), [[0, 1],
         #                 [2, 3]]],
-        # BUG(wyg): It has bug when using negative indexing(setitem and getitem)
         # negatives
-        #  [[-1], [0]],
-        #  [[0, 2], [-1]],
-        #  [slice(None), [-1]],
+        [[-1], [0]],
+        [[0, 2], [-1]],
+        [slice(None), [-1]],
     ]
 
     # test getitem

@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_ND_INDEX_SLICE_UTIL_H_
 #define ONEFLOW_USER_KERNELS_ND_INDEX_SLICE_UTIL_H_
 
+#include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 
@@ -87,6 +88,19 @@ struct FillByNdIndexFunctor final {
 };
 
 template<typename I>
+OF_DEVICE_FUNC void ShiftNegativeIndex(int64_t num_slices, int64_t index_ndims,
+                                       const int64_t* dense_shape, const I* indices) {
+  for (int64_t slice_idx = 0; slice_idx < num_slices; slice_idx++) {
+    const I* index_ptr = indices + slice_idx * index_ndims;
+    for (int64_t i = index_ndims - 1; i >= 0; --i) {
+      if (index_ptr[i] < 0 && index_ptr[i] >= -dense_shape[i]) {
+        index_ptr[i] = index_ptr[i] + dense_shape[i];
+      }
+    }
+  }
+}
+
+template<typename I>
 OF_DEVICE_FUNC int64_t OffsetInSliceToOffsetInDense(int64_t slice_size, int64_t index_ndims,
                                                     const int64_t* dense_shape, const I* indices,
                                                     int64_t n) {
@@ -94,8 +108,12 @@ OF_DEVICE_FUNC int64_t OffsetInSliceToOffsetInDense(int64_t slice_size, int64_t 
   const I* cur_nd_index_ptr = indices + slice_idx * index_ndims;
   int64_t offset = 0;
   int64_t product = 1;
+  int64_t shifted_index = 0;
   for (int64_t i = index_ndims - 1; i >= 0; --i) {
-    offset += cur_nd_index_ptr[i] * product;
+    shifted_index = cur_nd_index_ptr[i] < 0 && cur_nd_index_ptr[i] >= -dense_shape[i]
+                        ? cur_nd_index_ptr[i] + dense_shape[i]
+                        : cur_nd_index_ptr[i];
+    offset += shifted_index * product;
     product *= dense_shape[i];
   }
   return offset * slice_size + n % slice_size;
@@ -115,6 +133,7 @@ template<typename T, typename I>
 OF_DEVICE_FUNC void DoGatherNd(int64_t elem_cnt, int64_t slice_size, int64_t index_ndims,
                                const int64_t* dense_shape, const I* indices, const T* dense,
                                T* slices) {
+  // ShiftNegativeIndex(elem_cnt / slice_size, index_ndims, dense_shape, indices);
   XPU_1D_KERNEL_LOOP(i, elem_cnt) {
     int64_t offset = OffsetInSliceToOffsetInDense(slice_size, index_ndims, dense_shape, indices, i);
     slices[i] = dense[offset];
