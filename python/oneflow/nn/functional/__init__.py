@@ -61,7 +61,7 @@ from oneflow._C import dropout
 from oneflow._C import smooth_l1_loss
 from .functional_pad import pad
 from oneflow._C import triplet_margin_loss
-from oneflow._C import ctc_greedy_decoder
+from oneflow._C import ctc_greedy_decoder, ctc_loss
 from oneflow._C import one_hot
 from oneflow._C import normalize
 from oneflow._C import mse_loss
