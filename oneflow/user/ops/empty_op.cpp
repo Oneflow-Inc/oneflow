@@ -57,10 +57,7 @@ Maybe<Symbol<Stream>> MakeEmptyStream(const Symbol<Device>& out_device, const bo
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> EmptyOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
-  return Maybe<void>::Ok();
-}
+/* static */ Maybe<void> EmptyOp::GetSbp(user_op::SbpContext* ctx) { return Maybe<void>::Ok(); }
 
 /* static */ Maybe<void> EmptyOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
   SbpParallel default_sbp;

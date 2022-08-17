@@ -25,10 +25,7 @@ namespace oneflow {
   default_sbp.mutable_broadcast_parallel();
   return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
 }
-/*static*/ Maybe<void> RandpermOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
-  return Maybe<void>::Ok();
-}
+/*static*/ Maybe<void> RandpermOp::GetSbp(user_op::SbpContext* ctx) { return Maybe<void>::Ok(); }
 /*static*/ Maybe<void> RandpermOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   Shape* out_shape = ctx->MutOutputShape("out", 0);
   int32_t n = ctx->Attr<int32_t>("n");
