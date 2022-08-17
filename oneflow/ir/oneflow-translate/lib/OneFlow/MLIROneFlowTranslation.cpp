@@ -862,7 +862,7 @@ std::string ConvertJobToTosaIR(RoundTripOneFlowJobWrapperInterface& job_wrapper)
     pm.addPass(createCanonicalizerPass());
     pm.addPass(createConvertToSignlessForTosaPass());
     pm.addPass(createLowerOneFlowToTosaPass());
-    pm.addPass(tosa::createTosaMakeBroadcastablePass());
+    pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());
     if (mlir::failed(pm.run(*module))) {
       module->emitError("Failed to run oneflow-to-tosa pass");
       exit(EXIT_FAILURE);
