@@ -32,7 +32,8 @@ OneFlow upholds the core concept and architecture of static compilation and stre
     graph
     image
     utils.data
-    utils
+    utils.global_view
+    utils.tensor
     one_embedding
     environment_variables
 

@@ -34,8 +34,8 @@ def dict_to_global(input_dict, placement, sbp, *, sbp_for_special_keys):
         placement (oneflow.placement): the common placement for all keys.
         sbp (oneflow.sbp.sbp): the default SBP for not special keys.
         sbp_for_special_keys (dict): The keys are str type, and the values are oneflow.sbp.sbp type.
-         This is used to specify special SBPs for "System-Train-TrainStep" tensor with shape [1] etc.
-         Also, it is worth noting that, for a tensor of shape `(1, n)`, you can specify SBP is `oneflow.sbp.split(1)`.
+         If you want to do the `split(0)` operation, but there are tensors that cannot be split by dim 0, then these tensors can specify sbp.
+         It is worth noting that, for a tensor of shape `(1, n)`, you can specify SBP is `oneflow.sbp.split(1)`.
          The keys here support the use of "." to indicate nested dicts.
 
     Note:

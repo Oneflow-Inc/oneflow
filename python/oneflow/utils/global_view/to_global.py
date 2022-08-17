@@ -42,6 +42,10 @@ def to_global(input, placement=None, sbp=None, **kwargs):
 
     For a tensor input: please refer to the examples in :func:`oneflow.Tensor.to_global`.
 
+    Note:
+        For the input of dict type, such as the state dict of the model, the unified sbp cannot be used when calling the to_global method, and the sbp needs to be specialized. 
+        It is recommended to use :func:`oneflow.utils.global_view.dict_to_global`.
+
     For an input of other type (take a state dict as an example):
 
     .. code-block:: python
@@ -52,7 +56,7 @@ def to_global(input, placement=None, sbp=None, **kwargs):
         >>> placement = flow.placement("cpu", ranks=[0, 1]) # doctest: +SKIP
         >>> sbp = (flow.sbp.broadcast,) # doctest: +SKIP
         >>> model = nn.Sequential(nn.Linear(8, 4), nn.ReLU(), nn.Linear(4, 2)) # doctest: +SKIP
-        >>> global_state_dict = flow.to_global(model.state_dict(), placement, sbp) # doctest: +SKIP
+        >>> global_state_dict = flow.utils.global_view.to_global(model.state_dict(), placement, sbp) # doctest: +SKIP
         >>> for val in state_dict.values(): # doctest: +SKIP
         >>>     print(val.is_global) # doctest: +SKIP
 

@@ -1,15 +1,13 @@
-oneflow.utils
+oneflow.utils.global_view
 ======================================
-Some useful early features
+Some global view Ops
 --------------------------------------
-.. currentmodule:: oneflow.utils
+.. currentmodule:: oneflow.utils.global_view
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
 
-    from_torch
-    to_torch
     to_global
     to_local
     dict_to_global

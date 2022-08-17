@@ -40,7 +40,7 @@ def to_local(input, *, copy=False):
         >>> sbp = (flow.sbp.broadcast,) # doctest: +SKIP
         >>> model = nn.Sequential(nn.Linear(8, 4), nn.ReLU(), nn.Linear(4, 2)) # doctest: +SKIP
         >>> model = model.to_global(placement=placement, sbp=sbp) # doctest: +SKIP
-        >>> local_state_dict = flow.to_local(model.state_dict()) # doctest: +SKIP
+        >>> local_state_dict = flow.utils.global_view.to_local(model.state_dict()) # doctest: +SKIP
         >>> for val in local_state_dict.values(): # doctest: +SKIP
         >>>     print(val.is_global) # doctest: +SKIP
 
