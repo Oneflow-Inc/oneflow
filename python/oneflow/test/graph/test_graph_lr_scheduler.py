@@ -116,6 +116,7 @@ def _compare_graph_lr_scheduler_with_eager(test_case, **kwargs):
     lrs = _get_graph_lrs_from_log(lr_log_file)
     lrs = lrs[:iters]
 
+    optimizer.zero_grad(set_to_none=True)
     eager_lrs = [lr_scheduler.get_last_lr()[0]]
     for _ in range(iters):
         ret = module(_rand_input())
