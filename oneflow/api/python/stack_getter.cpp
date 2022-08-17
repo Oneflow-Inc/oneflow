@@ -34,7 +34,24 @@ using Stack = small_vector<std::pair<PyCodeObject*, int>, kDefaultStackSize>;
 
 class PyStackGetter final : public ForeignStackGetter {
  public:
-  // "happy path", performance is important
+  // indended to be called in main thread.
+  std::string GetCurrentStack(size_t max_size) const override {
+    if (IsShuttingDown()) { return ""; }
+
+    Stack stack;
+    PyFrameObject* frame = PyEval_GetFrame();
+    CHECK_NOTNULL(frame);
+    for (int i = 0; frame != nullptr && i < max_size; frame = frame->f_back, ++i) {
+      int lineno = PyFrame_GetLineNumber(frame);
+      // hold the PyCodeObject instead of the PyFrameObject because the latter holds
+      // references to the local objects in the frame.
+      stack.emplace_back(frame->f_code, lineno);
+    }
+    return GetFormattedStack(stack);
+  }
+
+  // "happy path", performance is important.
+  // indended to be called in main thread.
   void RecordCurrentStack(StackId id) override {
     if (IsShuttingDown()) { return; }
 
@@ -43,24 +60,46 @@ class PyStackGetter final : public ForeignStackGetter {
     id2stack.first = id;
     for (auto& f_code_and_line_no : id2stack.second) { Py_DECREF(f_code_and_line_no.first); }
     id2stack.second.clear();
-    PyFrameObject* frame = PyEval_GetFrame();
-    CHECK_NOTNULL(frame);
-    while (frame != nullptr && (id2stack.second.size() < kDefaultStackSize || IsInDebugMode())) {
+    for (PyFrameObject* frame = CHECK_NOTNULL(PyEval_GetFrame());
+         frame != nullptr && (id2stack.second.size() < kDefaultStackSize || IsInDebugMode());
+         frame = frame->f_back) {
       int lineno = PyFrame_GetLineNumber(frame);
       // hold the PyCodeObject instead of the PyFrameObject because the latter holds
       // references to the local objects in the frame.
       id2stack.second.emplace_back(frame->f_code, lineno);
       Py_INCREF(frame->f_code);
-      frame = frame->f_back;
     }
     index_ = (index_ + 1) % id2stack_arr_.max_size();
   }
 
-  // "bad path", performance is not important
+  // "bad path", performance is not important.
   std::string GetFormatted(StackId id) const override {
     std::lock_guard<std::mutex> lock(mutex_);
-    auto GetFormattedStack = [](const Stack& stack) -> std::string {
-      std::string buffer;
+    std::string result = "  <unknown>\n";
+    for (const auto& pair : id2stack_arr_) {
+      if (pair.first == id) {
+        const auto& stack = pair.second;
+        result = GetFormattedStack(stack);
+        if (stack.size() == kDefaultStackSize && !IsInDebugMode()) {
+          fmt::format_to(
+              std::back_inserter(result),
+              "The Python stack may be truncated, you might want to enable the debug mode (by "
+              "setting the environment variable `{}` to 1) and get the full stack.",
+              fmt::styled("ONEFLOW_DEBUG", fmt::emphasis::bold | fmt::fg(fmt::color::dark_gray)));
+        }
+        break;
+      }
+    }
+    return result;
+  }
+
+ private:
+  std::string GetFormattedStack(const Stack& stack) const {
+    std::string buffer;
+    // NOTE: intentionally not using CHECK_JUST here, because CHECK_JUST may also
+    // call current function (StackGetter::Print) and cause infinite loop.
+    // NOLINTNEXTLINE
+    Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
       for (const auto& pair : stack) {
         PyCodeObject* f_code = pair.first;
         int lineno = pair.second;
@@ -81,33 +120,10 @@ class PyStackGetter final : public ForeignStackGetter {
         fmt::format_to(std::back_inserter(buffer), "  File \"{}\", line {}, in {}\n    {}\n",
                        filename, lineno, funcname, line_text);
       }
-      if (stack.size() == kDefaultStackSize && !IsInDebugMode()) {
-        fmt::format_to(
-            std::back_inserter(buffer),
-            "The Python stack may be truncated, you might want to enable the debug mode (by "
-            "setting the environment variable `{}` to 1) and get the full stack.",
-            fmt::styled("ONEFLOW_DEBUG",
-                        fmt::emphasis::bold | fmt::fg(fmt::color::dark_gray)));
-      }
-      return buffer;
-    };
-    std::string result = "  <unknown>\n";
-    // NOTE: intentionally not using CHECK_JUST here, because CHECK_JUST may also
-    // call current function (StackGetter::Print) and cause infinite loop.
-    // NOLINTNEXTLINE
-    Singleton<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
-      for (const auto& pair : id2stack_arr_) {
-        if (pair.first == id) {
-          result = GetFormattedStack(pair.second);
-          break;
-        }
-      }
       return Maybe<void>::Ok();
     });
-    return result;
-  }
-
- private:
+    return buffer;
+  };
   std::array<std::pair<StackId, Stack>, 20000> id2stack_arr_;
   int64_t index_ = 0;
   mutable std::mutex mutex_;
@@ -117,6 +133,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("RegisterStackGetter", []() {
     Singleton<ForeignStackGetter>::Delete();
     Singleton<ForeignStackGetter>::SetAllocated(new PyStackGetter());
+  });
+  m.def("GetCurrentStack", [](size_t max_size) {
+    return Singleton<ForeignStackGetter>::Get()->GetCurrentStack(max_size);
   });
 }
 

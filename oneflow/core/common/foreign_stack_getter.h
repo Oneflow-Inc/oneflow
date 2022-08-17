@@ -39,6 +39,7 @@ inline StackId GetNextStackId() {
 class ForeignStackGetter {
  public:
   virtual ~ForeignStackGetter() = default;
+  virtual std::string GetCurrentStack(size_t max_size) const = 0;
   virtual void RecordCurrentStack(StackId id) = 0;
   virtual std::string GetFormatted(StackId id) const = 0;
 };
