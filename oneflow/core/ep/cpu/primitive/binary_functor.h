@@ -145,7 +145,6 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTanhBackwardWithDyX, Src, Dst>
   }
 };
 
-
 #define SPECIALIZATION_CPU_BINARY_FUNCTOR(op, type)                                          \
   template<>                                                                                 \
   struct BinaryFunctor<DeviceType::kCPU, op, type, type> {                                   \
