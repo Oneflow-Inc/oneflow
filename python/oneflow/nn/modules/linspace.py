@@ -60,22 +60,33 @@ def linspace_op(
         tensor([ 3.0000,  4.7500,  6.5000,  8.2500, 10.0000], dtype=oneflow.float32)
 
     """
+
     def is_scalar(tensor):
-        return tensor.ndim==0 and tensor.nelement() == 1
-    
+        return tensor.ndim == 0 and tensor.nelement() == 1
+
     if isinstance(start, flow.Tensor):
         if not is_scalar(start):
-            raise TypeError("linspace(): argument 'start' (position 1) must be Number, not Tensor")
+            raise TypeError(
+                "linspace(): argument 'start' (position 1) must be Number, not Tensor"
+            )
         start = start.item()
     if isinstance(end, flow.Tensor):
         if not is_scalar(end):
-            raise TypeError("linspace(): argument 'end' (position 2) must be Number, not Tensor")
+            raise TypeError(
+                "linspace(): argument 'end' (position 2) must be Number, not Tensor"
+            )
         end = end.item()
     if isinstance(steps, flow.Tensor):
         if not is_scalar(steps):
-            raise TypeError("linspace(): argument 'steps' (position 3) must be Number, not Tensor")
+            raise TypeError(
+                "linspace(): argument 'steps' (position 3) must be Number, not Tensor"
+            )
         if flow.is_floating_point(steps):
-            raise TypeError("linspace(): argument 'steps' must be int, not Tensor(with dtype:" + str(steps.dtype) +")")
+            raise TypeError(
+                "linspace(): argument 'steps' must be int, not Tensor(with dtype:"
+                + str(steps.dtype)
+                + ")"
+            )
         steps = steps.item()
 
     if start == end:
