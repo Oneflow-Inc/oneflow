@@ -67,7 +67,7 @@ DataType InferScalarType(PyObject* object) {
     return numpy::NumpyTypeToOFDataType(PyArray_DescrFromScalar(object)->type_num).GetOrThrow();
   } else if (PySequence_Check(object)) {
     int64_t length = PySequence_Length(object);
-    CHECK_GT_OR_THROW(length, 0) << "Index should not be empty.";
+    CHECK_GE_OR_THROW(length, 0) << "Index should not be negative.";
     DataType scalar_type = DataType::kInvalidDataType;
     for (int64_t i = 0; i < length; ++i) {
       PyObjectPtr item(PySequence_GetItem(object, i));
@@ -145,7 +145,7 @@ Shape InferArraySizes(PyObject* object) {
   PyObjectPtr handle;
   while (PySequence_Check(seq)) {
     int64_t length = PySequence_Length(seq);
-    CHECK_GT_OR_THROW(length, 0) << "Index should not be empty.";
+    CHECK_GE_OR_THROW(length, 0) << "Index should not be negative.";  // fix
     sizes.emplace_back(length);
     CHECK_LE_OR_THROW(sizes.size(), /*MAX_DIMS=*/128)
         << "Too many dimensions " << Py_TYPE(seq)->tp_name;
@@ -160,8 +160,8 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
   const DataType dtype = InferScalarType(object);
   const auto& device = JUST(Device::New("cpu"));
 
-  // index type must be integers
-  if (!(IsIntegralDataType(dtype) || (IsBoolDataType(dtype)))) {
+  // index type must be integers 排除等于0的情况
+  if ((!(IsIntegralDataType(dtype) || (IsBoolDataType(dtype))) && PySequence_Length(object) > 0)) {
     return Error::IndexError() << "only integers, slices (`:`), ellipsis (`...`), numpy.newaxis "
                                   "(`None`) and integer or boolean arrays are valid indices";
   }
