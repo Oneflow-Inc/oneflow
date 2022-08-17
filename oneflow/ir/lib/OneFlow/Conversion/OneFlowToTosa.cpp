@@ -100,7 +100,7 @@ bool allSignless(FunctionType funcType) {
 }
 
 Value CreateTransposeValue(Location& loc, ConversionPatternRewriter& rewriter, Value input,
-                      ArrayRef<int32_t> perms) {
+                           ArrayRef<int32_t> perms) {
   int perms_size = perms.size();
   auto transpose_perms = rewriter.create<tosa::ConstOp>(
       loc, RankedTensorType::get({perms_size}, rewriter.getI32Type()),
@@ -398,7 +398,9 @@ struct FlattenOpLowering final : public OpConversionPattern<FlattenOp> {
 
     // calculate flatten shape
     std::vector<int64_t> flatten_shape_vec;
-    for (auto dim = 0; dim < start_dim; ++dim) { flatten_shape_vec.push_back(in_shape.getDimSize(dim)); }
+    for (auto dim = 0; dim < start_dim; ++dim) {
+      flatten_shape_vec.push_back(in_shape.getDimSize(dim));
+    }
     auto last_dim = end_dim < 0 ? rank : end_dim + 1;
     int flatten_size = 1;
     for (auto dim = start_dim; dim < last_dim; ++dim) { flatten_size *= in_shape.getDimSize(dim); }

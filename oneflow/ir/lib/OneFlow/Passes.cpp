@@ -821,9 +821,10 @@ void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLI
 void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addPass(createConvertToSignlessForTosaPass());  // convert-to-signless-for-tosa
   pm.addNestedPass<func::FuncOp>(LLVM::createRequestCWrappersPass());  // llvm-request-c-wrappers
-  pm.addPass(createConvertToSignlessForTosaPass());            // convert-to-signless-for-tosa
-  pm.addPass(createLowerOneFlowToTosaPass());                  // lower-oneflow-to-tosa
-  pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());         // tosa-make-broadcastable
+  pm.addPass(createConvertToSignlessForTosaPass());  // convert-to-signless-for-tosa
+  pm.addPass(createLowerOneFlowToTosaPass());        // lower-oneflow-to-tosa
+  pm.addNestedPass<func::FuncOp>(
+      tosa::createTosaMakeBroadcastablePass());                // tosa-make-broadcastable
   pm.addPass(createCSEPass());                                 // cse
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
   pm.addNestedPass<func::FuncOp>(
