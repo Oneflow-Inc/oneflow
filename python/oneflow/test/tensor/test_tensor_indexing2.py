@@ -798,6 +798,7 @@ def _test_empty_ndim_index(test_case, device):
         flow.empty(2, 0, 6, 4, 5, device=device),
         x[:, flow.empty(0, 6, dtype=flow.int64, device=device)],
     )
+    
     x = flow.empty(10, 0, device=device)
     test_case.assertEqual(x[[1, 2]].shape, (2, 0))
     test_case.assertEqual(x[[], []].shape, (0,))

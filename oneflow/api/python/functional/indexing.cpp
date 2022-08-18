@@ -150,7 +150,6 @@ Shape InferArraySizes(PyObject* object) {
   PyObjectPtr handle;
   while (PySequence_Check(seq)) {
     int64_t length = PySequence_Length(seq);
-    //(length, 0) << "Index should not be empty.";
     sizes.emplace_back(length);
     CHECK_LE_OR_THROW(sizes.size(), /*MAX_DIMS=*/128)
         << "Too many dimensions " << Py_TYPE(seq)->tp_name;
