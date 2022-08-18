@@ -46,12 +46,19 @@ using functional::PyObjectPtr;
   case DataType::datatype:          \
     return PyFloat_FromDouble(GetMinVal<DataTypeToType<DataType::datatype>>());
 #define GET_FLOAT_RESOLUTION(datatype) \
-  case DataType::datatype: \
-    return PyFloat_FromDouble( \
+  case DataType::datatype:             \
+    return PyFloat_FromDouble(         \
         std::pow(10, -std::numeric_limits<DataTypeToType<DataType::datatype>>::digits10));
+#define GET_FLOAT_EPS(datatype) \
+  case DataType::datatype:      \
+    return PyFloat_FromDouble(-std::numeric_limits<DataTypeToType<DataType::datatype>>::epsilon());
+#define GET_FLOAT_TINY(datatype) \
+  case DataType::datatype:       \
+    return PyFloat_FromDouble(std::numeric_limits<DataTypeToType<DataType::datatype>>::min());
 
 #define INT_TYPE (kUInt8)(kInt8)(kInt32)(kInt64)
-#define FLOAT_TYPE (kFloat)(kDouble)
+// TODO(WangYi): support bf16
+#define FLOAT_TYPE (kFloat16)(kFloat)(kDouble)
 
 static PyTypeObject PyIInfoType = {
     PyVarObject_HEAD_INIT(NULL, 0) "oneflow.iinfo",  // tp_name
@@ -172,11 +179,37 @@ static PyObject* PyFInfo_resolution(PyObject* self, void*) {
   HANDLE_ERRORS
   DataType datatype = PyDTypeInfo_UnpackDataType(self);
   switch (datatype) {
-  OF_PP_FOR_EACH_ATOMIC(GET_FLOAT_RESOLUTION, FLOAT_TYPE);
-  default:
-    THROW(RuntimeError) << PyDTypeInfo_UnpackDType(self)->name()
-                        << " not supported by oneflow.finfo";
-    return NULL;
+    OF_PP_FOR_EACH_ATOMIC(GET_FLOAT_RESOLUTION, FLOAT_TYPE);
+    default:
+      THROW(RuntimeError) << PyDTypeInfo_UnpackDType(self)->name()
+                          << " not supported by oneflow.finfo";
+      return NULL;
+  }
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyFInfo_eps(PyObject* self, void*) {
+  HANDLE_ERRORS
+  DataType datatype = PyDTypeInfo_UnpackDataType(self);
+  switch (datatype) {
+    OF_PP_FOR_EACH_ATOMIC(GET_FLOAT_EPS, FLOAT_TYPE);
+    default:
+      THROW(RuntimeError) << PyDTypeInfo_UnpackDType(self)->name()
+                          << " not supported by oneflow.finfo";
+      return NULL;
+  }
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyFInfo_tiny(PyObject* self, void*) {
+  HANDLE_ERRORS
+  DataType datatype = PyDTypeInfo_UnpackDataType(self);
+  switch (datatype) {
+    OF_PP_FOR_EACH_ATOMIC(GET_FLOAT_TINY, FLOAT_TYPE);
+    default:
+      THROW(RuntimeError) << PyDTypeInfo_UnpackDType(self)->name()
+                          << " not supported by oneflow.finfo";
+      return NULL;
   }
   END_HANDLE_ERRORS
 }
@@ -223,6 +256,8 @@ static struct PyGetSetDef PyFInfo_properties[] = {
     {"max", (getter)PyFInfo_max, nullptr, nullptr, nullptr},
     {"min", (getter)PyFInfo_min, nullptr, nullptr, nullptr},
     {"resolution", (getter)PyFInfo_resolution, nullptr, nullptr, nullptr},
+    {"eps", (getter)PyFInfo_eps, nullptr, nullptr, nullptr},
+    {"tiny", (getter)PyFInfo_tiny, nullptr, nullptr, nullptr},
     {"dtype", (getter)PyDInfo_dtype, nullptr, nullptr, nullptr},
     {nullptr},
 };
