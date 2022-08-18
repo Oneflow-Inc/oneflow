@@ -138,10 +138,6 @@ namespace oneflow {
 
 namespace {
 
-bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_type_name) {
-  return op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == op_type_name;
-};
-
 void AddScaleAndSkipLbn(user_op::UserOpConfWrapperBuilder& multi_tensor_model_update_op_builder,
                         const user_op::UserOpConfWrapper& model_update_user_conf) {
   if (model_update_user_conf.has_input("scale_by_tensor", 0)) {
