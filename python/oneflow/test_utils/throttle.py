@@ -5,7 +5,7 @@ import pynvml
 from redis import Redis
 from pottery import Redlock
 
-AUTO_RELEASE_TIME = 300
+AUTO_RELEASE_TIME = 600
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Control when the script runs through special variables.')
