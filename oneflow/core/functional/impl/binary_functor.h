@@ -30,7 +30,7 @@ namespace functional {
 
 namespace impl {
 
-Maybe<Tensor> ScalarTensorToDevice(const std::shared_ptr<Tensor>& tensor, Symbol<Device> device);
+Maybe<Tensor> MaybeCopyTensorToDevice(const std::shared_ptr<Tensor>& tensor, Symbol<Device> device);
 
 class BinaryFunctor {
  public:
@@ -53,9 +53,10 @@ class BinaryFloatFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
-    // NOTE:If tensor x is scalar tensor and it's divice not equal to tensor y,
-    // than need move it to the target device first.This behavior aligns to torch.
-    const auto& tensor_x = JUST(ScalarTensorToDevice(x, JUST(y->device())));
+    // NOTE:If tensor x is scalar and it's device not equal to tensor y,
+    // then need move it to the target device first.(This behavior aligns to torch)
+    auto tensor_x = x;
+    if (IsScalarTensor(x)) { tensor_x = JUST(MaybeCopyTensorToDevice(x, JUST(y->device()))); }
     TensorProcessor tensor_processor;
     JUST(tensor_processor.AddInputs({tensor_x, y}, DType::Float()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
@@ -91,9 +92,10 @@ class InplaceableBinaryFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y, bool inplace) const {
-    // NOTE:If tensor x is scalar tensor and it's divice not equal to tensor y,
-    // than need move it to the target device first.This behavior aligns to torch.
-    const auto& tensor_x = JUST(ScalarTensorToDevice(x, JUST(y->device())));
+    // NOTE:If tensor x is scalar and it's device not equal to tensor y,
+    // then need move it to the target device first.(This behavior aligns to torch)
+    auto tensor_x = x;
+    if (IsScalarTensor(x)) { tensor_x = JUST(MaybeCopyTensorToDevice(x, JUST(y->device()))); }
     TensorProcessor tensor_processor;
     JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({tensor_x, y}).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
