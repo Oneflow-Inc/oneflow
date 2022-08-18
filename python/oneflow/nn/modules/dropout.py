@@ -59,15 +59,18 @@ class Dropout(_DropoutNd):
 
 
 class Dropout1d(Dropout):
-    pass
+    def forward(self, x, addend=None):
+        return flow._C.dropout1d(x, self.p, self.training)
 
 
 class Dropout2d(Dropout):
-    pass
+    def forward(self, x, addend=None):
+        return flow._C.dropout2d(x, self.p, self.training)
 
 
 class Dropout3d(Dropout):
-    pass
+    def forward(self, x, addend=None):
+        return flow._C.dropout3d(x, self.p, self.training)
 
 
 if __name__ == "__main__":

@@ -2522,15 +2522,16 @@ class Dropout2dFunctor {
     const int input_dim = input->ndim();
     CHECK_EQ_OR_RETURN(input_dim != 3 && input_dim != 4, true)
         << "dropout2d: Received a {inp_dim}-D input to dropout2d, which is deprecated "
-                    "and will result in an error in a future release. To retain the behavior "
-                    "and silence this warning, please use dropout instead. Note that dropout2d "
-                    "exists to provide channel-wise dropout on inputs with 2 spatial dimensions, "
-                    "a channel dimension, and an optional batch dimension (i.e. 3D or 4D inputs).";
-    CHECK_EQ_OR_RETURN(input_dim==3, true) << "dropout2d: Received a 3D input to dropout2d and assuming that channel-wise "
-                      "1D dropout behavior is desired - input is interpreted as shape (N, C, L), where C "
-                      "is the channel dim. This behavior will change in a future release to interpret the "
-                      "input as one without a batch dimension, i.e. shape (C, H, W). To maintain the 1D "
-                      "channel-wise dropout behavior, please switch to using dropout1d instead.";
+           "and will result in an error in a future release. To retain the behavior "
+           "and silence this warning, please use dropout instead. Note that dropout2d "
+           "exists to provide channel-wise dropout on inputs with 2 spatial dimensions, "
+           "a channel dimension, and an optional batch dimension (i.e. 3D or 4D inputs).";
+    CHECK_EQ_OR_RETURN(input_dim == 3, true)
+        << "dropout2d: Received a 3D input to dropout2d and assuming that channel-wise "
+           "1D dropout behavior is desired - input is interpreted as shape (N, C, L), where C "
+           "is the channel dim. This behavior will change in a future release to interpret the "
+           "input as one without a batch dimension, i.e. shape (C, H, W). To maintain the 1D "
+           "channel-wise dropout behavior, please switch to using dropout1d instead.";
     return JUST(DropoutImpl(input, p, train));
   }
 };
@@ -2544,10 +2545,10 @@ class Dropout3dFunctor {
     const int input_dim = input->ndim();
     CHECK_EQ_OR_RETURN(input_dim != 4 && input_dim != 5, true)
         << "dropout3d: Received a {inp_dim}-D input to dropout3d, which is deprecated "
-                    "and will result in an error in a future release. To retain the behavior "
-                    "and silence this warning, please use dropout instead. Note that dropout3d "
-                    "exists to provide channel-wise dropout on inputs with 3 spatial dimensions, "
-                    "a channel dimension, and an optional batch dimension (i.e. 4D or 5D inputs).";
+           "and will result in an error in a future release. To retain the behavior "
+           "and silence this warning, please use dropout instead. Note that dropout3d "
+           "exists to provide channel-wise dropout on inputs with 3 spatial dimensions, "
+           "a channel dimension, and an optional batch dimension (i.e. 4D or 5D inputs).";
     bool is_batched = (input_dim == 5);
     std::shared_ptr<one::Tensor> result;
     if (!is_batched) { result = JUST(Unsqueeze(input, 0)); }
