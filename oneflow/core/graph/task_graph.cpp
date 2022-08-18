@@ -563,9 +563,8 @@ void TaskGraph::SetOrderInGraphForEachNode() {
   TopoForEachNode(SetOrderInGraph);
 }
 
-void GetLogicalChains(std::vector<HashSet<const OpNode*>>* ret,
-                         const OpGraph& op_graph,
-                         const std::vector<const OpNode*>& order) {
+void GetLogicalChains(std::vector<HashSet<const OpNode*>>* ret, const OpGraph& op_graph,
+                      const std::vector<const OpNode*>& order) {
   HashSet<const OpNode*> visited;
 
   for (const OpNode* seed_node : order) {
@@ -612,40 +611,29 @@ void GetLogicalChains(std::vector<HashSet<const OpNode*>>* ret,
 }
 
 void TaskGraph::MergeChain() {
-  const OpGraph& op_graph = *Singleton<OpGraph>::Get();
-
-  std::vector<const OpNode*> ordered_op_nodes;
-  HashMap<const OpNode*, int64_t> op_node2global_order;
-  op_graph.TopoForEachNodeWithCtrlEdge([&](const OpNode* node) {
-    ordered_op_nodes.emplace_back(node);
-    op_node2global_order.emplace(node, ordered_op_nodes.size() - 1);
-  });
-
-  std::vector<HashSet<const OpNode*>> subgraph_list;
-  FindAllConnectedSubgraphForGpuExecOrder(&subgraph_list, op_graph, ordered_op_nodes);
-  if (subgraph_list.size() == 0) { return Maybe<void>::Ok(); }
-
-  auto CmpOpNodeOrder = [&](const OpNode* lhs, const OpNode* rhs) {
-    return op_node2global_order.at(lhs) < op_node2global_order.at(rhs);
-  };
-
-  auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
-
-  int64_t chain_id = 0;
-  for (auto* this_node : ordered_task_nodes_) {
-    // skip if this node has been set in a chain.
-    if (this_node->chain_id() != -1) { continue; }
-
-    CHECK_EQ(this_node->chain_id(), -1);
-    if (CanBeMergedInChain(this_node)) {
-      TraverseConnectedSubGraphMergeInThisChain(this_node, chain_id);
-    } else {
-      this_node->set_chain_id(chain_id);
+  if (EnvBool<ENABLE_LOGICAL_CHAIN>()) {
+    for (auto* this_node : ordered_task_nodes_) {
+      const auto* comp_node = dynamic_cast<const CompTaskNode*>(node);
+      const int64_t logical_chain_id = comp_node->op()->op_conf().logical_chain_id();
+      if (logical_chain_id != -1) { this_node->set_chain_id(logical_chain_id); }
     }
+  } else {
+    int64_t chain_id = 0;
+    for (auto* this_node : ordered_task_nodes_) {
+      // skip if this node has been set in a chain.
+      if (this_node->chain_id() != -1) { continue; }
 
-    ++chain_id;
+      CHECK_EQ(this_node->chain_id(), -1);
+      if (CanBeMergedInChain(this_node)) {
+        TraverseConnectedSubGraphMergeInThisChain(this_node, chain_id);
+      } else {
+        this_node->set_chain_id(chain_id);
+      }
+
+      ++chain_id;
+    }
+    for (auto* node : ordered_task_nodes_) { CHECK_NE(node->chain_id(), -1); }
   }
-  for (auto* node : ordered_task_nodes_) { CHECK_NE(node->chain_id(), -1); }
 }
 
 void TaskGraph::BuildCtrlRegstDescInSameChain() {
