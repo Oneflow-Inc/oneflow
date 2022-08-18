@@ -30,40 +30,6 @@ typedef Maybe<one::Tensor> (*UnaryBwFunc)(const std::shared_ptr<one::Tensor>&,
                                           const std::shared_ptr<one::Tensor>&);
 
 template<UnaryBwFunc BwFunc>
-class UnaryMathOp : public OpExprGradFunction<UnaryMathCaptureState> {
-  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
-
-  Maybe<void> Capture(UnaryMathCaptureState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override {
-    ctx->x_requires_grad = inputs.at(0)->requires_grad();
-    ctx->SaveTensorForBackward(inputs.at(0));
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> Apply(const UnaryMathCaptureState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override {
-    if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
-    const auto& x = ctx->SavedTensors().at(0);
-    in_grads->at(0) = JUST(BwFunc(x, out_grads.at(0)));
-    return Maybe<void>::Ok();
-  }
-
- protected:
-  std::shared_ptr<OpExpr> grad_op_;
-};
-
-#define INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS(op_type_name, op_cls)     \
-  class op_cls##Cls final : public UnaryMathOp<functional::op_cls##Grad> {}; \
-  REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##Cls);
-
-// OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS,
-// MATH_UNARY_ELEMENTWISE_REGISTER_FUNC_SEQ);
-OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS,
-                     OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh));
-
-#undef INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS
-
-template<UnaryBwFunc BwFunc>
 class UnaryMathBwdWithDyXOp : public OpExprGradFunction<UnaryMathCaptureState> {
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
@@ -136,6 +102,8 @@ class UnaryMathBwdWithFillZeroOp : public OpExprGradFunction<UnaryMathCaptureSta
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_X_CLASS,
                      MATH_UNARY_ELEMENTWISE_PRIMITIVE_FUNC_BWD_WITH_DY_X_SEQ);
+OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_X_CLASS,
+                     OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh));
 
 #undef INSTANTIAT_AND_REGISTER_UNARY_MATHOP_WITH_DY_X_CLASS
 
