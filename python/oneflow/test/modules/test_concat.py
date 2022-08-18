@@ -189,6 +189,12 @@ class TestModule(flow.unittest.TestCase):
         x = random_tensor(4, 2, 3, random(0, 3)).to(device)
         return torch.cat((x,), 0)
 
+    @profile(torch.cat)
+    def profile_cat(test_case):
+        input = torch.ones(32,64)
+        torch.cat((input,input),dim=0)
+        torch.cat((input,input),dim=1)
+
 
 if __name__ == "__main__":
     unittest.main()

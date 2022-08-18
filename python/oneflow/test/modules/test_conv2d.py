@@ -1590,6 +1590,12 @@ class TestConv2d(flow.unittest.TestCase):
         y = torch.nn.functional.conv2d(img, kernel, groups=3)
         return y
 
+    @profile(torch.nn.functional.conv2d)
+    def profile_functional_conv2d(test_case):
+        img = torch.ones(8, 4, 3, 3)
+        kernel = torch.ones(1, 4, 5, 5)
+        torch.nn.functional.conv2d(img, kernel, padding=1)
+
     def test_conv2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cuda", "cpu"]

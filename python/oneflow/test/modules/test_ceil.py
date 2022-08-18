@@ -53,6 +53,12 @@ class TestCeilModule(flow.unittest.TestCase):
         y = torch.ceil(x)
         return y
 
+    @profile(torch.ceil)
+    def profile_ceil(test_case):
+        torch.ceil(torch.ones(4))
+        torch.ceil(torch.ones(100000))
+
+
 
 if __name__ == "__main__":
     unittest.main()

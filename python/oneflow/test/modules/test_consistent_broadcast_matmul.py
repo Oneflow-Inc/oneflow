@@ -89,6 +89,12 @@ class TestConsistentBroadcastMatmulModule(flow.unittest.TestCase):
                         test_case, placement, x_sbp, y_sbp
                     )
 
+    @profile(torch.matmul)
+    def profile_matmul(test_case):
+        input1 = torch.ones(32,64)
+        input2 = torch.ones(64,128)
+        torch.matmul(input1,input2)
+
 
 if __name__ == "__main__":
     unittest.main()

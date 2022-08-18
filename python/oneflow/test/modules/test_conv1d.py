@@ -443,6 +443,13 @@ class TestConv1d(flow.unittest.TestCase):
         y = torch.nn.functional.conv1d(img, kernel, groups=3)
         return y
 
+    @profile(torch.nn.functional.conv1d)
+    def profile_functional_conv1d(test_case):
+        img = torch.ones(1, 3, 224)
+        kernel = torch.ones(3, 1, 3)
+        torch.nn.functional.conv1d(img, kernel, groups=3)
+        
+
     @autotest(n=5)
     def test_conv1d_with_random_data(test_case):
         channels = random(1, 6)
