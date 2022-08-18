@@ -46,6 +46,7 @@ from oneflow._C import sigmoid
 from oneflow._C import softshrink
 from oneflow._C import prelu
 from oneflow._C import gelu_with_approximate as gelu
+from oneflow._C import gelu_fast
 from oneflow._C import glu
 from oneflow._C import logsigmoid
 from oneflow._C import log_softmax

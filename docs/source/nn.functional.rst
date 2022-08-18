@@ -63,6 +63,7 @@ Non-linear activation functions
     prelu
     glu
     gelu
+    gelu_fast
     logsigmoid
     hardshrink
     softsign
