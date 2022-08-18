@@ -75,21 +75,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("softshrink")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
-      const auto softshrink_grad_op_name = ctx->FwOp().op_name() + "_grad";
-      ctx->DefineOp(softshrink_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-        return builder.OpTypeName("softshrink_grad")
-            .InputBind("y", ctx->FwOp().output("y", 0))
-            .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-            .Attr<double>("alpha", ctx->FwOp().attr<double>("alpha"))
-            .Output("dx")
-            .Build();
-      });
-      ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
-                                [&ctx, &softshrink_grad_op_name]() -> const std::string& {
-                                  return ctx->GetOp(softshrink_grad_op_name).output("dx", 0);
-                                });
-      return Maybe<void>::Ok();
-    });
 }  // namespace oneflow
