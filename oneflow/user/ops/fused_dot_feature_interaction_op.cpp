@@ -150,49 +150,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("fused_dot_feature_interaction")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-      builder.Op("fused_dot_feature_interaction_grad")
-          .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-          .Attr<bool>("self_interaction", op.attr<bool>("self_interaction"))
-          .Attr<std::string>("pooling", op.attr<std::string>("pooling"));
-      for (int64_t i = 0; i < op.input_size("features"); ++i) {
-        builder.Input("features", op.input("features", i));
-      }
-      if (op.user_op_conf().has_input("output_concat", 0)) {
-        builder.Output("output_concat_grad")
-            .Attr<int32_t>("output_concat_grad_dim",
-                           op.TensorDesc4ArgNameAndIndex("output_concat", 0).shape().At(1));
-      }
-      if (op.user_op_conf().has_input("sparse_feature", 0)) {
-        builder.Input("num_valid_sparse_feature", op.input("num_valid_sparse_feature", 0))
-            .Input("sparse_feature", op.input("sparse_feature", 0))
-            .Input("sparse_indices", op.input("sparse_indices", 0))
-            .Output("sparse_feature_grad");
-      }
-      builder.Output("features_grad", op.input_size("features"));
-      auto grad_op = builder.Build();
-      AddOp(grad_op);
-
-      for (int64_t i = 0; i < op.input_size("features"); ++i) {
-        if (op.NeedGenGradTensor4OpInput("features", i)) {
-          op.BindGradTensorWithOpInput(grad_op.output("features_grad", i), "features", i);
-        }
-      }
-      if (op.user_op_conf().has_input("output_concat", 0)) {
-        if (op.NeedGenGradTensor4OpInput("output_concat", 0)) {
-          op.BindGradTensorWithOpInput(grad_op.output("output_concat_grad", 0), "output_concat", 0);
-        }
-      }
-      if (op.user_op_conf().has_input("sparse_feature", 0)) {
-        if (op.NeedGenGradTensor4OpInput("sparse_feature", 0)) {
-          op.BindGradTensorWithOpInput(grad_op.output("sparse_feature_grad", 0), "sparse_feature",
-                                       0);
-        }
-      }
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace oneflow
