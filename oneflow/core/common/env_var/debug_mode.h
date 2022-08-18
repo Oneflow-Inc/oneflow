@@ -25,6 +25,9 @@ DEFINE_ENV_BOOL(ONEFLOW_DEBUG, false);
 
 inline bool IsInDebugMode() { return EnvBool<ONEFLOW_DEBUG_MODE>() || EnvBool<ONEFLOW_DEBUG>(); }
 
+DEFINE_ENV_BOOL(ENABLE_LOGICAL_CHAIN, true);
+inline bool EnableLogicalChain() { return EnvBool<ENABLE_LOGICAL_CHAIN>(); }
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_ENV_VAR_DEBUG_MODE_H_

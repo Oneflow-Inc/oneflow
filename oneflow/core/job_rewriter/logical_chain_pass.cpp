@@ -27,10 +27,9 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/env_var/env_var.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 
 namespace oneflow {
-
-DEFINE_ENV_BOOL(ENABLE_LOGICAL_CHAIN, true);
 
 namespace {
 
@@ -47,7 +46,7 @@ class LogicalChainPass final : public JobPass {
     return Apply(op_graph, &job_builder);
   }
 
-  bool IsEnabled(const JobPassCtx& ctx) const { return EnvBool<ENABLE_LOGICAL_CHAIN>(); }
+  bool IsEnabled(const JobPassCtx& ctx) const { return EnableLogicalChain(); }
 
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 };
@@ -294,7 +293,7 @@ Maybe<void> LogicalChainPass::Apply(const OpGraph& op_graph, JobBuilder* job_bui
         it->second.ordered_acc_op_nodes.emplace_back(this_node);
       }
     }
-    mut_op_name2conf.at(this_node->op().op_name())
+    JUST(MapAt(mut_op_name2conf, this_node->op().op_name()))
         .set_logical_order(JUST(MapAt(op_node2global_order, this_node)));
   }
 

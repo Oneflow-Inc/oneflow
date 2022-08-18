@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/global_for.h"
@@ -563,57 +564,10 @@ void TaskGraph::SetOrderInGraphForEachNode() {
   TopoForEachNode(SetOrderInGraph);
 }
 
-void GetLogicalChains(std::vector<HashSet<const OpNode*>>* ret, const OpGraph& op_graph,
-                      const std::vector<const OpNode*>& order) {
-  HashSet<const OpNode*> visited;
-
-  for (const OpNode* seed_node : order) {
-    if (visited.find(seed_node) != visited.end()) { continue; }
-    CHECK(visited.insert(seed_node).second);
-    const ParallelDesc& seed_parallel_desc = seed_node->parallel_desc();
-    // NOTE(chengcheng): ONLY consider GPU op and parallel num > 1.
-    if (seed_parallel_desc.device_type() != DeviceType::kCUDA) { continue; }
-    if (seed_parallel_desc.parallel_num() <= 1) { continue; }
-    if (IsBreakpointOpNode(seed_node)) { continue; }
-
-    HashSet<const OpNode*> this_subgraph;
-    std::queue<const OpNode*> queued_nodes;
-
-    std::shared_ptr<const Shape> seed_time_shape = GetOpNodeTimeShape(seed_node);
-    queued_nodes.push(seed_node);
-    while (!queued_nodes.empty()) {
-      const OpNode* cur_node = queued_nodes.front();
-      queued_nodes.pop();
-
-      CHECK(cur_node->parallel_desc().EqualsIgnoringHierarchy(seed_parallel_desc));
-      CHECK(this_subgraph.insert(cur_node).second);
-
-      cur_node->ForEachNodeOnInOutEdge([&](const OpNode* next_node) {
-        if (visited.find(next_node) == visited.end() && (!IsBreakpointOpNode(next_node))
-            && next_node->parallel_desc().EqualsIgnoringHierarchy(seed_parallel_desc)
-            && SharedPtrShapeEqual(GetOpNodeTimeShape(next_node), seed_time_shape)) {
-          CHECK(visited.insert(next_node).second);
-          queued_nodes.push(next_node);
-        }
-      });
-    }
-
-    if (this_subgraph.size() > 1) {
-      ret->emplace_back(HashSet<const OpNode*>());
-      ret->back().swap(this_subgraph);
-    }
-  }
-
-  std::sort(ret->begin(), ret->end(),
-            [](const HashSet<const OpNode*>& lhs, const HashSet<const OpNode*>& rhs) {
-              return lhs.size() > rhs.size();
-            });
-}
-
 void TaskGraph::MergeChain() {
-  if (EnvBool<ENABLE_LOGICAL_CHAIN>()) {
-    for (auto* this_node : ordered_task_nodes_) {
-      const auto* comp_node = dynamic_cast<const CompTaskNode*>(node);
+  if (EnableLogicalChain()) {
+    for (TaskNode* this_node : ordered_task_nodes_) {
+      CompTaskNode* comp_node = dynamic_cast<CompTaskNode*>(this_node);
       const int64_t logical_chain_id = comp_node->op()->op_conf().logical_chain_id();
       if (logical_chain_id != -1) { this_node->set_chain_id(logical_chain_id); }
     }
